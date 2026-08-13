@@ -411,3 +411,42 @@ def test_capture_appends_a_global_item(capsys, tmp_path):
     pending = tmp_path / "docs" / "gdoc" / "policy" / "pending.md"
     assert pending.exists()
     assert "c1" in pending.read_text()
+
+
+# ---------------------------------------------------------------------------
+# shared drive support
+# ---------------------------------------------------------------------------
+
+
+def _get_kwargs(drive):
+    """The keyword arguments of the last files().get call."""
+    return drive.files().get.call_args.kwargs
+
+
+def test_read_asks_for_metadata_with_shared_drive_support(capsys):
+    # Without supportsAllDrives, Drive answers 404 for a document on a Shared
+    # Drive that the caller can genuinely read. The error would be a bare 404
+    # rather than the clear message the design promises.
+    drive = MagicMock()
+    drive.comments().list.return_value.execute.side_effect = [{"comments": []}]
+    drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
+    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
+        "tools.gdoc.cli.load_config"
+    ) as config:
+        config.return_value.display_name = "Nail Khusnullin"
+        main(["read", "https://docs.google.com/document/d/1AbC/edit"])
+    capsys.readouterr()
+    assert _get_kwargs(drive)["supportsAllDrives"] is True
+
+
+def test_export_asks_for_metadata_with_shared_drive_support(capsys, tmp_path):
+    drive = MagicMock()
+    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
+    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
+        "tools.gdoc.cli.export_markdown", return_value="# Markdown content"
+    ), patch("tools.gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md"):
+        main(
+            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
+        )
+    capsys.readouterr()
+    assert _get_kwargs(drive)["supportsAllDrives"] is True
