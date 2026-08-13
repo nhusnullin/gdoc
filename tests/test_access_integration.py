@@ -104,3 +104,12 @@ def test_the_output_folder_accepts_new_files(drive):
     ).execute()
     assert folder["capabilities"]["canAddChildren"] is True
     assert folder.get("driveId"), "the output folder should be on a shared drive"
+
+
+def test_native_markdown_export_works_on_the_real_document(drive, test_doc_id):
+    """Records whether the pandoc fallback is dead code or load-bearing."""
+    from tools.gdoc.export import export_markdown
+
+    text = export_markdown(drive, test_doc_id)
+    print(f"exported {len(text)} characters of markdown")
+    assert text.strip()
