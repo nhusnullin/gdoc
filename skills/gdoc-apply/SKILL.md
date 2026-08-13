@@ -20,14 +20,14 @@ The subshell leaves Nail's own working directory unchanged.
 
 ## If Nail passes `--terminal-only`
 
-Do every step, but do not upload a new Google Doc. Run `$GDOC generate` as
-normal: it produces a local `.docx` at the path you pass to `--out`. Give Nail
-that path. Do not record a version in `gdoc_versions` (skip Step 5). Clear
-`pending.md` as normal. Say at the end that nothing was uploaded.
+Do Steps 1, 2 and 3: work through the items, edit the markdown, show the diffs,
+commit. Then stop. Do not run Step 4: `$GDOC generate` always tries to upload,
+so there is no local-only way to produce the document. Tell Nail the markdown is
+committed and that re-running without the flag will generate the document.
 
 ## Step 1: Load the context
 
-The argument is a path to `pending.md`. Its header line is:
+The argument is a path to `pending.md`. The path is relative to `$HUB`. Its header line is:
 
 ```
 Document: https://docs.google.com/document/d/<doc_id>/edit
@@ -77,6 +77,8 @@ Two outcomes, both fine:
   that path and the reason. Do not retry silently.
 
 ## Step 5: Record the version
+
+If `doc_id` was null in Step 4, skip this step and go to Step 6. There is no version to record.
 
 ```bash
 (cd "$HUB" && $GDOC pair add-version --md <paired md file> \
