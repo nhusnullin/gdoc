@@ -25,6 +25,21 @@ Body.
 
 NO_FRONTMATTER = "# Just a heading\n\nBody.\n"
 
+BODY_WITH_DASHES = """\
+---
+title: Fenced body
+gdoc: 1AbC
+---
+
+# Heading
+
+First paragraph.
+
+---
+
+Second paragraph.
+"""
+
 
 def test_reads_an_existing_pairing(tmp_path):
     path = tmp_path / "policy.md"
@@ -86,3 +101,24 @@ def test_find_by_doc_id_locates_the_paired_file(tmp_path):
 def test_find_by_doc_id_returns_none_when_nothing_matches(tmp_path):
     (tmp_path / "other.md").write_text(UNPAIRED)
     assert find_by_doc_id(tmp_path, "1AbC") is None
+
+
+def test_write_preserves_body_containing_a_horizontal_rule(tmp_path):
+    path = tmp_path / "doc.md"
+    path.write_text(BODY_WITH_DASHES)
+    write_pairing(path, Pairing(doc_id="1AbC", synced="2026-08-20", versions=()))
+    text = path.read_text()
+    assert "First paragraph." in text
+    assert "Second paragraph." in text
+    pairing = read_pairing(path)
+    assert pairing.doc_id == "1AbC"
+
+
+def test_write_clears_gdoc_synced_when_synced_is_none(tmp_path):
+    path = tmp_path / "policy.md"
+    path.write_text(PAIRED)  # has gdoc_synced: 2026-08-13
+    write_pairing(path, Pairing(doc_id="1AbC", synced=None, versions=()))
+    text = path.read_text()
+    assert "gdoc_synced" not in text
+    pairing = read_pairing(path)
+    assert pairing.synced is None

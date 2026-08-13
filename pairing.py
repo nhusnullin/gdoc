@@ -6,6 +6,8 @@ silently when a file moves.
 """
 
 import datetime
+import os
+import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -54,16 +56,38 @@ def read_pairing(md_path: Path) -> Pairing | None:
 
 
 def write_pairing(md_path: Path, pairing: Pairing) -> None:
-    """Rewrite only the three gdoc keys, leaving every other key and the body alone."""
+    """Rewrite only the three gdoc keys, leaving every other key and the body alone.
+
+    The write is atomic: content goes to a sibling temp file first, then
+    os.replace renames it onto md_path in one syscall.  A crash or kill
+    between the two leaves the original file intact.
+    """
     front, body = _split(md_path.read_text())
     updated = dict(front)
     updated["gdoc"] = pairing.doc_id
     if pairing.synced:
         updated["gdoc_synced"] = pairing.synced
+    else:
+        updated.pop("gdoc_synced", None)
     if pairing.versions:
         updated["gdoc_versions"] = [dict(version) for version in pairing.versions]
+    else:
+        updated.pop("gdoc_versions", None)
     rendered = yaml.safe_dump(updated, sort_keys=False, allow_unicode=True).rstrip("\n")
-    md_path.write_text(f"{_FENCE}\n{rendered}\n{_FENCE}\n\n{body}")
+    content = f"{_FENCE}\n{rendered}\n{_FENCE}\n\n{body}"
+    fd, tmp_str = tempfile.mkstemp(dir=md_path.parent, suffix=".tmp")
+    tmp = Path(tmp_str)
+    try:
+        os.write(fd, content.encode())
+        os.close(fd)
+        os.replace(tmp, md_path)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def add_version(pairing: Pairing, doc_id: str, created: str) -> Pairing:
