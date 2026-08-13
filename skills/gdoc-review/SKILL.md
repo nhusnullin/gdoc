@@ -17,17 +17,25 @@ Spec: `~/src/altery/intelligence-hub/docs/superpowers/specs/2026-08-13-gdoc-ai-a
 ## Setup
 
 ```bash
+HUB="$HOME/src/altery/intelligence-hub"
 GDOC="$HOME/.config/gdoc-agent/venv/bin/python -m tools.gdoc.cli"
 ```
 
-Run the CLI from `~/src/altery/intelligence-hub`, but keep Nail's own working
-directory as the corpus you search. The cwd he chose is deliberate: it decides
-which notes ground the answers.
+Every CLI call runs inside `(cd "$HUB" && ...)`. The subshell leaves Nail's own
+working directory unchanged. That directory is the corpus you search: the cwd he
+chose decides which notes ground the answers.
+
+## If Nail passes `--terminal-only`
+
+Do every step, but post nothing to the document. Print each reply in the
+terminal instead of running `$GDOC reply`, and print each refusal instead of
+posting it. Capture still runs: `pending.md` is a local file, not a change to
+the document. Say at the end that nothing was posted.
 
 ## Step 1: Read the comments
 
 ```bash
-$GDOC read <url>
+(cd "$HUB" && $GDOC read <url>)
 ```
 
 Returns `mine`, `others` and `skipped`. Threads already answered by the service
@@ -101,13 +109,13 @@ Write it to a file and post it:
 cat > /tmp/reply.txt <<'EOF'
 <the reply>
 EOF
-$GDOC reply <doc_id> <comment_id> --body-file /tmp/reply.txt
+(cd "$HUB" && $GDOC reply <doc_id> <comment_id> --body-file /tmp/reply.txt)
 ```
 
 ## Step 6: Capture global items
 
 ```bash
-$GDOC capture <doc_id> <comment_id> --slug <slug> --repo-root .
+(cd "$HUB" && $GDOC capture <doc_id> <comment_id> --slug <slug> --repo-root "$HUB")
 ```
 
 Then post the refusal, using the item number the capture returned:
@@ -118,6 +126,13 @@ here. Captured as item 2. I will handle it in a terminal session and produce a
 new version of the document.
 ```
 
+```bash
+cat > /tmp/refusal.txt <<'EOF'
+<the refusal>
+EOF
+(cd "$HUB" && $GDOC reply <doc_id> <comment_id> --body-file /tmp/refusal.txt)
+```
+
 ## Step 7: Mirror, only if paired
 
 Mirror only when the document has a paired markdown file, or when Nail owns it
@@ -125,7 +140,7 @@ and asks for one. Never mirror a document he does not own: counsel drafts and
 partner documents stay in Drive.
 
 ```bash
-$GDOC export <url> --repo-root .
+(cd "$HUB" && $GDOC export <url> --repo-root "$HUB")
 ```
 
 If it reports a mirror conflict, the markdown has uncommitted edits. Tell Nail
