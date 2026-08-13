@@ -75,3 +75,13 @@ def test_write_mirror_raises_when_git_cannot_be_consulted(tmp_path):
     path.write_text("# Existing\n")
     with pytest.raises(MirrorConflict, match="git could not be consulted"):
         write_mirror(tmp_path, "policy", "# From Drive\n")
+
+
+def test_force_rescues_when_git_cannot_be_consulted(tmp_path):
+    # tmp_path is outside any git repository, so is_dirty would raise.
+    # force=True must short-circuit before is_dirty is called and still write.
+    path = mirror_path(tmp_path, "policy")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("# Existing\n")
+    result = write_mirror(tmp_path, "policy", "# From Drive\n", force=True)
+    assert result.read_text() == "# From Drive\n"
