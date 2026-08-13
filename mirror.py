@@ -8,6 +8,10 @@ from pathlib import Path
 
 MIRROR_DIR = Path("docs") / "gdoc"
 
+# mkstemp creates 0600.  Without an explicit chmod the rename would silently
+# tighten permissions on a mirror that was readable before.
+_DEFAULT_MODE = 0o644
+
 _NON_WORD = re.compile(r"[^a-z0-9]+")
 
 
@@ -63,11 +67,13 @@ def write_mirror(repo_root: Path, slug: str, markdown: str, force: bool = False)
             f"{path} has uncommitted changes. Commit or discard them, "
             "or pass force=True to overwrite."
         )
+    mode = path.stat().st_mode & 0o777 if path.exists() else _DEFAULT_MODE
     fd, tmp_str = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
     tmp = Path(tmp_str)
     try:
         os.write(fd, markdown.encode())
         os.close(fd)
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except Exception:
         try:

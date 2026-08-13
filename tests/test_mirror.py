@@ -106,3 +106,17 @@ def test_write_mirror_is_atomic(repo, monkeypatch):
     assert mirror_path(repo, "policy").read_text() == "original\n"
     # No leftover temp file in the directory.
     assert list(mirror_path(repo, "policy").parent.glob("*.tmp")) == []
+
+
+def test_write_mirror_preserves_the_existing_file_mode(repo):
+    path = write_mirror(repo, "policy", "# One\n")
+    path.chmod(0o644)
+    git(repo, "add", ".")
+    git(repo, "commit", "-m", "mirror")
+    write_mirror(repo, "policy", "# Two\n")
+    assert path.stat().st_mode & 0o777 == 0o644
+
+
+def test_write_mirror_creates_a_readable_file(repo):
+    path = write_mirror(repo, "policy", "# One\n")
+    assert path.stat().st_mode & 0o777 == 0o644

@@ -15,6 +15,10 @@ import yaml
 
 _FENCE = "---"
 
+# mkstemp creates 0600.  Without an explicit chmod the rename would silently
+# tighten permissions on a note that was readable before.
+_DEFAULT_MODE = 0o644
+
 
 @dataclass(frozen=True)
 class Pairing:
@@ -75,11 +79,13 @@ def write_pairing(md_path: Path, pairing: Pairing) -> None:
         updated.pop("gdoc_versions", None)
     rendered = yaml.safe_dump(updated, sort_keys=False, allow_unicode=True).rstrip("\n")
     content = f"{_FENCE}\n{rendered}\n{_FENCE}\n\n{body}"
+    mode = md_path.stat().st_mode & 0o777 if md_path.exists() else _DEFAULT_MODE
     fd, tmp_str = tempfile.mkstemp(dir=md_path.parent, suffix=".tmp")
     tmp = Path(tmp_str)
     try:
         os.write(fd, content.encode())
         os.close(fd)
+        os.chmod(tmp, mode)
         os.replace(tmp, md_path)
     except Exception:
         try:

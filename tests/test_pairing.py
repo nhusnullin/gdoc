@@ -122,3 +122,13 @@ def test_write_clears_gdoc_synced_when_synced_is_none(tmp_path):
     assert "gdoc_synced" not in text
     pairing = read_pairing(path)
     assert pairing.synced is None
+
+
+def test_write_preserves_the_existing_file_mode(tmp_path):
+    # The atomic write goes through mkstemp, which creates 0600. Without an
+    # explicit chmod the rename would silently tighten permissions on a real note.
+    md = tmp_path / "note.md"
+    md.write_text("---\ngdoc: 1AbC\n---\n\nbody\n")
+    md.chmod(0o644)
+    write_pairing(md, Pairing(doc_id="1AbC", synced="2026-08-13"))
+    assert md.stat().st_mode & 0o777 == 0o644
