@@ -54,13 +54,26 @@ def _fail(message: str) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _file_meta(drive, doc_id: str) -> dict:
+    """Fetch file metadata.
+
+    supportsAllDrives is required for documents that live on a Shared Drive.
+    Without it Drive answers 404 for a file the caller can genuinely read.
+    """
+    return (
+        drive.files()
+        .get(fileId=doc_id, fields="name", supportsAllDrives=True)
+        .execute()
+    )
+
+
 def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
     drive = drive_service()
     config = load_config()
     threads = fetch_threads(drive, doc_id)
     mine, others, skipped = partition(threads, config.display_name)
-    meta = drive.files().get(fileId=doc_id, fields="name").execute()
+    meta = _file_meta(drive, doc_id)
     return _emit(
         {
             "doc_id": doc_id,
@@ -84,7 +97,7 @@ def cmd_export(args) -> int:
     doc_id = extract_doc_id(args.url)
     drive = drive_service()
     markdown = export_markdown(drive, doc_id)
-    meta = drive.files().get(fileId=doc_id, fields="name").execute()
+    meta = _file_meta(drive, doc_id)
     slug = args.slug or slugify(meta.get("name", ""))
     repo_root = Path(args.repo_root)
 
