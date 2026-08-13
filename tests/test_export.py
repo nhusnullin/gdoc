@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from googleapiclient.errors import HttpError
 
-from tools.gdoc.export import DOCX_MIME, MARKDOWN_MIME, export_markdown
+from gdoc.export import DOCX_MIME, MARKDOWN_MIME, export_markdown
 
 
 class FakeResponse:
@@ -29,7 +29,7 @@ def test_falls_back_to_docx_and_pandoc_when_markdown_is_unsupported():
         http_error(400),
         b"PK\x03\x04 fake docx bytes",
     ]
-    with patch("tools.gdoc.export._pandoc_docx_to_markdown", return_value="# From docx") as pandoc:
+    with patch("gdoc.export._pandoc_docx_to_markdown", return_value="# From docx") as pandoc:
         assert export_markdown(drive, "doc") == "# From docx"
     pandoc.assert_called_once()
 

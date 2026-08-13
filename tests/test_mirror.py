@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from tools.gdoc.mirror import MirrorConflict, mirror_path, slugify, write_mirror
+from gdoc.mirror import MirrorConflict, mirror_path, slugify, write_mirror
 
 
 def git(repo, *args):

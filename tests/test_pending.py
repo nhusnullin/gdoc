@@ -1,7 +1,7 @@
 import pytest
 
-from tools.gdoc.model import Thread
-from tools.gdoc.pending import append_item, next_item_number, pending_path
+from gdoc.model import Thread
+from gdoc.pending import append_item, next_item_number, pending_path
 
 TODAY = "2026-08-13"
 

@@ -56,7 +56,7 @@ def test_editing_the_text_is_refused(drive, test_doc_id):
     try:
         credentials = drive._http.credentials
     except AttributeError:
-        from tools.gdoc.auth import load_credentials
+        from gdoc.auth import load_credentials
 
         credentials = load_credentials()
 
@@ -96,7 +96,7 @@ def test_permissions_list_is_refused(drive, test_doc_id):
 
 def test_the_output_folder_accepts_new_files(drive):
     """The one place the agent is allowed to write."""
-    from tools.gdoc.config import load_config
+    from gdoc.config import load_config
 
     folder_id = load_config().output_folder_id
     folder = drive.files().get(
@@ -108,7 +108,7 @@ def test_the_output_folder_accepts_new_files(drive):
 
 def test_native_markdown_export_works_on_the_real_document(drive, test_doc_id):
     """Records whether the pandoc fallback is dead code or load-bearing."""
-    from tools.gdoc.export import export_markdown
+    from gdoc.export import export_markdown
 
     text = export_markdown(drive, test_doc_id)
     print(f"exported {len(text)} characters of markdown")

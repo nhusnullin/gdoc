@@ -8,8 +8,8 @@ in-thread reply is the only other record and Nail may resolve it.
 import re
 from pathlib import Path
 
-from tools.gdoc.mirror import MIRROR_DIR
-from tools.gdoc.model import Thread
+from gdoc.mirror import MIRROR_DIR
+from gdoc.model import Thread
 
 _ITEM_HEADING = re.compile(r"^## Item (\d+)", re.MULTILINE)
 

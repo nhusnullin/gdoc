@@ -1,6 +1,6 @@
 import pytest
 
-from tools.gdoc.docid import extract_doc_id
+from gdoc.docid import extract_doc_id
 
 DOC_ID = "1tyVhOTw9-bJ99IJTBZoTfWAT6fm3rjGIzfpHQX91hkw"
 

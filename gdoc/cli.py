@@ -14,18 +14,18 @@ from pathlib import Path
 
 from googleapiclient.errors import HttpError
 
-from tools.gdoc.auth import drive_service
-from tools.gdoc.config import load_config
-from tools.gdoc.docid import extract_doc_id
-from tools.gdoc.export import export_markdown
-from tools.gdoc.fetch import fetch_threads
-from tools.gdoc.filters import forced_kind, partition
-from tools.gdoc.generate import generate
-from tools.gdoc.mirror import MirrorConflict, mirror_path, slugify, write_mirror
-from tools.gdoc.model import Thread
-from tools.gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
-from tools.gdoc.pending import append_item
-from tools.gdoc.reply import post_reply
+from gdoc.auth import drive_service
+from gdoc.config import load_config
+from gdoc.docid import extract_doc_id
+from gdoc.export import export_markdown
+from gdoc.fetch import fetch_threads
+from gdoc.filters import forced_kind, partition
+from gdoc.generate import generate
+from gdoc.mirror import MirrorConflict, mirror_path, slugify, write_mirror
+from gdoc.model import Thread
+from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
+from gdoc.pending import append_item
+from gdoc.reply import post_reply
 
 
 def _thread_json(thread: Thread) -> dict:

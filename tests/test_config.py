@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from tools.gdoc.config import Config, load_config
+from gdoc.config import Config, load_config
 
 
 def test_loads_display_name_and_folder(tmp_path):

@@ -1,5 +1,5 @@
-from tools.gdoc.filters import forced_kind, needs_action, partition
-from tools.gdoc.model import Reply, Thread
+from gdoc.filters import forced_kind, needs_action, partition
+from gdoc.model import Reply, Thread
 
 ME = "Nail Khusnullin"
 

@@ -15,7 +15,7 @@ that is silently ignored is worse than a rare false positive.
 
 import re
 
-from tools.gdoc.model import Thread
+from gdoc.model import Thread
 
 _ADDRESSED = re.compile(r"^\s*(?:@ai\b|ai(?=[:?!]))", re.IGNORECASE)
 _SIGN = re.compile(r"^\s*@?ai([:?!])", re.IGNORECASE)

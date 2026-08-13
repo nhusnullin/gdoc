@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tools.gdoc.reply import GLOBAL_REFUSAL, assert_plain_text, post_reply
+from gdoc.reply import GLOBAL_REFUSAL, assert_plain_text, post_reply
 
 
 def test_plain_prose_is_accepted():

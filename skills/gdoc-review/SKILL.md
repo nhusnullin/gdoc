@@ -12,18 +12,24 @@ The marker is `ai` plus a sign, at the start of a comment: `ai:` leaves the
 choice to you, `ai?` means answer it here, `ai!` means capture it as global. The
 old `@ai` form still counts. The CLI does this matching; you never re-derive it.
 
-Spec: `~/src/altery/intelligence-hub/docs/superpowers/specs/2026-08-13-gdoc-ai-agent-design.md`
+Spec: `~/src/personal/gdoc/docs/superpowers/specs/2026-08-13-gdoc-ai-agent-design.md`
 
 ## Setup
 
 ```bash
-HUB="$HOME/src/altery/intelligence-hub"
-GDOC="$HOME/.config/gdoc-agent/venv/bin/python -m tools.gdoc.cli"
+GDOC="$HOME/.config/gdoc-agent/venv/bin/gdoc"
+GDOC_REPO="$HOME/src/personal/gdoc"
+VAULT="$PWD"
 ```
 
-Every CLI call runs inside `(cd "$HUB" && ...)`. The subshell leaves Nail's own
-working directory unchanged. That directory is the corpus you search: the cwd he
-chose decides which notes ground the answers.
+`$GDOC` is an installed command, so it runs from any directory. Nail's own
+working directory stays where he put it.
+
+Two roots, and they are not the same thing:
+
+- `$GDOC_REPO` is where mirrors and `pending.md` are written.
+- `$VAULT` is the repo Nail is working in. It is the corpus you search to ground
+  answers, and the tree scanned for markdown paired to a document.
 
 ## If Nail passes `--terminal-only`
 
@@ -35,7 +41,7 @@ the document. Say at the end that nothing was posted.
 ## Step 1: Read the comments
 
 ```bash
-(cd "$HUB" && $GDOC read <url>)
+$GDOC read <url>
 ```
 
 Returns `mine`, `others` and `skipped`. Threads already answered by the service
@@ -85,10 +91,10 @@ If a comment is genuinely ambiguous, ask Nail in the terminal. Do not guess.
 
 ## Step 4: Ground the answer
 
-Search Nail's current repo. Cite plain file paths. The corpus mixes Russian and
-English, so search in both languages.
+Search `$VAULT`. Cite plain file paths. The corpus mixes Russian and English, so
+search in both languages.
 
-If the repo has no source for the answer, say so in the reply. Never write a
+If the vault has no source for the answer, say so in the reply. Never write a
 plausible sentence to fill the gap.
 
 ## Step 5: Write the reply
@@ -109,13 +115,13 @@ Write it to a file and post it:
 cat > /tmp/reply.txt <<'EOF'
 <the reply>
 EOF
-(cd "$HUB" && $GDOC reply <doc_id> <comment_id> --body-file /tmp/reply.txt)
+$GDOC reply <doc_id> <comment_id> --body-file /tmp/reply.txt
 ```
 
 ## Step 6: Capture global items
 
 ```bash
-(cd "$HUB" && $GDOC capture <doc_id> <comment_id> --slug <slug> --repo-root "$HUB")
+$GDOC capture <doc_id> <comment_id> --slug <slug> --repo-root "$GDOC_REPO"
 ```
 
 Then post the refusal, using the item number the capture returned:
@@ -130,7 +136,7 @@ new version of the document.
 cat > /tmp/refusal.txt <<'EOF'
 <the refusal>
 EOF
-(cd "$HUB" && $GDOC reply <doc_id> <comment_id> --body-file /tmp/refusal.txt)
+$GDOC reply <doc_id> <comment_id> --body-file /tmp/refusal.txt
 ```
 
 ## Step 7: Mirror, only if paired
@@ -140,7 +146,7 @@ and asks for one. Never mirror a document he does not own: counsel drafts and
 partner documents stay in Drive.
 
 ```bash
-(cd "$HUB" && $GDOC export <url> --repo-root "$HUB")
+$GDOC export <url> --repo-root "$GDOC_REPO"
 ```
 
 If the JSON has `slug_collision_warning`, tell Nail before you go on. It means a different document already uses this slug.
@@ -155,7 +161,7 @@ posted   para 3   answered, cited domains/regulatory/cbc-emi.md
 posted   para 7   rephrased, ready to paste
 captured para 2   global: renumber sections
 
-1 global item in docs/gdoc/<slug>/pending.md
+1 global item in ~/src/personal/gdoc/docs/gdoc/<slug>/pending.md
 Next session: /gdoc-apply docs/gdoc/<slug>/pending.md
 ```
 

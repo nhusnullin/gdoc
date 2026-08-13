@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from googleapiclient.errors import HttpError
 
-from tools.gdoc.generate import generate, md_to_docx
+from gdoc.generate import generate, md_to_docx
 
 
 class FakeResponse:

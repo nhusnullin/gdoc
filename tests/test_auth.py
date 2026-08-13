@@ -1,6 +1,6 @@
 import pytest
 
-from tools.gdoc.auth import SCOPES, load_credentials
+from gdoc.auth import SCOPES, load_credentials
 
 
 def test_scope_is_drive_only():

@@ -11,12 +11,18 @@ new document version from it. The original document is never edited.
 ## Setup
 
 ```bash
-HUB="$HOME/src/altery/intelligence-hub"
-GDOC="$HOME/.config/gdoc-agent/venv/bin/python -m tools.gdoc.cli"
+GDOC="$HOME/.config/gdoc-agent/venv/bin/gdoc"
+GDOC_REPO="$HOME/src/personal/gdoc"
+VAULT="$PWD"
 ```
 
-Every CLI call and every `git` call in this skill runs inside `(cd "$HUB" && ...)`.
-The subshell leaves Nail's own working directory unchanged.
+`$GDOC` is an installed command, so it runs from any directory.
+
+Two roots, and they are not the same thing:
+
+- `$GDOC_REPO` holds `pending.md`, the mirror, and the generated `.docx` files.
+- `$VAULT` is the repo Nail is working in. The paired markdown lives there, and
+  so do the commits that record edits to it.
 
 ## If Nail passes `--terminal-only`
 
@@ -27,17 +33,17 @@ committed and that re-running without the flag will generate the document.
 
 ## Step 1: Load the context
 
-The argument is a path to `pending.md`. The path is relative to `$HUB`. Its header line is:
+The argument is a path to `pending.md`, relative to `$GDOC_REPO`. Its header line is:
 
 ```
 Document: https://docs.google.com/document/d/<doc_id>/edit
 ```
 
 Extract the `doc_id`. Read `mirror.md` in the same folder. Then find the
-paired markdown file:
+paired markdown file in the vault:
 
 ```bash
-(cd "$HUB" && $GDOC pair find --repo-root "$HUB" --doc-id <doc_id>)
+$GDOC pair find --repo-root "$VAULT" --doc-id <doc_id>
 ```
 
 If `pair find` returns nothing, Nail does not own this document. The output is
@@ -58,7 +64,7 @@ reviewable and a comment thread is not.
 ## Step 3: Commit the markdown
 
 ```bash
-(cd "$HUB" && git add <paired md file> && git commit -m "docs: apply global items from <doc name> review")
+(cd "$VAULT" && git add <paired md file> && git commit -m "docs: apply global items from <doc name> review")
 ```
 
 Commit before generating. Every generated document must correspond to a commit.
@@ -66,8 +72,8 @@ Commit before generating. Every generated document must correspond to a commit.
 ## Step 4: Generate the new version
 
 ```bash
-(cd "$HUB" && $GDOC generate --md <paired md file> --name "<doc name> v<n>" \
-  --out "$HUB/docs/gdoc/<slug>/out/v<n>.docx")
+$GDOC generate --md <paired md file> --name "<doc name> v<n>" \
+  --out "$GDOC_REPO/docs/gdoc/<slug>/out/v<n>.docx"
 ```
 
 Two outcomes, both fine:
@@ -81,14 +87,14 @@ Two outcomes, both fine:
 If `doc_id` was null in Step 4, skip this step and go to Step 6. There is no version to record.
 
 ```bash
-(cd "$HUB" && $GDOC pair add-version --md <paired md file> \
-  --version-id <new doc_id> --created <YYYY-MM-DD>)
+$GDOC pair add-version --md <paired md file> \
+  --version-id <new doc_id> --created <YYYY-MM-DD>
 ```
 
 Then commit the updated frontmatter:
 
 ```bash
-(cd "$HUB" && git add <paired md file> && git commit -m "docs: record <doc name> v<n> in gdoc_versions")
+(cd "$VAULT" && git add <paired md file> && git commit -m "docs: record <doc name> v<n> in gdoc_versions")
 ```
 
 Never record a version for a document that failed to upload.
@@ -99,7 +105,7 @@ Delete the applied items from `pending.md`. If all items are done, delete the
 file. Commit either way, so the history shows what was asked.
 
 ```bash
-(cd "$HUB" && git add docs/gdoc/<slug>/pending.md && git commit -m "docs: clear applied items from <doc name> pending.md")
+(cd "$GDOC_REPO" && git add docs/gdoc/<slug>/pending.md && git commit -m "docs: clear applied items from <doc name> pending.md")
 ```
 
 ## Never

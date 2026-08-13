@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gdoc"
+version = "0.1.0"
+description = "Review Google Doc comments from the terminal and mirror docs to markdown."
+requires-python = ">=3.11"
+dependencies = [
+    "google-auth",
+    "google-api-python-client",
+    "PyYAML",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+gdoc = "gdoc.cli:main"
+
+[tool.setuptools]
+packages = ["gdoc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: calls the live Drive API, skipped without credentials",
+]

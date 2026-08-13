@@ -1,4 +1,4 @@
-from tools.gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
+from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
 
 PAIRED = """\
 ---

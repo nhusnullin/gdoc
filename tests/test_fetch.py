@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from tools.gdoc.fetch import fetch_threads
+from gdoc.fetch import fetch_threads
 
 
 def _page(comments, next_token=None):

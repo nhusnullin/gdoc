@@ -1,4 +1,4 @@
-from tools.gdoc.model import parse_thread
+from gdoc.model import parse_thread
 
 ANCHORED = {
     "id": "AAACFjp837M",

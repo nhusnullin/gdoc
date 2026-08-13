@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tools.gdoc.cli import main
+from gdoc.cli import main
 
 
 # ---------------------------------------------------------------------------
@@ -28,8 +28,8 @@ def test_read_prints_partitioned_threads_as_json(capsys):
     drive = MagicMock()
     drive.comments().list.return_value.execute.side_effect = [{"comments": threads}]
     drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.load_config"
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.load_config"
     ) as config:
         config.return_value.display_name = "Nail Khusnullin"
         exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
@@ -62,7 +62,7 @@ def test_reply_reads_the_body_from_a_file(capsys, tmp_path):
     body.write_text("Plain text answer.")
     drive = MagicMock()
     drive.replies().create.return_value.execute.return_value = {"id": "r1"}
-    with patch("tools.gdoc.cli.drive_service", return_value=drive):
+    with patch("gdoc.cli.drive_service", return_value=drive):
         exit_code = main(["reply", _REAL_DOC_ID, "t1", "--body-file", str(body)])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
@@ -73,7 +73,7 @@ def test_reply_rejects_markdown_and_exits_nonzero(capsys, tmp_path):
     body = tmp_path / "body.txt"
     body.write_text("Has **markdown**.")
     drive = MagicMock()
-    with patch("tools.gdoc.cli.drive_service", return_value=drive):
+    with patch("gdoc.cli.drive_service", return_value=drive):
         exit_code = main(["reply", _REAL_DOC_ID, "t1", "--body-file", str(body)])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
@@ -85,8 +85,8 @@ def test_reply_accepts_a_full_url_and_extracts_the_id(capsys, tmp_path):
     """Passing a URL to reply must route to the same doc id as passing the bare id."""
     body = tmp_path / "body.txt"
     body.write_text("Plain text answer.")
-    with patch("tools.gdoc.cli.drive_service"), patch(
-        "tools.gdoc.cli.post_reply", return_value="r2"
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.post_reply", return_value="r2"
     ) as mock_post:
         exit_code = main(["reply", _REAL_DOC_URL, "t1", "--body-file", str(body)])
     payload = json.loads(capsys.readouterr().out)
@@ -114,9 +114,9 @@ def test_unknown_subcommand_exits_nonzero():
 def test_export_writes_mirror_and_returns_metadata(capsys, tmp_path):
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("tools.gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md") as mock_write:
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.export_markdown", return_value="# Markdown content"
+    ), patch("gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md") as mock_write:
         exit_code = main(
             ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
         )
@@ -128,13 +128,13 @@ def test_export_writes_mirror_and_returns_metadata(capsys, tmp_path):
 
 
 def test_export_reports_mirror_conflict_as_json_error(capsys, tmp_path):
-    from tools.gdoc.mirror import MirrorConflict
+    from gdoc.mirror import MirrorConflict
 
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.export_markdown", return_value="# Markdown"
-    ), patch("tools.gdoc.cli.write_mirror", side_effect=MirrorConflict("dirty file")):
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.export_markdown", return_value="# Markdown"
+    ), patch("gdoc.cli.write_mirror", side_effect=MirrorConflict("dirty file")):
         exit_code = main(
             ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
         )
@@ -181,7 +181,7 @@ def test_pair_set_creates_pairing_in_file(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["doc_id"] == "docXYZ"
-    from tools.gdoc.pairing import read_pairing
+    from gdoc.pairing import read_pairing
 
     written = read_pairing(md)
     assert written is not None
@@ -198,7 +198,7 @@ def test_pair_set_records_synced_date_when_provided(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["synced"] == "2026-08-13"
-    from tools.gdoc.pairing import read_pairing
+    from gdoc.pairing import read_pairing
 
     written = read_pairing(md)
     assert written.synced == "2026-08-13"
@@ -215,7 +215,7 @@ def test_pair_set_preserves_versions_when_doc_id_matches(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["versions_cleared"] == 0
-    from tools.gdoc.pairing import read_pairing
+    from gdoc.pairing import read_pairing
 
     written = read_pairing(md)
     assert len(written.versions) == 1
@@ -231,7 +231,7 @@ def test_pair_set_clears_versions_when_doc_id_differs(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["versions_cleared"] == 2
-    from tools.gdoc.pairing import read_pairing
+    from gdoc.pairing import read_pairing
 
     written = read_pairing(md)
     assert written.versions == ()
@@ -260,7 +260,7 @@ def test_pair_add_version_appends_a_version(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["versions_count"] == 1
-    from tools.gdoc.pairing import read_pairing
+    from gdoc.pairing import read_pairing
 
     written = read_pairing(md)
     assert len(written.versions) == 1
@@ -320,7 +320,7 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 def test_export_warns_when_slug_maps_to_a_different_document(capsys, tmp_path):
     # Set up an existing mirror file paired to a different doc
-    from tools.gdoc.mirror import MIRROR_DIR
+    from gdoc.mirror import MIRROR_DIR
 
     mirror_file = tmp_path / MIRROR_DIR / "my-policy" / "mirror.md"
     mirror_file.parent.mkdir(parents=True)
@@ -329,9 +329,9 @@ def test_export_warns_when_slug_maps_to_a_different_document(capsys, tmp_path):
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
     # write_mirror gets a real repo_root but we stub it so no file is overwritten
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.export_markdown", return_value="# New content"
-    ), patch("tools.gdoc.cli.write_mirror", return_value=mirror_file):
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.export_markdown", return_value="# New content"
+    ), patch("gdoc.cli.write_mirror", return_value=mirror_file):
         exit_code = main(
             [
                 "export",
@@ -360,9 +360,9 @@ def test_main_handles_http_error_as_json_error(capsys):
 
     drive = MagicMock()
     drive.files().get.return_value.execute.side_effect = error
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.load_config"
-    ) as config, patch("tools.gdoc.cli.fetch_threads", return_value=()):
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.load_config"
+    ) as config, patch("gdoc.cli.fetch_threads", return_value=()):
         config.return_value.display_name = "Nail Khusnullin"
         exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     payload = json.loads(capsys.readouterr().out)
@@ -377,7 +377,7 @@ def test_main_handles_http_error_as_json_error(capsys):
 
 
 def test_capture_appends_a_global_item(capsys, tmp_path):
-    from tools.gdoc.model import Thread
+    from gdoc.model import Thread
 
     thread = Thread(
         id="c1",
@@ -390,8 +390,8 @@ def test_capture_appends_a_global_item(capsys, tmp_path):
         replies=(),
     )
     drive = MagicMock()
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.fetch_threads", return_value=(thread,)
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.fetch_threads", return_value=(thread,)
     ):
         exit_code = main(
             [
@@ -430,8 +430,8 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
     drive = MagicMock()
     drive.comments().list.return_value.execute.side_effect = [{"comments": []}]
     drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.load_config"
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.load_config"
     ) as config:
         config.return_value.display_name = "Nail Khusnullin"
         main(["read", "https://docs.google.com/document/d/1AbC/edit"])
@@ -442,9 +442,9 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
 def test_export_asks_for_metadata_with_shared_drive_support(capsys, tmp_path):
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("tools.gdoc.cli.drive_service", return_value=drive), patch(
-        "tools.gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("tools.gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md"):
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.export_markdown", return_value="# Markdown content"
+    ), patch("gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md"):
         main(
             ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
         )

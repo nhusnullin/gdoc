@@ -13,7 +13,7 @@ from pathlib import Path
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
-from tools.gdoc.export import DOCX_MIME, PANDOC
+from gdoc.export import DOCX_MIME, PANDOC
 
 GOOGLE_DOC_MIME = "application/vnd.google-apps.document"
 

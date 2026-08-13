@@ -1,6 +1,6 @@
 """Read every comment thread on a document."""
 
-from tools.gdoc.model import Thread, parse_thread
+from gdoc.model import Thread, parse_thread
 
 FIELDS = (
     "nextPageToken,"
