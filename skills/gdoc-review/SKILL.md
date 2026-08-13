@@ -143,6 +143,8 @@ partner documents stay in Drive.
 (cd "$HUB" && $GDOC export <url> --repo-root "$HUB")
 ```
 
+If the JSON has `slug_collision_warning`, tell Nail before you go on. It means a different document already uses this slug.
+
 If it reports a mirror conflict, the markdown has uncommitted edits. Tell Nail
 and let him decide. Do not pass `--force` on your own.
 

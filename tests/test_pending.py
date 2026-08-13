@@ -64,3 +64,11 @@ def test_appending_the_same_comment_twice_is_refused(tmp_path):
     append_item(tmp_path, "policy", thread(id="t1"), doc_id="1AbC", today=TODAY)
     with pytest.raises(ValueError, match="already captured"):
         append_item(tmp_path, "policy", thread(id="t1"), doc_id="1AbC", today=TODAY)
+
+
+def test_multiline_comment_every_line_gets_blockquote_prefix(tmp_path):
+    multiline_thread = thread(content="line one\nline two")
+    append_item(tmp_path, "policy", multiline_thread, doc_id="1AbC", today=TODAY)
+    text = pending_path(tmp_path, "policy").read_text()
+    assert "> line one" in text
+    assert "> line two" in text

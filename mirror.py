@@ -1,7 +1,9 @@
 """Write the markdown mirror of a document, without losing local edits."""
 
+import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 MIRROR_DIR = Path("docs") / "gdoc"
@@ -61,5 +63,17 @@ def write_mirror(repo_root: Path, slug: str, markdown: str, force: bool = False)
             f"{path} has uncommitted changes. Commit or discard them, "
             "or pass force=True to overwrite."
         )
-    path.write_text(markdown)
+    fd, tmp_str = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    tmp = Path(tmp_str)
+    try:
+        os.write(fd, markdown.encode())
+        os.close(fd)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        tmp.unlink(missing_ok=True)
+        raise
     return path

@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import pytest
@@ -85,3 +86,23 @@ def test_force_rescues_when_git_cannot_be_consulted(tmp_path):
     path.write_text("# Existing\n")
     result = write_mirror(tmp_path, "policy", "# From Drive\n", force=True)
     assert result.read_text() == "# From Drive\n"
+
+
+def test_write_mirror_is_atomic(repo, monkeypatch):
+    # Create a committed mirror so is_dirty returns False on the next call.
+    write_mirror(repo, "policy", "original\n")
+    git(repo, "add", ".")
+    git(repo, "commit", "-m", "mirror")
+
+    def boom(fd, data):
+        raise OSError("simulated write failure")
+
+    monkeypatch.setattr(os, "write", boom)
+
+    with pytest.raises(OSError, match="simulated"):
+        write_mirror(repo, "policy", "new content\n")
+
+    # Original content survives intact.
+    assert mirror_path(repo, "policy").read_text() == "original\n"
+    # No leftover temp file in the directory.
+    assert list(mirror_path(repo, "policy").parent.glob("*.tmp")) == []

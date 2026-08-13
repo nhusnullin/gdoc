@@ -31,7 +31,7 @@ _ITEM = """
 
 Nail asked:
 
-> {request}
+{request}
 """
 
 
@@ -57,12 +57,14 @@ def append_item(repo_root: Path, slug: str, thread: Thread, doc_id: str, today: 
 
     number = next_item_number(path)
     anchor = thread.quoted.strip() if thread.quoted else "whole document"
+    raw_lines = thread.content.strip().splitlines()
+    quoted_request = "\n".join(f"> {line}" if line else ">" for line in raw_lines)
     item = _ITEM.format(
         number=number,
         today=today,
         comment_id=thread.id,
         anchor=anchor,
-        request=thread.content.strip(),
+        request=quoted_request,
     )
 
     # Open in append mode so an interrupted write cannot destroy existing items.
