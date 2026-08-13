@@ -53,13 +53,17 @@ def test_bad_url_exits_nonzero_with_json_error(capsys):
 # ---------------------------------------------------------------------------
 
 
+_REAL_DOC_ID = "1tyVhOTw9-bJ99IJTBZoTfWAT6fm3rjGIzfpHQX91hkw"
+_REAL_DOC_URL = f"https://docs.google.com/document/d/{_REAL_DOC_ID}/edit"
+
+
 def test_reply_reads_the_body_from_a_file(capsys, tmp_path):
     body = tmp_path / "body.txt"
     body.write_text("Plain text answer.")
     drive = MagicMock()
     drive.replies().create.return_value.execute.return_value = {"id": "r1"}
     with patch("tools.gdoc.cli.drive_service", return_value=drive):
-        exit_code = main(["reply", "1AbC", "t1", "--body-file", str(body)])
+        exit_code = main(["reply", _REAL_DOC_ID, "t1", "--body-file", str(body)])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["reply_id"] == "r1"
@@ -70,11 +74,26 @@ def test_reply_rejects_markdown_and_exits_nonzero(capsys, tmp_path):
     body.write_text("Has **markdown**.")
     drive = MagicMock()
     with patch("tools.gdoc.cli.drive_service", return_value=drive):
-        exit_code = main(["reply", "1AbC", "t1", "--body-file", str(body)])
+        exit_code = main(["reply", _REAL_DOC_ID, "t1", "--body-file", str(body)])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
     assert "markdown" in payload["error"]
     drive.replies().create.assert_not_called()
+
+
+def test_reply_accepts_a_full_url_and_extracts_the_id(capsys, tmp_path):
+    """Passing a URL to reply must route to the same doc id as passing the bare id."""
+    body = tmp_path / "body.txt"
+    body.write_text("Plain text answer.")
+    with patch("tools.gdoc.cli.drive_service"), patch(
+        "tools.gdoc.cli.post_reply", return_value="r2"
+    ) as mock_post:
+        exit_code = main(["reply", _REAL_DOC_URL, "t1", "--body-file", str(body)])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    # The extracted id, not the full URL, must reach post_reply.
+    _, positional, _ = mock_post.mock_calls[0]
+    assert positional[1] == _REAL_DOC_ID
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +202,39 @@ def test_pair_set_records_synced_date_when_provided(capsys, tmp_path):
 
     written = read_pairing(md)
     assert written.synced == "2026-08-13"
+
+
+def test_pair_set_preserves_versions_when_doc_id_matches(capsys, tmp_path):
+    md = tmp_path / "doc.md"
+    md.write_text(
+        "---\ngdoc: docABC\ngdoc_versions:\n  - id: docV1\n    created: '2026-08-01'\n---\n\nBody.\n"
+    )
+    exit_code = main(
+        ["pair", "set", "--md", str(md), "--doc-id", "docABC", "--synced", "2026-08-13"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["versions_cleared"] == 0
+    from tools.gdoc.pairing import read_pairing
+
+    written = read_pairing(md)
+    assert len(written.versions) == 1
+    assert written.versions[0]["id"] == "docV1"
+
+
+def test_pair_set_clears_versions_when_doc_id_differs(capsys, tmp_path):
+    md = tmp_path / "doc.md"
+    md.write_text(
+        "---\ngdoc: docABC\ngdoc_versions:\n  - id: docV1\n    created: '2026-08-01'\n  - id: docV2\n    created: '2026-08-10'\n---\n\nBody.\n"
+    )
+    exit_code = main(["pair", "set", "--md", str(md), "--doc-id", "docNEW"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["versions_cleared"] == 2
+    from tools.gdoc.pairing import read_pairing
+
+    written = read_pairing(md)
+    assert written.versions == ()
 
 
 # ---------------------------------------------------------------------------

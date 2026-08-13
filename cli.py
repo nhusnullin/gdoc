@@ -74,9 +74,9 @@ def cmd_read(args) -> int:
 
 
 def cmd_reply(args) -> int:
-    # args.doc is the raw doc ID returned by a prior `read` call, not a URL.
+    doc_id = extract_doc_id(args.doc)
     body = Path(args.body_file).read_text()
-    reply_id = post_reply(drive_service(), args.doc, args.comment_id, body)
+    reply_id = post_reply(drive_service(), doc_id, args.comment_id, body)
     return _emit({"reply_id": reply_id, "comment_id": args.comment_id})
 
 
@@ -172,9 +172,26 @@ def cmd_pair_show(args) -> int:
 
 def cmd_pair_set(args) -> int:
     path = Path(args.md)
-    pairing = Pairing(doc_id=args.doc_id, synced=args.synced)
+    existing = read_pairing(path)
+    if existing is not None and existing.doc_id == args.doc_id:
+        # Same document: version history is still valid, preserve it.
+        versions = existing.versions
+        versions_cleared = 0
+    else:
+        # Different document (or no prior pairing): old versions describe the
+        # wrong document and must not be carried forward.
+        versions = ()
+        versions_cleared = len(existing.versions) if existing is not None else 0
+    pairing = Pairing(doc_id=args.doc_id, synced=args.synced, versions=versions)
     write_pairing(path, pairing)
-    return _emit({"md": str(path), "doc_id": args.doc_id, "synced": args.synced})
+    return _emit(
+        {
+            "md": str(path),
+            "doc_id": args.doc_id,
+            "synced": args.synced,
+            "versions_cleared": versions_cleared,
+        }
+    )
 
 
 def cmd_pair_add_version(args) -> int:
@@ -279,7 +296,7 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv if argv is not None else sys.argv[1:])
     try:
         return args.func(args)
-    except (ValueError, FileNotFoundError, RuntimeError) as error:
+    except (ValueError, OSError, RuntimeError) as error:
         return _fail(str(error))
     except HttpError as error:
         return _fail(f"Drive API {error.resp.status}: {error.reason}")
