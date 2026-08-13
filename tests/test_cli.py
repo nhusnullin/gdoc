@@ -145,7 +145,7 @@ def test_export_reports_mirror_conflict_as_json_error(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# pair subcommand — show mode
+# pair subcommand, show mode
 # ---------------------------------------------------------------------------
 
 
@@ -170,7 +170,7 @@ def test_pair_show_returns_not_paired_for_plain_file(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# pair subcommand — set mode
+# pair subcommand, set mode
 # ---------------------------------------------------------------------------
 
 
@@ -238,7 +238,7 @@ def test_pair_set_clears_versions_when_doc_id_differs(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# pair subcommand — add-version mode
+# pair subcommand, add-version mode
 # ---------------------------------------------------------------------------
 
 
@@ -289,7 +289,7 @@ def test_pair_add_version_fails_when_file_is_not_paired(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# pair subcommand — find mode
+# pair subcommand, find mode
 # ---------------------------------------------------------------------------
 
 
@@ -314,7 +314,7 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# export — slug collision detection
+# export, slug collision detection
 # ---------------------------------------------------------------------------
 
 
