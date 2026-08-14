@@ -145,14 +145,33 @@ def escape(text: str) -> str:
     )
 
 
+# Ampersand last, or an escape gets un-escaped twice: "&amp;lt;" would come back
+# as "<" instead of "&lt;".
+_ENTITIES = (("&lt;", "<"), ("&gt;", ">"), ("&quot;", '"'), ("&apos;", "'"),
+             ("&amp;", "&"))
+
+
+def unescape(text: str) -> str:
+    """Undo XML escaping, so a heading is held as the characters a reader sees."""
+    for entity, character in _ENTITIES:
+        text = text.replace(entity, character)
+    return text
+
+
 def headings(document_xml: str) -> tuple:
-    """Every heading in document order, as (level, text)."""
+    """Every heading in document order, as (level, text).
+
+    The text is unescaped here, because a `<w:t>` body is already escaped and the
+    write site escapes again. Escaping twice puts "&amp;" on the contents page
+    under a heading reading "&". It also breaks the page number: this text is the
+    key `pagination.resolve` looks up, and the PDF carries a literal ampersand.
+    """
     found = []
     for paragraph in _PARAGRAPH.findall(document_xml):
         match = _HEADING.search(paragraph)
         if not match:
             continue
-        text = "".join(_TEXT.findall(paragraph)).strip()
+        text = unescape("".join(_TEXT.findall(paragraph))).strip()
         if text:
             found.append((int(match.group(1)), text))
     return tuple(found)

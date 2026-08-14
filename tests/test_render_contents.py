@@ -6,6 +6,7 @@ the point of the module under test.
 
 import re
 import zipfile
+from xml.sax.saxutils import unescape
 
 import pytest
 
@@ -274,11 +275,40 @@ def test_a_document_with_no_headings_is_refused(built, tmp_path):
         contents.write(stripped, tmp_path / "out.docx")
 
 
+def _document_with(source, dst, old, new):
+    """A copy of source whose document.xml has `old` replaced by `new`."""
+    xml = document_xml(source).replace(old, new)
+    with zipfile.ZipFile(source) as zin, zipfile.ZipFile(dst, "w") as zout:
+        for item in zin.infolist():
+            data = xml.encode("utf8") if item.filename == "word/document.xml" else zin.read(item.filename)
+            zout.writestr(item, data)
+    return dst
+
+
 def test_xml_special_characters_in_a_heading_survive(built, tmp_path):
+    """A heading's own text is already escaped, so escaping it again is visible.
+
+    Two effects, both of which the reader sees. The entry reads
+    `Risk &amp; "Controls"` while the heading above it reads `Risk & "Controls"`.
+    And the doubly escaped string is the key used to look up the page number,
+    which the PDF carries with a literal ampersand, so the entry loses its page
+    number too.
+    """
+    source = _document_with(
+        built, tmp_path / "special.docx",
+        '<w:t xml:space="preserve">Purpose</w:t>',
+        '<w:t xml:space="preserve">Risk &amp; &quot;Controls&quot;</w:t>',
+    )
+    heading = next(text for _level, text in contents.headings(document_xml(source))
+                   if "Risk" in text)
+    assert heading == '1-Risk & "Controls"'
+
     out = tmp_path / "written.docx"
-    contents.write(built, out, pages={})
-    # the bundled example has an ampersand-free set, so assert the escaper directly
-    assert contents.escape('Risk & "Control" <x>') == "Risk &amp; &quot;Control&quot; &lt;x&gt;"
+    contents.write(source, out, pages={heading: 5})
+    entry = next(p for p in entry_paragraphs(out) if "Risk" in p)
+    written = "".join(re.findall(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>", entry))
+    assert unescape(written, {"&quot;": '"', "&apos;": "'"}) == f"{heading}5"
+    assert "&amp;amp;" not in entry, "the heading text was escaped twice"
 
 
 def test_rewriting_in_place_leaves_one_file(built, tmp_path):
