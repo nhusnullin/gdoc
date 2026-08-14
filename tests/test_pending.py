@@ -20,7 +20,7 @@ def thread(id="t1", content="ai! renumber the sections", quoted="Section 4"):
 
 
 def test_pending_path_sits_beside_the_baseline(tmp_path):
-    assert pending_path(tmp_path, "policy") == tmp_path / "docs" / "gdoc" / "policy" / "pending.md"
+    assert pending_path(tmp_path, "policy") == tmp_path / ".gdoc" / "policy" / "pending.md"
 
 
 def test_first_item_is_number_one(tmp_path):

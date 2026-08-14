@@ -8,7 +8,7 @@ in-thread reply is the only other record and Nail may resolve it.
 import re
 from pathlib import Path
 
-from gdoc.baseline import MIRROR_DIR
+from gdoc.baseline import GDOC_DIR
 from gdoc.model import Thread
 
 _ITEM_HEADING = re.compile(r"^## Item (\d+)", re.MULTILINE)
@@ -36,7 +36,7 @@ Nail asked:
 
 
 def pending_path(repo_root: Path, slug: str) -> Path:
-    return repo_root / MIRROR_DIR / slug / "pending.md"
+    return repo_root / GDOC_DIR / slug / "pending.md"
 
 
 def next_item_number(path: Path) -> int:

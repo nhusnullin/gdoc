@@ -33,8 +33,9 @@ def test_slugify_falls_back_when_nothing_survives():
     assert slugify("!!!") == "untitled"
 
 
-def test_baseline_path_is_under_docs_gdoc(repo):
-    assert baseline_path(repo, "policy") == repo / "docs" / "gdoc" / "policy" / "baseline.md"
+def test_files_go_in_a_dot_gdoc_directory(tmp_path):
+    path = baseline_path(tmp_path, "my-doc")
+    assert path == tmp_path / ".gdoc" / "my-doc" / "baseline.md"
 
 
 def test_the_written_file_is_named_baseline(tmp_path):

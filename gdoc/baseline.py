@@ -14,7 +14,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-MIRROR_DIR = Path("docs") / "gdoc"
+# A dot directory because the root can be any directory: docs/ cannot be assumed
+# free or appropriate, and a dot-namespace signals tool-owned. It also keeps
+# these files out of Obsidian's search and graph.
+GDOC_DIR = Path(".gdoc")
 
 # mkstemp creates 0600.  Without an explicit chmod the rename would silently
 # tighten permissions on a baseline that was readable before.
@@ -33,7 +36,7 @@ def slugify(name: str) -> str:
 
 
 def baseline_path(repo_root: Path, slug: str) -> Path:
-    return repo_root / MIRROR_DIR / slug / "baseline.md"
+    return repo_root / GDOC_DIR / slug / "baseline.md"
 
 
 def is_dirty(path: Path) -> bool:

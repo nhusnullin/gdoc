@@ -293,7 +293,7 @@ def build_parser() -> argparse.ArgumentParser:
     find_cmd = pair_sub.add_parser(
         "find", help="find the markdown file paired to a document id"
     )
-    find_cmd.add_argument("--repo-root", required=True)
+    find_cmd.add_argument("--repo-root", default=".")
     find_cmd.add_argument("--doc-id", required=True)
     find_cmd.set_defaults(pair_func=cmd_pair_find)
 

@@ -293,6 +293,14 @@ def test_pair_add_version_fails_when_file_is_not_paired(capsys, tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def test_pair_find_defaults_to_the_working_directory():
+    """The default is the whole point: no command may name a specific repository."""
+    from gdoc.cli import build_parser
+
+    args = build_parser().parse_args(["pair", "find", "--doc-id", "1AbC"])
+    assert args.repo_root == "."
+
+
 def test_pair_find_returns_path_when_matched(capsys, tmp_path):
     subdir = tmp_path / "subdir"
     subdir.mkdir()
@@ -320,9 +328,9 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 def test_export_warns_when_slug_maps_to_a_different_document(capsys, tmp_path):
     # Set up an existing baseline file paired to a different doc
-    from gdoc.baseline import MIRROR_DIR
+    from gdoc.baseline import GDOC_DIR
 
-    baseline_file = tmp_path / MIRROR_DIR / "my-policy" / "baseline.md"
+    baseline_file = tmp_path / GDOC_DIR / "my-policy" / "baseline.md"
     baseline_file.parent.mkdir(parents=True)
     baseline_file.write_text("---\ngdoc: otherDocId\n---\n\nExisting content.\n")
 
@@ -408,7 +416,7 @@ def test_capture_appends_a_global_item(capsys, tmp_path):
     assert exit_code == 0
     assert payload["item"] == 1
     assert payload["comment_id"] == "c1"
-    pending = tmp_path / "docs" / "gdoc" / "policy" / "pending.md"
+    pending = tmp_path / ".gdoc" / "policy" / "pending.md"
     assert pending.exists()
     assert "c1" in pending.read_text()
 
