@@ -114,6 +114,7 @@ _PARAGRAPH = re.compile(r"<w:p\b.*?</w:p>", re.S)
 _TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>")
 _HEADING = re.compile(r'w:pStyle w:val="Heading(\d)"')
 _BOOKMARK_ID = re.compile(r'<w:bookmarkStart w:id="(\d+)"')
+_BOOKMARK_START = re.compile(r'<w:bookmarkStart w:id="(\d+)" w:name="([^"]+)"/>')
 
 
 class ContentsError(RuntimeError):
@@ -216,8 +217,35 @@ def _bookmarked(paragraph_xml: str, name: str, bookmark_id: int) -> str:
     return body[: body.rindex("</w:p>")] + end + "</w:p>"
 
 
+def _strip_our_bookmarks(document_xml: str) -> str:
+    """Remove every bookmark this module wrote on an earlier pass.
+
+    A rewrite must replace our own bookmarks rather than add to them.
+    Bookmark names are unique document-wide, and a second write without this
+    would leave two <w:bookmarkStart> tags carrying the same name, which is
+    invalid OOXML. Matched by the id on the start tag, so the corresponding
+    end tag goes with it. Anything not carrying our prefix, including the
+    template's own bookmarks, is left alone.
+    """
+    ours = {
+        match.group(1)
+        for match in _BOOKMARK_START.finditer(document_xml)
+        if match.group(2).startswith(BOOKMARK_PREFIX)
+    }
+    if not ours:
+        return document_xml
+    document_xml = _BOOKMARK_START.sub(
+        lambda m: "" if m.group(2).startswith(BOOKMARK_PREFIX) else m.group(0),
+        document_xml,
+    )
+    for bookmark_id in ours:
+        document_xml = document_xml.replace(f'<w:bookmarkEnd w:id="{bookmark_id}"/>', "")
+    return document_xml
+
+
 def _with_bookmarks(document_xml: str, count: int) -> tuple:
     """Bookmark every heading. Returns the document and the anchor names."""
+    document_xml = _strip_our_bookmarks(document_xml)
     existing = [int(i) for i in _BOOKMARK_ID.findall(document_xml)]
     next_id = max(existing) + 1 if existing else 1
 

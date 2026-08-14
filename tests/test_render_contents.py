@@ -8,10 +8,8 @@ import re
 import zipfile
 
 import pytest
-from docx import Document
 
-from gdoc.render import body, build, contents, frontmatter, shell
-from gdoc.render.ooxml import Numbering
+from gdoc.render import build, contents
 from gdoc.render.profiles import DEFAULT_TEMPLATE, TEMPLATES_DIR, resolve
 
 EXAMPLE = TEMPLATES_DIR / "altery-group-policy-v1.0" / "example.md"
@@ -34,24 +32,19 @@ def built(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def raw(tmp_path_factory):
-    """A build with the master's contents field untouched.
+def stale(tmp_path_factory):
+    """A copy of the bundled master template, with its stale field intact.
 
-    build() now writes the contents list itself, so the document it produces
-    already carries real entries, not the master's stale ones. This fixture
-    stops one step short, mirroring what build() does before that final step,
-    so the tests that check contents.write's own behaviour still have a
-    document with a stale field to replace.
+    build() now writes the contents list itself, so a document it produces
+    already carries real entries, not the master's stale ones. The tests that
+    check contents.write's own behaviour on a stale field need the master
+    template directly instead: it carries real Heading1-3 paragraphs, the
+    stale cached field with the GHOSTS text, and no TOC1 style. Copied into
+    tmp_path so a test never writes into the installed package.
     """
-    out = tmp_path_factory.mktemp("raw") / "source.docx"
+    out = tmp_path_factory.mktemp("stale") / "template.docx"
     master = resolve(DEFAULT_TEMPLATE)
-    markdown_text = EXAMPLE.read_text(encoding="utf-8")
-    meta, body_markdown = frontmatter.parse(markdown_text)
-    shell.build_shell(master, out, meta)
-    doc = Document(out)
-    body.render(doc, body_markdown, Numbering(doc),
-                heading_numbering=meta["heading_numbering"], base_dir=EXAMPLE.parent)
-    doc.save(out)
+    out.write_bytes(master.read_bytes())
     return out
 
 
@@ -77,9 +70,9 @@ def test_headings_are_found_in_document_order(built):
     assert [level for level, _text in found][:4] == [1, 2, 3, 1]
 
 
-def test_the_source_build_still_carries_the_stale_field(raw):
+def test_the_source_build_still_carries_the_stale_field(stale):
     """Guards the premise. If this fails, the master changed and so must the fix."""
-    xml = document_xml(raw)
+    xml = document_xml(stale)
     assert "<w:instrText" in xml
     assert any(ghost in xml for ghost in GHOSTS)
 
@@ -139,9 +132,9 @@ def test_every_entry_links_to_its_heading(built, tmp_path):
         assert anchor in bookmarks, f"entry links to {anchor}, which no heading defines"
 
 
-def test_each_heading_gets_exactly_one_bookmark(raw, tmp_path):
+def test_each_heading_gets_exactly_one_bookmark(stale, tmp_path):
     out = tmp_path / "written.docx"
-    result = contents.write(raw, out)
+    result = contents.write(stale, out)
     xml = document_xml(out)
     starts = re.findall(rf'<w:bookmarkStart[^>]*w:name="({contents.BOOKMARK_PREFIX}\d+)"', xml)
     assert len(starts) == len(result.entries)
@@ -164,10 +157,10 @@ def test_no_stale_cached_entry_survives_inside_the_field(built, tmp_path):
         assert ghost not in inside
 
 
-def test_toc_styles_are_added_when_the_template_lacks_them(raw, tmp_path):
-    assert 'w:styleId="TOC1"' not in styles_xml(raw)
+def test_toc_styles_are_added_when_the_template_lacks_them(stale, tmp_path):
+    assert 'w:styleId="TOC1"' not in styles_xml(stale)
     out = tmp_path / "written.docx"
-    contents.write(raw, out)
+    contents.write(stale, out)
     after = styles_xml(out)
     for sid in ("Index", "TOC1", "TOC2", "TOC3"):
         assert f'w:styleId="{sid}"' in after
@@ -305,3 +298,53 @@ def test_rewriting_in_place_cleans_up_after_a_failure(tmp_path):
     with pytest.raises(zipfile.BadZipFile):
         contents.rewrite_in_place(junk)
     assert list(tmp_path.iterdir()) == [junk], "a temporary file was left behind"
+
+
+def test_writing_twice_leaves_one_bookmark_per_heading_with_unique_names(built, tmp_path):
+    """A rewrite must replace its own bookmarks, not add to them.
+
+    The two-pass publish flow this feature exists for necessarily rewrites a
+    document that already has a contents list: build writes blanks, the real
+    page numbers come later. Bookmark names are unique document-wide, so
+    writing twice must not leave two bookmarks carrying the same name.
+    """
+    once = tmp_path / "once.docx"
+    twice = tmp_path / "twice.docx"
+    result = contents.write(built, once)
+    contents.write(once, twice)
+    xml = document_xml(twice)
+    starts = re.findall(rf'<w:bookmarkStart[^>]*w:name="({contents.BOOKMARK_PREFIX}\d+)"', xml)
+    assert len(starts) == len(result.entries)
+    assert len(set(starts)) == len(starts), "duplicate bookmark names"
+
+
+def test_writing_twice_leaves_one_contents_entry_per_heading(built, tmp_path):
+    """The second write replaces the first write's entries, not adds to them."""
+    once = tmp_path / "once.docx"
+    twice = tmp_path / "twice.docx"
+    contents.write(built, once)
+    result = contents.write(once, twice)
+    assert len(result.entries) == len(entry_paragraphs(twice))
+
+
+def test_a_bookmark_not_ours_survives_a_write_untouched(built, tmp_path):
+    """Only our own bookmarks are ours to replace on a rewrite.
+
+    The template's own bookmarks, or anyone else's, must be left alone.
+    """
+    source = tmp_path / "with_foreign_bookmark.docx"
+    xml = document_xml(built)
+    foreign_start = '<w:bookmarkStart w:id="999" w:name="NotOurs"/>'
+    foreign_end = '<w:bookmarkEnd w:id="999"/>'
+    marker = xml.index("<w:body>") + len("<w:body>")
+    xml = xml[:marker] + foreign_start + foreign_end + xml[marker:]
+    with zipfile.ZipFile(built) as zin, zipfile.ZipFile(source, "w") as zout:
+        for item in zin.infolist():
+            data = xml.encode("utf8") if item.filename == "word/document.xml" else zin.read(item.filename)
+            zout.writestr(item, data)
+
+    out = tmp_path / "written.docx"
+    contents.write(source, out)
+    result_xml = document_xml(out)
+    assert foreign_start in result_xml
+    assert foreign_end in result_xml
