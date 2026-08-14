@@ -43,12 +43,16 @@ the working set, and apply writes to it as well as reading it.
 stops being about the kind of comment and becomes about the outcome: **review
 never makes a new document, apply always does.**
 
+Local and global stop existing. Both skills run one test instead, in section 7,
+and it decides the only thing that still needs deciding: is this comment an item
+or a question.
+
 ## 3. What `gdoc-apply` does, in order
 
 | Step | What |
 |---|---|
 | 1 | Load `pending.md` and run `gdoc read` on the document it names |
-| 2 | Merge the two by comment id, and append anything new to `pending.md` |
+| 2 | Merge the two by comment id, and append what section 7's test calls an item |
 | 3 | Fold direct edits to the document back into the source markdown |
 | 4 | Work the items, one at a time, diff and approve |
 | 5 | Commit, generate, record the version, clear the applied items |
@@ -74,7 +78,12 @@ author is a display name.
 |---|---|---|
 | In `pending.md` and in `addressed` | Captured, and someone has replied since | Work it, reading the whole thread, not the captured text alone |
 | In `pending.md` only | Captured during a review, nothing has happened since | Work it, as today |
-| In `addressed` only | Left after the last review, or never reviewed | Append to `pending.md` as a new item, then work it |
+| In `addressed` only | Left after the last review, or never reviewed | Apply the test in section 7. If it changes the text, append to `pending.md` and work it. If not, answer it in the thread and capture nothing |
+
+That last row is where the two skills have to agree. A comment that reaches apply
+without a review is not automatically an item. It gets the same one-sentence test
+review would have given it, at a later moment. Without that, a question someone
+asked in a thread that a reply re-opened becomes an item with nothing to edit.
 
 Nothing is appended silently. Apply prints the merged list, marks which items are
 new, and waits, the same gate `gdoc-review` step 2 has. A comment reaching apply
@@ -190,35 +199,53 @@ This is the smallest change in this document and the one most likely to be
 noticed, because it changes what a second `gdoc read` returns on documents that
 already exist.
 
-## 7. What `gdoc-review` becomes
+## 7. One test, in both skills
 
-Review still reads, still answers, still captures. What changes is the test it
-applies.
+### Local and global are retired
 
-Today it asks whether a change is local or global, and captures only the global
-ones. That was right when the document was edited by hand. It is wrong now,
-because a local answer with replacement text is a change to the document that the
+Today `gdoc-review` classifies every comment as local, meaning the change fits
+inside the quoted span, or global, meaning it does not. Local ones are answered in
+the thread. Global ones are captured.
+
+That was right when Nail edited the document by hand. It is wrong now, twice.
+
+A local answer carrying replacement text is a change to the document that the
 markdown never receives. Review posts the new sentence in the thread, Nail pastes
 it into the document, and it becomes a direct edit that section 5 has to catch
 later. The tool proposes work and then loses it.
 
-The test becomes one question: **does this comment change the document's text?**
+And once apply is also deciding what to do with a comment, the term has to be
+carried by both skills while only one acts on it. Two SKILL.md files have no way
+to share text, so anything both must know is duplicated by hand and drifts.
 
-| | Changes the text | Does not |
+### The test
+
+**Does this comment change the document's text?**
+
+| | Yes | No |
 |---|---|---|
-| Examples | Rephrase this. Add a missing clause. Renumber the annex. Apply a term change everywhere | Is this the right term? Why does this section say five days? Where did this number come from? |
-| Action | Capture it as an item. Answer in the thread too, if there is a useful answer to give | Answer in the thread |
+| Examples | Rephrase this. Add a missing clause. Renumber the annex. Apply a term change everywhere | Is this the right term? Why does this section say five days? Which PDR decided this? |
+| Action | It is an item. Capture it | It is a question. Answer it in the thread |
 
-The local and global distinction does not disappear, it stops deciding whether to
-capture. It still decides what the reply says. A local item gets the proposed text
-in the thread as well as an item, so the person who asked can see the answer
-immediately. A global one gets a note that it needs a version, because there is no
-useful text to show.
+One sentence, one table, and both skills run it. Review runs it when it reads the
+document. Apply runs it on anything live that is not already in `pending.md`. The
+same comment gets the same answer whichever one sees it first, which is what makes
+running them in either order safe.
 
-`forced_kind` keeps working. `ai?` means answer in the thread, `ai!` means it needs
-a version. Neither one now decides capture, because a comment can be both.
+Whether the reply also carries proposed text is a judgement, not a category. Show
+the text when there is useful text to show. A rephrasing has some. A renumbering
+does not.
 
-Review's report ends by naming the next step, as it does today.
+### What this replaces
+
+The local and global table in `skills/gdoc-review/SKILL.md` step 3 is deleted, not
+edited. The terms also appear in `2026-08-13-gdoc-ai-agent-design.md` and
+`2026-08-14-gdoc-storage-and-iteration-design.md`, and this section supersedes
+them there. Neither file is rewritten; a spec records what was decided when.
+
+`forced_kind` is unaffected. `ai?` still means answer in the thread and `ai!`
+still means it needs a new version. Neither decides capture, because a comment can
+be both an answer and an item.
 
 ## 8. What `pending.md` holds
 
