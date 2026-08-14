@@ -127,25 +127,51 @@ for the first time:
 diff <(gdoc export <url>) path/to/source.md
 ```
 
-## Identity: key by document, not by title
+## Identity: key by the source markdown file
 
 `slug = slugify(document title)`, so the directory name tracks a mutable
-attribute. Renaming a document in Drive, or bumping a version in its title,
-creates a fresh directory and orphans the existing queue, with no warning.
+attribute. Bumping a version in the title creates a fresh directory and orphans
+the existing queue, with no warning.
 
-Not an edge case. `/gdoc-apply` generates a new version, and if that changes the
-title the next review forks a new queue. It has already happened: `ver-0-1` and
-`ver-0-2` are two queues for one document lineage. The dedup guard in
-`pending.py` is per file, so a comment carried across versions is captured again
-as new.
+Not an edge case. It is the normal pattern: **every iteration raises a new
+version of the document.** It has already happened once, and `ver-0-1` and
+`ver-0-2` are the result.
 
-Fix: keep readable directory names from the title, but look up by document id
-first. `find_slug_for_doc(root, doc_id)` scans `.gdoc/*/` for a recorded id.
-Found means reuse that directory whatever the title now says. Not found means
-create one from the title.
+The document id is not the fix either. `generate` calls `files.create`, so each
+version is a **new** Google Doc with a **new** id. Verified on 2026-08-14:
 
-`_check_slug_collision` guards the opposite direction, two documents mapping to
-one slug. With directories keyed by id it becomes unnecessary.
+| Queue directory | Document id |
+|---|---|
+| `...-ver-0-1` | `1E8-xKqUlhjMTvIKyXu6PCDLWZ0jV-1wsd0EM7Dfx2qE` |
+| `...-ver-0-2` | `1zIyYZOGYU_ip3HluvkfHxfTUspDrU97a9qt5TpULqlo` |
+
+Keying by document id would have formalised the fork, not closed it.
+
+**The stable identity is the source markdown file.** It survives every
+iteration, Nail names it, and it already carries the lineage:
+
+```yaml
+gdoc: <current version id>
+gdoc_versions:
+  - id: <v0.1 id>
+    created: 2026-08-13
+  - id: <v0.2 id>
+    created: 2026-08-14
+```
+
+So:
+
+- The slug is the source file's stem, not the document title. One queue
+  directory per source markdown, stable forever.
+- Lookup is `pairing.find_by_doc_id(root, doc_id)`, which already exists. It
+  must be widened: today it matches `pairing.doc_id` only, so an older version
+  id resolves to nothing. It has to search `gdoc_versions[].id` too, and a
+  review of any past version then lands in the one right directory.
+- No `doc_id` file and no new index. The frontmatter is the record.
+
+`_check_slug_collision` guards two documents mapping to one slug. With one
+directory per source file, two source files can still collide on a stem, so the
+check stays, retargeted at the source path rather than the document id.
 
 ## Where generated documents go
 
@@ -195,19 +221,74 @@ The distinction driving the behaviour: Nail's direct edits are decisions already
 taken, so the default is apply. A colleague's suggestion is a claim, so the
 default is evaluate.
 
-## Open, and blocking Part B
+## Part B: suggestions are readable. Verified 2026-08-14
 
-Whether suggestions can be read at all. The tool uses only the Drive API
-(`files().export`). Whether that renders pending suggestions as accepted,
-rejected or inline is unverified.
+The spike ran against the live v0.2 document. Suggestions can be read with the
+credential exactly as it stands.
 
-The likely route is the Docs API `documents.get` with its `suggestionsViewMode`
-parameter. Two things need confirming before any of step 8 is designed: whether
-a Commenter-role service account can read suggestions, and whether that needs an
-API scope the credential does not hold.
+- **Role: Commenter is enough.** Nothing was refused. Editor is not needed, and
+  granting it would break the guarantee asserted in
+  `tests/test_access_integration.py`: `canEdit is False`, and a text insert
+  returns 403. That test is what makes "the agent cannot change your document" a
+  fact instead of a promise. Do not trade it away for access already held.
+- **Scope: the existing `https://www.googleapis.com/auth/drive` is enough.** No
+  new scope, no new consent.
+- **Route: the Docs API `documents.get` with `suggestionsViewMode`.** All three
+  modes returned 200.
 
-If suggestions cannot be read, that half of step 8 has no build and needs a
-different approach.
+What each mode gives:
+
+| Mode | Result |
+|---|---|
+| `SUGGESTIONS_INLINE` | every suggestion visible, as text runs tagged with a suggestion id |
+| `PREVIEW_SUGGESTIONS_ACCEPTED` | clean text with all suggestions applied, no suggestion keys |
+| `DEFAULT_FOR_CURRENT_ACCESS` | resolved to `SUGGESTIONS_INLINE` for this credential |
+
+### The shape suggestions arrive in
+
+A replacement is **two runs sharing one suggestion id**: a run carrying
+`suggestedInsertionIds` with the new text, and a run carrying
+`suggestedDeletionIds` with the old. Group by the id to recover the intent.
+Reading the runs separately produces an insert next to an unrelated delete.
+
+Observed on the live document, with ids as returned:
+
+```
+suggest.wi7tah7h15z6   INSERT 'as the receiving'   DELETE 'as receiving'
+suggest.ns7mq4coyg4f   DELETE 'two '
+suggest.rl1vlbba1glz   DELETE 'Which entity owns that control, and how the
+                              evidence passes between them, is ??? . It is the
+                              first thing to settle, ...'
+```
+
+A pure deletion carries only deletion runs. Formatting-only suggestions appear
+as `suggestedTextStyleChanges`, which are round-trip noise for our purpose and
+should be ignored.
+
+### Two routes, and which to take
+
+**Per-suggestion, from `SUGGESTIONS_INLINE`.** Group runs by suggestion id and
+evaluate each one against the four responses below. This is the route the
+workflow needs, because accepting or arguing is a per-suggestion decision.
+
+**Whole-document, from `PREVIEW_SUGGESTIONS_ACCEPTED`.** Export with every
+suggestion applied and diff against the baseline. Cheaper, and it merges direct
+edits and suggestions in one pass, but it accepts everything silently. Use it
+only as a cross-check that nothing was missed.
+
+### New open question: authorship
+
+No author information appeared anywhere in the response. Comments carry
+`author.displayName`, which is how the review rules tell Nail's comments from a
+colleague's. Suggestions carry only an opaque id such as `suggest.wi7tah7h15z6`.
+
+So "never act on a comment that is not Nail's" has no equivalent for
+suggestions. Until that is settled, every suggestion must be treated as coming
+from someone whose reasoning has to be evaluated, never as a decision already
+taken. That is the safer default anyway, and it matches the policy below.
+
+Whether Drive's revisions API can attribute a suggestion to a person is
+untested.
 
 ## Deliberately not doing
 

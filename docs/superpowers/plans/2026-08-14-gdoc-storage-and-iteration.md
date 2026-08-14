@@ -10,8 +10,9 @@ changed in the document.
 
 **Spec:** [`docs/superpowers/specs/2026-08-14-gdoc-storage-and-iteration-design.md`](../specs/2026-08-14-gdoc-storage-and-iteration-design.md)
 
-**Scope:** Part A only. Part B, reading suggestions, is blocked on a spike and is
-not planned here.
+**Scope:** Part A only. Part B, merging suggestions, is unblocked but not planned
+here. The spike ran on 2026-08-14 and settled how they are read; how they are
+merged is a separate plan.
 
 ## Global constraints
 
@@ -372,78 +373,115 @@ cancel the pandoc round-trip noise."
 
 ---
 
-### Task 6: Key directories by document id
+### Task 6: Key directories by the source markdown file
 
-`slug = slugify(document title)`, so the directory tracks a mutable attribute.
-A version bump in the title forks the queue silently. It has already happened:
-`ver-0-1` and `ver-0-2` are two queues for one document lineage.
+`slug = slugify(document title)`, so the directory tracks a mutable attribute
+and each new version forks the queue. That is not an edge case, it is the normal
+pattern: every iteration raises a new version.
+
+The document id is not the anchor either. `generate` calls `files.create`, so
+each version is a new Google Doc with a new id. Verified on 2026-08-14: the
+`ver-0-1` queue holds `1E8-xKq...` and `ver-0-2` holds `1zIyYZO...`, two
+different documents.
+
+The anchor is the source markdown file. It survives every iteration, and it
+already carries the lineage in `gdoc:` plus `gdoc_versions[]`.
 
 **Files:**
-- Modify: `gdoc/baseline.py`, or a new `gdoc/queue.py` if `baseline.py` grows
-  past its purpose
+- Modify: `gdoc/pairing.py`
 - Modify: `gdoc/cli.py`
-- Modify: `tests/test_baseline.py`, `tests/test_cli.py`
+- Modify: `tests/test_pairing.py`, `tests/test_cli.py`
 
 **Interfaces:**
-- Produces: `find_slug_for_doc(root: Path, doc_id: str) -> str | None`, and
-  `slug_for_doc(root, doc_id, title) -> str` which reuses a found slug or makes
-  one from the title.
-- The document id is recorded in a `doc_id` file inside the slug directory, so a
-  lookup is a directory scan and needs no index.
+- Modifies: `find_by_doc_id(root, doc_id)` also matches `gdoc_versions[].id`,
+  not only the current `gdoc:` value.
+- Produces: `slug_for_source(md_path: Path) -> str`, the file stem.
+- No `doc_id` file, no new index. The frontmatter is the record.
 
 - [ ] **Step 1: Write the failing tests**
 
+In `tests/test_pairing.py`, using the shape the live file already has:
+
 ```python
-def test_reuses_the_existing_directory_when_the_title_changed(tmp_path):
-    # a directory recorded against 1AbC under the old title
-    assert slug_for_doc(tmp_path, "1AbC", "My Doc ver 0.2") == "my-doc-ver-0-1"
+LINEAGE = """\
+---
+title: Screening proposal
+gdoc: 1CurrentVersion
+gdoc_versions:
+  - id: 1FirstVersion
+    created: 2026-08-13
+  - id: 1CurrentVersion
+    created: 2026-08-14
+---
+
+Body.
+"""
 
 
-def test_creates_a_slug_from_the_title_when_the_doc_is_new(tmp_path):
-    assert slug_for_doc(tmp_path, "1New", "My Doc ver 0.1") == "my-doc-ver-0-1"
+def test_finds_the_source_by_the_current_version_id(tmp_path):
+    (tmp_path / "proposal.md").write_text(LINEAGE)
+    assert find_by_doc_id(tmp_path, "1CurrentVersion").name == "proposal.md"
 
 
-def test_two_documents_with_the_same_title_do_not_share_a_directory(tmp_path):
-    first = slug_for_doc(tmp_path, "1AbC", "Policy")
-    second = slug_for_doc(tmp_path, "1XyZ", "Policy")
-    assert first != second
+def test_finds_the_source_by_a_previous_version_id(tmp_path):
+    """Reviewing v0.1 after v0.2 exists must still land on one source file."""
+    (tmp_path / "proposal.md").write_text(LINEAGE)
+    assert find_by_doc_id(tmp_path, "1FirstVersion").name == "proposal.md"
+
+
+def test_unknown_id_still_returns_none(tmp_path):
+    (tmp_path / "proposal.md").write_text(LINEAGE)
+    assert find_by_doc_id(tmp_path, "1Unrelated") is None
 ```
 
-The third test is what `_check_slug_collision` used to warn about. Now it must be
-impossible rather than warned about.
+The second test is the whole point of this task. It fails today.
 
 - [ ] **Step 2: Run and confirm failure**
 
+Expected: `test_finds_the_source_by_a_previous_version_id` fails, returning
+`None`. The other two already pass, which is the proof that only the widening is
+missing.
+
 - [ ] **Step 3: Implement**
 
-`find_slug_for_doc` globs `<root>/.gdoc/*/doc_id` and returns the directory name
-whose contents match. `slug_for_doc` falls back to `slugify(title)`, suffixing
-when that name is taken by a different document.
+In `find_by_doc_id`, match `pairing.doc_id` first, then any `id` in
+`pairing.versions`. Current version first, so the common case does no extra work.
 
-Wire it into `capture`, so `--slug` becomes optional and is derived when absent.
-Write the `doc_id` file when a directory is created.
+Add `slug_for_source(md_path)` returning `md_path.stem`. The stem is already
+date-prefixed and hand-chosen, so it needs no slugify pass, but run it through
+`slugify` anyway to guarantee a safe directory name.
 
-Directory names stay readable, because the title is still what a person searches
-for. Only the identity is the id.
+Wire both into `capture`: derive the slug from the paired source file rather than
+from the document title, and make `--slug` optional.
+
+Keep `_check_slug_collision`, retargeted. Two source files in different folders
+can still share a stem, and that collision is now the only one possible.
 
 - [ ] **Step 4: Migrate the two existing queues by hand**
 
 They live at
-`~/src/altery/Altery-Platform-Hub/11-m2-crypto-project-eagle/202607-kyt-travel-rule/.gdoc/`.
-Read both `pending.md` headers for their document ids, write a `doc_id` file into
-each directory, and leave the directory names alone. Do not merge them: the
-document ids may genuinely differ, and merging two queues by hand is a decision
-for Nail, not for this task.
+`~/src/altery/Altery-Platform-Hub/11-m2-crypto-project-eagle/202607-kyt-travel-rule/.gdoc/`,
+beside their source file
+`2026-08-13-non-custodial-crypto-screening-control-proposal.md`, whose
+frontmatter already lists both document ids.
 
-If the two ids turn out to be the same document, stop and ask before merging.
+Both queues belong to that one source, so they become one directory named after
+its stem. Merging them means concatenating two `pending.md` files: 12 items from
+`ver-0-1` and 1 from `ver-0-2`.
+
+Renumber the merged items sequentially and keep every comment id, since that is
+what the dedup guard matches on. Show Nail the merged file before deleting
+either original.
 
 - [ ] **Step 5: Run the suite, then commit**
 
 ```bash
-git commit -am "feat: key queue directories by document id
+git commit -am "feat: key queue directories by the source markdown file
 
-A version bump in the title used to fork the queue silently. Directory names
-stay readable, but identity comes from the document id."
+Every iteration raises a new document with a new id, so neither the title nor
+the document id is stable. The source file is, and its frontmatter already
+records the whole lineage. find_by_doc_id now matches past versions too, so
+reviewing an old version lands in the one right directory."
 ```
 
 ---
@@ -552,10 +590,12 @@ git commit -am "docs: one root, .gdoc/, and no git requirement"
 
 ## Not in this plan
 
-- **Part B, reading suggestions.** Blocked on a spike: whether a Commenter-role
-  service account can read pending suggestions through the Docs API
-  `suggestionsViewMode`, and whether that needs a scope the credential does not
-  hold. Until that is answered, half of workflow step 8 has no design.
+- **Part B, merging suggestions.** No longer blocked. The 2026-08-14 spike
+  proved a Commenter-role service account reads them through the Docs API
+  `suggestionsViewMode`, with no new scope and no Editor role. What is left is
+  the merge design, plus one new open question: the response carries no author,
+  so suggestions cannot be attributed the way comments can. That needs its own
+  plan.
 - **The two-sided dedup gap.** `pending.md` dedups by comment id, but
   `/gdoc-apply` deletes each item as it applies it, so a later review captures
   the same comment again. Real, worth fixing, out of scope here.
