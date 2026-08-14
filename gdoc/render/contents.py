@@ -51,6 +51,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
+from gdoc.render.ooxml import USABLE_TWIPS
+
 MAX_LEVEL = 3
 # Bookmark names must be unique and free of spaces. Prefixed so ours are
 # recognisable and so a rewrite never collides with the template's own.
@@ -72,7 +74,10 @@ ENTRY_SPACING = '<w:spacing w:before="0" w:after="20" w:line="276" w:lineRule="a
 FIRST_ENTRY_SPACING = '<w:spacing w:before="60" w:after="20" w:line="276" w:lineRule="auto"/>'
 
 # The right tab is the text edge, which is what puts the page number at the margin.
-RIGHT_TAB = 9864
+# That is the page width less both margins, so it is USABLE_TWIPS by definition,
+# 9864 twips for this template. Imported rather than repeated: a page size change
+# has to move the tab with it or the page numbers stop sitting at the margin.
+RIGHT_TAB = USABLE_TWIPS
 # One nesting step each, in twips. 360 and 720 are what Google's own refresh uses,
 # measured off a published document: level two lands 18pt in, level three 36pt.
 # The house template used 283 and 567, which is close but visibly different, and a
@@ -90,9 +95,7 @@ def _level_style(level: int, indent: int) -> str:
         "</w:pPr><w:rPr/></w:style>"
     )
 
-# Measured off a LibreOffice-produced document, then frozen here. The right tab at
-# 9864 twips is the text edge, which is what puts the page number at the margin.
-# Each level indents by 283 twips, one for each nesting step.
+# Measured off a LibreOffice-produced document, then frozen here.
 TOC_STYLES = {
     "Index": (
         '<w:style w:type="paragraph" w:styleId="Index"><w:name w:val="Index"/>'
@@ -385,6 +388,12 @@ def _entry(level: int, text: str, page, anchor: str, prefix: str = "", suffix: s
 
     prefix and suffix carry the field's begin and end runs on the first and last
     entries, which is what keeps the contents list a field rather than plain text.
+
+    The paragraph clears the style's own right tab and sets its own one twip short
+    of it. That is copied from observed LibreOffice output: LibreOffice writes the
+    direct tab a twip inside the style's, and the numbers line up. A twip is 1/1440
+    of an inch, so the offset is invisible; it is kept because it is what was
+    measured against live Google rendering, not because the reason is understood.
     """
     style = f"TOC{min(level, MAX_LEVEL)}"
     spacing = FIRST_ENTRY_SPACING if first else ""
@@ -414,49 +423,53 @@ def write(src: Path, dst: Path, pages: Mapping | None = None) -> ContentsResult:
 
     pages maps heading text to a page number. A heading missing from it gets a
     blank page number rather than a guess.
+
+    The source archive is closed before returning. rewrite_in_place then calls
+    os.replace onto that same path, which raises PermissionError on Windows while a
+    handle is still open on it.
     """
     src, dst = Path(src), Path(dst)
-    archive = zipfile.ZipFile(src)
-    document = archive.read("word/document.xml").decode("utf8")
-    styles = archive.read("word/styles.xml").decode("utf8")
+    with zipfile.ZipFile(src) as archive:
+        document = archive.read("word/document.xml").decode("utf8")
+        styles = archive.read("word/styles.xml").decode("utf8")
 
-    found = headings(document)
-    if not found:
-        raise ContentsError(
-            "this document has no headings, so a contents list would be empty. "
-            "Refusing to write one."
+        found = headings(document)
+        if not found:
+            raise ContentsError(
+                "this document has no headings, so a contents list would be empty. "
+                "Refusing to write one."
+            )
+
+        document, anchors = _with_bookmarks(document, len(found))
+        located = field(document)
+        lookup = dict(pages or {})
+        last = len(found) - 1
+        entries = "".join(
+            _entry(
+                level,
+                text,
+                lookup.get(text, ""),
+                anchor,
+                prefix=located.begin_run if index == 0 else "",
+                suffix=located.end_run if index == last else "",
+                first=index == 0,
+            )
+            for index, ((level, text), anchor) in enumerate(zip(found, anchors))
         )
+        document = document[: located.start] + entries + document[located.end :]
+        styles = _with_styles(styles)
+        replaced = located.paragraphs
 
-    document, anchors = _with_bookmarks(document, len(found))
-    located = field(document)
-    lookup = dict(pages or {})
-    last = len(found) - 1
-    entries = "".join(
-        _entry(
-            level,
-            text,
-            lookup.get(text, ""),
-            anchor,
-            prefix=located.begin_run if index == 0 else "",
-            suffix=located.end_run if index == last else "",
-            first=index == 0,
-        )
-        for index, ((level, text), anchor) in enumerate(zip(found, anchors))
-    )
-    document = document[: located.start] + entries + document[located.end :]
-    styles = _with_styles(styles)
-    replaced = located.paragraphs
-
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as out:
-        for item in archive.infolist():
-            if item.filename == "word/document.xml":
-                data = document.encode("utf8")
-            elif item.filename == "word/styles.xml":
-                data = styles.encode("utf8")
-            else:
-                data = archive.read(item.filename)
-            out.writestr(item, data)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as out:
+            for item in archive.infolist():
+                if item.filename == "word/document.xml":
+                    data = document.encode("utf8")
+                elif item.filename == "word/styles.xml":
+                    data = styles.encode("utf8")
+                else:
+                    data = archive.read(item.filename)
+                out.writestr(item, data)
 
     return ContentsResult(entries=found, replaced_paragraphs=replaced)
 

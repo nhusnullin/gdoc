@@ -15,7 +15,7 @@ import zipfile
 from docx import Document
 
 from gdoc.render.ooxml import (BODY_SZ, HEADING_EMPHASIS, HEADING_LINE_SPACING,
-                               HEADING_SPACE_AFTER, HEADING_SPACE_BEFORE, USABLE_TWIPS,
+                               HEADING_SPACE_AFTER, HEADING_SPACE_BEFORE,
                                el, qn, set_fonts, set_ppr_child, sub)
 
 # The template's own "highlight as appropriate" mechanism for the Document
