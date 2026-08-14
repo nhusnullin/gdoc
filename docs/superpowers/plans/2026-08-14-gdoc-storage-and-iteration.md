@@ -604,10 +604,22 @@ So the author name stops being a gate and becomes a label. `needs_action` alread
 holds the real rules: marker present, not resolved, not the agent's own comment,
 no agent reply yet. That is the whole test after this task.
 
-**Note on ordering:** this task edits `skills/gdoc-review/SKILL.md` Step 2 and
-the `Never` list, which Task 7 also rewrites, and it edits `README.md`, which
-Task 8 rewrites. The sections do not overlap, so either order works. If Task 7
-has not started, doing this task first is cheaper.
+**Ordering: open, Nail decides at execution time.** Do not assume this task runs
+ninth, and do not reorder it on your own. Ask.
+
+What is known about the overlap:
+
+- It edits `skills/gdoc-review/SKILL.md` Step 2 and the `Never` list. Task 7
+  rewrites the same file, in different sections.
+- It edits `README.md`, which Task 8 rewrites, again in a different section.
+- It touches `gdoc/filters.py` and `gdoc/config.py`, which no other task in this
+  plan touches. Its `gdoc/cli.py` edit is confined to `cmd_read`, which Tasks 4
+  and 5 leave alone.
+
+So the file overlap is real but the line overlap looks like none. Whether that
+makes it safe to lift out and run first has not been checked, and the checkbox
+state of Tasks 1 to 8 changes the answer. Confirm with Nail before starting it
+out of order.
 
 **Files:**
 - Modify: `gdoc/filters.py`, `gdoc/cli.py`, `gdoc/config.py`
