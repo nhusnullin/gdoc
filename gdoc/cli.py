@@ -21,7 +21,7 @@ from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, partition
 from gdoc.generate import generate
-from gdoc.baseline import slugify
+from gdoc.baseline import slugify, write_baseline
 from gdoc.model import Thread
 from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
 from gdoc.pending import append_item
@@ -125,15 +125,30 @@ def cmd_capture(args) -> int:
 
 def cmd_generate(args) -> int:
     config = load_config()
+    drive = drive_service()
     result = generate(
-        drive_service(),
+        drive,
         Path(args.md),
         args.name,
         Path(args.out),
         folder_id=args.folder_id or config.output_folder_id,
     )
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
+    if args.baseline_root and result.doc_id:
+        payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
     return _emit(payload)
+
+
+def _write_baseline_for(drive, args, doc_id: str) -> Path:
+    """Snapshot the document that was just created.
+
+    This is the one moment the document and the markdown provably match, so it
+    is the only honest moment to take the snapshot. force=True is correct here
+    and only here: the write is meant to replace the previous version's
+    baseline, and refusing would break the loop on the second version.
+    """
+    markdown = export_markdown(drive, doc_id)
+    return write_baseline(Path(args.baseline_root), slugify(args.name), markdown, force=True)
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +257,9 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--name", required=True)
     gen.add_argument("--out", required=True)
     gen.add_argument("--folder-id")
+    gen.add_argument(
+        "--baseline-root", help="write the new document's baseline under this directory"
+    )
     gen.set_defaults(func=cmd_generate)
 
     pair = sub.add_parser("pair", help="manage document-to-markdown pairings")

@@ -154,6 +154,103 @@ def test_export_no_longer_takes_a_repo_root():
 
 
 # ---------------------------------------------------------------------------
+# generate subcommand
+# ---------------------------------------------------------------------------
+
+
+def _generate_args(tmp_path):
+    md = tmp_path / "source.md"
+    md.write_text("# Source\n")
+    out = tmp_path / "out" / "v2.docx"
+    return md, out
+
+
+def _run_generate(tmp_path, result, extra=()):
+    """Run generate with the upload stubbed out. Returns the parsed JSON."""
+    from gdoc.cli import main as cli_main
+
+    md, out = _generate_args(tmp_path)
+    with patch("gdoc.cli.drive_service"), patch("gdoc.cli.load_config") as config, patch(
+        "gdoc.cli.generate", return_value=result
+    ), patch("gdoc.cli.export_markdown", return_value="# Generated\n"):
+        config.return_value.output_folder_id = "0AFolderId"
+        exit_code = cli_main(
+            [
+                "generate",
+                "--md",
+                str(md),
+                "--name",
+                "My Doc",
+                "--out",
+                str(out),
+                "--baseline-root",
+                str(tmp_path),
+                *extra,
+            ]
+        )
+    return exit_code
+
+
+def _uploaded(tmp_path):
+    from gdoc.generate import Result
+
+    return Result(
+        docx_path=tmp_path / "out" / "v2.docx",
+        doc_id="1NewDocId",
+        link="https://docs.google.com/document/d/1NewDocId/edit",
+    )
+
+
+def _not_uploaded(tmp_path):
+    from gdoc.generate import Result
+
+    return Result(docx_path=tmp_path / "out" / "v2.docx", reason="no output_folder_id in config")
+
+
+def test_generate_writes_the_baseline_after_a_successful_upload(capsys, tmp_path):
+    exit_code = _run_generate(tmp_path, _uploaded(tmp_path))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    baseline = tmp_path / ".gdoc" / "my-doc" / "baseline.md"
+    assert baseline.read_text() == "# Generated\n"
+    assert payload["baseline_path"] == str(baseline)
+
+
+def test_generate_writes_no_baseline_when_the_upload_failed(capsys, tmp_path):
+    """A baseline for a document that was never created would be diffed against nothing."""
+    exit_code = _run_generate(tmp_path, _not_uploaded(tmp_path))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert not (tmp_path / ".gdoc").exists()
+    assert "baseline_path" not in payload
+
+
+def test_generate_overwrites_an_existing_baseline(capsys, tmp_path):
+    """The second version must not be blocked by the first version's snapshot."""
+    _run_generate(tmp_path, _uploaded(tmp_path))
+    capsys.readouterr()
+    exit_code = _run_generate(tmp_path, _uploaded(tmp_path))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "error" not in payload
+
+
+def test_generate_writes_no_baseline_without_a_baseline_root(capsys, tmp_path):
+    from gdoc.generate import Result
+
+    md, out = _generate_args(tmp_path)
+    result = Result(docx_path=out, doc_id="1NewDocId", link="link")
+    with patch("gdoc.cli.drive_service"), patch("gdoc.cli.load_config") as config, patch(
+        "gdoc.cli.generate", return_value=result
+    ), patch("gdoc.cli.export_markdown") as export:
+        config.return_value.output_folder_id = "0AFolderId"
+        exit_code = main(["generate", "--md", str(md), "--name", "My Doc", "--out", str(out)])
+    capsys.readouterr()
+    assert exit_code == 0
+    export.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # pair subcommand, show mode
 # ---------------------------------------------------------------------------
 
