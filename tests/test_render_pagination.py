@@ -1,8 +1,108 @@
 """Resolving which page each heading landed on, from rendered page text."""
 
+from io import BytesIO
+
 import pytest
 
 from gdoc.render import pagination
+
+
+def minimal_pdf(pages):
+    """Build a small PDF with one text line per entry, per page.
+
+    Hand-built so the suite needs no binary fixture and no PDF writer. Standard
+    Helvetica, uncompressed streams, which is all pypdf needs to extract text.
+    """
+    objects = [None, None, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    font_id, page_ids = 3, []
+
+    for lines in pages:
+        stream_lines = ["BT", "/F1 12 Tf", "1 0 0 1 50 750 Tm", "14 TL"]
+        for line in lines:
+            escaped = line.replace("\\", r"\\").replace("(", r"\(").replace(")", r"\)")
+            stream_lines += [f"({escaped}) Tj", "T*"]
+        stream_lines.append("ET")
+        stream = "\n".join(stream_lines)
+        content_id = len(objects) + 1
+        objects.append(f"<< /Length {len(stream)} >>\nstream\n{stream}\nendstream")
+        page_ids.append(len(objects) + 1)
+        objects.append(
+            f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+            f"/Resources << /Font << /F1 {font_id} 0 R >> >> "
+            f"/Contents {content_id} 0 R >>"
+        )
+
+    kids = " ".join(f"{pid} 0 R" for pid in page_ids)
+    objects[0] = "<< /Type /Catalog /Pages 2 0 R >>"
+    objects[1] = f"<< /Type /Pages /Count {len(page_ids)} /Kids [{kids}] >>"
+
+    out = BytesIO()
+    out.write(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(out.tell())
+        out.write(f"{number} 0 obj\n{body}\nendobj\n".encode("latin-1"))
+    xref_at = out.tell()
+    out.write(f"xref\n0 {len(objects) + 1}\n".encode())
+    out.write(b"0000000000 65535 f \n")
+    for offset in offsets:
+        out.write(f"{offset:010d} 00000 n \n".encode())
+    out.write(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+              f"startxref\n{xref_at}\n%%EOF\n".encode())
+    return out.getvalue()
+
+
+@pytest.fixture
+def sample_pdf(tmp_path):
+    """Three pages: a contents list, then a body page, then an appendix page.
+
+    Page 2 mentions "Appendices" in prose and page 3 carries it as a heading. That
+    is the case that made a substring match put two entries on the wrong page.
+    """
+    path = tmp_path / "sample.pdf"
+    path.write_bytes(minimal_pdf([
+        ["Contents", "1-Purpose 4", "Appendices 5"],
+        ["1-Purpose", "Body text mentioning Appendices in prose"],
+        ["Appendices", "Appendix 1 - Associated Documents"],
+    ]))
+    return path
+
+
+def test_page_count_reads_the_pdf(sample_pdf):
+    assert pagination.page_count(sample_pdf) == 3
+
+
+def test_page_lines_returns_the_text_of_each_page(sample_pdf):
+    lines = pagination.page_lines(sample_pdf)
+    assert len(lines) == 3
+    assert "Contents" in lines[0]
+    assert "1-Purpose" in lines[1]
+
+
+def test_from_pdf_resolves_headings_against_a_real_pdf(sample_pdf):
+    found = pagination.from_pdf(sample_pdf, ((1, "1-Purpose"), (1, "Appendices")))
+    assert found == {"1-Purpose": 2, "Appendices": 3}
+
+
+def test_no_external_program_is_used(sample_pdf, monkeypatch):
+    """Reading a PDF must not shell out. That is the whole point of the change."""
+    import subprocess
+
+    def refuse(*args, **kwargs):
+        raise AssertionError("pagination shelled out to an external program")
+
+    monkeypatch.setattr(subprocess, "run", refuse)
+    monkeypatch.setattr(subprocess, "Popen", refuse)
+    assert pagination.page_count(sample_pdf) == 3
+    assert len(pagination.page_lines(sample_pdf)) == 3
+
+
+def test_an_unreadable_file_is_reported_clearly(tmp_path):
+    broken = tmp_path / "broken.pdf"
+    broken.write_bytes(b"this is not a pdf")
+    with pytest.raises(pagination.PaginationError):
+        pagination.page_count(broken)
+
 
 HEADINGS = (
     (1, "1-Purpose"),

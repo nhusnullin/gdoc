@@ -13,6 +13,7 @@ dependencies = [
     "PyYAML",
     "python-docx>=1.1",
     "lxml",
+    "pypdf>=5",
 ]
 
 [project.optional-dependencies]
@@ -32,5 +33,5 @@ packages = ["gdoc", "gdoc.render"]
 testpaths = ["tests"]
 markers = [
     "integration: calls the live Drive API, skipped without credentials",
-    "slow: renders a real document, needs LibreOffice and poppler",
+    "slow: renders a real document",
 ]

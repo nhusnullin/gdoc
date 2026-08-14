@@ -15,16 +15,17 @@ pass is checked against its own export with `drift`. In measured runs the number
 were stable on the first try, because a page number is one or two characters at the
 right margin.
 
-`resolve` is kept free of subprocesses so it can be tested against page text
-directly. `from_pdf` is the thin shell around poppler.
+`resolve` takes page text directly, so it can be tested without a PDF at all.
+`from_pdf` is the thin wrapper that reads one. Reading is done in Python rather
+than by shelling out, because the tool has to run where no external program can
+be installed.
 """
 
 import re
-import subprocess
 from pathlib import Path
 
-PDFTOTEXT = "pdftotext"
-PDFINFO = "pdfinfo"
+from pypdf import PdfReader
+
 CONTENTS_TITLE = "Contents"
 # A heading long enough to wrap gets matched on this many leading characters.
 PREFIX = 40
@@ -75,28 +76,29 @@ def _first_page_with_line(pages, start, target):
 
 
 def page_count(pdf: Path) -> int:
-    result = subprocess.run([PDFINFO, str(pdf)], capture_output=True, text=True)
-    if result.returncode != 0:
-        raise PaginationError(f"{PDFINFO} failed on {pdf}:\n{result.stderr}")
-    for line in result.stdout.splitlines():
-        if line.startswith("Pages:"):
-            return int(line.split()[1])
-    raise PaginationError(f"{PDFINFO} reported no page count for {pdf}")
+    return len(_reader(pdf).pages)
 
 
 def page_lines(pdf: Path) -> list:
-    """The text of each page, as a list of lines. Needs poppler's pdftotext."""
-    pdf = Path(pdf)
+    """The text of each page, as a list of lines."""
     out = []
-    for page in range(1, page_count(pdf) + 1):
-        result = subprocess.run(
-            [PDFTOTEXT, "-f", str(page), "-l", str(page), str(pdf), "-"],
-            capture_output=True, text=True,
-        )
-        if result.returncode != 0:
-            raise PaginationError(f"{PDFTOTEXT} failed on {pdf} page {page}:\n{result.stderr}")
-        out.append(result.stdout.splitlines())
+    for number, page in enumerate(_reader(pdf).pages, start=1):
+        try:
+            text = page.extract_text() or ""
+        except Exception as error:  # noqa: BLE001 - one bad page must name itself
+            raise PaginationError(f"could not read page {number} of {pdf}: {error}") from error
+        out.append(text.splitlines())
     return out
+
+
+def _reader(pdf: Path) -> "PdfReader":
+    pdf = Path(pdf)
+    if not pdf.is_file():
+        raise PaginationError(f"no such file: {pdf}")
+    try:
+        return PdfReader(str(pdf))
+    except Exception as error:  # noqa: BLE001 - pypdf raises several unrelated types
+        raise PaginationError(f"could not read {pdf} as a PDF: {error}") from error
 
 
 def from_pdf(pdf: Path, headings) -> dict:
