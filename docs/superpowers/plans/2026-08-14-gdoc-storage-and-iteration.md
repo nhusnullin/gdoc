@@ -588,6 +588,174 @@ git commit -am "docs: one root, .gdoc/, and no git requirement"
 
 ---
 
+### Task 9: The marker decides, not the author name
+
+Today `partition` splits actionable threads into `mine` and `others` by comparing
+`thread.author_name` to `config.display_name`. That split exists to answer "is
+this really Nail?", and it cannot: Drive returns no email for comment authors and
+display names are editable. So the skill has to print a caveat every run saying
+the answer is a guess.
+
+Nail's decision, 2026-08-14: he does not want proof. Launching the skill is the
+trust decision. The `ai:` marker is the instruction, and a marker inside a
+document Nail chose to point the skill at is enough to act on.
+
+So the author name stops being a gate and becomes a label. `needs_action` already
+holds the real rules: marker present, not resolved, not the agent's own comment,
+no agent reply yet. That is the whole test after this task.
+
+**Note on ordering:** this task edits `skills/gdoc-review/SKILL.md` Step 2 and
+the `Never` list, which Task 7 also rewrites, and it edits `README.md`, which
+Task 8 rewrites. The sections do not overlap, so either order works. If Task 7
+has not started, doing this task first is cheaper.
+
+**Files:**
+- Modify: `gdoc/filters.py`, `gdoc/cli.py`, `gdoc/config.py`
+- Modify: `tests/test_filters.py`, `tests/test_cli.py`, `tests/test_config.py`
+- Modify: `skills/gdoc-review/SKILL.md`, `README.md`
+
+**Interfaces:**
+- Modifies: `partition(threads) -> tuple[tuple[Thread, ...], tuple[Thread, ...]]`,
+  returning `(addressed, skipped)`. The `display_name` argument is gone.
+- Modifies: `gdoc read` JSON. `mine` and `others` are replaced by one
+  `addressed` list. Each item keeps its `author` field, so the report can still
+  say who wrote a comment.
+- Modifies: `Config` loses `display_name`. `output_folder_id` is the only field
+  left, and an old config file that still carries `display_name` loads fine
+  because the extra key is ignored.
+- Unchanged: `Thread.author_name`, `is_addressed`, `forced_kind`, `needs_action`.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `tests/test_filters.py`, the point of the task is the second test. It asserts
+the behaviour that is wrong today:
+
+```python
+def test_a_marked_comment_from_anyone_is_actionable():
+    """The marker is the instruction. Who typed it does not change the work."""
+    threads = (thread(author_name="Nail Khusnullin"), thread(author_name="William Mejia"))
+    addressed, skipped = partition(threads)
+    assert len(addressed) == 2
+    assert skipped == ()
+
+
+def test_an_unmarked_comment_is_still_skipped():
+    addressed, skipped = partition((thread(content="Looks fine to me"),))
+    assert addressed == ()
+    assert len(skipped) == 1
+
+
+def test_an_already_answered_comment_is_still_skipped():
+    """Dropping the author check must not weaken the idempotence guard."""
+    answered = thread(replies=(Reply(id="r1", content="done", by_agent=True),))
+    addressed, skipped = partition((answered,))
+    assert addressed == ()
+```
+
+Delete the two tests that assert the `mine` / `others` split. They pin the
+behaviour being removed, so keeping them adapted would be the loosening that
+`CLAUDE.md` forbids.
+
+In `tests/test_cli.py`, pin the JSON shape, because the skill reads it:
+
+```python
+def test_read_returns_one_addressed_list_with_authors(...):
+    payload = read_json(main(["read", URL]))
+    assert "mine" not in payload
+    assert "others" not in payload
+    assert [t["author"] for t in payload["addressed"]] == ["Nail Khusnullin", "William Mejia"]
+```
+
+In `tests/test_config.py`, replace `test_missing_display_name_is_rejected` with:
+
+```python
+def test_a_config_without_display_name_loads(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"output_folder_id": "0AFolderId"}))
+    assert load_config(path) == Config(output_folder_id="0AFolderId")
+
+
+def test_an_old_config_with_display_name_still_loads(tmp_path):
+    """Nail's live config has the key. Loading must not start failing on it."""
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"display_name": "Nail Khusnullin", "output_folder_id": None}))
+    assert load_config(path).output_folder_id is None
+```
+
+- [ ] **Step 2: Run and confirm failure**
+
+Expected: `TypeError: partition() missing 1 required positional argument:
+'display_name'`, and the config test fails with `ValueError: display_name is
+required`.
+
+- [ ] **Step 3: Implement**
+
+In `gdoc/filters.py`: drop the `display_name` parameter, drop the `mine` and
+`others` lists, return `(addressed, skipped)`. Rewrite the module docstring. The
+first paragraph currently explains why authorship cannot be verified; replace it
+with why that no longer matters. Keep the explanation of the marker as it is.
+
+In `gdoc/cli.py` `cmd_read`: call `partition(threads)`, emit `addressed` and
+`skipped`. Drop the `load_config()` call, which was only there for the name.
+
+In `gdoc/config.py`: remove `display_name` from `Config`, its validation and the
+error message. Keep the missing-file error, and keep it naming a valid example.
+
+- [ ] **Step 4: Prove the author name is gone as a gate**
+
+```bash
+grep -rn "display_name\|author_name ==" gdoc skills
+```
+
+Expected: `author_name` only where a thread is described or printed, and
+`display_name` nowhere in `gdoc/` or `skills/`.
+
+- [ ] **Step 5: Rewrite the skill's Step 2**
+
+In `skills/gdoc-review/SKILL.md`:
+
+- Delete the display-name caveat, the first bullet under Step 2.
+- Keep the `permissions.list` caveat and the `Proceed?` gate. That gate is not
+  about authorship: a reply is public to everyone on the document and cannot be
+  taken back, so the confirmation still earns its place.
+- Replace the `Yours` / `Others` sample block with one list. Show the author name
+  next to each item, so an unexpected name is visible without being a blocker:
+
+```
+Will act:         para 3, para 7, para 11 (Nail), para 5 (William Mejia)
+Already answered: para 2
+
+I cannot see who else has access to this document. Replies will be
+visible to everyone on it, under the service account address.
+
+Proceed?
+```
+
+- In the `Never` list, `Never act on a comment that is not Nail's` becomes
+  `Never act on a comment without the marker`. That is the rule the code now
+  enforces, and the old line would read as a promise the tool no longer makes.
+
+- [ ] **Step 6: Update the README**
+
+Wherever the README explains the `mine` / `others` split or the display-name
+config field, say instead that the marker decides and that `read` returns one
+actionable list. State the trade plainly in one line: a marked comment from
+anyone in the document is acted on, and Nail chooses the document.
+
+- [ ] **Step 7: Run the suite, check coverage, then commit**
+
+```bash
+~/.config/gdoc-agent/venv/bin/pytest --cov=gdoc
+git commit -am "feat: act on the marker, not on the author name
+
+Drive gives no email for comment authors, so the display-name split was a guess
+dressed as a check, and the skill had to disclaim it every run. Pointing the
+skill at a document is the trust decision. The marker is the instruction, so
+partition now returns one actionable list and config drops display_name."
+```
+
+---
+
 ## Not in this plan
 
 - **Part B, merging suggestions.** No longer blocked. The 2026-08-14 spike
