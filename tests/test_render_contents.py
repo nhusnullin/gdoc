@@ -270,7 +270,7 @@ def test_page_numbers_are_written_when_supplied(built, tmp_path):
 
 
 def test_a_heading_with_no_page_number_gets_an_empty_cell(built, tmp_path):
-    """Better a blank than a wrong number. gdoc build has no pagination to offer."""
+    """Better a blank than a wrong number. build() has no pagination to offer."""
     out = tmp_path / "written.docx"
     contents.write(built, out, pages={})
     paras = entry_paragraphs(out)

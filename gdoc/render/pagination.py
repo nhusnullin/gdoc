@@ -4,11 +4,16 @@ A contents list needs page numbers, and page numbers do not exist until somethin
 lays the document out. Headless LibreOffice used to be that something. Google Docs
 is also that something, and we are uploading to it anyway.
 
-So `gdoc generate` uploads once with blank page numbers, exports the result as PDF,
-reads which page each heading actually sits on, writes those numbers into the
+So the publish flow uploads once with blank page numbers, exports the result as
+PDF, reads which page each heading actually sits on, writes those numbers into the
 contents list, and uploads the version it publishes. Google is the layout engine,
 which means the page numbers describe the document the reader is holding rather
 than a local approximation of it.
+
+No CLI command runs those two passes yet. `gdoc generate` still shells out to
+`pandoc md -o docx` and never imports this package; the spec parks the wiring for
+PR #5 Task 6. `tests/test_contents_integration.py` is where the composition is
+written down today.
 
 Writing the numbers can in principle move the text that follows, so the second
 pass is checked against its own export with `drift`. In measured runs the numbers

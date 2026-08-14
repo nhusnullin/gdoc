@@ -71,10 +71,19 @@ not a ban: it fails if `subprocess` spreads to another module, and it fails just
 as loudly if body.py's own dependency vanishes without the test being updated.
 
 Page numbers are the one real cost. They do not exist until something lays the
-document out, so `gdoc generate` gets them from Google: it uploads once, reads
-which page each heading landed on out of the PDF export, writes them in, and
-publishes. An offline `gdoc build` leaves them blank, which any desktop refresh
-fills in. A wrong number would be worse than a blank one.
+document out. The intended flow makes Google the layout engine: upload once with
+blank numbers, read which page each heading landed on out of the PDF export, write
+those numbers in, then upload the version that gets published.
+
+**That flow is not wired into a command yet.** `gdoc generate` still runs
+`pandoc md -o docx` and never imports `gdoc.render`. The design spec parks the
+wiring for PR #5 Task 6. The only place the two passes are composed today is
+`tests/test_contents_integration.py`, which needs the live Drive API and is opt-in
+behind `GDOC_LIVE_PUBLISH_TEST=1`.
+
+`gdoc.render.build` on its own has no pagination to offer, so it leaves the page
+numbers blank. Any desktop refresh fills them in, and a wrong number would be
+worse than a blank one.
 
 ## Skills are linked, not copied
 

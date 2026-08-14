@@ -87,11 +87,14 @@ faithful anyway because it is what the reader actually sees.
 
 ## Behaviour after this
 
-| Command | Needs | Produces |
+`build` is the function `gdoc.render.build`, not a subcommand. No CLI command
+exposes it: `gdoc --help` lists read, reply, export, capture, generate and pair.
+
+| Entry point | Needs | Produces |
 |---|---|---|
-| `gdoc build` | nothing external, no network | a complete `.docx`, contents entries and links correct, **page numbers blank** |
-| `gdoc build` with `pages` | nothing external | a complete `.docx` including page numbers |
-| `gdoc generate` | network | as today, plus pagination from Google (not wired here, see below) |
+| `gdoc.render.build` | nothing external, no network | a complete `.docx`, contents entries and links correct, **page numbers blank** |
+| `gdoc.render.contents.write` with `pages` | nothing external | a complete `.docx` including page numbers |
+| `gdoc generate` | network | as today. Still the `pandoc md -o docx` path, with no pagination from Google (not wired here, see below) |
 
 Blank page numbers offline are honest rather than broken. The entries, hierarchy and
 links are all correct, and because the contents list is still a real field, opening
@@ -142,7 +145,7 @@ Corrected during implementation. The first two criteria originally overclaimed.
   `{body.py}`, pinned by a test. An allowlist rather than a ban, because it fails
   both if `subprocess` spreads to another module and if body.py's pandoc dependency
   disappears without the test being updated.
-- `gdoc build` works with `soffice` and `pdftotext` absent from `PATH`. It still
+- `gdoc.render.build` works with `soffice` and `pdftotext` absent from `PATH`. It still
   needs pandoc, which is invoked by absolute path, so a stripped `PATH` proves
   nothing about it either way. Say so rather than implying otherwise.
 - The suite passes, including a check that every heading in the bundled example
