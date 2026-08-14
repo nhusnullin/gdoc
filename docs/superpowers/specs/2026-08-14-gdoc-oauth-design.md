@@ -331,51 +331,20 @@ into the queue quoted. Neither marker survives that trip, so nothing in
 The rule stays what commit 989e744 made it: feedback is acted on whoever left
 it. The author is a label in the report, never a gate.
 
-### The order is review, then apply, and nothing enforces it
+### The order is review, then apply, and nothing here enforces it
 
 Because `gdoc-apply` reads only the queue, a comment left after the review that
-filled that queue is invisible to it. This sequence loses work silently:
+filled that queue is invisible to it, and it is stranded on a version the next
+generate supersedes. This is a real gap and OAuth widens it, because a colleague
+can now leave a marked comment on a document nobody shared with the agent.
 
-1. `/gdoc-review` captures two global items.
-2. Nail reads the document again and leaves three more `ai!` comments.
-3. `/gdoc-apply` applies the two, generates v2, and reports success.
+It is not fixed here. Closing it properly means `gdoc-apply` stops being a queue
+consumer, which is a change to what the skill is for, not a check bolted onto its
+first step. That is designed separately in
+`2026-08-14-gdoc-apply-drains-design.md` and lands after this branch.
 
-The three new comments are stranded on v1, which is now superseded, and nothing
-said so. Today the pipeline only works if the order is kept by hand.
-
-The check is cheap, because the data already exists. `gdoc read` returns
-`addressed`, which already excludes every thread gdoc has answered, including
-the refusal replies `capture` posts. So at apply time a non-empty `addressed`
-means precisely "comments nobody has reviewed yet".
-
-`gdoc-apply` step 1 gains it. Before touching any item, run `gdoc read` on the
-document the queue names. If `addressed` is empty, carry on without comment. If
-it is not, stop and say so:
-
-```
-3 comments on this document have not been reviewed yet:
-  para 4 (Nail)           ai! renumber the annex
-  para 9 (William Mejia)  ai: is this the right term
-  para 12 (Nail)          ai! drop the pilot section
-
-Applying now would generate v2 without them, and they would stay on v1.
-Run /gdoc-review first, or say "apply anyway" to work through the queue alone.
-```
-
-One refinement. `capture` writes the queue, and the refusal reply that marks the
-thread answered is a separate `gdoc reply` call in the skill. If that reply ever
-failed, an already-captured comment would still be in `addressed`. So the check
-drops any id that already appears as a `Comment id:` in `pending.md`, which step
-1 has open anyway. No new command, and no false alarm.
-
-Nail can override, because sometimes the queue is what he wants and the new
-comments are for later. What he cannot do is miss it.
-
-One API call, no new state, and it needs credentials `gdoc-apply` already needs
-for `generate`. Under `--terminal-only` it still runs: reading is not posting.
-
-This is not caused by OAuth. It is a gap the OAuth work uncovered, and it is
-cheap enough to close here rather than file.
+Nothing in this branch depends on that design, and nothing in it should
+anticipate it.
 
 ### One thing that must change
 
@@ -488,9 +457,8 @@ a warning, because that is the next step and not a fault.
 - `skills/gdoc-review/SKILL.md`: step 2 split, the all-comments variant, the
   first-OAuth-run note, the `Never` line, and the step 2 warning text which
   currently says "under the service account address".
-- `skills/gdoc-apply/SKILL.md`: the unreviewed-comments check in step 1, the
-  author line when showing each item in step 2, and any wording that assumes the
-  service account.
+- `skills/gdoc-apply/SKILL.md`: the author line when showing each item in step 2,
+  and any wording that assumes the service account.
 
 ## 11. Out of scope
 

@@ -2763,38 +2763,8 @@ Replace the first `Never` line, which says the credential cannot edit:
 
 - [ ] **Step 6: skills/gdoc-apply/SKILL.md**
 
-Two edits.
-
-Add to the end of Step 1, after the `baseline.md` paragraph:
-
-```markdown
-### Check nothing was left behind
-
-`pending.md` is the only thing this skill reads, so a comment left after the
-review that filled it is invisible here. Applying anyway generates a new version
-without it, and it stays stranded on the version this one supersedes.
-
-```bash
-$GDOC read <the Document: url from the header>
-```
-
-Ignore any `addressed` item whose id already appears as a `Comment id:` in
-`pending.md`. If nothing is left, carry on and say nothing. If something is,
-stop:
-
-```
-3 comments on this document have not been reviewed yet:
-  para 4 (Nail)           ai! renumber the annex
-  para 9 (William Mejia)  ai: is this the right term
-  para 12 (Nail)          ai! drop the pilot section
-
-Applying now would generate v2 without them, and they would stay on v1.
-Run /gdoc-review first, or say "apply anyway" to work through the queue alone.
-```
-
-Wait for Nail. He may say apply anyway, and that is his call to make. Under
-`--terminal-only` this check still runs: reading is not posting.
-```
+One edit. This skill does not learn to read comments here. That is
+`2026-08-14-gdoc-apply-drains-design.md` and it lands after this branch.
 
 In Step 2, replace the first numbered item:
 
@@ -2823,8 +2793,7 @@ That is still true, but under oauth it is gdoc/guard.py that makes it true,
 not Google, and the difference matters to anyone reading the code.
 
 Both skills gain what changed: the [gdoc] marker, all-comments mode, and the
-unreviewed-comments check in gdoc-apply that stops a new version being
-generated without comments left after the last review.
+author line gdoc-apply now shows when it presents an item.
 
 install.sh now checks for the credential the configured mode needs."
 ```
