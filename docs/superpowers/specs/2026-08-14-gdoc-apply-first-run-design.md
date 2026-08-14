@@ -1,7 +1,9 @@
 # gdoc-apply first run and version bookkeeping, proposal
 
 Date: 2026-08-14
-Status: proposed, not agreed
+Status: superseded by [2026-08-14-gdoc-template-merge-design.md](2026-08-14-gdoc-template-merge-design.md),
+which takes these findings and answers the three open decisions. The findings
+below are kept because they are observations from a live run.
 Extends: [2026-08-14-gdoc-storage-and-iteration-design.md](2026-08-14-gdoc-storage-and-iteration-design.md)
 
 Findings from the first live run of `/gdoc-apply` against a source markdown that
