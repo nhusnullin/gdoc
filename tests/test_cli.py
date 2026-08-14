@@ -111,37 +111,46 @@ def test_unknown_subcommand_exits_nonzero():
 # ---------------------------------------------------------------------------
 
 
-def test_export_writes_the_baseline_and_returns_metadata(capsys, tmp_path):
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("gdoc.cli.write_baseline", return_value=tmp_path / "baseline.md") as mock_write:
-        exit_code = main(
-            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
-        )
-    payload = json.loads(capsys.readouterr().out)
+_EXPORT_URL = "https://docs.google.com/document/d/1AbC/edit"
+_MARKDOWN = "# Title\n\nBody.\n"
+
+
+def test_export_prints_markdown_to_stdout(capsys):
+    """Raw markdown, not the JSON envelope, so the output can be piped into diff."""
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ):
+        exit_code = main(["export", _EXPORT_URL])
     assert exit_code == 0
-    assert payload["doc_id"] == "1AbC"
-    assert payload["slug"] == "my-policy"
-    mock_write.assert_called_once()
+    assert capsys.readouterr().out == _MARKDOWN
 
 
-def test_export_reports_a_baseline_conflict_as_json_error(capsys, tmp_path):
-    from gdoc.baseline import BaselineConflict
+def test_export_writes_to_the_named_file(capsys, tmp_path):
+    out = tmp_path / "fetched.md"
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ):
+        exit_code = main(["export", _EXPORT_URL, "--out", str(out)])
+    capsys.readouterr()
+    assert exit_code == 0
+    assert out.read_text() == _MARKDOWN
 
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# Markdown"
-    ), patch("gdoc.cli.write_baseline", side_effect=BaselineConflict("dirty file")):
-        exit_code = main(
-            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
-        )
-    payload = json.loads(capsys.readouterr().out)
-    assert exit_code == 1
-    assert "error" in payload
-    assert "dirty" in payload["error"]
+
+def test_export_writes_nothing_when_out_is_absent(capsys, tmp_path):
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ):
+        main(["export", _EXPORT_URL])
+    capsys.readouterr()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_export_no_longer_takes_a_repo_root():
+    """Filing is no longer export's job, so the flag must be gone, not ignored."""
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ), pytest.raises(SystemExit):
+        main(["export", _EXPORT_URL, "--repo-root", "/tmp"])
 
 
 # ---------------------------------------------------------------------------
@@ -322,39 +331,6 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# export, slug collision detection
-# ---------------------------------------------------------------------------
-
-
-def test_export_warns_when_slug_maps_to_a_different_document(capsys, tmp_path):
-    # Set up an existing baseline file paired to a different doc
-    from gdoc.baseline import GDOC_DIR
-
-    baseline_file = tmp_path / GDOC_DIR / "my-policy" / "baseline.md"
-    baseline_file.parent.mkdir(parents=True)
-    baseline_file.write_text("---\ngdoc: otherDocId\n---\n\nExisting content.\n")
-
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    # write_baseline gets a real repo_root but we stub it so no file is overwritten
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# New content"
-    ), patch("gdoc.cli.write_baseline", return_value=baseline_file):
-        exit_code = main(
-            [
-                "export",
-                "https://docs.google.com/document/d/newDocId12345678901234/edit",
-                "--repo-root",
-                str(tmp_path),
-            ]
-        )
-    payload = json.loads(capsys.readouterr().out)
-    assert exit_code == 0
-    assert "slug_collision_warning" in payload
-    assert "otherDocId" in payload["slug_collision_warning"]
-
-
-# ---------------------------------------------------------------------------
 # HttpError handler
 # ---------------------------------------------------------------------------
 
@@ -443,18 +419,5 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
     ) as config:
         config.return_value.display_name = "Nail Khusnullin"
         main(["read", "https://docs.google.com/document/d/1AbC/edit"])
-    capsys.readouterr()
-    assert _get_kwargs(drive)["supportsAllDrives"] is True
-
-
-def test_export_asks_for_metadata_with_shared_drive_support(capsys, tmp_path):
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("gdoc.cli.write_baseline", return_value=tmp_path / "baseline.md"):
-        main(
-            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
-        )
     capsys.readouterr()
     assert _get_kwargs(drive)["supportsAllDrives"] is True

@@ -21,7 +21,7 @@ from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, partition
 from gdoc.generate import generate
-from gdoc.baseline import BaselineConflict, baseline_path, slugify, write_baseline
+from gdoc.baseline import slugify
 from gdoc.model import Thread
 from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
 from gdoc.pending import append_item
@@ -94,42 +94,20 @@ def cmd_reply(args) -> int:
 
 
 def cmd_export(args) -> int:
+    """Fetch the document as markdown. Write nothing unless asked.
+
+    stdout is raw markdown, not the JSON envelope the other commands print,
+    because the point is to pipe it into diff.
+    """
     doc_id = extract_doc_id(args.url)
-    drive = drive_service()
-    markdown = export_markdown(drive, doc_id)
-    meta = _file_meta(drive, doc_id)
-    slug = args.slug or slugify(meta.get("name", ""))
-    repo_root = Path(args.repo_root)
-
-    # Detect slug collision: a different document is already recorded under the
-    # same slug. Two document names that differ only in punctuation produce the
-    # same slug. The later write would silently overwrite the earlier baseline.
-    # We surface a warning rather than blocking because the user may have passed
-    # --slug explicitly to resolve a collision they are already aware of.
-    collision_warning = _check_slug_collision(repo_root, slug, doc_id)
-
-    path = write_baseline(repo_root, slug, markdown, force=args.force)
-    result = {"doc_id": doc_id, "slug": slug, "path": str(path), "characters": len(markdown)}
-    if collision_warning:
-        result["slug_collision_warning"] = collision_warning
-    return _emit(result)
-
-
-def _check_slug_collision(repo_root: Path, slug: str, doc_id: str) -> str | None:
-    """Return a warning string when the slug's existing baseline belongs to a different document."""
-    existing = baseline_path(repo_root, slug)
-    if not existing.exists():
-        return None
-    try:
-        pairing = read_pairing(existing)
-    except Exception:
-        return None
-    if pairing and pairing.doc_id != doc_id:
-        return (
-            f"slug '{slug}' is already used by document {pairing.doc_id}. "
-            "Pass --slug to choose a unique slug for this document."
-        )
-    return None
+    markdown = export_markdown(drive_service(), doc_id)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(markdown)
+        return 0
+    sys.stdout.write(markdown)
+    return 0
 
 
 def cmd_capture(args) -> int:
@@ -247,11 +225,9 @@ def build_parser() -> argparse.ArgumentParser:
     reply.add_argument("--body-file", required=True)
     reply.set_defaults(func=cmd_reply)
 
-    export = sub.add_parser("export", help="write the markdown baseline")
+    export = sub.add_parser("export", help="fetch the document as markdown")
     export.add_argument("url")
-    export.add_argument("--repo-root", default=".")
-    export.add_argument("--slug")
-    export.add_argument("--force", action="store_true")
+    export.add_argument("--out", help="write to this file instead of stdout")
     export.set_defaults(func=cmd_export)
 
     capture = sub.add_parser("capture", help="append a global item to pending.md")
