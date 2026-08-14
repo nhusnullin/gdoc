@@ -9,7 +9,7 @@ Commenter-only credential shapes the design.
 |---|---|
 | `gdoc/` | the package. Imports are `from gdoc.x import y` |
 | `tests/` | pytest suite. Every module has a matching test file |
-| `skills/` | `gdoc-review` and `gdoc-apply`. Edit here, then copy to `~/.claude/skills/` |
+| `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/gdoc/<slug>/` | mirrors, `pending.md`, generated `out/*.docx` |
 | `docs/superpowers/` | the implementation plan and the design spec |
 
@@ -26,10 +26,23 @@ Secrets and the venv live in `~/.config/gdoc-agent/`, never in this repo.
 A bug here writes Altery notes into the wrong tree, so check which one a change
 means before touching `--repo-root` handling.
 
-## Skills are duplicated on purpose
+## Skills are linked, not copied
 
-`skills/*/SKILL.md` is the source. `~/.claude/skills/*/SKILL.md` is the loaded
-copy. Change the source, then copy across, or the change does nothing.
+`~/.claude/skills/gdoc-review` and `gdoc-apply` are symlinks into `skills/` in
+this repo. There is one copy of each SKILL.md, so editing it here changes what
+Claude Code loads. No copy step, and no way for the skill to drift from the CLI
+it calls.
+
+Two consequences worth holding:
+
+- An edit is live the moment it is saved, before it is committed. Nothing warns
+  you. `./install.sh` prints `+ uncommitted changes` when the tree is dirty.
+- Deleting or moving `skills/` breaks the installed skills. Re-run
+  `./install.sh` after any move.
+
+`install.sh` is safe to re-run. It refuses to replace a real
+`~/.claude/skills/<name>` directory whose contents differ from this repo, so an
+older copy-based install cannot be destroyed silently.
 
 ## Testing
 

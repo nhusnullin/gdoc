@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Install the gdoc CLI and link its skills into Claude Code.
+#
+# Safe to re-run. Every step checks the current state first and does nothing
+# when it is already correct. The skills are linked, not copied, so editing
+# skills/*/SKILL.md takes effect immediately and the skill can never disagree
+# with the CLI it calls.
+
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV="$HOME/.config/gdoc-agent/venv"
+CONFIG_DIR="$HOME/.config/gdoc-agent"
+SKILLS_DIR="$HOME/.claude/skills"
+SKILLS=(gdoc-review gdoc-apply)
+
+fail() {
+    printf 'install: %s\n' "$1" >&2
+    exit 1
+}
+
+warn() {
+    printf 'install: warning: %s\n' "$1" >&2
+}
+
+# --------------------------------------------------------------------------
+# The CLI
+# --------------------------------------------------------------------------
+
+if [ ! -x "$VENV/bin/python" ]; then
+    command -v python3 >/dev/null 2>&1 || fail "python3 not found on PATH"
+    printf 'creating venv at %s\n' "$VENV"
+    python3 -m venv "$VENV"
+fi
+
+"$VENV/bin/pip" install -q --disable-pip-version-check -e "${REPO}[dev]" || fail "pip install failed"
+
+[ -x "$VENV/bin/gdoc" ] || fail "the gdoc command was not created. Check [project.scripts] in pyproject.toml"
+
+# --------------------------------------------------------------------------
+# The skills
+# --------------------------------------------------------------------------
+
+mkdir -p "$SKILLS_DIR"
+
+for skill in "${SKILLS[@]}"; do
+    src="$REPO/skills/$skill"
+    dst="$SKILLS_DIR/$skill"
+
+    [ -d "$src" ] || fail "missing $src"
+
+    if [ -L "$dst" ]; then
+        # Already a link. Leave it alone when it points here, repoint otherwise.
+        [ "$(readlink "$dst")" = "$src" ] && continue
+        rm "$dst"
+    elif [ -e "$dst" ]; then
+        # A real directory from an older copy-based install. Replacing it is
+        # only safe when it holds no edits that exist nowhere else.
+        if ! diff -rq -x .DS_Store "$src" "$dst" >/dev/null 2>&1; then
+            fail "$dst differs from the repo.
+  Copy the edits you want into $src, then re-run.
+  Compare with: diff -r -x .DS_Store '$src' '$dst'"
+        fi
+        rm -rf "$dst"
+    fi
+
+    ln -s "$src" "$dst"
+done
+
+# --------------------------------------------------------------------------
+# Credentials, checked but never written
+# --------------------------------------------------------------------------
+
+[ -f "$CONFIG_DIR/config.json" ] || warn "no $CONFIG_DIR/config.json yet. See README.md"
+[ -f "$CONFIG_DIR/sa-key.json" ] || warn "no $CONFIG_DIR/sa-key.json yet. See README.md"
+
+# --------------------------------------------------------------------------
+# What is installed
+# --------------------------------------------------------------------------
+
+commit="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+branch="$(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+# --porcelain, not "diff --quiet", so a brand new untracked SKILL.md still
+# counts as unsaved work. The linked skills make untracked files live.
+state=""
+[ -z "$(git -C "$REPO" status --porcelain 2>/dev/null)" ] || state=" + uncommitted changes"
+
+printf '\ngdoc installed\n\n'
+printf '  source   %s\n' "$REPO"
+printf '  version  %s on %s%s\n' "$commit" "$branch" "$state"
+printf '  cli      %s\n' "$VENV/bin/gdoc"
+printf '\n  skills (linked, so edits are live with no reinstall)\n'
+for skill in "${SKILLS[@]}"; do
+    printf '    %-12s -> %s\n' "$skill" "$(readlink "$SKILLS_DIR/$skill")"
+done
+printf '\n'

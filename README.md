@@ -12,12 +12,26 @@ new version.
 ## Install
 
 ```bash
-python3 -m venv ~/.config/gdoc-agent/venv
-~/.config/gdoc-agent/venv/bin/pip install -e ".[dev]"
+./install.sh
 ```
 
-This puts a `gdoc` command at `~/.config/gdoc-agent/venv/bin/gdoc`, so the tool
-runs from any directory.
+It creates the venv at `~/.config/gdoc-agent/venv`, installs the package in
+editable mode, and links `skills/gdoc-review` and `skills/gdoc-apply` into
+`~/.claude/skills/`. It prints the commit you are running.
+
+Safe to re-run. Every step checks the current state first.
+
+### Updating
+
+`git pull` is the whole update. The package is an editable install and the
+skills are symlinks, so both halves follow the working tree with no reinstall.
+
+Re-run `./install.sh` only after changing dependencies in `pyproject.toml`, or
+after adding a new skill directory.
+
+One consequence of linking: an uncommitted edit to a `SKILL.md` is already live
+in every Claude Code session. `install.sh` prints `+ uncommitted changes` when
+the working tree is dirty, so you can tell what you are actually running.
 
 ## Configure
 
@@ -78,7 +92,7 @@ gdoc_versions:
 ```
 gdoc/                    the package
 tests/                   pytest suite
-skills/                  gdoc-review and gdoc-apply, mirrored to ~/.claude/skills/
+skills/                  gdoc-review and gdoc-apply, symlinked into ~/.claude/skills/
 docs/gdoc/<slug>/        mirror.md, pending.md, out/
 docs/superpowers/        the plan and the design spec
 ```
