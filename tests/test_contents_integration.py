@@ -1,13 +1,16 @@
 """The whole publish path, against the live Drive API, with no LibreOffice.
 
-Skipped without credentials, like `test_access_integration.py`. Run it with:
+This one **creates** documents, unlike the read-only integration checks, so it is
+opt-in rather than merely credential-gated. A plain `pytest` must not write to
+somebody's Drive. Run it deliberately:
 
-    pytest -m integration tests/test_contents_integration.py -s
+    GDOC_LIVE_PUBLISH_TEST=1 pytest -m integration tests/test_contents_integration.py -s
 
 It uploads two throwaway documents and trashes both before it finishes, including
 when an assertion fails.
 """
 
+import os
 import shutil
 
 import pytest
@@ -18,7 +21,13 @@ from gdoc.generate import upload_as_gdoc
 from gdoc.render import build, contents, pagination
 from gdoc.render.profiles import TEMPLATES_DIR
 
-pytestmark = [pytest.mark.integration]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        os.environ.get("GDOC_LIVE_PUBLISH_TEST") != "1",
+        reason="creates Drive documents, set GDOC_LIVE_PUBLISH_TEST=1 to run",
+    ),
+]
 
 EXAMPLE = TEMPLATES_DIR / "altery-group-policy-v1.0" / "example.md"
 GHOSTS = ("Policy Statements 1 - Details", "Variation of procedure for legal entity X")
