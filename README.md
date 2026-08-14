@@ -9,6 +9,21 @@ document, and that limit is the design: replies go in comment threads, and
 document-wide changes are applied to a paired markdown file and published as a
 new version.
 
+## The marker decides
+
+`gdoc read` returns one actionable list, `addressed`. A comment is in it when it
+carries the `ai` marker, is not resolved, and has no reply from the agent yet.
+
+The author name is a label, not a gate. A marked comment from anyone on the
+document is acted on, and Nail chooses the document: pointing the skill at it is
+the trust decision. The name still travels in the payload, so an unexpected one
+is visible in the report.
+
+There was a `display_name` config field that split the list into Nail's comments
+and everyone else's. It is gone. Drive returns no email address for comment
+authors and display names are editable, so the split was a guess the skill had to
+disclaim every run.
+
 ## Install
 
 ```bash

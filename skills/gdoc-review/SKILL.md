@@ -1,12 +1,13 @@
 ---
 name: gdoc-review
-description: Use when Nail gives a Google Doc link and wants his ai: comments handled. Reads the comments, answers local ones in their threads, captures global ones for a later session.
+description: Use when Nail gives a Google Doc link and wants the ai: comments in it handled. Reads the comments, answers local ones in their threads, captures global ones for a later session.
 ---
 
 # Google Docs review
 
-Answer the `ai:` comments Nail left in a document. Local changes get an answer in
-the thread. Global changes get captured, never attempted.
+Answer the `ai:` comments in a document, whoever wrote them. Nail chose the
+document, and the marker is the instruction. Local changes get an answer in the
+thread. Global changes get captured, never attempted.
 
 The marker is `ai` plus a sign, at the start of a comment: `ai:` leaves the
 choice to you, `ai?` means answer it here, `ai!` means capture it as global. The
@@ -48,23 +49,22 @@ the document. Say at the end that nothing was posted.
 $GDOC read <url>
 ```
 
-Returns `mine`, `others` and `skipped`. Threads already answered by the service
-account appear under `skipped`, which is what makes a second run safe.
+Returns `addressed` and `skipped`. A marked comment from anyone in the document
+is addressed: the marker is the instruction, and Nail chose the document. Each
+item carries its `author`, so an unexpected name is visible. Threads already
+answered by the service account appear under `skipped`, which is what makes a
+second run safe.
 
 ## Step 2: Show Nail what you found, and stop
 
-Print the lists and ask before posting anything. Two things Nail must be told
-every run, because the agent cannot check either one:
-
-- The Drive API returns no email address for comment authors, so `mine` is a
-  display-name guess, not proof.
-- `permissions.list` is refused under Commenter, so the agent cannot see who
-  else can read this document. Replies are visible to all of them.
+Print the list and ask before posting anything. One thing Nail must be told every
+run, because the agent cannot check it: `permissions.list` is refused under
+Commenter, so the agent cannot see who else can read this document. Replies are
+visible to all of them, and a posted reply cannot be taken back.
 
 ```
-Yours (will act):      para 3, para 7, para 11
-Others (context only): para 5 (William Mejia)
-Already answered:      para 2
+Will act:         para 3, para 7, para 11 (Nail), para 5 (William Mejia)
+Already answered: para 2
 
 I cannot see who else has access to this document. Replies will be
 visible to everyone on it, under the service account address.
@@ -74,7 +74,7 @@ Proceed?
 
 Wait for an answer. Never post before this.
 
-## Step 3: Classify each of Nail's comments
+## Step 3: Classify each addressed comment
 
 Per comment, not per batch. One run may answer two and capture two.
 
@@ -84,9 +84,9 @@ Per comment, not per batch. One run may answer two and capture two.
 | Examples | A question. Rephrase this. Is this term right? Add a missing clause | Renumber sections. Restructure. Apply a term change everywhere |
 | Action | Answer in the thread | Capture, and reply with the refusal |
 
-`forced_kind` in the JSON carries Nail's override: `ai?` means answer it in the
-thread, `ai!` means capture it. `ai:` means he left the choice to you. Honour an
-override without re-deciding.
+`forced_kind` in the JSON carries the override written in the comment: `ai?`
+means answer it in the thread, `ai!` means capture it. `ai:` leaves the choice to
+you. Honour an override without re-deciding.
 
 An unanchored comment has `anchored: false` and no quote. It refers to the
 document as a whole, so treat it as global unless it is plainly a question.
@@ -176,6 +176,6 @@ now would bake them in and hide them from the next apply.
 - Never edit the reviewed document. The credential cannot, and neither may you.
 - Never resolve a thread. Resolving means Nail accepted the text.
 - Never reply twice to the same comment.
-- Never act on a comment that is not Nail's.
+- Never act on a comment without the marker.
 - Never attempt a global change in a comment thread.
 - Never write the baseline. That is `generate`'s job.

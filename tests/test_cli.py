@@ -11,13 +11,13 @@ from gdoc.cli import main
 # ---------------------------------------------------------------------------
 
 
-def test_read_prints_partitioned_threads_as_json(capsys):
+def test_read_returns_one_addressed_list_with_authors(capsys):
+    """The marker decides. The author name is a label, so it stays in the payload."""
     threads = [
         {
             "id": "t1",
             "content": "ai: rephrase",
             "author": {"displayName": "Nail Khusnullin", "me": False},
-            "quotedFileContent": {"value": "asdasd"},
         },
         {
             "id": "t2",
@@ -28,17 +28,13 @@ def test_read_prints_partitioned_threads_as_json(capsys):
     drive = MagicMock()
     drive.comments().list.return_value.execute.side_effect = [{"comments": threads}]
     drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.load_config"
-    ) as config:
-        config.return_value.display_name = "Nail Khusnullin"
+    with patch("gdoc.cli.drive_service", return_value=drive):
         exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    assert [t["id"] for t in payload["mine"]] == ["t1"]
-    assert [t["id"] for t in payload["others"]] == ["t2"]
-    assert payload["doc_id"] == "1AbC"
-    assert payload["slug"] == "test-doc"
+    assert "mine" not in payload
+    assert "others" not in payload
+    assert [t["author"] for t in payload["addressed"]] == ["Nail Khusnullin", "William Mejia"]
 
 
 def test_bad_url_exits_nonzero_with_json_error(capsys):
@@ -444,9 +440,8 @@ def test_main_handles_http_error_as_json_error(capsys):
     drive = MagicMock()
     drive.files().get.return_value.execute.side_effect = error
     with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.load_config"
-    ) as config, patch("gdoc.cli.fetch_threads", return_value=()):
-        config.return_value.display_name = "Nail Khusnullin"
+        "gdoc.cli.fetch_threads", return_value=()
+    ):
         exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
@@ -596,10 +591,7 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
     drive = MagicMock()
     drive.comments().list.return_value.execute.side_effect = [{"comments": []}]
     drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.load_config"
-    ) as config:
-        config.return_value.display_name = "Nail Khusnullin"
+    with patch("gdoc.cli.drive_service", return_value=drive):
         main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     capsys.readouterr()
     assert _get_kwargs(drive)["supportsAllDrives"] is True

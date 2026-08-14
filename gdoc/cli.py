@@ -77,17 +77,15 @@ def _file_meta(drive, doc_id: str) -> dict:
 def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
     drive = drive_service()
-    config = load_config()
     threads = fetch_threads(drive, doc_id)
-    mine, others, skipped = partition(threads, config.display_name)
+    addressed, skipped = partition(threads)
     meta = _file_meta(drive, doc_id)
     return _emit(
         {
             "doc_id": doc_id,
             "name": meta.get("name"),
             "slug": slugify(meta.get("name", "")),
-            "mine": [_thread_json(t) for t in mine],
-            "others": [_thread_json(t) for t in others],
+            "addressed": [_thread_json(t) for t in addressed],
             "skipped": [_thread_json(t) for t in skipped],
         }
     )
