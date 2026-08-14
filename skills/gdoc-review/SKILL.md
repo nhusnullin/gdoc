@@ -12,7 +12,8 @@ The marker is `ai` plus a sign, at the start of a comment: `ai:` leaves the
 choice to you, `ai?` means answer it here, `ai!` means capture it as global. The
 old `@ai` form still counts. The CLI does this matching; you never re-derive it.
 
-Spec: `~/src/personal/gdoc/docs/superpowers/specs/2026-08-13-gdoc-ai-agent-design.md`
+Spec: `~/src/personal/gdoc/docs/superpowers/specs/2026-08-14-gdoc-storage-and-iteration-design.md`,
+which supersedes the storage parts of the 2026-08-13 spec beside it.
 
 ## Setup
 
