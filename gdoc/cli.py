@@ -23,8 +23,15 @@ from gdoc.filters import forced_kind, partition
 from gdoc.generate import generate
 from gdoc.baseline import slugify, write_baseline
 from gdoc.model import Thread
-from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
-from gdoc.pending import append_item
+from gdoc.pairing import (
+    Pairing,
+    add_version,
+    find_by_doc_id,
+    read_pairing,
+    slug_for_source,
+    write_pairing,
+)
+from gdoc.pending import append_item, pending_path, recorded_source
 from gdoc.reply import post_reply
 
 
@@ -113,14 +120,58 @@ def cmd_export(args) -> int:
 def cmd_capture(args) -> int:
     drive = drive_service()
     doc_id = extract_doc_id(args.doc)
+    repo_root = Path(args.repo_root)
     threads = {t.id: t for t in fetch_threads(drive, doc_id)}
     thread = threads.get(args.comment_id)
     if thread is None:
         return _fail(f"comment {args.comment_id} not found on {doc_id}")
+
+    source = find_by_doc_id(repo_root, doc_id)
+    if source is None and not args.slug:
+        return _fail(
+            f"no markdown under {repo_root} is paired to {doc_id}. "
+            "Pair it with gdoc pair set, or pass --slug to choose a queue directory."
+        )
+    slug = args.slug or slug_for_source(source)
+    label = _source_label(repo_root, source) if source else None
+    warning = _check_source_collision(repo_root, slug, label) if label else None
+
     number = append_item(
-        Path(args.repo_root), args.slug, thread, doc_id=doc_id, today=date.today().isoformat()
+        repo_root,
+        slug,
+        thread,
+        doc_id=doc_id,
+        today=date.today().isoformat(),
+        source=label,
     )
-    return _emit({"item": number, "comment_id": args.comment_id})
+    result = {"item": number, "slug": slug, "source": label, "comment_id": args.comment_id}
+    if warning:
+        result["source_collision_warning"] = warning
+    return _emit(result)
+
+
+def _source_label(repo_root: Path, source: Path) -> str:
+    """The source path as recorded in pending.md, relative to the root where it can be."""
+    try:
+        return str(source.resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        return str(source.resolve())
+
+
+def _check_source_collision(repo_root: Path, slug: str, source: str) -> str | None:
+    """Warn when this queue was written for a different source file.
+
+    One directory per source file, so two documents can no longer collide. Two
+    source files in different folders sharing a stem still can, and that is now
+    the only collision possible.
+    """
+    recorded = recorded_source(pending_path(repo_root, slug))
+    if recorded and recorded != source:
+        return (
+            f"queue '{slug}' already holds items for {recorded}. "
+            "Pass --slug to keep this source in its own directory."
+        )
+    return None
 
 
 def cmd_generate(args) -> int:
@@ -148,7 +199,8 @@ def _write_baseline_for(drive, args, doc_id: str) -> Path:
     baseline, and refusing would break the loop on the second version.
     """
     markdown = export_markdown(drive, doc_id)
-    return write_baseline(Path(args.baseline_root), slugify(args.name), markdown, force=True)
+    slug = slug_for_source(Path(args.md))
+    return write_baseline(Path(args.baseline_root), slug, markdown, force=True)
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
     capture = sub.add_parser("capture", help="append a global item to pending.md")
     capture.add_argument("doc")
     capture.add_argument("comment_id")
-    capture.add_argument("--slug", required=True)
+    capture.add_argument("--slug", help="queue directory name, default the paired source's stem")
     capture.add_argument("--repo-root", default=".")
     capture.set_defaults(func=cmd_capture)
 

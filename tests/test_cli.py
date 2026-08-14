@@ -159,7 +159,7 @@ def test_export_no_longer_takes_a_repo_root():
 
 
 def _generate_args(tmp_path):
-    md = tmp_path / "source.md"
+    md = tmp_path / "2026-08-13-topic.md"
     md.write_text("# Source\n")
     out = tmp_path / "out" / "v2.docx"
     return md, out
@@ -211,7 +211,9 @@ def test_generate_writes_the_baseline_after_a_successful_upload(capsys, tmp_path
     exit_code = _run_generate(tmp_path, _uploaded(tmp_path))
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    baseline = tmp_path / ".gdoc" / "my-doc" / "baseline.md"
+    # The source file's stem, not the document title: the title carries a version
+    # number and would fork the directory on every iteration.
+    baseline = tmp_path / ".gdoc" / "2026-08-13-topic" / "baseline.md"
     assert baseline.read_text() == "# Generated\n"
     assert payload["baseline_path"] == str(baseline)
 
@@ -492,6 +494,89 @@ def test_capture_appends_a_global_item(capsys, tmp_path):
     pending = tmp_path / ".gdoc" / "policy" / "pending.md"
     assert pending.exists()
     assert "c1" in pending.read_text()
+
+
+_PAIRED_DOC_ID = "1AbCdefghijklmnopqrstuvwx"
+_PAIRED_URL = f"https://docs.google.com/document/d/{_PAIRED_DOC_ID}/edit"
+
+
+def _capture_thread():
+    from gdoc.model import Thread
+
+    return Thread(
+        id="c1",
+        content="ai! add a section on refunds",
+        author_name="Nail Khusnullin",
+        author_email=None,
+        by_agent=False,
+        quoted="policy text",
+        resolved=False,
+        replies=(),
+    )
+
+
+def _run_capture(tmp_path, extra=()):
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.fetch_threads", return_value=(_capture_thread(),)
+    ):
+        return main(["capture", _PAIRED_URL, "c1", "--repo-root", str(tmp_path), *extra])
+
+
+def test_capture_derives_the_slug_from_the_paired_source(capsys, tmp_path):
+    """The document title changes every iteration. The source file does not."""
+    source = tmp_path / "2026-08-13-topic.md"
+    source.write_text(f"---\ngdoc: {_PAIRED_DOC_ID}\n---\n\nBody.\n")
+    exit_code = _run_capture(tmp_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["slug"] == "2026-08-13-topic"
+    pending = tmp_path / ".gdoc" / "2026-08-13-topic" / "pending.md"
+    assert "Source: 2026-08-13-topic.md" in pending.read_text()
+
+
+def test_capture_finds_the_source_by_an_older_version_id(capsys, tmp_path):
+    source = tmp_path / "2026-08-13-topic.md"
+    source.write_text(
+        "---\ngdoc: 1LaterVersion\n"
+        f"gdoc_versions:\n  - id: {_PAIRED_DOC_ID}\n    created: 2026-08-13\n"
+        "  - id: 1LaterVersion\n    created: 2026-08-14\n---\n\nBody.\n"
+    )
+    exit_code = _run_capture(tmp_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["slug"] == "2026-08-13-topic"
+
+
+def test_capture_fails_when_nothing_is_paired_and_no_slug_is_given(capsys, tmp_path):
+    exit_code = _run_capture(tmp_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "--slug" in payload["error"]
+
+
+def test_capture_warns_when_the_queue_belongs_to_a_different_source(capsys, tmp_path):
+    """Two source files in different folders can still share a stem."""
+    other = tmp_path / "archive"
+    other.mkdir()
+    (other / "2026-08-13-topic.md").write_text("---\ngdoc: 1OtherDocument\n---\n\nBody.\n")
+    source = tmp_path / "2026-08-13-topic.md"
+    source.write_text(f"---\ngdoc: {_PAIRED_DOC_ID}\n---\n\nBody.\n")
+    from dataclasses import replace
+
+    from gdoc.pending import append_item
+
+    append_item(
+        tmp_path,
+        "2026-08-13-topic",
+        replace(_capture_thread(), id="c0"),
+        doc_id="1OtherDocument",
+        today="2026-08-13",
+        source="archive/2026-08-13-topic.md",
+    )
+    exit_code = _run_capture(tmp_path, extra=("--slug", "2026-08-13-topic"))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "archive/2026-08-13-topic.md" in payload["source_collision_warning"]
 
 
 # ---------------------------------------------------------------------------

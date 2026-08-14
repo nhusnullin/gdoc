@@ -12,12 +12,13 @@ from gdoc.baseline import GDOC_DIR
 from gdoc.model import Thread
 
 _ITEM_HEADING = re.compile(r"^## Item (\d+)", re.MULTILINE)
+_SOURCE_LINE = re.compile(r"^Source: (.+)$", re.MULTILINE)
 
 _FILE_HEADER = """\
 # Pending global items
 
 Document: https://docs.google.com/document/d/{doc_id}/edit
-
+{source_line}
 Each item needs changes across the document, so it was not answered in the
 comment thread. Work through them with /gdoc-apply.
 """
@@ -39,6 +40,18 @@ def pending_path(repo_root: Path, slug: str) -> Path:
     return repo_root / GDOC_DIR / slug / "pending.md"
 
 
+def recorded_source(path: Path) -> str | None:
+    """The source file this queue belongs to, or None.
+
+    None also covers queues written before the Source line existed, so an older
+    file stays readable.
+    """
+    if not path.exists():
+        return None
+    match = _SOURCE_LINE.search(path.read_text())
+    return match.group(1).strip() if match else None
+
+
 def next_item_number(path: Path) -> int:
     if not path.exists():
         return 1
@@ -46,7 +59,14 @@ def next_item_number(path: Path) -> int:
     return max(numbers) + 1 if numbers else 1
 
 
-def append_item(repo_root: Path, slug: str, thread: Thread, doc_id: str, today: str) -> int:
+def append_item(
+    repo_root: Path,
+    slug: str,
+    thread: Thread,
+    doc_id: str,
+    today: str,
+    source: str | None = None,
+) -> int:
     path = pending_path(repo_root, slug)
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -72,7 +92,8 @@ def append_item(repo_root: Path, slug: str, thread: Thread, doc_id: str, today: 
     # separator between sections without any truncate-and-rewrite.
     with open(path, "a") as f:
         if not existing:
-            f.write(_FILE_HEADER.format(doc_id=doc_id))
+            source_line = f"Source: {source}\n" if source else ""
+            f.write(_FILE_HEADER.format(doc_id=doc_id, source_line=source_line))
         f.write(item)
 
     return number
