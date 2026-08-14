@@ -17,5 +17,8 @@ docs/gdoc/*/out/
 # git repository, which clones cannot fetch.
 .claude/worktrees/
 
+# Per-machine Claude Code settings. .claude/settings.json is shared and tracked.
+.claude/settings.local.json
+
 # Obsidian opens this directory as a vault. Its state is per machine.
 .obsidian/
