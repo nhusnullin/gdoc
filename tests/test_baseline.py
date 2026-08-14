@@ -3,7 +3,14 @@ import subprocess
 
 import pytest
 
-from gdoc.baseline import BaselineConflict, baseline_path, slugify, write_baseline
+from gdoc.baseline import (
+    BaselineConflict,
+    baseline_path,
+    has_git,
+    is_dirty,
+    slugify,
+    write_baseline,
+)
 
 
 def git(repo, *args):
@@ -74,24 +81,44 @@ def test_force_overrides_the_guard(repo):
     assert baseline_path(repo, "policy").read_text() == "# From Drive\n"
 
 
-def test_write_baseline_raises_when_git_cannot_be_consulted(tmp_path):
-    # tmp_path is not a git repo, so git will fail with a non-zero exit code.
-    # The guard only fires when the file already exists, so create it first.
-    path = baseline_path(tmp_path, "policy")
-    path.parent.mkdir(parents=True, exist_ok=True)
+def test_has_git_is_true_inside_a_repository(repo):
+    assert has_git(repo) is True
+
+
+def test_has_git_is_false_outside_a_repository(tmp_path):
+    assert has_git(tmp_path) is False
+
+
+def test_is_dirty_still_raises_when_git_cannot_answer(tmp_path):
+    """git exists but the command fails. That is a real fault and must stay loud."""
+    path = tmp_path / "policy.md"
     path.write_text("# Existing\n")
     with pytest.raises(BaselineConflict, match="git could not be consulted"):
-        write_baseline(tmp_path, "policy", "# From Drive\n")
+        is_dirty(path)
 
 
-def test_force_rescues_when_git_cannot_be_consulted(tmp_path):
-    # tmp_path is outside any git repository, so is_dirty would raise.
-    # force=True must short-circuit before is_dirty is called and still write.
-    path = baseline_path(tmp_path, "policy")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("# Existing\n")
-    result = write_baseline(tmp_path, "policy", "# From Drive\n", force=True)
-    assert result.read_text() == "# From Drive\n"
+def test_writes_a_new_file_outside_a_git_repo(tmp_path):
+    path = write_baseline(tmp_path, "my-doc", "# Title\n")
+    assert path.read_text() == "# Title\n"
+
+
+def test_refuses_to_overwrite_outside_a_git_repo(tmp_path):
+    write_baseline(tmp_path, "my-doc", "# First\n")
+    with pytest.raises(BaselineConflict, match="force"):
+        write_baseline(tmp_path, "my-doc", "# Second\n")
+
+
+def test_the_refusal_says_git_is_unavailable(tmp_path):
+    """Otherwise the message reads as a complaint about uncommitted work."""
+    write_baseline(tmp_path, "my-doc", "# First\n")
+    with pytest.raises(BaselineConflict, match="git"):
+        write_baseline(tmp_path, "my-doc", "# Second\n")
+
+
+def test_force_overwrites_outside_a_git_repo(tmp_path):
+    write_baseline(tmp_path, "my-doc", "# First\n")
+    path = write_baseline(tmp_path, "my-doc", "# Second\n", force=True)
+    assert path.read_text() == "# Second\n"
 
 
 def test_write_baseline_is_atomic(repo, monkeypatch):
