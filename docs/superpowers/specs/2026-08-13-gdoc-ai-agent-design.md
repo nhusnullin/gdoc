@@ -4,6 +4,19 @@ Status: design, not built
 Last updated: 2026-08-13
 Owner: Nail
 
+> **Partly superseded on 2026-08-14** by
+> [2026-08-14-gdoc-storage-and-iteration-design.md](2026-08-14-gdoc-storage-and-iteration-design.md).
+>
+> Three things below are now wrong. Storage: files go in `.gdoc/` beside the
+> source markdown, not in `docs/gdoc/` in the tool's own repo, and the root is
+> `$PWD`. The mirror: it is renamed `baseline.md` and written by `generate`
+> after a successful upload, never at the end of a review. Git: this spec
+> assumes a git repository throughout, and the hub holding the source documents
+> is not one, so nothing may refuse to run without git.
+>
+> Everything else here still holds, including the comment marker rules, the
+> Commenter guarantee, and what section 10 records as verified.
+
 A global skill you invoke by hand. You give it a Google Doc link. It reads the
 `ai:` comments you left, answers the local ones in their threads, and tells you
 plainly which ones need a new version of the whole document.
