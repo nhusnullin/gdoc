@@ -21,7 +21,7 @@ from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, partition
 from gdoc.generate import generate
-from gdoc.mirror import MirrorConflict, mirror_path, slugify, write_mirror
+from gdoc.baseline import BaselineConflict, baseline_path, slugify, write_baseline
 from gdoc.model import Thread
 from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
 from gdoc.pending import append_item
@@ -101,14 +101,14 @@ def cmd_export(args) -> int:
     slug = args.slug or slugify(meta.get("name", ""))
     repo_root = Path(args.repo_root)
 
-    # Detect slug collision: a different document is already mirrored under the
+    # Detect slug collision: a different document is already recorded under the
     # same slug. Two document names that differ only in punctuation produce the
-    # same slug. The later write would silently overwrite the earlier mirror.
+    # same slug. The later write would silently overwrite the earlier baseline.
     # We surface a warning rather than blocking because the user may have passed
     # --slug explicitly to resolve a collision they are already aware of.
     collision_warning = _check_slug_collision(repo_root, slug, doc_id)
 
-    path = write_mirror(repo_root, slug, markdown, force=args.force)
+    path = write_baseline(repo_root, slug, markdown, force=args.force)
     result = {"doc_id": doc_id, "slug": slug, "path": str(path), "characters": len(markdown)}
     if collision_warning:
         result["slug_collision_warning"] = collision_warning
@@ -116,8 +116,8 @@ def cmd_export(args) -> int:
 
 
 def _check_slug_collision(repo_root: Path, slug: str, doc_id: str) -> str | None:
-    """Return a warning string when the slug's existing mirror belongs to a different document."""
-    existing = mirror_path(repo_root, slug)
+    """Return a warning string when the slug's existing baseline belongs to a different document."""
+    existing = baseline_path(repo_root, slug)
     if not existing.exists():
         return None
     try:
@@ -247,7 +247,7 @@ def build_parser() -> argparse.ArgumentParser:
     reply.add_argument("--body-file", required=True)
     reply.set_defaults(func=cmd_reply)
 
-    export = sub.add_parser("export", help="write the markdown mirror")
+    export = sub.add_parser("export", help="write the markdown baseline")
     export.add_argument("url")
     export.add_argument("--repo-root", default=".")
     export.add_argument("--slug")

@@ -111,12 +111,12 @@ def test_unknown_subcommand_exits_nonzero():
 # ---------------------------------------------------------------------------
 
 
-def test_export_writes_mirror_and_returns_metadata(capsys, tmp_path):
+def test_export_writes_the_baseline_and_returns_metadata(capsys, tmp_path):
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
     with patch("gdoc.cli.drive_service", return_value=drive), patch(
         "gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md") as mock_write:
+    ), patch("gdoc.cli.write_baseline", return_value=tmp_path / "baseline.md") as mock_write:
         exit_code = main(
             ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
         )
@@ -127,14 +127,14 @@ def test_export_writes_mirror_and_returns_metadata(capsys, tmp_path):
     mock_write.assert_called_once()
 
 
-def test_export_reports_mirror_conflict_as_json_error(capsys, tmp_path):
-    from gdoc.mirror import MirrorConflict
+def test_export_reports_a_baseline_conflict_as_json_error(capsys, tmp_path):
+    from gdoc.baseline import BaselineConflict
 
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
     with patch("gdoc.cli.drive_service", return_value=drive), patch(
         "gdoc.cli.export_markdown", return_value="# Markdown"
-    ), patch("gdoc.cli.write_mirror", side_effect=MirrorConflict("dirty file")):
+    ), patch("gdoc.cli.write_baseline", side_effect=BaselineConflict("dirty file")):
         exit_code = main(
             ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
         )
@@ -319,19 +319,19 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 
 def test_export_warns_when_slug_maps_to_a_different_document(capsys, tmp_path):
-    # Set up an existing mirror file paired to a different doc
-    from gdoc.mirror import MIRROR_DIR
+    # Set up an existing baseline file paired to a different doc
+    from gdoc.baseline import MIRROR_DIR
 
-    mirror_file = tmp_path / MIRROR_DIR / "my-policy" / "mirror.md"
-    mirror_file.parent.mkdir(parents=True)
-    mirror_file.write_text("---\ngdoc: otherDocId\n---\n\nExisting content.\n")
+    baseline_file = tmp_path / MIRROR_DIR / "my-policy" / "baseline.md"
+    baseline_file.parent.mkdir(parents=True)
+    baseline_file.write_text("---\ngdoc: otherDocId\n---\n\nExisting content.\n")
 
     drive = MagicMock()
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    # write_mirror gets a real repo_root but we stub it so no file is overwritten
+    # write_baseline gets a real repo_root but we stub it so no file is overwritten
     with patch("gdoc.cli.drive_service", return_value=drive), patch(
         "gdoc.cli.export_markdown", return_value="# New content"
-    ), patch("gdoc.cli.write_mirror", return_value=mirror_file):
+    ), patch("gdoc.cli.write_baseline", return_value=baseline_file):
         exit_code = main(
             [
                 "export",
@@ -444,7 +444,7 @@ def test_export_asks_for_metadata_with_shared_drive_support(capsys, tmp_path):
     drive.files().get.return_value.execute.return_value = {"name": "My policy"}
     with patch("gdoc.cli.drive_service", return_value=drive), patch(
         "gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md"):
+    ), patch("gdoc.cli.write_baseline", return_value=tmp_path / "baseline.md"):
         main(
             ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
         )
