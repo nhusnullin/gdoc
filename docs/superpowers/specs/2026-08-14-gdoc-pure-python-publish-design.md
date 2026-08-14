@@ -1,6 +1,6 @@
 # Taking LibreOffice and poppler out of the publish path
 
-Date: 2026-08-14. Status: agreed, in implementation.
+Date: 2026-08-14. Status: implemented.
 
 ## Correction, made during implementation
 

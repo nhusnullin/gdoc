@@ -42,6 +42,40 @@ and will not become one. This is the constraint an agent is most likely to break
 - The commit steps in `gdoc-apply` are conditional, and a skipped commit is
   always said out loud.
 
+## No external programs
+
+`gdoc` runs where the source documents live, and that environment has no package
+manager. Anything that cannot be pip installed cannot be installed at all. The
+rule is scoped to `gdoc/render/`, the publish path.
+
+LibreOffice and poppler were removed for this reason. That was 833MB of programs
+that cannot be copied into an isolated environment. Three external programs
+became one.
+
+pandoc remains, in three places, and each is tracked separately:
+
+- `gdoc/render/body.py`, as the markdown parser `build` depends on. Load-bearing.
+  Removing it means a pure-Python parser plus a rewritten AST walker, in the
+  module where the document body's pixel fidelity lives, so it needs its own
+  spec.
+- `gdoc/export.py`, as a markdown fallback. Drive exports `text/markdown`
+  natively, verified against the live account, so this one looks removable on
+  its own.
+- `gdoc/generate.py`, for the plain non-template path, which PR #5 Task 6
+  retires.
+
+`tests/test_no_external_programs.py` enforces this. The five removed program
+names must not appear in code under `gdoc/render/`, and the set of modules
+there importing `subprocess` must be exactly `{body.py}`. That is an allowlist,
+not a ban: it fails if `subprocess` spreads to another module, and it fails just
+as loudly if body.py's own dependency vanishes without the test being updated.
+
+Page numbers are the one real cost. They do not exist until something lays the
+document out, so `gdoc generate` gets them from Google: it uploads once, reads
+which page each heading landed on out of the PDF export, writes them in, and
+publishes. An offline `gdoc build` leaves them blank, which any desktop refresh
+fills in. A wrong number would be worse than a blank one.
+
 ## Skills are linked, not copied
 
 `~/.claude/skills/gdoc-review` and `gdoc-apply` are symlinks into `skills/` in

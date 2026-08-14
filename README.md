@@ -118,6 +118,12 @@ moment the document and the markdown provably match. A later apply diffs it
 against a fresh export to see what was edited directly in the document. Both
 sides carry the same pandoc round-trip distortion, so it cancels.
 
+`gdoc build` no longer goes through pandoc as a docx writer: that was the old
+`pandoc md -o docx` path, and it writes the .docx directly from the house
+template now. It still uses pandoc as the markdown parser that feeds that
+template. The export side still uses pandoc as a markdown fallback, which is
+tracked separately.
+
 ## No git requirement
 
 The tool works without git. Nothing refuses to run because git is unavailable,
