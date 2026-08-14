@@ -478,53 +478,6 @@ def strip_body(doc):
 TOC_STYLE_RE = re.compile(r"TOC[1-9]")
 
 
-def normalise_toc_tabs(path):
-    """Put every contents-list level's page number on the same right margin.
-
-    Runs after the LibreOffice pass, because the master has no TOC styles at
-    all: LibreOffice invents TOC1..TOC9 when it refreshes the field, and it is
-    inconsistent about them. On each *paragraph* it writes a right tab at the
-    text edge for every level, which is correct. In the *style* it sets level
-    one's right tab at the text edge but pulls each deeper level's in by that
-    level's indent, so TOC2 lands 283 twips short.
-
-    While an application shows the stored field result, the direct paragraph
-    formatting wins and every page number lines up. The moment one regenerates
-    the field, which Google Docs does on import and Word does on "Update
-    table", that formatting is discarded and the styles take over: level two's
-    numbers jump 5mm left of level one's. Fixing the style is what makes the
-    three applications agree.
-
-    The left indent is left alone. That is what shows the level.
-    """
-    doc = Document(path)
-    changed = 0
-    for style in doc.styles.element.findall(qn("w:style")):
-        if not TOC_STYLE_RE.fullmatch(style.get(qn("w:styleId")) or ""):
-            continue
-        p_pr = _style_ppr(style)
-
-        # Existing stops are cleared by position rather than dropped, since the
-        # style inherits a default stop from its base style that would
-        # otherwise swallow the tab before the page number ever reaches the
-        # right margin.
-        stale = []
-        for tabs in p_pr.findall(qn("w:tabs")):
-            stale += [tab.get(qn("w:pos")) for tab in tabs.findall(qn("w:tab"))]
-            p_pr.remove(tabs)
-
-        tabs = set_ppr_child(p_pr, "w:tabs")
-        for position in sorted({p for p in stale if p and p != str(USABLE_TWIPS)},
-                               key=int):
-            sub(tabs, "tab", val="clear", pos=position)
-        sub(tabs, "tab", val="right", pos=str(USABLE_TWIPS), leader="dot")
-        changed += 1
-
-    if changed:
-        doc.save(path)
-    return changed
-
-
 # ----------------------------------------------------------------- headers ---
 def fill_running_head(path, running_head):
     """Patch the running head, which lives in the header parts, not the body."""

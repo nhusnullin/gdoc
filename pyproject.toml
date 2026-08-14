@@ -27,7 +27,6 @@ packages = ["gdoc", "gdoc.render"]
 
 [tool.setuptools.package-data]
 "gdoc" = ["templates/*/*.docx", "templates/*/*.md"]
-"gdoc.render" = ["scripts/*.sh", "scripts/*.bas"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
