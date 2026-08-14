@@ -33,6 +33,7 @@ from gdoc.pairing import (
 )
 from gdoc.pending import append_item, pending_path, recorded_source
 from gdoc.reply import post_reply
+from gdoc.version import __version__, satisfies_minimum
 
 
 def _thread_json(thread: Thread) -> dict:
@@ -271,6 +272,12 @@ def cmd_pair_find(args) -> int:
     return _emit({"doc_id": args.doc_id, "path": str(found) if found else None})
 
 
+def cmd_version(args) -> int:
+    if args.min_version and not satisfies_minimum(__version__, args.min_version):
+        return _fail(f"needs gdoc >= {args.min_version}, found {__version__}")
+    return _emit({"version": __version__})
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -278,6 +285,7 @@ def cmd_pair_find(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gdoc")
+    parser.add_argument("--version", action="version", version=f"gdoc {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     read = sub.add_parser("read", help="list comment threads, partitioned")
@@ -340,6 +348,12 @@ def build_parser() -> argparse.ArgumentParser:
     find_cmd.add_argument("--repo-root", default=".")
     find_cmd.add_argument("--doc-id", required=True)
     find_cmd.set_defaults(pair_func=cmd_pair_find)
+
+    version_cmd = sub.add_parser("version", help="print the installed version as JSON")
+    version_cmd.add_argument(
+        "--min", dest="min_version", help="exit 1 unless the installed version is at least this"
+    )
+    version_cmd.set_defaults(func=cmd_version)
 
     return parser
 

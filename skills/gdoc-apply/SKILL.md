@@ -17,6 +17,16 @@ ROOT="$PWD"
 
 `$GDOC` is an installed command, so it runs from any directory.
 
+Check the CLI is new enough before anything else:
+
+```bash
+$GDOC version --min 0.2.0
+```
+
+An `error` in the JSON means the installed CLI predates a flag this skill
+relies on. Print it and stop. That is what `install.sh` and `git pull` are
+for; do not work around a missing flag.
+
 One root, `$ROOT`, and it is `$PWD`:
 
 - `$ROOT/.gdoc/<slug>/` holds `pending.md`, `baseline.md` and the generated

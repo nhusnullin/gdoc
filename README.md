@@ -82,7 +82,13 @@ gdoc export <url>                       # markdown to stdout
 gdoc export <url> --out fetched.md
 gdoc pair find --doc-id <doc_id>
 gdoc generate --md <paired.md> --name "<name>" --out <out.docx> --baseline-root .
+gdoc --version                          # e.g. "gdoc 0.2.0"
 ```
+
+## Version
+
+One version covers the CLI and both skills; see `docs/versioning.md` for the
+semver scheme and how a skill checks the installed CLI is new enough.
 
 ## One root, and `.gdoc/` inside it
 

@@ -426,6 +426,41 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# version
+# ---------------------------------------------------------------------------
+
+
+def test_top_level_version_flag_prints_and_exits_zero(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--version"])
+    assert excinfo.value.code == 0
+    assert capsys.readouterr().out.startswith("gdoc ")
+
+
+def test_version_subcommand_reports_the_installed_version(capsys):
+    from gdoc.version import __version__
+
+    exit_code = main(["version"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["version"] == __version__
+
+
+def test_version_subcommand_passes_a_satisfied_minimum(capsys):
+    exit_code = main(["version", "--min", "0.0.0"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "version" in payload
+
+
+def test_version_subcommand_fails_an_unsatisfied_minimum(capsys):
+    exit_code = main(["version", "--min", "999.0.0"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "needs gdoc >= 999.0.0" in payload["error"]
+
+
+# ---------------------------------------------------------------------------
 # HttpError handler
 # ---------------------------------------------------------------------------
 

@@ -85,9 +85,16 @@ branch="$(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown
 state=""
 [ -z "$(git -C "$REPO" status --porcelain 2>/dev/null)" ] || state=" + uncommitted changes"
 
+# The release version, from pyproject.toml via the installed package. Distinct
+# from the commit: a bug report needs the release, and "which commit" needs
+# the SHA. Neither one substitutes for the other.
+release="$("$VENV/bin/gdoc" --version 2>/dev/null | awk '{print $2}')"
+[ -n "$release" ] || release="unknown"
+
 printf '\ngdoc installed\n\n'
 printf '  source   %s\n' "$REPO"
-printf '  version  %s on %s%s\n' "$commit" "$branch" "$state"
+printf '  release  %s\n' "$release"
+printf '  commit   %s on %s%s\n' "$commit" "$branch" "$state"
 printf '  cli      %s\n' "$VENV/bin/gdoc"
 printf '\n  skills (linked, so edits are live with no reinstall)\n'
 for skill in "${SKILLS[@]}"; do
