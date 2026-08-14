@@ -1,6 +1,23 @@
-# A publish path with no external binaries
+# Taking LibreOffice and poppler out of the publish path
 
-Date: 2026-08-14. Status: agreed, ready to plan.
+Date: 2026-08-14. Status: agreed, in implementation.
+
+## Correction, made during implementation
+
+This document was first written and titled as "a publish path with no external
+binaries". **That was wrong.** `gdoc/render/body.py:384` runs
+`subprocess.run([PANDOC, "-f", PANDOC_FORMAT, "-t", "json"])`: pandoc is the
+markdown parser that `build` depends on. The error came from a grep over
+`gdoc/*.py`, which does not recurse into `gdoc/render/`. A Task 3 implementer found
+it and stopped rather than land a guard test that could never pass.
+
+What this plan actually delivers is narrower and still worth having: **LibreOffice
+and poppler both leave**, which is 833MB of programs that cannot be copied into an
+isolated environment. **pandoc stays**, so the publish path is not yet pip-only.
+
+Removing pandoc means replacing it with a pure-Python markdown parser and rewriting
+body.py's AST walker, which is most of its 579 lines, in the module where the
+document body's pixel fidelity lives. That needs its own spec. It is not a step here.
 
 ## Why
 
@@ -24,8 +41,11 @@ stripping heading weight, breaking list numbering and mis-numbering the first en
 What remains is poppler, and the code that still calls LibreOffice.
 
 Measured on the bundled example: `pypdf` returns the same page for all twelve
-headings as `pdftotext` does. So poppler is replaceable by a pure-Python wheel, and
-after that the publish path installs with pip and nothing else.
+headings as `pdftotext` does. So poppler is replaceable by a pure-Python wheel.
+
+pandoc remains after that, as the correction above records, so the publish path does
+not yet install with pip alone. It goes from three external programs to one, and
+from 833MB of them to about 150MB.
 
 A frozen single binary and a Go rewrite were both considered and declined. Freezing
 works (a 14MB PyInstaller build produced output byte-identical across all 23 zip
@@ -83,10 +103,15 @@ would be worse than a blank one.
 - **Wiring `generate` to the two-pass.** PR #5's Task 6 owns `generate`. The pieces
   it needs already exist and `tests/test_contents_integration.py` shows the exact
   composition. Doing it here would collide.
-- **pandoc.** Still used by `gdoc export` as a markdown fallback, and by
-  `generate`'s plain non-template path. Drive exports `text/markdown` natively,
-  verified against the live account, so the fallback is removable, and PR #5 Task 6
-  retires the plain path. Both belong to those changes, not this one.
+- **pandoc, in three separate places.** This is the big one, and the correction at
+  the top of this document explains why it is not here:
+  - `gdoc/render/body.py:384`, as the **markdown parser** for `build`. Load-bearing.
+    Removing it means a pure-Python parser plus a rewritten AST walker, in the module
+    that decides how the body looks. Needs its own spec.
+  - `gdoc/export.py`, as a markdown fallback when Drive's own `text/markdown` export
+    is unavailable. Verified against the live account that Drive supports it, so this
+    fallback looks removable on its own.
+  - `gdoc/generate.py`, for the plain non-template path, which PR #5 Task 6 retires.
 - **A frozen binary, and Go.** Both declined.
 - **Heading levels past 3.** They collapse onto `TOC3` today. Unchanged here.
 - **PR #5's Task 2 pixel comparisons.** They render locally through LibreOffice, so
@@ -109,9 +134,18 @@ system package.
 
 ## Done when
 
-- No module under `gdoc/` calls `soffice`, `pdftotext`, `pdfinfo` or `pdftoppm`.
-- `gdoc build` produces a complete document with no external program on `PATH`.
+Corrected during implementation. The first two criteria originally overclaimed.
+
+- No module under `gdoc/render/` names `soffice`, `libreoffice`, `pdftotext`,
+  `pdfinfo` or `pdftoppm` in code.
+- The set of modules under `gdoc/render/` importing `subprocess` is exactly
+  `{body.py}`, pinned by a test. An allowlist rather than a ban, because it fails
+  both if `subprocess` spreads to another module and if body.py's pandoc dependency
+  disappears without the test being updated.
+- `gdoc build` works with `soffice` and `pdftotext` absent from `PATH`. It still
+  needs pandoc, which is invoked by absolute path, so a stripped `PATH` proves
+  nothing about it either way. Say so rather than implying otherwise.
 - The suite passes, including a check that every heading in the bundled example
   resolves to a page through the pure-Python reader.
-- `pyproject.toml` declares `pypdf` and no longer claims the `slow` marker needs
-  LibreOffice.
+- `pyproject.toml` declares `pypdf`, no longer claims the `slow` marker needs
+  LibreOffice, and no longer ships the LibreOffice scripts as package data.
