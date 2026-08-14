@@ -12,3 +12,10 @@ venv/
 
 # Generated document versions, rebuilt from the paired markdown
 docs/gdoc/*/out/
+
+# Worktrees live inside the repo. Committing one adds it as an embedded
+# git repository, which clones cannot fetch.
+.claude/worktrees/
+
+# Obsidian opens this directory as a vault. Its state is per machine.
+.obsidian/
