@@ -113,6 +113,12 @@ _PARAGRAPH = re.compile(r"<w:p\b.*?</w:p>", re.S)
 # matches by accident and which would drop a field instruction into the text.
 _TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>")
 _HEADING = re.compile(r'w:pStyle w:val="Heading(\d)"')
+# Which field is the contents field, and where it stops. TOC names the instruction
+# we are allowed to replace; the rest is nesting bookkeeping.
+TOC_INSTRUCTION = "TOC"
+_INSTRUCTION = re.compile(r"<w:instrText[^>]*>(.*?)</w:instrText>", re.S)
+_FLD_CHAR = re.compile(r'w:fldCharType="(begin|end)"')
+_BEGIN = 'w:fldCharType="begin"'
 # Attribute order is not fixed, and no writer agrees on it. We put w:id first, the
 # bundled master is a Google Docs export and puts it last, after w:colFirst,
 # w:colLast and w:name. So match the attributes wherever they sit, with lookaheads.
@@ -195,33 +201,71 @@ def _run_carrying(paragraph_xml: str, marker: str) -> str:
     raise ContentsError(f"the contents field has no run carrying {marker}")
 
 
+def _toc_field(paragraphs) -> tuple:
+    """The paragraph carrying the TOC instruction, and where its field opens.
+
+    Chosen by the instruction naming TOC, never by being the first field in the
+    body. A document re-saved from Word can carry a PAGE field earlier on, and
+    splicing the entries over that leaves the real contents list where it is,
+    gives the reader two contents lists, and reports success.
+
+    The offset returned is the begin marker that opens this field, so a foreign
+    field sharing the paragraph is not counted into the nesting.
+    """
+    for index, match in enumerate(paragraphs):
+        for instruction in _INSTRUCTION.finditer(match.group(0)):
+            if TOC_INSTRUCTION not in instruction.group(1):
+                continue
+            head = match.group(0)[: instruction.start()]
+            return index, max(head.rfind(_BEGIN), 0)
+    return None, 0
+
+
+def _closing_paragraph(paragraphs, first: int, offset: int):
+    """The paragraph where the field opened at `offset` closes.
+
+    Counted by begin and end nesting depth, not by the first end marker after the
+    instruction. A cached result can hold fields of its own: Word writes a PAGEREF
+    field into every entry whenever a human refreshes the contents list. Taking the
+    first end then stops the field at the first entry, so the rest of the stale
+    list survives the splice and the reader gets both lists.
+    """
+    depth = 0
+    for index in range(first, len(paragraphs)):
+        body = paragraphs[index].group(0)
+        for kind in _FLD_CHAR.findall(body[offset:] if index == first else body):
+            depth += 1 if kind == "begin" else -1
+            if depth == 0:
+                return index
+    return None
+
+
 def field(document_xml: str) -> Field:
     """Locate the contents field.
 
     The master's field is malformed: the begin marker, the instruction and the
     separator all sit in a single run, where the format wants one run each. So the
-    field cannot be found by matching runs. Find the paragraph carrying the
-    instruction instead, then run forward to the paragraph carrying the end
-    marker. Everything between the two is the cached result.
+    field cannot be found by matching runs. Find the paragraph carrying the TOC
+    instruction instead, then run forward to the paragraph where the field closes.
+    Everything between the two is the cached result.
 
     Google accepts the malformed run and still builds a real contents list from it,
     so it is carried across untouched rather than repaired. Repairing it is a
     change with no observed benefit and an unmeasured risk.
     """
     paragraphs = list(_PARAGRAPH.finditer(document_xml))
-    first = next((i for i, m in enumerate(paragraphs) if "<w:instrText" in m.group(0)), None)
+    first, offset = _toc_field(paragraphs)
     if first is None:
         raise ContentsError(
-            "no contents field found in this document, so there is nothing to "
-            "replace. Was the contents list already written?"
+            "no TOC field instruction found in this document, so there is nothing "
+            "to replace. Was the contents list already written?"
         )
-    last = next(
-        (i for i, m in enumerate(paragraphs)
-         if i >= first and 'w:fldCharType="end"' in m.group(0)),
-        None,
-    )
+    last = _closing_paragraph(paragraphs, first, offset)
     if last is None:
-        raise ContentsError("the contents field has no end marker, refusing to guess where it stops")
+        raise ContentsError(
+            "the contents field is never closed: its begin and end markers do not "
+            "balance, so where the cached result stops is unknown"
+        )
     return Field(
         start=paragraphs[first].start(),
         end=paragraphs[last].end(),

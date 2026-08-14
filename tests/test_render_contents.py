@@ -310,14 +310,18 @@ def test_a_document_with_no_headings_is_refused(built, tmp_path):
         contents.write(stripped, tmp_path / "out.docx")
 
 
-def _document_with(source, dst, old, new):
-    """A copy of source whose document.xml has `old` replaced by `new`."""
-    xml = document_xml(source).replace(old, new)
+def _with_document_xml(source, dst, xml):
+    """A copy of source carrying the document.xml given."""
     with zipfile.ZipFile(source) as zin, zipfile.ZipFile(dst, "w") as zout:
         for item in zin.infolist():
             data = xml.encode("utf8") if item.filename == "word/document.xml" else zin.read(item.filename)
             zout.writestr(item, data)
     return dst
+
+
+def _document_with(source, dst, old, new):
+    """A copy of source whose document.xml has `old` replaced by `new`."""
+    return _with_document_xml(source, dst, document_xml(source).replace(old, new))
 
 
 def test_xml_special_characters_in_a_heading_survive(built, tmp_path):
@@ -442,3 +446,91 @@ def test_writing_twice_keeps_every_bookmark_paired_and_every_id_unique(built, tm
     assert len(starts) == len(ends), "a bookmark was left unterminated"
     assert len(set(starts)) == len(starts), "duplicate bookmark ids"
     assert sorted(starts) == sorted(ends), "a start and an end disagree on their id"
+
+
+# ------------------------------------------------- which field is the field ---
+# Neither shape below is reachable with today's Google-exported master, which has
+# exactly one instrText, one begin and one end. Both become reachable the day the
+# master is re-saved from Word, and each produces a document whose body is
+# immaculate and whose contents page lies, which is the defect this design exists
+# to prevent. So they are held here rather than left to the day it happens.
+
+FOREIGN_PAGE_FIELD = (
+    "<w:p><w:r>"
+    '<w:fldChar w:fldCharType="begin"/>'
+    '<w:instrText xml:space="preserve"> PAGE </w:instrText>'
+    '<w:fldChar w:fldCharType="separate"/></w:r>'
+    "<w:r><w:t>7</w:t></w:r>"
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'
+)
+
+PAGEREF_ENTRY = (
+    "<w:p>"
+    '<w:r><w:t xml:space="preserve">1. Purpose</w:t></w:r>'
+    '<w:r><w:fldChar w:fldCharType="begin"/>'
+    '<w:instrText xml:space="preserve"> PAGEREF _heading=h.1fob9te \\h </w:instrText>'
+    '<w:fldChar w:fldCharType="separate"/></w:r>'
+    "<w:r><w:t>4</w:t></w:r>"
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'
+)
+
+
+def test_a_foreign_field_earlier_in_the_body_is_not_the_contents_field(stale, tmp_path):
+    """Taking the first instruction splices the entries over a PAGE field.
+
+    The real contents list is then left where it is, the output carries two
+    contents lists, and write reports success. The field is chosen by its
+    instruction naming TOC instead. This also holds the older rule that an end
+    marker before the instruction, which this PAGE field has, is not the field's.
+    """
+    source = _document_with(stale, tmp_path / "page_field.docx",
+                            "<w:body>", "<w:body>" + FOREIGN_PAGE_FIELD)
+    out = tmp_path / "written.docx"
+    result = contents.write(source, out)
+    after = document_xml(out)
+    for mark in STALE_ENTRY_MARKS:
+        assert mark not in after, "the real contents list was left in place"
+    assert " PAGE " in after, "the foreign field was destroyed"
+    assert len(entry_paragraphs(out)) == len(result.entries)
+
+
+def test_a_cached_entry_carrying_its_own_field_does_not_end_the_field(stale, tmp_path):
+    """A refreshed TOC gives every entry a PAGEREF field of its own.
+
+    That is what Word writes whenever a human clicks update. Taking the first end
+    marker after the instruction then stops the field at the first entry: two
+    paragraphs are replaced, the rest of the stale list survives, and the reader
+    gets our entries followed by the template's. Counted by nesting depth instead.
+    """
+    xml = document_xml(stale)
+    instruction = next(m for m in re.finditer(r"<w:p\b.*?</w:p>", xml, re.S)
+                       if "<w:instrText" in m.group(0))
+    source = _with_document_xml(
+        stale, tmp_path / "pageref.docx",
+        xml[: instruction.end()] + PAGEREF_ENTRY + xml[instruction.end():],
+    )
+    out = tmp_path / "written.docx"
+    result = contents.write(source, out)
+    after = document_xml(out)
+    for mark in STALE_ENTRY_MARKS:
+        assert mark not in after, "the stale list survived the write"
+    # 19 paragraphs of stale cached result in the master, plus the one injected.
+    assert result.replaced_paragraphs == 20, "the field stopped at the first entry"
+    assert paragraph_texts(field_span(out)) == [
+        contents.escape(text) for _level, text in result.entries
+    ]
+
+
+def test_a_field_with_no_toc_instruction_is_refused(stale, tmp_path):
+    """A field is not the contents field just because it comes first."""
+    source = _document_with(stale, tmp_path / "no_toc.docx", " TOC ", " PAGE ")
+    with pytest.raises(contents.ContentsError, match="TOC"):
+        contents.write(source, tmp_path / "written.docx")
+
+
+def test_a_field_that_never_closes_is_refused(stale, tmp_path):
+    """Unbalanced markers mean the end of the cached result is unknown."""
+    source = _document_with(stale, tmp_path / "unclosed.docx",
+                            'w:fldCharType="end"', 'w:fldCharType="begin"')
+    with pytest.raises(contents.ContentsError, match="closed"):
+        contents.write(source, tmp_path / "written.docx")
