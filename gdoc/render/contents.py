@@ -41,6 +41,7 @@ layout engine. A caller with no pagination to offer, such as an offline
 and a wrong number is not.
 """
 
+import os
 import re
 import zipfile
 from dataclasses import dataclass
@@ -326,3 +327,20 @@ def write(src: Path, dst: Path, pages: Mapping | None = None) -> ContentsResult:
             out.writestr(item, data)
 
     return ContentsResult(entries=found, replaced_paragraphs=replaced)
+
+
+def rewrite_in_place(path: Path, pages: Mapping | None = None) -> ContentsResult:
+    """Replace a document's contents list, leaving one file behind.
+
+    Goes through a sibling temporary file, because a zip cannot be read and
+    rewritten at the same path at once. The temporary file is removed whether or
+    not the rewrite succeeds.
+    """
+    path = Path(path)
+    temporary = path.with_name(path.name + ".contents-tmp")
+    try:
+        result = write(path, temporary, pages=pages)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return result

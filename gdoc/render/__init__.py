@@ -1,11 +1,15 @@
 """Put markdown into a house template and produce a .docx.
 
-The pipeline: parse the front matter, copy the master and fill its front
-matter, splice the rendered body in, then let headless LibreOffice refresh the
-contents list so its page numbers are real.
+The pipeline: parse the front matter, copy the master and fill its front matter,
+splice the rendered body in, then write the contents list.
 
 The master is copied and edited, never rebuilt. That is what keeps the cover,
 logo, running head, footer and coloured tables pixel-identical to the original.
+
+Nothing here calls an external program. Page numbers are the caller's to supply,
+because they do not exist until something lays the document out. gdoc generate
+gets them from Google. A caller with none, such as an offline build, gets a
+contents list with correct entries and blank page numbers, which is honest.
 """
 
 import datetime
@@ -14,12 +18,12 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Mapping
 
 from docx import Document
 
-from gdoc.render import body, frontmatter, profiles, shell
+from gdoc.render import body, contents, frontmatter, profiles, shell
 from gdoc.render.ooxml import Numbering
-from gdoc.render.toc import TocError, refresh_toc
 
 
 class BuildError(RuntimeError):
@@ -29,10 +33,10 @@ class BuildError(RuntimeError):
 @dataclass(frozen=True)
 class BuildResult:
     docx_path: Path
-    pdf_path: Path | None
     title: str
     template: str
     blocks: int
+    entries: int
 
 
 def slugify(text: str) -> str:
@@ -65,8 +69,7 @@ def build(
     *,
     template: str = profiles.DEFAULT_TEMPLATE,
     title: str | None = None,
-    want_pdf: bool = False,
-    skip_toc: bool = False,
+    pages: Mapping | None = None,
 ) -> BuildResult:
     source_path = Path(md_path).resolve()
     if not source_path.is_file():
@@ -98,24 +101,12 @@ def build(
     )
     doc.save(output_path)
 
-    pdf_path = output_path.with_suffix(".pdf") if want_pdf else None
-    if skip_toc:
-        if want_pdf:
-            raise BuildError(
-                "a PDF needs the contents-list refresh, so --pdf cannot be "
-                "combined with --skip-toc"
-            )
-    else:
-        refresh_toc(output_path, pdf_path)
-        # After the refresh, never before: LibreOffice creates the TOC styles
-        # during that pass, and leaves each level's right tab pulled in by its
-        # own indent.
-        shell.normalise_toc_tabs(output_path)
+    written = contents.rewrite_in_place(output_path, pages=pages)
 
     return BuildResult(
         docx_path=output_path,
-        pdf_path=pdf_path,
         title=meta["cover_title"],
         template=template,
         blocks=blocks,
+        entries=len(written.entries),
     )

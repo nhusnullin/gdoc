@@ -61,7 +61,7 @@ def _publish(drive, docx, name, folder):
 @pytest.mark.skipif(not shutil.which("pdftotext"), reason="poppler not installed")
 def test_the_published_contents_list_describes_its_own_document(drive, folder, tmp_path):
     source = tmp_path / "source.docx"
-    build(EXAMPLE, source, skip_toc=True)          # no LibreOffice: skip_toc
+    build(EXAMPLE, source)
     headings = contents.headings(
         __import__("zipfile").ZipFile(source).read("word/document.xml").decode("utf8")
     )

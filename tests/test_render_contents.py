@@ -8,9 +8,11 @@ import re
 import zipfile
 
 import pytest
+from docx import Document
 
-from gdoc.render import build, contents
-from gdoc.render.profiles import TEMPLATES_DIR
+from gdoc.render import body, build, contents, frontmatter, shell
+from gdoc.render.ooxml import Numbering
+from gdoc.render.profiles import DEFAULT_TEMPLATE, TEMPLATES_DIR, resolve
 
 EXAMPLE = TEMPLATES_DIR / "altery-group-policy-v1.0" / "example.md"
 
@@ -27,7 +29,29 @@ GHOSTS = (
 @pytest.fixture(scope="module")
 def built(tmp_path_factory):
     out = tmp_path_factory.mktemp("built") / "source.docx"
-    build(EXAMPLE, out, skip_toc=True)
+    build(EXAMPLE, out)
+    return out
+
+
+@pytest.fixture(scope="module")
+def raw(tmp_path_factory):
+    """A build with the master's contents field untouched.
+
+    build() now writes the contents list itself, so the document it produces
+    already carries real entries, not the master's stale ones. This fixture
+    stops one step short, mirroring what build() does before that final step,
+    so the tests that check contents.write's own behaviour still have a
+    document with a stale field to replace.
+    """
+    out = tmp_path_factory.mktemp("raw") / "source.docx"
+    master = resolve(DEFAULT_TEMPLATE)
+    markdown_text = EXAMPLE.read_text(encoding="utf-8")
+    meta, body_markdown = frontmatter.parse(markdown_text)
+    shell.build_shell(master, out, meta)
+    doc = Document(out)
+    body.render(doc, body_markdown, Numbering(doc),
+                heading_numbering=meta["heading_numbering"], base_dir=EXAMPLE.parent)
+    doc.save(out)
     return out
 
 
@@ -53,9 +77,9 @@ def test_headings_are_found_in_document_order(built):
     assert [level for level, _text in found][:4] == [1, 2, 3, 1]
 
 
-def test_the_source_build_still_carries_the_stale_field(built):
+def test_the_source_build_still_carries_the_stale_field(raw):
     """Guards the premise. If this fails, the master changed and so must the fix."""
-    xml = document_xml(built)
+    xml = document_xml(raw)
     assert "<w:instrText" in xml
     assert any(ghost in xml for ghost in GHOSTS)
 
@@ -115,9 +139,9 @@ def test_every_entry_links_to_its_heading(built, tmp_path):
         assert anchor in bookmarks, f"entry links to {anchor}, which no heading defines"
 
 
-def test_each_heading_gets_exactly_one_bookmark(built, tmp_path):
+def test_each_heading_gets_exactly_one_bookmark(raw, tmp_path):
     out = tmp_path / "written.docx"
-    result = contents.write(built, out)
+    result = contents.write(raw, out)
     xml = document_xml(out)
     starts = re.findall(rf'<w:bookmarkStart[^>]*w:name="({contents.BOOKMARK_PREFIX}\d+)"', xml)
     assert len(starts) == len(result.entries)
@@ -140,10 +164,10 @@ def test_no_stale_cached_entry_survives_inside_the_field(built, tmp_path):
         assert ghost not in inside
 
 
-def test_toc_styles_are_added_when_the_template_lacks_them(built, tmp_path):
-    assert 'w:styleId="TOC1"' not in styles_xml(built)
+def test_toc_styles_are_added_when_the_template_lacks_them(raw, tmp_path):
+    assert 'w:styleId="TOC1"' not in styles_xml(raw)
     out = tmp_path / "written.docx"
-    contents.write(built, out)
+    contents.write(raw, out)
     after = styles_xml(out)
     for sid in ("Index", "TOC1", "TOC2", "TOC3"):
         assert f'w:styleId="{sid}"' in after
@@ -262,3 +286,22 @@ def test_xml_special_characters_in_a_heading_survive(built, tmp_path):
     contents.write(built, out, pages={})
     # the bundled example has an ampersand-free set, so assert the escaper directly
     assert contents.escape('Risk & "Control" <x>') == "Risk &amp; &quot;Control&quot; &lt;x&gt;"
+
+
+def test_rewriting_in_place_leaves_one_file(built, tmp_path):
+    """A zip cannot be read and rewritten at the same path at once."""
+    target = tmp_path / "inplace.docx"
+    target.write_bytes(built.read_bytes())
+    result = contents.rewrite_in_place(target, pages={"1-Purpose": 4})
+    assert list(tmp_path.iterdir()) == [target], "a temporary file was left behind"
+    assert len(result.entries) == 12
+    assert "<w:t>4</w:t>" in document_xml(target)
+
+
+def test_rewriting_in_place_cleans_up_after_a_failure(tmp_path):
+    """The temporary file must not survive a failed rewrite."""
+    junk = tmp_path / "junk.docx"
+    junk.write_bytes(b"not a docx")
+    with pytest.raises(zipfile.BadZipFile):
+        contents.rewrite_in_place(junk)
+    assert list(tmp_path.iterdir()) == [junk], "a temporary file was left behind"
