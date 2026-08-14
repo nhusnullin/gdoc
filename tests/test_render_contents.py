@@ -15,14 +15,21 @@ from gdoc.render.profiles import DEFAULT_TEMPLATE, TEMPLATES_DIR, resolve
 
 EXAMPLE = TEMPLATES_DIR / "altery-group-policy-v1.0" / "example.md"
 
-# Sections that exist only in the master template's stale cached field result.
-# If any of these reach the output, the reader gets a contents page describing a
-# different document.
+# Sections named in the master template's stale cached field result. They are
+# also the master's own heading names, so they cannot tell a stale entry from one
+# we wrote. They only guard the premise: the master still has a stale field.
 GHOSTS = (
     "Policy Statements 1 - Details",
     "Variation of procedure for legal entity X",
     "Documentation and Record Keeping",
 )
+
+# A stale entry is found by its shape, not by its words. The master's placeholder
+# section names are its real heading names too, so the same words legitimately
+# appear in the entries we write. What cannot survive is the template's own entry:
+# a hyperlink into Google's heading bookmarks, and the master's right tab at 12000
+# twips. Each appears 19 times in the master and only inside its contents list.
+STALE_ENTRY_MARKS = ('w:anchor="_heading=h.', 'w:pos="12000"')
 
 
 @pytest.fixture(scope="module")
@@ -63,6 +70,19 @@ def entry_paragraphs(path):
             if re.search(r'w:pStyle w:val="TOC\d"', p)]
 
 
+def field_span(path):
+    """The document.xml the contents field spans, cached result included."""
+    xml = document_xml(path)
+    located = contents.field(xml)
+    return xml[located.start:located.end]
+
+
+def paragraph_texts(fragment):
+    """The <w:t> text of each paragraph. Strict, so no field instruction leaks in."""
+    return ["".join(re.findall(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>", paragraph))
+            for paragraph in re.findall(r"<w:p\b.*?</w:p>", fragment, re.S)]
+
+
 def test_headings_are_found_in_document_order(built):
     found = contents.headings(document_xml(built))
     assert [text for _level, text in found][:4] == [
@@ -85,12 +105,21 @@ def test_writing_replaces_the_field_with_one_entry_per_heading(built, tmp_path):
     assert len(result.entries) == len(contents.headings(document_xml(built)))
 
 
-def test_no_stale_template_section_survives(built, tmp_path):
+def test_no_stale_template_section_survives(stale, tmp_path):
+    """The template's own contents entries must not reach the output, anywhere.
+
+    Runs against the master, which is the only fixture that still carries a stale
+    cached result. build() writes the contents list itself now, so a document it
+    produces has nothing stale left to leak, and this check would pass against a
+    write that did nothing at all.
+    """
+    before = document_xml(stale)
+    assert all(mark in before for mark in STALE_ENTRY_MARKS), "the master changed"
     out = tmp_path / "written.docx"
-    contents.write(built, out)
-    xml = document_xml(out)
-    for ghost in GHOSTS:
-        assert ghost not in xml, f"the template's own contents list leaked: {ghost}"
+    contents.write(stale, out)
+    after = document_xml(out)
+    for mark in STALE_ENTRY_MARKS:
+        assert mark not in after, f"a template contents entry survived: {mark}"
 
 
 def test_the_field_is_kept_so_a_reader_can_still_refresh_it(built, tmp_path):
@@ -146,16 +175,22 @@ def test_each_heading_gets_exactly_one_bookmark(stale, tmp_path):
         assert f'<w:bookmarkEnd w:id="{bookmark_id}"/>' in xml
 
 
-def test_no_stale_cached_entry_survives_inside_the_field(built, tmp_path):
-    """The field stays, but its old cached result must not."""
+def test_no_stale_cached_entry_survives_inside_the_field(stale, tmp_path):
+    """The field stays, but its old cached result must not.
+
+    Runs against the master for the same reason as the check above. The stale
+    entries carry the master's own page numbers, which run past the end of the
+    document, so the test is that every paragraph inside the field is an entry we
+    wrote, naming a heading of this document and nothing else.
+    """
     out = tmp_path / "written.docx"
-    contents.write(built, out)
-    xml = document_xml(out)
-    begin = xml.index('w:fldCharType="begin"')
-    end = xml.index('w:fldCharType="end"')
-    inside = xml[begin:end]
-    for ghost in GHOSTS:
-        assert ghost not in inside
+    result = contents.write(stale, out)
+    inside = field_span(out)
+    for mark in STALE_ENTRY_MARKS:
+        assert mark not in inside, f"a stale cached entry survived: {mark}"
+    assert paragraph_texts(inside) == [
+        contents.escape(text) for _level, text in result.entries
+    ]
 
 
 def test_toc_styles_are_added_when_the_template_lacks_them(stale, tmp_path):

@@ -11,7 +11,6 @@ when an assertion fails.
 """
 
 import os
-import shutil
 
 import pytest
 
@@ -58,7 +57,6 @@ def _publish(drive, docx, name, folder):
     return created["id"], pdf
 
 
-@pytest.mark.skipif(not shutil.which("pdftotext"), reason="poppler not installed")
 def test_the_published_contents_list_describes_its_own_document(drive, folder, tmp_path):
     source = tmp_path / "source.docx"
     build(EXAMPLE, source)
