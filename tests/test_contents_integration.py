@@ -94,6 +94,8 @@ def test_the_published_contents_list_describes_its_own_document(drive, folder, t
         text = (tmp_path / "pass2.pdf").read_bytes()
         for ghost in GHOSTS:
             assert ghost.encode() not in text, f"template placeholder leaked: {ghost}"
+
+        _assert_real_contents_list(second_id, headings)
     finally:
         for file_id in trash:
             try:
@@ -101,3 +103,35 @@ def test_the_published_contents_list_describes_its_own_document(drive, folder, t
                                      supportsAllDrives=True).execute()
             except Exception as error:  # noqa: BLE001 - cleanup must not mask the failure
                 print(f"could not trash {file_id}: {error}")
+
+
+def _assert_real_contents_list(document_id, headings):
+    """It must arrive as a table of contents, not as text shaped like one.
+
+    Without this, Google imports plain paragraphs: no update button, and a heading
+    added later never appears. That is the whole reason the field is kept.
+    """
+    from googleapiclient.discovery import build as build_service
+
+    from gdoc.auth import load_credentials
+
+    docs = build_service("docs", "v1", credentials=load_credentials(), cache_discovery=False)
+    document = docs.documents().get(documentId=document_id).execute()
+    toc = [e for e in document["body"]["content"] if "tableOfContents" in e]
+    assert toc, "the published document has no table of contents object, so nothing can refresh it"
+
+    linked = 0
+    entries = 0
+    for element in toc[0]["tableOfContents"].get("content", []):
+        paragraph = element.get("paragraph")
+        if not paragraph:
+            continue
+        runs = [r for r in paragraph.get("elements", [])
+                if r.get("textRun", {}).get("content", "").strip()]
+        if not runs:
+            continue
+        entries += 1
+        if any((r["textRun"].get("textStyle") or {}).get("link") for r in runs):
+            linked += 1
+    assert entries >= len(headings), f"expected {len(headings)} entries, found {entries}"
+    assert linked == entries, f"only {linked} of {entries} entries are clickable"

@@ -64,14 +64,30 @@ into the cover and control tables. Those pages differ by design.
 
 ## 3. The replacement
 
-`gdoc/render/contents.py` deletes the field and writes ordinary paragraphs in its
-place, styled `TOC1..TOC3`.
+`gdoc/render/contents.py` replaces the field's **cached result** and keeps the
+field.
 
-- Nothing is left to refresh, so nobody has to click anything.
-- Google has no field to restyle, so its own defaults never apply. Left to those
-  defaults it renders the contents page in Arial with bold level-one entries.
-- Entries declare no font and no weight, so they inherit the document default,
-  Calibri, through the `Index` parent style.
+An earlier attempt deleted the field outright. That was wrong, and Nail caught it:
+without a field, Google imports plain text, so the published document has no
+contents list at all, only text shaped like one. No update button, no clickable
+entries, and a heading somebody adds later never appears. Keeping the field means
+the document holds a real contents list a reader can refresh, while the cached
+result we write is already correct so nobody needs to.
+
+Entries are written the way a well-behaved application writes them:
+
+- Styled `TOC1..TOC3`, declaring no font and no weight, so they inherit the
+  document default, Calibri, through the `Index` parent. Left to its own defaults
+  Google renders a contents page in Arial with bold level-one entries.
+- Wrapped in `w:hyperlink` to a `w:bookmarkStart` on the heading, so entries are
+  clickable. Measured on the published document: 12 of 12 entries linked.
+- Carrying the `IndexLink` character style, which is empty on purpose. It overrides
+  Word's `Hyperlink` style, which would otherwise render every entry blue and
+  underlined.
+
+The malformed begin run is carried across untouched rather than repaired. Google
+accepts it and still builds a real contents list, so repairing it is a change with
+no observed benefit and unmeasured risk.
 
 The `TOC1..TOC3` and `Index` styles are measured constants in that module, lifted
 once off a LibreOffice-produced document. The right tab at 9864 twips is the text
@@ -128,18 +144,26 @@ exists as `tests/test_contents_integration.py`:
 
 ## 5. Tests
 
-- `tests/test_render_contents.py`, 12 checks, fully offline. Covers the field being
-  removed, no template placeholder surviving, the styles being added, entries
-  declaring no font or weight, page numbers written or left blank, level-to-style
-  mapping, and a refusal when a document has no headings.
+- `tests/test_render_contents.py`, 16 checks, fully offline. Covers the field being
+  **kept** with all four markers intact, the field bracketing the entries, no
+  template placeholder surviving inside it, every entry linking to a bookmark that
+  exists, one bookmark per heading with a matching end, the styles being added,
+  entries declaring no font or weight, page numbers written or left blank,
+  level-to-style mapping, and a refusal when a document has no headings.
 - `tests/test_render_pagination.py`, 9 checks, no subprocess. Covers whole-line
   matching, the contents page being skipped, prose mentions not winning, wrapped
   headings, whitespace, and drift reporting.
-- `tests/test_contents_integration.py`, the live path, marked `integration`. Builds,
-  publishes twice, asserts no drift and no leaked placeholder, and trashes both
-  throwaway documents in a `finally`.
+- `tests/test_contents_integration.py`, the live path. Builds, publishes twice,
+  asserts no drift, no leaked placeholder, a real `tableOfContents` object in the
+  published document, and every entry clickable. Trashes both throwaway documents
+  in a `finally`. Opt-in behind `GDOC_LIVE_PUBLISH_TEST=1`, because unlike the
+  read-only integration checks it creates documents, and a plain `pytest` must not
+  write to somebody's Drive.
 
-Full suite: **183 passed**, up from PR #5's 162, nothing broken.
+Full suite: **187 passed, 1 skipped**, up from PR #5's 162, nothing broken.
+
+Verified on the published document: native contents object present, 12 of 12
+entries clickable, font Calibri, bold false, page numbers stable with no drift.
 
 ## 6. What is left
 

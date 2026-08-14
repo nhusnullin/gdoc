@@ -75,12 +75,69 @@ def test_no_stale_template_section_survives(built, tmp_path):
         assert ghost not in xml, f"the template's own contents list leaked: {ghost}"
 
 
-def test_the_field_itself_is_gone(built, tmp_path):
+def test_the_field_is_kept_so_a_reader_can_still_refresh_it(built, tmp_path):
+    """Replacing the cached result, not the field.
+
+    Delete the field and Google imports plain text: no table of contents object,
+    no update button, and a heading added later never appears. Keeping the field
+    means the published document still holds a real, refreshable contents list.
+    """
     out = tmp_path / "written.docx"
     contents.write(built, out)
     xml = document_xml(out)
-    assert "<w:instrText" not in xml
-    assert 'w:fldCharType="begin"' not in xml
+    assert "<w:instrText" in xml
+    assert 'w:fldCharType="begin"' in xml
+    assert 'w:fldCharType="separate"' in xml
+    assert 'w:fldCharType="end"' in xml
+
+
+def test_the_field_brackets_the_entries(built, tmp_path):
+    out = tmp_path / "written.docx"
+    contents.write(built, out)
+    xml = document_xml(out)
+    begin = xml.index('w:fldCharType="begin"')
+    end = xml.index('w:fldCharType="end"')
+    first_entry = xml.index('w:pStyle w:val="TOC1"')
+    assert begin < end
+    assert begin < xml.rindex('w:pStyle w:val="TOC') < end
+    assert first_entry < end
+
+
+def test_every_entry_links_to_its_heading(built, tmp_path):
+    out = tmp_path / "written.docx"
+    result = contents.write(built, out)
+    xml = document_xml(out)
+    anchors = re.findall(r'<w:hyperlink w:anchor="([^"]+)"', xml)
+    bookmarks = re.findall(r'<w:bookmarkStart[^>]*w:name="([^"]+)"', xml)
+    ours = [a for a in anchors if a.startswith(contents.BOOKMARK_PREFIX)]
+    assert len(ours) == len(result.entries)
+    for anchor in ours:
+        assert anchor in bookmarks, f"entry links to {anchor}, which no heading defines"
+
+
+def test_each_heading_gets_exactly_one_bookmark(built, tmp_path):
+    out = tmp_path / "written.docx"
+    result = contents.write(built, out)
+    xml = document_xml(out)
+    starts = re.findall(rf'<w:bookmarkStart[^>]*w:name="({contents.BOOKMARK_PREFIX}\d+)"', xml)
+    assert len(starts) == len(result.entries)
+    assert len(set(starts)) == len(starts), "duplicate bookmark names"
+    for name in starts:
+        bookmark_id = re.search(
+            rf'<w:bookmarkStart w:id="(\d+)" w:name="{name}"/>', xml).group(1)
+        assert f'<w:bookmarkEnd w:id="{bookmark_id}"/>' in xml
+
+
+def test_no_stale_cached_entry_survives_inside_the_field(built, tmp_path):
+    """The field stays, but its old cached result must not."""
+    out = tmp_path / "written.docx"
+    contents.write(built, out)
+    xml = document_xml(out)
+    begin = xml.index('w:fldCharType="begin"')
+    end = xml.index('w:fldCharType="end"')
+    inside = xml[begin:end]
+    for ghost in GHOSTS:
+        assert ghost not in inside
 
 
 def test_toc_styles_are_added_when_the_template_lacks_them(built, tmp_path):
@@ -125,16 +182,23 @@ def test_a_heading_with_no_page_number_gets_an_empty_cell(built, tmp_path):
 
 
 def test_levels_map_to_their_styles(built, tmp_path):
+    """Strict <w:t> matching, or the first entry is skipped.
+
+    The first entry paragraph also carries the field instruction. A loose pattern
+    matches <w:instrText> too, and then no entry text matches, so the check passes
+    while verifying nothing.
+    """
     out = tmp_path / "written.docx"
     result = contents.write(built, out)
-    by_text = {text: level for level, text in result.entries}
     paras = entry_paragraphs(out)
-    for para in paras:
-        text = "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", para))
-        for known, level in by_text.items():
-            if text.startswith(known):
-                assert f'w:pStyle w:val="TOC{min(level, 3)}"' in para
-                break
+    assert len(paras) == len(result.entries)
+    checked = 0
+    for (level, text), para in zip(result.entries, paras):
+        found = "".join(re.findall(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>", para))
+        assert found.startswith(text), f"expected {text!r} at the start of {found!r}"
+        assert f'w:pStyle w:val="TOC{min(level, 3)}"' in para
+        checked += 1
+    assert checked == len(result.entries)
 
 
 def test_a_document_with_no_headings_is_refused(built, tmp_path):
