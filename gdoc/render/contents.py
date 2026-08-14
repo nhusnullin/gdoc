@@ -52,6 +52,40 @@ MAX_LEVEL = 3
 # recognisable and so a rewrite never collides with the template's own.
 BOOKMARK_PREFIX = "_gdoc_toc"
 
+# Explicit spacing on the entry styles, so a refresh does not visibly move them.
+#
+# Google imposes its own paragraph spacing when a reader refreshes the contents
+# list, and only the font is inherited. Measured on a published document: entries
+# sit at a 16 to 17pt pitch after a refresh. The template's own default,
+# after=120 before=60 line=276, computes to about 21.6pt, so leaving the styles to
+# inherit makes the contents list visibly tighten the first time anyone refreshes
+# it. Declaring the tighter value up front means the page looks the same before and
+# after, which is the point.
+ENTRY_SPACING = '<w:spacing w:before="0" w:after="20" w:line="276" w:lineRule="auto"/>'
+# Google leaves 3pt above the first entry only, not above every one. Word and
+# Google both add space-before to space-after rather than collapsing them, so
+# putting this on the style would widen every gap instead.
+FIRST_ENTRY_SPACING = '<w:spacing w:before="60" w:after="20" w:line="276" w:lineRule="auto"/>'
+
+# The right tab is the text edge, which is what puts the page number at the margin.
+RIGHT_TAB = 9864
+# One nesting step each, in twips. 360 and 720 are what Google's own refresh uses,
+# measured off a published document: level two lands 18pt in, level three 36pt.
+# The house template used 283 and 567, which is close but visibly different, and a
+# refresh would move the entries. Matching Google keeps the page still.
+LEVEL_INDENTS = (0, 360, 720)
+
+
+def _level_style(level: int, indent: int) -> str:
+    return (
+        f'<w:style w:type="paragraph" w:styleId="TOC{level}">'
+        f'<w:name w:val="toc {level}"/><w:basedOn w:val="Index"/><w:pPr><w:tabs>'
+        '<w:tab w:val="clear" w:pos="720"/>'
+        f'<w:tab w:val="right" w:pos="{RIGHT_TAB}" w:leader="dot"/></w:tabs>'
+        f'{ENTRY_SPACING}<w:ind w:hanging="0" w:left="{indent}"/>'
+        "</w:pPr><w:rPr/></w:style>"
+    )
+
 # Measured off a LibreOffice-produced document, then frozen here. The right tab at
 # 9864 twips is the text edge, which is what puts the page number at the margin.
 # Each level indents by 283 twips, one for each nesting step.
@@ -62,27 +96,9 @@ TOC_STYLES = {
         "<w:pPr><w:suppressLineNumbers/></w:pPr>"
         '<w:rPr><w:rFonts w:cs="Arial Unicode MS"/></w:rPr></w:style>'
     ),
-    "TOC1": (
-        '<w:style w:type="paragraph" w:styleId="TOC1"><w:name w:val="toc 1"/>'
-        '<w:basedOn w:val="Index"/><w:pPr><w:tabs>'
-        '<w:tab w:val="clear" w:pos="720"/>'
-        '<w:tab w:val="right" w:pos="9864" w:leader="dot"/></w:tabs>'
-        '<w:ind w:hanging="0" w:left="0"/></w:pPr><w:rPr/></w:style>'
-    ),
-    "TOC2": (
-        '<w:style w:type="paragraph" w:styleId="TOC2"><w:name w:val="toc 2"/>'
-        '<w:basedOn w:val="Index"/><w:pPr><w:tabs>'
-        '<w:tab w:val="clear" w:pos="720"/>'
-        '<w:tab w:val="right" w:pos="9864" w:leader="dot"/></w:tabs>'
-        '<w:ind w:hanging="0" w:left="283"/></w:pPr><w:rPr/></w:style>'
-    ),
-    "TOC3": (
-        '<w:style w:type="paragraph" w:styleId="TOC3"><w:name w:val="toc 3"/>'
-        '<w:basedOn w:val="Index"/><w:pPr><w:tabs>'
-        '<w:tab w:val="clear" w:pos="720"/>'
-        '<w:tab w:val="right" w:pos="9864" w:leader="dot"/></w:tabs>'
-        '<w:ind w:hanging="0" w:left="567"/></w:pPr><w:rPr/></w:style>'
-    ),
+    "TOC1": _level_style(1, LEVEL_INDENTS[0]),
+    "TOC2": _level_style(2, LEVEL_INDENTS[1]),
+    "TOC3": _level_style(3, LEVEL_INDENTS[2]),
     # Empty on purpose. It overrides Word's Hyperlink style, which would otherwise
     # render every entry blue and underlined.
     "IndexLink": (
@@ -226,7 +242,8 @@ def _with_bookmarks(document_xml: str, count: int) -> tuple:
     return document_xml, anchors
 
 
-def _entry(level: int, text: str, page, anchor: str, prefix: str = "", suffix: str = "") -> str:
+def _entry(level: int, text: str, page, anchor: str, prefix: str = "", suffix: str = "",
+           first: bool = False) -> str:
     """One contents line: a styled paragraph, a tab, then the page number.
 
     No font and no weight are declared. That is deliberate: anything declared here
@@ -237,11 +254,12 @@ def _entry(level: int, text: str, page, anchor: str, prefix: str = "", suffix: s
     entries, which is what keeps the contents list a field rather than plain text.
     """
     style = f"TOC{min(level, MAX_LEVEL)}"
+    spacing = FIRST_ENTRY_SPACING if first else ""
     return (
         f'<w:p><w:pPr><w:pStyle w:val="{style}"/><w:tabs>'
-        '<w:tab w:val="clear" w:pos="9864"/>'
-        '<w:tab w:val="right" w:pos="9863" w:leader="dot"/>'
-        "</w:tabs><w:rPr/></w:pPr>"
+        f'<w:tab w:val="clear" w:pos="{RIGHT_TAB}"/>'
+        f'<w:tab w:val="right" w:pos="{RIGHT_TAB - 1}" w:leader="dot"/>'
+        f"</w:tabs>{spacing}<w:rPr/></w:pPr>"
         f"{prefix}"
         f'<w:hyperlink w:anchor="{anchor}">'
         '<w:r><w:rPr><w:rStyle w:val="IndexLink"/><w:webHidden/></w:rPr>'
@@ -288,6 +306,7 @@ def write(src: Path, dst: Path, pages: Mapping | None = None) -> ContentsResult:
             anchor,
             prefix=located.begin_run if index == 0 else "",
             suffix=located.end_run if index == last else "",
+            first=index == 0,
         )
         for index, ((level, text), anchor) in enumerate(zip(found, anchors))
     )

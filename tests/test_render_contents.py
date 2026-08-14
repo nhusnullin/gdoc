@@ -162,6 +162,50 @@ def test_entries_declare_no_font_and_no_bold(built, tmp_path):
         assert not re.search(r"<w:b(\s+w:val=\"(1|true|on)\")?\s*/>", para)
 
 
+def test_entry_styles_declare_their_own_spacing(built, tmp_path):
+    """Inheriting the template's spacing makes the page jump on the first refresh.
+
+    Google imposes its own paragraph spacing when a reader refreshes the contents
+    list. The template default computes to about 21.6pt per line; Google's refresh
+    gives 16.4pt. Leave the styles to inherit and the contents list visibly tightens
+    the first time anyone clicks update. Declaring the tighter value keeps it still.
+    """
+    out = tmp_path / "written.docx"
+    contents.write(built, out)
+    after = styles_xml(out)
+    for sid in ("TOC1", "TOC2", "TOC3"):
+        style = re.search(rf'<w:style [^>]*w:styleId="{sid}".*?</w:style>', after, re.S).group(0)
+        assert "<w:spacing" in style, f"{sid} would inherit the template's looser spacing"
+
+
+def test_entry_indents_match_what_a_refresh_produces(built, tmp_path):
+    """Levels sit 18pt and 36pt in, because that is what Google's refresh uses.
+
+    The house template used 283 and 567 twips. Close, but a refresh moves the
+    entries sideways, which is exactly the visible jump this avoids.
+    """
+    out = tmp_path / "written.docx"
+    contents.write(built, out)
+    after = styles_xml(out)
+    for sid, expected in (("TOC1", 0), ("TOC2", 360), ("TOC3", 720)):
+        style = re.search(rf'<w:style [^>]*w:styleId="{sid}".*?</w:style>', after, re.S).group(0)
+        assert f'w:left="{expected}"' in style, f"{sid} should indent {expected} twips"
+
+
+def test_only_the_first_entry_carries_space_above(built, tmp_path):
+    """Google leaves 3pt above the first entry and nothing above the rest.
+
+    Word and Google add space-before to space-after rather than collapsing them, so
+    putting this on the style would widen every gap instead of just the first.
+    """
+    out = tmp_path / "written.docx"
+    contents.write(built, out)
+    paras = entry_paragraphs(out)
+    assert 'w:before="60"' in paras[0]
+    for para in paras[1:]:
+        assert 'w:before="60"' not in para
+
+
 def test_page_numbers_are_written_when_supplied(built, tmp_path):
     out = tmp_path / "written.docx"
     contents.write(built, out, pages={"1-Purpose": 4, "2-Scope": 7})

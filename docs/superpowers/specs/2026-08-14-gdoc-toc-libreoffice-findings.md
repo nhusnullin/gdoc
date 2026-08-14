@@ -89,6 +89,29 @@ The malformed begin run is carried across untouched rather than repaired. Google
 accepts it and still builds a real contents list, so repairing it is a change with
 no observed benefit and unmeasured risk.
 
+### Matching what a refresh produces
+
+Keeping the field means a reader can refresh it, and Google imposes its own layout
+when they do. Only the font is inherited; spacing and indents are Google's. So the
+entries are written with Google's own values, or the contents page visibly jumps the
+first time anybody clicks update. Measured on published documents:
+
+| Property | Template default | Google's refresh | What we write |
+|---|---|---|---|
+| Line pitch | ~21.6pt | 16.4pt | 16.4pt (`after=20`, `line=276`) |
+| Space above the block | 0 | 3pt, first entry only | 3pt, first entry only |
+| Level 2 indent | 283tw | 360tw (18pt) | 360tw |
+| Level 3 indent | 567tw | 720tw (36pt) | 720tw |
+
+Space before and space after are added, not collapsed, by both Word and Google. So
+the 3pt above the block goes on the first entry as direct formatting; putting it on
+the style would widen every gap instead of just the first.
+
+Result: the contents page before a refresh differs from after one by **0.087% of
+pixels**, down from 1.127% before this was tuned. The residue is 0.2pt of cumulative
+rounding across twelve lines, which is sub-pixel per line. Every other page is
+pixel-identical.
+
 The `TOC1..TOC3` and `Index` styles are measured constants in that module, lifted
 once off a LibreOffice-produced document. The right tab at 9864 twips is the text
 edge, which puts the page number at the margin; levels indent 0/283/567 twips.
