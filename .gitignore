@@ -10,5 +10,8 @@ dist/
 venv/
 .DS_Store
 
+# Obsidian workspace state, personal and not part of the tool
+.obsidian/
+
 # Generated document versions, rebuilt from the paired markdown
 docs/gdoc/*/out/
