@@ -1,4 +1,11 @@
-from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
+from gdoc.pairing import (
+    Pairing,
+    add_version,
+    find_by_doc_id,
+    read_pairing,
+    slug_for_source,
+    write_pairing,
+)
 
 PAIRED = """\
 ---
@@ -132,3 +139,54 @@ def test_write_preserves_the_existing_file_mode(tmp_path):
     md.chmod(0o644)
     write_pairing(md, Pairing(doc_id="1AbC", synced="2026-08-13"))
     assert md.stat().st_mode & 0o777 == 0o644
+
+
+# ---------------------------------------------------------------------------
+# lineage: every iteration raises a new document with a new id
+# ---------------------------------------------------------------------------
+
+LINEAGE = """\
+---
+title: Screening proposal
+gdoc: 1CurrentVersion
+gdoc_versions:
+  - id: 1FirstVersion
+    created: 2026-08-13
+  - id: 1CurrentVersion
+    created: 2026-08-14
+---
+
+Body.
+"""
+
+
+def test_finds_the_source_by_the_current_version_id(tmp_path):
+    (tmp_path / "proposal.md").write_text(LINEAGE)
+    assert find_by_doc_id(tmp_path, "1CurrentVersion").name == "proposal.md"
+
+
+def test_finds_the_source_by_a_previous_version_id(tmp_path):
+    """Reviewing v0.1 after v0.2 exists must still land on one source file."""
+    (tmp_path / "proposal.md").write_text(LINEAGE)
+    assert find_by_doc_id(tmp_path, "1FirstVersion").name == "proposal.md"
+
+
+def test_unknown_id_still_returns_none(tmp_path):
+    (tmp_path / "proposal.md").write_text(LINEAGE)
+    assert find_by_doc_id(tmp_path, "1Unrelated") is None
+
+
+# ---------------------------------------------------------------------------
+# the slug comes from the source file, which survives every iteration
+# ---------------------------------------------------------------------------
+
+
+def test_slug_for_source_is_the_file_stem(tmp_path):
+    assert slug_for_source(tmp_path / "2026-08-13-screening-proposal.md") == (
+        "2026-08-13-screening-proposal"
+    )
+
+
+def test_slug_for_source_makes_a_safe_directory_name(tmp_path):
+    """The stem is hand-chosen, but it must never produce a path with a slash in it."""
+    assert slug_for_source(tmp_path / "Q4 budget (draft).md") == "q4-budget-draft"

@@ -1,9 +1,10 @@
 """Decide which threads the agent may act on.
 
-Authorship cannot be verified: the Drive API returns no email address for
-comment authors, and display names are editable. So display_name matching is a
-sorting aid, not an access control, and the skill always shows both lists for
-confirmation before anything is posted.
+The author name is a label, not a gate. Launching the skill on a document is the
+trust decision: Nail chose the document, and a marked comment inside it is an
+instruction to act. Authorship could not be verified anyway, because the Drive
+API returns no email address for comment authors and display names are editable,
+so matching them was a guess dressed as a check.
 
 The marker is `ai` plus a sign, at the start of the comment. It starts with a
 letter because `@` opens the people picker in Google Docs and Nail does not want
@@ -52,21 +53,18 @@ def needs_action(thread: Thread) -> bool:
 
 
 def partition(
-    threads: tuple[Thread, ...], display_name: str
-) -> tuple[tuple[Thread, ...], tuple[Thread, ...], tuple[Thread, ...]]:
-    """Split into (mine, others, skipped).
+    threads: tuple[Thread, ...],
+) -> tuple[tuple[Thread, ...], tuple[Thread, ...]]:
+    """Split into (addressed, skipped).
 
-    skipped is returned rather than discarded so the skill can tell Nail why a
-    comment he can see was ignored.
+    needs_action holds the whole test. skipped is returned rather than discarded
+    so the skill can tell Nail why a comment he can see was ignored.
     """
-    mine: list[Thread] = []
-    others: list[Thread] = []
+    addressed: list[Thread] = []
     skipped: list[Thread] = []
     for thread in threads:
-        if not needs_action(thread):
-            skipped.append(thread)
-        elif thread.author_name == display_name:
-            mine.append(thread)
+        if needs_action(thread):
+            addressed.append(thread)
         else:
-            others.append(thread)
-    return tuple(mine), tuple(others), tuple(skipped)
+            skipped.append(thread)
+    return tuple(addressed), tuple(skipped)

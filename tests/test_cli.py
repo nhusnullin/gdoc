@@ -11,13 +11,13 @@ from gdoc.cli import main
 # ---------------------------------------------------------------------------
 
 
-def test_read_prints_partitioned_threads_as_json(capsys):
+def test_read_returns_one_addressed_list_with_authors(capsys):
+    """The marker decides. The author name is a label, so it stays in the payload."""
     threads = [
         {
             "id": "t1",
             "content": "ai: rephrase",
             "author": {"displayName": "Nail Khusnullin", "me": False},
-            "quotedFileContent": {"value": "asdasd"},
         },
         {
             "id": "t2",
@@ -28,17 +28,13 @@ def test_read_prints_partitioned_threads_as_json(capsys):
     drive = MagicMock()
     drive.comments().list.return_value.execute.side_effect = [{"comments": threads}]
     drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.load_config"
-    ) as config:
-        config.return_value.display_name = "Nail Khusnullin"
+    with patch("gdoc.cli.drive_service", return_value=drive):
         exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    assert [t["id"] for t in payload["mine"]] == ["t1"]
-    assert [t["id"] for t in payload["others"]] == ["t2"]
-    assert payload["doc_id"] == "1AbC"
-    assert payload["slug"] == "test-doc"
+    assert "mine" not in payload
+    assert "others" not in payload
+    assert [t["author"] for t in payload["addressed"]] == ["Nail Khusnullin", "William Mejia"]
 
 
 def test_bad_url_exits_nonzero_with_json_error(capsys):
@@ -111,37 +107,145 @@ def test_unknown_subcommand_exits_nonzero():
 # ---------------------------------------------------------------------------
 
 
-def test_export_writes_mirror_and_returns_metadata(capsys, tmp_path):
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md") as mock_write:
-        exit_code = main(
-            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
+_EXPORT_URL = "https://docs.google.com/document/d/1AbC/edit"
+_MARKDOWN = "# Title\n\nBody.\n"
+
+
+def test_export_prints_markdown_to_stdout(capsys):
+    """Raw markdown, not the JSON envelope, so the output can be piped into diff."""
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ):
+        exit_code = main(["export", _EXPORT_URL])
+    assert exit_code == 0
+    assert capsys.readouterr().out == _MARKDOWN
+
+
+def test_export_writes_to_the_named_file(capsys, tmp_path):
+    out = tmp_path / "fetched.md"
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ):
+        exit_code = main(["export", _EXPORT_URL, "--out", str(out)])
+    capsys.readouterr()
+    assert exit_code == 0
+    assert out.read_text() == _MARKDOWN
+
+
+def test_export_writes_nothing_when_out_is_absent(capsys, tmp_path):
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ):
+        main(["export", _EXPORT_URL])
+    capsys.readouterr()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_export_no_longer_takes_a_repo_root():
+    """Filing is no longer export's job, so the flag must be gone, not ignored."""
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.export_markdown", return_value=_MARKDOWN
+    ), pytest.raises(SystemExit):
+        main(["export", _EXPORT_URL, "--repo-root", "/tmp"])
+
+
+# ---------------------------------------------------------------------------
+# generate subcommand
+# ---------------------------------------------------------------------------
+
+
+def _generate_args(tmp_path):
+    md = tmp_path / "2026-08-13-topic.md"
+    md.write_text("# Source\n")
+    out = tmp_path / "out" / "v2.docx"
+    return md, out
+
+
+def _run_generate(tmp_path, result, extra=()):
+    """Run generate with the upload stubbed out. Returns the parsed JSON."""
+    from gdoc.cli import main as cli_main
+
+    md, out = _generate_args(tmp_path)
+    with patch("gdoc.cli.drive_service"), patch("gdoc.cli.load_config") as config, patch(
+        "gdoc.cli.generate", return_value=result
+    ), patch("gdoc.cli.export_markdown", return_value="# Generated\n"):
+        config.return_value.output_folder_id = "0AFolderId"
+        exit_code = cli_main(
+            [
+                "generate",
+                "--md",
+                str(md),
+                "--name",
+                "My Doc",
+                "--out",
+                str(out),
+                "--baseline-root",
+                str(tmp_path),
+                *extra,
+            ]
         )
+    return exit_code
+
+
+def _uploaded(tmp_path):
+    from gdoc.generate import Result
+
+    return Result(
+        docx_path=tmp_path / "out" / "v2.docx",
+        doc_id="1NewDocId",
+        link="https://docs.google.com/document/d/1NewDocId/edit",
+    )
+
+
+def _not_uploaded(tmp_path):
+    from gdoc.generate import Result
+
+    return Result(docx_path=tmp_path / "out" / "v2.docx", reason="no output_folder_id in config")
+
+
+def test_generate_writes_the_baseline_after_a_successful_upload(capsys, tmp_path):
+    exit_code = _run_generate(tmp_path, _uploaded(tmp_path))
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    assert payload["doc_id"] == "1AbC"
-    assert payload["slug"] == "my-policy"
-    mock_write.assert_called_once()
+    # The source file's stem, not the document title: the title carries a version
+    # number and would fork the directory on every iteration.
+    baseline = tmp_path / ".gdoc" / "2026-08-13-topic" / "baseline.md"
+    assert baseline.read_text() == "# Generated\n"
+    assert payload["baseline_path"] == str(baseline)
 
 
-def test_export_reports_mirror_conflict_as_json_error(capsys, tmp_path):
-    from gdoc.mirror import MirrorConflict
-
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# Markdown"
-    ), patch("gdoc.cli.write_mirror", side_effect=MirrorConflict("dirty file")):
-        exit_code = main(
-            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
-        )
+def test_generate_writes_no_baseline_when_the_upload_failed(capsys, tmp_path):
+    """A baseline for a document that was never created would be diffed against nothing."""
+    exit_code = _run_generate(tmp_path, _not_uploaded(tmp_path))
     payload = json.loads(capsys.readouterr().out)
-    assert exit_code == 1
-    assert "error" in payload
-    assert "dirty" in payload["error"]
+    assert exit_code == 0
+    assert not (tmp_path / ".gdoc").exists()
+    assert "baseline_path" not in payload
+
+
+def test_generate_overwrites_an_existing_baseline(capsys, tmp_path):
+    """The second version must not be blocked by the first version's snapshot."""
+    _run_generate(tmp_path, _uploaded(tmp_path))
+    capsys.readouterr()
+    exit_code = _run_generate(tmp_path, _uploaded(tmp_path))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "error" not in payload
+
+
+def test_generate_writes_no_baseline_without_a_baseline_root(capsys, tmp_path):
+    from gdoc.generate import Result
+
+    md, out = _generate_args(tmp_path)
+    result = Result(docx_path=out, doc_id="1NewDocId", link="link")
+    with patch("gdoc.cli.drive_service"), patch("gdoc.cli.load_config") as config, patch(
+        "gdoc.cli.generate", return_value=result
+    ), patch("gdoc.cli.export_markdown") as export:
+        config.return_value.output_folder_id = "0AFolderId"
+        exit_code = main(["generate", "--md", str(md), "--name", "My Doc", "--out", str(out)])
+    capsys.readouterr()
+    assert exit_code == 0
+    export.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +397,14 @@ def test_pair_add_version_fails_when_file_is_not_paired(capsys, tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def test_pair_find_defaults_to_the_working_directory():
+    """The default is the whole point: no command may name a specific repository."""
+    from gdoc.cli import build_parser
+
+    args = build_parser().parse_args(["pair", "find", "--doc-id", "1AbC"])
+    assert args.repo_root == "."
+
+
 def test_pair_find_returns_path_when_matched(capsys, tmp_path):
     subdir = tmp_path / "subdir"
     subdir.mkdir()
@@ -314,39 +426,6 @@ def test_pair_find_returns_null_when_not_found(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# export, slug collision detection
-# ---------------------------------------------------------------------------
-
-
-def test_export_warns_when_slug_maps_to_a_different_document(capsys, tmp_path):
-    # Set up an existing mirror file paired to a different doc
-    from gdoc.mirror import MIRROR_DIR
-
-    mirror_file = tmp_path / MIRROR_DIR / "my-policy" / "mirror.md"
-    mirror_file.parent.mkdir(parents=True)
-    mirror_file.write_text("---\ngdoc: otherDocId\n---\n\nExisting content.\n")
-
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    # write_mirror gets a real repo_root but we stub it so no file is overwritten
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# New content"
-    ), patch("gdoc.cli.write_mirror", return_value=mirror_file):
-        exit_code = main(
-            [
-                "export",
-                "https://docs.google.com/document/d/newDocId12345678901234/edit",
-                "--repo-root",
-                str(tmp_path),
-            ]
-        )
-    payload = json.loads(capsys.readouterr().out)
-    assert exit_code == 0
-    assert "slug_collision_warning" in payload
-    assert "otherDocId" in payload["slug_collision_warning"]
-
-
-# ---------------------------------------------------------------------------
 # HttpError handler
 # ---------------------------------------------------------------------------
 
@@ -361,9 +440,8 @@ def test_main_handles_http_error_as_json_error(capsys):
     drive = MagicMock()
     drive.files().get.return_value.execute.side_effect = error
     with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.load_config"
-    ) as config, patch("gdoc.cli.fetch_threads", return_value=()):
-        config.return_value.display_name = "Nail Khusnullin"
+        "gdoc.cli.fetch_threads", return_value=()
+    ):
         exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
@@ -408,9 +486,92 @@ def test_capture_appends_a_global_item(capsys, tmp_path):
     assert exit_code == 0
     assert payload["item"] == 1
     assert payload["comment_id"] == "c1"
-    pending = tmp_path / "docs" / "gdoc" / "policy" / "pending.md"
+    pending = tmp_path / ".gdoc" / "policy" / "pending.md"
     assert pending.exists()
     assert "c1" in pending.read_text()
+
+
+_PAIRED_DOC_ID = "1AbCdefghijklmnopqrstuvwx"
+_PAIRED_URL = f"https://docs.google.com/document/d/{_PAIRED_DOC_ID}/edit"
+
+
+def _capture_thread():
+    from gdoc.model import Thread
+
+    return Thread(
+        id="c1",
+        content="ai! add a section on refunds",
+        author_name="Nail Khusnullin",
+        author_email=None,
+        by_agent=False,
+        quoted="policy text",
+        resolved=False,
+        replies=(),
+    )
+
+
+def _run_capture(tmp_path, extra=()):
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.fetch_threads", return_value=(_capture_thread(),)
+    ):
+        return main(["capture", _PAIRED_URL, "c1", "--repo-root", str(tmp_path), *extra])
+
+
+def test_capture_derives_the_slug_from_the_paired_source(capsys, tmp_path):
+    """The document title changes every iteration. The source file does not."""
+    source = tmp_path / "2026-08-13-topic.md"
+    source.write_text(f"---\ngdoc: {_PAIRED_DOC_ID}\n---\n\nBody.\n")
+    exit_code = _run_capture(tmp_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["slug"] == "2026-08-13-topic"
+    pending = tmp_path / ".gdoc" / "2026-08-13-topic" / "pending.md"
+    assert "Source: 2026-08-13-topic.md" in pending.read_text()
+
+
+def test_capture_finds_the_source_by_an_older_version_id(capsys, tmp_path):
+    source = tmp_path / "2026-08-13-topic.md"
+    source.write_text(
+        "---\ngdoc: 1LaterVersion\n"
+        f"gdoc_versions:\n  - id: {_PAIRED_DOC_ID}\n    created: 2026-08-13\n"
+        "  - id: 1LaterVersion\n    created: 2026-08-14\n---\n\nBody.\n"
+    )
+    exit_code = _run_capture(tmp_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["slug"] == "2026-08-13-topic"
+
+
+def test_capture_fails_when_nothing_is_paired_and_no_slug_is_given(capsys, tmp_path):
+    exit_code = _run_capture(tmp_path)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "--slug" in payload["error"]
+
+
+def test_capture_warns_when_the_queue_belongs_to_a_different_source(capsys, tmp_path):
+    """Two source files in different folders can still share a stem."""
+    other = tmp_path / "archive"
+    other.mkdir()
+    (other / "2026-08-13-topic.md").write_text("---\ngdoc: 1OtherDocument\n---\n\nBody.\n")
+    source = tmp_path / "2026-08-13-topic.md"
+    source.write_text(f"---\ngdoc: {_PAIRED_DOC_ID}\n---\n\nBody.\n")
+    from dataclasses import replace
+
+    from gdoc.pending import append_item
+
+    append_item(
+        tmp_path,
+        "2026-08-13-topic",
+        replace(_capture_thread(), id="c0"),
+        doc_id="1OtherDocument",
+        today="2026-08-13",
+        source="archive/2026-08-13-topic.md",
+    )
+    exit_code = _run_capture(tmp_path, extra=("--slug", "2026-08-13-topic"))
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "archive/2026-08-13-topic.md" in payload["source_collision_warning"]
 
 
 # ---------------------------------------------------------------------------
@@ -430,23 +591,7 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
     drive = MagicMock()
     drive.comments().list.return_value.execute.side_effect = [{"comments": []}]
     drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.load_config"
-    ) as config:
-        config.return_value.display_name = "Nail Khusnullin"
+    with patch("gdoc.cli.drive_service", return_value=drive):
         main(["read", "https://docs.google.com/document/d/1AbC/edit"])
-    capsys.readouterr()
-    assert _get_kwargs(drive)["supportsAllDrives"] is True
-
-
-def test_export_asks_for_metadata_with_shared_drive_support(capsys, tmp_path):
-    drive = MagicMock()
-    drive.files().get.return_value.execute.return_value = {"name": "My policy"}
-    with patch("gdoc.cli.drive_service", return_value=drive), patch(
-        "gdoc.cli.export_markdown", return_value="# Markdown content"
-    ), patch("gdoc.cli.write_mirror", return_value=tmp_path / "mirror.md"):
-        main(
-            ["export", "https://docs.google.com/document/d/1AbC/edit", "--repo-root", str(tmp_path)]
-        )
     capsys.readouterr()
     assert _get_kwargs(drive)["supportsAllDrives"] is True

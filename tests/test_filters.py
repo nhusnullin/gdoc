@@ -86,18 +86,27 @@ def test_old_at_form_overrides_too():
     assert forced_kind("@ai rephrase this") is None
 
 
-def test_partition_splits_mine_others_and_skipped():
-    mine_thread = thread(id="mine", author_name=ME)
-    other_thread = thread(id="other", author_name="William Mejia")
-    skipped_thread = thread(id="skipped", resolved=True)
-    mine, others, skipped = partition(
-        (mine_thread, other_thread, skipped_thread), display_name=ME
-    )
-    assert [t.id for t in mine] == ["mine"]
-    assert [t.id for t in others] == ["other"]
-    assert [t.id for t in skipped] == ["skipped"]
+def test_a_marked_comment_from_anyone_is_actionable():
+    """The marker is the instruction. Who typed it does not change the work."""
+    threads = (thread(author_name="Nail Khusnullin"), thread(author_name="William Mejia"))
+    addressed, skipped = partition(threads)
+    assert len(addressed) == 2
+    assert skipped == ()
+
+
+def test_an_unmarked_comment_is_still_skipped():
+    addressed, skipped = partition((thread(content="Looks fine to me"),))
+    assert addressed == ()
+    assert len(skipped) == 1
+
+
+def test_an_already_answered_comment_is_still_skipped():
+    """Dropping the author check must not weaken the idempotence guard."""
+    answered = thread(replies=(Reply(id="r1", content="done", by_agent=True),))
+    addressed, skipped = partition((answered,))
+    assert addressed == ()
 
 
 def test_partition_returns_tuples():
-    mine, others, skipped = partition((thread(),), display_name=ME)
-    assert isinstance(mine, tuple) and isinstance(others, tuple) and isinstance(skipped, tuple)
+    addressed, skipped = partition((thread(), thread(resolved=True)))
+    assert isinstance(addressed, tuple) and isinstance(skipped, tuple)

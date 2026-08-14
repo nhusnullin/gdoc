@@ -21,10 +21,17 @@ from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, partition
 from gdoc.generate import generate
-from gdoc.mirror import MirrorConflict, mirror_path, slugify, write_mirror
+from gdoc.baseline import slugify, write_baseline
 from gdoc.model import Thread
-from gdoc.pairing import Pairing, add_version, find_by_doc_id, read_pairing, write_pairing
-from gdoc.pending import append_item
+from gdoc.pairing import (
+    Pairing,
+    add_version,
+    find_by_doc_id,
+    read_pairing,
+    slug_for_source,
+    write_pairing,
+)
+from gdoc.pending import append_item, pending_path, recorded_source
 from gdoc.reply import post_reply
 
 
@@ -70,17 +77,15 @@ def _file_meta(drive, doc_id: str) -> dict:
 def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
     drive = drive_service()
-    config = load_config()
     threads = fetch_threads(drive, doc_id)
-    mine, others, skipped = partition(threads, config.display_name)
+    addressed, skipped = partition(threads)
     meta = _file_meta(drive, doc_id)
     return _emit(
         {
             "doc_id": doc_id,
             "name": meta.get("name"),
             "slug": slugify(meta.get("name", "")),
-            "mine": [_thread_json(t) for t in mine],
-            "others": [_thread_json(t) for t in others],
+            "addressed": [_thread_json(t) for t in addressed],
             "skipped": [_thread_json(t) for t in skipped],
         }
     )
@@ -94,68 +99,106 @@ def cmd_reply(args) -> int:
 
 
 def cmd_export(args) -> int:
+    """Fetch the document as markdown. Write nothing unless asked.
+
+    stdout is raw markdown, not the JSON envelope the other commands print,
+    because the point is to pipe it into diff.
+    """
     doc_id = extract_doc_id(args.url)
-    drive = drive_service()
-    markdown = export_markdown(drive, doc_id)
-    meta = _file_meta(drive, doc_id)
-    slug = args.slug or slugify(meta.get("name", ""))
-    repo_root = Path(args.repo_root)
-
-    # Detect slug collision: a different document is already mirrored under the
-    # same slug. Two document names that differ only in punctuation produce the
-    # same slug. The later write would silently overwrite the earlier mirror.
-    # We surface a warning rather than blocking because the user may have passed
-    # --slug explicitly to resolve a collision they are already aware of.
-    collision_warning = _check_slug_collision(repo_root, slug, doc_id)
-
-    path = write_mirror(repo_root, slug, markdown, force=args.force)
-    result = {"doc_id": doc_id, "slug": slug, "path": str(path), "characters": len(markdown)}
-    if collision_warning:
-        result["slug_collision_warning"] = collision_warning
-    return _emit(result)
-
-
-def _check_slug_collision(repo_root: Path, slug: str, doc_id: str) -> str | None:
-    """Return a warning string when the slug's existing mirror belongs to a different document."""
-    existing = mirror_path(repo_root, slug)
-    if not existing.exists():
-        return None
-    try:
-        pairing = read_pairing(existing)
-    except Exception:
-        return None
-    if pairing and pairing.doc_id != doc_id:
-        return (
-            f"slug '{slug}' is already used by document {pairing.doc_id}. "
-            "Pass --slug to choose a unique slug for this document."
-        )
-    return None
+    markdown = export_markdown(drive_service(), doc_id)
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(markdown)
+        return 0
+    sys.stdout.write(markdown)
+    return 0
 
 
 def cmd_capture(args) -> int:
     drive = drive_service()
     doc_id = extract_doc_id(args.doc)
+    repo_root = Path(args.repo_root)
     threads = {t.id: t for t in fetch_threads(drive, doc_id)}
     thread = threads.get(args.comment_id)
     if thread is None:
         return _fail(f"comment {args.comment_id} not found on {doc_id}")
+
+    source = find_by_doc_id(repo_root, doc_id)
+    if source is None and not args.slug:
+        return _fail(
+            f"no markdown under {repo_root} is paired to {doc_id}. "
+            "Pair it with gdoc pair set, or pass --slug to choose a queue directory."
+        )
+    slug = args.slug or slug_for_source(source)
+    label = _source_label(repo_root, source) if source else None
+    warning = _check_source_collision(repo_root, slug, label) if label else None
+
     number = append_item(
-        Path(args.repo_root), args.slug, thread, doc_id=doc_id, today=date.today().isoformat()
+        repo_root,
+        slug,
+        thread,
+        doc_id=doc_id,
+        today=date.today().isoformat(),
+        source=label,
     )
-    return _emit({"item": number, "comment_id": args.comment_id})
+    result = {"item": number, "slug": slug, "source": label, "comment_id": args.comment_id}
+    if warning:
+        result["source_collision_warning"] = warning
+    return _emit(result)
+
+
+def _source_label(repo_root: Path, source: Path) -> str:
+    """The source path as recorded in pending.md, relative to the root where it can be."""
+    try:
+        return str(source.resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        return str(source.resolve())
+
+
+def _check_source_collision(repo_root: Path, slug: str, source: str) -> str | None:
+    """Warn when this queue was written for a different source file.
+
+    One directory per source file, so two documents can no longer collide. Two
+    source files in different folders sharing a stem still can, and that is now
+    the only collision possible.
+    """
+    recorded = recorded_source(pending_path(repo_root, slug))
+    if recorded and recorded != source:
+        return (
+            f"queue '{slug}' already holds items for {recorded}. "
+            "Pass --slug to keep this source in its own directory."
+        )
+    return None
 
 
 def cmd_generate(args) -> int:
     config = load_config()
+    drive = drive_service()
     result = generate(
-        drive_service(),
+        drive,
         Path(args.md),
         args.name,
         Path(args.out),
         folder_id=args.folder_id or config.output_folder_id,
     )
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
+    if args.baseline_root and result.doc_id:
+        payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
     return _emit(payload)
+
+
+def _write_baseline_for(drive, args, doc_id: str) -> Path:
+    """Snapshot the document that was just created.
+
+    This is the one moment the document and the markdown provably match, so it
+    is the only honest moment to take the snapshot. force=True is correct here
+    and only here: the write is meant to replace the previous version's
+    baseline, and refusing would break the loop on the second version.
+    """
+    markdown = export_markdown(drive, doc_id)
+    slug = slug_for_source(Path(args.md))
+    return write_baseline(Path(args.baseline_root), slug, markdown, force=True)
 
 
 # ---------------------------------------------------------------------------
@@ -247,17 +290,15 @@ def build_parser() -> argparse.ArgumentParser:
     reply.add_argument("--body-file", required=True)
     reply.set_defaults(func=cmd_reply)
 
-    export = sub.add_parser("export", help="write the markdown mirror")
+    export = sub.add_parser("export", help="fetch the document as markdown")
     export.add_argument("url")
-    export.add_argument("--repo-root", default=".")
-    export.add_argument("--slug")
-    export.add_argument("--force", action="store_true")
+    export.add_argument("--out", help="write to this file instead of stdout")
     export.set_defaults(func=cmd_export)
 
     capture = sub.add_parser("capture", help="append a global item to pending.md")
     capture.add_argument("doc")
     capture.add_argument("comment_id")
-    capture.add_argument("--slug", required=True)
+    capture.add_argument("--slug", help="queue directory name, default the paired source's stem")
     capture.add_argument("--repo-root", default=".")
     capture.set_defaults(func=cmd_capture)
 
@@ -266,6 +307,9 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--name", required=True)
     gen.add_argument("--out", required=True)
     gen.add_argument("--folder-id")
+    gen.add_argument(
+        "--baseline-root", help="write the new document's baseline under this directory"
+    )
     gen.set_defaults(func=cmd_generate)
 
     pair = sub.add_parser("pair", help="manage document-to-markdown pairings")
@@ -293,7 +337,7 @@ def build_parser() -> argparse.ArgumentParser:
     find_cmd = pair_sub.add_parser(
         "find", help="find the markdown file paired to a document id"
     )
-    find_cmd.add_argument("--repo-root", required=True)
+    find_cmd.add_argument("--repo-root", default=".")
     find_cmd.add_argument("--doc-id", required=True)
     find_cmd.set_defaults(pair_func=cmd_pair_find)
 

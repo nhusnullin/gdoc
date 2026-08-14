@@ -1,7 +1,7 @@
 import pytest
 
 from gdoc.model import Thread
-from gdoc.pending import append_item, next_item_number, pending_path
+from gdoc.pending import append_item, next_item_number, pending_path, recorded_source
 
 TODAY = "2026-08-13"
 
@@ -19,8 +19,8 @@ def thread(id="t1", content="ai! renumber the sections", quoted="Section 4"):
     )
 
 
-def test_pending_path_sits_beside_the_mirror(tmp_path):
-    assert pending_path(tmp_path, "policy") == tmp_path / "docs" / "gdoc" / "policy" / "pending.md"
+def test_pending_path_sits_beside_the_baseline(tmp_path):
+    assert pending_path(tmp_path, "policy") == tmp_path / ".gdoc" / "policy" / "pending.md"
 
 
 def test_first_item_is_number_one(tmp_path):
@@ -72,3 +72,34 @@ def test_multiline_comment_every_line_gets_blockquote_prefix(tmp_path):
     text = pending_path(tmp_path, "policy").read_text()
     assert "> line one" in text
     assert "> line two" in text
+
+
+# ---------------------------------------------------------------------------
+# the source file the queue belongs to
+# ---------------------------------------------------------------------------
+
+
+def test_the_header_records_the_source_file(tmp_path):
+    append_item(
+        tmp_path, "policy", thread(), doc_id="1AbC", today=TODAY, source="notes/policy.md"
+    )
+    assert "Source: notes/policy.md" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_recorded_source_reads_it_back(tmp_path):
+    append_item(
+        tmp_path, "policy", thread(), doc_id="1AbC", today=TODAY, source="notes/policy.md"
+    )
+    assert recorded_source(pending_path(tmp_path, "policy")) == "notes/policy.md"
+
+
+def test_recorded_source_is_none_for_an_older_queue(tmp_path):
+    """Queues written before the Source line must still be readable."""
+    append_item(tmp_path, "policy", thread(), doc_id="1AbC", today=TODAY)
+    path = pending_path(tmp_path, "policy")
+    assert "Source:" not in path.read_text()
+    assert recorded_source(path) is None
+
+
+def test_recorded_source_is_none_when_there_is_no_queue(tmp_path):
+    assert recorded_source(pending_path(tmp_path, "policy")) is None

@@ -1,35 +1,40 @@
 ---
 name: gdoc-review
-description: Use when Nail gives a Google Doc link and wants his ai: comments handled. Reads the comments, answers local ones in their threads, captures global ones for a later session.
+description: Use when Nail gives a Google Doc link and wants the ai: comments in it handled. Reads the comments, answers local ones in their threads, captures global ones for a later session.
 ---
 
 # Google Docs review
 
-Answer the `ai:` comments Nail left in a document. Local changes get an answer in
-the thread. Global changes get captured, never attempted.
+Answer the `ai:` comments in a document, whoever wrote them. Nail chose the
+document, and the marker is the instruction. Local changes get an answer in the
+thread. Global changes get captured, never attempted.
 
 The marker is `ai` plus a sign, at the start of a comment: `ai:` leaves the
 choice to you, `ai?` means answer it here, `ai!` means capture it as global. The
 old `@ai` form still counts. The CLI does this matching; you never re-derive it.
 
-Spec: `~/src/personal/gdoc/docs/superpowers/specs/2026-08-13-gdoc-ai-agent-design.md`
+Spec: `~/src/personal/gdoc/docs/superpowers/specs/2026-08-14-gdoc-storage-and-iteration-design.md`,
+which supersedes the storage parts of the 2026-08-13 spec beside it.
 
 ## Setup
 
 ```bash
 GDOC="$HOME/.config/gdoc-agent/venv/bin/gdoc"
-GDOC_REPO="$HOME/src/personal/gdoc"
-VAULT="$PWD"
+ROOT="$PWD"
 ```
 
 `$GDOC` is an installed command, so it runs from any directory. Nail's own
 working directory stays where he put it.
 
-Two roots, and they are not the same thing:
+One root, `$ROOT`, and it is `$PWD`:
 
-- `$GDOC_REPO` is where mirrors and `pending.md` are written.
-- `$VAULT` is the repo Nail is working in. It is the corpus you search to ground
-  answers, and the tree scanned for markdown paired to a document.
+- It is the corpus you search to ground answers.
+- It is the tree scanned for markdown paired to a document.
+- Tool-managed files go in `$ROOT/.gdoc/<slug>/`, beside the source markdown.
+
+`$PWD` is the CLI default for every `--repo-root`, so you never pass it.
+
+`$ROOT` may not be a git repository. Nothing here requires one.
 
 ## If Nail passes `--terminal-only`
 
@@ -44,23 +49,22 @@ the document. Say at the end that nothing was posted.
 $GDOC read <url>
 ```
 
-Returns `mine`, `others` and `skipped`. Threads already answered by the service
-account appear under `skipped`, which is what makes a second run safe.
+Returns `addressed` and `skipped`. A marked comment from anyone in the document
+is addressed: the marker is the instruction, and Nail chose the document. Each
+item carries its `author`, so an unexpected name is visible. Threads already
+answered by the service account appear under `skipped`, which is what makes a
+second run safe.
 
 ## Step 2: Show Nail what you found, and stop
 
-Print the lists and ask before posting anything. Two things Nail must be told
-every run, because the agent cannot check either one:
-
-- The Drive API returns no email address for comment authors, so `mine` is a
-  display-name guess, not proof.
-- `permissions.list` is refused under Commenter, so the agent cannot see who
-  else can read this document. Replies are visible to all of them.
+Print the list and ask before posting anything. One thing Nail must be told every
+run, because the agent cannot check it: `permissions.list` is refused under
+Commenter, so the agent cannot see who else can read this document. Replies are
+visible to all of them, and a posted reply cannot be taken back.
 
 ```
-Yours (will act):      para 3, para 7, para 11
-Others (context only): para 5 (William Mejia)
-Already answered:      para 2
+Will act:         para 3, para 7, para 11 (Nail), para 5 (William Mejia)
+Already answered: para 2
 
 I cannot see who else has access to this document. Replies will be
 visible to everyone on it, under the service account address.
@@ -70,7 +74,7 @@ Proceed?
 
 Wait for an answer. Never post before this.
 
-## Step 3: Classify each of Nail's comments
+## Step 3: Classify each addressed comment
 
 Per comment, not per batch. One run may answer two and capture two.
 
@@ -80,9 +84,9 @@ Per comment, not per batch. One run may answer two and capture two.
 | Examples | A question. Rephrase this. Is this term right? Add a missing clause | Renumber sections. Restructure. Apply a term change everywhere |
 | Action | Answer in the thread | Capture, and reply with the refusal |
 
-`forced_kind` in the JSON carries Nail's override: `ai?` means answer it in the
-thread, `ai!` means capture it. `ai:` means he left the choice to you. Honour an
-override without re-deciding.
+`forced_kind` in the JSON carries the override written in the comment: `ai?`
+means answer it in the thread, `ai!` means capture it. `ai:` leaves the choice to
+you. Honour an override without re-deciding.
 
 An unanchored comment has `anchored: false` and no quote. It refers to the
 document as a whole, so treat it as global unless it is plainly a question.
@@ -91,10 +95,10 @@ If a comment is genuinely ambiguous, ask Nail in the terminal. Do not guess.
 
 ## Step 4: Ground the answer
 
-Search `$VAULT`. Cite plain file paths. The corpus mixes Russian and English, so
+Search `$ROOT`. Cite plain file paths. The corpus mixes Russian and English, so
 search in both languages.
 
-If the vault has no source for the answer, say so in the reply. Never write a
+If the root has no source for the answer, say so in the reply. Never write a
 plausible sentence to fill the gap.
 
 ## Step 5: Write the reply
@@ -121,8 +125,20 @@ $GDOC reply <doc_id> <comment_id> --body-file /tmp/reply.txt
 ## Step 6: Capture global items
 
 ```bash
-$GDOC capture <doc_id> <comment_id> --slug <slug> --repo-root "$GDOC_REPO"
+$GDOC capture <doc_id> <comment_id>
 ```
+
+The queue directory is named after the paired source markdown file, which the
+CLI finds from the document id. Every version of a document resolves to the same
+source, so an old version and a new one share one queue.
+
+Two answers that need Nail, not a retry:
+
+- An error naming `--slug` means no markdown under `$ROOT` is paired to this
+  document. Either Nail does not own it, or the pairing is missing. Say which
+  you think it is and stop.
+- `source_collision_warning` means the queue already holds items for a different
+  source file with the same name. Tell Nail before you go on.
 
 Then post the refusal, using the item number the capture returned:
 
@@ -139,36 +155,27 @@ EOF
 $GDOC reply <doc_id> <comment_id> --body-file /tmp/refusal.txt
 ```
 
-## Step 7: Mirror, only if paired
-
-Mirror only when the document has a paired markdown file, or when Nail owns it
-and asks for one. Never mirror a document he does not own: counsel drafts and
-partner documents stay in Drive.
-
-```bash
-$GDOC export <url> --repo-root "$GDOC_REPO"
-```
-
-If the JSON has `slug_collision_warning`, tell Nail before you go on. It means a different document already uses this slug.
-
-If it reports a mirror conflict, the markdown has uncommitted edits. Tell Nail
-and let him decide. Do not pass `--force` on your own.
-
-## Step 8: Report
+## Step 7: Report
 
 ```
 posted   para 3   answered, cited domains/regulatory/cbc-emi.md
 posted   para 7   rephrased, ready to paste
 captured para 2   global: renumber sections
 
-1 global item in ~/src/personal/gdoc/docs/gdoc/<slug>/pending.md
-Next session: /gdoc-apply docs/gdoc/<slug>/pending.md
+1 global item in .gdoc/<slug>/pending.md
+Next session: /gdoc-apply .gdoc/<slug>/pending.md
 ```
+
+Write no snapshot of the document here. `gdoc generate` writes the baseline, at
+the one moment the document and the markdown provably match. By the end of a
+review the document may already carry Nail's direct edits, and a snapshot taken
+now would bake them in and hide them from the next apply.
 
 ## Never
 
 - Never edit the reviewed document. The credential cannot, and neither may you.
 - Never resolve a thread. Resolving means Nail accepted the text.
 - Never reply twice to the same comment.
-- Never act on a comment that is not Nail's.
+- Never act on a comment without the marker.
 - Never attempt a global change in a comment thread.
+- Never write the baseline. That is `generate`'s job.

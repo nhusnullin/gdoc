@@ -13,6 +13,8 @@ from pathlib import Path
 
 import yaml
 
+from gdoc.baseline import slugify
+
 _FENCE = "---"
 
 # mkstemp creates 0600.  Without an explicit chmod the rename would silently
@@ -101,13 +103,37 @@ def add_version(pairing: Pairing, doc_id: str, created: str) -> Pairing:
     return replace(pairing, versions=pairing.versions + ({"id": doc_id, "created": created},))
 
 
+def slug_for_source(md_path: Path) -> str:
+    """The queue directory name for a source file.
+
+    The stem, not the document title. Every iteration raises a new document with
+    a new title and a new id, so both fork the queue. The source file survives.
+
+    The stem is hand-chosen and already date-prefixed, so it needs no cleaning,
+    but it goes through slugify anyway to guarantee a safe directory name.
+    """
+    return slugify(md_path.stem)
+
+
+def _matches(pairing: Pairing, doc_id: str) -> bool:
+    """True when this pairing covers the document, current version or an older one.
+
+    Current version first, so the common case does no extra work. Older versions
+    count because reviewing v0.1 after v0.2 exists must still land on the one
+    source file.
+    """
+    if pairing.doc_id == doc_id:
+        return True
+    return any(version.get("id") == doc_id for version in pairing.versions)
+
+
 def find_by_doc_id(root: Path, doc_id: str) -> Path | None:
-    """Search a tree for the markdown file already paired to this document."""
+    """Search a tree for the markdown file paired to this document, any version."""
     for candidate in sorted(root.rglob("*.md")):
         try:
             pairing = read_pairing(candidate)
         except Exception:
             continue  # a malformed file must not stop the search
-        if pairing and pairing.doc_id == doc_id:
+        if pairing and _matches(pairing, doc_id):
             return candidate
     return None
