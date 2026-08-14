@@ -308,18 +308,17 @@ def test_rewriting_in_place_leaves_one_file(built, tmp_path):
     """A zip cannot be read and rewritten at the same path at once."""
     target = tmp_path / "inplace.docx"
     target.write_bytes(built.read_bytes())
-    before = target.stat().st_size
     result = contents.rewrite_in_place(target, pages={"1-Purpose": 4})
-    assert target.exists()
     assert list(tmp_path.iterdir()) == [target], "a temporary file was left behind"
-    assert target.stat().st_size != before or result.entries
+    assert len(result.entries) == 12
     assert "<w:t>4</w:t>" in document_xml(target)
 
 
 def test_rewriting_in_place_cleans_up_after_a_failure(tmp_path):
+    """The temporary file must not survive a failed rewrite."""
     junk = tmp_path / "junk.docx"
     junk.write_bytes(b"not a docx")
-    with pytest.raises(Exception):
+    with pytest.raises(zipfile.BadZipFile):
         contents.rewrite_in_place(junk)
     assert list(tmp_path.iterdir()) == [junk], "a temporary file was left behind"
 ```
