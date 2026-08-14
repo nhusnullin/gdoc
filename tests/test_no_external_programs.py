@@ -19,7 +19,6 @@ That is a separate change with its own spec, not a step in this plan.
 """
 
 import ast
-import re
 from pathlib import Path
 
 import pytest
@@ -32,13 +31,36 @@ def python_files():
     return sorted(RENDER.rglob("*.py"))
 
 
-def code_only(text):
-    """Source with docstrings and comments stripped.
+def _docstring_owners(tree):
+    """The module itself, plus every class and function in it."""
+    return [tree] + [
+        node for node in ast.walk(tree)
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
 
-    Naming a program while explaining why it is gone is fine, and several modules
-    do exactly that. Only executable code counts.
+
+def code_only(text):
+    """Source with real docstrings and comments stripped, real code kept.
+
+    Blanks only the line spans of genuine docstrings, found with
+    `ast.get_docstring` on the module and on every class and function, never by
+    matching triple quotes. A triple-quoted string used as an ordinary value,
+    such as a command template assigned to a variable, is not a docstring by
+    this test's own admission and survives untouched, same as it would survive
+    at runtime.
+
+    Naming a program while explaining why it is gone is fine, and several
+    modules do exactly that. Only executable code counts.
     """
-    without_docstrings = re.sub(r'("""|\'\'\')(?:.|\n)*?\1', '""', text)
+    lines = text.splitlines()
+    tree = ast.parse(text)
+    for owner in _docstring_owners(tree):
+        if ast.get_docstring(owner) is None:
+            continue
+        docstring_statement = owner.body[0]
+        for line_number in range(docstring_statement.lineno, docstring_statement.end_lineno + 1):
+            lines[line_number - 1] = ""
+    without_docstrings = "\n".join(lines)
     return "\n".join(
         line for line in without_docstrings.splitlines()
         if not line.strip().startswith("#")
@@ -51,11 +73,23 @@ def test_there_are_python_files_to_check():
 
 
 def test_the_stripper_keeps_code_and_drops_prose():
-    """Guards the guard again. A stripper that ate everything would pass silently."""
-    sample = '"""a docstring naming soffice"""\n# a comment naming pandoc\nx = "kept"\n'
+    """Guards the guard again. A stripper that ate everything would pass silently.
+
+    Also guards against the shape of bug that broke an earlier, regex-based
+    version of this stripper: a triple-quoted string assigned to a variable is
+    live code, not a docstring, whatever quote style it uses, and must survive
+    stripping exactly like the double-quoted assignment below does.
+    """
+    sample = (
+        '"""a docstring naming soffice"""\n'
+        '# a comment naming pandoc\n'
+        'PDFTOTEXT_CMD = """a live triple-quoted string naming pdftotext"""\n'
+        'x = "kept"\n'
+    )
     stripped = code_only(sample)
     assert "soffice" not in stripped
     assert "pandoc" not in stripped
+    assert "pdftotext" in stripped
     assert "kept" in stripped
 
 

@@ -474,10 +474,6 @@ def strip_body(doc):
     return removed
 
 
-# -------------------------------------------------------------------- toc ---
-TOC_STYLE_RE = re.compile(r"TOC[1-9]")
-
-
 # ----------------------------------------------------------------- headers ---
 def fill_running_head(path, running_head):
     """Patch the running head, which lives in the header parts, not the body."""
