@@ -113,8 +113,16 @@ _PARAGRAPH = re.compile(r"<w:p\b.*?</w:p>", re.S)
 # matches by accident and which would drop a field instruction into the text.
 _TEXT = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>")
 _HEADING = re.compile(r'w:pStyle w:val="Heading(\d)"')
-_BOOKMARK_ID = re.compile(r'<w:bookmarkStart w:id="(\d+)"')
-_BOOKMARK_START = re.compile(r'<w:bookmarkStart w:id="(\d+)" w:name="([^"]+)"/>')
+# Attribute order is not fixed, and no writer agrees on it. We put w:id first, the
+# bundled master is a Google Docs export and puts it last, after w:colFirst,
+# w:colLast and w:name. So match the attributes wherever they sit, with lookaheads.
+# A regex anchored on our own order finds none of the template's bookmarks, which
+# then makes every id we pick a duplicate of one of theirs.
+_BOOKMARK_ID = re.compile(r'<w:bookmarkStart\b[^>]*?\bw:id="(\d+)"')
+_BOOKMARK_START = re.compile(
+    r'<w:bookmarkStart\b(?=[^>]*\bw:id="(\d+)")(?=[^>]*\bw:name="([^"]*)")[^>]*/>'
+)
+_BOOKMARK_END = re.compile(r'<w:bookmarkEnd\b[^>]*?\bw:id="(\d+)"[^>]*/>')
 
 
 class ContentsError(RuntimeError):
@@ -217,37 +225,67 @@ def _bookmarked(paragraph_xml: str, name: str, bookmark_id: int) -> str:
     return body[: body.rindex("</w:p>")] + end + "</w:p>"
 
 
+def _matching_end(spans, after: int, claimed: set):
+    """The first unclaimed end tag of this id that follows the start tag.
+
+    Paired by position, never by a document-wide string replace. Ids are supposed
+    to be unique, but an earlier pass may have handed one of ours the same number
+    as one of the template's. Replacing every `<w:bookmarkEnd w:id="8"/>` in the
+    file would then delete the template's end tag too, and leave its
+    bookmarkStart with nothing closing it.
+    """
+    for span in spans:
+        if span[0] >= after and span not in claimed:
+            return span
+    return None
+
+
 def _strip_our_bookmarks(document_xml: str) -> str:
     """Remove every bookmark this module wrote on an earlier pass.
 
     A rewrite must replace our own bookmarks rather than add to them.
     Bookmark names are unique document-wide, and a second write without this
     would leave two <w:bookmarkStart> tags carrying the same name, which is
-    invalid OOXML. Matched by the id on the start tag, so the corresponding
-    end tag goes with it. Anything not carrying our prefix, including the
-    template's own bookmarks, is left alone.
+    invalid OOXML. Each start tag is removed together with the end tag it pairs
+    with. Anything not carrying our prefix, including the template's own
+    bookmarks, is left alone.
     """
-    ours = {
-        match.group(1)
-        for match in _BOOKMARK_START.finditer(document_xml)
-        if match.group(2).startswith(BOOKMARK_PREFIX)
-    }
-    if not ours:
-        return document_xml
-    document_xml = _BOOKMARK_START.sub(
-        lambda m: "" if m.group(2).startswith(BOOKMARK_PREFIX) else m.group(0),
-        document_xml,
-    )
-    for bookmark_id in ours:
-        document_xml = document_xml.replace(f'<w:bookmarkEnd w:id="{bookmark_id}"/>', "")
+    ends: dict = {}
+    for match in _BOOKMARK_END.finditer(document_xml):
+        ends.setdefault(match.group(1), []).append(match.span())
+
+    cuts, claimed = [], set()
+    for match in _BOOKMARK_START.finditer(document_xml):
+        if not match.group(2).startswith(BOOKMARK_PREFIX):
+            continue
+        cuts.append(match.span())
+        paired = _matching_end(ends.get(match.group(1), ()), match.end(), claimed)
+        if paired is not None:
+            claimed.add(paired)
+            cuts.append(paired)
+
+    # Backwards, so each cut leaves earlier offsets untouched.
+    for start, end in sorted(cuts, reverse=True):
+        document_xml = document_xml[:start] + document_xml[end:]
     return document_xml
+
+
+def _next_bookmark_id(document_xml: str) -> int:
+    """One past the highest bookmark id in the document, ours or anyone else's.
+
+    Ends are read as well as starts, so an id used only by a stray end tag still
+    counts. A duplicate id is invalid OOXML, and the file still parses, so nothing
+    would report it.
+    """
+    used = {int(i) for i in _BOOKMARK_ID.findall(document_xml)}
+    used |= {int(i) for i in _BOOKMARK_END.findall(document_xml)}
+    return max(used) + 1 if used else 1
 
 
 def _with_bookmarks(document_xml: str, count: int) -> tuple:
     """Bookmark every heading. Returns the document and the anchor names."""
     document_xml = _strip_our_bookmarks(document_xml)
-    existing = [int(i) for i in _BOOKMARK_ID.findall(document_xml)]
-    next_id = max(existing) + 1 if existing else 1
+    next_id = _next_bookmark_id(document_xml)
 
     edits, anchors = [], []
     for match in _PARAGRAPH.finditer(document_xml):

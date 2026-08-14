@@ -330,12 +330,18 @@ def test_writing_twice_leaves_one_contents_entry_per_heading(built, tmp_path):
 def test_a_bookmark_not_ours_survives_a_write_untouched(built, tmp_path):
     """Only our own bookmarks are ours to replace on a rewrite.
 
-    The template's own bookmarks, or anyone else's, must be left alone.
+    The template's own bookmarks, or anyone else's, must be left alone. The
+    attribute order here is Google's own, which is what the bundled master
+    writes. Our order puts w:id first, so a regex anchored on that finds none of
+    the template's bookmarks and every id we pick collides with one of them.
     """
     source = tmp_path / "with_foreign_bookmark.docx"
     xml = document_xml(built)
-    foreign_start = '<w:bookmarkStart w:id="999" w:name="NotOurs"/>'
-    foreign_end = '<w:bookmarkEnd w:id="999"/>'
+    foreign_start = (
+        '<w:bookmarkStart w:colFirst="0" w:colLast="0" '
+        'w:name="_heading=h.gjdgxs" w:id="8"/>'
+    )
+    foreign_end = '<w:bookmarkEnd w:id="8"/>'
     marker = xml.index("<w:body>") + len("<w:body>")
     xml = xml[:marker] + foreign_start + foreign_end + xml[marker:]
     with zipfile.ZipFile(built) as zin, zipfile.ZipFile(source, "w") as zout:
@@ -348,3 +354,26 @@ def test_a_bookmark_not_ours_survives_a_write_untouched(built, tmp_path):
     result_xml = document_xml(out)
     assert foreign_start in result_xml
     assert foreign_end in result_xml
+
+
+def bookmark_ids(xml, tag):
+    return re.findall(rf'<w:bookmark{tag}\b[^>]*?\bw:id="(\d+)"[^>]*/>', xml)
+
+
+def test_writing_twice_keeps_every_bookmark_paired_and_every_id_unique(built, tmp_path):
+    """Two invalid shapes that both still parse, so only counting finds them.
+
+    Our ids must not collide with the template's Google-written ones. If they do,
+    stripping our bookmarks on the second write also takes the foreign bookmark's
+    end tag, and the template is left with a bookmarkStart that nothing closes.
+    """
+    once = tmp_path / "once.docx"
+    twice = tmp_path / "twice.docx"
+    contents.write(built, once)
+    contents.write(once, twice)
+    xml = document_xml(twice)
+    starts = bookmark_ids(xml, "Start")
+    ends = bookmark_ids(xml, "End")
+    assert len(starts) == len(ends), "a bookmark was left unterminated"
+    assert len(set(starts)) == len(starts), "duplicate bookmark ids"
+    assert sorted(starts) == sorted(ends), "a start and an end disagree on their id"
