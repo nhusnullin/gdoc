@@ -22,6 +22,17 @@ gdoc = "gdoc.cli:main"
 [tool.setuptools]
 packages = ["gdoc"]
 
+[tool.pyright]
+# The venv lives in ~/.config/gdoc-agent/venv, never in this repo, so .venv is a
+# symlink to it and is gitignored. Without this, pyright reads the ambient
+# Python. That is the same 3.12, but the dependencies are installed only in the
+# venv, so every google-api-python-client import reads as unresolved.
+#
+#   ln -s ~/.config/gdoc-agent/venv .venv
+#
+venvPath = "."
+venv = ".venv"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [

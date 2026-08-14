@@ -6,7 +6,9 @@ htmlcov/
 *.egg-info/
 build/
 dist/
-.venv/
+# No trailing slash: .venv is a symlink to ~/.config/gdoc-agent/venv, and git
+# treats a symlink as a file, so ".venv/" would not match it.
+.venv
 venv/
 .DS_Store
 
