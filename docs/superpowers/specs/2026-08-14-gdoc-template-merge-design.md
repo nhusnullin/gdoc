@@ -1,9 +1,113 @@
 # gdoc template merge and version bookkeeping, design
 
 Date: 2026-08-14
-Status: agreed, not yet built
+Status: Task 1 built and merged. Tasks 2, 3 and 6 need the amendment below.
 Supersedes: [2026-08-14-gdoc-apply-first-run-design.md](2026-08-14-gdoc-apply-first-run-design.md)
 Extends: [2026-08-14-gdoc-storage-and-iteration-design.md](2026-08-14-gdoc-storage-and-iteration-design.md)
+Amended by: this document's own "Amendment, 2026-08-15" section
+
+## Amendment, 2026-08-15: LibreOffice is gone
+
+**Read this before the rest of the document.** Everything below still describes a
+LibreOffice pass. That pass no longer exists, so several sections are now wrong.
+
+This document's own "Deferred, deliberately" section predicted the change:
+
+> Writing those styles ourselves, the way `shell.py` already writes heading
+> styles, would leave LibreOffice needed only for `--pdf`.
+
+That is what happened, and then `--pdf` went too. PR #11 merged
+`gdoc/render/contents.py`, which writes the contents list directly, and
+`gdoc/render/pagination.py`, which gets page numbers from Google. The evidence is
+in [2026-08-14-gdoc-toc-libreoffice-findings.md](2026-08-14-gdoc-toc-libreoffice-findings.md)
+and the reasoning in
+[2026-08-14-gdoc-pure-python-publish-design.md](2026-08-14-gdoc-pure-python-publish-design.md).
+
+The one measurement that drove it: **Google Docs never refreshes an imported
+contents field.** Two documents were left untouched and polled for over thirteen
+minutes; both kept the master's placeholder contents list. So computing that
+cached result was the only thing LibreOffice was ever needed for.
+
+### What this changes, section by section
+
+| Section below | Now |
+|---|---|
+| "a LibreOffice contents-list refresh" (line 44) | gone, `contents.write` does it |
+| `toc.py`, `refresh_toc`, `normalise_toc_tabs` (line 84) | deleted |
+| `gdoc build ... [--pdf] [--skip-toc]` (line 123) | both flags gone, see below |
+| "those styles only exist after the LibreOffice pass" (line 139) | `contents.py` ships them |
+| `tests/test_render_fidelity.py` needing LibreOffice (lines 257-259) | see Task 2 below |
+| "the LibreOffice requirement" in docs (line 295) | already written, PR #11 |
+| "Dropping the LibreOffice dependency" as deferred (line 324) | **done** |
+
+### The build interface, corrected
+
+```
+gdoc.render.build(md_path, out_path=None, *, template=..., title=None, pages=None)
+  -> BuildResult(docx_path, title, template, blocks, entries)
+```
+
+`want_pdf` and `skip_toc` are gone. `pages` is new: a mapping of heading text to
+page number, which the caller supplies. `BuildResult` lost `pdf_path` and gained
+`entries`.
+
+**Page numbers are now the caller's problem, and that is deliberate.** They do not
+exist until something lays the document out. `generate` gets them from Google by
+uploading once and reading the export. A caller with none, such as an offline
+build, gets a contents list with correct entries, correct hierarchy, working links
+and **blank** page numbers. Any desktop refresh fills them in. A blank is honest;
+a wrong number is not.
+
+### No local PDF
+
+`--pdf` needed LibreOffice to render. Export the published document from Drive
+instead, which is more faithful anyway, because it is what the reader sees.
+
+### Task 2 needs redesigning, not editing
+
+Task 2's pixel comparisons are built on `build(want_pdf=True)`, then
+`soffice --headless --convert-to pdf`, then `pdftoppm`. All three are gone, and its
+`_tools_present("soffice", "pandoc", "pdftoppm", "pdftotext", "pdfinfo")` gate would
+skip the whole thing today.
+
+The findings document argues the metric was wrong regardless. Measured on the same
+document: **22.7% of pixels differing for harmless vertical drift, 3.1% for a
+contents page describing a different document.** It ranked the defects backwards, so
+a threshold on it would have failed the healthy page and passed the broken one. The
+harness also cannot compare a local render against a Google export at all, because
+one rasterises to 1241x1754 and the other to 1242x1755, and it refuses on size
+mismatch. It could never see the thing it existed to protect.
+
+What replaced it is already merged: assert the contents entries match the document's
+real headings, with page numbers inside the page count. No rasterising, no external
+program, and it catches the whole class of defect. See
+`tests/test_contents_integration.py`.
+
+Task 2 should therefore port the 25 checks that are still meaningful and drop the
+two pixel comparisons, or rebuild them against Google's export with a
+drift-tolerant comparison. That is a decision to make when Task 2 starts, not now.
+
+### Task 6 grew
+
+It was "`generate` renders through the template". It is now that **plus** the
+two-pass that gets page numbers from Google:
+
+1. `build` the document with no pages, so the contents list has blank numbers
+2. upload it, export the PDF, read which page each heading landed on
+3. `build` again with those pages
+4. upload the version that gets published, and check `pagination.drift` is empty
+
+`tests/test_contents_integration.py` is the working reference for all four steps.
+Task 6 also still carries a `skipif soffice` gate that must go.
+
+**Task 6 is the task that pays.** Until it lands, `gdoc generate` still runs
+`pandoc md -o docx`, so the skills publish plain documents with no house style, and
+none of the merged renderer work reaches a real document.
+
+### Unaffected
+
+Tasks 4, 5, 7, 8 and 9 do not touch any of this. Task 10 is partly done: PR #11
+added the "No external programs" section to `CLAUDE.md` and corrected `README.md`.
 
 Two changes that turned out to be one. The document renderer moves into this
 repo, and `generate` starts recording the version it just created.
