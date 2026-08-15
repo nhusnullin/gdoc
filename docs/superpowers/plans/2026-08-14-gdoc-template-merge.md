@@ -48,7 +48,7 @@ gdoc.render.pagination.drift(written, published) -> dict
 |---|---|
 | 1. Port the renderer | **Done and merged.** Skip it. |
 | 2. Port the 25 checks | **Redesign.** See below. |
-| 3. `gdoc build` + `template` key | **Amend.** Drop `--pdf` and `--skip-toc`. |
+| 3. `gdoc build` + `template` key | **Mostly dropped.** Keep the config key and fold it into Task 6. Do not build the command. |
 | 4. The title contract | Unchanged. |
 | 5. Drop the title heading | Unchanged. |
 | 6. `generate` through the template | **Amend and expand.** See below. |
@@ -76,19 +76,48 @@ headings, with page numbers inside the page count. If you still want pixels, com
 Google's export against a stored reference produced the same way, and pick a metric
 that does not treat two pixels of drift as a bigger defect than a wrong contents page.
 
-### Task 3, amend
+### Task 3, mostly dropped
 
-Keep the command and the `template` config key. Remove the `--pdf` and `--skip-toc`
-flags and everything downstream of them, including `want_pdf=args.pdf` and
-`skip_toc=args.skip_toc`. Add `--pages` only if a caller needs it; `generate` supplies
-pages directly through the Python API, so the CLI probably does not need the flag.
+This task bundles two unrelated things. One is needed, one is not.
 
-Worth knowing: `gdoc build` is named in `README.md` and in older planning documents as
-though it exists. It does not. This task is what creates it.
+**Keep `Config.template`.** Task 6 consumes it directly, at
+`template = args.template or config.template`, so `generate` has no way to know which
+template to render through without it. It is a dataclass field, a default of
+`profiles.DEFAULT_TEMPLATE`, and a line in `load_config`. **Fold it into Task 6**,
+where it is used, and keep the two config tests that come with it.
+
+**Do not build the `gdoc build` command.** Three reasons:
+
+1. Nail does not want local files. His words: "for me generate only google doc is
+   enough, i do not need docx and pdf to be honest." A local `.docx` is exactly what
+   this command produces.
+2. It got worse since the plan was written. `build` used to run LibreOffice and
+   produce a document with real page numbers. Offline it now writes **blank** ones,
+   because nothing has laid the document out. So the command's output is a
+   half-product: correct entries, correct links, empty page column.
+3. Nothing needs it. The tests call `gdoc.render.build()` directly in Python. A CLI
+   wrapper is a surface to document, version and maintain, with no caller.
+
+If a preview is ever wanted, the honest shape is `--dry-run` on `generate`, not a
+separate command, because `generate` is the thing that knows how to get page numbers.
+
+No README change is needed. It already says `gdoc.render.build` "is a function, not a
+command", and lists the subcommands that actually exist.
 
 ### Task 6, amend and expand
 
-It was "render through the template". It is now that plus the two-pass:
+It also absorbs `Config.template` from Task 3, since it is the only consumer:
+
+```python
+@dataclass(frozen=True)
+class Config:
+    output_folder_id: str | None = None
+    template: str = profiles.DEFAULT_TEMPLATE
+```
+
+read in `load_config`, and used as `template = args.template or config.template`.
+
+The rest was "render through the template". It is now that plus the two-pass:
 
 1. `build` with no pages, so the contents list carries blank page numbers
 2. upload, export the PDF, `pagination.from_pdf` to learn the real pages
@@ -848,11 +877,13 @@ git commit -m "test: port the template selftest checks into pytest"
 
 ---
 
-## Task 3: `gdoc build`, and the `template` config key [AMEND]
+## Task 3: `gdoc build`, and the `template` config key [MOSTLY DROPPED]
 
-> **Read the amendment at the top before starting.** Drop the `--pdf` and
-> `--skip-toc` flags and everything downstream of them. `build` no longer takes
-> `want_pdf` or `skip_toc`, and `BuildResult` has no `pdf_path`.
+> **Read the amendment at the top before starting.** Do not build the `gdoc build`
+> command: Nail does not want local files, and offline it would write blank page
+> numbers. Take only the `Config.template` half, which Task 6 needs, and implement it
+> there. The steps below also still use `--pdf` and `--skip-toc`, which no longer
+> exist.
 
 **Files:**
 - Modify: `gdoc/config.py`, `gdoc/cli.py`

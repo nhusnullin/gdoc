@@ -34,7 +34,7 @@ cached result was the only thing LibreOffice was ever needed for.
 |---|---|
 | "a LibreOffice contents-list refresh" (line 44) | gone, `contents.write` does it |
 | `toc.py`, `refresh_toc`, `normalise_toc_tabs` (line 84) | deleted |
-| `gdoc build ... [--pdf] [--skip-toc]` (line 123) | both flags gone, see below |
+| `gdoc build ... [--pdf] [--skip-toc]` (line 123) | the whole command is dropped, see below |
 | "those styles only exist after the LibreOffice pass" (line 139) | `contents.py` ships them |
 | `tests/test_render_fidelity.py` needing LibreOffice (lines 257-259) | see Task 2 below |
 | "the LibreOffice requirement" in docs (line 295) | already written, PR #11 |
@@ -63,6 +63,22 @@ a wrong number is not.
 `--pdf` needed LibreOffice to render. Export the published document from Drive
 instead, which is more faithful anyway, because it is what the reader sees.
 
+### No `gdoc build` command either
+
+The spec gives `build` its own subcommand so a document can be rendered with no Drive
+call. That is dropped, and only its `Config.template` half survives, folded into
+Task 6 where it is consumed.
+
+Nail does not want local files: "for me generate only google doc is enough, i do not
+need docx and pdf to be honest." The command produces exactly that. It is also worth
+less than when the spec was written, because offline it now writes **blank** page
+numbers, so its output is a half-product. And nothing needs it: the tests call
+`gdoc.render.build()` directly in Python.
+
+`gdoc.render.build` remains as a function, and it is what `generate` renders through.
+If a preview is ever wanted, `--dry-run` on `generate` is the honest shape, because
+`generate` is the thing that knows how to get page numbers.
+
 ### Task 2 needs redesigning, not editing
 
 Task 2's pixel comparisons are built on `build(want_pdf=True)`, then
@@ -89,8 +105,9 @@ drift-tolerant comparison. That is a decision to make when Task 2 starts, not no
 
 ### Task 6 grew
 
-It was "`generate` renders through the template". It is now that **plus** the
-two-pass that gets page numbers from Google:
+It absorbs `Config.template` from Task 3, since it is the only consumer. Then it is
+"`generate` renders through the template" **plus** the two-pass that gets page numbers
+from Google:
 
 1. `build` the document with no pages, so the contents list has blank numbers
 2. upload it, export the PDF, read which page each heading landed on
