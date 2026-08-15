@@ -66,3 +66,33 @@ def test_config_is_immutable(tmp_path):
     config = load_config(path)
     with pytest.raises(Exception):
         config.output_folder_id = "0AOther"
+
+
+def test_auth_mode_defaults_to_oauth(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"output_folder_id": "0AFolderId"}))
+    assert load_config(path).auth_mode == "oauth"
+
+
+def test_auth_mode_can_be_the_service_account(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"auth_mode": "service_account"}))
+    assert load_config(path).auth_mode == "service_account"
+
+
+def test_an_unknown_auth_mode_is_refused_and_names_both_options(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"auth_mode": "magic"}))
+    with pytest.raises(ValueError) as excinfo:
+        load_config(path)
+    message = str(excinfo.value)
+    assert "magic" in message
+    assert "oauth" in message
+    assert "service_account" in message
+
+
+def test_nails_live_config_still_loads_without_the_new_key(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"display_name": "Nail Khusnullin", "output_folder_id": None}))
+    config = load_config(path)
+    assert config.auth_mode == "oauth"
