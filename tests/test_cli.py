@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+from googleapiclient.errors import HttpError
 
 from gdoc.cli import main
 from gdoc.config import Config
@@ -504,6 +505,40 @@ def test_generate_survives_a_non_ioerror_pairing_failure_too(capsys, tmp_path):
     assert payload["link"] == "https://x/edit"
     assert "pairing_error" in payload
     assert "version" not in payload
+
+
+def test_generate_survives_a_baseline_failure_too(capsys, tmp_path):
+    """The baseline write can fail on its own, independent of the pairing write.
+
+    export_markdown is a Drive network call. A dropped connection or a refused
+    token surfaces as an HttpError, not an OSError. The document was still
+    published, so doc_id and link must still reach the payload, and the pairing
+    write is an independent fact that must still happen.
+    """
+    fake_resp = MagicMock()
+    fake_resp.status = 500
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    drive = MagicMock()
+    with patch("gdoc.cli.drive_service", return_value=drive), \
+         patch("gdoc.cli.load_config", return_value=Config(output_folder_id="0AF", template="none")), \
+         patch("gdoc.cli.export_markdown", side_effect=HttpError(fake_resp, b"boom")), \
+         patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = GenerateResult(
+            docx_path=tmp_path / "v.docx", doc_id="1New", link="https://x/edit"
+        )
+        argv = ["generate", "--md", str(md), "--out", str(tmp_path / "v.docx"),
+                "--name", "X v1", "--baseline-root", str(tmp_path)]
+        exit_code = main(argv)
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["doc_id"] == "1New"
+    assert payload["link"] == "https://x/edit"
+    assert "baseline_error" in payload
+    # independent of the baseline: the version is still recorded
+    pairing = read_pairing(md)
+    assert pairing.doc_id == "1New"
+    assert payload["version"] == 1
 
 
 def test_generate_records_nothing_without_baseline_root(tmp_path):

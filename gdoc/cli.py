@@ -180,20 +180,31 @@ def _check_source_collision(repo_root: Path, slug: str, source: str) -> str | No
 
 
 def cmd_generate(args) -> int:
-    """Publish the markdown, then record the version. The upload wins either way.
+    """Publish the markdown, then record what happened. The upload wins either way.
 
-    The pairing write below is wrapped in a broad except on purpose. read_pairing
-    and write_pairing can fail below the OSError layer: a UnicodeDecodeError
-    reading a note saved with bad bytes, or an AttributeError or ValueError from
-    front matter a hand edit or a bad merge left as a list instead of a mapping.
-    A narrow catch would let any of those escape and crash before the payload
-    below is ever printed, hiding a document that Drive already created. That is
-    the one outcome this function must never produce, so the catch is as wide as
-    the exceptions this pairing code can throw, not as wide as the ones a
-    narrower reading predicted. gdoc/pairing.py's find_by_doc_id and
-    gdoc/generate.py's _check_drift catch this broadly for the same reason. The
-    exception is named verbatim in the payload, so a real programming error is
-    still visible rather than silently reported as an ordinary pairing failure.
+    Once result.doc_id is set, a document was really created, and everything
+    after that point is recording facts about it: a baseline snapshot and a
+    pairing version. Each of those two writes gets its own broad except, on
+    purpose, and each is guarded on its own rather than the two sharing one
+    try, so a failure in one does not stop the other from being recorded.
+
+    _write_baseline_for makes a Drive network call (export_markdown) and a disk
+    write (write_baseline); either can fail in ways that are not an OSError, such
+    as HttpError on a dropped connection or an expired token, or PandocNotFound
+    if the plain export falls back to pandoc and it is missing. _record_version
+    calls read_pairing and write_pairing, which can fail below the OSError layer
+    too: a UnicodeDecodeError reading a note saved with bad bytes, or an
+    AttributeError or ValueError from front matter a hand edit or a bad merge
+    left as a list instead of a mapping. A narrow catch on either would let its
+    failure escape uncaught and crash before the payload below is ever printed,
+    hiding a document that Drive already created. That is the one outcome this
+    function must never produce, so both catches are as wide as the exceptions
+    this code can throw, not as wide as the ones a narrower reading predicted.
+    gdoc/pairing.py's find_by_doc_id and gdoc/generate.py's _check_drift catch
+    this broadly for the same reason. Each exception is named verbatim in its
+    own payload key (baseline_error, pairing_error), so a real programming error
+    is still visible rather than silently reported as an ordinary failure, and
+    the two stay distinguishable from each other.
     """
     config = load_config()
     template = args.template or config.template
@@ -215,8 +226,14 @@ def cmd_generate(args) -> int:
         return _fail_with(_missing_title(error, md_path))
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
     if args.baseline_root and result.doc_id:
-        payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
         payload["slug"] = slug_for_source(md_path)
+        try:
+            payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
+        except Exception as error:  # noqa: BLE001 - see the docstring
+            payload["baseline_error"] = (
+                f"the document was published but its baseline was not recorded: "
+                f"{type(error).__name__}: {error}"
+            )
         try:
             payload["version"] = _record_version(md_path, result.doc_id)
         except Exception as error:  # noqa: BLE001 - see the docstring
