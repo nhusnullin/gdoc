@@ -1,15 +1,38 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from googleapiclient.errors import HttpError
 
 from gdoc.generate import generate, md_to_docx
 
+TEMPLATE = "altery-group-policy-v1.0"
+# A template document carries the master's cover, control tables and contents
+# list, so it cannot be confused with a bare pandoc file of the same two lines.
+# The master alone is 58KB; the pandoc file is a few KB.
+TEMPLATE_SIZE = 40_000
+TEMPLATED_MARKDOWN = "---\ntitle: Kickoff Notes\n---\n\n# Section one\n\nBody.\n"
+
 
 class FakeResponse:
     def __init__(self, status):
         self.status = status
         self.reason = "test"
+
+
+def _drive(ids=("1Throwaway", "1New")):
+    """A Drive that accepts uploads and exports something PDF-shaped.
+
+    The PDF bytes are never parsed: every test that uses them patches
+    pagination.from_pdf, because building a real multi-page PDF here would test
+    pypdf rather than this module.
+    """
+    drive = MagicMock()
+    drive.files().create.return_value.execute.side_effect = [
+        {"id": file_id, "webViewLink": f"https://docs.google.com/document/d/{file_id}/edit"}
+        for file_id in ids
+    ]
+    drive.files().export.return_value.execute.return_value = b"%PDF-1.4 not really"
+    return drive
 
 
 def test_pandoc_produces_a_real_docx(tmp_path):
@@ -69,3 +92,89 @@ def test_missing_markdown_file_is_reported_before_anything_else(tmp_path):
     drive = MagicMock()
     with pytest.raises(FileNotFoundError):
         generate(drive, tmp_path / "missing.md", "X", tmp_path / "x.docx", folder_id=None)
+
+
+# ---------------------------------------------------------------------------
+# the house template
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.slow
+def test_generate_renders_through_the_template_when_one_is_given(tmp_path):
+    """Two uploads: one to learn Google's pagination, one to publish."""
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    with patch("gdoc.generate.pagination.from_pdf", return_value={"Section one": 3}):
+        result = generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert result.doc_id == "1New"
+    assert result.reason is None
+    assert not result.drift
+    assert result.docx_path.stat().st_size > TEMPLATE_SIZE
+    assert drive.files().create.call_count == 2
+
+
+@pytest.mark.slow
+def test_the_first_pass_document_is_trashed(tmp_path):
+    """The blank-page-number upload exists only to be measured. It must not linger."""
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    with patch("gdoc.generate.pagination.from_pdf", return_value={"Section one": 3}):
+        generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    trashed = drive.files().update.call_args.kwargs
+    assert trashed["fileId"] == "1Throwaway"
+    assert trashed["body"] == {"trashed": True}
+
+
+@pytest.mark.slow
+def test_generate_reports_drift_instead_of_hiding_it(tmp_path):
+    """A page number that moved means the contents list describes another document."""
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    with patch(
+        "gdoc.generate.pagination.from_pdf",
+        side_effect=[{"Section one": 3}, {"Section one": 4}],
+    ):
+        result = generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert result.doc_id == "1New"
+    assert result.drift == {"Section one": (3, 4)}
+    assert "Section one" in result.reason
+
+
+@pytest.mark.slow
+def test_a_template_without_a_folder_builds_locally_and_says_the_pages_are_blank(tmp_path):
+    """No Drive means no layout engine, so there are no page numbers to write."""
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    result = generate(
+        drive, md, "Kickoff Notes v1", tmp_path / "v1.docx", folder_id=None, template=TEMPLATE,
+    )
+    assert result.doc_id is None
+    assert result.docx_path.stat().st_size > TEMPLATE_SIZE
+    assert "output_folder_id" in result.reason
+    assert "page numbers" in result.reason
+    drive.files().create.assert_not_called()
+
+
+def test_template_none_keeps_the_plain_pandoc_path(tmp_path):
+    md = tmp_path / "in.md"
+    md.write_text("# Title\n\nBody.\n")
+    drive = _drive(ids=("1New",))
+    result = generate(
+        drive, md, "X v1", tmp_path / "v1.docx", folder_id="0AFolder", template=None,
+    )
+    assert result.doc_id == "1New"
+    assert result.docx_path.stat().st_size < TEMPLATE_SIZE
+    assert drive.files().create.call_count == 1
