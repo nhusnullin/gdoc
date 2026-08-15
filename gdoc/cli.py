@@ -8,7 +8,7 @@ they are multi-line plain text and shell quoting would mangle them.
 import argparse
 import json
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
 
@@ -180,6 +180,32 @@ def _check_source_collision(repo_root: Path, slug: str, source: str) -> str | No
 
 
 def cmd_generate(args) -> int:
+    """Publish the markdown, then record what happened. The upload wins either way.
+
+    Once result.doc_id is set, a document was really created, and everything
+    after that point is recording facts about it: a baseline snapshot and a
+    pairing version. Each of those two writes gets its own broad except, on
+    purpose, and each is guarded on its own rather than the two sharing one
+    try, so a failure in one does not stop the other from being recorded.
+
+    _write_baseline_for makes a Drive network call (export_markdown) and a disk
+    write (write_baseline); either can fail in ways that are not an OSError, such
+    as HttpError on a dropped connection or an expired token, or PandocNotFound
+    if the plain export falls back to pandoc and it is missing. _record_version
+    calls read_pairing and write_pairing, which can fail below the OSError layer
+    too: a UnicodeDecodeError reading a note saved with bad bytes, or an
+    AttributeError or ValueError from front matter a hand edit or a bad merge
+    left as a list instead of a mapping. A narrow catch on either would let its
+    failure escape uncaught and crash before the payload below is ever printed,
+    hiding a document that Drive already created. That is the one outcome this
+    function must never produce, so both catches are as wide as the exceptions
+    this code can throw, not as wide as the ones a narrower reading predicted.
+    gdoc/pairing.py's find_by_doc_id and gdoc/generate.py's _check_drift catch
+    this broadly for the same reason. Each exception is named verbatim in its
+    own payload key (baseline_error, pairing_error), so a real programming error
+    is still visible rather than silently reported as an ordinary failure, and
+    the two stay distinguishable from each other.
+    """
     config = load_config()
     template = args.template or config.template
     master = None if template == profiles.NO_TEMPLATE else template
@@ -200,8 +226,40 @@ def cmd_generate(args) -> int:
         return _fail_with(_missing_title(error, md_path))
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
     if args.baseline_root and result.doc_id:
-        payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
+        payload["slug"] = slug_for_source(md_path)
+        try:
+            payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
+        except Exception as error:  # noqa: BLE001 - see the docstring
+            payload["baseline_error"] = (
+                f"the document was published but its baseline was not recorded: "
+                f"{type(error).__name__}: {error}"
+            )
+        try:
+            payload["version"] = _record_version(md_path, result.doc_id)
+        except Exception as error:  # noqa: BLE001 - see the docstring
+            payload["pairing_error"] = (
+                f"the document was published but its version was not recorded: "
+                f"{type(error).__name__}: {error}"
+            )
     return _emit(payload)
+
+
+def _record_version(md_path: Path, doc_id: str) -> int:
+    """Write the pairing for a document that was just created. Returns its number.
+
+    This is a fact, not a policy: a document with this id was created from this
+    markdown today. Which folder, which filename and which version label stay
+    with the skill. The baseline write already establishes that recording facts
+    at this moment is generate's job.
+
+    Gated on --baseline-root, which already means "this is a tracked version of
+    a tracked file", so a one-off document does not stamp frontmatter on a note.
+    """
+    pairing = read_pairing(md_path) or Pairing(doc_id=doc_id)
+    created = date.today().isoformat()
+    updated = add_version(replace(pairing, doc_id=doc_id), doc_id, created)
+    write_pairing(md_path, updated)
+    return len(updated.versions)
 
 
 def _version_name(md_path: Path, template: str | None, title: str | None = None) -> str:
