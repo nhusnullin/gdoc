@@ -1,7 +1,28 @@
 # OAuth as a second credential
 
-Status: design, approved in outline on 2026-08-14. Supersedes nothing. Extends
-the credential section of `2026-08-13-gdoc-ai-agent-design.md`.
+Status: design, approved in outline on 2026-08-14, section 5 rewritten and
+approved on 2026-08-15. Supersedes nothing. Extends the credential section of
+`2026-08-13-gdoc-ai-agent-design.md`.
+
+## Principles
+
+`PRINCIPLES.md` did not exist when this spec was first written. The gate is
+answered here because section 5 was rewritten after it landed.
+
+Serves: principle 3. Under OAuth the credential can reach a whole Drive, and the
+guard's allowed set starts empty, so a command that does not name a document
+refuses every call rather than reaching for one. Not knowing resolves to
+refusing, never to acting.
+
+Strains: principle 3, in the other direction, and this is the cost of the
+design. The guard permits every method on the file the command names, including
+an edit to a reviewed document, which the service account could not make. What
+was a limit Google enforced becomes a limit gdoc merely respects. Section 5,
+"What this gives up", states it, and the dated decision in `PRINCIPLES.md` is
+rewritten rather than quietly left standing.
+
+Also touches principle 1: two packages are added, `google-auth-oauthlib` and
+`google-auth-httplib2`, both pip-installable, with reasons in section 10.
 
 ## 1. Why
 
@@ -55,11 +76,15 @@ document. OAuth cannot ship without fixing this.
 |---|---|
 | Which credential by default | `auth_mode` in config, defaulting to `oauth` |
 | Silent fallback when the token is missing | No. Fail with an error naming both fixes |
-| What replaces the cannot-edit guarantee | A write guard in the HTTP transport |
-| Can the guard be turned off | Yes, `allow_document_edits: true` in config |
+| What narrows the credential | A guard in the HTTP transport, on file ids |
+| What the guard governs | Which files, never which methods |
+| Can the guard be turned off | No. There is no config key for it |
 | Who the agent acts for | Anyone. The marker decides, never the author |
 | How the agent recognises its own replies | A `[gdoc]` line it writes, not identity |
 | Unmarked comments | Ignored, unless Nail asks for all-comments mode |
+
+The third and fourth rows were decided differently on 2026-08-14 and amended on
+2026-08-15. Section 5 records both the rule and the reason it changed.
 
 ## 4. Credentials
 
@@ -133,64 +158,182 @@ The missing-credential errors name the file and the fix:
   downloaded from Google Cloud. Points at section 9 of this spec.
 - service_account, no key: unchanged from today.
 
-## 5. The write guard
+## 5. The guard
+
+Amended 2026-08-15. The first draft of this section guarded verbs: any read was
+allowed, and only four writes. That guarded the wrong axis, and this section now
+says so. The reasoning is in "Why files and not verbs" below.
+
+### What it is for
+
+Under a service account the credential reached exactly the documents that had
+been shared with it, and on those it was a Commenter. Two limits, both Google's:
+a small reachable set, and no writing inside it.
+
+OAuth removes both at once. The token is Nail, the scope is full `drive`, and
+the reachable set is every file Nail owns or has been given. Nothing external
+narrows that, so the tool has to narrow it itself.
+
+The guard narrows the **set**, not the verbs. It answers one question: may this
+request touch this file? On a file it may touch, it has no opinion about the
+method.
+
+### Why files and not verbs
+
+The danger OAuth introduces is not that gdoc might learn to `PATCH`. It is that
+the credential can reach a whole Drive. A verb allowlist does nothing about
+that: under the first draft, gdoc could have read every document Nail owns, and
+every `GET` would have passed.
+
+The verb rule also modelled the wrong thing. It was written as if it were
+Commenter in Python, but Commenter cannot create files and the tool must, so
+the allowlist already had `files.create` in it. What it actually encoded was
+gdoc's own list of calls as of 2026-08-14, which means it has to be edited every
+time the tool learns a new one. It was already out of date when it was written:
+`generate` gained a second pass on 2026-08-15 that trashes its measuring copy
+with `files.update`, and the verb allowlist refuses it.
+
+A file-id rule needs no edit when a call is added, and it is aimed at the risk
+that OAuth actually creates.
 
 ### Why in the transport
 
-The guarantee the README makes is that the agent *cannot* edit a reviewed
-document, not that it chooses not to. A guard at the call sites would only prove
-the second. A guard in the HTTP transport sees every request the client makes,
-including ones added later and including any other Google API built on the same
-transport.
+The guarantee is meant to hold whatever the call sites do. A check at the call
+sites would only prove the tool remembered. A check in the HTTP transport sees
+every request the client makes, including ones added later, and including any
+other Google API built on the same transport, which is how the Docs API is
+covered without being named.
 
-### How
-
-`build()` is given an explicit `http=` instead of `credentials=`. The two cannot
-be passed together. The value is `google_auth_httplib2.AuthorizedHttp` wrapped in
-`gdoc/guard.py:GuardedHttp`, which mirrors that class's own signature, verified
-against the installed 0.4.1:
+### The allowed set
 
 ```
-request(uri, method="GET", body=None, headers=None,
-        redirections=5, connection_type=None, **kwargs)
+allowed = { the file id the command was given }
+        ∪ { file ids returned by creates the guard itself carried }
 ```
 
-It checks, then delegates unchanged. Every other attribute is proxied through to
-the wrapped object, because `googleapiclient` reaches for more than `request`
-during media upload.
+The first comes from the CLI: `cmd_read` and `cmd_reply` already call
+`extract_doc_id(args.url)` before building the client, so the id is passed to
+`drive_service`. Commands with no input document, `generate` among them, start
+with an empty set.
 
-The rule is an allowlist on method and path, with the query string ignored:
+The second is how `generate` works at all. It creates a measuring copy, exports
+it to PDF, creates the published copy, then trashes the measuring one. Three of
+those four calls address a file that did not exist when the client was built.
 
-| Allowed | |
+An empty set refuses everything. A command that forgets to name its document
+fails closed, which is principle 3.
+
+### The rule
+
+Method is never consulted, except to tell a create from a listing.
+
+| Request | Verdict |
 |---|---|
-| any `GET` or `HEAD` | reads, `files.export`, `comments.list`, discovery |
-| `POST /drive/v3/files` | create a new document |
-| `POST /upload/drive/v3/files` | the same create, with the docx body |
-| `POST /drive/v3/files/{id}/comments` | leave a comment |
-| `POST /drive/v3/files/{id}/comments/{cid}/replies` | reply in a thread |
+| path carries a file id, and the id is allowed | carried |
+| path carries a file id, and the id is not allowed | refused |
+| `POST /drive/v3/files`, `POST /upload/drive/v3/files` | carried, and the new id is learned |
+| `GET /drive/v3/files` | refused. This is `files.list` |
+| `POST .../{id}/permissions` | refused, on every file, allowed or not |
+| `POST /batch/...` | refused. The ids live in the body, not the path |
+| `GET /discovery/...`, `GET /drive/v3/about` | carried. No file is involved |
+| anything else | refused |
 
-Everything else is refused: every `PATCH`, `PUT` and `DELETE`, and every other
-`POST`. That covers `files.update`, `comments.delete`, `replies.delete`,
-`permissions.create`, batch requests, and the Docs API's
-`documents/{id}:batchUpdate`, without naming any of them.
+Two of those rows carry weight beyond their size.
 
-The refusal raises `PermissionError`. It is an `OSError` subclass, so
-`cli.py:main` already catches it and prints the normal JSON error envelope. No
-change to the CLI's error handling.
+**`files.list` is refused.** This is most of "gdoc cannot see files it was not
+given". gdoc never searches Drive today, so the refusal costs nothing, and a
+future command that wants to search has to come back to this section.
 
-The message names the method, the path, and `allow_document_edits`.
+**`permissions` is refused everywhere.** Granting other people access is a
+different kind of authority from changing a document, and the tool has no reason
+to hold it.
+
+### Matching
+
+The host is matched, not only the path, so a path shape on an unexpected host
+does not pass. The query string is ignored, so `fields` and `uploadType` cannot
+change a verdict. The method is upper-cased before use.
+
+File ids are read from three path shapes:
+
+```
+/drive/v3/files/{id}...                          Drive
+/upload/drive/v3/files/{id}...                   Drive, media
+/v1/documents/{id}[:method]                      Docs, id stops at the colon
+```
+
+The Docs API's `documents/{id}:batchUpdate` is the write that matters most and
+it is not a Drive URL, so its shape is matched explicitly.
+
+### Learning a created id
+
+After a create the guard carried returns a 2xx, the guard parses the response
+body and adds `id` to the allowed set. It is wrapped: a body that is not JSON,
+or has no `id`, teaches it nothing and never raises. `MediaFileUpload` is built
+with `resumable=False`, so a create is one request and one response, with no
+multi-step upload to follow.
+
+The alternative was for the call site to register the id after each create. That
+was rejected. It puts the guarantee back into discipline, and a create added
+later that forgets the line fails at runtime with no test noticing.
+
+### Refusal
+
+`PermissionError`, which is an `OSError` subclass, so `cli.py:main` already
+catches it and prints the normal JSON error envelope. No change to the CLI's
+error handling.
+
+The message names the method, the path, and the file id, and says gdoc only
+touches the document it was given.
 
 ### When it is installed
 
-In both modes. Under the service account it is redundant, because Google refuses
-anyway, but one code path is worth more than a saved wrapper, and it lets the
+Always, in both credential modes. Under the service account it is nearly
+redundant, but one code path is worth more than a saved wrapper, and it lets the
 guard's unit tests run with no credentials at all.
 
-`allow_document_edits: true` in config means the guard is not installed.
+There is no way to turn it off. The first draft had `allow_document_edits: true`
+in config, and that key is dropped: it was named for a lock this design no
+longer has, and its only real effect would have been to disable the safety net
+so that a temporary file could be binned. A config key whose one purpose is to
+switch off the guard gets set once and never unset.
 
-That flag only removes the block. Nothing in gdoc edits a document in place; it
-regenerates a new version from the paired markdown. Making the agent edit a
-document directly is a separate feature and is out of scope here. See section 11.
+`tests/test_guard_is_installed.py` asserts that `gdoc/auth.py` is the only
+module calling `build()`, so no future module can construct an unguarded client
+quietly. It is written in the style of `tests/test_no_external_programs.py`, as
+an allowlist rather than a ban.
+
+### What this gives up
+
+Under the service account, Google refused an edit to a reviewed document. After
+this, nothing refuses it. The guard confines the damage to the one file the
+command was given, and gdoc has no code that edits a document, but the promise
+moves from "it cannot" to "it does not".
+
+Two documents change to say so, in section 10: the README's cannot-edit
+paragraph, and the dated decision in `PRINCIPLES.md` that reads "the credential
+is Commenter-only".
+
+The threat model moves with it. A comment inside a reviewed document that talked
+the agent into editing that document would now succeed. Pointing the skill at a
+document was already the trust decision, recorded in `PRINCIPLES.md` on
+2026-08-13; this design makes that decision carry more.
+
+### One thing the guard cannot offer
+
+There is no middle setting where the agent writes only proposals a human accepts
+or rejects. The Docs API can read suggestions, through `suggestionsViewMode` and
+the `suggested*` fields, but it cannot create, accept or reject them. A
+suggestion is a byproduct of saving in the editor's suggesting mode, and there
+is no request type for it and no flag that puts a `batchUpdate` into it. Google
+tracks the gap as issue 287903901, unresolved.
+
+The one indirect route, uploading a `.docx` carrying Word tracked changes and
+letting the conversion turn them into suggestions, needs a full-content write
+over the existing file, which would orphan every comment anchor the tool depends
+on.
+
+So the guard's rule is binary because Google's API is.
 
 ## 6. Identity, and the `[gdoc]` marker
 
@@ -416,16 +559,15 @@ is to say what is wrong.
 ```json
 {
   "output_folder_id": "0AFolderId",
-  "auth_mode": "oauth",
-  "allow_document_edits": false
+  "auth_mode": "oauth"
 }
 ```
 
 `auth_mode` defaults to `"oauth"` and accepts only `"oauth"` or
 `"service_account"`. Any other value is an error at load, naming both accepted
-values. `allow_document_edits` defaults to `false`.
+values. It is the only key this design adds.
 
-A config file with neither key loads unchanged, the same way an older file with
+A config file without it loads unchanged, the same way an older file with
 `display_name` still loads today.
 
 ### Dependencies
@@ -450,10 +592,17 @@ a warning, because that is the next step and not a fault.
 ### Documentation
 
 - `README.md`: the credential section describes both modes. The sentence "It
-  cannot edit a document, and that limit is the design" is corrected to say who
-  enforces the limit in each mode.
-- `CLAUDE.md`: the `Never` list keeps "never edit a reviewed Google Doc" and
-  gains the reason it is now enforced by `gdoc/guard.py` under OAuth.
+  cannot edit a document, and that limit is the design" is replaced. Under OAuth
+  the limit that holds is the reachable set, not the verb, and the paragraph has
+  to say so rather than keep a promise the guard no longer makes.
+- `PRINCIPLES.md`: the dated decision "The credential is Commenter-only" is
+  retired, with the reason, and replaced by one about the reachable set. This is
+  the only principles change; the three principles themselves are untouched, and
+  principle 3 is what makes the empty allowed set refuse rather than permit.
+- `CLAUDE.md`: the `Never` list entry "never edit a reviewed Google Doc" loses
+  its "the credential cannot" clause, which stops being true under OAuth, and
+  gains what does hold: the guard confines every call to the file the command
+  was given.
 - `skills/gdoc-review/SKILL.md`: step 2 split, the all-comments variant, the
   first-OAuth-run note, the `Never` line, and the step 2 warning text which
   currently says "under the service account address".
@@ -462,10 +611,11 @@ a warning, because that is the next step and not a fault.
 
 ## 11. Out of scope
 
-- **Editing a reviewed document in place.** `allow_document_edits` removes the
-  block. It adds no capability. A command that edits a document directly, and
-  the question of what that does to `baseline.md` and the regenerate loop, is a
-  separate design.
+- **Editing a reviewed document in place.** The guard now permits it, but no
+  code does it. A command that edits a document directly, and the question of
+  what that does to `baseline.md` and the regenerate loop, is a separate design.
+  The same is true of republishing into the same file id instead of creating a
+  new document each version, which the guard would also now allow.
 - **More than one Google account.** One token file, one account.
 - **Encrypting the token at rest.** File mode `0600`, the same protection
   `sa-key.json` gets today.
@@ -485,17 +635,25 @@ cover `SCOPES` raises at load; a missing client file names the path; the token
 file is written `0600`; `logout` removes the file and reports whether one was
 there.
 
-**`tests/test_guard.py`** (new): `GET` passes through; `POST` to
-`/drive/v3/files` passes; `POST` to `/upload/drive/v3/files` passes; `POST` to a
-comments path passes; `POST` to a replies path passes; `PATCH` to a file is
-refused; `DELETE` of a comment is refused; `POST` to
-`/v1/documents/{id}:batchUpdate` is refused; a query string does not change any
-verdict; the refusal is a `PermissionError` naming the method, the path and
-`allow_document_edits`; the inner transport is never called on a refusal.
+**`tests/test_guard.py`** (new): every method on the allowed id is carried, `GET`
+through `DELETE`, including `documents/{id}:batchUpdate`; every one of those is
+refused on a second, unnamed id, `GET` included; `files.list` is refused;
+`permissions` is refused on the allowed id; a batch POST is refused; discovery
+and `about.get` are carried; a create is carried with an empty allowed set and
+its returned id is learned, so the next call on it passes; a create whose
+response is not JSON teaches nothing and does not raise; an empty allowed set
+refuses a read; the query string changes no verdict; the host is matched; the id
+is read correctly from all three path shapes, colon suffix included; the refusal
+is a `PermissionError` naming the method, the path and the file id; the inner
+transport is never called on a refusal.
 
-**`tests/test_config.py`**: `auth_mode` defaults to `oauth`; `allow_document_edits`
-defaults to `false`; a config with neither key still loads; an unknown
-`auth_mode` value raises and names both accepted values.
+**`tests/test_guard_is_installed.py`** (new): `gdoc/auth.py` is the only module
+under `gdoc/` that calls `build()`. An allowlist in the style of
+`tests/test_no_external_programs.py`, so it fails both if the call spreads and
+if it moves.
+
+**`tests/test_config.py`**: `auth_mode` defaults to `oauth`; a config without it
+still loads; an unknown `auth_mode` value raises and names both accepted values.
 
 **`tests/test_reply.py`**: the marker is appended on its own last line; the
 markdown check runs on the body before the marker is added; a body that already
@@ -522,11 +680,10 @@ replies; `capture` passes the thread's author and marked state through to
 
 **`tests/test_access_integration.py`**: splits by `auth_mode`. Under
 `service_account` every existing assertion stands unchanged, because Google is
-still the one refusing. Under `oauth` the same operations are attempted through
-a guarded client and must raise `PermissionError` before any request leaves the
-process. A third case asserts that with `allow_document_edits: true` under OAuth
-the guard is absent, which is the only honest way to prove the flag does what it
-says.
+still the one refusing. Under `oauth` the assertion changes shape: an edit to the
+named document now reaches Google, so what is asserted is the boundary instead.
+A read of a second, unnamed document raises `PermissionError` before any request
+leaves the process, and `files.list` does the same.
 
 Coverage stays at or above 80%.
 
@@ -534,14 +691,14 @@ Coverage stays at or above 80%.
 
 1. The marker and the identity fix. It is a correctness change that stands on
    its own and is safe under the service account today.
-2. Config keys, with the defaults but nothing reading them yet.
+2. The `auth_mode` config key, with its default but nothing reading it yet.
 3. `gdoc/guard.py` and its tests, against a fake transport, no credentials.
 4. `gdoc/oauth.py`, `auth.py` dispatch, the `auth` subcommands.
 5. The captured-item format: author, marked, and the end of `Nail asked:`.
 6. `--all` and the payload changes.
-7. Wire the guard into `drive_service`.
+7. Wire the guard into `drive_service`, and thread the doc id from the CLI.
 8. Integration suite split.
-9. install.sh, README, CLAUDE.md, both skills.
+9. install.sh, README, PRINCIPLES.md, CLAUDE.md, both skills.
 
 Steps 1 to 3 and step 5 need no Google Cloud setup, so section 9 can happen in
 parallel with them.
