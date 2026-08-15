@@ -20,7 +20,7 @@ from gdoc.render.ooxml import (BODY_FONT, BODY_SZ, CELL_BORDER, CELL_MARGIN_H,
                                CELL_MARGIN_V, HANGING, HDR_FILL, HEAD_COLOR, IND_LEFT,
                                LINE_SPACING, MAX_LIST_LEVEL, NO_FILL, ROW_FILL,
                                TBL_BORDER, USABLE_TWIPS, el, qn, set_fonts, sub, text_run)
-from gdoc.export import PANDOC
+from gdoc.export import PandocNotFound, find_pandoc
 
 # 1 inch is 1440 twips and 914400 EMU, so one twip is exactly 635 EMU. An image
 # is never widened past the text column, and never upscaled past its own size.
@@ -382,12 +382,14 @@ def make_table(rows, style="Table4"):
 def parse_markdown(markdown_text):
     try:
         result = subprocess.run(
-            [PANDOC, "-f", PANDOC_FORMAT, "-t", "json"],
+            [find_pandoc(), "-f", PANDOC_FORMAT, "-t", "json"],
             input=markdown_text, capture_output=True, text=True, check=True,
         )
+    except PandocNotFound as exc:
+        raise BodyError(str(exc)) from exc
     except FileNotFoundError as exc:
-        raise BodyError("pandoc is not installed. Install it with "
-                        "`brew install pandoc`.") from exc
+        raise BodyError("pandoc could not be run. Check that the file it resolved "
+                        "to is executable.") from exc
     except subprocess.CalledProcessError as exc:
         raise BodyError(f"pandoc could not parse the Markdown: {exc.stderr}") from exc
     return json.loads(result.stdout)
