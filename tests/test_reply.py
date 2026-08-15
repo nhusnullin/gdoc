@@ -54,3 +54,27 @@ def test_global_refusal_names_the_item_number():
 
 def test_global_refusal_is_itself_plain_text():
     assert assert_plain_text(GLOBAL_REFUSAL.format(item=1))
+
+
+def test_the_posted_body_carries_the_marker():
+    drive = MagicMock()
+    drive.replies().create.return_value.execute.return_value = {"id": "r1"}
+    post_reply(drive, "doc", "comment", "Plain text answer.")
+    posted = drive.replies().create.call_args.kwargs["body"]["content"]
+    assert posted == "Plain text answer.\n\n[gdoc]"
+
+
+def test_the_marker_itself_passes_the_markdown_check():
+    """Otherwise the tool would refuse its own replies."""
+    from gdoc.marker import with_marker
+
+    assert assert_plain_text(with_marker("Plain text answer."))
+
+
+def test_the_refusal_text_also_carries_the_marker_once_posted():
+    drive = MagicMock()
+    drive.replies().create.return_value.execute.return_value = {"id": "r1"}
+    post_reply(drive, "doc", "comment", GLOBAL_REFUSAL.format(item=2))
+    posted = drive.replies().create.call_args.kwargs["body"]["content"]
+    assert posted.endswith("\n\n[gdoc]")
+    assert posted.count("[gdoc]") == 1
