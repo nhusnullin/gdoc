@@ -99,8 +99,13 @@ what keep it honest.
 Domain choice, no principle above it. The author name is a label, not a gate. Drive returns no email address for
 comment authors and display names are editable, so any identity check is a guess
 the skill would have to disclaim every run. Pointing the skill at a document is
-the trust decision. Handling unmarked comments is planned, and it changes this
-line only.
+the trust decision.
+
+*Amended 2026-08-15.* Two things. Under `oauth` this stops being a preference:
+Drive reports the credential as the author of everything the signed-in user
+writes, so an author check would skip every marked comment Nail leaves himself.
+And `gdoc read --all` now exists, so unmarked comments are actionable when Nail
+asks for them and picks each one. The default is unchanged.
 
 **2026-08-14. Skills are symlinked into `~/.claude/skills/`, never copied.**
 Domain choice, no principle above it. A copy drifts silently. `install.sh` defends this and refuses to replace a real
