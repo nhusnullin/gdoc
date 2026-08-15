@@ -8,7 +8,7 @@ they are multi-line plain text and shell quoting would mangle them.
 import argparse
 import json
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
 
@@ -201,7 +201,34 @@ def cmd_generate(args) -> int:
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
     if args.baseline_root and result.doc_id:
         payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
+        payload["slug"] = slug_for_source(md_path)
+        try:
+            payload["version"] = _record_version(md_path, result.doc_id)
+        except OSError as error:
+            # The document is real and already in the payload above. Losing the
+            # version record is a problem to report, not a reason to hide it.
+            payload["pairing_error"] = (
+                f"the document was published but its version was not recorded: {error}"
+            )
     return _emit(payload)
+
+
+def _record_version(md_path: Path, doc_id: str) -> int:
+    """Write the pairing for a document that was just created. Returns its number.
+
+    This is a fact, not a policy: a document with this id was created from this
+    markdown today. Which folder, which filename and which version label stay
+    with the skill. The baseline write already establishes that recording facts
+    at this moment is generate's job.
+
+    Gated on --baseline-root, which already means "this is a tracked version of
+    a tracked file", so a one-off document does not stamp frontmatter on a note.
+    """
+    pairing = read_pairing(md_path) or Pairing(doc_id=doc_id)
+    created = date.today().isoformat()
+    updated = add_version(replace(pairing, doc_id=doc_id), doc_id, created)
+    write_pairing(md_path, updated)
+    return len(updated.versions)
 
 
 def _version_name(md_path: Path, template: str | None, title: str | None = None) -> str:
