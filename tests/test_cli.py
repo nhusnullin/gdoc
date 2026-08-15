@@ -488,6 +488,24 @@ def test_generate_reports_a_pairing_failure_without_hiding_the_document(capsys, 
     assert "version" not in payload
 
 
+def test_generate_survives_a_non_ioerror_pairing_failure_too(capsys, tmp_path):
+    """OSError is not the only way reading or writing the pairing can fail.
+
+    A malformed front matter (bad merge, hand edit) makes read_pairing raise
+    something that is not an OSError, such as AttributeError. The document was
+    still published, so doc_id and link must still reach the payload.
+    """
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    with patch("gdoc.cli.read_pairing", side_effect=AttributeError("'list' object has no attribute 'get'")):
+        assert _generate_ok(tmp_path, md) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["doc_id"] == "1New"
+    assert payload["link"] == "https://x/edit"
+    assert "pairing_error" in payload
+    assert "version" not in payload
+
+
 def test_generate_records_nothing_without_baseline_root(tmp_path):
     md = tmp_path / "note.md"
     original = "---\ntitle: Kickoff\n---\n\nBody.\n"
