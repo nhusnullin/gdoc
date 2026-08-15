@@ -168,6 +168,44 @@ def test_a_template_without_a_folder_builds_locally_and_says_the_pages_are_blank
     drive.files().create.assert_not_called()
 
 
+@pytest.mark.slow
+def test_a_refused_second_upload_keeps_the_docx_and_bins_the_measuring_copy(tmp_path):
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    drive.files().create.return_value.execute.side_effect = [
+        {"id": "1Throwaway", "webViewLink": "x"},
+        HttpError(FakeResponse(403), b"{}"),
+    ]
+    with patch("gdoc.generate.pagination.from_pdf", return_value={"Section one": 3}):
+        result = generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert result.doc_id is None
+    assert "403" in result.reason
+    assert result.docx_path.stat().st_size > TEMPLATE_SIZE
+    assert drive.files().update.call_args.kwargs["fileId"] == "1Throwaway"
+
+
+@pytest.mark.slow
+def test_an_unreadable_export_bins_the_measuring_copy_before_it_raises(tmp_path):
+    """Nothing was published, so the failure must not leave a stray document behind."""
+    from gdoc.render.pagination import PaginationError
+
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    with patch(
+        "gdoc.generate.pagination.from_pdf", side_effect=PaginationError("not a PDF")
+    ), pytest.raises(PaginationError):
+        generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert drive.files().update.call_args.kwargs["fileId"] == "1Throwaway"
+
+
 def test_template_none_keeps_the_plain_pandoc_path(tmp_path):
     md = tmp_path / "in.md"
     md.write_text("# Title\n\nBody.\n")

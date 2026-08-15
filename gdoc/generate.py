@@ -116,19 +116,32 @@ def _through_template(drive, md_path, name, out_path, folder_id, template) -> Re
         headings = _headings_of(blank)
         measured = None
         try:
-            measured, pages = _measure(
-                drive, blank, name + MEASURING_SUFFIX, folder_id, scratch / "blank.pdf", headings
+            # The upload is its own statement so the id is held before anything
+            # else can fail. Bound inside the call, a failure would lose it and
+            # leave the measuring copy in the folder for good.
+            measured = upload_as_gdoc(drive, blank, name + MEASURING_SUFFIX, folder_id)
+            pages = pagination.from_pdf(
+                _export_pdf(drive, measured["id"], scratch / "blank.pdf"), headings
             )
             render.build(md_path, out_path, template=template, pages=pages)
-            created, published = _measure(
-                drive, out_path, name, folder_id, scratch / "published.pdf", headings
-            )
+            created = upload_as_gdoc(drive, out_path, name, folder_id)
         except HttpError as error:
             return _upload_refused(drive, error, folder_id, md_path, out_path, template, measured)
-        moved = pagination.drift(pages, published)
+        except pagination.PaginationError:
+            # Nothing was published, so bin the measuring copy before the error escapes.
+            _trash_measured(drive, measured)
+            raise
+        # The document exists from here on, so nothing below may withhold its id.
+        moved, unchecked = _check_drift(
+            drive, created["id"], scratch / "published.pdf", headings, pages
+        )
         notes = [
             note
-            for note in (_trash(drive, measured["id"]), _drift_note(moved) if moved else None)
+            for note in (
+                _trash_measured(drive, measured),
+                unchecked,
+                _drift_note(moved) if moved else None,
+            )
             if note
         ]
 
@@ -141,12 +154,25 @@ def _through_template(drive, md_path, name, out_path, folder_id, template) -> Re
     )
 
 
-def _measure(drive, docx_path: Path, name: str, folder_id: str, pdf_path: Path, headings) -> tuple:
-    """Upload a document, then read out of Google which page each heading is on."""
-    created = upload_as_gdoc(drive, docx_path, name, folder_id)
-    data = drive.files().export(fileId=created["id"], mimeType=PDF_MIME).execute()
-    pdf_path.write_bytes(data)
-    return created, pagination.from_pdf(pdf_path, headings)
+def _export_pdf(drive, doc_id: str, pdf_path: Path) -> Path:
+    pdf_path.write_bytes(drive.files().export(fileId=doc_id, mimeType=PDF_MIME).execute())
+    return pdf_path
+
+
+def _check_drift(drive, doc_id: str, pdf_path: Path, headings, pages: dict) -> tuple:
+    """Compare the published document against the numbers written into it.
+
+    The document already exists, so a failure here is a note about a real
+    document rather than a reason to hide it. Returns (drift, note).
+    """
+    try:
+        published = pagination.from_pdf(_export_pdf(drive, doc_id, pdf_path), headings)
+    except (HttpError, pagination.PaginationError) as error:
+        return {}, (
+            "the published document could not be read back, so its page numbers "
+            f"were never checked against its contents list: {error}"
+        )
+    return pagination.drift(pages, published), None
 
 
 def _headings_of(docx_path: Path) -> tuple:
@@ -162,14 +188,15 @@ def _upload_refused(drive, error, folder_id, md_path, out_path, template, measur
     """
     if not out_path.exists():
         render.build(md_path, out_path, template=template)
-    notes = [_refused(error, folder_id, out_path)]
-    if measured:
-        notes.append(_trash(drive, measured["id"]))
+    notes = [_refused(error, folder_id, out_path), _trash_measured(drive, measured)]
     return Result(docx_path=out_path, reason=". ".join(note for note in notes if note))
 
 
-def _trash(drive, file_id: str) -> str | None:
-    """Bin the measuring copy. Returns a note when it could not be binned."""
+def _trash_measured(drive, measured: dict | None) -> str | None:
+    """Bin the measuring copy, if there is one. Returns a note when it survived."""
+    if not measured:
+        return None
+    file_id = measured["id"]
     try:
         drive.files().update(
             fileId=file_id, body={"trashed": True}, supportsAllDrives=True
@@ -208,7 +235,7 @@ def _no_folder(docx_path: Path, blank_pages: bool = False) -> str:
 
 def _refused(error: HttpError, folder_id: str, docx_path: Path) -> str:
     return (
-        f"upload refused with {error.resp.status}. Check that the service "
+        f"Drive refused the publish with {error.resp.status}. Check that the service "
         f"account is a Content manager on folder {folder_id}. "
         f"The document is ready at {docx_path}"
     )
