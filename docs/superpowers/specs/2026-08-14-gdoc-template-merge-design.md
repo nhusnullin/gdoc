@@ -99,9 +99,10 @@ real headings, with page numbers inside the page count. No rasterising, no exter
 program, and it catches the whole class of defect. See
 `tests/test_contents_integration.py`.
 
-Task 2 should therefore port the 25 checks that are still meaningful and drop the
-two pixel comparisons, or rebuild them against Google's export with a
-drift-tolerant comparison. That is a decision to make when Task 2 starts, not now.
+**Decided by Nail, 2026-08-15:** port the 25 checks that are still meaningful and drop
+both pixel comparisons. Fidelity rests on the contents-versus-headings assertion,
+which is merged and green. Rebuilding a visual check against Google's export is
+recorded as **issue #13** so it is not lost.
 
 ### Task 6 grew
 

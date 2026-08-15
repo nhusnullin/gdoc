@@ -47,7 +47,7 @@ gdoc.render.pagination.drift(written, published) -> dict
 | Task | Do this |
 |---|---|
 | 1. Port the renderer | **Done and merged.** Skip it. |
-| 2. Port the 25 checks | **Redesign.** See below. |
+| 2. Port the 25 checks | **Port what is meaningful, drop both pixel comparisons.** Decided, see below. |
 | 3. `gdoc build` + `template` key | **Mostly dropped.** Keep the config key and fold it into Task 6. Do not build the command. |
 | 4. The title contract | Unchanged. |
 | 5. Drop the title heading | Unchanged. |
@@ -70,11 +70,14 @@ against a Google export at all, because they rasterise to 1241x1754 and 1242x175
 it refuses on a size mismatch, so it could never see the published look it existed to
 protect.
 
-Port the 25 checks that still mean something. For fidelity, prefer the assertion that
-is already merged and green: the contents entries must match the document's real
-headings, with page numbers inside the page count. If you still want pixels, compare
-Google's export against a stored reference produced the same way, and pick a metric
-that does not treat two pixels of drift as a bigger defect than a wrong contents page.
+**Decided by Nail, 2026-08-15: port the 25 checks that still mean something, and drop
+both pixel comparisons.** Fidelity is covered by the assertion that is already merged
+and green: the contents entries must match the document's real headings, with page
+numbers inside the page count. It catches the defect that would actually reach a
+committee, and it runs offline with no external program.
+
+Rebuilding a visual check against Google's export is **issue #13**, so it is recorded
+rather than lost. Do not build it as part of this task.
 
 ### Task 3, mostly dropped
 
@@ -657,12 +660,13 @@ git commit -m "feat: port the document renderer into gdoc/render"
 
 ---
 
-## Task 2: Port the 25 checks into pytest [NEEDS REDESIGN]
+## Task 2: Port the 25 checks into pytest [AMEND, PIXEL COMPARISONS DROPPED]
 
 > **Read the amendment at the top before starting.** The steps below call
 > `build(want_pdf=True)`, `soffice --headless`, and `pdftoppm`. None of those exist.
-> The two pixel comparisons need rethinking rather than porting, and the amendment
-> explains why the metric ranked defects backwards.
+>
+> Nail decided on 2026-08-15: port the checks that still mean something, drop both
+> pixel comparisons. A visual check against Google's export is issue #13.
 
 **Files:**
 - Create: `tests/support/checks.py`, `tests/test_render_fidelity.py`, `tests/test_render_structure.py`
