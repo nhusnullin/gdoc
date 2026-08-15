@@ -1,7 +1,13 @@
 # Notes for AI assistants
 
-Read [README.md](README.md) first. It explains what the tool does and why the
-Commenter-only credential shapes the design.
+Read [PRINCIPLES.md](PRINCIPLES.md) before proposing any design. It is three
+constraints and the decisions that currently implement them, and it is short.
+
+Read [README.md](README.md) for what the tool does and how to run it.
+
+This file holds the specifics: what lives where, what each rule means in code,
+and what never to do. The reasons live in PRINCIPLES.md, and they live there
+only.
 
 ## What lives where
 
@@ -17,22 +23,15 @@ Secrets and the venv live in `~/.config/gdoc-agent/`, never in this repo.
 
 ## One root, and it is never this repo
 
-`--repo-root` means one thing for every command: the directory the tool works in,
-`$PWD` by default. It is the tree scanned for markdown with `gdoc:` frontmatter,
+Principle 2. Read it there.
+
+In code: `--repo-root` is the tree scanned for markdown with `gdoc:` frontmatter,
 and the tree `.gdoc/` is written into. In practice it is the folder holding the
 source document, in a vault such as `Altery-Platform-Hub`.
 
-Never reintroduce a default that names a repository, and never write tool files
-into this repo. A bug here writes Altery notes into the wrong tree.
-
-The queue directory is keyed by the **source markdown file**, not the document
-title and not the document id. Both change on every iteration; the source file
-does not.
-
 ## The tool must work without git
 
-`Altery-Platform-Hub`, where the source documents live, is not a git repository
-and will not become one. This is the constraint an agent is most likely to break.
+Principles 1 and 3. This is the constraint an agent is most likely to break.
 
 - Nothing may refuse to run because git is unavailable.
 - `is_dirty` raising `BaselineConflict` is correct only when git exists and the
@@ -41,6 +40,53 @@ and will not become one. This is the constraint an agent is most likely to break
   "overwrite".
 - The commit steps in `gdoc-apply` are conditional, and a skipped commit is
   always said out loud.
+
+## No external programs
+
+Principle 1. The rule is scoped to `gdoc/render/`, the publish path.
+
+pandoc remains, in three places, and each is tracked separately:
+
+- `gdoc/render/body.py`, as the markdown parser `build` depends on. Load-bearing.
+  Removing it means a pure-Python parser plus a rewritten AST walker, in the
+  module where the document body's pixel fidelity lives, so it needs its own
+  spec.
+- `gdoc/export.py`, as a markdown fallback. Drive exports `text/markdown`
+  natively, verified against the live account, so this one looks removable on
+  its own.
+- `gdoc/generate.py`, for the plain non-template path, which is what
+  `--template none` selects. Kept on purpose: it is the fallback when the house
+  template is not wanted, and keeping it narrowed the blast radius of wiring the
+  template in.
+
+`tests/test_no_external_programs.py` enforces this. The five removed program
+names must not appear in code under `gdoc/render/`, and the set of modules
+there importing `subprocess` must be exactly `{body.py}`. That is an allowlist,
+not a ban: it fails if `subprocess` spreads to another module, and it fails just
+as loudly if body.py's own dependency vanishes without the test being updated.
+
+Page numbers are the one real cost. They do not exist until something lays the
+document out. The intended flow makes Google the layout engine: upload once with
+blank numbers, read which page each heading landed on out of the PDF export, write
+those numbers in, then upload the version that gets published.
+
+`gdoc generate` runs that flow. It builds with blank page numbers, uploads that
+copy, exports it as PDF, reads the pages back, builds again with the numbers in,
+uploads the version that gets published, and trashes the measuring copy. The
+published copy is measured too, so a contents list that disagrees with its own
+document comes back in the result as `drift` rather than passing quietly.
+
+The template comes from `--template`, or from `template` in the config, which
+defaults to the bundled profile. `--template none` keeps the plain
+`pandoc md -o docx` path.
+
+`tests/test_contents_integration.py` still composes the two passes against live
+Drive, and is opt-in behind `GDOC_LIVE_PUBLISH_TEST=1`. It is the only test that
+creates real documents.
+
+`gdoc.render.build` on its own has no pagination to offer, so it leaves the page
+numbers blank. Any desktop refresh fills them in, and a wrong number would be
+worse than a blank one.
 
 ## Skills are linked, not copied
 

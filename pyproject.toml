@@ -11,6 +11,9 @@ dependencies = [
     "google-auth",
     "google-api-python-client",
     "PyYAML",
+    "python-docx>=1.1",
+    "lxml",
+    "pypdf>=5",
 ]
 
 [project.optional-dependencies]
@@ -20,10 +23,14 @@ dev = ["pytest"]
 gdoc = "gdoc.cli:main"
 
 [tool.setuptools]
-packages = ["gdoc"]
+packages = ["gdoc", "gdoc.render"]
+
+[tool.setuptools.package-data]
+"gdoc" = ["templates/*/*.docx", "templates/*/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
     "integration: calls the live Drive API, skipped without credentials",
+    "slow: renders a real document",
 ]

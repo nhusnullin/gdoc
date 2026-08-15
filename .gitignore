@@ -10,5 +10,13 @@ dist/
 venv/
 .DS_Store
 
+# Obsidian workspace state, personal and not part of the tool
+.obsidian/
+
+# Live git worktrees and per-machine settings. The branches are in git already,
+# so nothing here is the only copy of anything.
+.claude/worktrees/
+.claude/settings.local.json
+
 # Generated document versions, rebuilt from the paired markdown
 docs/gdoc/*/out/
