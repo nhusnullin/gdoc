@@ -14,6 +14,7 @@ from pathlib import Path
 
 from googleapiclient.errors import HttpError
 
+from gdoc import render
 from gdoc.auth import drive_service
 from gdoc.config import load_config
 from gdoc.docid import extract_doc_id
@@ -32,9 +33,8 @@ from gdoc.pairing import (
     write_pairing,
 )
 from gdoc.pending import append_item, pending_path, recorded_source
-from gdoc.reply import post_reply
-from gdoc import render
 from gdoc.render import profiles
+from gdoc.reply import post_reply
 
 
 def _thread_json(thread: Thread) -> dict:
