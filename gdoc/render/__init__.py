@@ -59,7 +59,9 @@ def default_output(meta: dict, source: Path) -> Path:
 def meta_for(md_path: Path, *, title: str | None = None) -> dict:
     """The front matter of a file, without building anything."""
     text = Path(md_path).read_text(encoding="utf-8")
-    meta, _ = frontmatter.parse(text, title_override=title)
+    meta, _ = frontmatter.parse(
+        text, title_override=title, source_name=Path(md_path).name
+    )
     return meta
 
 
@@ -82,7 +84,9 @@ def build(
         )
 
     markdown_text = source_path.read_text(encoding="utf-8")
-    meta, body_markdown = frontmatter.parse(markdown_text, title_override=title)
+    meta, body_markdown = frontmatter.parse(
+        markdown_text, title_override=title, source_name=source_path.name
+    )
     if not body_markdown.strip():
         raise BuildError("the file has front matter but no body content")
 

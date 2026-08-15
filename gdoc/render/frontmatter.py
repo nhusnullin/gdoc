@@ -10,6 +10,7 @@ in the template, so an unknown value would silently shade nothing.
 
 import datetime
 import re
+from pathlib import Path
 
 import yaml
 
@@ -29,9 +30,46 @@ REVISION_FIELDS = ("version", "date", "author", "approved_by",
 
 FRONT_MATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
+DATE_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-")
+H1_RE = re.compile(r"^#\s+(.+?)\s*#*\s*$")
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
+
 
 class FrontMatterError(ValueError):
     """Raised when the front matter is missing, malformed or incomplete."""
+
+
+class MissingTitle(FrontMatterError):
+    """No title, so the cover and running head would be blank.
+
+    Carries a candidate rather than using it. The tool does not invent a cover
+    title silently; the skill proposes this one and writes it into the note once
+    Nail agrees, so the decision is made once and then reused.
+    """
+
+    def __init__(self, candidate, source):
+        self.candidate = candidate
+        self.source = source
+        super().__init__(
+            "no title in front matter, so the cover and running head would be blank"
+        )
+
+
+def title_candidate(body_markdown, source_name):
+    """Return (candidate, 'h1'|'filename'). Deterministic, so it can be tested."""
+    in_fence = False
+    for line in body_markdown.splitlines():
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        match = H1_RE.match(line)
+        if match:
+            return match.group(1).strip(), "h1"
+    stem = Path(source_name).stem if source_name else ""
+    words = DATE_PREFIX_RE.sub("", stem).replace("-", " ").replace("_", " ").strip()
+    return (words[:1].upper() + words[1:]) if words else "Untitled", "filename"
 
 
 def _as_text(value):
@@ -89,16 +127,22 @@ def _validate_revisions(raw):
     return revisions
 
 
-def parse(markdown_text, *, title_override=None):
+def parse(markdown_text, *, title_override=None, source_name=None):
     """Validate the front matter and return (meta, body_markdown).
 
     `meta` is a plain dict of strings, ready for the template filler.
+
+    source_name is the file name the text came from. It is only used to suggest
+    a title when there is none, so a caller with nothing to offer can leave it
+    out and still get the suggestion drawn from the first heading.
     """
     data, body = split(markdown_text)
     if title_override:
         data = {**data, "title": title_override}
 
     missing = [field for field in REQUIRED if not data.get(field)]
+    if "title" in missing:
+        raise MissingTitle(*title_candidate(body, source_name or ""))
     if missing:
         raise FrontMatterError(
             f"required front matter field(s) missing: {missing}. "
