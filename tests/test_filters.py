@@ -55,8 +55,20 @@ def test_resolved_threads_are_skipped():
     assert needs_action(thread(resolved=True)) is False
 
 
-def test_threads_the_agent_wrote_are_skipped():
-    assert needs_action(thread(by_agent=True)) is False
+def test_a_marked_comment_the_credential_wrote_is_still_work():
+    """The regression this whole change turns on.
+
+    Under OAuth the credential is Nail, so by_agent is true for every comment he
+    writes. If it still gated needs_action, gdoc read would return nothing.
+    """
+    assert needs_action(thread(by_agent=True)) is True
+
+
+def test_a_marker_reply_counts_as_answered_even_without_me():
+    answered = thread(
+        replies=(Reply(id="r1", content="Done.\n\n[gdoc]", by_agent=False, by_marker=True),)
+    )
+    assert needs_action(answered) is False
 
 
 def test_threads_the_agent_already_answered_are_skipped():
