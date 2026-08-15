@@ -760,3 +760,95 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
         main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     capsys.readouterr()
     assert _get_kwargs(drive)["supportsAllDrives"] is True
+
+
+# ---------------------------------------------------------------------------
+# auth subcommand
+# ---------------------------------------------------------------------------
+
+
+def test_auth_login_reports_the_account(capsys, tmp_path):
+    drive = MagicMock()
+    with patch("gdoc.cli.oauth.login", return_value="creds") as login, patch(
+        "gdoc.cli.drive_service", return_value=drive
+    ), patch(
+        "gdoc.cli.oauth.account",
+        return_value={"displayName": "Nail Khusnullin", "emailAddress": "nail@altery.com"},
+    ):
+        exit_code = main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["logged_in"] is True
+    assert payload["account"] == "nail@altery.com"
+    assert login.call_args.args[0] == ["https://www.googleapis.com/auth/drive"]
+
+
+def test_auth_login_passes_explicit_paths_through(capsys, tmp_path):
+    client = tmp_path / "client.json"
+    token = tmp_path / "token.json"
+    with patch("gdoc.cli.oauth.login", return_value="creds") as login, patch(
+        "gdoc.cli.drive_service"
+    ), patch("gdoc.cli.oauth.account", return_value={}):
+        main(["auth", "login", "--client", str(client), "--token", str(token)])
+    assert login.call_args.kwargs["client_path"] == str(client)
+    assert login.call_args.kwargs["token_path"] == str(token)
+
+
+def test_auth_login_reports_a_missing_client_file_as_an_error(capsys, tmp_path):
+    client = tmp_path / "client.json"
+    with patch("gdoc.cli.oauth.login", side_effect=FileNotFoundError("no client")):
+        exit_code = main(["auth", "login", "--client", str(client)])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "no client" in payload["error"]
+
+
+def test_auth_status_says_it_is_ready(capsys):
+    with patch("gdoc.cli.load_config", return_value=__import__("gdoc.config", fromlist=["Config"]).Config()), patch(
+        "gdoc.cli.drive_service"
+    ), patch("gdoc.cli.oauth.account", return_value={"emailAddress": "nail@altery.com"}):
+        exit_code = main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["ready"] is True
+    assert payload["auth_mode"] == "oauth"
+    assert payload["account"] == "nail@altery.com"
+
+
+def test_auth_status_never_fails_and_says_what_is_wrong(capsys):
+    """Its whole job is to report a broken credential, so it must not raise."""
+    with patch("gdoc.cli.load_config", side_effect=FileNotFoundError("no config")), patch(
+        "gdoc.cli.drive_service", side_effect=FileNotFoundError("no OAuth token at /x")
+    ):
+        exit_code = main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["ready"] is False
+    assert "no OAuth token" in payload["problem"]
+    assert payload["auth_mode"] == "oauth"
+
+
+def test_auth_status_prints_where_to_revoke(capsys):
+    with patch("gdoc.cli.load_config", side_effect=FileNotFoundError), patch(
+        "gdoc.cli.drive_service", side_effect=RuntimeError("nope")
+    ):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert "myaccount.google.com" in payload["revoke_url"]
+
+
+def test_auth_logout_reports_that_it_removed_a_token(capsys, tmp_path):
+    token = tmp_path / "token.json"
+    token.write_text("{}")
+    exit_code = main(["auth", "logout", "--token", str(token)])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["logged_out"] is True
+    assert not token.exists()
+
+
+def test_auth_logout_on_a_machine_with_no_token_says_so(capsys, tmp_path):
+    exit_code = main(["auth", "logout", "--token", str(tmp_path / "token.json")])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["logged_out"] is False

@@ -14,8 +14,8 @@ from pathlib import Path
 
 from googleapiclient.errors import HttpError
 
-from gdoc import render
-from gdoc.auth import drive_service
+from gdoc import oauth, render
+from gdoc.auth import DEFAULT_KEY_PATH, SCOPES, drive_service
 from gdoc.config import load_config
 from gdoc.docid import extract_doc_id
 from gdoc.export import export_markdown
@@ -327,6 +327,71 @@ def cmd_pair_find(args) -> int:
 
 
 # ---------------------------------------------------------------------------
+# auth subcommand handlers
+# ---------------------------------------------------------------------------
+
+
+def cmd_auth(args) -> int:
+    return args.auth_func(args)
+
+
+def cmd_auth_login(args) -> int:
+    credentials = oauth.login(
+        SCOPES, client_path=args.client, token_path=args.token
+    )
+    user = oauth.account(drive_service(credentials=credentials))
+    return _emit(
+        {
+            "logged_in": True,
+            "account": user.get("emailAddress"),
+            "name": user.get("displayName"),
+            "token_path": str(args.token or oauth.DEFAULT_TOKEN_PATH),
+        }
+    )
+
+
+def _configured_mode() -> str:
+    try:
+        return load_config().auth_mode
+    except (FileNotFoundError, ValueError):
+        return "oauth"
+
+
+def cmd_auth_status(args) -> int:
+    """Say what is set up and what is broken. Never fail.
+
+    The except is deliberately broad. This command exists to report a broken
+    credential, so any exception is its output rather than its failure.
+    """
+    payload = {
+        "auth_mode": _configured_mode(),
+        "token_path": str(oauth.DEFAULT_TOKEN_PATH),
+        "client_path": str(oauth.DEFAULT_CLIENT_PATH),
+        "key_path": str(DEFAULT_KEY_PATH),
+        "revoke_url": "https://myaccount.google.com/permissions",
+    }
+    try:
+        user = oauth.account(drive_service())
+        payload["account"] = user.get("emailAddress")
+        payload["name"] = user.get("displayName")
+        payload["ready"] = True
+    except Exception as error:  # noqa: BLE001
+        payload["ready"] = False
+        payload["problem"] = str(error)
+    return _emit(payload)
+
+
+def cmd_auth_logout(args) -> int:
+    removed = oauth.logout(token_path=args.token)
+    return _emit(
+        {
+            "logged_out": removed,
+            "token_path": str(args.token or oauth.DEFAULT_TOKEN_PATH),
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
 
@@ -397,6 +462,22 @@ def build_parser() -> argparse.ArgumentParser:
     find_cmd.add_argument("--repo-root", default=".")
     find_cmd.add_argument("--doc-id", required=True)
     find_cmd.set_defaults(pair_func=cmd_pair_find)
+
+    auth = sub.add_parser("auth", help="manage the Google credential")
+    auth.set_defaults(func=cmd_auth)
+    auth_sub = auth.add_subparsers(dest="auth_command", required=True)
+
+    login_cmd = auth_sub.add_parser("login", help="authorise in a browser as yourself")
+    login_cmd.add_argument("--client", help="path to the Desktop OAuth client JSON")
+    login_cmd.add_argument("--token", help="where to write the token")
+    login_cmd.set_defaults(auth_func=cmd_auth_login)
+
+    status_cmd = auth_sub.add_parser("status", help="show the credential in use")
+    status_cmd.set_defaults(auth_func=cmd_auth_status)
+
+    logout_cmd = auth_sub.add_parser("logout", help="delete the local OAuth token")
+    logout_cmd.add_argument("--token", help="path to the token to delete")
+    logout_cmd.set_defaults(auth_func=cmd_auth_logout)
 
     return parser
 
