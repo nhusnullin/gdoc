@@ -81,7 +81,8 @@ gdoc capture <doc_id> <comment_id>
 gdoc export <url>                       # markdown to stdout
 gdoc export <url> --out fetched.md
 gdoc pair find --doc-id <doc_id>
-gdoc generate --md <paired.md> --name "<name>" --out <out.docx> --baseline-root .
+gdoc generate --md <paired.md> --out <out.docx> --baseline-root .
+gdoc generate --md <paired.md> --name "<name>" --template none --out <out.docx>
 ```
 
 ## One root, and `.gdoc/` inside it
@@ -121,7 +122,13 @@ sides carry the same pandoc round-trip distortion, so it cancels.
 `gdoc.render.build` writes the .docx directly from the house template, rather
 than letting pandoc write it. It is a function, not a command: `gdoc --help`
 lists read, reply, export, capture, generate and pair, and none of them exposes
-it yet. `gdoc generate` is still the old `pandoc md -o docx` path.
+it directly. `gdoc generate` calls it, which is how the house style reaches a
+real document. Page numbers come from Google, so generate uploads twice: once
+with blank numbers to measure the layout, once to publish. `--template none`
+keeps the old `pandoc md -o docx` path.
+
+`--name` is optional. Without it the new version is called
+`<cover title> v<n>`, where n is the recorded version count plus one.
 
 `build` uses pandoc only as the markdown parser that feeds the template. The
 export side still uses pandoc as a markdown fallback, which is tracked

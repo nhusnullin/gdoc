@@ -34,11 +34,10 @@ The entries are written the way a well-behaved application writes them:
   overrides Word's `Hyperlink` style so entries do not come out blue and
   underlined.
 
-Page numbers come from the caller. The intended source is Google itself: upload
-once, read the pagination back out of Google's own PDF export, then write it in.
-That makes Google the layout engine. No CLI command composes those two passes yet,
-and `gdoc generate` does not; `tests/test_contents_integration.py` is where the
-composition lives today.
+Page numbers come from the caller. The source is Google itself: upload once, read
+the pagination back out of Google's own PDF export, then write it in. That makes
+Google the layout engine. `gdoc generate` composes those two passes, and
+`tests/test_contents_integration.py` checks the composition against live Drive.
 
 A caller with no pagination to offer, `gdoc.render.build` for one, passes none and
 gets blank page numbers, because a blank is honest and a wrong number is not.
