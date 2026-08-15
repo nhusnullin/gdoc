@@ -60,17 +60,24 @@ def needs_action(thread: Thread) -> bool:
 
 def partition(
     threads: tuple[Thread, ...],
+    include_unmarked: bool = False,
 ) -> tuple[tuple[Thread, ...], tuple[Thread, ...]]:
     """Split into (addressed, skipped).
 
-    needs_action holds the whole test. skipped is returned rather than discarded
-    so the skill can tell Nail why a comment he can see was ignored.
+    By default needs_action holds the whole test. skipped is returned rather
+    than discarded so the skill can tell Nail why a comment he can see was
+    ignored.
+
+    include_unmarked is all-comments mode. It filters on nothing but resolved:
+    unmarked comments are candidates, and so are threads gdoc already answered.
+    Dropping answered ones would use has_agent_reply, which counts a `me` reply,
+    and under OAuth `me` is Nail. That would hide every thread he replied to by
+    hand, which is the opposite of what this mode is for. Nothing is posted from
+    this list without Nail picking it.
     """
     addressed: list[Thread] = []
     skipped: list[Thread] = []
     for thread in threads:
-        if needs_action(thread):
-            addressed.append(thread)
-        else:
-            skipped.append(thread)
+        wanted = not thread.resolved if include_unmarked else needs_action(thread)
+        (addressed if wanted else skipped).append(thread)
     return tuple(addressed), tuple(skipped)

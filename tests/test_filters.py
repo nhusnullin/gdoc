@@ -122,3 +122,34 @@ def test_an_already_answered_comment_is_still_skipped():
 def test_partition_returns_tuples():
     addressed, skipped = partition((thread(), thread(resolved=True)))
     assert isinstance(addressed, tuple) and isinstance(skipped, tuple)
+
+
+def test_all_mode_takes_unmarked_comments_too():
+    threads = (thread(content="ai: rephrase"), thread(content="This reads oddly"))
+    addressed, skipped = partition(threads, include_unmarked=True)
+    assert len(addressed) == 2
+    assert skipped == ()
+
+
+def test_all_mode_still_leaves_resolved_threads_alone():
+    addressed, skipped = partition((thread(resolved=True),), include_unmarked=True)
+    assert addressed == ()
+    assert len(skipped) == 1
+
+
+def test_all_mode_shows_a_thread_gdoc_already_answered():
+    """has_agent_reply counts a `me` reply, and under OAuth `me` is Nail.
+
+    Hiding answered threads here would hide every thread he replied to by hand,
+    which is the opposite of what all-comments mode is for.
+    """
+    answered = thread(
+        replies=(Reply(id="r1", content="Done.\n\n[gdoc]", by_agent=False, by_marker=True),)
+    )
+    addressed, _ = partition((answered,), include_unmarked=True)
+    assert len(addressed) == 1
+
+
+def test_default_mode_is_unchanged_by_the_new_argument():
+    threads = (thread(content="ai: rephrase"), thread(content="This reads oddly"))
+    assert partition(threads) == partition(threads, include_unmarked=False)

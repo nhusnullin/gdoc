@@ -852,3 +852,102 @@ def test_auth_logout_on_a_machine_with_no_token_says_so(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 0
     assert payload["logged_out"] is False
+
+
+def _read_payload(capsys, argv, threads):
+    drive = MagicMock()
+    drive.comments().list.return_value.execute.side_effect = [{"comments": threads}]
+    drive.files().get.return_value.execute.return_value = {"name": "Test doc"}
+    with patch("gdoc.cli.drive_service", return_value=drive):
+        exit_code = main(argv)
+    return exit_code, json.loads(capsys.readouterr().out)
+
+
+_MARKED = {
+    "id": "t1",
+    "content": "ai: rephrase",
+    "author": {"displayName": "Nail Khusnullin", "me": False},
+}
+_UNMARKED = {
+    "id": "t2",
+    "content": "This annex reads oddly",
+    "author": {"displayName": "William Mejia", "me": False},
+}
+_ANSWERED = {
+    "id": "t3",
+    "content": "ai? who owns this",
+    "author": {"displayName": "Nail Khusnullin", "me": False},
+    "replies": [
+        {
+            "id": "r1",
+            "content": "Compliance owns it.\n\n[gdoc]",
+            "author": {"displayName": "Nail Khusnullin", "me": True},
+        }
+    ],
+}
+
+
+def test_read_reports_the_default_mode(capsys):
+    _, payload = _read_payload(capsys, ["read", "https://docs.google.com/document/d/1AbC/edit"], [_MARKED])
+    assert payload["mode"] == "marked"
+
+
+def test_read_all_reports_all_mode(capsys):
+    _, payload = _read_payload(
+        capsys, ["read", "https://docs.google.com/document/d/1AbC/edit", "--all"], [_MARKED]
+    )
+    assert payload["mode"] == "all"
+
+
+def test_read_skips_unmarked_comments_by_default(capsys):
+    _, payload = _read_payload(
+        capsys, ["read", "https://docs.google.com/document/d/1AbC/edit"], [_MARKED, _UNMARKED]
+    )
+    assert [t["id"] for t in payload["addressed"]] == ["t1"]
+    assert [t["id"] for t in payload["skipped"]] == ["t2"]
+
+
+def test_read_all_offers_unmarked_comments(capsys):
+    _, payload = _read_payload(
+        capsys,
+        ["read", "https://docs.google.com/document/d/1AbC/edit", "--all"],
+        [_MARKED, _UNMARKED],
+    )
+    assert [t["id"] for t in payload["addressed"]] == ["t1", "t2"]
+
+
+def test_each_thread_says_whether_it_was_marked(capsys):
+    _, payload = _read_payload(
+        capsys,
+        ["read", "https://docs.google.com/document/d/1AbC/edit", "--all"],
+        [_MARKED, _UNMARKED],
+    )
+    marked = {t["id"]: t["marked"] for t in payload["addressed"]}
+    assert marked == {"t1": True, "t2": False}
+
+
+def test_each_thread_says_whether_it_was_answered(capsys):
+    _, payload = _read_payload(
+        capsys,
+        ["read", "https://docs.google.com/document/d/1AbC/edit", "--all"],
+        [_MARKED, _ANSWERED],
+    )
+    answered = {t["id"]: t["answered"] for t in payload["addressed"]}
+    assert answered == {"t1": False, "t3": True}
+
+
+def test_the_payload_carries_the_existing_replies(capsys):
+    _, payload = _read_payload(
+        capsys, ["read", "https://docs.google.com/document/d/1AbC/edit", "--all"], [_ANSWERED]
+    )
+    reply = payload["addressed"][0]["replies"][0]
+    assert reply["author"] == "Nail Khusnullin"
+    assert reply["by_gdoc"] is True
+    assert "Compliance owns it." in reply["content"]
+
+
+def test_a_thread_with_no_replies_carries_an_empty_list(capsys):
+    _, payload = _read_payload(
+        capsys, ["read", "https://docs.google.com/document/d/1AbC/edit"], [_MARKED]
+    )
+    assert payload["addressed"][0]["replies"] == []

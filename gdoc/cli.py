@@ -20,7 +20,7 @@ from gdoc.config import load_config
 from gdoc.docid import extract_doc_id
 from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
-from gdoc.filters import forced_kind, partition
+from gdoc.filters import forced_kind, is_addressed, partition
 from gdoc.generate import generate
 from gdoc.baseline import slugify, write_baseline
 from gdoc.model import Thread
@@ -37,6 +37,19 @@ from gdoc.render import frontmatter, profiles
 from gdoc.reply import post_reply
 
 
+# Enough of an existing reply to recognise it, not enough to bloat the payload.
+_REPLY_PREVIEW = 400
+
+
+def _reply_json(reply) -> dict:
+    return {
+        "id": reply.id,
+        "author": reply.author_name,
+        "content": reply.content[:_REPLY_PREVIEW],
+        "by_gdoc": reply.by_agent or reply.by_marker,
+    }
+
+
 def _thread_json(thread: Thread) -> dict:
     return {
         "id": thread.id,
@@ -45,6 +58,9 @@ def _thread_json(thread: Thread) -> dict:
         "quoted": thread.quoted,
         "anchored": thread.is_anchored,
         "forced_kind": forced_kind(thread.content),
+        "marked": is_addressed(thread.content),
+        "answered": thread.has_agent_reply,
+        "replies": [_reply_json(reply) for reply in thread.replies],
     }
 
 
@@ -85,13 +101,14 @@ def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
     drive = drive_service(doc_ids=doc_id)
     threads = fetch_threads(drive, doc_id)
-    addressed, skipped = partition(threads)
+    addressed, skipped = partition(threads, include_unmarked=args.all)
     meta = _file_meta(drive, doc_id)
     return _emit(
         {
             "doc_id": doc_id,
             "name": meta.get("name"),
             "slug": slugify(meta.get("name", "")),
+            "mode": "all" if args.all else "marked",
             "addressed": [_thread_json(t) for t in addressed],
             "skipped": [_thread_json(t) for t in skipped],
         }
@@ -402,6 +419,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     read = sub.add_parser("read", help="list comment threads, partitioned")
     read.add_argument("url")
+    read.add_argument(
+        "--all",
+        action="store_true",
+        help="offer every unresolved comment, not only the marked ones",
+    )
     read.set_defaults(func=cmd_read)
 
     reply = sub.add_parser("reply", help="post one plain-text reply")
