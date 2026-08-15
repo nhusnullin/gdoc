@@ -118,6 +118,15 @@ moment the document and the markdown provably match. A later apply diffs it
 against a fresh export to see what was edited directly in the document. Both
 sides carry the same pandoc round-trip distortion, so it cancels.
 
+`gdoc.render.build` writes the .docx directly from the house template, rather
+than letting pandoc write it. It is a function, not a command: `gdoc --help`
+lists read, reply, export, capture, generate and pair, and none of them exposes
+it yet. `gdoc generate` is still the old `pandoc md -o docx` path.
+
+`build` uses pandoc only as the markdown parser that feeds the template. The
+export side still uses pandoc as a markdown fallback, which is tracked
+separately.
+
 ## No git requirement
 
 The tool works without git. Nothing refuses to run because git is unavailable,
