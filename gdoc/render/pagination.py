@@ -10,10 +10,9 @@ contents list, and uploads the version it publishes. Google is the layout engine
 which means the page numbers describe the document the reader is holding rather
 than a local approximation of it.
 
-No CLI command runs those two passes yet. `gdoc generate` still shells out to
-`pandoc md -o docx` and never imports this package; the spec parks the wiring for
-PR #5 Task 6. `tests/test_contents_integration.py` is where the composition is
-written down today.
+`gdoc generate` runs those two passes whenever a template is in play, and trashes
+the measuring copy afterwards. `tests/test_contents_integration.py` checks the
+same sequence against live Drive.
 
 Writing the numbers can in principle move the text that follows, so the second
 pass is checked against its own export with `drift`. In measured runs the numbers

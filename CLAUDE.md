@@ -54,8 +54,10 @@ pandoc remains, in three places, and each is tracked separately:
 - `gdoc/export.py`, as a markdown fallback. Drive exports `text/markdown`
   natively, verified against the live account, so this one looks removable on
   its own.
-- `gdoc/generate.py`, for the plain non-template path, which PR #5 Task 6
-  retires.
+- `gdoc/generate.py`, for the plain non-template path, which is what
+  `--template none` selects. Kept on purpose: it is the fallback when the house
+  template is not wanted, and keeping it narrowed the blast radius of wiring the
+  template in.
 
 `tests/test_no_external_programs.py` enforces this. The five removed program
 names must not appear in code under `gdoc/render/`, and the set of modules
@@ -68,11 +70,19 @@ document out. The intended flow makes Google the layout engine: upload once with
 blank numbers, read which page each heading landed on out of the PDF export, write
 those numbers in, then upload the version that gets published.
 
-**That flow is not wired into a command yet.** `gdoc generate` still runs
-`pandoc md -o docx` and never imports `gdoc.render`. The design spec parks the
-wiring for PR #5 Task 6. The only place the two passes are composed today is
-`tests/test_contents_integration.py`, which needs the live Drive API and is opt-in
-behind `GDOC_LIVE_PUBLISH_TEST=1`.
+`gdoc generate` runs that flow. It builds with blank page numbers, uploads that
+copy, exports it as PDF, reads the pages back, builds again with the numbers in,
+uploads the version that gets published, and trashes the measuring copy. The
+published copy is measured too, so a contents list that disagrees with its own
+document comes back in the result as `drift` rather than passing quietly.
+
+The template comes from `--template`, or from `template` in the config, which
+defaults to the bundled profile. `--template none` keeps the plain
+`pandoc md -o docx` path.
+
+`tests/test_contents_integration.py` still composes the two passes against live
+Drive, and is opt-in behind `GDOC_LIVE_PUBLISH_TEST=1`. It is the only test that
+creates real documents.
 
 `gdoc.render.build` on its own has no pagination to offer, so it leaves the page
 numbers blank. Any desktop refresh fills them in, and a wrong number would be

@@ -5,9 +5,10 @@ package manager. A dependency that cannot be pip installed cannot be installed a
 all, so this is a rule rather than a preference.
 
 Scoped to gdoc/render/, the publish path. gdoc/export.py still shells out to pandoc
-as a markdown fallback, and gdoc/generate.py has a plain pandoc path. Both are out
-of scope here: Drive exports text/markdown natively, so the fallback is removable,
-and PR #5's Task 6 retires the plain path. Widen this guard when they go.
+as a markdown fallback, and gdoc/generate.py keeps a plain pandoc path for
+`--template none`. Both are out of scope here: Drive exports text/markdown
+natively, so the fallback is removable, and the plain path is a deliberate
+fallback rather than a leftover. Widen this guard if either goes.
 
 pandoc is also, today, the one external program still used inside gdoc/render/
 itself: gdoc/render/body.py runs it to parse markdown into an AST, and never as a

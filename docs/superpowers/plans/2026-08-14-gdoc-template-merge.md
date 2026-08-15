@@ -6,9 +6,133 @@
 
 **Architecture:** The renderer is ported, not rewritten, from the `altery-doc-template` skill into a new `gdoc/render/` subpackage, with the master template as a bundled profile under `gdoc/templates/`. A new `gdoc build` command renders locally with no Drive call; `gdoc generate` renders through the same code and then uploads. After a successful upload, and only when `--baseline-root` is passed, `generate` writes the pairing frontmatter that until now nothing wrote.
 
-**Tech Stack:** Python 3.11, python-docx, lxml, PyYAML, pandoc (parser only), headless LibreOffice (contents list), pytest.
+**Tech Stack:** Python 3.11, python-docx, lxml, PyYAML, pypdf, pandoc (parser only), pytest.
 
 **Spec:** [docs/superpowers/specs/2026-08-14-gdoc-template-merge-design.md](../specs/2026-08-14-gdoc-template-merge-design.md)
+
+---
+
+## Amendment, 2026-08-15: read this before any task
+
+**Task 1 is done and merged.** Tasks 2, 3 and 6 below are written against code that
+no longer exists, and Task 10 is partly done. Tasks 4, 5, 7, 8 and 9 are unaffected.
+
+PR #11 removed headless LibreOffice and poppler from the publish path.
+`gdoc/render/contents.py` now writes the contents list itself and
+`gdoc/render/pagination.py` gets page numbers from Google. The spec's
+"Amendment, 2026-08-15" section explains why, and the evidence is in
+[the findings](../specs/2026-08-14-gdoc-toc-libreoffice-findings.md).
+
+### What no longer exists
+
+`gdoc/render/toc.py`, `scripts/update-toc.sh`, `scripts/UpdateToc.bas`,
+`shell.normalise_toc_tabs`, `refresh_toc`, `TocError`, `build(want_pdf=...)`,
+`build(skip_toc=...)` and `BuildResult.pdf_path`. This plan still mentions them
+**31 times**. Every one of those mentions is stale.
+
+### The current interface
+
+```python
+gdoc.render.build(md_path, out_path=None, *, template=..., title=None, pages=None)
+    -> BuildResult(docx_path, title, template, blocks, entries)
+
+gdoc.render.contents.write(src, dst, pages=None) -> ContentsResult
+gdoc.render.contents.rewrite_in_place(path, pages=None) -> ContentsResult
+gdoc.render.pagination.from_pdf(pdf, headings) -> dict[str, int]
+gdoc.render.pagination.drift(written, published) -> dict
+```
+
+### Task status
+
+| Task | Do this |
+|---|---|
+| 1. Port the renderer | **Done and merged.** Skip it. |
+| 2. Port the 25 checks | **Port what is meaningful, drop both pixel comparisons.** Decided, see below. |
+| 3. `gdoc build` + `template` key | **Mostly dropped.** Keep the config key and fold it into Task 6. Do not build the command. |
+| 4. The title contract | Unchanged. |
+| 5. Drop the title heading | Unchanged. |
+| 6. `generate` through the template | **Amend and expand.** See below. |
+| 7. `generate` records the version | Unchanged. |
+| 8. `pair add-version` | Unchanged. |
+| 9. Rewrite the `gdoc-apply` skill | Unchanged. |
+| 10. README and CLAUDE.md | **Partly done** by PR #11. |
+
+### Task 2, redesign
+
+Its two pixel comparisons run `build(want_pdf=True)`, then
+`soffice --headless --convert-to pdf`, then `pdftoppm`. None of that exists, and its
+`_tools_present(...)` gate would skip the whole file today.
+
+The metric was also wrong. Measured on one document: **22.7% of pixels differing for
+harmless drift, 3.1% for a contents page describing a different document.** It ranked
+the defects backwards. And `tests/support/pdfdiff.py` cannot compare a local render
+against a Google export at all, because they rasterise to 1241x1754 and 1242x1755 and
+it refuses on a size mismatch, so it could never see the published look it existed to
+protect.
+
+**Decided by Nail, 2026-08-15: port the 25 checks that still mean something, and drop
+both pixel comparisons.** Fidelity is covered by the assertion that is already merged
+and green: the contents entries must match the document's real headings, with page
+numbers inside the page count. It catches the defect that would actually reach a
+committee, and it runs offline with no external program.
+
+Rebuilding a visual check against Google's export is **issue #13**, so it is recorded
+rather than lost. Do not build it as part of this task.
+
+### Task 3, mostly dropped
+
+This task bundles two unrelated things. One is needed, one is not.
+
+**Keep `Config.template`.** Task 6 consumes it directly, at
+`template = args.template or config.template`, so `generate` has no way to know which
+template to render through without it. It is a dataclass field, a default of
+`profiles.DEFAULT_TEMPLATE`, and a line in `load_config`. **Fold it into Task 6**,
+where it is used, and keep the two config tests that come with it.
+
+**Do not build the `gdoc build` command.** Three reasons:
+
+1. Nail does not want local files. His words: "for me generate only google doc is
+   enough, i do not need docx and pdf to be honest." A local `.docx` is exactly what
+   this command produces.
+2. It got worse since the plan was written. `build` used to run LibreOffice and
+   produce a document with real page numbers. Offline it now writes **blank** ones,
+   because nothing has laid the document out. So the command's output is a
+   half-product: correct entries, correct links, empty page column.
+3. Nothing needs it. The tests call `gdoc.render.build()` directly in Python. A CLI
+   wrapper is a surface to document, version and maintain, with no caller.
+
+If a preview is ever wanted, the honest shape is `--dry-run` on `generate`, not a
+separate command, because `generate` is the thing that knows how to get page numbers.
+
+No README change is needed. It already says `gdoc.render.build` "is a function, not a
+command", and lists the subcommands that actually exist.
+
+### Task 6, amend and expand
+
+It also absorbs `Config.template` from Task 3, since it is the only consumer:
+
+```python
+@dataclass(frozen=True)
+class Config:
+    output_folder_id: str | None = None
+    template: str = profiles.DEFAULT_TEMPLATE
+```
+
+read in `load_config`, and used as `template = args.template or config.template`.
+
+The rest was "render through the template". It is now that plus the two-pass:
+
+1. `build` with no pages, so the contents list carries blank page numbers
+2. upload, export the PDF, `pagination.from_pdf` to learn the real pages
+3. `build` again with those pages
+4. upload the version that gets published, then assert `pagination.drift` is empty
+
+`tests/test_contents_integration.py` is the working reference for all four steps.
+Delete the `skipif soffice` gate that Task 6 currently carries.
+
+**Do this task first.** Until it lands, `gdoc generate` still runs
+`pandoc md -o docx`, so both skills publish plain documents with no house style, and
+none of the merged renderer work reaches a real document.
 
 ## Global Constraints
 
@@ -36,7 +160,7 @@
 | `gdoc/render/body.py` | Markdown to template-idiomatic OOXML. Ported unchanged |
 | `gdoc/render/ooxml.py` | Element helpers and the constants measured off the master. Ported unchanged |
 | `gdoc/render/shell.py` | Template surgery: cover, tables, header, comment stripping. Ported unchanged |
-| `gdoc/render/toc.py` | `refresh_toc`, the LibreOffice driver |
+| ~~`gdoc/render/toc.py`~~ | ~~`refresh_toc`, the LibreOffice driver~~ **Deleted by PR #11.** Replaced by `gdoc/render/contents.py`, which writes the contents list, and `gdoc/render/pagination.py`, which gets page numbers from Google |
 | `gdoc/render/profiles.py` | Resolves a `--template` value to a master `.docx` |
 | `gdoc/render/scripts/update-toc.sh`, `UpdateToc.bas` | The LibreOffice macro. Template-agnostic, so not per profile |
 | `gdoc/templates/altery-group-policy-v1.0/template.docx` | The master |
@@ -65,7 +189,10 @@
 
 ---
 
-## Task 1: Port the renderer into `gdoc/render/`
+## Task 1: Port the renderer into `gdoc/render/` [DONE, MERGED]
+
+> **Do not run this task.** It shipped in commit `9de4523` and merged to `main` in
+> PR #11. `gdoc/render/toc.py` was deleted afterwards; see the amendment at the top.
 
 **Files:**
 - Create: `gdoc/render/__init__.py`, `frontmatter.py`, `body.py`, `ooxml.py`, `shell.py`, `toc.py`, `profiles.py`, `scripts/update-toc.sh`, `scripts/UpdateToc.bas`
@@ -533,7 +660,13 @@ git commit -m "feat: port the document renderer into gdoc/render"
 
 ---
 
-## Task 2: Port the 25 checks into pytest
+## Task 2: Port the 25 checks into pytest [AMEND, PIXEL COMPARISONS DROPPED]
+
+> **Read the amendment at the top before starting.** The steps below call
+> `build(want_pdf=True)`, `soffice --headless`, and `pdftoppm`. None of those exist.
+>
+> Nail decided on 2026-08-15: port the checks that still mean something, drop both
+> pixel comparisons. A visual check against Google's export is issue #13.
 
 **Files:**
 - Create: `tests/support/checks.py`, `tests/test_render_fidelity.py`, `tests/test_render_structure.py`
@@ -748,7 +881,13 @@ git commit -m "test: port the template selftest checks into pytest"
 
 ---
 
-## Task 3: `gdoc build`, and the `template` config key
+## Task 3: `gdoc build`, and the `template` config key [MOSTLY DROPPED]
+
+> **Read the amendment at the top before starting.** Do not build the `gdoc build`
+> command: Nail does not want local files, and offline it would write blank page
+> numbers. Take only the `Config.template` half, which Task 6 needs, and implement it
+> there. The steps below also still use `--pdf` and `--skip-toc`, which no longer
+> exist.
 
 **Files:**
 - Modify: `gdoc/config.py`, `gdoc/cli.py`
@@ -1255,7 +1394,15 @@ git commit -m "feat: do not print the title twice"
 
 ---
 
-## Task 6: `generate` renders through the template
+## Task 6: `generate` renders through the template [AMEND AND EXPAND, DO THIS FIRST]
+
+> **Read the amendment at the top before starting.** This task now also owns the
+> two-pass that gets page numbers from Google, and must lose its `skipif soffice`
+> gate. `tests/test_contents_integration.py` is the working reference.
+>
+> Do this task before 2 and 3. Until it lands, `gdoc generate` still runs
+> `pandoc md -o docx`, so the skills publish plain documents and none of the merged
+> renderer work reaches a real document.
 
 **Files:**
 - Modify: `gdoc/generate.py`, `gdoc/cli.py`
@@ -1792,7 +1939,11 @@ git commit -m "docs: first run, the title step, and generate owning the version 
 
 ---
 
-## Task 10: README and CLAUDE.md
+## Task 10: README and CLAUDE.md [PARTLY DONE]
+
+> PR #11 already added the "No external programs" section to `CLAUDE.md` and
+> corrected `README.md`. Do not write that LibreOffice is required. What is left is
+> whatever Tasks 2 to 9 introduce.
 
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`

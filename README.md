@@ -85,7 +85,8 @@ gdoc capture <doc_id> <comment_id>
 gdoc export <url>                       # markdown to stdout
 gdoc export <url> --out fetched.md
 gdoc pair find --doc-id <doc_id>
-gdoc generate --md <paired.md> --name "<name>" --out <out.docx> --baseline-root .
+gdoc generate --md <paired.md> --out <out.docx> --baseline-root .
+gdoc generate --md <paired.md> --name "<name>" --template none --out <out.docx>
 ```
 
 ## One root, and `.gdoc/` inside it
@@ -125,7 +126,33 @@ sides carry the same pandoc round-trip distortion, so it cancels.
 `gdoc.render.build` writes the .docx directly from the house template, rather
 than letting pandoc write it. It is a function, not a command: `gdoc --help`
 lists read, reply, export, capture, generate and pair, and none of them exposes
-it yet. `gdoc generate` is still the old `pandoc md -o docx` path.
+it directly. `gdoc generate` calls it, which is how the house style reaches a
+real document. Page numbers come from Google, so generate uploads twice: once
+with blank numbers to measure the layout, once to publish. `--template none`
+keeps the old `pandoc md -o docx` path.
+
+`--name` is optional. Without it the new version is called
+`<cover title> v<n>`, where n is the recorded version count plus one.
+
+A note with no `title:` in its front matter is refused, because the cover and
+the running head would be blank and the tool does not invent one. The refusal
+names the file and suggests a title, taken from the first heading or from the
+file name:
+
+```json
+{
+  "missing": "title",
+  "suggested_title": "Miguel kickoff call — 2026-08-12",
+  "suggested_from": "h1"
+}
+```
+
+The candidate is copied from the note exactly as written, punctuation and all,
+because a suggestion the tool has quietly reworded is no longer the author's
+own words.
+
+The suggestion is a proposal, never a decision. Get it approved, then add the
+title to the note, or pass `--title "..."` to publish once without editing it.
 
 `build` uses pandoc only as the markdown parser that feeds the template. The
 export side still uses pandoc as a markdown fallback, which is tracked
