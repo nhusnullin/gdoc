@@ -33,6 +33,8 @@ from gdoc.pairing import (
 )
 from gdoc.pending import append_item, pending_path, recorded_source
 from gdoc.reply import post_reply
+from gdoc import render
+from gdoc.render import profiles
 
 
 def _thread_json(thread: Thread) -> dict:
@@ -174,18 +176,37 @@ def _check_source_collision(repo_root: Path, slug: str, source: str) -> str | No
 
 def cmd_generate(args) -> int:
     config = load_config()
+    template = args.template or config.template
+    master = None if template == profiles.NO_TEMPLATE else template
+    md_path = Path(args.md)
+    name = args.name or _version_name(md_path, master)
     drive = drive_service()
     result = generate(
         drive,
-        Path(args.md),
-        args.name,
+        md_path,
+        name,
         Path(args.out),
         folder_id=args.folder_id or config.output_folder_id,
+        template=master,
     )
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
     if args.baseline_root and result.doc_id:
         payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
     return _emit(payload)
+
+
+def _version_name(md_path: Path, template: str | None) -> str:
+    """'<cover title> v<n>'. n is the recorded version count plus one.
+
+    An unpaired note has no recorded versions, so it gets v1. With no template
+    there may be no front matter to read, so the file stem stands in for the
+    title.
+    """
+    pairing = read_pairing(md_path)
+    number = len(pairing.versions) + 1 if pairing else 1
+    if template is None:
+        return f"{md_path.stem} v{number}"
+    return f"{render.meta_for(md_path)['cover_title']} v{number}"
 
 
 def _write_baseline_for(drive, args, doc_id: str) -> Path:
@@ -304,9 +325,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     gen = sub.add_parser("generate", help="markdown to a new Google Doc")
     gen.add_argument("--md", required=True)
-    gen.add_argument("--name", required=True)
+    gen.add_argument("--name", help="default: '<cover title> v<n>'")
     gen.add_argument("--out", required=True)
     gen.add_argument("--folder-id")
+    gen.add_argument("--template", help="profile name, path, or 'none' for plain pandoc")
     gen.add_argument(
         "--baseline-root", help="write the new document's baseline under this directory"
     )

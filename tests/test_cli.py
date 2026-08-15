@@ -249,6 +249,106 @@ def test_generate_writes_no_baseline_without_a_baseline_root(capsys, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# generate subcommand, the template and the version name
+# ---------------------------------------------------------------------------
+
+
+_NOTE = "---\ntitle: Kickoff Notes\n---\n\n# Section one\n\nBody.\n"
+
+
+def _run_generate_with(tmp_path, text, config, extra=()):
+    """Run generate with both Drive and the generator stubbed. Returns the stub."""
+    from gdoc.config import Config
+    from gdoc.generate import Result
+
+    md = tmp_path / "note.md"
+    md.write_text(text)
+    assert isinstance(config, Config)
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.load_config", return_value=config
+    ), patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = Result(docx_path=tmp_path / "v1.docx", doc_id="1New")
+        exit_code = main(["generate", "--md", str(md), "--out", str(tmp_path / "v1.docx"), *extra])
+    assert exit_code == 0
+    return fake_generate
+
+
+def test_generate_names_the_version_from_the_cover_title(capsys, tmp_path):
+    """No --name: the cover title plus the next version number."""
+    from gdoc.config import Config
+
+    fake = _run_generate_with(tmp_path, _NOTE, Config(output_folder_id="0AF"))
+    capsys.readouterr()
+    assert fake.call_args.args[2] == "Kickoff Notes v1"
+
+
+def test_generate_counts_the_recorded_versions(capsys, tmp_path):
+    from gdoc.config import Config
+
+    text = (
+        "---\ntitle: Kickoff Notes\ngdoc: docABC\n"
+        "gdoc_versions:\n  - id: docV1\n    created: '2026-08-01'\n"
+        "  - id: docV2\n    created: '2026-08-10'\n---\n\n# Section one\n\nBody.\n"
+    )
+    fake = _run_generate_with(tmp_path, text, Config(output_folder_id="0AF"))
+    capsys.readouterr()
+    assert fake.call_args.args[2] == "Kickoff Notes v3"
+
+
+def test_generate_names_the_version_from_the_file_stem_without_a_template(capsys, tmp_path):
+    """With no template there may be no front matter, so the file stem stands in."""
+    from gdoc.config import Config
+
+    fake = _run_generate_with(
+        tmp_path, "# Plain\n\nBody.\n", Config(output_folder_id="0AF", template="none")
+    )
+    capsys.readouterr()
+    assert fake.call_args.args[2] == "note v1"
+    assert fake.call_args.kwargs["template"] is None
+
+
+def test_generate_passes_the_configured_template_through(capsys, tmp_path):
+    from gdoc.config import Config
+
+    config = Config(output_folder_id="0AF", template="altery-group-policy-v1.0")
+    fake = _run_generate_with(tmp_path, _NOTE, config)
+    capsys.readouterr()
+    assert fake.call_args.kwargs["template"] == "altery-group-policy-v1.0"
+
+
+def test_the_template_argument_beats_the_config(capsys, tmp_path):
+    from gdoc.config import Config
+
+    fake = _run_generate_with(
+        tmp_path,
+        _NOTE,
+        Config(output_folder_id="0AF", template="none"),
+        extra=("--template", "altery-group-policy-v1.0"),
+    )
+    capsys.readouterr()
+    assert fake.call_args.kwargs["template"] == "altery-group-policy-v1.0"
+    assert fake.call_args.args[2] == "Kickoff Notes v1"
+
+
+def test_generate_reports_a_missing_title_as_a_json_error(capsys, tmp_path):
+    """A file with no title cannot be named, and guessing one would be worse."""
+    from gdoc.config import Config
+    from gdoc.generate import Result
+
+    md = tmp_path / "note.md"
+    md.write_text("Body with no front matter.\n")
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.load_config", return_value=Config(output_folder_id="0AF")
+    ), patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = Result(docx_path=tmp_path / "v1.docx", doc_id="1New")
+        exit_code = main(["generate", "--md", str(md), "--out", str(tmp_path / "v1.docx")])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "front matter" in payload["error"]
+    fake_generate.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # pair subcommand, show mode
 # ---------------------------------------------------------------------------
 
