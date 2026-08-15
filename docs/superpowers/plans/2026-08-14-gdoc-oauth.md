@@ -4,43 +4,66 @@
 
 **Goal:** Let gdoc authorise as Nail over OAuth, so a document no longer has to be shared with a service account address before it can be reviewed.
 
-**Architecture:** `gdoc/auth.py` stays the single chokepoint and grows a mode switch fed by `config.auth_mode`. A new `gdoc/oauth.py` owns the browser flow and the token file. Because OAuth requires full Drive scope, the "cannot edit a reviewed document" promise moves from Google to a new `gdoc/guard.py`, which wraps the HTTP transport and refuses every write except creating a file, a comment or a reply. Identity stops deciding anything: replies carry a `[gdoc]` marker written by `gdoc/marker.py`, because Drive's `author.me` means the service account today and Nail under OAuth.
+**Architecture:** `gdoc/auth.py` stays the single chokepoint and grows a mode switch fed by `config.auth_mode`. A new `gdoc/oauth.py` owns the browser flow and the token file. Because OAuth means full Drive scope on everything Nail can reach, a new `gdoc/guard.py` wraps the HTTP transport and confines every call to a set of file ids: the one the command was given, plus the ones gdoc's own creates returned. On those files it permits every method; on anything else it permits nothing. Identity stops deciding anything: replies carry a `[gdoc]` marker written by `gdoc/marker.py`, because Drive's `author.me` means the service account today and Nail under OAuth.
+
+**Amended 2026-08-15.** Section 5 of the spec was rewritten after review, and Tasks 3, 4, 6, 10 and 11 changed with it. The guard was a verb allowlist; it is now a file-id allowlist. `allow_document_edits` is gone. See the spec's section 5 for why. If you are reading a cached copy of this plan, re-read those five tasks.
 
 **Tech Stack:** Python 3.11+, `google-auth`, `google-auth-oauthlib` (new), `google-auth-httplib2`, `google-api-python-client`, pytest.
 
 **Spec:** `docs/superpowers/specs/2026-08-14-gdoc-oauth-design.md`
+
+## Principles
+
+`PRINCIPLES.md` did not exist when this plan was first written. The gate is
+answered here because five tasks were rewritten after it landed.
+
+Serves: principle 3. The guard's allowed set starts empty, so a command that
+does not name a document reaches nothing. Task 6 has a test for it.
+
+Strains: principle 3. On a file in the set the guard permits every method,
+including an edit to a reviewed document, so a limit Google enforced becomes one
+gdoc respects. Task 11 rewrites the README, `CLAUDE.md` and the dated decision in
+`PRINCIPLES.md` rather than leaving a promise standing that stopped being true.
+
+Also touches principle 1: `google-auth-oauthlib` and `google-auth-httplib2` are
+added in Task 5, both pip-installable.
 
 ## Global Constraints
 
 - **Run tests with** `~/.config/gdoc-agent/venv/bin/pytest`. Nothing else is installed.
 - **TDD, always.** Write the failing test, run it, watch it fail, then implement. A step that says "run it and see it fail" is not optional.
 - **Scope is exactly** `["https://www.googleapis.com/auth/drive"]`, unchanged, shared by both modes. There is no narrower scope that reads comments and writes replies. Never narrow it to make a test pass.
-- **`auth_mode` accepts only** `"oauth"` and `"service_account"`. Default `"oauth"`.
-- **`allow_document_edits` defaults to** `false`.
+- **`auth_mode` accepts only** `"oauth"` and `"service_account"`. Default `"oauth"`. It is the only config key this plan adds.
 - **The marker is exactly** `[gdoc]`, on its own last line, appended at most once.
-- **Never edit a reviewed Google Doc.** The guard exists to make that true. Never widen its allowlist to make a test pass.
+- **The guard's allowed set may only grow through the two doors in Task 4:** the ids passed to `drive_service`, and the ids a create response returned. Never add a third. Never widen the set to make a test pass, and never relax a refusal for `files.list`, `permissions` or batch.
 - **The tool must work without git and without a config file.** `gdoc read` works today with no `config.json`, and it must still work after this plan. A missing config resolves to the documented defaults, never to an error.
 - **Writing style in all docs, comments and commit messages:** plain short English, and never the em dash character.
 - **Immutability.** `Config`, `Thread` and `Reply` are frozen dataclasses. Return new values, never mutate.
 - **New dependency:** `google-auth-oauthlib` is genuinely new. `google-auth-httplib2` is already present at 0.4.1 as a transitive dependency but becomes a direct one, so it is declared too.
 
-### Collision warning: read this before touching cli.py or config.py
+### The collision is resolved
 
-A second workstream, `docs/superpowers/plans/2026-08-14-gdoc-template-merge.md` on branch `gdoc-apply-first-run`, is changing the same two files. **Assume it lands first.** It:
+The template-merge workstream landed. `main` was merged into this branch on
+2026-08-15 and the suite was green at 252 passed, 1 skipped before any task
+below was started. `Config` already carries `template`, `cmd_generate` already
+writes pairing frontmatter, and `generate` already runs its two passes.
 
-- adds a `template` key to `gdoc/config.py`
-- adds `gdoc build`, makes `--name` optional on `generate`, adds `--template`, and has `cmd_generate` write pairing frontmatter after upload
+What survives from that merge and matters here:
 
-Consequences for this plan:
+- **`gdoc/config.py` (Task 3):** `Config` has `output_folder_id` and `template`.
+  Add `auth_mode` beside them. Do not reorder existing fields.
+- **`gdoc/generate.py` (Task 4 and Task 6):** `generate` creates a measuring
+  copy, exports it to PDF, creates the published copy, then trashes the
+  measuring copy with `files.update`. Three of those calls address a file that
+  did not exist when the client was built. This is the reason the guard learns
+  ids from create responses, and `tests/test_generate.py` is the suite that
+  proves it still works.
+- Do not edit the main checkout at `/Users/nailkhusnullin/src/personal/gdoc`.
+  Work only in this worktree.
 
-- **`gdoc/config.py` (Task 3):** `Config` will already have a `template` field. The merge is purely additive. Keep `template` and add `auth_mode` and `allow_document_edits` beside it. Do not reorder existing fields.
-- **`gdoc/cli.py` (Tasks 7 and 9):** this plan adds an `auth` subparser and an `--all` flag on `read`. It does not touch `cmd_generate`, and `cmd_generate` is where the other branch works. If git reports a conflict in `cli.py`, it is in the parser block; keep both subparsers.
-- **`gdoc/auth.py`, `gdoc/oauth.py`, `gdoc/guard.py`, `gdoc/marker.py`, `gdoc/model.py`, `gdoc/filters.py`, `gdoc/reply.py`, `gdoc/pending.py`:** this plan's ground, no expected collision.
-- Do not edit the main checkout at `/Users/nailkhusnullin/src/personal/gdoc`. Work only in this worktree.
-
-### One open dependency
-
-This plan was written before Nail reviewed the spec. If his review changes a decision, the affected task changes with it. The two most likely to move are Task 2 (whether `by_agent` stays inside `has_agent_reply`) and Task 4 (the guard's allowlist).
+`gdoc-apply-drains` is still unmerged and still written against `main`. It
+renames `has_agent_reply` to `agent_replied_last`. Task 2 keeps the identity
+test in one property so that merge stays a one-line change.
 
 ---
 
@@ -49,16 +72,16 @@ This plan was written before Nail reviewed the spec. If his review changes a dec
 | File | Responsibility |
 |---|---|
 | `gdoc/marker.py` | **new.** The `[gdoc]` string and the two functions that add and detect it. Imported by both `model.py` and `reply.py`, so it lives on its own and neither depends on the other. |
-| `gdoc/guard.py` | **new.** `is_allowed(method, uri)` and `GuardedHttp`. Knows nothing about credentials. |
+| `gdoc/guard.py` | **new.** `file_id(uri)`, `verdict(method, uri, allowed)` and `GuardedHttp`. Knows nothing about credentials. |
 | `gdoc/oauth.py` | **new.** The browser flow, the token file, and reading the signed-in account. Takes scopes as an argument so it never imports `auth.py`. |
 | `gdoc/auth.py` | **modify.** The mode switch, and the one place the guard is installed. |
-| `gdoc/config.py` | **modify.** `auth_mode`, `allow_document_edits`. |
+| `gdoc/config.py` | **modify.** `auth_mode`. |
 | `gdoc/model.py` | **modify.** `Reply` gains `author_name` and `by_marker`. `has_agent_reply` stops depending on identity alone. |
 | `gdoc/filters.py` | **modify.** `needs_action` drops the author test. `partition` gains all-comments mode. |
 | `gdoc/reply.py` | **modify.** Post the marker. |
 | `gdoc/pending.py` | **modify.** Record the author and the marker. Stop saying "Nail asked". |
 | `gdoc/cli.py` | **modify.** `gdoc auth` subcommands, `read --all`, richer payload. |
-| `tests/test_marker.py`, `tests/test_guard.py`, `tests/test_oauth.py` | **new.** |
+| `tests/test_marker.py`, `tests/test_guard.py`, `tests/test_guard_is_installed.py`, `tests/test_oauth.py` | **new.** |
 | `tests/test_auth.py`, `test_config.py`, `test_model.py`, `test_filters.py`, `test_reply.py`, `test_pending.py`, `test_cli.py`, `test_access_integration.py` | **modify.** |
 | `pyproject.toml`, `install.sh`, `README.md`, `CLAUDE.md`, `skills/*/SKILL.md` | **modify.** |
 
@@ -470,7 +493,7 @@ service account already answered are not answered twice."
 
 ---
 
-## Task 3: Config keys
+## Task 3: The auth_mode config key
 
 **Files:**
 - Modify: `gdoc/config.py`
@@ -478,9 +501,11 @@ service account already answered are not answered twice."
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `Config(output_folder_id, auth_mode, allow_document_edits)` and `gdoc.config.AUTH_MODES`. Tasks 6 and 7 read both new fields.
+- Produces: `Config(output_folder_id, template, auth_mode)` and `gdoc.config.AUTH_MODES`. Task 6 reads `auth_mode`.
 
-**Collision:** if the template-merge branch landed first, `Config` already has a `template` field. Keep it. Add the two new fields beside it and leave the existing ones in place.
+**Amended 2026-08-15.** The first draft of this task added a second key, `allow_document_edits`. It is gone. Editing the named document is allowed by the guard now, so the key's only remaining effect would have been to switch the guard off entirely, and a key that exists only to disable a safety net gets set once and never unset. Add one field, not two.
+
+**Collision:** `Config` already carries `template` from the template-merge work. Keep it. Add `auth_mode` beside it and leave the existing fields in their current order.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -510,24 +535,11 @@ def test_an_unknown_auth_mode_is_refused_and_names_both_options(tmp_path):
     assert "service_account" in message
 
 
-def test_document_edits_are_forbidden_unless_asked_for(tmp_path):
-    path = tmp_path / "config.json"
-    path.write_text(json.dumps({}))
-    assert load_config(path).allow_document_edits is False
-
-
-def test_document_edits_can_be_unlocked(tmp_path):
-    path = tmp_path / "config.json"
-    path.write_text(json.dumps({"allow_document_edits": True}))
-    assert load_config(path).allow_document_edits is True
-
-
-def test_nails_live_config_still_loads_with_neither_new_key(tmp_path):
+def test_nails_live_config_still_loads_without_the_new_key(tmp_path):
     path = tmp_path / "config.json"
     path.write_text(json.dumps({"display_name": "Nail Khusnullin", "output_folder_id": None}))
     config = load_config(path)
     assert config.auth_mode == "oauth"
-    assert config.allow_document_edits is False
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -537,38 +549,33 @@ Expected: FAIL with `AttributeError: 'Config' object has no attribute 'auth_mode
 
 - [ ] **Step 3: Write minimal implementation**
 
-In `gdoc/config.py`, add the constant, extend the dataclass, and validate on load:
+In `gdoc/config.py`, add the constants, extend the dataclass, and validate on load:
 
 ```python
 AUTH_MODES = ("oauth", "service_account")
 DEFAULT_AUTH_MODE = "oauth"
-
-
-@dataclass(frozen=True)
-class Config:
-    output_folder_id: str | None = None
-    auth_mode: str = DEFAULT_AUTH_MODE
-    allow_document_edits: bool = False
 ```
 
-Replace the return in `load_config`:
+Add one field to `Config`, after the existing ones:
 
 ```python
-    data = json.loads(path.read_text())
+    auth_mode: str = DEFAULT_AUTH_MODE
+```
+
+In `load_config`, validate before constructing:
+
+```python
     auth_mode = data.get("auth_mode") or DEFAULT_AUTH_MODE
     if auth_mode not in AUTH_MODES:
         raise ValueError(
             f"auth_mode in {path} is {auth_mode!r}. "
             f"It must be one of: {', '.join(AUTH_MODES)}"
         )
-    return Config(
-        output_folder_id=data.get("output_folder_id"),
-        auth_mode=auth_mode,
-        allow_document_edits=bool(data.get("allow_document_edits", False)),
-    )
 ```
 
-Extend the `load_config` docstring with one sentence: `auth_mode` defaults to `oauth` and `allow_document_edits` to false, so a config written before either key existed keeps loading.
+and pass `auth_mode=auth_mode` to `Config(...)`, leaving every existing argument untouched.
+
+Extend the `load_config` docstring with one sentence: `auth_mode` defaults to `oauth`, so a config written before the key existed keeps loading.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -579,17 +586,21 @@ Expected: PASS
 
 ```bash
 git add gdoc/config.py tests/test_config.py
-git commit -m "feat: add auth_mode and allow_document_edits to config
+git commit -m "feat: add auth_mode to config
 
-auth_mode defaults to oauth and rejects anything but the two known values.
-Nothing reads either key yet."
+It defaults to oauth and rejects anything but the two known values. A
+config written before the key existed keeps loading. Nothing reads it yet."
 ```
 
 ---
 
-## Task 4: The write guard
+## Task 4: The guard
 
-OAuth needs full Drive scope, so Google stops being the thing that makes "the agent cannot edit a reviewed document" true. This is what replaces it. No credentials involved, so it tests entirely offline.
+**Rewritten 2026-08-15.** The first version of this task built a verb allowlist: any read passed, four writes passed, everything else was refused. It guarded the wrong axis and it was already out of date, because `generate` gained a `files.update` call that trashes its measuring copy. Read the spec's section 5 before starting. Do not reuse the old test file from git history.
+
+What the guard does now: it holds a set of file ids, and it carries a request only when the file the request addresses is in that set. Method is consulted only to tell a create from a listing.
+
+No credentials are involved, so this tests entirely offline.
 
 **Files:**
 - Create: `gdoc/guard.py`
@@ -597,168 +608,296 @@ OAuth needs full Drive scope, so Google stops being the thing that makes "the ag
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `gdoc.guard.is_allowed(method: str, uri: str) -> bool` and `gdoc.guard.GuardedHttp(inner)`. Task 6 wraps the authorised transport in `GuardedHttp`.
+- Produces: `gdoc.guard.file_id(uri) -> str | None`, `gdoc.guard.verdict(method, uri, allowed) -> str`, `gdoc.guard.GuardedHttp(inner, allowed)`. Task 6 wraps the authorised transport in `GuardedHttp` and passes the ids the command was given.
+
+**Why `verdict` returns a string, not a bool.** Three outcomes matter, not two: refuse, carry, and carry-then-learn-the-new-id. A bool cannot say the third, and the create case is what makes `generate` work.
 
 - [ ] **Step 1: Write the failing test**
 
 Create `tests/test_guard.py`:
 
 ```python
-"""The cannot-edit guarantee, asserted against the guard.
+"""The reachable set, asserted against the guard.
 
-Under a service account with Commenter access, Google refused these calls. OAuth
-has no scope that reads comments and writes replies without full Drive access, so
-these tests are the guarantee now. Never widen the allowlist to make one pass.
+Under a service account the credential reached only the documents shared with
+it. OAuth has no such limit: the token is Nail, the scope is full Drive, and
+every file Nail owns is reachable. This file is what narrows it back down.
+
+The rule is about files, never about methods. On a file the command was given,
+every method is carried, an edit included. On any other file, nothing is,
+a read included. Never widen the set to make a test pass.
 """
+
+import json
 
 import pytest
 
-from gdoc.guard import GuardedHttp, is_allowed
+from gdoc.guard import CARRY, LEARN, REFUSE, GuardedHttp, file_id, verdict
 
-FILES = "https://www.googleapis.com/drive/v3/files"
-UPLOAD = "https://www.googleapis.com/upload/drive/v3/files"
-ONE_FILE = "https://www.googleapis.com/drive/v3/files/1AbC"
-COMMENTS = "https://www.googleapis.com/drive/v3/files/1AbC/comments"
-REPLIES = "https://www.googleapis.com/drive/v3/files/1AbC/comments/c1/replies"
-DOCS_BATCH = "https://docs.googleapis.com/v1/documents/1AbC:batchUpdate"
+MINE = "1TheDocumentIWasGiven"
+YOURS = "1SomeOtherFileEntirely"
+ALLOWED = frozenset({MINE})
+
+DRIVE = "https://www.googleapis.com/drive/v3"
+UPLOAD = "https://www.googleapis.com/upload/drive/v3"
+DOCS = "https://docs.googleapis.com/v1"
 
 
 class FakeHttp:
-    """Records what it was asked to carry."""
+    """Records what it was asked to carry, and answers with a canned body."""
 
-    def __init__(self):
+    def __init__(self, body=b"{}", status="200"):
         self.calls = []
+        self.body = body
+        self.status = status
         self.credentials = "the credentials"
 
     def request(self, uri, method="GET", body=None, headers=None, **kwargs):
         self.calls.append((method, uri))
-        return ({"status": "200"}, b"{}")
+        return ({"status": self.status}, self.body)
 
 
-def guarded():
-    inner = FakeHttp()
-    return GuardedHttp(inner), inner
+def guarded(allowed=ALLOWED, **kwargs):
+    inner = FakeHttp(**kwargs)
+    return GuardedHttp(inner, allowed), inner
 
 
-# --- reads ---------------------------------------------------------------
+# --- reading the file id out of a url ------------------------------------
 
 
-def test_get_is_allowed():
-    assert is_allowed("GET", ONE_FILE) is True
+def test_the_id_is_read_from_a_drive_path():
+    assert file_id(f"{DRIVE}/files/{MINE}") == MINE
 
 
-def test_head_is_allowed():
-    assert is_allowed("HEAD", ONE_FILE) is True
+def test_the_id_is_read_from_a_drive_subpath():
+    assert file_id(f"{DRIVE}/files/{MINE}/comments/c1/replies") == MINE
 
 
-def test_export_is_a_get_so_it_is_allowed():
-    assert is_allowed("GET", ONE_FILE + "/export?mimeType=text%2Fmarkdown") is True
+def test_the_id_is_read_from_an_upload_path():
+    assert file_id(f"{UPLOAD}/files/{MINE}?uploadType=media") == MINE
 
 
-def test_listing_comments_is_allowed():
-    assert is_allowed("GET", COMMENTS + "?fields=comments(id)") is True
+def test_the_id_is_read_from_a_docs_path():
+    assert file_id(f"{DOCS}/documents/{MINE}") == MINE
 
 
-def test_discovery_is_allowed():
-    assert is_allowed("GET", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest") is True
+def test_the_id_stops_at_the_colon_in_a_docs_method():
+    """documents/{id}:batchUpdate is the write that matters most."""
+    assert file_id(f"{DOCS}/documents/{MINE}:batchUpdate") == MINE
 
 
-# --- the four writes the tool is for ------------------------------------
+def test_a_collection_path_carries_no_id():
+    assert file_id(f"{DRIVE}/files") is None
 
 
-def test_creating_a_file_is_allowed():
-    assert is_allowed("POST", FILES) is True
+def test_discovery_carries_no_id():
+    assert file_id("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest") is None
 
 
-def test_creating_a_file_with_media_is_allowed():
-    assert is_allowed("POST", UPLOAD + "?uploadType=multipart") is True
+# --- every method is carried on the file we were given -------------------
 
 
-def test_leaving_a_comment_is_allowed():
-    assert is_allowed("POST", COMMENTS) is True
+@pytest.mark.parametrize(
+    "method,uri",
+    [
+        ("GET", f"{DRIVE}/files/{MINE}"),
+        ("GET", f"{DRIVE}/files/{MINE}/export?mimeType=application%2Fpdf"),
+        ("GET", f"{DRIVE}/files/{MINE}/comments?fields=comments(id)"),
+        ("POST", f"{DRIVE}/files/{MINE}/comments"),
+        ("POST", f"{DRIVE}/files/{MINE}/comments/c1/replies?fields=id"),
+        ("PATCH", f"{DRIVE}/files/{MINE}"),
+        ("PUT", f"{UPLOAD}/files/{MINE}?uploadType=media"),
+        ("DELETE", f"{DRIVE}/files/{MINE}/comments/c1"),
+        ("POST", f"{DOCS}/documents/{MINE}:batchUpdate"),
+    ],
+)
+def test_any_method_is_carried_on_the_named_file(method, uri):
+    assert verdict(method, uri, ALLOWED) == CARRY
 
 
-def test_replying_in_a_thread_is_allowed():
-    assert is_allowed("POST", REPLIES + "?fields=id%2CcreatedTime") is True
+def test_trashing_the_measuring_copy_is_carried():
+    """generate creates a copy, measures it, then bins it. This is the bin."""
+    assert verdict("PATCH", f"{DRIVE}/files/{MINE}", ALLOWED) == CARRY
 
 
-# --- everything else ----------------------------------------------------
+# --- nothing at all on any other file ------------------------------------
 
 
-def test_renaming_a_file_is_refused():
-    assert is_allowed("PATCH", ONE_FILE) is False
+@pytest.mark.parametrize(
+    "method,uri",
+    [
+        ("GET", f"{DRIVE}/files/{YOURS}"),
+        ("GET", f"{DRIVE}/files/{YOURS}/comments"),
+        ("GET", f"{DRIVE}/files/{YOURS}/export?mimeType=application%2Fpdf"),
+        ("POST", f"{DRIVE}/files/{YOURS}/comments"),
+        ("PATCH", f"{DRIVE}/files/{YOURS}"),
+        ("DELETE", f"{DRIVE}/files/{YOURS}"),
+        ("POST", f"{DOCS}/documents/{YOURS}:batchUpdate"),
+    ],
+)
+def test_nothing_is_carried_on_a_file_we_were_not_given(method, uri):
+    assert verdict(method, uri, ALLOWED) == REFUSE
 
 
-def test_replacing_a_file_is_refused():
-    assert is_allowed("PUT", ONE_FILE) is False
+def test_reading_someone_elses_document_is_refused():
+    """The failure the verb allowlist could not see. A GET is not harmless."""
+    assert verdict("GET", f"{DRIVE}/files/{YOURS}", ALLOWED) == REFUSE
 
 
-def test_deleting_a_file_is_refused():
-    assert is_allowed("DELETE", ONE_FILE) is False
+def test_an_empty_allowed_set_refuses_a_read():
+    """A command that forgets to name its document reaches nothing."""
+    assert verdict("GET", f"{DRIVE}/files/{MINE}", frozenset()) == REFUSE
 
 
-def test_deleting_a_comment_is_refused():
-    assert is_allowed("DELETE", COMMENTS + "/c1") is False
+# --- the collection paths ------------------------------------------------
 
 
-def test_editing_a_documents_text_is_refused():
-    """The write that actually matters, and it is not even a Drive URL."""
-    assert is_allowed("POST", DOCS_BATCH) is False
+def test_listing_drive_is_refused():
+    """gdoc never searches Drive. This is most of 'it sees only what it is given'."""
+    assert verdict("GET", f"{DRIVE}/files?q=name+contains+'policy'", ALLOWED) == REFUSE
 
 
-def test_sharing_a_file_is_refused():
-    assert is_allowed("POST", ONE_FILE + "/permissions") is False
+def test_creating_a_file_is_carried_and_learned():
+    assert verdict("POST", f"{DRIVE}/files", frozenset()) == LEARN
+
+
+def test_creating_a_file_with_media_is_carried_and_learned():
+    assert verdict("POST", f"{UPLOAD}/files?uploadType=multipart", frozenset()) == LEARN
+
+
+# --- refused whatever the file ------------------------------------------
+
+
+def test_sharing_the_named_file_is_refused():
+    """Granting other people access is a different authority from editing."""
+    assert verdict("POST", f"{DRIVE}/files/{MINE}/permissions", ALLOWED) == REFUSE
 
 
 def test_a_batch_request_is_refused():
-    assert is_allowed("POST", "https://www.googleapis.com/batch/drive/v3") is False
+    """The file ids live in the body, where the guard cannot see them."""
+    assert verdict("POST", "https://www.googleapis.com/batch/drive/v3", ALLOWED) == REFUSE
 
 
-def test_a_post_to_a_file_itself_is_refused():
-    assert is_allowed("POST", ONE_FILE) is False
+# --- carried with no file involved ---------------------------------------
+
+
+def test_discovery_is_carried():
+    uri = "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"
+    assert verdict("GET", uri, frozenset()) == CARRY
+
+
+def test_about_get_is_carried():
+    """auth status asks who is signed in, and that names no file."""
+    assert verdict("GET", f"{DRIVE}/about?fields=user", frozenset()) == CARRY
+
+
+# --- matching details ----------------------------------------------------
+
+
+def test_the_query_string_changes_no_verdict():
+    assert verdict("POST", f"{UPLOAD}/files?uploadType=resumable", frozenset()) == LEARN
+    assert verdict("GET", f"{DRIVE}/files?corpora=allDrives", ALLOWED) == REFUSE
+
+
+def test_the_host_is_matched_not_only_the_path():
+    assert verdict("GET", f"https://example.com/drive/v3/files/{MINE}", ALLOWED) == REFUSE
 
 
 def test_the_method_is_case_insensitive():
-    assert is_allowed("patch", ONE_FILE) is False
-    assert is_allowed("get", ONE_FILE) is True
+    assert verdict("patch", f"{DRIVE}/files/{MINE}", ALLOWED) == CARRY
+    assert verdict("get", f"{DRIVE}/files/{YOURS}", ALLOWED) == REFUSE
 
 
-# --- the transport ------------------------------------------------------
+def test_an_unknown_googleapis_path_is_refused():
+    assert verdict("GET", "https://www.googleapis.com/gmail/v1/users/me/messages", ALLOWED) == REFUSE
 
 
-def test_an_allowed_request_reaches_the_inner_transport():
+# --- the transport -------------------------------------------------------
+
+
+def test_a_carried_request_reaches_the_inner_transport():
     http, inner = guarded()
-    http.request(COMMENTS, method="GET")
-    assert inner.calls == [("GET", COMMENTS)]
+    http.request(f"{DRIVE}/files/{MINE}/comments", method="GET")
+    assert inner.calls == [("GET", f"{DRIVE}/files/{MINE}/comments")]
 
 
 def test_a_refused_request_never_reaches_the_inner_transport():
     http, inner = guarded()
     with pytest.raises(PermissionError):
-        http.request(ONE_FILE, method="PATCH")
+        http.request(f"{DRIVE}/files/{YOURS}", method="GET")
     assert inner.calls == []
 
 
-def test_the_refusal_says_what_it_refused_and_how_to_lift_it():
+def test_the_refusal_names_the_method_the_path_and_the_file():
     http, _ = guarded()
     with pytest.raises(PermissionError) as excinfo:
-        http.request(ONE_FILE, method="PATCH")
+        http.request(f"{DRIVE}/files/{YOURS}", method="PATCH")
     message = str(excinfo.value)
     assert "PATCH" in message
-    assert "/drive/v3/files/1AbC" in message
-    assert "allow_document_edits" in message
+    assert f"/drive/v3/files/{YOURS}" in message
+    assert YOURS in message
+    assert "was given" in message
 
 
-def test_the_default_method_is_get_so_a_bare_request_passes():
+def test_the_default_method_is_get():
     http, inner = guarded()
-    http.request(ONE_FILE)
-    assert inner.calls == [("GET", ONE_FILE)]
+    http.request(f"{DRIVE}/files/{MINE}")
+    assert inner.calls == [("GET", f"{DRIVE}/files/{MINE}")]
 
 
 def test_other_attributes_proxy_to_the_inner_transport():
     """googleapiclient reaches past request() during media upload."""
     http, _ = guarded()
     assert http.credentials == "the credentials"
+
+
+# --- learning a created id -----------------------------------------------
+
+
+def test_a_created_file_joins_the_allowed_set():
+    body = json.dumps({"id": "1FreshlyCreated"}).encode()
+    http, _ = guarded(allowed=frozenset(), body=body)
+    http.request(f"{UPLOAD}/files?uploadType=multipart", method="POST")
+    assert verdict("GET", f"{DRIVE}/files/1FreshlyCreated", http.allowed) == CARRY
+
+
+def test_the_whole_generate_shape_works_from_an_empty_set():
+    """create, export, create, trash. Three of the four address a new file."""
+    body = json.dumps({"id": "1Measured"}).encode()
+    http, inner = guarded(allowed=frozenset(), body=body)
+    http.request(f"{UPLOAD}/files?uploadType=multipart", method="POST")
+    http.request(f"{DRIVE}/files/1Measured/export?mimeType=application%2Fpdf")
+    http.request(f"{DRIVE}/files/1Measured", method="PATCH")
+    assert len(inner.calls) == 3
+
+
+def test_a_create_that_answers_with_something_else_teaches_nothing():
+    http, _ = guarded(allowed=frozenset(), body=b"<html>a proxy said no</html>")
+    http.request(f"{DRIVE}/files", method="POST")
+    assert http.allowed == frozenset()
+
+
+def test_a_create_that_answers_without_an_id_teaches_nothing():
+    http, _ = guarded(allowed=frozenset(), body=json.dumps({"kind": "drive#file"}).encode())
+    http.request(f"{DRIVE}/files", method="POST")
+    assert http.allowed == frozenset()
+
+
+def test_a_failed_create_teaches_nothing():
+    body = json.dumps({"id": "1NeverActuallyMade"}).encode()
+    http, _ = guarded(allowed=frozenset(), body=body, status="403")
+    http.request(f"{DRIVE}/files", method="POST")
+    assert http.allowed == frozenset()
+
+
+def test_learning_does_not_mutate_the_set_it_was_given():
+    """The caller's frozenset must not change under it."""
+    given = frozenset({MINE})
+    body = json.dumps({"id": "1FreshlyCreated"}).encode()
+    http, _ = guarded(allowed=given, body=body)
+    http.request(f"{DRIVE}/files", method="POST")
+    assert given == frozenset({MINE})
+    assert http.allowed == frozenset({MINE, "1FreshlyCreated"})
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -771,66 +910,113 @@ Expected: FAIL, collection error `ModuleNotFoundError: No module named 'gdoc.gua
 Create `gdoc/guard.py`:
 
 ```python
-"""Refuse the writes the design says can never happen.
+"""Confine every request to the files the command was given.
 
-The promise is that the agent *cannot* edit a reviewed document, not that it
-chooses not to. Under a service account with Commenter access, Google enforced
-that. OAuth needs full Drive scope, because Drive has no scope that reads
-comments and writes replies without it, so the promise needs an enforcer here.
+Under a service account the credential reached only the documents that had been
+shared with it, and on those it was a Commenter. Two limits, both Google's: a
+small reachable set, and no writing inside it. OAuth removes both, because the
+token is Nail and the scope is full Drive. There is no narrower scope that reads
+comments and writes replies, so the reachable set has to be narrowed here.
+
+The rule is about files, never about methods. A verb allowlist would have left
+every document Nail owns readable, which is the risk OAuth actually introduces,
+and it would need editing every time the tool learns a new call.
 
 The check sits in the HTTP transport rather than at the call sites, so it sees
-every request the client makes: calls added later, and any other Google API built
-on the same transport. A call-site check would only prove the tool remembered.
-
-It is an allowlist. Four writes are what gdoc is for, and everything else is
-refused without being named.
+every request the client makes: calls added later, and any other Google API
+built on the same transport, which is how the Docs API is covered without the
+call sites knowing it exists.
 """
 
+import json
 import re
 from urllib.parse import urlsplit
 
-_READ_METHODS = frozenset({"GET", "HEAD"})
+CARRY = "carry"
+LEARN = "learn"
+REFUSE = "refuse"
 
-_ALLOWED_POSTS = (
-    # files.create, with and without a media body
-    re.compile(r"^/(?:upload/)?drive/v3/files$"),
-    # comments.create
-    re.compile(r"^/drive/v3/files/[^/]+/comments$"),
-    # replies.create
-    re.compile(r"^/drive/v3/files/[^/]+/comments/[^/]+/replies$"),
+_DRIVE_HOST = "www.googleapis.com"
+_DOCS_HOST = "docs.googleapis.com"
+
+# The three path shapes that name a file.
+_FILE_PATHS = (
+    re.compile(r"^/drive/v3/files/([^/]+)"),
+    re.compile(r"^/upload/drive/v3/files/([^/]+)"),
+    re.compile(r"^/v1/documents/([^/:]+)"),
 )
 
-LIFT = (
-    'Set "allow_document_edits": true in ~/.config/gdoc-agent/config.json '
-    "to lift this."
+# Creating a file names no id, because it is making one.
+_CREATE_PATHS = frozenset({"/drive/v3/files", "/upload/drive/v3/files"})
+
+# Neither does asking what the API looks like, or who is signed in.
+_NO_FILE_PATHS = (
+    re.compile(r"^/discovery/"),
+    re.compile(r"^/drive/v3/about$"),
 )
 
+# Refused on every file, allowed or not. Granting other people access is a
+# different authority from changing a document, and gdoc has no use for it.
+_FORBIDDEN = re.compile(r"/permissions(/|$)")
 
-def is_allowed(method: str, uri: str) -> bool:
-    """True when this request may be carried.
 
-    The query string is ignored, so uploadType and fields cannot change a
-    verdict.
+def file_id(uri: str) -> str | None:
+    """The file a request addresses, or None when it names none.
+
+    The Docs API writes documents/{id}:batchUpdate, so the id stops at the
+    colon.
     """
-    method = (method or "GET").upper()
-    if method in _READ_METHODS:
-        return True
-    if method != "POST":
-        return False
     path = urlsplit(uri).path
-    return any(pattern.match(path) for pattern in _ALLOWED_POSTS)
+    for pattern in _FILE_PATHS:
+        found = pattern.match(path)
+        if found:
+            return found.group(1)
+    return None
+
+
+def verdict(method: str, uri: str, allowed) -> str:
+    """CARRY, LEARN or REFUSE.
+
+    LEARN is a create: carry it, then take the id out of the response. Three
+    outcomes rather than two, because generate addresses files that did not
+    exist when the client was built.
+
+    The query string is ignored, so fields and uploadType cannot change a
+    verdict. The host is matched, so a familiar path shape elsewhere does not
+    pass.
+    """
+    split = urlsplit(uri)
+    if split.hostname not in (_DRIVE_HOST, _DOCS_HOST):
+        return REFUSE
+    path = split.path
+    if _FORBIDDEN.search(path):
+        return REFUSE
+    named = file_id(uri)
+    if named is not None:
+        return CARRY if named in allowed else REFUSE
+    if path in _CREATE_PATHS and (method or "GET").upper() == "POST":
+        return LEARN
+    if any(pattern.match(path) for pattern in _NO_FILE_PATHS):
+        return CARRY
+    # files.list, batch, and anything else that names no file.
+    return REFUSE
 
 
 class GuardedHttp:
-    """An httplib2-shaped transport that will not carry a write.
+    """An httplib2-shaped transport that reaches only the files it was given.
 
     The signature mirrors google_auth_httplib2.AuthorizedHttp.request, verified
     against the installed 0.4.1. Everything other than request is proxied,
     because googleapiclient reaches for more than request during media upload.
+
+    The allowed set grows through exactly two doors: the ids handed in at
+    construction, and the ids that creates this object carried came back with.
+    Never add a third.
     """
 
-    def __init__(self, inner):
+    def __init__(self, inner, allowed=frozenset()):
         self._inner = inner
+        self.allowed = frozenset(allowed)
 
     def request(
         self,
@@ -842,12 +1028,10 @@ class GuardedHttp:
         connection_type=None,
         **kwargs,
     ):
-        if not is_allowed(method, uri):
-            raise PermissionError(
-                f"gdoc refused {(method or 'GET').upper()} {urlsplit(uri).path}. "
-                f"It never edits a reviewed document. {LIFT}"
-            )
-        return self._inner.request(
+        decision = verdict(method, uri, self.allowed)
+        if decision == REFUSE:
+            self._refuse(method, uri)
+        response, content = self._inner.request(
             uri,
             method=method,
             body=body,
@@ -856,6 +1040,35 @@ class GuardedHttp:
             connection_type=connection_type,
             **kwargs,
         )
+        if decision == LEARN:
+            self._learn(response, content)
+        return response, content
+
+    def _refuse(self, method, uri):
+        path = urlsplit(uri).path
+        named = file_id(uri) or "no file"
+        raise PermissionError(
+            f"gdoc refused {(method or 'GET').upper()} {path}. "
+            f"It reaches only the document it was given, and {named} is not it."
+        )
+
+    def _learn(self, response, content):
+        """Add the id a create came back with.
+
+        Never raises. A body that is not JSON, or carries no id, teaches
+        nothing, and the next call on that file is refused. That is the safe
+        direction: a stray temporary file beats a widened set.
+        """
+        status = str(getattr(response, "status", None) or response.get("status", ""))
+        if not status.startswith("2"):
+            return
+        try:
+            created = json.loads(content)
+        except (ValueError, TypeError):
+            return
+        new_id = created.get("id") if isinstance(created, dict) else None
+        if new_id:
+            self.allowed = self.allowed | {new_id}
 
     def __getattr__(self, name):
         return getattr(self._inner, name)
@@ -864,24 +1077,27 @@ class GuardedHttp:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_guard.py -v`
-Expected: PASS, 24 tests
+Expected: PASS, 44 tests
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add gdoc/guard.py tests/test_guard.py
-git commit -m "feat: refuse writes in the HTTP transport
+git commit -m "feat: confine every request to the files the command was given
 
-OAuth needs full Drive scope, so Google stops being the thing that makes
-'the agent cannot edit a reviewed document' true. An allowlist in the
-transport is what makes it true instead: four writes pass, and every PATCH,
-PUT, DELETE and any other POST is refused, the Docs API included.
+OAuth means full Drive scope on everything Nail can reach, so the tool has
+to narrow that itself. The guard holds a set of file ids: the ones handed
+in, plus the ones its own creates came back with. On those, every method.
+On anything else, nothing, a read included.
+
+files.list is refused, so gdoc cannot search Drive. permissions is refused
+on every file, because granting other people access is a different
+authority. Batch is refused, because the ids live in the body.
 
 Nothing installs the guard yet."
 ```
 
 ---
-
 ## Task 5: The OAuth credential
 
 **Files:**
@@ -1369,28 +1585,33 @@ Nothing selects this credential yet."
 
 ---
 
-## Task 6: The mode switch, and installing the guard
+## Task 6: The mode switch, installing the guard, and threading the doc id
+
+**Rewritten 2026-08-15,** with the guard. `drive_service` no longer reads a config key to decide whether to guard: the guard is always installed, and what the caller supplies instead is the set of file ids the command is allowed to touch. Five call sites in `cli.py` change with it.
 
 **Files:**
 - Modify: `gdoc/auth.py`
+- Modify: `gdoc/cli.py`
 - Test: `tests/test_auth.py`
+- Create: `tests/test_guard_is_installed.py`
 
 **Interfaces:**
 - Consumes: `gdoc.oauth.load`, `gdoc.guard.GuardedHttp`, `gdoc.config.load_config`.
-- Produces: `gdoc.auth.load_credentials(key_path=None, mode=None)`, `gdoc.auth.load_service_account_credentials(key_path=None)`, `gdoc.auth.drive_service(credentials=None, allow_document_edits=None)`, `gdoc.auth.SCOPES`. Task 7 calls `drive_service` and reads `SCOPES` and `DEFAULT_KEY_PATH`.
+- Produces: `gdoc.auth.load_credentials(key_path=None, mode=None)`, `gdoc.auth.load_service_account_credentials(key_path=None)`, `gdoc.auth.drive_service(credentials=None, doc_ids=())`, `gdoc.auth.SCOPES`. Task 7 calls `drive_service()` with no ids, which is correct: `about.get` names no file.
 
-**Two traps in this task.**
+**Three traps in this task.**
 
 First, `tests/test_auth.py::test_missing_key_names_the_path_and_the_spec` calls `load_credentials(missing)` and expects the service account error. With `oauth` as the default it would get the OAuth error instead. That test must pass `mode="service_account"`.
 
 Second, `gdoc read` works today with no `config.json`. If `load_credentials` calls `load_config()` and lets `FileNotFoundError` escape, that stops being true. A missing config must resolve to the documented defaults.
+
+Third, `cmd_capture` builds the client on the line **before** it extracts the doc id. Reorder it, or the id is not available to pass.
 
 - [ ] **Step 1: Write the failing test**
 
 Replace the whole of `tests/test_auth.py`:
 
 ```python
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1439,7 +1660,7 @@ def test_the_mode_comes_from_config_when_not_given():
         assert load_credentials() == "oauth-credentials"
 
 
-def test_a_missing_config_still_resolves_to_oauth(tmp_path):
+def test_a_missing_config_still_resolves_to_oauth():
     """gdoc read works with no config.json today, and must keep working."""
     with patch("gdoc.auth.load_config", side_effect=FileNotFoundError("no config")), patch(
         "gdoc.auth.oauth.load", return_value="oauth-credentials"
@@ -1447,23 +1668,33 @@ def test_a_missing_config_still_resolves_to_oauth(tmp_path):
         assert load_credentials() == "oauth-credentials"
 
 
-def test_the_client_is_guarded_by_default():
-    with patch("gdoc.auth.load_config", return_value=Config()), patch(
-        "gdoc.auth.build"
-    ) as build:
+def test_the_client_is_always_guarded():
+    with patch("gdoc.auth.build") as build:
         drive_service(credentials=MagicMock())
     assert isinstance(build.call_args.kwargs["http"], GuardedHttp)
 
 
-def test_allow_document_edits_lifts_the_guard():
-    with patch("gdoc.auth.load_config", return_value=Config(allow_document_edits=True)), patch(
-        "gdoc.auth.build"
-    ) as build:
+def test_the_guard_starts_with_the_ids_it_was_given():
+    with patch("gdoc.auth.build") as build:
+        drive_service(credentials=MagicMock(), doc_ids=["1AbC", "1DeF"])
+    assert build.call_args.kwargs["http"].allowed == frozenset({"1AbC", "1DeF"})
+
+
+def test_no_ids_means_an_empty_set():
+    """generate names no input document. It creates, and learns from that."""
+    with patch("gdoc.auth.build") as build:
         drive_service(credentials=MagicMock())
-    assert not isinstance(build.call_args.kwargs["http"], GuardedHttp)
+    assert build.call_args.kwargs["http"].allowed == frozenset()
 
 
-def test_the_guard_is_installed_even_without_a_config(tmp_path):
+def test_a_single_id_may_be_passed_as_a_string():
+    """Every call site but one has exactly one document, so do not make it wrap."""
+    with patch("gdoc.auth.build") as build:
+        drive_service(credentials=MagicMock(), doc_ids="1AbC")
+    assert build.call_args.kwargs["http"].allowed == frozenset({"1AbC"})
+
+
+def test_the_guard_is_installed_without_a_config():
     """Not knowing must never resolve to the unguarded client."""
     with patch("gdoc.auth.load_config", side_effect=FileNotFoundError), patch(
         "gdoc.auth.build"
@@ -1472,34 +1703,50 @@ def test_the_guard_is_installed_even_without_a_config(tmp_path):
     assert isinstance(build.call_args.kwargs["http"], GuardedHttp)
 
 
-def test_the_caller_can_force_the_guard_on():
-    with patch("gdoc.auth.load_config", return_value=Config(allow_document_edits=True)), patch(
-        "gdoc.auth.build"
-    ) as build:
-        drive_service(credentials=MagicMock(), allow_document_edits=False)
-    assert isinstance(build.call_args.kwargs["http"], GuardedHttp)
-
-
 def test_discovery_caching_stays_off():
-    with patch("gdoc.auth.load_config", return_value=Config()), patch(
-        "gdoc.auth.build"
-    ) as build:
+    with patch("gdoc.auth.build") as build:
         drive_service(credentials=MagicMock())
     assert build.call_args.kwargs["cache_discovery"] is False
 
 
 def test_credentials_are_not_passed_beside_http():
     """googleapiclient refuses both at once."""
-    with patch("gdoc.auth.load_config", return_value=Config()), patch(
-        "gdoc.auth.build"
-    ) as build:
+    with patch("gdoc.auth.build") as build:
         drive_service(credentials=MagicMock())
     assert "credentials" not in build.call_args.kwargs
 ```
 
+Create `tests/test_guard_is_installed.py`:
+
+```python
+"""The guard is worth nothing if a module can build its own client.
+
+An allowlist, in the style of tests/test_no_external_programs.py. It fails if
+the call to build() spreads to a second module, and it fails just as loudly if
+auth.py stops making it, because that would mean the client is being built
+somewhere this test is not looking.
+"""
+
+from pathlib import Path
+
+PACKAGE = Path(__file__).resolve().parent.parent / "gdoc"
+
+
+def _modules_calling_build():
+    found = set()
+    for path in PACKAGE.rglob("*.py"):
+        if "build(" in path.read_text() and "discovery import build" in path.read_text():
+            found.add(path.relative_to(PACKAGE).as_posix())
+    return found
+
+
+def test_only_auth_builds_the_drive_client():
+    assert _modules_calling_build() == {"auth.py"}
+```
+
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_auth.py -v`
+Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_auth.py tests/test_guard_is_installed.py -v`
 Expected: FAIL, `ImportError: cannot import name 'load_service_account_credentials' from 'gdoc.auth'`
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1513,13 +1760,19 @@ One chokepoint, so nothing else in the package has to know which credential is
 in use. Two modes:
 
 - service_account, shared onto a document as Commenter. Google itself refuses
-  every edit.
-- oauth, authorised as Nail. No sharing step, but Drive has no scope that reads
-  comments and writes replies without full Drive access, so the cannot-edit
-  promise is carried by gdoc/guard.py instead.
+  every edit, and the credential reaches only what has been shared with it.
+- oauth, authorised as Nail. No sharing step, but the token is Nail and the
+  scope is full Drive, so the reachable set is everything Nail owns. There is
+  no narrower scope that reads comments and writes replies, so gdoc/guard.py
+  narrows it here instead.
 
-The guard is installed in both modes. Under the service account it is redundant,
-and one code path is worth more than a saved wrapper.
+The guard is installed in both modes and cannot be switched off. Under the
+service account it is nearly redundant, and one code path is worth more than a
+saved wrapper.
+
+doc_ids is the set of files a command may touch. It is empty for commands that
+have no input document, such as generate, which creates its own and lets the
+guard learn the ids from the create responses.
 """
 
 from pathlib import Path
@@ -1530,7 +1783,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 from gdoc import oauth
-from gdoc.config import DEFAULT_AUTH_MODE, load_config
+from gdoc.config import DEFAULT_AUTH_MODE, Config, load_config
 from gdoc.guard import GuardedHttp
 
 DEFAULT_KEY_PATH = Path.home() / ".config" / "gdoc-agent" / "sa-key.json"
@@ -1547,8 +1800,6 @@ def _config():
     try:
         return load_config()
     except (FileNotFoundError, ValueError):
-        from gdoc.config import Config
-
         return Config()
 
 
@@ -1572,56 +1823,76 @@ def load_credentials(key_path: Path | None = None, mode: str | None = None):
     return load_service_account_credentials(key_path)
 
 
-def drive_service(credentials=None, allow_document_edits: bool | None = None):
-    """Build a Drive v3 client, guarded unless config says otherwise.
+def drive_service(credentials=None, doc_ids=()):
+    """Build a Drive v3 client that reaches only doc_ids.
 
     http is passed instead of credentials, because the guard has to wrap the
     transport and googleapiclient refuses both arguments at once.
 
+    A bare string is accepted, because every caller but generate has exactly
+    one document and should not have to wrap it.
+
     cache_discovery is off because the on-disk discovery cache warns noisily
     under a venv and buys nothing for a tool that runs for a few seconds.
     """
+    if isinstance(doc_ids, str):
+        doc_ids = (doc_ids,)
     credentials = credentials or load_credentials()
-    if allow_document_edits is None:
-        allow_document_edits = _config().allow_document_edits
     http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
-    if not allow_document_edits:
-        http = GuardedHttp(http)
-    return build("drive", "v3", http=http, cache_discovery=False)
+    return build(
+        "drive", "v3", http=GuardedHttp(http, doc_ids), cache_discovery=False
+    )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Thread the doc id through cli.py**
 
-Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_auth.py -v`
-Expected: PASS, 12 tests
+Four commands know their document before they build a client. Pass it.
 
-- [ ] **Step 5: Check nothing else imported the old name**
+| Call site | Change |
+|---|---|
+| `cmd_read` | `drive_service(doc_ids=doc_id)`, the id is already on the line above |
+| `cmd_reply` | `post_reply(drive_service(doc_ids=doc_id), doc_id, ...)` |
+| `cmd_export` | `export_markdown(drive_service(doc_ids=doc_id), doc_id)` |
+| `cmd_capture` | **move `doc_id = extract_doc_id(args.doc)` above the `drive_service()` line**, then pass it |
+| `cmd_generate` | unchanged. It has no input document, and the guard learns from its creates |
 
-Run: `grep -rn "load_credentials" gdoc/ tests/ skills/`
-Expected: only `gdoc/auth.py`, `tests/test_auth.py`, and `tests/test_access_integration.py:61`. The integration file's use still works, because `load_credentials()` with no arguments is still valid.
+- [ ] **Step 5: Run test to verify it passes**
 
-- [ ] **Step 6: Run the whole suite**
+Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_auth.py tests/test_guard_is_installed.py -v`
+Expected: PASS, 14 tests
+
+- [ ] **Step 6: Check nothing else imported the old name**
+
+Run: `grep -rn "load_credentials\|drive_service(" gdoc/ tests/ skills/`
+Expected: `gdoc/auth.py`, `gdoc/cli.py`, `tests/test_auth.py`, and `tests/test_access_integration.py`. Every `drive_service()` in `gdoc/cli.py` either passes `doc_ids` or is `cmd_generate`.
+
+- [ ] **Step 7: Run the whole suite**
 
 Run: `~/.config/gdoc-agent/venv/bin/pytest -q`
 Expected: PASS. If `tests/test_access_integration.py` fails, that is Task 10's work, but read the failure first: a guard refusal there means the guard is doing its job and the test still expects Google to do it.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add gdoc/auth.py tests/test_auth.py
+git add gdoc/auth.py gdoc/cli.py tests/test_auth.py tests/test_guard_is_installed.py
 git commit -m "feat: choose the credential from config, and install the guard
 
 load_credentials dispatches on auth_mode, defaulting to oauth. A missing
 config.json resolves to the defaults rather than failing, because gdoc read
 works without one today.
 
-drive_service now passes http instead of credentials so the guard can wrap
-the transport. It is installed in both modes, and only allow_document_edits
-lifts it, including when there is no config to read."
+drive_service passes http instead of credentials so the guard can wrap the
+transport, and takes the file ids the command may touch. read, reply,
+export and capture each pass the document they were pointed at. generate
+passes none: it has no input document, and the guard learns the ids from
+its own create responses.
+
+The guard is always installed and there is no way to turn it off. A new
+test keeps auth.py the only module that builds a client, so no future
+module can quietly make an unguarded one."
 ```
 
 ---
-
 ## Task 7: `gdoc auth` subcommands
 
 **Files:**
@@ -2315,15 +2586,19 @@ answered, and what the existing replies say."
 
 ## Task 10: Split the integration suite by mode
 
-`tests/test_access_integration.py` asserts Google refuses every write. Under OAuth Google permits them and the guard refuses instead. Both must be tested, and the assertion must never be loosened to accommodate whichever mode is configured.
+**Rewritten 2026-08-15,** with the guard.
+
+`tests/test_access_integration.py` asserts Google refuses every write. Under a service account that is still exactly right. Under OAuth it is no longer what the design promises: an edit to the named document now reaches Google and Google permits it. What the guard promises instead is a boundary, so that is what the OAuth cases assert.
+
+**Read this before writing a line of it.** Under OAuth, an attempted edit on the test document is a real edit on a real document. No test in this file may attempt one. The old plan had `test_lifting_the_guard_really_lifts_it` rename the document and rename it back; that test is deleted along with the flag it tested, and nothing replaces it. What the OAuth cases probe is what is *refused*, which costs nothing when the refusal works and, when it fails, fails inside the process before a request is sent.
 
 **Files:**
 - Modify: `tests/conftest.py`
 - Modify: `tests/test_access_integration.py`
 
 **Interfaces:**
-- Consumes: `gdoc.auth.drive_service`, `gdoc.config.load_config`, `gdoc.guard.GuardedHttp`.
-- Produces: an `auth_mode` fixture and two skip markers. Nothing else depends on them.
+- Consumes: `gdoc.auth.drive_service`, `gdoc.config.load_config`.
+- Produces: an `auth_mode` fixture, a `drive` fixture scoped to the test document, and two skip markers. Nothing else depends on them.
 
 - [ ] **Step 1: Add the fixtures**
 
@@ -2333,6 +2608,10 @@ Replace `tests/conftest.py`:
 import pytest
 
 TEST_DOC_ID = "1tyVhOTw9-bJ99IJTBZoTfWAT6fm3rjGIzfpHQX91hkw"
+
+# A real Drive id shape that is not the test document. Every request to it must
+# be refused inside the process, so it is never fetched and never has to exist.
+OTHER_DOC_ID = "1NotTheDocumentTheseTestsWereGiven00000000"
 
 
 @pytest.fixture(scope="session")
@@ -2348,22 +2627,20 @@ def auth_mode():
 
 @pytest.fixture(scope="session")
 def drive():
+    """A client pointed at the test document, the way the CLI points one."""
     from gdoc.auth import drive_service
 
-    return drive_service()
-
-
-@pytest.fixture(scope="session")
-def unguarded_drive():
-    """A client with the guard lifted, to prove the flag does what it says."""
-    from gdoc.auth import drive_service
-
-    return drive_service(allow_document_edits=True)
+    return drive_service(doc_ids=TEST_DOC_ID)
 
 
 @pytest.fixture(scope="session")
 def test_doc_id():
     return TEST_DOC_ID
+
+
+@pytest.fixture(scope="session")
+def other_doc_id():
+    return OTHER_DOC_ID
 
 
 @pytest.fixture
@@ -2380,136 +2657,114 @@ def oauth_only(auth_mode):
 
 - [ ] **Step 2: Write the failing test**
 
-In `tests/test_access_integration.py`, update the module docstring:
+Replace the module docstring of `tests/test_access_integration.py`:
 
 ```python
-"""The cannot-edit guarantee, asserted against the live API.
+"""What the credential is allowed to do, asserted against the live API.
 
 These assert on what is permitted, not on what the agent chooses to do. A test
-that only proved the agent did not try to edit would prove nothing: the guarantee
-is that it cannot.
+that only proved the agent did not try would prove nothing.
 
-Who enforces it depends on the credential, so the file splits by mode.
+What is guaranteed depends on the credential, so the file splits by mode.
 
-- service_account: Google refuses. Commenter access cannot write.
-- oauth: Google would permit it, because Drive has no scope that reads comments
-  and writes replies without full access. gdoc/guard.py refuses instead, before
-  the request leaves the process.
+- service_account: Google refuses every write. Commenter access cannot edit,
+  rename, or delete, and the credential reaches only documents shared with it.
+- oauth: Google refuses nothing, because the token is Nail and the scope is full
+  Drive. gdoc/guard.py provides a different guarantee: the client reaches only
+  the file it was built for. So the OAuth cases assert the boundary, not the
+  verb.
+
+No test here attempts an edit on the test document. Under service_account Google
+would refuse it; under oauth it would succeed, and succeeding means editing a
+real document. Never add one.
 
 Never loosen an assertion to suit the configured mode. Add the other mode's case.
 """
 ```
 
-Add `service_account_only` to the three tests that assert a Google refusal, so their signatures become:
+Add the `service_account_only` fixture to every test that asserts a Google refusal, so their signatures become:
 
 ```python
 def test_google_says_the_agent_cannot_edit(drive, test_doc_id, service_account_only):
 def test_renaming_the_file_is_refused(drive, test_doc_id, service_account_only):
 def test_permissions_list_is_refused(drive, test_doc_id, service_account_only):
+def test_editing_the_text_is_refused(drive, test_doc_id, service_account_only):
+def test_deleting_a_comment_is_refused(drive, test_doc_id, service_account_only):
 ```
 
-Leave `test_editing_the_text_is_refused` and `test_deleting_a_comment_is_refused` accepting either enforcer, and change their bodies to accept a `PermissionError` as well as an `HttpError`. Replace `test_deleting_a_comment_is_refused` with:
-
-```python
-def test_deleting_a_comment_is_refused(drive, test_doc_id):
-    """Refused either way: by Google under Commenter, by the guard under OAuth."""
-    res = drive.comments().list(fileId=test_doc_id, fields="comments(id)").execute()
-    comment_id = res["comments"][0]["id"]
-    with pytest.raises((HttpError, PermissionError)) as excinfo:
-        drive.comments().delete(fileId=test_doc_id, commentId=comment_id).execute()
-    if isinstance(excinfo.value, HttpError):
-        assert excinfo.value.resp.status in (403, 404)
-    else:
-        assert "allow_document_edits" in str(excinfo.value)
-```
+Every one of those attempts a write on the test document, and under OAuth that write would land. They belong to the service account mode and nowhere else.
 
 Then append the OAuth cases:
 
 ```python
 # ---------------------------------------------------------------------------
-# Under OAuth the guard is the enforcer
+# Under OAuth the guarantee is the boundary, not the verb
 # ---------------------------------------------------------------------------
 
 
-def test_the_guard_refuses_a_rename_before_it_leaves_the_process(
-    drive, test_doc_id, oauth_only
+def test_reading_a_document_we_were_not_given_is_refused(
+    drive, other_doc_id, oauth_only
 ):
-    original = drive.files().get(fileId=test_doc_id, fields="name").execute()["name"]
+    """The failure the first draft's verb allowlist could not see.
+
+    OAuth reaches every file Nail owns, so a read is not harmless. This is the
+    guarantee that replaces Commenter.
+    """
     with pytest.raises(PermissionError) as excinfo:
-        drive.files().update(
-            fileId=test_doc_id, body={"name": original + " PROBE"}
+        drive.files().get(fileId=other_doc_id, fields="name").execute()
+    assert other_doc_id in str(excinfo.value)
+
+
+def test_listing_drive_is_refused(drive, oauth_only):
+    """gdoc never searches Drive, and under OAuth it must not be able to."""
+    with pytest.raises(PermissionError):
+        drive.files().list(pageSize=1, fields="files(id)").execute()
+
+
+def test_reading_someone_elses_comments_is_refused(drive, other_doc_id, oauth_only):
+    with pytest.raises(PermissionError):
+        drive.comments().list(fileId=other_doc_id, fields="comments(id)").execute()
+
+
+def test_sharing_the_named_document_is_refused(drive, test_doc_id, oauth_only):
+    """Allowed file, refused anyway. Granting access is a different authority."""
+    with pytest.raises(PermissionError):
+        drive.permissions().create(
+            fileId=test_doc_id, body={"role": "reader", "type": "anyone"}
         ).execute()
-    assert "PATCH" in str(excinfo.value)
 
 
-def test_the_guard_refuses_a_text_insert(drive, test_doc_id, oauth_only):
-    """The write that actually matters, on an API the guard was never told about."""
+def test_the_docs_api_is_bounded_by_the_same_set(drive, other_doc_id, oauth_only):
+    """The guard was never told the Docs API exists. It shares the transport."""
     from googleapiclient.discovery import build
 
     docs = build("docs", "v1", http=drive._http, cache_discovery=False)
     with pytest.raises(PermissionError):
         docs.documents().batchUpdate(
-            documentId=test_doc_id,
+            documentId=other_doc_id,
             body={"requests": [{"insertText": {"location": {"index": 1}, "text": "PROBE"}}]},
         ).execute()
 
 
-def test_reading_and_commenting_still_work_under_the_guard(drive, test_doc_id, oauth_only):
+def test_reading_and_commenting_still_work_under_the_guard(
+    drive, test_doc_id, oauth_only
+):
     """The guard must not break what the tool is for."""
     meta = drive.files().get(fileId=test_doc_id, fields="id").execute()
     assert meta["id"] == test_doc_id
     res = drive.comments().list(fileId=test_doc_id, fields="comments(id)").execute()
     assert len(res.get("comments", [])) >= 3
-
-
-def test_lifting_the_guard_really_lifts_it(unguarded_drive, test_doc_id, oauth_only):
-    """The only honest way to prove allow_document_edits does what it says.
-
-    A rename is attempted and reverted. It must NOT raise PermissionError,
-    because the guard is not installed. Whether Google permits it is beside the
-    point: the assertion is that gdoc stopped refusing.
-    """
-    original = unguarded_drive.files().get(fileId=test_doc_id, fields="name").execute()["name"]
-    try:
-        unguarded_drive.files().update(
-            fileId=test_doc_id, body={"name": original + " PROBE"}
-        ).execute()
-    except PermissionError:
-        pytest.fail("the guard was still installed with allow_document_edits true")
-    except HttpError:
-        return  # Google refused, which is fine. gdoc did not.
-    unguarded_drive.files().update(fileId=test_doc_id, body={"name": original}).execute()
-```
-
-Also update `test_editing_the_text_is_refused` to build the Docs client off the guarded transport rather than the raw credentials, so it exercises the guard when one is installed:
-
-```python
-def test_editing_the_text_is_refused(drive, test_doc_id):
-    """Refused either way, and the Docs API is not named in the allowlist."""
-    from googleapiclient.discovery import build
-
-    docs = build("docs", "v1", http=drive._http, cache_discovery=False)
-    try:
-        docs.documents().batchUpdate(
-            documentId=test_doc_id,
-            body={"requests": [{"insertText": {"location": {"index": 1}, "text": "PROBE"}}]},
-        ).execute()
-    except PermissionError as error:
-        assert "allow_document_edits" in str(error)
-        return
-    except HttpError as error:
-        assert error.resp.status in (403, 404), f"unexpected status: {error}"
-        return
-    pytest.fail("the text insert succeeded, so the guarantee does not hold")
 ```
 
 - [ ] **Step 3: Run the integration suite**
 
 Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_access_integration.py -v -m integration`
 
-Expected: with `auth_mode` still `service_account` in Nail's live config, the three `service_account_only` tests run and pass, and the four `oauth_only` tests skip with a reason. Nothing fails.
+Expected: with `auth_mode` still `service_account` in Nail's live config, the service account tests run and pass, and the six `oauth_only` tests skip with a reason. Nothing fails.
 
 If the live config has no `auth_mode` key, the fixture reports `oauth`, the OAuth cases run, and they need a token. If there is no token yet, the whole file errors on the `drive` fixture. That is expected before Task 11's setup, and it is why this task is late in the order. Record the result either way and move on.
+
+**Note on `test_google_says_the_agent_cannot_edit`:** it may already be building its Docs client from raw credentials rather than from `drive._http`. Leave it. Under `service_account_only` the enforcer is Google, and how the client was built does not change what Google answers.
 
 - [ ] **Step 4: Run the whole suite**
 
@@ -2520,16 +2775,19 @@ Expected: PASS, with skips reported
 
 ```bash
 git add tests/conftest.py tests/test_access_integration.py
-git commit -m "test: split the cannot-edit suite by who enforces it
+git commit -m "test: split the access suite by what each mode guarantees
 
-Under a service account Google refuses. Under OAuth the guard refuses,
-before the request leaves the process, including on the Docs API which the
-allowlist never names. A separate case lifts the guard and asserts gdoc
-stops refusing, which is the only honest way to test the flag."
+Under a service account Google refuses every write, and those assertions
+are unchanged. Under OAuth nothing external refuses, so the guarantee is a
+different one and the tests say so: a document the client was not built for
+is unreachable, files.list is refused, and sharing is refused even on the
+allowed file.
+
+No test attempts an edit on the test document. Under OAuth that would
+succeed, and succeeding means editing a real document."
 ```
 
 ---
-
 ## Task 11: The documents, install.sh, and the skills
 
 Nothing here changes behaviour, and all of it is load-bearing: the README's central claim is now mode-dependent, and both skills tell Claude things that stopped being true.
@@ -2598,18 +2856,24 @@ There are two credentials, and `auth_mode` in the config picks one.
 **`oauth`** (the default) authorises you in a browser. No document has to be
 shared with anything first: the agent reaches whatever you can reach. Drive has
 no scope that reads comments and writes replies without full Drive access, so
-this credential could edit a document. `gdoc/guard.py` is what stops it: every
-request goes through an allowlist that permits creating a file, a comment or a
-reply, and refuses every other write. Set `allow_document_edits` to true to lift
-it.
+this credential holds more than the tool needs. `gdoc/guard.py` narrows it back
+down. Every request goes through it, and it carries a request only when the file
+the request addresses is one gdoc was given or one gdoc created. Anything else
+is refused inside the process, a read included, so the tool cannot see a
+document you did not point it at and cannot search your Drive at all.
 
 **`service_account`** is the original. Give the service account address
 **Commenter** access on a document, and Google itself refuses every edit. No
 browser, no token to refresh, one sharing step per document.
 
-Either way the shape of the tool is the same: replies go in comment threads, and
+The difference worth knowing: under `service_account` the tool *cannot* edit a
+reviewed document, because Google will not let it. Under `oauth` it *does not*,
+because no code in it does. The guard bounds which files are reachable; it does
+not bound what happens inside one.
+
+Either way the shape of the tool is the same. Replies go in comment threads, and
 document-wide changes are applied to a paired markdown file and published as a
-new version. The reviewed document is never edited.
+new version.
 ```
 
 In the `## Configure` section, replace the file list:
@@ -2657,21 +2921,81 @@ In the `## Use` section, add `--all` under the direct CLI list:
 gdoc read <url> --all                   # every unresolved comment, not only marked ones
 ```
 
-- [ ] **Step 4: CLAUDE.md**
+- [ ] **Step 4: PRINCIPLES.md**
+
+The three principles are untouched. One dated decision is retired and one is
+added. Retired entries stay, marked retired, with the reason, which is the
+file's own rule.
+
+Replace the `**2026-08-13. The credential is Commenter-only.**` entry with:
+
+```markdown
+**2026-08-13. The credential is Commenter-only.** *Retired 2026-08-15.* It
+enforced the decision above by permission rather than by discipline, and it was
+Google's to enforce. OAuth has no scope that reads comments and writes replies
+without full Drive access, so keeping this would have meant keeping the sharing
+step forever. Replaced by the decision below.
+
+**2026-08-15. The client reaches only the files it was given.** Serves principle
+3. Under OAuth the credential can reach every file Nail owns, so `gdoc/guard.py`
+holds a set of file ids, the ones the command was handed plus the ones its own
+creates returned, and refuses every request addressing anything else. An empty
+set refuses everything, so a command that does not name a document reaches
+nothing.
+
+The cost is stated rather than hidden: on a file in the set, every method is
+permitted, including an edit to a reviewed document. "The agent cannot edit a
+reviewed document" becomes "it does not". Nothing in gdoc edits one, and the
+markdown-is-the-source decision above is now held up by design rather than by
+permission. `tests/test_guard.py` and `tests/test_guard_is_installed.py` are
+what keep it honest.
+```
+
+Then, in the `### Open violations` section, delete the entry about
+`gdoc/export.py` hardcoding pandoc's path if `main` has already fixed it. Check
+first with `grep -n "opt/homebrew" gdoc/export.py`; the parallel branch it names
+merged on 2026-08-15.
+
+- [ ] **Step 5: CLAUDE.md**
 
 In the `## Never` section, replace the first bullet:
 
 ```markdown
 - Never edit a reviewed Google Doc. Under `service_account` the credential
-  cannot. Under `oauth` it could, and `gdoc/guard.py` is what stops it. Never
-  widen that allowlist to make something work.
+  cannot. Under `oauth` it could: `gdoc/guard.py` bounds which files are
+  reachable, not what may be done inside one. Nothing in gdoc edits a document,
+  and nothing may start.
 ```
 
 Add to the `## What lives where` table, after the `gdoc/` row:
 
 ```markdown
-| `gdoc/guard.py` | the write allowlist. It carries the cannot-edit promise under OAuth |
+| `gdoc/guard.py` | the reachable set. Which files a client may touch, under either credential |
 | `gdoc/marker.py` | the `[gdoc]` label on gdoc's own replies |
+```
+
+Add a new section after "No external programs":
+
+```markdown
+## The client reaches only the files it was given
+
+Principle 3, and the decision dated 2026-08-15. Read it there.
+
+In code: `drive_service(doc_ids=...)` wraps the transport in
+`gdoc.guard.GuardedHttp`, which carries a request only when the file it
+addresses is in its set. The set is seeded from the CLI, where `read`, `reply`,
+`export` and `capture` each pass the document they were pointed at, and grows
+only when a create the guard itself carried comes back with an id. `generate`
+starts with an empty set and works entirely off that second door.
+
+Two rules an agent is likely to break:
+
+- The set has exactly two doors. Never add a third, and never widen it to make
+  a test pass. A refused call means the command did not say which document it
+  was for.
+- `gdoc/auth.py` is the only module that may call `build()`.
+  `tests/test_guard_is_installed.py` enforces it, as an allowlist: it fails if
+  the call spreads, and it fails if it moves.
 ```
 
 Add a new section after "The tool must work without git":
@@ -2689,7 +3013,7 @@ only: threads the service account answered before the marker existed carry no
 marker, and dropping it would answer them twice.
 ```
 
-- [ ] **Step 5: skills/gdoc-review/SKILL.md**
+- [ ] **Step 6: skills/gdoc-review/SKILL.md**
 
 Four edits.
 
@@ -2761,7 +3085,7 @@ Replace the first `Never` line, which says the credential cannot edit:
   Under oauth gdoc's own guard refuses, and neither may you.
 ```
 
-- [ ] **Step 6: skills/gdoc-apply/SKILL.md**
+- [ ] **Step 7: skills/gdoc-apply/SKILL.md**
 
 One edit. This skill does not learn to read comments here. That is
 `2026-08-14-gdoc-apply-drains-design.md` and it lands after this branch.
@@ -2774,23 +3098,28 @@ In Step 2, replace the first numbered item:
    line; say the author is not recorded rather than guessing.
 ```
 
-- [ ] **Step 7: Verify the docs against the code**
+- [ ] **Step 8: Verify the docs against the code**
 
-Run: `grep -rn "service account address\|the credential cannot\|Nail asked" README.md CLAUDE.md skills/`
-Expected: no hits except the deliberate contrast phrasing inside the new README and CLAUDE.md text. Any other hit is a stale claim, so fix it.
+Run: `grep -rn "service account address\|the credential cannot\|Nail asked" README.md CLAUDE.md PRINCIPLES.md skills/`
+Expected: no hits except the deliberate contrast phrasing inside the new README, PRINCIPLES.md and CLAUDE.md text. Any other hit is a stale claim, so fix it.
+
+Run: `grep -rn "Commenter-only\|cannot edit" README.md CLAUDE.md PRINCIPLES.md`
+Expected: every hit either sits under the retired 2026-08-13 decision or is scoped to `service_account`. An unqualified claim that the tool cannot edit a document is now false and must be fixed.
 
 Run: `~/.config/gdoc-agent/venv/bin/pytest -q`
 Expected: PASS
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add install.sh README.md CLAUDE.md skills/gdoc-review/SKILL.md skills/gdoc-apply/SKILL.md
-git commit -m "docs: describe both credentials and who enforces the edit limit
+git add install.sh README.md CLAUDE.md PRINCIPLES.md skills/gdoc-review/SKILL.md skills/gdoc-apply/SKILL.md
+git commit -m "docs: describe both credentials, and what each one guarantees
 
 The README's central claim was that the credential cannot edit a document.
-That is still true, but under oauth it is gdoc/guard.py that makes it true,
-not Google, and the difference matters to anyone reading the code.
+Under oauth that stops being true, and saying it anyway would be the worst
+outcome. What holds instead is the reachable set: the client sees only the
+file it was given. The README, CLAUDE.md and PRINCIPLES.md all say so, and
+the Commenter-only decision is retired rather than quietly dropped.
 
 Both skills gain what changed: the [gdoc] marker, all-comments mode, and the
 author line gdoc-apply now shows when it presents an item.
@@ -2811,8 +3140,14 @@ Expected: PASS, total coverage at or above 80 percent. If `pytest-cov` is not in
 
 - [ ] **Step 2: Confirm the guard cannot be bypassed by an import**
 
+Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_guard_is_installed.py -v`
+Expected: PASS. `gdoc/auth.py` is the only module calling `build()`.
+
 Run: `grep -rn "credentials=" gdoc/`
 Expected: only `gdoc/auth.py`, inside `load_service_account_credentials` and `drive_service`'s own parameter. If any other module builds a client with `credentials=`, it bypasses the guard. Route it through `drive_service`.
+
+Run: `grep -rn "drive_service(" gdoc/cli.py`
+Expected: every call passes `doc_ids`, except `cmd_generate`, which has no input document and learns its ids from its own creates.
 
 - [ ] **Step 3: Confirm identity is not a gate anywhere**
 
@@ -2831,6 +3166,8 @@ Expected: the help text lists `--all`.
 
 Say which mode the live config is in, whether the integration suite ran or skipped, and the coverage number. Do not claim the OAuth path works end to end until `gdoc auth login` has actually run against a real client file.
 
+Say plainly that the cannot-edit promise changed shape, and that `PRINCIPLES.md` records it. That is the part of this branch Nail has to agree with, and it must not arrive buried in a list of passing tests.
+
 ---
 
 ## Self-Review
@@ -2840,7 +3177,7 @@ Say which mode the live config is in, whether the integration suite ran or skipp
 | Spec section | Task |
 |---|---|
 | 4, credentials, `oauth.py`, `auth.py` dispatch | 5, 6 |
-| 5, the write guard | 4, wired in 6, proven in 10 |
+| 5, the guard | 4, wired into auth and the CLI in 6, proven in 10 |
 | 6, the marker and identity | 1, 2 |
 | 7, all-comments mode | 9, skill in 11 |
 | 8, what reaches gdoc-apply, the review-then-apply check, the item format | 8, skill in 11 |
@@ -2864,7 +3201,8 @@ Say which mode the live config is in, whether the integration suite ran or skipp
 - `partition(threads, include_unmarked=False)` is defined in Task 9 and called with that keyword in Task 9's tests only.
 - `oauth.load(scopes, token_path=None)` is defined in Task 5 and called as `oauth.load(SCOPES)` in Task 6.
 - `oauth.login(scopes, client_path=None, token_path=None)` is defined in Task 5 and called with those keywords in Task 7.
-- `drive_service(credentials=None, allow_document_edits=None)` is defined in Task 6 and used with `allow_document_edits=True` by the `unguarded_drive` fixture in Task 10.
+- `drive_service(credentials=None, doc_ids=())` is defined in Task 6, called with `doc_ids=` from four places in `cli.py`, and used by the `drive` fixture in Task 10.
+- `guard.verdict(method, uri, allowed)` returns `CARRY`, `LEARN` or `REFUSE`, all three defined in Task 4 and imported by that task's tests only. `GuardedHttp(inner, allowed)` exposes `.allowed` as a frozenset, read by Task 6's tests.
 - `DEFAULT_AUTH_MODE` is defined in Task 3 and imported by Task 6.
 - `load_service_account_credentials` is introduced in Task 6, and Task 6's step 5 checks no other caller expects the old behaviour of `load_credentials`.
 
