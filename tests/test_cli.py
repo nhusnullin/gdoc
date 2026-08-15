@@ -951,3 +951,65 @@ def test_a_thread_with_no_replies_carries_an_empty_list(capsys):
         capsys, ["read", "https://docs.google.com/document/d/1AbC/edit"], [_MARKED]
     )
     assert payload["addressed"][0]["replies"] == []
+
+
+# ---------------------------------------------------------------------------
+# Every command tells the guard which file it may touch
+#
+# The guard is only as good as its seed. These assert the wire between the CLI
+# and drive_service, which is the one place the id is actually chosen. Without
+# them, dropping `doc_ids=` from a command is a silent, live-only regression.
+# ---------------------------------------------------------------------------
+
+DOC_URL = "https://docs.google.com/document/d/1AbCdEf/edit"
+
+
+def test_read_builds_a_client_scoped_to_the_document():
+    with patch("gdoc.cli.drive_service") as drive_service, patch(
+        "gdoc.cli.fetch_threads", return_value=()
+    ), patch("gdoc.cli._file_meta", return_value={"name": "doc"}):
+        main(["read", DOC_URL])
+    assert drive_service.call_args.kwargs["doc_ids"] == "1AbCdEf"
+
+
+def test_reply_builds_a_client_scoped_to_the_document(tmp_path):
+    body = tmp_path / "body.txt"
+    body.write_text("Plain answer.")
+    with patch("gdoc.cli.drive_service") as drive_service, patch(
+        "gdoc.cli.post_reply", return_value="r1"
+    ):
+        main(["reply", DOC_URL, "c1", "--body-file", str(body)])
+    assert drive_service.call_args.kwargs["doc_ids"] == "1AbCdEf"
+
+
+def test_export_builds_a_client_scoped_to_the_document():
+    with patch("gdoc.cli.drive_service") as drive_service, patch(
+        "gdoc.cli.export_markdown", return_value="# doc"
+    ):
+        main(["export", DOC_URL])
+    assert drive_service.call_args.kwargs["doc_ids"] == "1AbCdEf"
+
+
+def test_capture_builds_a_client_scoped_to_the_document(tmp_path):
+    """capture extracted the id after building the client once. It must not."""
+    with patch("gdoc.cli.drive_service") as drive_service, patch(
+        "gdoc.cli.fetch_threads", return_value=()
+    ):
+        main(["capture", DOC_URL, "c1", "--repo-root", str(tmp_path)])
+    assert drive_service.call_args.kwargs["doc_ids"] == "1AbCdEf"
+
+
+def test_generate_scopes_its_client_to_the_output_folder(tmp_path):
+    """generate has no input document. The folder is the file it was given."""
+    from gdoc.config import Config
+    from gdoc.generate import Result
+
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: A note\n---\n\nBody.\n")
+    with patch("gdoc.cli.load_config", return_value=Config(output_folder_id="0AFolder")), patch(
+        "gdoc.cli.drive_service"
+    ) as drive_service, patch(
+        "gdoc.cli.generate", return_value=Result(docx_path=tmp_path / "o.docx")
+    ):
+        main(["generate", "--md", str(md), "--out", str(tmp_path / "o.docx")])
+    assert drive_service.call_args.kwargs["doc_ids"] == ["0AFolder"]
