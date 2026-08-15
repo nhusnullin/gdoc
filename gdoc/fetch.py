@@ -10,11 +10,14 @@ FIELDS = (
 )
 
 
-def fetch_threads(drive, doc_id: str) -> tuple[Thread, ...]:
+def fetch_threads(drive, doc_id: str, me_is_agent: bool = True) -> tuple[Thread, ...]:
     """Page through comments.list.
 
     fields is mandatory on this endpoint, and nextPageToken has to be inside it
     or pagination silently stops after the first page.
+
+    me_is_agent is passed straight to parse_thread. See it there: under oauth
+    Drive's `me` is Nail, not gdoc.
     """
     collected: list[Thread] = []
     page_token = None
@@ -30,7 +33,9 @@ def fetch_threads(drive, doc_id: str) -> tuple[Thread, ...]:
             )
             .execute()
         )
-        collected.extend(parse_thread(raw) for raw in response.get("comments") or ())
+        collected.extend(
+            parse_thread(raw, me_is_agent) for raw in response.get("comments") or ()
+        )
         page_token = response.get("nextPageToken")
         if not page_token:
             return tuple(collected)

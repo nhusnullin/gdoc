@@ -148,3 +148,40 @@ def test_replies_carry_their_author_name():
 def test_a_reply_with_no_author_block_is_unknown():
     raw = {**MARKED_REPLY, "replies": [{"id": "r1", "content": "hi"}]}
     assert parse_thread(raw).replies[0].author_name == "unknown"
+
+
+def test_me_only_marks_the_agent_when_the_credential_is_the_agent():
+    """Under oauth `me` is Nail, so it must not be read as gdoc."""
+    raw = {
+        **MARKED_REPLY,
+        "replies": [
+            {
+                "id": "r1",
+                "content": "one more thought",
+                "author": {"displayName": "Nail Khusnullin", "me": True},
+            }
+        ],
+    }
+    assert parse_thread(raw, me_is_agent=False).replies[0].by_agent is False
+    assert parse_thread(raw, me_is_agent=False).has_agent_reply is False
+    assert parse_thread(raw, me_is_agent=True).replies[0].by_agent is True
+
+
+def test_the_marker_still_answers_a_thread_when_me_is_not_the_agent():
+    raw = {
+        **MARKED_REPLY,
+        "replies": [
+            {
+                "id": "r1",
+                "content": "Captured as item 2.\n\n[gdoc]",
+                "author": {"displayName": "Nail Khusnullin", "me": True},
+            }
+        ],
+    }
+    assert parse_thread(raw, me_is_agent=False).has_agent_reply is True
+
+
+def test_the_thread_author_me_flag_follows_the_same_rule():
+    raw = {**MARKED_REPLY, "author": {"displayName": "Nail Khusnullin", "me": True}}
+    assert parse_thread(raw, me_is_agent=False).by_agent is False
+    assert parse_thread(raw, me_is_agent=True).by_agent is True

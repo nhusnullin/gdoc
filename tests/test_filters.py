@@ -1,5 +1,5 @@
 from gdoc.filters import forced_kind, needs_action, partition
-from gdoc.model import Reply, Thread
+from gdoc.model import Reply, Thread, parse_thread
 
 ME = "Nail Khusnullin"
 
@@ -153,3 +153,32 @@ def test_all_mode_shows_a_thread_gdoc_already_answered():
 def test_default_mode_is_unchanged_by_the_new_argument():
     threads = (thread(content="ai: rephrase"), thread(content="This reads oddly"))
     assert partition(threads) == partition(threads, include_unmarked=False)
+
+
+def test_a_reply_nail_typed_himself_does_not_count_as_gdocs():
+    """Under oauth, Drive marks Nail's own reply `me`.
+
+    Reading that as gdoc would drop the thread into `skipped` on every run,
+    forever. The legacy argument for keeping `me` does not rescue it either: a
+    thread the service account answered has `me` false when Nail's token reads
+    it, so under oauth `me` buys nothing and costs real threads.
+
+    The fix lives in parse_thread, which is why this goes through it: by_agent
+    now means "gdoc wrote it", not "the credential wrote it".
+    """
+    raw = {
+        "id": "t1",
+        "content": "ai? does this need a Consumer Duty ref",
+        "author": {"displayName": "Nail Khusnullin", "me": True},
+        "resolved": False,
+        "replies": [
+            {
+                "id": "r1",
+                "content": "and check the FCA handbook ref",
+                "author": {"displayName": "Nail Khusnullin", "me": True},
+            }
+        ],
+    }
+    assert needs_action(parse_thread(raw, me_is_agent=False)) is True
+    # Under the service account the same shape does mean gdoc answered.
+    assert needs_action(parse_thread(raw, me_is_agent=True)) is False

@@ -97,10 +97,26 @@ def _file_meta(drive, doc_id: str) -> dict:
     )
 
 
+def _configured_mode() -> str:
+    try:
+        return load_config().auth_mode
+    except (FileNotFoundError, ValueError):
+        return "oauth"
+
+
+def _me_is_agent() -> bool:
+    """Whether Drive's `me` flag identifies gdoc rather than the person.
+
+    True under the service account, false under oauth, where the credential is
+    Nail and his own replies would otherwise read as gdoc's.
+    """
+    return _configured_mode() == "service_account"
+
+
 def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
     drive = drive_service(doc_ids=doc_id)
-    threads = fetch_threads(drive, doc_id)
+    threads = fetch_threads(drive, doc_id, me_is_agent=_me_is_agent())
     addressed, skipped = partition(threads, include_unmarked=args.all)
     meta = _file_meta(drive, doc_id)
     return _emit(
@@ -144,7 +160,9 @@ def cmd_capture(args) -> int:
     doc_id = extract_doc_id(args.doc)
     drive = drive_service(doc_ids=doc_id)
     repo_root = Path(args.repo_root)
-    threads = {t.id: t for t in fetch_threads(drive, doc_id)}
+    threads = {
+        t.id: t for t in fetch_threads(drive, doc_id, me_is_agent=_me_is_agent())
+    }
     thread = threads.get(args.comment_id)
     if thread is None:
         return _fail(f"comment {args.comment_id} not found on {doc_id}")
@@ -365,13 +383,6 @@ def cmd_auth_login(args) -> int:
             "token_path": str(args.token or oauth.DEFAULT_TOKEN_PATH),
         }
     )
-
-
-def _configured_mode() -> str:
-    try:
-        return load_config().auth_mode
-    except (FileNotFoundError, ValueError):
-        return "oauth"
 
 
 def cmd_auth_status(args) -> int:
