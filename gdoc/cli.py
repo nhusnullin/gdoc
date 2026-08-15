@@ -33,7 +33,7 @@ from gdoc.pairing import (
     write_pairing,
 )
 from gdoc.pending import append_item, pending_path, recorded_source
-from gdoc.render import profiles
+from gdoc.render import frontmatter, profiles
 from gdoc.reply import post_reply
 
 
@@ -54,7 +54,12 @@ def _emit(payload: dict) -> int:
 
 
 def _fail(message: str) -> int:
-    print(json.dumps({"error": message}, indent=2))
+    return _fail_with({"error": message})
+
+
+def _fail_with(payload: dict) -> int:
+    """Fail with more than a message, for a refusal a caller can act on."""
+    print(json.dumps(payload, indent=2))
     return 1
 
 
@@ -179,23 +184,27 @@ def cmd_generate(args) -> int:
     template = args.template or config.template
     master = None if template == profiles.NO_TEMPLATE else template
     md_path = Path(args.md)
-    name = args.name or _version_name(md_path, master)
-    drive = drive_service()
-    result = generate(
-        drive,
-        md_path,
-        name,
-        Path(args.out),
-        folder_id=args.folder_id or config.output_folder_id,
-        template=master,
-    )
+    try:
+        name = args.name or _version_name(md_path, master, args.title)
+        drive = drive_service()
+        result = generate(
+            drive,
+            md_path,
+            name,
+            Path(args.out),
+            folder_id=args.folder_id or config.output_folder_id,
+            template=master,
+            title=args.title,
+        )
+    except frontmatter.MissingTitle as error:
+        return _fail_with(_missing_title(error, md_path))
     payload = {k: (str(v) if isinstance(v, Path) else v) for k, v in asdict(result).items()}
     if args.baseline_root and result.doc_id:
         payload["baseline_path"] = str(_write_baseline_for(drive, args, result.doc_id))
     return _emit(payload)
 
 
-def _version_name(md_path: Path, template: str | None) -> str:
+def _version_name(md_path: Path, template: str | None, title: str | None = None) -> str:
     """'<cover title> v<n>'. n is the recorded version count plus one.
 
     An unpaired note has no recorded versions, so it gets v1. With no template
@@ -206,7 +215,27 @@ def _version_name(md_path: Path, template: str | None) -> str:
     number = len(pairing.versions) + 1 if pairing else 1
     if template is None:
         return f"{md_path.stem} v{number}"
-    return f"{render.meta_for(md_path)['cover_title']} v{number}"
+    return f"{render.meta_for(md_path, title=title)['cover_title']} v{number}"
+
+
+def _missing_title(error: frontmatter.MissingTitle, md_path: Path) -> dict:
+    """The refusal payload. It names the file, a candidate, and the ways out.
+
+    The candidate is a suggestion for a human to approve, never a title the tool
+    uses. Nothing here writes anything into the note.
+    """
+    return {
+        "error": str(error),
+        "missing": "title",
+        "md": str(md_path),
+        "suggested_title": error.candidate,
+        "suggested_from": error.source,
+        "hint": (
+            "Add 'title: <the approved title>' to the front matter of the note, "
+            "or pass --title to publish once without editing it, "
+            "or --template none to publish without the house style"
+        ),
+    }
 
 
 def _write_baseline_for(drive, args, doc_id: str) -> Path:
@@ -329,6 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--out", required=True)
     gen.add_argument("--folder-id")
     gen.add_argument("--template", help="profile name, path, or 'none' for plain pandoc")
+    gen.add_argument("--title", help="cover title for this run, without editing the note")
     gen.add_argument(
         "--baseline-root", help="write the new document's baseline under this directory"
     )

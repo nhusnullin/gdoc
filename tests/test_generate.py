@@ -118,6 +118,22 @@ def test_generate_renders_through_the_template_when_one_is_given(tmp_path):
 
 
 @pytest.mark.slow
+def test_a_title_override_publishes_a_note_that_has_none(tmp_path):
+    """Without the override the build would refuse, because the note has no title."""
+    md = tmp_path / "2026-08-12-miguel-kickoff-call.md"
+    original = "---\ngdoc: 1abc\n---\n\n# Section one\n\nBody.\n"
+    md.write_text(original)
+    drive = _drive()
+    with patch("gdoc.generate.pagination.from_pdf", return_value={"Section one": 3}):
+        result = generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE, title="Kickoff Notes",
+        )
+    assert result.doc_id == "1New"
+    assert md.read_text() == original
+
+
+@pytest.mark.slow
 def test_the_first_pass_document_is_trashed(tmp_path):
     """The blank-page-number upload exists only to be measured. It must not linger."""
     md = tmp_path / "in.md"

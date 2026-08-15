@@ -330,22 +330,83 @@ def test_the_template_argument_beats_the_config(capsys, tmp_path):
     assert fake.call_args.args[2] == "Kickoff Notes v1"
 
 
-def test_generate_reports_a_missing_title_as_a_json_error(capsys, tmp_path):
-    """A file with no title cannot be named, and guessing one would be worse."""
+def _run_generate_on(tmp_path, name, text, extra=()):
+    """Run generate on a named file, with Drive and the generator stubbed."""
     from gdoc.config import Config
     from gdoc.generate import Result
 
-    md = tmp_path / "note.md"
-    md.write_text("Body with no front matter.\n")
+    md = tmp_path / name
+    md.write_text(text)
     with patch("gdoc.cli.drive_service"), patch(
         "gdoc.cli.load_config", return_value=Config(output_folder_id="0AF")
     ), patch("gdoc.cli.generate") as fake_generate:
         fake_generate.return_value = Result(docx_path=tmp_path / "v1.docx", doc_id="1New")
-        exit_code = main(["generate", "--md", str(md), "--out", str(tmp_path / "v1.docx")])
+        exit_code = main(
+            ["generate", "--md", str(md), "--out", str(tmp_path / "v1.docx"), *extra]
+        )
+    return exit_code, fake_generate, md
+
+
+_UNTITLED = "---\ngdoc: 1abc\n---\n\n# Miguel kickoff call\n\nBody.\n"
+
+
+def test_generate_refuses_a_note_with_no_title_and_suggests_one(capsys, tmp_path):
+    """Half the live notes have gdoc: and no title:. The refusal has to be usable."""
+    exit_code, fake_generate, md = _run_generate_on(
+        tmp_path, "2026-08-12-miguel-kickoff-call.md", _UNTITLED
+    )
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
-    assert "front matter" in payload["error"]
+    assert payload["missing"] == "title"
+    assert payload["suggested_title"] == "Miguel kickoff call"
+    assert payload["suggested_from"] == "h1"
+    assert payload["md"] == str(md)
+    assert "--title" in payload["hint"]
     fake_generate.assert_not_called()
+
+
+def test_the_suggestion_falls_back_to_the_file_name(capsys, tmp_path):
+    exit_code, _fake, _md = _run_generate_on(
+        tmp_path, "2026-08-12-miguel-kickoff-call.md", "---\ngdoc: 1abc\n---\n\nProse only.\n"
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert payload["suggested_title"] == "Miguel kickoff call"
+    assert payload["suggested_from"] == "filename"
+
+
+def test_the_title_flag_publishes_without_touching_the_note(capsys, tmp_path):
+    """The approved title can be used once before anyone edits the file."""
+    exit_code, fake_generate, md = _run_generate_on(
+        tmp_path,
+        "2026-08-12-miguel-kickoff-call.md",
+        _UNTITLED,
+        extra=("--title", "Kickoff Notes"),
+    )
+    capsys.readouterr()
+    assert exit_code == 0
+    assert fake_generate.call_args.args[2] == "Kickoff Notes v1"
+    assert fake_generate.call_args.kwargs["title"] == "Kickoff Notes"
+    assert md.read_text() == _UNTITLED
+
+
+def test_a_missing_title_found_during_the_build_is_reported_the_same_way(capsys, tmp_path):
+    """With --name given, nothing parses the front matter until the build does."""
+    from gdoc.config import Config
+    from gdoc.render.frontmatter import MissingTitle
+
+    md = tmp_path / "2026-08-12-miguel-kickoff-call.md"
+    md.write_text(_UNTITLED)
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.load_config", return_value=Config(output_folder_id="0AF")
+    ), patch("gdoc.cli.generate", side_effect=MissingTitle("Miguel kickoff call", "h1")):
+        exit_code = main(
+            ["generate", "--md", str(md), "--name", "X v1", "--out", str(tmp_path / "v1.docx")]
+        )
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert payload["missing"] == "title"
+    assert payload["suggested_title"] == "Miguel kickoff call"
 
 
 # ---------------------------------------------------------------------------
