@@ -70,6 +70,25 @@ Nail. So every `ai:` comment Nail writes would be read as written by the agent
 and skipped, and `gdoc read` would return an empty `addressed` list on every
 document. OAuth cannot ship without fixing this.
 
+**Amended 2026-08-15, after review.** The first draft dropped `by_agent` from
+`needs_action` but kept it inside `has_agent_reply`, on the grounds that it
+covered threads the service account answered before the marker existed. That
+reasoning was wrong under OAuth, and the error was the same one the section
+above describes.
+
+A thread the service account answered has `me` **false** when Nail's token
+reads it, because `me` means "the requester wrote this". So under OAuth
+`by_agent` provides no legacy coverage at all. What it does provide is a false
+positive on every reply Nail types himself, which makes `has_agent_reply` true
+and drops that thread into `skipped` on every future run, permanently.
+
+The fix is that `me` only identifies gdoc when the credential is gdoc.
+`parse_thread(raw, me_is_agent)` takes the answer, `fetch_threads` passes it,
+and the CLI derives it from `auth_mode`. Under `service_account` nothing
+changes and the legacy coverage still works. Under `oauth`, `by_agent` is
+always false and the marker carries idempotence alone, which is what the marker
+was added for.
+
 ## 3. Decisions
 
 | Question | Decision |
@@ -233,6 +252,7 @@ Method is never consulted, except to tell a create from a listing.
 | path carries a file id, and the id is not allowed | refused |
 | `POST /drive/v3/files`, `POST /upload/drive/v3/files` | carried, and the new id is learned |
 | `GET /drive/v3/files` | refused. This is `files.list` |
+| any path with a `.` or `..` segment | refused. See "Matching" |
 | `POST`, `PATCH`, `DELETE` on `.../permissions` | refused, on every file, allowed or not |
 | `POST /batch/...` | refused. The ids live in the body, not the path |
 | `GET /discovery/...`, `GET /drive/v3/about` | carried. No file is involved |
@@ -255,6 +275,28 @@ regardless, which `tests/test_access_integration.py` records.
 The host is matched, not only the path, so a path shape on an unexpected host
 does not pass. The query string is ignored, so `fields` and `uploadType` cannot
 change a verdict. The method is upper-cased before use.
+
+Two things found in review on 2026-08-15, both of which let the guard read a
+different request than the one the server acts on:
+
+**Dot segments are refused, not resolved.** Google normalises `..` and answers
+302 to the normalised path, and httplib2 follows that redirect inside the
+transport the guard wraps. Verified live: `/drive/v3/files/{a}/../{b}` and its
+`%2e%2e` form both redirect to `/drive/v3/files/{b}`. So the file the guard
+reads out of the path is not the file the server acts on. Any `.` or `..`
+segment, encoded or not, is refused. gdoc never builds one, so refusing costs
+nothing, and resolving would mean trusting that our normalisation matches
+Google's exactly.
+
+The practical exploit was blunted: the redirect loses the Authorization header,
+so the follow-up returned 403 rather than the document. That is httplib2's
+behaviour rather than a guarantee, and the promise "refuses every request
+addressing anything else" was false either way.
+
+**The method override is honoured.** `googleapiclient` rewrites a GET whose URI
+exceeds `MAX_URI_LENGTH` as a POST carrying `x-http-method-override: GET`. The
+server acts on the override, so the guard must too. Without this, an over-long
+`files.list` arrives as `POST /drive/v3/files` and reads as a create.
 
 File ids are read from three path shapes:
 
