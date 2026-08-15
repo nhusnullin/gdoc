@@ -9,6 +9,8 @@ description = "Review Google Doc comments from the terminal and mirror docs to m
 requires-python = ">=3.11"
 dependencies = [
     "google-auth",
+    "google-auth-oauthlib",
+    "google-auth-httplib2",
     "google-api-python-client",
     "PyYAML",
     "python-docx>=1.1",
