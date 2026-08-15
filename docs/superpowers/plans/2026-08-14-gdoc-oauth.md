@@ -1075,27 +1075,34 @@ class GuardedHttp:
 
     def _refuse(self, method, uri):
         path = urlsplit(uri).path
-        named = file_id(uri) or "no file"
+        named = file_id(uri)
+        if named:
+            why = f"{named} is not a file it was given"
+        else:
+            why = "that request names no single file"
         raise PermissionError(
             f"gdoc refused {(method or 'GET').upper()} {path}. "
-            f"It reaches only the document it was given, and {named} is not it."
+            f"It reaches only the files it was given, and {why}."
         )
 
     def _learn(self, response, content):
         """Add the id a create came back with.
 
-        Never raises. A body that is not JSON, or carries no id, teaches
-        nothing, and the next call on that file is refused. That is the safe
-        direction: a stray temporary file beats a widened set.
+        Never raises, and the except is broad for that reason. A body that is
+        not JSON, a response object shaped unlike httplib2's, or a create that
+        failed all teach nothing, and the next call on that file is refused.
+        That is the safe direction: a stray temporary file beats a widened set.
         """
-        status = str(getattr(response, "status", None) or response.get("status", ""))
-        if not status.startswith("2"):
-            return
         try:
+            status = getattr(response, "status", None)
+            if status is None and hasattr(response, "get"):
+                status = response.get("status")
+            if not str(status or "").startswith("2"):
+                return
             created = json.loads(content)
-        except (ValueError, TypeError):
+            new_id = created.get("id") if isinstance(created, dict) else None
+        except Exception:  # noqa: BLE001 - see the docstring
             return
-        new_id = created.get("id") if isinstance(created, dict) else None
         if new_id:
             self.allowed = self.allowed | {new_id}
 
@@ -1106,7 +1113,7 @@ class GuardedHttp:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_guard.py -v`
-Expected: PASS, 52 tests
+Expected: PASS, 54 tests
 
 - [ ] **Step 5: Commit**
 

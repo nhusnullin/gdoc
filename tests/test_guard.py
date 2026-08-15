@@ -301,3 +301,24 @@ def test_learning_does_not_mutate_the_set_it_was_given():
     http.request(f"{DRIVE}/files", method="POST")
     assert given == frozenset({MINE})
     assert http.allowed == frozenset({MINE, "1FreshlyCreated"})
+
+
+def test_a_create_whose_response_is_a_strange_object_teaches_nothing():
+    """_learn promises it never raises, so it must survive an odd transport."""
+
+    class OddHttp:
+        def request(self, uri, method="GET", **kwargs):
+            return (object(), b'{"id": "1Whatever"}')
+
+    http = GuardedHttp(OddHttp(), frozenset())
+    http.request(f"{DRIVE}/files", method="POST")
+    assert http.allowed == frozenset()
+
+
+def test_the_refusal_reads_clearly_when_no_file_was_named():
+    http, _ = guarded()
+    with pytest.raises(PermissionError) as excinfo:
+        http.request(f"{DRIVE}/files?q=title", method="GET")
+    message = str(excinfo.value)
+    assert "no file" not in message
+    assert "names no single file" in message
