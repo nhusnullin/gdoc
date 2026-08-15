@@ -322,3 +322,90 @@ def test_the_refusal_reads_clearly_when_no_file_was_named():
     message = str(excinfo.value)
     assert "no file" not in message
     assert "names no single file" in message
+
+
+# --- the path the server acts on, not the one we were handed --------------
+#
+# Google normalises dot segments and answers 302 to the normalised path, and
+# httplib2 follows that redirect inside the inner transport where the guard
+# cannot see it. Verified live on 2026-08-15:
+#
+#   GET /drive/v3/files/{mine}/../{yours}   -> 302 Location: .../files/{yours}
+#   GET /drive/v3/files/{mine}/%2e%2e/{yours} -> the same
+#
+# So a path the guard reads as one file can be a request for another. Any dot
+# segment is refused rather than resolved: gdoc never builds one.
+
+
+def test_a_dot_dot_segment_is_refused_even_when_it_names_an_allowed_file():
+    assert verdict("GET", f"{DRIVE}/files/{MINE}/../{YOURS}", ALLOWED) == REFUSE
+
+
+def test_a_percent_encoded_dot_dot_segment_is_refused():
+    assert verdict("GET", f"{DRIVE}/files/{MINE}/%2e%2e/{YOURS}", ALLOWED) == REFUSE
+
+
+def test_an_upper_case_percent_encoded_dot_dot_is_refused():
+    assert verdict("GET", f"{DRIVE}/files/{MINE}/%2E%2E/{YOURS}", ALLOWED) == REFUSE
+
+
+def test_a_single_dot_segment_is_refused():
+    assert verdict("GET", f"{DRIVE}/files/{MINE}/./comments", ALLOWED) == REFUSE
+
+
+def test_dot_segments_cannot_smuggle_a_read_past_a_no_file_path():
+    """The discovery allowance was the widest door in the rule."""
+    uri = "https://www.googleapis.com/discovery/v1/../../drive/v3/files/1abc"
+    assert verdict("GET", uri, frozenset()) == REFUSE
+
+
+def test_a_file_id_that_is_literally_dot_dot_is_refused():
+    assert verdict("GET", f"{DRIVE}/files/..", ALLOWED) == REFUSE
+
+
+# --- the method override --------------------------------------------------
+#
+# googleapiclient turns a GET whose URI is over MAX_URI_LENGTH into a POST
+# carrying x-http-method-override: GET. Without this, an over-long files.list
+# would arrive as POST /drive/v3/files and be read as a create.
+
+
+def test_an_overridden_method_decides_the_verdict():
+    http, inner = guarded()
+    with pytest.raises(PermissionError):
+        http.request(
+            f"{DRIVE}/files",
+            method="POST",
+            headers={"x-http-method-override": "GET"},
+        )
+    assert inner.calls == []
+
+
+def test_the_override_header_is_matched_whatever_its_case():
+    http, inner = guarded()
+    with pytest.raises(PermissionError):
+        http.request(
+            f"{DRIVE}/files",
+            method="POST",
+            headers={"X-HTTP-Method-Override": "GET"},
+        )
+    assert inner.calls == []
+
+
+def test_a_real_create_is_still_carried_and_learned():
+    """The override guard must not break the create path."""
+    body = json.dumps({"id": "1FreshlyCreated"}).encode()
+    http, _ = guarded(allowed=frozenset(), body=body)
+    http.request(f"{DRIVE}/files", method="POST", headers={"content-type": "application/json"})
+    assert http.allowed == frozenset({"1FreshlyCreated"})
+
+
+# --- proxying -------------------------------------------------------------
+
+
+def test_copying_the_transport_does_not_recurse():
+    """__getattr__ must not consult a half-built instance for _inner."""
+    import copy
+
+    http, _ = guarded()
+    assert copy.copy(http) is not None

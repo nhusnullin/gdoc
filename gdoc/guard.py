@@ -18,7 +18,7 @@ call sites knowing it exists.
 
 import json
 import re
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 CARRY = "carry"
 LEARN = "learn"
@@ -53,6 +53,28 @@ _NO_FILE_PATHS = (
 _FORBIDDEN_PATH = re.compile(r"/permissions(/|$)")
 _READ_METHODS = frozenset({"GET", "HEAD"})
 
+# googleapiclient turns a GET whose URI is over MAX_URI_LENGTH into a POST
+# carrying this header. The server acts on the override, so the guard must too,
+# or an over-long files.list arrives as POST /drive/v3/files and reads as a
+# create.
+_OVERRIDE_HEADER = "x-http-method-override"
+
+
+def _has_dot_segment(path: str) -> bool:
+    """True when the path contains a . or .. segment, encoded or not.
+
+    Google normalises these and answers 302 to the normalised path, and
+    httplib2 follows that redirect inside the transport the guard wraps. So the
+    file the guard reads out of the path is not the file the server acts on.
+    Verified live on 2026-08-15: both /files/{a}/../{b} and its %2e%2e form
+    redirect to /files/{b}.
+
+    They are refused rather than resolved. gdoc never builds such a path, so
+    there is nothing to lose by refusing, and resolving would mean trusting
+    that our normalisation matches Google's exactly.
+    """
+    return any(segment in (".", "..") for segment in unquote(path).split("/"))
+
 
 def file_id(uri: str) -> str | None:
     """The file a request addresses, or None when it names none.
@@ -66,6 +88,18 @@ def file_id(uri: str) -> str | None:
         if found:
             return found.group(1)
     return None
+
+
+def effective_method(method: str, headers=None) -> str:
+    """The method the server will act on.
+
+    An override header wins, because that is what googleapiclient sets when it
+    rewrites a long GET as a POST, and what the server honours.
+    """
+    for name, value in (headers or {}).items():
+        if name.lower() == _OVERRIDE_HEADER and value:
+            return str(value).upper()
+    return (method or "GET").upper()
 
 
 def verdict(method: str, uri: str, allowed) -> str:
@@ -84,6 +118,8 @@ def verdict(method: str, uri: str, allowed) -> str:
     if split.hostname not in (_DRIVE_HOST, _DOCS_HOST):
         return REFUSE
     path = split.path
+    if _has_dot_segment(path):
+        return REFUSE
     if _FORBIDDEN_PATH.search(path) and method not in _READ_METHODS:
         return REFUSE
     named = file_id(uri)
@@ -123,7 +159,7 @@ class GuardedHttp:
         connection_type=None,
         **kwargs,
     ):
-        decision = verdict(method, uri, self.allowed)
+        decision = verdict(effective_method(method, headers), uri, self.allowed)
         if decision == REFUSE:
             self._refuse(method, uri)
         response, content = self._inner.request(
@@ -173,4 +209,14 @@ class GuardedHttp:
             self.allowed = self.allowed | {new_id}
 
     def __getattr__(self, name):
-        return getattr(self._inner, name)
+        """Proxy everything else to the wrapped transport.
+
+        _inner is fetched through the instance dict rather than self._inner,
+        because on a half-built instance, one being copied for example, the
+        attribute is absent and self._inner would call this method again.
+        """
+        try:
+            inner = object.__getattribute__(self, "_inner")
+        except AttributeError:
+            raise AttributeError(name) from None
+        return getattr(inner, name)
