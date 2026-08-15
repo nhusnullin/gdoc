@@ -83,7 +83,7 @@ def _file_meta(drive, doc_id: str) -> dict:
 
 def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
-    drive = drive_service()
+    drive = drive_service(doc_ids=doc_id)
     threads = fetch_threads(drive, doc_id)
     addressed, skipped = partition(threads)
     meta = _file_meta(drive, doc_id)
@@ -101,7 +101,7 @@ def cmd_read(args) -> int:
 def cmd_reply(args) -> int:
     doc_id = extract_doc_id(args.doc)
     body = Path(args.body_file).read_text()
-    reply_id = post_reply(drive_service(), doc_id, args.comment_id, body)
+    reply_id = post_reply(drive_service(doc_ids=doc_id), doc_id, args.comment_id, body)
     return _emit({"reply_id": reply_id, "comment_id": args.comment_id})
 
 
@@ -112,7 +112,7 @@ def cmd_export(args) -> int:
     because the point is to pipe it into diff.
     """
     doc_id = extract_doc_id(args.url)
-    markdown = export_markdown(drive_service(), doc_id)
+    markdown = export_markdown(drive_service(doc_ids=doc_id), doc_id)
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -123,8 +123,9 @@ def cmd_export(args) -> int:
 
 
 def cmd_capture(args) -> int:
-    drive = drive_service()
+    # The id first: the client is built to reach this document and no other.
     doc_id = extract_doc_id(args.doc)
+    drive = drive_service(doc_ids=doc_id)
     repo_root = Path(args.repo_root)
     threads = {t.id: t for t in fetch_threads(drive, doc_id)}
     thread = threads.get(args.comment_id)
@@ -184,15 +185,18 @@ def cmd_generate(args) -> int:
     template = args.template or config.template
     master = None if template == profiles.NO_TEMPLATE else template
     md_path = Path(args.md)
+    folder_id = args.folder_id or config.output_folder_id
     try:
         name = args.name or _version_name(md_path, master, args.title)
-        drive = drive_service()
+        # No input document. The output folder is the one file this command was
+        # given; every other id it touches is one it created.
+        drive = drive_service(doc_ids=[folder_id] if folder_id else ())
         result = generate(
             drive,
             md_path,
             name,
             Path(args.out),
-            folder_id=args.folder_id or config.output_folder_id,
+            folder_id=folder_id,
             template=master,
             title=args.title,
         )
