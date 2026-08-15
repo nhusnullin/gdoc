@@ -13,7 +13,7 @@ from pathlib import Path
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
-from gdoc.export import DOCX_MIME, PANDOC
+from gdoc.export import DOCX_MIME, find_pandoc
 
 GOOGLE_DOC_MIME = "application/vnd.google-apps.document"
 
@@ -29,7 +29,7 @@ class Result:
 def md_to_docx(md_path: Path, out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        [PANDOC, str(md_path), "-o", str(out_path)],
+        [find_pandoc(), str(md_path), "-o", str(out_path)],
         check=True,
         capture_output=True,
         text=True,
