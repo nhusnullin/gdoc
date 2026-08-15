@@ -3,12 +3,17 @@
 One markdown file per document. The comment id is written into each item so a
 re-run can tell that an item is already captured, which matters because the
 in-thread reply is the only other record and Nail may resolve it.
+
+Each item records the author and the marker the comment carried. The marker is
+what decides that a comment is work, and the author is a label beside it, so
+neither can be assumed from the other.
 """
 
 import re
 from pathlib import Path
 
 from gdoc.baseline import GDOC_DIR
+from gdoc.filters import forced_kind, is_addressed
 from gdoc.model import Thread
 
 _ITEM_HEADING = re.compile(r"^## Item (\d+)", re.MULTILINE)
@@ -28,12 +33,30 @@ _ITEM = """
 
 - Captured: {today}
 - Comment id: {comment_id}
+- Author: {author}
 - Anchored to: {anchor}
+- Marked: {marked}
 
-Nail asked:
+The comment:
 
 {request}
 """
+
+_MARKER_LABELS = {"question": "ai?", "instruction": "ai!"}
+
+
+def _marked_label(content: str) -> str:
+    """What the comment's marker said, for Nail's eyes rather than a rule.
+
+    An all-comments pass can capture a comment nobody marked, and a later
+    session should be able to tell that apart from an explicit instruction. Both
+    are applied the same way.
+
+    The older @ai form reports as ai:, because it carries no sign.
+    """
+    if not is_addressed(content):
+        return "no marker"
+    return _MARKER_LABELS.get(forced_kind(content), "ai:")
 
 
 def pending_path(repo_root: Path, slug: str) -> Path:
@@ -83,7 +106,9 @@ def append_item(
         number=number,
         today=today,
         comment_id=thread.id,
+        author=thread.author_name,
         anchor=anchor,
+        marked=_marked_label(thread.content),
         request=quoted_request,
     )
 
