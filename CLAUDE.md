@@ -14,6 +14,8 @@ only.
 | Path | Holds |
 |---|---|
 | `gdoc/` | the package. Imports are `from gdoc.x import y` |
+| `gdoc/guard.py` | the reachable set. Which files a client may touch, under either credential |
+| `gdoc/marker.py` | the `[gdoc]` label on gdoc's own replies |
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
@@ -88,6 +90,37 @@ creates real documents.
 numbers blank. Any desktop refresh fills them in, and a wrong number would be
 worse than a blank one.
 
+## The client reaches only the files it was given
+
+Principle 3, and the decision dated 2026-08-15. Read it there.
+
+In code: `drive_service(doc_ids=...)` wraps the transport in
+`gdoc.guard.GuardedHttp`, which carries a request only when the file it
+addresses is in its set. The set is seeded from the CLI, where `read`, `reply`,
+`export` and `capture` each pass the document they were pointed at and
+`generate` passes the output folder, and it grows only when a create the guard
+itself carried comes back with an id.
+
+Two rules an agent is likely to break:
+
+- The set has exactly two doors, the ids passed in and the ids learned from a
+  create. Never add a third, and never widen it to make a test pass. A refused
+  call usually means the command did not say which document it was for.
+- `gdoc/auth.py` is the only module that may call `build()`.
+  `tests/test_guard_is_installed.py` enforces it, as an allowlist: it fails if
+  the call spreads, and it fails if it moves.
+
+## Identity is never a gate
+
+Drive's `author.me` means the service account under `auth_mode: service_account`
+and Nail under `oauth`. Nothing may branch on it to decide whether a comment is
+work: that would skip every comment Nail writes. The marker decides.
+
+`[gdoc]` on the last line of a reply is how gdoc recognises its own replies.
+`Reply.by_agent`, which is `me`, is kept in `has_agent_reply` for one reason
+only: threads the service account answered before the marker existed carry no
+marker, and dropping it would answer them twice.
+
 ## Skills are linked, not copied
 
 `~/.claude/skills/gdoc-review` and `gdoc-apply` are symlinks into `skills/` in
@@ -119,7 +152,10 @@ Never make a test pass by loosening an assertion about what the credential can d
 
 ## Never
 
-- Never edit a reviewed Google Doc. The credential cannot, and neither may the agent.
+- Never edit a reviewed Google Doc. Under `service_account` the credential
+  cannot. Under `oauth` it could: `gdoc/guard.py` bounds which files are
+  reachable, not what may be done inside one. Nothing in gdoc edits a document,
+  and nothing may start.
 - Never commit anything from `~/.config/gdoc-agent/`.
 - Never post markdown into a comment thread. The CLI refuses it for a reason.
 

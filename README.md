@@ -4,8 +4,27 @@ Review Google Doc comments from the terminal. The agent answers the `ai:`
 comments in their threads, captures the ones that need document-wide changes,
 and fetches a document as markdown so you can see what drifted.
 
-The credential is a service account with **Commenter** access. It cannot edit a
-document, and that limit is the design: replies go in comment threads, and
+There are two credentials, and `auth_mode` in the config picks one.
+
+**`oauth`** (the default) authorises you in a browser. No document has to be
+shared with anything first: the agent reaches whatever you can reach. Drive has
+no scope that reads comments and writes replies without full Drive access, so
+this credential holds more than the tool needs. `gdoc/guard.py` narrows it back
+down. Every request goes through it, and it carries a request only when the file
+the request addresses is one gdoc was given or one gdoc created. Anything else
+is refused inside the process, a read included, so the tool cannot see a
+document you did not point it at and cannot search your Drive at all.
+
+**`service_account`** is the original. Give the service account address
+**Commenter** access on a document, and Google itself refuses every edit. No
+browser, no token to refresh, one sharing step per document.
+
+The difference worth knowing: under `service_account` the tool *cannot* edit a
+reviewed document, because Google will not let it. Under `oauth` it *does not*,
+because no code in it does. The guard bounds which files are reachable; it does
+not bound what happens inside one.
+
+Either way the shape of the tool is the same. Replies go in comment threads, and
 document-wide changes are applied to a paired markdown file and published as a
 new version.
 
@@ -22,6 +41,11 @@ The author name is a label, not a gate. A marked comment from anyone on the
 document is acted on, and Nail chooses the document: pointing the skill at it is
 the trust decision. The name still travels in the payload, so an unexpected one
 is visible in the report.
+
+Under `oauth` this stops being a preference. Drive reports the credential as the
+author of everything you write, so an author check would skip every comment you
+leave yourself. gdoc recognises its own replies by the `[gdoc]` line it writes
+on the last line of each one, never by who posted it.
 
 There was a `display_name` config field that split the list into Nail's comments
 and everyone else's. It is gone. Drive returns no email address for comment
@@ -54,14 +78,39 @@ the working tree is dirty, so you can tell what you are actually running.
 
 ## Configure
 
-Two files, both outside this repo, neither in git:
+Files outside this repo, none of them in git:
 
-- `~/.config/gdoc-agent/sa-key.json` — the service account key.
-- `~/.config/gdoc-agent/config.json` — settings, including the key path and the
+- `~/.config/gdoc-agent/config.json`: settings, including `auth_mode` and the
   Drive folder new versions are written to.
+- `~/.config/gdoc-agent/oauth-client.json`: a Desktop OAuth client from Google
+  Cloud. Needed by `auth_mode: oauth`.
+- `~/.config/gdoc-agent/oauth-token.json`: written by `gdoc auth login`, mode
+  `0600`. Never edit it by hand.
+- `~/.config/gdoc-agent/sa-key.json`: the service account key. Needed by
+  `auth_mode: service_account`.
 
-Give the service account address Commenter access on any document you want
-reviewed.
+Under `service_account`, give the service account address Commenter access on
+any document you want reviewed. Under `oauth` there is no sharing step.
+
+### Signing in with OAuth
+
+Once, in Google Cloud, in the same project as the service account:
+
+1. Keep the Drive API enabled. It is the only API the package calls.
+2. OAuth consent screen, User type **Internal**. On External plus Testing,
+   Google expires refresh tokens after seven days and you would sign in weekly.
+3. Credentials, OAuth client ID, Application type **Desktop app**. Save the JSON
+   to `~/.config/gdoc-agent/oauth-client.json`.
+
+Then:
+
+```bash
+gdoc auth login     # a browser opens, approve
+gdoc auth status    # confirm the account
+gdoc auth logout    # delete the local token
+```
+
+`auth status` never fails. Reporting a broken credential is its job.
 
 ## Use
 
@@ -80,6 +129,7 @@ Direct CLI use:
 
 ```bash
 gdoc read <url>
+gdoc read <url> --all                   # every unresolved comment, not only marked
 gdoc reply <doc_id> <comment_id> --body-file reply.txt
 gdoc capture <doc_id> <comment_id>
 gdoc export <url>                       # markdown to stdout
@@ -142,7 +192,7 @@ file name:
 ```json
 {
   "missing": "title",
-  "suggested_title": "Miguel kickoff call — 2026-08-12",
+  "suggested_title": "Miguel kickoff call, 2026-08-12",
   "suggested_from": "h1"
 }
 ```

@@ -74,9 +74,26 @@ Domain choice, no principle above it. Document-wide changes are applied to the
 paired markdown and republished as a new version. Replies go in comment threads,
 because a thread is comment surface and not content.
 
-**2026-08-13. The credential is Commenter-only.** Enforces the decision above by
-permission rather than by discipline. Taking Editor access later would be a
-change to argue about, not a line that cannot be crossed.
+**2026-08-13. The credential is Commenter-only.** *Retired 2026-08-15.* It
+enforced the decision above by permission rather than by discipline, and it was
+Google's to enforce. OAuth has no scope that reads comments and writes replies
+without full Drive access, so keeping this would have meant keeping the
+per-document sharing step forever. Replaced by the decision below.
+
+**2026-08-15. The client reaches only the files it was given.** Serves principle
+3. Under OAuth the credential can reach every file the signed-in user owns, so
+`gdoc/guard.py` holds a set of file ids, the ones the command was handed plus
+the ones its own creates returned, and refuses every request addressing anything
+else. `files.list` is refused outright, so the tool cannot search Drive. An
+empty set refuses everything, so a command that does not name a document reaches
+nothing.
+
+The cost is stated rather than hidden: on a file in the set, every method is
+permitted, including an edit to a reviewed document. "The agent cannot edit a
+reviewed document" becomes "it does not". Nothing in gdoc edits one, and the
+markdown-is-the-source decision above is now held up by design rather than by
+permission. `tests/test_guard.py` and `tests/test_guard_is_installed.py` are
+what keep it honest.
 
 **2026-08-13. Only `ai:`-marked, unresolved, unanswered comments are actioned.**
 Domain choice, no principle above it. The author name is a label, not a gate. Drive returns no email address for
@@ -91,10 +108,12 @@ directory whose contents differ.
 
 ### Open violations
 
-**2026-08-15. `gdoc/export.py` hardcodes an absolute path to pandoc.** Violates
-principle 1: the path only exists on Apple Silicon with Homebrew, so `export` and
-`generate` both break on any other machine. This file is being changed in a
-parallel branch with an open PR. Reassess after that merges.
+**2026-08-15. `gdoc/export.py` hardcodes an absolute path to pandoc.**
+*Closed 2026-08-15.* The parallel branch merged. `find_pandoc` now resolves
+pandoc at call time, and the Homebrew path is a last-resort fallback rather than
+the answer. `tests/test_pandoc_path.py` covers it.
+
+None open.
 
 ## The gate
 

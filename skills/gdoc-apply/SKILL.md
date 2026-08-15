@@ -62,7 +62,10 @@ only for comparison, and it is never the file you edit.
 
 One item at a time. For each:
 
-1. Say what you are about to change and where.
+1. Say what you are about to change and where. Name the item's `Author` and
+   what it was `Marked` with, both recorded in `pending.md`. An item from
+   someone other than Nail, or one carrying `no marker`, is worth him seeing
+   before you change anything.
 2. Make the edit in the **paired markdown file**, never in `baseline.md`.
 3. Show Nail the diff for that item alone.
 4. Wait for approval before the next item.

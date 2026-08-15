@@ -72,7 +72,31 @@ done
 # --------------------------------------------------------------------------
 
 [ -f "$CONFIG_DIR/config.json" ] || warn "no $CONFIG_DIR/config.json yet. See README.md"
-[ -f "$CONFIG_DIR/sa-key.json" ] || warn "no $CONFIG_DIR/sa-key.json yet. See README.md"
+
+# Which credential to check for depends on auth_mode, which defaults to oauth.
+auth_mode="$("$VENV/bin/python" -c '
+import json
+import sys
+
+try:
+    print(json.load(open(sys.argv[1])).get("auth_mode") or "oauth")
+except Exception:
+    print("oauth")
+' "$CONFIG_DIR/config.json" 2>/dev/null || echo oauth)"
+
+case "$auth_mode" in
+    service_account)
+        [ -f "$CONFIG_DIR/sa-key.json" ] || warn "no $CONFIG_DIR/sa-key.json yet. See README.md"
+        ;;
+    *)
+        if [ ! -f "$CONFIG_DIR/oauth-client.json" ]; then
+            warn "no $CONFIG_DIR/oauth-client.json yet. See README.md, Configure"
+        elif [ ! -f "$CONFIG_DIR/oauth-token.json" ]; then
+            # Not a fault. It is the next step.
+            printf 'install: next step: gdoc auth login\n'
+        fi
+        ;;
+esac
 
 # --------------------------------------------------------------------------
 # What is installed
