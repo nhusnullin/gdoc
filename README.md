@@ -9,6 +9,10 @@ document, and that limit is the design: replies go in comment threads, and
 document-wide changes are applied to a paired markdown file and published as a
 new version.
 
+[PRINCIPLES.md](PRINCIPLES.md) holds the constraints behind these choices, and
+separates the ones that will not change from the ones that are just today's
+answer. Read it before changing anything here.
+
 ## The marker decides
 
 `gdoc read` returns one actionable list, `addressed`. A comment is in it when it
@@ -150,6 +154,7 @@ gdoc_versions:
 ## Layout
 
 ```
+PRINCIPLES.md            the constraints, and today's decisions under them
 gdoc/                    the package
 tests/                   pytest suite
 skills/                  gdoc-review and gdoc-apply, symlinked into ~/.claude/skills/

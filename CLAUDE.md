@@ -1,7 +1,13 @@
 # Notes for AI assistants
 
-Read [README.md](README.md) first. It explains what the tool does and why the
-Commenter-only credential shapes the design.
+Read [PRINCIPLES.md](PRINCIPLES.md) before proposing any design. It is three
+constraints and the decisions that currently implement them, and it is short.
+
+Read [README.md](README.md) for what the tool does and how to run it.
+
+This file holds the specifics: what lives where, what each rule means in code,
+and what never to do. The reasons live in PRINCIPLES.md, and they live there
+only.
 
 ## What lives where
 
@@ -17,22 +23,15 @@ Secrets and the venv live in `~/.config/gdoc-agent/`, never in this repo.
 
 ## One root, and it is never this repo
 
-`--repo-root` means one thing for every command: the directory the tool works in,
-`$PWD` by default. It is the tree scanned for markdown with `gdoc:` frontmatter,
+Principle 2. Read it there.
+
+In code: `--repo-root` is the tree scanned for markdown with `gdoc:` frontmatter,
 and the tree `.gdoc/` is written into. In practice it is the folder holding the
 source document, in a vault such as `Altery-Platform-Hub`.
 
-Never reintroduce a default that names a repository, and never write tool files
-into this repo. A bug here writes Altery notes into the wrong tree.
-
-The queue directory is keyed by the **source markdown file**, not the document
-title and not the document id. Both change on every iteration; the source file
-does not.
-
 ## The tool must work without git
 
-`Altery-Platform-Hub`, where the source documents live, is not a git repository
-and will not become one. This is the constraint an agent is most likely to break.
+Principles 1 and 3. This is the constraint an agent is most likely to break.
 
 - Nothing may refuse to run because git is unavailable.
 - `is_dirty` raising `BaselineConflict` is correct only when git exists and the
@@ -44,13 +43,7 @@ and will not become one. This is the constraint an agent is most likely to break
 
 ## No external programs
 
-`gdoc` runs where the source documents live, and that environment has no package
-manager. Anything that cannot be pip installed cannot be installed at all. The
-rule is scoped to `gdoc/render/`, the publish path.
-
-LibreOffice and poppler were removed for this reason. That was 833MB of programs
-that cannot be copied into an isolated environment. Three external programs
-became one.
+Principle 1. The rule is scoped to `gdoc/render/`, the publish path.
 
 pandoc remains, in three places, and each is tracked separately:
 
