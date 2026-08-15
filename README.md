@@ -130,6 +130,22 @@ keeps the old `pandoc md -o docx` path.
 `--name` is optional. Without it the new version is called
 `<cover title> v<n>`, where n is the recorded version count plus one.
 
+A note with no `title:` in its front matter is refused, because the cover and
+the running head would be blank and the tool does not invent one. The refusal
+names the file and suggests a title, taken from the first heading or from the
+file name:
+
+```json
+{
+  "missing": "title",
+  "suggested_title": "Miguel kickoff call",
+  "suggested_from": "h1"
+}
+```
+
+Add the approved title to the note, or pass `--title "..."` to publish once
+without editing it.
+
 `build` uses pandoc only as the markdown parser that feeds the template. The
 export side still uses pandoc as a markdown fallback, which is tracked
 separately.
