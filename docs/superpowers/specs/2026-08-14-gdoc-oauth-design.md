@@ -233,7 +233,7 @@ Method is never consulted, except to tell a create from a listing.
 | path carries a file id, and the id is not allowed | refused |
 | `POST /drive/v3/files`, `POST /upload/drive/v3/files` | carried, and the new id is learned |
 | `GET /drive/v3/files` | refused. This is `files.list` |
-| `POST .../{id}/permissions` | refused, on every file, allowed or not |
+| `POST`, `PATCH`, `DELETE` on `.../permissions` | refused, on every file, allowed or not |
 | `POST /batch/...` | refused. The ids live in the body, not the path |
 | `GET /discovery/...`, `GET /drive/v3/about` | carried. No file is involved |
 | anything else | refused |
@@ -244,9 +244,11 @@ Two of those rows carry weight beyond their size.
 given". gdoc never searches Drive today, so the refusal costs nothing, and a
 future command that wants to search has to come back to this section.
 
-**`permissions` is refused everywhere.** Granting other people access is a
-different kind of authority from changing a document, and the tool has no reason
-to hold it.
+**Changing `permissions` is refused everywhere.** Granting other people access
+is a different kind of authority from changing a document, and the tool has no
+reason to hold it. Reading the list is not refused: it is a read of the named
+file like any other, and under a service account Google answers it with a 403
+regardless, which `tests/test_access_integration.py` records.
 
 ### Matching
 
@@ -638,7 +640,8 @@ there.
 **`tests/test_guard.py`** (new): every method on the allowed id is carried, `GET`
 through `DELETE`, including `documents/{id}:batchUpdate`; every one of those is
 refused on a second, unnamed id, `GET` included; `files.list` is refused;
-`permissions` is refused on the allowed id; a batch POST is refused; discovery
+`writing a permission is refused on the allowed id while reading the list is
+not; a batch POST is refused; discovery
 and `about.get` are carried; a create is carried with an empty allowed set and
 its returned id is learned, so the next call on it passes; a create whose
 response is not JSON teaches nothing and does not raise; an empty allowed set

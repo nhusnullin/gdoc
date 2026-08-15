@@ -35,7 +35,7 @@ added in Task 5, both pip-installable.
 - **Scope is exactly** `["https://www.googleapis.com/auth/drive"]`, unchanged, shared by both modes. There is no narrower scope that reads comments and writes replies. Never narrow it to make a test pass.
 - **`auth_mode` accepts only** `"oauth"` and `"service_account"`. Default `"oauth"`. It is the only config key this plan adds.
 - **The marker is exactly** `[gdoc]`, on its own last line, appended at most once.
-- **The guard's allowed set may only grow through the two doors in Task 4:** the ids passed to `drive_service`, and the ids a create response returned. Never add a third. Never widen the set to make a test pass, and never relax a refusal for `files.list`, `permissions` or batch.
+- **The guard's allowed set may only grow through the two doors in Task 4:** the ids passed to `drive_service`, and the ids a create response returned. Never add a third. Never widen the set to make a test pass, and never relax a refusal for `files.list`, a permission write, or batch.
 - **The tool must work without git and without a config file.** `gdoc read` works today with no `config.json`, and it must still work after this plan. A missing config resolves to the documented defaults, never to an error.
 - **Writing style in all docs, comments and commit messages:** plain short English, and never the em dash character.
 - **Immutability.** `Config`, `Thread` and `Reply` are frozen dataclasses. Return new values, never mutate.
@@ -773,6 +773,28 @@ def test_sharing_the_named_file_is_refused():
     assert verdict("POST", f"{DRIVE}/files/{MINE}/permissions", ALLOWED) == REFUSE
 
 
+def test_revoking_access_to_the_named_file_is_refused():
+    assert verdict("DELETE", f"{DRIVE}/files/{MINE}/permissions/p1", ALLOWED) == REFUSE
+
+
+def test_changing_a_permission_on_the_named_file_is_refused():
+    assert verdict("PATCH", f"{DRIVE}/files/{MINE}/permissions/p1", ALLOWED) == REFUSE
+
+
+def test_reading_who_has_access_to_the_named_file_is_carried():
+    """A read of the named file like any other.
+
+    Under a service account Google answers this with a 403 regardless, which
+    tests/test_access_integration.py records. Refusing it here would buy
+    nothing and would hide that.
+    """
+    assert verdict("GET", f"{DRIVE}/files/{MINE}/permissions", ALLOWED) == CARRY
+
+
+def test_reading_who_has_access_to_another_file_is_still_refused():
+    assert verdict("GET", f"{DRIVE}/files/{YOURS}/permissions", ALLOWED) == REFUSE
+
+
 def test_a_batch_request_is_refused():
     """The file ids live in the body, where the guard cannot see them."""
     assert verdict("POST", "https://www.googleapis.com/batch/drive/v3", ALLOWED) == REFUSE
@@ -955,9 +977,15 @@ _NO_FILE_PATHS = (
     re.compile(r"^/drive/v3/about$"),
 )
 
-# Refused on every file, allowed or not. Granting other people access is a
-# different authority from changing a document, and gdoc has no use for it.
-_FORBIDDEN = re.compile(r"/permissions(/|$)")
+# Changing who else can reach a file is refused on every file, allowed or not.
+# Granting other people access is a different authority from changing a
+# document, and gdoc has no use for it.
+#
+# Reading the list is not refused here. It is a read of the named file like any
+# other, and under a service account Google answers it with a 403 anyway, which
+# tests/test_access_integration.py records.
+_FORBIDDEN_PATH = re.compile(r"/permissions(/|$)")
+_READ_METHODS = frozenset({"GET", "HEAD"})
 
 
 def file_id(uri: str) -> str | None:
@@ -985,16 +1013,17 @@ def verdict(method: str, uri: str, allowed) -> str:
     verdict. The host is matched, so a familiar path shape elsewhere does not
     pass.
     """
+    method = (method or "GET").upper()
     split = urlsplit(uri)
     if split.hostname not in (_DRIVE_HOST, _DOCS_HOST):
         return REFUSE
     path = split.path
-    if _FORBIDDEN.search(path):
+    if _FORBIDDEN_PATH.search(path) and method not in _READ_METHODS:
         return REFUSE
     named = file_id(uri)
     if named is not None:
         return CARRY if named in allowed else REFUSE
-    if path in _CREATE_PATHS and (method or "GET").upper() == "POST":
+    if path in _CREATE_PATHS and method == "POST":
         return LEARN
     if any(pattern.match(path) for pattern in _NO_FILE_PATHS):
         return CARRY
@@ -1077,7 +1106,7 @@ class GuardedHttp:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `~/.config/gdoc-agent/venv/bin/pytest tests/test_guard.py -v`
-Expected: PASS, 44 tests
+Expected: PASS, 52 tests
 
 - [ ] **Step 5: Commit**
 
@@ -1090,9 +1119,10 @@ to narrow that itself. The guard holds a set of file ids: the ones handed
 in, plus the ones its own creates came back with. On those, every method.
 On anything else, nothing, a read included.
 
-files.list is refused, so gdoc cannot search Drive. permissions is refused
-on every file, because granting other people access is a different
-authority. Batch is refused, because the ids live in the body.
+files.list is refused, so gdoc cannot search Drive. Writing a permission is
+refused on every file, because granting other people access is a different
+authority; reading the list is not, because that is a read like any other.
+Batch is refused, because the ids live in the body.
 
 Nothing installs the guard yet."
 ```
@@ -2727,7 +2757,12 @@ def test_reading_someone_elses_comments_is_refused(drive, other_doc_id, oauth_on
 
 
 def test_sharing_the_named_document_is_refused(drive, test_doc_id, oauth_only):
-    """Allowed file, refused anyway. Granting access is a different authority."""
+    """Allowed file, refused anyway. Granting access is a different authority.
+
+    Refused inside the process, so nothing is ever shared with anyone. If this
+    test starts failing, the next run of it publishes a real document to the
+    whole internet.
+    """
     with pytest.raises(PermissionError):
         drive.permissions().create(
             fileId=test_doc_id, body={"role": "reader", "type": "anyone"}
