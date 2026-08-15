@@ -189,6 +189,92 @@ def test_a_refused_second_upload_keeps_the_docx_and_bins_the_measuring_copy(tmp_
 
 
 @pytest.mark.slow
+def test_a_refused_first_upload_still_leaves_a_document_on_disk(tmp_path):
+    """Nothing was measured, so the document is built again with blank page numbers."""
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    drive.files().create.return_value.execute.side_effect = [HttpError(FakeResponse(403), b"{}")]
+    result = generate(
+        drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+        folder_id="0AFolder", template=TEMPLATE,
+    )
+    assert result.doc_id is None
+    assert "403" in result.reason
+    assert result.docx_path.stat().st_size > TEMPLATE_SIZE
+    drive.files().update.assert_not_called()
+
+
+@pytest.mark.slow
+def test_a_measuring_copy_that_survives_is_named_in_the_reason(tmp_path):
+    """A document nobody can find is worse than one the reason names."""
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    drive.files().update.return_value.execute.side_effect = HttpError(FakeResponse(500), b"{}")
+    with patch("gdoc.generate.pagination.from_pdf", return_value={"Section one": 3}):
+        result = generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert result.doc_id == "1New"
+    assert "1Throwaway" in result.reason
+    assert "by hand" in result.reason
+
+
+@pytest.mark.slow
+def test_a_document_that_cannot_be_read_back_is_still_reported(tmp_path):
+    """The drift check is the last step. By then the document exists, so it is reported.
+
+    The failure is a plain network error, not an HttpError: reading the document
+    back can fail in ways the Drive client never wraps.
+    """
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    with patch(
+        "gdoc.generate.pagination.from_pdf",
+        side_effect=[{"Section one": 3}, ConnectionResetError("connection reset")],
+    ):
+        result = generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert result.doc_id == "1New"
+    assert result.link.endswith("/edit")
+    assert "never checked" in result.reason
+    assert result.drift is None
+    assert drive.files().update.call_args.kwargs["fileId"] == "1Throwaway"
+
+
+@pytest.mark.slow
+def test_a_failed_second_build_bins_the_measuring_copy(tmp_path):
+    """Nothing was published, so the error stands, but the stray copy must not."""
+    from gdoc import render
+
+    md = tmp_path / "in.md"
+    md.write_text(TEMPLATED_MARKDOWN)
+    drive = _drive()
+    builds = []
+    real_build = render.build
+
+    def flaky_build(*args, **kwargs):
+        builds.append(kwargs.get("pages"))
+        if len(builds) == 2:
+            raise render.BuildError("the second build failed")
+        return real_build(*args, **kwargs)
+
+    with patch("gdoc.generate.render.build", side_effect=flaky_build), patch(
+        "gdoc.generate.pagination.from_pdf", return_value={"Section one": 3}
+    ), pytest.raises(render.BuildError):
+        generate(
+            drive, md, "Kickoff Notes v1", tmp_path / "v1.docx",
+            folder_id="0AFolder", template=TEMPLATE,
+        )
+    assert drive.files().update.call_args.kwargs["fileId"] == "1Throwaway"
+
+
+@pytest.mark.slow
 def test_an_unreadable_export_bins_the_measuring_copy_before_it_raises(tmp_path):
     """Nothing was published, so the failure must not leave a stray document behind."""
     from gdoc.render.pagination import PaginationError

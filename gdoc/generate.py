@@ -127,23 +127,21 @@ def _through_template(drive, md_path, name, out_path, folder_id, template) -> Re
             created = upload_as_gdoc(drive, out_path, name, folder_id)
         except HttpError as error:
             return _upload_refused(drive, error, folder_id, md_path, out_path, template, measured)
-        except pagination.PaginationError:
-            # Nothing was published, so bin the measuring copy before the error escapes.
+        except Exception:
+            # Nothing was published, so bin the measuring copy before the error
+            # escapes. Every failure counts, not just the two the happy path
+            # expects: a build error, a dropped connection and an expired token
+            # all strand the same document in the folder.
             _trash_measured(drive, measured)
             raise
         # The document exists from here on, so nothing below may withhold its id.
+        # The measuring copy goes first for the same reason: a drift check that
+        # blows up must not leave a second stray document behind.
+        stray = _trash_measured(drive, measured)
         moved, unchecked = _check_drift(
             drive, created["id"], scratch / "published.pdf", headings, pages
         )
-        notes = [
-            note
-            for note in (
-                _trash_measured(drive, measured),
-                unchecked,
-                _drift_note(moved) if moved else None,
-            )
-            if note
-        ]
+        notes = [note for note in (stray, unchecked, _drift_note(moved) if moved else None) if note]
 
     return Result(
         docx_path=out_path,
@@ -164,10 +162,15 @@ def _check_drift(drive, doc_id: str, pdf_path: Path, headings, pages: dict) -> t
 
     The document already exists, so a failure here is a note about a real
     document rather than a reason to hide it. Returns (drift, note).
+
+    Every failure is caught, deliberately. The export can fail with a dropped
+    connection, a timeout, a refused token or a full disk, and none of those is
+    an HttpError. Letting one escape would lose the id of a document that was
+    created, which is the one thing this module promises never to do.
     """
     try:
         published = pagination.from_pdf(_export_pdf(drive, doc_id, pdf_path), headings)
-    except (HttpError, pagination.PaginationError) as error:
+    except Exception as error:  # noqa: BLE001 - see the docstring
         return {}, (
             "the published document could not be read back, so its page numbers "
             f"were never checked against its contents list: {error}"
@@ -193,7 +196,12 @@ def _upload_refused(drive, error, folder_id, md_path, out_path, template, measur
 
 
 def _trash_measured(drive, measured: dict | None) -> str | None:
-    """Bin the measuring copy, if there is one. Returns a note when it survived."""
+    """Bin the measuring copy, if there is one. Returns a note when it survived.
+
+    Cleanup never raises. A copy that could not be binned is named in the note,
+    so the worst case is a document a human can go and delete, never a lost
+    result or a masked failure.
+    """
     if not measured:
         return None
     file_id = measured["id"]
@@ -201,10 +209,11 @@ def _trash_measured(drive, measured: dict | None) -> str | None:
         drive.files().update(
             fileId=file_id, body={"trashed": True}, supportsAllDrives=True
         ).execute()
-    except HttpError as error:
+    except Exception as error:  # noqa: BLE001 - see the docstring
+        status = getattr(getattr(error, "resp", None), "status", None) or error
         return (
             f"the measuring copy {file_id} could not be trashed "
-            f"({error.resp.status}), so delete it by hand"
+            f"({status}), so delete it by hand"
         )
     return None
 
