@@ -13,17 +13,24 @@ you edit. A principle you argue about first.
 ## 1. It runs on someone else's machine
 
 The CLI and the skills get distributed. Some of those machines are isolated
-environments. Every dependency is one more thing that has to already be there,
-and a missing one is not a degraded tool, it is a tool that does not run.
+environments with no package manager. Every dependency is one more thing that has
+to already be there, and a missing one is not a degraded tool, it is a tool that
+does not run.
+
+The line that decides: **a dependency pip can install travels with the tool. A
+program pip cannot install does not.** That is why PyYAML is fine and LibreOffice
+is not.
 
 So:
 
-- Prefer the standard library. Three pure-Python dependencies is the current
-  budget, and it is a budget.
-- A new third-party package needs a stated reason in the spec that adds it.
-- An external binary is the most expensive kind of dependency. It must degrade
-  with a clear message, never crash, and never be found at a hardcoded absolute
-  path.
+- A new third-party package still needs a stated reason in the spec that adds it.
+  Six today.
+- An external program is the expensive kind. LibreOffice and poppler were removed
+  for this reason, 833MB that cannot be copied into an isolated environment.
+  `tests/test_no_external_programs.py` enforces this for `gdoc/render/`, the
+  publish path, as an allowlist rather than a ban.
+- pandoc is the one that remains, tracked in three places. It must degrade with a
+  clear message, never crash, and never be found at a hardcoded absolute path.
 - git is a dependency the tool does not have. The vault holding the source
   documents is not a git repository and will not become one. Nothing refuses to
   run for lack of git, and a step skipped because git is absent is always said
