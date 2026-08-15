@@ -138,13 +138,17 @@ file name:
 ```json
 {
   "missing": "title",
-  "suggested_title": "Miguel kickoff call",
+  "suggested_title": "Miguel kickoff call — 2026-08-12",
   "suggested_from": "h1"
 }
 ```
 
-Add the approved title to the note, or pass `--title "..."` to publish once
-without editing it.
+The candidate is copied from the note exactly as written, punctuation and all,
+because a suggestion the tool has quietly reworded is no longer the author's
+own words.
+
+The suggestion is a proposal, never a decision. Get it approved, then add the
+title to the note, or pass `--title "..."` to publish once without editing it.
 
 `build` uses pandoc only as the markdown parser that feeds the template. The
 export side still uses pandoc as a markdown fallback, which is tracked

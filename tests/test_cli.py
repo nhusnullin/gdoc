@@ -362,6 +362,10 @@ def test_generate_refuses_a_note_with_no_title_and_suggests_one(capsys, tmp_path
     assert payload["suggested_from"] == "h1"
     assert payload["md"] == str(md)
     assert "--title" in payload["hint"]
+    # The suggestion is Nail's to approve. Without this the hint reads as
+    # permission to use the candidate, which is what the refusal exists to stop.
+    assert "approve" in payload["hint"]
+    assert "Nail" in payload["hint"]
     fake_generate.assert_not_called()
 
 

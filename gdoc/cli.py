@@ -231,9 +231,10 @@ def _missing_title(error: frontmatter.MissingTitle, md_path: Path) -> dict:
         "suggested_title": error.candidate,
         "suggested_from": error.source,
         "hint": (
-            "Add 'title: <the approved title>' to the front matter of the note, "
-            "or pass --title to publish once without editing it, "
-            "or --template none to publish without the house style"
+            "Ask Nail to approve a title before using this suggestion, then add "
+            "'title: <the approved title>' to the front matter of the note or pass "
+            "it with --title to publish once without editing the note. "
+            "--template none publishes without the house style and needs no title"
         ),
     }
 
