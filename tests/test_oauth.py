@@ -245,3 +245,27 @@ def test_account_survives_a_reply_with_no_user_block():
     drive = MagicMock()
     drive.about().get.return_value.execute.return_value = {}
     assert oauth.account(drive) == {}
+
+
+def test_a_token_file_that_is_not_an_object_does_not_crash(tmp_path):
+    """json.loads succeeds on any JSON value, so .get is not always there.
+
+    A list, a bare null or a string all parse. The refusal must still be the
+    friendly one naming `gdoc auth login`, not an AttributeError, which
+    cli.main does not catch and which loses the hint.
+    """
+    for content in ("[1, 2]", "null", '"a string"', "3"):
+        path = tmp_path / "token.json"
+        path.write_text(content)
+        with pytest.raises((PermissionError, ValueError)) as excinfo:
+            oauth.load(SCOPES, token_path=path)
+        assert "gdoc auth login" in str(excinfo.value)
+
+
+def test_an_unreadable_token_file_does_not_crash(tmp_path):
+    """A directory where the token should be still has to answer politely."""
+    path = tmp_path / "token.json"
+    path.mkdir()
+    with pytest.raises((PermissionError, ValueError, OSError)) as excinfo:
+        oauth.load(SCOPES, token_path=path)
+    assert "gdoc auth login" in str(excinfo.value)

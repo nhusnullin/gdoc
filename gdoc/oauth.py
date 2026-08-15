@@ -49,10 +49,19 @@ def _stored_scopes(path: Path) -> set[str] | None:
     Read from the file rather than the Credentials object, because
     from_authorized_user_file reports back the scopes it was asked for, not the
     ones the token actually carries.
+
+    Anything unreadable answers None, which means "the file does not say" and
+    leaves the refusal to the parse below. json.loads succeeds on any JSON
+    value, so a file holding a list or a bare null parses fine and then has no
+    .get; and the path may be unreadable, or a directory. None of those may
+    escape as an AttributeError or an OSError, because the caller's message is
+    the one that names `gdoc auth login`.
     """
     try:
         data = json.loads(path.read_text())
-    except ValueError:
+    except (ValueError, OSError):
+        return None
+    if not isinstance(data, dict):
         return None
     scopes = data.get("scopes")
     return set(scopes) if isinstance(scopes, list) else None
@@ -106,7 +115,11 @@ def load(scopes, token_path=None) -> Credentials:
         credentials = Credentials.from_authorized_user_file(
             str(token_path), list(scopes)
         )
-    except ValueError as error:
+    except (ValueError, AttributeError, TypeError, OSError) as error:
+        # Everything a bad token file can throw, turned into the one message
+        # that names the fix. json.loads accepts any JSON value, so a file
+        # holding a list or a bare null gets past the parse and then fails on
+        # attribute access; and the path may be unreadable or a directory.
         raise PermissionError(
             f"the token at {token_path} cannot be used ({error}). {LOGIN}"
         ) from error
