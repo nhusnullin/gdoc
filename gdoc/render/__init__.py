@@ -56,19 +56,28 @@ def default_output(meta: dict, source: Path) -> Path:
     return source.resolve().parent / f"{date_prefix}-{stem}.docx"
 
 
-def drop_title_heading(body_markdown: str, title: str) -> str:
+def drop_title_heading(body_markdown: str, title: str, cover_title: str | None = None) -> str:
     """Remove a leading H1 that repeats the title.
 
     Without this the title prints twice, once on the cover and again above the
     first paragraph. Keyed on the text matching, so it also helps a hand-written
     front matter whose title repeats the note's own heading.
+
+    Matches either the raw front matter title or the cover title, because
+    cover_title can append doc_type ("Third Party and Outsourcing" becomes
+    "Third Party and Outsourcing Policy" on the cover) and a user copying what
+    they see on the cover types the longer form. Where there is no doc_type
+    the two strings are identical and this changes nothing.
     """
+    candidates = {title.strip()}
+    if cover_title:
+        candidates.add(cover_title.strip())
     lines = body_markdown.splitlines()
     for index, line in enumerate(lines):
         if not line.strip():
             continue
         match = frontmatter.H1_RE.match(line)
-        if match and match.group(1).strip() == title.strip():
+        if match and match.group(1).strip() in candidates:
             return "\n".join(lines[index + 1:]).lstrip("\n")
         return body_markdown
     return body_markdown
@@ -105,7 +114,7 @@ def build(
     meta, body_markdown = frontmatter.parse(
         markdown_text, title_override=title, source_name=source_path.name
     )
-    body_markdown = drop_title_heading(body_markdown, meta["title"])
+    body_markdown = drop_title_heading(body_markdown, meta["title"], meta["cover_title"])
     if not body_markdown.strip():
         raise BuildError("the file has front matter but no body content")
 

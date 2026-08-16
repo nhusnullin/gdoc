@@ -55,3 +55,28 @@ def test_only_the_first_heading_is_considered():
 
     body = "Intro line.\n\n# Kickoff Notes\n\nMore.\n"
     assert drop_title_heading(body, "Kickoff Notes") == body
+
+
+def test_a_heading_matching_the_raw_title_is_dropped_even_with_a_different_cover_title():
+    """The form that already worked must keep working once cover_title is added."""
+    from gdoc.render import drop_title_heading
+
+    body = "# Kickoff Notes\n\nFirst paragraph.\n"
+    result = drop_title_heading(body, "Kickoff Notes", "Kickoff Notes Policy")
+    assert result.strip() == "First paragraph."
+
+
+def test_a_heading_matching_the_cover_title_is_dropped():
+    """A user typing what the cover shows, title plus doc_type, is a duplicate too."""
+    from gdoc.render import drop_title_heading
+
+    body = "# Kickoff Notes Policy\n\nFirst paragraph.\n"
+    result = drop_title_heading(body, "Kickoff Notes", "Kickoff Notes Policy")
+    assert result.strip() == "First paragraph."
+
+
+def test_a_heading_matching_neither_form_stays():
+    from gdoc.render import drop_title_heading
+
+    body = "# Background\n\nFirst paragraph.\n"
+    assert drop_title_heading(body, "Kickoff Notes", "Kickoff Notes Policy") == body
