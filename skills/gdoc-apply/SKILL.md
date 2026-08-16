@@ -94,10 +94,17 @@ document corresponds to a commit.
 ## Step 4: Generate the new version
 
 ```bash
-$GDOC generate --md <paired md file> --name "<doc name> v<n>" \
+$GDOC generate --md <paired md file> \
   --out "$ROOT/.gdoc/<slug>/out/v<n>.docx" \
   --baseline-root "$ROOT"
 ```
+
+No `--name`. The tool names the version `<cover title> v<n>` itself, counting the
+versions already recorded in the note. A name you write can only disagree with
+that count.
+
+The `<n>` in `--out` is a local file name and nothing else. Read the current
+count with `$GDOC pair show --md <paired md file>` and add one.
 
 `--out` is chosen by intent:
 
@@ -110,37 +117,96 @@ $GDOC generate --md <paired md file> --name "<doc name> v<n>" \
 This step generates a new version, so it uses the first row. The `.docx` is an
 upload intermediate and stays out of sight.
 
-`--baseline-root` is what makes the next apply able to see direct edits. On a
-successful upload the new document is exported and written to
-`.gdoc/<slug>/baseline.md`, replacing the previous version's snapshot. The JSON
-reports the path as `baseline_path`.
+`--baseline-root` does two things, and the next apply needs both. On a successful
+upload the new document is exported into `.gdoc/<slug>/baseline.md`, replacing
+the previous version's snapshot, reported as `baseline_path`. It also records the
+new version in the note's `gdoc_versions`, reported as `version`.
 
-Two outcomes, both fine:
+**Do not run `$GDOC pair add-version` after this.** The generate above already
+recorded the version. `add-version` does not check for duplicates, so a second
+call records the same document twice and the next version is numbered one too
+high. That command is for repairing a pairing by hand, nothing else.
 
-- `doc_id` and `link` present: the new Google Doc exists. Give Nail the link.
-- `doc_id` null and a `reason`: the `.docx` is on disk at `docx_path`. Give him
-  that path and the reason. No baseline is written, because there is no document
-  to compare against. Do not retry silently.
+### Which template
 
-## Step 5: Record the version
+`--template` defaults to the house style named in the config, so leave it off for
+anything Nail will share. It gives the document a cover, the control tables and a
+contents list.
 
-If `doc_id` was null in Step 4, skip this step and go to Step 6. There is no
-version to record.
+`--template none` makes a plain document with none of those: no cover, no control
+tables, no contents list. Use it only when Nail asks for a plain document.
 
-```bash
-$GDOC pair add-version --md <paired md file> \
-  --version-id <new doc_id> --created <YYYY-MM-DD>
-```
+### The title
 
-Then commit the updated frontmatter, again only inside a repository:
+The house style needs a `title` in the note's front matter. It fills the cover
+and the running head, and the version name is built from it. `--template none`
+needs no title, because there is no cover to put one on.
 
-```bash
-(cd "$ROOT" && git add <paired md file> && git commit -m "docs: record <doc name> v<n> in gdoc_versions")
-```
+`--title "<text>"` sets the cover title for this run alone. It writes nothing
+into the note, so the next run without it asks again.
 
-Never record a version for a document that failed to upload.
+### The four outcomes
 
-## Step 6: Clear the items
+Read the JSON. `doc_id` decides whether a document exists. Nothing else does.
+
+| Outcome | How you tell | What you do |
+|---|---|---|
+| Published | `doc_id` and `link` are set, `drift` and `reason` are null | Give Nail the link. Carry on. |
+| Published, with a warning | `doc_id` is set, and one of `drift`, `reason`, `baseline_error`, `pairing_error` says something | Give him the link first, then say what did not get recorded. |
+| Nothing created | `doc_id` is null and `reason` says why | Give him `docx_path` and the reason. Do not retry silently. |
+| Missing title | exit 1, a top-level `error`, with `missing`, `md`, `suggested_title`, `suggested_from` and `hint` | Stop and ask Nail. See below. |
+
+`drift` and `reason` are always in the JSON, and are null when there is nothing
+to say. `baseline_error` and `pairing_error` appear only when that write failed.
+
+**Published, with a warning.** The document is real. Do not read a warning as a
+failure and skip ahead, and do not bury the link under it. Give the link, then
+say plainly what each key means:
+
+| Key | What it means |
+|---|---|
+| `drift` | the page numbers in the contents list disagree with the document, as `{heading: [written, published]}`. Tell him to check the contents page before sharing it |
+| `reason` | a note about a document that was still created, such as a measuring copy left in the Drive folder for him to delete |
+| `baseline_error` | `.gdoc/<slug>/baseline.md` still describes the previous version, so the next apply cannot see direct edits |
+| `pairing_error` | the version is missing from `gdoc_versions`, so the next version reuses this one's number |
+
+**Missing title.** Stop there. Nothing is written and nothing is published until
+Nail picks a title.
+
+`suggested_title` is mechanical. It is the first `# heading` in the note, or,
+failing that, the file name with a leading date stripped and the hyphens and
+underscores turned into spaces. `suggested_from` says which: `h1` or `filename`.
+The tool has never read the note, so a filename suggestion is a file name wearing
+a title's clothes.
+
+You have read the note. Reading it and proposing a better title is your job, so
+do it: a kickoff note about ASV assessment scope should be called that, not
+called after its file.
+
+Give Nail three options, numbered, and wait:
+
+1. **What the tool extracted:** `<suggested_title>`, from `<suggested_from>`.
+2. **What you propose from the content:** your title, with one line saying what
+   in the note it came from.
+3. **One he types himself.**
+
+Label options 1 and 2 as what they are. They are different kinds of answer, and
+he should see both before choosing. Never choose for him, whichever you prefer.
+The title goes on the cover of a document other people read, and every version is
+named after it.
+
+Once he picks, decide where it goes, and say which you are doing:
+
+| Where | Command | When |
+|---|---|---|
+| the note's front matter | add one line, `title: <approved>` | the normal case. He will publish this note again, and the title is then decided once and reused |
+| this run only | `--title "<approved>"` | a one-off document, or a title he is still unsure about. The note is untouched, so the next run asks again |
+
+Prefer the front matter. Reach for `--title` only when the run really is a
+one-off. Adding the line to the front matter changes nothing else in the note.
+Then run Step 4 again.
+
+## Step 5: Clear the items
 
 Delete the applied items from `pending.md`. If all items are done, delete the
 file. Say what you removed either way.
@@ -157,5 +223,7 @@ Outside one, say that the items were cleared and nothing was committed.
 
 - Never edit the original Google Doc.
 - Never edit `baseline.md`.
-- Never write a `gdoc_versions` entry for a document that failed to upload.
+- Never run `pair add-version` after `generate`. The version is already recorded.
+- Never write a `gdoc_versions` entry by hand for a document that failed to upload.
+- Never invent a title, and never approve the suggested one on Nail's behalf.
 - Never report a commit that did not happen.
