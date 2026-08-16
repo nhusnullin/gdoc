@@ -700,6 +700,19 @@ def test_pair_add_version_fails_when_file_is_not_paired(capsys, tmp_path):
     assert "error" in payload
 
 
+def test_pair_add_version_moves_the_current_pointer(tmp_path):
+    """Nothing may leave gdoc: naming a version that is no longer current."""
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    write_pairing(md, Pairing(doc_id="1Old", versions=({"id": "1Old", "created": "2026-08-01"},)))
+    exit_code = main(["pair", "add-version", "--md", str(md),
+                      "--version-id", "1Next", "--created", "2026-08-14"])
+    pairing = read_pairing(md)
+    assert exit_code == 0
+    assert pairing.doc_id == "1Next"
+    assert [v["id"] for v in pairing.versions] == ["1Old", "1Next"]
+
+
 # ---------------------------------------------------------------------------
 # pair subcommand, find mode
 # ---------------------------------------------------------------------------

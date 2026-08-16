@@ -364,12 +364,15 @@ def cmd_pair_add_version(args) -> int:
     pairing = read_pairing(path)
     if pairing is None:
         return _fail(f"{path} is not paired to a document")
-    new_pairing = add_version(pairing, args.version_id, args.created)
+    # The pure add_version is left alone. Moving the pointer belongs here,
+    # so no command can leave gdoc: naming an old version.
+    new_pairing = add_version(replace(pairing, doc_id=args.version_id),
+                               args.version_id, args.created)
     write_pairing(path, new_pairing)
     return _emit(
         {
             "md": str(path),
-            "doc_id": pairing.doc_id,
+            "doc_id": new_pairing.doc_id,
             "versions_count": len(new_pairing.versions),
         }
     )
