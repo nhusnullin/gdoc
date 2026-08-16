@@ -56,6 +56,24 @@ def default_output(meta: dict, source: Path) -> Path:
     return source.resolve().parent / f"{date_prefix}-{stem}.docx"
 
 
+def drop_title_heading(body_markdown: str, title: str) -> str:
+    """Remove a leading H1 that repeats the title.
+
+    Without this the title prints twice, once on the cover and again above the
+    first paragraph. Keyed on the text matching, so it also helps a hand-written
+    front matter whose title repeats the note's own heading.
+    """
+    lines = body_markdown.splitlines()
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        match = frontmatter.H1_RE.match(line)
+        if match and match.group(1).strip() == title.strip():
+            return "\n".join(lines[index + 1:]).lstrip("\n")
+        return body_markdown
+    return body_markdown
+
+
 def meta_for(md_path: Path, *, title: str | None = None) -> dict:
     """The front matter of a file, without building anything."""
     text = Path(md_path).read_text(encoding="utf-8")
@@ -87,6 +105,7 @@ def build(
     meta, body_markdown = frontmatter.parse(
         markdown_text, title_override=title, source_name=source_path.name
     )
+    body_markdown = drop_title_heading(body_markdown, meta["title"])
     if not body_markdown.strip():
         raise BuildError("the file has front matter but no body content")
 
