@@ -19,7 +19,7 @@ import pytest
 from docx import Document
 
 from gdoc.render import build
-from gdoc.render.profiles import TEMPLATES_DIR
+from gdoc.render.profiles import DEFAULT_TEMPLATE, TEMPLATES_DIR, resolve
 
 EXAMPLE = TEMPLATES_DIR / "altery-group-policy-v1.0" / "example.md"
 
@@ -70,6 +70,24 @@ def heading_style(path, level):
                       part(path, "styles.xml"), re.S)
     assert match, f"Heading{level} is not defined"
     return match.group(0)
+
+
+def our_nums(path):
+    """{numId: its w:num definition} for the list instances this build added.
+
+    Told apart from the master's by what the master defines, not by the overrides
+    the checks below assert, which would make the selection circular. The master
+    ships numId 1 to 7 and no lvlOverride at all.
+    """
+    master = set(re.findall(r'<w:num w:numId="(\d+)"',
+                            part(resolve(DEFAULT_TEMPLATE), "numbering.xml")))
+    found = {}
+    for match in re.finditer(r'<w:num w:numId="(\d+)".*?</w:num>',
+                             part(path, "numbering.xml"), re.S):
+        if match.group(1) not in master:
+            found[match.group(1)] = match.group(0)
+    assert found, "no list instance was added, so there is nothing to check"
+    return found
 
 
 def front_matter_block():
@@ -144,25 +162,63 @@ def test_every_referenced_paragraph_style_resolves(built):
 
 
 def test_every_numbering_id_used_is_defined(built):
-    """The only guard on Numbering's per-list restart overrides.
-
-    Each list instance gets a fresh w:numId with startOverride on all nine
-    levels. An id written into the body but never added to numbering.xml leaves
-    the list unnumbered.
-    """
+    """An id written into the body but never defined leaves the list unnumbered."""
     used = set(re.findall(r'<w:numId w:val="(\d+)"/>', part(built, "document.xml")))
     defined = set(re.findall(r'<w:num w:numId="(\d+)"', part(built, "numbering.xml")))
     assert used, "the example has lists, so some numId must be used"
     assert not used - defined, f"undefined numIds: {sorted(used - defined, key=int)}"
 
+    for num_id, definition in our_nums(built).items():
+        overrides = re.findall(r"<w:lvlOverride\b.*?</w:lvlOverride>", definition, re.S)
+        assert len(overrides) == 9, \
+            f"numId {num_id} has {len(overrides)} lvlOverride, wanted 9"
+        for level, override in enumerate(overrides):
+            assert f'w:ilvl="{level}"' in override, \
+                f"numId {num_id} override {level} is out of order: {override}"
+            assert "<w:startOverride" in override, \
+                f"numId {num_id} level {level} would carry on from the list above"
+
+
+def test_a_second_ordered_list_restarts_at_one(tmp_path):
+    """Two ordered lists in one document must not run 1, 2, 3, 4.
+
+    A bare new w:num pointing at the same abstractNum does not restart numbering.
+    The second list carries on from the first, which this project has already seen
+    on the page as 1, 2, 2. What forces the restart is a w:num of its own with an
+    explicit startOverride, so that is what is asserted: the two lists do not share
+    an id, and each id restarts level zero at 1.
+
+    Structural, because the rendered digit does not exist in the file. Nothing here
+    lays the document out, so 1, 2, 1, 2 can only be read off the numbering
+    definitions the way Word and Google read it.
+    """
+    out = build_with_body(
+        tmp_path, "two_lists",
+        "# Lists\n\n1. first\n2. second\n\ntext between\n\n1. third\n2. fourth\n",
+    )
+    order = re.findall(r'<w:numId w:val="(\d+)"/>', part(out, "document.xml"))
+    ours = our_nums(out)
+    used_in_order = [n for i, n in enumerate(order) if n not in order[:i] and n in ours]
+    assert len(used_in_order) == 2, f"expected two lists, got numIds {used_in_order}"
+
+    for num_id in used_in_order:
+        level_zero = re.search(r'<w:lvlOverride w:ilvl="0">.*?</w:lvlOverride>',
+                               ours[num_id], re.S)
+        assert level_zero, f"numId {num_id} does not override level zero"
+        assert '<w:startOverride w:val="1"/>' in level_zero.group(0), \
+            f"numId {num_id} does not restart at 1: {level_zero.group(0)}"
+
 
 def test_heading_styles_carry_house_spacing_indent_and_keeps(built):
     """1.15 line, room beneath, flush left, and never stranded or split.
 
-    The values are literals on purpose. Importing HEADING_LINE_SPACING and
-    comparing against it would make this a mirror: the assertion would follow
-    the constant to whatever anyone set it to, including the master's single
-    spacing, and still pass. A house-style test must state the house style.
+    Every value here is a literal, and must stay one. Do not tidy 276, 120 and
+    240 into HEADING_LINE_SPACING, HEADING_SPACE_AFTER and HEADING_SPACE_BEFORE:
+    an assertion that reads the constant it guards follows that constant wherever
+    anyone moves it, back to the master's single spacing and zero space beneath
+    included, and still passes. Nor is a loose `after > 0` enough. It only catches
+    the spacing being deleted, not 120 quietly becoming 20. The literal is what
+    makes editing the constant fail this test, which is the whole point.
 
     keepNext and keepLines cover normalise_heading_keeps, which the standalone
     selftest never checked at all.
@@ -173,9 +229,10 @@ def test_heading_styles_carry_house_spacing_indent_and_keeps(built):
         assert spacing, f"Heading{level} declares no spacing"
         assert 'w:line="276"' in spacing.group(0), \
             f"Heading{level} is not 1.15 line: {spacing.group(0)}"
-        after = re.search(r'w:after="(\d+)"', spacing.group(0))
-        assert after and int(after.group(1)) > 0, \
-            f"Heading{level} sits hard against its own section: {spacing.group(0)}"
+        assert 'w:after="120"' in spacing.group(0), \
+            f"Heading{level} wants 6pt beneath it: {spacing.group(0)}"
+        assert 'w:before="240"' in spacing.group(0), \
+            f"Heading{level} wants 12pt above it: {spacing.group(0)}"
 
         indent = re.search(r"<w:ind[^>]*/>", style)
         assert indent, f"Heading{level} declares no indent"
