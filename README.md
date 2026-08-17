@@ -321,23 +321,30 @@ not survive into the next version. What survives is text and structure: headings
 lists, tables, and the words. If a change matters, put it in the markdown.
 
 **Page numbers cost an upload.** Every publish creates two documents and trashes
-the measuring one. If a run dies halfway, check the output folder.
-
-**Git is optional, with one consequence.** Nothing refuses to run because git is
-missing, and the skill says out loud when it skipped a commit. Outside a
-repository it cannot tell an edit from a stale copy, so it refuses to overwrite an
-existing snapshot rather than guess.
+the measuring one, because only Google can say which page a heading landed on. If
+a run dies halfway, check the folder for a leftover. To be fixed, tracked as
+[issue 23](https://github.com/nhusnullin/gdoc/issues/23).
 
 **One house template.** `altery-group-policy-v1.0` is bundled. A second one needs
 code, because the cover and the tables are found by their placeholder text.
 
 ## What is planned
 
-**gdoc live.** The next piece, designed and planned, not built. Today a review is
-a batch: you run the skill, it sweeps the comments, it stops. Live turns it into a
-session. You open it once on a document and keep reading. Every `ai:` comment you
-write gets an answer in its thread within a few seconds, with a single progress
-line that rewrites itself while the agent works.
+**gdoc live: answers while you read.** Today a review is one pass. You run it, it
+answers the comments that were already there, and it stops. Live keeps it open
+instead. You start it once on a document, then carry on reading. Write an `ai:`
+comment and the answer appears in that thread a few seconds later, while you are
+still on the paragraph that prompted it. You never leave the document, and you
+never run anything again. Designed and planned, not built yet.
+
+**Sign in as yourself.** Today the agent has its own account, and setup is mostly
+about creating it and sharing things with it. With normal Google sign-in you would
+approve it once in a browser and skip steps 2 to 4 of the setup. Replies would
+carry your name instead of a robot address, and you would not have to share
+anything, because the agent would see what you already see. The trade is real: the
+Commenter wall in the limitations comes from that separate account, so signing in
+as yourself replaces a permission Google enforces with a rule the tool follows.
+Tracked as [issue 10](https://github.com/nhusnullin/gdoc/issues/10).
 
 **Ordinary comments.** Reading and answering comments that carry no marker.
 
