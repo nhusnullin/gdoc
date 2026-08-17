@@ -27,6 +27,12 @@ NO_FILL = "ffffff"
 
 # 3pt above and below the text in a cell. The master sets no cell margin at all,
 # so descenders sit on the bottom border. Left and right stay at Word's own 108.
+#
+# The floor is 40 twips, 2pt, the least top and bottom padding that still keeps
+# descenders off the border. So 60 has only 20 twips of headroom: anything below
+# 40 is a defect, not a tighter style choice. tests/test_render_shell.py holds
+# that floor as a literal, so lowering this constant fails the test rather than
+# moving the goalposts.
 CELL_MARGIN_V = "60"
 CELL_MARGIN_H = "108"
 
