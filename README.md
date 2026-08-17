@@ -213,6 +213,11 @@ it again. All three work.
 A note that has never been published has nothing queued, so publishing it is the
 whole job. It asks once, then gives you the link.
 
+Your note needs a `title` in its front matter, because the cover page is built
+from it. If there is none, the agent proposes one and waits for you to pick.
+`gdoc/templates/altery-group-policy-v1.0/example.md` shows every other field the
+house template can use, including the revision table. All of them are optional.
+
 ### Review the comments
 
 ```
@@ -233,11 +238,13 @@ coming.
 /gdoc-apply                   whatever is queued here, and it asks if there are several
 ```
 
-All three find the same queue, so use whichever you have at hand. You never type a
-path into `.gdoc/`.
+All three find the same queue, so use whichever you have at hand.
 
 It takes one item at a time, shows you the change it made to your markdown, and
 waits. When the items are done it publishes a new version and gives you the link.
+
+Its own bookkeeping lives in a `.gdoc/` folder beside your markdown. You never
+need to open it, or name it.
 
 ## What you get told after a publish
 
@@ -271,50 +278,6 @@ The four warnings, and what to do about each:
 
 None of these means "run it again and hope". A document either exists or it does
 not, and the link is the answer.
-
-## What your markdown needs
-
-`title` in the front matter, and nothing else is required:
-
-```yaml
----
-title: Third Party and Outsourcing
-doc_type: Policy
-version: "2.0"
-classification: Internal
----
-```
-
-A document with no `title` is refused, because the cover page and the running head
-would be blank. The tool suggests one from the first heading or the file name, and
-the agent will usually propose a better one from reading the note. It must show
-you both, and nothing is published until you pick one.
-
-Once you pick, the title goes into the front matter and every later version reuses
-it. You can also approve a title for one publish only, without changing the note.
-
-`gdoc/templates/altery-group-policy-v1.0/example.md` shows every field the house
-template can use, including the revision table.
-
-## Where the files go
-
-The tool works in one folder, the one you are standing in. Its own files go in a
-`.gdoc/` folder beside the markdown they belong to. Nothing is written into this
-repo.
-
-```
-your notes folder/
-  2026-08-13-topic.md              your source, hand written
-  2026-08-13-topic.docx            generated
-  .gdoc/
-    2026-08-13-topic/
-      pending.md                   queued items, waiting to be applied
-      baseline.md                  the document as it was last published
-      out/v2.docx                  upload intermediate
-```
-
-You never need to open any of it. The folder is named after your markdown file, so
-it survives every new version of the document.
 
 ## Limitations
 
@@ -350,9 +313,6 @@ an unexpected one is visible.
 
 **Nothing runs by itself.** No watcher, no polling, no schedule. You start every
 run.
-
-**pandoc is required.** Publishing needs it. Without it you get a clear message,
-not a crash, but you get no document.
 
 **Round trips lose formatting.** The copy fetched back from Google is not your
 original file. Comparisons still work, because the snapshot went through the same
