@@ -163,8 +163,12 @@ posted   para 7   rephrased, ready to paste
 captured para 2   global: renumber sections
 
 1 global item in .gdoc/<slug>/pending.md
-Next session: /gdoc-apply .gdoc/<slug>/pending.md
+Next session: /gdoc-apply <source md>
 ```
+
+Name the queue file so Nail can read it, but hand him back his own markdown file
+as the next command. The queue path is bookkeeping, and `/gdoc-apply` with no
+argument finds it too.
 
 Write no snapshot of the document here. `gdoc generate` writes the baseline, at
 the one moment the document and the markdown provably match. By the end of a

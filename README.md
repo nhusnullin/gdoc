@@ -175,7 +175,7 @@ the corpus the agent searches to ground its answers:
 
 ```
 /gdoc-review <google doc url>
-/gdoc-apply .gdoc/<name>/pending.md
+/gdoc-apply notes.md
 ```
 
 `/gdoc-review` shows you what it found and stops. Nothing is posted until you say
@@ -183,7 +183,16 @@ so. Add `--terminal-only` to print the replies here and post nothing at all,
 which is the safe way to try it the first time.
 
 `/gdoc-apply` works through the queued items with you, edits the markdown, shows
-you the diff, and publishes a new version.
+you the diff, and publishes a new version. Pass your own markdown file, or the
+document link, or nothing at all:
+
+```
+/gdoc-apply notes.md          the file you write in
+/gdoc-apply <google doc url>  the document you were just reading
+/gdoc-apply                   whatever is queued here, and it asks if there are several
+```
+
+All three find the same queue. You never type a path into `.gdoc/`.
 
 ## The commands underneath
 

@@ -35,18 +35,48 @@ always tries to upload, so there is no local-only way to produce the document.
 Tell Nail the markdown is saved and that re-running without the flag will
 generate the document.
 
-## Step 1: Load the context
+## Step 1: Find the queue
 
-The argument is a path to `pending.md`, usually `.gdoc/<slug>/pending.md`. Its
-header holds two lines:
+Nail passes whatever he already has: his markdown file, the document link, or
+nothing. Never ask him for a path inside `.gdoc/`. He should not have to know a
+slug to work on his own document.
+
+| He passes | You do |
+|---|---|
+| nothing | list the queues under `$ROOT` |
+| his markdown, `notes.md` | find the queue whose `Source:` line names it |
+| the document URL | `$GDOC pair find --doc-id <doc_id>` for the source, then as above |
+| `.gdoc/<slug>/pending.md` | use it directly |
+
+The last row still works, because a path that names the file needs no resolving.
+It is not the form to suggest.
+
+Listing the queues:
+
+```bash
+ls "$ROOT"/.gdoc/*/pending.md 2>/dev/null
+```
+
+- One file: use it, and name the document it belongs to before you start.
+- Several: show each with its document name and item count, and ask which. Never
+  choose for him.
+- None: say nothing is queued under this root, and that `$ROOT` is `$PWD`, so the
+  usual cause is being in the wrong folder.
+
+Given his markdown instead, read the `Source:` line of each queue and match the
+one that names that file. If no queue names it, say so rather than guessing at a
+directory name: an empty queue and a queue you failed to find look identical to
+him, and only one of them is safe to proceed from.
+
+Every `pending.md` header holds two lines:
 
 ```
 Document: https://docs.google.com/document/d/<doc_id>/edit
 Source: <path to the source markdown, relative to the root>
 ```
 
-Use `Source:` to find the paired markdown. Older queues have no `Source:` line,
-so fall back to the document id:
+`Source:` is how you get from the queue to the paired markdown. Older queues have
+no `Source:` line, so fall back to the document id:
 
 ```bash
 $GDOC pair find --doc-id <doc_id>
