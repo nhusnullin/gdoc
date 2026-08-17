@@ -1,12 +1,15 @@
 ---
 name: gdoc-apply
-description: Use when Nail wants the captured global items from a Google Doc review applied. Edits the paired markdown, then generates a new Google Doc version from it.
+description: Use when Nail wants the captured global items from a Google Doc review applied, or wants a markdown note published as a Google Doc for the first time. Edits the paired markdown, then generates a new Google Doc version from it.
 ---
 
 # Apply global doc items
 
 Work through `pending.md` with Nail, edit the paired markdown, and generate a
 new document version from it. The original document is never edited.
+
+A note that has never been published has no queue, and publishing it is then the
+whole job. See "The first publish" in Step 1.
 
 ## Setup
 
@@ -68,6 +71,25 @@ one that names that file. If no queue names it, say so rather than guessing at a
 directory name: an empty queue and a queue you failed to find look identical to
 him, and only one of them is safe to proceed from.
 
+### The first publish
+
+A markdown file that exists, with no queue and no `gdoc:` in its front matter, is
+not a stranger's document. It is step one of the loop this skill serves, and
+publishing it is the whole job.
+
+Say so and get one confirmation:
+
+```
+2026-08-13-topic.md has no queued items and has never been published.
+Publish it as a new Google Doc? y
+```
+
+Then skip Steps 2 and 3, because there are no items to work through and no edits
+to commit, and go to Step 4. `generate` writes the first `gdoc:` and the first
+`gdoc_versions` entry itself, so nothing has to be paired first.
+
+Never run `pair set` to create that first pairing. Step 4 does it.
+
 Every `pending.md` header holds two lines:
 
 ```
@@ -82,8 +104,13 @@ no `Source:` line, so fall back to the document id:
 $GDOC pair find --doc-id <doc_id>
 ```
 
-If neither answers, Nail does not own this document. The output is a note for
-him, not a new document. Say so and stop.
+If neither answers **and he gave you a document link**, there is no source
+markdown for it here. That is a document he does not own the source of, so the
+output is a note for him, not a new document. Say so and stop.
+
+If he gave you a markdown file that exists, that same empty answer means the first
+publish above, not a refusal. The difference is whether a source file is in his
+hands, so check which he passed before you refuse anything.
 
 `baseline.md` in the queue folder is the document as it was generated. It is read
 only for comparison, and it is never the file you edit. It normally sits beside
@@ -136,7 +163,8 @@ versions already recorded in the note. A name you write can only disagree with
 that count.
 
 The `<n>` in `--out` is a local file name and nothing else. Read the current
-count with `$GDOC pair show --md <paired md file>` and add one.
+count with `$GDOC pair show --md <paired md file>` and add one. On a first
+publish that command answers `paired: false`, so `<n>` is 1.
 
 `--out` is chosen by intent:
 
@@ -147,8 +175,10 @@ count with `$GDOC pair show --md <paired md file>` and add one.
 | an explicit destination | that path |
 
 This step generates a new version, so it uses the first row. The `<slug>` there
-is the queue directory `pending.md` came from. The `.docx` is an upload
-intermediate and stays out of sight.
+is the queue directory `pending.md` came from, or, on a first publish where no
+queue exists, the source file's stem. Either way the run reports the `slug` it
+used, and that report wins. The `.docx` is an upload intermediate and stays out of
+sight.
 
 `--baseline-root` does two things, and the next apply needs both. On a successful
 upload the new document is exported into `.gdoc/<slug>/baseline.md`, replacing
