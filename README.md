@@ -1,199 +1,337 @@
 # gdoc
 
-Review Google Doc comments from the terminal. The agent answers the `ai:`
-comments in their threads, captures the ones that need document-wide changes,
-and fetches a document as markdown so you can see what drifted.
+Review a Google Doc by leaving comments in it, and let Claude Code answer them
+from your terminal.
 
-The credential is a service account with **Commenter** access. It cannot edit a
-document, and that limit is the design: replies go in comment threads, and
-document-wide changes are applied to a paired markdown file and published as a
-new version.
+You mark a comment with `ai:`. The agent reads it, answers small things right
+there in the comment thread, and queues the ones that need a rewrite of the whole
+document. Later you work through that queue: the agent edits the source markdown
+file and publishes a new version of the Google Doc from it.
 
-[PRINCIPLES.md](PRINCIPLES.md) holds the constraints behind these choices, and
-separates the ones that will not change from the ones that are just today's
-answer. Read it before changing anything here.
+The markdown file is the source. The Google Doc is a rendering of it. The tool
+never edits a document you point it at, because the credential holds **Commenter**
+access only. That is not a rule the agent follows, it is a permission Google
+enforces.
 
-## The marker decides
+## The loop
 
-`gdoc read` returns one actionable list, `addressed`. A comment is in it when it
-carries the `ai` marker, is not resolved, and has no reply from the agent yet.
+```
+1. You write the document as markdown        notes.md, in your notes folder
+2. gdoc publishes it as a Google Doc         house template, cover, contents, page numbers
+3. People read it and comment                mark yours with ai: for the agent
+4. /gdoc-review answers the comments          replies posted in the threads
+5. /gdoc-apply does the bigger rewrites       edits notes.md, publishes v2
+```
 
-The author name is a label, not a gate. A marked comment from anyone on the
-document is acted on, and Nail chooses the document: pointing the skill at it is
-the trust decision. The name still travels in the payload, so an unexpected one
-is visible in the report.
+Steps 4 and 5 are two sessions on purpose. A reply in a thread is cheap. A
+rewrite of the whole document is not, so it is never done while you are reading
+comments.
 
-There was a `display_name` config field that split the list into Nail's comments
-and everyone else's. It is gone. Drive returns no email address for comment
-authors and display names are editable, so the split was a guess the skill had to
-disclaim every run.
+## What works today
 
-## Install
+**Reading comments.** `gdoc read <url>` returns two lists: the comments waiting
+for the agent, and the ones it skipped with the reason visible. Comments already
+answered by the agent land in the skipped list, so running it twice is safe and
+posts nothing twice.
+
+**The marker.** A comment counts when it starts with `ai` plus a sign:
+
+| Marker | Meaning |
+|---|---|
+| `ai:` | you decide, agent or queue |
+| `ai?` | answer it in the thread |
+| `ai!` | this is a document-wide change, queue it |
+| `@ai` | the old form, still accepted |
+
+Anything else is left alone. A comment starting "AI tools are changing" is not a
+prompt.
+
+**Answering in threads.** Replies are plain text, posted into the comment thread.
+The agent never resolves a comment. You resolve it, because resolving means you
+accepted the answer.
+
+**Queueing the big ones.** Document-wide items go into `.gdoc/<name>/pending.md`
+beside your markdown file. Nothing is dropped silently. An item sits in that file
+until it is applied or you remove it.
+
+**Publishing.** `gdoc generate` renders your markdown through the house .docx
+template and uploads it to Drive as a new Google Doc. You get the cover page, the
+running head, the revision table, numbered headings, and a contents list with
+real page numbers.
+
+**Page numbers.** Nothing in Python knows where a page break lands, so Google does
+the counting. Generate uploads once with blank page numbers, exports that copy as
+PDF, reads which page each heading landed on, then uploads the version that gets
+published and trashes the measuring copy.
+
+**Comparing.** `gdoc export <url>` fetches a document back as markdown. Every
+publish also saves `baseline.md`, the document exactly as it was uploaded, so a
+later run can diff it against a fresh export and see what somebody edited by hand
+inside the Google Doc.
+
+**Version history.** The markdown file keeps its own lineage in the front matter:
+which document it is paired to, when it was last synced, and every version
+published from it.
+
+## What you need before you start
+
+- macOS or Linux, and a terminal.
+- Python 3.11 or newer.
+- [Claude Code](https://claude.com/claude-code), because the two skills run inside it.
+- pandoc. `brew install pandoc`, or your package manager. It is used to read
+  markdown, so publishing does not work without it.
+- A Google account, and permission to create a service account in Google Cloud.
+
+## Setup
+
+### 1. Install the tool
 
 ```bash
+git clone <this repo>
+cd gdoc
 ./install.sh
 ```
 
-It creates the venv at `~/.config/gdoc-agent/venv`, installs the package in
-editable mode, and links `skills/gdoc-review` and `skills/gdoc-apply` into
-`~/.claude/skills/`. It prints the commit you are running.
+That creates a venv at `~/.config/gdoc-agent/venv`, installs the `gdoc` command
+into it, and links the two skills into `~/.claude/skills/`. It prints the commit
+you are running. Safe to re-run: every step checks the current state first.
 
-Safe to re-run. Every step checks the current state first.
+To update later, `git pull` is the whole update. The package is an editable
+install and the skills are symlinks, so both follow the working tree. Re-run
+`./install.sh` only after dependencies change or a new skill is added.
 
-### Updating
+### 2. Create the service account
 
-`git pull` is the whole update. The package is an editable install and the
-skills are symlinks, so both halves follow the working tree with no reinstall.
+In [console.cloud.google.com](https://console.cloud.google.com):
 
-Re-run `./install.sh` only after changing dependencies in `pyproject.toml`, or
-after adding a new skill directory.
+1. Create a project, or pick one.
+2. **APIs and Services → Library →** enable **Google Drive API**.
+3. **IAM and Admin → Service Accounts → Create service account.** Give it a name
+   you will recognise in a comment thread, for example `doc-agent`. No project
+   roles are needed: everything it can do comes from Drive sharing, not from IAM.
+4. Open the account, **Keys → Add key → Create new key → JSON.** A file
+   downloads.
 
-One consequence of linking: an uncommitted edit to a `SKILL.md` is already live
-in every Claude Code session. `install.sh` prints `+ uncommitted changes` when
-the working tree is dirty, so you can tell what you are actually running.
-
-## Configure
-
-Two files, both outside this repo, neither in git:
-
-- `~/.config/gdoc-agent/sa-key.json` — the service account key.
-- `~/.config/gdoc-agent/config.json` — settings, including the key path and the
-  Drive folder new versions are written to.
-
-Give the service account address Commenter access on any document you want
-reviewed.
-
-## Use
-
-The skills drive the tool. Run them from the folder holding the source markdown:
-
-```
-/gdoc-review <google doc url>
-/gdoc-apply .gdoc/<slug>/pending.md
-```
-
-`/gdoc-review` reads the comments, answers the local ones, and captures the
-global ones to `pending.md`. `/gdoc-apply` works through those captured items,
-edits the paired markdown, and generates a new document version.
-
-Direct CLI use:
+Then put the key where the tool looks for it, and lock it down:
 
 ```bash
-gdoc read <url>
-gdoc reply <doc_id> <comment_id> --body-file reply.txt
-gdoc capture <doc_id> <comment_id>
-gdoc export <url>                       # markdown to stdout
-gdoc export <url> --out fetched.md
-gdoc pair find --doc-id <doc_id>
-gdoc generate --md <paired.md> --out <out.docx> --baseline-root .
-gdoc generate --md <paired.md> --name "<name>" --template none --out <out.docx>
+mkdir -p ~/.config/gdoc-agent
+mv ~/Downloads/<the-downloaded-key>.json ~/.config/gdoc-agent/sa-key.json
+chmod 600 ~/.config/gdoc-agent/sa-key.json
 ```
 
-## One root, and `.gdoc/` inside it
+Copy the account's address from the console. It looks like
+`doc-agent@your-project.iam.gserviceaccount.com`. You need it twice below.
 
-`--repo-root` is the same thing for every command: the directory the tool works
-in, `$PWD` by default. No path in the package or the skills names a specific
-repository.
+Never commit this key. It belongs in `~/.config/gdoc-agent/`, never in a repo.
 
-Tool-managed files go in `.gdoc/`, beside the source markdown they belong to:
+### 3. Give it an output folder
 
-```
-<folder holding the source md>/
-  2026-08-13-topic.md              the source, hand written
-  2026-08-13-topic.docx            generated, distributed
-  .gdoc/
-    2026-08-13-topic/
-      pending.md                   captured items awaiting apply
-      baseline.md                  the document as it was generated
-      out/v2.docx                  upload intermediate
-```
+New versions have to be created somewhere.
 
-Not `docs/gdoc/`. Once the root can be any directory, `docs/` cannot be assumed
-free or appropriate, and a dot-namespace signals tool-owned. It also keeps these
-files out of Obsidian's search and graph.
+Make a folder in a **Shared Drive**, then share that folder with the service
+account address as **Content manager**.
 
-The directory is named after the **source markdown file**, not the document
-title and not the document id. Every iteration raises a new Google Doc with a new
-id and usually a new version in its title, so both would fork the queue. The
-source file survives, and its frontmatter records the whole lineage, so
-reviewing an old version still lands in the one right directory.
+A Shared Drive matters. Files created there are owned by the Shared Drive, so you
+find them in your normal Drive and they do not disappear into a robot account's
+storage. In My Drive they would be owned by the service account instead.
 
-`baseline.md` is the document as `generate` uploaded it, written at the one
-moment the document and the markdown provably match. A later apply diffs it
-against a fresh export to see what was edited directly in the document. Both
-sides carry the same pandoc round-trip distortion, so it cancels.
+Open the folder and copy the id from the URL, the part after `/folders/`.
 
-`gdoc.render.build` writes the .docx directly from the house template, rather
-than letting pandoc write it. It is a function, not a command: `gdoc --help`
-lists read, reply, export, capture, generate and pair, and none of them exposes
-it directly. `gdoc generate` calls it, which is how the house style reaches a
-real document. Page numbers come from Google, so generate uploads twice: once
-with blank numbers to measure the layout, once to publish. `--template none`
-keeps the old `pandoc md -o docx` path.
+### 4. Write the config
 
-`--name` is optional. Without it the new version is called
-`<cover title> v<n>`, where n is the recorded version count plus one.
-
-A note with no `title:` in its front matter is refused, because the cover and
-the running head would be blank and the tool does not invent one. The refusal
-names the file and suggests a title, taken from the first heading or from the
-file name:
+`~/.config/gdoc-agent/config.json`:
 
 ```json
 {
-  "missing": "title",
-  "suggested_title": "Miguel kickoff call — 2026-08-12",
-  "suggested_from": "h1"
+  "output_folder_id": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
+  "template": "altery-group-policy-v1.0"
 }
 ```
 
-The candidate is copied from the note exactly as written, punctuation and all,
-because a suggestion the tool has quietly reworded is no longer the author's
-own words.
+`template` is optional. It defaults to the bundled house style. Use
+`"none"` to publish a plain document with no cover and no template.
 
-The suggestion is a proposal, never a decision. Get it approved, then add the
-title to the note, or pass `--title "..."` to publish once without editing it.
+### 5. Share a document with it
 
-`build` uses pandoc only as the markdown parser that feeds the template. The
-export side still uses pandoc as a markdown fallback, which is tracked
-separately.
+On any document you want reviewed, **Share** it with the service account address
+as **Commenter**. Nothing else. That share is the whole access model: to let the
+agent work on a document you share it, to stop it you unshare it. There is no
+list of document ids anywhere.
 
-## No git requirement
+### 6. Check it works
 
-The tool works without git. Nothing refuses to run because git is unavailable,
-and `/gdoc-apply` skips its commit step and says so.
+```bash
+~/.config/gdoc-agent/venv/bin/gdoc read <google doc url>
+```
 
-One consequence: outside a repository there is no way to tell an edit from a
-stale copy, so an existing `baseline.md` is never overwritten unless `--force`
-says so. `generate` passes it, because replacing the previous version's snapshot
-is exactly its job.
+You should get JSON back with the document name and its comments. If you get a
+404, the document is not shared with the service account.
 
-A paired note carries this frontmatter:
+## Using it
+
+Run these from the folder that holds your markdown, because that folder is also
+the corpus the agent searches to ground its answers:
+
+```
+/gdoc-review <google doc url>
+/gdoc-apply .gdoc/<name>/pending.md
+```
+
+`/gdoc-review` shows you what it found and stops. Nothing is posted until you say
+so. Add `--terminal-only` to print the replies here and post nothing at all,
+which is the safe way to try it the first time.
+
+`/gdoc-apply` works through the queued items with you, edits the markdown, shows
+you the diff, and publishes a new version.
+
+## The commands underneath
+
+The skills call these. You can run them directly. Every one prints a single JSON
+object, except `export`, which prints markdown so you can pipe it into `diff`.
+
+```bash
+gdoc read <url>                                  # comments, split into to-do and skipped
+gdoc reply <doc_id> <comment_id> --body-file reply.txt
+gdoc capture <doc_id> <comment_id>               # queue a document-wide item
+gdoc export <url>                                # the document as markdown, to stdout
+gdoc export <url> --out fetched.md
+gdoc generate --md notes.md --out out.docx --baseline-root .
+gdoc generate --md notes.md --template none --out out.docx
+gdoc pair show --md notes.md                     # which document is this paired to
+gdoc pair find --doc-id <doc_id>                 # which markdown is this document paired to
+```
+
+`--name` on generate is optional. Without it the new version is called
+`<cover title> v<n>`, where n is the version count plus one.
+
+## What your markdown needs
+
+`title` in the front matter, and nothing else is required:
 
 ```yaml
-gdoc: <doc_id>
-gdoc_synced: 2026-01-31
-gdoc_versions:
-  - id: <doc_id>
-    created: 2026-01-31
+---
+title: Third Party and Outsourcing
+doc_type: Policy
+version: "2.0"
+classification: Internal
+---
 ```
 
-## Layout
+A document with no `title` is refused, because the cover page and the running
+head would be blank. The refusal suggests one, taken from the first heading or the
+file name, and waits for you to approve it. You then add it to the note, or pass
+`--title "..."` to publish once without editing the note.
+
+`gdoc/templates/altery-group-policy-v1.0/example.md` shows every field the house
+template can use, including the revision table.
+
+## Where files go
+
+The tool works in one directory, `$PWD` by default. Its own files go in `.gdoc/`,
+beside the markdown they belong to. Nothing is ever written into this repo.
 
 ```
-PRINCIPLES.md            the constraints, and today's decisions under them
-gdoc/                    the package
-tests/                   pytest suite
-skills/                  gdoc-review and gdoc-apply, symlinked into ~/.claude/skills/
-docs/superpowers/        the plans and the design specs
+your notes folder/
+  2026-08-13-topic.md              your source, hand written
+  2026-08-13-topic.docx            generated
+  .gdoc/
+    2026-08-13-topic/
+      pending.md                   queued items, waiting to be applied
+      baseline.md                  the document as it was last published
+      out/v2.docx                  upload intermediate
 ```
 
-`.gdoc/` directories live beside the documents being reviewed, not in this repo.
+The directory is named after the markdown file, not the document. Every iteration
+raises a new Google Doc with a new id and usually a new title, so either of those
+would split the queue in two. The file survives.
 
-## Test
+## Limitations
+
+Worth reading before you rely on it.
+
+**It cannot edit the document.** By design. All it can do inside a Google Doc is
+post replies in comment threads. Every real change goes to the markdown and comes
+back as a new version.
+
+**Replies are signed with the raw address.** A thread shows
+`doc-agent@your-project.iam.gserviceaccount.com`, not a friendly name. Anyone
+reading the document sees that. A nicer label needs a real Google Workspace user
+for the agent, which is a separate piece of work.
+
+**It cannot see who else has access.** Under Commenter, Google refuses the
+permissions call. So the agent cannot warn you that an outside collaborator is on
+the document. It says so every run, and the decision to post is yours.
+
+**A document you cannot share, it cannot read.** If you only hold Commenter on
+somebody else's document, you cannot add the service account. You have to ask the
+owner.
+
+**Unmarked comments are ignored.** Only `ai:`, `ai?`, `ai!` and `@ai` count.
+Handling ordinary comments is planned, not built.
+
+**The author name is a label, not a gate.** A marked comment from anyone on the
+document is acted on. Drive returns no email address for comment authors and
+display names are editable, so an identity check would be a guess. Pointing the
+skill at a document is the trust decision. Every name still shows up in the
+report, so an unexpected one is visible.
+
+**Nothing runs by itself.** No watcher, no polling, no schedule. You start every
+run.
+
+**pandoc is required.** Publishing and the export fallback both need it. Without
+it you get a clear message, not a crash, but you get no document.
+
+**Round trips lose formatting.** The markdown you get back from `export` is not
+your original file. Comparisons work because `baseline.md` went through the same
+conversion, so the distortion cancels. Do not treat an export as a replacement
+for your source.
+
+**Page numbers cost an upload.** Generate creates two documents and trashes the
+measuring one. If a run dies halfway, check the output folder.
+
+**No git needed, and one consequence.** The tool never refuses to run because git
+is missing, and `/gdoc-apply` says out loud when it skipped a commit. Outside a
+repository there is no way to tell an edit from a stale copy, so an existing
+`baseline.md` is never overwritten unless `--force` says so.
+
+**One house template.** `altery-group-policy-v1.0` is bundled. A second template
+needs code, because the cover and the tables are found by their placeholder text.
+
+## What is planned
+
+**gdoc live.** The next piece, specced and planned, not built. Today a review is a
+batch: you run the skill, it sweeps the comments, it stops. Live turns it into a
+session. You open `/gdoc-live <url>` and keep reading. Every `ai:` comment you
+write gets an answer in its thread within a few seconds, with a single progress
+line that rewrites itself while the agent works. The design is in
+`docs/superpowers/specs/2026-08-17-gdoc-live-realtime-design.md`, aimed at the
+press release beside it.
+
+**Ordinary comments.** Reading and answering comments that carry no marker.
+
+**Dropping pandoc.** Drive can export markdown natively, so the export fallback
+looks removable. The markdown parser behind publishing is the harder half and
+needs its own design.
+
+**A friendly reply name.** A real Workspace user for the agent, so threads stop
+showing a service account address.
+
+## For maintainers
+
+- [PRINCIPLES.md](PRINCIPLES.md) is three durable constraints and the dated
+  decisions under them. Read it before proposing a design.
+- [CLAUDE.md](CLAUDE.md) is what lives where, and what never to do.
+- `docs/superpowers/` holds the specs and the implementation plans.
 
 ```bash
 ~/.config/gdoc-agent/venv/bin/pytest
 ```
 
-Integration tests that call Drive are skipped unless credentials are present.
+Tests that call Drive skip themselves without credentials. One test creates real
+documents and is opt-in behind `GDOC_LIVE_PUBLISH_TEST=1`.
+
+Editing a `SKILL.md` in `skills/` is live in every Claude Code session
+immediately, before you commit it, because the skills are symlinked.
+`./install.sh` prints `+ uncommitted changes` so you can tell what you are
+actually running.
