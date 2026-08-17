@@ -916,3 +916,64 @@ def test_read_asks_for_metadata_with_shared_drive_support(capsys):
         main(["read", "https://docs.google.com/document/d/1AbC/edit"])
     capsys.readouterr()
     assert _get_kwargs(drive)["supportsAllDrives"] is True
+
+
+# ---------------------------------------------------------------------------
+# generate: naming the folder on the command line
+# ---------------------------------------------------------------------------
+
+FOLDER_URL = "https://drive.google.com/drive/folders/0AFolderIdFromUrl?usp=sharing"
+
+
+def _generate_with_no_config(tmp_path, extra):
+    """Run generate with no config file at all. Returns the generate stub."""
+    from gdoc.generate import Result
+
+    md = tmp_path / "note.md"
+    md.write_text(_NOTE)
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.load_config",
+        side_effect=FileNotFoundError("config not found at ~/.config/gdoc-agent/config.json"),
+    ), patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = Result(docx_path=tmp_path / "v1.docx", doc_id="1New")
+        exit_code = main(["generate", "--md", str(md), "--out", str(tmp_path / "v1.docx"), *extra])
+    return exit_code, fake_generate
+
+
+def test_generate_takes_the_folder_id_out_of_a_pasted_url(capsys, tmp_path):
+    from gdoc.config import Config
+
+    fake = _run_generate_with(tmp_path, _NOTE, Config(), extra=["--folder-id", FOLDER_URL])
+    capsys.readouterr()
+    assert fake.call_args.kwargs["folder_id"] == "0AFolderIdFromUrl"
+
+
+def test_generate_needs_no_config_file_when_the_folder_is_given(capsys, tmp_path):
+    """The folder is the one thing generate cannot work out for itself."""
+    from gdoc.render import profiles
+
+    exit_code, fake = _generate_with_no_config(tmp_path, ["--folder-id", FOLDER_URL])
+    capsys.readouterr()
+    assert exit_code == 0
+    assert fake.call_args.kwargs["folder_id"] == "0AFolderIdFromUrl"
+    # No config file still means the house style, not a plain document.
+    assert fake.call_args.kwargs["template"] == profiles.DEFAULT_TEMPLATE
+
+
+def test_generate_without_a_folder_still_reports_the_missing_config(capsys, tmp_path):
+    exit_code, fake = _generate_with_no_config(tmp_path, [])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "config not found" in payload["error"]
+    fake.assert_not_called()
+
+
+def test_generate_refuses_a_document_url_as_the_folder(capsys, tmp_path):
+    """Pasting the document instead of the folder fails here, not on upload."""
+    exit_code, fake = _generate_with_no_config(
+        tmp_path, ["--folder-id", "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUv/edit"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "a document, not a folder" in payload["error"]
+    fake.assert_not_called()

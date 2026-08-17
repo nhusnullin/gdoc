@@ -197,6 +197,34 @@ call records the same document twice and the next version is numbered one too
 high. The one time it is right is repair, when `pairing_error` says the write
 failed. That case is below.
 
+### Which folder
+
+The document has to be created somewhere, and Nail is the one who decides where.
+
+| What you have | What you do |
+|---|---|
+| a Drive folder URL in his message | pass it as `--folder-id "<the URL>"`. The CLI takes the id out of it |
+| no URL, and `output_folder_id` in the config | leave `--folder-id` off. The config answers |
+| neither | ask him for the folder URL, and wait |
+
+```bash
+$GDOC generate --md <paired md file> \
+  --folder-id "https://drive.google.com/drive/folders/<id>" \
+  --out "$ROOT/.gdoc/<slug>/out/v<n>.docx" \
+  --baseline-root "$ROOT"
+```
+
+A folder URL on the command line is enough on its own: with one, no config file is
+needed at all. Read the config with `cat ~/.config/gdoc-agent/config.json` if you
+need to know whether a folder is already set.
+
+Never guess a folder, and never reuse one from an older run in this session
+without saying which you used. Publishing into the wrong folder puts a document in
+front of the wrong people, and unpublishing it is not something you can do.
+
+If he pastes a document URL by mistake, the CLI refuses it by name. Show him what
+it said and ask for the folder.
+
 ### Which template
 
 `--template` defaults to the house style named in the config, so leave it off for

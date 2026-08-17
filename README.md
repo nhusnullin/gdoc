@@ -130,22 +130,59 @@ Copy the account's address from the console. It looks like
 
 Never commit this key. It belongs in `~/.config/gdoc-agent/`, never in a repo.
 
-### 3. Give it an output folder
+### 3. Make a folder to publish into
 
-New versions have to be created somewhere.
+New documents have to be created somewhere. Make a folder for them, **in a Shared
+Drive, not in My Drive**, and share it with the service account address as
+**Content manager**.
 
-Make a folder in a **Shared Drive**, then share that folder with the service
-account address as **Content manager**.
+The Shared Drive is worth the extra click. Files created there belong to the
+Shared Drive, so your colleagues can open them and they do not sit inside a robot
+account nobody logs into. In My Drive they would be owned by the service account
+instead.
 
-A Shared Drive matters. Files created there are owned by the Shared Drive, so you
-find them in your normal Drive and they do not disappear into a robot account's
-storage. In My Drive they would be owned by the service account instead.
+Then copy the folder URL out of the address bar. That is the whole thing you hand
+over when you publish:
 
-Open the folder and copy the id from the URL, the part after `/folders/`.
+```
+https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz
+```
 
-### 4. Write the config
+Nothing to configure. Paste that URL when the agent asks which folder, and it
+takes the id out of it.
 
-`~/.config/gdoc-agent/config.json`:
+### 4. Share the documents you review
+
+The agent sees only what is shared with it. **Share** as **Commenter**, and
+nothing more.
+
+Keep those documents in a Shared Drive too. You can then share the folder once,
+as Commenter, and every document in it is covered. Sharing one document at a time
+works the same way, it is just more clicks.
+
+Keep this folder separate from the publish folder in step 3. The publish folder
+has to allow writes. Anywhere else, Commenter is a wall Google enforces, and that
+is the property the whole tool leans on.
+
+To stop the agent working on something, unshare it. There is no list of documents
+anywhere, and no run can widen its own reach.
+
+### 5. Check it works
+
+In Claude Code, from the folder that holds your markdown:
+
+```
+/gdoc-review <google doc url>
+```
+
+It reads the comments and shows you what it found, then asks before posting
+anything. If it cannot see the document at all, the share in step 4 did not land
+on the right address.
+
+### Optional: stop it asking for the folder
+
+If you publish into the same folder every time, name it once in
+`~/.config/gdoc-agent/config.json` and the agent stops asking:
 
 ```json
 {
@@ -154,27 +191,8 @@ Open the folder and copy the id from the URL, the part after `/folders/`.
 }
 ```
 
-`template` is optional. It defaults to the bundled house style.
-
-### 5. Share a document with it
-
-On any document you want reviewed, **Share** it with the service account address
-as **Commenter**. Nothing else.
-
-That share is the whole access model. To let the agent work on a document you
-share it, to stop it you unshare it. There is no list of documents anywhere, and
-no run can widen its own reach.
-
-### 6. Check it works
-
-In Claude Code, from the folder that holds your markdown:
-
-```
-/gdoc-review <google doc url> --terminal-only
-```
-
-It reads the comments and prints what it would say, and posts nothing at all. If
-it cannot see the document, the share in step 5 did not land on the right address.
+Both keys are optional. `template` defaults to the bundled house style. The id is
+the part of the folder URL after `/folders/`.
 
 ## Using it
 
@@ -185,11 +203,15 @@ knows.
 ### Publish a document
 
 ```
-/gdoc-apply notes.md
+/gdoc-apply notes.md <folder url>
 ```
 
-A note that has never been published has nothing queued, so it asks once and
-publishes it. You get a link back.
+The folder URL is the one from step 3, copied out of the address bar. Give it in
+the same message, or wait to be asked, or set it once in the config and never type
+it again. All three work.
+
+A note that has never been published has nothing queued, so publishing it is the
+whole job. It asks once, then gives you the link.
 
 ### Review the comments
 
@@ -197,9 +219,7 @@ publishes it. You get a link back.
 /gdoc-review <google doc url>
 ```
 
-It shows you what it found and stops. Nothing is posted until you say so. Add
-`--terminal-only` to print the replies in the terminal and post nothing, which is
-the safe way to try anything new.
+It shows you what it found and stops. Nothing is posted until you say so.
 
 For each comment it either answers in the thread or queues the item and says so in
 the thread, so anyone reading the document can see the change was noticed and is
@@ -302,7 +322,9 @@ Worth reading before you rely on it.
 
 **It cannot edit the document.** By design. All it can do inside a Google Doc is
 post replies in comment threads. Every real change goes to the markdown and comes
-back as a new version.
+back as a new version. The one exception is the folder it publishes into, where it
+has to be able to create files. Documents you share for review are behind the
+wall. Documents it created itself are not, so keep the two folders apart.
 
 **Replies are signed with the raw address.** A thread shows
 `doc-agent@your-project.iam.gserviceaccount.com`, not a friendly name. Everyone

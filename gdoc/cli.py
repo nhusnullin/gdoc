@@ -16,8 +16,8 @@ from googleapiclient.errors import HttpError
 
 from gdoc import render
 from gdoc.auth import drive_service
-from gdoc.config import load_config
-from gdoc.docid import extract_doc_id
+from gdoc.config import Config, load_config
+from gdoc.docid import extract_doc_id, extract_folder_id
 from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, partition
@@ -206,7 +206,8 @@ def cmd_generate(args) -> int:
     is still visible rather than silently reported as an ordinary failure, and
     the two stay distinguishable from each other.
     """
-    config = load_config()
+    folder_id = extract_folder_id(args.folder_id) if args.folder_id else None
+    config = _config_for(folder_id)
     template = args.template or config.template
     master = None if template == profiles.NO_TEMPLATE else template
     md_path = Path(args.md)
@@ -218,7 +219,7 @@ def cmd_generate(args) -> int:
             md_path,
             name,
             Path(args.out),
-            folder_id=args.folder_id or config.output_folder_id,
+            folder_id=folder_id or config.output_folder_id,
             template=master,
             title=args.title,
         )
@@ -242,6 +243,26 @@ def cmd_generate(args) -> int:
                 f"{type(error).__name__}: {error}"
             )
     return _emit(payload)
+
+
+def _config_for(folder_id: str | None) -> Config:
+    """The config file, or plain defaults when the caller already named the folder.
+
+    The output folder is the one setting generate cannot work out for itself, so
+    a run that was handed one has everything it needs and must not be refused for
+    a file it no longer reads. Everything else in the config has a default: the
+    template falls back to the bundled house style, so publishing without a config
+    file still produces a house-styled document rather than a plain one.
+
+    With no folder on the command line the file is the only source left, so its
+    absence stays the error it always was, naming what to write and where.
+    """
+    if folder_id is None:
+        return load_config()
+    try:
+        return load_config()
+    except FileNotFoundError:
+        return Config()
 
 
 def _record_version(md_path: Path, doc_id: str) -> int:
@@ -418,7 +439,10 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--md", required=True)
     gen.add_argument("--name", help="default: '<cover title> v<n>'")
     gen.add_argument("--out", required=True)
-    gen.add_argument("--folder-id")
+    gen.add_argument(
+        "--folder-id",
+        help="Drive folder URL or id to publish into. Given one, no config file is needed",
+    )
     gen.add_argument("--template", help="profile name, path, or 'none' for plain pandoc")
     gen.add_argument("--title", help="cover title for this run, without editing the note")
     gen.add_argument(
