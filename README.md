@@ -314,10 +314,11 @@ an unexpected one is visible.
 **Nothing runs by itself.** No watcher, no polling, no schedule. You start every
 run.
 
-**Round trips lose formatting.** The copy fetched back from Google is not your
-original file. Comparisons still work, because the snapshot went through the same
-conversion and the distortion cancels out. Never treat a fetched copy as a
-replacement for your source.
+**The template decides the look, so formatting done in the document is lost.**
+Every publish renders your markdown through the house template again. Fonts,
+colours, spacing and manual page breaks that somebody set inside the Google Doc do
+not survive into the next version. What survives is text and structure: headings,
+lists, tables, and the words. If a change matters, put it in the markdown.
 
 **Page numbers cost an upload.** Every publish creates two documents and trashes
 the measuring one. If a run dies halfway, check the output folder.
