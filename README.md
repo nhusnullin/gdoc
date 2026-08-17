@@ -325,6 +325,16 @@ the measuring one, because only Google can say which page a heading landed on. I
 a run dies halfway, check the folder for a leftover. To be fixed, tracked as
 [issue 23](https://github.com/nhusnullin/gdoc/issues/23).
 
+**A shared folder is safe while filenames stay unique.** Your notes folder may sync
+through Dropbox or Nextcloud. The tool's bookkeeping lives in `.gdoc/` beside your
+markdown, so it syncs too, and it is keyed by the filename rather than by who you
+are. You and a colleague working on differently named notes never collide. Two
+notes with the same filename share one queue and one snapshot, and so do two people
+reviewing the same document. Watch for sync conflict copies as well:
+`notes (conflicted copy).md` carries the same document id as `notes.md`, and the
+agent would pick up the copy. Tracked as
+[issue 25](https://github.com/nhusnullin/gdoc/issues/25).
+
 **One house template.** `altery-group-policy-v1.0` is bundled. A second one needs
 code, because the cover and the tables are found by their placeholder text.
 
