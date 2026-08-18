@@ -37,6 +37,15 @@ UNNUMBERED_HEADING_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Headings that number themselves are never auto-numbered either. "1. Key terms"
+# would otherwise come out as "1-1. Key terms", and the two numbers disagree the
+# moment the document has one unnumbered heading above the numbered ones. The
+# author's numbers win, because those are the ones the prose cross-references.
+#
+# A separator is required, so a heading is only self-numbered when it says so:
+# "1." and "1)" and "3.1" are numbers, "2026 plan" and "1.5x throughput" are not.
+NUMBERED_HEADING_RE = re.compile(r"^\s*\d+(?:\.\d+)*[.)]\s|^\s*\d+(?:\.\d+)+\s")
+
 # Pandoc extensions: pipe tables for the table syntax, mark for ==highlight==,
 # which is the only way to say "a human still has to fill this in".
 PANDOC_FORMAT = "markdown+pipe_tables+mark+strikeout+task_lists"
@@ -74,8 +83,16 @@ class HeadingNumberer:
         """
         return max(1, level - self.top_level + 1)
 
+    @staticmethod
+    def names_its_own_number(heading_text):
+        """True when the heading carries its own label, by name or by number."""
+        return bool(
+            UNNUMBERED_HEADING_RE.match(heading_text)
+            or NUMBERED_HEADING_RE.match(heading_text)
+        )
+
     def prefix(self, level, heading_text):
-        if not self.enabled or UNNUMBERED_HEADING_RE.match(heading_text):
+        if not self.enabled or self.names_its_own_number(heading_text):
             return ""
         index = max(0, level - self.top_level)
         self.counters[index] += 1
