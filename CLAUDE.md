@@ -31,17 +31,21 @@ In code: `--repo-root` is the tree scanned for markdown with `gdoc:` frontmatter
 and the tree `.gdoc/` is written into. In practice it is the folder holding the
 source document, in a vault such as `Altery-Platform-Hub`.
 
-## The tool must work without git
+## Nothing runs git
 
-Principles 1 and 3. This is the constraint an agent is most likely to break.
+Principles 1 and 3, and the decision dated 2026-08-18. This is the constraint an
+agent is most likely to break, usually by adding a helpful commit.
 
-- Nothing may refuse to run because git is unavailable.
-- `is_dirty` raising `BaselineConflict` is correct only when git exists and the
-  command fails. Without git, `write_baseline` refuses to overwrite an existing
-  file unless `force` says so, because not knowing must never resolve to
-  "overwrite".
-- The commit steps in `gdoc-apply` are conditional, and a skipped commit is
-  always said out loud.
+- No module and no skill runs git. Not to commit, not to check whether the root
+  is a repository, not to ask whether a file is dirty. `gdoc-apply` names every
+  file it changed and stops there.
+- `write_baseline` refuses to overwrite an existing `baseline.md` unless `force`
+  says so. It asks nothing and nobody: not knowing must never resolve to
+  "overwrite", and in a synced vault git could not have answered anyway.
+- `generate` is the only caller that writes a baseline, and it passes `force` at
+  the one moment the document and the markdown provably match.
+- `install.sh` still reads git, and that is about this repository rather than
+  about the user's documents.
 
 ## No external programs
 

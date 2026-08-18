@@ -28,7 +28,9 @@ One root, `$ROOT`, and it is `$PWD`:
 
 `$PWD` is the CLI default for every `--repo-root`, so you never pass it.
 
-`$ROOT` may not be a git repository. Every git step below is conditional.
+Nothing here runs git. Committing is Nail's job, and this skill does not do it
+or check whether it could. What it does instead is name every file it changed,
+so he can commit them himself if this root is a repository.
 
 ## If the credential is not working
 
@@ -45,7 +47,7 @@ that share is missing rather than that the folder id is wrong.
 ## If Nail passes `--terminal-only`
 
 Do Steps 1, 2 and 3: work through the items, edit the markdown, show the diffs,
-commit if there is a repository. Then stop. Do not run Step 4: `$GDOC generate`
+say what was saved. Then stop. Do not run Step 4: `$GDOC generate`
 always tries to upload, so there is no local-only way to produce the document.
 Tell Nail the markdown is saved and that re-running without the flag will
 generate the document.
@@ -144,26 +146,17 @@ One item at a time. For each:
 Global changes are handled here, not in comment threads, because a diff is
 reviewable and a comment thread is not.
 
-## Step 3: Save the markdown
+## Step 3: Say what was saved
 
-Commit only inside a git repository. Check first:
+The edits are on disk as soon as they are made. Name the file:
 
-```bash
-git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1
+```
+Saved <paired md file>. Not committed: committing is yours.
 ```
 
-If that succeeds:
-
-```bash
-(cd "$ROOT" && git add <paired md file> && git commit -m "docs: apply global items from <doc name> review")
-```
-
-If it fails, skip the commit and say so plainly, in these words or close to
-them: "Not a git repository, so nothing was committed. The markdown is saved on
-disk." A silent skip would read as a successful commit.
-
-Where there is a repository, commit before generating, so every generated
-document corresponds to a commit.
+That is the whole step. Do not run git, and do not check whether this root is a
+repository. Nail commits when he wants to, and a run that leaves the working
+tree dirty is the expected outcome, not a fault.
 
 ## Step 4: Generate the new version
 
@@ -341,43 +334,32 @@ Prefer the front matter. Reach for `--title` only when the run really is a
 one-off. Adding the line to the front matter changes nothing else in the note.
 Then run Step 4 again, and finish it, including the commit below.
 
-### Commit the note
+### What the publish wrote back
 
 `generate` writes `gdoc:` and `gdoc_versions` into the paired markdown itself,
-and a `title:` line may have gone in just before the run. Both are unsaved work
-until they are committed. Step 3 commits the text, this commits what the publish
-wrote back, and together they keep every generated document matched to a commit.
+and a `title:` line may have gone in just before the run. Say so, with the
+version number the JSON reported:
 
-Skip this when `doc_id` is null: nothing was written, so there is nothing to
-commit. After a `pairing_error`, repair it first, then commit.
-
-Inside a repository, and only there:
-
-```bash
-git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1
+```
+<paired md file> now records <title> v<version>.
 ```
 
-If that succeeds:
-
-```bash
-(cd "$ROOT" && git add <paired md file> && git commit -m "docs: record <title> v<version> in gdoc_versions")
-```
-
-`<version>` is the number the JSON reported. If it fails, say the front matter
-was updated and nothing was committed. The note is saved on disk either way.
+Nothing was written when `doc_id` is null, so say nothing then. After a
+`pairing_error`, repair it first and then say what the repair wrote.
 
 ## Step 5: Clear the items
 
 Delete the applied items from `pending.md`. If all items are done, delete the
 file. Say what you removed either way.
 
-Inside a repository, commit it so the history shows what was asked:
+Then close the run by listing every file that changed on disk, so Nail can
+commit them if he wants to:
 
-```bash
-(cd "$ROOT" && git add .gdoc/<slug>/pending.md && git commit -m "docs: clear applied items from <doc name> pending.md")
 ```
-
-Outside one, say that the items were cleared and nothing was committed.
+Changed, not committed:
+  <paired md file>       edits from items 1 and 2, and the v3 record
+  .gdoc/<slug>/pending.md  items 1 and 2 removed
+```
 
 ## Never
 
@@ -390,4 +372,5 @@ Outside one, say that the items were cleared and nothing was committed.
 - Never run `pair set` to fix an unpaired file. It clears `gdoc_versions` when
   the id differs, which drops the history. `generate` pairs the file itself.
 - Never invent a title, and never approve the suggested one on Nail's behalf.
-- Never report a commit that did not happen.
+- Never commit, and never check whether this root is a repository. That is
+  Nail's job, and the skill's job is to name what it changed.
