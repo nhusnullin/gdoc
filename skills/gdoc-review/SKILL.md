@@ -34,7 +34,7 @@ One root, `$ROOT`, and it is `$PWD`:
 
 `$PWD` is the CLI default for every `--repo-root`, so you never pass it.
 
-`$ROOT` may not be a git repository. Nothing here requires one.
+Nothing here runs git, and nothing here commits.
 
 ## If the credential is not working
 

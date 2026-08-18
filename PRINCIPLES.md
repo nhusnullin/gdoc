@@ -31,10 +31,10 @@ So:
   publish path, as an allowlist rather than a ban.
 - pandoc is the one that remains, tracked in three places. It must degrade with a
   clear message, never crash, and never be found at a hardcoded absolute path.
-- git is a dependency the tool does not have. The vault holding the source
-  documents is not a git repository and will not become one. Nothing refuses to
-  run for lack of git, and a step skipped because git is absent is always said
-  out loud.
+- git is not a dependency at all. The vault holding the source documents is not
+  a git repository and will not become one. Nothing in the tool or the skills
+  runs git, so there is no conditional step and nothing to say out loud about
+  one. See the decision dated 2026-08-18 below.
 
 ## 2. The root is where the user stands, and it is never this repo
 
@@ -122,6 +122,33 @@ The consequence is that a credential is chosen partly by which files exist, so
 login` and `gdoc auth use` write the mode down, which both makes a login take
 effect and settles the question for good on that machine. No setup step is a hand
 edit of the config file.
+
+**2026-08-18. Nothing runs git, and the agent never commits.** Serves principle
+1. Committing is Nail's job. A person receiving this tool should not have to
+think about git at all, and the skills should not carry a conditional and a
+"nothing was committed" sentence for a case that may never apply to them.
+
+Two halves, and they are separate decisions that happen to land together.
+
+The skills no longer commit. `gdoc-apply` used to run `git rev-parse` before
+three commits: the edits, the front matter the publish wrote back, and the
+cleared queue. All three are gone, replaced by naming every file that changed on
+disk so Nail can commit them himself. Trying the commit and reporting what git
+said was considered and rejected: that still makes committing the agent's job.
+
+`gdoc/baseline.py` no longer consults git either. It used to ask whether
+`baseline.md` held uncommitted work and overwrite it when git said no. Outside a
+repository the answer was always "cannot tell", which was most of the time. And
+where the root is a synced folder, a Dropbox or Nextcloud rewrite is exactly
+what git cannot see, so the check read as safety while providing none. Now an
+existing baseline is never overwritten without `force`, in any directory, which
+is principle 3 held by disk state rather than by a subprocess. `generate` passes
+`force` at the one moment the document and the markdown provably match, and it
+is the only caller that writes one.
+
+The cost is that a document generated from an uncommitted note is no longer
+matched to a commit. That was only ever true on Nail's own machine, and it was
+never checked.
 
 **2026-08-13. Only `ai:`-marked, unresolved, unanswered comments are actioned.**
 Domain choice, no principle above it. The author name is a label, not a gate. Drive returns no email address for
