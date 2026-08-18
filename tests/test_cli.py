@@ -1656,3 +1656,65 @@ def test_read_counts_answered_threads_that_have_been_replied_to_since(capsys):
 def test_read_counts_nothing_when_an_answered_thread_is_quiet(capsys):
     _, payload = _read_payload(capsys, ["read", _URL], [_answered_thread(None)])
     assert payload["skipped_with_newer_replies"] == 0
+
+
+# ---------------------------------------------------------------------------
+# export --media-dir (issue #28)
+# ---------------------------------------------------------------------------
+
+_MEDIA_URL = "https://docs.google.com/document/d/1AbC/edit"
+
+
+def test_export_with_media_writes_the_markdown_and_reports_the_pictures(capsys, tmp_path):
+    from gdoc.export import Export
+
+    out = tmp_path / "notes.md"
+    export = Export(
+        markdown="# Title\n\n![](notes-media/image1.png)\n",
+        images=(tmp_path / "notes-media" / "image1.png",),
+        warnings=(),
+    )
+    with patch("gdoc.cli.drive_service", return_value=MagicMock()), patch(
+        "gdoc.cli.export_with_media", return_value=export
+    ) as exporter:
+        code = main([
+            "export", _MEDIA_URL, "--out", str(out), "--media-dir", str(tmp_path / "notes-media"),
+        ])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert out.read_text().endswith("![](notes-media/image1.png)\n")
+    assert payload["images"] == [str(tmp_path / "notes-media" / "image1.png")]
+    assert exporter.call_args.args[1] == "1AbC"
+
+
+def test_export_reports_a_picture_it_could_not_carry(capsys, tmp_path):
+    """Silence is what made this bug show up only after the new document was read."""
+    from gdoc.export import Export
+
+    export = Export(markdown="# Title\n", images=(), warnings=("image3.png was in the document",))
+    with patch("gdoc.cli.drive_service", return_value=MagicMock()), patch(
+        "gdoc.cli.export_with_media", return_value=export
+    ):
+        main([
+            "export", _MEDIA_URL, "--out", str(tmp_path / "notes.md"),
+            "--media-dir", str(tmp_path / "m"),
+        ])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["warnings"] == ["image3.png was in the document"]
+
+
+def test_export_media_needs_somewhere_to_put_the_markdown(capsys, tmp_path):
+    code = main(["export", _MEDIA_URL, "--media-dir", str(tmp_path / "m")])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert "--out" in payload["error"]
+
+
+def test_export_without_media_still_writes_plain_markdown(capsys, tmp_path):
+    out = tmp_path / "notes.md"
+    with patch("gdoc.cli.drive_service", return_value=MagicMock()), patch(
+        "gdoc.cli.export_markdown", return_value="# Title\n"
+    ):
+        code = main(["export", _MEDIA_URL, "--out", str(out)])
+    assert code == 0
+    assert out.read_text() == "# Title\n"

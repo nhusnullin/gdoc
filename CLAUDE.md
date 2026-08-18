@@ -57,9 +57,13 @@ pandoc remains, in three places, and each is tracked separately:
   Removing it means a pure-Python parser plus a rewritten AST walker, in the
   module where the document body's pixel fidelity lives, so it needs its own
   spec.
-- `gdoc/export.py`, as a markdown fallback. Drive exports `text/markdown`
-  natively, verified against the live account, so this one looks removable on
-  its own.
+- `gdoc/export.py`, twice. As a markdown fallback, and as the only way to carry
+  pictures across. Drive's `text/markdown` export drops embedded pictures and
+  Google Drawings entirely, verified against a real document on 2026-08-18:
+  four drawings, no image markup of any kind. The docx export carries all four
+  as PNG bytes, so `export_with_media` always takes the docx route and runs
+  pandoc with `--extract-media`. That makes this use load-bearing, not a
+  fallback, and removing it now needs a docx reader.
 - `gdoc/generate.py`, for the plain non-template path, which is what
   `--template none` selects. Kept on purpose: it is the fallback when the house
   template is not wanted, and keeping it narrowed the blast radius of wiring the
@@ -197,6 +201,25 @@ evasion of automated revocation rather than security.
 So before this repo is ever made public: create a fresh client, distribute it as
 a file out of band, and clear these two constants. Do not obfuscate them to get
 past the scanner.
+
+## Pictures
+
+Two halves, and both were broken.
+
+- **Pulling a document in.** `gdoc export --out note.md --media-dir note-media`
+  is the only way to get the pictures. Drive's markdown export has none in it.
+  A picture in the docx that pandoc never extracts, usually a header image, is
+  reported in `warnings` rather than dropped: silence is what made #28 show up
+  only after somebody read the new document.
+- **Publishing it back.** `gdoc/render/body.py` embeds a picture that sits on its
+  own line (`lone_image`) and, since #28, every picture inside a paragraph as
+  well (`split_images`). A pulled document puts its diagrams at the end of the
+  paragraph that introduces them, and those were being dropped without a word.
+  Words first, then each picture on its own centred line.
+
+A picture at a URL is refused with a message naming `--media-dir`. Nothing here
+downloads: a publish that reached the network would depend on a link that
+expires.
 
 ## Identity is never a gate
 

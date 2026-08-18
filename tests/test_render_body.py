@@ -104,3 +104,99 @@ def test_an_ordinary_heading_is_still_numbered():
 
 def test_numbering_off_suppresses_everything():
     assert HeadingNumberer(enabled=False).prefix(1, "Purpose") == ""
+
+
+# ------------------------------------------------------------------- pictures --
+# Issue #28. A picture that lives at a URL cannot be embedded, and the message
+# has to name the way to get one that can.
+
+import pytest  # noqa: E402
+
+from gdoc.render import build  # noqa: E402
+from gdoc.render.body import BodyError  # noqa: E402
+
+
+def _note(tmp_path, body):
+    path = tmp_path / "note.md"
+    path.write_text(
+        "---\ntitle: Picture test\n---\n\n# Picture test\n\n## The picture\n\n" + body
+    )
+    return path
+
+
+def test_a_remote_picture_names_the_command_that_makes_it_local(tmp_path):
+    note = _note(tmp_path, "![](https://lh7-us.googleusercontent.com/abc)\n")
+    with pytest.raises(BodyError) as caught:
+        build(note, tmp_path / "out.docx")
+    message = str(caught.value)
+    assert "gdoc export" in message
+    assert "--media-dir" in message
+
+
+def test_a_local_picture_beside_the_note_is_embedded(tmp_path):
+    import zipfile
+
+    png = _one_pixel_png()
+    (tmp_path / "note-media").mkdir()
+    (tmp_path / "note-media" / "image1.png").write_bytes(png)
+    note = _note(tmp_path, "![](note-media/image1.png)\n")
+    out = tmp_path / "out.docx"
+    build(note, out)
+    assert any(n.startswith("word/media/") for n in zipfile.ZipFile(out).namelist())
+
+
+def _one_pixel_png() -> bytes:
+    """A real 1x1 PNG. python-docx reads the header, so a fake one will not do."""
+    import struct
+    import zlib
+
+    def chunk(kind, payload):
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+        )
+
+    header = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
+    pixels = zlib.compress(b"\x00\xff\xff\xff")
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", pixels) + chunk(b"IEND", b"")
+
+
+def test_pictures_inside_a_sentence_are_still_embedded(tmp_path):
+    """The real case from issue #28: a pulled document puts diagrams at the end
+    of the paragraph that introduces them, so `lone_image` never saw them and
+    two of three drawings were dropped without a word.
+    """
+    import zipfile
+
+    media = tmp_path / "note-media"
+    media.mkdir()
+    for name in ("image1.png", "image2.png"):
+        (media / name).write_bytes(_one_pixel_png())
+    note = _note(
+        tmp_path,
+        "Non-cash incentives follow a request model."
+        "![](note-media/image1.png)![](note-media/image2.png)\n",
+    )
+    out = tmp_path / "out.docx"
+    build(note, out)
+    document = zipfile.ZipFile(out).read("word/document.xml").decode("utf8")
+    assert document.count("<w:drawing") == 2
+
+
+def test_the_sentence_beside_a_picture_survives(tmp_path):
+    import re
+    import zipfile
+
+    media = tmp_path / "note-media"
+    media.mkdir()
+    (media / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "Route one is direct.![](note-media/image1.png)\n")
+    out = tmp_path / "out.docx"
+    build(note, out)
+    document = zipfile.ZipFile(out).read("word/document.xml").decode("utf8")
+    # Runs are split at every space, so read the text back out of them.
+    words = re.sub(r"\s+", " ", "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", document)))
+    assert "Route one is direct." in words
+    assert document.count("<w:drawing") == 1
