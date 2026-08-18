@@ -115,26 +115,58 @@ say which you chose.
 Picking an answered thread is allowed. It is the one case where you reply twice
 to the same comment, and you say so before posting.
 
-## Step 2: Show Nail what you found, and stop
+## Step 2: Say what you found, then act
 
-Print the list and ask before posting anything. One thing Nail must be told every
-run, because the agent should not rely on checking it: under `service_account`
-`permissions.list` is refused, so the agent cannot see who else can read this
-document. Replies are visible to all of them, and a posted reply cannot be
-taken back.
+A marker is Nail's instruction, written in the document. Asking him to confirm it
+adds a turn and settles nothing, so a marked comment is acted on in the same run:
+`ai?` is answered in its thread, `ai!` is captured, `ai:` is classified by you and
+then answered or captured. No "Proceed?" in any of those three.
+
+Print the list first, and print the access line with it. It is a statement now,
+not a question, and it goes out every run because the agent cannot check it:
+under `service_account` `permissions.list` is refused, so who else can read this
+document is unknown. A posted reply cannot be taken back.
 
 ```
 Will act:         para 3, para 7, para 11 (Nail), para 5 (William Mejia)
 Already answered: para 2
+Newer replies:    1 answered thread has an unmarked reply since my last one
 
-I cannot see who else has access to this document. Replies will be
-visible to everyone on it. Under auth_mode oauth they post under your
-own name; under service_account they post under the service account.
-
-Proceed?
+I cannot see who else has access to this document. Replies are visible
+to everyone on it. Under auth_mode oauth they post under your own name;
+under service_account they post under the service account.
 ```
 
-Wait for an answer. Never post before this.
+Then work through them, and print every reply in full in step 7. That printing is
+what replaces the gate: it is how Nail reads what went out.
+
+### When you stop and ask anyway
+
+You judge the draft before it is posted. Stop, show the draft, and wait when any
+of these is true:
+
+- **It carries something out of the hub that this document should not.** An
+  internal figure, an unpublished decision, the name of an internal document, a
+  counterparty's terms. This happened on 18 August: a draft carried a figure from
+  the hub thesis into a document shared with a counterparty, and it was caught at
+  the old gate. Nobody outside Altery should learn something from a gdoc reply
+  that they could not learn from the document.
+- **A rule in the root says it is not shared.** A note marked confidential or
+  internal, or anything the surrounding documents treat that way.
+- **You are not confident the answer is true.** Not "I have no source", which
+  step 4 already covers by saying so in the reply, but "I think this is right and
+  I could be wrong".
+- **The comment is genuinely ambiguous.** Unchanged, and it was always the rule.
+- **It would be a second reply to a thread you already answered.** Also unchanged.
+
+Say which of those it is, show the draft, and wait. When you post but cut
+something out of the draft first, post it and say what you cut and why.
+
+Everything else posts.
+
+All-comments mode is the one place that still asks for every comment, and it is
+unchanged: an unmarked comment carries no instruction, so Nail picks each one.
+See "If Nail asks for all the comments" above.
 
 ## Step 3: Classify each addressed comment
 
@@ -228,6 +260,21 @@ captured para 2   global: renumber sections
 Next session: /gdoc-apply <source md>
 ```
 
+Then the full text of every reply that was posted, one after the other, with the
+paragraph it went to. Not a summary of it. Nothing else in the run shows Nail
+what is now public, so this is the record.
+
+```
+--- posted to para 3 ---
+<the reply, exactly as posted>
+
+--- posted to para 7 ---
+<the reply, exactly as posted>
+```
+
+Say here what you cut from a draft and why, and say which threads you stopped on
+and are still waiting for.
+
 Name the queue file so Nail can read it, but hand him back his own markdown file
 as the next command. The queue path is bookkeeping, and `/gdoc-apply` with no
 argument finds it too.
@@ -249,3 +296,6 @@ now would bake them in and hide them from the next apply.
   picked that comment.
 - Never attempt a global change in a comment thread.
 - Never write the baseline. That is `generate`'s job.
+- Never post a reply you did not print in full afterwards. Posting without
+  showing the text is the one thing removing the gate must not cost.
+- Never batch-approve in all-comments mode. Nail picks each one.
