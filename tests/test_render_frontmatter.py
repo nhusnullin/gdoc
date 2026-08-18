@@ -55,6 +55,24 @@ def test_a_file_with_no_front_matter_at_all_is_still_its_own_error():
     assert "front matter" in str(excinfo.value)
 
 
+def test_the_no_front_matter_error_carries_the_fields_rather_than_a_file_to_go_and_find():
+    """A reader must be able to fix the note from the message alone.
+
+    The message used to end 'See references/front-matter.md for the full field
+    list', and no such file has ever existed in this repo. An agent that took
+    the sentence at its word searched the whole disk for two minutes and found
+    nothing. So the message carries the answer instead of a pointer to it: the
+    one required field, and the optional ones by name.
+    """
+    with pytest.raises(frontmatter.FrontMatterError) as excinfo:
+        frontmatter.parse("# Kickoff call\n\nBody.\n", source_name="kickoff.md")
+    message = str(excinfo.value)
+    assert "references/front-matter.md" not in message
+    assert "title" in message
+    for optional in ("classification", "owner", "doc_type", "revisions"):
+        assert optional in message, f"{optional} is not named in the message"
+
+
 def test_an_unrecognised_classification_is_still_refused():
     text = "---\ntitle: X\nclassification: Secret\n---\n\nBody.\n"
     with pytest.raises(frontmatter.FrontMatterError) as excinfo:
