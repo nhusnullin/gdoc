@@ -74,16 +74,66 @@ Domain choice, no principle above it. Document-wide changes are applied to the
 paired markdown and republished as a new version. Replies go in comment threads,
 because a thread is comment surface and not content.
 
-**2026-08-13. The credential is Commenter-only.** Enforces the decision above by
-permission rather than by discipline. Taking Editor access later would be a
-change to argue about, not a line that cannot be crossed.
+**2026-08-13. The credential is Commenter-only.** *Retired 2026-08-15.* It
+enforced the decision above by permission rather than by discipline, and it was
+Google's to enforce. Under OAuth the usable scope is full Drive, so keeping this
+would have meant keeping the per-document sharing step forever. Replaced by the
+decision below.
+
+*Corrected 2026-08-18.* This entry used to say Drive has no scope that reads
+comments and writes replies without full Drive access. Not true: both accept
+`drive.file`, which is non-sensitive. But a file enters `drive.file` scope only
+when the app created it or the user handed it over through Google's file picker,
+and a terminal has no picker, so pasting a URL still means full Drive. The
+conclusion holds; the reason was wrong.
+
+**2026-08-15. The client reaches only the files it was given.** Serves principle
+3. Under OAuth the credential can reach every file the signed-in user owns, so
+`gdoc/guard.py` holds a set of file ids, the ones the command was handed plus
+the ones its own creates returned, and refuses every request addressing anything
+else. `files.list` is refused outright, so the tool cannot search Drive. An
+empty set refuses everything, so a command that does not name a document reaches
+nothing.
+
+The cost is stated rather than hidden: on a file in the set, every method is
+permitted, including an edit to a reviewed document. "The agent cannot edit a
+reviewed document" becomes "it does not". Nothing in gdoc edits one, and the
+markdown-is-the-source decision above is now held up by design rather than by
+permission. `tests/test_guard.py` and `tests/test_guard_is_installed.py` are
+what keep it honest.
+
+**2026-08-18. An unstated `auth_mode` is inferred, never defaulted.** Serves
+principle 1, that the tool keeps working. A config written before `auth_mode`
+existed cannot mention it, so reading a missing key as oauth would flip every
+working service_account install the moment it upgraded, and every command would
+then fail on a token that was never created. `Config.auth_mode` is `None` when
+the file does not say, and `gdoc.auth.resolve_auth_mode` decides: a stated mode
+wins outright, a token means oauth, a key with no token means service_account,
+and neither means oauth, which is the new install.
+
+Inference is for silence only. A stated mode that is not one of the two is
+refused, and a config that cannot be read reaches the caller, because resolving
+either quietly would pick oauth on a machine holding a token, which is the wider
+credential and not the one the author asked for.
+
+The consequence is that a credential is chosen partly by which files exist, so
+`gdoc auth status` reports whether the mode was stated or inferred, and reports
+`null` rather than a guess when the config is broken. `gdoc auth
+login` and `gdoc auth use` write the mode down, which both makes a login take
+effect and settles the question for good on that machine. No setup step is a hand
+edit of the config file.
 
 **2026-08-13. Only `ai:`-marked, unresolved, unanswered comments are actioned.**
 Domain choice, no principle above it. The author name is a label, not a gate. Drive returns no email address for
 comment authors and display names are editable, so any identity check is a guess
 the skill would have to disclaim every run. Pointing the skill at a document is
-the trust decision. Handling unmarked comments is planned, and it changes this
-line only.
+the trust decision.
+
+*Amended 2026-08-15.* Two things. Under `oauth` this stops being a preference:
+Drive reports the credential as the author of everything the signed-in user
+writes, so an author check would skip every marked comment Nail leaves himself.
+And `gdoc read --all` now exists, so unmarked comments are actionable when Nail
+asks for them and picks each one. The default is unchanged.
 
 **2026-08-14. Skills are symlinked into `~/.claude/skills/`, never copied.**
 Domain choice, no principle above it. A copy drifts silently. `install.sh` defends this and refuses to replace a real
@@ -91,10 +141,12 @@ directory whose contents differ.
 
 ### Open violations
 
-**2026-08-15. `gdoc/export.py` hardcodes an absolute path to pandoc.** Violates
-principle 1: the path only exists on Apple Silicon with Homebrew, so `export` and
-`generate` both break on any other machine. This file is being changed in a
-parallel branch with an open PR. Reassess after that merges.
+**2026-08-15. `gdoc/export.py` hardcodes an absolute path to pandoc.**
+*Closed 2026-08-15.* The parallel branch merged. `find_pandoc` now resolves
+pandoc at call time, and the Homebrew path is a last-resort fallback rather than
+the answer. `tests/test_pandoc_path.py` covers it.
+
+None open.
 
 ## The gate
 

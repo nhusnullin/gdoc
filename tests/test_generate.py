@@ -318,3 +318,22 @@ def test_template_none_keeps_the_plain_pandoc_path(tmp_path):
     assert result.doc_id == "1New"
     assert result.docx_path.stat().st_size < TEMPLATE_SIZE
     assert drive.files().create.call_count == 1
+
+
+def test_the_upload_is_not_resumable():
+    """A resumable upload would be refused by the guard.
+
+    The initiating POST returns an empty body, so gdoc/guard.py learns no file
+    id from it, and the follow-up PUT carries no id in its path either. The
+    guard would refuse it, and the message would read like a security refusal
+    rather than an unsupported upload mode.
+
+    So the mode is pinned here. Making uploads resumable means teaching the
+    guard about the session URI first.
+    """
+    import inspect
+
+    from gdoc import generate as generate_module
+
+    source = inspect.getsource(generate_module.upload_as_gdoc)
+    assert "resumable=False" in source

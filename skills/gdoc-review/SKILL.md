@@ -36,6 +36,26 @@ One root, `$ROOT`, and it is `$PWD`:
 
 `$ROOT` may not be a git repository. Nothing here requires one.
 
+## If the credential is not working
+
+Any command can fail with no token, no key, or a permission error. Run
+`$GDOC auth status` and read it before guessing. It never fails, and it says
+which credential is in use, whether that came from the config or was worked out
+from the files present, and what is broken.
+
+Two fixes, and both are one command. Never tell Nail to edit
+`~/.config/gdoc-agent/config.json` by hand, and never edit it yourself:
+
+- no OAuth token, or he wants to act as himself: `$GDOC auth login`. It opens a
+  browser, waits for him to approve, and sets `auth_mode` to oauth once the
+  sign-in returns. Nothing has to be created first: gdoc ships its OAuth client.
+  Expect the command to sit there until he has clicked approve.
+- he wants the service account instead, and its key is installed:
+  `$GDOC auth use service_account`.
+
+Ask before running either. Both change which account posts replies, and the
+account name is visible to everyone on the document.
+
 ## If Nail passes `--terminal-only`
 
 Do every step, but post nothing to the document. Print each reply in the
@@ -51,23 +71,55 @@ $GDOC read <url>
 
 Returns `addressed` and `skipped`. A marked comment from anyone in the document
 is addressed: the marker is the instruction, and Nail chose the document. Each
-item carries its `author`, so an unexpected name is visible. Threads already
-answered by the service account appear under `skipped`, which is what makes a
-second run safe.
+item carries its `author`, so an unexpected name is visible. Threads gdoc has
+already answered appear under `skipped`, which is what makes a second run safe.
+
+Every reply gdoc posts ends with `[gdoc]` on its own line. That marker, not the
+account name, is how a later run knows the thread was answered. Under `oauth`
+replies post under Nail's own name, so the marker is the only signal that works.
+
+One case to expect once: the first `oauth` run on a document the service account
+reviewed earlier can list threads that were in fact answered. Those old replies
+carry no marker and no longer read as gdoc's. Each item's `replies` field shows
+what is already there, so say so and let Nail decide.
+
+## If Nail asks for all the comments
+
+By default only marked comments are work. When Nail says he wants to go through
+every comment, add `--all`:
+
+```bash
+$GDOC read <url> --all
+```
+
+`addressed` then holds every unresolved thread, marked or not, including ones
+that already have an answer. Each item says `marked`, `answered`, and carries
+its existing `replies`.
+
+This mode never batch-approves. Print the numbered list with author, quote and
+content, answered threads last and labelled, and let Nail pick. For each comment
+he picks: draft the reply, show it in the terminal, wait, then post. Unmarked
+comments carry no `forced_kind`, so classify local against global yourself and
+say which you chose.
+
+Picking an answered thread is allowed. It is the one case where you reply twice
+to the same comment, and you say so before posting.
 
 ## Step 2: Show Nail what you found, and stop
 
 Print the list and ask before posting anything. One thing Nail must be told every
-run, because the agent cannot check it: `permissions.list` is refused under
-Commenter, so the agent cannot see who else can read this document. Replies are
-visible to all of them, and a posted reply cannot be taken back.
+run, because the agent should not rely on checking it: under `service_account`
+`permissions.list` is refused, so the agent cannot see who else can read this
+document. Replies are visible to all of them, and a posted reply cannot be
+taken back.
 
 ```
 Will act:         para 3, para 7, para 11 (Nail), para 5 (William Mejia)
 Already answered: para 2
 
 I cannot see who else has access to this document. Replies will be
-visible to everyone on it, under the service account address.
+visible to everyone on it. Under auth_mode oauth they post under your
+own name; under service_account they post under the service account.
 
 Proceed?
 ```
@@ -177,9 +229,13 @@ now would bake them in and hide them from the next apply.
 
 ## Never
 
-- Never edit the reviewed document. The credential cannot, and neither may you.
+- Never edit the reviewed document. Under `service_account` the credential
+  cannot. Under `oauth` it could, and you still may not: replies go in threads,
+  and document-wide changes go through the paired markdown.
 - Never resolve a thread. Resolving means Nail accepted the text.
-- Never reply twice to the same comment.
-- Never act on a comment without the marker.
+- Never reply twice to the same comment, unless Nail picked an answered thread
+  in all-comments mode, and say so before posting.
+- Never act on an unmarked comment unless Nail asked for all-comments mode and
+  picked that comment.
 - Never attempt a global change in a comment thread.
 - Never write the baseline. That is `generate`'s job.

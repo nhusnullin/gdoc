@@ -1,5 +1,5 @@
 from gdoc.filters import forced_kind, needs_action, partition
-from gdoc.model import Reply, Thread
+from gdoc.model import Reply, Thread, parse_thread
 
 ME = "Nail Khusnullin"
 
@@ -55,8 +55,20 @@ def test_resolved_threads_are_skipped():
     assert needs_action(thread(resolved=True)) is False
 
 
-def test_threads_the_agent_wrote_are_skipped():
-    assert needs_action(thread(by_agent=True)) is False
+def test_a_marked_comment_the_credential_wrote_is_still_work():
+    """The regression this whole change turns on.
+
+    Under OAuth the credential is Nail, so by_agent is true for every comment he
+    writes. If it still gated needs_action, gdoc read would return nothing.
+    """
+    assert needs_action(thread(by_agent=True)) is True
+
+
+def test_a_marker_reply_counts_as_answered_even_without_me():
+    answered = thread(
+        replies=(Reply(id="r1", content="Done.\n\n[gdoc]", by_agent=False, by_marker=True),)
+    )
+    assert needs_action(answered) is False
 
 
 def test_threads_the_agent_already_answered_are_skipped():
@@ -110,3 +122,63 @@ def test_an_already_answered_comment_is_still_skipped():
 def test_partition_returns_tuples():
     addressed, skipped = partition((thread(), thread(resolved=True)))
     assert isinstance(addressed, tuple) and isinstance(skipped, tuple)
+
+
+def test_all_mode_takes_unmarked_comments_too():
+    threads = (thread(content="ai: rephrase"), thread(content="This reads oddly"))
+    addressed, skipped = partition(threads, include_unmarked=True)
+    assert len(addressed) == 2
+    assert skipped == ()
+
+
+def test_all_mode_still_leaves_resolved_threads_alone():
+    addressed, skipped = partition((thread(resolved=True),), include_unmarked=True)
+    assert addressed == ()
+    assert len(skipped) == 1
+
+
+def test_all_mode_shows_a_thread_gdoc_already_answered():
+    """has_agent_reply counts a `me` reply, and under OAuth `me` is Nail.
+
+    Hiding answered threads here would hide every thread he replied to by hand,
+    which is the opposite of what all-comments mode is for.
+    """
+    answered = thread(
+        replies=(Reply(id="r1", content="Done.\n\n[gdoc]", by_agent=False, by_marker=True),)
+    )
+    addressed, _ = partition((answered,), include_unmarked=True)
+    assert len(addressed) == 1
+
+
+def test_default_mode_is_unchanged_by_the_new_argument():
+    threads = (thread(content="ai: rephrase"), thread(content="This reads oddly"))
+    assert partition(threads) == partition(threads, include_unmarked=False)
+
+
+def test_a_reply_nail_typed_himself_does_not_count_as_gdocs():
+    """Under oauth, Drive marks Nail's own reply `me`.
+
+    Reading that as gdoc would drop the thread into `skipped` on every run,
+    forever. The legacy argument for keeping `me` does not rescue it either: a
+    thread the service account answered has `me` false when Nail's token reads
+    it, so under oauth `me` buys nothing and costs real threads.
+
+    The fix lives in parse_thread, which is why this goes through it: by_agent
+    now means "gdoc wrote it", not "the credential wrote it".
+    """
+    raw = {
+        "id": "t1",
+        "content": "ai? does this need a Consumer Duty ref",
+        "author": {"displayName": "Nail Khusnullin", "me": True},
+        "resolved": False,
+        "replies": [
+            {
+                "id": "r1",
+                "content": "and check the FCA handbook ref",
+                "author": {"displayName": "Nail Khusnullin", "me": True},
+            }
+        ],
+    }
+    assert needs_action(parse_thread(raw, me_is_agent=False)) is True
+    # Under the service account the same shape does mean gdoc answered.
+    assert needs_action(parse_thread(raw, me_is_agent=True)) is False

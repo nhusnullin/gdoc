@@ -14,13 +14,15 @@ from pathlib import Path
 
 from googleapiclient.errors import HttpError
 
-from gdoc import render
-from gdoc.auth import drive_service
-from gdoc.config import Config, load_config
+from gdoc import auth as auth_module
+from gdoc import config as config_module
+from gdoc import oauth, render
+from gdoc.auth import SCOPES, configured_mode, drive_service, resolve_auth_mode
+from gdoc.config import AUTH_MODES, Config, load_config, write_auth_mode
 from gdoc.docid import extract_doc_id, extract_folder_id
 from gdoc.export import export_markdown
 from gdoc.fetch import fetch_threads
-from gdoc.filters import forced_kind, partition
+from gdoc.filters import forced_kind, is_addressed, partition
 from gdoc.generate import generate
 from gdoc.baseline import slugify, write_baseline
 from gdoc.model import Thread
@@ -37,6 +39,19 @@ from gdoc.render import frontmatter, profiles
 from gdoc.reply import post_reply
 
 
+# Enough of an existing reply to recognise it, not enough to bloat the payload.
+_REPLY_PREVIEW = 400
+
+
+def _reply_json(reply) -> dict:
+    return {
+        "id": reply.id,
+        "author": reply.author_name,
+        "content": reply.content[:_REPLY_PREVIEW],
+        "by_gdoc": reply.by_agent or reply.by_marker,
+    }
+
+
 def _thread_json(thread: Thread) -> dict:
     return {
         "id": thread.id,
@@ -45,6 +60,9 @@ def _thread_json(thread: Thread) -> dict:
         "quoted": thread.quoted,
         "anchored": thread.is_anchored,
         "forced_kind": forced_kind(thread.content),
+        "marked": is_addressed(thread.content),
+        "answered": thread.has_agent_reply,
+        "replies": [_reply_json(reply) for reply in thread.replies],
     }
 
 
@@ -81,17 +99,36 @@ def _file_meta(drive, doc_id: str) -> dict:
     )
 
 
+def _configured_mode() -> str:
+    """The mode actually in use, stated or inferred.
+
+    auth.configured_mode already answers None for a config that is missing or
+    unreadable, so there is nothing to catch here.
+    """
+    return resolve_auth_mode(configured_mode())
+
+
+def _me_is_agent() -> bool:
+    """Whether Drive's `me` flag identifies gdoc rather than the person.
+
+    True under the service account, false under oauth, where the credential is
+    Nail and his own replies would otherwise read as gdoc's.
+    """
+    return _configured_mode() == "service_account"
+
+
 def cmd_read(args) -> int:
     doc_id = extract_doc_id(args.url)
-    drive = drive_service()
-    threads = fetch_threads(drive, doc_id)
-    addressed, skipped = partition(threads)
+    drive = drive_service(doc_ids=doc_id)
+    threads = fetch_threads(drive, doc_id, me_is_agent=_me_is_agent())
+    addressed, skipped = partition(threads, include_unmarked=args.all)
     meta = _file_meta(drive, doc_id)
     return _emit(
         {
             "doc_id": doc_id,
             "name": meta.get("name"),
             "slug": slugify(meta.get("name", "")),
+            "mode": "all" if args.all else "marked",
             "addressed": [_thread_json(t) for t in addressed],
             "skipped": [_thread_json(t) for t in skipped],
         }
@@ -101,7 +138,7 @@ def cmd_read(args) -> int:
 def cmd_reply(args) -> int:
     doc_id = extract_doc_id(args.doc)
     body = Path(args.body_file).read_text()
-    reply_id = post_reply(drive_service(), doc_id, args.comment_id, body)
+    reply_id = post_reply(drive_service(doc_ids=doc_id), doc_id, args.comment_id, body)
     return _emit({"reply_id": reply_id, "comment_id": args.comment_id})
 
 
@@ -112,7 +149,7 @@ def cmd_export(args) -> int:
     because the point is to pipe it into diff.
     """
     doc_id = extract_doc_id(args.url)
-    markdown = export_markdown(drive_service(), doc_id)
+    markdown = export_markdown(drive_service(doc_ids=doc_id), doc_id)
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -123,10 +160,13 @@ def cmd_export(args) -> int:
 
 
 def cmd_capture(args) -> int:
-    drive = drive_service()
+    # The id first: the client is built to reach this document and no other.
     doc_id = extract_doc_id(args.doc)
+    drive = drive_service(doc_ids=doc_id)
     repo_root = Path(args.repo_root)
-    threads = {t.id: t for t in fetch_threads(drive, doc_id)}
+    threads = {
+        t.id: t for t in fetch_threads(drive, doc_id, me_is_agent=_me_is_agent())
+    }
     thread = threads.get(args.comment_id)
     if thread is None:
         return _fail(f"comment {args.comment_id} not found on {doc_id}")
@@ -211,15 +251,18 @@ def cmd_generate(args) -> int:
     template = args.template or config.template
     master = None if template == profiles.NO_TEMPLATE else template
     md_path = Path(args.md)
+    folder_id = folder_id or config.output_folder_id
     try:
         name = args.name or _version_name(md_path, master, args.title)
-        drive = drive_service()
+        # No input document. The output folder is the one file this command was
+        # given; every other id it touches is one it created.
+        drive = drive_service(doc_ids=[folder_id] if folder_id else ())
         result = generate(
             drive,
             md_path,
             name,
             Path(args.out),
-            folder_id=folder_id or config.output_folder_id,
+            folder_id=folder_id,
             template=master,
             title=args.title,
         )
@@ -405,6 +448,183 @@ def cmd_pair_find(args) -> int:
 
 
 # ---------------------------------------------------------------------------
+# auth subcommand handlers
+# ---------------------------------------------------------------------------
+
+
+def cmd_auth(args) -> int:
+    return args.auth_func(args)
+
+
+def _claim_oauth_mode(payload: dict, token_path) -> None:
+    """Make oauth the configured mode, so the login just done takes effect.
+
+    Every other command reads auth_mode. A login that left a service_account
+    config alone would report success and change nothing, which is worse than
+    failing.
+
+    Not when the token went somewhere else. Nothing but this command reads a
+    custom token path, so claiming the mode would leave the config saying oauth
+    and no token where every other command looks for one, which is a working
+    install broken by a command that reported success.
+
+    A config that cannot be written is a warning rather than a failure, because
+    the token is already on disk. Same shape as generate's baseline_error.
+    """
+    if token_path is not None:
+        payload["config_note"] = (
+            f"auth_mode was left alone, because the token went to {token_path} "
+            f"rather than {oauth.DEFAULT_TOKEN_PATH}, and no other command reads "
+            f"that path."
+        )
+        return
+    payload["auth_mode"] = "oauth"
+    try:
+        payload["auth_mode_was"] = write_auth_mode("oauth")
+        payload["config_path"] = str(config_module.DEFAULT_PATH)
+    except Exception as error:  # noqa: BLE001 - the login already succeeded
+        payload["config_error"] = (
+            f"you are signed in, but auth_mode was not written to "
+            f"{config_module.DEFAULT_PATH}, so commands still use the old "
+            f"credential: {type(error).__name__}: {error}"
+        )
+
+
+def cmd_auth_login(args) -> int:
+    """Sign in, write the mode, then report who you are.
+
+    The order matters twice. The mode is written only after the browser flow
+    returned, so a failed login cannot break a setup that works. And it is
+    written before the account lookup, which is a network call: doing it after
+    meant a lookup failure left the person signed in with the old credential
+    still configured, and retrying changed nothing.
+    """
+    credentials = oauth.login(
+        SCOPES, client_path=args.client, token_path=args.token
+    )
+    payload = {
+        "logged_in": True,
+        "token_path": str(args.token or oauth.DEFAULT_TOKEN_PATH),
+    }
+    _claim_oauth_mode(payload, args.token)
+    user = oauth.account(drive_service(credentials=credentials))
+    payload["account"] = user.get("emailAddress")
+    payload["name"] = user.get("displayName")
+    return _emit(payload)
+
+
+def cmd_auth_status(args) -> int:
+    """Say what is set up and what is broken. Never fail.
+
+    The except is deliberately broad. This command exists to report a broken
+    credential, so any exception is its output rather than its failure.
+    """
+    payload = {
+        "token_path": str(oauth.DEFAULT_TOKEN_PATH),
+        "client_path": str(oauth.DEFAULT_CLIENT_PATH),
+        "key_path": str(auth_module.DEFAULT_KEY_PATH),
+        "revoke_url": "https://myaccount.google.com/permissions",
+    }
+    # Which client a login would use, so a person can see there is nothing left
+    # to set up. "bundled" is the normal answer.
+    try:
+        payload["client"] = oauth.client_config()[1]
+    except Exception as error:  # noqa: BLE001 - reporting is the whole job
+        payload["client"] = None
+        payload["client_problem"] = str(error)
+    # A config that cannot be read is exactly what this command is for, and the
+    # mode is left null rather than guessed: inferring one from the files present
+    # would report a credential the author did not ask for. A missing file is not
+    # a problem, it is the normal state of an install that never needed one.
+    try:
+        stated = configured_mode()
+        payload["auth_mode"] = resolve_auth_mode(stated)
+        payload["auth_mode_source"] = "config" if stated else "inferred"
+    except Exception as error:  # noqa: BLE001 - reporting is the whole job
+        payload["auth_mode"] = None
+        payload["auth_mode_source"] = "unknown"
+        payload["config_error"] = f"{type(error).__name__}: {error}"
+    try:
+        user = oauth.account(drive_service())
+        payload["account"] = user.get("emailAddress")
+        payload["name"] = user.get("displayName")
+        payload["ready"] = True
+    except Exception as error:  # noqa: BLE001
+        payload["ready"] = False
+        payload["problem"] = str(error)
+    return _emit(payload)
+
+
+def cmd_auth_use(args) -> int:
+    """Switch the credential. The other direction of auth login.
+
+    Without this, going back to the service account means hand editing JSON in a
+    directory the tool otherwise owns. Nothing else in gdoc asks that.
+
+    The mode is written even when its credential is missing, because installing
+    the credential is the next step and refusing here would leave the person
+    with nowhere to go. The warning says which file to create.
+    """
+    previous = write_auth_mode(args.mode)
+    payload = {
+        "auth_mode": args.mode,
+        "auth_mode_was": previous,
+        "config_path": str(config_module.DEFAULT_PATH),
+    }
+    needed = (
+        oauth.DEFAULT_TOKEN_PATH
+        if args.mode == "oauth"
+        else auth_module.DEFAULT_KEY_PATH
+    )
+    if not needed.exists():
+        fix = "gdoc auth login" if args.mode == "oauth" else f"save the key to {needed}"
+        payload["warning"] = (
+            f"auth_mode is now {args.mode}, but there is no credential at "
+            f"{needed}. Commands will fail until you fix that: {fix}."
+        )
+    return _emit(payload)
+
+
+def cmd_auth_logout(args) -> int:
+    """Delete the token, and say what happens next.
+
+    The mode is left alone on purpose. Logging out to sign in as a different
+    Google account is the common case, and a command that says it deletes a token
+    must not quietly repoint every other command at another credential.
+
+    That makes the next step the person's, so it is spelled out rather than left
+    for the next command to fail on.
+    """
+    before = _configured_mode()
+    removed = oauth.logout(token_path=args.token)
+    mode = _configured_mode()
+    payload = {
+        "logged_out": removed,
+        "token_path": str(args.token or oauth.DEFAULT_TOKEN_PATH),
+        "auth_mode": mode,
+        "auth_mode_was": before,
+    }
+    if mode != before:
+        # An unstated config resolves by which files exist, so deleting the token
+        # repointed it. The account that posts replies just changed, which is
+        # visible to everyone on the document.
+        payload["next"] = (
+            f"the config does not state auth_mode, so deleting the token moved "
+            f"it from {before} to {mode}. Run gdoc auth use {before} to keep "
+            f"{before}, or gdoc auth use {mode} to settle on {mode}."
+        )
+    elif mode == "oauth":
+        options = ["gdoc auth login"]
+        if auth_module.DEFAULT_KEY_PATH.exists():
+            options.append("gdoc auth use service_account")
+        payload["next"] = (
+            f"auth_mode is still oauth and there is no token, so commands will "
+            f"fail until you run: {', or '.join(options)}."
+        )
+    return _emit(payload)
+
+
+# ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
 
@@ -415,6 +635,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     read = sub.add_parser("read", help="list comment threads, partitioned")
     read.add_argument("url")
+    read.add_argument(
+        "--all",
+        action="store_true",
+        help="offer every unresolved comment, not only the marked ones",
+    )
     read.set_defaults(func=cmd_read)
 
     reply = sub.add_parser("reply", help="post one plain-text reply")
@@ -478,6 +703,26 @@ def build_parser() -> argparse.ArgumentParser:
     find_cmd.add_argument("--repo-root", default=".")
     find_cmd.add_argument("--doc-id", required=True)
     find_cmd.set_defaults(pair_func=cmd_pair_find)
+
+    auth = sub.add_parser("auth", help="manage the Google credential")
+    auth.set_defaults(func=cmd_auth)
+    auth_sub = auth.add_subparsers(dest="auth_command", required=True)
+
+    login_cmd = auth_sub.add_parser("login", help="authorise in a browser as yourself")
+    login_cmd.add_argument("--client", help="path to the Desktop OAuth client JSON")
+    login_cmd.add_argument("--token", help="where to write the token")
+    login_cmd.set_defaults(auth_func=cmd_auth_login)
+
+    status_cmd = auth_sub.add_parser("status", help="show the credential in use")
+    status_cmd.set_defaults(auth_func=cmd_auth_status)
+
+    use_cmd = auth_sub.add_parser("use", help="switch which credential is used")
+    use_cmd.add_argument("mode", choices=AUTH_MODES, help="the credential to use")
+    use_cmd.set_defaults(auth_func=cmd_auth_use)
+
+    logout_cmd = auth_sub.add_parser("logout", help="delete the local OAuth token")
+    logout_cmd.add_argument("--token", help="path to the token to delete")
+    logout_cmd.set_defaults(auth_func=cmd_auth_logout)
 
     return parser
 

@@ -2,6 +2,8 @@
 
 import re
 
+from gdoc.marker import with_marker
+
 # Only the markers that arrive visibly broken. Hyphen bullets read fine as
 # plain text, so they are allowed.
 _MARKDOWN = re.compile(r"(\*\*|`|^\s{0,3}#{1,6}\s)", re.MULTILINE)
@@ -31,13 +33,19 @@ def assert_plain_text(body: str) -> str:
 
 
 def post_reply(drive, doc_id: str, comment_id: str, body: str) -> str:
+    """Post one reply, marked so a later run can recognise it.
+
+    The markdown check runs on what the agent wrote, before the marker is added.
+    The marker is checked into the test suite as plain text, so appending it can
+    never turn an accepted body into a rejected one.
+    """
     assert_plain_text(body)
     created = (
         drive.replies()
         .create(
             fileId=doc_id,
             commentId=comment_id,
-            body={"content": body},
+            body={"content": with_marker(body)},
             fields="id,createdTime",
         )
         .execute()

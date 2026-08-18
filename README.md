@@ -8,10 +8,36 @@ there in the comment thread, and queues the ones that need a rewrite of the whol
 document. Later you work through that queue: the agent edits the source markdown
 file and publishes a new version of the Google Doc from it.
 
-The markdown file is the source. The Google Doc is a rendering of it. The tool
-never edits a document you point it at, because the credential holds **Commenter**
-access only. That is not a rule the agent follows, it is a permission Google
-enforces.
+The markdown file is the source. The Google Doc is a rendering of it. Nothing in
+the tool edits a document you point it at.
+
+There are two credentials, and `auth_mode` in the config picks one.
+
+**`oauth`** is the default. You approve it once in a browser and the agent acts as
+you, so nothing has to be shared with anything first. It holds more than the tool
+needs: the narrow `drive.file` scope does cover comments, but a file only enters
+that scope when the app created it or the user picked it through Google's file
+picker, and a terminal cannot show one. Pasting a URL means full Drive. `gdoc/guard.py` narrows it back down: every
+request goes through it, and it carries a request only when the file addressed is
+one gdoc was given or one gdoc created. Anything else is refused inside the
+process, a read included. So the tool cannot see a document you did not point it
+at, and cannot search your Drive at all.
+
+**`service_account`** is the original. The agent has its own account, you share a
+document with it as **Commenter**, and Google itself refuses every edit. No
+browser and no token to refresh, at the cost of one sharing step per document.
+
+You never edit the config to choose. `gdoc auth login` switches to `oauth`, and
+`gdoc auth use service_account` switches back. An install that already works on a
+service account keeps using it after an upgrade, because a config that never
+mentioned `auth_mode` is read as unstated rather than as oauth. `gdoc auth status`
+says which credential is in use and whether that came from the config or was
+worked out from the files present.
+
+The difference worth knowing: under `service_account` the tool *cannot* edit a
+reviewed document, because Google will not let it. Under `oauth` it *does not*,
+because no code in it does. The guard bounds which files are reachable. It does
+not bound what happens inside one.
 
 ## The loop
 
@@ -80,7 +106,8 @@ paired to, when it was last synced, and every version published from it.
 - [Claude Code](https://claude.com/claude-code), because the two skills run inside it.
 - pandoc. `brew install pandoc`, or your package manager. It is used to read
   markdown, so publishing does not work without it.
-- A Google account, and permission to create a service account in Google Cloud.
+- A Google altery.com account. Nothing to create in Google Cloud: gdoc ships the
+  OAuth client it signs in with.
 
 ## Setup
 
@@ -95,51 +122,47 @@ cd gdoc
 If GitHub says the repository does not exist, it is private. Ask Nail for access.
 
 `install.sh` creates a venv at `~/.config/gdoc-agent/venv`, installs the tool into
-it, and links the two skills into `~/.claude/skills/` so Claude Code can find
-them. It prints the commit you are running. Safe to re-run: every step checks the
-current state first.
+it, links `gdoc` into `~/.local/bin` so it is on your PATH, and links the two
+skills into `~/.claude/skills/` so Claude Code can find them. It prints the commit
+you are running. Safe to re-run: every step checks the current state first.
+
+If it says `~/.local/bin` is not on your PATH, it prints the one line to add.
 
 To update later, `git pull` is the whole update. Re-run `./install.sh` only after
 dependencies change or a new skill is added.
 
-### 2. Create the service account
-
-This is the account the agent acts as. It is not you, and it holds no access to
-anything until you share something with it.
-
-In [console.cloud.google.com](https://console.cloud.google.com):
-
-1. Create a project, or pick one.
-2. **APIs and Services → Library →** enable **Google Drive API**.
-3. **IAM and Admin → Service Accounts → Create service account.** Give it a name
-   you will recognise in a comment thread, for example `doc-agent`. No project
-   roles are needed: everything it can do comes from Drive sharing.
-4. Open the account, **Keys → Add key → Create new key → JSON.** A file
-   downloads.
-
-Then put the key where the tool looks for it, and lock it down:
+### 2. Sign in
 
 ```bash
-mkdir -p ~/.config/gdoc-agent
-mv ~/Downloads/<the-downloaded-key>.json ~/.config/gdoc-agent/sa-key.json
-chmod 600 ~/.config/gdoc-agent/sa-key.json
+gdoc auth login
 ```
 
-Copy the account's address from the console. It looks like
-`doc-agent@your-project.iam.gserviceaccount.com`. You need it twice below.
+A browser opens, you approve, and that is the whole step. There is no OAuth client
+to create and no config file to edit: gdoc ships its client, and the login writes
+`auth_mode` for you.
 
-Never commit this key. It belongs in `~/.config/gdoc-agent/`, never in a repo.
+You can skip this step entirely. Run `/gdoc-review <url>` and the skill notices
+there is no token, asks whether to sign you in, and does it.
+
+To check, or to change your mind later:
+
+```bash
+gdoc auth status               # which credential, and whether it works
+gdoc auth logout               # delete the local token
+gdoc auth use service_account  # switch credential, if a key is installed
+```
+
+The token lands in `~/.config/gdoc-agent/oauth-token.json`, mode `0600`, and never
+leaves your machine. Revoke the grant at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 
 ### 3. Make a folder to publish into
 
 New documents have to be created somewhere. Make a folder for them, **in a Shared
-Drive, not in My Drive**, and share it with the service account address as
-**Content manager**.
+Drive, not in My Drive**.
 
 The Shared Drive is worth the extra click. Files created there belong to the
-Shared Drive, so your colleagues can open them and they do not sit inside a robot
-account nobody logs into. In My Drive they would be owned by the service account
-instead.
+Shared Drive, so your colleagues can open them without you sharing each one.
 
 Then copy the folder URL out of the address bar. That is the whole thing you hand
 over when you publish:
@@ -151,21 +174,13 @@ https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz
 Nothing to configure. Paste that URL when the agent asks which folder, and it
 takes the id out of it.
 
-### 4. Share the documents you review
+### 4. Nothing to share
 
-The agent sees only what is shared with it. **Share** as **Commenter**, and
-nothing more.
+Under `oauth` there is no sharing step. The agent reaches whatever you can reach,
+and the guard keeps it to the document you named plus the folder you publish into.
 
-Keep those documents in a Shared Drive too. You can then share the folder once,
-as Commenter, and every document in it is covered. Sharing one document at a time
-works the same way, it is just more clicks.
-
-Keep this folder separate from the publish folder in step 3. The publish folder
-has to allow writes. Anywhere else, Commenter is a wall Google enforces, and that
-is the property the whole tool leans on.
-
-To stop the agent working on something, unshare it. There is no list of documents
-anywhere, and no run can widen its own reach.
+To keep the agent off something, do not point it at it. There is no list of
+documents anywhere, and no run can widen its own reach.
 
 ### 5. Check it works
 
@@ -176,8 +191,20 @@ In Claude Code, from the folder that holds your markdown:
 ```
 
 It reads the comments and shows you what it found, then asks before posting
-anything. If it cannot see the document at all, the share in step 4 did not land
-on the right address.
+anything. If it cannot see the document at all, run `gdoc auth status` and check
+which account you signed in as.
+
+### Optional: bring your own OAuth client
+
+Every user of the bundled client draws on the same Google rate limit. If that ever
+bites, create a Desktop app OAuth client of your own and save its JSON to
+`~/.config/gdoc-agent/oauth-client.json`. A file there wins over the bundled
+client, and `gdoc auth status` reports which one is in use.
+
+Security is not the reason to do this. A client shipped to many users is a public
+client by definition, per RFC 8252 section 8.5, and `gh` and `gcloud` both ship
+theirs the same way. Quota is the reason.
+
 
 ### Optional: stop it asking for the folder
 
@@ -193,6 +220,43 @@ If you publish into the same folder every time, name it once in
 
 Both keys are optional. `template` defaults to the bundled house style. The id is
 the part of the folder URL after `/folders/`.
+
+### Optional: use a service account instead
+
+The agent can have its own identity instead, with Commenter as a wall Google
+enforces. Create the account in **IAM and Admin → Service Accounts**, no project
+roles needed, add a JSON key, and save it as `~/.config/gdoc-agent/sa-key.json`
+with `chmod 600`. Share the publish folder with its address as **Content
+manager**, and every document you want reviewed as **Commenter**, keeping the two
+folders apart. Then:
+
+```bash
+gdoc auth use service_account
+```
+
+It writes the setting for you and warns if the key is not there yet. Going back is
+`gdoc auth login`.
+
+### For whoever maintains gdoc: the OAuth client
+
+Done once, for everybody. `gdoc/oauth.py` holds `BUNDLED_CLIENT_ID` and
+`BUNDLED_CLIENT_SECRET`. To create or replace them, in
+[console.cloud.google.com](https://console.cloud.google.com):
+
+1. Pick the project, and keep the **Google Drive API** enabled. It is the only
+   API gdoc calls.
+2. **OAuth consent screen**, User type **Internal**. Not optional. Internal is
+   what exempts gdoc from OAuth verification, from the unverified-app screen and
+   from the 100-user cap. gdoc needs the full Drive scope, which Google classes as
+   restricted, so going External would mean a
+   [CASA security assessment](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)
+   every 12 months. Internal also keeps refresh tokens from expiring after seven
+   days.
+3. **Credentials → Create credentials → OAuth client ID**, Application type
+   **Desktop app**.
+4. Paste the id and secret into the two constants in `gdoc/oauth.py`.
+
+Internal means only altery.com accounts can sign in. That is the audience.
 
 ## Using it
 
@@ -283,24 +347,26 @@ not, and the link is the answer.
 
 Worth reading before you rely on it.
 
-**It cannot edit the document.** By design. All it can do inside a Google Doc is
-post replies in comment threads. Every real change goes to the markdown and comes
-back as a new version. The one exception is the folder it publishes into, where it
-has to be able to create files. Documents you share for review are behind the
-wall. Documents it created itself are not, so keep the two folders apart.
+**It does not edit the document, but under `oauth` nothing stops it.** All it does
+inside a Google Doc is post replies in comment threads. Every real change goes to
+the markdown and comes back as a new version. Under `service_account` that is a
+permission Google enforces. Under `oauth` the guard bounds which files the tool can
+reach, not what it could do inside the one you named, so it is design discipline
+instead. Pointing the skill at a document is the trust decision.
 
-**Replies are signed with the raw address.** A thread shows
-`doc-agent@your-project.iam.gserviceaccount.com`, not a friendly name. Everyone
-reading the document sees that. A nicer label needs a real Google Workspace user
-for the agent, which is separate work.
+**Replies carry your name.** Under `oauth`, Drive reports you as the author of
+every reply, so a thread does not show that an agent wrote it. gdoc signs each
+reply with a `[gdoc]` line on its last line, which is also how it recognises its
+own replies on a later run. Under `service_account` the thread shows the raw
+`doc-agent@your-project.iam.gserviceaccount.com` address instead.
 
-**It cannot see who else has access.** Under Commenter, Google refuses to say. So
-it cannot warn you that an outside collaborator is on the document. It says so
-every run, and the decision to post is yours.
+**It cannot always see who else has access.** Under `service_account`, Commenter
+means Google refuses to say, so it cannot warn you that an outside collaborator is
+on the document. It says so every run, and the decision to post is yours.
 
-**A document you cannot share, it cannot read.** If you only hold Commenter on
-somebody else's document, you cannot add the service account. You have to ask the
-owner.
+**A document you cannot share, it cannot read, under `service_account` only.** If
+you hold Commenter on somebody else's document you cannot add the service account,
+so you have to ask the owner. Under `oauth` any document you can open is readable.
 
 **Unmarked comments are ignored.** Only `ai:`, `ai?`, `ai!` and `@ai` count.
 Handling ordinary comments is planned, not built.
@@ -347,22 +413,13 @@ comment and the answer appears in that thread a few seconds later, while you are
 still on the paragraph that prompted it. You never leave the document, and you
 never run anything again. Designed and planned, not built yet.
 
-**Sign in as yourself.** Today the agent has its own account, and setup is mostly
-about creating it and sharing things with it. With normal Google sign-in you would
-approve it once in a browser and skip steps 2 to 4 of the setup. Replies would
-carry your name instead of a robot address, and you would not have to share
-anything, because the agent would see what you already see. The trade is real: the
-Commenter wall in the limitations comes from that separate account, so signing in
-as yourself replaces a permission Google enforces with a rule the tool follows.
-Tracked as [issue 10](https://github.com/nhusnullin/gdoc/issues/10).
-
 **Ordinary comments.** Reading and answering comments that carry no marker.
 
 **Fewer things to install.** Google can hand back markdown by itself, so the
 pandoc dependency should shrink.
 
-**A friendly reply name.** A real Workspace user for the agent, so threads stop
-showing a service account address.
+**A friendly reply name.** A real Workspace user for the agent, so `service_account`
+threads stop showing a raw address.
 
 ---
 

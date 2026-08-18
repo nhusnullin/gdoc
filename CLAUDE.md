@@ -14,6 +14,8 @@ only.
 | Path | Holds |
 |---|---|
 | `gdoc/` | the package. Imports are `from gdoc.x import y` |
+| `gdoc/guard.py` | the reachable set. Which files a client may touch, under either credential |
+| `gdoc/marker.py` | the `[gdoc]` label on gdoc's own replies |
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
@@ -88,6 +90,121 @@ creates real documents.
 numbers blank. Any desktop refresh fills them in, and a wrong number would be
 worse than a blank one.
 
+## The client reaches only the files it was given
+
+Principle 3, and the decision dated 2026-08-15. Read it there.
+
+In code: `drive_service(doc_ids=...)` wraps the transport in
+`gdoc.guard.GuardedHttp`, which carries a request only when the file it
+addresses is in its set. The set is seeded from the CLI, where `read`, `reply`,
+`export` and `capture` each pass the document they were pointed at and
+`generate` passes the output folder, and it grows only when a create the guard
+itself carried comes back with an id.
+
+Two rules an agent is likely to break:
+
+- The set has exactly two doors, the ids passed in and the ids learned from a
+  create. Never add a third, and never widen it to make a test pass. A refused
+  call usually means the command did not say which document it was for.
+- `gdoc/auth.py` is the only module that may call `build()`.
+  `tests/test_guard_is_installed.py` enforces it, as an allowlist: it fails if
+  the call spreads, and it fails if it moves.
+
+## Which credential, and who decides
+
+`gdoc.auth.resolve_auth_mode` is the one place. It is a pure function of the mode
+the config states plus which credential files exist, so it never reads the config
+itself and a test can hand it either case.
+
+- A stated mode wins outright. Nothing on disk may overrule the author's word,
+  and a mode it does not recognise is refused rather than inferred past. A typo
+  must never resolve to oauth, which is the credential with the wider reach.
+- An unstated mode is inferred: a token means oauth, a key with no token means
+  service_account, neither means oauth.
+
+`auth._config()` returns the defaults for a **missing** config only. A config that
+exists and cannot be understood reaches the caller, so every command fails naming
+the problem. `gdoc auth status` is the one place that catches it, reports
+`auth_mode: null` with source `unknown`, and never guesses.
+
+`Config.auth_mode` is `None` when the file does not say, and that is the point.
+Defaulting it to oauth in `load_config` would flip every working service_account
+install the moment it upgraded, because a config written before the key existed
+cannot mention it. Never give that field a default.
+
+Two consequences an agent is likely to break:
+
+- `gdoc auth login` writes `auth_mode: oauth` through `config.write_auth_mode`,
+  after the browser flow returns and **before** the account lookup. Later would
+  mean a network failure leaves the person signed in with the old credential
+  configured. `--token` skips the write entirely and says so, because nothing
+  else reads a custom token path. `gdoc auth use <mode>` is the same write, in
+  either direction, so no setup step is ever a hand edit of JSON.
+- `write_auth_mode` carries every other key over, `display_name` included, and
+  refuses a file it could not parse rather than replacing it. It writes through a
+  temporary file and `os.replace`, so a failed write cannot leave an empty config.
+  Truncating first lost settings that were readable a moment earlier, and the
+  empty file then blocked the next write too.
+
+`tests/conftest.py` redirects the config and both credential paths into a tmp
+directory for every non-integration test, autouse. Without it a test that runs
+`auth login` edits the developer's real config, and resolving an unstated mode
+would answer differently per machine. Integration tests are exempt, because the
+real credential is their point.
+
+## The OAuth client is shipped, and stays Internal
+
+`gdoc/oauth.py` holds `BUNDLED_CLIENT_ID` and `BUNDLED_CLIENT_SECRET`, so nobody
+using gdoc visits a cloud console. Both rules matter:
+
+- **The secret belongs in version control.** RFC 8252 section 8.5: a secret
+  shipped to many users "should not be treated as confidential" and serves no
+  purpose "beyond client identification". `gh` ships its own with the comment
+  "This value is safe to be embedded in version control", and `gcloud` ships a
+  Google secret in a constant named `CLOUDSDK_CLIENT_NOTSOSECRET`. Do not
+  "fix" this by moving it to `~/.config/gdoc-agent/`. What protects an account
+  is the per-user token, which never leaves the machine.
+- **The client must stay User type Internal.** gdoc needs the full Drive scope,
+  which Google classes as restricted. Internal exempts gdoc from verification,
+  the unverified-app screen and the 100-user cap. External would mean a CASA
+  assessment every 12 months, and refresh tokens expiring weekly.
+
+A file at `~/.config/gdoc-agent/oauth-client.json` wins over the bundled client.
+That is an override for quota, not a setup step, the way gcloud treats
+`--client-id-file`. One shared client shares one Google rate limit, which is why
+rclone is retiring its shared Drive client during 2026.
+
+`oauth.client_config` is the one place that decides, and it returns where the
+client came from so `gdoc auth status` can report it.
+
+### The one thing that changes this decision: making the repo public
+
+Nail decided on 2026-08-18 to keep the client in git, on the RFC and on the `gh`
+and `gcloud` precedent. That decision assumed a private repo, and one condition
+would break it.
+
+GitHub secret scanning carries a **partner** pattern for
+`google_oauth_client_id, google_oauth_client_secret`. On a public repository it is
+reported to Google, who may revoke the client. So publishing this repo would
+break every colleague's login at once, without warning and without a commit to
+blame. rclone obfuscates its Google secret for exactly this reason, which is
+evasion of automated revocation rather than security.
+
+So before this repo is ever made public: create a fresh client, distribute it as
+a file out of band, and clear these two constants. Do not obfuscate them to get
+past the scanner.
+
+## Identity is never a gate
+
+Drive's `author.me` means the service account under `auth_mode: service_account`
+and Nail under `oauth`. Nothing may branch on it to decide whether a comment is
+work: that would skip every comment Nail writes. The marker decides.
+
+`[gdoc]` on the last line of a reply is how gdoc recognises its own replies.
+`Reply.by_agent`, which is `me`, is kept in `has_agent_reply` for one reason
+only: threads the service account answered before the marker existed carry no
+marker, and dropping it would answer them twice.
+
 ## Skills are linked, not copied
 
 `~/.claude/skills/gdoc-review` and `gdoc-apply` are symlinks into `skills/` in
@@ -128,7 +245,10 @@ instead, as with the 40-twip cell margin.
 
 ## Never
 
-- Never edit a reviewed Google Doc. The credential cannot, and neither may the agent.
+- Never edit a reviewed Google Doc. Under `service_account` the credential
+  cannot. Under `oauth` it could: `gdoc/guard.py` bounds which files are
+  reachable, not what may be done inside one. Nothing in gdoc edits a document,
+  and nothing may start.
 - Never commit anything from `~/.config/gdoc-agent/`.
 - Never post markdown into a comment thread. The CLI refuses it for a reason.
 

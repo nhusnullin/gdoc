@@ -103,3 +103,65 @@ def test_recorded_source_is_none_for_an_older_queue(tmp_path):
 
 def test_recorded_source_is_none_when_there_is_no_queue(tmp_path):
     assert recorded_source(pending_path(tmp_path, "policy")) is None
+
+
+def marked(content):
+    return thread(content=content)
+
+
+def test_the_item_records_who_asked(tmp_path):
+    append_item(tmp_path, "policy", thread(), doc_id="1AbC", today=TODAY)
+    assert "Author: Nail Khusnullin" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_an_item_from_someone_else_records_their_name(tmp_path):
+    other = Thread(
+        id="t9",
+        content="ai! renumber the annex",
+        author_name="William Mejia",
+        author_email=None,
+        by_agent=False,
+        quoted="Annex 2",
+        resolved=False,
+        replies=(),
+    )
+    append_item(tmp_path, "policy", other, doc_id="1AbC", today=TODAY)
+    assert "Author: William Mejia" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_the_item_never_claims_nail_asked(tmp_path):
+    """The marker decides, not the author, so the queue must not assume one."""
+    append_item(tmp_path, "policy", thread(), doc_id="1AbC", today=TODAY)
+    assert "Nail asked" not in pending_path(tmp_path, "policy").read_text()
+
+
+def test_the_item_records_the_marker_it_carried(tmp_path):
+    append_item(tmp_path, "policy", marked("ai! renumber"), doc_id="1AbC", today=TODAY)
+    assert "Marked: ai!" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_a_question_marker_is_recorded_as_such(tmp_path):
+    append_item(tmp_path, "policy", marked("ai? is this right"), doc_id="1AbC", today=TODAY)
+    assert "Marked: ai?" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_a_plain_colon_marker_is_recorded_as_such(tmp_path):
+    append_item(tmp_path, "policy", marked("ai: rephrase"), doc_id="1AbC", today=TODAY)
+    assert "Marked: ai:" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_an_unmarked_comment_says_so(tmp_path):
+    """All-comments mode can capture a comment nobody marked."""
+    append_item(tmp_path, "policy", marked("This annex is out of order"), doc_id="1AbC", today=TODAY)
+    assert "Marked: no marker" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_the_comment_text_is_still_quoted(tmp_path):
+    append_item(tmp_path, "policy", marked("ai! renumber"), doc_id="1AbC", today=TODAY)
+    assert "> ai! renumber" in pending_path(tmp_path, "policy").read_text()
+
+
+def test_capturing_the_same_comment_twice_is_still_refused(tmp_path):
+    append_item(tmp_path, "policy", thread(id="t1"), doc_id="1AbC", today=TODAY)
+    with pytest.raises(ValueError, match="already captured"):
+        append_item(tmp_path, "policy", thread(id="t1"), doc_id="1AbC", today=TODAY)
