@@ -26,6 +26,13 @@ at, and cannot search your Drive at all.
 document with it as **Commenter**, and Google itself refuses every edit. No
 browser and no token to refresh, at the cost of one sharing step per document.
 
+You never edit the config to choose. `gdoc auth login` switches to `oauth`, and
+`gdoc auth use service_account` switches back. An install that already works on a
+service account keeps using it after an upgrade, because a config that never
+mentioned `auth_mode` is read as unstated rather than as oauth. `gdoc auth status`
+says which credential is in use and whether that came from the config or was
+worked out from the files present.
+
 The difference worth knowing: under `service_account` the tool *cannot* edit a
 reviewed document, because Google will not let it. Under `oauth` it *does not*,
 because no code in it does. The guard bounds which files are reachable. It does
@@ -209,21 +216,19 @@ the part of the folder URL after `/folders/`.
 
 ### Optional: use a service account instead
 
-Set `auth_mode` to `service_account` and the agent gets its own identity again,
-with Commenter as a wall Google enforces:
+The agent can have its own identity instead, with Commenter as a wall Google
+enforces. Create the account in **IAM and Admin → Service Accounts**, no project
+roles needed, add a JSON key, and save it as `~/.config/gdoc-agent/sa-key.json`
+with `chmod 600`. Share the publish folder with its address as **Content
+manager**, and every document you want reviewed as **Commenter**, keeping the two
+folders apart. Then:
 
-```json
-{
-  "auth_mode": "service_account"
-}
+```bash
+gdoc auth use service_account
 ```
 
-Then create the account in **IAM and Admin → Service Accounts**, no project roles
-needed, add a JSON key, and save it as `~/.config/gdoc-agent/sa-key.json` with
-`chmod 600`. Share the publish folder with its address as **Content manager**, and
-every document you want reviewed as **Commenter**, keeping the two folders apart.
-
-`auth_mode` defaults to `oauth`.
+It writes the setting for you and warns if the key is not there yet. Going back is
+`gdoc auth login`.
 
 ## Using it
 

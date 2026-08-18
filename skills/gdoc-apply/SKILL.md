@@ -30,6 +30,17 @@ One root, `$ROOT`, and it is `$PWD`:
 
 `$ROOT` may not be a git repository. Every git step below is conditional.
 
+## If the credential is not working
+
+`$GDOC auth status` says which credential is in use and what is broken. It never
+fails. `$GDOC auth login` signs Nail in and switches to oauth;
+`$GDOC auth use service_account` switches back. Ask before running either, and
+never edit `~/.config/gdoc-agent/config.json` by hand.
+
+Under `oauth` the publish folder does not have to be shared with anything. Under
+`service_account` it does, as Content manager, and a refused upload usually means
+that share is missing rather than that the folder id is wrong.
+
 ## If Nail passes `--terminal-only`
 
 Do Steps 1, 2 and 3: work through the items, edit the markdown, show the diffs,

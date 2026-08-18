@@ -993,6 +993,333 @@ def test_auth_status_prints_where_to_revoke(capsys):
     assert "myaccount.google.com" in payload["revoke_url"]
 
 
+# ---------------------------------------------------------------------------
+# auth login switches the credential over, rather than asking for a hand edit
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def config_at(gdoc_agent_dir):
+    """The config file inside this test's own gdoc-agent directory.
+
+    The redirection itself is in conftest and applies to every test, because a
+    login writes this file and no test may write the real one.
+    """
+    return gdoc_agent_dir / "config.json"
+
+
+def _login(extra=()):
+    """A successful browser flow. Returns nothing; the caller reads the config."""
+    return patch("gdoc.cli.oauth.login", return_value="creds"), patch(
+        "gdoc.cli.drive_service"
+    ), patch("gdoc.cli.oauth.account", return_value={"emailAddress": "nail@altery.com"})
+
+
+def test_auth_login_switches_a_service_account_config_over(capsys, config_at):
+    """Signing in and then still using the old credential is the worst outcome.
+
+    Every other command reads auth_mode, so a login that left it alone would
+    report success and change nothing.
+    """
+    config_at.write_text(json.dumps({"auth_mode": "service_account"}))
+    a, b, c = _login()
+    with a, b, c:
+        exit_code = main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert json.loads(config_at.read_text())["auth_mode"] == "oauth"
+    assert payload["auth_mode"] == "oauth"
+    assert payload["auth_mode_was"] == "service_account"
+
+
+def test_auth_login_keeps_the_rest_of_the_config(capsys, config_at):
+    config_at.write_text(
+        json.dumps({"auth_mode": "service_account", "output_folder_id": "0AFolderId"})
+    )
+    a, b, c = _login()
+    with a, b, c:
+        main(["auth", "login"])
+    capsys.readouterr()
+    assert json.loads(config_at.read_text())["output_folder_id"] == "0AFolderId"
+
+
+def test_auth_login_states_the_mode_a_config_left_unstated(capsys, config_at):
+    """Writing it down is the point. An inferred mode changes as files appear."""
+    config_at.write_text(json.dumps({"output_folder_id": "0AFolderId"}))
+    a, b, c = _login()
+    with a, b, c:
+        main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert json.loads(config_at.read_text())["auth_mode"] == "oauth"
+    assert payload["auth_mode"] == "oauth"
+    assert payload["auth_mode_was"] is None
+
+
+def test_auth_login_creates_a_config_when_there_is_none(capsys, config_at):
+    a, b, c = _login()
+    with a, b, c:
+        main(["auth", "login"])
+    capsys.readouterr()
+    assert json.loads(config_at.read_text()) == {"auth_mode": "oauth"}
+
+
+def test_auth_login_on_a_config_already_oauth_reports_no_change(capsys, config_at):
+    config_at.write_text(json.dumps({"auth_mode": "oauth"}))
+    a, b, c = _login()
+    with a, b, c:
+        main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["auth_mode"] == "oauth"
+    assert payload["auth_mode_was"] == "oauth"
+
+
+def test_a_failed_login_leaves_the_config_alone(capsys, config_at):
+    """No token was written, so switching the mode would break a working setup."""
+    config_at.write_text(json.dumps({"auth_mode": "service_account"}))
+    with patch("gdoc.cli.oauth.login", side_effect=FileNotFoundError("no client")):
+        exit_code = main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "no client" in payload["error"]
+    assert json.loads(config_at.read_text())["auth_mode"] == "service_account"
+
+
+def test_a_config_that_cannot_be_written_does_not_lose_the_login(capsys, config_at):
+    """The token is already on disk, so this is a warning, not a failure."""
+    a, b, c = _login()
+    with a, b, c, patch(
+        "gdoc.cli.write_auth_mode", side_effect=OSError("read-only file system")
+    ):
+        exit_code = main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["logged_in"] is True
+    assert "read-only file system" in payload["config_error"]
+
+
+# ---------------------------------------------------------------------------
+# auth use: the supported way to switch, in both directions
+# ---------------------------------------------------------------------------
+
+
+def test_auth_use_switches_to_the_service_account(capsys, config_at):
+    """Hand editing JSON is not a setup step. This is the other direction."""
+    config_at.write_text(json.dumps({"auth_mode": "oauth"}))
+    exit_code = main(["auth", "use", "service_account"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert json.loads(config_at.read_text())["auth_mode"] == "service_account"
+    assert payload["auth_mode"] == "service_account"
+    assert payload["auth_mode_was"] == "oauth"
+
+
+def test_auth_use_switches_to_oauth(capsys, config_at):
+    config_at.write_text(json.dumps({"auth_mode": "service_account"}))
+    exit_code = main(["auth", "use", "oauth"])
+    capsys.readouterr()
+    assert exit_code == 0
+    assert json.loads(config_at.read_text())["auth_mode"] == "oauth"
+
+
+def test_auth_use_keeps_the_rest_of_the_config(capsys, config_at):
+    config_at.write_text(json.dumps({"output_folder_id": "0AFolderId"}))
+    main(["auth", "use", "service_account"])
+    capsys.readouterr()
+    assert json.loads(config_at.read_text())["output_folder_id"] == "0AFolderId"
+
+
+def test_auth_use_refuses_a_mode_that_does_not_exist(capsys, config_at):
+    """argparse rejects it before any handler runs, so the config is untouched."""
+    config_at.write_text(json.dumps({"auth_mode": "oauth"}))
+    with pytest.raises(SystemExit) as excinfo:
+        main(["auth", "use", "magic"])
+    assert excinfo.value.code == 2
+    assert json.loads(config_at.read_text())["auth_mode"] == "oauth"
+
+
+def test_auth_use_warns_when_the_credential_it_switched_to_is_missing(capsys, config_at):
+    """Switching to a credential that is not installed yet must not look fine."""
+    exit_code = main(["auth", "use", "service_account"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "sa-key.json" in payload["warning"]
+
+
+def test_auth_use_says_nothing_extra_when_the_credential_is_there(
+    capsys, config_at, gdoc_agent_dir
+):
+    (gdoc_agent_dir / "sa-key.json").write_text("{}")
+    main(["auth", "use", "service_account"])
+    payload = json.loads(capsys.readouterr().out)
+    assert "warning" not in payload
+
+
+def test_auth_logout_says_which_credential_runs_next(capsys, config_at, gdoc_agent_dir):
+    """Deleting the token leaves every command broken, so say so and say the fix."""
+    (gdoc_agent_dir / "oauth-token.json").write_text("{}")
+    config_at.write_text(json.dumps({"auth_mode": "oauth"}))
+    main(["auth", "logout"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["auth_mode"] == "oauth"
+    assert "gdoc auth login" in payload["next"]
+
+
+def test_auth_logout_names_the_service_account_when_its_key_is_there(
+    capsys, config_at, gdoc_agent_dir
+):
+    (gdoc_agent_dir / "oauth-token.json").write_text("{}")
+    (gdoc_agent_dir / "sa-key.json").write_text("{}")
+    config_at.write_text(json.dumps({"auth_mode": "oauth"}))
+    main(["auth", "logout"])
+    payload = json.loads(capsys.readouterr().out)
+    assert "gdoc auth use service_account" in payload["next"]
+
+
+def test_auth_logout_does_not_switch_the_mode_by_itself(capsys, config_at, gdoc_agent_dir):
+    """Logging out to sign in as somebody else is the common case."""
+    (gdoc_agent_dir / "oauth-token.json").write_text("{}")
+    (gdoc_agent_dir / "sa-key.json").write_text("{}")
+    config_at.write_text(json.dumps({"auth_mode": "oauth"}))
+    main(["auth", "logout"])
+    capsys.readouterr()
+    assert json.loads(config_at.read_text())["auth_mode"] == "oauth"
+
+
+def test_a_login_into_another_token_path_does_not_claim_the_mode(capsys, config_at, tmp_path):
+    """Nothing else reads a custom token path, so oauth would find no token.
+
+    Claiming the mode here left a working service_account install with a config
+    saying oauth and no token where every command looks for one.
+    """
+    config_at.write_text(json.dumps({"auth_mode": "service_account"}))
+    a, b, c = _login()
+    with a, b, c:
+        exit_code = main(["auth", "login", "--token", str(tmp_path / "elsewhere.json")])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert json.loads(config_at.read_text())["auth_mode"] == "service_account"
+    assert "auth_mode" not in payload
+    assert "elsewhere.json" in payload["config_note"]
+
+
+def test_the_mode_is_written_before_the_account_is_looked_up(capsys, config_at):
+    """The account lookup is a network call, and the token is already on disk.
+
+    Writing the mode after it meant a lookup failure left the person signed in
+    with the old credential still configured, and retrying changed nothing.
+    """
+    config_at.write_text(json.dumps({"auth_mode": "service_account"}))
+    with patch("gdoc.cli.oauth.login", return_value="creds"), patch(
+        "gdoc.cli.drive_service"
+    ), patch("gdoc.cli.oauth.account", side_effect=OSError("network unreachable")):
+        exit_code = main(["auth", "login"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "network unreachable" in payload["error"]
+    assert json.loads(config_at.read_text())["auth_mode"] == "oauth"
+
+
+def test_auth_use_oauth_warns_when_there_is_no_token_yet(capsys, config_at):
+    exit_code = main(["auth", "use", "oauth"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert "gdoc auth login" in payload["warning"]
+
+
+def test_logout_says_when_deleting_the_token_changes_the_credential(
+    capsys, config_at, gdoc_agent_dir
+):
+    """An unstated config resolves by files, so deleting the token repoints it.
+
+    Anyone who signed in before login wrote the config is in this state. The
+    account that posts replies changes, so it cannot be left unsaid.
+    """
+    config_at.write_text(json.dumps({"output_folder_id": "0AFolderId"}))
+    (gdoc_agent_dir / "oauth-token.json").write_text("{}")
+    (gdoc_agent_dir / "sa-key.json").write_text("{}")
+    main(["auth", "logout"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["auth_mode"] == "service_account"
+    assert payload["auth_mode_was"] == "oauth"
+    assert "service_account" in payload["next"]
+
+
+def test_auth_status_survives_a_config_that_is_not_a_json_object(capsys, config_at):
+    """A list parses fine and then has no keys. It must not be a traceback."""
+    config_at.write_text("[1, 2]")
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        exit_code = main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert str(config_at) in payload["config_error"]
+
+
+def test_read_refuses_a_config_it_cannot_understand(capsys, config_at):
+    """Not knowing which credential was asked for must not pick the wider one."""
+    config_at.write_text(json.dumps({"auth_mode": "service-account"}))
+    exit_code = main(["read", "https://docs.google.com/document/d/1AbC/edit"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "service-account" in payload["error"]
+
+
+def test_auth_status_says_the_mode_came_from_the_config(capsys, config_at):
+    config_at.write_text(json.dumps({"auth_mode": "service_account"}))
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["auth_mode"] == "service_account"
+    assert payload["auth_mode_source"] == "config"
+
+
+def test_auth_status_says_when_the_mode_was_only_inferred(capsys, config_at, gdoc_agent_dir):
+    """An upgraded install has no auth_mode, so say why it is on this one."""
+    config_at.write_text(json.dumps({"output_folder_id": "0AFolderId"}))
+    (gdoc_agent_dir / "sa-key.json").write_text("{}")
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["auth_mode"] == "service_account"
+    assert payload["auth_mode_source"] == "inferred"
+
+
+def test_auth_status_does_not_guess_a_mode_for_a_broken_config(capsys, config_at):
+    """Reporting a mode here would be a guess, and the wider one at that."""
+    config_at.write_text(json.dumps({"auth_mode": "magic"}))
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        exit_code = main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["auth_mode"] is None
+    assert payload["auth_mode_source"] == "unknown"
+    assert "magic" in payload["config_error"]
+
+
+def test_auth_status_names_a_config_it_could_not_read(capsys, config_at):
+    """Falling back quietly would hide the typo that caused the fallback."""
+    config_at.write_text(json.dumps({"auth_mode": "magic"}))
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert "magic" in payload["config_error"]
+
+
+def test_auth_status_says_nothing_about_a_config_that_is_merely_absent(capsys, config_at):
+    """No config is the normal state of a new install, not a problem."""
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert "config_error" not in payload
+
+
+def test_auth_status_on_a_bare_machine_is_inferred_oauth(capsys, config_at):
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["auth_mode"] == "oauth"
+    assert payload["auth_mode_source"] == "inferred"
+
+
 def test_auth_logout_reports_that_it_removed_a_token(capsys, tmp_path):
     token = tmp_path / "token.json"
     token.write_text("{}")

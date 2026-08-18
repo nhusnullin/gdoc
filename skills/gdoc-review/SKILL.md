@@ -36,6 +36,24 @@ One root, `$ROOT`, and it is `$PWD`:
 
 `$ROOT` may not be a git repository. Nothing here requires one.
 
+## If the credential is not working
+
+Any command can fail with no token, no key, or a permission error. Run
+`$GDOC auth status` and read it before guessing. It never fails, and it says
+which credential is in use, whether that came from the config or was worked out
+from the files present, and what is broken.
+
+Two fixes, and both are one command. Never tell Nail to edit
+`~/.config/gdoc-agent/config.json` by hand, and never edit it yourself:
+
+- no OAuth token, or he wants to act as himself: `$GDOC auth login`. It opens a
+  browser and sets `auth_mode` to oauth once the sign-in returns.
+- he wants the service account instead, and its key is installed:
+  `$GDOC auth use service_account`.
+
+Ask before running either. Both change which account posts replies, and the
+account name is visible to everyone on the document.
+
 ## If Nail passes `--terminal-only`
 
 Do every step, but post nothing to the document. Print each reply in the

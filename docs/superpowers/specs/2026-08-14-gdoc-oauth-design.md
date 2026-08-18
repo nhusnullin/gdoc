@@ -93,7 +93,7 @@ was added for.
 
 | Question | Decision |
 |---|---|
-| Which credential by default | `auth_mode` in config, defaulting to `oauth` |
+| Which credential by default | `auth_mode` in config. Unstated is inferred, see the 2026-08-18 amendment |
 | Silent fallback when the token is missing | No. Fail with an error naming both fixes |
 | What narrows the credential | A guard in the HTTP transport, on file ids |
 | What the guard governs | Which files, never which methods |
@@ -172,7 +172,7 @@ modes.
 The missing-credential errors name the file and the fix:
 
 - oauth, no token: the path, then `run: gdoc auth login`, then a note that
-  `"auth_mode": "service_account"` in config restores the old behaviour.
+  `gdoc auth use service_account` restores the old behaviour.
 - oauth, no client file: the path, and that it is a Desktop OAuth client
   downloaded from Google Cloud. Points at section 9 of this spec.
 - service_account, no key: unchanged from today.
@@ -607,12 +607,12 @@ is to say what is wrong.
 }
 ```
 
-`auth_mode` defaults to `"oauth"` and accepts only `"oauth"` or
-`"service_account"`. Any other value is an error at load, naming both accepted
-values. It is the only key this design adds.
+`auth_mode` accepts only `"oauth"` or `"service_account"`. Any other value is an
+error at load, naming both accepted values. It is the only key this design adds.
 
 A config file without it loads unchanged, the same way an older file with
-`display_name` still loads today.
+`display_name` still loads today. Which credential that means is the subject of
+the amendment below.
 
 ### Dependencies
 
@@ -697,8 +697,10 @@ under `gdoc/` that calls `build()`. An allowlist in the style of
 `tests/test_no_external_programs.py`, so it fails both if the call spreads and
 if it moves.
 
-**`tests/test_config.py`**: `auth_mode` defaults to `oauth`; a config without it
-still loads; an unknown `auth_mode` value raises and names both accepted values.
+**`tests/test_config.py`**: a config without `auth_mode` still loads, and reads
+as unstated rather than as oauth; an unknown `auth_mode` value raises and names
+both accepted values; `write_auth_mode` carries every other key over, refuses a
+file it could not parse, and writes mode 0600.
 
 **`tests/test_reply.py`**: the marker is appended on its own last line; the
 markdown check runs on the body before the marker is added; a body that already
@@ -747,3 +749,61 @@ Coverage stays at or above 80%.
 
 Steps 1 to 3 and step 5 need no Google Cloud setup, so section 9 can happen in
 parallel with them.
+
+---
+
+## Amendment, 2026-08-18: an unstated mode is inferred, and login writes it down
+
+Shipped with the branch. Three defects in the design above, all in the same place.
+
+**Defaulting `auth_mode` to oauth breaks every existing install.** A config
+written before this design cannot mention the key, so "defaults to oauth" meant
+that upgrading flipped a working service_account setup to a credential with no
+token, and every command failed. `Config.auth_mode` is now `None` when the file
+does not say, and `gdoc.auth.resolve_auth_mode` decides: a stated mode wins
+outright, a token means oauth, a key with no token means service_account, and
+neither means oauth, which is the new install this design was written for.
+
+The resolver never reads the config, so "stated as oauth" and "stated nothing"
+stay distinguishable. It takes both paths as arguments, which is also what lets
+the suite stop depending on which credentials the developer has installed.
+
+**A login did not take effect.** `gdoc auth login` ran the browser flow and wrote
+the token, but left `auth_mode` alone, so a config saying service_account kept
+using the service account and the login reported success while changing nothing.
+It now writes `auth_mode: oauth` through `config.write_auth_mode`, after the flow
+returns and never before, so a failed login cannot break a working setup. A config
+that cannot be written is a warning beside the account, not a failure, because the
+token is already on disk.
+
+**There was no supported way back.** The only route to service_account was
+editing JSON in a directory the tool otherwise owns. `gdoc auth use <mode>` is
+that write in either direction, and warns when the credential it switched to is
+not installed yet. `gdoc auth logout` leaves the mode alone, because logging out
+to sign in as another account is the common case, but it now says which commands
+will fail and what to run.
+
+`gdoc auth status` gained `auth_mode_source`, either `config` or `inferred`, and
+reports a config it could not read rather than falling back quietly.
+
+`install.sh` no longer carries its own copy of the rule. It asks the package.
+
+**What a review pass caught afterwards**, all fixed with tests:
+
+- The mode was written after the account lookup, a network call, so a lookup
+  failure left the person signed in with the old credential still configured.
+  It is written first now.
+- `auth login --token <elsewhere>` claimed the mode anyway, leaving a config
+  saying oauth and no token where every other command looks. It now skips the
+  write and says why.
+- `write_auth_mode` truncated the target before writing, so a failed write
+  emptied the config and the empty file then blocked recovery. It writes to a
+  temporary file and renames.
+- An unrecognised stated mode, a hyphen typo for instance, fell through to
+  inference and resolved to oauth on a machine holding a token. Both the resolver
+  and `auth._config` now refuse rather than infer past it.
+- `auth status` could raise on a config holding a JSON list, while SKILL.md said
+  it never fails. `load_config` refuses a non-object by name, and status reports
+  `auth_mode: null` with source `unknown`.
+- `auth logout` silently repointed the credential when the config was unstated
+  and a key was present. It now reports the change and how to settle it.

@@ -73,16 +73,14 @@ done
 
 [ -f "$CONFIG_DIR/config.json" ] || warn "no $CONFIG_DIR/config.json yet. See README.md"
 
-# Which credential to check for depends on auth_mode, which defaults to oauth.
+# Which credential to check for. Asked of the package rather than worked out
+# here, because a second copy of the rule would drift from the one in
+# gdoc/auth.py and would warn about the wrong missing file.
 auth_mode="$("$VENV/bin/python" -c '
-import json
-import sys
+from gdoc.auth import configured_mode, resolve_auth_mode
 
-try:
-    print(json.load(open(sys.argv[1])).get("auth_mode") or "oauth")
-except Exception:
-    print("oauth")
-' "$CONFIG_DIR/config.json" 2>/dev/null || echo oauth)"
+print(resolve_auth_mode(configured_mode()))
+' 2>/dev/null || echo oauth)"
 
 case "$auth_mode" in
     service_account)

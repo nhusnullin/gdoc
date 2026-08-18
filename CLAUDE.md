@@ -110,6 +110,48 @@ Two rules an agent is likely to break:
   `tests/test_guard_is_installed.py` enforces it, as an allowlist: it fails if
   the call spreads, and it fails if it moves.
 
+## Which credential, and who decides
+
+`gdoc.auth.resolve_auth_mode` is the one place. It is a pure function of the mode
+the config states plus which credential files exist, so it never reads the config
+itself and a test can hand it either case.
+
+- A stated mode wins outright. Nothing on disk may overrule the author's word,
+  and a mode it does not recognise is refused rather than inferred past. A typo
+  must never resolve to oauth, which is the credential with the wider reach.
+- An unstated mode is inferred: a token means oauth, a key with no token means
+  service_account, neither means oauth.
+
+`auth._config()` returns the defaults for a **missing** config only. A config that
+exists and cannot be understood reaches the caller, so every command fails naming
+the problem. `gdoc auth status` is the one place that catches it, reports
+`auth_mode: null` with source `unknown`, and never guesses.
+
+`Config.auth_mode` is `None` when the file does not say, and that is the point.
+Defaulting it to oauth in `load_config` would flip every working service_account
+install the moment it upgraded, because a config written before the key existed
+cannot mention it. Never give that field a default.
+
+Two consequences an agent is likely to break:
+
+- `gdoc auth login` writes `auth_mode: oauth` through `config.write_auth_mode`,
+  after the browser flow returns and **before** the account lookup. Later would
+  mean a network failure leaves the person signed in with the old credential
+  configured. `--token` skips the write entirely and says so, because nothing
+  else reads a custom token path. `gdoc auth use <mode>` is the same write, in
+  either direction, so no setup step is ever a hand edit of JSON.
+- `write_auth_mode` carries every other key over, `display_name` included, and
+  refuses a file it could not parse rather than replacing it. It writes through a
+  temporary file and `os.replace`, so a failed write cannot leave an empty config.
+  Truncating first lost settings that were readable a moment earlier, and the
+  empty file then blocked the next write too.
+
+`tests/conftest.py` redirects the config and both credential paths into a tmp
+directory for every non-integration test, autouse. Without it a test that runs
+`auth login` edits the developer's real config, and resolving an unstated mode
+would answer differently per machine. Integration tests are exempt, because the
+real credential is their point.
+
 ## Identity is never a gate
 
 Drive's `author.me` means the service account under `auth_mode: service_account`

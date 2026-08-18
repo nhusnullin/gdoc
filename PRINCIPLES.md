@@ -95,6 +95,27 @@ markdown-is-the-source decision above is now held up by design rather than by
 permission. `tests/test_guard.py` and `tests/test_guard_is_installed.py` are
 what keep it honest.
 
+**2026-08-18. An unstated `auth_mode` is inferred, never defaulted.** Serves
+principle 1, that the tool keeps working. A config written before `auth_mode`
+existed cannot mention it, so reading a missing key as oauth would flip every
+working service_account install the moment it upgraded, and every command would
+then fail on a token that was never created. `Config.auth_mode` is `None` when
+the file does not say, and `gdoc.auth.resolve_auth_mode` decides: a stated mode
+wins outright, a token means oauth, a key with no token means service_account,
+and neither means oauth, which is the new install.
+
+Inference is for silence only. A stated mode that is not one of the two is
+refused, and a config that cannot be read reaches the caller, because resolving
+either quietly would pick oauth on a machine holding a token, which is the wider
+credential and not the one the author asked for.
+
+The consequence is that a credential is chosen partly by which files exist, so
+`gdoc auth status` reports whether the mode was stated or inferred, and reports
+`null` rather than a guess when the config is broken. `gdoc auth
+login` and `gdoc auth use` write the mode down, which both makes a login take
+effect and settles the question for good on that machine. No setup step is a hand
+edit of the config file.
+
 **2026-08-13. Only `ai:`-marked, unresolved, unanswered comments are actioned.**
 Domain choice, no principle above it. The author name is a label, not a gate. Drive returns no email address for
 comment authors and display names are editable, so any identity check is a guess

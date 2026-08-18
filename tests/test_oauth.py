@@ -108,6 +108,15 @@ def test_a_missing_token_names_the_path_and_both_ways_out(tmp_path):
     assert "service_account" in message
 
 
+def test_both_ways_out_are_commands_rather_than_a_file_to_edit(tmp_path):
+    """This is the message a person hits most. It must not send them into JSON."""
+    with pytest.raises(FileNotFoundError) as excinfo:
+        oauth.load(SCOPES, token_path=tmp_path / "token.json")
+    message = str(excinfo.value)
+    assert "gdoc auth use service_account" in message
+    assert "config.json" not in message
+
+
 def test_an_expired_token_refreshes_and_the_file_is_rewritten(tmp_path):
     token = write_token(
         tmp_path / "token.json", credentials(expiry=naive_utc(timedelta(hours=-2)))

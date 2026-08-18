@@ -24,8 +24,8 @@ SPEC = "docs/superpowers/specs/2026-08-14-gdoc-oauth-design.md"
 
 LOGIN = "Run: gdoc auth login"
 USE_THE_KEY_INSTEAD = (
-    'To use the service account instead, set "auth_mode": "service_account" '
-    "in ~/.config/gdoc-agent/config.json."
+    "To use the service account instead, run: gdoc auth use service_account. "
+    "It writes the setting, so there is no file to edit by hand."
 )
 
 

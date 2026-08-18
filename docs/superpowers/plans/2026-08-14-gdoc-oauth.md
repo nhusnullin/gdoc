@@ -33,7 +33,7 @@ added in Task 5, both pip-installable.
 - **Run tests with** `~/.config/gdoc-agent/venv/bin/pytest`. Nothing else is installed.
 - **TDD, always.** Write the failing test, run it, watch it fail, then implement. A step that says "run it and see it fail" is not optional.
 - **Scope is exactly** `["https://www.googleapis.com/auth/drive"]`, unchanged, shared by both modes. There is no narrower scope that reads comments and writes replies. Never narrow it to make a test pass.
-- **`auth_mode` accepts only** `"oauth"` and `"service_account"`. Default `"oauth"`. It is the only config key this plan adds.
+- **`auth_mode` accepts only** `"oauth"` and `"service_account"`. Default `"oauth"`. It is the only config key this plan adds. *Superseded 2026-08-18: there is no default. An unstated mode is inferred from which credential files exist, because defaulting it flipped every working service_account install on upgrade. See the amendment at the end of the spec.*
 - **The marker is exactly** `[gdoc]`, on its own last line, appended at most once.
 - **The guard's allowed set may only grow through the two doors in Task 4:** the ids passed to `drive_service`, and the ids a create response returned. Never add a third. Never widen the set to make a test pass, and never relax a refusal for `files.list`, a permission write, or batch.
 - **The tool must work without git and without a config file.** `gdoc read` works today with no `config.json`, and it must still work after this plan. A missing config resolves to the documented defaults, never to an error.
