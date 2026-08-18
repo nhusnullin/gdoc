@@ -177,6 +177,23 @@ rclone is retiring its shared Drive client during 2026.
 `oauth.client_config` is the one place that decides, and it returns where the
 client came from so `gdoc auth status` can report it.
 
+### The one thing that changes this decision: making the repo public
+
+Nail decided on 2026-08-18 to keep the client in git, on the RFC and on the `gh`
+and `gcloud` precedent. That decision assumed a private repo, and one condition
+would break it.
+
+GitHub secret scanning carries a **partner** pattern for
+`google_oauth_client_id, google_oauth_client_secret`. On a public repository it is
+reported to Google, who may revoke the client. So publishing this repo would
+break every colleague's login at once, without warning and without a commit to
+blame. rclone obfuscates its Google secret for exactly this reason, which is
+evasion of automated revocation rather than security.
+
+So before this repo is ever made public: create a fresh client, distribute it as
+a file out of band, and clear these two constants. Do not obfuscate them to get
+past the scanner.
+
 ## Identity is never a gate
 
 Drive's `author.me` means the service account under `auth_mode: service_account`

@@ -48,8 +48,8 @@ SPEC = "docs/superpowers/specs/2026-08-14-gdoc-oauth-design.md"
 # retiring its shared Drive client during 2026 for exactly that reason, at a
 # scale of many hundreds of times the free quota. Anyone who needs their own can
 # drop a client file in place, which wins over this one.
-BUNDLED_CLIENT_ID = ""
-BUNDLED_CLIENT_SECRET = ""
+BUNDLED_CLIENT_ID = "4326046141-n9fho1g348nflsue7jdrj10dkst3a0a9.apps.googleusercontent.com"
+BUNDLED_CLIENT_SECRET = "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"
 
 AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
