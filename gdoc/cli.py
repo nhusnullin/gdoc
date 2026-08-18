@@ -62,7 +62,11 @@ def _thread_json(thread: Thread) -> dict:
         "forced_kind": forced_kind(thread.content),
         "marked": is_addressed(thread.content),
         "answered": thread.has_agent_reply,
+        "has_newer_replies": thread.has_newer_replies,
         "replies": [_reply_json(reply) for reply in thread.replies],
+        # The turn gdoc has not seen. The full list above is context; this is
+        # what a marked follow-up asked for. Issue #26.
+        "new_replies": [_reply_json(reply) for reply in thread.new_replies],
     }
 
 
@@ -131,6 +135,9 @@ def cmd_read(args) -> int:
             "mode": "all" if args.all else "marked",
             "addressed": [_thread_json(t) for t in addressed],
             "skipped": [_thread_json(t) for t in skipped],
+            # An empty addressed list means "nothing to do". This says whether
+            # it also means "nothing was said", which is not the same thing.
+            "skipped_with_newer_replies": sum(1 for t in skipped if t.has_newer_replies),
         }
     )
 

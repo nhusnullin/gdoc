@@ -16,6 +16,13 @@ class Reply:
     by_agent: bool
     author_name: str = "unknown"
     by_marker: bool = False
+    created_time: str = ""
+    modified_time: str = ""
+
+    @property
+    def is_agent(self) -> bool:
+        """True when gdoc wrote this reply, under either credential."""
+        return self.by_agent or self.by_marker
 
 
 @dataclass(frozen=True)
@@ -42,7 +49,44 @@ class Thread:
         the service account answered before the marker existed: dropping it
         would repost on every one of them.
         """
-        return any(reply.by_agent or reply.by_marker for reply in self.replies)
+        return any(reply.is_agent for reply in self.replies)
+
+    @property
+    def new_replies(self) -> tuple[Reply, ...]:
+        """The replies gdoc has not answered yet.
+
+        Everything, when gdoc has never replied here. Otherwise what came after
+        its last reply, which is the turn it has not seen. Issue #26: without
+        this a whole thread went to `skipped` the moment it was answered once,
+        so a new instruction typed inside it was invisible, and the run reported
+        `addressed: []`, which reads as "nothing new".
+
+        Position decides, because Drive returns replies in the order they were
+        written and a time is not guaranteed to be there. A reply written before
+        the answer but edited after it counts as new as well: that is Nail going
+        back to his own reply to say what he meant.
+        """
+        last_agent = -1
+        for index, reply in enumerate(self.replies):
+            if reply.is_agent:
+                last_agent = index
+        if last_agent < 0:
+            return self.replies
+        cutoff = self.replies[last_agent].created_time
+        return tuple(
+            reply
+            for index, reply in enumerate(self.replies)
+            if not reply.is_agent
+            and (
+                index > last_agent
+                or (cutoff and reply.modified_time > cutoff)
+            )
+        )
+
+    @property
+    def has_newer_replies(self) -> bool:
+        """True when gdoc answered here and something has been said since."""
+        return self.has_agent_reply and bool(self.new_replies)
 
 
 def parse_thread(raw: dict, me_is_agent: bool = True) -> Thread:
@@ -67,6 +111,8 @@ def parse_thread(raw: dict, me_is_agent: bool = True) -> Thread:
             by_agent=me_is_agent and bool((item.get("author") or {}).get("me")),
             author_name=(item.get("author") or {}).get("displayName") or "unknown",
             by_marker=has_marker(item.get("content") or ""),
+            created_time=item.get("createdTime") or "",
+            modified_time=item.get("modifiedTime") or "",
         )
         for item in raw.get("replies") or ()
     )

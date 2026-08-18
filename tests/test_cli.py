@@ -1589,3 +1589,70 @@ def test_generate_refuses_a_document_url_as_the_folder(capsys, tmp_path):
     assert exit_code == 1
     assert "a document, not a folder" in payload["error"]
     fake.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# read: follow-ups inside an answered thread (issue #26)
+# ---------------------------------------------------------------------------
+
+_URL = "https://docs.google.com/document/d/1AbC/edit"
+
+
+def _answered_thread(follow_up_content, thread_id="t9"):
+    replies = [
+        {
+            "id": "g1",
+            "content": "Compliance owns it.\n\n[gdoc]",
+            "createdTime": "2026-08-18T10:00:00Z",
+            "modifiedTime": "2026-08-18T10:00:00Z",
+            "author": {"displayName": "Nail Khusnullin", "me": True},
+        }
+    ]
+    if follow_up_content:
+        replies.append(
+            {
+                "id": "r2",
+                "content": follow_up_content,
+                "createdTime": "2026-08-18T11:00:00Z",
+                "modifiedTime": "2026-08-18T11:00:00Z",
+                "author": {"displayName": "Nail Khusnullin", "me": False},
+            }
+        )
+    return {
+        "id": thread_id,
+        "content": "ai? who owns this",
+        "author": {"displayName": "Nail Khusnullin", "me": False},
+        "replies": replies,
+    }
+
+
+def test_read_surfaces_a_marked_follow_up_inside_an_answered_thread(capsys):
+    _, payload = _read_payload(
+        capsys, ["read", _URL], [_answered_thread("ai: also add it to chapter 4")]
+    )
+    assert [t["id"] for t in payload["addressed"]] == ["t9"]
+
+
+def test_read_shows_only_the_new_turn_of_an_answered_thread(capsys):
+    """The whole history is context, not the instruction to act on."""
+    _, payload = _read_payload(
+        capsys, ["read", _URL], [_answered_thread("ai: also add it to chapter 4")]
+    )
+    thread = payload["addressed"][0]
+    assert [r["id"] for r in thread["new_replies"]] == ["r2"]
+    assert [r["id"] for r in thread["replies"]] == ["g1", "r2"]
+
+
+def test_read_counts_answered_threads_that_have_been_replied_to_since(capsys):
+    """An empty addressed list must never be mistaken for nothing new."""
+    _, payload = _read_payload(
+        capsys, ["read", _URL], [_answered_thread("thanks, that reads better")]
+    )
+    assert payload["addressed"] == []
+    assert payload["skipped_with_newer_replies"] == 1
+    assert payload["skipped"][0]["has_newer_replies"] is True
+
+
+def test_read_counts_nothing_when_an_answered_thread_is_quiet(capsys):
+    _, payload = _read_payload(capsys, ["read", _URL], [_answered_thread(None)])
+    assert payload["skipped_with_newer_replies"] == 0

@@ -6,7 +6,8 @@ FIELDS = (
     "nextPageToken,"
     "comments(id,createdTime,modifiedTime,resolved,quotedFileContent(value),"
     "content,author(displayName,emailAddress,me),"
-    "replies(id,content,author(displayName,emailAddress,me)))"
+    "replies(id,content,createdTime,modifiedTime,"
+    "author(displayName,emailAddress,me)))"
 )
 
 
