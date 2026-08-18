@@ -185,3 +185,63 @@ def test_the_thread_author_me_flag_follows_the_same_rule():
     raw = {**MARKED_REPLY, "author": {"displayName": "Nail Khusnullin", "me": True}}
     assert parse_thread(raw, me_is_agent=False).by_agent is False
     assert parse_thread(raw, me_is_agent=True).by_agent is True
+
+
+# ----------------------------------------------------- what arrived after the answer --
+def _raw(replies):
+    return {"id": "t", "content": "a note", "author": {"displayName": "Nail"},
+            "resolved": False, "replies": replies}
+
+
+def _reply(rid, content, created, modified=None, me=False):
+    return {"id": rid, "content": content, "createdTime": created,
+            "modifiedTime": modified or created,
+            "author": {"displayName": "Nail", "me": me}}
+
+
+def test_reply_times_are_parsed():
+    thread = parse_thread(_raw([_reply("r1", "hi", "2026-08-18T10:00:00Z")]))
+    assert thread.replies[0].created_time == "2026-08-18T10:00:00Z"
+    assert thread.replies[0].modified_time == "2026-08-18T10:00:00Z"
+
+
+def test_every_reply_is_new_when_gdoc_has_not_answered():
+    thread = parse_thread(_raw([_reply("r1", "hi", "2026-08-18T10:00:00Z")]))
+    assert [r.id for r in thread.new_replies] == ["r1"]
+    assert thread.has_newer_replies is False
+
+
+def test_only_replies_after_the_last_gdoc_reply_are_new():
+    thread = parse_thread(_raw([
+        _reply("r1", "before", "2026-08-18T09:00:00Z"),
+        _reply("g1", "Done.\n\n[gdoc]", "2026-08-18T10:00:00Z"),
+        _reply("r2", "after", "2026-08-18T11:00:00Z"),
+    ]))
+    assert [r.id for r in thread.new_replies] == ["r2"]
+    assert thread.has_newer_replies is True
+
+
+def test_a_reply_edited_after_the_answer_is_new_again():
+    thread = parse_thread(_raw([
+        _reply("r1", "rewritten", "2026-08-18T09:00:00Z", modified="2026-08-18T12:00:00Z"),
+        _reply("g1", "Done.\n\n[gdoc]", "2026-08-18T10:00:00Z"),
+    ]))
+    assert [r.id for r in thread.new_replies] == ["r1"]
+
+
+def test_gdoc_replies_are_never_new():
+    thread = parse_thread(_raw([
+        _reply("g1", "Done.\n\n[gdoc]", "2026-08-18T10:00:00Z"),
+        _reply("g2", "Also done.\n\n[gdoc]", "2026-08-18T11:00:00Z"),
+    ]))
+    assert thread.new_replies == ()
+    assert thread.has_newer_replies is False
+
+
+def test_missing_times_fall_back_to_the_order_drive_returned():
+    """Drive returns replies chronologically, so position still answers it."""
+    thread = parse_thread({"id": "t", "content": "n", "author": {}, "replies": [
+        {"id": "g1", "content": "Done.\n\n[gdoc]", "author": {}},
+        {"id": "r2", "content": "after", "author": {}},
+    ]})
+    assert [r.id for r in thread.new_replies] == ["r2"]

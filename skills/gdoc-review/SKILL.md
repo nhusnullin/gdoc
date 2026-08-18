@@ -74,6 +74,16 @@ is addressed: the marker is the instruction, and Nail chose the document. Each
 item carries its `author`, so an unexpected name is visible. Threads gdoc has
 already answered appear under `skipped`, which is what makes a second run safe.
 
+A marker means the same thing inside a thread as it does on a head comment. So
+an answered thread comes back as addressed when a marked reply was written after
+gdoc's last one. Its `new_replies` field holds that turn, and it is the part to
+act on: the rest of the thread is context, and gdoc has already answered it.
+
+`skipped_with_newer_replies` counts the answered threads where something was
+said afterwards without a marker. Read it out every run, even when it is 0.
+`addressed: []` on its own cannot tell "nothing to do" from "he wrote something
+I am not allowed to act on", and it is the second one that loses instructions.
+
 Every reply gdoc posts ends with `[gdoc]` on its own line. That marker, not the
 account name, is how a later run knows the thread was answered. Under `oauth`
 replies post under Nail's own name, so the marker is the only signal that works.

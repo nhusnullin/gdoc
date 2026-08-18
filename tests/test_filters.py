@@ -182,3 +182,68 @@ def test_a_reply_nail_typed_himself_does_not_count_as_gdocs():
     assert needs_action(parse_thread(raw, me_is_agent=False)) is True
     # Under the service account the same shape does mean gdoc answered.
     assert needs_action(parse_thread(raw, me_is_agent=True)) is False
+
+
+# ------------------------------------------------ follow-ups inside an answered thread --
+# Issue #26. A thread gdoc answered was dropped into skipped and never looked at
+# again, so a new instruction typed inside it was invisible, and the run reported
+# addressed: [] which reads as "nothing new".
+
+GDOC = Reply(id="g1", content="Done.\n\n[gdoc]", by_agent=False, by_marker=True,
+             created_time="2026-08-18T10:00:00Z", modified_time="2026-08-18T10:00:00Z")
+
+
+def follow_up(content, created="2026-08-18T11:00:00Z", modified=None):
+    return Reply(id="r9", content=content, by_agent=False,
+                 created_time=created, modified_time=modified or created)
+
+
+def test_a_marked_follow_up_after_the_answer_is_work_again():
+    assert needs_action(thread(replies=(GDOC, follow_up("ai: also fix the heading")))) is True
+
+
+def test_an_unmarked_follow_up_is_not_actioned():
+    """Ordinary conversation must not become an instruction."""
+    assert needs_action(thread(replies=(GDOC, follow_up("thanks, that reads better")))) is False
+
+
+def test_the_head_marker_does_not_authorise_every_later_reply():
+    """The head said ai:, it was answered, and that turn is over."""
+    answered = thread(content="ai: rephrase", replies=(GDOC, follow_up("ok")))
+    assert needs_action(answered) is False
+
+
+def test_a_thread_answered_with_nothing_after_it_stays_skipped():
+    assert needs_action(thread(replies=(GDOC,))) is False
+
+
+def test_a_marked_reply_before_the_answer_does_not_come_back():
+    """It is the post gdoc already replied to."""
+    old = follow_up("ai: rephrase", created="2026-08-18T09:00:00Z")
+    assert needs_action(thread(content="a note", replies=(old, GDOC))) is False
+
+
+def test_a_reply_edited_after_the_answer_comes_back():
+    """Nail edited his earlier reply to add the instruction."""
+    edited = follow_up("ai: on second thought, cut it",
+                       created="2026-08-18T09:00:00Z",
+                       modified="2026-08-18T12:00:00Z")
+    assert needs_action(thread(content="a note", replies=(edited, GDOC))) is True
+
+
+def test_a_marked_reply_on_an_unmarked_head_is_work():
+    """A marker on a reply means what it means on a head post."""
+    assert needs_action(thread(content="a note", replies=(follow_up("ai: fix this"),))) is True
+
+
+def test_a_resolved_thread_with_a_marked_follow_up_stays_closed():
+    answered = thread(resolved=True, replies=(GDOC, follow_up("ai: reopen this")))
+    assert needs_action(answered) is False
+
+
+def test_partition_counts_answered_threads_holding_replies_it_did_not_action():
+    quiet = thread(id="t1", replies=(GDOC,))
+    chatty = thread(id="t2", replies=(GDOC, follow_up("thanks")))
+    addressed, skipped = partition((quiet, chatty))
+    assert addressed == ()
+    assert [t.id for t in skipped if t.has_newer_replies] == ["t2"]

@@ -48,14 +48,22 @@ def needs_action(thread: Thread) -> bool:
     Who wrote the comment is not part of the test. Under OAuth the credential is
     Nail, so an author check would skip every comment he writes.
 
-    has_agent_reply is what makes a second run idempotent: it never posts twice,
-    and no local record of handled ids is needed.
+    A marker means the same thing wherever it is written. Replying inside a
+    thread is the natural way to answer an answer, so a marked reply is an
+    instruction exactly as a marked head post is.
+
+    What keeps a second run from posting twice is `new_replies`, not the thread:
+    gdoc never answers a post it has already answered, but a post written after
+    its last reply is a new turn. An unmarked follow-up is deliberately not
+    actioned. "thanks" is not an instruction, and guessing which follow-ups are
+    would be acting on a comment the tool cannot classify.
     """
-    return (
-        is_addressed(thread.content)
-        and not thread.resolved
-        and not thread.has_agent_reply
-    )
+    if thread.resolved:
+        return False
+    posts = [reply.content for reply in thread.new_replies]
+    if not thread.has_agent_reply:
+        posts.append(thread.content)
+    return any(is_addressed(post) for post in posts)
 
 
 def partition(
