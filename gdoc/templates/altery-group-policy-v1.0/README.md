@@ -75,10 +75,11 @@ The three approval chains are separate and must not be merged:
 - Heading levels are relative. The shallowest heading in your file becomes
   Heading1 at 16pt, whatever its Markdown level, and numbering still starts at
   1. You do not have to reshuffle heading levels to suit the template.
-- **Set `heading_numbering: none` if your body already numbers its own
-  sections.** Otherwise you get "3-1-Purpose": the template numbers on top of
-  your numbers, and any unnumbered lead sections push the count out of step
-  with your own cross-references.
+- A heading that numbers itself keeps its own number. `## 1. Key terms` and
+  `### 3.1 Route one` publish as written, and the numbering carries on from
+  them, so a hand-written `4.` is followed by a computed `5-`. Set
+  `heading_numbering: none` when the whole body is hand numbered and you want
+  no computed prefixes at all.
 - `==text==` marks text yellow, the master's convention for "a human still has
   to fill this in". It is the only formatting that survives as a placeholder;
   a filled cover value has its highlight cleared automatically.

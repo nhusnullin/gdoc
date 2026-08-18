@@ -44,7 +44,25 @@ UNNUMBERED_HEADING_RE = re.compile(
 #
 # A separator is required, so a heading is only self-numbered when it says so:
 # "1." and "1)" and "3.1" are numbers, "2026 plan" and "1.5x throughput" are not.
-NUMBERED_HEADING_RE = re.compile(r"^\s*\d+(?:\.\d+)*[.)]\s|^\s*\d+(?:\.\d+)+\s")
+# A dotted number needs no separator, a single one does. "2.0 release notes" and
+# "3.1 GHz band" are read as numbers anyway, which cannot be helped: they are
+# left unnumbered rather than doubled, the same answer "Appendix 2" gets.
+NUMBERED_HEADING_RE = re.compile(r"^\s*(?P<number>\d+(?:\.\d+)+|\d+)(?P<sep>[.)])?(?=\s|$)")
+
+
+def authored_number(heading_text):
+    """The number a heading gives itself, as a list of ints, or None.
+
+    A lone number with no separator is not one: "10 things we learned" is a
+    heading, "10." is a section.
+    """
+    match = NUMBERED_HEADING_RE.match(heading_text or "")
+    if not match:
+        return None
+    number = match.group("number")
+    if not match.group("sep") and "." not in number:
+        return None
+    return [int(part) for part in number.split(".")]
 
 # Pandoc extensions: pipe tables for the table syntax, mark for ==highlight==,
 # which is the only way to say "a human still has to fill this in".
@@ -83,22 +101,36 @@ class HeadingNumberer:
         """
         return max(1, level - self.top_level + 1)
 
-    @staticmethod
-    def names_its_own_number(heading_text):
-        """True when the heading carries its own label, by name or by number."""
-        return bool(
-            UNNUMBERED_HEADING_RE.match(heading_text)
-            or NUMBERED_HEADING_RE.match(heading_text)
-        )
-
     def prefix(self, level, heading_text):
-        if not self.enabled or self.names_its_own_number(heading_text):
+        if not self.enabled or UNNUMBERED_HEADING_RE.match(heading_text or ""):
             return ""
         index = max(0, level - self.top_level)
-        self.counters[index] += 1
+        authored = authored_number(heading_text)
+        if authored is not None:
+            self._follow(index, authored)
+            return ""
+        self.counters[index] = self.counters[index] + 1
+        self._clear_below(index)
+        return ".".join(str(c) for c in self.counters[: index + 1]) + "-"
+
+    def _follow(self, index, authored):
+        """Carry on from the author's number, so the next computed one follows it.
+
+        Without this, "1-Introduction" then a hand-written "2. Scope" is followed
+        by a computed "2-", and the document holds two headings numbered 2.
+
+        A number that does not fit the depth it sits at is not this document's
+        sequence: "3.1 GHz band" as a top-level heading is a frequency. It is
+        left unnumbered, and it moves nothing.
+        """
+        if len(authored) != index + 1:
+            return
+        self.counters[: index + 1] = authored
+        self._clear_below(index)
+
+    def _clear_below(self, index):
         for deeper in range(index + 1, len(self.counters)):
             self.counters[deeper] = 0
-        return ".".join(str(c) for c in self.counters[: index + 1]) + "-"
 
 
 def shallowest_heading_level(blocks, current=None):
