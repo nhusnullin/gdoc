@@ -2,8 +2,12 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+from googleapiclient.errors import HttpError
 
 from gdoc.cli import main
+from gdoc.config import Config
+from gdoc.generate import Result as GenerateResult
+from gdoc.pairing import Pairing, read_pairing, write_pairing
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +418,145 @@ def test_a_missing_title_found_during_the_build_is_reported_the_same_way(capsys,
 
 
 # ---------------------------------------------------------------------------
+# generate: version bookkeeping
+# ---------------------------------------------------------------------------
+
+
+def _generate_ok(tmp_path, md, doc_id="1New", extra=()):
+    """Run generate with a stubbed Drive and a stubbed export."""
+    drive = MagicMock()
+    with patch("gdoc.cli.drive_service", return_value=drive), \
+         patch("gdoc.cli.load_config", return_value=Config(output_folder_id="0AF", template="none")), \
+         patch("gdoc.cli.export_markdown", return_value="# exported\n"), \
+         patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = GenerateResult(
+            docx_path=tmp_path / "v.docx", doc_id=doc_id, link="https://x/edit"
+        )
+        argv = ["generate", "--md", str(md), "--out", str(tmp_path / "v.docx"),
+                "--name", "X v1", "--baseline-root", str(tmp_path), *extra]
+        return main(argv)
+
+
+def test_generate_pairs_a_file_that_has_never_been_generated(capsys, tmp_path):
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    assert _generate_ok(tmp_path, md) == 0
+    payload = json.loads(capsys.readouterr().out)
+    pairing = read_pairing(md)
+    assert pairing.doc_id == "1New"
+    assert [v["id"] for v in pairing.versions] == ["1New"]
+    assert payload["version"] == 1
+    assert payload["slug"] == "note"
+
+
+def test_generate_appends_the_next_version_and_moves_the_pointer(tmp_path):
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    write_pairing(md, Pairing(doc_id="1Old", versions=({"id": "1Old", "created": "2026-08-01"},)))
+    assert _generate_ok(tmp_path, md, doc_id="1Next") == 0
+    pairing = read_pairing(md)
+    assert pairing.doc_id == "1Next"
+    assert [v["id"] for v in pairing.versions] == ["1Old", "1Next"]
+
+
+def test_generate_records_nothing_when_the_upload_failed(tmp_path):
+    md = tmp_path / "note.md"
+    original = "---\ntitle: Kickoff\n---\n\nBody.\n"
+    md.write_text(original)
+    drive = MagicMock()
+    with patch("gdoc.cli.drive_service", return_value=drive), \
+         patch("gdoc.cli.load_config", return_value=Config(output_folder_id="0AF", template="none")), \
+         patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = GenerateResult(
+            docx_path=tmp_path / "v.docx", doc_id=None, reason="upload refused with 403"
+        )
+        exit_code = main(["generate", "--md", str(md), "--out", str(tmp_path / "v.docx"),
+                          "--name", "X v1", "--baseline-root", str(tmp_path)])
+    assert exit_code == 0
+    assert md.read_text() == original
+
+
+def test_generate_reports_a_pairing_failure_without_hiding_the_document(capsys, tmp_path):
+    """The document was really uploaded. A failed pairing write must not hide that."""
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    with patch("gdoc.cli.write_pairing", side_effect=OSError("disk full")):
+        assert _generate_ok(tmp_path, md) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["doc_id"] == "1New"
+    assert payload["link"] == "https://x/edit"
+    assert "pairing_error" in payload
+    assert "version" not in payload
+
+
+def test_generate_survives_a_non_ioerror_pairing_failure_too(capsys, tmp_path):
+    """OSError is not the only way reading or writing the pairing can fail.
+
+    A malformed front matter (bad merge, hand edit) makes read_pairing raise
+    something that is not an OSError, such as AttributeError. The document was
+    still published, so doc_id and link must still reach the payload.
+    """
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    with patch("gdoc.cli.read_pairing", side_effect=AttributeError("'list' object has no attribute 'get'")):
+        assert _generate_ok(tmp_path, md) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["doc_id"] == "1New"
+    assert payload["link"] == "https://x/edit"
+    assert "pairing_error" in payload
+    assert "version" not in payload
+
+
+def test_generate_survives_a_baseline_failure_too(capsys, tmp_path):
+    """The baseline write can fail on its own, independent of the pairing write.
+
+    export_markdown is a Drive network call. A dropped connection or a refused
+    token surfaces as an HttpError, not an OSError. The document was still
+    published, so doc_id and link must still reach the payload, and the pairing
+    write is an independent fact that must still happen.
+    """
+    fake_resp = MagicMock()
+    fake_resp.status = 500
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    drive = MagicMock()
+    with patch("gdoc.cli.drive_service", return_value=drive), \
+         patch("gdoc.cli.load_config", return_value=Config(output_folder_id="0AF", template="none")), \
+         patch("gdoc.cli.export_markdown", side_effect=HttpError(fake_resp, b"boom")), \
+         patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = GenerateResult(
+            docx_path=tmp_path / "v.docx", doc_id="1New", link="https://x/edit"
+        )
+        argv = ["generate", "--md", str(md), "--out", str(tmp_path / "v.docx"),
+                "--name", "X v1", "--baseline-root", str(tmp_path)]
+        exit_code = main(argv)
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["doc_id"] == "1New"
+    assert payload["link"] == "https://x/edit"
+    assert "baseline_error" in payload
+    # independent of the baseline: the version is still recorded
+    pairing = read_pairing(md)
+    assert pairing.doc_id == "1New"
+    assert payload["version"] == 1
+
+
+def test_generate_records_nothing_without_baseline_root(tmp_path):
+    md = tmp_path / "note.md"
+    original = "---\ntitle: Kickoff\n---\n\nBody.\n"
+    md.write_text(original)
+    drive = MagicMock()
+    with patch("gdoc.cli.drive_service", return_value=drive), \
+         patch("gdoc.cli.load_config", return_value=Config(output_folder_id="0AF", template="none")), \
+         patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = GenerateResult(
+            docx_path=tmp_path / "v.docx", doc_id="1New", link="https://x/edit"
+        )
+        main(["generate", "--md", str(md), "--out", str(tmp_path / "v.docx"), "--name", "X v1"])
+    assert md.read_text() == original
+
+
+# ---------------------------------------------------------------------------
 # pair subcommand, show mode
 # ---------------------------------------------------------------------------
 
@@ -555,6 +698,19 @@ def test_pair_add_version_fails_when_file_is_not_paired(capsys, tmp_path):
     payload = json.loads(capsys.readouterr().out)
     assert exit_code == 1
     assert "error" in payload
+
+
+def test_pair_add_version_moves_the_current_pointer(tmp_path):
+    """Nothing may leave gdoc: naming a version that is no longer current."""
+    md = tmp_path / "note.md"
+    md.write_text("---\ntitle: Kickoff\n---\n\nBody.\n")
+    write_pairing(md, Pairing(doc_id="1Old", versions=({"id": "1Old", "created": "2026-08-01"},)))
+    exit_code = main(["pair", "add-version", "--md", str(md),
+                      "--version-id", "1Next", "--created", "2026-08-14"])
+    pairing = read_pairing(md)
+    assert exit_code == 0
+    assert pairing.doc_id == "1Next"
+    assert [v["id"] for v in pairing.versions] == ["1Old", "1Next"]
 
 
 # ---------------------------------------------------------------------------
@@ -1013,3 +1169,64 @@ def test_generate_scopes_its_client_to_the_output_folder(tmp_path):
     ):
         main(["generate", "--md", str(md), "--out", str(tmp_path / "o.docx")])
     assert drive_service.call_args.kwargs["doc_ids"] == ["0AFolder"]
+
+
+# ---------------------------------------------------------------------------
+# generate: naming the folder on the command line
+# ---------------------------------------------------------------------------
+
+FOLDER_URL = "https://drive.google.com/drive/folders/0AFolderIdFromUrl?usp=sharing"
+
+
+def _generate_with_no_config(tmp_path, extra):
+    """Run generate with no config file at all. Returns the generate stub."""
+    from gdoc.generate import Result
+
+    md = tmp_path / "note.md"
+    md.write_text(_NOTE)
+    with patch("gdoc.cli.drive_service"), patch(
+        "gdoc.cli.load_config",
+        side_effect=FileNotFoundError("config not found at ~/.config/gdoc-agent/config.json"),
+    ), patch("gdoc.cli.generate") as fake_generate:
+        fake_generate.return_value = Result(docx_path=tmp_path / "v1.docx", doc_id="1New")
+        exit_code = main(["generate", "--md", str(md), "--out", str(tmp_path / "v1.docx"), *extra])
+    return exit_code, fake_generate
+
+
+def test_generate_takes_the_folder_id_out_of_a_pasted_url(capsys, tmp_path):
+    from gdoc.config import Config
+
+    fake = _run_generate_with(tmp_path, _NOTE, Config(), extra=["--folder-id", FOLDER_URL])
+    capsys.readouterr()
+    assert fake.call_args.kwargs["folder_id"] == "0AFolderIdFromUrl"
+
+
+def test_generate_needs_no_config_file_when_the_folder_is_given(capsys, tmp_path):
+    """The folder is the one thing generate cannot work out for itself."""
+    from gdoc.render import profiles
+
+    exit_code, fake = _generate_with_no_config(tmp_path, ["--folder-id", FOLDER_URL])
+    capsys.readouterr()
+    assert exit_code == 0
+    assert fake.call_args.kwargs["folder_id"] == "0AFolderIdFromUrl"
+    # No config file still means the house style, not a plain document.
+    assert fake.call_args.kwargs["template"] == profiles.DEFAULT_TEMPLATE
+
+
+def test_generate_without_a_folder_still_reports_the_missing_config(capsys, tmp_path):
+    exit_code, fake = _generate_with_no_config(tmp_path, [])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "config not found" in payload["error"]
+    fake.assert_not_called()
+
+
+def test_generate_refuses_a_document_url_as_the_folder(capsys, tmp_path):
+    """Pasting the document instead of the folder fails here, not on upload."""
+    exit_code, fake = _generate_with_no_config(
+        tmp_path, ["--folder-id", "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUv/edit"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "a document, not a folder" in payload["error"]
+    fake.assert_not_called()

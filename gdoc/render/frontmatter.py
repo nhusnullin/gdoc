@@ -23,6 +23,23 @@ CLASSIFICATIONS = {
 
 REQUIRED = ("title",)
 
+# Named in the error below so a reader can fix the note from the message alone.
+# Every one of these is read in parse(); adding a field there means adding it
+# here, and test_render_frontmatter.py holds the four that matter to the message.
+OPTIONAL = (
+    "alt_title", "doc_type", "version", "date", "owner", "last_approval",
+    "review_frequency", "board_ratification", "distribution", "classification",
+    "heading_numbering", "revisions",
+)
+
+NO_FRONT_MATTER = (
+    "no YAML front matter found. The file must start with a '---' line, the "
+    "metadata block, then a closing '---' line. "
+    f"Required: {list(REQUIRED)}. "
+    f"Optional: {list(OPTIONAL)}. "
+    "The shortest note that publishes is three lines: '---', 'title: Some Title', '---'."
+)
+
 DEFAULT_VERSION = "1.0"
 
 REVISION_FIELDS = ("version", "date", "author", "approved_by",
@@ -90,11 +107,7 @@ def split(markdown_text):
     """Return (front_matter_dict, body_markdown)."""
     match = FRONT_MATTER_RE.match(markdown_text)
     if not match:
-        raise FrontMatterError(
-            "no YAML front matter found. The file must start with a '---' line, "
-            "the metadata block, then a closing '---' line. "
-            "See references/front-matter.md for the full field list."
-        )
+        raise FrontMatterError(NO_FRONT_MATTER)
     try:
         data = yaml.safe_load(match.group(1)) or {}
     except yaml.YAMLError as exc:

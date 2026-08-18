@@ -150,6 +150,15 @@ TDD. Write the failing test first.
 `tests/test_access_integration.py` calls Drive and skips without credentials.
 Never make a test pass by loosening an assertion about what the credential can do.
 
+### A house-style test must never read the constant it tests
+
+`assert style.spacing == HEADING_LINE_SPACING` is worth nothing. It is a mirror:
+set the constant back to the master's single spacing and the assertion follows it
+and still passes. Write the house value as a literal instead, so the test says
+what the house style is. `tests/test_render_shell.py` does this on purpose, and
+where a value has a safe range rather than one right answer it asserts the floor
+instead, as with the 40-twip cell margin.
+
 ## Never
 
 - Never edit a reviewed Google Doc. Under `service_account` the credential
