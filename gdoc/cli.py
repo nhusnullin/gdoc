@@ -20,7 +20,7 @@ from gdoc import oauth, render
 from gdoc.auth import SCOPES, configured_mode, drive_service, resolve_auth_mode
 from gdoc.config import AUTH_MODES, Config, load_config, write_auth_mode
 from gdoc.docid import extract_doc_id, extract_folder_id
-from gdoc.export import export_markdown
+from gdoc.export import export_markdown, export_with_media
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, is_addressed, partition
 from gdoc.generate import generate
@@ -154,9 +154,36 @@ def cmd_export(args) -> int:
 
     stdout is raw markdown, not the JSON envelope the other commands print,
     because the point is to pipe it into diff.
+
+    --media-dir is the exception, and it prints the envelope: pictures are files,
+    so there is a report to make about them that markdown on stdout cannot carry.
     """
+    # Before the credential: an argument that cannot work should not need a login
+    # to say so.
+    if args.media_dir and not args.out:
+        return _fail(
+            "--media-dir needs --out: the pictures are written beside the "
+            "markdown, so the markdown has to have somewhere to be."
+        )
+
     doc_id = extract_doc_id(args.url)
-    markdown = export_markdown(drive_service(doc_ids=doc_id), doc_id)
+    drive = drive_service(doc_ids=doc_id)
+
+    if args.media_dir:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        export = export_with_media(drive, doc_id, Path(args.media_dir), out)
+        out.write_text(export.markdown)
+        return _emit(
+            {
+                "out": str(out),
+                "media_dir": str(Path(args.media_dir)),
+                "images": [str(path) for path in export.images],
+                "warnings": list(export.warnings),
+            }
+        )
+
+    markdown = export_markdown(drive, doc_id)
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -658,6 +685,10 @@ def build_parser() -> argparse.ArgumentParser:
     export = sub.add_parser("export", help="fetch the document as markdown")
     export.add_argument("url")
     export.add_argument("--out", help="write to this file instead of stdout")
+    export.add_argument(
+        "--media-dir",
+        help="carry the pictures across into this directory, beside --out",
+    )
     export.set_defaults(func=cmd_export)
 
     capture = sub.add_parser("capture", help="append a global item to pending.md")

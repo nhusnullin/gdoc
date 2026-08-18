@@ -488,6 +488,29 @@ def lone_image(nodes):
     return target[0], alt
 
 
+def split_images(nodes):
+    """Separate a paragraph's pictures from its words, keeping their order.
+
+    A pulled Google Doc puts its diagrams at the end of the paragraph that
+    introduces them, so a paragraph often holds a sentence and two drawings.
+    `lone_image` refuses those, and the inline path renders alt text, which for
+    an exported drawing is empty. Two of three diagrams disappeared that way.
+
+    Issue #28. Each picture becomes its own centred paragraph after the words,
+    which is how it reads in the source document anyway.
+    """
+    if not isinstance(nodes, list):
+        return nodes, []
+    words, images = [], []
+    for node in nodes:
+        if isinstance(node, dict) and node.get("t") == "Image":
+            _attr, alt, target = node["c"]
+            images.append((target[0], alt))
+        else:
+            words.append(node)
+    return words, images
+
+
 def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
     if state is None:
         state = {"first_heading": True}
@@ -530,7 +553,26 @@ def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
                               page_break=page_break))
 
         elif tag in ("Para", "Plain"):
+            content, images = split_images(content)
             runs = inline_runs(content)
+            if images and level == 0:
+                # The words first, then each picture on its own line. A picture
+                # in a list item stays on the inline path: a figure inside a
+                # bullet would break the numbering it sits in.
+                if runs:
+                    emit(make_paragraph(runs, before="240" if state.get("after_table") else "0"))
+                place_image = state.get("place_image")
+                if place_image is None:
+                    raise BodyError(
+                        f"the document has an image ({images[0][0]}) but the "
+                        "renderer was given no base directory to resolve it against")
+                for target, alt in images:
+                    emit(place_image(target))
+                    alt_runs = inline_runs(alt)
+                    if alt_runs:
+                        emit(make_caption(alt_runs))
+                state["after_table"] = False
+                continue
             if level == 0:
                 # A table carries no space beneath it, so the next paragraph
                 # would otherwise sit hard against its bottom border.
@@ -575,6 +617,11 @@ def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
         state["after_table"] = tag == "Table"
 
 
+def _is_remote(target: str) -> bool:
+    """True when the image points at a URL rather than at a file on disk."""
+    return str(target).lower().startswith(("http://", "https://", "//", "data:"))
+
+
 def image_placer(doc, base_dir):
     """Add a picture to `doc` and hand back its detached paragraph.
 
@@ -583,6 +630,16 @@ def image_placer(doc, base_dir):
     of the body for `emit` to place in document order.
     """
     def place_image(target):
+        if _is_remote(target):
+            # Google's export writes googleusercontent URLs, and a URL is not a
+            # picture: nothing here downloads, and a publish that reached the
+            # network would depend on a link that expires. Issue #28.
+            raise BodyError(
+                f"the picture at {target} is a link, not a file. Nothing here "
+                "downloads pictures. Pull the document again with "
+                "`gdoc export --out <note>.md --media-dir <note>-media`, which "
+                "writes the pictures beside the markdown, and publish that."
+            )
         path = (Path(base_dir) / target).expanduser()
         if not path.is_file():
             raise BodyError(f"image not found: {target}, looked in {base_dir}")
