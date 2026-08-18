@@ -121,10 +121,23 @@ case "$auth_mode" in
         [ -f "$CONFIG_DIR/sa-key.json" ] || warn "no $CONFIG_DIR/sa-key.json yet. See README.md"
         ;;
     *)
-        if [ ! -f "$CONFIG_DIR/oauth-client.json" ]; then
-            warn "no $CONFIG_DIR/oauth-client.json yet. See README.md, Configure"
+        # Which client a login would use, asked of the package for the same
+        # reason as the mode. Normally "bundled", and then there is nothing to
+        # set up: warning about a missing oauth-client.json would be wrong.
+        client="$("$VENV/bin/python" -c '
+from gdoc.oauth import client_config
+
+try:
+    print(client_config()[1])
+except Exception:
+    print("none")
+' 2>/dev/null || echo none)"
+
+        if [ "$client" = "none" ]; then
+            warn "this build ships no OAuth client, and there is none at
+  $CONFIG_DIR/oauth-client.json. See README.md, the OAuth client section."
         elif [ ! -f "$CONFIG_DIR/oauth-token.json" ]; then
-            # Not a fault. It is the next step.
+            # Not a fault. It is the next step, and the only one.
             printf 'install: next step: gdoc auth login\n'
         fi
         ;;
