@@ -18,6 +18,8 @@ only.
 | `gdoc/marker.py` | the `[gdoc]` label on gdoc's own replies |
 | `gdoc/restyle.py` | the house-styled copy of a document nothing here is paired to |
 | `gdoc/comments.py` | carrying comment threads from one document onto another |
+| `gdoc/edits.py` | the diff between the baseline and a fresh export |
+| `gdoc/suggestions.py` | pending suggestions, read through the Docs API |
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
@@ -275,6 +277,33 @@ signed in as. The author's name in the text is the only honest record of who
 said it. An anchor is the second: it is computed against a document's
 structure, and the house template changes that by construction. So the copies
 are unanchored, and the quoted sentence is the pointer that is left.
+
+## Reading what was changed in the document
+
+`gdoc edits` answers "what did Nail change in the browser", and it writes
+nothing. Porting a hunk into hand-written markdown is judgment, so the CLI
+reports and `gdoc-apply` decides.
+
+Two sources, because one of them lies. The markdown export diffed against
+`baseline.md` sees edits made in editing mode. It does not see suggestions at
+all: Drive renders a suggested document as though nothing had been suggested, so
+a review done entirely in suggesting mode diffs to nothing. `gdoc/suggestions.py`
+reads those through `documents.get` with `suggestionsViewMode=SUGGESTIONS_INLINE`.
+
+Three rules an agent is likely to break:
+
+- **The Docs scope is asked for separately.** `SCOPES` is Drive and stays Drive.
+  `DOCS_SCOPES` is `documents.readonly`, requested only by `docs_service`, so a
+  token issued before this existed keeps every other command working and only
+  `gdoc edits` says to log in again. `LOGIN_SCOPES` is both, so one browser trip
+  covers it.
+- **Read only, and it stays read only.** gdoc reads a suggestion as an intention
+  and applies it to the markdown. It never accepts one in the document.
+- **A baseline is only diffed when it belongs to this document.**
+  `baseline.json` beside it records the document id it was taken from, and every
+  version is a new document, so a mismatch is the stale case. `baseline_state`
+  returns `ok`, `unverified`, `missing` or `stale`, and `edits` reports which
+  rather than refusing to run.
 
 ## Identity is never a gate
 

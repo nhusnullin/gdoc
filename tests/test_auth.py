@@ -155,7 +155,7 @@ def test_load_credentials_infers_the_service_account_from_the_key(tmp_path):
         "gdoc.auth.load_service_account_credentials", return_value="sa-credentials"
     ) as load_key:
         assert load_credentials(key_path=key) == "sa-credentials"
-    load_key.assert_called_once_with(key)
+    load_key.assert_called_once_with(key, scopes=SCOPES)
 
 
 def test_the_client_is_always_guarded():
@@ -204,3 +204,52 @@ def test_credentials_are_not_passed_beside_http():
     with patch("gdoc.auth.build") as build:
         drive_service(credentials=MagicMock())
     assert "credentials" not in build.call_args.kwargs
+
+
+# ------------------------------------------------------------- the Docs client --
+# Issue #29. Reading pending suggestions needs documents.readonly, and the token
+# every existing install holds does not have it. So the new scope is asked for
+# only where it is needed: `gdoc edits` fails until one `gdoc auth login`, and
+# every other command keeps working on the token that is already there.
+
+from gdoc.auth import DOCS_SCOPES, LOGIN_SCOPES, docs_service  # noqa: E402
+
+
+def test_the_docs_scope_is_read_only():
+    """gdoc reads a suggestion as an intention. It never accepts one."""
+    assert DOCS_SCOPES == ["https://www.googleapis.com/auth/documents.readonly"]
+
+
+def test_a_login_asks_for_both_scopes_at_once():
+    """Otherwise reading suggestions costs a second browser trip."""
+    assert set(LOGIN_SCOPES) == set(SCOPES) | set(DOCS_SCOPES)
+
+
+def test_the_drive_client_still_asks_for_drive_alone():
+    """Adding the Docs scope here would break every install until it re-logged in."""
+    with patch("gdoc.auth.oauth.load", return_value="creds") as load, patch(
+        "gdoc.auth.build"
+    ):
+        load_credentials(mode="oauth")
+    load.assert_called_once_with(SCOPES)
+
+
+def test_the_docs_client_is_guarded_too():
+    with patch("gdoc.auth.build") as build:
+        docs_service(credentials=MagicMock(), doc_ids="1AbC")
+    assert isinstance(build.call_args.kwargs["http"], GuardedHttp)
+    assert build.call_args.kwargs["http"].allowed == frozenset({"1AbC"})
+
+
+def test_the_docs_client_is_the_docs_api():
+    with patch("gdoc.auth.build") as build:
+        docs_service(credentials=MagicMock(), doc_ids="1AbC")
+    assert build.call_args.args[:2] == ("docs", "v1")
+
+
+def test_the_docs_client_asks_for_the_docs_scope():
+    with patch("gdoc.auth.oauth.load", return_value="creds") as load, patch(
+        "gdoc.auth.build"
+    ):
+        docs_service(doc_ids="1AbC")
+    load.assert_called_once_with(DOCS_SCOPES)
