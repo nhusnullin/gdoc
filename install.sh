@@ -12,6 +12,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$HOME/.config/gdoc-agent/venv"
 CONFIG_DIR="$HOME/.config/gdoc-agent"
 SKILLS_DIR="$HOME/.claude/skills"
+BIN_DIR="$HOME/.local/bin"
 SKILLS=(gdoc-review gdoc-apply)
 
 fail() {
@@ -36,6 +37,39 @@ fi
 "$VENV/bin/pip" install -q --disable-pip-version-check -e "${REPO}[dev]" || fail "pip install failed"
 
 [ -x "$VENV/bin/gdoc" ] || fail "the gdoc command was not created. Check [project.scripts] in pyproject.toml"
+
+# --------------------------------------------------------------------------
+# One command on PATH
+# --------------------------------------------------------------------------
+#
+# Linked rather than copied, so it follows the venv with no reinstall. The venv
+# script carries an absolute shebang, so a symlink to it resolves correctly.
+#
+# ~/.local/bin because that is where pipx and uv put tools. It is not on the
+# macOS default PATH, which is /etc/paths plus /etc/paths.d, so the check below
+# is not decoration.
+
+mkdir -p "$BIN_DIR"
+link="$BIN_DIR/gdoc"
+
+if [ -L "$link" ]; then
+    [ "$(readlink "$link")" = "$VENV/bin/gdoc" ] || ln -sf "$VENV/bin/gdoc" "$link"
+elif [ -e "$link" ]; then
+    # Somebody else's gdoc. Leave it: shadowing a real program is worse than
+    # asking the person to look.
+    warn "$link exists and is not a link to this install. Left alone."
+else
+    ln -s "$VENV/bin/gdoc" "$link"
+fi
+
+case ":$PATH:" in
+    *":$BIN_DIR:"*) ;;
+    *)
+        printf 'install: %s is not on your PATH. Add it with:\n' "$BIN_DIR" >&2
+        printf '  echo '"'"'export PATH="$HOME/.local/bin:$PATH"'"'"' >> ~/.zshrc\n' >&2
+        printf 'install: until then, call it as %s/bin/gdoc\n' "$VENV" >&2
+        ;;
+esac
 
 # --------------------------------------------------------------------------
 # The skills

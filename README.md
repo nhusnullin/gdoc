@@ -14,9 +14,10 @@ the tool edits a document you point it at.
 There are two credentials, and `auth_mode` in the config picks one.
 
 **`oauth`** is the default. You approve it once in a browser and the agent acts as
-you, so nothing has to be shared with anything first. Drive has no scope that
-reads comments and writes replies without full Drive access, so this credential
-holds more than the tool needs. `gdoc/guard.py` narrows it back down: every
+you, so nothing has to be shared with anything first. It holds more than the tool
+needs: the narrow `drive.file` scope does cover comments, but a file only enters
+that scope when the app created it or the user picked it through Google's file
+picker, and a terminal cannot show one. Pasting a URL means full Drive. `gdoc/guard.py` narrows it back down: every
 request goes through it, and it carries a request only when the file addressed is
 one gdoc was given or one gdoc created. Anything else is refused inside the
 process, a read included. So the tool cannot see a document you did not point it
@@ -105,7 +106,8 @@ paired to, when it was last synced, and every version published from it.
 - [Claude Code](https://claude.com/claude-code), because the two skills run inside it.
 - pandoc. `brew install pandoc`, or your package manager. It is used to read
   markdown, so publishing does not work without it.
-- A Google account, and permission to create credentials in Google Cloud.
+- A Google altery.com account. Nothing to create in Google Cloud: gdoc ships the
+  OAuth client it signs in with.
 
 ## Setup
 
@@ -120,46 +122,39 @@ cd gdoc
 If GitHub says the repository does not exist, it is private. Ask Nail for access.
 
 `install.sh` creates a venv at `~/.config/gdoc-agent/venv`, installs the tool into
-it, and links the two skills into `~/.claude/skills/` so Claude Code can find
-them. It prints the commit you are running. Safe to re-run: every step checks the
-current state first.
+it, links `gdoc` into `~/.local/bin` so it is on your PATH, and links the two
+skills into `~/.claude/skills/` so Claude Code can find them. It prints the commit
+you are running. Safe to re-run: every step checks the current state first.
+
+If it says `~/.local/bin` is not on your PATH, it prints the one line to add.
 
 To update later, `git pull` is the whole update. Re-run `./install.sh` only after
 dependencies change or a new skill is added.
 
 ### 2. Sign in
 
-Once, in [console.cloud.google.com](https://console.cloud.google.com):
-
-1. Create a project, or pick one.
-2. **APIs and Services → Library →** enable **Google Drive API**. It is the only
-   API the tool calls.
-3. **OAuth consent screen.** User type **Internal**. On External plus Testing,
-   Google expires refresh tokens after seven days and you would sign in weekly.
-4. **Credentials → Create credentials → OAuth client ID.** Application type
-   **Desktop app**. Download the JSON.
-
-Then put the client where the tool looks for it:
-
 ```bash
-mkdir -p ~/.config/gdoc-agent
-mv ~/Downloads/<the-downloaded-client>.json ~/.config/gdoc-agent/oauth-client.json
-chmod 600 ~/.config/gdoc-agent/oauth-client.json
+gdoc auth login
 ```
 
-And sign in:
+A browser opens, you approve, and that is the whole step. There is no OAuth client
+to create and no config file to edit: gdoc ships its client, and the login writes
+`auth_mode` for you.
+
+You can skip this step entirely. Run `/gdoc-review <url>` and the skill notices
+there is no token, asks whether to sign you in, and does it.
+
+To check, or to change your mind later:
 
 ```bash
-gdoc auth login     # a browser opens, approve
-gdoc auth status    # confirm which account you are
-gdoc auth logout    # delete the local token
+gdoc auth status               # which credential, and whether it works
+gdoc auth logout               # delete the local token
+gdoc auth use service_account  # switch credential, if a key is installed
 ```
 
-`gdoc auth login` writes `~/.config/gdoc-agent/oauth-token.json`, mode `0600`.
-Never edit it by hand. `gdoc auth status` never fails: reporting a broken
-credential is its job.
-
-Never commit either file. They belong in `~/.config/gdoc-agent/`, never in a repo.
+The token lands in `~/.config/gdoc-agent/oauth-token.json`, mode `0600`, and never
+leaves your machine. Revoke the grant at
+[myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 
 ### 3. Make a folder to publish into
 
@@ -199,6 +194,18 @@ It reads the comments and shows you what it found, then asks before posting
 anything. If it cannot see the document at all, run `gdoc auth status` and check
 which account you signed in as.
 
+### Optional: bring your own OAuth client
+
+Every user of the bundled client draws on the same Google rate limit. If that ever
+bites, create a Desktop app OAuth client of your own and save its JSON to
+`~/.config/gdoc-agent/oauth-client.json`. A file there wins over the bundled
+client, and `gdoc auth status` reports which one is in use.
+
+Security is not the reason to do this. A client shipped to many users is a public
+client by definition, per RFC 8252 section 8.5, and `gh` and `gcloud` both ship
+theirs the same way. Quota is the reason.
+
+
 ### Optional: stop it asking for the folder
 
 If you publish into the same folder every time, name it once in
@@ -229,6 +236,27 @@ gdoc auth use service_account
 
 It writes the setting for you and warns if the key is not there yet. Going back is
 `gdoc auth login`.
+
+### For whoever maintains gdoc: the OAuth client
+
+Done once, for everybody. `gdoc/oauth.py` holds `BUNDLED_CLIENT_ID` and
+`BUNDLED_CLIENT_SECRET`. To create or replace them, in
+[console.cloud.google.com](https://console.cloud.google.com):
+
+1. Pick the project, and keep the **Google Drive API** enabled. It is the only
+   API gdoc calls.
+2. **OAuth consent screen**, User type **Internal**. Not optional. Internal is
+   what exempts gdoc from OAuth verification, from the unverified-app screen and
+   from the 100-user cap. gdoc needs the full Drive scope, which Google classes as
+   restricted, so going External would mean a
+   [CASA security assessment](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)
+   every 12 months. Internal also keeps refresh tokens from expiring after seven
+   days.
+3. **Credentials → Create credentials → OAuth client ID**, Application type
+   **Desktop app**.
+4. Paste the id and secret into the two constants in `gdoc/oauth.py`.
+
+Internal means only altery.com accounts can sign in. That is the audience.
 
 ## Using it
 

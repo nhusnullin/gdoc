@@ -807,3 +807,57 @@ reports a config it could not read rather than falling back quietly.
   `auth_mode: null` with source `unknown`.
 - `auth logout` silently repointed the credential when the config was unstated
   and a key was present. It now reports the change and how to settle it.
+
+## Amendment, 2026-08-18: gdoc ships the OAuth client
+
+Section 9 of this spec made every user create a Desktop OAuth client in Google
+Cloud before they could sign in. That was four steps in a console, and no
+comparable tool asks for them.
+
+Checked in the source of four: `gh` embeds a client id **and secret** in
+`internal/authflow/flow.go`, with the comment "This value is safe to be embedded
+in version control". `gcloud` embeds a Google client secret in `config.py`, in a
+constant named `CLOUDSDK_CLIENT_NOTSOSECRET`. `rclone` embeds an obfuscated Drive
+secret. Vercel embeds a client id with no secret. None of the four sends a user to
+a console before first login.
+
+The standards position is settled. RFC 8252 section 8.5: a secret "statically
+included as part of an app distributed to multiple users should not be treated as
+confidential", serves "little value beyond client identification", and such a
+client MUST be treated as public. So `BUNDLED_CLIENT_ID` and
+`BUNDLED_CLIENT_SECRET` in `gdoc/oauth.py` give up nothing that was protected. The
+per-user token stays per-user.
+
+Two constraints came out of the same research and are now recorded in CLAUDE.md:
+
+- **Internal is load-bearing**, not a convenience. The full Drive scope is a
+  restricted scope. Internal exempts gdoc from verification, the unverified-app
+  screen and the 100-user cap; External would mean a CASA assessment every 12
+  months.
+- **The device flow is not an option.** Google allows only `drive.appdata` and
+  `drive.file` with it, so the loopback flow this spec chose was right.
+
+The cost of one shared client is quota, since Google rate limits per client.
+rclone is retiring its shared Drive client during 2026 for that reason, at many
+hundreds of times the free quota. At one company that is irrelevant, and a client
+file still overrides the bundled one for anyone who wants their own.
+
+`install.sh` also links `gdoc` into `~/.local/bin`, and says so when that is not
+on PATH, which it is not by default on macOS.
+
+### Correction to a claim this spec made three times
+
+The spec, README and `gdoc/oauth.py` all said Drive has no scope that reads
+comments and writes replies without full Drive access. That is wrong.
+`comments.list` and `replies.create` both accept `drive.file`, which Google
+classes as **non-sensitive**.
+
+The real constraint is that `drive.file` covers only files the app created or that
+the user handed it through the Google Picker or Drive's "Open with". There is no
+documented way to put an existing file in `drive.file` scope by pasting an id or a
+URL, and a terminal cannot show a Picker. So full Drive is still required for the
+review flow, for a different reason than the one given.
+
+Worth following up: `gdoc generate` creates the files it touches, and app-created
+files are in `drive.file` scope automatically, so the publish path could run on a
+non-sensitive scope. Not done, and it needs its own spec.

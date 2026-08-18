@@ -47,7 +47,9 @@ Two fixes, and both are one command. Never tell Nail to edit
 `~/.config/gdoc-agent/config.json` by hand, and never edit it yourself:
 
 - no OAuth token, or he wants to act as himself: `$GDOC auth login`. It opens a
-  browser and sets `auth_mode` to oauth once the sign-in returns.
+  browser, waits for him to approve, and sets `auth_mode` to oauth once the
+  sign-in returns. Nothing has to be created first: gdoc ships its OAuth client.
+  Expect the command to sit there until he has clicked approve.
 - he wants the service account instead, and its key is installed:
   `$GDOC auth use service_account`.
 

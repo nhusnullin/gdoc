@@ -525,6 +525,13 @@ def cmd_auth_status(args) -> int:
         "key_path": str(auth_module.DEFAULT_KEY_PATH),
         "revoke_url": "https://myaccount.google.com/permissions",
     }
+    # Which client a login would use, so a person can see there is nothing left
+    # to set up. "bundled" is the normal answer.
+    try:
+        payload["client"] = oauth.client_config()[1]
+    except Exception as error:  # noqa: BLE001 - reporting is the whole job
+        payload["client"] = None
+        payload["client_problem"] = str(error)
     # A config that cannot be read is exactly what this command is for, and the
     # mode is left null rather than guessed: inferring one from the files present
     # would report a credential the author did not ask for. A missing file is not

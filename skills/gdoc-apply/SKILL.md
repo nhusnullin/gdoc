@@ -33,7 +33,8 @@ One root, `$ROOT`, and it is `$PWD`:
 ## If the credential is not working
 
 `$GDOC auth status` says which credential is in use and what is broken. It never
-fails. `$GDOC auth login` signs Nail in and switches to oauth;
+fails. `$GDOC auth login` signs Nail in and switches to oauth, with no OAuth
+client to create first, and it waits for him to approve in the browser;
 `$GDOC auth use service_account` switches back. Ask before running either, and
 never edit `~/.config/gdoc-agent/config.json` by hand.
 

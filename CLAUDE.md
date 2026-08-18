@@ -152,6 +152,31 @@ directory for every non-integration test, autouse. Without it a test that runs
 would answer differently per machine. Integration tests are exempt, because the
 real credential is their point.
 
+## The OAuth client is shipped, and stays Internal
+
+`gdoc/oauth.py` holds `BUNDLED_CLIENT_ID` and `BUNDLED_CLIENT_SECRET`, so nobody
+using gdoc visits a cloud console. Both rules matter:
+
+- **The secret belongs in version control.** RFC 8252 section 8.5: a secret
+  shipped to many users "should not be treated as confidential" and serves no
+  purpose "beyond client identification". `gh` ships its own with the comment
+  "This value is safe to be embedded in version control", and `gcloud` ships a
+  Google secret in a constant named `CLOUDSDK_CLIENT_NOTSOSECRET`. Do not
+  "fix" this by moving it to `~/.config/gdoc-agent/`. What protects an account
+  is the per-user token, which never leaves the machine.
+- **The client must stay User type Internal.** gdoc needs the full Drive scope,
+  which Google classes as restricted. Internal exempts gdoc from verification,
+  the unverified-app screen and the 100-user cap. External would mean a CASA
+  assessment every 12 months, and refresh tokens expiring weekly.
+
+A file at `~/.config/gdoc-agent/oauth-client.json` wins over the bundled client.
+That is an override for quota, not a setup step, the way gcloud treats
+`--client-id-file`. One shared client shares one Google rate limit, which is why
+rclone is retiring its shared Drive client during 2026.
+
+`oauth.client_config` is the one place that decides, and it returns where the
+client came from so `gdoc auth status` can report it.
+
 ## Identity is never a gate
 
 Drive's `author.me` means the service account under `auth_mode: service_account`

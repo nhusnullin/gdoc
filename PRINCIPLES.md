@@ -76,9 +76,16 @@ because a thread is comment surface and not content.
 
 **2026-08-13. The credential is Commenter-only.** *Retired 2026-08-15.* It
 enforced the decision above by permission rather than by discipline, and it was
-Google's to enforce. OAuth has no scope that reads comments and writes replies
-without full Drive access, so keeping this would have meant keeping the
-per-document sharing step forever. Replaced by the decision below.
+Google's to enforce. Under OAuth the usable scope is full Drive, so keeping this
+would have meant keeping the per-document sharing step forever. Replaced by the
+decision below.
+
+*Corrected 2026-08-18.* This entry used to say Drive has no scope that reads
+comments and writes replies without full Drive access. Not true: both accept
+`drive.file`, which is non-sensitive. But a file enters `drive.file` scope only
+when the app created it or the user handed it over through Google's file picker,
+and a terminal has no picker, so pasting a URL still means full Drive. The
+conclusion holds; the reason was wrong.
 
 **2026-08-15. The client reaches only the files it was given.** Serves principle
 3. Under OAuth the credential can reach every file the signed-in user owns, so

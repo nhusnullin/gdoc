@@ -17,6 +17,7 @@ naive _helpers.utcnow(), and mixing an aware datetime in raises TypeError.
 import json
 import stat
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 from google.oauth2.credentials import Credentials
@@ -189,14 +190,96 @@ def test_a_token_file_with_no_scopes_recorded_is_not_refused(tmp_path):
 # --- login --------------------------------------------------------------
 
 
-def test_login_without_a_client_file_names_the_path_and_the_spec(tmp_path):
+def test_login_without_a_client_anywhere_names_the_path_and_the_spec(tmp_path):
+    """Only reachable on a build that ships no client of its own."""
     client = tmp_path / "oauth-client.json"
-    with pytest.raises(FileNotFoundError) as excinfo:
-        oauth.login(SCOPES, client_path=client, token_path=tmp_path / "token.json")
+    with patch.object(oauth, "BUNDLED_CLIENT_ID", ""), patch.object(
+        oauth, "BUNDLED_CLIENT_SECRET", ""
+    ):
+        with pytest.raises(FileNotFoundError) as excinfo:
+            oauth.login(SCOPES, client_path=client, token_path=tmp_path / "token.json")
     message = str(excinfo.value)
     assert str(client) in message
     assert "Desktop" in message
     assert "2026-08-14-gdoc-oauth-design" in message
+
+
+# --- which client, bundled or the user's own -----------------------------
+
+
+def test_the_bundled_client_means_there_is_nothing_to_set_up(tmp_path):
+    """A person using gdoc should never visit a cloud console.
+
+    gh and gcloud both ship their own client id and secret. RFC 8252 section 8.5
+    says a secret distributed with an app is not a confidential secret and the
+    client must be treated as public, so shipping one costs nothing that was
+    being protected.
+    """
+    with patch.object(oauth, "BUNDLED_CLIENT_ID", "bundled.apps.googleusercontent.com"), \
+         patch.object(oauth, "BUNDLED_CLIENT_SECRET", "bundled-secret"):
+        config, source = oauth.client_config(tmp_path / "absent.json")
+    assert config["installed"]["client_id"] == "bundled.apps.googleusercontent.com"
+    assert config["installed"]["client_secret"] == "bundled-secret"
+    assert source == "bundled"
+
+
+def test_the_bundled_client_carries_the_endpoints_the_flow_needs(tmp_path):
+    """from_client_config gets no file to read them out of."""
+    with patch.object(oauth, "BUNDLED_CLIENT_ID", "id"), patch.object(
+        oauth, "BUNDLED_CLIENT_SECRET", "secret"
+    ):
+        config, _ = oauth.client_config(tmp_path / "absent.json")
+    installed = config["installed"]
+    assert installed["auth_uri"] == "https://accounts.google.com/o/oauth2/auth"
+    assert installed["token_uri"] == "https://oauth2.googleapis.com/token"
+
+
+def test_a_client_file_wins_over_the_bundled_one(tmp_path):
+    """The reason to bring your own is quota, and quota is the owner's call.
+
+    gcloud treats --client-id-file the same way, as an override rather than a
+    setup step.
+    """
+    client = tmp_path / "oauth-client.json"
+    client.write_text(json.dumps({"installed": {"client_id": "mine", "client_secret": "s"}}))
+    with patch.object(oauth, "BUNDLED_CLIENT_ID", "id"), patch.object(
+        oauth, "BUNDLED_CLIENT_SECRET", "secret"
+    ):
+        config, source = oauth.client_config(client)
+    assert config["installed"]["client_id"] == "mine"
+    assert source == str(client)
+
+
+def test_half_a_bundled_client_does_not_count_as_one(tmp_path):
+    """An id with no secret would fail at Google with a worse message."""
+    with patch.object(oauth, "BUNDLED_CLIENT_ID", "id"), patch.object(
+        oauth, "BUNDLED_CLIENT_SECRET", ""
+    ):
+        with pytest.raises(FileNotFoundError):
+            oauth.client_config(tmp_path / "absent.json")
+
+
+def test_login_uses_the_bundled_client_without_touching_the_disk(tmp_path, monkeypatch):
+    token = tmp_path / "token.json"
+    seen = {}
+
+    class FakeFlow:
+        @classmethod
+        def from_client_config(cls, config, scopes):
+            seen["client_id"] = config["installed"]["client_id"]
+            assert scopes == SCOPES
+            return cls()
+
+        def run_local_server(self, **kwargs):
+            return credentials()
+
+    monkeypatch.setattr(oauth, "InstalledAppFlow", FakeFlow)
+    monkeypatch.setattr(oauth, "BUNDLED_CLIENT_ID", "bundled")
+    monkeypatch.setattr(oauth, "BUNDLED_CLIENT_SECRET", "secret")
+
+    oauth.login(SCOPES, client_path=tmp_path / "absent.json", token_path=token)
+    assert seen["client_id"] == "bundled"
+    assert stat.S_IMODE(token.stat().st_mode) == 0o600
 
 
 def test_login_writes_the_token_private(tmp_path, monkeypatch):
@@ -206,7 +289,8 @@ def test_login_writes_the_token_private(tmp_path, monkeypatch):
 
     class FakeFlow:
         @classmethod
-        def from_client_secrets_file(cls, path, scopes):
+        def from_client_config(cls, config, scopes):
+            assert config["installed"]["client_id"] == "c"
             assert scopes == SCOPES
             return cls()
 

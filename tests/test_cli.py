@@ -1263,6 +1263,38 @@ def test_read_refuses_a_config_it_cannot_understand(capsys, config_at):
     assert "service-account" in payload["error"]
 
 
+def test_auth_status_says_the_client_is_bundled(capsys, config_at):
+    """So a person can tell there is nothing left to set up."""
+    with patch("gdoc.cli.oauth.BUNDLED_CLIENT_ID", "id"), patch(
+        "gdoc.cli.oauth.BUNDLED_CLIENT_SECRET", "secret"
+    ), patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["client"] == "bundled"
+
+
+def test_auth_status_names_the_client_file_when_there_is_one(
+    capsys, config_at, gdoc_agent_dir
+):
+    client = gdoc_agent_dir / "oauth-client.json"
+    client.write_text(json.dumps({"installed": {"client_id": "mine"}}))
+    with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["client"] == str(client)
+
+
+def test_auth_status_says_when_no_client_exists_at_all(capsys, config_at):
+    with patch("gdoc.cli.oauth.BUNDLED_CLIENT_ID", ""), patch(
+        "gdoc.cli.oauth.BUNDLED_CLIENT_SECRET", ""
+    ), patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
+        exit_code = main(["auth", "status"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["client"] is None
+    assert "ships no OAuth client" in payload["client_problem"]
+
+
 def test_auth_status_says_the_mode_came_from_the_config(capsys, config_at):
     config_at.write_text(json.dumps({"auth_mode": "service_account"}))
     with patch("gdoc.cli.drive_service", side_effect=RuntimeError("nope")):
