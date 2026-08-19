@@ -305,6 +305,15 @@ Three rules an agent is likely to break:
   returns `ok`, `unverified`, `missing` or `stale`, and `edits` reports which
   rather than refusing to run.
 
+Both skills read it, and they read it for different reasons. `gdoc-review` reports
+the counts and touches nothing: a review that lists only comments reads as
+"nothing else changed", which is the sentence that loses an edit. `gdoc-apply`
+applies them, and does not publish when it could not read them. A
+`suggestions_error`, or a `missing` or `stale` baseline, means half the review was
+invisible on that run, and a version built from the markdown anyway would drop
+it silently. The stop is in the skill rather than in `generate`, because
+`generate` is handed markdown and cannot know a document was reviewed at all.
+
 ## Identity is never a gate
 
 Drive's `author.me` means the service account under `auth_mode: service_account`

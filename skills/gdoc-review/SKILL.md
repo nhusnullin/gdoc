@@ -93,6 +93,40 @@ reviewed earlier can list threads that were in fact answered. Those old replies
 carry no marker and no longer read as gdoc's. Each item's `replies` field shows
 what is already there, so say so and let Nail decide.
 
+### Then read what he changed in the document itself
+
+A comment is not the only way Nail reviews. He renames a heading, cuts a
+sentence, or marks the same changes in suggesting mode. Carrying those into the
+markdown is `/gdoc-apply`'s job, not this skill's, but they have to be visible
+here. This run is the one that tells him what is waiting, and a review that
+reports only comments reads as "nothing else changed".
+
+```bash
+$GDOC edits <url>
+```
+
+It writes nothing, so it runs under `--terminal-only` too. Four keys, reported in
+Step 2:
+
+- `counts.hunks`, edits made in editing mode, the fresh export diffed against
+  `baseline.md`.
+- `counts.suggestions`, suggestions still pending in the document.
+- `baseline`, whether the hunks could be computed at all. `missing` or `stale`
+  means no editing-mode edit is visible on this run, so say that instead of
+  reporting zero. Zero and cannot-tell are not the same answer, the same way
+  `addressed: []` is not "nothing was said".
+- `suggestions_error` naming `documents.readonly` means the token predates the
+  Docs scope. Say suggestions were not read, and that one `$GDOC auth login`
+  fixes it. Ask before running it, the same as everywhere else.
+
+An error naming `--slug` means no markdown under `$ROOT` is paired to this
+document. Report it and carry on with the comments. Step 6 hits the same case,
+and an unpaired document has no baseline to compare against anyway.
+
+Never act on a hunk or a suggestion here, and never accept a suggestion in the
+document. This skill answers comments. Document-wide changes go through the
+paired markdown, where a diff is reviewable.
+
 ## If Nail asks for all the comments
 
 By default only marked comments are work. When Nail says he wants to go through
@@ -131,6 +165,7 @@ document is unknown. A posted reply cannot be taken back.
 Will act:         para 3, para 7, para 11 (Nail), para 5 (William Mejia)
 Already answered: para 2
 Newer replies:    1 answered thread has an unmarked reply since my last one
+In the document:  2 direct edits, 3 pending suggestions (baseline ok)
 
 I cannot see who else has access to this document. Replies are visible
 to everyone on it. Under auth_mode oauth they post under your own name;
@@ -257,6 +292,7 @@ posted   para 7   rephrased, ready to paste
 captured para 2   global: renumber sections
 
 1 global item in .gdoc/<slug>/pending.md
+2 direct edits and 3 suggestions in the document, for /gdoc-apply to carry across
 Next session: /gdoc-apply <source md>
 ```
 
@@ -295,6 +331,10 @@ now would bake them in and hide them from the next apply.
 - Never act on an unmarked comment unless Nail asked for all-comments mode and
   picked that comment.
 - Never attempt a global change in a comment thread.
+- Never report zero direct edits when `baseline` is `missing` or `stale`. Nothing
+  was compared, so zero is a guess dressed as a fact.
+- Never apply a hunk or accept a suggestion. `/gdoc-apply` carries them into the
+  markdown, and accepting in the document is Nail's.
 - Never write the baseline. That is `generate`'s job.
 - Never post a reply you did not print in full afterwards. Posting without
   showing the text is the one thing removing the gate must not cost.
