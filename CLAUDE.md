@@ -16,6 +16,8 @@ only.
 | `gdoc/` | the package. Imports are `from gdoc.x import y` |
 | `gdoc/guard.py` | the reachable set. Which files a client may touch, under either credential |
 | `gdoc/marker.py` | the `[gdoc]` label on gdoc's own replies |
+| `gdoc/restyle.py` | the house-styled copy of a document nothing here is paired to |
+| `gdoc/comments.py` | carrying comment threads from one document onto another |
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
@@ -57,13 +59,14 @@ pandoc remains, in three places, and each is tracked separately:
   Removing it means a pure-Python parser plus a rewritten AST walker, in the
   module where the document body's pixel fidelity lives, so it needs its own
   spec.
-- `gdoc/export.py`, twice. As a markdown fallback, and as the only way to carry
-  pictures across. Drive's `text/markdown` export drops embedded pictures and
-  Google Drawings entirely, verified against a real document on 2026-08-18:
-  four drawings, no image markup of any kind. The docx export carries all four
-  as PNG bytes, so `export_with_media` always takes the docx route and runs
-  pandoc with `--extract-media`. That makes this use load-bearing, not a
-  fallback, and removing it now needs a docx reader.
+- `gdoc/export.py`, twice. As a markdown fallback, and as the way to carry
+  pictures a Google Drawing holds. What Drive's `text/markdown` export does with
+  pictures depends on the kind, verified against real documents on 2026-08-18
+  and 2026-08-19: an **embedded image** comes back as a reference-style link to
+  a base64 `data:` URI, and a **Google Drawing** does not come back at all. The
+  docx export carries both as PNG bytes, so `export_with_media` always takes the
+  docx route and runs pandoc with `--extract-media`. That makes this use
+  load-bearing, not a fallback, and removing it now needs a docx reader.
 - `gdoc/generate.py`, for the plain non-template path, which is what
   `--template none` selects. Kept on purpose: it is the fallback when the house
   template is not wanted, and keeping it narrowed the blast radius of wiring the
@@ -206,20 +209,72 @@ past the scanner.
 
 Two halves, and both were broken.
 
-- **Pulling a document in.** `gdoc export --out note.md --media-dir note-media`
-  is the only way to get the pictures. Drive's markdown export has none in it.
-  A picture in the docx that pandoc never extracts, usually a header image, is
-  reported in `warnings` rather than dropped: silence is what made #28 show up
-  only after somebody read the new document.
-- **Publishing it back.** `gdoc/render/body.py` embeds a picture that sits on its
-  own line (`lone_image`) and, since #28, every picture inside a paragraph as
-  well (`split_images`). A pulled document puts its diagrams at the end of the
-  paragraph that introduces them, and those were being dropped without a word.
-  Words first, then each picture on its own centred line.
+- **Pulling a document in.** Plain `gdoc export` is enough for an embedded
+  image: Drive hands it back as a base64 `data:` URI and the publish decodes it.
+  `--media-dir` is what a Google Drawing needs, because Drive leaves those out
+  of the markdown altogether; it takes the docx route instead. A picture in the
+  docx that pandoc never extracts, usually a header image, is reported in
+  `warnings` rather than dropped: silence is what made #28 show up only after
+  somebody read the new document.
+- **Publishing it back.** `gdoc/render/body.py` embeds a picture wherever it
+  finds one: alone on its line (`lone_image`), inside a paragraph, and inside a
+  heading. `split_images` searches **recursively**, and that is not a refinement.
+  Drive writes a picture on its own line as a bold heading,
+  `# **![][image1]**`, so the image sits inside a `Strong` node, and a top-level
+  search finds nothing and drops it in silence. That was the 2026-08-19 bug.
+  A heading holding nothing but a picture emits no heading at all: it takes no
+  number and no contents entry, because it is a figure.
 
-A picture at a URL is refused with a message naming `--media-dir`. Nothing here
-downloads: a publish that reached the network would depend on a link that
-expires.
+A picture at an http URL is refused with a message naming `--media-dir`. Nothing
+here downloads: a publish that reached the network would depend on a link that
+expires. A `data:` URI is decoded instead, because those bytes arrived with the
+document.
+
+## Restyling a document gdoc knows nothing about
+
+`gdoc restyle` publishes a house-styled copy of a document with no queue, no
+paired markdown and no baseline. `gdoc/restyle.py` composes the pull, the
+publish and the comment copy; `gdoc/comments.py` is the copy on its own.
+
+Four rules, and each one is the reason something is shaped the way it is.
+
+- **The folder is never derived from the original.** It comes from
+  `--folder-id`, or from `output_folder_id`. Reading the original's parent and
+  creating there would work today, because a create names no file, but it would
+  mean reaching a folder Nail never named. That is the third door principle 3
+  forbids. So `cli.cmd_restyle` hands `drive_service` exactly two ids, the
+  document and the folder, and the new document's id is learned from the create
+  that made it. `gdoc/restyle.py` never builds a client; it is given one.
+- **It is one command, not three the skill composes.** Only because of the
+  guard: the comment copy writes to a document that did not exist when the run
+  started. In one client its id is already learned. Split across CLI runs the
+  last one would have to be handed an id from outside.
+- **The front matter is built with `yaml.safe_dump`, never an f-string.** The
+  only field in it is the title, and that title is a Drive document's name.
+  "Q3: Roadmap" written by hand is `title: Q3: Roadmap`, which is not a mapping,
+  and the run dies parsing its own front matter before it publishes anything.
+- **Nothing is recorded.** No pairing, no version, no baseline, and the pulled
+  markdown is deleted. A restyle is a throwaway by design, so running it twice
+  makes two unrelated documents. The temp directory survives only when nothing
+  was created, and then `workdir` names it, because the pull is all the run
+  produced.
+- **A copied comment is somebody else's text, so it is carried verbatim.**
+  `gdoc/comments.py` does not run `reply.assert_plain_text` and does not add the
+  `[gdoc]` marker. The check guards what gdoc writes, which gdoc can always
+  rephrase; refusing to carry a comment over an asterisk would lose the comment
+  to protect its formatting. The marker means "gdoc wrote this", and stamping it
+  on other people's words would claim authorship of text gdoc only moved.
+
+`restyle.survey` is the same read without any of the writes, behind
+`--dry-run`. The confirmation the skill asks for has to name the folder and the
+thread counts, and both have to be on screen before a document exists.
+
+Two things cannot come across, and no code should try. Drive creates every
+comment as the authenticated user, so every copy is authored by whoever gdoc is
+signed in as. The author's name in the text is the only honest record of who
+said it. An anchor is the second: it is computed against a document's
+structure, and the house template changes that by construction. So the copies
+are unanchored, and the quoted sentence is the pointer that is left.
 
 ## Identity is never a gate
 

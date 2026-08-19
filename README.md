@@ -99,6 +99,12 @@ fresh copy, so it can tell you what somebody changed by hand inside the Google D
 **Keeps the version history.** Your markdown file records which document it is
 paired to, when it was last synced, and every version published from it.
 
+**Restyles a document it knows nothing about.** Point it at a Google Doc with no
+markdown behind it and it pulls the document, puts it in the house template, and
+publishes a new one. The open comment threads come across, each message carrying
+the name of whoever wrote it. The original is untouched, and nothing is saved on
+your side: a restyle is a throwaway copy, not a new note to look after.
+
 ## What you need before you start
 
 - macOS or Linux, and a terminal.
@@ -401,12 +407,13 @@ reviewing the same document. Watch for sync conflict copies as well:
 agent would pick up the copy. Tracked as
 [issue 25](https://github.com/nhusnullin/gdoc/issues/25).
 
-**Pictures come across, one command at a time.** Pulling an existing Google Doc
-into markdown needs `gdoc export --out note.md --media-dir note-media`, which
-writes the pictures beside the note and links them. Plain `gdoc export` returns
-Drive's own markdown, and Drive leaves every picture out of it. A picture the
-converter cannot place, usually a header image, is named in the output so you can
-add it by hand.
+**Pictures come across, and drawings need one flag.** An ordinary embedded
+picture survives a plain `gdoc export`: Drive hands it back inside the markdown
+and the publish puts it in the new document. A **Google Drawing** does not: Drive
+leaves those out of its markdown entirely, so pull the document with
+`gdoc export --out note.md --media-dir note-media`, which takes the docx route
+and writes the pictures beside the note. Either way, a picture that could not be
+carried is named in the output rather than dropped quietly.
 
 **One house template.** `altery-group-policy-v1.0` is bundled. A second one needs
 code, because the cover and the tables are found by their placeholder text.

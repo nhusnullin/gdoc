@@ -52,6 +52,11 @@ always tries to upload, so there is no local-only way to produce the document.
 Tell Nail the markdown is saved and that re-running without the flag will
 generate the document.
 
+A restyle is refused under this flag, not adapted. It exists to publish, and
+`$GDOC restyle` uploads before it has anything to show. Say that, and stop
+before the confirmation. `--dry-run` is the one part that is safe to run, and it
+answers what the restyle would do without creating anything.
+
 ## Step 1: Find the queue
 
 Nail passes whatever he already has: his markdown file, the document link, or
@@ -62,7 +67,7 @@ slug to work on his own document.
 |---|---|
 | nothing | list the queues under `$ROOT` |
 | his markdown, `notes.md` | find the queue whose `Source:` line names it |
-| the document URL | `$GDOC pair find --doc-id <doc_id>` for the source, then as above |
+| the document URL | `$GDOC pair find --doc-id <doc_id>` for the source, then as above. Nothing paired means a restyle, below |
 | `.gdoc/<slug>/pending.md` | use it directly |
 
 The last row still works, because a path that names the file needs no resolving.
@@ -119,17 +124,85 @@ $GDOC pair find --doc-id <doc_id>
 ```
 
 If neither answers **and he gave you a document link**, there is no source
-markdown for it here. That is a document he does not own the source of, so the
-output is a note for him, not a new document. Say so and stop.
+markdown for it here. That is the restyle below, not a refusal.
 
 If he gave you a markdown file that exists, that same empty answer means the first
 publish above, not a refusal. The difference is whether a source file is in his
-hands, so check which he passed before you refuse anything.
+hands, so check which he passed before you do either.
 
 `baseline.md` in the queue folder is the document as it was generated. It is read
 only for comparison, and it is never the file you edit. It normally sits beside
 `pending.md`, but Step 4 reports `baseline_path`, and that is the truth if the
 two ever disagree.
+
+### The restyle
+
+A document link, no queue, and nothing under this root paired to it. gdoc knows
+nothing about it. What Nail wants is the same document in the house template, so
+pull it, publish a new one, and carry the open comment threads across.
+
+One command does all of it, and it is the whole job:
+
+```bash
+$GDOC restyle --doc "<the document URL>"
+```
+
+Ask first, and ask with the answer already on screen. `--dry-run` creates
+nothing and gives you the document's name, the folder id and the thread counts:
+
+```bash
+$GDOC restyle --doc "<the document URL>" --dry-run
+```
+
+Then one confirmation, in this shape:
+
+```
+"MC incentive routes" is not paired to anything under this root.
+Restyle it: a new document in the house template, in folder 0AFolderId
+  (from your config).
+  7 comment threads, 4 open. The 4 open ones come across, authored by you,
+  with the original names in the text. The 3 resolved ones do not.
+  This is a conversion, not a copy: tables and layout may come across differently.
+  Nothing is written under this root. The original is untouched.
+Go ahead? y
+```
+
+That is one turn, not ceremony. It creates a document other people can read, in
+a folder, and there is no undo. The line that earns its place is the folder: a
+restyled copy of somebody else's document in the wrong folder is the failure
+worth being slow about. `--folder-id "<folder URL>"` overrides the config, the
+same as everywhere else.
+
+Then skip Steps 2, 3, 4 and 5. There are no items, no markdown to edit, no queue
+to clear, and `restyle` has already published. Read its JSON:
+
+| Key | What you say |
+|---|---|
+| `doc_id`, `link` | the document exists. Give him the link first |
+| `comments_copied`, `comments_skipped_resolved` | how many threads came across, and how many resolved ones did not |
+| `comment_errors` | threads that were not copied, each naming why. The document is still fine |
+| `image_warnings` | pictures that could not be carried. Name them, he may want to add them by hand |
+| `drift` | the contents list disagrees with the document. Tell him to check it before sharing |
+| `reason` | why nothing was created. Read it whenever `doc_id` is null: a refused publish still exits 0, so the exit code will not tell you |
+| `workdir` | only set when nothing was created. The pulled markdown is in there, and it is all the run produced |
+
+Say four things afterwards, every time:
+
+- No comment kept its anchor. The copies sit unattached at the top.
+- Every copy is authored by whoever gdoc is signed in as. That is why the
+  original names are in the text.
+- The new document carries the same name as the original, so Drive now holds two
+  documents with that name. Renaming it is his to do.
+- Nothing under this root changed, so there is nothing to commit.
+
+Use `--no-comments` when he wants the clean document without the discussion, and
+`--template none` when he wants a plain one.
+
+A restyle is a throwaway. It records no pairing, no version and no baseline, and
+running it twice makes two unrelated documents. Never run `pair set` afterwards
+to tie one to the original: they are not the same document, and the original is
+not gdoc's to publish over.
+
 
 ## Step 2: Work through the items in order
 
@@ -371,6 +444,8 @@ Changed, not committed:
 - Never write a `gdoc_versions` entry by hand for a document that failed to upload.
 - Never run `pair set` to fix an unpaired file. It clears `gdoc_versions` when
   the id differs, which drops the history. `generate` pairs the file itself.
+- Never pair, version or baseline a restyled document. It is a throwaway copy,
+  and the original is not gdoc's to publish over.
 - Never invent a title, and never approve the suggested one on Nail's behalf.
 - Never commit, and never check whether this root is a repository. That is
   Nail's job, and the skill's job is to name what it changed.

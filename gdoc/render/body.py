@@ -10,6 +10,9 @@ whole class of problem.
 """
 
 import json
+import base64
+import binascii
+import io
 import re
 import subprocess
 from pathlib import Path
@@ -138,6 +141,16 @@ def shallowest_heading_level(blocks, current=None):
     for block in blocks:
         tag, content = block["t"], block.get("c")
         if tag == "Header":
+            # A heading holding nothing but a picture is a figure, so it does
+            # not set the document's heading depth either. Otherwise Drive's
+            # "# ![][image1]" makes every real heading one level deeper than it
+            # is, and they come out numbered "0.1-".
+            words, images = split_images(content[2])
+            if images and not any(
+                node for node in words
+                if isinstance(node, dict) and node.get("t") not in ("Space", "SoftBreak")
+            ):
+                continue
             level = content[0]
             current = level if current is None else min(current, level)
         elif tag in ("BulletList", "OrderedList", "BlockQuote", "Div"):
@@ -498,22 +511,67 @@ def split_images(nodes):
 
     Issue #28. Each picture becomes its own centred paragraph after the words,
     which is how it reads in the source document anyway.
+
+    The search is recursive, and that is not a refinement. Drive writes a
+    picture on its own line as a bold heading, `# **![][image1]**`, so the image
+    sits inside a Strong node. Looking only at the top level of the inline list
+    found nothing and dropped the picture in silence, which is what Nail hit on
+    2026-08-19. Formatting can nest arbitrarily, so nothing may assume a depth.
     """
     if not isinstance(nodes, list):
         return nodes, []
-    words, images = [], []
-    for node in nodes:
-        if isinstance(node, dict) and node.get("t") == "Image":
-            _attr, alt, target = node["c"]
-            images.append((target[0], alt))
-        else:
-            words.append(node)
+    images = []
+    words = [kept for kept in (_without_images(node, images) for node in nodes)
+             if kept is not None]
     return words, images
+
+
+def _without_images(node, images):
+    """Return the node with every picture inside it removed, or None if it was one."""
+    if not isinstance(node, dict):
+        return node
+    if node.get("t") == "Image":
+        _attr, alt, target = node["c"]
+        images.append((target[0], alt))
+        return None
+    content = node.get("c")
+    if not isinstance(content, list):
+        return node
+    # An inline container holds its children in a list somewhere inside `c`:
+    # Strong and Emph hold them directly, Link and Span hold them at index 1.
+    # Rebuilding rather than editing keeps the node immutable.
+    rebuilt = []
+    for item in content:
+        if isinstance(item, list):
+            rebuilt.append([kept for kept in (_without_images(child, images) for child in item)
+                            if kept is not None])
+        elif isinstance(item, dict):
+            kept = _without_images(item, images)
+            rebuilt.append(kept if kept is not None else {"t": "Str", "c": ""})
+        else:
+            rebuilt.append(item)
+    return {**node, "c": rebuilt}
 
 
 def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
     if state is None:
         state = {"first_heading": True}
+
+    def emit_images(images, state):
+        """Place each picture on its own centred line, with its alt as caption."""
+        if not images:
+            return
+        place_image = state.get("place_image")
+        if place_image is None:
+            raise BodyError(
+                f"the document has an image ({images[0][0]}) but the renderer "
+                "was given no base directory to resolve it against")
+        for target, alt in images:
+            emit(place_image(target))
+            alt_runs = inline_runs(alt)
+            if alt_runs:
+                emit(make_caption(alt_runs))
+
     for block in blocks:
         tag, content = block["t"], block.get("c")
 
@@ -537,8 +595,19 @@ def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
 
         elif tag == "Header":
             heading_level, _attr, inlines = content
+            # Drive exports a picture that sits on its own line as a heading,
+            # "# ![][image1]". The inline path renders no picture at all, so it
+            # used to vanish, leaving an empty heading that still took a number
+            # and an empty line in the contents list. Reported 2026-08-19.
+            inlines, images = split_images(inlines)
             runs = inline_runs(inlines)
             plain = "".join(r[0] for r in runs)
+            if images and not plain.strip():
+                # Nothing but a picture. It is a figure, not a heading, so it
+                # gets no number and no contents entry.
+                emit_images(images, state)
+                state["after_table"] = False
+                continue
             prefix = numberer.prefix(heading_level, plain)
             if prefix:
                 runs = [(prefix, False, False, False, None)] + runs
@@ -551,6 +620,9 @@ def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
                 state["first_heading"] = False
             emit(make_heading(numberer.style_level(heading_level), runs,
                               page_break=page_break))
+            # A heading that names a picture keeps its words and gets the
+            # picture underneath it, where it reads.
+            emit_images(images, state)
 
         elif tag in ("Para", "Plain"):
             content, images = split_images(content)
@@ -561,16 +633,7 @@ def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
                 # bullet would break the numbering it sits in.
                 if runs:
                     emit(make_paragraph(runs, before="240" if state.get("after_table") else "0"))
-                place_image = state.get("place_image")
-                if place_image is None:
-                    raise BodyError(
-                        f"the document has an image ({images[0][0]}) but the "
-                        "renderer was given no base directory to resolve it against")
-                for target, alt in images:
-                    emit(place_image(target))
-                    alt_runs = inline_runs(alt)
-                    if alt_runs:
-                        emit(make_caption(alt_runs))
+                emit_images(images, state)
                 state["after_table"] = False
                 continue
             if level == 0:
@@ -617,6 +680,36 @@ def walk(blocks, emit, numbering, numberer, level=0, num_id=None, state=None):
         state["after_table"] = tag == "Table"
 
 
+def _is_data_uri(target: str) -> bool:
+    return str(target).lower().startswith("data:")
+
+
+def _decode_data_uri(target: str):
+    """The bytes of an inline picture, as a stream python-docx can read.
+
+    Drive's markdown export writes an embedded picture as a reference-style link
+    to a base64 data: URI, so the bytes arrive with the markdown. Refusing them
+    sent people to --media-dir for a picture the export had already handed over.
+
+    No network, no temporary file: principle 1 is untouched, because this is
+    decoding what is already in the document.
+    """
+    header, _, payload = str(target).partition(",")
+    if not payload or "base64" not in header:
+        raise BodyError(
+            "an inline picture could not be read: only base64 data: URIs are "
+            f"understood, and this one says {header[:40]!r}"
+        )
+    if not header[len("data:"):].lower().startswith("image/"):
+        raise BodyError(
+            f"the inline data is not a picture, it says {header[:40]!r}"
+        )
+    try:
+        return io.BytesIO(base64.b64decode(payload, validate=True))
+    except (binascii.Error, ValueError) as error:
+        raise BodyError(f"an inline picture could not be decoded: {error}") from error
+
+
 def _is_remote(target: str) -> bool:
     """True when the image points at a URL rather than at a file on disk."""
     return str(target).lower().startswith(("http://", "https://", "//", "data:"))
@@ -630,25 +723,29 @@ def image_placer(doc, base_dir):
     of the body for `emit` to place in document order.
     """
     def place_image(target):
-        if _is_remote(target):
-            # Google's export writes googleusercontent URLs, and a URL is not a
-            # picture: nothing here downloads, and a publish that reached the
-            # network would depend on a link that expires. Issue #28.
+        if _is_data_uri(target):
+            source = _decode_data_uri(target)
+        elif _is_remote(target):
+            # A URL is not a picture: nothing here downloads, and a publish that
+            # reached the network would depend on a link that expires. Issue #28.
             raise BodyError(
                 f"the picture at {target} is a link, not a file. Nothing here "
                 "downloads pictures. Pull the document again with "
                 "`gdoc export --out <note>.md --media-dir <note>-media`, which "
                 "writes the pictures beside the markdown, and publish that."
             )
-        path = (Path(base_dir) / target).expanduser()
-        if not path.is_file():
-            raise BodyError(f"image not found: {target}, looked in {base_dir}")
+        else:
+            path = (Path(base_dir) / target).expanduser()
+            if not path.is_file():
+                raise BodyError(f"image not found: {target}, looked in {base_dir}")
+            source = str(path)
         paragraph = doc.add_paragraph()
         run = paragraph.add_run()
         try:
-            run.add_picture(str(path))
+            run.add_picture(source)
         except Exception as exc:
-            raise BodyError(f"the image could not be embedded, {target}: {exc}") from exc
+            shown = target if not _is_data_uri(target) else "an inline picture"
+            raise BodyError(f"the image could not be embedded, {shown}: {exc}") from exc
         shape = doc.inline_shapes[-1]
         if shape.width > IMAGE_MAX_EMU:
             shape.height = Emu(round(shape.height * IMAGE_MAX_EMU / shape.width))

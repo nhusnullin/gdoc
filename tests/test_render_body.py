@@ -200,3 +200,124 @@ def test_the_sentence_beside_a_picture_survives(tmp_path):
     words = re.sub(r"\s+", " ", "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", document)))
     assert "Route one is direct." in words
     assert document.count("<w:drawing") == 1
+
+
+import re  # noqa: E402
+
+# ------------------------------------------------- pictures inside a heading --
+# Reported by Nail on 2026-08-19. Drive exports a picture that sits on its own
+# line as a heading: "# ![][image1]". The heading branch renders inline runs,
+# which drop an image without a word, so the picture vanished, the document got
+# an empty heading, and the contents list got an empty entry that ate a number.
+
+def _base64_png() -> str:
+    import base64
+
+    return "data:image/png;base64," + base64.b64encode(_one_pixel_png()).decode()
+
+
+def _headings_and_drawings(out):
+    import zipfile
+
+    document = zipfile.ZipFile(out).read("word/document.xml").decode("utf8")
+    text = [t for t in re.findall(r"<w:t[^>]*>([^<]*)</w:t>", document)]
+    return text, document.count("<w:drawing")
+
+
+def test_a_picture_alone_on_a_heading_line_is_embedded(tmp_path):
+    (tmp_path / "m").mkdir()
+    (tmp_path / "m" / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "# ![](m/image1.png)\n\n## Real heading\n\nText.\n")
+    _, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
+
+
+def test_a_heading_that_is_only_a_picture_leaves_no_empty_heading(tmp_path):
+    """It became "2-" with no words, in the document and in the contents list."""
+    (tmp_path / "m").mkdir()
+    (tmp_path / "m" / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "# ![](m/image1.png)\n\n## Real heading\n\nText.\n")
+    text, _ = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    # The contents list is written as whole entries, one run each, so a heading
+    # with no words shows up there as a bare number.
+    # Two headings, so two entries, each written as one run and separated by the
+    # page-number run. The body starts after them, splitting at every space.
+    start = text.index("Contents") + 1
+    entries = [entry for entry in text[start : start + 4] if entry]
+    assert not [e for e in entries if re.fullmatch(r"\d+(\.\d+)*-", e)]
+    # and the number it would have eaten goes to the real heading
+    assert "2-Real heading" in entries
+
+
+def test_a_heading_with_words_and_a_picture_keeps_both(tmp_path):
+    (tmp_path / "m").mkdir()
+    (tmp_path / "m" / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "# Diagram ![](m/image1.png)\n\nText.\n")
+    text, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
+    assert "Diagram" in "".join(text)
+
+
+# --------------------------------------------------------- pictures as data --
+# Drive's markdown export writes an embedded picture as a reference-style link
+# to a base64 data: URI. The bytes are right there, so refusing them sent people
+# to --media-dir for a picture the export had already handed over.
+
+def test_a_data_uri_picture_is_embedded_without_a_media_directory(tmp_path):
+    note = _note(tmp_path, f"Text.\n\n![]({_base64_png()})\n")
+    _, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
+
+
+def test_a_data_uri_picture_in_a_heading_is_embedded_too(tmp_path):
+    """Exactly the shape Drive produced for Nail's document."""
+    note = _note(tmp_path, f"# ![]({_base64_png()})\n\n## Real heading\n\nText.\n")
+    _, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
+
+
+def test_a_data_uri_that_is_not_an_image_is_refused(tmp_path):
+    note = _note(tmp_path, "![](data:text/plain;base64,aGVsbG8=)\n")
+    with pytest.raises(BodyError, match="not a picture"):
+        build(note, tmp_path / "out.docx")
+
+
+# ------------------------------------------- pictures nested inside formatting --
+# The shape Drive actually produced, and the reason the first fix missed it:
+# "# **![][image1]**". The image sits inside a Strong node, and split_images
+# only looked at the top level of the inline list.
+
+def test_a_picture_inside_bold_is_found(tmp_path):
+    (tmp_path / "m").mkdir()
+    (tmp_path / "m" / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "**![](m/image1.png)**\n")
+    _, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
+
+
+def test_a_bold_heading_that_is_only_a_picture_is_found(tmp_path):
+    """Exactly Nail's document: `# **![][image1]**` with a data: URI."""
+    note = _note(tmp_path, f"# **![]({_base64_png()})**\n\n## Real heading\n\nText.\n")
+    text, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
+    start = text.index("Contents") + 1
+    entries = [entry for entry in text[start : start + 4] if entry]
+    assert not [e for e in entries if re.fullmatch(r"\d+(\.\d+)*-", e)]
+
+
+def test_words_around_a_nested_picture_survive(tmp_path):
+    (tmp_path / "m").mkdir()
+    (tmp_path / "m" / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "**Route one ![](m/image1.png) is direct.**\n")
+    text, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    words = re.sub(r"\s+", " ", "".join(text))
+    assert drawings == 1
+    assert "Route one" in words and "is direct." in words
+
+
+def test_a_picture_inside_a_link_is_still_found(tmp_path):
+    (tmp_path / "m").mkdir()
+    (tmp_path / "m" / "image1.png").write_bytes(_one_pixel_png())
+    note = _note(tmp_path, "[![](m/image1.png)](https://example.com)\n")
+    _, drawings = _headings_and_drawings(build(note, tmp_path / "out.docx").docx_path)
+    assert drawings == 1
