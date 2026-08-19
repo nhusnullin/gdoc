@@ -407,12 +407,13 @@ reviewing the same document. Watch for sync conflict copies as well:
 agent would pick up the copy. Tracked as
 [issue 25](https://github.com/nhusnullin/gdoc/issues/25).
 
-**Pictures come across, one command at a time.** Pulling an existing Google Doc
-into markdown needs `gdoc export --out note.md --media-dir note-media`, which
-writes the pictures beside the note and links them. Plain `gdoc export` returns
-Drive's own markdown, and Drive leaves every picture out of it. A picture the
-converter cannot place, usually a header image, is named in the output so you can
-add it by hand.
+**Pictures come across, and drawings need one flag.** An ordinary embedded
+picture survives a plain `gdoc export`: Drive hands it back inside the markdown
+and the publish puts it in the new document. A **Google Drawing** does not: Drive
+leaves those out of its markdown entirely, so pull the document with
+`gdoc export --out note.md --media-dir note-media`, which takes the docx route
+and writes the pictures beside the note. Either way, a picture that could not be
+carried is named in the output rather than dropped quietly.
 
 **One house template.** `altery-group-policy-v1.0` is bundled. A second one needs
 code, because the cover and the tables are found by their placeholder text.

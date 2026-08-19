@@ -59,13 +59,14 @@ pandoc remains, in three places, and each is tracked separately:
   Removing it means a pure-Python parser plus a rewritten AST walker, in the
   module where the document body's pixel fidelity lives, so it needs its own
   spec.
-- `gdoc/export.py`, twice. As a markdown fallback, and as the only way to carry
-  pictures across. Drive's `text/markdown` export drops embedded pictures and
-  Google Drawings entirely, verified against a real document on 2026-08-18:
-  four drawings, no image markup of any kind. The docx export carries all four
-  as PNG bytes, so `export_with_media` always takes the docx route and runs
-  pandoc with `--extract-media`. That makes this use load-bearing, not a
-  fallback, and removing it now needs a docx reader.
+- `gdoc/export.py`, twice. As a markdown fallback, and as the way to carry
+  pictures a Google Drawing holds. What Drive's `text/markdown` export does with
+  pictures depends on the kind, verified against real documents on 2026-08-18
+  and 2026-08-19: an **embedded image** comes back as a reference-style link to
+  a base64 `data:` URI, and a **Google Drawing** does not come back at all. The
+  docx export carries both as PNG bytes, so `export_with_media` always takes the
+  docx route and runs pandoc with `--extract-media`. That makes this use
+  load-bearing, not a fallback, and removing it now needs a docx reader.
 - `gdoc/generate.py`, for the plain non-template path, which is what
   `--template none` selects. Kept on purpose: it is the fallback when the house
   template is not wanted, and keeping it narrowed the blast radius of wiring the
@@ -208,20 +209,26 @@ past the scanner.
 
 Two halves, and both were broken.
 
-- **Pulling a document in.** `gdoc export --out note.md --media-dir note-media`
-  is the only way to get the pictures. Drive's markdown export has none in it.
-  A picture in the docx that pandoc never extracts, usually a header image, is
-  reported in `warnings` rather than dropped: silence is what made #28 show up
-  only after somebody read the new document.
-- **Publishing it back.** `gdoc/render/body.py` embeds a picture that sits on its
-  own line (`lone_image`) and, since #28, every picture inside a paragraph as
-  well (`split_images`). A pulled document puts its diagrams at the end of the
-  paragraph that introduces them, and those were being dropped without a word.
-  Words first, then each picture on its own centred line.
+- **Pulling a document in.** Plain `gdoc export` is enough for an embedded
+  image: Drive hands it back as a base64 `data:` URI and the publish decodes it.
+  `--media-dir` is what a Google Drawing needs, because Drive leaves those out
+  of the markdown altogether; it takes the docx route instead. A picture in the
+  docx that pandoc never extracts, usually a header image, is reported in
+  `warnings` rather than dropped: silence is what made #28 show up only after
+  somebody read the new document.
+- **Publishing it back.** `gdoc/render/body.py` embeds a picture wherever it
+  finds one: alone on its line (`lone_image`), inside a paragraph, and inside a
+  heading. `split_images` searches **recursively**, and that is not a refinement.
+  Drive writes a picture on its own line as a bold heading,
+  `# **![][image1]**`, so the image sits inside a `Strong` node, and a top-level
+  search finds nothing and drops it in silence. That was the 2026-08-19 bug.
+  A heading holding nothing but a picture emits no heading at all: it takes no
+  number and no contents entry, because it is a figure.
 
-A picture at a URL is refused with a message naming `--media-dir`. Nothing here
-downloads: a publish that reached the network would depend on a link that
-expires.
+A picture at an http URL is refused with a message naming `--media-dir`. Nothing
+here downloads: a publish that reached the network would depend on a link that
+expires. A `data:` URI is decoded instead, because those bytes arrived with the
+document.
 
 ## Restyling a document gdoc knows nothing about
 
