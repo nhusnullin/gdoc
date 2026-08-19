@@ -37,6 +37,7 @@ from gdoc.pairing import (
 from gdoc.pending import append_item, pending_path, recorded_source
 from gdoc.render import frontmatter, profiles
 from gdoc.reply import post_reply
+from gdoc.restyle import NO_FOLDER, restyle, survey
 
 
 # Enough of an existing reply to recognise it, not enough to bloat the payload.
@@ -320,6 +321,38 @@ def cmd_generate(args) -> int:
                 f"{type(error).__name__}: {error}"
             )
     return _emit(payload)
+
+
+def cmd_restyle(args) -> int:
+    """Publish a house-styled copy of a document nothing here is paired to.
+
+    Two ids reach the client and no more: the document Nail named, and the
+    folder he named or the config holds. The new document's id is learned from
+    the create that made it, so the comment copy needs no third door.
+
+    The folder is checked here rather than after the pull, because a run that
+    cannot publish should not spend a download and a conversion finding out.
+    """
+    doc_id = extract_doc_id(args.doc)
+    folder_id = extract_folder_id(args.folder_id) if args.folder_id else None
+    config = _config_for(folder_id)
+    folder_id = folder_id or config.output_folder_id
+    if not folder_id:
+        return _fail(NO_FOLDER)
+    drive = drive_service(doc_ids=[doc_id, folder_id])
+    if args.dry_run:
+        return _emit({**survey(drive, doc_id, me_is_agent=_me_is_agent()), "folder_id": folder_id})
+    template = args.template or config.template
+    result = restyle(
+        drive,
+        doc_id,
+        folder_id=folder_id,
+        title=args.title,
+        template=None if template == profiles.NO_TEMPLATE else template,
+        copy_comments=not args.no_comments,
+        me_is_agent=_me_is_agent(),
+    )
+    return _emit(result.as_json())
 
 
 def _config_for(folder_id: str | None) -> Config:
@@ -712,6 +745,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--baseline-root", help="write the new document's baseline under this directory"
     )
     gen.set_defaults(func=cmd_generate)
+
+    styled = sub.add_parser(
+        "restyle", help="a house-styled copy of a document nothing here is paired to"
+    )
+    styled.add_argument("--doc", required=True, help="the document URL or id")
+    styled.add_argument(
+        "--folder-id",
+        help="Drive folder URL or id to publish into. Default: output_folder_id",
+    )
+    styled.add_argument("--title", help="cover title. Default: the document's own name")
+    styled.add_argument("--template", help="profile name, path, or 'none' for plain pandoc")
+    styled.add_argument(
+        "--no-comments",
+        action="store_true",
+        help="publish without carrying the open comment threads across",
+    )
+    styled.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="say what would happen: the name, the folder, and the thread counts",
+    )
+    styled.set_defaults(func=cmd_restyle)
 
     pair = sub.add_parser("pair", help="manage document-to-markdown pairings")
     pair.set_defaults(func=cmd_pair)

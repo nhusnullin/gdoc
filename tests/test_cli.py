@@ -1718,3 +1718,133 @@ def test_export_without_media_still_writes_plain_markdown(capsys, tmp_path):
         code = main(["export", _MEDIA_URL, "--out", str(out)])
     assert code == 0
     assert out.read_text() == "# Title\n"
+
+
+# ---------------------------------------------------------------------------
+# restyle subcommand
+# ---------------------------------------------------------------------------
+
+RESTYLE_DOC_URL = "https://docs.google.com/document/d/1SourceDoc/edit"
+
+
+def _restyle_result(**kwargs):
+    from gdoc.restyle import RestyleResult
+
+    base = dict(
+        source_doc_id="1SourceDoc",
+        source_name="MC incentive routes",
+        title="MC incentive routes",
+        folder_id="0AFolderId",
+        doc_id="1NewDoc",
+        link="https://docs.google.com/document/d/1NewDoc/edit",
+        comments_copied=4,
+        comments_skipped_resolved=3,
+    )
+    return RestyleResult(**{**base, **kwargs})
+
+
+def _run_restyle(extra=(), result=None, folder="0AFolderId"):
+    with patch("gdoc.cli.drive_service") as service, patch(
+        "gdoc.cli.load_config"
+    ) as config, patch(
+        "gdoc.cli.restyle", return_value=result or _restyle_result()
+    ) as called:
+        config.return_value.output_folder_id = folder
+        config.return_value.template = "altery-group-policy-v1.0"
+        exit_code = main(["restyle", "--doc", RESTYLE_DOC_URL, *extra])
+    return exit_code, called, service
+
+
+def test_restyle_reports_the_new_document_and_the_comment_counts(capsys):
+    exit_code, _, _ = _run_restyle()
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["doc_id"] == "1NewDoc"
+    assert payload["comments_copied"] == 4
+    assert payload["comments_skipped_resolved"] == 3
+    assert payload["workdir"] is None
+
+
+def test_restyle_takes_the_folder_from_the_config_when_none_was_given():
+    _, called, _ = _run_restyle()
+    assert called.call_args.kwargs["folder_id"] == "0AFolderId"
+
+
+def test_a_folder_url_on_the_command_line_wins_over_the_config():
+    _, called, _ = _run_restyle(
+        extra=["--folder-id", "https://drive.google.com/drive/folders/0BOther"]
+    )
+    assert called.call_args.kwargs["folder_id"] == "0BOther"
+
+
+def test_restyle_refuses_with_no_folder_anywhere(capsys):
+    exit_code, called, _ = _run_restyle(folder=None)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert list(payload) == ["error"]
+    assert "--folder-id" in payload["error"]
+    assert "output_folder_id" in payload["error"]
+    called.assert_not_called()
+
+
+def test_restyle_reaches_only_the_source_document_and_the_folder():
+    """Every other id it touches is one it created. No third door."""
+    _, _, service = _run_restyle()
+    assert sorted(service.call_args.kwargs["doc_ids"]) == ["0AFolderId", "1SourceDoc"]
+
+
+def test_no_comments_is_passed_through():
+    _, called, _ = _run_restyle(extra=["--no-comments"])
+    assert called.call_args.kwargs["copy_comments"] is False
+
+
+def test_template_none_means_a_plain_document():
+    _, called, _ = _run_restyle(extra=["--template", "none"])
+    assert called.call_args.kwargs["template"] is None
+
+
+def test_the_house_template_is_the_default():
+    _, called, _ = _run_restyle()
+    assert called.call_args.kwargs["template"] == "altery-group-policy-v1.0"
+
+
+def test_a_failed_publish_exits_zero_and_names_the_working_directory(capsys):
+    """Nothing was created, but the pull is on disk and the reason is readable."""
+    failed = _restyle_result(
+        doc_id=None, link=None, comments_copied=None, comments_skipped_resolved=None,
+        reason="403 from Drive", workdir="/tmp/gdoc-restyle-abc",
+    )
+    exit_code, _, _ = _run_restyle(result=failed)
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["doc_id"] is None
+    assert payload["reason"] == "403 from Drive"
+    assert payload["workdir"] == "/tmp/gdoc-restyle-abc"
+
+
+def test_restyle_dry_run_creates_nothing_and_counts_the_threads(capsys):
+    survey = {
+        "source_doc_id": "1SourceDoc",
+        "source_name": "MC incentive routes",
+        "threads_open": 4,
+        "threads_resolved": 3,
+    }
+    with patch("gdoc.cli.drive_service"), patch("gdoc.cli.load_config") as config, patch(
+        "gdoc.cli.survey", return_value=survey
+    ), patch("gdoc.cli.restyle") as run:
+        config.return_value.output_folder_id = "0AFolderId"
+        config.return_value.template = "altery-group-policy-v1.0"
+        exit_code = main(["restyle", "--doc", RESTYLE_DOC_URL, "--dry-run"])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["threads_open"] == 4
+    assert payload["folder_id"] == "0AFolderId"
+    run.assert_not_called()
+
+
+def test_a_document_url_passed_as_the_folder_is_refused(capsys):
+    exit_code, called, _ = _run_restyle(extra=["--folder-id", RESTYLE_DOC_URL])
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 1
+    assert "error" in payload
+    called.assert_not_called()

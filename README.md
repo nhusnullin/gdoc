@@ -99,6 +99,12 @@ fresh copy, so it can tell you what somebody changed by hand inside the Google D
 **Keeps the version history.** Your markdown file records which document it is
 paired to, when it was last synced, and every version published from it.
 
+**Restyles a document it knows nothing about.** Point it at a Google Doc with no
+markdown behind it and it pulls the document, puts it in the house template, and
+publishes a new one. The open comment threads come across, each message carrying
+the name of whoever wrote it. The original is untouched, and nothing is saved on
+your side: a restyle is a throwaway copy, not a new note to look after.
+
 ## What you need before you start
 
 - macOS or Linux, and a terminal.
