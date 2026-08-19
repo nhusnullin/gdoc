@@ -16,6 +16,8 @@ only.
 | `gdoc/` | the package. Imports are `from gdoc.x import y` |
 | `gdoc/guard.py` | the reachable set. Which files a client may touch, under either credential |
 | `gdoc/marker.py` | the `[gdoc]` label on gdoc's own replies |
+| `gdoc/restyle.py` | the house-styled copy of a document nothing here is paired to |
+| `gdoc/comments.py` | carrying comment threads from one document onto another |
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
@@ -220,6 +222,52 @@ Two halves, and both were broken.
 A picture at a URL is refused with a message naming `--media-dir`. Nothing here
 downloads: a publish that reached the network would depend on a link that
 expires.
+
+## Restyling a document gdoc knows nothing about
+
+`gdoc restyle` publishes a house-styled copy of a document with no queue, no
+paired markdown and no baseline. `gdoc/restyle.py` composes the pull, the
+publish and the comment copy; `gdoc/comments.py` is the copy on its own.
+
+Four rules, and each one is the reason something is shaped the way it is.
+
+- **The folder is never derived from the original.** It comes from
+  `--folder-id`, or from `output_folder_id`. Reading the original's parent and
+  creating there would work today, because a create names no file, but it would
+  mean reaching a folder Nail never named. That is the third door principle 3
+  forbids. So `cli.cmd_restyle` hands `drive_service` exactly two ids, the
+  document and the folder, and the new document's id is learned from the create
+  that made it. `gdoc/restyle.py` never builds a client; it is given one.
+- **It is one command, not three the skill composes.** Only because of the
+  guard: the comment copy writes to a document that did not exist when the run
+  started. In one client its id is already learned. Split across CLI runs the
+  last one would have to be handed an id from outside.
+- **The front matter is built with `yaml.safe_dump`, never an f-string.** The
+  only field in it is the title, and that title is a Drive document's name.
+  "Q3: Roadmap" written by hand is `title: Q3: Roadmap`, which is not a mapping,
+  and the run dies parsing its own front matter before it publishes anything.
+- **Nothing is recorded.** No pairing, no version, no baseline, and the pulled
+  markdown is deleted. A restyle is a throwaway by design, so running it twice
+  makes two unrelated documents. The temp directory survives only when nothing
+  was created, and then `workdir` names it, because the pull is all the run
+  produced.
+- **A copied comment is somebody else's text, so it is carried verbatim.**
+  `gdoc/comments.py` does not run `reply.assert_plain_text` and does not add the
+  `[gdoc]` marker. The check guards what gdoc writes, which gdoc can always
+  rephrase; refusing to carry a comment over an asterisk would lose the comment
+  to protect its formatting. The marker means "gdoc wrote this", and stamping it
+  on other people's words would claim authorship of text gdoc only moved.
+
+`restyle.survey` is the same read without any of the writes, behind
+`--dry-run`. The confirmation the skill asks for has to name the folder and the
+thread counts, and both have to be on screen before a document exists.
+
+Two things cannot come across, and no code should try. Drive creates every
+comment as the authenticated user, so every copy is authored by whoever gdoc is
+signed in as. The author's name in the text is the only honest record of who
+said it. An anchor is the second: it is computed against a document's
+structure, and the house template changes that by construction. So the copies
+are unanchored, and the quoted sentence is the pointer that is left.
 
 ## Identity is never a gate
 
