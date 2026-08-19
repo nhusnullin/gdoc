@@ -109,3 +109,47 @@ def test_write_baseline_preserves_the_existing_file_mode(tmp_path):
 def test_write_baseline_creates_a_readable_file(tmp_path):
     path = write_baseline(tmp_path, "policy", "# One\n")
     assert path.stat().st_mode & 0o777 == 0o644
+
+
+# ------------------------------------------------------- which document it is --
+# Issue #29. A baseline is only worth diffing against when it was taken from the
+# document being diffed. Every version is a new document, so the id answers it.
+
+from gdoc.baseline import baseline_state, read_provenance, write_provenance  # noqa: E402
+
+
+def test_provenance_records_the_document_the_baseline_came_from(tmp_path):
+    write_provenance(tmp_path, "policy", "doc-1")
+    assert read_provenance(tmp_path, "policy")["doc_id"] == "doc-1"
+
+
+def test_provenance_is_missing_rather_than_an_error(tmp_path):
+    assert read_provenance(tmp_path, "policy") is None
+
+
+def test_unreadable_provenance_reads_as_missing(tmp_path):
+    write_provenance(tmp_path, "policy", "doc-1")
+    (tmp_path / ".gdoc" / "policy" / "baseline.json").write_text("{ not json")
+    assert read_provenance(tmp_path, "policy") is None
+
+
+def test_a_baseline_from_this_document_is_ok(tmp_path):
+    write_baseline(tmp_path, "policy", "# One\n")
+    write_provenance(tmp_path, "policy", "doc-1")
+    assert baseline_state(tmp_path, "policy", "doc-1") == "ok"
+
+
+def test_a_baseline_from_another_document_is_stale(tmp_path):
+    write_baseline(tmp_path, "policy", "# One\n")
+    write_provenance(tmp_path, "policy", "doc-1")
+    assert baseline_state(tmp_path, "policy", "doc-2") == "stale"
+
+
+def test_no_baseline_at_all_is_missing(tmp_path):
+    assert baseline_state(tmp_path, "policy", "doc-1") == "missing"
+
+
+def test_a_baseline_with_no_provenance_is_unverified(tmp_path):
+    """Published before this existed. Probably right, and worth saying so."""
+    write_baseline(tmp_path, "policy", "# One\n")
+    assert baseline_state(tmp_path, "policy", "doc-1") == "unverified"

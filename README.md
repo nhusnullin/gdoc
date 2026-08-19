@@ -390,7 +390,15 @@ run.
 Every publish renders your markdown through the house template again. Fonts,
 colours, spacing and manual page breaks that somebody set inside the Google Doc do
 not survive into the next version. What survives is text and structure: headings,
-lists, tables, and the words. If a change matters, put it in the markdown.
+lists, tables, and the words.
+
+**Words you change in the document are carried back, once you ask.** `/gdoc-apply`
+starts by reading what changed in the document since it was generated, in editing
+mode and in suggesting mode both, and puts those changes into your markdown before
+it publishes the next version. It reports what it applied and asks about anything
+it could not place. Suggestions stay pending in the document: gdoc reads them, and
+accepting them is yours. If you never run `/gdoc-apply`, the next publish still
+overwrites the document with what the markdown says.
 
 **Page numbers cost an upload.** Every publish creates two documents and trashes
 the measuring one, because only Google can say which page a heading landed on. If

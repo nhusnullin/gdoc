@@ -936,7 +936,12 @@ def test_auth_login_reports_the_account(capsys, tmp_path):
     assert exit_code == 0
     assert payload["logged_in"] is True
     assert payload["account"] == "nail@altery.com"
-    assert login.call_args.args[0] == ["https://www.googleapis.com/auth/drive"]
+    # Both scopes in one browser trip: Drive for everything, documents.readonly
+    # so `gdoc edits` can read pending suggestions without a second login.
+    assert login.call_args.args[0] == [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/documents.readonly",
+    ]
 
 
 def test_auth_login_passes_explicit_paths_through(capsys, tmp_path):
@@ -1848,3 +1853,134 @@ def test_a_document_url_passed_as_the_folder_is_refused(capsys):
     assert exit_code == 1
     assert "error" in payload
     called.assert_not_called()
+
+
+# edits subcommand (issue #29)
+# ---------------------------------------------------------------------------
+
+_EDITS_URL = "https://docs.google.com/document/d/1AbC/edit"
+
+_BASELINE_MD = """# Routing questions
+
+## 1. Key terms
+
+Scheme means Mastercard.
+"""
+
+
+def _edits_payload(capsys, tmp_path, current_md, suggestions=None, argv=None, docs_error=None):
+    from gdoc.baseline import write_baseline, write_provenance
+
+    source = tmp_path / "notes.md"
+    source.write_text("---\ngdoc: 1AbC\n---\n\n# Routing questions\n")
+    write_baseline(tmp_path, "notes", _BASELINE_MD, force=True)
+    write_provenance(tmp_path, "notes", "1AbC")
+
+    drive = MagicMock()
+    drive.files().get.return_value.execute.return_value = {"name": "Routing questions"}
+    drive.files().export.return_value.execute.return_value = current_md.encode()
+
+    docs = MagicMock()
+    if docs_error is not None:
+        docs.documents().get.return_value.execute.side_effect = docs_error
+    else:
+        docs.documents().get.return_value.execute.return_value = suggestions or {"body": {"content": []}}
+
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.docs_service", return_value=docs
+    ):
+        exit_code = main(argv or ["edits", _EDITS_URL, "--repo-root", str(tmp_path)])
+    return exit_code, json.loads(capsys.readouterr().out), docs
+
+
+def test_edits_reports_a_change_made_in_the_document(capsys, tmp_path):
+    current = _BASELINE_MD.replace("Mastercard.", "Mastercard or Visa.")
+    code, payload, _ = _edits_payload(capsys, tmp_path, current)
+    assert code == 0
+    assert payload["baseline"] == "ok"
+    assert [h["kind"] for h in payload["hunks"]] == ["change"]
+    assert "Visa" in payload["hunks"][0]["after"]
+
+
+def test_edits_finds_the_source_markdown_from_the_document_id(capsys, tmp_path):
+    _, payload, _ = _edits_payload(capsys, tmp_path, _BASELINE_MD)
+    assert payload["source"].endswith("notes.md")
+    assert payload["slug"] == "notes"
+
+
+def test_edits_reports_pending_suggestions(capsys, tmp_path):
+    doc = {
+        "body": {
+            "content": [
+                {"paragraph": {"elements": [
+                    {"textRun": {"content": "or Visa", "suggestedInsertionIds": ["s1"]}}
+                ]}}
+            ]
+        }
+    }
+    _, payload, docs = _edits_payload(capsys, tmp_path, _BASELINE_MD, suggestions=doc)
+    assert [s["kind"] for s in payload["suggestions"]] == ["insertion"]
+    assert docs.documents().get.call_args.kwargs["suggestionsViewMode"] == "SUGGESTIONS_INLINE"
+
+
+def test_edits_says_when_the_baseline_is_missing_rather_than_failing(capsys, tmp_path):
+    (tmp_path / "notes.md").write_text("---\ngdoc: 1AbC\n---\n")
+    drive = MagicMock()
+    drive.files().get.return_value.execute.return_value = {"name": "Routing questions"}
+    docs = MagicMock()
+    docs.documents().get.return_value.execute.return_value = {"body": {"content": []}}
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.docs_service", return_value=docs
+    ):
+        code = main(["edits", _EDITS_URL, "--repo-root", str(tmp_path)])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["baseline"] == "missing"
+    assert payload["hunks"] == []
+
+
+def test_edits_says_when_the_baseline_belongs_to_another_version(capsys, tmp_path):
+    from gdoc.baseline import write_baseline, write_provenance
+
+    (tmp_path / "notes.md").write_text("---\ngdoc: 1AbC\n---\n")
+    write_baseline(tmp_path, "notes", _BASELINE_MD, force=True)
+    write_provenance(tmp_path, "notes", "an-older-document")
+    drive = MagicMock()
+    drive.files().get.return_value.execute.return_value = {"name": "Routing questions"}
+    docs = MagicMock()
+    docs.documents().get.return_value.execute.return_value = {"body": {"content": []}}
+    with patch("gdoc.cli.drive_service", return_value=drive), patch(
+        "gdoc.cli.docs_service", return_value=docs
+    ):
+        main(["edits", _EDITS_URL, "--repo-root", str(tmp_path)])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["baseline"] == "stale"
+    assert payload["hunks"] == []
+
+
+def test_edits_reports_a_missing_scope_without_losing_the_hunks(capsys, tmp_path):
+    """One re-login fixes it. Until then the export half is still worth having."""
+    current = _BASELINE_MD.replace("Mastercard.", "Visa.")
+    _, payload, _ = _edits_payload(
+        capsys, tmp_path, current, docs_error=PermissionError("token is missing documents.readonly")
+    )
+    assert [h["kind"] for h in payload["hunks"]] == ["change"]
+    assert "documents.readonly" in payload["suggestions_error"]
+    assert payload["suggestions"] == []
+
+
+def test_edits_counts_what_it_found(capsys, tmp_path):
+    current = _BASELINE_MD.replace("Mastercard.", "Visa.")
+    _, payload, _ = _edits_payload(capsys, tmp_path, current)
+    assert payload["counts"] == {"hunks": 1, "suggestions": 0}
+
+
+def test_edits_refuses_when_no_markdown_is_paired_to_the_document(capsys, tmp_path):
+    drive = MagicMock()
+    drive.files().get.return_value.execute.return_value = {"name": "Routing questions"}
+    with patch("gdoc.cli.drive_service", return_value=drive), patch("gdoc.cli.docs_service"):
+        code = main(["edits", _EDITS_URL, "--repo-root", str(tmp_path)])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert "--slug" in payload["error"]
+

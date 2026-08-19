@@ -17,14 +17,27 @@ from googleapiclient.errors import HttpError
 from gdoc import auth as auth_module
 from gdoc import config as config_module
 from gdoc import oauth, render
-from gdoc.auth import SCOPES, configured_mode, drive_service, resolve_auth_mode
+from gdoc.auth import (
+    LOGIN_SCOPES,
+    configured_mode,
+    docs_service,
+    drive_service,
+    resolve_auth_mode,
+)
 from gdoc.config import AUTH_MODES, Config, load_config, write_auth_mode
 from gdoc.docid import extract_doc_id, extract_folder_id
+from gdoc.edits import diff_markdown
 from gdoc.export import export_markdown, export_with_media
 from gdoc.fetch import fetch_threads
 from gdoc.filters import forced_kind, is_addressed, partition
 from gdoc.generate import generate
-from gdoc.baseline import slugify, write_baseline
+from gdoc.baseline import (
+    baseline_path,
+    baseline_state,
+    slugify,
+    write_baseline,
+    write_provenance,
+)
 from gdoc.model import Thread
 from gdoc.pairing import (
     Pairing,
@@ -38,6 +51,7 @@ from gdoc.pending import append_item, pending_path, recorded_source
 from gdoc.render import frontmatter, profiles
 from gdoc.reply import post_reply
 from gdoc.restyle import NO_FOLDER, restyle, survey
+from gdoc.suggestions import parse_suggestions
 
 
 # Enough of an existing reply to recognise it, not enough to bloat the payload.
@@ -148,6 +162,76 @@ def cmd_reply(args) -> int:
     body = Path(args.body_file).read_text()
     reply_id = post_reply(drive_service(doc_ids=doc_id), doc_id, args.comment_id, body)
     return _emit({"reply_id": reply_id, "comment_id": args.comment_id})
+
+
+def cmd_edits(args) -> int:
+    """Report what was edited in the document after it was generated.
+
+    Two sources, because one of them lies. The export diffed against the
+    baseline shows edits made in editing mode. Drive renders a suggested
+    document as if no suggestion existed, so a review done entirely in
+    suggesting mode diffs to nothing at all, and only the Docs API sees it.
+
+    Nothing is written. Porting a change into hand-written markdown is judgment,
+    and that belongs to the agent reading this, not to a difflib call.
+    """
+    doc_id = extract_doc_id(args.url)
+    drive = drive_service(doc_ids=doc_id)
+    repo_root = Path(args.repo_root)
+    source = find_by_doc_id(repo_root, doc_id)
+    if source is None and not args.slug:
+        return _fail(
+            f"no markdown under {repo_root} is paired to {doc_id}. "
+            "Pair it with gdoc pair set, or pass --slug to name the queue directory."
+        )
+    slug = args.slug or slug_for_source(source)
+
+    state = baseline_state(repo_root, slug, doc_id)
+    hunks = ()
+    if state in ("ok", "unverified"):
+        baseline = baseline_path(repo_root, slug).read_text()
+        hunks = diff_markdown(baseline, export_markdown(drive, doc_id))
+
+    suggestions, suggestions_error = _read_suggestions(doc_id)
+
+    return _emit(
+        {
+            "doc_id": doc_id,
+            "name": _file_meta(drive, doc_id).get("name"),
+            "slug": slug,
+            "source": str(source) if source else None,
+            "baseline": state,
+            "baseline_path": str(baseline_path(repo_root, slug)),
+            "hunks": [
+                {"kind": h.kind, "heading": h.heading, "before": h.before, "after": h.after}
+                for h in hunks
+            ],
+            "suggestions": [
+                {"kind": s.kind, "heading": s.heading, "text": s.text} for s in suggestions
+            ],
+            "suggestions_error": suggestions_error,
+            "counts": {"hunks": len(hunks), "suggestions": len(suggestions)},
+        }
+    )
+
+
+def _read_suggestions(doc_id: str):
+    """The pending suggestions, or the reason there are none to show.
+
+    A token issued before documents.readonly existed fails here and nowhere
+    else. That is worth reporting rather than raising: the export half of this
+    command is still the answer to half the question, and the fix is one login.
+    """
+    try:
+        docs = docs_service(doc_ids=doc_id)
+        document = (
+            docs.documents()
+            .get(documentId=doc_id, suggestionsViewMode="SUGGESTIONS_INLINE")
+            .execute()
+        )
+    except (PermissionError, FileNotFoundError, HttpError) as error:
+        return (), f"{error}"
+    return parse_suggestions(document), None
 
 
 def cmd_export(args) -> int:
@@ -438,7 +522,12 @@ def _write_baseline_for(drive, args, doc_id: str) -> Path:
     """
     markdown = export_markdown(drive, doc_id)
     slug = slug_for_source(Path(args.md))
-    return write_baseline(Path(args.baseline_root), slug, markdown, force=True)
+    path = write_baseline(Path(args.baseline_root), slug, markdown, force=True)
+    # Which document this snapshot came from. Every version is a new document,
+    # so a later `gdoc edits` can tell a current baseline from one belonging to
+    # the version before it, and refuse to diff against the wrong thing.
+    write_provenance(Path(args.baseline_root), slug, doc_id)
+    return path
 
 
 # ---------------------------------------------------------------------------
@@ -567,7 +656,7 @@ def cmd_auth_login(args) -> int:
     still configured, and retrying changed nothing.
     """
     credentials = oauth.login(
-        SCOPES, client_path=args.client, token_path=args.token
+        LOGIN_SCOPES, client_path=args.client, token_path=args.token
     )
     payload = {
         "logged_in": True,
@@ -723,6 +812,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="carry the pictures across into this directory, beside --out",
     )
     export.set_defaults(func=cmd_export)
+
+    edits = sub.add_parser(
+        "edits", help="what was edited in the document since it was generated"
+    )
+    edits.add_argument("url")
+    edits.add_argument("--repo-root", default=".")
+    edits.add_argument("--slug", help="queue directory name, default the paired source's stem")
+    edits.set_defaults(func=cmd_edits)
 
     capture = sub.add_parser("capture", help="append a global item to pending.md")
     capture.add_argument("doc")

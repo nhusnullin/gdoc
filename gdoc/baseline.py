@@ -8,9 +8,11 @@ the same pandoc round-trip distortion, so it cancels.
 It is not a mirror. Nothing reads it to learn the current state of the document.
 """
 
+import json
 import os
 import re
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 # A dot directory because the root can be any directory: docs/ cannot be assumed
@@ -78,3 +80,59 @@ def write_baseline(repo_root: Path, slug: str, markdown: str, force: bool = Fals
         tmp.unlink(missing_ok=True)
         raise
     return path
+
+
+# ------------------------------------------------------- which document it is --
+# A baseline is only worth diffing against when it was taken from the document
+# being diffed. Every version is a new document, so the id settles it, and the
+# stale case is exactly the one where the last publish failed to export.
+
+
+def provenance_path(repo_root: Path, slug: str) -> Path:
+    return repo_root / GDOC_DIR / slug / "baseline.json"
+
+
+def write_provenance(repo_root: Path, slug: str, doc_id: str) -> Path:
+    """Record which document this slug's baseline was taken from."""
+    path = provenance_path(repo_root, slug)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "doc_id": doc_id,
+                "captured": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    return path
+
+
+def read_provenance(repo_root: Path, slug: str) -> dict | None:
+    """What was recorded, or None when there is nothing usable.
+
+    A file that cannot be read is the same answer as no file. It says nothing
+    about the baseline either way, and the caller's next step is the same.
+    """
+    path = provenance_path(repo_root, slug)
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def baseline_state(repo_root: Path, slug: str, doc_id: str) -> str:
+    """One of: ok, missing, stale, unverified.
+
+    unverified is a baseline published before provenance existed. It is probably
+    right, and reading it is still better than losing the edits in silence, so
+    the caller reports the label rather than refusing.
+    """
+    if not baseline_path(repo_root, slug).exists():
+        return "missing"
+    recorded = read_provenance(repo_root, slug)
+    if recorded is None or not recorded.get("doc_id"):
+        return "unverified"
+    return "ok" if recorded["doc_id"] == doc_id else "stale"

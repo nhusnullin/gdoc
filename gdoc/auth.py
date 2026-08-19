@@ -32,6 +32,14 @@ from gdoc.guard import GuardedHttp
 
 DEFAULT_KEY_PATH = Path.home() / ".config" / "gdoc-agent" / "sa-key.json"
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+# Reading pending suggestions is a Docs API call, and Drive scope does not cover
+# it. It is asked for separately, and only by docs_service, so a token issued
+# before this existed keeps working for everything else: one command fails,
+# naming the login that fixes it, instead of all of them. A login asks for both,
+# so nobody pays for a second browser trip.
+DOCS_SCOPES = ["https://www.googleapis.com/auth/documents.readonly"]
+LOGIN_SCOPES = SCOPES + DOCS_SCOPES
 SPEC = "docs/superpowers/specs/2026-08-13-gdoc-ai-agent-design.md"
 
 
@@ -53,7 +61,7 @@ def _config():
         return Config()
 
 
-def load_service_account_credentials(key_path: Path | None = None):
+def load_service_account_credentials(key_path: Path | None = None, scopes=None):
     key_path = key_path or DEFAULT_KEY_PATH
     if not key_path.exists():
         raise FileNotFoundError(
@@ -61,7 +69,7 @@ def load_service_account_credentials(key_path: Path | None = None):
             f"Setup steps are in {SPEC}, section 10."
         )
     return service_account.Credentials.from_service_account_file(
-        str(key_path), scopes=SCOPES
+        str(key_path), scopes=scopes or SCOPES
     )
 
 
@@ -119,12 +127,17 @@ def resolve_auth_mode(
     return DEFAULT_AUTH_MODE
 
 
-def load_credentials(key_path: Path | None = None, mode: str | None = None):
-    """Read the credential the resolver picked."""
+def load_credentials(key_path: Path | None = None, mode: str | None = None, scopes=None):
+    """Read the credential the resolver picked, for the scopes the caller needs.
+
+    scopes defaults to Drive. A caller that needs more says so, and pays for it
+    alone: under oauth a token missing the scope raises, naming the login.
+    """
+    scopes = scopes or SCOPES
     mode = resolve_auth_mode(mode or configured_mode(), key_path=key_path)
     if mode == "oauth":
-        return oauth.load(SCOPES)
-    return load_service_account_credentials(key_path)
+        return oauth.load(scopes)
+    return load_service_account_credentials(key_path, scopes=scopes)
 
 
 def drive_service(credentials=None, doc_ids=()):
@@ -145,4 +158,20 @@ def drive_service(credentials=None, doc_ids=()):
     http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
     return build(
         "drive", "v3", http=GuardedHttp(http, doc_ids), cache_discovery=False
+    )
+
+
+def docs_service(credentials=None, doc_ids=()):
+    """Build a Docs v1 client that reaches only doc_ids.
+
+    The same guard as drive_service, because the guard reads the request URI and
+    already knows the Docs API's /v1/documents/{id} shape. Read only: the scope
+    cannot write, and nothing here would.
+    """
+    if isinstance(doc_ids, str):
+        doc_ids = (doc_ids,)
+    credentials = credentials or load_credentials(scopes=DOCS_SCOPES)
+    http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http())
+    return build(
+        "docs", "v1", http=GuardedHttp(http, doc_ids), cache_discovery=False
     )
