@@ -42,7 +42,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
 | `go/internal/config/` | where the per-user files live, per platform |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
-| `bin/` | what `make build` and `make dist` write. Not in git |
+| `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
 order. Milestone 1 is done: the binary exists, prints the envelope, owns the
@@ -112,9 +112,29 @@ fresh v1 login. Nothing else in either tool changes. Do not "fix" the comment in
 `login.go` by calling the two sets equal: they are not, and the widening has to
 stay written down.
 
-A v2 `Save` carries `universe_domain` and `account` through untouched. They are
-google-auth's fields, v2 uses neither, and dropping them would quietly rewrite a
-file both tools share.
+**`MissingScopes` knows that the full Drive scope covers the Docs calls.** The
+Docs API accepts `auth/drive` on `documents.get` and `documents.batchUpdate`, so
+a v1 token, which is Drive plus `documents.readonly`, is missing nothing v2
+needs. Comparing the requested list literally warned on Nail's own working
+token, and a warning on the working case is one people learn to ignore.
+`coveredBy` in `login.go` is where that lives. It is a report, never a refusal,
+and `drive.file` is deliberately not in it: that scope reaches only files the
+app itself created.
+
+A v2 `Save` carries `universe_domain`, `account` and `rapt_token` through
+untouched. They are google-auth's fields, `Credentials.to_json` writes all three
+when they are set, v2 uses none of them, and dropping one would quietly rewrite
+a file both tools share. `rapt_token` is the reauth proof token, so losing it
+makes v1 ask for reauthentication again.
+
+`Load` refuses a file that parses but cannot be refreshed. The required set is
+google-auth's, not one v2 invented: `from_authorized_user_info` raises without
+`refresh_token`, `client_id` and `client_secret`, and v1 reads this same file
+through it. A `{}` that read as a token would have `auth status` report a token
+present and the first Docs call fail with something else. `token_uri` is not in
+that set, because google-auth overrides it with its own constant whatever the
+file says; `Load` fills the same value in rather than posting a refresh to an
+empty URL.
 
 ### The guard owns the wire, and it exists before any client
 
@@ -157,6 +177,26 @@ with the MIME boundary, so the `/upload` grammar is unreachable until M6 teaches
 the transport to read the first MIME part. Failing closed is the right direction
 to be wrong in.
 
+Three more shapes belong to that same rule, and each closes a way the request on
+the wire differed from the one that was judged.
+
+- **`uploadType` decides what the body is.** With `uploadType=media` the body IS
+  the file's content, so `{"parents":["FOLDER1"]}` reads as bytes to Drive and
+  as metadata to `checkParent`: the file lands unparented and the guard then
+  learns its id at `LevelFull`. `checkUploadType` permits the shapes the parent
+  check can read, `multipart` and `resumable` and an absent parameter, and
+  refuses the rest. Nothing may learn an id from a create it could not verify.
+- **`fields` reaches the permission surface.** A GET is judged on its path, and
+  `fields=*` or `fields=permissions(...)` returns exactly what refusing
+  `/permissions` was for. A Drive read carries an allowlist of query parameters
+  (`driveReadParams`), and its `fields` value may name neither `*` nor
+  `permissions`.
+- **The base transport carries no proxy.** `http.DefaultTransport` reads
+  `HTTPS_PROXY`, so a nil base would send an unjudged `CONNECT` to whatever host
+  the environment named, with the credential following it there. `baseTransport`
+  sets `Proxy: nil` for that reason. If a proxy is ever wanted it has to be
+  judged, not inherited from the environment.
+
 A create whose response carries no readable id is recorded on the policy and
 readable through `Policy.Warnings()`. Silence there turns into "file was not
 given to this command" on the next request, which names the wrong problem.
@@ -193,14 +233,23 @@ Naming `net/http` and dialing with it are not the same thing, so
   answers a request somebody else made, so it stays out of this set. A canary
   test states that rather than leaving it to luck.
 
-The builder scanner resolves the import name per file and knows four ways to
+The builder scanner resolves the import name per file and knows six ways to
 make a wire: a composite literal, `new(http.Client)`, a zero-value `var c
-http.Client`, and the dialers. That is not thoroughness for its own sake. A
-scanner that assumes the name is always `http` and looks only for composite
-literals is walked around by `import nh "net/http"`, by `import . "net/http"`,
-by `new(...)` and by a zero-value declaration, and every one of those builds a
-wire outside the guard while passing both checks. The canary carries a case for
-each, and each case was watched failing against the older scanner.
+http.Client`, the dialers, a type declaration that renames the wire (`type C =
+http.Client`, or the same without the equals sign), and a struct embedding one
+by value. That is not thoroughness for its own sake. A scanner that assumes the
+name is always `http` and looks only for composite literals is walked around by
+`import nh "net/http"`, by `import . "net/http"`, by `new(...)`, by a zero-value
+declaration, by `type C = http.Client; var _ = &C{}` and by `type T struct{
+http.Client }`, and every one of those builds a wire outside the guard while
+passing both checks. The canary carries a case for each, and each case was
+watched failing against the scanner that missed it.
+
+The two type shapes are flagged on the declaration, not on the values built from
+it. Following an alias would mean resolving names across a package, and a
+package outside the guard has no reason to give the wire a second name. Embedding
+a **pointer** is not flagged: that is holding a client somebody else made, the
+same as taking one as a parameter.
 
 Both fail in both directions, like v1's `test_guard_is_installed`. They fail
 when an import or a builder spreads, and they fail when an allowlisted room
