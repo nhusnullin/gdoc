@@ -24,16 +24,20 @@ import (
 // allowed lists the package directories, relative to the module root, that may
 // import net/http. `internal/auth` is here because its Refresh and Login take
 // the guard's *http.Client as a parameter: it names the type, and builders
-// below proves it never makes one. `internal/auth/loopback` joins this set in
-// Task 7, which adds the login listener. A room is listed only once it exists,
+// below proves it never makes one. `internal/auth/loopback` is here because the
+// login flow parks the browser redirect on a localhost listener; it serves and
+// never dials, so it is not a builder. A room is listed only once it exists,
 // because this test has to be green at every commit.
 var allowed = map[string]bool{
-	"internal/guard": true,
-	"internal/auth":  true,
+	"internal/guard":         true,
+	"internal/auth":          true,
+	"internal/auth/loopback": true,
 }
 
 // builders lists the package directories that may construct an HTTP client or
 // reach the package-level dialing helpers. Exactly one, and it stays one.
+// Serving is not building: an http.Server answers requests somebody else made,
+// so the loopback listener is deliberately absent from this set.
 var builders = map[string]bool{
 	"internal/guard": true,
 }
@@ -184,12 +188,14 @@ func TestScannerFindsAStrayImport(t *testing.T) {
 }
 
 // TestScannerTellsNamingFromBuilding is the second canary: a package that only
-// names *http.Client in a signature is not a builder, and one that makes a
-// client or calls http.Get is.
+// names *http.Client in a signature is not a builder, one that serves is not a
+// builder either, and one that makes a client or calls http.Get is.
 func TestScannerTellsNamingFromBuilding(t *testing.T) {
 	root := t.TempDir()
 	write(t, filepath.Join(root, "handed", "handed.go"),
 		"package handed\n\nimport \"net/http\"\n\nfunc Use(c *http.Client) *http.Response { return nil }\n")
+	write(t, filepath.Join(root, "server", "server.go"),
+		"package server\n\nimport \"net/http\"\n\nvar S = &http.Server{Handler: http.NewServeMux()}\n")
 	write(t, filepath.Join(root, "maker", "maker.go"),
 		"package maker\n\nimport \"net/http\"\n\nvar C = &http.Client{}\n")
 	write(t, filepath.Join(root, "shortcut", "shortcut.go"),

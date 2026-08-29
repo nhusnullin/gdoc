@@ -20,3 +20,6 @@ venv/
 
 # Generated document versions, rebuilt from the paired markdown
 docs/gdoc/*/out/
+
+# Compiled Go binaries, rebuilt by `make build` and `make dist`
+bin/

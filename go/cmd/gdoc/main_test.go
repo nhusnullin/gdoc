@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 )
@@ -11,7 +12,7 @@ import (
 func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 	t.Helper()
 	var buf bytes.Buffer
-	code := run(args, &buf)
+	code := run(args, &buf, io.Discard)
 	dec := json.NewDecoder(&buf)
 	var got map[string]any
 	if err := dec.Decode(&got); err != nil {
@@ -53,6 +54,9 @@ func TestUnknownCommandFailsAndNamesItself(t *testing.T) {
 	msg, _ := got["error"].(string)
 	if !strings.Contains(msg, "sing loudly") || !strings.Contains(msg, "auth status") {
 		t.Fatalf("the error must name the command and the ones that exist: %q", msg)
+	}
+	if !strings.Contains(msg, "auth login") {
+		t.Fatalf("the usage line must name login too: %q", msg)
 	}
 }
 

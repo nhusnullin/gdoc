@@ -1211,7 +1211,13 @@ Interfaces block asks for and the sample `main.go` omitted.
   - `auth.Login(c *http.Client, w io.Writer) error`: builds the authorization URL (endpoint `https://accounts.google.com/o/oauth2/auth`, `code_challenge_method=S256`, verifier from `crypto/rand`, scopes from Global Constraints, `redirect_uri` = the loopback address), **prints it to `w` (stderr)** with one plain sentence, waits for the code, exchanges it at `TokenURI` (form fields `grant_type=authorization_code`, `code`, `code_verifier`, `client_id`, `client_secret`, `redirect_uri`), saves via `auth.Save`. No browser is opened: v2 runs no external programs at all.
 - Note for the implementer: `accounts.google.com` is a page the human opens in their own browser; gdoc itself never requests it, so the guard's host allowlist does not change.
 
-- [ ] **Step 1: Write the failing test for the URL and the exchange** (fake RoundTripper asserts the exchange form carries `grant_type=authorization_code`, `code_verifier` matching the challenge in the printed URL, and the fixture code; assert the printed URL carries `code_challenge_method=S256`, the two scopes, and the loopback redirect)
+**Scope notes from the implementation (2026-08-29):**
+- Also created: `go/internal/auth/loopback/loopback_test.go`. The coverage standard says every exported function under `internal/` has a test, and `Listen`, `Addr`, `WaitCode` and `Close` are four of them.
+- Also modified: `go/cmd/gdoc/main_test.go` and `.gitignore`. `run` gained a second writer (`run(args, out, errOut)`) so the login URL has somewhere to go that is not stdout, and the test passes `io.Discard`. `bin/` is ignored, because `make dist` writes binaries there.
+- The `Makefile` gained a `vet` target holding the plan's other two validation commands (`go vet` and the `gofmt -l` check). Standard library only, nothing fetched.
+- The boundary test gained one canary case: a package that builds an `http.Server` is not a builder. The builder check already told serving from dialing; the canary makes that a stated property instead of an accident, which is what lets `internal/auth/loopback` stay out of the builder allowlist.
+
+- [x] **Step 1: Write the failing test for the URL and the exchange** (fake RoundTripper asserts the exchange form carries `grant_type=authorization_code`, `code_verifier` matching the challenge in the printed URL, and the fixture code; assert the printed URL carries `code_challenge_method=S256`, the two scopes, and the loopback redirect)
 
 ```go
 package auth
@@ -1277,7 +1283,7 @@ func TestExchangeSendsVerifierAndSaves(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure, then implement.** `login.go`:
+- [x] **Step 2: Run to verify failure, then implement.** (FAIL: `buildAuthURL`, `exchangeCode`, `Login`, `loopback.Listen` all undefined) `login.go`:
 
 ```go
 package auth
@@ -1466,9 +1472,9 @@ func (s *Server) WaitCode(state string, timeout time.Duration) (string, error) {
 func (s *Server) Close() { s.srv.Close() }
 ```
 
-- [ ] **Step 3: Add `internal/auth/loopback` to the boundary import allowlist** (Task 5's trim is undone; see the Task 6 scope change above, so the set becomes `internal/guard`, `internal/auth`, `internal/auth/loopback`). Leave the builder allowlist at `internal/guard`: the loopback listener serves and never dials. Run `go test ./...`: everything green, boundary test included.
+- [x] **Step 3: Add `internal/auth/loopback` to the boundary import allowlist** (Task 5's trim is undone; see the Task 6 scope change above, so the set becomes `internal/guard`, `internal/auth`, `internal/auth/loopback`). Leave the builder allowlist at `internal/guard`: the loopback listener serves and never dials. Run `go test ./...`: everything green, boundary test included.
 
-- [ ] **Step 4: Wire `auth login` into `cmd/gdoc` (URL to stderr, one JSON object to stdout at the end), and write the Makefile**
+- [x] **Step 4: Wire `auth login` into `cmd/gdoc` (URL to stderr, one JSON object to stdout at the end), and write the Makefile**
 
 ```makefile
 GO := cd go && go
@@ -1487,12 +1493,12 @@ dist:
 .PHONY: test build dist
 ```
 
-- [ ] **Step 5: Run the acceptance checks**
+- [x] **Step 5: Run the acceptance checks**
 
 Run: `make test && make dist && ls bin/`
 Expected: all tests pass; three binaries exist. Then the live check (your machine, real config): `./bin/gdoc-darwin-arm64 auth status` prints one JSON object with `token_present: true`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add go/ Makefile

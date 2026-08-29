@@ -104,7 +104,10 @@ func (t Token) Refresh(c *http.Client) (Token, error) {
 		RefreshToken string `json:"refresh_token"`
 		ExpiresIn    int    `json:"expires_in"`
 	}
-	if err := json.Unmarshal(body, &r); err != nil || r.AccessToken == "" {
+	if err := unmarshalToken(body, &r); err != nil {
+		return Token{}, err
+	}
+	if r.AccessToken == "" {
 		return Token{}, errors.New("token refresh returned 200 with no access token")
 	}
 	out := t
@@ -116,6 +119,16 @@ func (t Token) Refresh(c *http.Client) (Token, error) {
 	}
 	out.Expiry = time.Now().UTC().Add(time.Duration(r.ExpiresIn) * time.Second)
 	return out, nil
+}
+
+// unmarshalToken reads a token endpoint's 200 body. Both exchanges share it,
+// the refresh and the login code exchange, so a 200 nobody can parse fails the
+// same way in both.
+func unmarshalToken(body []byte, r any) error {
+	if err := json.Unmarshal(body, r); err != nil {
+		return errors.New("token endpoint returned 200 with an unreadable body")
+	}
+	return nil
 }
 
 func summarize(body []byte) string {
