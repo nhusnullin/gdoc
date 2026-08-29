@@ -550,7 +550,7 @@ git commit -m "feat(v2): guard policy with write levels and the two doors"
 **Interfaces:**
 - Produces: `guard.NewClient(p *Policy, base http.RoundTripper) *http.Client`. `base == nil` means real HTTPS. The client: judges every request (body read via `GetBody`), refuses redirects to any other origin, and after a `POST` create on the files collection reads the response JSON for `"id"` and calls `p.Learn(id)`, restoring the response body. Every later milestone gets its `*http.Client` from here and nowhere else.
 
-- [ ] **Step 1: Write the failing tests over a fake transport**
+- [x] **Step 1: Write the failing tests over a fake transport**
 
 ```go
 package guard
@@ -639,9 +639,14 @@ func TestCrossOriginRedirectRefused(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure** (`go test ./internal/guard/`, FAIL: `NewClient` undefined)
+- [x] **Step 2: Run to verify failure** (`go test ./internal/guard/`, FAIL: `NewClient` undefined)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
+
+Landed as written, with two hardening changes noted in the code: `CheckRedirect`
+caps the chain at 10 (a custom `CheckRedirect` replaces the standard library's
+own limit), and `learnFromCreate` peeks at most 1 MiB of the response while
+still handing the caller the whole body.
 
 ```go
 package guard
@@ -759,7 +764,7 @@ func (t *transport) learnFromCreate(resp *http.Response) {
 }
 ```
 
-- [ ] **Step 4: Run tests (PASS), commit**
+- [x] **Step 4: Run tests (PASS), commit**
 
 ```bash
 git add go/internal/guard/
