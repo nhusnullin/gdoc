@@ -138,8 +138,8 @@ func NewClient(p *Policy, base http.RoundTripper) *http.Client {
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// The RoundTripper contract: the request body is closed on every path,
 	// errors included, and the caller's request is never modified. send is req
-	// itself unless the peek had to buffer a body that cannot be re-read, in
-	// which case it is a copy carrying the restored body.
+	// itself when there is no body, and otherwise a copy carrying the peeked
+	// bytes back in front of the rest.
 	body, send, err := peekBody(req)
 	if err != nil {
 		closeBody(req)
@@ -235,25 +235,24 @@ func closeBody(req *http.Request) {
 }
 
 // peekBody returns the front of the request body for the guard to judge, plus
-// the request to send. When GetBody can replay the body the caller's request
-// goes out untouched. When it cannot, the peeked bytes are put back in front
-// of the rest through a copy of the request: RoundTrip may not modify the one
-// it was handed.
+// the request to send. The peeked bytes go back in front of the rest through a
+// copy of the request, because RoundTrip may not modify the one it was handed.
+//
+// It always reads req.Body, and never req.GetBody, and that is the whole point
+// of the function. GetBody is a function the caller supplied; nothing makes
+// what it returns agree with what Body carries. Judging the replay and sending
+// the body would mean the guard decided about bytes that never left the
+// machine, which is the one assumption this package exists to not make. Reading
+// Body itself makes judged bytes and sent bytes the same bytes by construction,
+// so GetBody cannot enter the judgment at all.
+//
+// GetBody is carried over onto the copy unchanged, and it still works: it
+// replays the original body from the start and the peek never touched it. So a
+// redirect or a retry still has a body where it had one before, and the
+// replayed request passes RoundTrip again, where it is judged on its own.
 func peekBody(req *http.Request) ([]byte, *http.Request, error) {
 	if req.Body == nil {
 		return nil, req, nil
-	}
-	if req.GetBody != nil {
-		rc, err := req.GetBody()
-		if err != nil {
-			return nil, req, err
-		}
-		defer rc.Close()
-		head, err := io.ReadAll(io.LimitReader(rc, maxPeek))
-		if err != nil {
-			return nil, req, err
-		}
-		return head, req, nil
 	}
 	head, err := io.ReadAll(io.LimitReader(req.Body, maxPeek))
 	if err != nil {

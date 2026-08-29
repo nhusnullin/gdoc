@@ -361,3 +361,77 @@ func TestTheGuardDoesNotDialThroughAProxy(t *testing.T) {
 		t.Fatal("the base carries a proxy function, so an unjudged CONNECT can go out first")
 	}
 }
+
+// GetBody is a function the caller supplied, and nothing makes what it returns
+// agree with what Body carries. A guard that judged the replay and sent the
+// body would have decided about bytes that never left the machine.
+func TestTheGuardJudgesTheBodyItSends(t *testing.T) {
+	f := &fake{status: 200, body: `{"id":"SNEAKY"}`}
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	c := NewClient(p, f)
+
+	req, err := http.NewRequest("POST", "https://www.googleapis.com/drive/v3/files",
+		strings.NewReader(`{"parents":["SOMEONE_ELSES_FOLDER"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The replay says the create lands in the folder the command named. The
+	// body says otherwise, and the body is what goes on the wire.
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader(`{"parents":["FOLDER1"]}`)), nil
+	}
+
+	if _, err := c.Do(req); err == nil || !strings.Contains(err.Error(), "guard refused") {
+		t.Fatalf("the guard must judge the body it sends, got %v", err)
+	}
+	if len(f.seen) != 0 {
+		t.Fatal("it reached the wire")
+	}
+	if _, known := p.files["SNEAKY"]; known {
+		t.Fatal("an id was learned from a create the guard never judged")
+	}
+}
+
+// The request that goes out keeps its GetBody, which is what replays the body
+// on a redirect or a retry. The guard reads Body to judge it and puts the bytes
+// back in front of the rest; it does not spend the replay doing so.
+func TestTheSentRequestCanStillReplayItsBody(t *testing.T) {
+	f := &fake{status: 200, body: `{"id":"NEWDOC"}`}
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	c := NewClient(p, f)
+
+	payload := `{"parents":["FOLDER1"],"name":"x"}`
+	resp, err := c.Post("https://www.googleapis.com/drive/v3/files",
+		"application/json", strings.NewReader(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if len(f.seen) != 1 {
+		t.Fatalf("the create must reach the wire once, got %d", len(f.seen))
+	}
+	sent := f.seen[0]
+	if sent.GetBody == nil {
+		t.Fatal("the request that goes out lost its GetBody, so a redirect cannot replay it")
+	}
+	rc, err := sent.GetBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(replay) != payload {
+		t.Fatalf("the replay is not the body: %q", replay)
+	}
+	wire, err := io.ReadAll(sent.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(wire) != payload {
+		t.Fatalf("the wire saw %q, not the body the caller wrote", wire)
+	}
+}
