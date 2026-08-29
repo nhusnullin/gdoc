@@ -61,9 +61,16 @@ reason as principle 1 requires:
   194 KB template with one apostrophe of difference (spike `go/xmltest`).
 - `yuin/goldmark`: parses everything the hub markdown needs, including an image
   nested in a heading; `==mark==` was added in 55 lines (spike `go/gmtest`).
+- `goccy/go-yaml`: parses the `gdoc:` front matter and `house.yaml`. The reason:
+  both are human-authored configuration, a product interface where a quiet
+  parsing bug silently alters a document, and a hand-rolled parser is where
+  such bugs live. This library has zero transitive modules, rejects duplicate
+  keys, and supports strict unknown-field rejection. Chosen over `yaml.v3`,
+  whose upstream is frozen. Second-opinion reviewed 2026-08-29.
 
-Everything else is the standard library. A third dependency needs its reason
-written here first.
+Everything else is the standard library. A fourth dependency needs its reason
+written here first; the one open candidate is `sergi/go-diff`, decided at the
+alignment milestone.
 
 ### Output contract
 
@@ -82,7 +89,10 @@ OAuth only. One scope: `https://www.googleapis.com/auth/drive`, which the Docs
 API accepts for every call gdoc makes. The bundled Internal client carries over
 from v1, with both of its rules: the secret stays in version control, and the
 client stays User type Internal. The public-repo caveat in CLAUDE.md applies
-unchanged. Token and config live in `~/.config/gdoc-agent/`, never in a repo.
+unchanged. Token and config live in `~/.config/gdoc-agent/` on macOS, and in
+`%AppData%\gdoc-agent` on Windows, never in a repo. `auth login` is a real
+desktop flow: loopback redirect with PKCE, hand-rolled on the standard library.
+v2 reads a token file v1 wrote, so an existing install needs no new login.
 
 ## The guard
 
@@ -108,9 +118,13 @@ Serves principle 3. This is the safety property everything else stands on.
 
 These are requirements, not advice. Each has a measured 200-that-lied behind it.
 
-- **Capability probe.** Before the first suggest-mode write of a session, probe
-  `writeMode: SUGGEST` against a throwaway document and cache the answer for the
-  session only. An unenrolled project answers 200 and direct-edits.
+- **Capability probe.** On every `propose` invocation, before its first
+  suggest-mode write, probe `writeMode: SUGGEST` against a throwaway document.
+  One invocation may batch many proposals behind one probe. The binary is
+  one-shot and holds no hidden state, so there is nothing to cache the answer
+  in, and an asserted "--already-probed" from outside would reopen the exact
+  silent-direct-edit failure the probe exists to prevent. An unenrolled project
+  answers 200 and direct-edits.
 - **Read-back after every proposal.** Confirm the change is absent from the
   document read with `PREVIEW_WITHOUT_SUGGESTIONS` (so it is a suggestion, not an
   edit) and that the affected span reads as intended (index arithmetic is the
@@ -175,7 +189,10 @@ before a write happens. Nothing about the original is ever modified in survey.
 
 Lists threads with real character ranges (`commentsViewMode`, which requires
 `includeTabsContent=true`). Takes a `--since` cursor and reports only activity
-after it, so a live session's poll is one cheap call. Reports the marker on
+after it, so a live session's poll is one cheap call. The cursor is an opaque
+value the binary emits and the caller hands back; the live skill holds it for
+the session and it dies with the session. Anything that must survive across
+sessions lives in the front matter, nowhere else. Reports the marker on
 each comment: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an unmarked follow-up in a thread
 gdoc has answered, is reported and never acted on. The marker is the trigger,
 always: stickiness carries context, never authority.
