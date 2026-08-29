@@ -64,6 +64,13 @@ The result is documented in CLAUDE.md under "v2 lives at `go/`".
 
 ### M2. Reading, and the honest witness
 
+Three things M1 left for this milestone to pick up. `Policy.AllowFile`,
+`AllowCreateIn` and `GrantInPlace` have no production caller yet: if M2 lands
+without one, delete it rather than carry it. `Token.Refresh` is the same, and M2
+is the milestone that needs it. And `Policy.Warnings()` collects what the guard
+could not do quietly, so whatever command M2 adds should put those on the
+envelope rather than dropping them.
+
 `documents.get` with `includeTabsContent=true`, tab detection, comment threads
 with real ranges and `ai` markers, the opaque `--since` cursor (held by the
 caller, dies with the session), pending suggestions with stable ids,
