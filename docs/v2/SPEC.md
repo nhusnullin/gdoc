@@ -224,6 +224,14 @@ write level the guard allows, which is the point.
 
 An `assigneeEmailAddress` may be set when the skill knows who should answer.
 
+**One writer per document.** Work may fan out across documents freely, one
+worker per document, and replies within one document may run in parallel
+(they target thread ids, not indexes). Proposals within one document are
+serialized: a `batchUpdate` lands at character indexes computed from a read,
+so a concurrent proposer shifts the ground under the other and the API
+reports 200 either way. Each proposal re-reads before computing its indexes
+and reads back after landing.
+
 ### Withdrawing a proposal
 
 gdoc may retract its own pending, unaccepted suggestion: `deleteContentRange` in
