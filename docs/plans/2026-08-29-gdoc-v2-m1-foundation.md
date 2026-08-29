@@ -320,7 +320,7 @@ git commit -m "feat(v2): per-platform config paths, env override for tests"
   - `oauth2.googleapis.com`: `POST /token` only.
   - `GET /drive/v3/files` with no id (listing) is refused outright.
 
-- [ ] **Step 1: Write the failing table test**
+- [x] **Step 1: Write the failing table test**
 
 ```go
 package guard
@@ -399,9 +399,9 @@ func TestEmptyPolicyRefusesEverything(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails** (`go test ./internal/guard/`, FAIL)
+- [x] **Step 2: Run to verify it fails** (`go test ./internal/guard/`, FAIL)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```go
 // Package guard is the network policy. Principle 3: the client reaches only
@@ -532,7 +532,7 @@ func isSuggestMode(body []byte) bool {
 }
 ```
 
-- [ ] **Step 4: Run tests (PASS), commit**
+- [x] **Step 4: Run tests (PASS), commit**
 
 ```bash
 git add go/internal/guard/
