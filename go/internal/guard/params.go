@@ -34,17 +34,31 @@ var noParams = map[string]bool{}
 
 // docsReadParams are the parameters a Docs read may carry. suggestionsViewMode
 // is how gdoc sees pending suggestions, which Drive's export renders as though
-// nothing had been suggested.
+// nothing had been suggested. commentsViewMode is how it reads comment threads
+// with real character ranges, which is M2's whole reason for the Docs read; it
+// needs includeTabsContent, so the two travel together.
+//
+// These four are the whole of documents.get
+// (https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/get)
+// plus the two system parameters gdoc sets, so a later milestone adds nothing
+// here.
 var docsReadParams = map[string]bool{
 	"alt":                 true,
 	"fields":              true,
 	"suggestionsViewMode": true,
 	"includeTabsContent":  true,
+	"commentsViewMode":    true,
 }
 
 // driveReadParams are the parameters a Drive read may carry. The path is only
 // half of what a GET asks for: the path names one file and the level says read,
 // and the query decides how much of that file comes back.
+//
+// The list covers comments.list, replies.list and files.export whole, so a
+// later milestone adds nothing here. What is left out of files.get is left out
+// on purpose: `includePermissionsForView` is the permission surface /permissions
+// and checkFields already refuse, and `acknowledgeAbuse` overrides a warning
+// gdoc has no business overriding.
 var driveReadParams = map[string]bool{
 	"alt":               true, // export asks for the bytes rather than the metadata
 	"mimeType":          true, // which export format
@@ -52,6 +66,7 @@ var driveReadParams = map[string]bool{
 	"pageSize":          true, // comments come back a page at a time
 	"pageToken":         true,
 	"includeDeleted":    true, // comments list
+	"startModifiedTime": true, // the --since cursor: activity after this instant
 	"supportsAllDrives": true,
 }
 

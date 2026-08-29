@@ -73,6 +73,11 @@ func TestTheCallsGdocMakesStillCarry(t *testing.T) {
 		{"GET", "https://docs.googleapis.com/v1/documents/DOC1?suggestionsViewMode=SUGGESTIONS_INLINE", nil},
 		{"POST", "https://www.googleapis.com/drive/v3/files?fields=id", nil},
 		{"POST", "https://oauth2.googleapis.com/token", nil},
+		// The two M2 reads. Comment threads with real character ranges are a
+		// documents.get with commentsViewMode, which needs includeTabsContent,
+		// and the --since cursor is comments.list with startModifiedTime.
+		{"GET", "https://docs.googleapis.com/v1/documents/DOC1?commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED&includeTabsContent=true", nil},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments?startModifiedTime=2026-08-29T09:00:00Z&pageToken=t", nil},
 	}
 	for _, c := range cases {
 		t.Run(c.url, func(t *testing.T) {
