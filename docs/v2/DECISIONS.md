@@ -449,10 +449,15 @@ for ad-hoc work on documents gdoc has nothing to do with. His enrolment also lit
 the Drive, Gmail, Calendar, Sheets, Slides, Chat, People and Universal Search MCP
 servers. None changes this design.
 
-## 2026-08-29. Tabs are a landmine, and two rules follow.
+## 2026-08-29. Tabs are out of scope, and gdoc defends against them.
 
-Docs tabs are **GA**, not preview, so colleagues can already make them and one of
-Nail's own test documents had one.
+Amended after review: the earlier title read as an intention to support tabs.
+There is none. **gdoc has no tab features.** It creates none, styles none, and
+addresses none, and this does not change if Google pushes tabs harder.
+
+The entry stays because tabs are **GA**, not preview, so a colleague can put one
+in a document gdoc is pointed at, and one of Nail's own test documents already
+had one. Both failure modes are silent, on somebody else's document.
 
 Google's wording, verbatim:
 
@@ -465,14 +470,14 @@ And for writes: a request without a `tabId` "will in most cases be applied to th
 first tab" — **except** `ReplaceAllTextRequest`, `DeleteNamedRangeRequest` and
 `ReplaceNamedRangeContentRequest`, which **apply to every tab**.
 
-So:
+Two defensive rules, and they are defences rather than features:
 
 - **Always read with `includeTabsContent=true`.** Reading `document.body` without
-  it sees one tab and reports the rest as absent, silently. `commentsViewMode`
-  requires it anyway.
-- **Never use `replaceAllText` without a `tabId`.** The cover placeholders are
-  filled with it, and on a multi-tab document it reaches into all of them. Same for
-  the two named-range requests.
+  it sees one tab and reports the rest as absent, silently. gdoc must never be
+  blind to content that exists. `commentsViewMode` requires it anyway.
+- **If a document gdoc is asked to write to has more than one tab, gdoc stops and
+  reports that tabs are unsupported.** It never guesses which tab was meant and
+  never writes anyway. Not knowing must not resolve to "the first one, probably".
 
 ## 2026-08-29. Amendments from reading the documentation.
 
