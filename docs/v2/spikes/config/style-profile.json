@@ -1,0 +1,1306 @@
+{
+ "source": {
+  "documentId": "1R4gmDnE9uZqltTHN7xWzGOe1klPB3Z2BVEVYfVRRSZw",
+  "title": "template",
+  "url": "https://docs.google.com/document/d/1R4gmDnE9uZqltTHN7xWzGOe1klPB3Z2BVEVYfVRRSZw/edit",
+  "extractedOn": "2026-08-29"
+ },
+ "documentStyle": {
+  "pageSizePT": {
+   "width": 595.2755905511812,
+   "height": 841.8897637795277,
+   "note": "A4 portrait"
+  },
+  "marginTopPT": 62.35,
+  "marginBottomPT": 51,
+  "marginLeftPT": 51.05,
+  "marginRightPT": 51.05,
+  "marginHeaderPT": 14.15,
+  "marginFooterPT": 0,
+  "useCustomHeaderFooterMargins": true,
+  "useFirstPageHeaderFooter": true,
+  "pageNumberStart": 1,
+  "ids": {
+   "defaultHeaderId": "kix.hf0",
+   "firstPageHeaderId": "kix.hf1",
+   "defaultFooterId": "kix.hf2",
+   "firstPageFooterId": "kix.hf3",
+   "note": "ids are per-document; a target gets its own from createHeader/createFooter"
+  },
+  "backgroundColor": null
+ },
+ "palette": {
+  "houseNavy": "#22265F",
+  "note_houseNavy": "colour every heading run and every header/footer run actually carries",
+  "namedStyleHeadingBlue": "#06436E",
+  "note_namedStyleHeadingBlue": "what the HEADING_1/2 named style declares; every body heading overrides it to houseNavy",
+  "teal": "#549F99",
+  "note_teal": "HEADING_3",
+  "headerOrange": "#FF771C",
+  "subtitleGrey": "#666666",
+  "coverPlaceholderHighlight": "#FFFF00",
+  "coverPlaceholderRed": "#FF0000",
+  "tableVersionControlFill": "#F5D1AE",
+  "tableRevisionHeaderFill": "#BDCDD2",
+  "tableRevisionBodyFill": "#F3F8F9",
+  "tableGreyHeaderFill": "#CCCCCC",
+  "classConfidential": "#F4CCCC",
+  "classRestricted": "#FCE5CD",
+  "classInternal": "#FFF2CC",
+  "classPublic": "#D9EAD3"
+ },
+ "namedStyles": {
+  "NORMAL_TEXT": {
+   "textStyle": {
+    "fontFamily": "Calibri",
+    "fontWeight": 400,
+    "fontSizePT": 11,
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "strikethrough": false,
+    "smallCaps": false,
+    "foregroundColor": "#000000",
+    "backgroundColor": null,
+    "baselineOffset": "NONE"
+   },
+   "paragraphStyle": {
+    "alignment": "START",
+    "lineSpacing": 115,
+    "spacingMode": "NEVER_COLLAPSE",
+    "spaceAbovePT": 3,
+    "spaceBelowPT": 6,
+    "indentStartPT": 0,
+    "indentFirstLinePT": 0,
+    "indentEndPT": 0,
+    "keepWithNext": false,
+    "keepLinesTogether": false,
+    "avoidWidowAndOrphan": true,
+    "pageBreakBefore": false,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": {
+     "borderTop": {
+      "widthPT": 0,
+      "paddingPT": 0,
+      "color": null,
+      "dashStyle": "SOLID"
+     },
+     "borderBottom": {
+      "widthPT": 0,
+      "paddingPT": 0,
+      "color": null,
+      "dashStyle": "SOLID"
+     },
+     "borderLeft": {
+      "widthPT": 0,
+      "paddingPT": 0,
+      "color": null,
+      "dashStyle": "SOLID"
+     },
+     "borderRight": {
+      "widthPT": 0,
+      "paddingPT": 0,
+      "color": null,
+      "dashStyle": "SOLID"
+     },
+     "borderBetween": {
+      "widthPT": 0,
+      "paddingPT": 0,
+      "color": null,
+      "dashStyle": "SOLID"
+     }
+    }
+   }
+  },
+  "HEADING_1": {
+   "textStyle": {
+    "fontFamily": null,
+    "fontWeight": null,
+    "fontSizePT": 16,
+    "bold": true,
+    "italic": null,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": "#06436E",
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": 0,
+    "indentStartPT": 36,
+    "indentFirstLinePT": 18,
+    "indentEndPT": null,
+    "keepWithNext": true,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "HEADING_2": {
+   "textStyle": {
+    "fontFamily": null,
+    "fontWeight": null,
+    "fontSizePT": 14,
+    "bold": null,
+    "italic": null,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": "#06436E",
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": 0,
+    "indentStartPT": 72,
+    "indentFirstLinePT": 54,
+    "indentEndPT": null,
+    "keepWithNext": true,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "HEADING_3": {
+   "textStyle": {
+    "fontFamily": null,
+    "fontWeight": null,
+    "fontSizePT": 12,
+    "bold": null,
+    "italic": null,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": "#549F99",
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": null,
+    "indentStartPT": 108,
+    "indentFirstLinePT": 90,
+    "indentEndPT": null,
+    "keepWithNext": true,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "HEADING_4": {
+   "textStyle": {
+    "fontFamily": null,
+    "fontWeight": null,
+    "fontSizePT": null,
+    "bold": true,
+    "italic": null,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": null,
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": null,
+    "indentStartPT": 144,
+    "indentFirstLinePT": 126,
+    "indentEndPT": null,
+    "keepWithNext": true,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "HEADING_5": {
+   "textStyle": {
+    "fontFamily": null,
+    "fontWeight": null,
+    "fontSizePT": null,
+    "bold": true,
+    "italic": true,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": null,
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": null,
+    "indentStartPT": 180,
+    "indentFirstLinePT": 162,
+    "indentEndPT": null,
+    "keepWithNext": null,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "HEADING_6": {
+   "textStyle": {
+    "fontFamily": null,
+    "fontWeight": null,
+    "fontSizePT": null,
+    "bold": true,
+    "italic": null,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": null,
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": null,
+    "indentStartPT": 216,
+    "indentFirstLinePT": 198,
+    "indentEndPT": null,
+    "keepWithNext": null,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "TITLE": {
+   "textStyle": {
+    "fontFamily": "Arial",
+    "fontWeight": 400,
+    "fontSizePT": 16,
+    "bold": true,
+    "italic": null,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": null,
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": "CENTER",
+    "lineSpacing": 100,
+    "spacingMode": null,
+    "spaceAbovePT": 12,
+    "spaceBelowPT": 3,
+    "indentStartPT": null,
+    "indentFirstLinePT": null,
+    "indentEndPT": null,
+    "keepWithNext": null,
+    "keepLinesTogether": null,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  },
+  "SUBTITLE": {
+   "textStyle": {
+    "fontFamily": "Georgia",
+    "fontWeight": 400,
+    "fontSizePT": 24,
+    "bold": null,
+    "italic": true,
+    "underline": null,
+    "strikethrough": null,
+    "smallCaps": null,
+    "foregroundColor": "#666666",
+    "backgroundColor": null,
+    "baselineOffset": null
+   },
+   "paragraphStyle": {
+    "alignment": null,
+    "lineSpacing": null,
+    "spacingMode": null,
+    "spaceAbovePT": 18,
+    "spaceBelowPT": 4,
+    "indentStartPT": null,
+    "indentFirstLinePT": null,
+    "indentEndPT": null,
+    "keepWithNext": true,
+    "keepLinesTogether": true,
+    "avoidWidowAndOrphan": null,
+    "pageBreakBefore": null,
+    "direction": "LEFT_TO_RIGHT",
+    "shading": null,
+    "borders": null
+   }
+  }
+ },
+ "namedStylesEffectiveOverrides": {
+  "note": "Every HEADING_1..2 paragraph in the template body resets indentStart and indentFirstLine to 0 and recolours the run to #22265F. The named-style indents (36/18, 72/54, 108/90 ...) are Word-conversion residue and are never visible. Apply the effective values.",
+  "HEADING_1": {
+   "indentStartPT": 0,
+   "indentFirstLinePT": 0,
+   "foregroundColor": "#22265F",
+   "fontSizePT": 16,
+   "bold": true,
+   "spaceAbovePT": 12,
+   "spaceBelowPT": 0,
+   "keepWithNext": true
+  },
+  "HEADING_2": {
+   "indentStartPT": 0,
+   "indentFirstLinePT": 0,
+   "foregroundColor": "#22265F",
+   "fontSizePT": 14,
+   "bold": false,
+   "spaceAbovePT": 12,
+   "spaceBelowPT": 0,
+   "keepWithNext": true
+  },
+  "HEADING_3": {
+   "indentStartPT": 0,
+   "indentFirstLinePT": 0,
+   "foregroundColor": "#549F99",
+   "fontSizePT": 12,
+   "spaceAbovePT": 12,
+   "keepWithNext": true
+  }
+ },
+ "header": {
+  "default": {
+   "id_in_template": "kix.hf0",
+   "alignment": "END",
+   "paragraphs": [
+    {
+     "runs": [
+      {
+       "text": "Altery - xxx Policy",
+       "fontSizePT": 12,
+       "color": "#FF771C"
+      }
+     ]
+    },
+    {
+     "runs": [
+      {
+       "horizontalRule": true,
+       "color": "#06436E",
+       "fontSizePT": 12
+      }
+     ]
+    },
+    {
+     "runs": [
+      {
+       "text": "",
+       "fontSizePT": 9,
+       "color": "#06436E"
+      }
+     ]
+    }
+   ]
+  },
+  "firstPage": {
+   "id_in_template": "kix.hf1",
+   "alignment": "START",
+   "lineSpacing": 200,
+   "paragraphs": [
+    {
+     "runs": [
+      {
+       "text": "For internal use only \\t",
+       "fontSizePT": 12,
+       "color": "#22265F"
+      }
+     ]
+    },
+    {
+     "runs": [
+      {
+       "text": ""
+      }
+     ],
+     "alignment": "CENTER"
+    },
+    {
+     "runs": [
+      {
+       "text": ""
+      }
+     ]
+    }
+   ],
+   "logo": {
+    "positionedObjectId": "z.000000000.i.2",
+    "layout": "WRAP_TEXT",
+    "leftOffsetPT": 395.25,
+    "topOffsetPT": -14.149448818897637,
+    "widthPT": 146.25,
+    "heightPT": 72.75,
+    "marginsPT": {
+     "top": 9,
+     "bottom": 9,
+     "left": 9,
+     "right": 9
+    },
+    "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXfAbjX5cpR6XWasYGfBQlMLXee3PUnMM4KAdDxcj2lrI7iJcASrmAcyUitCNRskSGRHGYhTP7JcI1bXczEIuBcH-p6VykKSocJVtHbHkBcLvq_psM8MczKw94gVe3o-BOFlgQLWZAkT4EOEU9E1T15o-GGZxBi9JUDX4-WhiCbd8mZppRc=s2048?key=ixozJNEz6WdWJW9hVAXBAQ",
+    "apiNote": "Docs API has no createPositionedObject request. Only insertInlineImage exists, so a reproduction can only place the logo inline."
+   }
+  }
+ },
+ "footer": {
+  "default": {
+   "id_in_template": "kix.hf2",
+   "lineSpacing": 200,
+   "paragraphs": [
+    {
+     "runs": [
+      {
+       "text": "",
+       "fontSizePT": 12,
+       "color": "#22265F"
+      }
+     ]
+    },
+    {
+     "runs": [
+      {
+       "text": "For internal use only \\t\\t\\t\\t\\t\\t\\t                       \\t\\t\\t",
+       "fontSizePT": 12,
+       "color": "#22265F"
+      },
+      {
+       "autoText": "PAGE_NUMBER",
+       "fontSizePT": 12,
+       "color": "#22265F"
+      }
+     ]
+    }
+   ]
+  },
+  "firstPage": {
+   "id_in_template": "kix.hf3",
+   "lineSpacing": 200,
+   "indentStartPT": 108,
+   "indentFirstLinePT": 108,
+   "paragraphs": [
+    {
+     "runs": [
+      {
+       "text": "\\t\\t\\t\\t\\t\\t                               \\t\\t",
+       "fontSizePT": 12,
+       "color": "#22265F"
+      },
+      {
+       "autoText": "PAGE_NUMBER",
+       "fontSizePT": 12,
+       "color": "#22265F"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "coverPage": {
+  "note": "The cover uses NORMAL_TEXT paragraphs with explicit run styling. It does NOT use TITLE or SUBTITLE.",
+  "leadingBlankParagraphs": 5,
+  "paragraphDefaults": {
+   "namedStyleType": "NORMAL_TEXT",
+   "alignment": "CENTER",
+   "spaceAbovePT": 0,
+   "spaceBelowPT": 0,
+   "avoidWidowAndOrphan": false
+  },
+  "lines": [
+   {
+    "text": "Altery Group ",
+    "fontSizePT": 29,
+    "bold": true
+   },
+   {
+    "text": "",
+    "fontSizePT": 29,
+    "bold": true
+   },
+   {
+    "text": "(Name of) Framework/Policy",
+    "fontSizePT": 29,
+    "bold": true,
+    "runs": [
+     {
+      "text": "(Name of)",
+      "highlight": "#FFFF00"
+     },
+     {
+      "text": " "
+     },
+     {
+      "text": "Framework/Policy",
+      "color": "#FF0000"
+     }
+    ]
+   },
+   {
+    "text": "or",
+    "fontSizePT": 29,
+    "bold": true
+   },
+   {
+    "text": "(Name of) Framework/Policy",
+    "fontSizePT": 29,
+    "bold": true
+   },
+   {
+    "text": "Version: 1.0",
+    "fontSizePT": 20,
+    "runs": [
+     {
+      "text": "Version: "
+     },
+     {
+      "text": "1.0",
+      "highlight": "#FFFF00"
+     }
+    ]
+   },
+   {
+    "text": "May 2025",
+    "fontSizePT": 20,
+    "highlight": "#FFFF00"
+   }
+  ],
+  "afterCover": "8 empty NORMAL_TEXT paragraphs, JUSTIFIED, spaceAbove 18pt, 10pt runs, then the 'Version Control' label"
+ },
+ "sectionLabels": {
+  "note": "Version Control / Document Classification / Contents are NOT headings. They are NORMAL_TEXT with explicit runs.",
+  "Version Control": {
+   "bold": true,
+   "fontSizePT": 12,
+   "color": "#22265F",
+   "alignment": "JUSTIFIED",
+   "spaceAbovePT": 18,
+   "spaceBelowPT": 0
+  },
+  "Document Classification (Highlight as appropriate)": {
+   "bold": true,
+   "fontSizePT": 12,
+   "color": "#22265F",
+   "alignment": "JUSTIFIED",
+   "spaceAbovePT": 18
+  },
+  "Contents": {
+   "fontSizePT": 16,
+   "color": "#22265F",
+   "spaceAbovePT": 24,
+   "spaceBelowPT": 0,
+   "keepLinesTogether": true
+  }
+ },
+ "tables": [
+  {
+   "name": "Version Control",
+   "contentIndex": 22,
+   "rows": 5,
+   "columns": 2,
+   "columnWidthsPT": [
+    150,
+    359.25
+   ],
+   "borderAllSides": {
+    "widthPT": 1,
+    "color": "#000000",
+    "dashStyle": "SOLID"
+   },
+   "rowsDetail": [
+    {
+     "minRowHeightPT": 28.5,
+     "cells": [
+      {
+       "text": "Document Owner",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 24.3984375,
+     "cells": [
+      {
+       "text": "Date of Last Approval",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 23.25,
+     "cells": [
+      {
+       "text": "Review Frequency",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "Annually",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 23.25,
+     "cells": [
+      {
+       "text": "Board Ratification Date",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 23.25,
+     "cells": [
+      {
+       "text": "Policy Distribution",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F5D1AE",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Revision History",
+   "contentIndex": 24,
+   "rows": 3,
+   "columns": 7,
+   "columnWidthsPT": [
+    52.5,
+    75.75,
+    63,
+    78,
+    61.5,
+    79.5,
+    102
+   ],
+   "borderAllSides": {
+    "widthPT": 0.5,
+    "color": "#000000",
+    "dashStyle": "SOLID"
+   },
+   "rowsDetail": [
+    {
+     "minRowHeightPT": 32.4,
+     "cells": [
+      {
+       "text": "Version No",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Date",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Version Author",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Approved By",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Approval Date",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Section Updated",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Revisions/\nChanges",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 28.35,
+     "cells": [
+      {
+       "text": "xx",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "xx",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "xx",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "[Relevant Board Level Committee]",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "xx",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "New document",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 28.35,
+     "cells": [
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      },
+      {
+       "text": "",
+       "backgroundColor": "#F3F8F9",
+       "paddingPT": {}
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Document Classification",
+   "contentIndex": 32,
+   "rows": 5,
+   "columns": 2,
+   "columnWidthsPT": [
+    90,
+    417
+   ],
+   "borderAllSides": {
+    "widthPT": 0.5,
+    "color": "#000000",
+    "dashStyle": "SOLID"
+   },
+   "rowsDetail": [
+    {
+     "minRowHeightPT": 19.5,
+     "cells": [
+      {
+       "text": "Class",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      },
+      {
+       "text": "Description",
+       "backgroundColor": "#BDCDD2",
+       "paddingPT": {}
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 30.4,
+     "cells": [
+      {
+       "text": "Confidential (C)",
+       "backgroundColor": "#F4CCCC",
+       "paddingPT": {}
+      },
+      {
+       "text": "Data that is extremely sensitive, of highest value, to Company and intended for use by named individual(s) only.",
+       "backgroundColor": null,
+       "paddingPT": {}
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 26.05,
+     "cells": [
+      {
+       "text": "Restricted (R)",
+       "backgroundColor": "#FCE5CD",
+       "paddingPT": {}
+      },
+      {
+       "text": "Data that is sensitive within the Company and is intended for business use only by specific groups of employees.",
+       "backgroundColor": null,
+       "paddingPT": {}
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 27.6,
+     "cells": [
+      {
+       "text": "Internal (I)",
+       "backgroundColor": "#FFF2CC",
+       "paddingPT": {}
+      },
+      {
+       "text": "Data that is only sensitive outside the company. Generally available to employees and approved non-employees.",
+       "backgroundColor": "#FFF2CC",
+       "paddingPT": {}
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 18.55,
+     "cells": [
+      {
+       "text": "Public (P)",
+       "backgroundColor": "#D9EAD3",
+       "paddingPT": {}
+      },
+      {
+       "text": "Non-sensitive data available for external release.",
+       "backgroundColor": null,
+       "paddingPT": {}
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Roles and Responsibilities",
+   "contentIndex": 91,
+   "rows": 7,
+   "columns": 2,
+   "columnWidthsPT": [
+    225,
+    258.75
+   ],
+   "borderAllSides": {
+    "widthPT": 1,
+    "color": "#000000",
+    "dashStyle": "SOLID"
+   },
+   "rowsDetail": [
+    {
+     "minRowHeightPT": 24.75,
+     "cells": [
+      {
+       "text": "Roles",
+       "backgroundColor": "#CCCCCC",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "Responsibilities",
+       "backgroundColor": "#CCCCCC",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 130.265625,
+     "cells": [
+      {
+       "text": "Senior Management and Board of Directors\n(the \u201cBoard\u201d)",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "The Board is ultimately accountable for the prevention of bribery and corruption and has overall accountability for the AML/CTF control framework. The Board has appointed the Managing Director as the individual who sits on the Board of Directors, as the officer responsible for Altery\u2019s compliance with the 2017 Money Laundering Regulations (\u201c2017 MLRs\u201d) as amended.\n\nSenior Management and the Board are responsible for activity promoting and encouraging a culture of compliance throughout Altery, demonstrating a clear \u2018tone from the top\u2019 that Altery will not tolerate non compliance.",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 96.75,
+     "cells": [
+      {
+       "text": "\u201cAppointed Board Level Committee\u201d",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "Overseeing internal and external audit functions.\nEnsuring compliance with regulatory requirements and other relevant laws.\nManaging the company\u2019s risk management framework, including the development and monitoring of risk appetite.\nReviewing and approving compliance and risk management policies.",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 96.75,
+     "cells": [
+      {
+       "text": "Money Laundering Reporting Officer (MLRO)",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "The MLRO oversees Altery\u2019s compliance with applicable anti\u2011bribery and anti\u2011corruption systems and controls, and reports to the Board on their operation and effectiveness. The MLRO also responds promptly to any reasonable requests for information from relevant regulatory or law enforcement authorities.",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 95.25,
+     "cells": [
+      {
+       "text": "1st Line of Defence - 1LOD",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "The 1LOD owns the bribery and corruption risk posed by Altery\u2019s customer base. The first line functions are responsible for developing and implementing operational procedures to ensure the requirements of this Policy are met.",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 95.25,
+     "cells": [
+      {
+       "text": "2nd Line of Defence - 2LOD",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "The 2LOD ensures that the Altery Fraud Prevention Policy principles are applied consistently across business operations, including monitoring of fiat activities, conducts periodic reviews and escalates any significant risks and supports investigations into customer outcomes.",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 105.75,
+     "cells": [
+      {
+       "text": "All Employees",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "Employees must report any suspicions of bribery and corruption, in a timely manner, to the MLRO through the designated reporting channel. Failure to do so may lead to disciplinary and legal action including criminal penalties and/or substantial fines. All employees are required to read this Policy, attest to it on an annual basis and adhere to this Policy in their day to day activities.",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Appendix 2 Glossary",
+   "contentIndex": 115,
+   "rows": 2,
+   "columns": 2,
+   "columnWidthsPT": [
+    245.25,
+    246.75
+   ],
+   "borderAllSides": {
+    "widthPT": 1,
+    "color": "#000000",
+    "dashStyle": "SOLID"
+   },
+   "rowsDetail": [
+    {
+     "minRowHeightPT": 24.75,
+     "cells": [
+      {
+       "text": "Definition",
+       "backgroundColor": "#CCCCCC",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "Description",
+       "backgroundColor": "#CCCCCC",
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    },
+    {
+     "minRowHeightPT": 24.75,
+     "cells": [
+      {
+       "text": "",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      },
+      {
+       "text": "",
+       "backgroundColor": null,
+       "paddingPT": {
+        "left": 5,
+        "right": 5,
+        "top": 5,
+        "bottom": 5
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "tableCellTextStyle": {
+  "bold_header": true,
+  "fontFamily": "Calibri",
+  "fontSizePT": 12,
+  "note": "every table header run is Calibri 12pt bold; the Version Control table's label column indents 4pt and uses lineSpacing 100"
+ },
+ "lists": {
+  "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE",
+  "level0": {
+   "glyphSymbol": "\u25cf",
+   "glyphFormat": "%0",
+   "indentFirstLinePT": 18,
+   "indentStartPT": 36,
+   "bulletAlignment": "START"
+  },
+  "numberedPreset": "NUMBERED_DECIMAL_ALPHA_ROMAN",
+  "numberedLevel0": {
+   "glyphType": "DECIMAL",
+   "glyphFormat": "%0.",
+   "indentFirstLinePT": 18,
+   "indentStartPT": 36
+  },
+  "note": "list ids in the template: kix.list.1..7; only nesting level 0 is used anywhere in the body"
+ },
+ "headingNumbering": {
+  "mechanism": "LITERAL TEXT, not list numbering",
+  "level1Format": "N-Title      e.g. '1-Purpose', '2-Scope', '10-Governance and Management Information (MI)'",
+  "level2Format": "unnumbered   e.g. 'Appendix 1 \u2013 Associated Documents'",
+  "reason": "createParagraphBullets would renumber the ordinary paragraphs between headings"
+ },
+ "tableOfContents": {
+  "present": true,
+  "style": "Calibri 12pt, lineSpacing 100, tab stop at 600PT, entries link by headingId",
+  "policy": "leave alone; Nail refreshes it by hand"
+ }
+}
