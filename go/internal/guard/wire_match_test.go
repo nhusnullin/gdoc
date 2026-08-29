@@ -237,3 +237,45 @@ func TestTheHeadersGdocSendsAreCarried(t *testing.T) {
 		t.Fatal("the request did not reach the wire")
 	}
 }
+
+// The Authorization header was on the allowlist with no opinion about its
+// value, so any credential in any scheme rode along on a judged request. The
+// guard does not hold the token and cannot say whose it is, so what it checks
+// is the shape: one value, the Bearer scheme, something after it.
+// checkAuthorization names the part it cannot check.
+func TestTheAuthorizationHeaderMustBeABearerCredential(t *testing.T) {
+	cases := []struct {
+		name   string
+		values []string
+	}{
+		{"another scheme entirely", []string{"Basic dXNlcjpwYXNz"}},
+		{"a scheme the guard has never decided about", []string{"GoogleLogin auth=x"}},
+		{"the scheme with nothing after it", []string{"Bearer "}},
+		{"no scheme at all", []string{"token"}},
+		{"two credentials, and the server picks", []string{"Bearer one", "Bearer two"}},
+		{"an empty header", []string{""}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := &fake{status: 200, body: `{}`}
+			p := NewPolicy()
+			p.AllowFile("DOC1", LevelSuggest)
+			c := NewClient(p, f)
+			req, err := http.NewRequest("GET", "https://www.googleapis.com/drive/v3/files/DOC1", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header["Authorization"] = tc.values
+			_, err = c.Do(req)
+			if err == nil || !strings.Contains(err.Error(), "guard refused") {
+				t.Fatalf("want a guard refusal, got %v", err)
+			}
+			if strings.Contains(err.Error(), "dXNlcjpwYXNz") {
+				t.Fatal("the refusal printed the credential it refused")
+			}
+			if len(f.seen) != 0 {
+				t.Fatal("it reached the wire")
+			}
+		})
+	}
+}

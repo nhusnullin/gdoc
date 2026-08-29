@@ -62,7 +62,7 @@ var methodOverrideHeaders = []string{
 // another one, a resumable upload's X-Upload-Content-Type for instance, adds it
 // here on purpose.
 var allowedHeaders = map[string]bool{
-	"authorization":   true, // the one credential gdoc sends
+	"authorization":   true, // the one credential gdoc sends; checkAuthorization reads its value
 	"content-type":    true, // every POST and PATCH gdoc makes sets it
 	"content-length":  true,
 	"accept":          true,
@@ -204,9 +204,15 @@ func checkWireMatchesJudgment(req *http.Request) error {
 			}
 		}
 	}
-	for key := range req.Header {
-		if !allowedHeaders[strings.ToLower(key)] {
+	for key, vals := range req.Header {
+		lower := strings.ToLower(key)
+		if !allowedHeaders[lower] {
 			return refuse("the header %q is not one gdoc sends, and a header changes what a request returns or does as much as the query does", key)
+		}
+		if lower == "authorization" {
+			if err := checkAuthorization(vals); err != nil {
+				return err
+			}
 		}
 	}
 	if req.URL.Query().Has("_method") {
@@ -218,6 +224,37 @@ func checkWireMatchesJudgment(req *http.Request) error {
 	// served by another with the credential attached.
 	if req.Host != "" && req.Host != req.URL.Host {
 		return refuse("the Host header %q is not the host that was judged, %q", req.Host, req.URL.Host)
+	}
+	return nil
+}
+
+// checkAuthorization is the most the guard can honestly say about the
+// credential on a request, and the limit is worth naming rather than papering
+// over.
+//
+// What it checks: one value, the Bearer scheme, and a token after it. That
+// refuses a second credential the server would choose between, another scheme
+// carrying another principal, and an empty grant.
+//
+// What it cannot check: whose token it is. The guard is built from a policy and
+// a base transport and never sees the token; whatever attaches the credential
+// does it above this point, and refreshes the value as the token expires, so
+// pinning a literal value here would refuse the request after every refresh. A
+// caller that swaps in another person's bearer token therefore runs the judged
+// operation as that person, and the guard carries it. What the guard still
+// bounds is which files are reachable and what may be done to them, which is
+// principle 3's actual claim. Nothing here is a claim about identity.
+//
+// The refusal never prints the header value: a refusal goes in the envelope
+// the caller reports, and a credential does not belong there.
+func checkAuthorization(vals []string) error {
+	if len(vals) != 1 {
+		return refuse("a request carries one Authorization header, and this one carries %d, so which credential the server reads is not decided here", len(vals))
+	}
+	const scheme = "Bearer "
+	rest, ok := strings.CutPrefix(vals[0], scheme)
+	if !ok || strings.TrimSpace(rest) == "" {
+		return refuse("the Authorization header is not a Bearer credential with a token after it, and that is the only kind gdoc sends")
 	}
 	return nil
 }
