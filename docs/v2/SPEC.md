@@ -8,14 +8,17 @@ disagree, this file is wrong.
 
 ## Principles
 
-Serves: all three.
+Serves: all four.
 1. One static Go binary, zero external programs, zero packages to install on the
    target machine. pandoc is gone entirely.
 2. The root is where the user stands. No hidden state anywhere: what gdoc knows
-   lives in the front matter of the markdown it describes. `.gdoc/`,
-   `baseline.md` and `pending.md` do not exist in v2.
+   lives in the front matter of the markdown it describes, under a single
+   `gdoc:` key that gdoc owns and never beyond it. `.gdoc/`, `baseline.md` and
+   `pending.md` do not exist in v2.
 3. The guard owns the transport and ids carry write levels. Verification by a
    second route wherever a write matters.
+4. Every word costs a reader's attention: outcomes in the reader's language,
+   machinery out of documents, diagnostics in the terminal on request.
 
 Strains: none in the machine sense. One accepted external risk: proposing in the
 document depends on Google's Developer Preview, which is Pre-GA and can be

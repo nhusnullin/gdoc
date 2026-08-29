@@ -1,6 +1,6 @@
 # Notes for AI assistants
 
-Read [PRINCIPLES.md](PRINCIPLES.md) before proposing any design. It is three
+Read [PRINCIPLES.md](PRINCIPLES.md) before proposing any design. It is four
 constraints and the decisions that currently implement them, and it is short.
 
 Read [README.md](README.md) for what the tool does and how to run it.

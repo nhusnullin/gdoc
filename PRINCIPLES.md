@@ -3,7 +3,8 @@
 Read this before proposing any design. It is short on purpose.
 
 Two layers. **Principles** are durable constraints on the world the tool runs in.
-They have a reason that does not expire, and there are three. **Decisions** are
+They have a reason that does not expire, and there are four, the fourth
+added 2026-08-29. **Decisions** are
 today's implementation. They are dated, they name the principle they serve, and
 retiring one is an ordinary edit.
 
@@ -36,6 +37,12 @@ So:
   runs git, so there is no conditional step and nothing to say out loud about
   one. See the decision dated 2026-08-18 below.
 
+*Amended 2026-08-29, for v2.* The reason holds and v2 makes it stronger, but
+the line above is written in pip's language and v2 has no pip: it is one static
+Go binary with no external programs at all, pandoc included. The line that
+decides becomes: **if it is not inside the binary, it does not travel.** The
+bullets above describe v1 and retire with it.
+
 ## 2. The root is where the user stands, and it is never this repo
 
 The source documents live in a vault that is not this repository. A default that
@@ -50,6 +57,15 @@ So:
 - The queue directory is keyed by the source markdown file. Not the document
   title, not the document id. Both change on every iteration. The file does not.
 
+*Amended 2026-08-29, for v2.* The principle stands; two of the three
+consequences retire. v2 has no `.gdoc/` and no queue: what gdoc knows lives in
+the front matter of the markdown it describes, under a single `gdoc:` key that
+gdoc owns and never beyond it. And the root gains a second job the old wording
+never mentions: it is not only where files land, it is the context the agent
+acts from, so a comment in a document is answered with the hub open. The
+restatement: **the hub is the working directory, the memory and the context,
+and nothing lives hidden beside it.**
+
 ## 3. Uncertainty never resolves toward the destructive answer
 
 The tool cannot always tell an edit from a stale copy, or a real instruction from
@@ -63,6 +79,32 @@ So:
 - A captured item is never silently dropped. It stays in `pending.md` until it is
   applied or removed on purpose.
 - A comment the tool cannot confidently classify is reported, not acted on.
+
+*Amended 2026-08-29, for v2.* The text stands word for word. It is the one
+principle v2 needed more of. The examples above are v1's: `baseline.md` and
+`pending.md` do not exist in v2, so they retire with it. The v2 instances: the
+guard's write levels, under which a handed-in document can never be
+direct-edited; the capability probe and the read-back after every proposal,
+because four 200s lied in one day; the marker is the trigger, so an unmarked
+comment is reported and never executed; and a write target with more than one
+tab stops the command rather than guessing. A comment the tool cannot
+confidently classify is still reported, not acted on.
+
+## 4. Every word costs a reader's attention
+
+Added 2026-08-29, Nail's principle, wording settled with a second opinion.
+
+gdoc writes in a terminal Nail chose to open and in documents read by people
+who did not choose it. Its readers have limited attention. They should not
+have to understand gdoc's machinery to understand its work.
+
+gdoc says what happened, why it matters, and what the reader must decide or
+do, in terms the reader uses. Calls, indexes, status codes and other machinery
+stay out of documents. They appear in the terminal only when Nail asks for
+diagnostics or needs them to recover from a failure.
+
+The line that decides: **if the reader must translate it, rewrite it. If the
+reader does not need it, remove it.**
 
 ## Decisions
 
