@@ -309,10 +309,14 @@ func Status() (*StatusReport, error) {
 	out.TokenPresent = true
 	out.Expired = &expired
 	out.Scopes = tok.Scopes
-	// A token can carry less than v2 asks for: a granular consent screen where
-	// somebody ticked a subset, or a v1 login, which asks for documents.readonly
-	// rather than the read/write Docs scope. Either way the Docs calls will 403,
-	// and this is the one place that can say why before they do.
+	// A token can carry less than v2 asks for, from a granular consent screen
+	// where somebody ticked a subset, and then the Docs calls will 403. This is
+	// the one place that can say why before they do.
+	//
+	// A v1 login is not such a case, and MissingScopes is where that is decided:
+	// v1 asks for documents.readonly rather than the read/write Docs scope, but
+	// it also asks for the full Drive scope, which the Docs API accepts. So a v1
+	// token reports nothing missing.
 	out.MissingScopes = MissingScopes(tok.Scopes)
 	return out, nil
 }

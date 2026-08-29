@@ -72,7 +72,8 @@ Four things about those fields:
 - `missing_scopes` names what v2 asks for that the token does not carry. A
   partial grant is reported, never refused: the login worked, and this is the
   one place that can say why the Docs calls will 403 before they do. A v1 token
-  looks exactly like this.
+  is not an example of one: it carries the full Drive scope, which covers the
+  Docs scope v2 asks for, so it reports nothing. See `MissingScopes` below.
 - A token file that exists and cannot be read is a **failure**, not
   `token_present: false`. It comes back `ok: false` with the path still in
   `data`, and with the warnings it would have carried on the way out. Reporting

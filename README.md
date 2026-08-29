@@ -449,8 +449,9 @@ you to `auth login`, which overwrites the file and loses the evidence.
 
 If the token was granted less than the Go binary asks for, `auth status` still
 says ok and lists the difference in `missing_scopes`, with a warning naming the
-scopes and telling you to sign in again. A token from the Python tool looks like
-this, because it asks for the read-only Docs scope.
+scopes and telling you to sign in again. A token from the Python tool is not one
+of these: it asks for the read-only Docs scope, but it also asks for the full
+Drive scope, which the Docs API accepts, so nothing is reported missing.
 
 `auth login` prints the link rather than opening a browser for you, because the
 Go binary runs no other program at all. While it waits it listens on 127.0.0.1
