@@ -59,6 +59,12 @@ func NewClient(p *Policy, base http.RoundTripper) *http.Client {
 			if len(via) >= maxRedirects {
 				return errors.New("guard refused: too many redirects")
 			}
+			// The redirect target passes RoundTrip too, so this repeats a check
+			// rather than replacing one. It is here so the refusal names the
+			// redirect instead of the request that followed it.
+			if err := checkWireMatchesJudgment(req); err != nil {
+				return fmt.Errorf("redirect refused: %w", err)
+			}
 			// The body is not carried into the judgment here: a redirect the
 			// guard cannot read the body of is judged as if it had none, which
 			// is the refusing direction for anything above a read.
@@ -80,7 +86,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		closeBody(req)
 		return nil, fmt.Errorf("guard refused: unreadable request body: %w", err)
 	}
-	if err := checkNoMethodOverride(req); err != nil {
+	if err := checkWireMatchesJudgment(req); err != nil {
 		closeBody(send)
 		return nil, err
 	}
@@ -107,20 +113,51 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-// checkNoMethodOverride refuses a request that asks the server to perform a
-// method other than the one Judge read. Neither the header nor the `_method`
-// query parameter appears in any call gdoc makes, so refusing both costs
-// nothing.
-func checkNoMethodOverride(req *http.Request) error {
-	for _, h := range methodOverrideHeaders {
-		if v := req.Header.Get(h); v != "" {
-			return refuse("%s: %q asks for a method other than the one judged", h, v)
+// checkWireMatchesJudgment is the request-level half of one invariant: the
+// guard must judge exactly the bytes that go on the wire. Judge is handed a
+// method and a URL, and the request can still send a different method through
+// a header and a different host through req.Host. The URL-level half of the
+// same invariant lives in plainPath, which closes `..`, `%2F` and an opaque
+// path.
+//
+// Neither the method-override header nor the `_method` query parameter nor a
+// Host that disagrees with the URL appears in any call gdoc makes, so refusing
+// all of them costs nothing.
+func checkWireMatchesJudgment(req *http.Request) error {
+	// Header.Get canonicalises the key it looks up, so it only finds an entry
+	// stored under the canonical spelling. net/http writes map keys verbatim,
+	// so a key planted as "X-HTTP-METHOD-OVERRIDE" would reach Google unseen.
+	// The comparison therefore walks the map and folds case itself.
+	for key, vals := range req.Header {
+		if !isMethodOverride(key) {
+			continue
+		}
+		for _, v := range vals {
+			if v != "" {
+				return refuse("%s: %q asks for a method other than the one judged", key, v)
+			}
 		}
 	}
 	if req.URL.Query().Has("_method") {
 		return refuse("_method asks for a method other than the one judged")
 	}
+	// Go dials req.URL.Host but writes req.Host as the Host header, and as
+	// :authority on HTTP/2, whenever it is set. Google's frontend routes on
+	// that value, so a request judged against one host's grammar would be
+	// served by another with the credential attached.
+	if req.Host != "" && req.Host != req.URL.Host {
+		return refuse("the Host header %q is not the host that was judged, %q", req.Host, req.URL.Host)
+	}
 	return nil
+}
+
+func isMethodOverride(key string) bool {
+	for _, h := range methodOverrideHeaders {
+		if strings.EqualFold(key, h) {
+			return true
+		}
+	}
+	return false
 }
 
 func closeBody(req *http.Request) {

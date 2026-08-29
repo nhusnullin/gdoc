@@ -139,7 +139,8 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 }
 
 // plainPath refuses a path the guard would read differently from the way the
-// transport sends it. Two shapes, one reason.
+// transport sends it. Three shapes, one reason. It is the URL-level half of the
+// invariant that checkWireMatchesJudgment holds at the request level.
 //
 // A `..` segment lets an id that is in the set walk to an endpoint the rules
 // below refuse outright: `/drive/v3/files/DOC1/../../../about` is judged as a
@@ -151,10 +152,18 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 // decoded and u.EscapedPath is what goes out, so `DOC1%2F..%2Fabout` is one
 // segment to the guard and three to whoever decodes it next.
 //
-// Neither shape occurs in a real Docs or Drive URL. Ids are [A-Za-z0-9_-], so
-// refusing both costs nothing and closes the gap between what is judged and
-// what is sent.
+// An opaque path is the third door. url.URL.RequestURI returns Opaque when it
+// is set, so the transport writes Opaque and never looks at Path. The rules
+// below read Path, so a known id in Path would carry a request to whatever
+// Opaque names.
+//
+// None of the three occurs in a real Docs or Drive URL. Ids are [A-Za-z0-9_-],
+// so refusing all of them costs nothing and closes the gap between what is
+// judged and what is sent.
 func plainPath(u *url.URL) error {
+	if u.Opaque != "" {
+		return refuse("the URL carries an opaque path %q, which is sent instead of %q", u.Opaque, u.Path)
+	}
 	if u.RawPath != "" {
 		return refuse("path %q is percent-encoded; the guard judges plain paths only", u.EscapedPath())
 	}
