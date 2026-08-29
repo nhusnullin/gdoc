@@ -396,6 +396,9 @@ The only remedy is the text itself: **a comment gdoc writes opens with `gdoc:`**
 and a suggestion is explained by a comment that does. Nail's call, and the only
 option available.
 
+*Superseded the same day: the marker is 🤖, not a `gdoc:` prefix. See
+"Everything gdoc writes opens with 🤖."*
+
 ## 2026-08-29. gdoc proposes. It never accepts and never rejects.
 
 Nail's rule. `acceptSuggestion` and `rejectSuggestion` work and will not be used.
