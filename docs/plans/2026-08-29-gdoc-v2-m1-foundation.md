@@ -877,7 +877,7 @@ git commit -m "test(v2): net/http import allowlist, both directions"
   - `cmd/gdoc`: dispatch `gdoc auth status`; unknown commands emit a failing envelope naming the command.
 - Constants: copy `BUNDLED_CLIENT_ID` and `BUNDLED_CLIENT_SECRET` values verbatim from `gdoc/oauth.py:51-52` into `auth.go`, with v1's comment about RFC 8252 carried over. `client_source` is `"file"` when `oauth-client.json` exists in the config dir, else `"bundled"`.
 
-- [ ] **Step 1: Write the failing tests** (temp config dir via `t.Setenv("GDOC_CONFIG_DIR", t.TempDir())`; write a fixture token JSON; assert Load round-trips; assert Refresh posts the right form and keeps the old refresh token when the response has none, over a fake `RoundTripper`; assert Save then Load is identical and that a failed Save leaves the original file intact)
+- [x] **Step 1: Write the failing tests** (temp config dir via `t.Setenv("GDOC_CONFIG_DIR", t.TempDir())`; write a fixture token JSON; assert Load round-trips; assert Refresh posts the right form and keeps the old refresh token when the response has none, over a fake `RoundTripper`; assert Save then Load is identical and that a failed Save leaves the original file intact)
 
 ```go
 package auth
@@ -962,7 +962,7 @@ func TestSaveIsCrashSafe(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**, then **Step 3: implement** `auth.go`:
+- [x] **Step 2: Run to verify failure**, then **Step 3: implement** `auth.go`:
 
 ```go
 // Package auth holds the OAuth token and the bundled client. The secret is
@@ -1159,14 +1159,38 @@ func authStatus() emit.Result {
 }
 ```
 
-- [ ] **Step 4: Fill in the two constants from `gdoc/oauth.py:51-52`, run all tests** (`cd go && go test ./...`), and try it for real: `cd go && go run ./cmd/gdoc auth status` should print one JSON object reporting your actual v1 token as present.
+- [x] **Step 4: Fill in the two constants from `gdoc/oauth.py:51-52`, run all tests** (`cd go && go test ./...`), and try it for real: `cd go && go run ./cmd/gdoc auth status` should print one JSON object reporting your actual v1 token as present.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add go/internal/auth/ go/cmd/
 git commit -m "feat(v2): token load and refresh on stdlib, auth status, CLI skeleton"
 ```
+
+⚠️ **Scope change made in Task 6: the boundary allowlist has three rooms, not two.**
+`auth.go` as this plan writes it takes the guard's `*http.Client` as a parameter, so
+`internal/auth` imports `net/http` and Task 5's two-room allowlist fails. Widening the
+import allowlist on its own would have lost the guarantee it existed for, so
+`go/boundary/boundary_test.go` now runs two checks. `TestNetHTTPStaysInItsRooms`
+allowlists who may name the type: `internal/guard` and `internal/auth` today,
+`internal/auth/loopback` from Task 7. `TestOnlyTheGuardBuildsTheWire` allowlists who may
+build one, and that stays `internal/guard` alone: it refuses an `http.Client` or
+`http.Transport` composite literal and the package-level dialers (`http.Get`, `Post`,
+`PostForm`, `Head`, `DefaultClient`, `DefaultTransport`) anywhere else. Test files are
+exempt from the second check, because faking the wire is what a test is for. Both checks
+still fail in both directions, and both have a canary.
+
+➕ Added `go/cmd/gdoc/main_test.go`, which the file list did not name: `main.go` is code
+this task wrote, and the plan requires tests for the code a task changes. It asserts that
+stdout carries exactly one JSON object, that an unknown command fails and names both
+itself and the commands that exist, and that `auth status` reports the config dir it was
+pointed at.
+
+➕ `auth.Status()` returns `(map[string]any, error)` rather than the bare map the
+Interfaces block names. `config.TokenPath()` can fail, and swallowing that would make a
+broken home directory read as "signed out". `client_source` is reported, which the
+Interfaces block asks for and the sample `main.go` omitted.
 
 ---
 
@@ -1442,7 +1466,7 @@ func (s *Server) WaitCode(state string, timeout time.Duration) (string, error) {
 func (s *Server) Close() { s.srv.Close() }
 ```
 
-- [ ] **Step 3: Restore the boundary allowlist to its two rooms** (Task 5's trim is reverted: `internal/auth/loopback` is back). Run `go test ./...`: everything green, boundary test included.
+- [ ] **Step 3: Add `internal/auth/loopback` to the boundary import allowlist** (Task 5's trim is undone; see the Task 6 scope change above, so the set becomes `internal/guard`, `internal/auth`, `internal/auth/loopback`). Leave the builder allowlist at `internal/guard`: the loopback listener serves and never dials. Run `go test ./...`: everything green, boundary test included.
 
 - [ ] **Step 4: Wire `auth login` into `cmd/gdoc` (URL to stderr, one JSON object to stdout at the end), and write the Makefile**
 
