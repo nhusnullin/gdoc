@@ -100,6 +100,11 @@ func isWireType(e ast.Expr, names map[string]bool, dot bool) bool {
 // A pointer ends the walk. `[]*http.Client` is a list of clients somebody else
 // made, which is the same as taking one as a parameter, and that is not
 // building the wire.
+//
+// A function's RESULTS are walked, and its parameters are not. `func Build() (c
+// http.Client) { return }` hands back a whole zero-value client that nobody
+// gave it, so the function is a factory for the wire; a parameter is a client
+// its caller built, which is `handed` again.
 func holdsWire(e ast.Expr, names map[string]bool, dot bool) bool {
 	switch v := e.(type) {
 	case *ast.ArrayType: // [N]http.Client and []http.Client
@@ -108,6 +113,16 @@ func holdsWire(e ast.Expr, names map[string]bool, dot bool) bool {
 		return holdsWire(v.Key, names, dot) || holdsWire(v.Value, names, dot)
 	case *ast.ChanType: // chan http.Client
 		return holdsWire(v.Value, names, dot)
+	case *ast.FuncType: // func() http.Client, and func() (c http.Client)
+		if v.Results == nil {
+			return false
+		}
+		for _, fld := range v.Results.List {
+			if holdsWire(fld.Type, names, dot) {
+				return true
+			}
+		}
+		return false
 	}
 	return isWireType(e, names, dot)
 }
@@ -142,13 +157,15 @@ func httpImporters(root string) (all, prod map[string]bool, err error) {
 // http.Client or http.Transport, or use a package-level dialer. Test files are
 // skipped: faking the wire is what a test is for.
 //
-// Seven ways to build one, and a scanner that knows only the first is a scanner
+// Eight ways to build one, and a scanner that knows only the first is a scanner
 // that can be walked around: a composite literal, `new(http.Client)`, a
 // zero-value declaration `var c http.Client`, the package-level dialers, a type
 // declaration that renames the wire (`type C = http.Client`, or the same
-// without the equals sign), a struct that holds one by value, and a container
-// that holds one by value, which is `make([]http.Client, 1)` and every shape
-// holdsWire walks. Each is checked under every import spelling.
+// without the equals sign), a struct that holds one by value, a container that
+// holds one by value, which is `make([]http.Client, 1)` and every shape
+// holdsWire walks, and a function that hands one back by value, which is
+// `func Build() (c http.Client) { return }`. Each is checked under every import
+// spelling.
 //
 // A struct field counts whether it is embedded or named. `struct{ C http.Client }`
 // is the same zero-value client as `struct{ http.Client }`, reached through one
@@ -194,6 +211,10 @@ func httpBuilders(root string) (map[string]bool, error) {
 					if holdsWire(fld.Type, names, dot) {
 						found[rel] = true
 					}
+				}
+			case *ast.FuncType: // func Build() (c http.Client), and the signature of a func value
+				if holdsWire(v, names, dot) {
+					found[rel] = true
 				}
 			case *ast.SelectorExpr: // http.Get, http.DefaultClient
 				if x, ok := v.X.(*ast.Ident); ok && names[x.Name] && dialers[v.Sel.Name] {
@@ -437,14 +458,28 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 		"package nestedfield\n\nimport \"net/http\"\n\ntype T struct{ C []http.Client }\n")
 	write(t, filepath.Join(root, "containertype", "containertype.go"),
 		"package containertype\n\nimport \"net/http\"\n\ntype C []http.Client\n")
+	// A function that produces a wire by value is a factory for one, whether the
+	// result is named or not. `func Build() (c http.Client) { return }` returns a
+	// whole zero-value client that nobody handed over, and it is the shape a
+	// scanner reading only declarations and literals never sees.
+	write(t, filepath.Join(root, "namedresult", "namedresult.go"),
+		"package namedresult\n\nimport \"net/http\"\n\nfunc Build() (c http.Client) { return }\n")
+	write(t, filepath.Join(root, "bareresult", "bareresult.go"),
+		"package bareresult\n\nimport \"net/http\"\n\nfunc Build() http.Transport { panic(\"unused\") }\n")
+	write(t, filepath.Join(root, "resultslice", "resultslice.go"),
+		"package resultslice\n\nimport \"net/http\"\n\nfunc Build() (cs []http.Client) { return }\n")
+	// A method result is the same factory reached through a receiver.
+	write(t, filepath.Join(root, "methodresult", "methodresult.go"),
+		"package methodresult\n\nimport \"net/http\"\n\ntype F struct{}\n\nfunc (F) Build() (c http.Client) { return }\n")
 
 	found, err := httpBuilders(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"aliased", "aliasedcall", "anonembed", "arrayvar", "chanelem", "containertype",
-		"definedtype", "dotted", "embedded", "maker", "mapvalue", "namedfield", "nestedfield",
-		"newed", "roundtripper", "shortcut", "slicelit", "slicemake", "typealias", "zero"}
+	want := []string{"aliased", "aliasedcall", "anonembed", "arrayvar", "bareresult", "chanelem",
+		"containertype", "definedtype", "dotted", "embedded", "maker", "mapvalue", "methodresult",
+		"namedfield", "namedresult", "nestedfield", "newed", "resultslice", "roundtripper",
+		"shortcut", "slicelit", "slicemake", "typealias", "zero"}
 	if got := names(found); !reflect.DeepEqual(got, want) {
 		t.Errorf("httpBuilders found %v, want %v", got, want)
 	}
