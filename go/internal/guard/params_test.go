@@ -67,7 +67,11 @@ func TestTheCallsGdocMakesStillCarry(t *testing.T) {
 	}{
 		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1?fields=id,name,mimeType", nil},
 		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/markdown&alt=media", nil},
-		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments?pageSize=100&includeDeleted=false", nil},
+		// comments.list requires `fields`: Drive answers a request without one
+		// with an error, so a case that omits it passes the guard and still
+		// fails the real API, and it does not pin the shape M2 sends.
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=comments(id,content,author,quotedFileContent,replies),nextPageToken&pageSize=100&includeDeleted=false", nil},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?fields=replies(id,content,author,createdTime)&pageSize=100", nil},
 		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=id", nil},
 		{"PATCH", "https://www.googleapis.com/drive/v3/files/MADE1?fields=id", []byte(`{"trashed":true}`)},
 		{"GET", "https://docs.googleapis.com/v1/documents/DOC1?suggestionsViewMode=SUGGESTIONS_INLINE", nil},
@@ -188,5 +192,61 @@ func TestAnUnreadableQueryIsRefused(t *testing.T) {
 	u.RawQuery = "fields=id&%zz=1"
 	if err := p.Judge("GET", u, nil); err == nil {
 		t.Error("a query that cannot be parsed must be refused, not judged on the part that parsed")
+	}
+}
+
+// alt=media on a bare files.get is not a metadata read: it hands back the
+// file's bytes. gdoc reads bytes through /export, where checkExportMime decides
+// the format, so the parameter has no business on the metadata call.
+func TestAltMediaOnAPlainFileGetIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	for _, raw := range []string{
+		"https://www.googleapis.com/drive/v3/files/DOC1?alt=media",
+		"https://www.googleapis.com/drive/v3/files/DOC1?alt=json",
+		"https://www.googleapis.com/drive/v3/files/MADE1?alt=media",
+		"https://www.googleapis.com/drive/v3/files/DOC1?fields=id&alt=media",
+	} {
+		if p.Judge("GET", mustURL(t, raw), nil) == nil {
+			t.Errorf("%s must be refused: a metadata read carries no alt", raw)
+		}
+	}
+	// Where the bytes are asked for on purpose, alt still carries.
+	ok := "https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/markdown&alt=media"
+	if err := p.Judge("GET", mustURL(t, ok), nil); err != nil {
+		t.Errorf("an export asks for bytes on purpose: %v", err)
+	}
+}
+
+// Each read shape carries only the parameters its own method defines. One
+// shared list let a paging parameter onto a metadata read and an export format
+// onto a comment listing, and neither is a call Drive has.
+func TestEachDriveReadCarriesOnlyItsOwnParameters(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	for _, raw := range []string{
+		// files.get takes no paging, no export format, no comment filter.
+		"https://www.googleapis.com/drive/v3/files/DOC1?pageSize=100",
+		"https://www.googleapis.com/drive/v3/files/DOC1?pageToken=t",
+		"https://www.googleapis.com/drive/v3/files/DOC1?mimeType=text/markdown",
+		"https://www.googleapis.com/drive/v3/files/DOC1?includeDeleted=false",
+		"https://www.googleapis.com/drive/v3/files/DOC1?startModifiedTime=2026-08-29T09:00:00Z",
+		// files.export takes no paging and no comment filter.
+		"https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/plain&pageSize=100",
+		"https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/plain&includeDeleted=false",
+		// The comment reads take no export format and no bytes.
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments?mimeType=text/markdown",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments?alt=media",
+		// startModifiedTime is the comments.list cursor and nothing else.
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?startModifiedTime=2026-08-29T09:00:00Z",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?startModifiedTime=2026-08-29T09:00:00Z",
+		// A single comment or reply is not a page of them.
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?pageToken=t",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?pageSize=100",
+	} {
+		if p.Judge("GET", mustURL(t, raw), nil) == nil {
+			t.Errorf("%s must be refused: that parameter is not on this call", raw)
+		}
 	}
 }

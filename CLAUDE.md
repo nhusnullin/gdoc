@@ -189,9 +189,9 @@ the wire differed from the one that was judged.
   refuses the rest. Nothing may learn an id from a create it could not verify.
 - **`fields` reaches the permission surface.** A GET is judged on its path, and
   `fields=*` or `fields=permissions(...)` returns exactly what refusing
-  `/permissions` was for. A Drive read carries an allowlist of query parameters
-  (`driveReadParams`), and its `fields` value may name neither `*` nor
-  `permissions`.
+  `/permissions` was for. Each Drive read shape carries its own allowlist of
+  query parameters (`driveReadParamsFor`), and its `fields` value may name
+  neither `*` nor `permissions`.
 - **The base transport carries no proxy.** `http.DefaultTransport` reads
   `HTTPS_PROXY`, so a nil base would send an unjudged `CONNECT` to whatever host
   the environment named, with the credential following it there. `baseTransport`

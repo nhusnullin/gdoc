@@ -231,11 +231,72 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 	return refuse("%s %s is not a call gdoc makes on a document. It reads with GET and writes with POST {id}:batchUpdate, and those are the two", method, u.Path)
 }
 
-// driveReads are the sub-resources a level-1 read may name under a known id.
-// The plan's grammar is `{id}`, `{id}/export` and `{id}/comments*`, and
-// everything else is refused: /permissions exposes collaborator identities,
-// and /revisions is a second way to read a document's history.
-var driveReads = map[string]bool{"": true, "export": true, "comments": true}
+// driveShape names the Drive method a path under a known file id addresses, and
+// returns "" for a path that is not one of them. The plan's grammar is `{id}`,
+// `{id}/export` and `{id}/comments*`, and everything else is refused:
+// /permissions exposes collaborator identities, and /revisions is a second way
+// to read a document's history.
+//
+// The segment count is part of the name, and that is the whole point of this
+// function. Reading only the first sub-segment judges `{id}/export/anything` as
+// files.export and `{id}/comments/C1/permissions` as the comment surface, so a
+// known id walks to a path nobody decided about while the guard reads the
+// prefix it recognises.
+//
+// An empty segment is a segment. `{id}//permissions` splits into three parts
+// with the middle one empty, and a check that reads an empty sub-resource as
+// "none given" judges it as a plain metadata read. What Drive's router does
+// with the doubled slash is not a question the guard answers by guess, so every
+// empty segment is refused below before this is called.
+func driveShape(parts []string) string {
+	switch {
+	case len(parts) == 1:
+		return "file"
+	case len(parts) == 2 && parts[1] == "export":
+		return "export"
+	case len(parts) == 2 && parts[1] == "comments":
+		return "comments" // comments.list
+	case len(parts) == 3 && parts[1] == "comments":
+		return "comment" // comments.get, update, delete
+	case len(parts) == 4 && parts[1] == "comments" && parts[3] == "replies":
+		return "replies" // replies.list, create
+	case len(parts) == 5 && parts[1] == "comments" && parts[3] == "replies":
+		return "reply" // replies.get, update, delete
+	}
+	return ""
+}
+
+// commentWrites are the writes Drive defines on the comment surface, by shape
+// and method. Creating is a POST on the collection, changing and removing are on
+// the item, and the same pair repeats one level down for replies. A method Drive
+// does not define on a shape is refused: the guard carries the calls gdoc makes,
+// and nothing else.
+var commentWrites = map[string]map[string]bool{
+	"comments": {"POST": true},
+	"comment":  {"PATCH": true, "DELETE": true},
+	"replies":  {"POST": true},
+	"reply":    {"PATCH": true, "DELETE": true},
+}
+
+// driveReadParamsFor is the query allowlist for one read shape. Each Drive
+// method carries its own parameters, so one shared list would put paging on a
+// metadata read and an export format on a comment listing, and neither is a
+// call Drive has.
+func driveReadParamsFor(shape string) map[string]bool {
+	switch shape {
+	case "file":
+		return driveGetParams
+	case "export":
+		return driveExportParams
+	case "comments":
+		return driveCommentListParams
+	case "replies":
+		return driveReplyListParams
+	case "comment", "reply":
+		return driveCommentGetParams
+	}
+	return nil
+}
 
 // filesCollection reports whether a Drive path names the files collection
 // itself rather than a file under it. It is one grammar with two readers, and
@@ -269,28 +330,30 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 		return refuse("%s on the files collection is not carried: gdoc never lists Drive, and it carries a create only into the folder the command named", method)
 	}
 	parts := strings.Split(strings.TrimPrefix(rest, "/"), "/")
+	for _, seg := range parts {
+		if seg == "" {
+			return refuse("the path %q carries an empty segment, and the guard reads a doubled slash as nothing rather than guessing what Drive's router makes of it", u.Path)
+		}
+	}
 	id := parts[0]
 	lvl, known := p.level(id)
 	if !known {
 		return refuse("file %q was not given to this command", id)
 	}
-	sub := ""
-	if len(parts) > 1 {
-		sub = parts[1]
-	}
+	shape := driveShape(parts)
 	switch {
-	case method == "GET" && driveReads[sub]:
+	case method == "GET" && driveReadParamsFor(shape) != nil:
 		// metadata, export, comments, replies: reading is level 1. What comes
 		// back is decided by the query as much as by the path, so the query is
-		// judged too.
-		return checkQuery(u, driveReadParams)
-	case (method == "POST" || method == "PATCH" || method == "DELETE") && sub == "comments":
+		// judged too, per shape.
+		return checkQuery(u, driveReadParamsFor(shape))
+	case commentWrites[shape][method]:
 		// the comment surface, replies included, is part of LevelSuggest
 		if err := checkCommentWrite(body); err != nil {
 			return err
 		}
 		return checkQuery(u, driveWriteParams)
-	case method == "PATCH" && sub == "" && lvl == LevelFull:
+	case method == "PATCH" && shape == "file" && lvl == LevelFull:
 		// e.g. trashing a document gdoc created
 		return checkQuery(u, driveWriteParams)
 	}

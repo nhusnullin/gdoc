@@ -181,7 +181,10 @@ func TestResolvingOrReopeningAThreadIsRefused(t *testing.T) {
 	if err := p.Judge("POST", u, []byte(`{"content":"a plain reply"}`)); err != nil {
 		t.Errorf("a plain reply must be carried: %v", err)
 	}
-	if err := p.Judge("DELETE", u, nil); err != nil {
+	// A delete names the reply it removes, which is where Drive defines the
+	// method; the collection above it takes POST only.
+	del := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1")
+	if err := p.Judge("DELETE", del, nil); err != nil {
 		t.Errorf("a write with no body at all carries no action: %v", err)
 	}
 }
@@ -628,5 +631,61 @@ func TestABatchUpdateBodyTheGuardCannotReadIsRefused(t *testing.T) {
 				t.Errorf("%s on %s must be refused: the guard cannot judge what it cannot read", body, id)
 			}
 		}
+	}
+}
+
+// The sub-resource is only half of a Drive path: the segments after it decide
+// which method the request reaches. Keying on the first sub-segment alone reads
+// `{id}/export/anything` as files.export, and an empty segment as no segment at
+// all, so `{id}//permissions` was judged as a plain metadata read.
+func TestADrivePathIsJudgedBySegmentCount(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+
+	refused := []struct{ method, raw string }{
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/export/anything"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1//permissions"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1//revisions"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/permissions"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1/anything"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments//replies"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/MADE1/export/anything"},
+		// A method Drive does not define on that shape.
+		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies"},
+	}
+	for _, c := range refused {
+		t.Run(c.method+" "+c.raw, func(t *testing.T) {
+			if p.Judge(c.method, mustURL(t, c.raw), nil) == nil {
+				t.Errorf("%s %s is outside the grammar and must be refused", c.method, c.raw)
+			}
+		})
+	}
+
+	// The other direction: every shape Drive actually defines still carries.
+	carried := []struct{ method, raw string }{
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/markdown&alt=media"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments?pageSize=100"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?fields=id"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?pageSize=100"},
+		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?fields=id"},
+		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=id"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1"},
+		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?fields=id"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/MADE1?fields=id"},
+	}
+	for _, c := range carried {
+		t.Run(c.method+" "+c.raw, func(t *testing.T) {
+			if err := p.Judge(c.method, mustURL(t, c.raw), nil); err != nil {
+				t.Errorf("%s %s is in the grammar and must be carried: %v", c.method, c.raw, err)
+			}
+		})
 	}
 }

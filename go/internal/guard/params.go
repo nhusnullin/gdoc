@@ -50,24 +50,62 @@ var docsReadParams = map[string]bool{
 	"commentsViewMode":    true,
 }
 
-// driveReadParams are the parameters a Drive read may carry. The path is only
-// half of what a GET asks for: the path names one file and the level says read,
-// and the query decides how much of that file comes back.
+// The Drive reads, one allowlist per call shape. The path is only half of what
+// a GET asks for: the path names one file and the level says read, and the
+// query decides how much of that file comes back.
 //
-// The list covers comments.list, replies.list and files.export whole, so a
-// later milestone adds nothing here. What is left out of files.get is left out
-// on purpose: `includePermissionsForView` is the permission surface /permissions
+// One list across all of them was wrong in both directions. It put paging on a
+// metadata read and an export format on a comment listing, neither of which is
+// a call Drive has, and it put `alt` on the bare files.get, where `alt=media`
+// stops being a metadata read and hands back the file's bytes. Each set below
+// is that method's own parameters, from the Drive v3 reference, so a request
+// carries only what its own shape needs.
+
+// driveGetParams are the parameters files.get may carry. No `alt`: a metadata
+// read asks for metadata, and gdoc reads bytes through /export, where
+// checkExportMime decides the format. What else is left out is left out on
+// purpose: `includePermissionsForView` is the permission surface /permissions
 // and checkFields already refuse, and `acknowledgeAbuse` overrides a warning
 // gdoc has no business overriding.
-var driveReadParams = map[string]bool{
-	"alt":               true, // export asks for the bytes rather than the metadata
-	"mimeType":          true, // which export format, narrowed further by checkExportMime
+var driveGetParams = map[string]bool{
 	"fields":            true, // narrowed further by checkFields
+	"supportsAllDrives": true,
+}
+
+// driveExportParams are the parameters files.export may carry. This is the one
+// read that asks for bytes, so `alt` belongs here and nowhere else. No `fields`:
+// the answer is a file, and a field mask has nothing to select in it.
+var driveExportParams = map[string]bool{
+	"alt":               true,
+	"mimeType":          true, // which export format, narrowed further by checkExportMime
+	"supportsAllDrives": true,
+}
+
+// driveCommentListParams are the parameters comments.list may carry.
+// startModifiedTime is the --since cursor, activity after this instant, and it
+// is on comments.list alone.
+var driveCommentListParams = map[string]bool{
+	"fields":            true,
 	"pageSize":          true, // comments come back a page at a time
 	"pageToken":         true,
-	"includeDeleted":    true, // comments list
-	"startModifiedTime": true, // the --since cursor: activity after this instant
-	"supportsAllDrives": true,
+	"includeDeleted":    true,
+	"startModifiedTime": true,
+}
+
+// driveReplyListParams are the parameters replies.list may carry: the comment
+// list's paging without the cursor, which replies.list does not define.
+var driveReplyListParams = map[string]bool{
+	"fields":         true,
+	"pageSize":       true,
+	"pageToken":      true,
+	"includeDeleted": true,
+}
+
+// driveCommentGetParams are the parameters comments.get and replies.get may
+// carry. One comment is not a page of them, so no paging and no cursor.
+var driveCommentGetParams = map[string]bool{
+	"fields":         true,
+	"includeDeleted": true,
 }
 
 // driveWriteParams are the parameters a comment write or an in-place patch may
