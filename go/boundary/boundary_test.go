@@ -125,8 +125,13 @@ func httpImporters(root string) (all, prod map[string]bool, err error) {
 // that can be walked around: a composite literal, `new(http.Client)`, a
 // zero-value declaration `var c http.Client`, the package-level dialers, a type
 // declaration that renames the wire (`type C = http.Client`, or the same
-// without the equals sign), and a struct that embeds one by value. Each is
+// without the equals sign), and a struct that holds one by value. Each is
 // checked under every import spelling.
+//
+// A struct field counts whether it is embedded or named. `struct{ C http.Client }`
+// is the same zero-value client as `struct{ http.Client }`, reached through one
+// extra word, and a scanner that reads only the embedded shape is walked around
+// by naming the field.
 //
 // The two type shapes are flagged on the declaration rather than on the use.
 // Following an alias to the values built from it would mean resolving names
@@ -162,9 +167,9 @@ func httpBuilders(root string) (map[string]bool, error) {
 				if isWireType(v.Type, names, dot) {
 					found[rel] = true
 				}
-			case *ast.StructType: // struct{ http.Client }
+			case *ast.StructType: // struct{ http.Client }, struct{ C http.Client }
 				for _, fld := range v.Fields.List {
-					if len(fld.Names) == 0 && isWireType(fld.Type, names, dot) {
+					if isWireType(fld.Type, names, dot) {
 						found[rel] = true
 					}
 				}
@@ -384,13 +389,17 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 		"package embedded\n\nimport \"net/http\"\n\ntype T struct{ http.Client }\n")
 	write(t, filepath.Join(root, "anonembed", "anonembed.go"),
 		"package anonembed\n\nimport \"net/http\"\n\nvar V = struct{ http.Transport }{}\n")
+	// Naming the field changes nothing: a value of T still holds a whole client
+	// that the guard never made.
+	write(t, filepath.Join(root, "namedfield", "namedfield.go"),
+		"package namedfield\n\nimport \"net/http\"\n\ntype T struct{ C http.Client }\n")
 
 	found, err := httpBuilders(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"aliased", "aliasedcall", "anonembed", "definedtype", "dotted", "embedded",
-		"maker", "newed", "roundtripper", "shortcut", "typealias", "zero"}
+		"maker", "namedfield", "newed", "roundtripper", "shortcut", "typealias", "zero"}
 	if got := names(found); !reflect.DeepEqual(got, want) {
 		t.Errorf("httpBuilders found %v, want %v", got, want)
 	}

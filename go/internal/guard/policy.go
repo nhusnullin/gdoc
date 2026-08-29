@@ -153,7 +153,9 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 	switch u.Host {
 	case "oauth2.googleapis.com":
 		if method == "POST" && u.Path == "/token" {
-			return nil
+			// The exchange is a form in the body. Nothing gdoc sends puts any
+			// of it in the query.
+			return checkQuery(u, noParams)
 		}
 		return refuse("%s %s is not carried on the token host, where the one call gdoc makes is POST /token", method, u.Path)
 	case "docs.googleapis.com":
@@ -213,10 +215,10 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 	}
 	switch {
 	case method == "GET" && verb == "":
-		return nil
+		return checkQuery(u, docsReadParams)
 	case method == "POST" && verb == "batchUpdate":
 		if lvl == LevelFull || isSuggestMode(body) {
-			return nil
+			return checkQuery(u, noParams)
 		}
 		return refuse("direct edit of %q, which was handed in; only SUGGEST is allowed", id)
 	}
@@ -256,7 +258,7 @@ func (p *Policy) judgeDrive(method string, u *url.URL) error {
 		if method == "POST" && p.createFolder() != "" {
 			// create, into the one named folder; transport verifies parent,
 			// but only for the upload shapes it can read metadata out of.
-			return checkUploadType(u)
+			return checkQuery(u, driveCreateParams)
 		}
 		return refuse("%s on the files collection is not carried: gdoc never lists Drive, and it carries a create only into the folder the command named", method)
 	}
@@ -275,99 +277,15 @@ func (p *Policy) judgeDrive(method string, u *url.URL) error {
 		// metadata, export, comments, replies: reading is level 1. What comes
 		// back is decided by the query as much as by the path, so the query is
 		// judged too.
-		return checkReadQuery(u)
+		return checkQuery(u, driveReadParams)
 	case (method == "POST" || method == "PATCH" || method == "DELETE") && sub == "comments":
-		return nil // the comment surface, replies included, is part of LevelSuggest
+		// the comment surface, replies included, is part of LevelSuggest
+		return checkQuery(u, driveWriteParams)
 	case method == "PATCH" && sub == "" && lvl == LevelFull:
-		return nil // e.g. trashing a document gdoc created
+		// e.g. trashing a document gdoc created
+		return checkQuery(u, driveWriteParams)
 	}
 	return refuse("%s %s is not allowed at the %s level. A file handed in may be read, commented on and suggested on, and only a file gdoc created may be changed in place", method, u.Path, lvl)
-}
-
-// uploadTypes are the create shapes the guard can check. `multipart` and
-// `resumable` both put the metadata where the parent check can read it: a
-// multipart body opens with the metadata part, and a resumable start is the
-// metadata on its own. An absent uploadType is a plain JSON create.
-//
-// `media` is the shape that is refused. It makes the whole body the file's
-// content, so `{"parents":["FOLDER1"]}` is bytes to Drive and metadata to the
-// parent check: the file lands unparented and the guard then learns its id at
-// full level. Nothing here may learn an id from a create it could not verify,
-// so an upload shape the guard cannot read is refused rather than carried.
-var uploadTypes = map[string]bool{"multipart": true, "resumable": true}
-
-// checkUploadType refuses a create whose body the parent check cannot read.
-// The check is on the create only. An upload against a file already in the set
-// creates nothing and teaches the guard nothing, so its level decides it.
-func checkUploadType(u *url.URL) error {
-	vals, present := u.Query()["uploadType"]
-	if !present {
-		return nil
-	}
-	if len(vals) != 1 || !uploadTypes[vals[0]] {
-		return refuse("uploadType=%q is not a create the guard can check; it reads parents out of multipart and resumable metadata only", strings.Join(vals, ","))
-	}
-	return nil
-}
-
-// driveReadParams are the query parameters a Drive read may carry. It is an
-// allowlist because the path is only half of what a GET asks for: the path
-// names one file and the level says read, and the query decides how much of
-// that file comes back.
-var driveReadParams = map[string]bool{
-	"alt":               true, // export asks for the bytes rather than the metadata
-	"mimeType":          true, // which export format
-	"fields":            true, // narrowed further by checkFields
-	"pageSize":          true, // comments come back a page at a time
-	"pageToken":         true,
-	"includeDeleted":    true, // comments list
-	"supportsAllDrives": true,
-}
-
-// blockedFields are the field names a read may not ask for. The guard refuses
-// /permissions because it names who else can reach the document, and `fields`
-// reaches the same data through a plain GET of the file.
-var blockedFields = map[string]bool{"permissions": true, "permissionids": true}
-
-func checkReadQuery(u *url.URL) error {
-	for name, vals := range u.Query() {
-		if !driveReadParams[name] {
-			return refuse("the query parameter %q is not one a read carries", name)
-		}
-		if name != "fields" {
-			continue
-		}
-		for _, v := range vals {
-			if err := checkFields(v); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// checkFields reads a fields expression as its bare names. Drive separates
-// them with commas, slashes and parentheses, so splitting on everything that
-// is not a name character gives the list to check, and `permissions/role`
-// cannot hide inside a sub-selection.
-func checkFields(v string) error {
-	if strings.Contains(v, "*") {
-		return refuse("fields=%q asks for every field, and that includes the permission surface /permissions is refused to protect", v)
-	}
-	for _, name := range strings.FieldsFunc(v, notFieldRune) {
-		if blockedFields[strings.ToLower(name)] {
-			return refuse("fields=%q names %q, and who else can reach a document is refused however it is asked for", v, name)
-		}
-	}
-	return nil
-}
-
-func notFieldRune(r rune) bool {
-	switch {
-	case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
-		return false
-	}
-	return true
 }
 
 // isSuggestMode reads the one field that keeps a handed-in document

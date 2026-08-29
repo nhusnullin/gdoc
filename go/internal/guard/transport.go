@@ -35,11 +35,39 @@ const clientTimeout = 5 * time.Minute
 // methodOverrideHeaders are the headers Google's REST stack honours to perform
 // a different method from the one on the wire. A request carrying one is
 // judged as one thing and served as another, which is the whole gap the guard
-// exists to close.
+// exists to close. The allowlist below refuses them too; they are named here so
+// the refusal says which trick it stopped.
 var methodOverrideHeaders = []string{
 	"X-HTTP-Method-Override",
 	"X-HTTP-Method",
 	"X-Method-Override",
+}
+
+// allowedHeaders are the request headers the guard has decided about, keyed in
+// lower case. Every other header is refused, and that is the point.
+//
+// A header is the second spelling of a query parameter. Google's system
+// parameters (https://docs.cloud.google.com/apis/docs/system-parameters) give
+// `fields` the twin X-Goog-FieldMask, `key` the twin X-Goog-Api-Key,
+// `quotaUser` the twin X-Goog-Quota-User, and the method override a header of
+// its own. A Drive read whose query carries no `fields` at all can still ask
+// for `permissions(...)` in X-Goog-FieldMask, so a guard that judges only the
+// query judges half the request.
+//
+// Blocking the spellings one at a time is what needed a patch each time
+// somebody found another one. This is an allowlist for the same reason the
+// query rule in params.go is one, and the two are the same rule over one
+// request. The six below are what gdoc's own calls set: the credential, the
+// body's type and length, and what Go itself writes. A milestone that needs
+// another one, a resumable upload's X-Upload-Content-Type for instance, adds it
+// here on purpose.
+var allowedHeaders = map[string]bool{
+	"authorization":   true, // the one credential gdoc sends
+	"content-type":    true, // every POST and PATCH gdoc makes sets it
+	"content-length":  true,
+	"accept":          true,
+	"accept-encoding": true,
+	"user-agent":      true,
 }
 
 type transport struct {
@@ -154,11 +182,15 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 // Neither the method-override header nor the `_method` query parameter nor a
 // Host that disagrees with the URL appears in any call gdoc makes, so refusing
 // all of them costs nothing.
+//
+// The header allowlist is the general form of the same thing: X-Goog-FieldMask
+// is `fields` by another name, and the next spelling nobody has read about yet
+// is refused here without a patch.
 func checkWireMatchesJudgment(req *http.Request) error {
 	// Header.Get canonicalises the key it looks up, so it only finds an entry
 	// stored under the canonical spelling. net/http writes map keys verbatim,
 	// so a key planted as "X-HTTP-METHOD-OVERRIDE" would reach Google unseen.
-	// The comparison therefore walks the map and folds case itself.
+	// Both loops below therefore walk the raw map and fold case themselves.
 	for key, vals := range req.Header {
 		if !isMethodOverride(key) {
 			continue
@@ -167,6 +199,11 @@ func checkWireMatchesJudgment(req *http.Request) error {
 			if v != "" {
 				return refuse("%s: %q asks for a method other than the one judged", key, v)
 			}
+		}
+	}
+	for key := range req.Header {
+		if !allowedHeaders[strings.ToLower(key)] {
+			return refuse("the header %q is not one gdoc sends, and a header changes what a request returns or does as much as the query does", key)
 		}
 	}
 	if req.URL.Query().Has("_method") {
