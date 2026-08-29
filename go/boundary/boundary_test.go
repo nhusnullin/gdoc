@@ -258,6 +258,37 @@ func TestNothingRunsAnExternalProgram(t *testing.T) {
 	}
 }
 
+// TestEveryTargetThatWritesIntoBinMakesIt: bin/ is ignored and nothing tracks
+// it, so a fresh clone does not have one. A target that writes a binary there
+// without making the directory first fails before it produces anything, and it
+// fails only on the machine that has never built before.
+func TestEveryTargetThatWritesIntoBinMakesIt(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, writes, makes := "", false, false
+	check := func() {
+		if writes && !makes {
+			t.Errorf("the %s target writes into bin/ without creating it; a fresh clone has no bin/", target)
+		}
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(line, "\t") { // a recipe line
+			if strings.Contains(line, "bin/") {
+				writes = true
+			}
+			if strings.Contains(line, "mkdir") && strings.Contains(line, "bin") {
+				makes = true
+			}
+			continue
+		}
+		check()
+		target, writes, makes = strings.TrimSpace(strings.SplitN(line, ":", 2)[0]), false, false
+	}
+	check()
+}
+
 // TestNoThirdPartyDependencies keeps "standard library only" a property of the
 // tree rather than a sentence in a plan. A require block is where that stops
 // being true.

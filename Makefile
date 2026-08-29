@@ -11,9 +11,11 @@ vet:
 	cd go && test -z "$$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
 build:
+	mkdir -p bin
 	$(GO) build -o ../bin/gdoc ./cmd/gdoc
 
 dist:
+	mkdir -p bin
 	cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -o ../bin/gdoc-darwin-arm64 ./cmd/gdoc
 	cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -o ../bin/gdoc-darwin-amd64 ./cmd/gdoc
 	cd go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../bin/gdoc-windows-amd64.exe ./cmd/gdoc
