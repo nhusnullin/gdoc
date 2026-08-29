@@ -139,8 +139,9 @@ func NewClient(p *Policy, base http.RoundTripper) *http.Client {
 			}
 			// The body is not carried into the judgment here: a redirect the
 			// guard cannot read the body of is judged as if it had none. For a
-			// batchUpdate that is the refusing direction, since no body is no
-			// suggestion. For a comment write it is not, since no body is no
+			// batchUpdate that is the refusing direction twice over, since no
+			// body is no suggestion and no body is a request list the guard
+			// could not read. For a comment write it is not, since no body is no
 			// resolve, and the check that matters runs anyway: the redirected
 			// request passes RoundTrip with its real body before it goes out.
 			if err := p.Judge(req.Method, req.URL, nil); err != nil {

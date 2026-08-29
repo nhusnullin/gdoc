@@ -515,11 +515,15 @@ func TestTheReplayIsTheBodyTheGuardJudged(t *testing.T) {
 func TestABodyPastThePeekCarriesNoReplay(t *testing.T) {
 	f := &fake{status: 200, body: `{}`}
 	p := NewPolicy()
-	p.Learn("DOC1") // LevelFull, so a big batchUpdate body is carried
+	p.Learn("DOC1") // LevelFull, so an in-place patch is carried
 	c := NewClient(p, f)
 
-	big := `{"requests":[],"pad":"` + strings.Repeat("x", maxPeek) + `"}`
-	req, err := http.NewRequest("POST", "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate",
+	// A Drive patch, because it is the one write whose body the policy does not
+	// have to read. A batchUpdate past the peek arrives at the policy truncated
+	// and is refused there, which is the subject of its own test; this one is
+	// about what the transport does with a body it did not hold whole.
+	big := `{"trashed":true,"pad":"` + strings.Repeat("x", maxPeek) + `"}`
+	req, err := http.NewRequest("PATCH", "https://www.googleapis.com/drive/v3/files/DOC1",
 		strings.NewReader(big))
 	if err != nil {
 		t.Fatal(err)

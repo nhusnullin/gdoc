@@ -136,8 +136,10 @@ func refuse(format string, a ...any) error {
 // rather than a request it retries. Nothing else in gdoc decides what is
 // reachable.
 //
-// The body is read only to tell a suggestion from a direct edit. An absent
-// body is judged as no suggestion, which refuses rather than carries.
+// The body is read for two things: to tell a suggestion from a direct edit, and
+// to see the request kinds a batchUpdate carries. An absent body is judged as
+// no suggestion and as a batchUpdate the guard could not read, and both of
+// those refuse rather than carry.
 func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 	if u.Scheme != "https" {
 		return refuse("the URL scheme is %q, and gdoc makes https requests only. This request was not built by gdoc", u.Scheme)
@@ -218,6 +220,9 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 	case method == "GET" && verb == "":
 		return checkQuery(u, docsReadParams)
 	case method == "POST" && verb == "batchUpdate":
+		if err := judgeRequests(body); err != nil {
+			return err
+		}
 		if lvl == LevelFull || isSuggestMode(body) {
 			return checkQuery(u, noParams)
 		}
@@ -356,4 +361,77 @@ func isSuggestMode(body []byte) bool {
 		return false // a body the guard cannot read is not a suggestion
 	}
 	return probe.WriteControl.WriteMode == "SUGGEST"
+}
+
+// judgeRequests reads the request kinds inside a batchUpdate body. SPEC.md's
+// Never list: "Never accept, reject or delete anyone else's suggestion." Docs
+// spells all three as request kinds inside `requests[]`
+// (https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/request),
+// so neither the path nor the write level can see them, and the body is the
+// only thing that can.
+//
+// The rule holds at both levels. A document gdoc created can still hold
+// somebody else's suggestion, and the Never list names no level.
+//
+// Unknown kinds are carried, and that is the one rule in this guard that is not
+// an allowlist. The reason is the shape of what it guards. A batchUpdate
+// request kind is one entry in a documented schema, and the spec names the ones
+// that are dangerous; the query surface is the opposite, a set Google keeps
+// giving new spellings for the same capability, which is why params.go could
+// only be an allowlist. An allowlist here would also be empty today, because M1
+// has no batchUpdate call site, and an empty one refuses the SUGGEST write the
+// guard exists to allow.
+//
+// So the family is refused rather than the three names: a kind whose name
+// carries "suggestion" acts on one, and a fourth spelling of the same idea is
+// refused before anybody has read about it. Note what that does not touch.
+// Withdrawing gdoc's own proposal is deleteContentRange in suggest mode, which
+// acts on a range and names no suggestion, and every ordinary request kind a
+// later milestone needs carries unchanged.
+//
+// A body this cannot read is refused, at both levels. That covers a body past
+// the transport's peek, which arrives here truncated: a batchUpdate longer than
+// maxPeek is refused rather than carried unread, and a milestone that needs a
+// bigger one raises the cap on purpose.
+func judgeRequests(body []byte) error {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(body, &top); err != nil {
+		return refuse("the body of this batchUpdate cannot be read, so the requests in it cannot be judged: %v", err)
+	}
+	// The list is found by folding case, because encoding/json matches field
+	// names that way and Docs may too, so `Requests` is the same list under a
+	// spelling a check on the exact key reads as absent. Two spellings at once
+	// are refused: which list the server takes is not decided here.
+	var raw json.RawMessage
+	found := false
+	for name, v := range top {
+		if !strings.EqualFold(name, "requests") {
+			continue
+		}
+		if found {
+			return refuse("this batchUpdate names its request list more than once, and which list the server reads is not decided here")
+		}
+		raw, found = v, true
+	}
+	if !found {
+		return nil // a batchUpdate naming no requests changes nothing
+	}
+	var reqs []map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &reqs); err != nil {
+		return refuse("the request list of this batchUpdate cannot be read as a list of requests: %v", err)
+	}
+	for _, req := range reqs {
+		// A Docs request names exactly one kind. A request naming none, or two,
+		// is one the guard cannot say what it does, and that must not resolve
+		// to sending it.
+		if len(req) != 1 {
+			return refuse("a request in this batchUpdate names %d kinds, and a request names one", len(req))
+		}
+		for kind := range req {
+			if strings.Contains(strings.ToLower(kind), "suggestion") {
+				return refuse("%q acts on a suggestion, and gdoc never accepts, rejects or deletes anyone else's", kind)
+			}
+		}
+	}
+	return nil
 }

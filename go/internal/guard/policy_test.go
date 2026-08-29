@@ -538,3 +538,95 @@ func TestTheActionFieldIsRefusedByItsPresence(t *testing.T) {
 		t.Error("a comment write whose body is not an object must be refused")
 	}
 }
+
+// SPEC.md's Never list: "Never accept, reject or delete anyone else's
+// suggestion." Docs spells all three as request kinds inside the batchUpdate
+// body, so neither the path nor the write level can see them, and the body is
+// the only thing that can.
+func TestASuggestionVerbInABatchUpdateIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	handed := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
+	made := mustURL(t, "https://docs.googleapis.com/v1/documents/MADE1:batchUpdate")
+
+	bodies := []string{
+		`{"requests":[{"acceptSuggestion":{"suggestionId":"s1"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"rejectSuggestion":{"suggestionId":"s1"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"deleteSuggestion":{"suggestionId":"s1"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// Buried behind an ordinary request, which is where it would ride.
+		`{"requests":[{"insertText":{"text":"x"}},{"deleteSuggestion":{}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// encoding/json folds case on a field name, so Docs may read these as
+		// the same kind. The guard folds case too.
+		`{"requests":[{"AcceptSuggestion":{}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// A fourth spelling in the same family, which nobody has read about.
+		`{"requests":[{"resolveSuggestion":{}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// The capitalised list key decodes into the same list.
+		`{"Requests":[{"deleteSuggestion":{}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+	}
+	for _, body := range bodies {
+		// The rule is about the suggestion, not about the level. A document
+		// gdoc made itself may still carry somebody else's suggestion.
+		if p.Judge("POST", handed, []byte(body)) == nil {
+			t.Errorf("%s must be refused at the suggest level", body)
+		}
+		if p.Judge("POST", made, []byte(body)) == nil {
+			t.Errorf("%s must be refused on a document gdoc created", body)
+		}
+	}
+}
+
+// The other direction. An ordinary request still carries, and so does the one
+// SPEC.md names for withdrawing gdoc's own proposal: deleteContentRange in
+// suggest mode, which acts on a range and names no suggestion at all.
+func TestAnOrdinaryBatchUpdateStillCarries(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	handed := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
+	made := mustURL(t, "https://docs.googleapis.com/v1/documents/MADE1:batchUpdate")
+
+	suggest := []string{
+		`{"requests":[{"insertText":{"text":"x"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"deleteContentRange":{"range":{"startIndex":1,"endIndex":2}}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"writeControl":{"writeMode":"SUGGEST"}}`,
+	}
+	for _, body := range suggest {
+		if err := p.Judge("POST", handed, []byte(body)); err != nil {
+			t.Errorf("%s must be carried: %v", body, err)
+		}
+	}
+	for _, body := range []string{
+		`{"requests":[{"insertText":{"text":"x"}}]}`,
+		`{"requests":[{"updateTextStyle":{}},{"createParagraphBullets":{}}]}`,
+		`{}`,
+	} {
+		if err := p.Judge("POST", made, []byte(body)); err != nil {
+			t.Errorf("%s must be carried on a document gdoc created: %v", body, err)
+		}
+	}
+}
+
+// A batchUpdate body the guard cannot read whole is refused at both levels. A
+// body past the transport's peek arrives here truncated, and a request the
+// guard could not look inside must not resolve to sending it.
+func TestABatchUpdateBodyTheGuardCannotReadIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	for _, id := range []string{"DOC1", "MADE1"} {
+		u := mustURL(t, "https://docs.googleapis.com/v1/documents/"+id+":batchUpdate")
+		for _, body := range []string{
+			`{"requests":[{"insertText":{"text":"xxx`,                // truncated at the peek
+			`{"requests":"everything"}`,                              // not a list of requests
+			`{"requests":[{"insertText":{},"deleteSuggestion":{}}]}`, // two kinds in one request
+			`{"requests":[null]}`,
+			`{"requests":[],"Requests":[{"deleteSuggestion":{}}]}`, // the list, twice
+		} {
+			if p.Judge("POST", u, []byte(body)) == nil {
+				t.Errorf("%s on %s must be refused: the guard cannot judge what it cannot read", body, id)
+			}
+		}
+	}
+}
