@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,17 +14,62 @@ import (
 // decodeOne insists a stream is exactly one JSON object. It is the output
 // contract itself, so it is written once: the tests that also need stderr
 // decode their own stdout with it rather than copying the assertion.
+//
+// The end of the stream is proved by decoding a second value and requiring
+// io.EOF, not by Decoder.More. More answers whether another element follows in
+// the array or object being read, so it reads a closing bracket as the end and
+// `{"ok":true}]` passed the helper while being output no skill can parse.
 func decodeOne(t *testing.T, r io.Reader) map[string]any {
 	t.Helper()
+	got, err := onlyJSONObject(r)
+	if err != nil {
+		t.Fatalf("stdout is not exactly one JSON object: %v", err)
+	}
+	return got
+}
+
+// onlyJSONObject is decodeOne's judgment, split out so a test can check the
+// helper itself. A helper that calls t.Fatal cannot be shown to refuse
+// anything, and this one is the output contract.
+func onlyJSONObject(r io.Reader) (map[string]any, error) {
 	dec := json.NewDecoder(r)
 	var got map[string]any
 	if err := dec.Decode(&got); err != nil {
-		t.Fatalf("stdout is not one JSON object: %v", err)
+		return nil, fmt.Errorf("the first value is not a JSON object: %w", err)
 	}
-	if dec.More() {
-		t.Fatal("stdout carried more than one JSON object")
+	var rest json.RawMessage
+	if err := dec.Decode(&rest); err != io.EOF {
+		return nil, fmt.Errorf("something follows the object: %q, err %v", string(rest), err)
 	}
-	return got
+	return got, nil
+}
+
+// The helper is the contract, so it is checked in both directions. Every shape
+// below is stdout no skill can parse, and Decoder.More let the trailing-bracket
+// one through: More reports whether another element follows inside the array or
+// object being read, and a closing bracket at the top level reads to it as the
+// end of the stream.
+func TestOnlyJSONObjectRefusesAnythingAfterTheObject(t *testing.T) {
+	for _, out := range []string{
+		`{"ok":true}]`,
+		`{"ok":true}}`,
+		`{"ok":true}{"ok":false}`,
+		`{"ok":true} trailing`,
+		`{"ok":true}[1]`,
+		`[{"ok":true}]`,
+		``,
+	} {
+		if _, err := onlyJSONObject(strings.NewReader(out)); err == nil {
+			t.Errorf("%q must be refused: stdout is exactly one JSON object", out)
+		}
+	}
+	got, err := onlyJSONObject(strings.NewReader("{\"ok\":true}\n"))
+	if err != nil {
+		t.Fatalf("one object, with the newline the emitter writes: %v", err)
+	}
+	if got["ok"] != true {
+		t.Fatalf("the object came back wrong: %v", got)
+	}
 }
 
 // runJSON runs the command and insists stdout is exactly one JSON object.
