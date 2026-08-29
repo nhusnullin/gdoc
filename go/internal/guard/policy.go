@@ -384,6 +384,29 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 // above a read, so not knowing must not resolve to sending it. That covers a
 // body longer than the transport's peek, which arrives here truncated, and a
 // body that is not an object at all.
+// One more rule on this surface was considered and left out on purpose, so it
+// is written down here rather than found missing later. SPEC.md's Never list
+// also says "Never write a comment or reply that does not open with the robot
+// emoji." The guard could read `content` and check the prefix. It does not, and
+// the rule belongs where the reply body is built.
+//
+// The reason is the difference between that field and this one. `action` is a
+// field gdoc never sets, so refusing its presence can never be wrong. `content`
+// is a field gdoc always sets, and the check would be on its value, in human
+// prose. That is where a guard can refuse real work, and it has an exception
+// the guard cannot see: text gdoc did not author. v1 learned it, and CLAUDE.md
+// records it. gdoc/comments.py carries a copied comment verbatim and unmarked,
+// because the marker means "gdoc wrote this" and stamping it on somebody else's
+// words claims authorship of text gdoc only moved. v2 plans no comment copy
+// today, checked against SPEC.md's restyle section and PLAN.md's M7: in-place
+// restyle leaves the threads alone and `--new` loses them. But a prefix rule
+// enforced here would have to be unpicked the day that changes, and the guard
+// would be the last place anybody looked.
+//
+// The two rules also differ in what they cost when broken. Accepting somebody's
+// suggestion is irreversible harm to their work, which is why judgeRequests
+// refuses it here. A reply missing its marker is a breach of a reader
+// convention, fixable by the next reply. The guard holds the first kind.
 func checkCommentWrite(body []byte) error {
 	if len(bytes.TrimSpace(body)) == 0 {
 		return nil // a DELETE, which carries no body and so no action
