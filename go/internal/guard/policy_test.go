@@ -408,3 +408,65 @@ func TestHostEdgeCasesAreRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestACreateTheGuardCannotCheckIsRefused pins the upload shapes. uploadType
+// decides what the body is: with `media` the body IS the file's content, so
+// `{"parents":["FOLDER1"]}` would be read as bytes by Drive and as metadata by
+// the parent check, and the file would land unparented while the guard learned
+// its id at full level.
+func TestACreateTheGuardCannotCheckIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	for _, raw := range []string{
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=media",
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=MEDIA",
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=",
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&uploadType=media",
+	} {
+		if err := p.Judge("POST", mustURL(t, raw), nil); err == nil {
+			t.Errorf("%s must be refused: the guard cannot read parents out of that body", raw)
+		}
+	}
+	for _, raw := range []string{
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+		"https://www.googleapis.com/drive/v3/files",
+	} {
+		if err := p.Judge("POST", mustURL(t, raw), nil); err != nil {
+			t.Errorf("%s must be carried: %v", raw, err)
+		}
+	}
+}
+
+// TestAReadMayNotAskForThePermissionSurface closes the query door on the rule
+// that refuses /permissions. The path names one file and the level says read,
+// but `fields` alone decides how much of that file comes back.
+func TestAReadMayNotAskForThePermissionSurface(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	for _, raw := range []string{
+		"https://www.googleapis.com/drive/v3/files/DOC1?fields=*",
+		"https://www.googleapis.com/drive/v3/files/DOC1?fields=permissions(emailAddress)",
+		"https://www.googleapis.com/drive/v3/files/DOC1?fields=id,permissions/role",
+		"https://www.googleapis.com/drive/v3/files/DOC1?fields=permissionIds",
+		"https://www.googleapis.com/drive/v3/files/MADE1?fields=*",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=comments(author,permissions)",
+		"https://www.googleapis.com/drive/v3/files/DOC1?q=name",
+		"https://www.googleapis.com/drive/v3/files/DOC1?corpora=allDrives",
+	} {
+		if err := p.Judge("GET", mustURL(t, raw), nil); err == nil {
+			t.Errorf("%s must be refused", raw)
+		}
+	}
+	for _, raw := range []string{
+		"https://www.googleapis.com/drive/v3/files/DOC1",
+		"https://www.googleapis.com/drive/v3/files/DOC1?fields=id,name,mimeType",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=comments(id,content)&pageSize=100",
+		"https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/markdown&alt=media",
+	} {
+		if err := p.Judge("GET", mustURL(t, raw), nil); err != nil {
+			t.Errorf("%s must be carried: %v", raw, err)
+		}
+	}
+}

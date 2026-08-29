@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,11 +47,41 @@ type transport struct {
 	base   http.RoundTripper
 }
 
+// The base transport's own bounds, the values http.DefaultTransport uses.
+// clientTimeout bounds the whole request; these bound the parts of it that can
+// hang before a response is ever begun.
+const (
+	dialTimeout           = 30 * time.Second
+	keepAlive             = 30 * time.Second
+	tlsHandshakeTimeout   = 10 * time.Second
+	expectContinueTimeout = 1 * time.Second
+	idleConnTimeout       = 90 * time.Second
+	maxIdleConns          = 100
+)
+
+// baseTransport is the guard's own wire. It is not http.DefaultTransport,
+// because that one reads HTTPS_PROXY: with a proxy set, a request judged as
+// "GET docs.googleapis.com" leaves the machine as a CONNECT to whatever host
+// the environment named, and the credential follows it there. The guard judges
+// exactly the request that goes on the wire, so Proxy stays nil and the only
+// host dialled is the host that was judged.
+func baseTransport() *http.Transport {
+	return &http.Transport{
+		Proxy:                 nil,
+		DialContext:           (&net.Dialer{Timeout: dialTimeout, KeepAlive: keepAlive}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          maxIdleConns,
+		IdleConnTimeout:       idleConnTimeout,
+		TLSHandshakeTimeout:   tlsHandshakeTimeout,
+		ExpectContinueTimeout: expectContinueTimeout,
+	}
+}
+
 // NewClient returns the one client the rest of gdoc may use. A nil base means
-// real HTTPS.
+// real HTTPS, through the guard's own transport.
 func NewClient(p *Policy, base http.RoundTripper) *http.Client {
 	if base == nil {
-		base = http.DefaultTransport
+		base = baseTransport()
 	}
 	return &http.Client{
 		Transport: &transport{policy: p, base: base},

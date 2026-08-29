@@ -152,14 +152,17 @@ func TestSameOriginRedirectToAKnownPathIsCarried(t *testing.T) {
 	}
 }
 
-func TestNilBaseUsesTheDefaultTransport(t *testing.T) {
+// A nil base still means real HTTPS. It is the guard's own transport rather
+// than http.DefaultTransport, and TestTheGuardDoesNotDialThroughAProxy says
+// why.
+func TestNilBaseUsesARealTransport(t *testing.T) {
 	c := NewClient(NewPolicy(), nil)
 	tr, ok := c.Transport.(*transport)
 	if !ok {
 		t.Fatalf("client transport is not the guard: %T", c.Transport)
 	}
-	if tr.base != http.DefaultTransport {
-		t.Fatal("a nil base must fall back to the real HTTPS transport")
+	if _, ok := tr.base.(*http.Transport); !ok {
+		t.Fatalf("a nil base must fall back to a real HTTPS transport, got %T", tr.base)
 	}
 }
 
@@ -313,5 +316,48 @@ func TestTheRedirectChainIsCapped(t *testing.T) {
 func TestTheClientHasATimeout(t *testing.T) {
 	if c := NewClient(NewPolicy(), nil); c.Timeout == 0 {
 		t.Fatal("a hung endpoint must not hang the CLI forever")
+	}
+}
+
+// TestAMediaUploadIsRefusedBeforeTheWire is the transport half of the upload
+// rule. The refusal has to land before the request goes out, because the id
+// the guard would learn afterwards comes back at full level.
+func TestAMediaUploadIsRefusedBeforeTheWire(t *testing.T) {
+	f := &fake{status: 200, body: `{"id":"UPLOADED"}`}
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	c := NewClient(p, f)
+	_, err := c.Post("https://www.googleapis.com/upload/drive/v3/files?uploadType=media",
+		"application/json", bytes.NewReader([]byte(`{"parents":["FOLDER1"]}`)))
+	if err == nil || !strings.Contains(err.Error(), "guard refused") {
+		t.Fatalf("want a guard refusal, got %v", err)
+	}
+	if len(f.seen) != 0 {
+		t.Fatal("it reached the wire")
+	}
+	if _, known := p.files["UPLOADED"]; known {
+		t.Fatal("an id was learned at full level from a create the guard could not check")
+	}
+}
+
+// TestTheGuardDoesNotDialThroughAProxy: http.DefaultTransport reads HTTPS_PROXY,
+// so a nil base would send an unjudged CONNECT to whatever host the environment
+// names, before the judged request and carrying the same credential. The guard
+// brings its own base for that reason.
+func TestTheGuardDoesNotDialThroughAProxy(t *testing.T) {
+	c := NewClient(NewPolicy(), nil)
+	tr, ok := c.Transport.(*transport)
+	if !ok {
+		t.Fatalf("the client's transport is %T, not the guard's", c.Transport)
+	}
+	if tr.base == http.DefaultTransport {
+		t.Fatal("the base is http.DefaultTransport, which honours HTTPS_PROXY")
+	}
+	base, ok := tr.base.(*http.Transport)
+	if !ok {
+		t.Fatalf("the guard's base is %T, so its proxy setting cannot be read", tr.base)
+	}
+	if base.Proxy != nil {
+		t.Fatal("the base carries a proxy function, so an unjudged CONNECT can go out first")
 	}
 }
