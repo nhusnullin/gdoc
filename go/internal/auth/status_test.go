@@ -93,7 +93,8 @@ func TestStatusNamesAnUnreadableToken(t *testing.T) {
 func TestStatusNamesTheScopesTheTokenDoesNotCarry(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	if err := Save(Token{AccessToken: "A", RefreshToken: "R", TokenURI: TokenURI,
-		Scopes: []string{"https://www.googleapis.com/auth/drive"},
+		ClientID: "CID", ClientSecret: "CS",
+		Scopes: []string{"https://www.googleapis.com/auth/documents.readonly"},
 		Expiry: time.Now().UTC().Add(time.Hour),
 	}); err != nil {
 		t.Fatal(err)
@@ -103,8 +104,38 @@ func TestStatusNamesTheScopesTheTokenDoesNotCarry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(out.MissingScopes, []string{"https://www.googleapis.com/auth/documents"}) {
-		t.Fatalf("missing_scopes: %v", out.MissingScopes)
+	want := []string{
+		"https://www.googleapis.com/auth/drive",
+		"https://www.googleapis.com/auth/documents",
+	}
+	if !reflect.DeepEqual(out.MissingScopes, want) {
+		t.Fatalf("missing_scopes: %v, want %v", out.MissingScopes, want)
+	}
+}
+
+// The Docs API accepts the full Drive scope on documents.get and
+// documents.batchUpdate. A v1 token carries drive plus documents.readonly, so
+// it can do everything v2 asks for, and a warning on the repository owner's own
+// machine would be a false one.
+func TestStatusIsQuietForAV1Token(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	if err := Save(Token{AccessToken: "A", RefreshToken: "R", TokenURI: TokenURI,
+		ClientID: "CID", ClientSecret: "CS",
+		Scopes: []string{
+			"https://www.googleapis.com/auth/drive",
+			"https://www.googleapis.com/auth/documents.readonly",
+		},
+		Expiry: time.Now().UTC().Add(time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := Status()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.MissingScopes) > 0 {
+		t.Fatalf("a v1 token is missing nothing v2 needs: %v", out.MissingScopes)
 	}
 }
 
@@ -113,6 +144,7 @@ func TestStatusNamesTheScopesTheTokenDoesNotCarry(t *testing.T) {
 func TestStatusIsQuietWhenEveryScopeIsThere(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	if err := Save(Token{AccessToken: "A", RefreshToken: "R", TokenURI: TokenURI,
+		ClientID: "CID", ClientSecret: "CS",
 		Scopes: loginScopes, Expiry: time.Now().UTC().Add(time.Hour)}); err != nil {
 		t.Fatal(err)
 	}

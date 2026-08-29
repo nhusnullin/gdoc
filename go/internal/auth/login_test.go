@@ -8,12 +8,45 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"gdoc/internal/guard"
 )
+
+// MissingScopes has to know that one scope can stand for another. The Docs API
+// accepts the full Drive scope, so a token holding drive is not missing the
+// documents scope, and a warning that fires on a working token teaches people
+// to ignore the warning.
+func TestMissingScopesReadsDriveAsCoveringDocs(t *testing.T) {
+	const (
+		drive        = "https://www.googleapis.com/auth/drive"
+		docs         = "https://www.googleapis.com/auth/documents"
+		docsReadonly = "https://www.googleapis.com/auth/documents.readonly"
+		driveFile    = "https://www.googleapis.com/auth/drive.file"
+	)
+	cases := []struct {
+		name string
+		have []string
+		want []string
+	}{
+		{"a v2 login", []string{drive, docs}, nil},
+		{"a v1 login", []string{drive, docsReadonly}, nil},
+		{"drive on its own", []string{drive}, nil},
+		{"docs on its own", []string{docs}, []string{drive}},
+		{"nothing at all", nil, []string{drive, docs}},
+		{"drive.file is not drive", []string{driveFile, docs}, []string{drive}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := MissingScopes(c.have); !reflect.DeepEqual(got, c.want) {
+				t.Errorf("MissingScopes(%v) = %v, want %v", c.have, got, c.want)
+			}
+		})
+	}
+}
 
 func TestAuthURLCarriesPKCE(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
@@ -176,7 +209,7 @@ func TestLoginReportsARefusedSignIn(t *testing.T) {
 func TestARefreshlessExchangeDoesNotOverwriteAGoodToken(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	good := Token{AccessToken: "OLD", RefreshToken: "KEEPME", TokenURI: TokenURI,
-		Expiry: time.Now().UTC().Add(time.Hour)}
+		ClientID: "CID", ClientSecret: "CS", Expiry: time.Now().UTC().Add(time.Hour)}
 	if err := Save(good); err != nil {
 		t.Fatal(err)
 	}

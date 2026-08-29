@@ -57,9 +57,11 @@ var ErrNoToken = errors.New("no OAuth token")
 
 // Token is v1's oauth-token.json, the google-auth "authorized user" shape. The
 // field names are the file's, so a person logged in through v1 is logged in
-// here with no migration. UniverseDomain and Account are carried but never
-// used: google-auth writes them, and a v2 save that dropped them would quietly
-// rewrite a file both tools share.
+// here with no migration. UniverseDomain, Account and RaptToken are carried but
+// never used: google-auth's Credentials.to_json writes all three when they are
+// set, and a v2 save that dropped one would quietly rewrite a file both tools
+// share. RaptToken is the reauth proof token, and losing it makes v1 ask for
+// reauthentication again.
 type Token struct {
 	AccessToken    string    `json:"token"`
 	RefreshToken   string    `json:"refresh_token"`
@@ -67,6 +69,7 @@ type Token struct {
 	ClientID       string    `json:"client_id"`
 	ClientSecret   string    `json:"client_secret"`
 	Scopes         []string  `json:"scopes"`
+	RaptToken      string    `json:"rapt_token,omitempty"`
 	UniverseDomain string    `json:"universe_domain,omitempty"`
 	Account        string    `json:"account,omitempty"`
 	Expiry         time.Time `json:"expiry"`
@@ -95,7 +98,39 @@ func Load() (Token, error) {
 	if err := json.Unmarshal(b, &t); err != nil {
 		return Token{}, fmt.Errorf("the token at %s cannot be parsed: %w", path, err)
 	}
+	if missing := t.missingFields(); len(missing) > 0 {
+		return Token{}, fmt.Errorf("the token at %s is missing %s, so it cannot be refreshed. Run: gdoc auth login",
+			path, strings.Join(missing, ", "))
+	}
+	// google-auth overrides token_uri with its own constant whichever value the
+	// file carries, so a file without one is still a working login. Filling it
+	// in here is what stops a refresh posting to an empty URL.
+	if t.TokenURI == "" {
+		t.TokenURI = TokenURI
+	}
 	return t, nil
+}
+
+// missingFields names the fields an authorized-user token must carry. The set
+// is google-auth's: from_authorized_user_info refuses a file without
+// refresh_token, client_id or client_secret, and v1 reads this same file
+// through it. A file that parses but has none of them is not "signed in": it is
+// a file that fails on the first refresh, after auth status has already
+// reported a token present.
+func (t Token) missingFields() []string {
+	var missing []string
+	for _, f := range []struct {
+		name, value string
+	}{
+		{"refresh_token", t.RefreshToken},
+		{"client_id", t.ClientID},
+		{"client_secret", t.ClientSecret},
+	} {
+		if f.value == "" {
+			missing = append(missing, f.name)
+		}
+	}
+	return missing
 }
 
 // tokenResponse is what both exchanges get back from the token endpoint.

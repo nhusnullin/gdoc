@@ -117,6 +117,17 @@ func grantedScopes(scope string) []string {
 	return loginScopes
 }
 
+// coveredBy names the scopes that stand in for another one. The Docs API
+// accepts the full Drive scope on documents.get and documents.batchUpdate, so a
+// token holding drive can do everything the documents scope allows. Without
+// this, every v1 token reports a scope missing that it does not need, which is
+// a warning on the working case, and a warning on the working case is one
+// people learn to ignore. drive.file is deliberately not here: it reaches only
+// files the app itself created.
+var coveredBy = map[string][]string{
+	"https://www.googleapis.com/auth/documents": {"https://www.googleapis.com/auth/drive"},
+}
+
 // MissingScopes names the scopes v2 asks for that a token does not carry. A
 // partial grant is reported, never refused: the login worked, and the person
 // has to be able to see why the Docs calls will fail.
@@ -127,11 +138,23 @@ func MissingScopes(have []string) []string {
 	}
 	var missing []string
 	for _, want := range loginScopes {
-		if !got[want] {
+		if !satisfied(got, want) {
 			missing = append(missing, want)
 		}
 	}
 	return missing
+}
+
+func satisfied(got map[string]bool, want string) bool {
+	if got[want] {
+		return true
+	}
+	for _, wider := range coveredBy[want] {
+		if got[wider] {
+			return true
+		}
+	}
+	return false
 }
 
 // Login prints the authorization URL to w (stderr: stdout is reserved for the

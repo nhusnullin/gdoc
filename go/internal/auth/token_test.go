@@ -42,13 +42,19 @@ func TestLoadWithNoTokenNamesTheFileAndTheFix(t *testing.T) {
 }
 
 func TestLoadRefusesAnUnreadableToken(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("GDOC_CONFIG_DIR", dir)
-	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte("{not json"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Load(); err == nil {
-		t.Fatal("a token that cannot be parsed must not resolve to an empty token")
+	// json.Unmarshal succeeds on any JSON value, so a file holding a string or
+	// a bare null gets past the parse and would leave an empty token behind.
+	for _, body := range []string{"{not json", `"signed out"`, `null`, `[]`} {
+		t.Run(body, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("GDOC_CONFIG_DIR", dir)
+			if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(); err == nil {
+				t.Fatal("a token that cannot be parsed must not resolve to an empty token")
+			}
+		})
 	}
 }
 
@@ -201,7 +207,8 @@ func TestSaveWritesAPrivateFile(t *testing.T) {
 func TestSaveKeepsFieldsV2DoesNotUse(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
-	written := `{"token":"A","refresh_token":"R","universe_domain":"googleapis.com","account":"nail@example.com"}`
+	written := `{"token":"A","refresh_token":"R","client_id":"CID","client_secret":"CS",` +
+		`"universe_domain":"googleapis.com","account":"nail@example.com","rapt_token":"RAPT"}`
 	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(written), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -218,6 +225,64 @@ func TestSaveKeepsFieldsV2DoesNotUse(t *testing.T) {
 	}
 	if again.UniverseDomain != "googleapis.com" || again.Account != "nail@example.com" {
 		t.Fatalf("a save dropped what google-auth wrote: %+v", again)
+	}
+	// rapt_token is the reauth proof token. google-auth writes it whenever the
+	// account has one, and a v1 refresh needs it back.
+	if again.RaptToken != "RAPT" {
+		t.Fatalf("a save dropped rapt_token: %+v", again)
+	}
+}
+
+// Load refuses a token file that parses but cannot be used. google-auth's
+// from_authorized_user_info requires refresh_token, client_id and
+// client_secret, so a file missing one of them is not a login: it is a file
+// that will fail on the first refresh, after auth status has already said a
+// token is present.
+func TestLoadRefusesATokenMissingTheFieldsARefreshNeeds(t *testing.T) {
+	cases := map[string]string{
+		"empty object":     `{}`,
+		"no refresh token": `{"client_id":"CID","client_secret":"CS"}`,
+		"no client id":     `{"refresh_token":"R","client_secret":"CS"}`,
+		"no client secret": `{"refresh_token":"R","client_id":"CID"}`,
+		"blank client id":  `{"refresh_token":"R","client_id":"","client_secret":"CS"}`,
+	}
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("GDOC_CONFIG_DIR", dir)
+			if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			_, err := Load()
+			if err == nil {
+				t.Fatal("a token that cannot be refreshed must not read as a token")
+			}
+			if errors.Is(err, ErrNoToken) {
+				t.Fatalf("a file that exists is not a missing token: %v", err)
+			}
+			if !strings.Contains(err.Error(), "gdoc auth login") {
+				t.Fatalf("the message must name the fix: %v", err)
+			}
+		})
+	}
+}
+
+// The token endpoint is google-auth's constant and it overrides whatever the
+// file says, so a file with no token_uri is usable. v2 fills the same value in
+// rather than posting a refresh to an empty URL.
+func TestLoadFillsInTheTokenEndpointWhenTheFileOmitsIt(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	body := `{"token":"A","refresh_token":"R","client_id":"CID","client_secret":"CS"}`
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tok, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tok.TokenURI != TokenURI {
+		t.Fatalf("token uri is %q, want %q", tok.TokenURI, TokenURI)
 	}
 }
 

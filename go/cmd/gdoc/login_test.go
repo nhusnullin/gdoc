@@ -27,7 +27,8 @@ func TestLoginPrintsTheURLToStderrNotStdout(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"),
-		[]byte(`{"token":"A","refresh_token":"R","scopes":["x"],"expiry":"2020-01-01T00:00:00Z"}`), 0o600); err != nil {
+		[]byte(`{"token":"A","refresh_token":"R","client_id":"CID","client_secret":"CS",`+
+			`"scopes":["x"],"expiry":"2020-01-01T00:00:00Z"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	stubLogin(t, func(w io.Writer) error {
