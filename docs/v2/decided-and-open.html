@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decided and Open</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Roboto+Mono:wght@400;500&family=Spectral:ital,wght@0,500;0,600;1,400&display=swap">
+
+<style>
+  :root {
+    --ground:   #F4F5F2;
+    --panel:    #FFFFFF;
+    --sunk:     #EAECE6;
+    --ink:      #1A1D1B;
+    --ink-soft: #414741;
+    --muted:    #6A7169;
+    --rule:     #D9DCD4;
+    --rule-hard:#BEC3B8;
+    --accent:   #1E4D3F;
+    --settled:     #2E6B4F;
+    --settled-bg:  #E3EFE7;
+    --open:        #8A5A1B;
+    --open-bg:     #F6EEDF;
+    --blocked:     #8C3B32;
+    --blocked-bg:  #F6E5E2;
+    --shadow: 0 1px 2px rgba(26,29,27,.05), 0 10px 26px -14px rgba(26,29,27,.20);
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #101210;
+      --panel:    #181B18;
+      --sunk:     #1F2320;
+      --ink:      #E9EBE6;
+      --ink-soft: #C2C7BF;
+      --muted:    #8C948A;
+      --rule:     #272C27;
+      --rule-hard:#3A413A;
+      --accent:   #7FC2A8;
+      --settled:     #6BC194;
+      --settled-bg:  #122B20;
+      --open:        #D9A055;
+      --open-bg:     #2C2011;
+      --blocked:     #E08076;
+      --blocked-bg:  #2E1613;
+      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 10px 26px -14px rgba(0,0,0,.85);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #101210;
+    --panel:    #181B18;
+    --sunk:     #1F2320;
+    --ink:      #E9EBE6;
+    --ink-soft: #C2C7BF;
+    --muted:    #8C948A;
+    --rule:     #272C27;
+    --rule-hard:#3A413A;
+    --accent:   #7FC2A8;
+    --settled:     #6BC194;
+    --settled-bg:  #122B20;
+    --open:        #D9A055;
+    --open-bg:     #2C2011;
+    --blocked:     #E08076;
+    --blocked-bg:  #2E1613;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 10px 26px -14px rgba(0,0,0,.85);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(1.5rem,4vw,4rem) clamp(1rem,5vw,2rem) 7rem;
+  }
+
+  .wrap { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: clamp(2.75rem,5vw,4.5rem); }
+  .col { max-width: var(--measure); display: flex; flex-direction: column; gap: 1rem; }
+  section { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .eyebrow {
+    font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); display: flex; flex-wrap: wrap; gap: .5rem 1.4rem;
+  }
+
+  h1 {
+    font-family: Spectral, ui-serif, Georgia, serif;
+    font-weight: 600; font-size: clamp(2.1rem,6vw,3.2rem);
+    line-height: 1.06; letter-spacing: -.02em; margin: 0;
+    text-wrap: balance; max-width: 16ch; color: var(--accent);
+  }
+  .standfirst {
+    font-family: Spectral, ui-serif, Georgia, serif;
+    font-size: clamp(1.15rem,3vw,1.45rem); line-height: 1.45;
+    color: var(--ink-soft); max-width: 50ch; margin: 0; text-wrap: pretty;
+  }
+
+  h2 {
+    font-family: Spectral, ui-serif, Georgia, serif;
+    font-size: clamp(1.45rem,4vw,1.95rem); font-weight: 600;
+    line-height: 1.18; letter-spacing: -.012em; margin: 0;
+    padding-bottom: .65rem; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap;
+  }
+  h2 .count {
+    font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 400;
+  }
+
+  p { margin: 0; text-wrap: pretty; }
+  .lede { font-size: 1.08rem; color: var(--ink-soft); }
+  strong { font-weight: 600; color: var(--ink); }
+
+  code {
+    font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .85em; background: var(--sunk);
+    border: 1px solid var(--rule); border-radius: 3px;
+    padding: .05em .34em; white-space: nowrap;
+  }
+
+  ol.ledger { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
+  ol.ledger > li {
+    background: var(--panel); border: 1px solid var(--rule);
+    box-shadow: var(--shadow);
+    display: grid; grid-template-columns: 3rem 1fr; align-items: start;
+  }
+  ol.ledger > li > .n {
+    font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .78rem; font-variant-numeric: tabular-nums;
+    color: var(--muted); padding: .95rem .4rem .95rem .9rem;
+    border-right: 1px solid var(--rule); align-self: stretch;
+  }
+  ol.ledger > li > .c { padding: .9rem 1.1rem; display: flex; flex-direction: column; gap: .4rem; }
+  ol.ledger .t { font-weight: 600; line-height: 1.4; }
+  ol.ledger .d { font-size: .93rem; color: var(--ink-soft); }
+  ol.ledger .why {
+    font-size: .88rem; color: var(--muted);
+    border-left: 2px solid var(--rule-hard); padding-left: .7rem;
+  }
+
+  li.is-open   { border-left: 3px solid var(--open); }
+  li.is-block  { border-left: 3px solid var(--blocked); }
+  li.is-settled{ border-left: 3px solid var(--settled); }
+
+  .chip {
+    display: inline-block; font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .64rem; letter-spacing: .1em; text-transform: uppercase;
+    padding: .16em .5em; border-radius: 2px; white-space: nowrap; font-weight: 500;
+  }
+  .chip.s { background: var(--settled-bg); color: var(--settled); }
+  .chip.o { background: var(--open-bg); color: var(--open); }
+  .chip.b { background: var(--blocked-bg); color: var(--blocked); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule-hard); background: var(--panel); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; font-size: .89rem; min-width: 30rem; }
+  thead th {
+    text-align: left; font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .67rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; padding: .72rem .9rem;
+    background: var(--sunk); border-bottom: 1px solid var(--rule-hard); white-space: nowrap;
+  }
+  tbody td { padding: .7rem .9rem; border-bottom: 1px solid var(--rule); vertical-align: top; color: var(--ink-soft); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.k { color: var(--ink); font-weight: 500; }
+
+  .ask {
+    border: 1px solid var(--open); background: var(--open-bg);
+    padding: 1.15rem 1.3rem; display: flex; flex-direction: column; gap: .5rem;
+    max-width: var(--measure);
+  }
+  .ask .kick {
+    font-family: "Roboto Mono", ui-monospace, monospace;
+    font-size: .67rem; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--open); font-weight: 500;
+  }
+  .ask p { color: var(--ink); }
+
+  a { color: var(--ink); text-decoration-color: var(--rule-hard); text-underline-offset: .18em; }
+  a:hover { text-decoration-color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 1.3rem; font-size: .84rem; color: var(--muted); max-width: var(--measure); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="col" style="max-width:none">
+    <div class="eyebrow"><span>gdoc v2</span><span>29 August 2026</span><span>what we decided, in plain words</span></div>
+    <h1>Decided and Open</h1>
+    <p class="standfirst">One evening, twenty live experiments, and a Developer Preview that arrived the same day you applied for it and rewrote a third of this.</p>
+  </header>
+
+  <section>
+    <h2>What gdoc v2 is</h2>
+    <div class="col">
+      <p class="lede">One file you copy onto a machine. No Python, no packages, nothing to install. An agent <em>calls</em> it instead of reading its source and rewriting it to get a job done, which is what happens today.</p>
+      <p>It publishes documents from your notes, puts other people's documents into the house style without destroying the review already in them, and proposes changes as real suggestions you accept or reject with your own hand. Everything it remembers lives in your own markdown, where you can see it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>How a document lives</h2>
+    <div class="col">
+      <p class="lede">Three things working together, and it matters which does what.</p>
+      <p><strong>The binary</strong> deals in facts. What is in the document, what is in your notes, where they differ. It never decides what any of it means. <strong>The skill</strong> is the judgement: what a comment is asking for, whether two versions have genuinely diverged, what to propose. <strong>A comment in the document</strong> is simply another door into that same agent, alongside your terminal.</p>
+      <p>So the same work can be reached two ways, and behaves identically either way.</p>
+    </div>
+    <ol class="ledger">
+      <li class="is-settled"><span class="n">1</span><div class="c">
+        <span class="t">You write markdown in the hub</span></div></li>
+      <li class="is-settled"><span class="n">2</span><div class="c">
+        <span class="t"><code>publish</code> makes a Google Doc</span>
+        <span class="d">It builds a file and uploads it. That route gives the cover, the running head, the logo on page one, a live contents list and page numbers, all at once.</span></div></li>
+      <li class="is-settled"><span class="n">3</span><div class="c">
+        <span class="t">People read it and comment</span>
+        <span class="d">You mark the ones for the agent with <code>ai:</code>, <code>ai?</code> or <code>ai!</code>.</span></div></li>
+      <li class="is-settled"><span class="n">4</span><div class="c">
+        <span class="t">A comment is a prompt, and the agent answers it with your hub open</span>
+        <span class="d">Writing <code>ai!</code> in the document does exactly what typing the same instruction to Claude in your terminal does. Same agent, same judgement, and <strong>the same context</strong>: it reads the markdown the document came from and the folder around it, the notes, the decision log, the raw material.</span>
+        <span class="why">This is the point. A question is answered from what you actually know, not from the words on the page. An instruction is carried out against your material, not against the document in isolation. And if it needs your notes changed, they change in that moment, exactly as they would in a terminal session. Nothing is queued for later.</span></div></li>
+      <li class="is-settled"><span class="n">5</span><div class="c">
+        <span class="t">gdoc proposes with native suggestions. You decide.</span>
+        <span class="d">Changes arrive as <strong>real Google suggestions</strong>, with the accept and reject chips your colleagues already know, and a <strong>real comment attached to the exact words</strong> explaining why. gdoc never accepts and never rejects. That is your hand.</span>
+        <span class="why">Possible because of the Google Developer Preview, granted the same day it was asked for.</span></div></li>
+      <li class="is-settled"><span class="n">6</span><div class="c">
+        <span class="t">Steps 3 to 5 repeat, for as long as the document is alive</span>
+        <span class="d">Same document, same link, same comment history. Colleagues never get a new URL.</span></div></li>
+      <li class="is-settled"><span class="n">7</span><div class="c">
+        <span class="t">Alignment is a question you ask, and it runs both ways</span>
+        <span class="d">Has the <strong>document</strong> drifted from what your notes now say, because somebody edited it in the browser? Or have your <strong>notes</strong> moved ahead of the document, because a decision landed in that folder and the document has not caught up? Both are drift, and the second is the one that quietly makes a document wrong.</span>
+        <span class="why">It is not a command. The binary can report what each side holds and where they differ. Whether that difference <em>matters</em> is judgement, so it lives in the skill. And it never deletes from your notes: something that exists only there is work not yet published, not drift.</span></div></li>
+      <li class="is-settled"><span class="n">8</span><div class="c">
+        <span class="t">A PDF is File, Download, PDF</span>
+        <span class="d">In the browser, by you. gdoc has no part in it.</span></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>The decisions <span class="count">grouped, not numbered to death</span></h2>
+
+    <ol class="ledger">
+      <li class="is-settled"><span class="n">A</span><div class="c">
+        <span class="t">The tool is a binary, and it never prompts</span>
+        <span class="d">Go, one static file, two dependencies. OAuth only, one scope. It emits structured output and exits; Claude does the talking.</span>
+        <span class="why">And it judges <em>whether</em> to ask you. Routine and reversible, it acts. Outward-facing or hard to undo, it stops. A tool that asks permission for everything teaches you to say yes without reading.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">B</span><div class="c">
+        <span class="t">Your notes are the source and the memory. Nothing is hidden.</span>
+        <span class="d">No hidden folder. What gdoc knows lives in the front matter of the file it describes.</span>
+        <span class="why">v1 hid its state and it forked: one document had two queues in two folders holding different open items, and a colleague's question sat unanswered in one of them.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">C</span><div class="c">
+        <span class="t">gdoc never replaces the body of a document that exists</span>
+        <span class="d">It edits in place, always.</span>
+        <span class="why">Replacing it destroys every comment anchor, including on paragraphs never touched, flattens smart chips so a date chip keeps the words and loses the date, and the API reports all of it as fine. Your colleagues' comments would simply vanish from the screen.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">D</span><div class="c">
+        <span class="t">The house style is a text file you can read</span>
+        <span class="d"><code>house.yaml</code>. Colours, fonts, headings, tables, the cover, the logo. A generator builds documents from it.</span>
+        <span class="why">Because you improve the style by asking an agent to look at it and advise you, not by editing Word. So it has to be something an agent can read and something you can review as a diff. v1's template was a Word file, the improvements could not go in it, so they went into code, and the code quietly became the real template.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">E</span><div class="c">
+        <span class="t">Restyling has two modes, and the careful one is the default</span>
+        <span class="d"><strong>In place</strong> keeps every comment, anchor, chip and suggestion, and cannot give the document a first page, a contents list or page numbers. <strong>As a new document</strong> gives a perfect house style and starts with an empty margin.</span>
+        <span class="why">Copying a document in Drive loses the review no matter how it is done, so any new document begins with nothing. When gdoc sees there is nothing to protect, it says so and offers the better route rather than taking it.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">F</span><div class="c">
+        <span class="t">Only a marked comment makes gdoc act</span>
+        <span class="d">A thread stays open once you have used it, so the agent keeps the conversation in mind. But it acts only on a comment carrying an <code>ai</code> marker. Anything else is shown to you and never executed.</span>
+        <span class="why">Nothing is silently ignored, which was v1's failure. And nobody gains the power to drive the agent by replying in a thread you opened.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">G</span><div class="c">
+        <span class="t">Everything gdoc writes opens with 🤖</span>
+        <span class="d">Every comment it leaves starts with the robot. Nothing else, no name, no prefix.</span>
+        <span class="why">Google will not let a tool set an author, so every comment and suggestion gdoc makes is signed with <strong>your</strong> name and your photo. The marker has one job: to say <em>this was not written by a person</em>. A robot says exactly that, at a glance, in a sidebar with twenty threads in it.</span></div></li>
+      <li class="is-settled"><span class="n">H</span><div class="c">
+        <span class="t">Where it cannot act, it gives you the task</span>
+        <span class="d">A short checklist page in the document, with the exact clicks, listing only what is genuinely missing. You delete it when you are done.</span>
+        <span class="why">A document quietly missing its logo is the tool deciding on your behalf that it did not matter.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">I</span><div class="c">
+        <span class="t">Never trust a success</span>
+        <span class="d">When something matters, gdoc checks by a different route that it really happened.</span>
+        <span class="why">In one day, four Google calls returned "OK" while doing something else. One was asked to <em>propose</em> a sentence and rewrote the document instead, silently. Comments reported as healthy had vanished from the screen. Two settings were accepted and never saved.</span>
+      </div></li>
+
+      <li class="is-settled"><span class="n">J</span><div class="c">
+        <span class="t">Copy before you test. Originals are read-only.</span>
+        <span class="d">Your rule, and the same one gdoc follows: it never edits a document it was pointed at, only what it made.</span>
+      </div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>What it cannot do <span class="count">only when restyling in place</span></h2>
+    <div class="col">
+      <p class="lede"><strong>Every limitation below applies to one situation only:</strong> gdoc styling a document that <em>already exists</em>, which is what happens when a colleague sends you something and you want it in the house style without destroying the review already on it.</p>
+      <p><strong>A document gdoc creates has none of these problems.</strong> Publishing builds a file and uploads it, and that route produces the logo, the contents list, the page numbers, custom style names and everything else, exactly.</p>
+      <p>So this is the price of not throwing away somebody's comments, and it is paid once, on their document, as a short list of things to click.</p>
+      <ul class="plain">
+        <li><strong>The logo on page one.</strong> Nothing in the API creates a first-page header, and nothing places a floating image.</li>
+        <li><strong>The contents list.</strong> No request creates one, in any spelling. You insert it and refresh it.</li>
+        <li><strong>Footer page numbers.</strong> Same.</li>
+        <li><strong>Style names of your own.</strong> Google's nine can be redefined; a tenth cannot be added.</li>
+        <li><strong>Dot leaders</strong> in a contents line, and <strong>table styling</strong> has to be applied cell by cell, because Google has no idea of a table style.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <p class="lede">And one that is not about restyling at all.</p>
+      <p><strong>Copying a document through the API always loses its comments and suggestions.</strong> Drive's own "Make a copy" dialogue has a checkbox for it; the API has no equivalent, and five plausible parameter names were accepted and silently ignored. So any route that produces a new document begins with an empty margin, however it was built.</p>
+    </div>
+  </section>
+
+
+  <footer>
+    Twenty live experiments against Google Drive, two adversarial reviews, a Go feasibility study that built every capability rather than surveying it, and a Developer Preview granted the same day it was requested. The full record, with every measurement and every refusal quoted, is in <code>docs/v2/</code>.
+  </footer>
+
+</div>
+
+</body>
+</html>
