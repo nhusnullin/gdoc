@@ -203,6 +203,17 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 // and /revisions is a second way to read a document's history.
 var driveReads = map[string]bool{"": true, "export": true, "comments": true}
 
+// filesCollection reports whether a Drive path names the files collection
+// itself rather than a file under it. It is one grammar with two readers, and
+// they must agree: judgeDrive reads it to decide a POST is a create, and
+// isCreate reads it to decide the parent check runs. A path only one of them
+// called a create would reach Drive with a parent nobody checked, which is one
+// of principle 3's two doors left open.
+func filesCollection(path string) bool {
+	p := strings.TrimPrefix(path, "/upload")
+	return p == "/drive/v3/files" || p == "/drive/v3/files/"
+}
+
 func (p *Policy) judgeDrive(method string, u *url.URL) error {
 	path := strings.TrimPrefix(u.Path, "/upload")
 	rest, ok := strings.CutPrefix(path, "/drive/v3/files")
@@ -215,7 +226,7 @@ func (p *Policy) judgeDrive(method string, u *url.URL) error {
 	if rest != "" && !strings.HasPrefix(rest, "/") {
 		return refuse("drive path %q", u.Path)
 	}
-	if rest == "" || rest == "/" { // the collection itself
+	if filesCollection(u.Path) { // the collection itself
 		if method == "POST" && p.createFolder() != "" {
 			return nil // create, into the one named folder; transport verifies parent
 		}

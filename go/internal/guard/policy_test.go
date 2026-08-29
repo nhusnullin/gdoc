@@ -184,3 +184,46 @@ func TestDeleteOnAFileItselfIsRefused(t *testing.T) {
 		t.Fatal("a hard delete must be refused even on a created file")
 	}
 }
+
+// TestTheFilesCollectionIsOneGrammar holds the invariant filesCollection exists
+// for. judgeDrive reads that path grammar to decide a POST is a create, and
+// isCreate reads it to decide the parent check runs. Two copies could drift,
+// and the direction that matters is a create Judge carries and the parent check
+// never sees: it would reach Drive with a parent nobody checked.
+func TestTheFilesCollectionIsOneGrammar(t *testing.T) {
+	cases := []struct {
+		path       string
+		collection bool
+	}{
+		{"/drive/v3/files", true},
+		{"/drive/v3/files/", true},
+		{"/upload/drive/v3/files", true},
+		{"/upload/drive/v3/files/", true},
+		{"/drive/v3/files//", false},
+		{"/drive/v3/filesX", false},
+		{"/drive/v3/files-backup", false},
+		{"/drive/v3/files/DOC1", false},
+		{"/drive/v3/files/DOC1/comments", false},
+		{"/upload/drive/v3/files/DOC1", false},
+		{"/uploads/drive/v3/files", false},
+		{"/drive/v3/about", false},
+	}
+	// Nothing is in the file set, so the only POST this policy carries is a
+	// create on the collection.
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	for _, c := range cases {
+		t.Run(c.path, func(t *testing.T) {
+			if got := filesCollection(c.path); got != c.collection {
+				t.Fatalf("filesCollection(%q) = %v, want %v", c.path, got, c.collection)
+			}
+			u := &url.URL{Scheme: "https", Host: "www.googleapis.com", Path: c.path}
+			if got := isCreate(u, "POST"); got != c.collection {
+				t.Errorf("isCreate reads %q as %v, so the parent check disagrees with the helper", c.path, got)
+			}
+			if got := p.Judge("POST", u, nil) == nil; got != c.collection {
+				t.Errorf("Judge carries POST %q = %v, so the policy disagrees with the helper", c.path, got)
+			}
+		})
+	}
+}

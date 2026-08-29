@@ -196,13 +196,11 @@ func peekBody(req *http.Request) ([]byte, *http.Request, error) {
 	return head, send, nil
 }
 
+// isCreate reports whether this request is the create the parent check must
+// run on. The path grammar is filesCollection's, so the policy and the parent
+// check cannot read the same path two ways.
 func isCreate(u *url.URL, method string) bool {
-	if method != "POST" || u.Host != "www.googleapis.com" {
-		return false
-	}
-	p := strings.TrimPrefix(u.Path, "/upload")
-	p = strings.TrimSuffix(p, "/")
-	return p == "/drive/v3/files"
+	return method == "POST" && u.Host == "www.googleapis.com" && filesCollection(u.Path)
 }
 
 // checkParent refuses a create that does not name exactly the folder this
