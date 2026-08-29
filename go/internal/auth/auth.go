@@ -98,9 +98,15 @@ func Load() (Token, error) {
 }
 
 // tokenResponse is what both exchanges get back from the token endpoint.
+//
+// Scope is what the authorization server GRANTED, which is not always what was
+// asked for: Google's granular consent screen lets a person tick a subset. RFC
+// 6749 section 5.1 makes the field optional only when the grant matches the
+// request, so an absent scope means the whole requested set was granted.
 type tokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
+	Scope        string `json:"scope"`
 	ExpiresIn    int    `json:"expires_in"`
 }
 
@@ -247,5 +253,12 @@ func Status() (map[string]any, error) {
 	out["token_present"] = true
 	out["expired"] = tok.Expired()
 	out["scopes"] = tok.Scopes
+	// A token can carry less than v2 asks for: a granular consent screen where
+	// somebody ticked a subset, or a v1 login, which asks for documents.readonly
+	// rather than the read/write Docs scope. Either way the Docs calls will 403,
+	// and this is the one place that can say why before they do.
+	if missing := MissingScopes(tok.Scopes); len(missing) > 0 {
+		out["missing_scopes"] = missing
+	}
 	return out, nil
 }

@@ -82,15 +82,56 @@ func exchangeCode(c *http.Client, code, verifier, redirect string) (Token, error
 	if err != nil {
 		return Token{}, err
 	}
+	// A code exchange with no refresh token is not a login. The access token
+	// would work for about an hour, then every refresh would post an empty
+	// refresh_token and fail for good, with no way back except a fresh login,
+	// and Save would already have written over the token that did work. The
+	// request carries access_type=offline with prompt=consent, so a missing
+	// refresh token is an anomaly rather than a normal reply.
+	if r.RefreshToken == "" {
+		return Token{}, fmt.Errorf("code exchange returned 200 with no refresh token, " +
+			"so the sign-in would stop working within the hour. Nothing was saved. Try signing in again")
+	}
 	return Token{
 		AccessToken:  r.AccessToken,
 		RefreshToken: r.RefreshToken,
 		TokenURI:     TokenURI,
 		ClientID:     BundledClientID,
 		ClientSecret: BundledClientSecret,
-		Scopes:       loginScopes,
+		Scopes:       grantedScopes(r.Scope),
 		Expiry:       time.Now().UTC().Add(time.Duration(r.ExpiresIn) * time.Second),
 	}, nil
+}
+
+// grantedScopes is what the token actually carries, which is what belongs in
+// the file. Recording the requested list instead would let auth status report
+// scopes the token does not have, and a later 403 would have nothing in the
+// file to explain it.
+//
+// Silence means the grant matched the request: RFC 6749 section 5.1 makes the
+// scope field optional only in that case.
+func grantedScopes(scope string) []string {
+	if granted := strings.Fields(scope); len(granted) > 0 {
+		return granted
+	}
+	return loginScopes
+}
+
+// MissingScopes names the scopes v2 asks for that a token does not carry. A
+// partial grant is reported, never refused: the login worked, and the person
+// has to be able to see why the Docs calls will fail.
+func MissingScopes(have []string) []string {
+	got := make(map[string]bool, len(have))
+	for _, s := range have {
+		got[s] = true
+	}
+	var missing []string
+	for _, want := range loginScopes {
+		if !got[want] {
+			missing = append(missing, want)
+		}
+	}
+	return missing
 }
 
 // Login prints the authorization URL to w (stderr: stdout is reserved for the

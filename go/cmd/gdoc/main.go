@@ -82,6 +82,11 @@ func authStatus() emit.Result {
 		r.Warnings = append(r.Warnings,
 			"an oauth-client.json sits in the config dir, but v2 does not read it yet: the bundled client is in use")
 	}
+	if missing, ok := data["missing_scopes"].([]string); ok && len(missing) > 0 {
+		r.Warnings = append(r.Warnings,
+			fmt.Sprintf("the token does not carry every scope gdoc asks for, so those calls will be refused: %s. Run: gdoc auth login",
+				strings.Join(missing, ", ")))
+	}
 	return r
 }
 

@@ -126,6 +126,32 @@ func TestUnknownCommandFailsAndNamesItself(t *testing.T) {
 	}
 }
 
+// A token granted less than gdoc asked for still reports ok, and says which
+// scope is missing. A v1 token looks exactly like this: it carries drive plus
+// documents.readonly, so the Docs writes v2 makes will be refused.
+func TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	token := `{"token":"A","refresh_token":"R","token_uri":"https://oauth2.googleapis.com/token",` +
+		`"client_id":"CID","client_secret":"CS","scopes":["https://www.googleapis.com/auth/drive"],` +
+		`"expiry":"2020-01-01T00:00:00Z"}`
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(token), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "auth", "status")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a partial grant is a report, not a failure: %v (exit %d)", got, code)
+	}
+	warnings, _ := got["warnings"].([]any)
+	if len(warnings) != 1 {
+		t.Fatalf("want one warning about the missing scope: %v", got["warnings"])
+	}
+	if w, _ := warnings[0].(string); !strings.Contains(w, "auth/documents") {
+		t.Fatalf("the warning must name the scope: %q", w)
+	}
+}
+
 func TestNoArgumentsFails(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
