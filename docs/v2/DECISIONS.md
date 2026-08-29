@@ -954,3 +954,40 @@ One more line from the same review: the prompts behind the skills, alignment
 above all, are part of the product. They live in the repo and a change to one is
 reviewed like code, because a wrong alignment judgement writes a wrong suggestion
 into a document colleagues read.
+
+## 2026-08-29. Live review is a session, not a service.
+
+Nail's requirement, added after the spec was first written: once a review is
+launched, the conversation moves into the document and stays there. He writes
+`ai!` in a comment and the suggestion and the 🤖 reply arrive within seconds,
+for as long as the session runs. Review is live until he stops it.
+
+What does not change: nothing runs on its own. The live loop exists only while
+a session Nail launched is running. Closing the terminal ends it. The 2026-08-17
+standing watcher stays dead.
+
+**The mechanism is session-scoped polling.** The skill loops; every 5 to 15
+seconds the binary makes one cheap call, "any comment activity since this
+cursor", and exits. The binary stays one-shot and gains a `--since` cursor.
+Liveness is the skill's, which is where judgement already lives.
+
+Two alternatives were reviewed on Nail's ask, and both lose mechanically:
+
+- **Apps Script** cannot push to a machine with no public endpoint, so the poll
+  never goes away; it would only add a component in front of it. And its own
+  timers bottom out at one minute, six times slower than the poll it would
+  replace. Plus the costs already priced in BLOCKED-BY-API.md: a second
+  execution surface that sees less of the API than the binary does.
+- **A Chrome extension** can push for real, via native messaging, but only
+  while the document is open in a browser, only until Google moves the DOM, and
+  only by putting a signed-in Chrome inside the trust boundary of a tool whose
+  first principle is one file you copy. Driving the browser was already
+  rejected once, for the checklist, on the same grounds.
+
+**A colleague's `ai!` acts.** Nail's call, made knowing what it widens: during
+a live session, anyone who can comment on the document can drive the agent,
+without Nail between them. The marker stays the trigger and identity stays not
+a gate, consistent with everything above. The guard caps the blast radius: on a
+handed-in document the agent can only suggest and reply, so the worst a
+colleague's instruction can produce is a suggestion Nail rejects. A colleague
+who can already edit the whole document was always trusted with more than this.

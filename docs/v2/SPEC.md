@@ -44,7 +44,8 @@ reviewed like code.
 
 In: `publish`, `restyle` (two modes), reading comments and suggestions, replying,
 proposing as native suggestions, withdrawing gdoc's own pending proposal, the
-two-sided diff that `align` composes, the finishing checklist, OAuth.
+two-sided diff that `align` composes, the finishing checklist, live review
+sessions (session-scoped polling), OAuth.
 
 Out, permanently or until a decision says otherwise: PDF export and any `release`
 command, tab features of any kind, a daemon or watcher, accepting or rejecting
@@ -173,8 +174,9 @@ before a write happens. Nothing about the original is ever modified in survey.
 ### Reading comments
 
 Lists threads with real character ranges (`commentsViewMode`, which requires
-`includeTabsContent=true`). Reports the marker on each comment: `ai:`, `ai?`,
-`ai!`, or none. An unmarked comment, including an unmarked follow-up in a thread
+`includeTabsContent=true`). Takes a `--since` cursor and reports only activity
+after it, so a live session's poll is one cheap call. Reports the marker on
+each comment: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an unmarked follow-up in a thread
 gdoc has answered, is reported and never acted on. The marker is the trigger,
 always: stickiness carries context, never authority.
 
@@ -244,7 +246,11 @@ Two named workflows, both judgement, both skills rather than commands:
 - **The review session.** Reads the threads, answers `ai?` from the hub, carries
   out `ai!` against the hub, proposes document changes as suggestions. If it
   could not read half the review (suggestions unreadable, comments partial), it
-  says so and does not report clean.
+  says so and does not report clean. It can run **live**: polling on the
+  `--since` cursor until Nail stops it, acting on new marked comments as they
+  arrive. A colleague's `ai!` acts too, by decision: the marker is the trigger,
+  identity is not a gate, and the guard caps a handed-in document at suggest
+  and reply.
 - **The alignment check.** Composes the diff, judges what matters, proposes both
   ways: suggestions into the document, edits into the hub with agreement.
 
@@ -255,8 +261,14 @@ Skills stay symlinked from this repo, one copy, as in v1.
 The part that connects the document's margin to the hub folder, stated here
 because it is design, not wiring.
 
-- **There is no watcher.** Nothing polls Drive and nothing runs on its own. A
-  comment written today waits, visible in the document, until a session looks.
+- **There is no watcher.** Nothing runs on its own. A comment written today
+  waits, visible in the document, until a session looks.
+- **A session can stay live.** Once launched, a review session may keep the
+  document's comments in view: the skill loops, and every 5 to 15 seconds the
+  binary makes one cheap call, "activity since this cursor", and exits. New
+  marked comments are acted on within seconds, and the conversation lives in
+  the document. The loop is the skill's; the binary stays one-shot. Liveness
+  ends with the session.
 - **The loop starts when Nail starts it.** He opens a session in the hub folder
   (or runs the review skill there). The hub being the working directory is what
   gives the agent its context: the notes, the decision log, the raw material.
