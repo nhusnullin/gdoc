@@ -1,20 +1,70 @@
 package auth
 
+// The code exchange: what goes to the token endpoint, and what a token is made
+// of when it comes back.
+
 import (
 	"io"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
 
-// jsonRT answers every token request with one canned body.
-func jsonRT(body string) rtFunc {
-	return func(r *http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200, Request: r,
-			Body: io.NopCloser(strings.NewReader(body))}, nil
+func TestExchangeSendsVerifierAndSaves(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	rt := &formRT{}
+	c := &http.Client{Transport: rt}
+
+	tok, err := exchangeCode(c, "CODE7", "VERIF7", "http://127.0.0.1:9999/callback")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if rt.seen.Get("code") != "CODE7" || rt.seen.Get("code_verifier") != "VERIF7" {
+		t.Fatalf("exchange form wrong: %v", rt.seen)
+	}
+	if rt.seen.Get("grant_type") != "authorization_code" {
+		t.Fatalf("grant_type: %q", rt.seen.Get("grant_type"))
+	}
+	if rt.seen.Get("redirect_uri") != "http://127.0.0.1:9999/callback" {
+		t.Fatalf("redirect_uri: %q", rt.seen.Get("redirect_uri"))
+	}
+	if tok.RefreshToken != "R" || tok.AccessToken != "A" {
+		t.Fatalf("token: %+v", tok)
+	}
+	if tok.ClientID != BundledClientID || tok.TokenURI != TokenURI {
+		t.Fatalf("token does not carry the client it was issued to: %+v", tok)
+	}
+	if !tok.Expiry.After(time.Now().Add(59 * time.Minute)) {
+		t.Fatalf("expiry: %v", tok.Expiry)
+	}
+}
+
+// A refusal from the token endpoint must not be read as a token.
+func TestExchangeReportsAFailedCode(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	c := &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 400, Request: r, Body: io.NopCloser(strings.NewReader(
+			`{"error":"invalid_grant"}`))}, nil
+	})}
+
+	if _, err := exchangeCode(c, "STALE", "V", "http://127.0.0.1:9999/callback"); err == nil {
+		t.Fatal("a 400 from the token endpoint must be an error")
+	} else if !strings.Contains(err.Error(), "invalid_grant") {
+		t.Fatalf("the error must name what the endpoint said: %v", err)
+	}
+}
+
+// A 200 that carries no token is not a login. Not knowing must not resolve to
+// "signed in with an empty token".
+func TestExchangeRefusesA200WithNoToken(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	c := &http.Client{Transport: jsonRT(`{"expires_in":3600}`)}
+
+	if _, err := exchangeCode(c, "CODE", "V", "http://127.0.0.1:9999/callback"); err == nil {
+		t.Fatal("a 200 with no access token must not pass")
 	}
 }
 
@@ -33,41 +83,6 @@ func TestExchangeRefusesA200WithNoRefreshToken(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "refresh token") {
 		t.Fatalf("the error must name what was missing: %v", err)
-	}
-}
-
-// A login that saves nothing is better than a login that overwrites a working
-// token with one that expires in an hour and cannot be refreshed.
-func TestARefreshlessExchangeDoesNotOverwriteAGoodToken(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	good := Token{AccessToken: "OLD", RefreshToken: "KEEPME", TokenURI: TokenURI,
-		Expiry: time.Now().UTC().Add(time.Hour)}
-	if err := Save(good); err != nil {
-		t.Fatal(err)
-	}
-	c := &http.Client{Transport: jsonRT(`{"access_token":"A","expires_in":3600}`)}
-	w := chanWriter{lines: make(chan string, 4)}
-	done := make(chan error, 1)
-
-	go func() { done <- Login(c, w) }()
-	authURL := urlFrom(t, <-w.lines)
-	q := authURL.Query()
-	resp, err := http.Get(callbackWith(t, q.Get("redirect_uri"),
-		url.Values{"code": {"CODE9"}, "state": {q.Get("state")}}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-
-	if err := <-done; err == nil {
-		t.Fatal("the login must fail")
-	}
-	saved, err := Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if saved.RefreshToken != "KEEPME" {
-		t.Fatalf("the working token was overwritten: %+v", saved)
 	}
 }
 
@@ -103,43 +118,5 @@ func TestExchangeFallsBackToTheRequestedScopesWhenTheEndpointSaysNothing(t *test
 	}
 	if !reflect.DeepEqual(tok.Scopes, loginScopes) {
 		t.Fatalf("scopes: %v, want the requested set %v", tok.Scopes, loginScopes)
-	}
-}
-
-// A partial grant is reported, not refused: the login worked, and the person
-// has to be able to see why the Docs calls will fail.
-func TestStatusNamesTheScopesTheTokenDoesNotCarry(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	if err := Save(Token{AccessToken: "A", RefreshToken: "R", TokenURI: TokenURI,
-		Scopes: []string{"https://www.googleapis.com/auth/drive"},
-		Expiry: time.Now().UTC().Add(time.Hour),
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	out, err := Status()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(out.MissingScopes, []string{"https://www.googleapis.com/auth/documents"}) {
-		t.Fatalf("missing_scopes: %v", out.MissingScopes)
-	}
-}
-
-// A token carrying everything v2 asks for reports nothing, so the warning means
-// something when it does appear.
-func TestStatusIsQuietWhenEveryScopeIsThere(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	if err := Save(Token{AccessToken: "A", RefreshToken: "R", TokenURI: TokenURI,
-		Scopes: loginScopes, Expiry: time.Now().UTC().Add(time.Hour)}); err != nil {
-		t.Fatal(err)
-	}
-
-	out, err := Status()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(out.MissingScopes) > 0 {
-		t.Fatalf("a full grant must report nothing: %+v", out)
 	}
 }

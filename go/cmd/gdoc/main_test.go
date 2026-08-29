@@ -10,12 +10,12 @@ import (
 	"testing"
 )
 
-// runJSON runs the command and insists stdout is exactly one JSON object.
-func runJSON(t *testing.T, args ...string) (map[string]any, int) {
+// decodeOne insists a stream is exactly one JSON object. It is the output
+// contract itself, so it is written once: the tests that also need stderr
+// decode their own stdout with it rather than copying the assertion.
+func decodeOne(t *testing.T, r io.Reader) map[string]any {
 	t.Helper()
-	var buf bytes.Buffer
-	code := run(args, &buf, io.Discard)
-	dec := json.NewDecoder(&buf)
+	dec := json.NewDecoder(r)
 	var got map[string]any
 	if err := dec.Decode(&got); err != nil {
 		t.Fatalf("stdout is not one JSON object: %v", err)
@@ -23,7 +23,15 @@ func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 	if dec.More() {
 		t.Fatal("stdout carried more than one JSON object")
 	}
-	return got, code
+	return got
+}
+
+// runJSON runs the command and insists stdout is exactly one JSON object.
+func runJSON(t *testing.T, args ...string) (map[string]any, int) {
+	t.Helper()
+	var buf bytes.Buffer
+	code := run(args, &buf, io.Discard)
+	return decodeOne(t, &buf), code
 }
 
 // The populated shape, through the envelope: this is what a skill reads.

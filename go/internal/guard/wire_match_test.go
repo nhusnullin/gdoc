@@ -8,22 +8,38 @@ import (
 )
 
 // This file holds one family of tests: the guard must judge exactly the bytes
-// that go on the wire. Three spellings send something other than what Judge
-// read, and all three are refused.
+// that go on the wire. Four spellings send something other than what Judge
+// read, a method header, a method query parameter, a Host that disagrees with
+// the URL and an opaque path, and all four are refused.
 
-// TestANonCanonicalMethodOverrideHeaderIsRefused is the method-override trick
-// spelled a way http.Header.Get cannot see. Get canonicalises the key it looks
-// up, so it only finds an entry stored as "X-Http-Method-Override". A key
-// written straight into the map is invisible to it, and net/http writes map
-// keys verbatim, so the header reaches Google intact.
-func TestANonCanonicalMethodOverrideHeaderIsRefused(t *testing.T) {
-	cases := []string{
-		"X-HTTP-METHOD-OVERRIDE",
-		"x-http-method",
-		"X-METHOD-override",
+// TestMethodOverrideIsRefused closes the "judged as one thing, sent as another"
+// gap on the header side. Google's REST stack performs the overridden method,
+// so a GET the guard allows would arrive as a DELETE it never saw.
+//
+// The rawMapKey half is the same trick spelled a way http.Header.Get cannot
+// see. Get canonicalises the key it looks up, so it only finds an entry stored
+// as "X-Http-Method-Override". A key written straight into the map is invisible
+// to it, and net/http writes map keys verbatim, so the header reaches Google
+// intact. That is a real bypass this test caught, which is why both spellings
+// stay in the table.
+func TestMethodOverrideIsRefused(t *testing.T) {
+	cases := []struct {
+		header, value string
+		rawMapKey     bool
+	}{
+		{header: "X-HTTP-Method-Override", value: "DELETE"},
+		{header: "X-HTTP-Method", value: "PATCH"},
+		{header: "X-Method-Override", value: "DELETE"},
+		{header: "X-HTTP-METHOD-OVERRIDE", value: "DELETE", rawMapKey: true},
+		{header: "x-http-method", value: "DELETE", rawMapKey: true},
+		{header: "X-METHOD-override", value: "DELETE", rawMapKey: true},
 	}
-	for _, key := range cases {
-		t.Run(key, func(t *testing.T) {
+	for _, tc := range cases {
+		name := tc.header
+		if tc.rawMapKey {
+			name = "raw map key " + tc.header
+		}
+		t.Run(name, func(t *testing.T) {
 			f := &fake{status: 200, body: `{}`}
 			p := NewPolicy()
 			p.AllowFile("DOC1", LevelSuggest)
@@ -32,7 +48,11 @@ func TestANonCanonicalMethodOverrideHeaderIsRefused(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			req.Header[key] = []string{"DELETE"} // not Header.Set: the spelling is the point
+			if tc.rawMapKey {
+				req.Header[tc.header] = []string{tc.value} // not Header.Set: the spelling is the point
+			} else {
+				req.Header.Set(tc.header, tc.value)
+			}
 			if _, err := c.Do(req); err == nil || !strings.Contains(err.Error(), "guard refused") {
 				t.Fatalf("want a guard refusal, got %v", err)
 			}
@@ -40,6 +60,22 @@ func TestANonCanonicalMethodOverrideHeaderIsRefused(t *testing.T) {
 				t.Fatal("it reached the wire")
 			}
 		})
+	}
+}
+
+// TestMethodQueryOverrideIsRefused is the query-parameter spelling of the same
+// trick.
+func TestMethodQueryOverrideIsRefused(t *testing.T) {
+	f := &fake{status: 200, body: `{}`}
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	c := NewClient(p, f)
+	_, err := c.Get("https://www.googleapis.com/drive/v3/files/DOC1?_method=DELETE")
+	if err == nil || !strings.Contains(err.Error(), "guard refused") {
+		t.Fatalf("want a guard refusal, got %v", err)
+	}
+	if len(f.seen) != 0 {
+		t.Fatal("it reached the wire")
 	}
 }
 

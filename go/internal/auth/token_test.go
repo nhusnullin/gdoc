@@ -1,8 +1,9 @@
 package auth
 
+// The token file itself: reading it, refreshing it, writing it back.
+
 import (
 	"errors"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,19 +12,6 @@ import (
 
 	"gdoc/internal/config"
 )
-
-const fixture = `{"token":"OLD","refresh_token":"R1","token_uri":"https://oauth2.googleapis.com/token","client_id":"CID","client_secret":"CS","scopes":["https://www.googleapis.com/auth/drive"],"expiry":"2020-01-01T00:00:00Z"}`
-
-func writeFixture(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	t.Setenv("GDOC_CONFIG_DIR", dir)
-	path := filepath.Join(dir, "oauth-token.json")
-	if err := os.WriteFile(path, []byte(fixture), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
-}
 
 func TestLoadReadsV1Format(t *testing.T) {
 	writeFixture(t)
@@ -64,30 +52,10 @@ func TestLoadRefusesAnUnreadableToken(t *testing.T) {
 	}
 }
 
-type fakeRT struct {
-	body   string
-	status int
-	seen   string
-}
-
-func (f *fakeRT) RoundTrip(r *http.Request) (*http.Response, error) {
-	b, _ := io.ReadAll(r.Body)
-	f.seen = string(b)
-	if !strings.Contains(f.seen, "grant_type=refresh_token") ||
-		!strings.Contains(f.seen, "refresh_token=R1") {
-		return &http.Response{StatusCode: 400, Body: io.NopCloser(strings.NewReader(`{"error":"bad form"}`)), Request: r}, nil
-	}
-	status := f.status
-	if status == 0 {
-		status = 200
-	}
-	return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(f.body)), Request: r}, nil
-}
-
 func TestRefreshKeepsOldRefreshToken(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	rt := &fakeRT{body: `{"access_token":"NEW","expires_in":3600}`}
+	rt := &formRT{body: `{"access_token":"NEW","expires_in":3600}`}
 	got, err := tok.Refresh(&http.Client{Transport: rt})
 	if err != nil {
 		t.Fatal(err)
@@ -95,8 +63,11 @@ func TestRefreshKeepsOldRefreshToken(t *testing.T) {
 	if got.AccessToken != "NEW" || got.RefreshToken != "R1" {
 		t.Fatalf("refresh must keep the old refresh token: %+v", got)
 	}
-	if !strings.Contains(rt.seen, "client_id=CID") || !strings.Contains(rt.seen, "client_secret=CS") {
-		t.Fatalf("the form must carry the client: %q", rt.seen)
+	if rt.seen.Get("grant_type") != "refresh_token" || rt.seen.Get("refresh_token") != "R1" {
+		t.Fatalf("the form must ask for a refresh with the token on disk: %v", rt.seen)
+	}
+	if rt.seen.Get("client_id") != "CID" || rt.seen.Get("client_secret") != "CS" {
+		t.Fatalf("the form must carry the client: %v", rt.seen)
 	}
 	if got.Expired() {
 		t.Fatal("a fresh token is not expired")
@@ -106,7 +77,7 @@ func TestRefreshKeepsOldRefreshToken(t *testing.T) {
 func TestRefreshTakesANewRefreshTokenWhenGiven(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	got, err := tok.Refresh(&http.Client{Transport: &fakeRT{body: `{"access_token":"NEW","refresh_token":"R2","expires_in":3600}`}})
+	got, err := tok.Refresh(&http.Client{Transport: &formRT{body: `{"access_token":"NEW","refresh_token":"R2","expires_in":3600}`}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +89,7 @@ func TestRefreshTakesANewRefreshTokenWhenGiven(t *testing.T) {
 func TestRefreshReportsTheEndpointError(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	_, err := tok.Refresh(&http.Client{Transport: &fakeRT{status: 400, body: `{"error":"invalid_grant"}`}})
+	_, err := tok.Refresh(&http.Client{Transport: &formRT{status: 400, body: `{"error":"invalid_grant"}`}})
 	if err == nil || !strings.Contains(err.Error(), "invalid_grant") {
 		t.Fatalf("want the endpoint error named, got %v", err)
 	}
@@ -127,8 +98,23 @@ func TestRefreshReportsTheEndpointError(t *testing.T) {
 func TestRefuse200WithNoAccessToken(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	if _, err := tok.Refresh(&http.Client{Transport: &fakeRT{body: `{"expires_in":3600}`}}); err == nil {
+	if _, err := tok.Refresh(&http.Client{Transport: &formRT{body: `{"expires_in":3600}`}}); err == nil {
 		t.Fatal("a 200 with no access token must not pass")
+	}
+}
+
+// The transport failing is what the user sees when the guard refuses the POST
+// or the network is down. It must reach the caller, not be swallowed.
+func TestRefreshReportsATransportFailure(t *testing.T) {
+	writeFixture(t)
+	tok, _ := Load()
+	c := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("guard refused: host \"evil\"")
+	})}
+	if _, err := tok.Refresh(c); err == nil {
+		t.Fatal("a refused POST must fail the refresh")
+	} else if !strings.Contains(err.Error(), "guard refused") {
+		t.Fatalf("the error must carry what went wrong: %v", err)
 	}
 }
 
@@ -183,83 +169,6 @@ func TestFailedSaveLeavesTheOriginalIntact(t *testing.T) {
 	}
 }
 
-func TestStatusReportsThePresentToken(t *testing.T) {
-	path := writeFixture(t)
-	got, err := Status()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.TokenPresent || got.TokenPath != path {
-		t.Fatalf("status: %+v", got)
-	}
-	if got.Expired == nil || !*got.Expired {
-		t.Fatal("a 2020 expiry must report expired")
-	}
-	if got.ClientSource != "bundled" {
-		t.Fatalf("client source: %v", got.ClientSource)
-	}
-	if len(got.Scopes) != 1 {
-		t.Fatalf("scopes: %v", got.Scopes)
-	}
-}
-
-func TestStatusWithNoToken(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	got, err := Status()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.TokenPresent {
-		t.Fatalf("status: %+v", got)
-	}
-	if got.Expired != nil {
-		t.Fatal("with no token there is nothing to call expired")
-	}
-}
-
-// v1 lets oauth-client.json override the bundled client. v2's login does not
-// read it, so status must not claim it is in use: every v2 token belongs to the
-// bundled client, and saying otherwise sends a person looking for a quota that
-// was never separated.
-func TestStatusSaysAClientFileIsNotUsedYet(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("GDOC_CONFIG_DIR", dir)
-	if err := os.WriteFile(filepath.Join(dir, "oauth-client.json"), []byte(`{}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	got, err := Status()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ClientSource != "bundled" {
-		t.Fatalf("every v2 login uses the bundled client: %v", got.ClientSource)
-	}
-	if !got.ClientFileIgnored {
-		t.Fatalf("the file is there and unused; status must say so: %+v", got)
-	}
-}
-
-// A token that exists and cannot be read is a fault to name. Reporting it as
-// "signed out" is how somebody re-runs auth login, overwrites the file, and
-// never learns what was wrong with it.
-func TestStatusNamesAnUnreadableToken(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("GDOC_CONFIG_DIR", dir)
-	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte("{not json"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	got, err := Status()
-	if err == nil {
-		t.Fatal("a token that cannot be parsed must not read as signed out")
-	}
-	if !strings.Contains(err.Error(), "oauth-token.json") {
-		t.Fatalf("the error must name the file: %v", err)
-	}
-	if got == nil || got.TokenPath == "" {
-		t.Fatalf("the facts still come back beside the error: %+v", got)
-	}
-}
-
 // The token file holds a refresh token. Its permissions are part of the
 // contract, not an accident of how Save happens to be written today.
 func TestSaveWritesAPrivateFile(t *testing.T) {
@@ -309,21 +218,6 @@ func TestSaveKeepsFieldsV2DoesNotUse(t *testing.T) {
 	}
 	if again.UniverseDomain != "googleapis.com" || again.Account != "nail@example.com" {
 		t.Fatalf("a save dropped what google-auth wrote: %+v", again)
-	}
-}
-
-// The transport failing is what the user sees when the guard refuses the POST
-// or the network is down. It must reach the caller, not be swallowed.
-func TestRefreshReportsATransportFailure(t *testing.T) {
-	writeFixture(t)
-	tok, _ := Load()
-	c := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
-		return nil, errors.New("guard refused: host \"evil\"")
-	})}
-	if _, err := tok.Refresh(c); err == nil {
-		t.Fatal("a refused POST must fail the refresh")
-	} else if !strings.Contains(err.Error(), "guard refused") {
-		t.Fatalf("the error must carry what went wrong: %v", err)
 	}
 }
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -48,15 +47,7 @@ func TestLoginPrintsTheURLToStderrNotStdout(t *testing.T) {
 	if !strings.Contains(errOut.String(), "accounts.google.com") {
 		t.Fatalf("the URL must reach stderr: %q", errOut.String())
 	}
-	dec := json.NewDecoder(&out)
-	var got map[string]any
-	if err := dec.Decode(&got); err != nil {
-		t.Fatalf("stdout is not one JSON object: %v", err)
-	}
-	if dec.More() {
-		t.Fatal("stdout carried more than one JSON object")
-	}
-	if got["ok"] != true {
+	if got := decodeOne(t, &out); got["ok"] != true {
 		t.Fatalf("envelope: %v", got)
 	}
 }
@@ -85,14 +76,7 @@ func TestAPanicIsStillOneEnvelope(t *testing.T) {
 	if code != 1 {
 		t.Fatalf("a crash must exit 1, got %d", code)
 	}
-	dec := json.NewDecoder(&out)
-	var got map[string]any
-	if err := dec.Decode(&got); err != nil {
-		t.Fatalf("stdout is not one JSON object: %v", err)
-	}
-	if dec.More() {
-		t.Fatal("stdout carried more than one JSON object")
-	}
+	got := decodeOne(t, &out)
 	if got["ok"] != false {
 		t.Fatalf("a crash is not a success: %v", got)
 	}

@@ -1,9 +1,11 @@
 package auth
 
+// The browser trip: the URL that is printed, the callback that comes back, and
+// what the whole flow leaves on disk.
+
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,22 +14,6 @@ import (
 
 	"gdoc/internal/guard"
 )
-
-// exchangeRT stands in for the token endpoint. It records the form so the test
-// can prove the verifier and the code went out, and nothing here reaches the
-// network.
-type exchangeRT struct{ seenVerifier, seenCode, seenGrant, seenRedirect string }
-
-func (e *exchangeRT) RoundTrip(r *http.Request) (*http.Response, error) {
-	b, _ := io.ReadAll(r.Body)
-	form, _ := url.ParseQuery(string(b))
-	e.seenVerifier = form.Get("code_verifier")
-	e.seenCode = form.Get("code")
-	e.seenGrant = form.Get("grant_type")
-	e.seenRedirect = form.Get("redirect_uri")
-	return &http.Response{StatusCode: 200, Request: r, Body: io.NopCloser(strings.NewReader(
-		`{"access_token":"A","refresh_token":"R","expires_in":3600}`))}, nil
-}
 
 func TestAuthURLCarriesPKCE(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
@@ -73,84 +59,12 @@ func TestAuthURLVerifierIsFreshEachTime(t *testing.T) {
 	}
 }
 
-func TestExchangeSendsVerifierAndSaves(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	rt := &exchangeRT{}
-	c := &http.Client{Transport: rt}
-
-	tok, err := exchangeCode(c, "CODE7", "VERIF7", "http://127.0.0.1:9999/callback")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if rt.seenCode != "CODE7" || rt.seenVerifier != "VERIF7" {
-		t.Fatalf("exchange form wrong: %+v", rt)
-	}
-	if rt.seenGrant != "authorization_code" {
-		t.Fatalf("grant_type: %q", rt.seenGrant)
-	}
-	if rt.seenRedirect != "http://127.0.0.1:9999/callback" {
-		t.Fatalf("redirect_uri: %q", rt.seenRedirect)
-	}
-	if tok.RefreshToken != "R" || tok.AccessToken != "A" {
-		t.Fatalf("token: %+v", tok)
-	}
-	if tok.ClientID != BundledClientID || tok.TokenURI != TokenURI {
-		t.Fatalf("token does not carry the client it was issued to: %+v", tok)
-	}
-	if !tok.Expiry.After(time.Now().Add(59 * time.Minute)) {
-		t.Fatalf("expiry: %v", tok.Expiry)
-	}
-}
-
-// A refusal from the token endpoint must not be read as a token.
-func TestExchangeReportsAFailedCode(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	c := &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 400, Request: r, Body: io.NopCloser(strings.NewReader(
-			`{"error":"invalid_grant"}`))}, nil
-	})}
-
-	if _, err := exchangeCode(c, "STALE", "V", "http://127.0.0.1:9999/callback"); err == nil {
-		t.Fatal("a 400 from the token endpoint must be an error")
-	} else if !strings.Contains(err.Error(), "invalid_grant") {
-		t.Fatalf("the error must name what the endpoint said: %v", err)
-	}
-}
-
-// A 200 that carries no token is not a login. Not knowing must not resolve to
-// "signed in with an empty token".
-func TestExchangeRefusesA200WithNoToken(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	c := &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200, Request: r, Body: io.NopCloser(strings.NewReader(
-			`{"expires_in":3600}`))}, nil
-	})}
-
-	if _, err := exchangeCode(c, "CODE", "V", "http://127.0.0.1:9999/callback"); err == nil {
-		t.Fatal("a 200 with no access token must not pass")
-	}
-}
-
-type rtFunc func(*http.Request) (*http.Response, error)
-
-func (f rtFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
-
-// chanWriter hands the login URL to the test the moment Login prints it, so
-// the test can play the browser.
-type chanWriter struct{ lines chan string }
-
-func (c chanWriter) Write(p []byte) (int, error) {
-	c.lines <- string(p)
-	return len(p), nil
-}
-
 // TestLoginRoundTrip plays the whole flow with no browser and no network: the
 // test reads the URL off stderr, calls the loopback address itself, and checks
 // the token landed in the temp config dir.
 func TestLoginRoundTrip(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	rt := &exchangeRT{}
+	rt := &formRT{}
 	c := &http.Client{Transport: rt}
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
@@ -169,8 +83,8 @@ func TestLoginRoundTrip(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	if rt.seenCode != "CODE9" {
-		t.Fatalf("the code from the callback did not reach the exchange: %q", rt.seenCode)
+	if rt.seen.Get("code") != "CODE9" {
+		t.Fatalf("the code from the callback did not reach the exchange: %q", rt.seen.Get("code"))
 	}
 	saved, err := Load()
 	if err != nil {
@@ -187,7 +101,7 @@ func TestLoginRoundTrip(t *testing.T) {
 // code into it.
 func TestAStrayCallbackDoesNotEndTheLogin(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	rt := &exchangeRT{}
+	rt := &formRT{}
 	c := &http.Client{Transport: rt}
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
@@ -218,8 +132,8 @@ func TestAStrayCallbackDoesNotEndTheLogin(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatalf("the real callback must still complete the login: %v", err)
 	}
-	if rt.seenCode != "CODE9" {
-		t.Fatalf("the stray code reached the exchange: %q", rt.seenCode)
+	if rt.seen.Get("code") != "CODE9" {
+		t.Fatalf("the stray code reached the exchange: %q", rt.seen.Get("code"))
 	}
 }
 
@@ -227,7 +141,7 @@ func TestAStrayCallbackDoesNotEndTheLogin(t *testing.T) {
 // and the message the user gets has to say which happened.
 func TestLoginReportsARefusedSignIn(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	c := &http.Client{Transport: &exchangeRT{}}
+	c := &http.Client{Transport: &formRT{}}
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
@@ -257,13 +171,48 @@ func TestLoginReportsARefusedSignIn(t *testing.T) {
 	}
 }
 
+// A login that saves nothing is better than a login that overwrites a working
+// token with one that expires in an hour and cannot be refreshed.
+func TestARefreshlessExchangeDoesNotOverwriteAGoodToken(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	good := Token{AccessToken: "OLD", RefreshToken: "KEEPME", TokenURI: TokenURI,
+		Expiry: time.Now().UTC().Add(time.Hour)}
+	if err := Save(good); err != nil {
+		t.Fatal(err)
+	}
+	c := &http.Client{Transport: jsonRT(`{"access_token":"A","expires_in":3600}`)}
+	w := chanWriter{lines: make(chan string, 4)}
+	done := make(chan error, 1)
+
+	go func() { done <- Login(c, w) }()
+	authURL := urlFrom(t, <-w.lines)
+	q := authURL.Query()
+	resp, err := http.Get(callbackWith(t, q.Get("redirect_uri"),
+		url.Values{"code": {"CODE9"}, "state": {q.Get("state")}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	if err := <-done; err == nil {
+		t.Fatal("the login must fail")
+	}
+	saved, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.RefreshToken != "KEEPME" {
+		t.Fatalf("the working token was overwritten: %+v", saved)
+	}
+}
+
 // TestLoginThroughTheGuardsOwnClient is the composition the CLI does: the
 // token exchange goes out through a guard-built client over a fake base. A
 // change to TokenURI, or to the guard's token-host rule, breaks this and
 // nothing else in the suite.
 func TestLoginThroughTheGuardsOwnClient(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	rt := &exchangeRT{}
+	rt := &formRT{}
 	c := guard.NewClient(guard.NewPolicy(), rt)
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
@@ -282,35 +231,10 @@ func TestLoginThroughTheGuardsOwnClient(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatalf("an empty policy still carries the token endpoint: %v", err)
 	}
-	if rt.seenCode != "CODE9" {
-		t.Fatalf("the exchange did not reach the wire through the guard: %q", rt.seenCode)
+	if rt.seen.Get("code") != "CODE9" {
+		t.Fatalf("the exchange did not reach the wire through the guard: %q", rt.seen.Get("code"))
 	}
 	if _, err := Load(); err != nil {
 		t.Fatalf("the login did not save a token: %v", err)
 	}
-}
-
-// urlFrom pulls the authorization URL out of the sentence Login prints.
-func urlFrom(t *testing.T, printed string) *url.URL {
-	t.Helper()
-	i := strings.Index(printed, "https://")
-	if i < 0 {
-		t.Fatalf("no URL in the login message: %q", printed)
-	}
-	u, err := url.Parse(strings.TrimSpace(printed[i:]))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return u
-}
-
-// callbackWith builds the redirect the browser would follow.
-func callbackWith(t *testing.T, redirect string, q url.Values) string {
-	t.Helper()
-	u, err := url.Parse(redirect)
-	if err != nil {
-		t.Fatal(err)
-	}
-	u.RawQuery = q.Encode()
-	return u.String()
 }
