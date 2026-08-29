@@ -1,24 +1,69 @@
 # gdoc v2 Milestone 1: Foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+## Overview
 
-**Goal:** A Go binary `gdoc` that exists, speaks the JSON envelope, owns the network through a guard with write levels, and can log in, refresh and report its OAuth state. It can refuse everything before it can do anything.
+A Go binary `gdoc` that exists, speaks the JSON envelope, owns the network through a guard with write levels, and can log in, refresh and report its OAuth state. It can refuse everything before it can do anything.
 
-**Architecture:** One module at `go/`. One package, `internal/guard`, owns all outbound HTTP as a policy plus transport. `internal/auth` handles the token file and refresh through the guard's client; its loopback login listener is the one other place `net/http` may appear, enforced by an allowlist test. Every command prints exactly one JSON object to stdout.
+The problem it solves: v1 is Python, and its guard was fitted around a client that already existed. v2 starts from the guard, so no outbound request exists before a policy that can refuse it. This milestone builds nothing that talks to Docs yet. It builds the refusal, the envelope, and the credential.
 
-**Tech Stack:** Go 1.27, standard library only in this milestone. No `golang.org/x/oauth2`, no `os/exec` anywhere in v2 (stronger than v1: the login flow prints the URL to stderr instead of opening a browser).
+How it integrates: the module lives at `go/`, beside the existing Python package. Nothing under `gdoc/` changes. The Go binary reads v1's token file (`oauth-token.json`, same format), so a person already logged in through v1 is already logged in here.
 
-**Spec:** `docs/v2/SPEC.md` (agreed 2026-08-29). Master plan: `docs/v2/PLAN.md`.
+Spec: `docs/v2/SPEC.md` (agreed 2026-08-29). Master plan: `docs/v2/PLAN.md`.
 
-## Principles
+## Context (from discovery)
 
-Serves: 1 (static binary, stdlib only), 3 (the guard exists before the first
-network call; uncertainty refuses), 4 (stdout carries one machine object;
-human words go to stderr).
+- Files and components involved: a new tree at `go/` holding `internal/emit`, `internal/config`, `internal/guard`, `internal/auth`, `internal/auth/loopback`, `cmd/gdoc` and `boundary/`, plus a `Makefile` at the repo root.
+- Related patterns found: `gdoc/guard.py` (the reachable set, and its rule that ids enter through exactly two doors), `gdoc/auth.py` (`resolve_auth_mode`, the config and token paths), `gdoc/oauth.py` lines 51-52 (the bundled client constants this milestone copies verbatim).
+- Dependencies identified: none. Go 1.27 standard library only.
 
-Strains: none.
+## Development Approach
 
-## Global Constraints
+- **Testing approach**: TDD. Every task writes the failing test first, runs it to watch it fail, then implements until it passes.
+- Complete each task fully before moving to the next. Each task ends in its own commit.
+- Make small, focused changes.
+- **CRITICAL: every task MUST include new or updated tests** for the code it changes. Tests are a required deliverable of the task, not an optional extra.
+- **CRITICAL: all tests must pass before the next task starts.** No exceptions.
+- **CRITICAL: update this plan file when scope changes during implementation.**
+- Run the validation commands after each change.
+
+## Testing Strategy
+
+- **Unit tests**: required for every task. Table-driven wherever the input space is a set of cases, as in the guard policy.
+- **Boundary test**: `go/boundary/` holds an import allowlist test. It is an allowlist in both directions. It fails when `net/http` spreads to a package that may not have it, and it fails when a package that should have it stops importing it.
+- **E2E tests**: this project has no UI and no browser e2e suite, so there are none to add. Task 7 ends with a real `auth status` run against the machine's own token instead, which is the closest thing to end to end here.
+- Coverage standard: every exported function under `internal/` has a test.
+
+## Validation Commands
+
+- `cd go && go test ./...`
+- `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
+- `cd go && go vet ./...`
+
+## Progress Tracking
+
+- Mark completed items with `[x]` as soon as they are done.
+- Add newly discovered tasks with a ➕ prefix.
+- Record issues and blockers with a ⚠️ prefix.
+- Update the plan if the implementation deviates from the original scope.
+
+## Solution Overview
+
+One module at `go/`. One package, `internal/guard`, owns all outbound HTTP as a policy plus a transport. `internal/auth` handles the token file and its refresh through the guard's client; the loopback login listener under `internal/auth/loopback` is the one other place `net/http` may appear, and the boundary test enforces that. Every command prints exactly one JSON object to stdout.
+
+Key design decisions and why:
+
+- The guard is constructed before anything that could reach the network, so the first request in the program's history has already passed a policy. Fitting a guard on later is how v1 got there, and it is why v1 needs a test to prove `build()` is called in only one module.
+- Write levels live in the policy, not at the call site. A handed-in document id is readable and never editable. A create is refused unless it names a folder the run was given.
+- The envelope is one package that every command prints through, so "one JSON object on stdout" is a property of a type rather than a convention each command has to remember.
+- Login prints the URL to stderr instead of opening a browser. That is what lets v2 ban `os/exec` outright.
+
+## Technical Details
+
+**Principles.** Serves: 1 (static binary, stdlib only), 3 (the guard exists before the first network call, and uncertainty refuses), 4 (stdout carries one machine object, human words go to stderr). Strains: none.
+
+**Tech stack.** Go 1.27, standard library only in this milestone. No `golang.org/x/oauth2`. No `os/exec` anywhere in v2, which is stronger than v1.
+
+**Global constraints:**
 
 - Module path `gdoc`, directory `go/` in this repo. Go `1.27`.
 - Third-party dependencies allowed in this milestone: none.
@@ -28,13 +73,15 @@ Strains: none.
 - Allowed hosts, exact: `docs.googleapis.com`, `www.googleapis.com`, `oauth2.googleapis.com` (token endpoint only).
 - OAuth client id and secret: copy the constant values verbatim from `gdoc/oauth.py` lines 51-52 (`BUNDLED_CLIENT_ID`, `BUNDLED_CLIENT_SECRET`). They are deliberately in version control; see CLAUDE.md.
 - Scopes requested by login: `https://www.googleapis.com/auth/drive` and `https://www.googleapis.com/auth/documents` (one browser trip covers both, as v1's `LOGIN_SCOPES`).
-- All commits run from repo root. Test command: `cd go && go test ./...`.
+- All commits run from the repo root. Test command: `cd go && go test ./...`.
 - No em dashes in any text this plan produces.
 
-## Validation Commands
-- `cd go && go test ./...`
-- `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
-- `cd go && go vet ./...`
+## What Goes Where
+
+- **Implementation Steps** (`[ ]` checkboxes): everything achievable inside this repo. The Go module, its tests, the Makefile, the documentation updates.
+- **Post-Completion** (no checkboxes): the checks that need a real Google account, a real browser trip, or a machine other than this one.
+
+## Implementation Steps
 
 ---
 
@@ -48,13 +95,13 @@ Strains: none.
 **Interfaces:**
 - Produces: `emit.Result{OK bool, Data any, Error string, Warnings []string}`; `emit.Print(w io.Writer, r Result) error` writes one JSON object plus newline; `emit.ExitCode(r Result) int` (0 iff OK). Later tasks build every command's output through these.
 
-- [ ] **Step 1: Create the module**
+- [x] **Step 1: Create the module**
 
 ```bash
 mkdir -p go/internal/emit && cd go && go mod init gdoc
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```go
 package emit
@@ -100,12 +147,12 @@ func TestPrintFailureShape(t *testing.T) {
 }
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `cd go && go test ./internal/emit/`
 Expected: FAIL, `Result` undefined.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 ```go
 // Package emit is the one output contract: every command prints exactly one
@@ -138,7 +185,7 @@ func ExitCode(r Result) int {
 }
 ```
 
-- [ ] **Step 5: Run to verify it passes, then commit**
+- [x] **Step 5: Run to verify it passes, then commit**
 
 Run: `cd go && go test ./internal/emit/` (expect PASS), then:
 
@@ -1425,8 +1472,50 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 
 ---
 
-## Milestone acceptance (spec item 1)
+### Task 8: Verify acceptance criteria
 
-- `go test ./...` green, including: a request for an id outside the set never reaches the transport; a direct edit on a handed-in id is refused; a create aimed at an unnamed folder is refused; the boundary test holds in both directions.
-- `make dist` produces the three platform binaries with `CGO_ENABLED=0`.
-- `gdoc auth status` on the real machine reports the v1 token without having modified anything.
+**Files:**
+- Modify: none expected. Fix whatever the checks below break.
+
+**Interfaces:**
+- Consumes: everything Tasks 1 to 7 produced. Produces: proof that the milestone acceptance in `docs/v2/SPEC.md` item 1 holds.
+
+- [ ] verify every requirement in the Overview is implemented: the binary exists, prints the envelope, owns the network through the guard, and can log in, refresh and report OAuth state
+- [ ] verify the guard refuses, by running the four cases in one go and reading the output: a request for an id outside the set never reaches the transport; a direct edit on a handed-in id is refused; a create aimed at an unnamed folder is refused; the boundary test holds in both directions
+- [ ] run the full test suite: `cd go && go test ./...`
+- [ ] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
+- [ ] run the vet check: `cd go && go vet ./...`
+- [ ] verify coverage: every exported function under `go/internal/` has a test. `cd go && go test ./... -cover` and read the per-package numbers; add tests for anything uncovered rather than lowering the bar
+- [ ] verify `make dist` produces the three platform binaries with `CGO_ENABLED=0`, and that `file bin/*` reports the expected architectures
+- [ ] commit any fixes this task made
+
+### Task 9: [Final] Update documentation
+
+**Files:**
+- Modify: `README.md`
+- Modify: `CLAUDE.md`
+- Modify: `docs/v2/PLAN.md`
+
+**Interfaces:**
+- Produces: the repo's own account of what now exists in Go, so the next milestone starts from documentation that matches the tree.
+
+- [ ] update `README.md`: say that `go/` exists, what `gdoc auth status` and `gdoc auth login` do, and how to build with `make build` and `make dist`
+- [ ] update `CLAUDE.md` with the patterns this milestone established: the guard owns all outbound HTTP and is built before any client, `net/http` is allowlisted by the boundary test to `internal/guard` and `internal/auth/loopback`, and every command prints through `internal/emit`
+- [ ] mark Milestone 1 done in `docs/v2/PLAN.md`
+- [ ] run the full test suite one more time: `cd go && go test ./...`
+- [ ] commit the documentation updates
+- [ ] move this plan to `docs/plans/completed/`
+
+## Post-Completion
+
+*Items needing a real account, a browser, or another machine. No checkboxes: these are informational.*
+
+**Manual verification:**
+
+- `gdoc auth status` on the real machine reports the v1 token, and has modified nothing. Compare `oauth-token.json` before and after by checksum.
+- `gdoc auth login` end to end: the URL goes to stderr, the browser trip completes on the loopback listener, and the token that lands still works for a following `auth status`.
+- The windows and amd64 binaries from `make dist` actually start on those platforms. Cross-compiling proves they link, not that they run.
+
+**External system updates:**
+
+- None. This milestone adds a second binary beside v1 and changes nothing that v1 or the skills read.
