@@ -45,10 +45,12 @@ func TestJudge(t *testing.T) {
 		{"unknown path shape", "GET", "https://www.googleapis.com/drive/v3/about", nil, false},
 	}
 	for _, c := range cases {
-		err := p.Judge(c.method, mustURL(t, c.url), c.body)
-		if (err == nil) != c.ok {
-			t.Errorf("%s: got err=%v, want ok=%v", c.name, err, c.ok)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			err := p.Judge(c.method, mustURL(t, c.url), c.body)
+			if (err == nil) != c.ok {
+				t.Errorf("got err=%v, want ok=%v", err, c.ok)
+			}
+		})
 	}
 }
 

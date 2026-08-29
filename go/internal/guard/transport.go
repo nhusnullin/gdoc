@@ -12,15 +12,34 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
-// maxPeek caps how much of a create response the guard reads while looking for
-// the new id. The rest of the body is handed to the caller untouched.
+// maxPeek caps how much of a body the guard reads, on both sides. On the
+// request side it is how much metadata a create may put in front of its
+// content; a create whose parents sit past the cap is refused rather than
+// carried unread. On the response side it is how far the guard looks for the
+// new id. Either way the rest of the body is handed on untouched.
 const maxPeek = 1 << 20
 
 // maxRedirects caps a redirect chain. A custom CheckRedirect replaces the
 // standard library's own limit, so the cap has to live here.
 const maxRedirects = 10
+
+// clientTimeout bounds one request end to end. Without it a hung Google
+// endpoint hangs the CLI forever, and a command that never returns prints no
+// JSON object at all.
+const clientTimeout = 5 * time.Minute
+
+// methodOverrideHeaders are the headers Google's REST stack honours to perform
+// a different method from the one on the wire. A request carrying one is
+// judged as one thing and served as another, which is the whole gap the guard
+// exists to close.
+var methodOverrideHeaders = []string{
+	"X-HTTP-Method-Override",
+	"X-HTTP-Method",
+	"X-Method-Override",
+}
 
 type transport struct {
 	policy *Policy
@@ -35,6 +54,7 @@ func NewClient(p *Policy, base http.RoundTripper) *http.Client {
 	}
 	return &http.Client{
 		Transport: &transport{policy: p, base: base},
+		Timeout:   clientTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirects {
 				return errors.New("guard refused: too many redirects")
@@ -51,22 +71,35 @@ func NewClient(p *Policy, base http.RoundTripper) *http.Client {
 }
 
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	body, err := peekBody(req)
+	// The RoundTripper contract: the request body is closed on every path,
+	// errors included, and the caller's request is never modified. send is req
+	// itself unless the peek had to buffer a body that cannot be re-read, in
+	// which case it is a copy carrying the restored body.
+	body, send, err := peekBody(req)
 	if err != nil {
+		closeBody(req)
 		return nil, fmt.Errorf("guard refused: unreadable request body: %w", err)
 	}
+	if err := checkNoMethodOverride(req); err != nil {
+		closeBody(send)
+		return nil, err
+	}
 	if err := t.policy.Judge(req.Method, req.URL, body); err != nil {
+		closeBody(send)
 		return nil, err
 	}
 	create := isCreate(req.URL, req.Method)
 	if create {
 		if err := t.checkParent(body); err != nil {
+			closeBody(send)
 			return nil, err
 		}
 	}
-	resp, err := t.base.RoundTrip(req)
+	resp, err := t.base.RoundTrip(send)
 	if err != nil {
-		return resp, err
+		// The contract is (nil, err) on failure. A response handed back beside
+		// an error is a body nobody closes.
+		return nil, err
 	}
 	if create && resp.StatusCode < 300 {
 		t.learnFromCreate(resp)
@@ -74,24 +107,56 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func peekBody(req *http.Request) ([]byte, error) {
+// checkNoMethodOverride refuses a request that asks the server to perform a
+// method other than the one Judge read. Neither the header nor the `_method`
+// query parameter appears in any call gdoc makes, so refusing both costs
+// nothing.
+func checkNoMethodOverride(req *http.Request) error {
+	for _, h := range methodOverrideHeaders {
+		if v := req.Header.Get(h); v != "" {
+			return refuse("%s: %q asks for a method other than the one judged", h, v)
+		}
+	}
+	if req.URL.Query().Has("_method") {
+		return refuse("_method asks for a method other than the one judged")
+	}
+	return nil
+}
+
+func closeBody(req *http.Request) {
+	if req != nil && req.Body != nil {
+		_ = req.Body.Close()
+	}
+}
+
+// peekBody returns the front of the request body for the guard to judge, plus
+// the request to send. When GetBody can replay the body the caller's request
+// goes out untouched. When it cannot, the peeked bytes are put back in front
+// of the rest through a copy of the request: RoundTrip may not modify the one
+// it was handed.
+func peekBody(req *http.Request) ([]byte, *http.Request, error) {
 	if req.Body == nil {
-		return nil, nil
+		return nil, req, nil
 	}
 	if req.GetBody != nil {
 		rc, err := req.GetBody()
 		if err != nil {
-			return nil, err
+			return nil, req, err
 		}
 		defer rc.Close()
-		return io.ReadAll(rc)
+		head, err := io.ReadAll(io.LimitReader(rc, maxPeek))
+		if err != nil {
+			return nil, req, err
+		}
+		return head, req, nil
 	}
-	b, err := io.ReadAll(req.Body)
+	head, err := io.ReadAll(io.LimitReader(req.Body, maxPeek))
 	if err != nil {
-		return nil, err
+		return nil, req, err
 	}
-	req.Body = io.NopCloser(bytes.NewReader(b))
-	return b, nil
+	send := req.Clone(req.Context())
+	send.Body = readCloser{Reader: io.MultiReader(bytes.NewReader(head), req.Body), Closer: req.Body}
+	return head, send, nil
 }
 
 func isCreate(u *url.URL, method string) bool {
@@ -104,36 +169,48 @@ func isCreate(u *url.URL, method string) bool {
 }
 
 // checkParent refuses a create that does not name exactly the folder this
-// command was given. For multipart uploads the metadata part is the first JSON
-// object; M6 sets GetBody so the peek sees it. A create whose parents the guard
-// cannot read is refused: not knowing never resolves to carrying it.
+// command was given. A create whose parents the guard cannot read is refused:
+// not knowing never resolves to carrying it.
+//
+// That includes a multipart upload today. The body of a multipart create opens
+// with the MIME boundary, not with the metadata object, so this parse fails and
+// the create is refused. The /upload grammar the policy allows is therefore
+// unreachable until something here reads the first MIME part, which is M6's
+// job: it is the milestone that publishes a docx. Failing closed is the right
+// direction to be wrong in, so it stays refused rather than half-parsed.
 func (t *transport) checkParent(body []byte) error {
 	var meta struct {
 		Parents []string `json:"parents"`
 	}
-	dec := json.NewDecoder(bytes.NewReader(body))
-	if err := dec.Decode(&meta); err != nil || len(meta.Parents) != 1 || meta.Parents[0] != t.policy.createIn {
-		return fmt.Errorf("guard refused: create must name exactly the folder %q", t.policy.createIn)
+	folder := t.policy.createFolder()
+	if err := json.Unmarshal(body, &meta); err != nil || len(meta.Parents) != 1 || meta.Parents[0] != folder {
+		return fmt.Errorf("guard refused: create must name exactly the folder %q", folder)
 	}
 	return nil
 }
 
 // learnFromCreate is the second of the policy's two doors: an id that came back
 // from a create the guard itself carried. The response body is restored so the
-// caller reads it whole.
+// caller reads it whole. A create whose id the guard could not read is
+// recorded, because the alternative is silence: the next request against that
+// document is refused with "file was not given to this command", which names
+// the wrong problem.
 func (t *transport) learnFromCreate(resp *http.Response) {
 	orig := resp.Body
 	head, err := io.ReadAll(io.LimitReader(orig, maxPeek))
 	resp.Body = readCloser{Reader: io.MultiReader(bytes.NewReader(head), orig), Closer: orig}
 	if err != nil {
+		t.policy.note("a create succeeded but its response could not be read, so the new id was not learned: %v", err)
 		return
 	}
 	var created struct {
 		ID string `json:"id"`
 	}
-	if json.Unmarshal(head, &created) == nil && created.ID != "" {
-		t.policy.Learn(created.ID)
+	if json.Unmarshal(head, &created) != nil || created.ID == "" {
+		t.policy.note("a create succeeded but no id was found in the first %d bytes of the response, so the new file is not in the reachable set", maxPeek)
+		return
 	}
+	t.policy.Learn(created.ID)
 }
 
 type readCloser struct {
