@@ -31,6 +31,11 @@ Strains: none.
 - All commits run from repo root. Test command: `cd go && go test ./...`.
 - No em dashes in any text this plan produces.
 
+## Validation Commands
+- `cd go && go test ./...`
+- `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
+- `cd go && go vet ./...`
+
 ---
 
 ### Task 1: Module scaffold and the JSON envelope
@@ -1422,6 +1427,6 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 
 ## Milestone acceptance (spec item 1)
 
-- [ ] `go test ./...` green, including: a request for an id outside the set never reaches the transport; a direct edit on a handed-in id is refused; a create aimed at an unnamed folder is refused; the boundary test holds in both directions.
-- [ ] `make dist` produces the three platform binaries with `CGO_ENABLED=0`.
-- [ ] `gdoc auth status` on the real machine reports the v1 token without having modified anything.
+- `go test ./...` green, including: a request for an id outside the set never reaches the transport; a direct edit on a handed-in id is refused; a create aimed at an unnamed folder is refused; the boundary test holds in both directions.
+- `make dist` produces the three platform binaries with `CGO_ENABLED=0`.
+- `gdoc auth status` on the real machine reports the v1 token without having modified anything.

@@ -2,7 +2,7 @@
 
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
 producing working, testable software. Detailed task-by-task plans live in
-`docs/superpowers/plans/` and are written when a milestone starts, so each one
+`docs/plans/` (ralphex's plan directory) and are written when a milestone starts, so each one
 is written against the code that actually exists by then. Milestone 1's is
 written already.
 
@@ -51,7 +51,7 @@ authorization URL goes to stderr; stdout stays reserved for the one JSON
 object), `auth status`. Cross-builds for all three
 platforms run from this milestone on, in the Makefile, so portability is never
 discovered late. Acceptance: spec item 1.
-Detailed plan: `docs/superpowers/plans/2026-08-29-gdoc-v2-m1-foundation.md`.
+Detailed plan: `docs/plans/2026-08-29-gdoc-v2-m1-foundation.md`.
 
 ### M2. Reading, and the honest witness
 
