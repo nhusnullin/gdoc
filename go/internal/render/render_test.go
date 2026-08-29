@@ -15,7 +15,12 @@ func repoDir(t *testing.T) string {
 	return filepath.Join(filepath.Dir(thisFile), "..", "..")
 }
 
-func templatePath(t *testing.T) string { return filepath.Join(repoDir(t), "testdata", "template.docx") }
+// The bundled master, reached where it really lives. A copy under testdata would
+// drift out of the contract the surgery depends on without anything saying so.
+func templatePath(t *testing.T) string {
+	return filepath.Join(repoDir(t), "..", "gdoc", "templates",
+		"altery-group-policy-v1.0", "template.docx")
+}
 
 func docPath(t *testing.T, name string) string {
 	return filepath.Join(repoDir(t), "testdata", "docs", name)

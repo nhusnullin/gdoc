@@ -23,7 +23,7 @@ reading the spec's "what is not proven" section first.
 | `internal/generate` | the two-pass publish |
 | `cmd/gdocgo` | the CLI |
 | `cmd/pixdiff` | the measuring instrument: two directories of page images in, a per-page difference count out |
-| `testdata/docs` | the six documents everything was measured against |
+| `testdata/docs` | the six documents everything was measured against. The master template is not copied here: the tests reach the real one in `gdoc/templates/` |
 
 ## Running it
 

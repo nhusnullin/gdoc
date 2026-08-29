@@ -12,13 +12,15 @@ import (
 	"spike/gdocgo/internal/ooxml"
 )
 
-// masterPath is the bundled template. The surgery finds the cover by
-// placeholder text and the tables by their first-column labels, so testing it
-// against anything else would test a different contract.
+// masterPath is the bundled template, reached where it really lives rather than
+// through a copy. The surgery finds the cover by placeholder text and the tables
+// by their first-column labels, so testing it against anything else would test a
+// different contract, and a copy would drift out of that contract in silence.
 func masterPath(t *testing.T) string {
 	t.Helper()
 	_, thisFile, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(thisFile), "..", "..", "testdata", "template.docx")
+	return filepath.Join(filepath.Dir(thisFile), "..", "..", "..",
+		"gdoc", "templates", "altery-group-policy-v1.0", "template.docx")
 }
 
 func meta(t *testing.T, text string) *frontmatter.Meta {
