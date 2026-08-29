@@ -895,3 +895,62 @@ document read with `PREVIEW_WITHOUT_SUGGESTIONS`; a direct edit is present.
 
 The four incidents that produced this rule are recorded as facts about Google's
 behaviour in `BLOCKED-BY-API.md`, not here.
+
+## 2026-08-29. The preview may vanish, and the risk is accepted. Loudly.
+
+Nail's call, on review. If Google withdraws the Developer Preview, gdoc loses
+proposing in the document: suggestions and anchored comments. Replies in existing
+threads survive, because they are plain Drive API. That loss is accepted.
+
+What is not built: fallback code. The colour scheme stays on paper, in the
+withdrawal entry above, and is rebuilt only if the day comes. Maintaining a live
+second path for a retired design is the cost that was refused.
+
+What is not negotiable: the loss must be loud. The capability probe against a
+throwaway document and the read-back after every proposal stay, because an
+unenrolled project answers 200 while silently direct-editing. The feature may
+vanish. It must never vanish as a silent edit to a reviewed document.
+
+## 2026-08-29. The guard owns the transport, and every id carries a write level.
+
+Serves principle 3, and carries the v1 guard into Go stronger than it was.
+
+In v1 the guard wrapped a client library's transport. v2 has no client library,
+and the whole preview surface is hand-rolled JSON, which is exactly the kind of
+request that walks around a bolted-on wrapper. So the guard is not a wrapper any
+more: **one package owns the network**, nothing else in the binary can make an
+HTTP request, and a test fails if HTTP construction appears anywhere else.
+
+The set keeps v1's two doors exactly: ids handed in on the command line, ids
+learned from a create the guard itself carried. New in v2, each id carries a
+write level:
+
+- an id learned from a create is fully writable, because gdoc made it
+- an id handed in is **read-and-suggest only**, never direct-editable
+- `restyle` in place is the one exception, granted explicitly per run, never
+  inherited
+
+A rule the skill follows is advisory. A rule in the transport is physics. The
+morning incident, a 200 that direct-edited a reviewed document, becomes locally
+impossible to cause and the read-back catches the remote half.
+
+## 2026-08-29. Publish runs once. Everything after travels as suggestions.
+
+Colleagues keep one URL for the life of a document, and gdoc never replaces an
+existing body. Together those close the question of how a big hub update lands:
+there is **no republish mechanism**, in any form.
+
+Scale is handled by judgement, in the skill, like everything else:
+
+- small drift arrives as inline suggestions
+- a structural rewrite arrives as **one suggestion per affected section**, each
+  with a 🤖 comment saying what changed and why, so accepting is one chip per
+  section rather than a wall of green
+- when a document's review has run its course, the escape hatch already exists:
+  `restyle --new` builds a fresh document from the hub, exact style, new URL,
+  said out loud and chosen by a person
+
+One more line from the same review: the prompts behind the skills, alignment
+above all, are part of the product. They live in the repo and a change to one is
+reviewed like code, because a wrong alignment judgement writes a wrong suggestion
+into a document colleagues read.
