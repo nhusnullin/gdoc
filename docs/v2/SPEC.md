@@ -119,10 +119,16 @@ is why the token write is part of the M9 Windows smoke test.
 
 Serves principle 3. This is the safety property everything else stands on.
 
-- **One package owns the network.** Nothing else in the binary can construct an
-  HTTP request. A test fails the build if HTTP construction appears in any other
-  package. This is the v1 allowlist test, made stronger by owning the transport
-  instead of wrapping a client.
+- **One package owns the network.** `internal/guard` is the only package that
+  may build an HTTP client or reach a package-level dialer such as `http.Get`.
+  Naming `net/http` is not the same thing as dialing with it, and the boundary
+  test draws that line: a second, wider allowlist says who may import the type
+  at all, and `internal/auth` and `internal/auth/loopback` are on it.
+  `internal/auth` takes the guard's client as a parameter and sends requests
+  through it; `loopback` runs an `http.Server`, and serving is not building.
+  Both checks fail in both directions, so a room that stops owning what it was
+  listed for fails too. This is the v1 allowlist test, made stronger by owning
+  the transport instead of wrapping a client.
 - **Two doors into the id set**, exactly as v1: ids handed in on the command
   line, and ids learned from a create the guard itself carried. `files.list` is
   refused outright. An empty set refuses everything.

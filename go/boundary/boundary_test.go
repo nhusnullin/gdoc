@@ -351,21 +351,109 @@ func TestEveryTargetThatWritesIntoBinMakesIt(t *testing.T) {
 	check()
 }
 
-// TestNoThirdPartyDependencies keeps "standard library only" a property of the
-// tree rather than a sentence in a plan. A require block is where that stops
-// being true.
+// allowedModules names the third-party modules this tree may require. It is
+// EMPTY AT M1, and empty is a milestone's state rather than v2's rule.
+//
+// SPEC.md already agreed three, each with its reason written there:
+//
+//	github.com/beevik/etree   OOXML, because encoding/xml corrupts it
+//	github.com/yuin/goldmark  the hub markdown, likely first needed at M5
+//	github.com/goccy/go-yaml  the gdoc: front matter and house.yaml
+//
+// The milestone that first needs one adds its path here and nothing else. It
+// does not delete this test, and it does not widen it to "whatever go.mod
+// says". A fourth module needs its reason in SPEC.md before its line in this
+// map; the open candidate is sergi/go-diff at M8.
+//
+// The map is written empty rather than left as an instruction in a plan,
+// because a red build with no note beside it is what a later milestone would
+// otherwise argue with. Today it refuses exactly what the blanket refusal did.
+var allowedModules = map[string]bool{}
+
+// TestNoThirdPartyDependencies keeps the module list a property of the tree
+// rather than a sentence in a plan. A require line naming something outside
+// allowedModules is where that stops being true, and so is a go.sum entry: the
+// sum file is what proves something was really fetched.
 func TestNoThirdPartyDependencies(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("..", "go.mod"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range strings.Split(string(b), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), "require") {
-			t.Errorf("go.mod requires something: %q. v2 is standard library only", line)
+	for _, path := range requiredModules(string(b)) {
+		if !allowedModules[path] {
+			t.Errorf("go.mod requires %q, which allowedModules does not name. Add it there, with its reason in SPEC.md, or drop the dependency", path)
 		}
 	}
-	if _, err := os.Stat(filepath.Join("..", "go.sum")); err == nil {
-		t.Error("go.sum exists, so something outside the standard library was fetched")
+	sum, err := os.ReadFile(filepath.Join("..", "go.sum"))
+	if err != nil {
+		return // no go.sum means nothing was fetched, which is M1's state
+	}
+	for _, line := range strings.Split(string(sum), "\n") {
+		path, _, ok := strings.Cut(strings.TrimSpace(line), " ")
+		if !ok {
+			continue
+		}
+		if !allowedModules[path] {
+			t.Errorf("go.sum names %q, so it was fetched, and allowedModules does not name it", path)
+		}
+	}
+}
+
+// requiredModules reads the module paths out of a go.mod, in both spellings:
+// the one-line `require path version` and the parenthesised block. It reads the
+// text rather than running `go list`, so the test says what the file says even
+// when nothing was ever downloaded.
+func requiredModules(mod string) []string {
+	var paths []string
+	inBlock := false
+	for _, raw := range strings.Split(mod, "\n") {
+		line := strings.TrimSpace(raw)
+		if i := strings.Index(line, "//"); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if inBlock {
+			if line == ")" {
+				inBlock = false
+				continue
+			}
+			if path, _, ok := strings.Cut(line, " "); ok && path != "" {
+				paths = append(paths, path)
+			}
+			continue
+		}
+		rest, ok := strings.CutPrefix(line, "require")
+		if !ok {
+			continue
+		}
+		rest = strings.TrimSpace(rest)
+		if rest == "(" {
+			inBlock = true
+			continue
+		}
+		if path, _, ok := strings.Cut(rest, " "); ok && path != "" {
+			paths = append(paths, path)
+		}
+	}
+	return paths
+}
+
+// TestRequiredModulesReadsBothSpellings is the canary for the parser above.
+// Without it an allowlist that never sees a require line reads exactly like a
+// tree that has no dependencies.
+func TestRequiredModulesReadsBothSpellings(t *testing.T) {
+	mod := "module gdoc\n\ngo 1.27\n\nrequire github.com/one/alpha v1.0.0\n\nrequire (\n\tgithub.com/two/beta v2.0.0 // indirect\n\tgithub.com/three/gamma v3.0.0\n)\n"
+	got := requiredModules(mod)
+	want := []string{"github.com/one/alpha", "github.com/two/beta", "github.com/three/gamma"}
+	if len(got) != len(want) {
+		t.Fatalf("requiredModules read %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("requiredModules[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+	if len(requiredModules("module gdoc\n\ngo 1.27\n")) != 0 {
+		t.Error("a go.mod with no require line reads as a dependency")
 	}
 }
 

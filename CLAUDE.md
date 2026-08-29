@@ -96,6 +96,14 @@ Human words and the URL have one place to go, and it is not stdout.
 The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
+`gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
+than an oversight. There is no help command: `dispatch` matches `auth status`
+and `auth login` and nothing else, so `--help` comes back as an unknown command
+with the one-line `usage` string in the error. A caller reads the same JSON
+object it reads for every other run, and the exit code still means what it means
+everywhere else. Human-readable help would have to reach stdout beside the
+object, or exit 0 on a run that did no work, and both break the contract.
+
 ### The token file is v1's, so a v1 login is already a v2 login
 
 `internal/auth` reads `oauth-token.json` from the config dir in v1's google-auth
@@ -179,19 +187,25 @@ the transport to read the first MIME part. Failing closed is the right direction
 to be wrong in.
 
 Three more shapes belong to that same rule, and each closes a way the request on
-the wire differed from the one that was judged.
+the wire differed from the one that was judged. The two allowlists below them,
+one over the query and one over the headers, are the same rule again and are
+broader than all three.
 
-- **`uploadType` decides what the body is.** With `uploadType=media` the body IS
-  the file's content, so `{"parents":["FOLDER1"]}` reads as bytes to Drive and
-  as metadata to `checkParent`: the file lands unparented and the guard then
-  learns its id at `LevelFull`. `checkUploadType` permits the shapes the parent
-  check can read, `multipart` and `resumable` and an absent parameter, and
-  refuses the rest. Nothing may learn an id from a create it could not verify.
+- **The upload parameter decides what the body is.** With `uploadType=media`
+  the body IS the file's content, so `{"parents":["FOLDER1"]}` reads as bytes to
+  Drive and as metadata to `checkParent`: the file lands unparented and the
+  guard then learns its id at `LevelFull`. `checkUploadShape` permits the shapes
+  the parent check can read, `multipart` and `resumable` and an absent
+  parameter, and refuses the rest. It reads `upload_protocol` too, which is the
+  same choice under Google's newer name, where `raw` is what `media` was. A
+  request naming both parameters is refused rather than guessed at: the guard
+  would be reading the one Drive may not obey. Nothing may learn an id from a
+  create it could not verify.
 - **`fields` reaches the permission surface.** A GET is judged on its path, and
   `fields=*` or `fields=permissions(...)` returns exactly what refusing
-  `/permissions` was for. Each Drive read shape carries its own allowlist of
-  query parameters (`driveReadParamsFor`), and its `fields` value may name
-  neither `*` nor `permissions`.
+  `/permissions` was for. `checkFields` refuses `*`, refuses `permissions` by
+  any spelling, and refuses an empty mask, because Google reads a mask with
+  nothing in it as every field.
 - **The base transport carries no proxy.** `http.DefaultTransport` reads
   `HTTPS_PROXY`, so a nil base would send an unjudged `CONNECT` to whatever host
   the environment named, with the credential following it there. `baseTransport`
@@ -205,6 +219,60 @@ given to this command" on the next request, which names the wrong problem.
 `Policy` is mutex-guarded. `NewClient` hands out an `*http.Client`, which Go
 documents as safe for concurrent use, and `Learn` writes the set from inside
 `RoundTrip` while `Judge` reads it. `make test` runs `-race`; keep it there.
+
+### Two allowlists over one request, the query and the headers
+
+This is the guard's broadest rule, and it is easy to read past because neither
+half names a single attack.
+
+Google gives one capability several spellings. `fields` is also `$fields` and
+also the header `X-Goog-FieldMask`. `uploadType` has the sibling
+`upload_protocol`. `key` is also `$key` and the header `X-Goog-Api-Key`. A list
+of blocked spellings needs a patch each time somebody finds another one, and
+every miss is a live hole until then. So both halves are allowlists. They are
+wrong in the direction of a refusal the next milestone widens on purpose.
+
+- **The query.** `params.go` holds one allowlist per call shape, not one across
+  all of them: `driveGetParams`, `driveExportParams`, `driveCommentListParams`,
+  `driveReplyListParams`, `driveCommentGetParams`, `driveWriteParams`,
+  `driveCreateParams`, `docsReadParams`, and `noParams` for a call that carries
+  no query at all. One list for everything was wrong in both directions: it put
+  paging on a metadata read and an export format on a comment listing, neither
+  of which is a call Drive has, and it put `alt` on the bare `files.get`, where
+  `alt=media` stops being a metadata read and hands back the file's bytes.
+  `checkQuery` parses the raw query itself rather than through `u.Query()`,
+  which drops a pair it cannot read and returns the rest, and it refuses a
+  parameter given twice.
+- **The headers.** `allowedHeaders` in `transport.go` names seven, in lower
+  case, and every other header is refused. They are `authorization`,
+  `content-type`, `content-length`, `accept`, `accept-encoding`, `user-agent`
+  and `referer`. A Drive read whose query carries no `fields` can still ask for
+  `permissions(...)` in `X-Goog-FieldMask`, so a guard that judges only the
+  query judges half the request. `referer` is on the list because
+  `http.Client.Do` builds a redirect hop itself and sets it, and leaving it out
+  refused every redirect the policy allows. `cookie` is deliberately absent:
+  `NewClient` sets no jar, so a Cookie is a second credential nobody decided
+  about. A milestone needing another header, a resumable upload's
+  `X-Upload-Content-Type` for instance, adds it here on purpose.
+
+Both loops walk the raw header map and fold case themselves. `Header.Get`
+canonicalises the key it looks up, so it finds nothing stored under
+`X-HTTP-METHOD-OVERRIDE`, and two keys that fold to the same name are two lines
+on the wire. Counting one key at a time read each of them as the only one, which
+is how `Authorization` beside `authorization` put two credentials on a judged
+request and left the server to pick.
+
+`checkAuthorization` is the most the guard can honestly say about the
+credential, and the limit is worth holding. It checks one value, the `Bearer `
+scheme, and a token after it. That refuses a second credential, another scheme
+carrying another principal, and an empty grant. It cannot check whose token it
+is: the guard is built from a policy and a base transport and never sees the
+token, and pinning a literal would refuse the request after every refresh. So a
+caller that swaps in another person's bearer token runs the judged operation as
+that person. What the guard still bounds is which files are reachable and what
+may be done to them, which is principle 3's actual claim. Nothing here is a
+claim about identity. The refusal never prints the header value, because a
+refusal goes into the JSON the caller reports.
 
 ### The guard judges plain paths only
 
@@ -234,17 +302,24 @@ Naming `net/http` and dialing with it are not the same thing, so
   answers a request somebody else made, so it stays out of this set. A canary
   test states that rather than leaving it to luck.
 
-The builder scanner resolves the import name per file and knows six ways to
+The builder scanner resolves the import name per file and knows eight ways to
 make a wire: a composite literal, `new(http.Client)`, a zero-value `var c
 http.Client`, the dialers, a type declaration that renames the wire (`type C =
-http.Client`, or the same without the equals sign), and a struct embedding one
-by value. That is not thoroughness for its own sake. A scanner that assumes the
-name is always `http` and looks only for composite literals is walked around by
+http.Client`, or the same without the equals sign), a struct holding one by
+value, a container holding one by value (`make([]http.Client, 1)` and every
+shape `holdsWire` walks), and a function handing one back by value (`func
+Build() (c http.Client) { return }`). `holdsWire` recurses, so it also sees a
+wire that is only a generic type argument. A struct field counts whether it is
+embedded or named: `struct{ C http.Client }` is the same zero-value client as
+`struct{ http.Client }`, reached through one extra word.
+
+That is not thoroughness for its own sake. A scanner that assumes the name is
+always `http` and looks only for composite literals is walked around by
 `import nh "net/http"`, by `import . "net/http"`, by `new(...)`, by a zero-value
-declaration, by `type C = http.Client; var _ = &C{}` and by `type T struct{
-http.Client }`, and every one of those builds a wire outside the guard while
-passing both checks. The canary carries a case for each, and each case was
-watched failing against the scanner that missed it.
+declaration, by `type C = http.Client; var _ = &C{}`, by `type T struct{
+http.Client }`, by a slice, and by a named return, and every one of those builds
+a wire outside the guard while passing both checks. The canary carries a case
+for each, and each case was watched failing against the scanner that missed it.
 
 The two type shapes are flagged on the declaration, not on the values built from
 it. Following an alias would mean resolving names across a package, and a
@@ -266,9 +341,26 @@ rule possible is that `auth login` prints the URL instead of opening a browser.
 Opening a browser is the one thing a CLI usually shells out for.
 
 `go/boundary/boundary_test.go` enforces it, the way
-`tests/test_no_external_programs.py` enforces v1's. The same file also holds
-"standard library only" to the tree: it fails on a `require` block in `go.mod`
-and on a `go.sum` existing at all.
+`tests/test_no_external_programs.py` enforces v1's.
+
+### Standard library only, and that rule is M1's alone
+
+The same file holds "standard library only" to the tree: `allowedModules` in
+`TestNoThirdPartyDependencies` is empty, so every `require` line in `go.mod` and
+every module named in a `go.sum` is refused today.
+
+**Empty is a milestone's state, not the plan.** SPEC.md already agreed three
+modules, each with its reason written there: `beevik/etree`, because
+`encoding/xml` corrupts OOXML; `yuin/goldmark`, for the markdown M5 parses; and
+`goccy/go-yaml`, for the `gdoc:` front matter and `house.yaml`. The milestone
+that first needs one adds its path to `allowedModules` and nothing else. It does
+not delete the test, and it does not widen it to "whatever go.mod says". A
+fourth module needs its reason in SPEC.md before its line in the map, and the
+open candidate is `sergi/go-diff` at M8.
+
+Writing the map empty rather than leaving an instruction was the point: M1
+refuses exactly what it refused before, and M2 edits one line instead of
+arguing with a red build it has no note about.
 
 ### Building
 
@@ -283,6 +375,13 @@ and on a `go.sum` existing at all.
 `CGO_ENABLED=0`, so each one is static and the binary is the whole dependency.
 There is no linux target. Cross-building proves the binaries link, not that they
 run, so the real Windows smoke test belongs to M9.
+
+`.github/workflows/go.yml` runs all four on every push: gofmt, vet, the raced
+test suite, and `make dist`. dist is in CI because a cross-compile break is
+invisible to whoever is working on macOS, and "portability is never discovered
+late" is only true if something checks it on every commit rather than when
+somebody remembers. The workflow runs on ubuntu and builds no linux binary,
+which is fine: cross-compiling is what is being proved.
 
 ## One root, and it is never this repo
 

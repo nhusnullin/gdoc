@@ -22,6 +22,12 @@ Strains: none.
   `goccy/go-yaml v1.19.2` (front matter and `house.yaml`; reason written in
   SPEC.md; zero transitive modules). A fourth needs its reason written into
   SPEC.md first; the open candidate is `sergi/go-diff` at milestone 8.
+- None of those three is in `go.mod` yet, and the M1 boundary test refuses
+  every one of them. `allowedModules` in `TestNoThirdPartyDependencies` is an
+  empty allowlist, so "standard library only" is M1's state rather than v2's
+  rule. The milestone that first needs a module adds its path to that map, and
+  nothing else: it does not delete the test and it does not widen it to accept
+  whatever `go.mod` says. M5 is the likely first, for goldmark.
 - No `golang.org/x/oauth2`: the token refresh is a single POST to Google's
   token endpoint and is hand-rolled on the standard library.
 - v1 is retired as of 2026-08-29, Nail's call. The Python code stays in the
@@ -38,7 +44,8 @@ Strains: none.
 Module scaffold at `go/`, the JSON output envelope, config paths decided per
 platform (`~/.config/gdoc-agent` on macOS, `%AppData%\gdoc-agent` on Windows),
 and the guard as the complete network policy, not just a RoundTripper: an
-allowlist of exact Google hosts, refusal of cross-origin redirects, the id set
+allowlist of exact Google hosts, redirects capped and re-judged so one off the
+host allowlist is refused, the id set
 with write levels, a create-child capability for the one folder a command was
 given, narrowly defined non-file exemptions for the token endpoint, and
 response learning from creates. Enforced by a `go/ast` import-boundary test:

@@ -21,3 +21,8 @@ jobs:
         run: cd go && go vet ./...
       - name: test
         run: cd go && go test -race ./...
+      # Cross-compiling is a claim the Makefile makes and nobody working on
+      # macOS can break safely. Running it here finds a windows-only build
+      # failure on the commit that caused it.
+      - name: dist
+        run: make dist
