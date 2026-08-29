@@ -197,6 +197,17 @@ each comment: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an un
 gdoc has answered, is reported and never acted on. The marker is the trigger,
 always: stickiness carries context, never authority.
 
+**The 🤖 reply is the receipt, and the document is the ledger.** A marked
+comment counts as handled exactly when a 🤖 reply newer than it sits in its
+thread. No local record of handled comments exists anywhere, so any session at
+any time recomputes the open work from the threads alone, and gdoc's own
+replies surfacing in the next poll read as receipts, not as news. Two ordering
+rules follow: the receipt is written last, only after the action verifiably
+landed; and before re-acting on an old marked comment, the skill checks the
+pending proposals and their front-matter provenance, so a crash between the
+action and the receipt resolves to writing the missing receipt, never to
+acting twice.
+
 ### `reply`
 
 Posts into an existing thread. Plain text only. Every reply gdoc writes opens
