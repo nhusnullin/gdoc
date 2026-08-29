@@ -447,6 +447,11 @@ reports, not an error. A token file that is there and cannot be read is a
 different answer: it fails and names the file, because "signed out" would send
 you to `auth login`, which overwrites the file and loses the evidence.
 
+If the token was granted less than the Go binary asks for, `auth status` still
+says ok and lists the difference in `missing_scopes`, with a warning naming the
+scopes and telling you to sign in again. A token from the Python tool looks like
+this, because it asks for the read-only Docs scope.
+
 `auth login` prints the link rather than opening a browser for you, because the
 Go binary runs no other program at all. While it waits it listens on 127.0.0.1
 on a port the kernel picks, which is what your browser comes back to, so a

@@ -7,6 +7,10 @@ import (
 	"io"
 )
 
+// Result is the one object every command prints. Error carries what went
+// wrong, Warnings what went right in a way the reader still has to know about,
+// and the three optional fields are absent rather than empty so a skill can
+// tell "nothing to say" from "said nothing".
 type Result struct {
 	OK       bool     `json:"ok"`
 	Data     any      `json:"data,omitempty"`
@@ -14,12 +18,17 @@ type Result struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
+// Print writes the result as one JSON object and a newline. HTML escaping is
+// off because the strings here are paths, URLs and Drive ids, and `<` in a
+// path helps nobody read it.
 func Print(w io.Writer, r Result) error {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	return enc.Encode(r)
 }
 
+// ExitCode is the other half of the output contract: the process exits 0 if and
+// only if the object it printed says ok.
 func ExitCode(r Result) int {
 	if r.OK {
 		return 0

@@ -104,9 +104,12 @@ fresh v1 login. Written down in CLAUDE.md and README.md as well.
 
 `auth status` never guesses. An absent token file is `token_present: false` with
 `ok: true`; a token file that exists and cannot be read is `ok: false` naming
-the file. `auth_mode` is the constant `oauth`, and `client_source` is the
-constant `bundled`: v1's `oauth-client.json` override is not implemented in v2,
-and status says so instead of claiming it.
+the file, and it still carries the warnings the successful run would have.
+`auth_mode` is the constant `oauth`, and `client_source` is the constant
+`bundled`: v1's `oauth-client.json` override is not implemented in v2, and
+status says so instead of claiming it. When the token carries less than v2 asks
+for, `missing_scopes` names the difference and a warning says the Docs calls
+will be refused. That is a report, not a failure: the login worked.
 
 `Save` writes a temp file in the same directory, syncs it, and renames.
 Same-directory rename is atomic on POSIX. On Windows it is not guaranteed, which

@@ -4,7 +4,8 @@
 // nothing more. What protects an account is the per-user token, which never
 // leaves the machine.
 //
-// Refresh is one form POST, which is why x/oauth2 is not a dependency. This
+// The token endpoint is two form POSTs, the refresh and the code exchange,
+// which is why x/oauth2 is not a dependency. This
 // package never builds an HTTP client: it is handed one, and the only place
 // that builds one is internal/guard.
 package auth

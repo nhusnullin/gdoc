@@ -17,8 +17,10 @@ import (
 type Server struct {
 	ln    net.Listener
 	state string
-	codes chan result
-	srv   *http.Server
+	// answers, not codes: a refusal from the authorization server comes back
+	// the same way a code does, and the caller has to tell the two apart.
+	answers chan result
+	srv     *http.Server
 }
 
 type result struct {
@@ -35,7 +37,7 @@ func Listen(state string) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{ln: ln, state: state, codes: make(chan result, 1)}
+	s := &Server{ln: ln, state: state, answers: make(chan result, 1)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", s.callback)
 	s.srv = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
@@ -45,10 +47,6 @@ func Listen(state string) (*Server, error) {
 
 // callback answers the browser honestly. It says "signed in" only when a code
 // this run asked for actually arrived.
-//
-// The page is written and flushed before the answer is delivered. Delivering
-// first ends the login, the caller closes the listener, and the browser gets a
-// dropped connection instead of the sentence explaining what happened.
 func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	if q.Get("state") != s.state {
@@ -61,25 +59,29 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 			msg += ": " + d
 		}
 		http.Error(w, "Sign-in failed: "+msg, http.StatusBadRequest)
-		s.deliver(w, result{err: fmt.Errorf("the sign-in was refused: %s", msg)})
+		s.flushThenAnswer(w, result{err: fmt.Errorf("the sign-in was refused: %s", msg)})
 		return
 	}
 	code := q.Get("code")
 	if code == "" {
 		http.Error(w, "Sign-in failed: the callback carried no code.", http.StatusBadRequest)
-		s.deliver(w, result{err: errors.New("login callback carried no code")})
+		s.flushThenAnswer(w, result{err: errors.New("login callback carried no code")})
 		return
 	}
 	fmt.Fprint(w, "Signed in. You can close this tab.")
-	s.deliver(w, result{code: code})
+	s.flushThenAnswer(w, result{code: code})
 }
 
-func (s *Server) deliver(w http.ResponseWriter, r result) {
+// flushThenAnswer pushes the page out to the browser, then hands the result to
+// whoever is waiting. The order is the whole point: answering first ends the
+// login, the caller closes the listener, and the browser gets a dropped
+// connection instead of the sentence explaining what happened.
+func (s *Server) flushThenAnswer(w http.ResponseWriter, r result) {
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
 	select {
-	case s.codes <- r:
+	case s.answers <- r:
 	default: // a second hit changes nothing
 	}
 }
@@ -91,7 +93,7 @@ func (s *Server) Addr() string { return s.ln.Addr().String() }
 // authorization server refuses, or the timeout runs out.
 func (s *Server) WaitCode(timeout time.Duration) (string, error) {
 	select {
-	case r := <-s.codes:
+	case r := <-s.answers:
 		if r.err != nil {
 			return "", r.err
 		}

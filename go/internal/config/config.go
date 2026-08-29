@@ -13,6 +13,9 @@ import (
 
 const dirName = "gdoc-agent"
 
+// Dir is the directory gdoc's per-user files live in. It fails rather than
+// guessing: a home directory the OS cannot name would otherwise put the token
+// somewhere nobody looks and nobody deletes.
 func Dir() (string, error) {
 	if d := os.Getenv("GDOC_CONFIG_DIR"); d != "" {
 		return d, nil
@@ -31,6 +34,8 @@ func Dir() (string, error) {
 	return filepath.Join(home, ".config", dirName), nil
 }
 
+// TokenPath is where the OAuth token file sits. The name is v1's, so a login
+// through either tool signs the other one in.
 func TokenPath() (string, error) {
 	d, err := Dir()
 	if err != nil {

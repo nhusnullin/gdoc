@@ -51,11 +51,15 @@ network, and can log in and report its OAuth state.
 ### The two commands, and what reaches stdout
 
 `gdoc auth status` reports `auth_mode`, `token_path`, `client_source` and
-`token_present`, plus `expired` and `scopes` when a token is there. Being signed
-out is an answer, so it comes back as `ok: true` with `token_present: false`
-rather than as a failure.
+`token_present`, plus `expired`, `scopes` and `missing_scopes` when a token is
+there. Being signed out is an answer, so it comes back as `ok: true` with
+`token_present: false` rather than as a failure.
 
-Three things about those fields:
+The shape is `auth.StatusReport`, a struct with json tags, not a map. The
+command reads its fields in Go, so a field renamed in `auth` cannot silently
+drop a warning in `cmd`.
+
+Four things about those fields:
 
 - `auth_mode` is the constant `"oauth"`. v2 has no service account and never
   reads v1's `config.json`, so on a machine set to `auth_mode: service_account`
@@ -65,11 +69,15 @@ Three things about those fields:
   config dir override the client; v2's login does not read that file yet, so
   when it exists status adds `client_file_ignored: true` and a warning rather
   than claiming an override that is not wired up.
+- `missing_scopes` names what v2 asks for that the token does not carry. A
+  partial grant is reported, never refused: the login worked, and this is the
+  one place that can say why the Docs calls will 403 before they do. A v1 token
+  looks exactly like this.
 - A token file that exists and cannot be read is a **failure**, not
   `token_present: false`. It comes back `ok: false` with the path still in
-  `data`. Reporting it as signed out is how somebody re-runs `auth login`,
-  overwrites the file, and never learns what was wrong with it. Only an absent
-  file means signed out.
+  `data`, and with the warnings it would have carried on the way out. Reporting
+  it as signed out is how somebody re-runs `auth login`, overwrites the file,
+  and never learns what was wrong with it. Only an absent file means signed out.
 
 A panic anywhere is still one JSON object: `cmd/gdoc` recovers, prints
 `ok: false` with what happened, and puts the stack trace on stderr. A Go trace

@@ -66,6 +66,11 @@ func dispatch(args []string, errOut io.Writer) emit.Result {
 			return authLogin(errOut)
 		}
 	}
+	// Bare gdoc named no command, so there is nothing to quote back: `unknown
+	// command ""` names nothing and reads like a fault in the tool.
+	if len(args) == 0 {
+		return emit.Result{OK: false, Error: "gdoc needs a command. " + usage}
+	}
 	return emit.Result{OK: false,
 		Error: fmt.Sprintf("unknown command %q. %s", strings.Join(args, " "), usage)}
 }

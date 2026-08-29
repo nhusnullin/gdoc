@@ -178,11 +178,20 @@ func TestAFailingStatusStillCarriesItsWarnings(t *testing.T) {
 	}
 }
 
+// Bare gdoc named no command, so the error must not quote one. `unknown command
+// ""` names nothing and reads like a bug in the tool.
 func TestNoArgumentsFails(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
 	got, code := runJSON(t)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("bare gdoc must fail: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if strings.Contains(msg, `""`) {
+		t.Errorf("nothing was named, so nothing must be quoted back: %q", msg)
+	}
+	if !strings.Contains(msg, "needs a command") || !strings.Contains(msg, "auth status") {
+		t.Errorf("the error must say what is missing and what exists: %q", msg)
 	}
 }

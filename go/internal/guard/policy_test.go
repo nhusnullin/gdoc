@@ -233,8 +233,11 @@ func TestTokenHostCarriesNothingElse(t *testing.T) {
 }
 
 func TestDeleteOnAFileItselfIsRefused(t *testing.T) {
-	// A created file may be trashed with PATCH. A hard delete is not part of
-	// any level: nothing here destroys data.
+	// A created file may be trashed with PATCH, and trashing is reversible.
+	// DELETE on the file itself is not: it removes the document for everyone it
+	// was shared with, with nothing to undo. The comment surface is the one
+	// place DELETE is carried, because a comment gdoc wrote is gdoc's to
+	// withdraw.
 	p := NewPolicy()
 	p.Learn("MADE1")
 	if p.Judge("DELETE", mustURL(t, "https://www.googleapis.com/drive/v3/files/MADE1"), nil) == nil {

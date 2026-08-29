@@ -7,13 +7,16 @@ import (
 )
 
 func TestEnvOverrideWins(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", "/tmp/gdoc-test-conf")
+	// t.TempDir, not a literal path: M9 runs this suite on Windows, where a
+	// path spelled for POSIX is not a path at all.
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
 	d, err := Dir()
-	if err != nil || d != "/tmp/gdoc-test-conf" {
+	if err != nil || d != dir {
 		t.Fatalf("got %q, %v", d, err)
 	}
 	p, _ := TokenPath()
-	if p != filepath.Join("/tmp/gdoc-test-conf", "oauth-token.json") {
+	if p != filepath.Join(dir, "oauth-token.json") {
 		t.Fatalf("token path: %q", p)
 	}
 }
