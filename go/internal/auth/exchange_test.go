@@ -121,12 +121,8 @@ func TestStatusNamesTheScopesTheTokenDoesNotCarry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	missing, ok := out["missing_scopes"].([]string)
-	if !ok {
-		t.Fatalf("status did not report the missing scope: %v", out)
-	}
-	if !reflect.DeepEqual(missing, []string{"https://www.googleapis.com/auth/documents"}) {
-		t.Fatalf("missing_scopes: %v", missing)
+	if !reflect.DeepEqual(out.MissingScopes, []string{"https://www.googleapis.com/auth/documents"}) {
+		t.Fatalf("missing_scopes: %v", out.MissingScopes)
 	}
 }
 
@@ -143,7 +139,7 @@ func TestStatusIsQuietWhenEveryScopeIsThere(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, present := out["missing_scopes"]; present {
-		t.Fatalf("a full grant must report nothing: %v", out)
+	if len(out.MissingScopes) > 0 {
+		t.Fatalf("a full grant must report nothing: %+v", out)
 	}
 }

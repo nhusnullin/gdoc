@@ -219,29 +219,48 @@ func Save(t Token) error {
 	return nil
 }
 
+// StatusReport is the answer `gdoc auth status` prints, and the json tags are
+// the field names a skill reads. It is a struct rather than a map so the
+// command that renders it names the fields in Go: a key spelled in two packages
+// is a warning that disappears the day one of them is renamed.
+//
+// The three optional fields are absent, not empty, when there is no token to
+// describe. Expired is a pointer for that reason: "not expired" and "there is
+// no token" are different answers.
+type StatusReport struct {
+	AuthMode          string   `json:"auth_mode"`
+	TokenPath         string   `json:"token_path"`
+	ClientSource      string   `json:"client_source"`
+	TokenPresent      bool     `json:"token_present"`
+	ClientFileIgnored bool     `json:"client_file_ignored,omitempty"`
+	Expired           *bool    `json:"expired,omitempty"`
+	Scopes            []string `json:"scopes,omitempty"`
+	MissingScopes     []string `json:"missing_scopes,omitempty"`
+}
+
 // Status is what `gdoc auth status` reports. It reads and writes nothing else:
 // a status run must never refresh, move or rewrite the token file.
 //
-// The map comes back even when the error does. A token file that exists and
+// The report comes back even when the error does. A token file that exists and
 // cannot be read is a fault the caller must name: reporting it as "signed out"
 // is how somebody re-runs auth login, overwrites the file, and never learns
-// what was wrong with it.
-func Status() (map[string]any, error) {
+// what was wrong with it. Only a config dir gdoc cannot locate at all leaves
+// nothing to report, and then the report is nil.
+func Status() (*StatusReport, error) {
 	path, err := config.TokenPath()
 	if err != nil {
 		return nil, err
 	}
-	out := map[string]any{
-		"auth_mode":     "oauth", // v2 is OAuth only; it does not read v1's config
-		"token_path":    path,
-		"client_source": "bundled",
-		"token_present": false,
+	out := &StatusReport{
+		AuthMode:     "oauth", // v2 is OAuth only; it does not read v1's config
+		TokenPath:    path,
+		ClientSource: "bundled",
 	}
 	if _, err := os.Stat(filepath.Join(filepath.Dir(path), clientFileName)); err == nil {
 		// v1 lets this file override the bundled client. v2's login does not
 		// read it yet, so saying "file" here would name a client no token was
 		// ever issued to.
-		out["client_file_ignored"] = true
+		out.ClientFileIgnored = true
 	}
 	tok, err := Load()
 	if errors.Is(err, ErrNoToken) {
@@ -250,15 +269,14 @@ func Status() (map[string]any, error) {
 	if err != nil {
 		return out, err
 	}
-	out["token_present"] = true
-	out["expired"] = tok.Expired()
-	out["scopes"] = tok.Scopes
+	expired := tok.Expired()
+	out.TokenPresent = true
+	out.Expired = &expired
+	out.Scopes = tok.Scopes
 	// A token can carry less than v2 asks for: a granular consent screen where
 	// somebody ticked a subset, or a v1 login, which asks for documents.readonly
 	// rather than the read/write Docs scope. Either way the Docs calls will 403,
 	// and this is the one place that can say why before they do.
-	if missing := MissingScopes(tok.Scopes); len(missing) > 0 {
-		out["missing_scopes"] = missing
-	}
+	out.MissingScopes = MissingScopes(tok.Scopes)
 	return out, nil
 }

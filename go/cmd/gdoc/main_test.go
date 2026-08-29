@@ -152,6 +152,32 @@ func TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry(t *testing.T) {
 	}
 }
 
+// A failing status keeps its warnings. The run where the token cannot be read
+// is the one where a person most needs to know an oauth-client.json is sitting
+// there unused, and it was the run that dropped the sentence saying so.
+func TestAFailingStatusStillCarriesItsWarnings(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	if err := os.WriteFile(filepath.Join(dir, "oauth-client.json"), []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "auth", "status")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("an unreadable token must fail: %v (exit %d)", got, code)
+	}
+	warnings, _ := got["warnings"].([]any)
+	if len(warnings) != 1 {
+		t.Fatalf("the ignored client file must still be reported: %v", got["warnings"])
+	}
+	if w, _ := warnings[0].(string); !strings.Contains(w, "oauth-client.json") {
+		t.Fatalf("the warning must name the file: %q", w)
+	}
+}
+
 func TestNoArgumentsFails(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 

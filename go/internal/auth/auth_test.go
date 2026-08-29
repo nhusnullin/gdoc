@@ -189,18 +189,17 @@ func TestStatusReportsThePresentToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got["token_present"] != true || got["token_path"] != path {
-		t.Fatalf("status: %v", got)
+	if !got.TokenPresent || got.TokenPath != path {
+		t.Fatalf("status: %+v", got)
 	}
-	if got["expired"] != true {
+	if got.Expired == nil || !*got.Expired {
 		t.Fatal("a 2020 expiry must report expired")
 	}
-	if got["client_source"] != "bundled" {
-		t.Fatalf("client source: %v", got["client_source"])
+	if got.ClientSource != "bundled" {
+		t.Fatalf("client source: %v", got.ClientSource)
 	}
-	scopes, ok := got["scopes"].([]string)
-	if !ok || len(scopes) != 1 {
-		t.Fatalf("scopes: %v", got["scopes"])
+	if len(got.Scopes) != 1 {
+		t.Fatalf("scopes: %v", got.Scopes)
 	}
 }
 
@@ -210,10 +209,10 @@ func TestStatusWithNoToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got["token_present"] != false {
-		t.Fatalf("status: %v", got)
+	if got.TokenPresent {
+		t.Fatalf("status: %+v", got)
 	}
-	if _, reported := got["expired"]; reported {
+	if got.Expired != nil {
 		t.Fatal("with no token there is nothing to call expired")
 	}
 }
@@ -232,11 +231,11 @@ func TestStatusSaysAClientFileIsNotUsedYet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got["client_source"] != "bundled" {
-		t.Fatalf("every v2 login uses the bundled client: %v", got["client_source"])
+	if got.ClientSource != "bundled" {
+		t.Fatalf("every v2 login uses the bundled client: %v", got.ClientSource)
 	}
-	if got["client_file_ignored"] != true {
-		t.Fatalf("the file is there and unused; status must say so: %v", got)
+	if !got.ClientFileIgnored {
+		t.Fatalf("the file is there and unused; status must say so: %+v", got)
 	}
 }
 
@@ -256,8 +255,8 @@ func TestStatusNamesAnUnreadableToken(t *testing.T) {
 	if !strings.Contains(err.Error(), "oauth-token.json") {
 		t.Fatalf("the error must name the file: %v", err)
 	}
-	if got == nil || got["token_path"] == nil {
-		t.Fatalf("the facts still come back beside the error: %v", got)
+	if got == nil || got.TokenPath == "" {
+		t.Fatalf("the facts still come back beside the error: %+v", got)
 	}
 }
 

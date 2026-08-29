@@ -71,23 +71,33 @@ func dispatch(args []string, errOut io.Writer) emit.Result {
 }
 
 func authStatus() emit.Result {
-	data, err := auth.Status()
+	report, err := auth.Status()
 	if err != nil {
-		// The data goes out beside the error: the caller still learns which
-		// file was being read, and the error names what was wrong with it.
-		return emit.Result{OK: false, Error: err.Error(), Data: data}
+		// The report goes out beside the error, warnings included: the caller
+		// still learns which file was being read and what else is in the way,
+		// and the error names what was wrong with it. The run that fails is the
+		// one where the extra fact is worth most.
+		return emit.Result{OK: false, Error: err.Error(), Data: report, Warnings: statusWarnings(report)}
 	}
-	r := emit.Result{OK: true, Data: data}
-	if data["client_file_ignored"] == true {
-		r.Warnings = append(r.Warnings,
-			"an oauth-client.json sits in the config dir, but v2 does not read it yet: the bundled client is in use")
+	return emit.Result{OK: true, Data: report, Warnings: statusWarnings(report)}
+}
+
+// statusWarnings says what the report cannot say in a field: a fact that is
+// true, not a failure, and still changes what the reader should do next.
+func statusWarnings(r *auth.StatusReport) []string {
+	if r == nil {
+		return nil
 	}
-	if missing, ok := data["missing_scopes"].([]string); ok && len(missing) > 0 {
-		r.Warnings = append(r.Warnings,
-			fmt.Sprintf("the token does not carry every scope gdoc asks for, so those calls will be refused: %s. Run: gdoc auth login",
-				strings.Join(missing, ", ")))
+	var w []string
+	if r.ClientFileIgnored {
+		w = append(w, "an oauth-client.json sits in the config dir, but v2 does not read it yet: the bundled client is in use")
 	}
-	return r
+	if len(r.MissingScopes) > 0 {
+		w = append(w, fmt.Sprintf(
+			"the token does not carry every scope gdoc asks for, so those calls will be refused: %s. Run: gdoc auth login",
+			strings.Join(r.MissingScopes, ", ")))
+	}
+	return w
 }
 
 // authLogin prints the authorization URL to errOut and waits for the browser to
