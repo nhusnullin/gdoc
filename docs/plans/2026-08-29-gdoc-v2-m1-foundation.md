@@ -781,7 +781,7 @@ git commit -m "feat(v2): guard transport: judge, parent check, learn from create
 **Interfaces:**
 - Produces: a test that fails the build when `net/http` is imported anywhere in the module outside the allowlist `{internal/guard, internal/auth/loopback}`. It is an allowlist, not a ban, exactly like v1's `test_guard_is_installed`: it fails if the import spreads, and it fails just as loudly if an allowlisted package stops importing it without this test being updated.
 
-- [ ] **Step 1: Write the test (it passes now and starts failing the moment anyone strays; also add a canary)**
+- [x] **Step 1: Write the test (it passes now and starts failing the moment anyone strays; also add a canary)**
 
 ```go
 // Package boundary enforces that gdoc has exactly one wire. Only the guard
@@ -850,9 +850,9 @@ func keys() []string {
 }
 ```
 
-- [ ] **Step 2: Run it** (`go test ./boundary/`). Expected now: FAIL on the second half, because `internal/auth/loopback` does not exist yet. That is the allowlist working. Temporarily it documents Task 7's obligation; leave it failing only if Task 7 lands in the same session, otherwise trim the allowlist to `internal/guard` and expand it in Task 7. Choose the trim: the test must be green at every commit.
+- [x] **Step 2: Run it** (`go test ./boundary/`). Expected now: FAIL on the second half, because `internal/auth/loopback` does not exist yet. That is the allowlist working. Temporarily it documents Task 7's obligation; leave it failing only if Task 7 lands in the same session, otherwise trim the allowlist to `internal/guard` and expand it in Task 7. Choose the trim: the test must be green at every commit.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add go/boundary/
