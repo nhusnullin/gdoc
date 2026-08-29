@@ -2,6 +2,18 @@
 
 **Spike, 29 August 2026. Throwaway code, kept only as evidence.**
 
+## Principles
+
+Serves: principle 1. pandoc is the one external program left, and it survives
+because removing it in Python means writing a Markdown parser. In Go it is an
+import, and the build is one static binary with nothing to install on the machine
+it runs on.
+
+Strains: principle 1's own "a new third-party package needs a stated reason".
+This adds five at once. Each is named with its reason and its licence under
+Dependencies below, all are permissive and pure Go, and none of them is a program
+a package manager has to fetch, which is the line principle 1 actually draws.
+
 ## The answer
 
 Yes, exactly. Not "close enough": zero differing pixels.
@@ -194,21 +206,28 @@ when the whole point is to leave most of the file alone.
   A renderer that had to lay text out itself would be a different question, and
   this design never does.
 
-## Recommendation
+## Recommendation, and what was decided
 
-The fidelity question is answered and it is not close. If a Go rewrite is wanted
-for other reasons, single binary, no pandoc, no Python on a colleague's machine,
-then pixel fidelity is not an argument against it.
+The fidelity question is answered and it is not close. Pixel fidelity is not an
+argument against a Go rewrite, and the render path, which everyone assumed was the
+risk, is the part that ports cleanly.
 
-Whether to do the rewrite is a separate decision, and this spike says nothing
-about the other two thirds of the tool. What it does say is that the render path,
-which is the part everyone assumed was the risk, is the part that ports cleanly.
+**Decided on 29 August 2026: the next version of gdoc is written in Go.** Recorded
+in PRINCIPLES.md under that date. The reason is principle 1 rather than anything
+in the numbers above: a single binary is the end of the road this repository has
+been walking since the bundled OAuth client and `install.sh`. The numbers above
+only removed the objection.
 
-Two things are worth taking regardless of that decision:
+The decision is taken with one thing unproven and stated: `gdoc export` uses
+pandoc as a docx *reader*, goldmark does not replace it, and that reader has to be
+written. Proving it is the first task of the port, not the last.
 
-1. **The six defects.** They are fixed in this worktree against the Python code
-   and the suite passes. They are worth cherry-picking whatever happens to the
-   port.
+Two things are worth taking into the Python tool immediately, whatever the port's
+pace:
+
+1. **The six defects.** Four are fixed against the Python code in this worktree
+   and the suite passes; the other two are the Go side's to carry. They matter
+   today, on documents already being published.
 2. **The outline-based pagination.** It is strictly better than matching
    extracted PDF text, and it is a small change in Python.
 
