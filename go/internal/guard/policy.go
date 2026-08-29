@@ -4,6 +4,7 @@
 package guard
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -161,7 +162,7 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 	case "docs.googleapis.com":
 		return p.judgeDocs(method, u, body)
 	case "www.googleapis.com":
-		return p.judgeDrive(method, u)
+		return p.judgeDrive(method, u, body)
 	}
 	return refuse("the host %q is not one gdoc talks to. It reaches docs.googleapis.com, www.googleapis.com and the token host, and nothing else", u.Host)
 }
@@ -242,7 +243,7 @@ func filesCollection(path string) bool {
 	return p == "/drive/v3/files" || p == "/drive/v3/files/"
 }
 
-func (p *Policy) judgeDrive(method string, u *url.URL) error {
+func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 	path := strings.TrimPrefix(u.Path, "/upload")
 	rest, ok := strings.CutPrefix(path, "/drive/v3/files")
 	if !ok {
@@ -280,12 +281,46 @@ func (p *Policy) judgeDrive(method string, u *url.URL) error {
 		return checkQuery(u, driveReadParams)
 	case (method == "POST" || method == "PATCH" || method == "DELETE") && sub == "comments":
 		// the comment surface, replies included, is part of LevelSuggest
+		if err := checkCommentWrite(body); err != nil {
+			return err
+		}
 		return checkQuery(u, driveWriteParams)
 	case method == "PATCH" && sub == "" && lvl == LevelFull:
 		// e.g. trashing a document gdoc created
 		return checkQuery(u, driveWriteParams)
 	}
 	return refuse("%s %s is not allowed at the %s level. A file handed in may be read, commented on and suggested on, and only a file gdoc created may be changed in place", method, u.Path, lvl)
+}
+
+// checkCommentWrite refuses a write that closes or reopens somebody's thread.
+// SPEC.md's Never list: "Never resolve or reopen a comment thread." The whole
+// comment surface is writable at LevelSuggest, so the path cannot tell a reply
+// from a resolve and the body is the only thing that can.
+//
+// Drive spells both as one field, `action` on a reply
+// (https://developers.google.com/workspace/drive/api/reference/rest/v3/replies),
+// and the refusal is the whole field rather than the two values. gdoc sets no
+// action at all, so an action nobody has decided about is refused the way an
+// unknown query parameter is. `resolved` on the comment itself is output only:
+// Drive sets it from the reply action, and there is nothing to check there.
+//
+// A body that cannot be read is refused rather than carried. A comment write is
+// above a read, so not knowing must not resolve to sending it. That covers a
+// body longer than the transport's peek, which arrives here truncated.
+func checkCommentWrite(body []byte) error {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return nil // a DELETE, which carries no body and so no action
+	}
+	var probe struct {
+		Action string `json:"action"`
+	}
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return refuse("the body of this comment write cannot be read, so a reply cannot be told from a resolve: %v", err)
+	}
+	if probe.Action != "" {
+		return refuse("action=%q on a comment thread is refused: gdoc never resolves or reopens somebody's thread", probe.Action)
+	}
+	return nil
 }
 
 // isSuggestMode reads the one field that keeps a handed-in document

@@ -148,6 +148,44 @@ func TestGrantInPlaceNeverAdmitsAnUnknownID(t *testing.T) {
 	}
 }
 
+// SPEC.md's Never list: "Never resolve or reopen a comment thread." Drive
+// spells both as the `action` field on a reply, and the whole comment surface
+// is writable at LevelSuggest, so the body is the only thing that tells a reply
+// from a resolve.
+func TestResolvingOrReopeningAThreadIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	u := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies")
+	for _, body := range []string{
+		`{"action":"resolve"}`,
+		`{"action":"reopen"}`,
+		`{"content":"done","action":"resolve"}`,
+	} {
+		if p.Judge("POST", u, []byte(body)) == nil {
+			t.Errorf("%s must be refused: gdoc never resolves or reopens a thread", body)
+		}
+	}
+	// The rule is about the thread, not about the level. A document gdoc made
+	// itself is no more allowed to close somebody's thread.
+	made := mustURL(t, "https://www.googleapis.com/drive/v3/files/MADE1/comments/C1/replies")
+	if p.Judge("POST", made, []byte(`{"action":"resolve"}`)) == nil {
+		t.Error("a resolve on a created document must be refused too")
+	}
+	// A body the guard cannot read cannot be told apart from a resolve, and a
+	// comment write is above a read, so not knowing refuses.
+	if p.Judge("POST", u, []byte(`{"content":`)) == nil {
+		t.Error("a comment write whose body cannot be read must be refused")
+	}
+	// The other direction: the writes gdoc does make still go out.
+	if err := p.Judge("POST", u, []byte(`{"content":"a plain reply"}`)); err != nil {
+		t.Errorf("a plain reply must be carried: %v", err)
+	}
+	if err := p.Judge("DELETE", u, nil); err != nil {
+		t.Errorf("a write with no body at all carries no action: %v", err)
+	}
+}
+
 func TestUnreadableBatchUpdateBodyIsNotASuggestion(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
