@@ -61,7 +61,7 @@ var docsReadParams = map[string]bool{
 // gdoc has no business overriding.
 var driveReadParams = map[string]bool{
 	"alt":               true, // export asks for the bytes rather than the metadata
-	"mimeType":          true, // which export format
+	"mimeType":          true, // which export format, narrowed further by checkExportMime
 	"fields":            true, // narrowed further by checkFields
 	"pageSize":          true, // comments come back a page at a time
 	"pageToken":         true,
@@ -129,6 +129,44 @@ func checkParamValue(name, v string) error {
 		if !altValues[v] {
 			return refuse("alt=%q is not a response format gdoc reads", v)
 		}
+	case "mimeType":
+		return checkExportMime(v)
+	case "includeTabsContent":
+		// SPEC.md: "Always read with includeTabsContent=true. Reading without
+		// it silently sees one tab." The guard decides the value here, and it
+		// does not require the parameter to be present. Two reasons, and both
+		// matter.
+		//
+		// A read that says `false` is asking for the blind read on purpose, and
+		// nothing gdoc does wants that, so it is refused like any other value
+		// the guard has not decided about. But requiring the parameter would
+		// make the guard order every Docs read to fetch every tab, including a
+		// metadata-only read such as `fields=documentId,title`, which needs no
+		// tab content at all. That is a call-site decision about what to ask
+		// for, and it belongs where the call is built, in M2's reader, beside
+		// the multi-tab check the same read feeds.
+		//
+		// So the limit is worth naming: a Docs read that omits this reaches
+		// Drive, sees one tab, and the guard does not stop it.
+		if v != "true" {
+			return refuse("includeTabsContent=%q is not a read gdoc makes: without a plain true the answer covers one tab and says nothing about the rest", v)
+		}
+	}
+	return nil
+}
+
+// checkExportMime refuses the one export format SPEC.md's Never list names:
+// "Never export a PDF. Nail downloads it from the browser." mimeType decides
+// what /export returns, so this is where that rule can be applied.
+//
+// The comparison folds case and drops anything after the `;`, because a media
+// type is case-insensitive and its parameters do not change which type it is.
+// A `;` makes url.ParseQuery refuse the whole query today, so that half is
+// belt and braces rather than the only stop.
+func checkExportMime(v string) error {
+	mime, _, _ := strings.Cut(v, ";")
+	if strings.EqualFold(strings.TrimSpace(mime), "application/pdf") {
+		return refuse("mimeType=%q asks for a PDF export, and gdoc never exports one", v)
 	}
 	return nil
 }

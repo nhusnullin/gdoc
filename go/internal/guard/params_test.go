@@ -139,6 +139,46 @@ func TestAnEmptyFieldMaskIsRefused(t *testing.T) {
 	}
 }
 
+// SPEC.md's Never list: "Never export a PDF. Nail downloads it from the
+// browser." mimeType was on the allowlist with no opinion about its value, so
+// the one export format the spec names was the one nothing stopped.
+func TestAPDFExportIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	const base = "https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType="
+	for _, raw := range []string{
+		base + "application/pdf",
+		base + "APPLICATION/PDF",             // the scheme is case-insensitive, so the rule is too
+		base + "application/pdf;+charset=x",  // a parameter after the type is still the type
+		base + "+application/pdf+&alt=media", // and so is one with spaces around it
+	} {
+		if err := p.Judge("GET", mustURL(t, raw), nil); err == nil {
+			t.Errorf("%s must be refused: gdoc never exports a PDF", raw)
+		}
+	}
+	docx := base + "application/vnd.openxmlformats-officedocument.wordprocessingml.document&alt=media"
+	if err := p.Judge("GET", mustURL(t, docx), nil); err != nil {
+		t.Errorf("the docx export is the honest witness and must still be carried: %v", err)
+	}
+}
+
+// SPEC.md: "Always read with includeTabsContent=true. Reading without it
+// silently sees one tab." The guard decides the value, not the presence: see
+// checkParamValue for where that line is drawn and why.
+func TestIncludeTabsContentMustSayTrue(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	const base = "https://docs.googleapis.com/v1/documents/DOC1?includeTabsContent="
+	for _, raw := range []string{base + "false", base, base + "1", base + "TRUE"} {
+		if err := p.Judge("GET", mustURL(t, raw), nil); err == nil {
+			t.Errorf("%s must be refused: a read that asks for one tab reads one tab and says nothing about the rest", raw)
+		}
+	}
+	if err := p.Judge("GET", mustURL(t, base+"true"), nil); err != nil {
+		t.Errorf("the read gdoc makes must be carried: %v", err)
+	}
+}
+
 // A query the guard cannot parse is a query it cannot judge, and Google may
 // still read the half that url.Values drops.
 func TestAnUnreadableQueryIsRefused(t *testing.T) {
