@@ -215,6 +215,15 @@ with 🤖 and nothing else: no name, no prefix text. `commentUpdateState` is
 checked. gdoc never resolves and never reopens a thread, even though the API now
 can: resolving means the answer was accepted, and only Nail accepts.
 
+**A long action writes at most two messages into its thread.** An
+acknowledgment when the work will take noticeably long (one line, reader
+language), and the receipt when the action verifiably landed. Never a progress
+feed: principle 4, the margin is the readers' room and the terminal is the
+operator's. A failed action replaces the receipt with a plain failure naming
+the reason, so a thread always ends in a true statement and never in a
+dangling "on it". Acknowledgment and receipt are separate replies, never
+edits of one message.
+
 ### `propose`
 
 Writes a change as a native Google suggestion (`writeMode: SUGGEST`) with an
