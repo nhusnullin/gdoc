@@ -121,10 +121,18 @@ func httpImporters(root string) (all, prod map[string]bool, err error) {
 // http.Client or http.Transport, or use a package-level dialer. Test files are
 // skipped: faking the wire is what a test is for.
 //
-// Four ways to build one, and a scanner that knows only the first is a scanner
+// Six ways to build one, and a scanner that knows only the first is a scanner
 // that can be walked around: a composite literal, `new(http.Client)`, a
-// zero-value declaration `var c http.Client`, and the package-level dialers.
-// Each is checked under every import spelling.
+// zero-value declaration `var c http.Client`, the package-level dialers, a type
+// declaration that renames the wire (`type C = http.Client`, or the same
+// without the equals sign), and a struct that embeds one by value. Each is
+// checked under every import spelling.
+//
+// The two type shapes are flagged on the declaration rather than on the use.
+// Following an alias to the values built from it would mean resolving names
+// across a package, and a package outside the guard has no reason to give the
+// wire a second name in the first place. Embedding a POINTER is not flagged:
+// that is holding a client somebody else made, which is what `handed` does.
 func httpBuilders(root string) (map[string]bool, error) {
 	found := map[string]bool{}
 	err := walkGo(root, func(rel, path string, f *ast.File) error {
@@ -149,6 +157,16 @@ func httpBuilders(root string) (map[string]bool, error) {
 			case *ast.ValueSpec: // var c http.Client
 				if v.Type != nil && isWireType(v.Type, names, dot) {
 					found[rel] = true
+				}
+			case *ast.TypeSpec: // type C = http.Client, type C http.Client
+				if isWireType(v.Type, names, dot) {
+					found[rel] = true
+				}
+			case *ast.StructType: // struct{ http.Client }
+				for _, fld := range v.Fields.List {
+					if len(fld.Names) == 0 && isWireType(fld.Type, names, dot) {
+						found[rel] = true
+					}
 				}
 			case *ast.SelectorExpr: // http.Get, http.DefaultClient
 				if x, ok := v.X.(*ast.Ident); ok && names[x.Name] && dialers[v.Sel.Name] {
@@ -300,6 +318,9 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 		"package server\n\nimport \"net/http\"\n\nvar S = &http.Server{Handler: http.NewServeMux()}\n")
 	write(t, filepath.Join(root, "pointer", "pointer.go"),
 		"package pointer\n\nimport \"net/http\"\n\nvar C *http.Client\n")
+	// Embedding a POINTER is being handed one, the same as the field above.
+	write(t, filepath.Join(root, "embedptr", "embedptr.go"),
+		"package embedptr\n\nimport \"net/http\"\n\ntype T struct{ *http.Client }\n")
 	write(t, filepath.Join(root, "faketest", "wire_test.go"),
 		"package faketest\n\nimport \"net/http\"\n\nvar C = &http.Client{}\n")
 	// Builders, one spelling each.
@@ -319,12 +340,26 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 		"package zero\n\nimport \"net/http\"\n\nvar C http.Client\n")
 	write(t, filepath.Join(root, "roundtripper", "roundtripper.go"),
 		"package roundtripper\n\nimport \"net/http\"\n\nvar T = &http.Transport{}\n")
+	// A type alias renames the wire, and every spelling above then works again
+	// under a name the scanner has never heard of.
+	write(t, filepath.Join(root, "typealias", "typealias.go"),
+		"package typealias\n\nimport \"net/http\"\n\ntype C = http.Client\n\nvar _ = &C{}\n")
+	// A defined type is the same move without the equals sign.
+	write(t, filepath.Join(root, "definedtype", "definedtype.go"),
+		"package definedtype\n\nimport \"net/http\"\n\ntype C http.Client\n")
+	// Embedding a VALUE puts a whole client inside another type, and a value of
+	// that type is a wire nobody handed over.
+	write(t, filepath.Join(root, "embedded", "embedded.go"),
+		"package embedded\n\nimport \"net/http\"\n\ntype T struct{ http.Client }\n")
+	write(t, filepath.Join(root, "anonembed", "anonembed.go"),
+		"package anonembed\n\nimport \"net/http\"\n\nvar V = struct{ http.Transport }{}\n")
 
 	found, err := httpBuilders(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"aliased", "aliasedcall", "dotted", "maker", "newed", "roundtripper", "shortcut", "zero"}
+	want := []string{"aliased", "aliasedcall", "anonembed", "definedtype", "dotted", "embedded",
+		"maker", "newed", "roundtripper", "shortcut", "typealias", "zero"}
 	if got := names(found); !reflect.DeepEqual(got, want) {
 		t.Errorf("httpBuilders found %v, want %v", got, want)
 	}
