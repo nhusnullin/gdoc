@@ -24,6 +24,31 @@ func (f *fake) RoundTrip(r *http.Request) (*http.Response, error) {
 	}, nil
 }
 
+// redirectingFake answers the first request with a 302 to `to` and everything
+// after it with 200. It is what lets a test follow a redirect the way the
+// standard library does, headers and all, instead of calling CheckRedirect by
+// hand.
+type redirectingFake struct {
+	to   string
+	seen []*http.Request
+}
+
+func (f *redirectingFake) RoundTrip(r *http.Request) (*http.Response, error) {
+	f.seen = append(f.seen, r)
+	h := http.Header{"Content-Type": []string{"application/json"}}
+	status := http.StatusOK
+	if len(f.seen) == 1 {
+		status = http.StatusFound
+		h.Set("Location", f.to)
+	}
+	return &http.Response{
+		StatusCode: status,
+		Body:       io.NopCloser(strings.NewReader(`{}`)),
+		Header:     h,
+		Request:    r,
+	}, nil
+}
+
 func TestRefusedRequestNeverReachesTheWire(t *testing.T) {
 	f := &fake{status: 200, body: `{}`}
 	p := NewPolicy()
@@ -433,5 +458,119 @@ func TestTheSentRequestCanStillReplayItsBody(t *testing.T) {
 	}
 	if string(wire) != payload {
 		t.Fatalf("the wire saw %q, not the body the caller wrote", wire)
+	}
+}
+
+// GetBody is what replays a body BELOW the guard. http.Transport rewinds
+// through it when a pooled connection breaks, inside the base transport, and
+// those bytes never pass RoundTrip again. So a GetBody the guard did not write
+// puts unjudged bytes on the wire on the retry. The request the guard sends
+// carries a replay of the bytes it judged, or no replay at all.
+func TestTheReplayIsTheBodyTheGuardJudged(t *testing.T) {
+	f := &fake{status: 200, body: `{"id":"NEWDOC"}`}
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	c := NewClient(p, f)
+
+	judged := `{"parents":["FOLDER1"]}`
+	req, err := http.NewRequest("POST", "https://www.googleapis.com/drive/v3/files",
+		strings.NewReader(judged))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The caller's replay says the create lands somewhere else. A retry inside
+	// the base transport would send this, and the guard never judged it.
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader(`{"parents":["SOMEONE_ELSES_FOLDER"]}`)), nil
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if len(f.seen) != 1 {
+		t.Fatalf("the create must reach the wire once, got %d", len(f.seen))
+	}
+	sent := f.seen[0]
+	if sent.GetBody == nil {
+		t.Fatal("a body the guard holds whole must still be replayable")
+	}
+	rc, err := sent.GetBody()
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(replay) != judged {
+		t.Fatalf("a retry would send %q, which the guard never judged", replay)
+	}
+}
+
+// The other half of the same rule. A body longer than the peek is streamed on
+// without the guard holding it, so there is nothing to replay from, and the
+// caller's own replay is not it. No GetBody means http.Transport does not
+// retry, which is the refusing direction.
+func TestABodyPastThePeekCarriesNoReplay(t *testing.T) {
+	f := &fake{status: 200, body: `{}`}
+	p := NewPolicy()
+	p.Learn("DOC1") // LevelFull, so a big batchUpdate body is carried
+	c := NewClient(p, f)
+
+	big := `{"requests":[],"pad":"` + strings.Repeat("x", maxPeek) + `"}`
+	req, err := http.NewRequest("POST", "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate",
+		strings.NewReader(big))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.GetBody == nil {
+		t.Fatal("this test is pointless if the caller had no replay to carry over")
+	}
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if len(f.seen) != 1 {
+		t.Fatalf("the write must reach the wire once, got %d", len(f.seen))
+	}
+	if f.seen[0].GetBody != nil {
+		t.Fatal("a body the guard did not hold whole must carry no replay")
+	}
+	sent, err := io.ReadAll(f.seen[0].Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(sent) != big {
+		t.Fatal("the body the wire saw is not the body the caller wrote")
+	}
+}
+
+// A real redirect, followed by the standard library, rather than CheckRedirect
+// called by hand. Client.Do adds a Referer to the request it builds for the
+// hop, and that request passes RoundTrip and the header allowlist. Calling the
+// hook directly never sees that header, so it passed while a genuinely allowed
+// redirect was refused on the wire.
+func TestARealSameOriginRedirectIsCarried(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	f := &redirectingFake{to: "https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/markdown"}
+	c := NewClient(p, f)
+	req, err := http.NewRequest("GET", "https://www.googleapis.com/drive/v3/files/DOC1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer token")
+	resp, err := c.Do(req)
+	if err != nil {
+		t.Fatalf("a redirect the policy allows must be carried: %v", err)
+	}
+	resp.Body.Close()
+	if len(f.seen) != 2 {
+		t.Fatalf("the redirect was not followed: %d requests reached the wire", len(f.seen))
+	}
+	if f.seen[1].Header.Get("Referer") == "" {
+		t.Fatal("the premise changed: Client.Do no longer adds a Referer, so this test proves nothing")
 	}
 }

@@ -304,21 +304,30 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 // unknown query parameter is. `resolved` on the comment itself is output only:
 // Drive sets it from the reply action, and there is nothing to check there.
 //
+// The field is refused by its presence, not by its value. `{"action":""}` and
+// `{"action":null}` are the field, spelled two ways that a check on the decoded
+// string reads as absent, and what Drive does with either is a question the
+// guard would be answering by guess. The body is decoded into raw fields for
+// that reason: a string field cannot tell an absent key from a present empty
+// one. The names are compared with case folded, because encoding/json matches
+// them that way, so `{"Action":"resolve"}` decodes into the same field.
+//
 // A body that cannot be read is refused rather than carried. A comment write is
 // above a read, so not knowing must not resolve to sending it. That covers a
-// body longer than the transport's peek, which arrives here truncated.
+// body longer than the transport's peek, which arrives here truncated, and a
+// body that is not an object at all.
 func checkCommentWrite(body []byte) error {
 	if len(bytes.TrimSpace(body)) == 0 {
 		return nil // a DELETE, which carries no body and so no action
 	}
-	var probe struct {
-		Action string `json:"action"`
-	}
+	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(body, &probe); err != nil {
 		return refuse("the body of this comment write cannot be read, so a reply cannot be told from a resolve: %v", err)
 	}
-	if probe.Action != "" {
-		return refuse("action=%q on a comment thread is refused: gdoc never resolves or reopens somebody's thread", probe.Action)
+	for name := range probe {
+		if strings.EqualFold(name, "action") {
+			return refuse("%q on a comment thread is refused: gdoc never resolves or reopens somebody's thread, so it sends no action field at all", name)
+		}
 	}
 	return nil
 }

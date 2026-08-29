@@ -57,10 +57,22 @@ var methodOverrideHeaders = []string{
 // Blocking the spellings one at a time is what needed a patch each time
 // somebody found another one. This is an allowlist for the same reason the
 // query rule in params.go is one, and the two are the same rule over one
-// request. The six below are what gdoc's own calls set: the credential, the
-// body's type and length, and what Go itself writes. A milestone that needs
-// another one, a resumable upload's X-Upload-Content-Type for instance, adds it
-// here on purpose.
+// request. The list below is what gdoc's own calls set plus what the standard
+// library adds above the guard: the credential, the body's type and length, and
+// Referer.
+//
+// What net/http adds, and where, decides which of them have to be here.
+// http.Client.Do builds the request for a redirect hop itself: it copies the
+// original headers and sets Referer, and that request then passes RoundTrip, so
+// leaving Referer out refused every redirect the policy allows. Cookie is the
+// other one Do can add, from a jar, and NewClient sets no jar, so a Cookie on a
+// request is a second credential nobody here decided about and stays refused.
+// Host, Content-Length, Connection, Accept-Encoding and the default User-Agent
+// are written by http.Transport, below RoundTrip, so the guard never sees them
+// and the entries below are for a caller that sets them itself.
+//
+// A milestone that needs another one, a resumable upload's
+// X-Upload-Content-Type for instance, adds it here on purpose.
 var allowedHeaders = map[string]bool{
 	"authorization":   true, // the one credential gdoc sends; checkAuthorization reads its value
 	"content-type":    true, // every POST and PATCH gdoc makes sets it
@@ -68,6 +80,7 @@ var allowedHeaders = map[string]bool{
 	"accept":          true,
 	"accept-encoding": true,
 	"user-agent":      true,
+	"referer":         true, // http.Client.Do sets it on a redirect hop
 }
 
 type transport struct {
@@ -204,15 +217,28 @@ func checkWireMatchesJudgment(req *http.Request) error {
 			}
 		}
 	}
+	// One name, one value, counted across every spelling of that name. Two map
+	// keys that fold to the same header are two lines on the wire, and a count
+	// taken one key at a time reads each of them as the only one. That is how
+	// "Authorization" beside "authorization" put two credentials on a judged
+	// request and left the server to pick. gdoc sends each of these once, so
+	// the rule holds for all of them rather than for the credential alone.
+	byName := map[string][]string{}
 	for key, vals := range req.Header {
 		lower := strings.ToLower(key)
 		if !allowedHeaders[lower] {
 			return refuse("the header %q is not one gdoc sends, and a header changes what a request returns or does as much as the query does", key)
 		}
-		if lower == "authorization" {
-			if err := checkAuthorization(vals); err != nil {
-				return err
-			}
+		byName[lower] = append(byName[lower], vals...)
+	}
+	for name, vals := range byName {
+		if len(vals) != 1 {
+			return refuse("the request carries %d values for the header %q, and gdoc sends one, so which one the server reads is not decided here", len(vals), name)
+		}
+	}
+	if vals, ok := byName["authorization"]; ok {
+		if err := checkAuthorization(vals); err != nil {
+			return err
 		}
 	}
 	if req.URL.Query().Has("_method") {
@@ -234,7 +260,9 @@ func checkWireMatchesJudgment(req *http.Request) error {
 //
 // What it checks: one value, the Bearer scheme, and a token after it. That
 // refuses a second credential the server would choose between, another scheme
-// carrying another principal, and an empty grant.
+// carrying another principal, and an empty grant. Its caller counts the values
+// across every spelling of the name first, so the count here is about the
+// values this function is handed rather than the whole request.
 //
 // What it cannot check: whose token it is. The guard is built from a policy and
 // a base transport and never sees the token; whatever attaches the credential
@@ -286,10 +314,22 @@ func closeBody(req *http.Request) {
 // Body itself makes judged bytes and sent bytes the same bytes by construction,
 // so GetBody cannot enter the judgment at all.
 //
-// GetBody is carried over onto the copy unchanged, and it still works: it
-// replays the original body from the start and the peek never touched it. So a
-// redirect or a retry still has a body where it had one before, and the
-// replayed request passes RoundTrip again, where it is judged on its own.
+// The caller's GetBody is dropped, and this is the half a redirect argument
+// does not cover. A redirect is driven by http.Client, above the guard, so the
+// replayed request passes RoundTrip and is judged again. A retry is not:
+// http.Transport rewinds a request through GetBody inside the base transport,
+// below the guard, when a pooled connection breaks. Those bytes go on the wire
+// without passing RoundTrip at all, so a GetBody returning something other than
+// the peeked body is unjudged bytes on the wire.
+//
+// So the request the guard sends carries a replay the guard wrote itself, over
+// the bytes it judged, or no replay at all. The guard writes one when it holds
+// the whole body, which is a body shorter than the peek, and only when the
+// caller had a replay to begin with: adding one where there was none would make
+// a request retryable that its caller built not to be. A longer body is
+// streamed on without being held, so there is nothing to replay from and
+// GetBody stays nil. http.Transport does not retry a request it cannot rewind,
+// which is the refusing direction, and the caller sees the connection error.
 func peekBody(req *http.Request) ([]byte, *http.Request, error) {
 	if req.Body == nil {
 		return nil, req, nil
@@ -300,6 +340,16 @@ func peekBody(req *http.Request) ([]byte, *http.Request, error) {
 	}
 	send := req.Clone(req.Context())
 	send.Body = readCloser{Reader: io.MultiReader(bytes.NewReader(head), req.Body), Closer: req.Body}
+	send.GetBody = nil
+	// A short read means the body ended before the cap, so head is all of it.
+	// A read that fills the cap exactly may or may not have a tail, and the
+	// guard does not guess: it drops the replay.
+	if req.GetBody != nil && len(head) < maxPeek {
+		replay := head
+		send.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(replay)), nil
+		}
+	}
 	return head, send, nil
 }
 

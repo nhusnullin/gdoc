@@ -91,6 +91,27 @@ func isWireType(e ast.Expr, names map[string]bool, dot bool) bool {
 	return false
 }
 
+// holdsWire reports whether e is a wire type or a container that holds one by
+// value. `var c [1]http.Client` is a whole client, and so is every element of
+// `make([]http.Client, 1)`, a map value and a channel's element type. A scanner
+// that reads only the bare type is walked around by writing one pair of
+// brackets in front of it.
+//
+// A pointer ends the walk. `[]*http.Client` is a list of clients somebody else
+// made, which is the same as taking one as a parameter, and that is not
+// building the wire.
+func holdsWire(e ast.Expr, names map[string]bool, dot bool) bool {
+	switch v := e.(type) {
+	case *ast.ArrayType: // [N]http.Client and []http.Client
+		return holdsWire(v.Elt, names, dot)
+	case *ast.MapType: // map[k]http.Client
+		return holdsWire(v.Key, names, dot) || holdsWire(v.Value, names, dot)
+	case *ast.ChanType: // chan http.Client
+		return holdsWire(v.Value, names, dot)
+	}
+	return isWireType(e, names, dot)
+}
+
 // httpImporters returns the package directories under root, slash separated
 // and relative to root, that import net/http. Two sets, and the difference is
 // the point. `all` counts every file, because a stray import is worth flagging
@@ -121,12 +142,13 @@ func httpImporters(root string) (all, prod map[string]bool, err error) {
 // http.Client or http.Transport, or use a package-level dialer. Test files are
 // skipped: faking the wire is what a test is for.
 //
-// Six ways to build one, and a scanner that knows only the first is a scanner
+// Seven ways to build one, and a scanner that knows only the first is a scanner
 // that can be walked around: a composite literal, `new(http.Client)`, a
 // zero-value declaration `var c http.Client`, the package-level dialers, a type
 // declaration that renames the wire (`type C = http.Client`, or the same
-// without the equals sign), and a struct that holds one by value. Each is
-// checked under every import spelling.
+// without the equals sign), a struct that holds one by value, and a container
+// that holds one by value, which is `make([]http.Client, 1)` and every shape
+// holdsWire walks. Each is checked under every import spelling.
 //
 // A struct field counts whether it is embedded or named. `struct{ C http.Client }`
 // is the same zero-value client as `struct{ http.Client }`, reached through one
@@ -150,26 +172,26 @@ func httpBuilders(root string) (map[string]bool, error) {
 		}
 		ast.Inspect(f, func(n ast.Node) bool {
 			switch v := n.(type) {
-			case *ast.CompositeLit: // http.Client{...}
-				if isWireType(v.Type, names, dot) {
+			case *ast.CompositeLit: // http.Client{...}, []http.Client{...}
+				if holdsWire(v.Type, names, dot) {
 					found[rel] = true
 				}
-			case *ast.CallExpr: // new(http.Client)
+			case *ast.CallExpr: // new(http.Client), make([]http.Client, 1)
 				id, ok := v.Fun.(*ast.Ident)
-				if ok && id.Name == "new" && len(v.Args) == 1 && isWireType(v.Args[0], names, dot) {
+				if ok && (id.Name == "new" || id.Name == "make") && len(v.Args) > 0 && holdsWire(v.Args[0], names, dot) {
 					found[rel] = true
 				}
-			case *ast.ValueSpec: // var c http.Client
-				if v.Type != nil && isWireType(v.Type, names, dot) {
+			case *ast.ValueSpec: // var c http.Client, var c [1]http.Client
+				if v.Type != nil && holdsWire(v.Type, names, dot) {
 					found[rel] = true
 				}
 			case *ast.TypeSpec: // type C = http.Client, type C http.Client
-				if isWireType(v.Type, names, dot) {
+				if holdsWire(v.Type, names, dot) {
 					found[rel] = true
 				}
 			case *ast.StructType: // struct{ http.Client }, struct{ C http.Client }
 				for _, fld := range v.Fields.List {
-					if isWireType(fld.Type, names, dot) {
+					if holdsWire(fld.Type, names, dot) {
 						found[rel] = true
 					}
 				}
@@ -357,6 +379,10 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 	// Embedding a POINTER is being handed one, the same as the field above.
 	write(t, filepath.Join(root, "embedptr", "embedptr.go"),
 		"package embedptr\n\nimport \"net/http\"\n\ntype T struct{ *http.Client }\n")
+	// A container of POINTERS is a list of clients somebody else made, which is
+	// `handed` again with one more layer.
+	write(t, filepath.Join(root, "ptrslice", "ptrslice.go"),
+		"package ptrslice\n\nimport \"net/http\"\n\nvar C []*http.Client\n")
 	write(t, filepath.Join(root, "faketest", "wire_test.go"),
 		"package faketest\n\nimport \"net/http\"\n\nvar C = &http.Client{}\n")
 	// Builders, one spelling each.
@@ -393,13 +419,32 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 	// that the guard never made.
 	write(t, filepath.Join(root, "namedfield", "namedfield.go"),
 		"package namedfield\n\nimport \"net/http\"\n\ntype T struct{ C http.Client }\n")
+	// A container holds the client by value the same way a struct field does.
+	// `var c [1]http.Client` is one whole client, and make() builds as many as
+	// it is asked for, so a scanner that reads only the bare type is walked
+	// around by wrapping the type in one bracket.
+	write(t, filepath.Join(root, "arrayvar", "arrayvar.go"),
+		"package arrayvar\n\nimport \"net/http\"\n\nvar C [1]http.Client\n")
+	write(t, filepath.Join(root, "slicemake", "slicemake.go"),
+		"package slicemake\n\nimport \"net/http\"\n\nvar C = make([]http.Client, 1)\n")
+	write(t, filepath.Join(root, "slicelit", "slicelit.go"),
+		"package slicelit\n\nimport \"net/http\"\n\nvar C = []http.Client{{}}\n")
+	write(t, filepath.Join(root, "mapvalue", "mapvalue.go"),
+		"package mapvalue\n\nimport \"net/http\"\n\nvar C map[string]http.Client\n")
+	write(t, filepath.Join(root, "chanelem", "chanelem.go"),
+		"package chanelem\n\nimport \"net/http\"\n\nvar C chan http.Transport\n")
+	write(t, filepath.Join(root, "nestedfield", "nestedfield.go"),
+		"package nestedfield\n\nimport \"net/http\"\n\ntype T struct{ C []http.Client }\n")
+	write(t, filepath.Join(root, "containertype", "containertype.go"),
+		"package containertype\n\nimport \"net/http\"\n\ntype C []http.Client\n")
 
 	found, err := httpBuilders(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"aliased", "aliasedcall", "anonembed", "definedtype", "dotted", "embedded",
-		"maker", "namedfield", "newed", "roundtripper", "shortcut", "typealias", "zero"}
+	want := []string{"aliased", "aliasedcall", "anonembed", "arrayvar", "chanelem", "containertype",
+		"definedtype", "dotted", "embedded", "maker", "mapvalue", "namedfield", "nestedfield",
+		"newed", "roundtripper", "shortcut", "slicelit", "slicemake", "typealias", "zero"}
 	if got := names(found); !reflect.DeepEqual(got, want) {
 		t.Errorf("httpBuilders found %v, want %v", got, want)
 	}

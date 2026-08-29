@@ -508,3 +508,33 @@ func TestAReadMayNotAskForThePermissionSurface(t *testing.T) {
 		}
 	}
 }
+
+// The rule is the field, not the value. `action` present at all is refused,
+// because gdoc sets none and an action nobody decided about must not be
+// carried on the guess that an empty one does nothing. Drive is free to read
+// `""` or `null` however it likes; the guard is not the place to find out.
+func TestTheActionFieldIsRefusedByItsPresence(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	u := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies")
+	for _, body := range []string{
+		`{"action":""}`,
+		`{"action":null}`,
+		`{"content":"done","action":""}`,
+		`{"Action":"resolve"}`,
+		`{"ACTION":""}`,
+	} {
+		if p.Judge("POST", u, []byte(body)) == nil {
+			t.Errorf("%s carries the action field, and the field is what is refused", body)
+		}
+	}
+	// A reply that names no action at all is still carried.
+	if err := p.Judge("POST", u, []byte(`{"content":"a plain reply"}`)); err != nil {
+		t.Errorf("a plain reply must be carried: %v", err)
+	}
+	// A body that is not an object cannot be read as a reply, so it is refused
+	// rather than carried.
+	if p.Judge("POST", u, []byte(`["action"]`)) == nil {
+		t.Error("a comment write whose body is not an object must be refused")
+	}
+}
