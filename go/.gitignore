@@ -1,0 +1,3 @@
+# The measuring copies and the rendered pages are rebuilt on demand.
+*.docx.out
+/coverage.out
