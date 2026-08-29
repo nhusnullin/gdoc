@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -24,7 +26,71 @@ func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 	return got, code
 }
 
-func TestAuthStatusReportsTheToken(t *testing.T) {
+// The populated shape, through the envelope: this is what a skill reads.
+func TestAuthStatusReportsAPresentToken(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	token := `{"token":"A","refresh_token":"R","token_uri":"https://oauth2.googleapis.com/token",` +
+		`"client_id":"CID","client_secret":"CS","scopes":["https://www.googleapis.com/auth/drive"],` +
+		`"expiry":"2020-01-01T00:00:00Z"}`
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(token), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "auth", "status")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("status: %v (exit %d)", got, code)
+	}
+	data, ok := got["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("no data object: %v", got)
+	}
+	if data["token_present"] != true || data["expired"] != true {
+		t.Fatalf("a 2020 token is present and expired: %v", data)
+	}
+	if data["client_source"] != "bundled" || data["auth_mode"] != "oauth" {
+		t.Fatalf("v2 is OAuth only on the bundled client: %v", data)
+	}
+	scopes, ok := data["scopes"].([]any)
+	if !ok || len(scopes) != 1 {
+		t.Fatalf("scopes: %v", data["scopes"])
+	}
+}
+
+// A token that exists and cannot be read must fail loudly rather than read as
+// signed out, and the envelope still names the file it tried.
+func TestAuthStatusFailsOnAnUnreadableToken(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "auth", "status")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("an unreadable token must fail: %v (exit %d)", got, code)
+	}
+	if data, ok := got["data"].(map[string]any); !ok || data["token_path"] == nil {
+		t.Fatalf("the facts still come back beside the error: %v", got)
+	}
+}
+
+// A command that accepts and ignores what it does not understand tells the user
+// it did something it did not.
+func TestTrailingArgumentsAreRefused(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	for _, args := range [][]string{
+		{"auth", "status", "nonsense"},
+		{"auth", "login", "--token", "/tmp/x"},
+	} {
+		got, code := runJSON(t, args...)
+		if code == 0 || got["ok"] != false {
+			t.Errorf("%v must be refused, not silently trimmed: %v", args, got)
+		}
+	}
+}
+
+func TestAuthStatusWithNoTokenIsStillAReport(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
 

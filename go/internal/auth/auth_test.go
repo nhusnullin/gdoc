@@ -1,12 +1,15 @@
 package auth
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gdoc/internal/config"
 )
 
 const fixture = `{"token":"OLD","refresh_token":"R1","token_uri":"https://oauth2.googleapis.com/token","client_id":"CID","client_secret":"CS","scopes":["https://www.googleapis.com/auth/drive"],"expiry":"2020-01-01T00:00:00Z"}`
@@ -159,8 +162,14 @@ func TestFailedSaveLeavesTheOriginalIntact(t *testing.T) {
 
 	tok, _ := Load()
 	tok.AccessToken = "NEVER"
-	if err := Save(tok); err == nil {
-		t.Skip("this filesystem let the write through; nothing to assert")
+	err := Save(tok)
+	if err == nil && os.Geteuid() == 0 {
+		// Root writes through a read-only directory, so there is no failed
+		// save to observe. Say so out loud rather than passing quietly.
+		t.Skip("running as root: a read-only directory does not block the write, so this case cannot be staged here")
+	}
+	if err == nil {
+		t.Fatal("the directory was read-only and the save still went through")
 	}
 	if err := os.Chmod(dir, 0o700); err != nil {
 		t.Fatal(err)
@@ -209,7 +218,11 @@ func TestStatusWithNoToken(t *testing.T) {
 	}
 }
 
-func TestStatusSeesAClientFile(t *testing.T) {
+// v1 lets oauth-client.json override the bundled client. v2's login does not
+// read it, so status must not claim it is in use: every v2 token belongs to the
+// bundled client, and saying otherwise sends a person looking for a quota that
+// was never separated.
+func TestStatusSaysAClientFileIsNotUsedYet(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
 	if err := os.WriteFile(filepath.Join(dir, "oauth-client.json"), []byte(`{}`), 0o600); err != nil {
@@ -219,8 +232,99 @@ func TestStatusSeesAClientFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got["client_source"] != "file" {
-		t.Fatalf("a client file must win over the bundled one: %v", got["client_source"])
+	if got["client_source"] != "bundled" {
+		t.Fatalf("every v2 login uses the bundled client: %v", got["client_source"])
+	}
+	if got["client_file_ignored"] != true {
+		t.Fatalf("the file is there and unused; status must say so: %v", got)
+	}
+}
+
+// A token that exists and cannot be read is a fault to name. Reporting it as
+// "signed out" is how somebody re-runs auth login, overwrites the file, and
+// never learns what was wrong with it.
+func TestStatusNamesAnUnreadableToken(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Status()
+	if err == nil {
+		t.Fatal("a token that cannot be parsed must not read as signed out")
+	}
+	if !strings.Contains(err.Error(), "oauth-token.json") {
+		t.Fatalf("the error must name the file: %v", err)
+	}
+	if got == nil || got["token_path"] == nil {
+		t.Fatalf("the facts still come back beside the error: %v", got)
+	}
+}
+
+// The token file holds a refresh token. Its permissions are part of the
+// contract, not an accident of how Save happens to be written today.
+func TestSaveWritesAPrivateFile(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", filepath.Join(t.TempDir(), "made-by-save"))
+	if err := Save(Token{AccessToken: "A", RefreshToken: "R"}); err != nil {
+		t.Fatal(err)
+	}
+	path, err := config.TokenPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fi.Mode().Perm(); got != 0o600 {
+		t.Errorf("the token file is %o, want 600", got)
+	}
+	di, err := os.Stat(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := di.Mode().Perm(); got != 0o700 {
+		t.Errorf("the config dir is %o, want 700", got)
+	}
+}
+
+// A token file written by google-auth carries fields v2 does not use. A v2 save
+// must not quietly drop them from a file both tools share.
+func TestSaveKeepsFieldsV2DoesNotUse(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	written := `{"token":"A","refresh_token":"R","universe_domain":"googleapis.com","account":"nail@example.com"}`
+	if err := os.WriteFile(filepath.Join(dir, "oauth-token.json"), []byte(written), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tok, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(tok); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.UniverseDomain != "googleapis.com" || again.Account != "nail@example.com" {
+		t.Fatalf("a save dropped what google-auth wrote: %+v", again)
+	}
+}
+
+// The transport failing is what the user sees when the guard refuses the POST
+// or the network is down. It must reach the caller, not be swallowed.
+func TestRefreshReportsATransportFailure(t *testing.T) {
+	writeFixture(t)
+	tok, _ := Load()
+	c := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("guard refused: host \"evil\"")
+	})}
+	if _, err := tok.Refresh(c); err == nil {
+		t.Fatal("a refused POST must fail the refresh")
+	} else if !strings.Contains(err.Error(), "guard refused") {
+		t.Fatalf("the error must carry what went wrong: %v", err)
 	}
 }
 

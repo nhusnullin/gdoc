@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,7 +25,14 @@ const authEndpoint = "https://accounts.google.com/o/oauth2/auth"
 // loginTimeout is how long the listener waits for the browser to come back.
 const loginTimeout = 3 * time.Minute
 
-// loginScopes is v1's LOGIN_SCOPES: one browser trip covers Drive and Docs.
+// loginScopes is what one browser trip asks for: Drive, and Docs read/write.
+//
+// This is NOT v1's LOGIN_SCOPES. v1 asks for drive plus documents.readonly
+// (gdoc/auth.py), and v2 asks for the read/write documents scope because v2
+// writes suggestions through the Docs API. The consequence runs one way: v1's
+// token satisfies v2, but after a v2 login the scope v1 asks for is not in the
+// file, so v1's `gdoc edits` asks for a fresh v1 login. Written down in
+// README.md and CLAUDE.md.
 var loginScopes = []string{
 	"https://www.googleapis.com/auth/drive",
 	"https://www.googleapis.com/auth/documents",
@@ -34,9 +40,14 @@ var loginScopes = []string{
 
 // randomToken is the source of both the PKCE verifier and the state. Both must
 // be unguessable, and both are fresh per login.
+//
+// crypto/rand.Read is documented never to fail on any supported platform: it
+// fills the slice or the program dies. That is the guarantee this line rests
+// on. If the source is ever swapped for one that can fail, this has to return
+// an error, because a silent failure hands out an all-zero verifier and state.
 func randomToken() string {
 	b := make([]byte, 32)
-	_, _ = rand.Read(b)
+	rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
@@ -60,34 +71,16 @@ func buildAuthURL(redirect, state string) (verifier, authURL string) {
 // exchangeCode turns the callback's code into a token. The client comes from
 // internal/guard, so this POST is judged like every other request.
 func exchangeCode(c *http.Client, code, verifier, redirect string) (Token, error) {
-	form := url.Values{
+	r, err := postTokenForm(c, TokenURI, url.Values{
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
 		"code_verifier": {verifier},
 		"client_id":     {BundledClientID},
 		"client_secret": {BundledClientSecret},
 		"redirect_uri":  {redirect},
-	}
-	resp, err := c.Post(TokenURI, "application/x-www-form-urlencoded",
-		strings.NewReader(form.Encode()))
+	}, "code exchange")
 	if err != nil {
 		return Token{}, err
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode != http.StatusOK {
-		return Token{}, fmt.Errorf("code exchange failed (%d): %s", resp.StatusCode, summarize(body))
-	}
-	var r struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		ExpiresIn    int    `json:"expires_in"`
-	}
-	if err := unmarshalToken(body, &r); err != nil {
-		return Token{}, err
-	}
-	if r.AccessToken == "" {
-		return Token{}, errors.New("code exchange returned 200 with no access token")
 	}
 	return Token{
 		AccessToken:  r.AccessToken,
@@ -102,18 +95,19 @@ func exchangeCode(c *http.Client, code, verifier, redirect string) (Token, error
 
 // Login prints the authorization URL to w (stderr: stdout is reserved for the
 // one JSON object) and waits. No browser is opened: v2 runs no external
-// programs at all.
+// programs at all. It opens a listener on a port the kernel picks on
+// 127.0.0.1, and gives up after loginTimeout.
 func Login(c *http.Client, w io.Writer) error {
-	srv, err := loopback.Listen()
+	state := randomToken()
+	srv, err := loopback.Listen(state)
 	if err != nil {
 		return err
 	}
 	defer srv.Close()
-	state := randomToken()
 	redirect := "http://" + srv.Addr() + "/callback"
 	verifier, authURL := buildAuthURL(redirect, state)
 	fmt.Fprintf(w, "Open this link in your browser to sign in:\n%s\n", authURL)
-	code, err := srv.WaitCode(state, loginTimeout)
+	code, err := srv.WaitCode(loginTimeout)
 	if err != nil {
 		return err
 	}

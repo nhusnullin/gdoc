@@ -3,7 +3,7 @@
 GO := cd go && go
 
 test:
-	$(GO) test ./...
+	$(GO) test -race ./...
 
 # vet is the plan's other two validation commands, in one target.
 vet:
