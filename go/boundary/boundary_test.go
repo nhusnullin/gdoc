@@ -1,11 +1,12 @@
-// Package boundary enforces that gdoc has exactly one wire. This is the v1
-// allowlist test, ported: it fails in BOTH directions, on spread and on silent
-// disappearance.
+// Package boundary enforces that gdoc has exactly one wire, runs no external
+// programs, and depends on nothing outside the standard library. This is the v1
+// allowlist test, ported: the wire checks fail in BOTH directions, on spread
+// and on silent disappearance.
 //
-// Two checks, because importing net/http and dialing with it are not the same
-// thing. The import allowlist says which packages may name the type at all.
-// The builder allowlist says who may make a client out of it, and that is the
-// single room the guard occupies.
+// Two wire checks, because importing net/http and dialing with it are not the
+// same thing. The import allowlist says which packages may name the type at
+// all. The builder allowlist says who may make a client out of it, and that is
+// the single room the guard occupies.
 package boundary
 
 import (
@@ -49,6 +50,47 @@ var dialers = map[string]bool{
 	"Get": true, "Post": true, "PostForm": true, "Head": true,
 }
 
+// wireTypes are the net/http types that are a wire once a value of one exists.
+var wireTypes = map[string]bool{"Client": true, "Transport": true}
+
+// httpRefs reports the identifiers that stand for net/http in this file, and
+// whether the file dot-imported it. Assuming the name is always "http" is how a
+// scanner misses `import nh "net/http"` and `import . "net/http"`, which build
+// a wire just as well as the canonical spelling does.
+func httpRefs(f *ast.File) (names map[string]bool, dot bool) {
+	names = map[string]bool{}
+	for _, imp := range f.Imports {
+		if strings.Trim(imp.Path.Value, `"`) != "net/http" {
+			continue
+		}
+		if imp.Name == nil {
+			names["http"] = true
+			continue
+		}
+		switch imp.Name.Name {
+		case ".":
+			dot = true
+		case "_": // a blank import cannot name anything
+		default:
+			names[imp.Name.Name] = true
+		}
+	}
+	return names, dot
+}
+
+// isWireType reports whether e names http.Client or http.Transport, under any
+// spelling this file's imports allow.
+func isWireType(e ast.Expr, names map[string]bool, dot bool) bool {
+	switch v := e.(type) {
+	case *ast.SelectorExpr:
+		x, ok := v.X.(*ast.Ident)
+		return ok && names[x.Name] && wireTypes[v.Sel.Name]
+	case *ast.Ident:
+		return dot && wireTypes[v.Name]
+	}
+	return false
+}
+
 // httpImporters returns the package directories under root, slash separated
 // and relative to root, that import net/http. Two sets, and the difference is
 // the point. `all` counts every file, because a stray import is worth flagging
@@ -59,7 +101,8 @@ var dialers = map[string]bool{
 func httpImporters(root string) (all, prod map[string]bool, err error) {
 	all, prod = map[string]bool{}, map[string]bool{}
 	err = walkGo(root, func(rel, path string, f *ast.File) error {
-		if !importsHTTP(f) {
+		names, dot := httpRefs(f)
+		if len(names) == 0 && !dot {
 			return nil
 		}
 		all[rel] = true
@@ -75,22 +118,44 @@ func httpImporters(root string) (all, prod map[string]bool, err error) {
 }
 
 // httpBuilders returns the package directories under root that construct an
-// http.Client or use a package-level dialer. Test files are skipped: faking the
-// wire is what a test is for.
+// http.Client or http.Transport, or use a package-level dialer. Test files are
+// skipped: faking the wire is what a test is for.
+//
+// Four ways to build one, and a scanner that knows only the first is a scanner
+// that can be walked around: a composite literal, `new(http.Client)`, a
+// zero-value declaration `var c http.Client`, and the package-level dialers.
+// Each is checked under every import spelling.
 func httpBuilders(root string) (map[string]bool, error) {
 	found := map[string]bool{}
 	err := walkGo(root, func(rel, path string, f *ast.File) error {
-		if !importsHTTP(f) || strings.HasSuffix(path, "_test.go") {
+		if strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		names, dot := httpRefs(f)
+		if len(names) == 0 && !dot {
 			return nil
 		}
 		ast.Inspect(f, func(n ast.Node) bool {
 			switch v := n.(type) {
-			case *ast.CompositeLit:
-				if isHTTPName(v.Type, "Client") || isHTTPName(v.Type, "Transport") {
+			case *ast.CompositeLit: // http.Client{...}
+				if isWireType(v.Type, names, dot) {
 					found[rel] = true
 				}
-			case *ast.SelectorExpr:
-				if x, ok := v.X.(*ast.Ident); ok && x.Name == "http" && dialers[v.Sel.Name] {
+			case *ast.CallExpr: // new(http.Client)
+				id, ok := v.Fun.(*ast.Ident)
+				if ok && id.Name == "new" && len(v.Args) == 1 && isWireType(v.Args[0], names, dot) {
+					found[rel] = true
+				}
+			case *ast.ValueSpec: // var c http.Client
+				if v.Type != nil && isWireType(v.Type, names, dot) {
+					found[rel] = true
+				}
+			case *ast.SelectorExpr: // http.Get, http.DefaultClient
+				if x, ok := v.X.(*ast.Ident); ok && names[x.Name] && dialers[v.Sel.Name] {
+					found[rel] = true
+				}
+			case *ast.Ident: // Get, DefaultClient, under a dot import
+				if dot && dialers[v.Name] {
 					found[rel] = true
 				}
 			}
@@ -102,24 +167,6 @@ func httpBuilders(root string) (map[string]bool, error) {
 		return nil, err
 	}
 	return found, nil
-}
-
-func isHTTPName(e ast.Expr, name string) bool {
-	sel, ok := e.(*ast.SelectorExpr)
-	if !ok || sel.Sel.Name != name {
-		return false
-	}
-	x, ok := sel.X.(*ast.Ident)
-	return ok && x.Name == "http"
-}
-
-func importsHTTP(f *ast.File) bool {
-	for _, imp := range f.Imports {
-		if strings.Trim(imp.Path.Value, `"`) == "net/http" {
-			return true
-		}
-	}
-	return false
 }
 
 // walkGo parses every .go file under root and hands the visitor the file's
@@ -146,9 +193,6 @@ func TestNetHTTPStaysInItsRooms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	delete(all, "boundary") // this package's own canary, below
-	delete(prod, "boundary")
-
 	for pkg := range all {
 		if !allowed[pkg] {
 			t.Errorf("%s imports net/http; only %v may", pkg, names(allowed))
@@ -166,8 +210,6 @@ func TestOnlyTheGuardBuildsTheWire(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	delete(found, "boundary") // the canary again
-
 	for pkg := range found {
 		if !builders[pkg] {
 			t.Errorf("%s builds an HTTP client or dials directly; only %v may", pkg, names(builders))
@@ -177,6 +219,42 @@ func TestOnlyTheGuardBuildsTheWire(t *testing.T) {
 		if !found[pkg] {
 			t.Errorf("%s no longer builds the client; the wire moved and this test did not", pkg)
 		}
+	}
+}
+
+// TestNothingRunsAnExternalProgram is v1's rule, made true rather than stated.
+// v2 runs no external programs at all: that is what lets the login flow print a
+// URL instead of opening a browser, and it is why the binary is one file.
+func TestNothingRunsAnExternalProgram(t *testing.T) {
+	banned := map[string]bool{"os/exec": true, "syscall/js": true}
+	err := walkGo("..", func(rel, path string, f *ast.File) error {
+		for _, imp := range f.Imports {
+			if p := strings.Trim(imp.Path.Value, `"`); banned[p] {
+				t.Errorf("%s imports %s; v2 runs no external programs", path, p)
+			}
+		}
+		return nil
+	}, parser.ImportsOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestNoThirdPartyDependencies keeps "standard library only" a property of the
+// tree rather than a sentence in a plan. A require block is where that stops
+// being true.
+func TestNoThirdPartyDependencies(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "require") {
+			t.Errorf("go.mod requires something: %q. v2 is standard library only", line)
+		}
+	}
+	if _, err := os.Stat(filepath.Join("..", "go.sum")); err == nil {
+		t.Error("go.sum exists, so something outside the standard library was fetched")
 	}
 }
 
@@ -190,39 +268,65 @@ func TestScannerFindsAStrayImport(t *testing.T) {
 	// A package whose only net/http import is in a test file. It counts as a
 	// stray, and it must not count as a room that still owns the wire.
 	write(t, filepath.Join(root, "faker", "faker_test.go"), "package faker\n\nimport \"net/http\"\n\nvar _ http.RoundTripper\n")
+	// Renamed and dot imports are the same import.
+	write(t, filepath.Join(root, "aliased", "aliased.go"), "package aliased\n\nimport nh \"net/http\"\n\nfunc Use(c *nh.Client) {}\n")
 
 	all, prod, err := httpImporters(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := names(all); !reflect.DeepEqual(got, []string{"faker", "stray"}) {
-		t.Errorf("httpImporters all found %v, want [faker stray]", got)
+	if got := names(all); !reflect.DeepEqual(got, []string{"aliased", "faker", "stray"}) {
+		t.Errorf("httpImporters all found %v, want [aliased faker stray]", got)
 	}
-	if got := names(prod); !reflect.DeepEqual(got, []string{"stray"}) {
-		t.Errorf("httpImporters prod found %v, want [stray]; a test file must not stand in for production code", got)
+	if got := names(prod); !reflect.DeepEqual(got, []string{"aliased", "stray"}) {
+		t.Errorf("httpImporters prod found %v, want [aliased stray]; a test file must not stand in for production code", got)
 	}
 }
 
 // TestScannerTellsNamingFromBuilding is the second canary: a package that only
 // names *http.Client in a signature is not a builder, one that serves is not a
-// builder either, and one that makes a client or calls http.Get is.
+// builder either, and one that makes a client by any spelling is.
+//
+// The five build cases below are not decoration. Every one of them was checked
+// against this scanner and, before the fix, the aliased import, the dot import,
+// new(http.Client) and the zero-value declaration all came back clean while
+// building a wire outside the guard.
 func TestScannerTellsNamingFromBuilding(t *testing.T) {
 	root := t.TempDir()
+	// Not builders.
 	write(t, filepath.Join(root, "handed", "handed.go"),
 		"package handed\n\nimport \"net/http\"\n\nfunc Use(c *http.Client) *http.Response { return nil }\n")
 	write(t, filepath.Join(root, "server", "server.go"),
 		"package server\n\nimport \"net/http\"\n\nvar S = &http.Server{Handler: http.NewServeMux()}\n")
+	write(t, filepath.Join(root, "pointer", "pointer.go"),
+		"package pointer\n\nimport \"net/http\"\n\nvar C *http.Client\n")
+	write(t, filepath.Join(root, "faketest", "wire_test.go"),
+		"package faketest\n\nimport \"net/http\"\n\nvar C = &http.Client{}\n")
+	// Builders, one spelling each.
 	write(t, filepath.Join(root, "maker", "maker.go"),
 		"package maker\n\nimport \"net/http\"\n\nvar C = &http.Client{}\n")
 	write(t, filepath.Join(root, "shortcut", "shortcut.go"),
 		"package shortcut\n\nimport \"net/http\"\n\nfunc Fetch() { http.Get(\"https://x\") }\n")
+	write(t, filepath.Join(root, "aliased", "aliased.go"),
+		"package aliased\n\nimport nh \"net/http\"\n\nvar C = &nh.Client{}\n")
+	write(t, filepath.Join(root, "aliasedcall", "aliasedcall.go"),
+		"package aliasedcall\n\nimport nh \"net/http\"\n\nfunc Fetch() { nh.Get(\"https://x\") }\n")
+	write(t, filepath.Join(root, "dotted", "dotted.go"),
+		"package dotted\n\nimport . \"net/http\"\n\nvar C = &Client{}\n")
+	write(t, filepath.Join(root, "newed", "newed.go"),
+		"package newed\n\nimport \"net/http\"\n\nvar C = new(http.Client)\n")
+	write(t, filepath.Join(root, "zero", "zero.go"),
+		"package zero\n\nimport \"net/http\"\n\nvar C http.Client\n")
+	write(t, filepath.Join(root, "roundtripper", "roundtripper.go"),
+		"package roundtripper\n\nimport \"net/http\"\n\nvar T = &http.Transport{}\n")
 
 	found, err := httpBuilders(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := names(found); !reflect.DeepEqual(got, []string{"maker", "shortcut"}) {
-		t.Errorf("httpBuilders found %v, want [maker shortcut]", got)
+	want := []string{"aliased", "aliasedcall", "dotted", "maker", "newed", "roundtripper", "shortcut", "zero"}
+	if got := names(found); !reflect.DeepEqual(got, want) {
+		t.Errorf("httpBuilders found %v, want %v", got, want)
 	}
 }
 
