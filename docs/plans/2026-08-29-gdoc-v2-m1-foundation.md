@@ -205,7 +205,7 @@ git commit -m "feat(v2): go module and the JSON output envelope"
 **Interfaces:**
 - Produces: `config.Dir() (string, error)`, `config.TokenPath() (string, error)`. Honors `GDOC_CONFIG_DIR`; darwin gets `~/.config/gdoc-agent`, windows `%AppData%\gdoc-agent`. Task 6 consumes both.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```go
 package config
@@ -247,9 +247,9 @@ func TestPlatformDefault(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails** (`go test ./internal/config/`, FAIL: undefined)
+- [x] **Step 2: Run to verify it fails** (`go test ./internal/config/`, FAIL: undefined)
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```go
 // Package config decides where gdoc's per-user files live. v1's macOS path
@@ -294,7 +294,7 @@ func TokenPath() (string, error) {
 }
 ```
 
-- [ ] **Step 4: Run tests, commit**
+- [x] **Step 4: Run tests, commit**
 
 ```bash
 git add go/internal/config/
