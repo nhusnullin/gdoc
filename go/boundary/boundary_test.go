@@ -97,6 +97,11 @@ func isWireType(e ast.Expr, names map[string]bool, dot bool) bool {
 // that reads only the bare type is walked around by writing one pair of
 // brackets in front of it.
 //
+// A generic instantiation is the same brackets under a name the scanner has
+// never heard of. `type Box[T any] struct{ V T }` names no wire, so the type
+// declaration is clean, and `var c Box[http.Client]` then builds a whole
+// zero-value client out of it. The type arguments are walked for that reason.
+//
 // A pointer ends the walk. `[]*http.Client` is a list of clients somebody else
 // made, which is the same as taking one as a parameter, and that is not
 // building the wire.
@@ -113,6 +118,15 @@ func holdsWire(e ast.Expr, names map[string]bool, dot bool) bool {
 		return holdsWire(v.Key, names, dot) || holdsWire(v.Value, names, dot)
 	case *ast.ChanType: // chan http.Client
 		return holdsWire(v.Value, names, dot)
+	case *ast.IndexExpr: // Box[http.Client], one type argument
+		return holdsWire(v.Index, names, dot)
+	case *ast.IndexListExpr: // Pair[string, http.Client], several
+		for _, arg := range v.Indices {
+			if holdsWire(arg, names, dot) {
+				return true
+			}
+		}
+		return false
 	case *ast.FuncType: // func() http.Client, and func() (c http.Client)
 		if v.Results == nil {
 			return false
@@ -404,6 +418,10 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 	// `handed` again with one more layer.
 	write(t, filepath.Join(root, "ptrslice", "ptrslice.go"),
 		"package ptrslice\n\nimport \"net/http\"\n\nvar C []*http.Client\n")
+	// A pointer type argument is a client somebody else made, so the walk stops
+	// at it here exactly as it does in ptrslice.
+	write(t, filepath.Join(root, "genericptr", "genericptr.go"),
+		"package genericptr\n\nimport \"net/http\"\n\ntype Box[T any] struct{ V T }\n\nvar C Box[*http.Client]\n")
 	write(t, filepath.Join(root, "faketest", "wire_test.go"),
 		"package faketest\n\nimport \"net/http\"\n\nvar C = &http.Client{}\n")
 	// Builders, one spelling each.
@@ -471,15 +489,23 @@ func TestScannerTellsNamingFromBuilding(t *testing.T) {
 	// A method result is the same factory reached through a receiver.
 	write(t, filepath.Join(root, "methodresult", "methodresult.go"),
 		"package methodresult\n\nimport \"net/http\"\n\ntype F struct{}\n\nfunc (F) Build() (c http.Client) { return }\n")
+	// A generic instantiation hides the wire behind one pair of brackets, the
+	// same move as the array above. `Box[http.Client]` is a Box holding a whole
+	// zero-value client, and the type argument is where that client is named.
+	write(t, filepath.Join(root, "generic", "generic.go"),
+		"package generic\n\nimport \"net/http\"\n\ntype Box[T any] struct{ V T }\n\nvar C Box[http.Client]\n")
+	// Several type arguments is the same shape under a different AST node.
+	write(t, filepath.Join(root, "genericlist", "genericlist.go"),
+		"package genericlist\n\nimport \"net/http\"\n\ntype Pair[A any, B any] struct {\n\tFirst  A\n\tSecond B\n}\n\nvar C Pair[string, http.Client]\n")
 
 	found, err := httpBuilders(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"aliased", "aliasedcall", "anonembed", "arrayvar", "bareresult", "chanelem",
-		"containertype", "definedtype", "dotted", "embedded", "maker", "mapvalue", "methodresult",
-		"namedfield", "namedresult", "nestedfield", "newed", "resultslice", "roundtripper",
-		"shortcut", "slicelit", "slicemake", "typealias", "zero"}
+		"containertype", "definedtype", "dotted", "embedded", "generic", "genericlist", "maker",
+		"mapvalue", "methodresult", "namedfield", "namedresult", "nestedfield", "newed",
+		"resultslice", "roundtripper", "shortcut", "slicelit", "slicemake", "typealias", "zero"}
 	if got := names(found); !reflect.DeepEqual(got, want) {
 		t.Errorf("httpBuilders found %v, want %v", got, want)
 	}
