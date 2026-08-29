@@ -72,7 +72,7 @@ Key design decisions and why:
 - Config dir: `$GDOC_CONFIG_DIR` if set; else `~/.config/gdoc-agent` on darwin; else `%AppData%\gdoc-agent` on windows. Token file name: `oauth-token.json` (v1's file, same format).
 - Allowed hosts, exact: `docs.googleapis.com`, `www.googleapis.com`, `oauth2.googleapis.com` (token endpoint only).
 - OAuth client id and secret: copy the constant values verbatim from `gdoc/oauth.py` lines 51-52 (`BUNDLED_CLIENT_ID`, `BUNDLED_CLIENT_SECRET`). They are deliberately in version control; see CLAUDE.md.
-- Scopes requested by login: `https://www.googleapis.com/auth/drive` and `https://www.googleapis.com/auth/documents` (one browser trip covers both, as v1's `LOGIN_SCOPES`).
+- Scopes requested by login: `https://www.googleapis.com/auth/drive` and `https://www.googleapis.com/auth/documents` (one browser trip covers both). ⚠️ Corrected 2026-08-30: this is **not** v1's `LOGIN_SCOPES`. v1 asks for `drive` plus `documents.readonly`; v2 asks for the Docs read/write scope, deliberately, because v2 writes suggestions through the Docs API. The consequence runs one way and is recorded in README.md, CLAUDE.md and docs/v2/SPEC.md: a v2 login makes v1's scope check fail until v1 logs in again.
 - All commits run from the repo root. Test command: `cd go && go test ./...`.
 - No em dashes in any text this plan produces.
 
@@ -1534,6 +1534,19 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 
 **Not verified.** A real OAuth login and a real token refresh were not run: the machine's token is read only, no human is present to complete a browser trip, and a live refresh would spend the real refresh token. Both are covered by tests over a fake `RoundTripper`. `auth login` was run end to end as far as the browser trip, against a throwaway `GDOC_CONFIG_DIR`, and its URL carries `code_challenge_method=S256`, both scopes and the loopback redirect. Nothing calls `Token.Refresh` yet: no M1 command needs a fresh access token, so it is tested but unused until M2.
 
+**What the code review pass found (2026-08-30).** Fixed on the branch, in three
+commits: the `Policy` map had no mutex and a race was reproduced with concurrent
+creates and reads through one client (`make test` now runs `-race`); the builder
+allowlist missed aliased imports, dot imports, `new(http.Client)` and zero-value
+declarations, all of which build a wire outside the guard; the guard did not
+look at `X-HTTP-Method-Override`, so a judged GET could be served as a DELETE;
+`auth.Status` swallowed every error from `Load`, so a corrupt token read as
+signed out; and nothing recovered a panic, so a crash printed a Go trace and no
+JSON. Two findings were left as decisions for Nail and documented instead: the
+`writeMode: SUGGEST` bar rests on a client-supplied field the server has been
+measured ignoring, and the Docs scope is wider than v1's. Both are now written
+down in CLAUDE.md and docs/v2/SPEC.md.
+
 ### Task 9: [Final] Update documentation
 
 **Files:**
@@ -1549,7 +1562,7 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 - [x] mark Milestone 1 done in `docs/v2/PLAN.md`
 - [x] run the full test suite one more time: `cd go && go test ./...`
 - [x] commit the documentation updates
-- [x] move this plan to `docs/plans/completed/`
+- The harness moves this plan to `docs/plans/completed/` when the run finishes. Nobody here moves it, so this is not a checkbox.
 
 ## Post-Completion
 
@@ -1563,4 +1576,4 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 
 **External system updates:**
 
-- None. This milestone adds a second binary beside v1 and changes nothing that v1 or the skills read.
+- ⚠️ Corrected 2026-08-30: not none. `gdoc auth login` rewrites `~/.config/gdoc-agent/oauth-token.json`, which v1 and both skills read, and it writes the wider Docs scope into it. Running a v2 login on a machine that uses v1 means v1's `gdoc edits` asks for a fresh v1 login. Nothing else v1 or the skills read is touched.

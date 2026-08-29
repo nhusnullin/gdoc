@@ -443,15 +443,30 @@ bin/gdoc auth login    # prints a sign-in link and waits for you to open it
 ```
 
 `auth status` answers when you are signed out too: no token is a fact it
-reports, not an error. `auth login` prints the link rather than opening a
-browser for you, because the Go binary runs no other program at all.
+reports, not an error. A token file that is there and cannot be read is a
+different answer: it fails and names the file, because "signed out" would send
+you to `auth login`, which overwrites the file and loses the evidence.
+
+`auth login` prints the link rather than opening a browser for you, because the
+Go binary runs no other program at all. While it waits it listens on 127.0.0.1
+on a port the kernel picks, which is what your browser comes back to, so a
+firewall may ask once. It gives up after three minutes.
 
 Both print exactly one JSON object on stdout and nothing else. Prose and the
 sign-in link go to stderr, so anything reading the output has one object to
 parse and no filtering to do.
 
 It reads the same `~/.config/gdoc-agent/oauth-token.json` the Python tool
-writes, in the same format. Sign in once and you are signed in to both.
+writes, in the same format, so a Python login already signs you in here.
+
+The other direction is not symmetrical yet. `bin/gdoc auth login` asks for the
+Docs read/write scope, because writing suggestions needs it, while the Python
+tool asks for the read-only one and checks that what it asked for is in the
+file. So after a Go login, `gdoc edits` asks you to log in through the Python
+tool once more. Nothing else in either tool is affected.
+
+`GDOC_CONFIG_DIR` moves both files somewhere else, which is what the Go test
+suite uses so tests never touch your real config.
 
 The `gdoc` on your PATH is still the Python tool this README describes. `bin/gdoc`
 is the new one, and nothing installs it yet.

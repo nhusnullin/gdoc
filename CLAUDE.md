@@ -55,6 +55,29 @@ network, and can log in and report its OAuth state.
 out is an answer, so it comes back as `ok: true` with `token_present: false`
 rather than as a failure.
 
+Three things about those fields:
+
+- `auth_mode` is the constant `"oauth"`. v2 has no service account and never
+  reads v1's `config.json`, so on a machine set to `auth_mode: service_account`
+  the two tools disagree on purpose. The resolver documented further down is
+  v1's alone.
+- `client_source` is always `"bundled"`. v1 lets `oauth-client.json` in the
+  config dir override the client; v2's login does not read that file yet, so
+  when it exists status adds `client_file_ignored: true` and a warning rather
+  than claiming an override that is not wired up.
+- A token file that exists and cannot be read is a **failure**, not
+  `token_present: false`. It comes back `ok: false` with the path still in
+  `data`. Reporting it as signed out is how somebody re-runs `auth login`,
+  overwrites the file, and never learns what was wrong with it. Only an absent
+  file means signed out.
+
+A panic anywhere is still one JSON object: `cmd/gdoc` recovers, prints
+`ok: false` with what happened, and puts the stack trace on stderr. A Go trace
+on stdout with exit 2 would break the contract every caller has.
+
+`GDOC_CONFIG_DIR` moves the config dir. It is how every Go test avoids the real
+config, the v2 counterpart of v1's `tests/conftest.py`.
+
 `gdoc auth login` prints the authorization URL to **stderr**, waits for the
 browser to come back to the loopback listener, saves the token, then reports
 what `auth status` would. Exactly one JSON object reaches stdout, always through
@@ -71,6 +94,19 @@ fails and says what is missing. It does not ask.
 needs no migration and no second browser trip. The bundled client id and secret
 are v1's two constants copied verbatim, and the rule about them has not changed:
 read "The OAuth client is shipped, and stays Internal" below.
+
+**The other direction is not symmetrical, and this is a scope widening.** v1's
+`LOGIN_SCOPES` is Drive plus `documents.readonly`. v2's login asks for Drive
+plus `documents`, the read/write scope, because v2 writes suggestions through
+the Docs API. v1 refuses a token whose stored scopes lack one it requested
+(`gdoc/oauth.py`), so after a `bin/gdoc auth login` v1's `gdoc edits` asks for a
+fresh v1 login. Nothing else in either tool changes. Do not "fix" the comment in
+`login.go` by calling the two sets equal: they are not, and the widening has to
+stay written down.
+
+A v2 `Save` carries `universe_domain` and `account` through untouched. They are
+google-auth's fields, v2 uses neither, and dropping them would quietly rewrite a
+file both tools share.
 
 ### The guard owns the wire, and it exists before any client
 
@@ -89,12 +125,45 @@ body says `SUGGEST`.
 
 A create is refused unless it names exactly the one folder the run was given,
 and the transport reads the create's response for the new id and teaches the
-policy. Those are still principle 3's two doors, ported.
+policy. Those are still principle 3's two doors, ported. Naming a folder to
+create in does not put that folder in the reachable set: it is a create target,
+not a third door.
+
+**Read this before trusting the level-1 write bar.** What keeps a handed-in
+document read-and-suggest only is `writeControl.writeMode == "SUGGEST"` in the
+request body, which is a field the client itself supplies.
+`docs/v2/BLOCKED-BY-API.md` records the measurement: `writeMode` is absent from
+the public Docs discovery document, and one morning this exact call returned 200
+and silently made a direct edit. So the server is not known to honour it, and
+what the guard holds today is a statement of intent rather than a guarantee. The
+capability probe the spec relies on, which would ask the server what it will do
+before the write goes out, **does not exist yet**. Widening or narrowing what
+`isSuggestMode` permits is a decision for Nail, not a refactor.
+
+The guard judges the request it actually sends. It refuses
+`X-HTTP-Method-Override` and its two cousins, and a `_method` query parameter,
+because Google's REST stack performs the overridden method: a GET the guard
+allowed would arrive as a DELETE it never saw. A create it cannot read the
+parents of is refused, which today includes a multipart upload: that body opens
+with the MIME boundary, so the `/upload` grammar is unreachable until M6 teaches
+the transport to read the first MIME part. Failing closed is the right direction
+to be wrong in.
+
+A create whose response carries no readable id is recorded on the policy and
+readable through `Policy.Warnings()`. Silence there turns into "file was not
+given to this command" on the next request, which names the wrong problem.
+
+`Policy` is mutex-guarded. `NewClient` hands out an `*http.Client`, which Go
+documents as safe for concurrent use, and `Learn` writes the set from inside
+`RoundTrip` while `Judge` reads it. `make test` runs `-race`; keep it there.
 
 ### The guard judges plain paths only
 
-A percent-encoded path, or a `.` or `..` segment, is refused before the host is
-looked at. The reason is not tidiness. `u.Path` is decoded, `u.EscapedPath()` is
+A path whose escaping differs from its plain form (`%2F`, `%2E` and the like),
+or a `.` or `..` segment, is refused before the host is looked at. A harmless
+`%20` passes: Go only sets `RawPath` when the escaped form differs from the
+default encoding of `Path`. A URL carrying credentials is refused too, because
+those become an Authorization header gdoc did not build. The reason is not tidiness. `u.Path` is decoded, `u.EscapedPath()` is
 what goes out, and Go cleans no dot segments out of a URL. Without the rule the
 guard reads one URL and the transport sends another:
 `/drive/v3/files/DOC1/../../../about` passes as a read of DOC1 and arrives as
@@ -116,6 +185,15 @@ Naming `net/http` and dialing with it are not the same thing, so
   answers a request somebody else made, so it stays out of this set. A canary
   test states that rather than leaving it to luck.
 
+The builder scanner resolves the import name per file and knows four ways to
+make a wire: a composite literal, `new(http.Client)`, a zero-value `var c
+http.Client`, and the dialers. That is not thoroughness for its own sake. A
+scanner that assumes the name is always `http` and looks only for composite
+literals is walked around by `import nh "net/http"`, by `import . "net/http"`,
+by `new(...)` and by a zero-value declaration, and every one of those builds a
+wire outside the guard while passing both checks. The canary carries a case for
+each, and each case was watched failing against the older scanner.
+
 Both fail in both directions, like v1's `test_guard_is_installed`. They fail
 when an import or a builder spreads, and they fail when an allowlisted room
 stops holding what it was listed for. The disappearance half reads production
@@ -129,11 +207,16 @@ v1 scopes that ban to `gdoc/render/` and keeps pandoc. v2 runs nothing: no
 rule possible is that `auth login` prints the URL instead of opening a browser.
 Opening a browser is the one thing a CLI usually shells out for.
 
+`go/boundary/boundary_test.go` enforces it, the way
+`tests/test_no_external_programs.py` enforces v1's. The same file also holds
+"standard library only" to the tree: it fails on a `require` block in `go.mod`
+and on a `go.sum` existing at all.
+
 ### Building
 
 | Command | Does |
 |---|---|
-| `make test` | `cd go && go test ./...` |
+| `make test` | `cd go && go test -race ./...` |
 | `make vet` | `go vet ./...` and the `gofmt -l` check |
 | `make build` | `bin/gdoc`, for this machine |
 | `make dist` | the three platform binaries |

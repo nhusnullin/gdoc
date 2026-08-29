@@ -85,14 +85,32 @@ alignment milestone.
 
 ## Auth
 
-OAuth only. One scope: `https://www.googleapis.com/auth/drive`, which the Docs
-API accepts for every call gdoc makes. The bundled Internal client carries over
-from v1, with both of its rules: the secret stays in version control, and the
-client stays User type Internal. The public-repo caveat in CLAUDE.md applies
-unchanged. Token and config live in `~/.config/gdoc-agent/` on macOS, and in
-`%AppData%\gdoc-agent` on Windows, never in a repo. `auth login` is a real
-desktop flow: loopback redirect with PKCE, hand-rolled on the standard library.
-v2 reads a token file v1 wrote, so an existing install needs no new login.
+OAuth only. The bundled Internal client carries over from v1, with both of its
+rules: the secret stays in version control, and the client stays User type
+Internal. The public-repo caveat in CLAUDE.md applies unchanged. Token and
+config live in `~/.config/gdoc-agent/` on macOS, and in `%AppData%\gdoc-agent`
+on Windows, never in a repo. `GDOC_CONFIG_DIR` overrides both, which is what the
+test suite uses. `auth login` is a real desktop flow: loopback redirect with
+PKCE, hand-rolled on the standard library. v2 reads a token file v1 wrote, so an
+existing install needs no new login.
+
+**Scopes, corrected 2026-08-30.** This section used to say one scope,
+`https://www.googleapis.com/auth/drive`. M1 shipped two: Drive, and
+`https://www.googleapis.com/auth/documents`, the Docs read/write scope, because
+v2 writes suggestions through the Docs API. That is wider than v1, which asks
+for `documents.readonly`, and it runs one way: a v1 token still satisfies v2,
+but after a v2 login v1's own scope check fails and `gdoc edits` asks for a
+fresh v1 login. Written down in CLAUDE.md and README.md as well.
+
+`auth status` never guesses. An absent token file is `token_present: false` with
+`ok: true`; a token file that exists and cannot be read is `ok: false` naming
+the file. `auth_mode` is the constant `oauth`, and `client_source` is the
+constant `bundled`: v1's `oauth-client.json` override is not implemented in v2,
+and status says so instead of claiming it.
+
+`Save` writes a temp file in the same directory, syncs it, and renames.
+Same-directory rename is atomic on POSIX. On Windows it is not guaranteed, which
+is why the token write is part of the M9 Windows smoke test.
 
 ## The guard
 
@@ -110,6 +128,19 @@ Serves principle 3. This is the safety property everything else stands on.
   - handed in: read and suggest only, never direct-editable
   - `restyle` in place is the one exception, granted explicitly per run, never
     inherited or remembered
+- **The level-1 write bar is not yet what this spec assumes.** What holds a
+  handed-in document to suggestions today is `writeControl.writeMode ==
+  "SUGGEST"` in the request body, a field the client supplies.
+  `BLOCKED-BY-API.md` records that `writeMode` is absent from the public Docs
+  discovery document and that this call was measured returning 200 while making
+  a direct edit. The per-invocation capability probe this spec relies on to
+  close that gap **does not exist yet**. Until it does, "never direct-editable"
+  is what gdoc asks for, not what the server is known to enforce. Changing it is
+  a decision, not a refactor.
+- **The guard judges the request it sends.** Method-override headers and a
+  `_method` query parameter are refused, a URL carrying credentials is refused,
+  and a path whose escaping differs from its plain form, or that walks through
+  `.` or `..`, is refused before the host is looked at.
 - The preview surface is hand-rolled JSON (it is absent from the discovery
   document), and it goes through the same package because there is nothing else
   to go through.
