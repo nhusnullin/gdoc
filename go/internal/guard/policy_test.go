@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 )
@@ -92,6 +93,52 @@ func TestUnreadableBatchUpdateBodyIsNotASuggestion(t *testing.T) {
 	}
 	if p.Judge("POST", u, nil) == nil {
 		t.Fatal("an absent body must not pass as SUGGEST")
+	}
+}
+
+// TestAKnownIDMayNotWalkToAnEndpointTheGuardRefuses is the traversal case. Both
+// paths below are judged as a read of DOC1, which is in the set, and both arrive
+// at the server as drive.about.get, which the table above refuses when it is
+// asked plainly. The URL the guard reads and the URL the transport sends have to
+// be the same one.
+func TestAKnownIDMayNotWalkToAnEndpointTheGuardRefuses(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+
+	cases := []struct{ name, raw string }{
+		{"dot segments", "https://www.googleapis.com/drive/v3/files/DOC1/../../../about"},
+		{"encoded separators", "https://www.googleapis.com/drive/v3/files/DOC1%2F..%2F..%2Fabout"},
+		{"dot segments on the docs host", "https://docs.googleapis.com/v1/documents/DOC1/../EVIL"},
+		{"a single dot", "https://www.googleapis.com/drive/v3/files/DOC1/./export"},
+	}
+	for _, c := range cases {
+		req, err := http.NewRequest("GET", c.raw, nil)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if err := p.Judge("GET", req.URL, nil); err == nil {
+			t.Errorf("%s: %s was carried; wire path %q", c.name, c.raw, req.URL.RequestURI())
+		}
+	}
+}
+
+// TestAPlainPathIsStillCarried is the other direction: the traversal check must
+// not refuse the ordinary URLs gdoc actually builds.
+func TestAPlainPathIsStillCarried(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	for _, raw := range []string{
+		"https://www.googleapis.com/drive/v3/files/DOC1/export?mimeType=text/markdown",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=comments(id)",
+		"https://docs.googleapis.com/v1/documents/DOC1",
+	} {
+		req, err := http.NewRequest("GET", raw, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := p.Judge("GET", req.URL, nil); err != nil {
+			t.Errorf("%s must be carried: %v", raw, err)
+		}
 	}
 }
 

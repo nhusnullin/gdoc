@@ -47,6 +47,9 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 	if u.Scheme != "https" {
 		return refuse("scheme %q", u.Scheme)
 	}
+	if err := plainPath(u); err != nil {
+		return err
+	}
 	switch u.Host {
 	case "oauth2.googleapis.com":
 		if method == "POST" && u.Path == "/token" {
@@ -59,6 +62,34 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 		return p.judgeDrive(method, u)
 	}
 	return refuse("host %q", u.Host)
+}
+
+// plainPath refuses a path the guard would read differently from the way the
+// transport sends it. Two shapes, one reason.
+//
+// A `..` segment lets an id that is in the set walk to an endpoint the rules
+// below refuse outright: `/drive/v3/files/DOC1/../../../about` is judged as a
+// read of DOC1 and arrives at the server as drive.about.get, which the guard
+// declines when it is asked plainly. Go does not clean dot segments out of a
+// URL, so the walk reaches the wire intact.
+//
+// A percent-encoded separator does the same by a different door. u.Path is
+// decoded and u.EscapedPath is what goes out, so `DOC1%2F..%2Fabout` is one
+// segment to the guard and three to whoever decodes it next.
+//
+// Neither shape occurs in a real Docs or Drive URL. Ids are [A-Za-z0-9_-], so
+// refusing both costs nothing and closes the gap between what is judged and
+// what is sent.
+func plainPath(u *url.URL) error {
+	if u.RawPath != "" {
+		return refuse("path %q is percent-encoded; the guard judges plain paths only", u.EscapedPath())
+	}
+	for _, seg := range strings.Split(u.Path, "/") {
+		if seg == "." || seg == ".." {
+			return refuse("path %q walks through %q", u.Path, seg)
+		}
+	}
+	return nil
 }
 
 func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {

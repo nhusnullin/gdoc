@@ -50,19 +50,28 @@ var dialers = map[string]bool{
 }
 
 // httpImporters returns the package directories under root, slash separated
-// and relative to root, that import net/http.
-func httpImporters(root string) (map[string]bool, error) {
-	found := map[string]bool{}
-	err := walkGo(root, func(rel, _ string, f *ast.File) error {
-		if importsHTTP(f) {
-			found[rel] = true
+// and relative to root, that import net/http. Two sets, and the difference is
+// the point. `all` counts every file, because a stray import is worth flagging
+// wherever it sits. `prod` counts only non-test files, because a test file that
+// fakes the wire must never stand in for the room that owns it: without the
+// split, a package could quietly stop dialing and its own test file would keep
+// the allowlist looking satisfied.
+func httpImporters(root string) (all, prod map[string]bool, err error) {
+	all, prod = map[string]bool{}, map[string]bool{}
+	err = walkGo(root, func(rel, path string, f *ast.File) error {
+		if !importsHTTP(f) {
+			return nil
+		}
+		all[rel] = true
+		if !strings.HasSuffix(path, "_test.go") {
+			prod[rel] = true
 		}
 		return nil
 	}, parser.ImportsOnly)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return found, nil
+	return all, prod, nil
 }
 
 // httpBuilders returns the package directories under root that construct an
@@ -133,20 +142,21 @@ func walkGo(root string, visit func(rel, path string, f *ast.File) error, mode p
 }
 
 func TestNetHTTPStaysInItsRooms(t *testing.T) {
-	found, err := httpImporters("..")
+	all, prod, err := httpImporters("..")
 	if err != nil {
 		t.Fatal(err)
 	}
-	delete(found, "boundary") // this package's own canary, below
+	delete(all, "boundary") // this package's own canary, below
+	delete(prod, "boundary")
 
-	for pkg := range found {
+	for pkg := range all {
 		if !allowed[pkg] {
 			t.Errorf("%s imports net/http; only %v may", pkg, names(allowed))
 		}
 	}
 	for pkg := range allowed {
-		if !found[pkg] {
-			t.Errorf("allowlisted package %s no longer imports net/http; update the allowlist deliberately", pkg)
+		if !prod[pkg] {
+			t.Errorf("allowlisted package %s no longer imports net/http outside its tests; update the allowlist deliberately", pkg)
 		}
 	}
 }
@@ -177,13 +187,19 @@ func TestScannerFindsAStrayImport(t *testing.T) {
 	write(t, filepath.Join(root, "stray", "dial.go"), "package stray\n\nimport \"net/http\"\n\nvar _ = http.DefaultClient\n")
 	write(t, filepath.Join(root, "clean", "quiet.go"), "package clean\n\nimport \"fmt\"\n\nvar _ = fmt.Sprint\n")
 	write(t, filepath.Join(root, "notes.txt"), "net/http\n")
+	// A package whose only net/http import is in a test file. It counts as a
+	// stray, and it must not count as a room that still owns the wire.
+	write(t, filepath.Join(root, "faker", "faker_test.go"), "package faker\n\nimport \"net/http\"\n\nvar _ http.RoundTripper\n")
 
-	found, err := httpImporters(root)
+	all, prod, err := httpImporters(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := names(found); !reflect.DeepEqual(got, []string{"stray"}) {
-		t.Errorf("httpImporters found %v, want [stray]", got)
+	if got := names(all); !reflect.DeepEqual(got, []string{"faker", "stray"}) {
+		t.Errorf("httpImporters all found %v, want [faker stray]", got)
+	}
+	if got := names(prod); !reflect.DeepEqual(got, []string{"stray"}) {
+		t.Errorf("httpImporters prod found %v, want [stray]; a test file must not stand in for production code", got)
 	}
 }
 

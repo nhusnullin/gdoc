@@ -1515,14 +1515,24 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 **Interfaces:**
 - Consumes: everything Tasks 1 to 7 produced. Produces: proof that the milestone acceptance in `docs/v2/SPEC.md` item 1 holds.
 
-- [ ] verify every requirement in the Overview is implemented: the binary exists, prints the envelope, owns the network through the guard, and can log in, refresh and report OAuth state
-- [ ] verify the guard refuses, by running the four cases in one go and reading the output: a request for an id outside the set never reaches the transport; a direct edit on a handed-in id is refused; a create aimed at an unnamed folder is refused; the boundary test holds in both directions
-- [ ] run the full test suite: `cd go && go test ./...`
-- [ ] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
-- [ ] run the vet check: `cd go && go vet ./...`
-- [ ] verify coverage: every exported function under `go/internal/` has a test. `cd go && go test ./... -cover` and read the per-package numbers; add tests for anything uncovered rather than lowering the bar
-- [ ] verify `make dist` produces the three platform binaries with `CGO_ENABLED=0`, and that `file bin/*` reports the expected architectures
-- [ ] commit any fixes this task made
+- [x] verify every requirement in the Overview is implemented: the binary exists, prints the envelope, owns the network through the guard, and can log in, refresh and report OAuth state
+- [x] verify the guard refuses, by running the four cases in one go and reading the output: a request for an id outside the set never reaches the transport; a direct edit on a handed-in id is refused; a create aimed at an unnamed folder is refused; the boundary test holds in both directions
+- [x] run the full test suite: `cd go && go test ./...`
+- [x] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
+- [x] run the vet check: `cd go && go vet ./...`
+- [x] verify coverage: every exported function under `go/internal/` has a test. `cd go && go test ./... -cover` and read the per-package numbers; add tests for anything uncovered rather than lowering the bar
+- [x] verify `make dist` produces the three platform binaries with `CGO_ENABLED=0`, and that `file bin/*` reports the expected architectures
+- [x] commit any fixes this task made
+
+**What the verification pass found.** Three defects, all fixed here.
+
+- ⚠️ **The guard carried a path traversal.** `GET /drive/v3/files/DOC1/../../../about` was judged as a read of DOC1, which is in the set, and reached the wire with its dot segments intact, arriving at `drive.about.get`. The guard refuses that endpoint when it is asked plainly, and refuses `files.list` too, so a known id could walk to both. A percent-encoded separator (`DOC1%2F..%2Fabout`) did the same by a second door, because `u.Path` is decoded and `EscapedPath` is what goes out. `guard.plainPath` now refuses both shapes, ahead of the host switch. Neither occurs in a real Docs or Drive URL: ids are `[A-Za-z0-9_-]`.
+- ⚠️ **The boundary test only held in one direction.** Removing `net/http` from `internal/auth/loopback/loopback.go` left the suite green, because `loopback_test.go` still imported it and `httpImporters` counted test files. `httpImporters` now returns two sets: `all` for the spread check, `prod` (non-test files only) for the disappearance check. A test that fakes the wire can no longer stand in for the room that owns it.
+- ⚠️ **`make vet`'s failure branch named no file.** It ran `gofmt -l go/` after `cd go`, so it printed `lstat go/: no such file or directory` instead of the misformatted file. It exited non-zero, so nothing was let through, but the diagnostic was useless.
+
+**Evidence.** `go/internal/guard/acceptance_test.go` runs the guard cases over a base `RoundTripper` that fails the test if anything reaches it, so "never reaches the transport" is enforced rather than asserted. That transport was itself checked: pointed at an allowed request it fails, so it is not a no-op. The boundary test was demonstrated in both directions on a scratch copy: a stray `net/http` in `internal/config` fails it, and a production file dropping the import fails it. Coverage: no function under `internal/` sits at 0.0%. `make dist` produced the three binaries, `CGO_ENABLED=0` recorded in each, `file` reporting arm64, x86_64 and PE32+.
+
+**Not verified.** A real OAuth login and a real token refresh were not run: the machine's token is read only, no human is present to complete a browser trip, and a live refresh would spend the real refresh token. Both are covered by tests over a fake `RoundTripper`. `auth login` was run end to end as far as the browser trip, against a throwaway `GDOC_CONFIG_DIR`, and its URL carries `code_challenge_method=S256`, both scopes and the loopback redirect. Nothing calls `Token.Refresh` yet: no M1 command needs a fresh access token, so it is tested but unused until M2.
 
 ### Task 9: [Final] Update documentation
 

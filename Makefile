@@ -8,7 +8,7 @@ test:
 # vet is the plan's other two validation commands, in one target.
 vet:
 	$(GO) vet ./...
-	cd go && test -z "$$(gofmt -l .)" || { gofmt -l go/; exit 1; }
+	cd go && test -z "$$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
 build:
 	$(GO) build -o ../bin/gdoc ./cmd/gdoc
