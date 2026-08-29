@@ -3,6 +3,7 @@ package guard
 import (
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -12,6 +13,62 @@ func mustURL(t *testing.T, s string) *url.URL {
 		t.Fatal(err)
 	}
 	return u
+}
+
+// TestARefusalNamesTheRuleItApplied holds what a refusal is for. It lands in
+// the envelope's error field and it is the only thing the reader gets, so it
+// has to say which rule refused and what the request would have had to be. Two
+// rules that print the same sentence are one sentence too few: a reader cannot
+// tell which of them to argue with.
+func TestARefusalNamesTheRuleItApplied(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+
+	cases := []struct{ name, method, url, want string }{
+		{"not https", "GET", "http://docs.googleapis.com/v1/documents/DOC1", "https requests only"},
+		{"another host", "GET", "https://evil.example.com/v1/documents/DOC1", "is not one gdoc talks to"},
+		{"the wrong call on the token host", "GET", "https://oauth2.googleapis.com/token", "POST /token"},
+		{"a docs path naming no document", "GET", "https://docs.googleapis.com/v1/documents", "names no document"},
+		{"a verb the docs grammar does not have", "POST", "https://docs.googleapis.com/v1/documents/DOC1:copy", "batchUpdate"},
+		{"outside the files collection", "GET", "https://www.googleapis.com/drive/v3/about", "outside /drive/v3/files"},
+		{"a prefix that is not a segment", "GET", "https://www.googleapis.com/drive/v3/filesDOC1", "does not end that segment"},
+		{"the collection itself", "GET", "https://www.googleapis.com/drive/v3/files", "files collection"},
+		{"a sub-resource outside the grammar", "GET", "https://www.googleapis.com/drive/v3/files/DOC1/permissions", "at the suggest level"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := p.Judge(c.method, mustURL(t, c.url), nil)
+			if err == nil {
+				t.Fatal("want a refusal, got none")
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("the refusal must say %q: %v", c.want, err)
+			}
+		})
+	}
+}
+
+// The two drive-path rules are different rules, and a reader who cannot tell
+// them apart cannot tell whether the path was wrong or the collection was.
+func TestTheTwoDrivePathRefusalsReadDifferently(t *testing.T) {
+	p := NewPolicy()
+	outside := p.Judge("GET", mustURL(t, "https://www.googleapis.com/drive/v3/about"), nil)
+	misread := p.Judge("GET", mustURL(t, "https://www.googleapis.com/drive/v3/filesDOC1"), nil)
+	if outside == nil || misread == nil {
+		t.Fatal("both must be refused")
+	}
+	if outside.Error() == misread.Error() {
+		t.Fatalf("two rules, one sentence: %v", outside)
+	}
+}
+
+func TestALevelNamesItselfInWords(t *testing.T) {
+	if got := LevelSuggest.String(); got != "suggest" {
+		t.Errorf("LevelSuggest prints %q; a refusal must not make the reader translate a number", got)
+	}
+	if got := LevelFull.String(); got != "full" {
+		t.Errorf("LevelFull prints %q", got)
+	}
 }
 
 func TestJudge(t *testing.T) {

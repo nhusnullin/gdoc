@@ -11,12 +11,27 @@ import (
 	"sync"
 )
 
+// Level is how much a request may do to one file. It starts at 1 rather than
+// at iota's 0 so that the zero value is no level at all: a Level nobody set
+// must not read as permission to do anything.
 type Level int
 
 const (
 	LevelSuggest Level = 1 // handed in: read, comment, suggest. Never direct-edit.
 	LevelFull    Level = 2 // created by gdoc, or explicitly granted in-place.
 )
+
+// String names a level for a refusal message. A reader who has to translate a
+// number is a reader who has not been told which rule refused them.
+func (l Level) String() string {
+	switch l {
+	case LevelSuggest:
+		return "suggest"
+	case LevelFull:
+		return "full"
+	}
+	return fmt.Sprintf("unknown(%d)", int(l))
+}
 
 // Policy is the reachable set plus the one folder a create may target.
 //
@@ -33,6 +48,9 @@ type Policy struct {
 	warnings []string // things the guard could not do quietly, for the command to report
 }
 
+// NewPolicy returns a policy that refuses everything. A command opens it one id
+// at a time, so a command that forgot to say which document it is for gets a
+// refusal rather than the whole of Drive.
 func NewPolicy() *Policy { return &Policy{files: map[string]Level{}} }
 
 // AllowFile puts a handed-in id in the set at the level it was handed in at.
@@ -111,9 +129,17 @@ func refuse(format string, a ...any) error {
 	return fmt.Errorf("guard refused: "+format, a...)
 }
 
+// Judge is the whole policy in one function: it answers whether this method on
+// this URL, carrying this body, may go out. Every request passes it, including
+// the ones a redirect produces, and a refusal is an error the caller reports
+// rather than a request it retries. Nothing else in gdoc decides what is
+// reachable.
+//
+// The body is read only to tell a suggestion from a direct edit. An absent
+// body is judged as no suggestion, which refuses rather than carries.
 func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 	if u.Scheme != "https" {
-		return refuse("scheme %q", u.Scheme)
+		return refuse("the URL scheme is %q, and gdoc makes https requests only. This request was not built by gdoc", u.Scheme)
 	}
 	// Userinfo in the URL becomes an Authorization header on the wire. gdoc
 	// authenticates with its own token and nothing else, so a URL carrying
@@ -129,13 +155,13 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 		if method == "POST" && u.Path == "/token" {
 			return nil
 		}
-		return refuse("%s %s on the token host", method, u.Path)
+		return refuse("%s %s is not carried on the token host, where the one call gdoc makes is POST /token", method, u.Path)
 	case "docs.googleapis.com":
 		return p.judgeDocs(method, u, body)
 	case "www.googleapis.com":
 		return p.judgeDrive(method, u)
 	}
-	return refuse("host %q", u.Host)
+	return refuse("the host %q is not one gdoc talks to. It reaches docs.googleapis.com, www.googleapis.com and the token host, and nothing else", u.Host)
 }
 
 // plainPath refuses a path the guard would read differently from the way the
@@ -178,7 +204,7 @@ func plainPath(u *url.URL) error {
 func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 	rest, ok := strings.CutPrefix(u.Path, "/v1/documents/")
 	if !ok || rest == "" {
-		return refuse("docs path %q", u.Path)
+		return refuse("the path %q names no document. On the Docs host gdoc reaches /v1/documents/{id}, and nothing else", u.Path)
 	}
 	id, verb, _ := strings.Cut(rest, ":")
 	lvl, known := p.level(id)
@@ -194,7 +220,7 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 		}
 		return refuse("direct edit of %q, which was handed in; only SUGGEST is allowed", id)
 	}
-	return refuse("%s %s", method, u.Path)
+	return refuse("%s %s is not a call gdoc makes on a document. It reads with GET and writes with POST {id}:batchUpdate, and those are the two", method, u.Path)
 }
 
 // driveReads are the sub-resources a level-1 read may name under a known id.
@@ -218,19 +244,19 @@ func (p *Policy) judgeDrive(method string, u *url.URL) error {
 	path := strings.TrimPrefix(u.Path, "/upload")
 	rest, ok := strings.CutPrefix(path, "/drive/v3/files")
 	if !ok {
-		return refuse("drive path %q", u.Path)
+		return refuse("the path %q is outside /drive/v3/files, which is the only Drive collection gdoc reaches", u.Path)
 	}
 	// CutPrefix does not know about segment boundaries, so `/drive/v3/filesX`
 	// would otherwise be judged as file X. The guard must not judge a path it
-	// has misread.
+	// has misread, and the refusal says which of the two path rules stopped it.
 	if rest != "" && !strings.HasPrefix(rest, "/") {
-		return refuse("drive path %q", u.Path)
+		return refuse("the path %q begins with /drive/v3/files but does not end that segment, so the guard would be reading it as a file it is not", u.Path)
 	}
 	if filesCollection(u.Path) { // the collection itself
 		if method == "POST" && p.createFolder() != "" {
 			return nil // create, into the one named folder; transport verifies parent
 		}
-		return refuse("%s on the files collection (listing and unparented creates)", method)
+		return refuse("%s on the files collection is not carried: gdoc never lists Drive, and it carries a create only into the folder the command named", method)
 	}
 	parts := strings.Split(strings.TrimPrefix(rest, "/"), "/")
 	id := parts[0]
@@ -250,7 +276,7 @@ func (p *Policy) judgeDrive(method string, u *url.URL) error {
 	case method == "PATCH" && sub == "" && lvl == LevelFull:
 		return nil // e.g. trashing a document gdoc created
 	}
-	return refuse("%s %s at level %d", method, u.Path, lvl)
+	return refuse("%s %s is not allowed at the %s level. A file handed in may be read, commented on and suggested on, and only a file gdoc created may be changed in place", method, u.Path, lvl)
 }
 
 // isSuggestMode reads the one field that keeps a handed-in document
