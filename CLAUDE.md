@@ -27,6 +27,122 @@ only.
 
 Secrets and the venv live in `~/.config/gdoc-agent/`, never in this repo.
 
+## v2 lives at `go/`, and v1 is untouched
+
+`gdoc/` is v1, the Python package every other section here describes. `go/` is
+v2, one static binary on the Go standard library. The two trees do not import
+each other, and nothing in the Go work has changed a line under `gdoc/`.
+
+| Path | Holds |
+|---|---|
+| `go/cmd/gdoc/` | `main.go`. Arguments in, one JSON object out, exit |
+| `go/internal/emit/` | the output envelope every command prints through |
+| `go/internal/guard/` | the network policy, and the only place a client is built |
+| `go/internal/auth/` | the token file, its refresh, and the login flow |
+| `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
+| `go/internal/config/` | where the per-user files live, per platform |
+| `go/boundary/` | the two allowlist tests that keep the wire in one room |
+| `bin/` | what `make build` and `make dist` write. Not in git |
+
+`docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
+order. Milestone 1 is done: the binary exists, prints the envelope, owns the
+network, and can log in and report its OAuth state.
+
+### The two commands, and what reaches stdout
+
+`gdoc auth status` reports `auth_mode`, `token_path`, `client_source` and
+`token_present`, plus `expired` and `scopes` when a token is there. Being signed
+out is an answer, so it comes back as `ok: true` with `token_present: false`
+rather than as a failure.
+
+`gdoc auth login` prints the authorization URL to **stderr**, waits for the
+browser to come back to the loopback listener, saves the token, then reports
+what `auth status` would. Exactly one JSON object reaches stdout, always through
+`internal/emit`, and the exit code is 0 if and only if that object says `ok`.
+Human words and the URL have one place to go, and it is not stdout.
+
+The binary never prompts and never reads stdin. A command missing something
+fails and says what is missing. It does not ask.
+
+### The token file is v1's, so a v1 login is already a v2 login
+
+`internal/auth` reads `oauth-token.json` from the config dir in v1's google-auth
+"authorized user" shape, field names included. Somebody logged in through v1
+needs no migration and no second browser trip. The bundled client id and secret
+are v1's two constants copied verbatim, and the rule about them has not changed:
+read "The OAuth client is shipped, and stays Internal" below.
+
+### The guard owns the wire, and it exists before any client
+
+`guard.NewClient` is the only place an `*http.Client` is made, and it is made
+from a `*Policy`. So the first request in the program's history has already been
+judged. v1 fitted a guard around a client that already existed, which is why v1
+needs a test proving `build()` is called in one module only.
+
+Write levels live in the policy, never at the call site. `LevelSuggest` is what
+a handed-in id gets: read, comment, suggest, and never a direct edit.
+`LevelFull` is what a create returned, or what `GrantInPlace` raises a handed-in
+id to for one process. A call site cannot widen its own reach by phrasing a
+request differently, because the policy reads the method, the URL and the body:
+a `batchUpdate` on a handed-in document is refused inside the process unless the
+body says `SUGGEST`.
+
+A create is refused unless it names exactly the one folder the run was given,
+and the transport reads the create's response for the new id and teaches the
+policy. Those are still principle 3's two doors, ported.
+
+### The guard judges plain paths only
+
+A percent-encoded path, or a `.` or `..` segment, is refused before the host is
+looked at. The reason is not tidiness. `u.Path` is decoded, `u.EscapedPath()` is
+what goes out, and Go cleans no dot segments out of a URL. Without the rule the
+guard reads one URL and the transport sends another:
+`/drive/v3/files/DOC1/../../../about` passes as a read of DOC1 and arrives as
+`drive.about.get`, an endpoint the guard refuses when it is asked plainly.
+`DOC1%2F..%2Fabout` is the same walk through a second door. Real Docs and Drive
+ids are `[A-Za-z0-9_-]`, so refusing both shapes costs nothing.
+
+### The boundary test holds two allowlists, and the difference is the point
+
+Naming `net/http` and dialing with it are not the same thing, so
+`go/boundary/boundary_test.go` checks both.
+
+- The **import allowlist** says who may name the type: `internal/guard`,
+  `internal/auth` and `internal/auth/loopback`. `internal/auth` is on it because
+  `Refresh` and `Login` take the guard's client as a parameter.
+- The **builder allowlist** says who may construct an outbound client or reach a
+  package-level dialer such as `http.Get`. That is `internal/guard` alone.
+  Serving is not building: `internal/auth/loopback` runs an `http.Server`, which
+  answers a request somebody else made, so it stays out of this set. A canary
+  test states that rather than leaving it to luck.
+
+Both fail in both directions, like v1's `test_guard_is_installed`. They fail
+when an import or a builder spreads, and they fail when an allowlisted room
+stops holding what it was listed for. The disappearance half reads production
+files only: a `_test.go` that fakes the wire must never stand in for the room
+that owns the wire.
+
+### No external programs at all
+
+v1 scopes that ban to `gdoc/render/` and keeps pandoc. v2 runs nothing: no
+`os/exec` anywhere under `go/`, and nothing may add one. What makes the stronger
+rule possible is that `auth login` prints the URL instead of opening a browser.
+Opening a browser is the one thing a CLI usually shells out for.
+
+### Building
+
+| Command | Does |
+|---|---|
+| `make test` | `cd go && go test ./...` |
+| `make vet` | `go vet ./...` and the `gofmt -l` check |
+| `make build` | `bin/gdoc`, for this machine |
+| `make dist` | the three platform binaries |
+
+`make dist` builds darwin/arm64, darwin/amd64 and windows/amd64 with
+`CGO_ENABLED=0`, so each one is static and the binary is the whole dependency.
+There is no linux target. Cross-building proves the binaries link, not that they
+run, so the real Windows smoke test belongs to M9.
+
 ## One root, and it is never this repo
 
 Principle 2. Read it there.

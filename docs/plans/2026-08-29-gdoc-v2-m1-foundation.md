@@ -1544,12 +1544,12 @@ git commit -m "feat(v2): auth login with loopback and PKCE, cross-build matrix"
 **Interfaces:**
 - Produces: the repo's own account of what now exists in Go, so the next milestone starts from documentation that matches the tree.
 
-- [ ] update `README.md`: say that `go/` exists, what `gdoc auth status` and `gdoc auth login` do, and how to build with `make build` and `make dist`
-- [ ] update `CLAUDE.md` with the patterns this milestone established: the guard owns all outbound HTTP and is built before any client, `net/http` is allowlisted by the boundary test to `internal/guard` and `internal/auth/loopback`, and every command prints through `internal/emit`
-- [ ] mark Milestone 1 done in `docs/v2/PLAN.md`
-- [ ] run the full test suite one more time: `cd go && go test ./...`
-- [ ] commit the documentation updates
-- [ ] move this plan to `docs/plans/completed/`
+- [x] update `README.md`: say that `go/` exists, what `gdoc auth status` and `gdoc auth login` do, and how to build with `make build` and `make dist`
+- [x] update `CLAUDE.md` with the patterns this milestone established: the guard owns all outbound HTTP and is built before any client, `net/http` is allowlisted by the boundary test to `internal/guard` and `internal/auth/loopback`, and every command prints through `internal/emit`
+- [x] mark Milestone 1 done in `docs/v2/PLAN.md`
+- [x] run the full test suite one more time: `cd go && go test ./...`
+- [x] commit the documentation updates
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

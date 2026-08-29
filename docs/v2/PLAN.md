@@ -4,7 +4,7 @@
 producing working, testable software. Detailed task-by-task plans live in
 `docs/plans/` (ralphex's plan directory) and are written when a milestone starts, so each one
 is written against the code that actually exists by then. Milestone 1's is
-written already.
+written, and that milestone is done.
 
 ## Principles
 
@@ -33,7 +33,7 @@ Strains: none.
 
 ## The milestones
 
-### M1. Foundation: the binary exists and can refuse
+### M1. Foundation: the binary exists and can refuse (done 2026-08-29)
 
 Module scaffold at `go/`, the JSON output envelope, config paths decided per
 platform (`~/.config/gdoc-agent` on macOS, `%AppData%\gdoc-agent` on Windows),
@@ -52,6 +52,15 @@ object), `auth status`. Cross-builds for all three
 platforms run from this milestone on, in the Makefile, so portability is never
 discovered late. Acceptance: spec item 1.
 Detailed plan: `docs/plans/2026-08-29-gdoc-v2-m1-foundation.md`.
+
+Landed 2026-08-29, with three things worth carrying forward. The import
+allowlist has three rooms rather than one, because `internal/auth` takes the
+guard's client as a parameter, so a second check was added: only
+`internal/guard` may build a client or dial, and serving an `http.Server` is not
+building. The guard refuses percent-encoded paths and dot segments outright,
+because it would otherwise read a URL differently from the way the transport
+sends it. And no browser is opened at all, so v2 needs no `os/exec` anywhere.
+The result is documented in CLAUDE.md under "v2 lives at `go/`".
 
 ### M2. Reading, and the honest witness
 

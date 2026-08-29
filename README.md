@@ -426,6 +426,36 @@ carried is named in the output rather than dropped quietly.
 **One house template.** `altery-group-policy-v1.0` is bundled. A second one needs
 code, because the cover and the tables are found by their placeholder text.
 
+## The Go rewrite
+
+A second implementation lives at `go/`: one static binary, no Python, no pandoc,
+nothing to install beside it. It is being built a milestone at a time
+(`docs/v2/PLAN.md`), and so far it does one job, the credential.
+
+```bash
+make build   # bin/gdoc, for this machine
+make dist    # bin/gdoc-darwin-arm64, -darwin-amd64, -windows-amd64.exe
+```
+
+```bash
+bin/gdoc auth status   # which token, where it is, whether it has expired
+bin/gdoc auth login    # prints a sign-in link and waits for you to open it
+```
+
+`auth status` answers when you are signed out too: no token is a fact it
+reports, not an error. `auth login` prints the link rather than opening a
+browser for you, because the Go binary runs no other program at all.
+
+Both print exactly one JSON object on stdout and nothing else. Prose and the
+sign-in link go to stderr, so anything reading the output has one object to
+parse and no filtering to do.
+
+It reads the same `~/.config/gdoc-agent/oauth-token.json` the Python tool
+writes, in the same format. Sign in once and you are signed in to both.
+
+The `gdoc` on your PATH is still the Python tool this README describes. `bin/gdoc`
+is the new one, and nothing installs it yet.
+
 ## What is planned
 
 **gdoc live: answers while you read.** Today a review is one pass. You run it, it
