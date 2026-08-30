@@ -144,7 +144,7 @@ suite still passes: 652 tests.
    `image/jpeg` encoder produces exactly such a file, and the publish dies with a
    bare `UnrecognizedImageError`. Such files are unusual but legal. The Go reader
    takes the size from the frame header and accepts them. Evidence kept at
-   `go/testdata/docs/photo-nojfif.jpg`.
+   `spike/render/testdata/docs/photo-nojfif.jpg`.
 
 6. **Link destinations are dropped.** `inline_runs` recurses into a `Link` and
    keeps only its text, so a published document has no live links anywhere. This

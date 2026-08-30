@@ -2,7 +2,7 @@
 
 Built on 29 August 2026 to answer one question: can a Go port of `gdoc`'s render
 path match the Python one pixel for pixel? The answer, and how it was measured,
-is in [../docs/superpowers/specs/2026-08-29-go-render-spike.md](../docs/superpowers/specs/2026-08-29-go-render-spike.md).
+is in [../../docs/superpowers/specs/2026-08-29-go-render-spike.md](../../docs/superpowers/specs/2026-08-29-go-render-spike.md).
 
 **This is spike code.** It renders and it publishes. It does not review, reply,
 export, capture, restyle, pair or keep a baseline. Do not build on it without

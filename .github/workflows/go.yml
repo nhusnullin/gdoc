@@ -1,0 +1,28 @@
+# The Go suite is where the guard's guarantees live, so it runs on every push
+# rather than when somebody remembers to run make test.
+name: Go
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+      - name: gofmt
+        run: cd go && test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: vet
+        run: cd go && go vet ./...
+      - name: test
+        run: cd go && go test -race ./...
+      # Cross-compiling is a claim the Makefile makes and nobody working on
+      # macOS can break safely. Running it here finds a windows-only build
+      # failure on the commit that caused it.
+      - name: dist
+        run: make dist

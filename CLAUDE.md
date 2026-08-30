@@ -23,10 +23,367 @@ only.
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
-| `go/` | the render spike that settled the language decision. Throwaway, and it says so. Renders and publishes; reads nothing back |
+| `go/` | v2, the Go rewrite. Its own module, standard library only. See the section below |
+| `spike/render/` | the render spike that settled the language decision. Throwaway, and it says so. Renders and publishes; reads nothing back. Kept as the measured reference M5 and M6 build against, not as code to extend |
 | `.gdoc/<slug>/` | `pending.md`, `baseline.md`, generated `out/*.docx`. **Not in this repo:** it sits beside the source markdown being reviewed |
 
 Secrets and the venv live in `~/.config/gdoc-agent/`, never in this repo.
+
+## v2 lives at `go/`, and v1 is untouched
+
+`gdoc/` is v1, the Python package every other section here describes. `go/` is
+v2, one static binary on the Go standard library. The two trees do not import
+each other, and nothing in the Go work has changed a line under `gdoc/`.
+
+| Path | Holds |
+|---|---|
+| `go/cmd/gdoc/` | `main.go`. Arguments in, one JSON object out, exit |
+| `go/internal/emit/` | the output envelope every command prints through |
+| `go/internal/guard/` | the network policy, and the only place a client is built |
+| `go/internal/auth/` | the token file, its refresh, and the login flow |
+| `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
+| `go/internal/config/` | where the per-user files live, per platform |
+| `go/boundary/` | the two allowlist tests that keep the wire in one room |
+| `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
+
+`docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
+order. Milestone 1 is done: the binary exists, prints the envelope, owns the
+network, and can log in and report its OAuth state.
+
+### The two commands, and what reaches stdout
+
+`gdoc auth status` reports `auth_mode`, `token_path`, `client_source` and
+`token_present`, plus `expired`, `scopes` and `missing_scopes` when a token is
+there. Being signed out is an answer, so it comes back as `ok: true` with
+`token_present: false` rather than as a failure.
+
+The shape is `auth.StatusReport`, a struct with json tags, not a map. The
+command reads its fields in Go, so a field renamed in `auth` cannot silently
+drop a warning in `cmd`.
+
+Four things about those fields:
+
+- `auth_mode` is the constant `"oauth"`. v2 has no service account and never
+  reads v1's `config.json`, so on a machine set to `auth_mode: service_account`
+  the two tools disagree on purpose. The resolver documented further down is
+  v1's alone.
+- `client_source` is always `"bundled"`. v1 lets `oauth-client.json` in the
+  config dir override the client; v2's login does not read that file yet, so
+  when it exists status adds `client_file_ignored: true` and a warning rather
+  than claiming an override that is not wired up.
+- `missing_scopes` names what v2 asks for that the token does not carry. A
+  partial grant is reported, never refused: the login worked, and this is the
+  one place that can say why the Docs calls will 403 before they do. A v1 token
+  is not an example of one: it carries the full Drive scope, which covers the
+  Docs scope v2 asks for, so it reports nothing. See `MissingScopes` below.
+- A token file that exists and cannot be read is a **failure**, not
+  `token_present: false`. It comes back `ok: false` with the path still in
+  `data`, and with the warnings it would have carried on the way out. Reporting
+  it as signed out is how somebody re-runs `auth login`, overwrites the file,
+  and never learns what was wrong with it. Only an absent file means signed out.
+
+A panic anywhere is still one JSON object: `cmd/gdoc` recovers, prints
+`ok: false` with what happened, and puts the stack trace on stderr. A Go trace
+on stdout with exit 2 would break the contract every caller has.
+
+`GDOC_CONFIG_DIR` moves the config dir. It is how every Go test avoids the real
+config, the v2 counterpart of v1's `tests/conftest.py`.
+
+`gdoc auth login` prints the authorization URL to **stderr**, waits for the
+browser to come back to the loopback listener, saves the token, then reports
+what `auth status` would. Exactly one JSON object reaches stdout, always through
+`internal/emit`, and the exit code is 0 if and only if that object says `ok`.
+Human words and the URL have one place to go, and it is not stdout.
+
+The binary never prompts and never reads stdin. A command missing something
+fails and says what is missing. It does not ask.
+
+`gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
+than an oversight. There is no help command: `dispatch` matches `auth status`
+and `auth login` and nothing else, so `--help` comes back as an unknown command
+with the one-line `usage` string in the error. A caller reads the same JSON
+object it reads for every other run, and the exit code still means what it means
+everywhere else. Human-readable help would have to reach stdout beside the
+object, or exit 0 on a run that did no work, and both break the contract.
+
+### The token file is v1's, so a v1 login is already a v2 login
+
+`internal/auth` reads `oauth-token.json` from the config dir in v1's google-auth
+"authorized user" shape, field names included. Somebody logged in through v1
+needs no migration and no second browser trip. The bundled client id and secret
+are v1's two constants copied verbatim, and the rule about them has not changed:
+read "The OAuth client is shipped, and stays Internal" below.
+
+**The other direction is not symmetrical, and this is a scope widening.** v1's
+`LOGIN_SCOPES` is Drive plus `documents.readonly`. v2's login asks for Drive
+plus `documents`, the read/write scope, because v2 writes suggestions through
+the Docs API. v1 refuses a token whose stored scopes lack one it requested
+(`gdoc/oauth.py`), so after a `bin/gdoc auth login` v1's `gdoc edits` asks for a
+fresh v1 login. Nothing else in either tool changes. Do not "fix" the comment in
+`login.go` by calling the two sets equal: they are not, and the widening has to
+stay written down.
+
+**`MissingScopes` knows that the full Drive scope covers the Docs calls.** The
+Docs API accepts `auth/drive` on `documents.get` and `documents.batchUpdate`, so
+a v1 token, which is Drive plus `documents.readonly`, is missing nothing v2
+needs. Comparing the requested list literally warned on Nail's own working
+token, and a warning on the working case is one people learn to ignore.
+`coveredBy` in `login.go` is where that lives. It is a report, never a refusal,
+and `drive.file` is deliberately not in it: that scope reaches only files the
+app itself created.
+
+A v2 `Save` carries `universe_domain`, `account` and `rapt_token` through
+untouched. They are google-auth's fields, `Credentials.to_json` writes all three
+when they are set, v2 uses none of them, and dropping one would quietly rewrite
+a file both tools share. `rapt_token` is the reauth proof token, so losing it
+makes v1 ask for reauthentication again.
+
+`Load` refuses a file that parses but cannot be refreshed. The required set is
+google-auth's, not one v2 invented: `from_authorized_user_info` raises without
+`refresh_token`, `client_id` and `client_secret`, and v1 reads this same file
+through it. A `{}` that read as a token would have `auth status` report a token
+present and the first Docs call fail with something else. `token_uri` is not in
+that set, because google-auth overrides it with its own constant whatever the
+file says; `Load` fills the same value in rather than posting a refresh to an
+empty URL.
+
+### The guard owns the wire, and it exists before any client
+
+`guard.NewClient` is the only place an `*http.Client` is made, and it is made
+from a `*Policy`. So the first request in the program's history has already been
+judged. v1 fitted a guard around a client that already existed, which is why v1
+needs a test proving `build()` is called in one module only.
+
+Write levels live in the policy, never at the call site. `LevelSuggest` is what
+a handed-in id gets: read, comment, suggest, and never a direct edit.
+`LevelFull` is what a create returned, or what `GrantInPlace` raises a handed-in
+id to for one process. A call site cannot widen its own reach by phrasing a
+request differently, because the policy reads the method, the URL and the body:
+a `batchUpdate` on a handed-in document is refused inside the process unless the
+body says `SUGGEST`.
+
+A create is refused unless it names exactly the one folder the run was given,
+and the transport reads the create's response for the new id and teaches the
+policy. Those are still principle 3's two doors, ported. Naming a folder to
+create in does not put that folder in the reachable set: it is a create target,
+not a third door.
+
+**Read this before trusting the level-1 write bar.** What keeps a handed-in
+document read-and-suggest only is `writeControl.writeMode == "SUGGEST"` in the
+request body, which is a field the client itself supplies.
+`docs/v2/BLOCKED-BY-API.md` records the measurement: `writeMode` is absent from
+the public Docs discovery document, and one morning this exact call returned 200
+and silently made a direct edit. So the server is not known to honour it, and
+what the guard holds today is a statement of intent rather than a guarantee. The
+capability probe the spec relies on, which would ask the server what it will do
+before the write goes out, **does not exist yet**. Widening or narrowing what
+`isSuggestMode` permits is a decision for Nail, not a refactor.
+
+The guard judges the request it actually sends. It refuses
+`X-HTTP-Method-Override` and its two cousins, and a `_method` query parameter,
+because Google's REST stack performs the overridden method: a GET the guard
+allowed would arrive as a DELETE it never saw. A create it cannot read the
+parents of is refused, which today includes a multipart upload: that body opens
+with the MIME boundary, so the `/upload` grammar is unreachable until M6 teaches
+the transport to read the first MIME part. Failing closed is the right direction
+to be wrong in.
+
+Three more shapes belong to that same rule, and each closes a way the request on
+the wire differed from the one that was judged. The two allowlists below them,
+one over the query and one over the headers, are the same rule again and are
+broader than all three.
+
+- **The upload parameter decides what the body is.** With `uploadType=media`
+  the body IS the file's content, so `{"parents":["FOLDER1"]}` reads as bytes to
+  Drive and as metadata to `checkParent`: the file lands unparented and the
+  guard then learns its id at `LevelFull`. `checkUploadShape` permits the shapes
+  the parent check can read, `multipart` and `resumable` and an absent
+  parameter, and refuses the rest. It reads `upload_protocol` too, which is the
+  same choice under Google's newer name, where `raw` is what `media` was. A
+  request naming both parameters is refused rather than guessed at: the guard
+  would be reading the one Drive may not obey. Nothing may learn an id from a
+  create it could not verify.
+- **`fields` reaches the permission surface.** A GET is judged on its path, and
+  `fields=*` or `fields=permissions(...)` returns exactly what refusing
+  `/permissions` was for. `checkFields` refuses `*`, refuses `permissions` by
+  any spelling, and refuses an empty mask, because Google reads a mask with
+  nothing in it as every field.
+- **The base transport carries no proxy.** `http.DefaultTransport` reads
+  `HTTPS_PROXY`, so a nil base would send an unjudged `CONNECT` to whatever host
+  the environment named, with the credential following it there. `baseTransport`
+  sets `Proxy: nil` for that reason. If a proxy is ever wanted it has to be
+  judged, not inherited from the environment.
+
+A create whose response carries no readable id is recorded on the policy and
+readable through `Policy.Warnings()`. Silence there turns into "file was not
+given to this command" on the next request, which names the wrong problem.
+
+`Policy` is mutex-guarded. `NewClient` hands out an `*http.Client`, which Go
+documents as safe for concurrent use, and `Learn` writes the set from inside
+`RoundTrip` while `Judge` reads it. `make test` runs `-race`; keep it there.
+
+### Two allowlists over one request, the query and the headers
+
+This is the guard's broadest rule, and it is easy to read past because neither
+half names a single attack.
+
+Google gives one capability several spellings. `fields` is also `$fields` and
+also the header `X-Goog-FieldMask`. `uploadType` has the sibling
+`upload_protocol`. `key` is also `$key` and the header `X-Goog-Api-Key`. A list
+of blocked spellings needs a patch each time somebody finds another one, and
+every miss is a live hole until then. So both halves are allowlists. They are
+wrong in the direction of a refusal the next milestone widens on purpose.
+
+- **The query.** `params.go` holds one allowlist per call shape, not one across
+  all of them: `driveGetParams`, `driveExportParams`, `driveCommentListParams`,
+  `driveReplyListParams`, `driveCommentGetParams`, `driveWriteParams`,
+  `driveCreateParams`, `docsReadParams`, and `noParams` for a call that carries
+  no query at all. One list for everything was wrong in both directions: it put
+  paging on a metadata read and an export format on a comment listing, neither
+  of which is a call Drive has, and it put `alt` on the bare `files.get`, where
+  `alt=media` stops being a metadata read and hands back the file's bytes.
+  `checkQuery` parses the raw query itself rather than through `u.Query()`,
+  which drops a pair it cannot read and returns the rest, and it refuses a
+  parameter given twice.
+- **The headers.** `allowedHeaders` in `transport.go` names seven, in lower
+  case, and every other header is refused. They are `authorization`,
+  `content-type`, `content-length`, `accept`, `accept-encoding`, `user-agent`
+  and `referer`. A Drive read whose query carries no `fields` can still ask for
+  `permissions(...)` in `X-Goog-FieldMask`, so a guard that judges only the
+  query judges half the request. `referer` is on the list because
+  `http.Client.Do` builds a redirect hop itself and sets it, and leaving it out
+  refused every redirect the policy allows. `cookie` is deliberately absent:
+  `NewClient` sets no jar, so a Cookie is a second credential nobody decided
+  about. A milestone needing another header, a resumable upload's
+  `X-Upload-Content-Type` for instance, adds it here on purpose.
+
+Both loops walk the raw header map and fold case themselves. `Header.Get`
+canonicalises the key it looks up, so it finds nothing stored under
+`X-HTTP-METHOD-OVERRIDE`, and two keys that fold to the same name are two lines
+on the wire. Counting one key at a time read each of them as the only one, which
+is how `Authorization` beside `authorization` put two credentials on a judged
+request and left the server to pick.
+
+`checkAuthorization` is the most the guard can honestly say about the
+credential, and the limit is worth holding. It checks one value, the `Bearer `
+scheme, and a token after it. That refuses a second credential, another scheme
+carrying another principal, and an empty grant. It cannot check whose token it
+is: the guard is built from a policy and a base transport and never sees the
+token, and pinning a literal would refuse the request after every refresh. So a
+caller that swaps in another person's bearer token runs the judged operation as
+that person. What the guard still bounds is which files are reachable and what
+may be done to them, which is principle 3's actual claim. Nothing here is a
+claim about identity. The refusal never prints the header value, because a
+refusal goes into the JSON the caller reports.
+
+### The guard judges plain paths only
+
+A path whose escaping differs from its plain form (`%2F`, `%2E` and the like),
+or a `.` or `..` segment, is refused before the host is looked at. A harmless
+`%20` passes: Go only sets `RawPath` when the escaped form differs from the
+default encoding of `Path`. A URL carrying credentials is refused too, because
+those become an Authorization header gdoc did not build. The reason is not tidiness. `u.Path` is decoded, `u.EscapedPath()` is
+what goes out, and Go cleans no dot segments out of a URL. Without the rule the
+guard reads one URL and the transport sends another:
+`/drive/v3/files/DOC1/../../../about` passes as a read of DOC1 and arrives as
+`drive.about.get`, an endpoint the guard refuses when it is asked plainly.
+`DOC1%2F..%2Fabout` is the same walk through a second door. Real Docs and Drive
+ids are `[A-Za-z0-9_-]`, so refusing both shapes costs nothing.
+
+### The boundary test holds two allowlists, and the difference is the point
+
+Naming `net/http` and dialing with it are not the same thing, so
+`go/boundary/boundary_test.go` checks both.
+
+- The **import allowlist** says who may name the type: `internal/guard`,
+  `internal/auth` and `internal/auth/loopback`. `internal/auth` is on it because
+  `Refresh` and `Login` take the guard's client as a parameter.
+- The **builder allowlist** says who may construct an outbound client or reach a
+  package-level dialer such as `http.Get`. That is `internal/guard` alone.
+  Serving is not building: `internal/auth/loopback` runs an `http.Server`, which
+  answers a request somebody else made, so it stays out of this set. A canary
+  test states that rather than leaving it to luck.
+
+The builder scanner resolves the import name per file and knows eight ways to
+make a wire: a composite literal, `new(http.Client)`, a zero-value `var c
+http.Client`, the dialers, a type declaration that renames the wire (`type C =
+http.Client`, or the same without the equals sign), a struct holding one by
+value, a container holding one by value (`make([]http.Client, 1)` and every
+shape `holdsWire` walks), and a function handing one back by value (`func
+Build() (c http.Client) { return }`). `holdsWire` recurses, so it also sees a
+wire that is only a generic type argument. A struct field counts whether it is
+embedded or named: `struct{ C http.Client }` is the same zero-value client as
+`struct{ http.Client }`, reached through one extra word.
+
+That is not thoroughness for its own sake. A scanner that assumes the name is
+always `http` and looks only for composite literals is walked around by
+`import nh "net/http"`, by `import . "net/http"`, by `new(...)`, by a zero-value
+declaration, by `type C = http.Client; var _ = &C{}`, by `type T struct{
+http.Client }`, by a slice, and by a named return, and every one of those builds
+a wire outside the guard while passing both checks. The canary carries a case
+for each, and each case was watched failing against the scanner that missed it.
+
+The two type shapes are flagged on the declaration, not on the values built from
+it. Following an alias would mean resolving names across a package, and a
+package outside the guard has no reason to give the wire a second name. Embedding
+a **pointer** is not flagged: that is holding a client somebody else made, the
+same as taking one as a parameter.
+
+Both fail in both directions, like v1's `test_guard_is_installed`. They fail
+when an import or a builder spreads, and they fail when an allowlisted room
+stops holding what it was listed for. The disappearance half reads production
+files only: a `_test.go` that fakes the wire must never stand in for the room
+that owns the wire.
+
+### No external programs at all
+
+v1 scopes that ban to `gdoc/render/` and keeps pandoc. v2 runs nothing: no
+`os/exec` anywhere under `go/`, and nothing may add one. What makes the stronger
+rule possible is that `auth login` prints the URL instead of opening a browser.
+Opening a browser is the one thing a CLI usually shells out for.
+
+`go/boundary/boundary_test.go` enforces it, the way
+`tests/test_no_external_programs.py` enforces v1's.
+
+### Standard library only, and that rule is M1's alone
+
+The same file holds "standard library only" to the tree: `allowedModules` in
+`TestNoThirdPartyDependencies` is empty, so every `require` line in `go.mod` and
+every module named in a `go.sum` is refused today.
+
+**Empty is a milestone's state, not the plan.** SPEC.md already agreed three
+modules, each with its reason written there: `beevik/etree`, because
+`encoding/xml` corrupts OOXML; `yuin/goldmark`, for the markdown M5 parses; and
+`goccy/go-yaml`, for the `gdoc:` front matter and `house.yaml`. The milestone
+that first needs one adds its path to `allowedModules` and nothing else. It does
+not delete the test, and it does not widen it to "whatever go.mod says". A
+fourth module needs its reason in SPEC.md before its line in the map, and the
+open candidate is `sergi/go-diff` at M8.
+
+Writing the map empty rather than leaving an instruction was the point: M1
+refuses exactly what it refused before, and M2 edits one line instead of
+arguing with a red build it has no note about.
+
+### Building
+
+| Command | Does |
+|---|---|
+| `make test` | `cd go && go test -race ./...` |
+| `make vet` | `go vet ./...` and the `gofmt -l` check |
+| `make build` | `bin/gdoc`, for this machine |
+| `make dist` | the three platform binaries |
+
+`make dist` builds darwin/arm64, darwin/amd64 and windows/amd64 with
+`CGO_ENABLED=0`, so each one is static and the binary is the whole dependency.
+There is no linux target. Cross-building proves the binaries link, not that they
+run, so the real Windows smoke test belongs to M9.
+
+`.github/workflows/go.yml` runs all four on every push: gofmt, vet, the raced
+test suite, and `make dist`. dist is in CI because a cross-compile break is
+invisible to whoever is working on macOS, and "portability is never discovered
+late" is only true if something checks it on every commit rather than when
+somebody remembers. The workflow runs on ubuntu and builds no linux binary,
+which is fine: cross-compiling is what is being proved.
 
 ## One root, and it is never this repo
 

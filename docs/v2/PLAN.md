@@ -4,7 +4,7 @@
 producing working, testable software. Detailed task-by-task plans live in
 `docs/plans/` (ralphex's plan directory) and are written when a milestone starts, so each one
 is written against the code that actually exists by then. Milestone 1's is
-written already.
+written, and that milestone is done.
 
 ## Principles
 
@@ -22,6 +22,12 @@ Strains: none.
   `goccy/go-yaml v1.19.2` (front matter and `house.yaml`; reason written in
   SPEC.md; zero transitive modules). A fourth needs its reason written into
   SPEC.md first; the open candidate is `sergi/go-diff` at milestone 8.
+- None of those three is in `go.mod` yet, and the M1 boundary test refuses
+  every one of them. `allowedModules` in `TestNoThirdPartyDependencies` is an
+  empty allowlist, so "standard library only" is M1's state rather than v2's
+  rule. The milestone that first needs a module adds its path to that map, and
+  nothing else: it does not delete the test and it does not widen it to accept
+  whatever `go.mod` says. M5 is the likely first, for goldmark.
 - No `golang.org/x/oauth2`: the token refresh is a single POST to Google's
   token endpoint and is hand-rolled on the standard library.
 - v1 is retired as of 2026-08-29, Nail's call. The Python code stays in the
@@ -33,12 +39,13 @@ Strains: none.
 
 ## The milestones
 
-### M1. Foundation: the binary exists and can refuse
+### M1. Foundation: the binary exists and can refuse (done 2026-08-29)
 
 Module scaffold at `go/`, the JSON output envelope, config paths decided per
 platform (`~/.config/gdoc-agent` on macOS, `%AppData%\gdoc-agent` on Windows),
 and the guard as the complete network policy, not just a RoundTripper: an
-allowlist of exact Google hosts, refusal of cross-origin redirects, the id set
+allowlist of exact Google hosts, redirects capped and re-judged so one off the
+host allowlist is refused, the id set
 with write levels, a create-child capability for the one folder a command was
 given, narrowly defined non-file exemptions for the token endpoint, and
 response learning from creates. Enforced by a `go/ast` import-boundary test:
@@ -53,7 +60,23 @@ platforms run from this milestone on, in the Makefile, so portability is never
 discovered late. Acceptance: spec item 1.
 Detailed plan: `docs/plans/2026-08-29-gdoc-v2-m1-foundation.md`.
 
+Landed 2026-08-29, with three things worth carrying forward. The import
+allowlist has three rooms rather than one, because `internal/auth` takes the
+guard's client as a parameter, so a second check was added: only
+`internal/guard` may build a client or dial, and serving an `http.Server` is not
+building. The guard refuses percent-encoded paths and dot segments outright,
+because it would otherwise read a URL differently from the way the transport
+sends it. And no browser is opened at all, so v2 needs no `os/exec` anywhere.
+The result is documented in CLAUDE.md under "v2 lives at `go/`".
+
 ### M2. Reading, and the honest witness
+
+Three things M1 left for this milestone to pick up. `Policy.AllowFile`,
+`AllowCreateIn` and `GrantInPlace` have no production caller yet: if M2 lands
+without one, delete it rather than carry it. `Token.Refresh` is the same, and M2
+is the milestone that needs it. And `Policy.Warnings()` collects what the guard
+could not do quietly, so whatever command M2 adds should put those on the
+envelope rather than dropping them.
 
 `documents.get` with `includeTabsContent=true`, tab detection, comment threads
 with real ranges and `ai` markers, the opaque `--since` cursor (held by the
