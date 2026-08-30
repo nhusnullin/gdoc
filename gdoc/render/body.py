@@ -146,10 +146,12 @@ def shallowest_heading_level(blocks, current=None):
             # "# ![][image1]" makes every real heading one level deeper than it
             # is, and they come out numbered "0.1-".
             words, images = split_images(content[2])
-            if images and not any(
-                node for node in words
-                if isinstance(node, dict) and node.get("t") not in ("Space", "SoftBreak")
-            ):
+            # Tested on the rendered text, the way walk() tests it. Asking
+            # whether any node survives is defeated by the Strong wrapper Drive
+            # puts around "# **![][image1]**": the Strong survives, holding
+            # nothing, so the heading counted as level 1 and every real heading
+            # came out numbered "0.1-".
+            if images and not "".join(r[0] for r in inline_runs(words)).strip():
                 continue
             level = content[0]
             current = level if current is None else min(current, level)
@@ -183,6 +185,12 @@ def inline_runs(nodes, out=None, bold=False, italic=False, mono=False,
             inline_runs(content, out, bold, True, mono, highlight)
         elif tag == "Highlighted":
             inline_runs(content, out, bold, italic, mono, "yellow")
+        elif tag == "Span" and "mark" in (content[0][1] if content else []):
+            # pandoc 3.x renders ==text== as a Span carrying the class "mark",
+            # not as the Highlighted node this branch was written for. Without
+            # this the highlight silently disappears, which is the one mark
+            # that means "a human still has to fill this in".
+            inline_runs(content[1], out, bold, italic, mono, "yellow")
         elif tag == "Code":
             out.append((content[1], bold, italic, True, highlight))
         elif tag == "Quoted":
@@ -192,9 +200,15 @@ def inline_runs(nodes, out=None, bold=False, italic=False, mono=False,
             out.append((marks[1], bold, italic, mono, highlight))
         elif tag == "Link":
             inline_runs(content[1], out, bold, italic, mono, highlight)
-        elif tag in ("Span", "Strikeout", "SmallCaps", "Superscript", "Subscript",
-                     "Cite", "Note"):
+        elif tag in ("Span", "Cite"):
+            # These carry [attributes, inlines], so the children are last.
             inline_runs(content[-1], out, bold, italic, mono, highlight)
+        elif tag in ("Strikeout", "SmallCaps", "Superscript", "Subscript", "Note"):
+            # These carry the inline list directly. Taking content[-1] here
+            # takes the LAST inline node instead of the list, and iterating a
+            # dict yields its keys, so every one of them rendered as nothing:
+            # "~~struck out~~" silently disappeared from the document.
+            inline_runs(content, out, bold, italic, mono, highlight)
         elif tag == "RawInline":
             continue
         elif isinstance(content, list):
