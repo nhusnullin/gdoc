@@ -23,6 +23,8 @@ only.
 | `tests/` | pytest suite. Every module has a matching test file |
 | `skills/` | `gdoc-review` and `gdoc-apply`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/superpowers/` | the implementation plans and the design specs |
+| `go/` | v2, the Go rewrite. Its own module, standard library only. See the section below |
+| `spike/render/` | the render spike that settled the language decision. Throwaway, and it says so. Renders and publishes; reads nothing back. Kept as the measured reference M5 and M6 build against, not as code to extend |
 | `.gdoc/<slug>/` | `pending.md`, `baseline.md`, generated `out/*.docx`. **Not in this repo:** it sits beside the source markdown being reviewed |
 
 Secrets and the venv live in `~/.config/gdoc-agent/`, never in this repo.
@@ -410,6 +412,13 @@ agent is most likely to break, usually by adding a helpful commit.
 ## No external programs
 
 Principle 1. The rule is scoped to `gdoc/render/`, the publish path.
+
+**Decided 2026-08-29: the next version is written in Go**, and the reason is this
+section. Read the decision in PRINCIPLES.md before proposing work that assumes
+otherwise. In Go the first two uses below stop existing, because a Markdown parser
+is an import rather than a spec. The third, the docx reader, has to be written and
+is unproven. Nothing here is deleted until the Go side covers it: this repository
+is still the tool.
 
 pandoc remains, in three places, and each is tracked separately:
 

@@ -32,6 +32,8 @@ So:
   publish path, as an allowlist rather than a ban.
 - pandoc is the one that remains, tracked in three places. It must degrade with a
   clear message, never crash, and never be found at a hardcoded absolute path.
+  Two of the three go away by changing language rather than by writing a parser;
+  see the decision dated 2026-08-29 below.
 - git is not a dependency at all. The vault holding the source documents is not
   a git repository and will not become one. Nothing in the tool or the skills
   runs git, so there is no conditional step and nothing to say out loud about
@@ -207,6 +209,58 @@ asks for them and picks each one. The default is unchanged.
 **2026-08-14. Skills are symlinked into `~/.claude/skills/`, never copied.**
 Domain choice, no principle above it. A copy drifts silently. `install.sh` defends this and refuses to replace a real
 directory whose contents differ.
+
+**2026-08-29. The next version of gdoc is written in Go.** Serves principle 1.
+
+Principle 1 draws its line at "a program pip cannot install does not travel".
+pandoc is that program. It has survived three specs because removing it in Python
+means writing a Markdown parser and rewriting the AST walker in the module where
+the body's pixel fidelity lives. In Go it is an import. A Go build is one static
+binary: no interpreter, no venv, no pandoc, nothing that has to already be on the
+machine. That is principle 1 satisfied rather than managed, and it is the whole
+reason for the decision. Speed is not.
+
+The fidelity question was measured before deciding, because it was the assumed
+risk. Six documents were built by both renderers, published to Drive by both,
+exported as PDF by Google, rasterised at 300 dpi and compared with a zero
+tolerance: 418,385,088 pixels across 48 pages, none different. Run twice on
+separate publishes. The spike is
+`docs/superpowers/specs/2026-08-29-go-render-spike.md`, and the code is on branch
+`spike/go-render`.
+
+It ports exactly for a structural reason worth keeping in mind. Neither renderer
+builds a .docx. Both copy the master and cut into it, so the cover, the logo, the
+running head and the coloured tables travel as bytes. A .docx is a zip of XML, and
+the body was already written as OOXML by hand against constants measured out of
+the template. None of that was ever Python.
+
+**What the decision does not rest on.** `gdoc/export.py` uses pandoc as a docx
+*reader*, and that use is load-bearing rather than a fallback: it is the only
+route that brings a picture out of a Google Doc. goldmark does not replace it, so
+that reader has to be written. It is unmeasured. The estimate is that it is the
+size of the body renderer, because it only has to read Google's own docx export
+rather than arbitrary Word files, and because it is the same `document.xml` shape
+the renderer already writes. An estimate is not a measurement, and proving this is
+the first thing the port should do.
+
+So "pandoc in three places" becomes "one docx reader to write", and that reader is
+a job this repository has in either language.
+
+**Scope.** Next version. The Python tool stays until the Go one covers what it
+covers, and nothing is deleted on the strength of this entry. Roughly a third of
+the package is ported; the rest, and a 652-test suite, is not.
+
+**One thing the port found that belongs in Python either way.** Page numbers come
+from Google's PDF export. The Python renderer reads them by extracting the PDF's
+text and matching it line by line, which is guesswork over glyph coordinates: it
+can match a heading against its own contents entry and report the contents page as
+the heading's page. Google's export carries a document outline, one entry per
+heading pointing at the page it sits on. Reading that is exact and has no failure
+of this kind. Adopt it in Python whatever happens to the port.
+
+Porting also found four defects in `gdoc/render/`, each of which loses content in
+silence. They are fixed already, so that work survives even if the port stalls.
+See the commit "fix: four things the renderer was dropping in silence".
 
 ### Open violations
 

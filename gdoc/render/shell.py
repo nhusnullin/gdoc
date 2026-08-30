@@ -524,8 +524,13 @@ def strip_comments(path):
             elif name == "[Content_Types].xml":
                 text = data.decode("utf-8")
                 for part in COMMENT_PARTS:
+                    # Attribute order is not fixed, and no writer agrees on it.
+                    # The bundled master is a Google Docs export and writes
+                    # ContentType before PartName, so anchoring on PartName
+                    # matched nothing and every published document carried an
+                    # Override naming a part that had been removed.
                     text = re.sub(
-                        rf'<Override PartName="/{re.escape(part)}"[^>]*/>', "", text)
+                        rf'<Override[^>]*PartName="/{re.escape(part)}"[^>]*/>', "", text)
                 data = text.encode("utf-8")
             elif name == "word/_rels/document.xml.rels":
                 text = data.decode("utf-8")
