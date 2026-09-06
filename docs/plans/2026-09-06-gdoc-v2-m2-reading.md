@@ -181,10 +181,26 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 **Interfaces:**
 - Produces: `github.com/goccy/go-yaml v1.19.2` in `go.mod`; `TestNoThirdPartyDependencies` passes with exactly that module allowed and still refuses any other. This is the one-line widening PLAN.md and CLAUDE.md describe: the milestone that first needs a module adds its path, and nothing else.
 
-- [ ] write the failing test change first: add `"github.com/goccy/go-yaml": "the gdoc: front matter and house.yaml; reason in SPEC.md"` to `allowedModules`, and make sure a canary asserts an unlisted module path in a scratch `go.mod` string is still refused
-- [ ] run `cd go && go get github.com/goccy/go-yaml@v1.19.2 && go mod tidy` and confirm `go.sum` names no module other than go-yaml itself (PLAN.md: zero transitive modules; if `go mod tidy` pulls anything else, stop and record it with ⚠️ rather than allowlisting it)
-- [ ] run the boundary test: green, and the refusal canary still fails on the unlisted path
-- [ ] commit: `feat(v2): goccy/go-yaml enters, admitted by name in the boundary test`
+- [x] write the failing test change first: add `"github.com/goccy/go-yaml": "the gdoc: front matter and house.yaml; reason in SPEC.md"` to `allowedModules`, and make sure a canary asserts an unlisted module path in a scratch `go.mod` string is still refused
+- [x] run `cd go && go get github.com/goccy/go-yaml@v1.19.2 && go mod tidy` and confirm `go.sum` names no module other than go-yaml itself (PLAN.md: zero transitive modules; if `go mod tidy` pulls anything else, stop and record it with ⚠️ rather than allowlisting it)
+- [x] run the boundary test: green, and the refusal canary still fails on the unlisted path
+- [x] commit: `feat(v2): goccy/go-yaml enters, admitted by name in the boundary test`
+
+⚠️ `go mod tidy` is deferred to Task 2. Nothing imports go-yaml yet, so tidy deletes the
+require line it was just given, and Task 1 would commit an empty `go.mod` again. `go get`
+alone was run, and `go.sum` names go-yaml and nothing else, which is the zero-transitive-
+modules claim PLAN.md makes, confirmed. The require line carries `// indirect` until
+`internal/frontmatter` imports it in Task 2, which is the honest marker for "required, not
+yet used". Task 2 runs `go mod tidy` and the marker goes.
+
+➕ `allowedModules` changed shape from `map[string]bool` to `map[string]string`, path against
+reason, so the reason lives beside the entry rather than in the comment above the map. Two
+tests were added with it: `TestAllowedModulesAreReallyRequired` is the disappearance half,
+which fails when the map names a module `go.mod` no longer requires, and
+`TestAllowedModulesStillRefusesAnUnlistedPath` is the canary the checkbox above asks for. The
+judgement moved into `unlistedModules` and `summedModules` so scratch text can be put through
+it: once a module is both listed and required, a test that only reads the real files passes
+whether the refusal still works or not.
 
 ---
 

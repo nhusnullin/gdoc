@@ -351,24 +351,27 @@ func TestEveryTargetThatWritesIntoBinMakesIt(t *testing.T) {
 	check()
 }
 
-// allowedModules names the third-party modules this tree may require. It is
-// EMPTY AT M1, and empty is a milestone's state rather than v2's rule.
+// allowedModules names the third-party modules this tree may require, each
+// against the reason it is here. It was empty at M1, and it grows one line per
+// milestone that first needs a module.
 //
-// SPEC.md already agreed three, each with its reason written there:
+// SPEC.md agreed three, each with its reason written there:
 //
 //	github.com/beevik/etree   OOXML, because encoding/xml corrupts it
 //	github.com/yuin/goldmark  the hub markdown, likely first needed at M5
 //	github.com/goccy/go-yaml  the gdoc: front matter and house.yaml
 //
-// The milestone that first needs one adds its path here and nothing else. It
-// does not delete this test, and it does not widen it to "whatever go.mod
-// says". A fourth module needs its reason in SPEC.md before its line in this
-// map; the open candidate is sergi/go-diff at M8.
-//
-// The map is written empty rather than left as an instruction in a plan,
-// because a red build with no note beside it is what a later milestone would
-// otherwise argue with. Today it refuses exactly what the blanket refusal did.
-var allowedModules = map[string]bool{}
+// M2 added the third. The milestone that first needs one of the others adds its
+// path here and nothing else. It does not delete this test, and it does not
+// widen it to "whatever go.mod says". A fourth module needs its reason in
+// SPEC.md before its line in this map; the open candidate is sergi/go-diff at
+// M8.
+var allowedModules = map[string]string{
+	// M2 needs it for the gdoc: front-matter block, and M5 for house.yaml. It
+	// decodes strictly, which is what a block that must be refused rather than
+	// half-read needs, and it carries no transitive modules of its own.
+	"github.com/goccy/go-yaml": "the gdoc: front matter and house.yaml; reason in SPEC.md",
+}
 
 // TestNoThirdPartyDependencies keeps the module list a property of the tree
 // rather than a sentence in a plan. A require line naming something outside
@@ -379,24 +382,75 @@ func TestNoThirdPartyDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range requiredModules(string(b)) {
-		if !allowedModules[path] {
-			t.Errorf("go.mod requires %q, which allowedModules does not name. Add it there, with its reason in SPEC.md, or drop the dependency", path)
-		}
+	for _, path := range unlistedModules(requiredModules(string(b))) {
+		t.Errorf("go.mod requires %q, which allowedModules does not name. Add it there, with its reason in SPEC.md, or drop the dependency", path)
 	}
 	sum, err := os.ReadFile(filepath.Join("..", "go.sum"))
 	if err != nil {
-		return // no go.sum means nothing was fetched, which is M1's state
+		return // no go.sum means nothing was fetched
 	}
-	for _, line := range strings.Split(string(sum), "\n") {
-		path, _, ok := strings.Cut(strings.TrimSpace(line), " ")
-		if !ok {
+	for _, path := range unlistedModules(summedModules(string(sum))) {
+		t.Errorf("go.sum names %q, so it was fetched, and allowedModules does not name it", path)
+	}
+}
+
+// TestAllowedModulesAreReallyRequired is the disappearance half. A module that
+// stops being used has to leave this map too: an allowlist naming something the
+// tree no longer requires is a door standing open for no reason.
+func TestAllowedModulesAreReallyRequired(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	required := map[string]bool{}
+	for _, path := range requiredModules(string(b)) {
+		required[path] = true
+	}
+	for path := range allowedModules {
+		if !required[path] {
+			t.Errorf("allowedModules names %q, which go.mod no longer requires. Drop it from the map", path)
+		}
+	}
+}
+
+// unlistedModules names the paths allowedModules does not carry, in the order
+// they were read and with each path named once. The judgement lives here rather
+// than inside the test above so a canary can put scratch text through it: once
+// a module is both listed and required, a test that only reads the real files
+// passes whether the refusal still works or not.
+func unlistedModules(paths []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, path := range paths {
+		if _, ok := allowedModules[path]; ok {
 			continue
 		}
-		if !allowedModules[path] {
-			t.Errorf("go.sum names %q, so it was fetched, and allowedModules does not name it", path)
+		if seen[path] {
+			continue
 		}
+		seen[path] = true
+		out = append(out, path)
 	}
+	return out
+}
+
+// summedModules reads the module paths out of a go.sum. Every module has two
+// lines there, the zip hash and the go.mod hash, so a path is returned once.
+func summedModules(sum string) []string {
+	var paths []string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(sum, "\n") {
+		path, _, ok := strings.Cut(strings.TrimSpace(line), " ")
+		if !ok || path == "" {
+			continue
+		}
+		if seen[path] {
+			continue
+		}
+		seen[path] = true
+		paths = append(paths, path)
+	}
+	return paths
 }
 
 // requiredModules reads the module paths out of a go.mod, in both spellings:
@@ -616,4 +670,26 @@ func names(set map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// TestAllowedModulesStillRefusesAnUnlistedPath is the canary for the allowlist
+// itself. TestNoThirdPartyDependencies reads the real files, so once a module
+// is listed and required, that test passes whether the refusal still works or
+// not. This one judges scratch text: the listed path is carried, and an
+// unlisted one beside it is still named as a refusal.
+func TestAllowedModulesStillRefusesAnUnlistedPath(t *testing.T) {
+	mod := "module gdoc\n\ngo 1.27\n\nrequire (\n\tgithub.com/goccy/go-yaml v1.19.2\n\tgithub.com/sergi/go-diff v1.3.1\n)\n"
+	got := unlistedModules(requiredModules(mod))
+	if !reflect.DeepEqual(got, []string{"github.com/sergi/go-diff"}) {
+		t.Errorf("unlistedModules read %v, want [github.com/sergi/go-diff]", got)
+	}
+
+	sum := "github.com/goccy/go-yaml v1.19.2 h1:abc=\ngithub.com/sergi/go-diff v1.3.1/go.mod h1:def=\n"
+	if got := unlistedModules(summedModules(sum)); !reflect.DeepEqual(got, []string{"github.com/sergi/go-diff"}) {
+		t.Errorf("unlistedModules over go.sum read %v, want [github.com/sergi/go-diff]", got)
+	}
+
+	if len(unlistedModules(requiredModules("module gdoc\n\ngo 1.27\n"))) != 0 {
+		t.Error("a go.mod with no require line reads as an unlisted dependency")
+	}
 }
