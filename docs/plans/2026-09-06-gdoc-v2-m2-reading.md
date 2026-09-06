@@ -246,12 +246,12 @@ whether the refusal still works or not.
   - `(*Session).Warnings() []string`: the policy's `Warnings()` plus the session's own, in that order.
 - Boundary: `internal/gapi` names `*http.Request` and `*http.Client` and builds neither, so it joins `allowed` with the comment "builds requests and sets the bearer; takes the guard's client as a parameter, and builders below proves it never makes one", and stays out of `builders`. Write the allowlist change first, watch the boundary test fail on the missing room, then create the package.
 
-- [ ] add `internal/gapi` to `allowed` in the boundary test and run it: FAIL, the room does not exist yet
-- [ ] write the failing session tests over a fake `RoundTripper` under a temp `GDOC_CONFIG_DIR` with a fixture token: exactly one `Bearer` header; an expired fixture token triggers exactly one refresh POST before the GET, the saved file carries the new access token, and `Warnings()` says so; a 401 triggers one refresh and one retry; two 401s produce the named error and no further request; a 404 with a Google error body surfaces `message` and the status; `GetBytes` stops at `limit`; a policy with no `AllowFile` refuses the read with a guard refusal
-- [ ] run the tests and watch them fail
-- [ ] implement `session.go`
-- [ ] run the full suite including the boundary test: green in both directions (on a scratch copy, remove the `net/http` import from `session.go` and confirm the disappearance check fires)
-- [ ] commit: `feat(v2): gapi session: bearer, refresh on expiry and on one 401, through the guard`
+- [x] add `internal/gapi` to `allowed` in the boundary test and run it: FAIL, the room does not exist yet
+- [x] write the failing session tests over a fake `RoundTripper` under a temp `GDOC_CONFIG_DIR` with a fixture token: exactly one `Bearer` header; an expired fixture token triggers exactly one refresh POST before the GET, the saved file carries the new access token, and `Warnings()` says so; a 401 triggers one refresh and one retry; two 401s produce the named error and no further request; a 404 with a Google error body surfaces `message` and the status; `GetBytes` stops at `limit`; a policy with no `AllowFile` refuses the read with a guard refusal
+- [x] run the tests and watch them fail
+- [x] implement `session.go`
+- [x] run the full suite including the boundary test: green in both directions (on a scratch copy, remove the `net/http` import from `session.go` and confirm the disappearance check fires)
+- [x] commit: `feat(v2): gapi session: bearer, refresh on expiry and on one 401, through the guard`
 
 ---
 

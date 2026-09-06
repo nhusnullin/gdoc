@@ -33,6 +33,11 @@ var allowed = map[string]bool{
 	"internal/guard":         true,
 	"internal/auth":          true,
 	"internal/auth/loopback": true,
+	// internal/gapi builds the requests every read goes out as and sets the
+	// bearer on them. It names *http.Request and *http.Client and makes
+	// neither: the client comes in as a parameter, and builders below is what
+	// proves it.
+	"internal/gapi": true,
 }
 
 // builders lists the package directories that may construct an HTTP client or
