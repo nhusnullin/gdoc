@@ -433,17 +433,78 @@ whether the refusal still works or not.
 **Interfaces:**
 - Consumes: everything Tasks 1 to 9 produced. Produces: proof that PLAN.md's M2 description, as corrected 2026-09-06, holds: `documents.get` with `includeTabsContent=true`, tab detection, `read` as text with suggestions inline and anchors marked plus the structure on a flag, threads with real ranges and markers as facts, the opaque cursor, pending suggestions with stable ids and what stopped being pending, the docx reader, the versioned front-matter block, strict YAML.
 
-- [ ] verify every item in the Overview and in PLAN.md M2 is implemented, by reading each command's test and the fixture it runs on
-- [ ] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`; each hit is either a fact with a different name or a defect to remove
-- [ ] verify the reads are guard-bounded: a command test where the fake wire fails the test if anything reaches it proves a refused id never reaches the transport (mirror `acceptance_test.go`)
-- [ ] verify the boundary test in both directions on a scratch copy: a stray `net/http` in `internal/comments` fails it; removing the import from `internal/gapi/session.go` fails it; a second module in `go.mod` fails it
-- [ ] verify front-matter preservation on real files: `frontmatter.Write` of an unchanged block on a fixture with front matter, then `cmp` the bytes
-- [ ] run the full test suite: `cd go && go test -race ./...`
-- [ ] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
-- [ ] run the vet check: `cd go && go vet ./...`
-- [ ] verify coverage: every exported function under `go/internal/` has a test (`cd go && go test ./... -cover`); add tests rather than lowering the bar
-- [ ] verify `make build` and `make dist` still produce the binaries with `CGO_ENABLED=0`, and record the binary size delta from the YAML module in this plan with a ➕ line
-- [ ] commit any fixes this task made
+- [x] verify every item in the Overview and in PLAN.md M2 is implemented, by reading each command's test and the fixture it runs on
+- [x] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`; each hit is either a fact with a different name or a defect to remove
+- [x] verify the reads are guard-bounded: a command test where the fake wire fails the test if anything reaches it proves a refused id never reaches the transport (mirror `acceptance_test.go`)
+- [x] verify the boundary test in both directions on a scratch copy: a stray `net/http` in `internal/comments` fails it; removing the import from `internal/gapi/session.go` fails it; a second module in `go.mod` fails it
+- [x] verify front-matter preservation on real files: `frontmatter.Write` of an unchanged block on a fixture with front matter, then `cmp` the bytes
+- [x] run the full test suite: `cd go && go test -race ./...`
+- [x] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
+- [x] run the vet check: `cd go && go vet ./...`
+- [x] verify coverage: every exported function under `go/internal/` has a test (`cd go && go test ./... -cover`); add tests rather than lowering the bar
+- [x] verify `make build` and `make dist` still produce the binaries with `CGO_ENABLED=0`, and record the binary size delta from the YAML module in this plan with a ➕ line
+- [x] commit any fixes this task made
+
+**What the checks found, and what they cost.**
+
+➕ The guard-bounded check needed a second half and got one:
+`go/internal/gapi/acceptance_test.go`, `internal/guard/acceptance_test.go`'s
+`neverCalled` transport brought to the room where a session is what carries a
+read. `cmd/gdoc`'s `TestAReadIsBoundedToTheOneDocumentItWasGiven` already put the
+policy the command built through `Policy.Judge`, which proves the setup; it does
+not prove a refused read never reaches the wire, because that test stubs the
+session out entirely. The new test builds the policy the way `open()` does, one
+`AllowFile` at `LevelSuggest`, and sends the URLs the three commands actually
+build (`docs.URL`, `comments.ListURL`, `docx.ExportURL`, taken from the packages
+rather than retyped) for another document, over a transport that fails the test
+on contact. Both `GetJSON` and `GetBytes` are covered. It was watched failing:
+adding the other id to the policy fires the transport on all four cases.
+
+➕ One coverage hole, and a test rather than a lower bar. `view`'s `plain` had
+zero coverage: it prints the second copy of a run carrying both an insertion and
+a deletion id, text suggested and then suggested away, and no fixture had one.
+`TestTextSuggestedAndThenSuggestedAwayPrintsTwiceAndIsMarkedOnce` covers it and
+states the rule the code comment claims: the text prints twice, the comment
+marker opens once, and it belongs to the first copy. After it, no function
+anywhere under `go/internal/` has zero coverage, and the total is 93.3%.
+
+⚠️ The boundary test does not count `import _ "net/http"`, and that is correct
+rather than a hole: `httpRefs` skips a blank import with the comment "a blank
+import cannot name anything", and a package that cannot name the type cannot
+build a client out of it either. The first attempt at the scratch check used a
+blank import and passed, which looked like a miss and was not. A real import
+fails it, under the canonical name and under an alias, and both were watched.
+
+➕ All three boundary directions were watched failing on a scratch copy of the
+repo at `HEAD`: a used `net/http` in `internal/comments` fails
+`TestNetHTTPStaysInItsRooms` naming the room and the four that may; deleting the
+import from `internal/gapi/session.go` fails the same test's disappearance half;
+a second `require` line fails `TestNoThirdPartyDependencies` twice, once for
+`go.mod` and once for `go.sum`.
+
+➕ Front-matter preservation was checked outside the suite, on files nobody wrote
+for it. Every fixture carrying a readable `gdoc:` block round-trips
+byte-identical under `cmp`, CRLF included. On five real files with no block at
+all, two hub notes and this repo's `README.md`, `CLAUDE.md` and
+`docs/v2/SPEC.md`, `Write` adds the block for exactly 83 bytes and every original
+line survives in order.
+
+➕ **The binary size delta.** `make build` and `make dist` both still produce
+their binaries, `CGO_ENABLED=0`, and `file` reports Mach-O arm64 and PE32+ for
+Windows. Two measurements, because the milestone's growth and the module's are
+not the same number. go-yaml alone, measured against a build of `HEAD` with the
+module dropped and its two calls stubbed:
+
+| Target | Without go-yaml | With | Delta |
+|---|---|---|---|
+| darwin/arm64 | 11,092,994 | 12,132,722 | +1,039,728 (+9.4%) |
+| darwin/amd64 | 11,858,512 | 12,980,240 | +1,121,728 (+9.5%) |
+| windows/amd64 | 11,758,080 | 12,859,904 | +1,101,824 (+9.4%) |
+
+All of M2 against M1's last binary (`47c638b^`), which is the number a person
+downloading the tool sees: darwin/arm64 10,162,818 to 12,132,722, +1,969,904
+(+19.4%). So roughly half the milestone's growth is the YAML module and half is
+the eight new packages.
 
 ---
 

@@ -178,3 +178,46 @@ func TestStructureRoundTripsWithItsIndexes(t *testing.T) {
 		t.Errorf("first run = %+v", r)
 	}
 }
+
+// Text suggested and then suggested away carries both id lists on one run, and
+// Docs shows it as a deletion followed by an insertion. Both copies print, and
+// the second one carries no comment marker: the characters exist once in the
+// document, so opening a range around them twice would describe a range the
+// document does not have.
+func TestTextSuggestedAndThenSuggestedAwayPrintsTwiceAndIsMarkedOnce(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":10,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":10,"textRun":{"content":"draftier\n",
+		   "suggestedInsertionIds":["INS1"],"suggestedDeletionIds":["DEL1"]}}]}}]},
+		"comments":[{"id":"C1","range":{"startIndex":1,"endIndex":9}}]}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := Text(d)
+
+	if n := strings.Count(text, "draftier"); n != 2 {
+		t.Errorf("the text prints %d times, want 2 (a deletion then an insertion): %q", n, text)
+	}
+	if !strings.Contains(text, "{-") || !strings.Contains(text, "[s:DEL1]") {
+		t.Errorf("no deletion span: %q", text)
+	}
+	if !strings.Contains(text, "{+") || !strings.Contains(text, "[s:INS1]") {
+		t.Errorf("no insertion span: %q", text)
+	}
+	if n := strings.Count(text, "[[c:C1]]"); n != 1 {
+		t.Errorf("the comment opens %d times, want exactly 1: %q", n, text)
+	}
+	if n := strings.Count(text, "[[/c]]"); n != 1 {
+		t.Errorf("the comment closes %d times, want exactly 1: %q", n, text)
+	}
+	// The deletion is the first copy, so the marker belongs to it.
+	del := strings.Index(text, "{-")
+	ins := strings.Index(text, "{+")
+	if del < 0 || ins < 0 || del > ins {
+		t.Fatalf("want the deletion before the insertion: %q", text)
+	}
+	if at := strings.Index(text, "[[c:C1]]"); at > ins {
+		t.Errorf("the comment marker is on the second copy: %q", text)
+	}
+}
