@@ -377,11 +377,15 @@ whether the refusal still works or not.
   - `type File struct { Comments []Comment }`, `type Comment struct { ID, Author, Date, Text string; Anchored bool; Span string }`: from `word/comments.xml` (`w:comment` with `w:id`, `w:author`, `w:date`, concatenated `w:t`); `Anchored` true when `word/document.xml` carries a `w:commentRangeStart` with that id, `Span` the concatenated `w:t` text between it and its `w:commentRangeEnd`. `encoding/xml`, namespace by URI, read-only.
   - `docx.Match(threads []comments.Thread, f *File) []comments.Thread`: sets `Witness` on a copy of each thread: `anchored` when a docx comment with the same normalised content (and the same author display name when the docx has one) has `Anchored`; `detached` when matched and not anchored; `unmatched` when nothing matches. Replies are not matched: the witness question is whether the thread is attached, and the first comment is the thread.
 
-- [ ] write the failing tests: `Parse` on the helper-built docx finds two comments, one anchored with the right span and one detached; a docx without `word/comments.xml` parses to zero comments; a zip that is not a docx is refused by name; `Match` gives `anchored`, `detached` and `unmatched` across three threads and leaves the input slice untouched; `Export` over a fake wire asks for the docx mime and `supportsAllDrives=true`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the docx export reader, and the witness match against comment threads`
+- ⚠️ `Export` takes a local `Reader` interface (one `GetBytes`) rather than `*gapi.Session`, the same deviation `internal/docs` and `internal/comments` made and for the same reason: this room may not name `net/http`, and a test of it must not have to.
+- ➕ Four decisions the plan did not state, all written into the code's comments: a zip with no `word/document.xml` is refused by name, because a failed export is usually an HTML sign-in page and reading that as a document with no comments would report every thread as detached; a part that does not parse is refused naming the part, for the same reason; the join is on the comment's normalised words because `w:id` in the docx is the export's own numbering and carries no Drive comment id; and one exported comment answers for one thread, so two threads with the same words take two of them rather than both taking the first.
+- ➕ Elements are matched by the WordprocessingML namespace URI, never by the `w:` prefix, and every part read is bounded by `MaxExportBytes`. A prefix is the document's choice, and an unbounded decompression is a memory limit somebody else sets.
+
+- [x] write the failing tests: `Parse` on the helper-built docx finds two comments, one anchored with the right span and one detached; a docx without `word/comments.xml` parses to zero comments; a zip that is not a docx is refused by name; `Match` gives `anchored`, `detached` and `unmatched` across three threads and leaves the input slice untouched; `Export` over a fake wire asks for the docx mime and `supportsAllDrives=true`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the docx export reader, and the witness match against comment threads`
 
 ---
 
