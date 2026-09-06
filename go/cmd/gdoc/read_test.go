@@ -740,3 +740,30 @@ func TestTheSnapshotWriteKeepsTheNotesMode(t *testing.T) {
 		t.Errorf("the directory holds %d entries, want just the note", len(entries))
 	}
 }
+
+// A suggestion the author has edited down to whitespace is still pending, so it
+// belongs in the snapshot. List drops it from what the run prints, because it
+// says nothing a reader can act on, and a snapshot built from that same list
+// forgets it: when it is later accepted or rejected, the run that would report
+// it gone has no record that it was ever there.
+func TestTheSnapshotCarriesASuggestionEditedDownToWhitespace(t *testing.T) {
+	stubSession(t, &fakeSession{json: map[string]string{
+		"docs.googleapis.com": `{"documentId":"` + fixtureDocID + `","body":{"content":[
+			{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+			 "elements":[{"startIndex":1,"endIndex":3,"textRun":{"content":" \n","suggestedInsertionIds":["suggest.thin"]}}]}}]}}`,
+	}})
+	stubNow(t, time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC))
+	path := copyToTemp(t, "paired.md")
+
+	got, code := runJSON(t, "suggestions", fixtureDocID, "--md", path)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("suggestions --md: %v (exit %d)", got, code)
+	}
+	if pending, ok := dataOf(t, got)["pending"].([]any); !ok || len(pending) != 0 {
+		t.Fatalf("pending = %v, want nothing printed: the text says nothing a reader can act on", pending)
+	}
+	after := mustRead(t, path)
+	if !strings.Contains(after, "suggest.thin") {
+		t.Errorf("the snapshot must carry the id that is still pending:\n%s", after)
+	}
+}

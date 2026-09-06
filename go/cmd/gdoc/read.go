@@ -399,7 +399,7 @@ func cmdSuggestions(raw []string) emit.Result {
 		return emit.Result{OK: true, Data: data, Warnings: r.warnings()}
 	}
 	path := a.flags["--md"]
-	gone, err := recordSnapshot(path, r.id, pending, suggestions.IDs(d))
+	gone, err := recordSnapshot(path, r.id, suggestions.All(d), suggestions.IDs(d))
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
 	}
@@ -415,10 +415,11 @@ func cmdSuggestions(raw []string) emit.Result {
 // A file paired with another document is refused: writing this document's
 // observation into it would be the wrong file, and the next run would read the
 // snapshot as this document's history.
-// nowIDs is every id still pending, the whitespace-only ones pending does not
-// carry included. What left is a question about ids, and a suggestion the author
-// edited down to a space has not left.
-func recordSnapshot(path, id string, pending []suggestions.Pending, nowIDs []string) ([]suggestions.Gone, error) {
+// all is every pending suggestion, the whitespace-only ones the printed listing
+// drops included, and nowIDs is their ids. What left is a question about ids: a
+// suggestion the author edited down to a space has not left, and a snapshot
+// that forgot it cannot say so when it does.
+func recordSnapshot(path, id string, all []suggestions.Pending, nowIDs []string) ([]suggestions.Gone, error) {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the markdown file could not be read: %w", err)
@@ -439,7 +440,7 @@ func recordSnapshot(path, id string, pending []suggestions.Pending, nowIDs []str
 	}
 	// A copy, so the block that was read is not written to.
 	updated := *block
-	updated.SuggestionsSeen = suggestions.Snapshot(pending, now())
+	updated.SuggestionsSeen = suggestions.Snapshot(all, now())
 	out, err := frontmatter.Write(src, &updated)
 	if err != nil {
 		return nil, err

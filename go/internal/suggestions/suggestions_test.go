@@ -361,6 +361,11 @@ func TestASuggestionEditedDownToWhitespaceIsNotGone(t *testing.T) {
 	if got := IDs(d); len(got) != 1 || got[0] != "suggest.thin" {
 		t.Fatalf("IDs() = %v, want the id, which is still pending", got)
 	}
+	// The snapshot is built from All, not List: forgetting the suggestion here
+	// means the run that sees it accepted or rejected cannot report it gone.
+	if got := All(d); len(got) != 1 || got[0].ID != "suggest.thin" {
+		t.Fatalf("All() = %+v, want the suggestion, which is still pending", got)
+	}
 	seen := &frontmatter.SuggestionsSeen{Items: []frontmatter.SuggestionSeen{
 		{ID: "suggest.thin", Kind: frontmatter.KindInsertion, Text: "was a whole sentence"},
 	}}

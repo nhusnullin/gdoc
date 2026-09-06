@@ -56,14 +56,23 @@ func List(d *docs.Document) []Pending {
 	return walk(d).kept()
 }
 
+// All is every pending suggestion, the whitespace-only ones List drops
+// included. It is what the snapshot records, because what is pending is a
+// question about ids: a suggestion the author has edited down to a space is
+// still in the document, and leaving it out of the snapshot means the run that
+// sees it accepted or rejected has no record it was ever there.
+func All(d *docs.Document) []Pending {
+	return walk(d).found
+}
+
 // IDs is every pending suggestion id, the whitespace-only ones List drops
 // included. It is what GoneSince compares a snapshot against: a suggestion the
 // author has since edited down to a space is still pending, and reporting it as
 // gone would be a fact that is not true.
 func IDs(d *docs.Document) []string {
-	w := walk(d)
-	out := make([]string, 0, len(w.found))
-	for _, p := range w.found {
+	all := All(d)
+	out := make([]string, 0, len(all))
+	for _, p := range all {
 		out = append(out, p.ID)
 	}
 	return out

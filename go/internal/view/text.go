@@ -20,7 +20,9 @@ import (
 
 // The markup the projection adds. Every one of these is two characters, so a
 // literal one in the document's own text is escaped with a backslash and a
-// marker in the output is always gdoc's.
+// marker in the output is always gdoc's. The backslash is escaped as well, so
+// the reader can tell whose backslash it is: an even run of them is the
+// author's text, an odd one ends in gdoc's escape.
 const (
 	openInsertion = "{+"
 	shutInsertion = "+}"
@@ -445,6 +447,17 @@ func (e *emitter) writeText(s string, start int) {
 	for i := 0; i < len(rs); i++ {
 		if track {
 			e.drain(idx, false)
+		}
+		if rs[i] == '\\' {
+			// The escape character is escaped too, or the encoding cannot be
+			// read back: the author's own backslash in front of a marker reads
+			// as gdoc's, and gdoc's in front of a literal reads as the
+			// author's. Either way a marker changes hands, which is what the
+			// escaping exists to prevent. An even run of backslashes is the
+			// author's text, an odd one ends in the escape.
+			e.out.WriteString("\\\\")
+			idx += utf16Len(rs[i])
+			continue
 		}
 		if i+1 < len(rs) && isEscapePair(rs[i], rs[i+1]) {
 			// The backslash goes in and the loop moves on by one rune, not two.

@@ -515,6 +515,16 @@ escape advances by **one** rune rather than two: two literals can share a
 character, so consuming both halves of `{-` in `{-}` walks past the `-}` behind
 it and leaves half a marker in the text.
 
+**The backslash is escaped too, as `\\`.** Without it the encoding cannot be
+read back: a backslash the author typed in front of a marker looks like the one
+gdoc writes, so a real comment anchor after a word ending in `\` reads as a
+literal and is dropped, and a sentence the author wrote as `\{+text+}` reads as
+a pending suggestion gdoc never marked. Both directions hand a marker to the
+wrong side, which is the thing the escaping exists to prevent. The rule for a
+reader is a parity: an even run of backslashes is the author's own text and the
+marker behind it is gdoc's, an odd run ends in gdoc's escape and the marker
+behind it is the author's.
+
 The escaping is per run, so a marker whose two halves fall in two runs, or a
 document character sitting against one of gdoc's own markers, still reaches the
 text unescaped. That is `docs/backlog/escaping-across-run-boundaries.md`.
@@ -635,7 +645,10 @@ Four rules, and each one has a reason:
   on, so `GoneSince` is given `suggestions.IDs` instead: a suggestion the author
   has since edited down to a space is still in the document, and putting it in
   `gone_since_last_look` would be a false fact in the one field the skill judges
-  accepted-or-rejected from.
+  accepted-or-rejected from. The snapshot is written from `suggestions.All` for
+  the same reason, and not from the listing the run prints: a snapshot built
+  from the filtered list forgets that suggestion, so the run that later sees it
+  accepted or rejected has no record it was ever there and reports nothing.
 
 ### `GrantInPlace` is gone until M7, and `AllowCreateIn` stayed
 

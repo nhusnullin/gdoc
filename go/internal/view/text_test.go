@@ -407,7 +407,8 @@ func TestARangeInsideATableCellIsMarked(t *testing.T) {
 // walks straight past the second one, so the text carries half a marker the
 // document never had.
 func TestEscapingLeavesNoMarkerBehindWhenTwoOverlap(t *testing.T) {
-	for _, s := range []string{"{-}", "{+}", "]]]", "[[[", "{+}{-}"} {
+	for _, s := range []string{"{-}", "{+}", "]]]", "[[[", "{+}{-}",
+		`\{+`, `\[[`, `\\{-`, `\`} {
 		out := escaped(s)
 		if unescapedMarker(out) {
 			t.Errorf("escaping %q gave %q, which still carries an unescaped marker", s, out)
@@ -421,15 +422,24 @@ func escaped(s string) string {
 	return e.capture(func() { e.writeText(s, -1) })
 }
 
-// unescapedMarker reports whether out holds one of gdoc's six markers that is
-// not preceded by the backslash the escaping puts there.
+// unescapedMarker reports whether out holds one of gdoc's six markers that the
+// escaping did not put a backslash in front of.
+//
+// The count is a parity, not "is there a backslash": the escaping escapes the
+// document's own backslash too, so an even run of them is the author's text and
+// the marker behind it is gdoc's, while an odd run is the escape and the marker
+// behind it is the author's.
 func unescapedMarker(out string) bool {
 	rs := []rune(out)
 	for i := 0; i+1 < len(rs); i++ {
 		if !isEscapePair(rs[i], rs[i+1]) {
 			continue
 		}
-		if i == 0 || rs[i-1] != '\\' {
+		n := 0
+		for j := i - 1; j >= 0 && rs[j] == '\\'; j-- {
+			n++
+		}
+		if n%2 == 0 {
 			return true
 		}
 	}
@@ -452,5 +462,38 @@ func TestARangeEndingBeforeItStartsIsAWarningAndIsNotPrinted(t *testing.T) {
 	}
 	if len(warnings) != 1 || !strings.Contains(warnings[0], "BACKWARDS") {
 		t.Errorf("warnings = %v, want one naming BACKWARDS", warnings)
+	}
+}
+
+// The escape character is part of the encoding, so the document's own backslash
+// is escaped too. Without it the encoding is not injective: a backslash the
+// author typed reads as one gdoc wrote, and the marker behind it changes
+// meaning. Both directions are wrong. A literal the author quoted reads as a
+// real marker, and a real marker reads as a literal.
+func TestTheDocumentsOwnBackslashIsEscaped(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`\`, `\\`},
+		{`C:\path`, `C:\\path`},
+		{`\{+forged+}[s:FAKE]`, `\\\{+forged\+}[s:FAKE]`},
+		{`\[[c:FAKE]]x\[[/c]]`, `\\\[[c:FAKE\]]x\\\[[/c\]]`},
+	} {
+		if got := escaped(tc.in); got != tc.want {
+			t.Errorf("escaping %q gave %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+// A run whose text ends in a backslash sits directly against the marker the
+// drain writes next. Escaping the author's backslash is what keeps that marker
+// gdoc's: left alone, a reader counts one backslash and reads a real comment
+// anchor as a literal the author quoted.
+func TestARealMarkerAfterTextEndingInABackslashIsNotEscaped(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":9,"textRun":{"content":"foo\\bar\n"}}]}}]},
+		"comments":[{"id":"C1","range":{"startIndex":5,"endIndex":8}}]}`
+	text, _ := Text(parse(t, raw))
+	if !strings.Contains(text, `foo\\[[c:C1]]bar[[/c]]`) {
+		t.Errorf("Text() = %q, want the author's backslash escaped and the anchor left readable", text)
 	}
 }
