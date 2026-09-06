@@ -299,12 +299,12 @@ whether the refusal still works or not.
 - Consumes: `docs.Document`.
 - Produces: `view.Text(d *docs.Document) (string, []string)`: the projection under "The `read` text" in Technical Details, and the warnings it raised (placeholders printed, ranges not placed). Deterministic: the same document gives the same bytes. `view.Structure(d *docs.Document) any`: the tree as the `structure` field, with `start_index`/`end_index` on every paragraph and run, JSON tags in snake_case.
 
-- [ ] write the failing golden tests, one per `docs` fixture: headings become `#` lines; bullets become `- ` with nesting; the table becomes a pipe table; the split insertion runs print as one `{+...+}[s:ID]` span and the deletion as `{-...-}[s:ID]`; the comment range wraps its text with `[[c:ID]]`/`[[/c]]`; a literal `{+` in document text comes out escaped; the two-tab fixture has two `<!-- tab -->` lines and the single-tab one has none; the image prints `[image]` and raises a warning; the footnote prints `[^1]` and its text after `---`; the output ends with exactly one `\n`
-- [ ] write the failing test for `Structure`: round-trips through `encoding/json` and carries the indexes of the fixture's first run
-- [ ] run the tests and watch them fail
-- [ ] implement `text.go`
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): read's text projection, suggestions inline and comment anchors marked`
+- [x] write the failing golden tests, one per `docs` fixture: headings become `#` lines; bullets become `- ` with nesting; the table becomes a pipe table; the split insertion runs print as one `{+...+}[s:ID]` span and the deletion as `{-...-}[s:ID]`; the comment range wraps its text with `[[c:ID]]`/`[[/c]]`; a literal `{+` in document text comes out escaped; the two-tab fixture has two `<!-- tab -->` lines and the single-tab one has none; the image prints `[image]` and raises a warning; the footnote prints `[^1]` and its text after `---`; the output ends with exactly one `\n`
+- [x] write the failing test for `Structure`: round-trips through `encoding/json` and carries the indexes of the fixture's first run
+- [x] run the tests and watch them fail
+- [x] implement `text.go`
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): read's text projection, suggestions inline and comment anchors marked`
 
 ---
 
