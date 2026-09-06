@@ -133,13 +133,26 @@ func (s *Session) attempt(ctx context.Context, rawURL, accept string, limit int6
 	}
 	defer resp.Body.Close()
 
+	ok := resp.StatusCode >= 200 && resp.StatusCode <= 299
 	read := limit
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if !ok {
 		read = maxErrorBody
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, read))
+	// One byte past the ceiling, so a body that fills it can be told from a body
+	// that ended. Truncating and handing the short bytes on makes the docx
+	// reader say "the export is not a docx" and the JSON reader say the answer
+	// is not JSON, and both name something the server did not do.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, read+1))
 	if err != nil {
 		return nil, 0, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err)
+	}
+	if int64(len(body)) > read {
+		if !ok {
+			// A failed request's body is only ever quoted from, and statusError
+			// does not quote it at all. Cutting it here costs nothing.
+			return body[:read], resp.StatusCode, nil
+		}
+		return nil, 0, fmt.Errorf("the answer from %s is larger than the %d bytes this read allows", rawURL, limit)
 	}
 	return body, resp.StatusCode, nil
 }

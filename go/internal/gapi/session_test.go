@@ -311,9 +311,9 @@ func TestANonSuccessWithNoReadableMessageStillCarriesTheStatus(t *testing.T) {
 	}
 }
 
-func TestGetBytesStopsAtTheLimit(t *testing.T) {
+func TestGetBytesReadsUpToTheLimit(t *testing.T) {
 	tokenFile(t, time.Now().Add(time.Hour))
-	body := strings.Repeat("x", 100)
+	body := strings.Repeat("x", 10)
 	w := &wire{answer: func(n int, r *http.Request) (int, string) { return 200, body }}
 	s := open(t, w)
 
@@ -322,10 +322,28 @@ func TestGetBytesStopsAtTheLimit(t *testing.T) {
 		t.Fatalf("GetBytes: %v", err)
 	}
 	if len(b) != 10 {
-		t.Errorf("read %d bytes, want the limit of 10", len(b))
+		t.Errorf("read %d bytes, want all 10", len(b))
 	}
 	if r := w.requests()[0]; r.Accept != "*/*" {
 		t.Errorf("Accept = %q, want */* on a bytes read", r.Accept)
+	}
+}
+
+// TestABodyOverTheLimitIsAnErrorNamingTheLimit is about which problem the
+// caller is told about. Truncating and handing the short bytes on makes the
+// docx reader say "the export is not a docx" and the JSON reader say the answer
+// is not JSON, and both name something the server did not do. --witness then
+// marks every thread unmatched with no hint that a ceiling caused it.
+func TestABodyOverTheLimitIsAnErrorNamingTheLimit(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	body := strings.Repeat("x", 100)
+	w := &wire{answer: func(n int, r *http.Request) (int, string) { return 200, body }}
+	s := open(t, w)
+
+	if _, err := s.GetBytes(context.Background(), docURL(), 10); err == nil {
+		t.Fatal("a body over the limit came back as a short success")
+	} else if !strings.Contains(err.Error(), "10") {
+		t.Errorf("error = %q, want it to name the limit it hit", err)
 	}
 }
 

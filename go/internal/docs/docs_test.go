@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gdoc/internal/guard"
 )
 
 const testDocID = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"
@@ -106,5 +108,22 @@ func TestFetchCarriesTheSessionsRefusalOut(t *testing.T) {
 	f := &fakeReader{err: refusal}
 	if _, err := Fetch(context.Background(), f, testDocID); !errors.Is(err, refusal) {
 		t.Fatalf("Fetch returned %v, want the session's refusal", err)
+	}
+}
+
+// TestURLIsACallTheGuardCarries is the strongest thing this file can say about
+// the read URL: not that it matches a list written twice, but that the guard
+// carries it. comments and docx each prove their own URL this way; without it,
+// a parameter added here that docsReadParams does not name passes the whole
+// offline suite and fails only against Google.
+func TestURLIsACallTheGuardCarries(t *testing.T) {
+	u, err := url.Parse(URL(testDocID))
+	if err != nil {
+		t.Fatalf("URL built a URL that does not parse: %v", err)
+	}
+	p := guard.NewPolicy()
+	p.AllowFile(testDocID, guard.LevelSuggest)
+	if err := p.Judge("GET", u, nil); err != nil {
+		t.Fatalf("the guard refused the Docs read: %v", err)
 	}
 }

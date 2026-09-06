@@ -462,6 +462,14 @@ Rules that hold across all three:
   the embedded object the read could not classify: calling it an image would be
   a guess. Reading any of them is
   `docs/backlog/read-pictures-and-drawings.md`.
+- A footnote's text is flattened, so a suggestion inside one is in neither
+  `read`'s markers nor `pending`, and nothing warns. That is
+  `docs/backlog/suggestions-inside-footnotes.md`.
+- A 2xx body larger than the read's ceiling is an **error naming the ceiling**,
+  never a short read. Truncating made the docx reader say "the export is not a
+  docx" and the JSON reader say the answer is not JSON, both naming something
+  the server did not do. A failed request's body is still cut, because
+  `statusError` only reads Google's message out of it.
 - Lists come back as `- ` items, two spaces of indent per level. A numbered list
   reads back as a bulleted one: telling the two apart needs the document's
   `lists` map, which this milestone does not read.
@@ -491,7 +499,14 @@ below exists to make impossible.
 escaped with a backslash.** That is not tidiness. Without it a document that
 quotes one of gdoc's own markers makes the AI read somebody's sentence as a
 pending suggestion, and there is no way for it to tell. `escapePairs` in
-`internal/view/text.go` has to stay in step with the constants above it.
+`internal/view/text.go` has to stay in step with the constants above it, and the
+escape advances by **one** rune rather than two: two literals can share a
+character, so consuming both halves of `{-` in `{-}` walks past the `-}` behind
+it and leaves half a marker in the text.
+
+The escaping is per run, so a marker whose two halves fall in two runs, or a
+document character sitting against one of gdoc's own markers, still reaches the
+text unescaped. That is `docs/backlog/escaping-across-run-boundaries.md`.
 
 A run carrying both an insertion id and a deletion id prints twice, as the
 deletion then the insertion, because that is what Docs shows. The comment
@@ -504,7 +519,11 @@ other's summary, so both are kept.
 ### The cursor is opaque, and it dies with the session
 
 `base64url(JSON{"v":1,"t":"<RFC3339 UTC>"})`, holding the newest `modifiedTime`
-seen across the comments and their replies. The binary emits it, the caller
+seen across the comments and their replies. The instant keeps its **milliseconds**,
+because that is what Drive sends: rounded down to the second, the floor sits up
+to 999 ms below the activity the run just reported, Drive returns that thread
+again, and the next cursor rounds down to the same second. The thread is then
+news on every poll for ever. `ParseCursor` reads both shapes. The binary emits it, the caller
 hands it back on the next poll, and **nothing writes it anywhere**: a live
 session holds it in memory and it dies with the session. What must survive a
 session lives in the front matter, and this does not.

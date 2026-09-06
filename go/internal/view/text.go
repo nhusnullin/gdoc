@@ -440,11 +440,14 @@ func (e *emitter) writeText(s string, start int) {
 			e.drain(idx, false)
 		}
 		if i+1 < len(rs) && isEscapePair(rs[i], rs[i+1]) {
+			// The backslash goes in and the loop moves on by one rune, not two.
+			// Two literals can share a character: "{-}" is "{-" and then "-}",
+			// and consuming both halves of the first pair walks straight past
+			// the second, leaving "-}" in the text as a closing marker the
+			// document never had.
 			e.out.WriteString("\\")
 			e.out.WriteRune(rs[i])
-			e.out.WriteRune(rs[i+1])
-			idx += utf16Len(rs[i]) + utf16Len(rs[i+1])
-			i++
+			idx += utf16Len(rs[i])
 			continue
 		}
 		if rs[i] != '\n' {

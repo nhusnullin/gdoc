@@ -41,11 +41,19 @@ type cursorBody struct {
 // String is the value the caller hands back. UTC always, so the same instant in
 // two zones is one cursor, and RawURLEncoding so it carries no character a URL
 // or a shell treats as its own.
+//
+// RFC3339Nano, not RFC3339, and that is the difference between a poll that
+// finishes and one that does not. Drive writes modifiedTime with milliseconds.
+// Formatting to whole seconds hands the next poll a floor up to 999 ms below
+// the activity this run just reported, Drive returns that thread again, and
+// NextCursor truncates it back to the same floor: the thread is news on every
+// poll for ever. ParseCursor reads both shapes, so a cursor already in a
+// caller's hand still parses.
 func (c *Cursor) String() string {
 	if c == nil {
 		return ""
 	}
-	b, err := json.Marshal(cursorBody{V: cursorVersion, T: c.At.UTC().Format(time.RFC3339)})
+	b, err := json.Marshal(cursorBody{V: cursorVersion, T: c.At.UTC().Format(time.RFC3339Nano)})
 	if err != nil {
 		// cursorBody is two fields of the two kinds encoding/json cannot fail
 		// on. There is no error to report here and nothing that could produce
@@ -58,11 +66,14 @@ func (c *Cursor) String() string {
 // since is the value ListURL puts on startModifiedTime, and "" for no cursor. A
 // method on the nil pointer so the caller does not repeat the check at every
 // page.
+//
+// The same precision String writes, and for the same reason: a floor rounded
+// down to the second re-opens a window this run already read.
 func (c *Cursor) since() string {
 	if c == nil {
 		return ""
 	}
-	return c.At.UTC().Format(time.RFC3339)
+	return c.At.UTC().Format(time.RFC3339Nano)
 }
 
 // ParseCursor reads what String wrote.

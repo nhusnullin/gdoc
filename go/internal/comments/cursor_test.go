@@ -135,3 +135,40 @@ func TestPaddedBase64IsRead(t *testing.T) {
 		t.Errorf("ParseCursor() = %v, want %v", got.At, at)
 	}
 }
+
+// TestCursorKeepsTheMillisecondsDriveSent is the one that decides whether a
+// poll ever finishes. Drive writes modifiedTime with milliseconds, so a cursor
+// that formats to whole seconds hands the next poll a floor up to 999 ms below
+// the activity it just reported. Drive then returns that thread again, and
+// NextCursor truncates it back to the same floor, so the thread is news on
+// every poll for ever.
+func TestCursorKeepsTheMillisecondsDriveSent(t *testing.T) {
+	c := &Cursor{At: at("2026-09-06T11:00:00.789Z")}
+
+	back, err := ParseCursor(c.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !back.At.Equal(c.At) {
+		t.Errorf("round trip = %v, want %v", back.At, c.At)
+	}
+	if got, want := c.since(), "2026-09-06T11:00:00.789Z"; got != want {
+		t.Errorf("since() = %q, want %q", got, want)
+	}
+}
+
+// TestNextCursorDoesNotReReportTheThreadItJustSaw is the same fact from the
+// caller's side: the cursor this run emits must not select the thread this run
+// already reported.
+func TestNextCursorDoesNotReReportTheThreadItJustSaw(t *testing.T) {
+	threads := []Thread{{Modified: "2026-09-06T11:00:00.789Z"}}
+
+	emitted := NextCursor(nil, threads).String()
+	next, err := ParseCursor(emitted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.At.Before(at("2026-09-06T11:00:00.789Z")) {
+		t.Errorf("the emitted cursor is %v, which is before the activity it saw", next.At)
+	}
+}

@@ -400,3 +400,38 @@ func TestARangeInsideATableCellIsMarked(t *testing.T) {
 		t.Errorf("Text() = %q, want the cell text marked", text)
 	}
 }
+
+// TestEscapingLeavesNoMarkerBehindWhenTwoOverlap is the invariant the escaping
+// exists for: a marker in the output is always gdoc's own. Two literals that
+// share a character overlap, and consuming both characters of the first pair
+// walks straight past the second one, so the text carries half a marker the
+// document never had.
+func TestEscapingLeavesNoMarkerBehindWhenTwoOverlap(t *testing.T) {
+	for _, s := range []string{"{-}", "{+}", "]]]", "[[[", "{+}{-}"} {
+		out := escaped(s)
+		if unescapedMarker(out) {
+			t.Errorf("escaping %q gave %q, which still carries an unescaped marker", s, out)
+		}
+	}
+}
+
+// escaped runs one run of text through the emitter's escaping alone.
+func escaped(s string) string {
+	e := &emitter{seen: map[string]bool{}}
+	return e.capture(func() { e.writeText(s, -1) })
+}
+
+// unescapedMarker reports whether out holds one of gdoc's six markers that is
+// not preceded by the backslash the escaping puts there.
+func unescapedMarker(out string) bool {
+	rs := []rune(out)
+	for i := 0; i+1 < len(rs); i++ {
+		if !isEscapePair(rs[i], rs[i+1]) {
+			continue
+		}
+		if i == 0 || rs[i-1] != '\\' {
+			return true
+		}
+	}
+	return false
+}
