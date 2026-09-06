@@ -434,8 +434,14 @@ Rules that hold across all three:
   `modifiedTime`; the Docs read carries the character range, keyed by the same
   comment id. A thread the Docs read gave no usable range comes back with
   `range: null` and a warning, never a failed listing. The shape of the Docs
-  `comments` key is measured rather than documented, so the decoder is loose on
-  purpose, and unusable therefore covers four cases: no range at all, a range
+  `comments` key was measured on 2026-09-06, on a real document, because the
+  reference does not describe it: each entry carries `commentId` and an
+  `anchorId`, and the range sits in the tab under
+  `documentTab.commentAnchors[anchorId].ranges`. `docs.anchoredRange` reads
+  that first; the three shapes guessed at before the measurement stay as
+  fallbacks. `go/internal/docs/testdata/anchors.json` is the measured shape
+  with placeholder text, and the recording it was modelled on holds a real
+  document and is gitignored. Unusable therefore covers four cases: no range at all, a range
   that does not end after it starts, a range whose ends fall outside the tab's
   text, and a range naming a tab the document does not have. `comments` is the
   command whose output names the range as a position, and M3 places a proposal
@@ -525,9 +531,9 @@ marker.** Armed, it puts its own close before its own open, and at the end of
 the last run the closes-only drain emits the close and leaves the open behind.
 Either way the text carries half a pair, which is exactly what the escaping
 below exists to make impossible. The test is `r.Start >= r.End`, not equality:
-the indexes come out of the Docs answer unchecked, the shape of the `comments`
-key is measured rather than documented, so the loose decoder can hand over an
-inverted pair. Inverted is the worse half, because it crosses the markers it
+the indexes come out of the Docs answer unchecked, and the decoder trusts the
+measured `commentAnchors` shape without checking the numbers, so it can hand
+over an inverted pair. Inverted is the worse half, because it crosses the markers it
 passes on the way. A range whose ends are outside the tab's text, or naming a
 tab the document does not have, is the same answer for the same reason, and all
 of it is `docs.Document.Places`, the one rule `comments` reports from too.

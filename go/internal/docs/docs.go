@@ -55,6 +55,10 @@ type Tab struct {
 	ID    string  `json:"id"`
 	Title string  `json:"title"`
 	Body  []Block `json:"blocks"`
+	// anchors is the tab's commentAnchors, by anchorId, each already carrying
+	// this tab's id. Unexported: it feeds CommentRanges and is not part of the
+	// structure a caller reads.
+	anchors map[string]Range
 }
 
 // Block is one element of a body: either a paragraph or a table, never both and
@@ -268,6 +272,15 @@ func (d *Document) appendTab(t rawTab) {
 	if t.DocumentTab != nil {
 		tab.Body = blocks(t.DocumentTab.Body.content(), t.DocumentTab.InlineObjects)
 		d.addFootnotes(t.DocumentTab.Footnotes, t.DocumentTab.InlineObjects)
+		for anchorID, a := range t.DocumentTab.CommentAnchors {
+			if len(a.Ranges) == 0 {
+				continue // an anchor with no range places nothing; the comment stays unplaced
+			}
+			if tab.anchors == nil {
+				tab.anchors = map[string]Range{}
+			}
+			tab.anchors[anchorID] = Range{Tab: tab.ID, Start: a.Ranges[0].StartIndex, End: a.Ranges[0].EndIndex}
+		}
 	}
 	d.Tabs = append(d.Tabs, tab)
 	for _, child := range t.ChildTabs {

@@ -40,6 +40,21 @@ type rawDocumentTab struct {
 	Body          *rawBody                   `json:"body"`
 	Footnotes     map[string]rawFootnote     `json:"footnotes"`
 	InlineObjects map[string]rawInlineObject `json:"inlineObjects"`
+	// CommentAnchors is where COMMENTS_VIEW_MODE_INCLUDED puts the ranges,
+	// measured 2026-09-06 on a real document: keyed by anchorId, and each
+	// `comments[]` entry names its anchorId. The reference for documents.get
+	// still does not describe it.
+	CommentAnchors map[string]rawCommentAnchor `json:"commentAnchors"`
+}
+
+// rawCommentAnchor is one anchor's ranges. A comment on one span has one; the
+// shape allows several, and the first is where the comment sits.
+type rawCommentAnchor struct {
+	AnchorID string `json:"anchorId"`
+	Ranges   []struct {
+		StartIndex int `json:"startIndex"`
+		EndIndex   int `json:"endIndex"`
+	} `json:"ranges"`
 }
 
 type rawBody struct {
@@ -237,11 +252,14 @@ func plainText(bs []Block) string {
 
 // commentRanges reads the top-level comments array of the Docs response.
 //
-// The shape is measured, not documented: the reference for documents.get does
-// not describe what commentsViewMode adds, so the decoder tries the three
-// places a range has been seen and reports the entry as unplaced when none of
-// them reads. An unplaced comment is a fact the command puts in warnings; the
-// thread itself still comes back, from Drive, with its quoted text.
+// The shape was measured on 2026-09-06, against a real document: each entry
+// carries `commentId` and an `anchorId`, and the range sits in the tab, under
+// `documentTab.commentAnchors[anchorId].ranges`. That lookup runs first. The
+// reference for documents.get still does not describe what commentsViewMode
+// adds, so the three shapes the decoder guessed at before the measurement stay
+// as fallbacks, and an entry none of them reads is reported as unplaced. An
+// unplaced comment is a fact the command puts in warnings; the thread itself
+// still comes back, from Drive, with its quoted text.
 func commentRanges(raws []json.RawMessage, tabs []Tab) (map[string]Range, []string) {
 	placed := map[string]Range{}
 	var unplaced []string
@@ -257,6 +275,10 @@ func commentRanges(raws []json.RawMessage, tabs []Tab) (map[string]Range, []stri
 			unplaced = append(unplaced, fmt.Sprintf("comments[%d] (no id)", i))
 			continue
 		}
+		if r, ok := anchoredRange(firstString(fields, "anchorId"), tabs); ok {
+			placed[id] = r
+			continue
+		}
 		if r, ok := rangeOf(fields, tabs); ok {
 			placed[id] = r
 			continue
@@ -267,6 +289,21 @@ func commentRanges(raws []json.RawMessage, tabs []Tab) (map[string]Range, []stri
 		placed = nil
 	}
 	return placed, unplaced
+}
+
+// anchoredRange is the measured shape: the comment names an anchorId, and the
+// tab that holds that anchor knows its range. The tab is the one whose anchors
+// named it, so a multi-tab document needs no tabId on the comment.
+func anchoredRange(anchorID string, tabs []Tab) (Range, bool) {
+	if anchorID == "" {
+		return Range{}, false
+	}
+	for _, t := range tabs {
+		if r, ok := t.anchors[anchorID]; ok {
+			return r, true
+		}
+	}
+	return Range{}, false
 }
 
 // rangeOf looks for a range in the three shapes it has been seen in: a `range`

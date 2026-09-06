@@ -224,6 +224,35 @@ func TestCommentRangesPlaceOneAndListTheOther(t *testing.T) {
 	}
 }
 
+// The shape Google actually returns, measured on 2026-09-06 against a real
+// document with six comments: each `comments[]` entry carries `commentId` and
+// an `anchorId`, and the range lives in the tab, under
+// `documentTab.commentAnchors[anchorId].ranges`. The fixture is that shape with
+// placeholder text; the recording it was modelled on holds a real document and
+// stays out of the tree.
+func TestCommentRangesComeFromTheTabsCommentAnchors(t *testing.T) {
+	d := fixture(t, "anchors.json")
+	want := map[string]Range{
+		"C-FIRST":  {Tab: "t.0", Start: 7, End: 15},
+		"C-TWO":    {Tab: "t.0", Start: 22, End: 31}, // an anchor with several ranges places on its first
+		"C-SECOND": {Tab: "t.1", Start: 13, End: 27}, // the tab is the one whose anchors named it
+	}
+	for id, w := range want {
+		got, ok := d.CommentRanges[id]
+		if !ok || got != w {
+			t.Errorf("%s: range = %+v (placed %v), want %+v", id, got, ok, w)
+		}
+	}
+	if len(d.CommentRanges) != len(want) {
+		t.Errorf("len(CommentRanges) = %d, want %d: %v", len(d.CommentRanges), len(want), d.CommentRanges)
+	}
+	// An anchorId no tab knows is a comment the read did not place: reported,
+	// never guessed.
+	if len(d.Unplaced) != 1 || d.Unplaced[0] != "C-LOST" {
+		t.Errorf("Unplaced = %v, want [C-LOST]", d.Unplaced)
+	}
+}
+
 func TestCommentRangeShapesTheDecoderAccepts(t *testing.T) {
 	// The shape of the Docs read's `comments` key is measured, not documented,
 	// so the decoder tries the three places a range has been seen. Each case is
