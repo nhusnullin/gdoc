@@ -12,12 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 
+	"gdoc/internal/atomicfile"
 	"gdoc/internal/comments"
 	"gdoc/internal/docs"
 	"gdoc/internal/docx"
@@ -162,6 +162,13 @@ func parseArgs(raw []string, spec flagSet) (*args, error) {
 			a.flags[name] = value
 		case i+1 >= len(raw):
 			return nil, fmt.Errorf("%s needs a value, and none follows it", name)
+		case knows(spec, raw[i+1]):
+			// The next argument is another flag this command takes, so it is not
+			// this one's value. Swallowing it read `--since --witness` as a
+			// cursor and failed naming the cursor, which is the wrong problem.
+			return nil, fmt.Errorf("%s needs a value, and %q is another flag", name, raw[i+1])
+		case raw[i+1] == "":
+			return nil, fmt.Errorf("%s was given an empty value", name)
 		default:
 			i++
 			a.flags[name] = raw[i]
@@ -171,6 +178,14 @@ func parseArgs(raw []string, spec flagSet) (*args, error) {
 		return nil, errors.New("this command needs a document: a Google Docs URL or a document id")
 	}
 	return a, nil
+}
+
+// knows reports whether the argument names a flag of this command. It is the
+// map lookup rather than the value, because a flag that takes no value is a
+// false in the same map.
+func knows(spec flagSet, arg string) bool {
+	_, ok := spec[arg]
+	return ok
 }
 
 // reach is one command's opened reach: the id it was given, and the session on
@@ -235,6 +250,7 @@ func cmdRead(raw []string) emit.Result {
 		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 	}
 	text, notes := view.Text(d)
+	notes = append(unplacedWarnings(d), notes...)
 	data := readData{
 		DocumentID: d.ID,
 		Title:      d.Title,
@@ -247,6 +263,19 @@ func cmdRead(raw []string) emit.Result {
 		data.Structure = view.Structure(d)
 	}
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(notes...)}
+}
+
+// unplacedWarnings names the comments the Docs read returned with no range this
+// binary could read. `read` marks a range in the text, so a comment with no
+// range is one the text cannot show, and silence there reads as a document with
+// no such comment in it.
+func unplacedWarnings(d *docs.Document) []string {
+	var out []string
+	for _, id := range d.Unplaced {
+		out = append(out, fmt.Sprintf(
+			"comment %s: the Docs read placed no range for it, so the text carries no marker for it", id))
+	}
+	return out
 }
 
 // commentsData is what `gdoc comments` prints. The cursor is what the next poll
@@ -370,7 +399,7 @@ func cmdSuggestions(raw []string) emit.Result {
 		return emit.Result{OK: true, Data: data, Warnings: r.warnings()}
 	}
 	path := a.flags["--md"]
-	gone, err := recordSnapshot(path, r.id, pending)
+	gone, err := recordSnapshot(path, r.id, pending, suggestions.IDs(d))
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
 	}
@@ -386,7 +415,10 @@ func cmdSuggestions(raw []string) emit.Result {
 // A file paired with another document is refused: writing this document's
 // observation into it would be the wrong file, and the next run would read the
 // snapshot as this document's history.
-func recordSnapshot(path, id string, pending []suggestions.Pending) ([]suggestions.Gone, error) {
+// nowIDs is every id still pending, the whitespace-only ones pending does not
+// carry included. What left is a question about ids, and a suggestion the author
+// edited down to a space has not left.
+func recordSnapshot(path, id string, pending []suggestions.Pending, nowIDs []string) ([]suggestions.Gone, error) {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the markdown file could not be read: %w", err)
@@ -401,7 +433,7 @@ func recordSnapshot(path, id string, pending []suggestions.Pending) ([]suggestio
 	if block.DocumentID != id {
 		return nil, fmt.Errorf("%s is paired with document %s, and this read was of %s", path, block.DocumentID, id)
 	}
-	gone := suggestions.GoneSince(block.SuggestionsSeen, pending)
+	gone := suggestions.GoneSince(block.SuggestionsSeen, nowIDs)
 	if gone == nil {
 		gone = []suggestions.Gone{}
 	}
@@ -418,45 +450,9 @@ func recordSnapshot(path, id string, pending []suggestions.Pending) ([]suggestio
 	return gone, nil
 }
 
-// writeFile replaces the file through a temp file in the same directory and a
-// rename, as auth.Save does. A failed write must not leave a note truncated:
-// the markdown is the source, and gdoc is not its only reader.
+// writeFile replaces the note, keeping the mode it had. A failed write must not
+// leave a note truncated: the markdown is the source, and gdoc is not its only
+// reader.
 func writeFile(path string, b []byte) error {
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+"-*")
-	if err != nil {
-		return err
-	}
-	name := tmp.Name()
-	fail := func(err error) error {
-		tmp.Close()
-		os.Remove(name)
-		return err
-	}
-	if _, err := tmp.Write(b); err != nil {
-		return fail(err)
-	}
-	// The mode of the file being replaced, so a note somebody made group
-	// readable stays that way.
-	mode := os.FileMode(0o644)
-	if info, err := os.Stat(path); err == nil {
-		mode = info.Mode().Perm()
-	}
-	if err := tmp.Chmod(mode); err != nil {
-		return fail(err)
-	}
-	// Sync before the rename. Without it a power cut can leave the renamed file
-	// present and empty, which is the failure this dance exists to prevent.
-	if err := tmp.Sync(); err != nil {
-		return fail(err)
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(name)
-		return err
-	}
-	if err := os.Rename(name, path); err != nil {
-		os.Remove(name)
-		return err
-	}
-	return nil
+	return atomicfile.Replace(path, b, atomicfile.ModeOf(path, 0o644))
 }

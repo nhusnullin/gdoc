@@ -53,29 +53,49 @@ type Gone struct {
 // runs. Every id a run carries is reported, because a run inside two
 // overlapping suggestions belongs to both of them.
 func List(d *docs.Document) []Pending {
+	return walk(d).kept()
+}
+
+// IDs is every pending suggestion id, the whitespace-only ones List drops
+// included. It is what GoneSince compares a snapshot against: a suggestion the
+// author has since edited down to a space is still pending, and reporting it as
+// gone would be a fact that is not true.
+func IDs(d *docs.Document) []string {
+	w := walk(d)
+	out := make([]string, 0, len(w.found))
+	for _, p := range w.found {
+		out = append(out, p.ID)
+	}
+	return out
+}
+
+func walk(d *docs.Document) *walker {
 	var w walker
 	for _, tab := range d.Tabs {
 		// A heading in one tab is not above anything in the next one.
 		w.section = ""
 		w.blocks(tab.Body)
 	}
-	return w.kept()
+	return &w
 }
 
 // GoneSince is every item in the snapshot whose id is not pending now, with
 // what it said when it was last seen. A nil snapshot means nothing was ever
 // seen, so nothing can have left.
 //
+// nowIDs is IDs, not List: what is still pending is the question, and List
+// drops the suggestions whose text says nothing a reader can act on.
+//
 // The match is on the id alone. One replacement is one id carried by a deletion
 // run and an insertion run, so an id that left takes both of its halves with
 // it, and each half still reports its own text.
-func GoneSince(seen *frontmatter.SuggestionsSeen, now []Pending) []Gone {
+func GoneSince(seen *frontmatter.SuggestionsSeen, nowIDs []string) []Gone {
 	if seen == nil {
 		return nil
 	}
-	pending := make(map[string]bool, len(now))
-	for _, p := range now {
-		pending[p.ID] = true
+	pending := make(map[string]bool, len(nowIDs))
+	for _, id := range nowIDs {
+		pending[id] = true
 	}
 	var out []Gone
 	for _, item := range seen.Items {

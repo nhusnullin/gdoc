@@ -27,6 +27,17 @@ func fixture(t *testing.T, name string) *docs.Document {
 	return d
 }
 
+// document is one inline Docs response, for a rule that needs a shape no
+// fixture carries.
+func document(t *testing.T, raw string) *docs.Document {
+	t.Helper()
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
+}
+
 // text is a run carrying the two id lists, which is the only run shape a
 // suggestion is read from.
 func text(s string, insertions, deletions []string) docs.Run {
@@ -188,7 +199,7 @@ func TestGoneListsExactlyTheIDsThatLeft(t *testing.T) {
 		{ID: "suggest.stay", Kind: frontmatter.KindInsertion, Section: "Scope", Text: "critical "},
 		{ID: "suggest.left", Kind: frontmatter.KindDeletion, Section: "Controls", Text: "annually"},
 	}}
-	now := []Pending{{ID: "suggest.stay", Kind: frontmatter.KindInsertion, Section: "Scope", Text: "critical "}}
+	now := []string{"suggest.stay"}
 
 	got := GoneSince(seen, now)
 	want := []Gone{{
@@ -226,7 +237,7 @@ func TestGoneMatchesOnTheIDAlone(t *testing.T) {
 		{ID: "suggest.a1", Kind: frontmatter.KindDeletion, Text: "annually"},
 		{ID: "suggest.a1", Kind: frontmatter.KindInsertion, Text: "every quarter"},
 	}}
-	if got := GoneSince(seen, []Pending{{ID: "suggest.a1", Kind: frontmatter.KindDeletion, Text: "annually"}}); got != nil {
+	if got := GoneSince(seen, []string{"suggest.a1"}); got != nil {
 		t.Errorf("GoneSince() = %+v, want nil: the id is still pending", got)
 	}
 	if got := GoneSince(seen, nil); len(got) != 2 {
@@ -235,7 +246,7 @@ func TestGoneMatchesOnTheIDAlone(t *testing.T) {
 }
 
 func TestGoneWithNoSnapshotIsEmpty(t *testing.T) {
-	if got := GoneSince(nil, []Pending{{ID: "suggest.a1", Kind: frontmatter.KindInsertion, Text: "x"}}); got != nil {
+	if got := GoneSince(nil, []string{"suggest.a1"}); got != nil {
 		t.Errorf("GoneSince(nil, ...) = %+v, want nil: nothing was seen, so nothing left", got)
 	}
 }
@@ -274,7 +285,11 @@ func TestSnapshotRoundTrips(t *testing.T) {
 	}
 	// The snapshot is the input to the next run's Gone, so the two functions
 	// have to agree about what a match is.
-	if got := GoneSince(back.SuggestionsSeen, now); got != nil {
+	nowIDs := make([]string, 0, len(now))
+	for _, p := range now {
+		nowIDs = append(nowIDs, p.ID)
+	}
+	if got := GoneSince(back.SuggestionsSeen, nowIDs); got != nil {
 		t.Errorf("GoneSince(snapshot, the same pendings) = %+v, want nil", got)
 	}
 }
@@ -328,5 +343,28 @@ func assertPending(t *testing.T, got, want []Pending) {
 		if got[i] != want[i] {
 			t.Errorf("List()[%d] = %+v, want %+v", i, got[i], want[i])
 		}
+	}
+}
+
+// A suggestion whose text the author has edited down to whitespace is still
+// pending. List drops it, because it says nothing a reader can act on, and
+// comparing the snapshot against that filtered list reported it as gone: a
+// false fact in the one field the skill judges accepted-or-rejected from.
+func TestASuggestionEditedDownToWhitespaceIsNotGone(t *testing.T) {
+	d := document(t, `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":3,"textRun":{"content":" \n","suggestedInsertionIds":["suggest.thin"]}}]}}]}}`)
+
+	if got := List(d); len(got) != 0 {
+		t.Fatalf("List() = %+v, want nothing: the text says nothing a reader can act on", got)
+	}
+	if got := IDs(d); len(got) != 1 || got[0] != "suggest.thin" {
+		t.Fatalf("IDs() = %v, want the id, which is still pending", got)
+	}
+	seen := &frontmatter.SuggestionsSeen{Items: []frontmatter.SuggestionSeen{
+		{ID: "suggest.thin", Kind: frontmatter.KindInsertion, Text: "was a whole sentence"},
+	}}
+	if got := GoneSince(seen, IDs(d)); got != nil {
+		t.Errorf("GoneSince() = %+v, want nil: the suggestion is still in the document", got)
 	}
 }

@@ -500,11 +500,15 @@ pending marked in it:
 | `{-text-}[s:ID]` | a pending suggested deletion, and its id |
 | `[[c:ID]]text[[/c]]` | the text a comment is attached to, and the comment id |
 | `<!-- tab t.0: Title -->` | the tab that follows, on a document with more than one |
-| `[image]`, `[drawing]`, `[equation]` | content that is not text yet, with a warning |
+| `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet, with a warning |
 
 If the document's own text contains one of those markers, it comes back with a
-backslash in front of it, so a marker in the output is always gdoc's. Tables
-become pipe tables and footnotes are appended after a `---` line. `--structure`
+backslash in front of it, so a marker in the output is always gdoc's. `[object]`
+is an embedded object the read could not classify: calling it an image would be
+a guess. Tables become pipe tables and footnotes are appended after a `---` line.
+Lists come back as `- ` items, two spaces of indent per level, so a numbered
+list reads back as a bulleted one: telling the two apart needs the document's
+`lists` map, which this milestone does not read. `--structure`
 adds the document tree with character indexes on it, which is what a later
 milestone needs to place a suggestion at an exact position. The text is not a
 summary of the structure, and the structure is not a summary of the text.
@@ -514,6 +518,8 @@ replies, whether it is resolved, the sentence it quotes, and the character range
 the Docs read placed it at. A thread the Docs read could not place comes back
 with `range: null` and a warning, rather than failing the whole listing. The
 marker is a fact too: `ai:`, `ai?`, `ai!` or `none`, taken from the first word.
+`@ai` is not one of them. The Python tool still accepts that old form; the Go
+binary matches the three exactly.
 
 `--since` takes the `cursor` a previous run printed and asks for what changed
 after it. The cursor is opaque: it is the newest activity that run saw, encoded,

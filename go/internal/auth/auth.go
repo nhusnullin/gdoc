@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"gdoc/internal/atomicfile"
 	"gdoc/internal/config"
 )
 
@@ -219,40 +220,9 @@ func Save(t Token) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".oauth-token-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	if _, err := tmp.Write(b); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
-		return err
-	}
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
-		return err
-	}
-	// Sync before the rename. Without it a power cut can leave the renamed file
-	// present and empty, which is the exact failure the temp-and-rename dance
-	// exists to prevent.
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		os.Remove(tmpName)
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmpName)
-		return err
-	}
-	// Same-directory rename. Not guaranteed atomic on Windows; documented in
-	// docs/v2/SPEC.md and covered by the M9 Windows smoke test.
-	if err := os.Rename(tmpName, path); err != nil {
-		os.Remove(tmpName)
-		return err
-	}
-	return nil
+	// 0o600 whatever the file carried before: it is a credential, and a token
+	// somebody made group readable is a token this write narrows back.
+	return atomicfile.Replace(path, b, 0o600)
 }
 
 // StatusReport is the answer `gdoc auth status` prints, and the json tags are

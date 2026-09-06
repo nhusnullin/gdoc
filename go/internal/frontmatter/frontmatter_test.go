@@ -358,3 +358,78 @@ func TestWriteGivesBackTheBlankLineAfterTheBlock(t *testing.T) {
 		t.Fatalf("the blank line before author: moved.\nwant:\n%q\ngot:\n%q", src, out)
 	}
 }
+
+// TestControlCharactersSurviveTheRoundTrip is the snapshot's own words going in
+// and coming back out. Google Docs puts a tab in a text run wherever the author
+// typed one, and the emitter used to write that as a plain scalar the parser
+// then read without the tab.
+func TestControlCharactersSurviveTheRoundTrip(t *testing.T) {
+	for _, text := range []string{"one\ttwo", "\tleading", "trailing\t", "a\rb", "two\nlines", "  spaced  ", "quote \" and \\ backslash", "ünïcode"} {
+		src, err := Write([]byte("body\n"), blockWithText(text))
+		if err != nil {
+			t.Errorf("Write(%q) = %v, want a file", text, err)
+			continue
+		}
+		back, err := Read(src)
+		if err != nil {
+			t.Errorf("Read back %q: %v\n%s", text, err, src)
+			continue
+		}
+		if got := back.SuggestionsSeen.Items[0].Text; got != text {
+			t.Errorf("%q round-tripped to %q\n%s", text, got, src)
+		}
+	}
+}
+
+// TestVerifyRefusesABlockThatDoesNotReadBack is the guard behind the quoting.
+// A block gdoc writes and then cannot read is a note it would corrupt and then
+// refuse to touch, because Write reads the block it finds before replacing it.
+// So the render is checked against its own parse before any caller writes it.
+func TestVerifyRefusesABlockThatDoesNotReadBack(t *testing.T) {
+	b := blockWithText("one\ttwo")
+	// What the emitter wrote before the quoting rule: a plain scalar whose tab
+	// the parser drops.
+	lossy := []byte("gdoc:\n  schema: 1\n  document_id: 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r\n" +
+		"  suggestions_seen:\n    at: 2026-09-06T12:00:00Z\n    items:\n      - id: suggest.a1\n" +
+		"        kind: insertion\n        section: \"\"\n        text: one\ttwo\n")
+	err := verify(lossy, b)
+	if err == nil {
+		t.Fatal("verify() = nil on a block whose tab the parser drops, want an error")
+	}
+	if !strings.Contains(err.Error(), "left as it was") {
+		t.Errorf("verify() = %q, want an error saying the file is untouched", err)
+	}
+	// And the render the package actually produces passes it.
+	out, err := render(b)
+	if err != nil {
+		t.Fatalf("render() = %v", err)
+	}
+	if err := verify(out, b); err != nil {
+		t.Errorf("verify(render(b)) = %v, want nil", err)
+	}
+}
+
+func blockWithText(text string) *Block {
+	return &Block{
+		Schema:     Schema,
+		DocumentID: "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r",
+		SuggestionsSeen: &SuggestionsSeen{
+			At:    time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC),
+			Items: []SuggestionSeen{{ID: "suggest.a1", Kind: KindInsertion, Text: text}},
+		},
+	}
+}
+
+// TestWriteRefusesBrokenFrontMatterWithNoGdocKey is the first pairing of a note.
+// Write's only guard against rewriting front matter it does not understand is
+// the read it does first, and that read used to stop before checking anything
+// when the file had no gdoc: key yet.
+func TestWriteRefusesBrokenFrontMatterWithNoGdocKey(t *testing.T) {
+	src := []byte("---\ntitle: \"unclosed\ntags: [a]\n---\n\nbody\n")
+	if _, err := Write(src, blockWithText("hello")); err == nil {
+		t.Fatal("Write() rewrote front matter it could not parse, want an error")
+	}
+	if _, err := Read(src); err == nil {
+		t.Error("Read() = nil error on front matter it could not parse, want an error naming it")
+	}
+}

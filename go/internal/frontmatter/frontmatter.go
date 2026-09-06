@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -53,12 +54,20 @@ func Read(src []byte) (*Block, error) {
 // the file is parsed once and the two functions can never disagree about where
 // the span is.
 func readFrom(d *document) (*Block, error) {
-	if !d.hasFront || d.gdocStart < 0 {
+	if !d.hasFront {
 		return nil, nil
 	}
 
+	// Before the gdoc: span is looked for, not after. Write's only guard against
+	// rewriting front matter it does not understand is this function, and a file
+	// being paired for the first time has no gdoc: key at all: checking only
+	// when one is already there is checking every case but the first.
 	if err := checkFrontMatter(d); err != nil {
 		return nil, err
+	}
+
+	if d.gdocStart < 0 {
+		return nil, nil
 	}
 
 	span := normalize(strings.Join(d.lines[d.gdocStart:d.gdocEnd], ""))
@@ -118,9 +127,16 @@ func Write(src []byte, b *Block) ([]byte, error) {
 
 // marshal renders the block under its key, with the file's line endings.
 func marshal(b *Block, eol string) ([]byte, error) {
-	out, err := yaml.MarshalWithOptions(wrapper{Gdoc: b}, yaml.Indent(2), yaml.IndentSequence(true))
+	out, err := render(b)
 	if err != nil {
-		return nil, fmt.Errorf("gdoc front matter: %w", err)
+		return nil, err
+	}
+	// The block is read back before any caller writes it. A block that does not
+	// survive its own round trip is a note gdoc would corrupt and then refuse to
+	// touch, because Write reads the block it finds before replacing it. So it
+	// fails here, where the file on disk is still untouched.
+	if err := verify(out, b); err != nil {
+		return nil, err
 	}
 	if !bytes.HasSuffix(out, []byte("\n")) {
 		out = append(out, '\n')
@@ -129,6 +145,56 @@ func marshal(b *Block, eol string) ([]byte, error) {
 		out = bytes.ReplaceAll(out, []byte("\n"), []byte(eol))
 	}
 	return out, nil
+}
+
+// render is the block as YAML, before the line endings are put back.
+//
+// A string carrying a control character is written double quoted, because the
+// emitter writes it as a plain scalar it cannot read back: a tab inside one is
+// dropped on the way in, and a bare carriage return produces a block that fails
+// to parse at all. The snapshot carries a suggestion's own words, and Google
+// Docs puts a tab in a text run wherever the author typed one, so what goes in
+// has to come back out.
+func render(b *Block) ([]byte, error) {
+	out, err := yaml.MarshalWithOptions(wrapper{Gdoc: b},
+		yaml.Indent(2), yaml.IndentSequence(true), yaml.CustomMarshaler[string](quoteControls))
+	if err != nil {
+		return nil, fmt.Errorf("gdoc front matter: %w", err)
+	}
+	return out, nil
+}
+
+// quoteControls is the one string rule render adds. A string with no control
+// character in it is left to the emitter's own choice, so the block reads the
+// way it always has.
+func quoteControls(s string) ([]byte, error) {
+	if strings.IndexFunc(s, isControl) < 0 {
+		return yaml.Marshal(s)
+	}
+	return []byte(strconv.Quote(s)), nil
+}
+
+func isControl(r rune) bool { return r < 0x20 || r == 0x7f }
+
+// verify refuses a block that does not survive its own round trip. It reads the
+// rendered YAML back and renders it again: anything the emitter wrote and the
+// parser then read differently shows up as different bytes.
+func verify(out []byte, b *Block) error {
+	var back wrapper
+	if err := yaml.UnmarshalWithOptions(out, &back, yaml.Strict()); err != nil {
+		return fmt.Errorf("gdoc front matter: the block gdoc rendered does not read back, so the file is left as it was: %w", err)
+	}
+	if back.Gdoc == nil {
+		return errors.New("gdoc front matter: the block gdoc rendered read back empty, so the file is left as it was")
+	}
+	again, err := render(back.Gdoc)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(again, out) {
+		return errors.New("gdoc front matter: the block gdoc rendered does not read back as what it was given, so the file is left as it was")
+	}
+	return nil
 }
 
 // checkFrontMatter reads the whole front matter loosely, so YAML the author's

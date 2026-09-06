@@ -67,13 +67,15 @@ type Reader interface {
 
 // ExportURL is the docx export of one file.
 //
-// supportsAllDrives is on this call, unlike the comment listing: this is a read
-// of the files collection, where a shared-drive file without the parameter
-// answers a flat 404.
+// supportsAllDrives is absent, for the same reason it is absent from the comment
+// listing. files.export defines two parameters and neither is that one: measured
+// against the live Drive v3 discovery document on 2026-09-06, files.export takes
+// fileId and mimeType, while files.get is where supportsAllDrives lives. Sending
+// a parameter the method does not define is a parameter the server may reject,
+// and it would take every --witness run with it.
 func ExportURL(id string) string {
 	q := url.Values{
-		"mimeType":          {docxMime},
-		"supportsAllDrives": {"true"},
+		"mimeType": {docxMime},
 	}
 	return "https://www.googleapis.com/drive/v3/files/" + id + "/export?" + q.Encode()
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -219,5 +220,183 @@ func TestTextSuggestedAndThenSuggestedAwayPrintsTwiceAndIsMarkedOnce(t *testing.
 	}
 	if at := strings.Index(text, "[[c:C1]]"); at > ins {
 		t.Errorf("the comment marker is on the second copy: %q", text)
+	}
+}
+
+// parse is one inline Docs response as a document. The fixtures are the
+// specification of the whole shape; these are one rule at a time.
+func parse(t *testing.T, raw string) *docs.Document {
+	t.Helper()
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
+}
+
+// A range covering no characters marks nothing, so it is a warning rather than
+// a marker. Armed, it printed the close before the open, and at the end of the
+// last run it printed the close alone: either way the text carried half a pair,
+// which is the one thing the escaping exists to make impossible.
+func TestARangeCoveringNoTextIsAWarningAndIsNotPrinted(t *testing.T) {
+	for _, at := range []int{3, 13} {
+		raw := `{"documentId":"D","body":{"content":[
+			{"startIndex":1,"endIndex":13,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+			 "elements":[{"startIndex":1,"endIndex":13,"textRun":{"content":"hello world\n"}}]}}]},
+			"comments":[{"id":"EMPTY","range":{"startIndex":` + strconv.Itoa(at) + `,"endIndex":` + strconv.Itoa(at) + `}}]}`
+		text, warnings := Text(parse(t, raw))
+		if strings.Contains(text, "[[") {
+			t.Errorf("range %d..%d was marked: %q", at, at, text)
+		}
+		if len(warnings) != 1 || !strings.Contains(warnings[0], "EMPTY") {
+			t.Errorf("range %d..%d: warnings = %v, want one naming EMPTY", at, at, warnings)
+		}
+	}
+}
+
+// Two ranges that touch are two ranges, not one inside the other. The close of
+// the first comes before the open of the second at the shared index.
+func TestTwoTouchingRangesDoNotReadAsNested(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":13,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":13,"textRun":{"content":"hello world\n"}}]}}]},
+		"comments":[{"id":"AA","range":{"startIndex":1,"endIndex":6}},
+		            {"id":"BB","range":{"startIndex":6,"endIndex":12}}]}`
+	text, warnings := Text(parse(t, raw))
+	if len(warnings) != 0 {
+		t.Fatalf("warnings = %v, want none", warnings)
+	}
+	want := "[[c:AA]]hello[[/c]][[c:BB]] world[[/c]]\n"
+	if text != want {
+		t.Errorf("Text() = %q, want %q", text, want)
+	}
+}
+
+// Two ranges opening at the same index are ordered by id, so the projection is
+// deterministic whatever order Docs answered in.
+func TestRangesOpeningTogetherAreOrderedByID(t *testing.T) {
+	body := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":13,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":13,"textRun":{"content":"hello world\n"}}]}}]},`
+	first := parse(t, body+`"comments":[{"id":"AA","range":{"startIndex":1,"endIndex":6}},
+	                          {"id":"BB","range":{"startIndex":1,"endIndex":12}}]}`)
+	second := parse(t, body+`"comments":[{"id":"BB","range":{"startIndex":1,"endIndex":12}},
+	                           {"id":"AA","range":{"startIndex":1,"endIndex":6}}]}`)
+	a, _ := Text(first)
+	b, _ := Text(second)
+	if a != b {
+		t.Errorf("the answer order changed the text:\n%q\n%q", a, b)
+	}
+	if !strings.HasPrefix(a, "[[c:AA]][[c:BB]]") {
+		t.Errorf("Text() = %q, want AA to open before BB", a)
+	}
+}
+
+// The index Docs gives counts UTF-16 code units. A typographic quote is one
+// unit and three bytes and an emoji is two units and four, so counting runes or
+// bytes puts every marker after one of them in the wrong place.
+func TestTheIndexCountsUTF16CodeUnits(t *testing.T) {
+	// “ is 1 unit, 🤖 is 2. Content is `“a🤖b cd\n`: indexes 1..9, so `cd`
+	// starts at 7 and the paragraph ends at 10.
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":10,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":10,"textRun":{"content":"“a🤖b cd\n"}}]}}]},
+		"comments":[{"id":"C1","range":{"startIndex":7,"endIndex":9}}]}`
+	text, warnings := Text(parse(t, raw))
+	if len(warnings) != 0 {
+		t.Fatalf("warnings = %v, want none", warnings)
+	}
+	want := "“a\U0001f916b [[c:C1]]cd[[/c]]\n"
+	if text != want {
+		t.Errorf("Text() = %q, want %q", text, want)
+	}
+}
+
+// Every marker the projection adds is escaped when the document's own text
+// carries it. The two deletion markers had no case anywhere, and a document
+// quoting `{-annually-}` would have read as a pending suggested deletion.
+func TestEveryMarkerIsEscapedInTheDocumentsOwnText(t *testing.T) {
+	for _, marker := range escapePairs {
+		raw := `{"documentId":"D","body":{"content":[
+			{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+			 "elements":[{"startIndex":1,"endIndex":9,"textRun":{"content":` +
+			strconv.Quote("a "+marker+" b\n") + `}}]}}]}}`
+		text, _ := Text(parse(t, raw))
+		if want := "a \\" + marker + " b\n"; text != want {
+			t.Errorf("Text() = %q, want %q", text, want)
+		}
+	}
+}
+
+// escapePairs has to hold every marker the projection writes. The list is the
+// only thing standing between somebody's sentence and the AI reading it as
+// gdoc's own markup, so the rule is a test rather than a review note.
+func TestEscapePairsHoldsEveryMarker(t *testing.T) {
+	for _, marker := range []string{openInsertion, shutInsertion, openDeletion, shutDeletion, openComment, shutComment} {
+		found := false
+		for _, p := range escapePairs {
+			if p == marker {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("escapePairs does not hold %q", marker)
+		}
+	}
+}
+
+// A footnote's paragraphs are joined with newlines, and the footnote prints on
+// one line. They become spaces: dropping them glued the last word of one
+// paragraph to the first word of the next.
+func TestAFootnoteWithTwoParagraphsIsNotGluedTogether(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":8,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":6,"textRun":{"content":"Text "}},
+		             {"startIndex":6,"endIndex":7,"footnoteReference":{"footnoteId":"kix.f1","footnoteNumber":"1"}},
+		             {"startIndex":7,"endIndex":8,"textRun":{"content":"\n"}}]}}]},
+		"footnotes":{"kix.f1":{"footnoteId":"kix.f1","content":[
+			{"paragraph":{"elements":[{"textRun":{"content":"first\n"}}]}},
+			{"paragraph":{"elements":[{"textRun":{"content":"second\n"}}]}}]}}}`
+	text, _ := Text(parse(t, raw))
+	if !strings.Contains(text, "[^1]: first second") {
+		t.Errorf("Text() =\n%s\nwant the two paragraphs separated", text)
+	}
+}
+
+// A footnote referenced twice is one entry under the body, and both references
+// print the same number. Counting again numbered the second reference as a new
+// note while recording nothing, so the body and the reference disagreed.
+func TestASecondReferenceToOneFootnotePrintsTheSameNumber(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":5,"textRun":{"content":"one "}},
+		             {"startIndex":5,"endIndex":6,"footnoteReference":{"footnoteId":"kix.f1"}},
+		             {"startIndex":6,"endIndex":8,"textRun":{"content":" x"}},
+		             {"startIndex":8,"endIndex":9,"footnoteReference":{"footnoteId":"kix.f1"}}]}}]},
+		"footnotes":{"kix.f1":{"footnoteId":"kix.f1","content":[
+			{"paragraph":{"elements":[{"textRun":{"content":"the note\n"}}]}}]}}}`
+	text, _ := Text(parse(t, raw))
+	if n := strings.Count(text, "[^1]"); n != 3 {
+		t.Errorf("[^1] appears %d times, want 3 (two references and the body): %q", n, text)
+	}
+	if strings.Contains(text, "[^2]") {
+		t.Errorf("the second reference to one footnote is numbered 2: %q", text)
+	}
+}
+
+// A comment anchored to text inside a table cell is marked there. The reachable
+// positions are collected by walking into the tables, and a walk that stopped
+// at the table would drop the range with a warning instead.
+func TestARangeInsideATableCellIsMarked(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":20,"table":{"tableRows":[{"tableCells":[
+			{"content":[{"paragraph":{"elements":[{"startIndex":4,"endIndex":10,"textRun":{"content":"cell\n"}}]}}]}]}]}}]},
+		"comments":[{"id":"INCELL","range":{"startIndex":4,"endIndex":8}}]}`
+	text, warnings := Text(parse(t, raw))
+	if len(warnings) != 0 {
+		t.Fatalf("warnings = %v, want none", warnings)
+	}
+	if !strings.Contains(text, "[[c:INCELL]]cell[[/c]]") {
+		t.Errorf("Text() = %q, want the cell text marked", text)
 	}
 }

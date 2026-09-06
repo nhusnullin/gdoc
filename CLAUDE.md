@@ -50,6 +50,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/suggestions/` | what is pending, and what stopped being pending since the snapshot |
 | `go/internal/docx/` | the docx export reader, and the witness match against threads |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
+| `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/live/` | the one opt-in end-to-end test. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
@@ -165,8 +166,9 @@ needs a test proving `build()` is called in one module only.
 
 Write levels live in the policy, never at the call site. `LevelSuggest` is what
 a handed-in id gets: read, comment, suggest, and never a direct edit.
-`LevelFull` is what a create returned, or what `GrantInPlace` raises a handed-in
-id to for one process. A call site cannot widen its own reach by phrasing a
+`LevelFull` is what a create returned, and `Learn` is the only door to it. M7
+adds a per-run in-place grant back beside its caller; read "`GrantInPlace` is
+gone until M7" below before looking for one now. A call site cannot widen its own reach by phrasing a
 request differently, because the policy reads the method, the URL and the body:
 a `batchUpdate` on a handed-in document is refused inside the process unless the
 body says `SUGGEST`.
@@ -435,9 +437,13 @@ Rules that hold across all three:
   `comments` key is measured rather than documented, so the decoder is loose on
   purpose.
 - **Argument parsing is strict.** An unknown flag, a repeated flag, a missing
-  value and an extra positional argument each fail naming the offender. A
-  command that accepts and ignores what it did not understand tells the caller
-  it did something it did not.
+  value, an empty value written either way, an extra positional argument, and a
+  flag standing where another flag's value belongs each fail naming the
+  offender. A command that accepts and ignores what it did not understand tells
+  the caller it did something it did not. The last of those is why `parseArgs`
+  looks the next argument up in the command's own flag set rather than refusing
+  anything starting with a dash: a cursor is base64url, and `-` is in that
+  alphabet.
 - **Reads only.** Nothing in these commands POSTs to Docs or Drive. The single
   write anywhere is the snapshot in a local markdown file, and only when the
   caller named that file with `--md`.
@@ -446,10 +452,19 @@ Rules that hold across all three:
   costs an export. A thread is joined to an exported comment on its words and
   its author's name, because the docx carries no Drive comment id. An export
   that could not be read is a warning and every thread `unmatched`, not a failed
-  listing.
-- Pictures, drawings and equations print as `[image]`, `[drawing]` and
-  `[equation]` placeholders, each with a warning. Reading them is
+  listing. The export URL carries `mimeType` and nothing else: `files.export`
+  defines two parameters, measured against the live Drive v3 discovery document
+  on 2026-09-06, and `supportsAllDrives` is on `files.get` instead. Sending a
+  parameter the method does not define is one the server may reject, and it
+  would take every `--witness` run with it.
+- Pictures, drawings, equations and objects print as `[image]`, `[drawing]`,
+  `[equation]` and `[object]` placeholders, each with a warning. `[object]` is
+  the embedded object the read could not classify: calling it an image would be
+  a guess. Reading any of them is
   `docs/backlog/read-pictures-and-drawings.md`.
+- Lists come back as `- ` items, two spaces of indent per level. A numbered list
+  reads back as a bulleted one: telling the two apart needs the document's
+  `lists` map, which this milestone does not read.
 
 ### `read`'s text, and why every marker is escaped
 
@@ -465,6 +480,12 @@ snapshot. Six markers, and the meaning of each:
 | `<!-- tab t.0: Title -->` | the tab that follows, printed only when there is more than one |
 | `# ` to `###### ` | a `HEADING_n` paragraph. `TITLE` and `SUBTITLE` are plain paragraphs |
 | `[image]`, `[drawing]`, `[equation]`, `[object]` | content this milestone does not read |
+
+**A comment range covering no characters is a warning, not a marker.** Armed, it
+puts its own close before its own open at the shared index, and at the end of
+the last run the closes-only drain emits the close and leaves the open behind.
+Either way the text carries half a pair, which is exactly what the escaping
+below exists to make impossible.
 
 **A literal `{+`, `{-`, `+}`, `-}`, `[[` or `]]` in the document's own text is
 escaped with a backslash.** That is not tidiness. Without it a document that
@@ -504,10 +525,15 @@ writes those; M2 defines the shape and carries them through untouched).
 Four rules, and each one has a reason:
 
 - **The read is strict.** `goccy/go-yaml` with `yaml.Strict()`: an unknown key,
-  a key given twice, more than one YAML document, a missing `document_id`, a
-  `document_id` that is not a Drive id, a `kind` that is neither `insertion` nor
-  `deletion`. Each is refused naming the key, and the file is left untouched. A
-  block gdoc half understands is a pairing it may act on wrongly.
+  a key given twice, a missing `document_id`, a `document_id` that is not a
+  Drive id, a `kind` that is neither `insertion` nor `deletion`. Each is refused
+  naming the key, and the file is left untouched. A block gdoc half understands
+  is a pairing it may act on wrongly. The front matter is one YAML document by
+  construction, so there is no check for a second one: it closes at the first
+  `---` or `...` line, which is where a second document would have begun. The
+  author's own keys are checked too, and on every path: a file being paired for
+  the first time has no `gdoc:` key at all, so checking only when one is already
+  there would check every case but the first.
 - **`schema` must be exactly 1.** A block stating another version is refused
   rather than read on a guess. `Schema` is the constant; bumping it is a
   decision, not a refactor.
@@ -516,13 +542,29 @@ Four rules, and each one has a reason:
   unchanged, and a file with no front matter at all gets the block added with
   new delimiters. `frontmatter.Read` and `frontmatter.Write` share one parse, so
   they cannot disagree about where the span is.
+- **The write is checked against its own parse before it leaves the package.**
+  A string carrying a control character is written double quoted, because the
+  emitter writes it as a plain scalar the parser reads differently: a tab inside
+  one is dropped on the way back in, and a bare carriage return produces a block
+  that fails to parse at all. Google Docs puts a tab in a text run wherever the
+  author typed one, so this is the snapshot's own words. `verify` then renders
+  the block, reads it back and renders it again, and refuses a block whose two
+  renderings differ. The reason it has to be a refusal rather than a warning is
+  that `Write` reads the block it finds before replacing it: a block gdoc broke
+  is a note gdoc would then never touch again.
 - **The snapshot is written after a successful read, never before.** A read that
   failed knows nothing about what is pending, and a snapshot taken then would
   report everything this run could not see as gone on the next one. The write
-  goes through a temp file in the same directory and a rename, keeping the
-  file's mode, because the markdown is the source and gdoc is not its only
-  reader. A file whose block names another document is refused rather than
-  repaired.
+  goes through `internal/atomicfile`, a temp file in the same directory and a
+  rename, keeping the file's mode, because the markdown is the source and gdoc
+  is not its only reader. A file whose block names another document is refused
+  rather than repaired.
+- **What is pending is a question about ids.** `suggestions.List` drops the
+  suggestions whose text is only whitespace, which say nothing a reader can act
+  on, so `GoneSince` is given `suggestions.IDs` instead: a suggestion the author
+  has since edited down to a space is still in the document, and putting it in
+  `gone_since_last_look` would be a false fact in the one field the skill judges
+  accepted-or-rejected from.
 
 ### `GrantInPlace` is gone until M7, and `AllowCreateIn` stayed
 
@@ -545,6 +587,13 @@ production callers here, which is the other half of what M2 was asked to settle.
 | `make vet` | `go vet ./...` and the `gofmt -l` check |
 | `make build` | `bin/gdoc`, for this machine |
 | `make dist` | the three platform binaries |
+
+`GDOC_LIVE_TEST=1` runs the one opt-in end-to-end test, in `go/internal/live`.
+It then needs `GDOC_LIVE_DOC_ID=<document id>`, and there is no default: the
+guard is opened with exactly the document the run names. It reads, and creates
+nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
+docx export into `testdata/`, which is a real document's content, so a person
+redacts those before they are committed.
 
 `make dist` builds darwin/arm64, darwin/amd64 and windows/amd64 with
 `CGO_ENABLED=0`, so each one is static and the binary is the whole dependency.

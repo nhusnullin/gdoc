@@ -74,11 +74,13 @@ var driveGetParams = map[string]bool{
 
 // driveExportParams are the parameters files.export may carry. This is the one
 // read that asks for bytes, so `alt` belongs here and nowhere else. No `fields`:
-// the answer is a file, and a field mask has nothing to select in it.
+// the answer is a file, and a field mask has nothing to select in it. No
+// `supportsAllDrives` either: files.export does not define it, measured against
+// the live Drive v3 discovery document on 2026-09-06, and an allowlist naming a
+// parameter the method does not have permits a request nothing should send.
 var driveExportParams = map[string]bool{
-	"alt":               true,
-	"mimeType":          true, // which export format, narrowed further by checkExportMime
-	"supportsAllDrives": true,
+	"alt":      true,
+	"mimeType": true, // which export format, narrowed further by checkExportMime
 }
 
 // driveCommentListParams are the parameters comments.list may carry.

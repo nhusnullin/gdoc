@@ -48,7 +48,7 @@ var placeholders = map[string]struct{ mark, noun string }{
 // warnings the projection raised: a placeholder printed in place of content,
 // and a comment range it could not place in the text.
 func Text(d *docs.Document) (string, []string) {
-	e := &emitter{seen: map[string]bool{}, notes: map[string]bool{}}
+	e := &emitter{seen: map[string]bool{}}
 	tabIDs := map[string]bool{}
 	for _, tab := range d.Tabs {
 		tabIDs[tab.ID] = true
@@ -103,7 +103,6 @@ type emitter struct {
 	events   []event
 	cur      int
 	seen     map[string]bool
-	notes    map[string]bool
 	order    []note
 	warnings []string
 }
@@ -139,6 +138,16 @@ func (e *emitter) startTab(t docs.Tab, ranges map[string]docs.Range) {
 			continue
 		}
 		e.seen[id] = true
+		if r.Start == r.End {
+			// A range covering no characters marks nothing. Arming it anyway
+			// puts the close before the open at the same index, and at the end
+			// of the last run the closes-only drain emits the close and leaves
+			// the open behind: either way the text carries a marker that is not
+			// a pair, which is what the escaping exists to make impossible.
+			e.warnings = append(e.warnings,
+				fmt.Sprintf("comment %s: its range %d..%d covers no text, so it is not marked", id, r.Start, r.End))
+			continue
+		}
 		if !covers(spans, r.Start) || !covers(spans, r.End) {
 			e.warnings = append(e.warnings,
 				fmt.Sprintf("comment %s: its range %d..%d is not in the text of tab %s, so it is not marked", id, r.Start, r.End, r.Tab))
@@ -382,14 +391,19 @@ func (e *emitter) plain(rs []docs.Run) {
 // referenced twice is one entry under the body, which is what the document
 // shows.
 func (e *emitter) footnote(r docs.Run) string {
+	// The number already recorded for this footnote, so a second reference
+	// prints what the first one did. Counting again would number the same note
+	// twice over when Docs left the number out of the run.
+	for _, n := range e.order {
+		if n.id == r.FootnoteID {
+			return n.number
+		}
+	}
 	n := r.Text
 	if n == "" {
 		n = strconv.Itoa(len(e.order) + 1)
 	}
-	if !e.notes[r.FootnoteID] {
-		e.notes[r.FootnoteID] = true
-		e.order = append(e.order, note{number: n, id: r.FootnoteID})
-	}
+	e.order = append(e.order, note{number: n, id: r.FootnoteID})
 	return n
 }
 
@@ -401,7 +415,11 @@ func (e *emitter) appendFootnotes(d *docs.Document) {
 	}
 	e.chunk("---")
 	for _, n := range e.order {
-		e.chunk("[^" + n.number + "]: " + escape(d.Footnotes[n.id]))
+		// A footnote's paragraphs are joined with newlines, and a chunk is one
+		// line, so they become spaces. Dropping them instead glued the last word
+		// of one paragraph to the first word of the next.
+		text := strings.ReplaceAll(d.Footnotes[n.id], "\n", " ")
+		e.chunk("[^" + n.number + "]: " + e.capture(func() { e.writeText(text, -1) }))
 	}
 }
 
@@ -438,26 +456,6 @@ func (e *emitter) writeText(s string, start int) {
 	if track {
 		e.drain(idx, true)
 	}
-}
-
-// escape is writeText with nothing tracked, for a string that is not part of
-// the indexed body: a footnote's text.
-func escape(s string) string {
-	rs := []rune(s)
-	var b strings.Builder
-	for i := 0; i < len(rs); i++ {
-		if i+1 < len(rs) && isEscapePair(rs[i], rs[i+1]) {
-			b.WriteString("\\")
-			b.WriteRune(rs[i])
-			b.WriteRune(rs[i+1])
-			i++
-			continue
-		}
-		if rs[i] != '\n' {
-			b.WriteRune(rs[i])
-		}
-	}
-	return b.String()
 }
 
 func isEscapePair(a, b rune) bool {

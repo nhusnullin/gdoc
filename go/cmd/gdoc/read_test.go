@@ -633,3 +633,107 @@ func outside(src string) string {
 	}
 	return strings.Join(out, "\n")
 }
+
+// The projection's warnings reach the envelope. `read` prints a placeholder in
+// place of content it cannot read, and a caller that gets the text without the
+// warning believes it read the whole document.
+func TestReadCarriesTheProjectionWarnings(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "internal", "docs", "testdata", "objects.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stubSession(t, &fakeSession{json: map[string]string{"docs.googleapis.com": string(raw)}})
+
+	got, code := runJSON(t, "read", fixtureDocID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("read: %v (exit %d)", got, code)
+	}
+	ws := warningsOf(t, got)
+	for _, want := range []string{"[image]", "[drawing]", "[equation]"} {
+		if !hasWarning(ws, want) {
+			t.Errorf("no warning names %s: %v", want, ws)
+		}
+	}
+}
+
+// A comment the Docs read returned with no range this binary could read is a
+// warning on `read` too. The text marks ranges, so a comment with no range is
+// one the text cannot show, and silence reads as a document with no such
+// comment in it.
+func TestReadNamesTheCommentsItCouldNotPlace(t *testing.T) {
+	doc := `{"documentId":"` + fixtureDocID + `","title":"T","body":{"content":[
+		{"startIndex":1,"endIndex":6,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":6,"textRun":{"content":"Text\n"}}]}}]},
+		"comments":[{"id":"NORANGE","anchor":"kix.abc"}]}`
+	stubSession(t, &fakeSession{json: map[string]string{"docs.googleapis.com": doc}})
+
+	got, code := runJSON(t, "read", fixtureDocID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("read: %v (exit %d)", got, code)
+	}
+	if ws := warningsOf(t, got); !hasWarning(ws, "NORANGE") {
+		t.Errorf("warnings = %v, want one naming the comment with no range", ws)
+	}
+}
+
+// A flag given where a value belongs is refused naming both. Swallowing it read
+// `--since --witness` as a cursor and failed naming the cursor, which is not
+// the problem the caller has.
+func TestAFlagIsNotSwallowedAsAnotherFlagsValue(t *testing.T) {
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", "--witness")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("comments: %v (exit %d), want a refusal", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if !strings.Contains(msg, "--since") || !strings.Contains(msg, "--witness") {
+		t.Errorf("error = %q, want it to name both flags", msg)
+	}
+}
+
+// An empty value is refused whichever way it was written. `--md=` was already
+// refused; `--md ""` reached os.ReadFile and failed naming the wrong problem.
+func TestAnEmptyFlagValueIsRefusedBothWaysItCanBeWritten(t *testing.T) {
+	for _, args := range [][]string{
+		{"suggestions", fixtureDocID, "--md", ""},
+		{"suggestions", fixtureDocID, "--md="},
+	} {
+		got, code := runJSON(t, args...)
+		if code == 0 || got["ok"] != false {
+			t.Fatalf("%v: %v (exit %d), want a refusal", args, got, code)
+		}
+		if msg, _ := got["error"].(string); !strings.Contains(msg, "empty value") {
+			t.Errorf("%v: error = %q, want it to name the empty value", args, msg)
+		}
+	}
+}
+
+// The note's mode is what it was. gdoc is not the only reader of the markdown,
+// and a note somebody made group readable stays that way.
+func TestTheSnapshotWriteKeepsTheNotesMode(t *testing.T) {
+	stubSession(t, docsAndComments(t))
+	stubNow(t, time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC))
+	path := copyToTemp(t, "paired.md")
+	if err := os.Chmod(path, 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "suggestions", fixtureDocID, "--md", path)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("suggestions: %v (exit %d)", got, code)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mode := info.Mode().Perm(); mode != 0o640 {
+		t.Errorf("mode = %v, want 0640", mode)
+	}
+	// And nothing was left beside it.
+	entries, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("the directory holds %d entries, want just the note", len(entries))
+	}
+}

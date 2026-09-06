@@ -34,8 +34,12 @@ Strains: none.
   repo untouched as reference until v2 replaces its last use, then its removal
   is a separate decision. Nothing maintains it.
 - Platforms: darwin/arm64, darwin/amd64, windows/amd64. No linux.
-- Live tests follow v1's convention: skip without credentials, create documents
-  only in the Drive test folder, never touch a document gdoc did not create.
+- Live tests split by direction, corrected at M2. A live **read** may be pointed
+  at a document the run names and reads nothing else: `internal/live` skips
+  unless `GDOC_LIVE_TEST=1` and then needs `GDOC_LIVE_DOC_ID`, with no default.
+  A live **write** follows v1's convention: create documents only in the Drive
+  test folder, and never touch a document gdoc did not create. M6 is the first
+  milestone with a production writer to run one.
 
 ## The milestones
 
@@ -113,7 +117,10 @@ milestone asked; M7 adds it back beside its caller. `AllowCreateIn` stayed,
 because the transport's whole create path reads it and M6 needs that path.
 `internal/gapi` is the fourth room in the import allowlist and builds no client
 of its own. `goccy/go-yaml` is the first third-party module, named in
-`allowedModules` with its reason. The result is documented in CLAUDE.md under
+`allowedModules` with its reason. The live test reads a document the operator
+names and creates nothing, which is why the standing fact above now splits live
+reads from live writes: a live write needs a production writer, and M6 is the
+first milestone with one. The result is documented in CLAUDE.md under
 "v2 lives at `go/`", and in the README under "The Go rewrite".
 
 What M2 leaves for M3:

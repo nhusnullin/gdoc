@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -325,5 +326,66 @@ func TestAThreadWithNoRepliesCarriesAnEmptyList(t *testing.T) {
 	}
 	if !strings.Contains(string(b), `"range":null`) {
 		t.Errorf("an unplaced thread must print range: null, got %s", b)
+	}
+}
+
+// endlessReader is Drive answering every page with another token. The loop's
+// exit used to be entirely Drive's to give.
+type endlessReader struct {
+	calls int
+	token string
+}
+
+func (e *endlessReader) GetJSON(_ context.Context, _ string, into any) error {
+	e.calls++
+	token := e.token
+	if token == "" {
+		token = "page" + strconv.Itoa(e.calls)
+	}
+	return json.Unmarshal([]byte(`{"nextPageToken":"`+token+`","comments":[]}`), into)
+}
+
+// A listing that never ends fails naming the bound. The alternative is a hang
+// with no output and no exit code, which is the one thing the envelope promises
+// cannot happen.
+func TestAListingThatNeverEndsFailsRatherThanHanging(t *testing.T) {
+	f := &endlessReader{}
+	got, err := Fetch(context.Background(), f, "DOC1", nil)
+	if err == nil {
+		t.Fatalf("Fetch() = %d comments and no error, want an error", len(got))
+	}
+	if !strings.Contains(err.Error(), "did not end") {
+		t.Errorf("Fetch() = %q, want an error naming the bound", err)
+	}
+	if f.calls != maxPages {
+		t.Errorf("Fetch() made %d calls, want the %d it is bounded to", f.calls, maxPages)
+	}
+}
+
+// A page token Drive repeats is a listing that is not advancing, and it is
+// caught on the second call rather than after the full bound.
+func TestARepeatedPageTokenIsRefused(t *testing.T) {
+	f := &endlessReader{token: "same"}
+	if _, err := Fetch(context.Background(), f, "DOC1", nil); err == nil || !strings.Contains(err.Error(), "repeated its page token") {
+		t.Fatalf("Fetch() = %v, want an error naming the repeated token", err)
+	}
+	if f.calls != 2 {
+		t.Errorf("Fetch() made %d calls, want 2", f.calls)
+	}
+}
+
+// The marker is the first whitespace-separated token, and a tab is whitespace.
+// Cutting on one separator at a time left `ai:<tab>text` as one token, so the
+// comment that asked gdoc to act read as a comment addressed to nobody.
+func TestAMarkerSeparatedByATabIsStillAMarker(t *testing.T) {
+	for _, content := range []string{"ai:\tanswer this", "ai?\r\nand a question", "  ai!\ttyped with a tab"} {
+		if got := markerOf(content); got == MarkerNone {
+			t.Errorf("markerOf(%q) = %q, want the marker it opens with", content, got)
+		}
+	}
+	for _, content := range []string{"ai:no-space", "AI:\tshouting", "not ai: at the front"} {
+		if got := markerOf(content); got != MarkerNone {
+			t.Errorf("markerOf(%q) = %q, want %q", content, got, MarkerNone)
+		}
 	}
 }

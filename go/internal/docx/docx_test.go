@@ -186,8 +186,12 @@ func TestExportAsksForTheDocxMimeOnAllDrives(t *testing.T) {
 	if q.Get("mimeType") != docxMime {
 		t.Errorf("mimeType = %q, want the docx type", q.Get("mimeType"))
 	}
-	if q.Get("supportsAllDrives") != "true" {
-		t.Error("the export does not carry supportsAllDrives, and the test folder is a shared drive")
+	// files.export defines fileId and mimeType and nothing else, so a parameter
+	// beyond them is one the server may reject and take the whole witness with.
+	for _, name := range []string{"supportsAllDrives", "fields", "alt"} {
+		if q.Has(name) {
+			t.Errorf("the export carries %s, which files.export does not define", name)
+		}
 	}
 }
 

@@ -18,6 +18,7 @@ package comments
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -27,6 +28,12 @@ import (
 // pageSize is the largest page Drive's comments.list serves. Fewer, larger
 // pages is fewer round trips through the guard for the same threads.
 const pageSize = "100"
+
+// maxPages bounds the listing. 100 pages of 100 is ten thousand comments, which
+// is more than a document under review has; past it the answer is a report, not
+// a document, and a listing still handing back tokens is a Drive that is not
+// advancing rather than a document that is very large.
+const maxPages = 100
 
 // fieldMask is exactly what a thread is made of, and nothing else. Asking for
 // every field would carry the permission surface the guard refuses to reach by
@@ -162,17 +169,24 @@ type listPage struct {
 func Fetch(ctx context.Context, s Reader, id string, since *Cursor) ([]RawComment, error) {
 	var out []RawComment
 	token := ""
-	for {
-		var page listPage
-		if err := s.GetJSON(ctx, ListURL(id, token, since.since()), &page); err != nil {
+	for page := 0; page < maxPages; page++ {
+		var answer listPage
+		if err := s.GetJSON(ctx, ListURL(id, token, since.since()), &answer); err != nil {
 			return nil, err
 		}
-		out = append(out, page.Comments...)
-		if page.NextPageToken == "" {
+		out = append(out, answer.Comments...)
+		if answer.NextPageToken == "" {
 			return out, nil
 		}
-		token = page.NextPageToken
+		if answer.NextPageToken == token {
+			return nil, fmt.Errorf("the comment listing repeated its page token after %d comments, so it is not advancing", len(out))
+		}
+		token = answer.NextPageToken
 	}
+	// The loop is bounded because the exit is Drive's to give. A listing that
+	// keeps handing back a token is a hang with no output and no exit code,
+	// which is the one thing the output contract promises cannot happen.
+	return nil, fmt.Errorf("the comment listing did not end after %d pages of %s comments each", maxPages, pageSize)
 }
 
 // Threads joins the Drive listing to the Docs ranges, in the order Drive
@@ -236,11 +250,12 @@ func replies(raw []RawReply) []Reply {
 // including `AI:` and `ai:no-space`: the marker is what makes gdoc act, and a
 // loose match is gdoc acting on a sentence nobody addressed to it.
 func markerOf(content string) string {
-	token, _, _ := strings.Cut(strings.TrimLeft(content, " \t\r\n"), " ")
-	token, _, _ = strings.Cut(token, "\n")
-	token = strings.TrimRight(token, "\r\t")
-	if markers[token] {
-		return token
+	// Fields, so the sentence is cut the way the doc comment says it is. Cutting
+	// on one separator at a time left `ai:<tab>answer this` as a single token,
+	// which read as no marker at all.
+	fields := strings.Fields(content)
+	if len(fields) > 0 && markers[fields[0]] {
+		return fields[0]
 	}
 	return MarkerNone
 }

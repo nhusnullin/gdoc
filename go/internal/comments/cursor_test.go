@@ -116,3 +116,22 @@ func TestNextCursorStepsOverATimeItCannotRead(t *testing.T) {
 		t.Errorf("cursor = %v, want the one time that read", got)
 	}
 }
+
+// Padded base64url is what an encoder that does not know the raw form writes.
+// Reading it costs a line, and the branch that does has a case rather than a
+// comment saying why it is there.
+func TestPaddedBase64IsRead(t *testing.T) {
+	at := time.Date(2026, 9, 6, 11, 30, 0, 0, time.UTC)
+	raw := []byte(`{"v":1,"t":"` + at.Format(time.RFC3339) + `"}`)
+	padded := base64.URLEncoding.EncodeToString(raw)
+	if !strings.HasSuffix(padded, "=") {
+		t.Fatalf("the fixture %q carries no padding, so it tests nothing", padded)
+	}
+	got, err := ParseCursor(padded)
+	if err != nil {
+		t.Fatalf("ParseCursor(%q) = %v", padded, err)
+	}
+	if !got.At.Equal(at) {
+		t.Errorf("ParseCursor() = %v, want %v", got.At, at)
+	}
+}
