@@ -86,15 +86,24 @@ depend on: the **docx export reader** (unzip, read `word/comments.xml` and the
 `commentRangeStart`/`End` markers), because the export is the honest witness
 the write milestones verify against; and the **versioned `gdoc:` front-matter
 schema**, designed here and reviewed by Nail, because publish must write it
-crash-safely from its first version: ids, publish record, schema version, the
-per-section fingerprint pairs alignment will consume, plus the observation
-state M3 and M4 need across sessions: the last-seen pending-suggestion
-snapshot and the provenance of gdoc's own proposals, committed only after a
-successful suggestions read. Everything outside the `gdoc:` key is preserved
-byte-identically. The YAML dependency (`goccy/go-yaml`, see SPEC.md) enters
-here, with strict decoding: duplicate and unknown keys rejected, exactly one
-document, required values validated rather than defaulting to useful-looking
-zeros.
+crash-safely from its first version: ids, publish record, schema version, plus
+the observation state M3 and M4 need across sessions: the last-seen
+pending-suggestion snapshot and the provenance of gdoc's own proposals,
+committed only after a successful suggestions read. Everything outside the
+`gdoc:` key is preserved byte-identically. The YAML dependency
+(`goccy/go-yaml`, see SPEC.md) enters here, with strict decoding: duplicate
+and unknown keys rejected, exactly one document, required values validated
+rather than defaulting to useful-looking zeros.
+
+**Corrected 2026-09-06, during the M2 re-cut.** Two things this paragraph
+used to promise are withdrawn, and one is added. Withdrawn: the per-section
+fingerprint pairs (SPEC.md "The diff" says why), and any rule in the binary
+that decides whether a comment is answered or a gone suggestion was accepted.
+The binary reports facts; the skills judge. Added: `read`, the document as
+text the skill reads, with pending suggestions inline and comment anchors
+marked, plus the raw structure with character indexes on a flag. It is the
+piece review (M3) and alignment (M8) both stand on. Reading pictures and
+drawings is in `docs/backlog/`.
 
 ### M3. Writing, and the first usable review
 
@@ -128,7 +137,7 @@ confirms the module graph gained nothing transitive.
 ### M6. Publish
 
 Render, upload with conversion into the given folder, verify by export, write
-the front matter crash-safely to the M2 schema, fingerprints included.
+the front matter crash-safely to the M2 schema: ids and the publish record.
 Failure policy is rollback-first: if the front-matter write fails after a
 successful upload, trash the created document and verify `trashed=true`; only
 if the rollback also fails does the error carry the live id and the exact
@@ -143,18 +152,23 @@ styling under the per-run write grant, the finishing checklist page under a
 named range, `--new` through the generator including the document-content
 extraction it needs, and the nothing-to-protect detection that offers rather
 than takes. `--new` also defines its state transition: when the new document
-replaces the paired one, the front matter gets the new id and fresh fingerprint
-baselines in the same change; a document left unpaired is refused by alignment
+replaces the paired one, the front matter gets the new id and a fresh publish
+record in the same change; a document left unpaired is refused by alignment
 until it is paired on purpose. Acceptance: spec item 5, the ten-feature
 preservation run.
 
 ### M8. The diff, alignment, and the align skill
 
-The two-sided diff command over the document and the hub markdown.
-Drift-direction classification from the M2 fingerprints (hub moved, document
-moved, conflict). The align skill: composes, judges, proposes both ways, never
-deletes from the hub. The second dependency decision lands here: `sergi/go-diff`
-(proven in the spike) with a written reason, or a hand-rolled word diff.
+The align skill over `read`'s output and the hub markdown it reads itself:
+composes the comparison, judges what matters with Nail's word on which side is
+the source of truth, proposes both ways, never deletes from the hub, and works
+on a document gdoc never published. Whether a binary diff command earns its
+place at all is decided here, and with it the second dependency decision:
+`sergi/go-diff` (proven in the spike) with a written reason, a hand-rolled word
+diff, or nothing, if the skill reads both sides well enough without one.
+(Corrected 2026-09-06: this used to name a two-sided diff command and
+drift-direction classification from M2 fingerprints. Both are withdrawn, see
+SPEC.md "The diff".)
 
 ### M9. Release
 
@@ -173,9 +187,9 @@ debugs with. The review skill lands with the writes in M3, not at the end,
 because v1 is retired now and answering comments is the daily need; the plan
 is only honest if "usable early" names the milestone where it becomes true.
 The front-matter schema is designed in M2 even though publish arrives in M6,
-because publish is one-shot and cannot retro-fit fingerprints onto documents
-it already made. Generator parity is its own milestone because it is the
+because publish is one-shot and the record it writes (ids, publish record,
+schema version) has to be right from its first version. Generator parity is its own milestone because it is the
 largest single risk and deserves its own gate. Restyle after publish, because
 `--new` and the checklist depend on the generator. Alignment last among the
-features, because it consumes everything: the readers, the fingerprints, the
+features, because it consumes everything: the readers, `read`'s output, the
 proposals. Platform work is continuous from M1; only packaging waits.

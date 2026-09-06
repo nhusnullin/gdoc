@@ -237,16 +237,22 @@ each comment: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an un
 gdoc has answered, is reported and never acted on. The marker is the trigger,
 always: stickiness carries context, never authority.
 
-**The 🤖 reply is the receipt, and the document is the ledger.** A marked
-comment counts as handled exactly when a 🤖 reply newer than it sits in its
-thread. No local record of handled comments exists anywhere, so any session at
-any time recomputes the open work from the threads alone, and gdoc's own
-replies surfacing in the next poll read as receipts, not as news. Two ordering
-rules follow: the receipt is written last, only after the action verifiably
-landed; and before re-acting on an old marked comment, the skill checks the
-pending proposals and their front-matter provenance, so a crash between the
-action and the receipt resolves to writing the missing receipt, never to
-acting twice.
+**The 🤖 reply is the receipt, and the document is the ledger.** No local
+record of handled comments exists anywhere, so any session at any time
+recomputes the open work from the threads alone, and gdoc's own replies
+surfacing in the next poll read as receipts, not as news. Two ordering rules
+follow: the receipt is written last, only after the action verifiably landed;
+and before re-acting on an old marked comment, the skill checks the pending
+proposals and their front-matter provenance, so a crash between the action
+and the receipt resolves to writing the missing receipt, never to acting twice.
+
+**Corrected 2026-09-06: whether a comment is answered is the skill's
+judgement, not a rule in the binary.** This section used to say a marked
+comment "counts as handled exactly when a 🤖 reply newer than it sits in its
+thread". That is a heuristic, and a wrong one when the reply was an
+acknowledgment or a follow-up question changed what was asked. The binary
+reports the facts of a thread: every reply, its author, its time, and whether
+it opens with 🤖. The skill reads them and decides what still needs an answer.
 
 ### `reply`
 
@@ -297,15 +303,26 @@ reading; it never makes them.
 
 ### The diff (what `align` composes)
 
-The binary command emits both sides and the raw differences: the document's
-current content and the hub markdown, side by side. Whether a difference matters
-is the skill's judgement. Alignment runs both ways, writes to the hub only with
-agreement, and never deletes from it: content that exists only in the hub is
-unpublished work, not drift.
+The binary emits the document's current content in a form the skill can read
+(`read`: headings, paragraphs, tables, pending suggestions inline with their
+ids, comment anchors marked). The skill reads the hub markdown itself, from
+disk, and composes the comparison. Whether a difference matters is the
+skill's judgement, and Nail can tell it which side is the source of truth.
+Alignment runs both ways, writes to the hub only with agreement, and never
+deletes from it: content that exists only in the hub is unpublished work, not
+drift. Alignment also works on a document gdoc never published: there is no
+paired note then, and the person or the skill supplies the hub context.
 
-How gdoc classifies which side moved since the last publish is **deferred to the
-plan** (the front-matter fingerprint scheme is the standing recommendation). The
-front matter is the only place that state may live.
+**Corrected 2026-09-06.** This section used to say the binary "emits both
+sides and the raw differences", and that classifying which side moved since
+the last publish was deferred to the plan with a per-section fingerprint
+scheme as the standing recommendation. Both are withdrawn, Nail's call. The
+binary reads the document only, because making it read markdown adds coupling
+and does nothing for an external document. Fingerprints are dropped: they
+answer "did this section change since publish", which says nothing about
+meaning, nothing about authority, and nothing at all about a document without
+a publish record. The front matter records facts (the pairing, the publish
+record, gdoc's own proposals) and no content baseline.
 
 ## The generator and `house.yaml`
 
@@ -411,6 +428,7 @@ Each is a test or a checkable run, not a claim.
 
 ## Open questions, deferred to the plan
 
-- The front-matter schema and the drift-direction classification for `align`.
+- The front-matter schema. (The drift-direction classification for `align`
+  was on this line until 2026-09-06; it is withdrawn, see "The diff".)
 - Go module layout in this repo, beside the Python v1.
 - Which platforms get built binaries.
