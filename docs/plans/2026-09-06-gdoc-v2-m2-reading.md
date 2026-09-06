@@ -349,11 +349,16 @@ whether the refusal still works or not.
   - `comments.Threads(raw []RawComment, d *docs.Document) ([]Thread, []string)`: joins ranges by id, sets `Marker` and `ByGdoc` per Technical Details, returns the ids the Docs read did not place.
   - `type Cursor struct { At time.Time }`, `comments.ParseCursor(s string) (*Cursor, error)` (refuses anything not `v:1`), `comments.NextCursor(prev *Cursor, threads []Thread) *Cursor` (newest `Modified` and reply `Created` seen, else `prev`), `(*Cursor).String() string`.
 
-- [ ] write the failing tests: `ListURL` carries exactly the allowed parameters and adds `startModifiedTime` only with a cursor; `Fetch` over a fake wire follows two pages and stops; markers for `ai:`, `ai?`, `ai!`, `AI:` (not a marker: exact match) and `none`; `ByGdoc` true only for a reply opening with 🤖; `Resolved` passes through; a thread without a range has `Range == nil` and its id in the unplaced list; `NextCursor` picks the newest time across comments and replies and falls back to `prev`; `ParseCursor` refuses `v:2` and non-base64, and round-trips `String()`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): comment threads as facts, with ranges, markers and the --since cursor`
+- ⚠️ **`supportsAllDrives` is not on this call, and the plan's URL above is wrong about it.** `comments.list` does not define the parameter: it belongs to the files collection, and the guard's `driveCommentListParams`, written from the Drive v3 reference, names `fields`, `pageSize`, `pageToken`, `includeDeleted` and `startModifiedTime` and not that one. Sending it would be refused inside the process by the guard's own query allowlist, so every comments read would die before the wire. The shared-drive 404 the global constraint describes is a files-collection problem; a comment collection hangs off a file already addressed by id. The milestone's other Drive call, the docx export in Task 8, still carries it.
+- ➕ `ListURL` builds its query through `url.Values.Encode` rather than concatenation. A page token is Drive's opaque string, and one carrying an `&` would end the parameter and start another: the request on the wire would then not be the request the guard judged. The test proves the URL by handing it to a real `guard.Policy.Judge`, not by comparing it to a second copy of the allowlist, which would pass while the command failed.
+- ⚠️ `Fetch` takes a local `Reader` interface (one `GetJSON`) rather than `*gapi.Session`, the same deviation `internal/docs` made and for the same reason: this room may not name `net/http`, and a test of it must not have to.
+- ➕ Three decisions the plan did not state, all written into the code's comments: `Threads` tolerates a nil document (no ranges, every thread unplaced) because the witness path reads threads with no Docs read behind them; a thread's `Replies` is never nil, so an empty thread prints `[]` rather than `null`; and `prev` is the cursor's floor rather than only its fallback, because a cursor that goes backwards makes the next poll re-report what this one just reported. A `modifiedTime` that does not parse is stepped over rather than failing the listing: one repeated thread is cheaper than a failed review.
+
+- [x] write the failing tests: `ListURL` carries exactly the allowed parameters and adds `startModifiedTime` only with a cursor; `Fetch` over a fake wire follows two pages and stops; markers for `ai:`, `ai?`, `ai!`, `AI:` (not a marker: exact match) and `none`; `ByGdoc` true only for a reply opening with 🤖; `Resolved` passes through; a thread without a range has `Range == nil` and its id in the unplaced list; `NextCursor` picks the newest time across comments and replies and falls back to `prev`; `ParseCursor` refuses `v:2` and non-base64, and round-trips `String()`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): comment threads as facts, with ranges, markers and the --since cursor`
 
 ---
 
