@@ -38,7 +38,7 @@ var noParams = map[string]bool{}
 // with real character ranges, which is M2's whole reason for the Docs read; it
 // needs includeTabsContent, so the two travel together.
 //
-// These four are the whole of documents.get
+// These are the three documents.get parameters
 // (https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/get)
 // plus the two system parameters gdoc sets, so a later milestone adds nothing
 // here.

@@ -274,11 +274,17 @@ whether the refusal still works or not.
   - The pre-tabs shape: when the JSON has no `tabs`, the top-level `body` is the one tab with id `t.0`.
   - `CommentRanges` decodes the top-level `comments` array loosely (`id`, and a range under whatever key the measured shape uses: try `range`, then `anchor.range`, then top-level `startIndex`/`endIndex`). An entry without a readable range goes to `Unplaced`. ⚠️ The shape is measured, not documented: the first live run records a redacted fixture into `testdata/` and the decoder is tightened to it in a follow-up commit.
 
-- [ ] write the failing tests on the fixtures: two tabs and `MultiTab()`; the pre-tabs fixture reads as one tab `t.0`; headings carry their style and table text lands in cells in reading order; runs carry their suggestion ids; the image and footnote runs carry their kinds and the footnote text is in `Footnotes`; `CommentRanges` places the ranged comment and lists the unplaced one; `URL` carries the three parameters and nothing else; `Fetch` over a fake wire sends `includeTabsContent=true` (assert on the request the fake saw)
-- [ ] run the tests and watch them fail
-- [ ] implement `docs.go` and `walk.go`; fix the `docsReadParams` comment
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the Docs read with tabs, the document tree, suggestion ids and comment ranges`
+- [x] write the failing tests on the fixtures: two tabs and `MultiTab()`; the pre-tabs fixture reads as one tab `t.0`; headings carry their style and table text lands in cells in reading order; runs carry their suggestion ids; the image and footnote runs carry their kinds and the footnote text is in `Footnotes`; `CommentRanges` places the ranged comment and lists the unplaced one; `URL` carries the three parameters and nothing else; `Fetch` over a fake wire sends `includeTabsContent=true` (assert on the request the fake saw)
+- [x] run the tests and watch them fail
+- [x] implement `docs.go` and `walk.go`; fix the `docsReadParams` comment
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the Docs read with tabs, the document tree, suggestion ids and comment ranges`
+
+➕ `Fetch` takes `docs.Reader`, a one-method interface (`GetJSON`), not `*gapi.Session`. A `*gapi.Session` satisfies it, so no caller changes. The reason is the boundary test: its import allowlist reads test files too, so a fake `http.RoundTripper` in `docs_test.go` would have made `internal/docs` a fifth room that names `net/http`. The interface keeps the reader pure and its tests wire-free, and the fake records the URL the reader built, which is the assertion the task asked for. Every reader package after this one takes the same seam.
+
+➕ The guard-refusal case moved out of `internal/docs`: with no wire in the room, the test that a refused id never reaches the transport belongs to the command layer, where Task 10 already asks for it. What `docs_test.go` proves instead is that `Fetch` hands the session's refusal back unwrapped.
+
+➕ `Run.Kind` has a sixth value, `object`: an embedded object carrying neither `imageProperties` nor `embeddedDrawingProperties`. Calling it an image would be a guess, and this package reports rather than guesses. Task 5's projection prints `[object]` for it.
 
 ---
 
