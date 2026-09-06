@@ -116,6 +116,85 @@ type Range struct {
 // the write milestones stop on it.
 func (d *Document) MultiTab() bool { return len(d.Tabs) > 1 }
 
+// Places says whether r names a position in this document: it ends after it
+// starts, it names a tab the document has, and both its endpoints fall inside
+// that tab's text.
+//
+// One rule, because two commands answer from it. read marks a comment's range
+// in the text and comments prints it as a position, and a range one of them
+// refuses while the other prints it is a false fact in whichever field the
+// skill reads. The indexes come out of the Docs comments key unchecked, and
+// that decoder is loose on purpose because the shape is measured rather than
+// documented, so an empty pair, an inverted pair, an index outside the text and
+// a tab the document does not have are all shapes it can hand over.
+func (d *Document) Places(r Range) bool {
+	for _, t := range d.Tabs {
+		if t.Places(r) {
+			return true
+		}
+	}
+	return false
+}
+
+// Places says whether r names a position in this one tab. Document.Places is
+// this same rule over every tab, so there is still one rule and two ways in.
+//
+// A walker arms from the tab it is walking, never from the document, and warns
+// from the document, which is the answer comments prints. The two answers only
+// differ when two tabs share an id, which the decoder can produce because a tab
+// carrying no id at all is called t.0: the document form would then answer off
+// the first of them, and a walker that armed a comment marker on that answer
+// would open a marker its own text never closes. That is the half a pair the
+// escaping exists to make impossible, so each tab answers for itself.
+func (t Tab) Places(r Range) bool {
+	return r.Start < r.End && r.Tab == t.ID && t.covers(r.Start, r.End)
+}
+
+// covers says whether both indexes fall inside this tab's text runs. An index
+// is in a run when it is at either end of it or between them, because a range
+// closing at the last character of a run closes at that run's end index.
+//
+// It is unexported on purpose: Places is the whole rule, and a caller reaching
+// past it for one third of the rule is how the two commands drift apart.
+func (t Tab) covers(start, end int) bool {
+	hasStart, hasEnd := coveringRuns(t.Body, start, end)
+	return hasStart && hasEnd
+}
+
+// coveringRuns walks the blocks once, tables walked into, and says whether
+// start and end each fell inside a text run. It stops as soon as both have.
+//
+// It allocates nothing on purpose. Places is asked once per comment, in both
+// commands, so building a slice of every run's index pair per comment walks the
+// whole tab and throws the walk away again for each one. A document near the
+// read's ceiling is a few hundred thousand runs, and the cost is then seconds
+// rather than the milliseconds an ordinary review document costs.
+func coveringRuns(bs []Block, start, end int) (hasStart, hasEnd bool) {
+	for _, b := range bs {
+		if b.Paragraph != nil {
+			for _, r := range b.Paragraph.Runs {
+				hasStart = hasStart || (start >= r.StartIndex && start <= r.EndIndex)
+				hasEnd = hasEnd || (end >= r.StartIndex && end <= r.EndIndex)
+				if hasStart && hasEnd {
+					return true, true
+				}
+			}
+			continue
+		}
+		for _, row := range b.Table {
+			for _, c := range row {
+				s, e := coveringRuns(c.Blocks, start, end)
+				hasStart = hasStart || s
+				hasEnd = hasEnd || e
+				if hasStart && hasEnd {
+					return true, true
+				}
+			}
+		}
+	}
+	return hasStart, hasEnd
+}
+
 // URL is the one read. includeTabsContent=true is not optional: without it the
 // answer covers the first tab and says nothing about the rest, and
 // commentsViewMode requires it. suggestionsViewMode is the only view carrying

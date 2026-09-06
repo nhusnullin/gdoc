@@ -503,9 +503,17 @@ pending marked in it:
 | `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet, with a warning |
 
 If the document's own text contains one of those markers, it comes back with a
-backslash in front of it, so a marker in the output is always gdoc's. `[object]`
+backslash in front of it, and a backslash the author typed comes back doubled.
+So the rule for reading the text back is a parity: an even run of backslashes is
+the author's own text and the marker behind it is gdoc's, an odd run ends in
+gdoc's escape and the marker behind it is the author's. The escaping is done one
+text run at a time, so a marker whose two halves fall in two runs, or a document
+character sitting against one of gdoc's own markers, can still reach the text
+unescaped. That gap is written up in
+`docs/backlog/escaping-across-run-boundaries.md`. `[object]`
 is an embedded object the read could not classify: calling it an image would be
-a guess. Tables become pipe tables and footnotes are appended after a `---` line.
+a guess. Tables become pipe tables, with a literal `|` in a cell escaped as
+`\|` so the row keeps its shape, and footnotes are appended after a `---` line.
 Lists come back as `- ` items, two spaces of indent per level, so a numbered
 list reads back as a bulleted one: telling the two apart needs the document's
 `lists` map, which this milestone does not read. `--structure`

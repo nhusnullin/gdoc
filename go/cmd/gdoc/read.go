@@ -57,11 +57,17 @@ var openSession = func(p *guard.Policy) (session, error) {
 // states the line it expects rather than parsing one back.
 var now = time.Now
 
-// docURLPatterns are the two URL shapes Nail pastes, ported from v1's
-// gdoc/docid.py. The editor URL is the usual one; the ?id= shape is what an
-// older Drive link and a shared link carry.
+// docURLPatterns are the URL shapes Nail pastes, ported from v1's
+// gdoc/docid.py. Three shapes, matched by two patterns: the editor URL is the
+// usual one, with or without the account segment below, and the ?id= shape is
+// what an older Drive link and a shared link carry.
+//
+// The optional u/<n>/ segment is the account the browser is signed in as, and
+// it is in the address bar of anybody signed into more than one Google account.
+// v1's two patterns miss it, so the paste comes back as "not a Google Docs
+// URL" for a URL that is one.
 var docURLPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`/document/d/([A-Za-z0-9_-]+)`),
+	regexp.MustCompile(`/document/(?:u/\d+/)?d/([A-Za-z0-9_-]+)`),
 	regexp.MustCompile(`[?&]id=([A-Za-z0-9_-]+)`),
 }
 

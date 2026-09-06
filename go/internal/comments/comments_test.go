@@ -211,11 +211,23 @@ func TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot(t *testing.T) {
 // id. Only AAAA1111 is placed, so the other two threads are the unplaced case.
 func document() *docs.Document {
 	return &docs.Document{
-		ID: testDocID,
+		ID:   testDocID,
+		Tabs: []docs.Tab{tabCovering("t.0", 1, 2000)},
 		CommentRanges: map[string]docs.Range{
 			"AAAA1111": {Tab: "t.0", Start: 1204, End: 1223},
 		},
 	}
+}
+
+// tabCovering is a tab holding one run over the given indexes. A range is only
+// a position when the tab it names has text there, so the fixtures carry the
+// text the ranges point into.
+func tabCovering(id string, start, end int) docs.Tab {
+	return docs.Tab{ID: id, Body: []docs.Block{{Paragraph: &docs.Paragraph{
+		StartIndex: start,
+		EndIndex:   end,
+		Runs:       []docs.Run{{Kind: docs.KindText, StartIndex: start, EndIndex: end}},
+	}}}}
 }
 
 func threadsFromFixtures(t *testing.T) ([]Thread, []string) {
@@ -518,33 +530,41 @@ func ids(raw []RawComment) []string {
 	return out
 }
 
-// A range that does not end after it starts places nothing. internal/view
-// refuses the same shape and warns, because the Docs comments key is measured
-// rather than documented and its decoder is loose on purpose. comments is the
-// command whose output names the range as a position, and M3 places proposals
-// from it, so it must not report one it would refuse to mark.
+// A range that places nothing leaves the thread unplaced. Four shapes: one that
+// does not end after it starts, an empty one, one whose end is outside the
+// tab's text, and one naming a tab the document does not have. The Docs
+// comments key is measured rather than documented and its decoder is loose on
+// purpose, so it can hand over all four. internal/view refuses the same four
+// and warns, through the same docs.Document.Places, and comments is the command
+// whose output names the range as a position, with M3 placing proposals from
+// it, so it must not report one read would refuse to mark.
 func TestAnUnusableRangeLeavesTheThreadUnplaced(t *testing.T) {
-	raw := []RawComment{{ID: "BACKWARDS"}, {ID: "EMPTY"}, {ID: "GOOD"}}
-	d := &docs.Document{CommentRanges: map[string]docs.Range{
-		"BACKWARDS": {Tab: "t.0", Start: 9, End: 3},
-		"EMPTY":     {Tab: "t.0", Start: 4, End: 4},
-		"GOOD":      {Tab: "t.0", Start: 3, End: 9},
-	}}
+	raw := []RawComment{{ID: "BACKWARDS"}, {ID: "EMPTY"}, {ID: "OUTSIDE"}, {ID: "NOTAB"}, {ID: "GOOD"}}
+	d := &docs.Document{
+		Tabs: []docs.Tab{tabCovering("t.0", 1, 20)},
+		CommentRanges: map[string]docs.Range{
+			"BACKWARDS": {Tab: "t.0", Start: 9, End: 3},
+			"EMPTY":     {Tab: "t.0", Start: 4, End: 4},
+			"OUTSIDE":   {Tab: "t.0", Start: 3, End: 900},
+			"NOTAB":     {Tab: "t.9", Start: 3, End: 9},
+			"GOOD":      {Tab: "t.0", Start: 3, End: 9},
+		},
+	}
 
 	threads, unplaced := Threads(raw, d)
 
-	if len(threads) != 3 {
-		t.Fatalf("Threads = %d threads, want 3", len(threads))
+	if len(threads) != 5 {
+		t.Fatalf("Threads = %d threads, want 5", len(threads))
 	}
-	for _, tr := range threads[:2] {
+	for _, tr := range threads[:4] {
 		if tr.Range != nil {
 			t.Errorf("thread %s carries range %+v, want none", tr.ID, *tr.Range)
 		}
 	}
-	if threads[2].Range == nil {
+	if threads[4].Range == nil {
 		t.Error("thread GOOD lost the range it had")
 	}
-	if want := []string{"BACKWARDS", "EMPTY"}; !reflect.DeepEqual(unplaced, want) {
+	if want := []string{"BACKWARDS", "EMPTY", "OUTSIDE", "NOTAB"}; !reflect.DeepEqual(unplaced, want) {
 		t.Errorf("unplaced = %v, want %v", unplaced, want)
 	}
 }

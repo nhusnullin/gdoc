@@ -127,3 +127,68 @@ func TestURLIsACallTheGuardCarries(t *testing.T) {
 		t.Fatalf("the guard refused the Docs read: %v", err)
 	}
 }
+
+// Places is the one rule read marks from and comments reports from, so the four
+// shapes it refuses are named here rather than left to the two callers.
+func TestPlacesRefusesEveryRangeThatNamesNoPosition(t *testing.T) {
+	d := &Document{Tabs: []Tab{
+		{ID: "t.0", Body: []Block{{Paragraph: &Paragraph{
+			StartIndex: 1, EndIndex: 20,
+			Runs: []Run{{Kind: KindText, StartIndex: 1, EndIndex: 20}},
+		}}}},
+		{ID: "t.1", Body: []Block{{Table: Table{{{Blocks: []Block{{Paragraph: &Paragraph{
+			StartIndex: 4, EndIndex: 10,
+			Runs: []Run{{Kind: KindText, StartIndex: 4, EndIndex: 10}},
+		}}}}}}}}},
+	}}
+
+	for _, c := range []struct {
+		why  string
+		r    Range
+		want bool
+	}{
+		{"a range inside the text", Range{Tab: "t.0", Start: 3, End: 9}, true},
+		{"a range closing at the run's end index", Range{Tab: "t.0", Start: 1, End: 20}, true},
+		{"a range inside a table cell in another tab", Range{Tab: "t.1", Start: 4, End: 10}, true},
+		{"an inverted pair", Range{Tab: "t.0", Start: 9, End: 3}, false},
+		{"an empty pair", Range{Tab: "t.0", Start: 4, End: 4}, false},
+		{"an end past the text", Range{Tab: "t.0", Start: 3, End: 900}, false},
+		{"a start before the text", Range{Tab: "t.0", Start: 0, End: 9}, false},
+		{"a tab the document does not have", Range{Tab: "t.9", Start: 3, End: 9}, false},
+		{"no tab named at all", Range{Start: 3, End: 9}, false},
+		{"a range in one tab named against another", Range{Tab: "t.1", Start: 3, End: 9}, false},
+	} {
+		if got := d.Places(c.r); got != c.want {
+			t.Errorf("Places(%+v) = %v, want %v: %s", c.r, got, c.want, c.why)
+		}
+	}
+}
+
+// Tab.Places answers for one tab, and Document.Places is that over every tab.
+// The two forms only part company when two tabs share an id, which the decoder
+// can hand over because a tab with no id at all is called t.0. A walker asks
+// the tab it is walking: answering off the document would arm a comment marker
+// on indexes the walked tab's own text does not hold, and the walk would end
+// with an opening marker and no close.
+func TestTabPlacesAnswersForItsOwnTabWhenTwoTabsShareAnID(t *testing.T) {
+	first := Tab{ID: "t.0", Body: []Block{{Paragraph: &Paragraph{
+		StartIndex: 1, EndIndex: 2000,
+		Runs: []Run{{Kind: KindText, StartIndex: 1, EndIndex: 2000}},
+	}}}}
+	second := Tab{ID: "t.0", Body: []Block{{Paragraph: &Paragraph{
+		StartIndex: 1, EndIndex: 1210,
+		Runs: []Run{{Kind: KindText, StartIndex: 1, EndIndex: 1210}},
+	}}}}
+	d := &Document{Tabs: []Tab{first, second}}
+	r := Range{Tab: "t.0", Start: 1204, End: 1223}
+
+	if !first.Places(r) {
+		t.Error("the first tab refused a range inside its own text")
+	}
+	if second.Places(r) {
+		t.Error("the second tab placed a range that ends past its own text")
+	}
+	if !d.Places(r) {
+		t.Error("the document refused a range one of its tabs holds")
+	}
+}

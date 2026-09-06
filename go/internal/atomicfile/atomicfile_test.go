@@ -1,8 +1,10 @@
 package atomicfile
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -63,14 +65,65 @@ func TestAFailedWriteLeavesNoTempFileBehind(t *testing.T) {
 
 // The file being replaced is never truncated first. A reader that opens it
 // while the write is in flight sees the old bytes or the new ones.
+//
+// The assertion is on the mechanism rather than on what is left behind. A
+// directory holding one entry afterwards is equally true of os.WriteFile, which
+// truncates the file in place, so counting entries would let a refactor that
+// empties a note or an OAuth token through. A handle opened before the write
+// still reads the old bytes only because a temp file was renamed over the path
+// and the old inode is still there.
+//
+// The open-handle half of that is POSIX's, and on Windows it cannot be staged:
+// os.Open asks for FILE_SHARE_READ|FILE_SHARE_WRITE and not
+// FILE_SHARE_DELETE, so the MoveFileEx behind os.Rename fails with a sharing
+// violation while the handle is held, and the test would die on Replace rather
+// than on an assertion of its own. That is the caveat the package doc records,
+// and the M9 Windows smoke test is where it is measured. The contents and the
+// directory entries are checked everywhere.
 func TestTheOldContentsSurviveUntilTheRename(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "note.md")
 	if err := os.WriteFile(path, []byte("before\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	before, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A reader that opened the file just before the write started. Windows
+	// refuses the rename underneath it, so the handle is only opened where
+	// holding one across a rename is a thing that happens.
+	var reader *os.File
+	if runtime.GOOS != "windows" {
+		reader, err = os.Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer reader.Close()
+	}
+
 	if err := Replace(path, []byte("after\n"), 0o644); err != nil {
 		t.Fatal(err)
+	}
+
+	if reader != nil {
+		held, err := io.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(held) != "before\n" {
+			t.Errorf("the open reader saw %q, want the old bytes: the file was written in place rather than renamed over", held)
+		}
+		after, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if os.SameFile(before, after) {
+			t.Error("the path still names the file it named before, so nothing was renamed over it")
+		}
+	}
+	if b, _ := os.ReadFile(path); string(b) != "after\n" {
+		t.Errorf("contents = %q, want the new bytes", b)
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {

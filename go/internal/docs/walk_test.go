@@ -183,7 +183,11 @@ func TestRunsCarryTheirSuggestionIDs(t *testing.T) {
 func TestObjectRunsCarryTheirKindsAndTheFootnoteText(t *testing.T) {
 	d := fixture(t, "objects.json")
 	runs := paragraphs(d.Tabs[0].Body)[0].Runs
-	want := []string{KindText, KindImage, KindText, KindDrawing, KindEquation, KindFootnoteRef, KindText}
+	// KindObject is in this list on purpose. An embedded object carrying
+	// neither imageProperties nor embeddedDrawingProperties is a thing gdoc
+	// cannot name, and calling it an image would be the guess this package
+	// refuses to make. Without a case here that guess passes every test.
+	want := []string{KindText, KindImage, KindText, KindDrawing, KindObject, KindEquation, KindFootnoteRef, KindText}
 	if len(runs) != len(want) {
 		t.Fatalf("len(runs) = %d, want %d", len(runs), len(want))
 	}
@@ -192,8 +196,8 @@ func TestObjectRunsCarryTheirKindsAndTheFootnoteText(t *testing.T) {
 			t.Errorf("run %d kind = %q, want %q", i, runs[i].Kind, k)
 		}
 	}
-	if runs[5].FootnoteID != "kix.fn1" {
-		t.Errorf("footnote reference id = %q", runs[5].FootnoteID)
+	if runs[6].FootnoteID != "kix.fn1" {
+		t.Errorf("footnote reference id = %q", runs[6].FootnoteID)
 	}
 	if got := d.Footnotes["kix.fn1"]; got != "Measured on 2026-09-06." {
 		t.Errorf("footnote text = %q", got)

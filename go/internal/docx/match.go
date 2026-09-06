@@ -62,15 +62,34 @@ func Match(threads []comments.Thread, f *File) []comments.Thread {
 // another thread already. One exported comment answers for one thread, so two
 // threads carrying the same words take two of them rather than both taking the
 // first.
+//
+// When more than one unused comment matches and they do not agree on whether
+// they are anchored, no answer is given and the thread comes back unmatched.
+// The join is on words and an author name, and nothing orders the two sides
+// against each other: Drive's comments.list defines no ordering and
+// word/comments.xml is numbered by the export, so first-fit would hand one of
+// the two thread ids a witness belonging to the other. --since makes that
+// reachable with one thread in view, because the listing is narrowed to the
+// cursor window and the export is not. detached means the text this thread was
+// written about is gone, so pinning it on the wrong id points the skill at the
+// wrong sentence. Refusing to guess is the same answer this milestone gives
+// everywhere else it cannot stand behind a fact.
 func find(cs []Comment, used []bool, t comments.Thread) int {
 	want := normalise(t.Content)
+	first := -1
 	for i, c := range cs {
 		if used[i] || normalise(c.Text) != want || !authorsAgree(c.Author, t.Author) {
 			continue
 		}
-		return i
+		if first < 0 {
+			first = i
+			continue
+		}
+		if c.Anchored != cs[first].Anchored {
+			return -1
+		}
 	}
-	return -1
+	return first
 }
 
 // authorsAgree is true when both sides name an author and it is the same one,

@@ -234,7 +234,12 @@ func checkFrontMatter(d *document) error {
 // matter is not an error: it is a file that has not been paired yet.
 func parse(src []byte) (*document, error) {
 	d := &document{lines: splitLines(string(src)), gdocStart: -1, eol: "\n"}
-	if bytes.Contains(src, []byte("\r\n")) {
+	// The line endings of the gdoc: block follow the first line of the file's
+	// own front matter, or of its body when it has none. Reading them off the
+	// whole file instead put CRLF inside an LF block whenever one CRLF sat
+	// anywhere in the prose, which is gdoc's own block churning the endings of
+	// a file it promises to leave byte for byte.
+	if len(d.lines) > 0 && strings.HasSuffix(d.lines[0], "\r\n") {
 		d.eol = "\r\n"
 	}
 	if len(d.lines) == 0 || !isDelimiter(strings.TrimPrefix(d.lines[0], bom), openDelimiter) {

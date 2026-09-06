@@ -68,6 +68,39 @@ func TestADifferentAuthorIsNotTheSameComment(t *testing.T) {
 func TestTwoThreadsWithTheSameWordsTakeTwoExportedComments(t *testing.T) {
 	f := &File{Comments: []Comment{
 		{ID: "0", Author: "Nail Khusnullin", Text: "ai: same words", Anchored: true, Span: "one"},
+		{ID: "1", Author: "Nail Khusnullin", Text: "ai: same words", Anchored: true, Span: "two"},
+	}}
+	in := []comments.Thread{
+		{ID: "AAAA", Author: "Nail Khusnullin", Content: "ai: same words"},
+		{ID: "BBBB", Author: "Nail Khusnullin", Content: "ai: same words"},
+		{ID: "CCCC", Author: "Nail Khusnullin", Content: "ai: same words"},
+	}
+
+	got := Match(in, f)
+
+	if got[0].Witness != WitnessAnchored {
+		t.Errorf("threads[0] witness = %q, want anchored", got[0].Witness)
+	}
+	if got[1].Witness != WitnessAnchored {
+		t.Errorf("threads[1] witness = %q; one exported comment answers for one thread", got[1].Witness)
+	}
+	// The third thread carries the same words and the export holds two such
+	// comments, both already answering for another thread. Its truthful witness
+	// is unmatched: it was created after the export. Handing it an exported
+	// comment that has answered already would be a witness for something the
+	// export does not hold, in the field the skill judges from.
+	if got[2].Witness != WitnessUnmatched {
+		t.Errorf("threads[2] witness = %q; the export holds two such comments and both are spoken for", got[2].Witness)
+	}
+}
+
+// Two exported comments carrying the same words from the same author, one
+// anchored and one not, say nothing about which Drive thread is which. Neither
+// side is ordered against the other, so first-fit would hand one thread id the
+// other one's witness, and detached names the wrong sentence when it does.
+func TestAnAmbiguousWitnessIsUnmatchedRatherThanGuessed(t *testing.T) {
+	f := &File{Comments: []Comment{
+		{ID: "0", Author: "Nail Khusnullin", Text: "ai: same words", Anchored: true, Span: "one"},
 		{ID: "1", Author: "Nail Khusnullin", Text: "ai: same words"},
 	}}
 	in := []comments.Thread{
@@ -77,11 +110,26 @@ func TestTwoThreadsWithTheSameWordsTakeTwoExportedComments(t *testing.T) {
 
 	got := Match(in, f)
 
-	if got[0].Witness != WitnessAnchored {
-		t.Errorf("threads[0] witness = %q, want anchored", got[0].Witness)
+	for i, th := range got {
+		if th.Witness != WitnessUnmatched {
+			t.Errorf("threads[%d] witness = %q, want unmatched: the two exported comments disagree", i, th.Witness)
+		}
 	}
-	if got[1].Witness != WitnessDetached {
-		t.Errorf("threads[1] witness = %q; one exported comment answers for one thread", got[1].Witness)
+}
+
+// The same ambiguity with one thread in view, which is what --since produces:
+// the listing is narrowed to the cursor window and the export is not.
+func TestOneThreadWithTwoDisagreeingCandidatesIsUnmatched(t *testing.T) {
+	f := &File{Comments: []Comment{
+		{ID: "0", Author: "Nail Khusnullin", Text: "ai: same words", Anchored: true, Span: "one"},
+		{ID: "1", Author: "Nail Khusnullin", Text: "ai: same words"},
+	}}
+	in := []comments.Thread{{ID: "BBBB", Author: "Nail Khusnullin", Content: "ai: same words"}}
+
+	got := Match(in, f)
+
+	if got[0].Witness != WitnessUnmatched {
+		t.Errorf("witness = %q, want unmatched: nothing says which of the two this thread is", got[0].Witness)
 	}
 }
 

@@ -511,6 +511,9 @@ func TestSuggestionsRefusesAFileWithNoBlock(t *testing.T) {
 func TestDocumentIDAcceptsWhatNailPastes(t *testing.T) {
 	for _, arg := range []string{
 		"https://docs.google.com/document/d/" + fixtureDocID + "/edit?tab=t.0",
+		// The address bar of anybody signed into more than one Google account.
+		"https://docs.google.com/document/u/0/d/" + fixtureDocID + "/edit",
+		"https://docs.google.com/document/u/12/d/" + fixtureDocID + "/edit?tab=t.0",
 		"https://drive.google.com/open?id=" + fixtureDocID,
 		fixtureDocID,
 		"  " + fixtureDocID + "  ",
@@ -530,6 +533,7 @@ func TestDocumentIDRefusesWhatIsNotOne(t *testing.T) {
 	for _, arg := range []string{
 		"", "short", "https://docs.google.com/document/d/tooshort/edit",
 		"/Users/nail/notes/policy.md", "https://example.com/",
+		"https://docs.google.com/document/u/x/d/" + fixtureDocID + "/edit",
 		"1w0Sresiz E9Kr810VZRJwX4JtDBF4OqNr",
 	} {
 		got, err := documentID(arg)

@@ -435,11 +435,23 @@ Rules that hold across all three:
   comment id. A thread the Docs read gave no usable range comes back with
   `range: null` and a warning, never a failed listing. The shape of the Docs
   `comments` key is measured rather than documented, so the decoder is loose on
-  purpose, and unusable therefore covers two cases: no range at all, and a range
-  that does not end after it starts. `comments` is the command whose output
-  names the range as a position, and M3 places a proposal from it, so reporting
-  a range `read` would refuse to mark would be a false fact in that field. The
-  test is the same `Start >= End` as `internal/view`'s.
+  purpose, and unusable therefore covers four cases: no range at all, a range
+  that does not end after it starts, a range whose ends fall outside the tab's
+  text, and a range naming a tab the document does not have. `comments` is the
+  command whose output names the range as a position, and M3 places a proposal
+  from it, so reporting a range `read` would refuse to mark would be a false
+  fact in that field. **One rule decides, and it lives in `docs`.**
+  `docs.Document.Places` is what `comments` reports from and what
+  `internal/view` warns from, so the two commands cannot drift apart. It is that
+  rule over every tab, and `docs.Tab.Places` is the same rule for one tab.
+  `view` arms its markers from the tab's form, because the markers go into the
+  tab being walked: two tabs sharing an id, which happens when a tab carries no
+  `tabId` and takes the default `t.0`, would otherwise arm one tab on the other
+  one's indexes and leave an opening marker with no close. On a document whose
+  tab ids are unique the two forms answer the same. `view` keeps its own two
+  warning messages, which name which half of the rule the range failed, and the
+  gating is `Places`'s. An inverted pair is the worst of
+  the four, because it crosses the markers it passes on the way.
 - **Argument parsing is strict.** An unknown flag, a repeated flag, a missing
   value, an empty value written either way, an extra positional argument, and a
   flag standing where another flag's value belongs each fail naming the
@@ -456,7 +468,13 @@ Rules that hold across all three:
   costs an export. A thread is joined to an exported comment on its words and
   its author's name, because the docx carries no Drive comment id. An export
   that could not be read is a warning and every thread `unmatched`, not a failed
-  listing. The export URL carries `mimeType` and nothing else: `files.export`
+  listing. **Two exported comments that match one thread and disagree about
+  being anchored give no answer**: the thread comes back `unmatched` rather than
+  taking the first. Neither side is ordered against the other, Drive's
+  `comments.list` defines no ordering and `word/comments.xml` is numbered by the
+  export, so first-fit would hand one thread id the other's witness. `--since`
+  reaches it with one thread in view, because the listing is narrowed to the
+  cursor window and the export is not. The export URL carries `mimeType` and nothing else: `files.export`
   defines two parameters, measured against the live Drive v3 discovery document
   on 2026-09-06, and `supportsAllDrives` is on `files.get` instead. Sending a
   parameter the method does not define is one the server may reject, and it
@@ -480,6 +498,12 @@ Rules that hold across all three:
 - Lists come back as `- ` items, two spaces of indent per level. A numbered list
   reads back as a bulleted one: telling the two apart needs the document's
   `lists` map, which this milestone does not read.
+- A table is a pipe table, and a `|` the author typed inside a cell is escaped
+  as `\|`. Unescaped it is a column separator, so a two-cell row holding
+  `A | B` reads back as three columns under a two-column separator: an ordinary
+  cell value would change the table's shape. The escaping happens on the row,
+  after the marker escaping has doubled the author's backslashes, so the parity
+  rule a reader uses on a marker holds on a pipe too.
 
 ### `read`'s text, and why every marker is escaped
 
@@ -504,7 +528,12 @@ below exists to make impossible. The test is `r.Start >= r.End`, not equality:
 the indexes come out of the Docs answer unchecked, the shape of the `comments`
 key is measured rather than documented, so the loose decoder can hand over an
 inverted pair. Inverted is the worse half, because it crosses the markers it
-passes on the way.
+passes on the way. A range whose ends are outside the tab's text, or naming a
+tab the document does not have, is the same answer for the same reason, and all
+of it is `docs.Document.Places`, the one rule `comments` reports from too.
+`docs.Tab.Places` is that rule asked of one tab, which is what the walk arms
+from: the document form answers off the first tab carrying the id, so on two
+tabs sharing one it would arm the tab being walked on the other tab's text.
 
 **A literal `{+`, `{-`, `+}`, `-}`, `[[` or `]]` in the document's own text is
 escaped with a backslash.** That is not tidiness. Without it a document that
@@ -594,7 +623,7 @@ else in the file. It carries `schema`, `document_id`, `folder_id`, a `published`
 record (M6 writes it), the `suggestions_seen` snapshot and `proposals` (M3
 writes those; M2 defines the shape and carries them through untouched).
 
-Four rules, and each one has a reason:
+Six rules, and each one has a reason:
 
 - **The read is strict.** `goccy/go-yaml` with `yaml.Strict()`: an unknown key,
   a key given twice, a missing `document_id`, a `document_id` that is not a

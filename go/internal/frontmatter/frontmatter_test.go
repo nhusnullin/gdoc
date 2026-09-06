@@ -216,6 +216,30 @@ func TestWriteMovesNoLineOutsideTheBlock(t *testing.T) {
 	}
 }
 
+// A note whose front matter is LF keeps LF in the gdoc: block, even when a
+// stray CRLF sits somewhere in the prose. Deciding the endings from the whole
+// file made gdoc's own block the one part of the note whose endings changed.
+func TestWriteTakesTheLineEndingsFromTheFrontMatterNotTheProse(t *testing.T) {
+	src := []byte("---\nauthor: Nail\ngdoc:\n  schema: 1\n  document_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd\n---\n\nOne line.\r\nAnd a line the editor wrote with CRLF.\n")
+	b, err := Read(src)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	b.FolderID = "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr"
+
+	out, err := Write(src, b)
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if !bytes.Contains(out, []byte("  folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr\n")) ||
+		bytes.Contains(out, []byte("  folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr\r\n")) {
+		t.Errorf("the new line did not keep the front matter's LF: %q", out)
+	}
+	if !bytes.Contains(out, []byte("One line.\r\n")) {
+		t.Errorf("the author's own CRLF line did not come through untouched: %q", out)
+	}
+}
+
 func TestWriteKeepsCRLF(t *testing.T) {
 	src := fixture(t, "crlf.md")
 	b, err := Read(src)

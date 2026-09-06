@@ -51,18 +51,14 @@ var placeholders = map[string]struct{ mark, noun string }{
 // and a comment range it could not place in the text.
 func Text(d *docs.Document) (string, []string) {
 	e := &emitter{seen: map[string]bool{}}
-	tabIDs := map[string]bool{}
-	for _, tab := range d.Tabs {
-		tabIDs[tab.ID] = true
-	}
 	for _, tab := range d.Tabs {
 		if d.MultiTab() {
 			e.chunk(fmt.Sprintf("<!-- tab %s: %s -->", tab.ID, tab.Title))
 		}
-		e.startTab(tab, d.CommentRanges)
+		e.startTab(d, tab)
 		e.blocks(tab.Body)
 	}
-	e.unplaced(d.CommentRanges, tabIDs)
+	e.unplaced(d.CommentRanges)
 	e.appendFootnotes(d)
 	return strings.Join(e.chunks, "\n\n") + "\n", e.warnings
 }
@@ -128,38 +124,38 @@ func (e *emitter) capture(f func()) string {
 	return b.String()
 }
 
-// startTab arms the comment markers for one tab. A range whose ends are not in
-// this tab's text is dropped with a warning rather than half-printed: an
-// opening marker with no close is worse than a sentence saying so.
-func (e *emitter) startTab(t docs.Tab, ranges map[string]docs.Range) {
+// startTab arms the comment markers for one tab. A range Places refuses is
+// dropped with a warning rather than half-printed: an opening marker with no
+// close is worse than a sentence saying so.
+//
+// The rule is Places's, and only the wording of the warning is decided here.
+// read marks a comment's range in the text and comments prints it as a
+// position, and a range one of them refuses while the other prints it is a
+// false fact in whichever field the skill reads. So the condition lives in one
+// place, and a condition added to it takes effect in both commands at once.
+//
+// The two forms of Places do two different jobs, and both are needed. The
+// warning is the document's, because that is the answer comments prints and
+// warning here about a range the document does place would be the drift this
+// exists to stop. The arming is the walked tab's, because the markers go into
+// that tab's text: two tabs sharing an id, which the decoder can hand over
+// because a tab with no id at all is called t.0, would otherwise arm this one
+// on the other one's indexes and end the walk with an open marker and no close.
+// On a document whose tab ids are unique the two answers are the same one.
+func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 	e.events, e.cur = nil, 0
-	spans := intervals(t.Body, nil)
-	for _, id := range sortedIDs(ranges) {
-		r := ranges[id]
+	for _, id := range sortedIDs(d.CommentRanges) {
+		r := d.CommentRanges[id]
 		if r.Tab != t.ID {
 			continue
 		}
-		e.seen[id] = true
-		if r.Start >= r.End {
-			// A range that does not end after it starts marks nothing. Arming
-			// it anyway puts the close before the open, and at the end of the
-			// last run the closes-only drain emits the close and leaves the
-			// open behind: either way the text carries a marker that is not a
-			// pair, which is what the escaping exists to make impossible. An
-			// inverted range is worse than an empty one, because it crosses two
-			// other markers on the way past them.
-			//
-			// Not only the equal case, because the indexes come out of Docs
-			// unchecked: the shape of the comments key is measured rather than
-			// documented, so the decoder that reads them is loose on purpose
-			// and an inverted pair is a shape it can hand over.
-			e.warnings = append(e.warnings,
-				fmt.Sprintf("comment %s: its range %d..%d does not end after it starts, so it is not marked", id, r.Start, r.End))
-			continue
+		if !e.seen[id] {
+			e.seen[id] = true
+			if !d.Places(r) {
+				e.warnings = append(e.warnings, unplacedWarning(id, r))
+			}
 		}
-		if !covers(spans, r.Start) || !covers(spans, r.End) {
-			e.warnings = append(e.warnings,
-				fmt.Sprintf("comment %s: its range %d..%d is not in the text of tab %s, so it is not marked", id, r.Start, r.End, r.Tab))
+		if !t.Places(r) {
 			continue
 		}
 		e.events = append(e.events, event{index: r.Start, open: true, id: id})
@@ -179,16 +175,35 @@ func (e *emitter) startTab(t docs.Tab, ranges map[string]docs.Range) {
 	})
 }
 
-// unplaced warns about a range naming a tab the document does not have. Every
-// other range was either marked or warned about while its tab was walked.
-func (e *emitter) unplaced(ranges map[string]docs.Range, tabs map[string]bool) {
+// unplaced warns about a range naming a tab the document does not have. A range
+// whose tab is here was marked or warned about while that tab was walked, which
+// is what seen records, so what is left names a tab that is not.
+func (e *emitter) unplaced(ranges map[string]docs.Range) {
 	for _, id := range sortedIDs(ranges) {
-		if e.seen[id] || tabs[ranges[id].Tab] {
+		if e.seen[id] {
 			continue
 		}
 		e.warnings = append(e.warnings,
 			fmt.Sprintf("comment %s: its range names tab %s, which this document does not have", id, ranges[id].Tab))
 	}
+}
+
+// unplacedWarning names which half of the placement rule the range failed. It
+// is wording, not a second rule: Places has already refused the range, and this
+// only says why in the words the reader needs.
+//
+// An inverted or empty range is called out on its own, because it is the worse
+// half: armed, it puts its close before its open and crosses the markers it
+// passes on the way, and at the end of the last run the closes-only drain emits
+// the close and leaves the open behind. Either way the text carries half a
+// pair, which is what the escaping exists to make impossible. The indexes come
+// out of the Docs comments key unchecked, and that decoder is loose on purpose,
+// so an inverted pair is a shape it can hand over.
+func unplacedWarning(id string, r docs.Range) string {
+	if r.Start >= r.End {
+		return fmt.Sprintf("comment %s: its range %d..%d does not end after it starts, so it is not marked", id, r.Start, r.End)
+	}
+	return fmt.Sprintf("comment %s: its range %d..%d is not in the text of tab %s, so it is not marked", id, r.Start, r.End, r.Tab)
 }
 
 // drain writes the markers up to and including index upTo. With closesOnly the
@@ -257,13 +272,19 @@ func headingLevel(style string) int {
 // table is a pipe table: the rows in reading order, a separator after the
 // first. The widths are not padded, because the reader is a language model and
 // the alignment would be bytes nobody reads.
+//
+// A pipe the author typed is escaped, because an unescaped one is a column
+// separator: a two-cell row holding "A | B" and "C" reads back as three columns
+// under a two-column separator, so an ordinary cell value changes the table's
+// shape. The escaping is done here rather than in cell, so a nested table
+// flattened into a cell is escaped once by the outer row.
 func (e *emitter) table(t docs.Table) {
 	rows := make([]string, 0, len(t))
 	width := 0
 	for _, row := range t {
 		cells := make([]string, 0, len(row))
 		for _, c := range row {
-			cells = append(cells, e.cell(c))
+			cells = append(cells, escapePipes(e.cell(c)))
 		}
 		if len(cells) > width {
 			width = len(cells)
@@ -498,32 +519,12 @@ func utf16Len(r rune) int {
 	return 1
 }
 
-// intervals is every text position a comment range can be placed at: the closed
-// index range of every run in the body, tables included.
-func intervals(bs []docs.Block, out [][2]int) [][2]int {
-	for _, b := range bs {
-		if b.Paragraph != nil {
-			for _, r := range b.Paragraph.Runs {
-				out = append(out, [2]int{r.StartIndex, r.EndIndex})
-			}
-			continue
-		}
-		for _, row := range b.Table {
-			for _, c := range row {
-				out = intervals(c.Blocks, out)
-			}
-		}
-	}
-	return out
-}
-
-func covers(spans [][2]int, i int) bool {
-	for _, s := range spans {
-		if i >= s[0] && i <= s[1] {
-			return true
-		}
-	}
-	return false
+// escapePipes puts a backslash in front of every pipe in a cell. It runs after
+// the marker escaping, which has already doubled the author's own backslashes,
+// so the parity a reader uses on a marker holds here too: an odd run of
+// backslashes before the pipe ends in gdoc's escape.
+func escapePipes(cell string) string {
+	return strings.ReplaceAll(cell, "|", `\|`)
 }
 
 func sortedIDs(ranges map[string]docs.Range) []string {

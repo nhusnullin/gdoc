@@ -78,7 +78,7 @@ func TestOnlyAMultiTabDocumentCarriesTabLines(t *testing.T) {
 
 func TestAPlaceholderIsAWarning(t *testing.T) {
 	_, warnings := Text(fixture(t, "objects.json"))
-	want := []string{"[image]", "[drawing]", "[equation]"}
+	want := []string{"[image]", "[drawing]", "[object]", "[equation]"}
 	for _, w := range want {
 		found := false
 		for _, got := range warnings {
@@ -109,6 +109,40 @@ func TestARangeOutsideTheTextIsAWarningAndIsNotPrinted(t *testing.T) {
 	}
 	if len(warnings) != 1 || !strings.Contains(warnings[0], "FARAWAY") {
 		t.Errorf("warnings = %v, want one naming FARAWAY", warnings)
+	}
+}
+
+// Two tabs can share an id: a tab carrying no tabId at all is called t.0, the
+// same name the pre-tabs body gets. The markers are armed into the tab being
+// walked, so the tab has to answer for its own text. Arming the second tab on
+// the first one's answer opens a marker at 5 that the second tab's text, which
+// ends at 10, never closes, and nothing warns because the range was placed.
+func TestATabSharingAnIDIsNotArmedOnTheOtherTabsText(t *testing.T) {
+	raw := `{"documentId":"D","tabs":[
+		{"tabProperties":{"tabId":"t.0","title":"First"},"documentTab":{"body":{"content":[
+		 {"startIndex":1,"endIndex":30,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		  "elements":[{"startIndex":1,"endIndex":30,"textRun":{"content":"aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"}}]}}]}}},
+		{"tabProperties":{"title":"Second"},"documentTab":{"body":{"content":[
+		 {"startIndex":1,"endIndex":10,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		  "elements":[{"startIndex":1,"endIndex":10,"textRun":{"content":"bbbbbbbb\n"}}]}}]}}}],
+		"comments":[{"id":"C1","range":{"startIndex":5,"endIndex":25,"tabId":"t.0"}}]}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Tabs) != 2 || d.Tabs[0].ID != d.Tabs[1].ID {
+		t.Fatalf("the fixture no longer gives two tabs with one id: %+v", d.Tabs)
+	}
+
+	text, warnings := Text(d)
+	if opens, closes := strings.Count(text, "[[c:C1]]"), strings.Count(text, "[[/c]]"); opens != closes {
+		t.Errorf("%d opening markers and %d closing ones, want a pair each: %q", opens, closes, text)
+	}
+	if got := strings.Count(text, "[[c:C1]]"); got != 1 {
+		t.Errorf("the range was marked %d times, want once, in the tab that holds it: %q", got, text)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("warnings = %v, want none: the document does place this range", warnings)
 	}
 }
 
@@ -398,6 +432,26 @@ func TestARangeInsideATableCellIsMarked(t *testing.T) {
 	}
 	if !strings.Contains(text, "[[c:INCELL]]cell[[/c]]") {
 		t.Errorf("Text() = %q, want the cell text marked", text)
+	}
+}
+
+// A pipe the author typed inside a cell is escaped. Unescaped it is a column
+// separator, so a two-cell row holding "A | B" reads back with three columns
+// under a two-column separator, and an ordinary cell value has changed the
+// table's shape.
+func TestAPipeInsideACellDoesNotAddAColumn(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":40,"table":{"tableRows":[
+			{"tableCells":[
+				{"content":[{"paragraph":{"elements":[{"startIndex":2,"endIndex":9,"textRun":{"content":"A | B\n"}}]}}]},
+				{"content":[{"paragraph":{"elements":[{"startIndex":10,"endIndex":13,"textRun":{"content":"C\n"}}]}}]}]}]}}]}}`
+	text, _ := Text(parse(t, raw))
+	row := strings.Split(text, "\n")[0]
+	if row != `A \| B | C` {
+		t.Errorf("row = %q, want the author's pipe escaped", row)
+	}
+	if got := strings.Count(row, " | "); got != 1 {
+		t.Errorf("the row has %d separators, want 1: the table changed shape", got)
 	}
 }
 
