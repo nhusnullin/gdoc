@@ -518,11 +518,11 @@ the eight new packages.
 **Interfaces:**
 - Produces: the repo's account of what now exists, so M3 starts from documentation that matches the tree.
 
-- [ ] update `README.md`: the three read commands, their arguments, the `read` text conventions (`{+ +}`, `{- -}`, `[s:ID]`, `[[c:ID]]`), the cursor, `--witness`, `--md`, and the `gdoc:` block a paired note carries
-- [ ] update `CLAUDE.md` under "v2 lives at `go/`": the facts-only rule and the test for it; the four rooms of the import allowlist and why `internal/gapi` is one; `allowedModules` holds go-yaml; the front-matter block version 1 and its rules (strict decode, byte-preserving write, snapshot written only after a successful read); `read`'s text conventions and the escaping rule; the cursor is opaque and dies with the session; `GrantInPlace` is gone until M7 and `AllowCreateIn` stayed, with the reason; pictures and drawings are in the backlog
-- [ ] update `docs/v2/PLAN.md`: mark M2 done with the date, record what it left for M3 (the Docs `comments` range shape is measured from the live fixture; `AllowCreateIn` has its first production caller in M6; the review skill reads `comments` and judges), and the binary size delta
-- [ ] run the full test suite one more time: `cd go && go test -race ./...`
-- [ ] commit the documentation updates: `docs: M2 lands, the read commands and the front-matter block written down`
+- [x] update `README.md`: the three read commands, their arguments, the `read` text conventions (`{+ +}`, `{- -}`, `[s:ID]`, `[[c:ID]]`), the cursor, `--witness`, `--md`, and the `gdoc:` block a paired note carries
+- [x] update `CLAUDE.md` under "v2 lives at `go/`": the facts-only rule and the test for it; the four rooms of the import allowlist and why `internal/gapi` is one; `allowedModules` holds go-yaml; the front-matter block version 1 and its rules (strict decode, byte-preserving write, snapshot written only after a successful read); `read`'s text conventions and the escaping rule; the cursor is opaque and dies with the session; `GrantInPlace` is gone until M7 and `AllowCreateIn` stayed, with the reason; pictures and drawings are in the backlog
+- [x] update `docs/v2/PLAN.md`: mark M2 done with the date, record what it left for M3 (the Docs `comments` range shape is measured from the live fixture; `AllowCreateIn` has its first production caller in M6; the review skill reads `comments` and judges), and the binary size delta
+- [x] run the full test suite one more time: `cd go && go test -race ./...`
+- [x] commit the documentation updates: `docs: M2 lands, the read commands and the front-matter block written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes. Nobody here moves it, so this is not a checkbox.
 
 ## Post-Completion

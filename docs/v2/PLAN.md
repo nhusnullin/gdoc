@@ -3,8 +3,8 @@
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
 producing working, testable software. Detailed task-by-task plans live in
 `docs/plans/` and are written when a milestone starts, so each one
-is written against the code that actually exists by then. Milestone 1's is
-written, and that milestone is done.
+is written against the code that actually exists by then. Milestones 1 and 2
+are written, and both are done.
 
 ## Principles
 
@@ -22,12 +22,12 @@ Strains: none.
   `goccy/go-yaml v1.19.2` (front matter and `house.yaml`; reason written in
   SPEC.md; zero transitive modules). A fourth needs its reason written into
   SPEC.md first; the open candidate is `sergi/go-diff` at milestone 8.
-- None of those three is in `go.mod` yet, and the M1 boundary test refuses
-  every one of them. `allowedModules` in `TestNoThirdPartyDependencies` is an
-  empty allowlist, so "standard library only" is M1's state rather than v2's
-  rule. The milestone that first needs a module adds its path to that map, and
-  nothing else: it does not delete the test and it does not widen it to accept
-  whatever `go.mod` says. M5 is the likely first, for goldmark.
+- `goccy/go-yaml` is in `go.mod` as of M2, and it is the only one.
+  `allowedModules` in `TestNoThirdPartyDependencies` names it with its reason,
+  and refuses every other require line and every other `go.sum` entry. The
+  milestone that first needs another adds its path to that map, and nothing
+  else: it does not delete the test and it does not widen it to accept whatever
+  `go.mod` says. M5 is the likely next, for goldmark.
 - No `golang.org/x/oauth2`: the token refresh is a single POST to Google's
   token endpoint and is hand-rolled on the standard library.
 - v1 is retired as of 2026-08-29, Nail's call. The Python code stays in the
@@ -69,7 +69,7 @@ because it would otherwise read a URL differently from the way the transport
 sends it. And no browser is opened at all, so v2 needs no `os/exec` anywhere.
 The result is documented in CLAUDE.md under "v2 lives at `go/`".
 
-### M2. Reading, and the honest witness
+### M2. Reading, and the honest witness (done 2026-09-06)
 
 Three things M1 left for this milestone to pick up. `Policy.AllowFile`,
 `AllowCreateIn` and `GrantInPlace` have no production caller yet: if M2 lands
@@ -104,6 +104,42 @@ text the skill reads, with pending suggestions inline and comment anchors
 marked, plus the raw structure with character indexes on a flag. It is the
 piece review (M3) and alignment (M8) both stand on. Reading pictures and
 drawings is in `docs/backlog/`.
+
+**Landed 2026-09-06.** Three commands, `read`, `comments` and `suggestions`,
+each opening the guard with exactly the one document it was given.
+`Policy.AllowFile`, `Token.Refresh` and `Policy.Warnings()` have production
+callers now. `GrantInPlace` had none and was deleted with its tests, as this
+milestone asked; M7 adds it back beside its caller. `AllowCreateIn` stayed,
+because the transport's whole create path reads it and M6 needs that path.
+`internal/gapi` is the fourth room in the import allowlist and builds no client
+of its own. `goccy/go-yaml` is the first third-party module, named in
+`allowedModules` with its reason. The result is documented in CLAUDE.md under
+"v2 lives at `go/`", and in the README under "The Go rewrite".
+
+What M2 leaves for M3:
+
+- The response shape of the Docs read's `comments` key is measured, not
+  documented, so the decoder is loose on purpose. The first live run records a
+  redacted fixture, and `docs.CommentRanges` is tightened to that shape then.
+- `AllowCreateIn` still has no production caller. Its first one is M6's
+  publish, and M3 must not invent one to make a test pass.
+- The review skill reads `comments` and `read` and does all the judging. The
+  binary reports the marker, `resolved`, `by_gdoc`, the witness and
+  `gone_since_last_look`, and nothing in Go says what any of them means. M3 is
+  the milestone most likely to want that rule bent, and it stays.
+- The revmux review of the M1 guard (2026-09-06) left one major and four minor
+  findings in `go/internal/guard`, all on the write path: `isSuggestMode` reads
+  `writeControl` more loosely than the server does; a repeated JSON key
+  collapses before `judgeRequests` and `checkParent` see it; `DELETE` and
+  `PATCH` on any comment are carried at `LevelSuggest`; `resumable` uploads can
+  never complete; nothing tests that a refused request closes the body. M3 is
+  the first milestone that sends a write, so they belong to it.
+
+**The binary size delta.** All of M2 against M1's last binary, darwin/arm64:
+10,162,818 to 12,132,722 bytes, +1,969,904 (+19.4%). Roughly half of that is
+`goccy/go-yaml` (+1,039,728 on darwin/arm64, +1,121,728 on darwin/amd64,
++1,101,824 on windows/amd64, each about +9.4%) and half is the eight new
+packages. All three targets still build with `CGO_ENABLED=0`.
 
 ### M3. Writing, and the first usable review
 

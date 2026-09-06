@@ -37,20 +37,29 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 
 | Path | Holds |
 |---|---|
-| `go/cmd/gdoc/` | `main.go`. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | `main.go` and `read.go`. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
 | `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
 | `go/internal/config/` | where the per-user files live, per platform |
+| `go/internal/gapi/` | the authenticated session. The one room that builds a request |
+| `go/internal/docs/` | the Docs read: tabs, the document tree, suggestion ids, comment ranges |
+| `go/internal/view/` | the document as the text `read` prints, and as the tree `--structure` prints |
+| `go/internal/comments/` | Drive's threads joined to the Docs ranges, and the `--since` cursor |
+| `go/internal/suggestions/` | what is pending, and what stopped being pending since the snapshot |
+| `go/internal/docx/` | the docx export reader, and the witness match against threads |
+| `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
+| `go/internal/live/` | the one opt-in end-to-end test. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestone 1 is done: the binary exists, prints the envelope, owns the
-network, and can log in and report its OAuth state.
+order. Milestones 1 and 2 are done: the binary exists, prints the envelope, owns
+the network, can log in and report its OAuth state, and reads a document three
+ways with `read`, `comments` and `suggestions`.
 
-### The two commands, and what reaches stdout
+### The auth commands, and what reaches stdout
 
 `gdoc auth status` reports `auth_mode`, `token_path`, `client_source` and
 `token_present`, plus `expired`, `scopes` and `missing_scopes` when a token is
@@ -99,9 +108,9 @@ The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
 `gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
-than an oversight. There is no help command: `dispatch` matches `auth status`
-and `auth login` and nothing else, so `--help` comes back as an unknown command
-with the one-line `usage` string in the error. A caller reads the same JSON
+than an oversight. There is no help command: `dispatch` matches the five
+commands and nothing else, so `--help` comes back as an unknown command with the
+one-line `usage` string in the error. A caller reads the same JSON
 object it reads for every other run, and the exit code still means what it means
 everywhere else. Human-readable help would have to reach stdout beside the
 object, or exit 0 on a run that did no work, and both break the contract.
@@ -295,9 +304,16 @@ ids are `[A-Za-z0-9_-]`, so refusing both shapes costs nothing.
 Naming `net/http` and dialing with it are not the same thing, so
 `go/boundary/boundary_test.go` checks both.
 
-- The **import allowlist** says who may name the type: `internal/guard`,
-  `internal/auth` and `internal/auth/loopback`. `internal/auth` is on it because
-  `Refresh` and `Login` take the guard's client as a parameter.
+- The **import allowlist** says who may name the type. Four rooms:
+  `internal/guard`, `internal/auth`, `internal/auth/loopback` and
+  `internal/gapi`. `internal/auth` is on it because `Refresh` and `Login` take
+  the guard's client as a parameter. `internal/gapi` was added at M2 for the
+  same kind of reason: it builds the `*http.Request` every read goes out as and
+  sets the bearer on it, and the `*http.Client` it sends them on is a parameter.
+  Keeping request building in one room is what stops the bearer, the Accept
+  header and the refresh rule from being written three slightly different ways
+  in three reader packages. It is in the import allowlist and not the builder
+  one, and that difference is the whole point of having two lists.
 - The **builder allowlist** says who may construct an outbound client or reach a
   package-level dialer such as `http.Get`. That is `internal/guard` alone.
   Serving is not building: `internal/auth/loopback` runs an `http.Server`, which
@@ -345,24 +361,181 @@ Opening a browser is the one thing a CLI usually shells out for.
 `go/boundary/boundary_test.go` enforces it, the way
 `tests/test_no_external_programs.py` enforces v1's.
 
-### Standard library only, and that rule is M1's alone
+### One module, named in `allowedModules`, and the rest still refused
 
-The same file holds "standard library only" to the tree: `allowedModules` in
-`TestNoThirdPartyDependencies` is empty, so every `require` line in `go.mod` and
-every module named in a `go.sum` is refused today.
+The same file holds the dependency list to the tree: `allowedModules` in
+`TestNoThirdPartyDependencies` names what `go.mod` may require, and every other
+`require` line and every other module in `go.sum` is refused.
 
-**Empty is a milestone's state, not the plan.** SPEC.md already agreed three
-modules, each with its reason written there: `beevik/etree`, because
-`encoding/xml` corrupts OOXML; `yuin/goldmark`, for the markdown M5 parses; and
-`goccy/go-yaml`, for the `gdoc:` front matter and `house.yaml`. The milestone
-that first needs one adds its path to `allowedModules` and nothing else. It does
-not delete the test, and it does not widen it to "whatever go.mod says". A
-fourth module needs its reason in SPEC.md before its line in the map, and the
-open candidate is `sergi/go-diff` at M8.
+It held nothing at M1. M2 added one line, `github.com/goccy/go-yaml`, for the
+`gdoc:` front matter, with the reason already written in SPEC.md and repeated in
+the map. It brings no transitive modules of its own, and it costs about 1 MB on
+each platform binary, measured in the M2 plan.
 
-Writing the map empty rather than leaving an instruction was the point: M1
-refuses exactly what it refused before, and M2 edits one line instead of
-arguing with a red build it has no note about.
+SPEC.md agreed three modules in total. The other two are `beevik/etree`, because
+`encoding/xml` corrupts OOXML on the way back out, and `yuin/goldmark`, for the
+markdown M5 parses. The milestone that first needs one adds its path to
+`allowedModules` and nothing else. It does not delete the test, and it does not
+widen it to "whatever `go.mod` says". A fourth module needs its reason in
+SPEC.md before its line in the map, and the open candidate is `sergi/go-diff` at
+M8.
+
+`TestAllowedModulesAreReallyRequired` is the other direction: a path in the map
+that `go.mod` no longer requires fails too. An allowlist naming something that
+is not there stops describing the tree.
+
+### The binary prints facts, and the skills judge
+
+This is M2's line, and it is the one an agent is most likely to cross by being
+helpful. Nail's call, 2026-09-06, recorded in `docs/v2/SPEC.md` and PLAN.md M2.
+
+Nothing under `go/internal/` decides whether a comment is answered, whether a
+suggestion that stopped being pending was accepted or thrown away, whether the
+note and the document differ in a way that matters, or which side is the source
+of truth. Every one of those is the skill's, reading what the commands print.
+
+So the packages report a marker (`ai:`, `ai?`, `ai!`, `none`), a `resolved`
+flag, a reply's `by_gdoc`, a witness of `anchored`, `detached` or `unmatched`,
+and a list called `gone_since_last_look`. Each is a fact with a neutral name.
+None of them is a verdict, and none may grow into one.
+
+Two tests state the rule rather than leaving it to review:
+`TestThreadsCarriesEveryFactAndJudgesNone` in `internal/comments`, and
+`TestMatchGivesAnchoredDetachedAndUnmatched` in `internal/docx`. A field named
+`handled`, `accepted`, `rejected`, `matters` or `drift` appearing under
+`go/internal/` is either a fact wearing the wrong name or a defect.
+
+### The three read commands
+
+`read`, `comments` and `suggestions`. Each one takes the document URL Nail
+pastes, or a bare id, and each does the same four things in the same order:
+turn the argument into an id, open a `guard.Policy` holding exactly that id at
+`LevelSuggest`, open a `gapi.Session` on the guard's client, and hand what came
+back to a pure reader package. The readers take no client and touch no wire, so
+every one of them is testable on a fixture, and the fixtures under `testdata/`
+are the specification of what Google actually returns.
+
+- `read <url> [--structure]`: the text projection, and the tree with the flag.
+- `comments <url> [--since CURSOR] [--witness]`: the threads with their ranges,
+  markers, replies and the next cursor.
+- `suggestions <url> [--md PATH]`: what is pending, and with a paired file what
+  stopped being pending.
+
+Rules that hold across all three:
+
+- **One Docs read, three views.** `documents.get` with
+  `includeTabsContent=true`, `suggestionsViewMode=SUGGESTIONS_INLINE` and
+  `commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED` carries the structure, the
+  suggestion ids and the comment ranges in one call.
+- **Drive is the source of threads, Docs is the source of ranges.**
+  `comments.list` carries the replies, the authors, `resolved` and
+  `modifiedTime`; the Docs read carries the character range, keyed by the same
+  comment id. A thread the Docs read did not place comes back with
+  `range: null` and a warning, never a failed listing. The shape of the Docs
+  `comments` key is measured rather than documented, so the decoder is loose on
+  purpose.
+- **Argument parsing is strict.** An unknown flag, a repeated flag, a missing
+  value and an extra positional argument each fail naming the offender. A
+  command that accepts and ignores what it did not understand tells the caller
+  it did something it did not.
+- **Reads only.** Nothing in these commands POSTs to Docs or Drive. The single
+  write anywhere is the snapshot in a local markdown file, and only when the
+  caller named that file with `--md`.
+- **`--witness` is a second read, not a field.** The docx export is the only
+  truthful answer to whether a comment is still attached to text, so the witness
+  costs an export. A thread is joined to an exported comment on its words and
+  its author's name, because the docx carries no Drive comment id. An export
+  that could not be read is a warning and every thread `unmatched`, not a failed
+  listing.
+- Pictures, drawings and equations print as `[image]`, `[drawing]` and
+  `[equation]` placeholders, each with a warning. Reading them is
+  `docs/backlog/read-pictures-and-drawings.md`.
+
+### `read`'s text, and why every marker is escaped
+
+The text is a deterministic projection of one `docs.Document`: the same
+document gives the same bytes, so a golden file is a specification rather than a
+snapshot. Six markers, and the meaning of each:
+
+| In the text | Means |
+|---|---|
+| `{+text+}[s:ID]` | a pending suggested insertion, with its suggestion id |
+| `{-text-}[s:ID]` | a pending suggested deletion |
+| `[[c:ID]]text[[/c]]` | the range a comment is attached to, `ID` being the Drive comment id |
+| `<!-- tab t.0: Title -->` | the tab that follows, printed only when there is more than one |
+| `# ` to `###### ` | a `HEADING_n` paragraph. `TITLE` and `SUBTITLE` are plain paragraphs |
+| `[image]`, `[drawing]`, `[equation]`, `[object]` | content this milestone does not read |
+
+**A literal `{+`, `{-`, `+}`, `-}`, `[[` or `]]` in the document's own text is
+escaped with a backslash.** That is not tidiness. Without it a document that
+quotes one of gdoc's own markers makes the AI read somebody's sentence as a
+pending suggestion, and there is no way for it to tell. `escapePairs` in
+`internal/view/text.go` has to stay in step with the constants above it.
+
+A run carrying both an insertion id and a deletion id prints twice, as the
+deletion then the insertion, because that is what Docs shows. The comment
+marker opens once, on the first copy.
+
+`--structure` is the same document as a tree with character indexes on it, which
+is what M3 needs to place a proposal at an exact position. Neither view is the
+other's summary, so both are kept.
+
+### The cursor is opaque, and it dies with the session
+
+`base64url(JSON{"v":1,"t":"<RFC3339 UTC>"})`, holding the newest `modifiedTime`
+seen across the comments and their replies. The binary emits it, the caller
+hands it back on the next poll, and **nothing writes it anywhere**: a live
+session holds it in memory and it dies with the session. What must survive a
+session lives in the front matter, and this does not.
+
+It is opaque on purpose. A caller that decodes the instant and does arithmetic
+on it has made the encoding a contract, and it is not one. The version field is
+there so a later shape is refused by name. A cursor that cannot be decoded is an
+error naming the problem, never silently read as "from the beginning": that
+would report a window nobody asked for and look like a clean poll.
+
+### The `gdoc:` front-matter block, schema 1
+
+`internal/frontmatter` owns one key in a note's YAML front matter and nothing
+else in the file. It carries `schema`, `document_id`, `folder_id`, a `published`
+record (M6 writes it), the `suggestions_seen` snapshot and `proposals` (M3
+writes those; M2 defines the shape and carries them through untouched).
+
+Four rules, and each one has a reason:
+
+- **The read is strict.** `goccy/go-yaml` with `yaml.Strict()`: an unknown key,
+  a key given twice, more than one YAML document, a missing `document_id`, a
+  `document_id` that is not a Drive id, a `kind` that is neither `insertion` nor
+  `deletion`. Each is refused naming the key, and the file is left untouched. A
+  block gdoc half understands is a pairing it may act on wrongly.
+- **`schema` must be exactly 1.** A block stating another version is refused
+  rather than read on a guess. `Schema` is the constant; bumping it is a
+  decision, not a refactor.
+- **The write is byte-preserving.** Only the `gdoc:` span changes. The author's
+  keys, their order, the line endings and the trailing newline come through
+  unchanged, and a file with no front matter at all gets the block added with
+  new delimiters. `frontmatter.Read` and `frontmatter.Write` share one parse, so
+  they cannot disagree about where the span is.
+- **The snapshot is written after a successful read, never before.** A read that
+  failed knows nothing about what is pending, and a snapshot taken then would
+  report everything this run could not see as gone on the next one. The write
+  goes through a temp file in the same directory and a rename, keeping the
+  file's mode, because the markdown is the source and gdoc is not its only
+  reader. A file whose block names another document is refused rather than
+  repaired.
+
+### `GrantInPlace` is gone until M7, and `AllowCreateIn` stayed
+
+PLAN.md M2 asked that a guard door with no production caller be deleted rather
+than carried. `GrantInPlace` had none, so it went, with its tests. M7's in-place
+restyle adds it back beside its caller, and the level it raises to is a decision
+for Nail then, not something to restore from git because a test wants it.
+
+`AllowCreateIn` stayed even though M2 calls it nowhere. The transport's whole
+create path is built on it: the parent check, the upload-shape check and the
+response learning all read it, and deleting it would mean deleting the create
+half of the guard that M6 needs. `AllowFile` and `Token.Refresh` got their first
+production callers here, which is the other half of what M2 was asked to settle.
 
 ### Building
 
