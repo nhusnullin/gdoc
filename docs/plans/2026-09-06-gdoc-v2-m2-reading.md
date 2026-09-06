@@ -317,15 +317,18 @@ whether the refusal still works or not.
 **Interfaces:**
 - Consumes: `docs.Document`, `frontmatter.SuggestionsSeen`.
 - Produces:
-  - `type Pending struct { ID, Kind, Section, Text string }` and `suggestions.Pending(d *docs.Document) []Pending`: port of `gdoc/suggestions.py`. Runs sharing one id and kind are joined in order; `Section` is the text of the heading above, `""` before the first; tables are walked; empty text after trimming is dropped; every id a run carries is reported (v1 took `ids[0]`; a run with two ids is two suggestions).
-  - `type Gone struct { ID, Kind, Section, Text string; SeenAt time.Time }` and `suggestions.Gone(seen *frontmatter.SuggestionsSeen, now []Pending) []Gone`: every item in `seen` whose id is not in `now`, with what it said last time. A fact. Whether it was accepted or rejected is the skill's, reading `read`'s text.
+  - `type Pending struct { ID, Kind, Section, Text string }` and `suggestions.List(d *docs.Document) []Pending`: port of `gdoc/suggestions.py`. Runs sharing one id and kind are joined in order; `Section` is the text of the heading above, `""` before the first; tables are walked; empty text after trimming is dropped; every id a run carries is reported (v1 took `ids[0]`; a run with two ids is two suggestions).
+  - `type Gone struct { Pending; SeenAt time.Time }` and `suggestions.GoneSince(seen *frontmatter.SuggestionsSeen, now []Pending) []Gone`: every item in `seen` whose id is not in `now`, with what it said last time. A fact. Whether it was accepted or rejected is the skill's, reading `read`'s text.
   - `suggestions.Snapshot(now []Pending, at time.Time) *frontmatter.SuggestionsSeen`.
 
-- [ ] write the failing tests: two runs one id join to one pending; a run with two ids is two pendings; heading context follows the walk into a table; `Gone` lists exactly the ids that left and carries their old text and `seen_at`; `Gone` with a nil snapshot is empty; `Snapshot` round-trips through `frontmatter.Write` and `Read`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): pending suggestions with stable ids, and what stopped being pending`
+- ⚠️ Naming deviation from the plan, forced by Go: a package cannot hold a type and a function under one name, so `Pending` and `Gone` stayed the types and the functions became `List` and `GoneSince`. `Gone` embeds `Pending`, so `encoding/json` still flattens it to the `id`/`kind`/`section`/`text`/`seen_at` object the Output shapes section prints.
+- ➕ Two decisions the plan did not state, both written into the code's comments: heading context resets at each tab boundary (a heading in one tab is not above anything in the next), and only a text run is read as a suggestion (a footnote reference carries its number as text, so a suggested footnote would otherwise be reported as the insertion of "1").
+
+- [x] write the failing tests: two runs one id join to one pending; a run with two ids is two pendings; heading context follows the walk into a table; `Gone` lists exactly the ids that left and carries their old text and `seen_at`; `Gone` with a nil snapshot is empty; `Snapshot` round-trips through `frontmatter.Write` and `Read`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): pending suggestions with stable ids, and what stopped being pending`
 
 ---
 
