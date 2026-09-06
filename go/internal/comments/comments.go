@@ -195,10 +195,11 @@ func Fetch(ctx context.Context, s Reader, id string, since *Cursor) ([]RawCommen
 }
 
 // Threads joins the Drive listing to the Docs ranges, in the order Drive
-// answered. The second return is the ids no range was found for: the thread
-// still comes back, with its quoted text, and the command puts the ids in
-// warnings. A missing anchor is a fact about one thread, never a reason to fail
-// the read of all of them.
+// answered. The second return is the ids no usable range was found for, whether
+// the Docs read placed none or placed one that does not end after it starts:
+// the thread still comes back, with its quoted text, and the command puts the
+// ids in warnings. A missing anchor is a fact about one thread, never a reason
+// to fail the read of all of them.
 //
 // A nil document is no ranges rather than a crash: a run that reads threads
 // without a Docs read behind it is a run where every thread is unplaced.
@@ -223,10 +224,18 @@ func Threads(raw []RawComment, d *docs.Document) ([]Thread, []string) {
 		if c.QuotedFileContent != nil {
 			t.Quoted = c.QuotedFileContent.Value
 		}
-		if r, ok := ranges[c.ID]; ok {
+		if r, ok := ranges[c.ID]; ok && r.Start < r.End {
 			// A copy, so the caller cannot reach into the document's map.
 			t.Range = &r
 		} else {
+			// A range that does not end after it starts places nothing, and
+			// internal/view refuses the same shape rather than marking with it.
+			// The indexes come out of the Docs comments key unchecked, and that
+			// decoder is loose on purpose because the shape is measured rather
+			// than documented, so an empty or an inverted pair is a shape it can
+			// hand over. This is the command whose output names the range as a
+			// position, so reporting one gdoc would refuse to mark would be a
+			// false fact in the field a proposal is placed from.
 			unplaced = append(unplaced, c.ID)
 		}
 		threads = append(threads, t)

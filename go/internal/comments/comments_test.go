@@ -517,3 +517,34 @@ func ids(raw []RawComment) []string {
 	}
 	return out
 }
+
+// A range that does not end after it starts places nothing. internal/view
+// refuses the same shape and warns, because the Docs comments key is measured
+// rather than documented and its decoder is loose on purpose. comments is the
+// command whose output names the range as a position, and M3 places proposals
+// from it, so it must not report one it would refuse to mark.
+func TestAnUnusableRangeLeavesTheThreadUnplaced(t *testing.T) {
+	raw := []RawComment{{ID: "BACKWARDS"}, {ID: "EMPTY"}, {ID: "GOOD"}}
+	d := &docs.Document{CommentRanges: map[string]docs.Range{
+		"BACKWARDS": {Tab: "t.0", Start: 9, End: 3},
+		"EMPTY":     {Tab: "t.0", Start: 4, End: 4},
+		"GOOD":      {Tab: "t.0", Start: 3, End: 9},
+	}}
+
+	threads, unplaced := Threads(raw, d)
+
+	if len(threads) != 3 {
+		t.Fatalf("Threads = %d threads, want 3", len(threads))
+	}
+	for _, tr := range threads[:2] {
+		if tr.Range != nil {
+			t.Errorf("thread %s carries range %+v, want none", tr.ID, *tr.Range)
+		}
+	}
+	if threads[2].Range == nil {
+		t.Error("thread GOOD lost the range it had")
+	}
+	if want := []string{"BACKWARDS", "EMPTY"}; !reflect.DeepEqual(unplaced, want) {
+		t.Errorf("unplaced = %v, want %v", unplaced, want)
+	}
+}

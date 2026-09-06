@@ -432,10 +432,14 @@ Rules that hold across all three:
 - **Drive is the source of threads, Docs is the source of ranges.**
   `comments.list` carries the replies, the authors, `resolved` and
   `modifiedTime`; the Docs read carries the character range, keyed by the same
-  comment id. A thread the Docs read did not place comes back with
+  comment id. A thread the Docs read gave no usable range comes back with
   `range: null` and a warning, never a failed listing. The shape of the Docs
   `comments` key is measured rather than documented, so the decoder is loose on
-  purpose.
+  purpose, and unusable therefore covers two cases: no range at all, and a range
+  that does not end after it starts. `comments` is the command whose output
+  names the range as a position, and M3 places a proposal from it, so reporting
+  a range `read` would refuse to mark would be a false fact in that field. The
+  test is the same `Start >= End` as `internal/view`'s.
 - **Argument parsing is strict.** An unknown flag, a repeated flag, a missing
   value, an empty value written either way, an extra positional argument, and a
   flag standing where another flag's value belongs each fail naming the
@@ -588,7 +592,12 @@ Four rules, and each one has a reason:
   naming the key, and the file is left untouched. A block gdoc half understands
   is a pairing it may act on wrongly. The front matter is one YAML document by
   construction, so there is no check for a second one: it closes at the first
-  `---` or `...` line, which is where a second document would have begun. The
+  `---` or `...` line, which is where a second document would have begun. A
+  delimiter is recognised with trailing spaces or tabs after it, and behind a
+  leading byte order mark, because Jekyll, python-frontmatter and goldmark-meta
+  all read those as front matter: a note gdoc reads as unpaired is a note
+  `Write` puts a second block in front of, demoting the author's keys to prose.
+  The
   author's own keys are checked too, and on every path: a file being paired for
   the first time has no `gdoc:` key at all, so checking only when one is already
   there would check every case but the first.

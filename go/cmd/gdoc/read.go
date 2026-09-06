@@ -323,7 +323,7 @@ func cmdComments(raw []string) emit.Result {
 	var own []string
 	for _, id := range unplaced {
 		own = append(own, fmt.Sprintf(
-			"comment %s: the Docs read placed no range for it, so the thread comes back with its quoted text and no position", id))
+			"comment %s: the Docs read gave it no usable range, so the thread comes back with its quoted text and no position", id))
 	}
 	if a.has("--witness") {
 		var witnessed []comments.Thread

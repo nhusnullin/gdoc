@@ -452,3 +452,65 @@ func TestWriteRefusesAFileWhoseFrontMatterNeverCloses(t *testing.T) {
 		t.Error("Write returned bytes beside its error")
 	}
 }
+
+// A delimiter carrying trailing spaces is still a delimiter. Jekyll,
+// python-frontmatter and goldmark-meta all accept one, so a note written that
+// way has front matter everywhere except here. Reading it as unpaired is not a
+// quiet no-op: Write then takes the "never paired" branch and puts a second
+// block in front of the author's keys, demoting them to prose, which is the
+// same corruption the unclosed-delimiter refusal exists to prevent.
+func TestTrailingSpaceOnTheDelimiterIsStillFrontMatter(t *testing.T) {
+	src := []byte("--- \ntitle: x\ngdoc:\n  schema: 1\n  document_id: " + testDocumentID + "\n--- \nbody\n")
+
+	b, err := Read(src)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if b == nil {
+		t.Fatal("a note whose delimiters carry a trailing space read as unpaired")
+	}
+	if b.DocumentID != testDocumentID {
+		t.Errorf("document_id = %q", b.DocumentID)
+	}
+
+	out, err := Write(src, b)
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if !bytes.Equal(src, out) {
+		t.Fatalf("Write did not replace the block in place.\nwant:\n%q\ngot:\n%q", src, out)
+	}
+}
+
+// A UTF-8 byte order mark in front of the opening delimiter is what an editor
+// on Windows writes. The front matter behind it is still front matter, and a
+// file with no front matter behind it keeps its mark in front of the block gdoc
+// adds: moving the block before the mark puts the mark in the body.
+func TestAByteOrderMarkDoesNotHideTheFrontMatter(t *testing.T) {
+	const bom = "\uFEFF"
+
+	paired := []byte(bom + "---\ntitle: x\ngdoc:\n  schema: 1\n  document_id: " + testDocumentID + "\n---\nbody\n")
+	b, err := Read(paired)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if b == nil {
+		t.Fatal("a note behind a byte order mark read as unpaired")
+	}
+	out, err := Write(paired, b)
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if !bytes.Equal(paired, out) {
+		t.Fatalf("Write did not replace the block in place.\nwant:\n%q\ngot:\n%q", paired, out)
+	}
+
+	plain := []byte(bom + "# Title\n\nbody\n")
+	out, err = Write(plain, &Block{Schema: Schema, DocumentID: testDocumentID})
+	if err != nil {
+		t.Fatalf("Write on an unpaired note: %v", err)
+	}
+	if !bytes.HasPrefix(out, []byte(bom+"---\n")) {
+		t.Errorf("the byte order mark did not stay in front of the block:\n%q", out)
+	}
+}

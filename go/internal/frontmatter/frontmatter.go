@@ -21,6 +21,10 @@ const (
 	closeAlternate = "..."
 )
 
+// bom is the UTF-8 byte order mark. An editor on Windows writes one in front of
+// the opening delimiter, and the front matter behind it is still front matter.
+const bom = "\uFEFF"
+
 // wrapper carries the block under its key, so the strict decode sees the same
 // shape the file has.
 type wrapper struct {
@@ -114,10 +118,18 @@ func Write(src []byte, b *Block) ([]byte, error) {
 	var out bytes.Buffer
 	switch {
 	case !d.hasFront:
+		// A byte order mark stays in front of everything, the new block
+		// included: moving the block before it would leave the mark sitting in
+		// the body, where it is a character rather than an encoding.
+		rest := src
+		if bytes.HasPrefix(rest, []byte(bom)) {
+			out.WriteString(bom)
+			rest = rest[len(bom):]
+		}
 		out.WriteString(openDelimiter + d.eol)
 		out.Write(block)
 		out.WriteString(openDelimiter + d.eol)
-		out.Write(src)
+		out.Write(rest)
 	case d.gdocStart >= 0:
 		out.WriteString(strings.Join(d.lines[:d.gdocStart], ""))
 		out.Write(block)
@@ -225,13 +237,13 @@ func parse(src []byte) (*document, error) {
 	if bytes.Contains(src, []byte("\r\n")) {
 		d.eol = "\r\n"
 	}
-	if len(d.lines) == 0 || trim(d.lines[0]) != openDelimiter {
+	if len(d.lines) == 0 || !isDelimiter(strings.TrimPrefix(d.lines[0], bom), openDelimiter) {
 		return d, nil
 	}
 
 	d.closeAt = -1
 	for i := 1; i < len(d.lines); i++ {
-		if t := trim(d.lines[i]); t == openDelimiter || t == closeAlternate {
+		if isDelimiter(d.lines[i], openDelimiter) || isDelimiter(d.lines[i], closeAlternate) {
 			d.closeAt = i
 			break
 		}
@@ -302,6 +314,17 @@ func splitLines(s string) []string {
 // trim drops a line's terminator, CRLF included.
 func trim(line string) string {
 	return strings.TrimRight(line, "\r\n")
+}
+
+// isDelimiter reports whether the line is that front-matter delimiter. Trailing
+// spaces and tabs do not stop it being one: Jekyll, python-frontmatter and
+// goldmark-meta all accept them, so a note written that way has front matter
+// everywhere else and gdoc must not read it as unpaired. Reading it as unpaired
+// is not a quiet no-op. Write then takes its "never paired" branch and puts a
+// second block in front of the author's own keys, demoting them to prose, which
+// is the corruption the unclosed-delimiter refusal exists to prevent.
+func isDelimiter(line, delimiter string) bool {
+	return strings.TrimRight(trim(line), " \t") == delimiter
 }
 
 // normalize hands the YAML decoder LF line endings, whatever the file uses.
