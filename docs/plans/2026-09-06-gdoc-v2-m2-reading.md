@@ -220,13 +220,13 @@ whether the refusal still works or not.
   - `(*Block).Validate() error`: the rules under "The front-matter block" above.
 - The span is found by lines, never by re-marshalling the author's YAML: a top-level key is a line matching `^gdoc:` inside the `---` delimiters, and its span runs to the next line that starts at column 0 with a non-space character, or to the closing delimiter.
 
-- [ ] write the failing tests for `Read`: each fixture, asserting the nil-nil cases, the decoded values of the full block, and one refusal per invalid fixture with the key named in the error
-- [ ] write the failing tests for `Write`: `Read` then `Write` of an unchanged block is byte-identical; changing one field changes only lines inside the `gdoc:` span (line diff: no other line moved); CRLF stays CRLF; a file without front matter gains delimiters and the block and nothing else; a file with a `title:` and no `gdoc:` keeps its `title:` line byte-identical; an invalid block returns the error and the input unchanged
-- [ ] write the failing tests for `Validate`: missing `document_id`, `schema: 2`, an unknown `kind`, a proposal without an id
-- [ ] run `cd go && go test ./internal/frontmatter/` and watch it fail
-- [ ] implement `schema.go` and `frontmatter.go`
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the gdoc: front-matter block, strict in, byte-preserving out`
+- [x] write the failing tests for `Read`: each fixture, asserting the nil-nil cases, the decoded values of the full block, and one refusal per invalid fixture with the key named in the error
+- [x] write the failing tests for `Write`: `Read` then `Write` of an unchanged block is byte-identical; changing one field changes only lines inside the `gdoc:` span (line diff: no other line moved); CRLF stays CRLF; a file without front matter gains delimiters and the block and nothing else; a file with a `title:` and no `gdoc:` keeps its `title:` line byte-identical; an invalid block returns the error and the input unchanged
+- [x] write the failing tests for `Validate`: missing `document_id`, `schema: 2`, an unknown `kind`, a proposal without an id
+- [x] run `cd go && go test ./internal/frontmatter/` and watch it fail
+- [x] implement `schema.go` and `frontmatter.go`
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the gdoc: front-matter block, strict in, byte-preserving out`
 
 ---
 
