@@ -435,3 +435,22 @@ func unescapedMarker(out string) bool {
 	}
 	return false
 }
+
+// A range whose end is before its start marks nothing, and arming it puts the
+// close before the open: the text then carries half a pair, which is what the
+// escaping exists to make impossible. The decoder that reads these indexes is
+// loose on purpose, because the shape of the Docs comments key is measured
+// rather than documented, so an inverted pair is a shape it can hand over.
+func TestARangeEndingBeforeItStartsIsAWarningAndIsNotPrinted(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":13,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":13,"textRun":{"content":"hello world\n"}}]}}]},
+		"comments":[{"id":"BACKWARDS","range":{"startIndex":9,"endIndex":3}}]}`
+	text, warnings := Text(parse(t, raw))
+	if strings.Contains(text, "[[") {
+		t.Errorf("an inverted range was marked: %q", text)
+	}
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "BACKWARDS") {
+		t.Errorf("warnings = %v, want one naming BACKWARDS", warnings)
+	}
+}

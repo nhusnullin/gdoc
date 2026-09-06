@@ -69,11 +69,73 @@ func (c *Cursor) String() string {
 //
 // The same precision String writes, and for the same reason: a floor rounded
 // down to the second re-opens a window this run already read.
+//
+// The instant goes out as it is, and the bound Drive applies to it is
+// inclusive: startModifiedTime is documented as the minimum value of
+// modifiedTime. Asking for a window starting a millisecond later would be
+// asking Drive not to send a comment modified inside the cursor's own
+// millisecond, and losing a comment is the wrong direction to be wrong in. So
+// the request stays wide and narrow drops what came back too old.
 func (c *Cursor) since() string {
 	if c == nil {
 		return ""
 	}
 	return c.At.UTC().Format(time.RFC3339Nano)
+}
+
+// narrow drops the comments this cursor has already reported.
+//
+// Without it the thread whose instant became the cursor comes back on every
+// poll: the bound is inclusive, so Drive sends it again, and NextCursor cannot
+// advance past an instant it already holds, so the next poll asks the same
+// question. The thread is then news for ever, which is the failure String's
+// millisecond precision was for. The precision fixed the rounding half of it
+// and this is the boundary half.
+//
+// A comment is kept when anything about it is strictly newer than the cursor,
+// its own modifiedTime or any reply's createdTime. The replies are in the set
+// for the reason NextCursor reads them: a thread whose modifiedTime Drive did
+// not move is still a thread with something new in it.
+//
+// A nil cursor narrows nothing, so a listing with no --since is the wire's
+// words in the wire's order.
+func (c *Cursor) narrow(raw []RawComment) []RawComment {
+	if c == nil {
+		return raw
+	}
+	out := make([]RawComment, 0, len(raw))
+	for _, comment := range raw {
+		if c.isNews(comment) {
+			out = append(out, comment)
+		}
+	}
+	return out
+}
+
+// isNews is whether one comment carries an instant this cursor has not seen.
+func (c *Cursor) isNews(comment RawComment) bool {
+	if c.newer(comment.ModifiedTime) {
+		return true
+	}
+	for _, r := range comment.Replies {
+		if c.newer(r.CreatedTime) {
+			return true
+		}
+	}
+	return false
+}
+
+// newer is whether s is strictly after the cursor, and true as well when s is
+// not an instant at all. An instant gdoc cannot read is not evidence that
+// nothing happened, so the comment carrying it is reported; NextCursor steps
+// over the same case for the same reason, and the cost is one repeated thread
+// rather than a lost one.
+func (c *Cursor) newer(s string) bool {
+	at, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return true
+	}
+	return at.After(c.At)
 }
 
 // ParseCursor reads what String wrote.

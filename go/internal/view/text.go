@@ -138,14 +138,21 @@ func (e *emitter) startTab(t docs.Tab, ranges map[string]docs.Range) {
 			continue
 		}
 		e.seen[id] = true
-		if r.Start == r.End {
-			// A range covering no characters marks nothing. Arming it anyway
-			// puts the close before the open at the same index, and at the end
-			// of the last run the closes-only drain emits the close and leaves
-			// the open behind: either way the text carries a marker that is not
-			// a pair, which is what the escaping exists to make impossible.
+		if r.Start >= r.End {
+			// A range that does not end after it starts marks nothing. Arming
+			// it anyway puts the close before the open, and at the end of the
+			// last run the closes-only drain emits the close and leaves the
+			// open behind: either way the text carries a marker that is not a
+			// pair, which is what the escaping exists to make impossible. An
+			// inverted range is worse than an empty one, because it crosses two
+			// other markers on the way past them.
+			//
+			// Not only the equal case, because the indexes come out of Docs
+			// unchecked: the shape of the comments key is measured rather than
+			// documented, so the decoder that reads them is loose on purpose
+			// and an inverted pair is a shape it can hand over.
 			e.warnings = append(e.warnings,
-				fmt.Sprintf("comment %s: its range %d..%d covers no text, so it is not marked", id, r.Start, r.End))
+				fmt.Sprintf("comment %s: its range %d..%d does not end after it starts, so it is not marked", id, r.Start, r.End))
 			continue
 		}
 		if !covers(spans, r.Start) || !covers(spans, r.End) {

@@ -389,3 +389,65 @@ func TestAMarkerSeparatedByATabIsStillAMarker(t *testing.T) {
 		}
 	}
 }
+
+// startModifiedTime is documented as the minimum value of modifiedTime, so the
+// bound Drive applies is inclusive: the thread whose instant became the cursor
+// comes back on the next poll, and NextCursor cannot advance past an instant it
+// already holds. Left alone that thread is news on every poll for ever, which
+// is the failure the cursor's millisecond precision was for. The precision
+// fixed the rounding half of it and this is the boundary half.
+func TestFetchDropsTheThreadItsCursorAlreadyReported(t *testing.T) {
+	f := bothPages(t)
+	// 10:45 is page-one's newest instant, reply R2 of AAAA1111, so it is the
+	// cursor the previous poll emitted. Nothing in either page is newer.
+	raw, err := Fetch(context.Background(), f, testDocID, &Cursor{At: at("2026-09-06T10:45:00Z")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) != 0 {
+		t.Errorf("Fetch returned %d comments, want none: every instant in the pages is the cursor's or older", len(raw))
+	}
+}
+
+// A thread whose own modifiedTime Drive did not move is still a thread with
+// something new in it, so the reply times are read too. Narrowing on
+// modifiedTime alone would drop the answer somebody just wrote.
+func TestFetchKeepsAThreadWhoseReplyIsNewerThanTheCursor(t *testing.T) {
+	f := bothPages(t)
+	// AAAA1111 was modified at 10:30, which is the cursor, and carries a reply
+	// written at 10:45, which is not.
+	raw, err := Fetch(context.Background(), f, testDocID, &Cursor{At: at("2026-09-06T10:30:00Z")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) != 1 || raw[0].ID != "AAAA1111" {
+		t.Fatalf("Fetch returned %d comments, want AAAA1111 alone for its newer reply", len(raw))
+	}
+}
+
+// An instant gdoc cannot read is not evidence that nothing happened, so the
+// comment carrying it is reported. NextCursor steps over the same case for the
+// same reason.
+func TestFetchKeepsACommentWhoseTimeItCannotRead(t *testing.T) {
+	page := []byte(`{"comments":[{"id":"AAAA1111","modifiedTime":"not a time","replies":[]}]}`)
+	f := &fakeReader{pages: [][]byte{page}}
+	raw, err := Fetch(context.Background(), f, testDocID, &Cursor{At: at("2026-09-06T10:45:00Z")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) != 1 {
+		t.Errorf("Fetch returned %d comments, want the one whose time it could not read", len(raw))
+	}
+}
+
+// No cursor is no narrowing, and the wire's words come through as they were.
+func TestFetchWithNoCursorNarrowsNothing(t *testing.T) {
+	f := bothPages(t)
+	raw, err := Fetch(context.Background(), f, testDocID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) != 3 {
+		t.Errorf("Fetch returned %d comments, want all 3", len(raw))
+	}
+}

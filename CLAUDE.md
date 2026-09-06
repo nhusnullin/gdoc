@@ -489,11 +489,15 @@ snapshot. Six markers, and the meaning of each:
 | `# ` to `###### ` | a `HEADING_n` paragraph. `TITLE` and `SUBTITLE` are plain paragraphs |
 | `[image]`, `[drawing]`, `[equation]`, `[object]` | content this milestone does not read |
 
-**A comment range covering no characters is a warning, not a marker.** Armed, it
-puts its own close before its own open at the shared index, and at the end of
+**A comment range that does not end after it starts is a warning, not a
+marker.** Armed, it puts its own close before its own open, and at the end of
 the last run the closes-only drain emits the close and leaves the open behind.
 Either way the text carries half a pair, which is exactly what the escaping
-below exists to make impossible.
+below exists to make impossible. The test is `r.Start >= r.End`, not equality:
+the indexes come out of the Docs answer unchecked, the shape of the `comments`
+key is measured rather than documented, so the loose decoder can hand over an
+inverted pair. Inverted is the worse half, because it crosses the markers it
+passes on the way.
 
 **A literal `{+`, `{-`, `+}`, `-}`, `[[` or `]]` in the document's own text is
 escaped with a backslash.** That is not tidiness. Without it a document that
@@ -527,6 +531,20 @@ news on every poll for ever. `ParseCursor` reads both shapes. The binary emits i
 hands it back on the next poll, and **nothing writes it anywhere**: a live
 session holds it in memory and it dies with the session. What must survive a
 session lives in the front matter, and this does not.
+
+**The precision is only half of that fix, and `Cursor.narrow` is the other
+half.** `startModifiedTime` is documented as the *minimum* value of
+`modifiedTime`, so Drive's bound is inclusive: handed the instant of the newest
+thread the last run saw, it sends that thread back, and `NextCursor` cannot
+advance past an instant it already holds. So the thread would be news on every
+poll again, for the boundary reason rather than the rounding one. The request
+stays inclusive on purpose, because asking for a window a millisecond later
+would tell Drive to withhold a comment modified inside the cursor's own
+millisecond, and losing a comment is the wrong direction to be wrong in. `Fetch`
+narrows the answer instead: a comment is kept when its own `modifiedTime` or any
+reply's `createdTime` is strictly newer than the cursor. The replies are in that
+test for the reason `NextCursor` reads them, and an instant gdoc cannot parse
+keeps its comment.
 
 It is opaque on purpose. A caller that decodes the instant and does arithmetic
 on it has made the encoding a contract, and it is not one. The version field is

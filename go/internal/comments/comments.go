@@ -166,6 +166,11 @@ type listPage struct {
 // client. A document the command was not given is refused inside the process,
 // before anything reaches a wire, and that refusal comes back as this
 // function's error unwrapped: it is the sentence the caller has to read.
+//
+// With a cursor the answer is narrowed before it is returned. Drive's bound on
+// startModifiedTime is inclusive, so the listing carries the thread whose
+// instant became the cursor; narrow is what keeps that thread from being news
+// on every poll. Read the reasoning on Cursor.narrow.
 func Fetch(ctx context.Context, s Reader, id string, since *Cursor) ([]RawComment, error) {
 	var out []RawComment
 	token := ""
@@ -176,7 +181,7 @@ func Fetch(ctx context.Context, s Reader, id string, since *Cursor) ([]RawCommen
 		}
 		out = append(out, answer.Comments...)
 		if answer.NextPageToken == "" {
-			return out, nil
+			return since.narrow(out), nil
 		}
 		if answer.NextPageToken == token {
 			return nil, fmt.Errorf("the comment listing repeated its page token after %d comments, so it is not advancing", len(out))
