@@ -2,7 +2,7 @@
 
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
 producing working, testable software. Detailed task-by-task plans live in
-`docs/plans/` (ralphex's plan directory) and are written when a milestone starts, so each one
+`docs/plans/` and are written when a milestone starts, so each one
 is written against the code that actually exists by then. Milestone 1's is
 written, and that milestone is done.
 
