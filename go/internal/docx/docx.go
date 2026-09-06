@@ -100,7 +100,7 @@ func Parse(b []byte) (*File, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the export is not a docx: %w", err)
 	}
-	body, found, err := part(z, "word/document.xml")
+	body, found, err := part(z, "word/document.xml", MaxExportBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func Parse(b []byte) (*File, error) {
 	}
 
 	f := &File{Comments: []Comment{}}
-	raw, found, err := part(z, "word/comments.xml")
+	raw, found, err := part(z, "word/comments.xml", MaxExportBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -132,10 +132,15 @@ func Parse(b []byte) (*File, error) {
 	return f, nil
 }
 
-// part reads one file out of the zip, bounded. The second return says whether
-// the part was there at all, so an absent comments part and an unreadable one
-// are two different answers.
-func part(z *zip.Reader, name string) ([]byte, bool, error) {
+// part reads one file out of the zip, bounded by limit. The second return says
+// whether the part was there at all, so an absent comments part and an
+// unreadable one are two different answers.
+//
+// A member over the ceiling is an error naming it, never the short bytes. This
+// is internal/gapi's rule about a response body, one layer in: handing the XML
+// parser a document cut mid-element makes it report that word/document.xml did
+// not parse, which blames Google's export for a limit gdoc chose.
+func part(z *zip.Reader, name string, limit int64) ([]byte, bool, error) {
 	for _, f := range z.File {
 		if f.Name != name {
 			continue
@@ -145,9 +150,14 @@ func part(z *zip.Reader, name string) ([]byte, bool, error) {
 			return nil, true, fmt.Errorf("%s could not be opened: %w", name, err)
 		}
 		defer rc.Close()
-		b, err := io.ReadAll(io.LimitReader(rc, MaxExportBytes))
+		// One byte past the ceiling, so a part that fills it can be told from a
+		// part that ended.
+		b, err := io.ReadAll(io.LimitReader(rc, limit+1))
 		if err != nil {
 			return nil, true, fmt.Errorf("%s could not be read: %w", name, err)
+		}
+		if int64(len(b)) > limit {
+			return nil, true, fmt.Errorf("%s is larger than the %d bytes this read allows", name, limit)
 		}
 		return b, true, nil
 	}

@@ -397,15 +397,27 @@ func TestAMarkerSeparatedByATabIsStillAMarker(t *testing.T) {
 // is the failure the cursor's millisecond precision was for. The precision
 // fixed the rounding half of it and this is the boundary half.
 func TestFetchDropsTheThreadItsCursorAlreadyReported(t *testing.T) {
-	f := bothPages(t)
-	// 10:45 is page-one's newest instant, reply R2 of AAAA1111, so it is the
-	// cursor the previous poll emitted. Nothing in either page is newer.
-	raw, err := Fetch(context.Background(), f, testDocID, &Cursor{At: at("2026-09-06T10:45:00Z")})
+	// The cursor a previous poll over these same pages handed back. Its instant
+	// is 10:45, page-one's newest, reply R2 of AAAA1111, and it names the
+	// thread that instant came from. Nothing in either page is newer, so a
+	// second poll has nothing to report. Built through NextCursor rather than by
+	// hand, because the ids at the boundary are half of what a cursor is.
+	seen, err := Fetch(context.Background(), bothPages(t), testDocID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	threads, _ := Threads(seen, nil)
+	since := NextCursor(nil, threads)
+	if since.At != at("2026-09-06T10:45:00Z") {
+		t.Fatalf("the previous poll's cursor is %v, want page-one's newest instant", since.At)
+	}
+
+	raw, err := Fetch(context.Background(), bothPages(t), testDocID, since)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(raw) != 0 {
-		t.Errorf("Fetch returned %d comments, want none: every instant in the pages is the cursor's or older", len(raw))
+		t.Errorf("Fetch returned %v, want none: every instant in the pages is the cursor's or older", ids(raw))
 	}
 }
 
@@ -450,4 +462,58 @@ func TestFetchWithNoCursorNarrowsNothing(t *testing.T) {
 	if len(raw) != 3 {
 		t.Errorf("Fetch returned %d comments, want all 3", len(raw))
 	}
+}
+
+// A comment modified inside the cursor's own millisecond, that the last poll
+// landed too early to see, must still be news. Drive's precision cannot tell
+// the two instants apart, so a strictly-newer comparison alone drops that
+// comment on every poll for ever, and losing a comment is the wrong direction
+// to be wrong in. The cursor carries the ids it reported at its own instant,
+// which is what tells the two apart.
+func TestFetchKeepsACommentSharingTheCursorsMillisecondItNeverReported(t *testing.T) {
+	reported := []Thread{{ID: "AAAA1111", Modified: "2026-09-06T10:00:00.123Z"}}
+	since := NextCursor(nil, reported)
+
+	page := []byte(`{"comments":[` +
+		`{"id":"AAAA1111","modifiedTime":"2026-09-06T10:00:00.123Z","replies":[]},` +
+		`{"id":"BBBB2222","modifiedTime":"2026-09-06T10:00:00.123Z","replies":[]}]}`)
+	raw, err := Fetch(context.Background(), &fakeReader{pages: [][]byte{page}}, testDocID, since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) != 1 || raw[0].ID != "BBBB2222" {
+		t.Fatalf("Fetch returned %v, want BBBB2222 alone: the one comment in that millisecond nobody has been told about", ids(raw))
+	}
+}
+
+// And exactly once. The cursor the second poll emits has to carry both ids,
+// including the one narrow dropped, or the two comments take turns being news
+// and the poll never goes quiet.
+func TestTheCursorAfterASharedMillisecondReportsNeitherCommentAgain(t *testing.T) {
+	page := []byte(`{"comments":[` +
+		`{"id":"AAAA1111","modifiedTime":"2026-09-06T10:00:00.123Z","replies":[]},` +
+		`{"id":"BBBB2222","modifiedTime":"2026-09-06T10:00:00.123Z","replies":[]}]}`)
+	first := NextCursor(nil, []Thread{{ID: "AAAA1111", Modified: "2026-09-06T10:00:00.123Z"}})
+
+	raw, err := Fetch(context.Background(), &fakeReader{pages: [][]byte{page}}, testDocID, first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second := NextCursor(first, []Thread{{ID: raw[0].ID, Modified: raw[0].ModifiedTime}})
+
+	again, err := Fetch(context.Background(), &fakeReader{pages: [][]byte{page}}, testDocID, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(again) != 0 {
+		t.Fatalf("the third poll returned %v, want nothing: both comments have been reported once", ids(again))
+	}
+}
+
+func ids(raw []RawComment) []string {
+	out := make([]string, 0, len(raw))
+	for _, c := range raw {
+		out = append(out, c.ID)
+	}
+	return out
 }

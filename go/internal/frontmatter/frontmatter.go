@@ -31,12 +31,13 @@ type wrapper struct {
 // gdoc: span located. Every index is into lines, and every line carries its own
 // terminator, so joining a slice of them reproduces the bytes exactly.
 type document struct {
-	lines     []string
-	hasFront  bool
-	closeAt   int // index of the closing delimiter line
-	gdocStart int // -1 when the file has no gdoc: key
-	gdocEnd   int // one past the last line of the span
-	eol       string
+	lines       []string
+	hasFront    bool
+	openNoClose bool // line 1 opens the front matter and nothing closes it
+	closeAt     int  // index of the closing delimiter line
+	gdocStart   int  // -1 when the file has no gdoc: key
+	gdocEnd     int  // one past the last line of the span
+	eol         string
 }
 
 // Read returns the gdoc: block, or nil when the file has no front matter or the
@@ -104,6 +105,10 @@ func Write(src []byte, b *Block) ([]byte, error) {
 	block, err := marshal(b, d.eol)
 	if err != nil {
 		return nil, err
+	}
+
+	if d.openNoClose {
+		return nil, fmt.Errorf("front matter: line 1 opens with %s and the front matter never closes; add the closing %s, because gdoc will not write a second block in front of it", openDelimiter, openDelimiter)
 	}
 
 	var out bytes.Buffer
@@ -232,7 +237,11 @@ func parse(src []byte) (*document, error) {
 		}
 	}
 	if d.closeAt < 0 {
-		// An opening delimiter with no closing one is not front matter.
+		// An opening delimiter with no closing one is not front matter, so
+		// there is no block to read. It is not an unpaired note either, and
+		// Write refuses it rather than putting a second block in front of the
+		// author's keys.
+		d.openNoClose = true
 		return d, nil
 	}
 	d.hasFront = true

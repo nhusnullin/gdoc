@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 )
 
@@ -26,16 +27,27 @@ import (
 // anyway is how a poll quietly reports the wrong window.
 const cursorVersion = 1
 
-// Cursor is one instant: the newest modifiedTime, across the comments and their
-// replies, that the run which emitted it saw.
+// Cursor is one instant, plus the ids reported at it: the newest modifiedTime,
+// across the comments and their replies, that the run which emitted it saw, and
+// every thread whose own newest instant was that one.
+//
+// The ids are there because the instant alone cannot answer the boundary
+// question. Drive writes modifiedTime to the millisecond, so two comments can
+// share an instant while only one of them has been reported, and no comparison
+// on the instant tells those two comments apart. Ids do.
 type Cursor struct {
-	At time.Time
+	At  time.Time
+	Ids []string
 }
 
-// cursorBody is what the base64 carries.
+// cursorBody is what the base64 carries. The ids are omitted when there are
+// none, and a cursor written before this field existed still reads: the ids
+// only ever narrow further, so their absence costs one repeated thread and
+// never a lost one. That is why the version did not have to move.
 type cursorBody struct {
-	V int    `json:"v"`
-	T string `json:"t"`
+	V int      `json:"v"`
+	T string   `json:"t"`
+	I []string `json:"i,omitempty"`
 }
 
 // String is the value the caller hands back. UTC always, so the same instant in
@@ -53,9 +65,9 @@ func (c *Cursor) String() string {
 	if c == nil {
 		return ""
 	}
-	b, err := json.Marshal(cursorBody{V: cursorVersion, T: c.At.UTC().Format(time.RFC3339Nano)})
+	b, err := json.Marshal(cursorBody{V: cursorVersion, T: c.At.UTC().Format(time.RFC3339Nano), I: c.Ids})
 	if err != nil {
-		// cursorBody is two fields of the two kinds encoding/json cannot fail
+		// cursorBody is three fields of the kinds encoding/json cannot fail
 		// on. There is no error to report here and nothing that could produce
 		// one.
 		return ""
@@ -75,7 +87,8 @@ func (c *Cursor) String() string {
 // modifiedTime. Asking for a window starting a millisecond later would be
 // asking Drive not to send a comment modified inside the cursor's own
 // millisecond, and losing a comment is the wrong direction to be wrong in. So
-// the request stays wide and narrow drops what came back too old.
+// the request stays wide and narrow drops what came back too old or already
+// reported.
 func (c *Cursor) since() string {
 	if c == nil {
 		return ""
@@ -96,6 +109,13 @@ func (c *Cursor) since() string {
 // its own modifiedTime or any reply's createdTime. The replies are in the set
 // for the reason NextCursor reads them: a thread whose modifiedTime Drive did
 // not move is still a thread with something new in it.
+//
+// A comment sitting exactly on the cursor's instant is kept too, unless the
+// cursor names its id. Strictly-newer alone would drop it, and that is a lost
+// comment rather than a repeated one: two comments can share a millisecond with
+// only one of them reported, when the poll landed between the two writes. Then
+// the second one is at the cursor's instant, has never been seen, and no
+// comparison on instants can say so.
 //
 // A nil cursor narrows nothing, so a listing with no --since is the wire's
 // words in the wire's order.
@@ -122,6 +142,30 @@ func (c *Cursor) isNews(comment RawComment) bool {
 			return true
 		}
 	}
+	if c.reported(comment.ID) {
+		// Reported at this instant already. A comment edited twice inside one
+		// millisecond is the blind spot left, and it is Drive's precision
+		// rather than a choice made here.
+		return false
+	}
+	if c.sameInstant(comment.ModifiedTime) {
+		return true
+	}
+	for _, r := range comment.Replies {
+		if c.sameInstant(r.CreatedTime) {
+			return true
+		}
+	}
+	return false
+}
+
+// reported is whether this cursor names the id among the threads it carried.
+func (c *Cursor) reported(id string) bool {
+	for _, seen := range c.Ids {
+		if seen == id {
+			return true
+		}
+	}
 	return false
 }
 
@@ -136,6 +180,16 @@ func (c *Cursor) newer(s string) bool {
 		return true
 	}
 	return at.After(c.At)
+}
+
+// sameInstant is whether s is the cursor's own instant. An unreadable instant
+// is not one: newer has already reported that comment.
+func (c *Cursor) sameInstant(s string) bool {
+	at, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return false
+	}
+	return at.Equal(c.At)
 }
 
 // ParseCursor reads what String wrote.
@@ -168,13 +222,22 @@ func ParseCursor(s string) (*Cursor, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the cursor %q carries %q, which is not an RFC 3339 instant", s, body.T)
 	}
-	return &Cursor{At: at}, nil
+	return &Cursor{At: at, Ids: body.I}, nil
 }
 
 // NextCursor is the newest instant this run saw: the modifiedTime of every
 // thread and the createdTime of every reply, whichever is latest. A reply is in
 // the set because a thread whose modifiedTime Drive did not move is still a
 // thread with something new in it.
+//
+// It also carries the ids of the threads whose own newest instant is that one,
+// which is what narrow reads at the boundary. When the instant has not moved
+// those ids are added to the ones the previous cursor held rather than
+// replacing them: a thread narrow dropped is a thread the caller was told about
+// on an earlier poll, and forgetting its id makes the two threads sharing that
+// millisecond take turns being news for ever. When the instant does move the
+// older ids go, because every comment behind the new instant is strictly older
+// and the strict comparison covers it.
 //
 // prev is the floor, not just the fallback. A run that saw only older activity
 // keeps the cursor it was given: a cursor that goes backwards makes the next
@@ -189,26 +252,77 @@ func NextCursor(prev *Cursor, threads []Thread) *Cursor {
 		newest = prev.At
 	}
 	moved := false
+	for _, t := range threads {
+		at, ok := peak(t)
+		if ok && at.After(newest) {
+			newest = at
+			moved = true
+		}
+	}
+
+	fresh := idsAt(newest, threads)
+	if !moved {
+		// Nothing newer than what the caller already had, which includes the
+		// case of having had nothing at all.
+		if prev == nil {
+			return nil
+		}
+		ids := union(prev.Ids, fresh)
+		if len(ids) == len(prev.Ids) {
+			return prev
+		}
+		return &Cursor{At: prev.At, Ids: ids}
+	}
+	return &Cursor{At: newest, Ids: fresh}
+}
+
+// peak is one thread's own newest instant, across its modifiedTime and its
+// replies' createdTime, and false when it carries none gdoc can read.
+func peak(t Thread) (time.Time, bool) {
+	out := time.Time{}
+	ok := false
 	consider := func(s string) {
 		at, err := time.Parse(time.RFC3339, s)
 		if err != nil {
 			return
 		}
-		if at.After(newest) {
-			newest = at
-			moved = true
+		if !ok || at.After(out) {
+			out, ok = at, true
 		}
 	}
+	consider(t.Modified)
+	for _, r := range t.Replies {
+		consider(r.Created)
+	}
+	return out, ok
+}
+
+// idsAt is the ids of the threads whose own newest instant is this one, sorted
+// so the same run always writes the same cursor.
+func idsAt(instant time.Time, threads []Thread) []string {
+	var out []string
 	for _, t := range threads {
-		consider(t.Modified)
-		for _, r := range t.Replies {
-			consider(r.Created)
+		if at, ok := peak(t); ok && at.Equal(instant) {
+			out = append(out, t.ID)
 		}
 	}
-	if !moved {
-		// Nothing newer than what the caller already had, which includes the
-		// case of having had nothing at all.
-		return prev
+	sort.Strings(out)
+	return out
+}
+
+// union is the two id sets together, sorted, and never the same id twice.
+func union(a, b []string) []string {
+	seen := make(map[string]bool, len(a)+len(b))
+	var out []string
+	for _, set := range [][]string{a, b} {
+		for _, id := range set {
+			if seen[id] {
+				continue
+			}
+			seen[id] = true
+			out = append(out, id)
+		}
 	}
-	return &Cursor{At: newest}
+	sort.Strings(out)
+	return out
 }

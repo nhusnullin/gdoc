@@ -433,3 +433,22 @@ func TestWriteRefusesBrokenFrontMatterWithNoGdocKey(t *testing.T) {
 		t.Error("Read() = nil error on front matter it could not parse, want an error naming it")
 	}
 }
+
+// A file whose opening delimiter never closes is not front matter, so Read
+// reports no block. Write must not read that as "this note has never been
+// paired" and prepend a second block: the author's own keys, gdoc: among them,
+// would become body text, and gdoc would then be pairing a note it had just
+// broken. Not knowing what is there must never resolve to writing over it.
+func TestWriteRefusesAFileWhoseFrontMatterNeverCloses(t *testing.T) {
+	src := fixture(t, "unterminated.md")
+	out, err := Write(src, &Block{Schema: Schema, DocumentID: testDocumentID})
+	if err == nil {
+		t.Fatalf("Write accepted an unclosed delimiter and returned:\n%s", out)
+	}
+	if !strings.Contains(err.Error(), "never closes") {
+		t.Errorf("error = %q, want it to name the unclosed delimiter", err)
+	}
+	if out != nil {
+		t.Error("Write returned bytes beside its error")
+	}
+}

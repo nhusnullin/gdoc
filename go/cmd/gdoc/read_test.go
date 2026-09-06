@@ -292,8 +292,11 @@ func TestCommentsCarriesTheWarningsAndReportsAnUnplacedThread(t *testing.T) {
 	if !hasWarning(ws, "BBBB2222") {
 		t.Errorf("the unplaced thread must be named in warnings: %v", ws)
 	}
-	if data["cursor"] != "eyJ2IjoxLCJ0IjoiMjAyNi0wOS0wNlQxMDo0NTowMFoifQ" {
-		t.Errorf("cursor = %v, want the newest instant across comments and replies", data["cursor"])
+	// base64url of {"v":1,"t":"2026-09-06T10:45:00Z","i":["AAAA1111"]}: the
+	// newest instant across the comments and their replies, which is reply R2's,
+	// and the thread it belongs to.
+	if data["cursor"] != "eyJ2IjoxLCJ0IjoiMjAyNi0wOS0wNlQxMDo0NTowMFoiLCJpIjpbIkFBQUExMTExIl19" {
+		t.Errorf("cursor = %v, want the newest instant across comments and replies, with the thread it came from", data["cursor"])
 	}
 }
 

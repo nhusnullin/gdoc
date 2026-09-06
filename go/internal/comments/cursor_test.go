@@ -2,6 +2,7 @@ package comments
 
 import (
 	"encoding/base64"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -170,5 +171,40 @@ func TestNextCursorDoesNotReReportTheThreadItJustSaw(t *testing.T) {
 	}
 	if next.At.Before(at("2026-09-06T11:00:00.789Z")) {
 		t.Errorf("the emitted cursor is %v, which is before the activity it saw", next.At)
+	}
+}
+
+// The ids ride in the cursor, so the next poll can tell a comment it has
+// already been told about from one that only shares its millisecond.
+func TestCursorCarriesTheIdsItReportedAtItsInstant(t *testing.T) {
+	c := NextCursor(nil, []Thread{
+		{ID: "BBBB2222", Modified: "2026-09-06T11:00:00.789Z"},
+		{ID: "AAAA1111", Modified: "2026-09-06T11:00:00.789Z"},
+		{ID: "OLD", Modified: "2026-09-06T10:00:00Z"},
+	})
+	if got, want := c.Ids, []string{"AAAA1111", "BBBB2222"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("ids = %v, want %v: the two at the newest instant, sorted, and not the older one", got, want)
+	}
+
+	back, err := ParseCursor(c.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(back.Ids, c.Ids) || !back.At.Equal(c.At) {
+		t.Errorf("round trip = %v %v, want %v %v", back.At, back.Ids, c.At, c.Ids)
+	}
+}
+
+// A cursor written before the ids existed still reads. Their absence costs one
+// repeated thread at the boundary and never a lost one, which is why the
+// version did not have to move.
+func TestACursorWithNoIdsStillReads(t *testing.T) {
+	raw := base64.RawURLEncoding.EncodeToString([]byte(`{"v":1,"t":"2026-09-06T11:00:00.789Z"}`))
+	back, err := ParseCursor(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(back.Ids) != 0 || !back.At.Equal(at("2026-09-06T11:00:00.789Z")) {
+		t.Errorf("ParseCursor = %v %v", back.At, back.Ids)
 	}
 }

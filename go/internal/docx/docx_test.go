@@ -150,7 +150,7 @@ func (f *fakeReader) GetBytes(_ context.Context, rawURL string, limit int64) ([]
 	return f.body, nil
 }
 
-func TestExportAsksForTheDocxMimeOnAllDrives(t *testing.T) {
+func TestExportAsksForTheDocxMimeAndNothingFilesExportDoesNotDefine(t *testing.T) {
 	want := wholeExport(t)
 	r := &fakeReader{body: want}
 
@@ -228,4 +228,48 @@ func TestATruncatedDocumentPartIsRefused(t *testing.T) {
 	} else if !strings.Contains(err.Error(), "word/document.xml") {
 		t.Errorf("error = %q, and it does not name the part that failed", err)
 	}
+}
+
+// A part that decompresses past the ceiling is an error naming the ceiling, the
+// rule internal/gapi already holds for a response body. Truncating hands the
+// XML parser a document cut mid-element, and it then says word/document.xml did
+// not parse, which blames Google's export for a limit gdoc chose. The limit is
+// a parameter so the test does not have to build 32 MB to ask the question.
+func TestAPartOverTheCeilingNamesTheCeiling(t *testing.T) {
+	z := reader(t, buildDocx(t, map[string]string{"word/document.xml": "<w:document>0123456789</w:document>"}))
+
+	_, found, err := part(z, "word/document.xml", 8)
+	if err == nil {
+		t.Fatal("part read a member past the ceiling without saying so")
+	}
+	if !found {
+		t.Error("found = false, but the part was there")
+	}
+	if !strings.Contains(err.Error(), "8") || !strings.Contains(err.Error(), "word/document.xml") {
+		t.Errorf("error = %q, want it to name the part and the ceiling", err)
+	}
+}
+
+// And a part that exactly fills the ceiling is a part that ended, not one that
+// was cut.
+func TestAPartThatExactlyFillsTheCeilingIsRead(t *testing.T) {
+	body := "0123456789"
+	z := reader(t, buildDocx(t, map[string]string{"word/document.xml": body}))
+
+	got, found, err := part(z, "word/document.xml", int64(len(body)))
+	if err != nil || !found {
+		t.Fatalf("part = %v, %v", found, err)
+	}
+	if string(got) != body {
+		t.Errorf("part = %q, want %q", got, body)
+	}
+}
+
+func reader(t *testing.T, b []byte) *zip.Reader {
+	t.Helper()
+	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return z
 }

@@ -469,7 +469,10 @@ Rules that hold across all three:
   never a short read. Truncating made the docx reader say "the export is not a
   docx" and the JSON reader say the answer is not JSON, both naming something
   the server did not do. A failed request's body is still cut, because
-  `statusError` only reads Google's message out of it.
+  `statusError` only reads Google's message out of it. The same rule holds one
+  layer in, on a zip member: `docx.part` takes the ceiling as a parameter and
+  refuses a `word/document.xml` over it, rather than handing the XML parser a
+  document cut mid-element and blaming the export for a limit gdoc chose.
 - Lists come back as `- ` items, two spaces of indent per level. A numbered list
   reads back as a bulleted one: telling the two apart needs the document's
   `lists` map, which this milestone does not read.
@@ -522,8 +525,9 @@ other's summary, so both are kept.
 
 ### The cursor is opaque, and it dies with the session
 
-`base64url(JSON{"v":1,"t":"<RFC3339 UTC>"})`, holding the newest `modifiedTime`
-seen across the comments and their replies. The instant keeps its **milliseconds**,
+`base64url(JSON{"v":1,"t":"<RFC3339 UTC>","i":["<comment id>"]})`, holding the
+newest `modifiedTime` seen across the comments and their replies, and the ids of
+the threads whose own newest instant was that one. The instant keeps its **milliseconds**,
 because that is what Drive sends: rounded down to the second, the floor sits up
 to 999 ms below the activity the run just reported, Drive returns that thread
 again, and the next cursor rounds down to the same second. The thread is then
@@ -545,6 +549,23 @@ narrows the answer instead: a comment is kept when its own `modifiedTime` or any
 reply's `createdTime` is strictly newer than the cursor. The replies are in that
 test for the reason `NextCursor` reads them, and an instant gdoc cannot parse
 keeps its comment.
+
+**The ids are the third part, and without them "strictly newer" loses a
+comment.** Two comments can share a millisecond with only one of them reported,
+when the poll landed between the two writes. The second one then sits exactly on
+the cursor's instant, has never been seen, and no comparison on instants can say
+so: Drive's precision cannot tell the two apart. So the cursor carries the ids it
+reported at its own instant, and a comment on that instant is news unless the
+cursor names it. `NextCursor` **adds** to those ids while the instant does not
+move, and replaces them when it does. Adding is what makes the poll go quiet: a
+thread `narrow` dropped is a thread reported on an earlier poll, and forgetting
+its id makes the two threads sharing that millisecond take turns being news for
+ever. What is left is a comment edited twice inside one millisecond, which is
+Drive's precision rather than a choice made here.
+
+A cursor written before `i` existed still reads, and the version stays 1 for that
+reason: the ids only ever narrow further, so their absence costs one repeated
+thread and never a lost one.
 
 It is opaque on purpose. A caller that decodes the instant and does arithmetic
 on it has made the encoding a contract, and it is not one. The version field is
@@ -578,7 +599,11 @@ Four rules, and each one has a reason:
   keys, their order, the line endings and the trailing newline come through
   unchanged, and a file with no front matter at all gets the block added with
   new delimiters. `frontmatter.Read` and `frontmatter.Write` share one parse, so
-  they cannot disagree about where the span is.
+  they cannot disagree about where the span is. A file whose opening `---` never
+  closes is neither of those cases: `Read` reports no block, because there is no
+  front matter to read, and `Write` **refuses** it. Writing there would put a
+  second block in front of the author's keys and demote their own `gdoc:` key to
+  prose, which is gdoc pairing a note it had just broken.
 - **The write is checked against its own parse before it leaves the package.**
   A string carrying a control character is written double quoted, because the
   emitter writes it as a plain scalar the parser reads differently: a tab inside
