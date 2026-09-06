@@ -116,17 +116,21 @@ func TestJudge(t *testing.T) {
 	}
 }
 
-func TestGrantInPlaceUpgrades(t *testing.T) {
+// A handed-in document is read and suggest only, and there is no longer a
+// method that lifts that inside a process. GrantInPlace left with M2: PLAN.md
+// says an unused door is deleted rather than kept warm, and M7's in-place
+// restyle adds it back beside its caller.
+func TestAHandedInDocumentIsNeverDirectlyEdited(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
 	edit := []byte(`{"requests":[]}`)
 	u := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
 	if p.Judge("POST", u, edit) == nil {
-		t.Fatal("edit must be refused before the grant")
+		t.Fatal("a direct edit of a handed-in document must be refused")
 	}
-	p.GrantInPlace("DOC1")
-	if err := p.Judge("POST", u, edit); err != nil {
-		t.Fatalf("edit must be allowed after the grant: %v", err)
+	suggest := []byte(`{"requests":[],"writeControl":{"writeMode":"SUGGEST"}}`)
+	if err := p.Judge("POST", u, suggest); err != nil {
+		t.Fatalf("a suggestion on a handed-in document must be carried: %v", err)
 	}
 }
 
@@ -135,16 +139,6 @@ func TestEmptyPolicyRefusesEverything(t *testing.T) {
 	u := mustURL(t, "https://docs.googleapis.com/v1/documents/ANY")
 	if p.Judge("GET", u, nil) == nil {
 		t.Fatal("an empty set must refuse everything")
-	}
-}
-
-func TestGrantInPlaceNeverAdmitsAnUnknownID(t *testing.T) {
-	// GrantInPlace upgrades a level; it is not a third door into the set.
-	p := NewPolicy()
-	p.GrantInPlace("EVIL")
-	u := mustURL(t, "https://docs.googleapis.com/v1/documents/EVIL")
-	if p.Judge("GET", u, nil) == nil {
-		t.Fatal("GrantInPlace must not admit an id that was never given")
 	}
 }
 
