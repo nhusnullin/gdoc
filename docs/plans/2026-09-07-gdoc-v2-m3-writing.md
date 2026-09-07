@@ -241,14 +241,20 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
   - `propose.Record(note []byte, results []Result, at time.Time) ([]byte, error)`: appends to `proposals[]` through `frontmatter.Write`.
 - A document with `MultiTab()` is refused before any write, naming the tab count.
 
-- [ ] write the failing tests for `FindSpan`: one match gives the range in UTF-16 units (a fixture paragraph with an emoji before the match proves it); no match and two matches refuse by name; a match inside a suggested run refuses
-- [ ] write the failing tests for `Batch`: three requests in order, the comment content opens with `🤖 `, the assignee is present only when given, `writeControl` is exact
-- [ ] write the failing tests for `Apply` and `Verify` over a fake wire that answers the read-backs from fixtures: the happy path is `Verified: true` with all three checks; an `ALL_FAILED_UNKNOWN_REASON` answer is `Verified: false` with the state reported; a preview that shows the replacement (a direct edit happened) fails the second check and warns; a docx without the comment fails the third; a two-tab document is refused before the fake sees a POST
-- [ ] write the failing schema test: `proposals[]` with and without `quoted` both read
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): propose writes a suggestion with an anchored 🤖 comment and verifies it three ways`
+- [x] write the failing tests for `FindSpan`: one match gives the range in UTF-16 units (a fixture paragraph with an emoji before the match proves it); no match and two matches refuse by name; a match inside a suggested run refuses
+- [x] write the failing tests for `Batch`: three requests in order, the comment content opens with `🤖 `, the assignee is present only when given, `writeControl` is exact
+- [x] write the failing tests for `Apply` and `Verify` over a fake wire that answers the read-backs from fixtures: the happy path is `Verified: true` with all three checks; an `ALL_FAILED_UNKNOWN_REASON` answer is `Verified: false` with the state reported; a preview that shows the replacement (a direct edit happened) fails the second check and warns; a docx without the comment fails the third; a two-tab document is refused before the fake sees a POST
+- [x] write the failing schema test: `proposals[]` with and without `quoted` both read
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): propose writes a suggestion with an anchored 🤖 comment and verifies it three ways`
+
+- ➕ `insertComment` carries `content` and `range` at the top of the request, not nested under a `comment` key. This plan's Technical Details said `comment: {content: ...}`; DECISIONS.md 2026-08-29 measured the shape and every other spelling answers `Cannot find field`. The measured shape is what `Batch` sends.
+- ➕ `Result.Warnings`, the same field `probe.Report` and `reply.Result` grew for the same reason: after the batch has gone out the change exists, so a read-back that failed is reported rather than raised.
+- ➕ `propose.StartsAt` and `propose.PreviewURL`, exported beside `FindSpan`. The preview check is a question about a place in a document, so it belongs next to the code that found the place, and Task 7's command tests read the URL to tell the two views apart.
+- ➕ `Record` skips a result with no suggestion id rather than writing an entry with an empty one. An empty id fails the block's own validation, which would lose the provenance of every other proposal in the same write.
+- ➕ `FindSpan` searches table cells as well as body paragraphs. A cell's paragraphs carry their own indexes in the same tab, and refusing to look there would report "not found" about words that are plainly on screen.
 
 ---
 

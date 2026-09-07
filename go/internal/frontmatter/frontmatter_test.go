@@ -538,3 +538,50 @@ func TestAByteOrderMarkDoesNotHideTheFrontMatter(t *testing.T) {
 		t.Errorf("the byte order mark did not stay in front of the block:\n%q", out)
 	}
 }
+
+// TestReadDecodesProposalsWithAndWithoutQuoted covers the one field M3 adds to
+// the shape. quoted is optional in the decoder on purpose: a note paired under
+// M2 carries proposals without it, and a strict read that refused those would
+// unpair every note gdoc has already written.
+func TestReadDecodesProposalsWithAndWithoutQuoted(t *testing.T) {
+	b, err := Read(fixture(t, "proposal-quoted.md"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(b.Proposals) != 2 {
+		t.Fatalf("proposals = %d, want 2", len(b.Proposals))
+	}
+	if got := b.Proposals[0].Quoted; got != "reviewed annually" {
+		t.Errorf("proposals[0].quoted = %q, want %q", got, "reviewed annually")
+	}
+	if got := b.Proposals[1].Quoted; got != "" {
+		t.Errorf("proposals[1].quoted = %q, want empty: the key is absent and that is allowed", got)
+	}
+}
+
+// TestWriteKeepsQuotedThroughARoundTrip is the other half: a block written with
+// quoted reads back with it, so provenance survives the note being rewritten.
+func TestWriteKeepsQuotedThroughARoundTrip(t *testing.T) {
+	src := fixture(t, "minimal.md")
+	b, err := Read(src)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	b.Proposals = []Proposal{{
+		ID:        "suggest.abc",
+		CommentID: "AAAABBBBCCCC",
+		At:        time.Date(2026, 9, 7, 9, 0, 0, 0, time.UTC),
+		Quoted:    "reviewed annually",
+	}}
+	out, err := Write(src, b)
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	back, err := Read(out)
+	if err != nil {
+		t.Fatalf("Read after Write: %v", err)
+	}
+	if len(back.Proposals) != 1 || back.Proposals[0].Quoted != "reviewed annually" {
+		t.Errorf("proposals = %+v", back.Proposals)
+	}
+}

@@ -1,0 +1,15 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "The preview shows the replacement, so the write was a direct edit",
+  "revisionId": "ALm37BXedited",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 76, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 76, "textRun": {
+          "content": "The supplier register is reviewed every six months by the operations team.\n",
+          "textStyle": {}}}
+      ]}}
+  ]}
+}
