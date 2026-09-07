@@ -337,10 +337,55 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
   - Removed from v1's skill: `capture`, `pending.md`, `edits`, `baseline`, `--terminal-only` (replaced by "say what you would post" when Nail asks for a dry run), the service-account branch.
 - The skill is a product artifact: a change to it is reviewed like code, and the revmux round reads it.
 
-- [ ] write the skill, section by section as above, plain English, short sentences, no em dashes
-- [ ] read it against SPEC.md "Skills", "How a comment reaches the agent" and "Never", and list in this plan any rule the skill states that SPEC does not, or the reverse
-- [ ] check `install.sh` still links the directory and that `~/.claude/skills/gdoc-review` resolves to it
-- [ ] commit: `feat(v2): the review skill, rewritten over gdoc comments, read, reply and propose`
+- [x] write the skill, section by section as above, plain English, short sentences, no em dashes
+- [x] read it against SPEC.md "Skills", "How a comment reaches the agent" and "Never", and list in this plan any rule the skill states that SPEC does not, or the reverse
+- [x] check `install.sh` still links the directory and that `~/.claude/skills/gdoc-review` resolves to it
+- [x] commit: `feat(v2): the review skill, rewritten over gdoc comments, read, reply and propose`
+
+**Read against SPEC.md, and where the two do not line up:**
+
+Rules the skill states that SPEC does not. Each is judgement, which is what a
+skill is for, and none of them widens what the binary may do.
+
+- **The dry run.** "Say what you would post" replaces v1's `--terminal-only`.
+  SPEC has no dry run because it describes the binary, and the binary has no
+  mode: not writing is the skill not calling `reply` or `propose`.
+- **All-comments mode.** v1's per-comment picking, kept. SPEC says an unmarked
+  comment is never acted on, and this mode does not break that: Nail picks each
+  one, which is the instruction the marker would have been.
+- **The stop-and-ask list.** The hub leak of 18 August, a note the root marks
+  confidential, an answer the skill is not confident is true, a genuinely
+  ambiguous comment, a second reply to an answered thread. SPEC's "Never prompt"
+  is about the binary, and these are the skill asking, which is the opposite
+  half of the same rule.
+- **The shape of a reply**: the answer first, one reason line, sources last. And
+  grounding in `$ROOT` in both languages. SPEC says `ai?` is answered from the
+  hub and stops there.
+- **A resolved thread is not work.** SPEC says gdoc never resolves and never
+  reopens, and says nothing about reading the flag. Nail resolves when he
+  accepts, so the flag is his answer.
+- **The receipt names where the work landed, and says less on a document shared
+  outside Altery.** SPEC says the receipt is written last and only after the
+  action landed; what it may contain is the hub-leak rule, which is the skill's.
+- **The probe folder is a constant in the skill.** SPEC leaves the folder to the
+  caller. The skill names Nail's Drive test folder so `propose` is one command.
+
+Rules SPEC states that the skill does not.
+
+- **The live session.** SPEC's review session "can run live", polling on the
+  `--since` cursor until Nail stops it. That is M4, so the skill reads
+  `--since` nowhere and the loop is not written yet. `comments` already emits
+  the cursor.
+- **One writer per document.** SPEC serializes proposals within a document. The
+  skill makes one `propose` call per document and the binary serializes the
+  proposals inside it, each after its own fresh read, so there is nothing left
+  for the skill to state.
+- **Never replace the body of a document that exists**, and **never export a
+  PDF**. The first has no skill counterpart in M3: there is no publish command
+  yet, and the guard refuses it. The second is in the skill's Never list even
+  though nothing here could do it, because it is a habit rather than a call.
+- **Never prompt.** The binary's rule, and the skill's opposite: it asks Nail in
+  five named cases and nowhere else.
 
 ---
 
