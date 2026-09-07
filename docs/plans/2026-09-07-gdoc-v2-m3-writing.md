@@ -397,9 +397,9 @@ Rules SPEC states that the skill does not.
 **Interfaces:**
 - Produces: `TestLiveProposeReplyWithdraw`, gated on `GDOC_LIVE_TEST=1` and `GDOC_LIVE_WRITE=1`, skipping with a message otherwise. It opens a policy with `AllowCreateIn` on the test folder, runs `probe.Run` (which creates and trashes its own document), creates a second document there with one sentence, proposes a replacement into it and asserts `Verified` with all three checks, replies `🤖 ...` to the comment the proposal made and asserts `Verified`, withdraws the proposal and asserts `Verified`, then trashes the document and asserts `trashed: true`. Every document it touches is one it created. With `GDOC_LIVE_RECORD=1` it saves the `batchUpdate` answer and the `SUGGESTIONS_INLINE` read as redacted fixtures for `propose`'s tests to be tightened against.
 
-- [ ] write the test, run it with the variables unset and confirm it skips with a message
-- [ ] run the full suite: green; do not run it live in the unattended run
-- [ ] commit: `test(v2): the opt-in live write: probe, propose, reply, withdraw, trash`
+- [x] write the test, run it with the variables unset and confirm it skips with a message
+- [x] run the full suite: green; do not run it live in the unattended run
+- [x] commit: `test(v2): the opt-in live write: probe, propose, reply, withdraw, trash`
 
 ---
 
