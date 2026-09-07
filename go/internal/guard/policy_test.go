@@ -773,6 +773,41 @@ func TestARepeatedKeyIsRefused(t *testing.T) {
 	}
 }
 
+// A number the token walk cannot parse must not hide a repeated key behind it.
+// json.Decoder.Token decodes every number into a float64, so a literal out of
+// that range ends the walk with an error; the callers unmarshal into
+// json.RawMessage and a []string, neither of which parses the number, so they
+// accept the same body and keep the last copy of the repeat. That is the
+// duplicate-key check failing open on exactly the bodies it exists to refuse.
+func TestANumberTheWalkCannotParseDoesNotHideARepeat(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.AllowCreateIn("FOLDER1")
+
+	batch := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
+	body := `{"requests":[{"deleteSuggestion":{"suggestionId":"s1"}},{"pad":1e999}],` +
+		`"requests":[{"insertText":{"text":"a"}}],"writeControl":{"writeMode":"SUGGEST"}}`
+	err := p.Judge("POST", batch, []byte(body))
+	if err == nil {
+		t.Fatal("a repeated requests list must be refused however wide the numbers inside it are")
+	}
+	if !strings.Contains(err.Error(), "twice") {
+		t.Errorf("the refusal must name the repeat: %v", err)
+	}
+
+	// The same walk guards a comment write's body, one caller along.
+	reply := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies")
+	if p.Judge("POST", reply, []byte(`{"content":"a","pad":1e999,"content":"b"}`)) == nil {
+		t.Error("a comment write naming content twice must be refused past an unparsable number")
+	}
+
+	// The other direction: a number that is merely large is not a refusal on
+	// its own, and a body with no repeat still goes out.
+	if err := p.Judge("POST", reply, []byte(`{"content":"a","pad":1e999}`)); err != nil {
+		t.Errorf("a body with no repeat must be carried whatever its numbers: %v", err)
+	}
+}
+
 // TestNoCommentPatchOrDelete: the guard cannot tell whose comment C1 is, and no
 // command carries a change or a removal of one. A milestone that needs either
 // adds it back beside its caller, the way GrantInPlace will return.

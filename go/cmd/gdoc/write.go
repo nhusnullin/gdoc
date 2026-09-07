@@ -12,6 +12,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -466,14 +467,29 @@ func readNote(path, docID string) (*notePath, error) {
 // readProposals reads the list the skill wrote. An empty list is refused rather
 // than run: a probe document would be created and trashed for a run with
 // nothing to propose.
+//
+// The read is strict, for the reason parseArgs refuses an unknown flag and
+// frontmatter reads with yaml.Strict(). A misspelled `quoted`, `replacement` or
+// `why` is caught a few lines down, because Check refuses their empty values;
+// `assignee` is optional, so a dropped one landed a comment with nobody
+// assigned, reported verified: true, and warned about nothing.
 func readProposals(path string) ([]propose.Proposal, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the proposals file could not be read: %w", err)
 	}
 	var out []propose.Proposal
-	if err := json.Unmarshal(raw, &out); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&out); err != nil {
 		return nil, fmt.Errorf("%s is not a list of proposals: %w", path, err)
+	}
+	// Decode stops at the end of the first value, where Unmarshal refused a
+	// file with anything behind it. A second list after the first is a file
+	// somebody edited wrongly, and running the first half of it silently is the
+	// same mistake as dropping a key.
+	if dec.More() {
+		return nil, fmt.Errorf("%s carries more than one list of proposals", path)
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)

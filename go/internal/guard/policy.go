@@ -510,13 +510,24 @@ func exactKey(m map[string]json.RawMessage, name string) (json.RawMessage, bool)
 // The names are folded, because that is how encoding/json matches them: two
 // spellings of one field are one field to the parse the guard is protecting.
 //
-// A body this cannot tokenize is not this function's refusal. Its callers
-// unmarshal the same bytes immediately after, and each of them already refuses
-// an unreadable body naming the parse error, which is the more useful message.
+// A body this cannot walk is refused here rather than left to the caller, and
+// the decoder reads numbers as json.Number so that the walk can reach the end
+// of any body a caller would accept. Both halves are one bug. json.Decoder
+// decodes a number into a float64 by default, so a literal out of that range
+// ends the walk with an error; the callers unmarshal into json.RawMessage and a
+// []string, neither of which parses the number, so they accept the body and
+// keep the last copy of the repeat. Swallowing the walk's error then carried
+// exactly the bodies this exists to refuse, with the padding number as the key.
+//
+// With UseNumber the walk ends early only on a body that is not valid JSON,
+// which every caller refuses on the line after this one, so failing closed here
+// costs a message rather than a request.
 func hasDuplicateKeys(body []byte) error {
-	name, err := duplicateKey(json.NewDecoder(bytes.NewReader(body)))
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	name, err := duplicateKey(dec)
 	if err != nil {
-		return nil
+		return refuse("the body could not be read as JSON, so the guard cannot tell whether it names a key twice: %v", err)
 	}
 	if name != "" {
 		return refuse("the body names %q twice inside one object, and encoding/json keeps the last copy while the server may read the first", name)

@@ -20,6 +20,7 @@ package probe
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -119,13 +120,23 @@ func create(ctx context.Context, s Session, folderID string) (string, error) {
 		ID string `json:"id"`
 	}
 	if err := s.PostJSON(ctx, createURL(), body, &answer); err != nil {
+		// A failure raised after Drive accepted the create is not a create that
+		// did not happen. The document is in the folder, and its id was in the
+		// answer nothing could read, so gdoc can neither name it in
+		// probe_document_id nor trash it. Saying it could not be created sends
+		// somebody to look for a failure while the litter sits in their Drive.
+		if sentAnyway(err) {
+			return "", fmt.Errorf("Drive accepted the create and its answer could not be read, so a probe document may be in folder %q with no id for gdoc to name or trash it: %w", folderID, err)
+		}
 		return "", fmt.Errorf("the probe document could not be created in folder %q: %w", folderID, err)
 	}
 	if answer.ID == "" {
 		// Without an id nothing further is reachable: the guard learns the new
 		// file from this answer, so a create it could not read is a create with
-		// no document behind it as far as the rest of the run is concerned.
-		return "", fmt.Errorf("the create in folder %q answered with no document id, so the probe has nothing to write to", folderID)
+		// no document behind it as far as the rest of the run is concerned. It
+		// is not one as far as Drive is concerned, which is why this says the
+		// document may be there rather than that it is not.
+		return "", fmt.Errorf("the create in folder %q answered with no document id, so the probe has nothing to write to and a document may be sitting there unnamed", folderID)
 	}
 	return answer.ID, nil
 }
@@ -248,4 +259,14 @@ func fileURL(id string) string {
 // trashedURL is files.get asking the one question the confirmation has.
 func trashedURL(id string) string {
 	return "https://www.googleapis.com/drive/v3/files/" + id + "?fields=trashed&supportsAllDrives=true"
+}
+
+// sentAnyway says whether the request reached Drive in spite of the error. The
+// session marks the failures raised after the server accepted a request, and
+// this room asks by behaviour rather than by importing that package: naming a
+// Session interface here is what keeps net/http out, and an imported sentinel
+// would bring it back through the side door.
+func sentAnyway(err error) bool {
+	var sent interface{ Sent() bool }
+	return errors.As(err, &sent) && sent.Sent()
 }

@@ -193,8 +193,11 @@ func TestACreateWithNoIDIsAnErrorNamingTheFolder(t *testing.T) {
 	if !strings.Contains(err.Error(), testFolderID) {
 		t.Errorf("the error does not name the folder the create targeted: %v", err)
 	}
+	if !strings.Contains(err.Error(), "may") {
+		t.Errorf("Drive answered, so the error must not claim the document was not created: %v", err)
+	}
 	if rep.ProbeDocumentID != "" {
-		t.Errorf("ProbeDocumentID = %q, and nothing was created", rep.ProbeDocumentID)
+		t.Errorf("ProbeDocumentID = %q, and there is no id to name", rep.ProbeDocumentID)
 	}
 	if len(f.calls) != 1 {
 		t.Errorf("the fake saw %d requests, want one: nothing follows a create with no id", len(f.calls))
@@ -434,5 +437,39 @@ func TestTheProbeDocumentIsNeverHandedIn(t *testing.T) {
 	}
 	if err := p.Judge("POST", u, body); err == nil {
 		t.Fatal("the direct insert was carried on a handed-in document")
+	}
+}
+
+// acceptedError is what the session hands back for a failure raised after the
+// server accepted the request. The probe asks by behaviour, the way the three
+// writer packages do, so the fake answers by behaviour too.
+type acceptedError struct{ error }
+
+func (acceptedError) Sent() bool { return true }
+
+// A create Drive accepted whose answer could not be read is not a create that
+// did not happen. The document is in the folder, gdoc has no id for it, so it
+// can neither name it in probe_document_id nor trash it. Saying the document
+// could not be created sends somebody to look for a failure while the litter
+// sits in their Drive.
+func TestACreateDriveAcceptedButCouldNotBeReadSaysSo(t *testing.T) {
+	f := script(t, "enrolled.json")
+	f.failAt = map[int]error{0: acceptedError{errors.New("the answer is not JSON")}}
+
+	rep, err := Run(context.Background(), f, testFolderID)
+	if err == nil {
+		t.Fatal("a create whose answer could not be read is still a failed probe")
+	}
+	if !strings.Contains(err.Error(), testFolderID) {
+		t.Errorf("the failure must name the folder the document may be in: %v", err)
+	}
+	if !strings.Contains(err.Error(), "may") {
+		t.Errorf("the failure must not claim the document was not created: %v", err)
+	}
+	if rep.ProbeDocumentID != "" || rep.Trashed {
+		t.Errorf("there is no id to name and nothing was trashed: %+v", rep)
+	}
+	if len(f.calls) != 1 {
+		t.Errorf("nothing more is reachable without an id: %v", f.calls)
 	}
 }

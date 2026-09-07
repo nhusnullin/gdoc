@@ -720,6 +720,28 @@ func TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes(t *testing.T) {
 	}
 }
 
+// The proposals file is a hand-written input, so a key gdoc does not understand
+// is refused by name rather than dropped. quoted, replacement and why are caught
+// downstream by Check, because their empty values are refused; assignee is
+// optional, so a misspelling of it landed a comment with nobody assigned, said
+// verified: true, and warned about nothing.
+func TestProposeRefusesAnUnknownKeyInTheProposalsFile(t *testing.T) {
+	f := stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
+	from := tempFile(t, "proposals.json",
+		`[{"quoted":"a","replacement":"b","why":"c","assigned_to":"nail@altery.com"}]`)
+
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a key gdoc does not understand must stop the run: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "assigned_to") {
+		t.Errorf("the error must name the key: %q", msg)
+	}
+	if len(f.calls) != 0 {
+		t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+	}
+}
+
 func TestProposeRefusesAnEmptyProposalList(t *testing.T) {
 	f := stubWire(t, &fakeWire{})
 	from := tempFile(t, "proposals.json", "[]")

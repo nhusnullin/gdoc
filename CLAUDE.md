@@ -220,6 +220,16 @@ stream and refuses any object that names a key twice, folding case, and
 body carrying two `requests` lists, two `parents` lists or two `action` fields
 is judged on one copy and may be served on the other.
 
+**The walk reads numbers as `json.Number`, and a body it cannot walk is
+refused.** Both halves are one bug. `json.Decoder.Token` decodes a number into a
+float64, so a literal out of that range such as `1e999` ended the walk with an
+error, while the callers, which unmarshal into `json.RawMessage` and a
+`[]string`, never parse the number and accept the same body. Swallowing that
+error carried a `batchUpdate` naming `requests` twice, with a `deleteSuggestion`
+in the copy the guard never read. With `UseNumber` the walk ends early only on a
+body that is not valid JSON, which every caller refuses on the line after, so
+failing closed there costs a message rather than a request.
+
 The guard judges the request it actually sends. It refuses
 `X-HTTP-Method-Override` and its two cousins, and a `_method` query parameter,
 because Google's REST stack performs the overridden method: a GET the guard
@@ -760,7 +770,12 @@ Three rules about the probe that are decisions rather than details:
   `TestTheProbeDocumentIsNeverHandedIn` states it.
 - **Every failure path still trashes, and the report names the document.** A
   probe document left behind is named in `probe_document_id` with
-  `trashed: false`, never silent.
+  `trashed: false`, never silent. The one case it cannot name is the create
+  Drive accepted whose answer could not be read: the id was in that answer, so
+  there is nothing to put in the field and nothing to trash. The failure says
+  the document **may** be in the folder rather than that it was not created,
+  because Drive made it. The guard learns the new id from the same answer, so it
+  would refuse the trash in any case, and it warns.
 
 The probe is `AllowCreateIn`'s first production caller. PLAN.md expected that to
 be M6's publish, and M3 arrived first.
@@ -1036,7 +1051,12 @@ every one of those a reported-not-raised failure.
 **Nothing here decides what to write.** The body of a reply, the words of a
 proposal and the reason for it arrive already written, in a file the skill
 wrote: `--body-file` for a reply, `--from proposals.json` for a proposal, a list
-of `{quoted, replacement, why, assignee?}`. The skill reads the threads and
+of `{quoted, replacement, why, assignee?}`. That file is read strictly, the way
+every other input here is: an unknown key is refused by name, and so is a second
+list behind the first. A misspelled `quoted`, `replacement` or `why` is caught by
+`Proposal.Check` because their empty values are refused, but `assignee` is
+optional, so a dropped one landed a comment with nobody assigned and warned about
+nothing. The skill reads the threads and
 decides which ones still need an answer; the binary reports the marker,
 `resolved`, `by_gdoc` and the witness, and says nothing about what any of them
 means. That is M2's line, held. Read "The binary prints facts, and the skills
