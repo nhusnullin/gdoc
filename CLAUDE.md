@@ -738,6 +738,14 @@ tree and the plan move is done by hand.
 | `make build` | `bin/gdoc`, for this machine |
 | `make dist` | the three platform binaries |
 
+On Nail's machine `gdoc` on PATH is still v1: `~/.local/bin/gdoc` links to the
+Python venv, and both skills call v1's commands. v2 is `gdoc2`, a symlink from
+`~/.local/bin/gdoc2` to this repo's `bin/gdoc`, so `make build` refreshes it
+with no reinstall (Nail's choice, 2026-09-07). The two share one word with two
+meanings: v1 `read` lists comments, v2 `read` prints the text and v2
+`comments` lists comments. `gdoc` moves to v2 when the skills do, in M3, and
+the install story proper is M9.
+
 `GDOC_LIVE_TEST=1` runs the one opt-in end-to-end test, in `go/internal/live`.
 It then needs `GDOC_LIVE_DOC_ID=<document id>`, and there is no default: the
 guard is opened with exactly the document the run names. It reads, and creates
