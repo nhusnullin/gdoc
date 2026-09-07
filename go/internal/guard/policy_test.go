@@ -175,10 +175,10 @@ func TestResolvingOrReopeningAThreadIsRefused(t *testing.T) {
 	if err := p.Judge("POST", u, []byte(`{"content":"a plain reply"}`)); err != nil {
 		t.Errorf("a plain reply must be carried: %v", err)
 	}
-	// A delete names the reply it removes, which is where Drive defines the
-	// method; the collection above it takes POST only.
-	del := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1")
-	if err := p.Judge("DELETE", del, nil); err != nil {
+	// A write with no body at all carries no action, so there is nothing here
+	// to refuse. The comment surface takes POST and nothing else, so the empty
+	// body is checked on the call gdoc makes.
+	if err := p.Judge("POST", u, nil); err != nil {
 		t.Errorf("a write with no body at all carries no action: %v", err)
 	}
 }
@@ -275,9 +275,8 @@ func TestTokenHostCarriesNothingElse(t *testing.T) {
 func TestDeleteOnAFileItselfIsRefused(t *testing.T) {
 	// A created file may be trashed with PATCH, and trashing is reversible.
 	// DELETE on the file itself is not: it removes the document for everyone it
-	// was shared with, with nothing to undo. The comment surface is the one
-	// place DELETE is carried, because a comment gdoc wrote is gdoc's to
-	// withdraw.
+	// was shared with, with nothing to undo. Nothing else carries DELETE
+	// either, the comment surface included: see TestNoCommentPatchOrDelete.
 	p := NewPolicy()
 	p.Learn("MADE1")
 	if p.Judge("DELETE", mustURL(t, "https://www.googleapis.com/drive/v3/files/MADE1"), nil) == nil {
@@ -457,6 +456,7 @@ func TestACreateTheGuardCannotCheckIsRefused(t *testing.T) {
 		"https://www.googleapis.com/upload/drive/v3/files?uploadType=MEDIA",
 		"https://www.googleapis.com/upload/drive/v3/files?uploadType=",
 		"https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&uploadType=media",
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
 	} {
 		if err := p.Judge("POST", mustURL(t, raw), nil); err == nil {
 			t.Errorf("%s must be refused: the guard cannot read parents out of that body", raw)
@@ -464,7 +464,6 @@ func TestACreateTheGuardCannotCheckIsRefused(t *testing.T) {
 	}
 	for _, raw := range []string{
 		"https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-		"https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
 		"https://www.googleapis.com/drive/v3/files",
 	} {
 		if err := p.Judge("POST", mustURL(t, raw), nil); err != nil {
@@ -650,6 +649,12 @@ func TestADrivePathIsJudgedBySegmentCount(t *testing.T) {
 		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1"},
 		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments"},
 		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies"},
+		// Drive defines these two on the item, and the guard carries neither:
+		// see TestNoCommentPatchOrDelete.
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1"},
 	}
 	for _, c := range refused {
 		t.Run(c.method+" "+c.raw, func(t *testing.T) {
@@ -668,11 +673,7 @@ func TestADrivePathIsJudgedBySegmentCount(t *testing.T) {
 		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?pageSize=100"},
 		{"GET", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?fields=id"},
 		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=id"},
-		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?fields=id"},
-		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1"},
 		{"POST", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?fields=id"},
-		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?fields=id"},
-		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1"},
 		{"PATCH", "https://www.googleapis.com/drive/v3/files/MADE1?fields=id"},
 	}
 	for _, c := range carried {
@@ -681,5 +682,128 @@ func TestADrivePathIsJudgedBySegmentCount(t *testing.T) {
 				t.Errorf("%s %s is in the grammar and must be carried: %v", c.method, c.raw, err)
 			}
 		})
+	}
+}
+
+// TestSuggestModeIsReadExactly holds the one field that keeps a handed-in
+// document read-and-suggest only. Google's proto-JSON is case-sensitive, so
+// `WRITEMODE` is not the field the server reads, and the guard must not be
+// broader than the server on the field that permits a write: a body carrying a
+// spelling Docs ignores would be a direct edit the guard passed as a
+// suggestion.
+//
+// A body naming the field twice is refused too. Which copy the server takes is
+// not decided here.
+func TestSuggestModeIsReadExactly(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	u := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
+
+	refused := []string{
+		`{"writeControl":{"WRITEMODE":"SUGGEST"}}`,
+		`{"WriteControl":{"writeMode":"SUGGEST"}}`,
+		`{"WriteControl":{"WRITEMODE":"SUGGEST"}}`,
+		`{"writecontrol":{"writemode":"SUGGEST"}}`,
+		`{"writeControl":{"writeMode":"suggest"}}`,
+		`{"writeControl":{"writeMode":"SUGGEST"},"WriteControl":{"writeMode":"SUGGEST"}}`,
+		`{"writeControl":{"writeMode":"SUGGEST"},"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"writeControl":{"writeMode":"SUGGEST","WriteMode":"SUGGEST"}}`,
+		`{"writeControl":{"writeMode":"SUGGEST","writeMode":"SUGGEST"}}`,
+		`{"writeControl":{"writeMode":["SUGGEST"]}}`,
+		`{"writeControl":"SUGGEST"}`,
+	}
+	for _, body := range refused {
+		if p.Judge("POST", u, []byte(body)) == nil {
+			t.Errorf("%s must be refused: it is not a plain writeMode: SUGGEST", body)
+		}
+	}
+
+	carried := []string{
+		`{"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"insertText":{"text":"x"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+	}
+	for _, body := range carried {
+		if err := p.Judge("POST", u, []byte(body)); err != nil {
+			t.Errorf("%s is the write gdoc makes and must be carried: %v", body, err)
+		}
+	}
+}
+
+// TestARepeatedKeyIsRefused closes the gap between the body the guard judged
+// and the body the server acts on. encoding/json keeps the last copy of a
+// repeated key and drops the rest, so a body carrying two `requests` lists, two
+// `action` fields or two `parents` lists is judged on one and may be served on
+// the other.
+func TestARepeatedKeyIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+
+	batch := mustURL(t, "https://docs.googleapis.com/v1/documents/MADE1:batchUpdate")
+	doubled := []string{
+		`{"requests":[],"requests":[{"deleteSuggestion":{}}]}`,
+		`{"requests":[{"insertText":{"text":"a","text":"b"}}]}`,
+		`{"requests":[{"insertText":{"location":{"index":1,"index":2}}}]}`,
+	}
+	for _, body := range doubled {
+		err := p.Judge("POST", batch, []byte(body))
+		if err == nil {
+			t.Errorf("%s must be refused: a repeated key collapses before the guard reads it", body)
+			continue
+		}
+		if !strings.Contains(err.Error(), "twice") {
+			t.Errorf("the refusal must name the repeat: %v", err)
+		}
+	}
+
+	reply := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies")
+	if p.Judge("POST", reply, []byte(`{"content":"a","content":"b"}`)) == nil {
+		t.Error("a comment write naming content twice must be refused")
+	}
+	if p.Judge("POST", reply, []byte(`{"content":"a","nested":{"x":1,"X":2}}`)) == nil {
+		t.Error("a repeat one level down is the same problem and must be refused")
+	}
+
+	// The other direction: a body naming each key once still goes out.
+	if err := p.Judge("POST", reply, []byte(`{"content":"a plain reply"}`)); err != nil {
+		t.Errorf("a body with no repeat must be carried: %v", err)
+	}
+	if err := p.Judge("POST", batch, []byte(`{"requests":[{"insertText":{"text":"a"}},{"insertText":{"text":"b"}}]}`)); err != nil {
+		t.Errorf("the same key in two list entries is not a repeat: %v", err)
+	}
+}
+
+// TestNoCommentPatchOrDelete: the guard cannot tell whose comment C1 is, and no
+// command carries a change or a removal of one. A milestone that needs either
+// adds it back beside its caller, the way GrantInPlace will return.
+func TestNoCommentPatchOrDelete(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	for _, c := range []struct{ method, raw string }{
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies/R1"},
+		{"PATCH", "https://www.googleapis.com/drive/v3/files/MADE1/comments/C1?fields=id"},
+		{"DELETE", "https://www.googleapis.com/drive/v3/files/MADE1/comments/C1/replies/R1"},
+	} {
+		err := p.Judge(c.method, mustURL(t, c.raw), nil)
+		if err == nil {
+			t.Errorf("%s %s must be refused", c.method, c.raw)
+			continue
+		}
+		if !strings.Contains(err.Error(), "whose comment") {
+			t.Errorf("the refusal must name the rule: %v", err)
+		}
+	}
+	// The other direction: the two writes gdoc does make still carry.
+	for _, raw := range []string{
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=id",
+		"https://www.googleapis.com/drive/v3/files/DOC1/comments/C1/replies?fields=id",
+	} {
+		if err := p.Judge("POST", mustURL(t, raw), []byte(`{"content":"x"}`)); err != nil {
+			t.Errorf("POST %s must be carried: %v", raw, err)
+		}
 	}
 }

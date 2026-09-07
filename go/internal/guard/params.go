@@ -211,19 +211,25 @@ func checkExportMime(v string) error {
 	return nil
 }
 
-// uploadShapes are the create shapes the guard can check, under either
-// spelling. `multipart` and `resumable` both put the metadata where the parent
-// check can read it: a multipart body opens with the metadata part, and a
-// resumable start is the metadata on its own. No upload parameter at all is a
-// plain JSON create, which the parent check reads directly.
+// uploadShapes are the create shapes the guard carries, under either spelling.
+// `multipart` puts the metadata where the parent check can read it: the body
+// opens with the metadata part. No upload parameter at all is a plain JSON
+// create, which the parent check reads directly.
 //
-// The refused shape is the one that makes the whole body the file's content:
-// `uploadType=media`, and the same thing under its newer name,
+// The first refused shape is the one that makes the whole body the file's
+// content: `uploadType=media`, and the same thing under its newer name,
 // `upload_protocol=raw`. There `{"parents":["FOLDER1"]}` is bytes to Drive and
 // metadata to the parent check, so the file lands unparented and the guard then
 // learns its id at full level. Nothing here may learn an id from a create it
 // could not verify.
-var uploadShapes = map[string]bool{"multipart": true, "resumable": true}
+//
+// `resumable` is the second, and dropping it is finding 4 of the M1 review. A
+// resumable create is two legs: this one, and a PUT to a location URL carrying
+// `upload_id`. The guard carries neither the method nor the parameter, so the
+// shape could never finish, and a half-permitted route reads as a working one
+// to whoever tries it next. The milestone that needs resumable uploads adds
+// both legs together or neither.
+var uploadShapes = map[string]bool{"multipart": true}
 
 // checkUploadShape refuses a create whose body the parent check cannot read.
 // The two parameters are the same choice spelled two ways, so a request naming
@@ -243,7 +249,7 @@ func checkUploadShape(vals url.Values) error {
 		return nil
 	}
 	if len(shape) != 1 || !uploadShapes[shape[0]] {
-		return refuse("%s=%q is not a create the guard can check; it reads parents out of multipart and resumable metadata only", name, strings.Join(shape, ","))
+		return refuse("%s=%q is not a create the guard carries; it reads parents out of multipart metadata and out of a plain JSON create, and out of nothing else", name, strings.Join(shape, ","))
 	}
 	return nil
 }

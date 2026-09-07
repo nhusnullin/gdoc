@@ -372,6 +372,9 @@ func isCreate(u *url.URL, method string) bool {
 // job: it is the milestone that publishes a docx. Failing closed is the right
 // direction to be wrong in, so it stays refused rather than half-parsed.
 func (t *transport) checkParent(body []byte) error {
+	if err := hasDuplicateKeys(body); err != nil {
+		return err
+	}
 	var meta struct {
 		Parents []string `json:"parents"`
 	}

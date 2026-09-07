@@ -173,6 +173,15 @@ request differently, because the policy reads the method, the URL and the body:
 a `batchUpdate` on a handed-in document is refused inside the process unless the
 body says `SUGGEST`.
 
+`commentWrites` carries `POST` and nothing else: no `PATCH` and no `DELETE`, on
+a comment or on a reply. Nothing in a comment id says who wrote it, so the guard
+cannot tell gdoc's own comment from somebody else's, and no command needs
+either method. The milestone that needs one adds it back beside its caller, the
+way `GrantInPlace` returns at M7. `uploadShapes` is `multipart` alone for a
+related reason: a resumable create is two legs, the guard carries neither the
+`PUT` nor `upload_id`, so the shape could never finish and a half-permitted
+route reads as a working one.
+
 A create is refused unless it names exactly the one folder the run was given,
 and the transport reads the create's response for the new id and teaches the
 policy. Those are still principle 3's two doors, ported. Naming a folder to
@@ -184,11 +193,25 @@ document read-and-suggest only is `writeControl.writeMode == "SUGGEST"` in the
 request body, which is a field the client itself supplies.
 `docs/v2/BLOCKED-BY-API.md` records the measurement: `writeMode` is absent from
 the public Docs discovery document, and one morning this exact call returned 200
-and silently made a direct edit. So the server is not known to honour it, and
-what the guard holds today is a statement of intent rather than a guarantee. The
-capability probe the spec relies on, which would ask the server what it will do
-before the write goes out, **does not exist yet**. Widening or narrowing what
-`isSuggestMode` permits is a decision for Nail, not a refactor.
+and silently made a direct edit. Measured again on 2026-09-07, on a throwaway
+document: an `insertText` at index 30 in SUGGEST mode came back 200 and the
+read-back carried `suggest.xyh4cb4emh7y`, so the project is enrolled today.
+Enrolled today is not a guarantee for tomorrow, and the earlier measurement is
+what says so. The field is still a statement of intent rather than a guarantee,
+and what makes a write trustworthy is the capability probe before it and the
+read-back after it, neither of which lives in the guard. Widening or narrowing
+what `isSuggestMode` permits is a decision for Nail, not a refactor.
+
+`isSuggestMode` reads both keys **exactly**, and refuses a body where two keys
+fold to either name. Google's proto-JSON is case-sensitive, so `WRITEMODE` is
+not the field the server reads, while `encoding/json` matched it: the guard must
+never be broader than the server on the one field that permits a write.
+`hasDuplicateKeys` is the same rule one layer out. It walks the body as a token
+stream and refuses any object that names a key twice, folding case, and
+`judgeRequests`, `checkCommentWrite` and `checkParent` each call it first.
+`encoding/json` keeps the last copy of a repeated key and drops the rest, so a
+body carrying two `requests` lists, two `parents` lists or two `action` fields
+is judged on one copy and may be served on the other.
 
 The guard judges the request it actually sends. It refuses
 `X-HTTP-Method-Override` and its two cousins, and a `_method` query parameter,
@@ -208,8 +231,8 @@ broader than all three.
   the body IS the file's content, so `{"parents":["FOLDER1"]}` reads as bytes to
   Drive and as metadata to `checkParent`: the file lands unparented and the
   guard then learns its id at `LevelFull`. `checkUploadShape` permits the shapes
-  the parent check can read, `multipart` and `resumable` and an absent
-  parameter, and refuses the rest. It reads `upload_protocol` too, which is the
+  the parent check can read, `multipart` and an absent parameter, and refuses
+  the rest, `resumable` included. It reads `upload_protocol` too, which is the
   same choice under Google's newer name, where `raw` is what `media` was. A
   request naming both parameters is refused rather than guessed at: the guard
   would be reading the one Drive may not obey. Nothing may learn an id from a

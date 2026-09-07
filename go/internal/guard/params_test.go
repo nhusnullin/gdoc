@@ -118,7 +118,6 @@ func TestUploadProtocolIsTheSameChoiceAsUploadType(t *testing.T) {
 	}
 	for _, raw := range []string{
 		"https://www.googleapis.com/upload/drive/v3/files?upload_protocol=multipart",
-		"https://www.googleapis.com/upload/drive/v3/files?upload_protocol=resumable",
 	} {
 		if err := p.Judge("POST", mustURL(t, raw), nil); err != nil {
 			t.Errorf("%s must be carried: %v", raw, err)
@@ -249,6 +248,24 @@ func TestEachDriveReadCarriesOnlyItsOwnParameters(t *testing.T) {
 	} {
 		if p.Judge("GET", mustURL(t, raw), nil) == nil {
 			t.Errorf("%s must be refused: that parameter is not on this call", raw)
+		}
+	}
+}
+
+// TestResumableUploadIsRefused: a resumable create is a two-leg call. The start
+// leg posts the metadata, and the content goes up on a PUT to a location URL
+// carrying `upload_id`, both of which the guard refuses. So the shape could
+// never complete, and half-permitting it reads as a working route to whoever
+// tries it next. The guard says no at the leg it can see.
+func TestResumableUploadIsRefused(t *testing.T) {
+	p := NewPolicy()
+	p.AllowCreateIn("FOLDER1")
+	for _, raw := range []string{
+		"https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+		"https://www.googleapis.com/upload/drive/v3/files?upload_protocol=resumable",
+	} {
+		if err := p.Judge("POST", mustURL(t, raw), nil); err == nil {
+			t.Errorf("%s must be refused: the guard carries no leg of a resumable upload", raw)
 		}
 	}
 }

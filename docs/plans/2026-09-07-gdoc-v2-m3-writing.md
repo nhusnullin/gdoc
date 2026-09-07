@@ -152,11 +152,11 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
   5. A request body type in the tests that records `Close`, and one test per refusal path (unreadable body, wire mismatch, policy refusal, parent-check refusal) asserting the body was closed, so the `RoundTripper` contract the comment claims is held by a test.
 - ⚠️ Finding 6 from the same review, the `docsReadParams` comment, was fixed in M2.
 
-- [ ] write the failing tests, one per finding: `{"WriteControl":{"WRITEMODE":"SUGGEST"}}` and a doubled `writeControl` are refused as direct edits; a doubled `requests` key, a doubled `action` key and a doubled `parents` key are each refused by name; `PATCH` and `DELETE` on `{id}/comments/C1` and on a reply are refused with the rule in the message; `uploadType=resumable` is refused; each refusal path closes the body
-- [ ] run `cd go && go test ./internal/guard/` and watch the new tests fail
-- [ ] implement the five changes; update the `isSuggestMode` doc comment and the CLAUDE.md caveat with the 2026-09-07 measurement, keeping the rule that the probe and the read-back are what make a write trustworthy
-- [ ] run the guard tests, the boundary test, gofmt, vet: green
-- [ ] commit: `fix(v2): the guard reads writeMode exactly, refuses repeated keys, and carries no comment PATCH or DELETE`
+- [x] write the failing tests, one per finding: `{"WriteControl":{"WRITEMODE":"SUGGEST"}}` and a doubled `writeControl` are refused as direct edits; a doubled `requests` key, a doubled `action` key and a doubled `parents` key are each refused by name; `PATCH` and `DELETE` on `{id}/comments/C1` and on a reply are refused with the rule in the message; `uploadType=resumable` is refused; each refusal path closes the body
+- [x] run `cd go && go test ./internal/guard/` and watch the new tests fail
+- [x] implement the five changes; update the `isSuggestMode` doc comment and the CLAUDE.md caveat with the 2026-09-07 measurement, keeping the rule that the probe and the read-back are what make a write trustworthy
+- [x] run the guard tests, the boundary test, gofmt, vet: green
+- [x] commit: `fix(v2): the guard reads writeMode exactly, refuses repeated keys, and carries no comment PATCH or DELETE`
 
 ---
 

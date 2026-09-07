@@ -2,6 +2,7 @@ package guard
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -576,5 +577,104 @@ func TestARealSameOriginRedirectIsCarried(t *testing.T) {
 	}
 	if f.seen[1].Header.Get("Referer") == "" {
 		t.Fatal("the premise changed: Client.Do no longer adds a Referer, so this test proves nothing")
+	}
+}
+
+// countingBody is a request body that records how often it was closed, and can
+// fail its read on demand. It exists so the RoundTripper contract RoundTrip's
+// comment claims, that the body is closed on every path including a refusal, is
+// held by a test rather than by review.
+type countingBody struct {
+	reader io.Reader
+	err    error
+	closes int
+}
+
+func (b *countingBody) Read(p []byte) (int, error) {
+	if b.err != nil {
+		return 0, b.err
+	}
+	return b.reader.Read(p)
+}
+
+func (b *countingBody) Close() error {
+	b.closes++
+	return nil
+}
+
+// TestEveryRefusalClosesTheBody walks the four ways RoundTrip returns without
+// reaching the wire. A body nobody closes leaks the connection it was read
+// from, and net/http hands the transport the only reference to it.
+//
+// The transport is called directly rather than through the client, because
+// http.Client closes the body itself on an error and would hide which of the
+// two did it.
+func TestEveryRefusalClosesTheBody(t *testing.T) {
+	cases := []struct {
+		name    string
+		policy  func(*Policy)
+		method  string
+		url     string
+		body    *countingBody
+		headers map[string]string
+	}{
+		{
+			name:   "unreadable body",
+			policy: func(p *Policy) { p.AllowFile("DOC1", LevelSuggest) },
+			method: "POST",
+			url:    "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate",
+			body:   &countingBody{err: errors.New("the body broke mid-read")},
+		},
+		{
+			name:    "wire does not match the judgment",
+			policy:  func(p *Policy) { p.AllowFile("DOC1", LevelSuggest) },
+			method:  "POST",
+			url:     "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate",
+			body:    &countingBody{reader: strings.NewReader(`{"writeControl":{"writeMode":"SUGGEST"}}`)},
+			headers: map[string]string{"X-Goog-FieldMask": "permissions"},
+		},
+		{
+			name:   "the policy refuses",
+			policy: func(p *Policy) {},
+			method: "POST",
+			url:    "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate",
+			body:   &countingBody{reader: strings.NewReader(`{"writeControl":{"writeMode":"SUGGEST"}}`)},
+		},
+		{
+			name:   "the parent check refuses",
+			policy: func(p *Policy) { p.AllowCreateIn("FOLDER1") },
+			method: "POST",
+			url:    "https://www.googleapis.com/drive/v3/files",
+			body:   &countingBody{reader: strings.NewReader(`{"parents":["ELSEWHERE"]}`)},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := NewPolicy()
+			c.policy(p)
+			f := &fake{status: 200, body: `{}`}
+			req, err := http.NewRequest(c.method, c.url, c.body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Authorization", "Bearer t")
+			req.Header.Set("Content-Type", "application/json")
+			for k, v := range c.headers {
+				req.Header.Set(k, v)
+			}
+			resp, err := (&transport{policy: p, base: f}).RoundTrip(req)
+			if err == nil {
+				t.Fatal("want a refusal")
+			}
+			if resp != nil {
+				t.Fatal("a refusal returns no response, so nothing is left to close")
+			}
+			if len(f.seen) != 0 {
+				t.Fatal("the refused request reached the wire")
+			}
+			if c.body.closes != 1 {
+				t.Fatalf("the body was closed %d times, want exactly once", c.body.closes)
+			}
+		})
 	}
 }

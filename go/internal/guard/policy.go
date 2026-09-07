@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"strings"
 	"sync"
@@ -257,17 +258,26 @@ func driveShape(parts []string) string {
 	return ""
 }
 
-// commentWrites are the writes Drive defines on the comment surface, by shape
-// and method. Creating is a POST on the collection, changing and removing are on
-// the item, and the same pair repeats one level down for replies. A method Drive
-// does not define on a shape is refused: the guard carries the calls gdoc makes,
-// and nothing else.
+// commentWrites are the writes the guard carries on the comment surface, by
+// shape and method. Creating is a POST on the collection, and the same call
+// repeats one level down for replies. A method Drive does not define on a
+// shape is refused: the guard carries the calls gdoc makes, and nothing else.
 var commentWrites = map[string]map[string]bool{
 	"comments": {"POST": true},
-	"comment":  {"PATCH": true, "DELETE": true},
 	"replies":  {"POST": true},
-	"reply":    {"PATCH": true, "DELETE": true},
 }
+
+// commentItemWrites are the two methods Drive defines on one comment or one
+// reply, and the guard carries neither. That is finding 3 of the M1 review.
+//
+// The reason is what the guard can see. A path names a comment id, and nothing
+// in the id says who wrote it, so PATCH on C1 is as likely to rewrite somebody
+// else's words as gdoc's own. No command gdoc has changes or removes a comment:
+// a proposal withdrawn leaves its own comment in place and replies to it, which
+// is a POST. So the surface stays as narrow as its callers, and a milestone
+// that needs either method adds it back here beside the caller that needs it,
+// the way GrantInPlace returns at M7.
+var commentItemWrites = map[string]bool{"PATCH": true, "DELETE": true}
 
 // driveReadParamsFor is the query allowlist for one read shape. Each Drive
 // method carries its own parameters, so one shared list would put paging on a
@@ -344,6 +354,8 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 			return err
 		}
 		return checkQuery(u, driveWriteParams)
+	case commentItemWrites[method] && (shape == "comment" || shape == "reply"):
+		return refuse("%s on one %s is not carried: nothing in the path says whose comment this is, so the guard carries no comment or reply PATCH or DELETE at all. A later milestone adds it back beside the caller that needs it", method, shape)
 	case method == "PATCH" && shape == "file" && lvl == LevelFull:
 		// e.g. trashing a document gdoc created
 		return checkQuery(u, driveWriteParams)
@@ -400,7 +412,10 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 // convention, fixable by the next reply. The guard holds the first kind.
 func checkCommentWrite(body []byte) error {
 	if len(bytes.TrimSpace(body)) == 0 {
-		return nil // a DELETE, which carries no body and so no action
+		return nil // no body at all, and so no action
+	}
+	if err := hasDuplicateKeys(body); err != nil {
+		return err
 	}
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(body, &probe); err != nil {
@@ -420,24 +435,167 @@ func checkCommentWrite(body []byte) error {
 // Read this before trusting it. The bar is a field the client itself supplies,
 // and docs/v2/BLOCKED-BY-API.md records the measurement: writeMode is absent
 // from the public Docs discovery document, and one morning this exact call
-// returned 200 and silently made a direct edit instead of a suggestion. So the
-// server is not known to honour the field, and a body that says SUGGEST is a
-// statement of intent rather than a guarantee.
+// returned 200 and silently made a direct edit instead of a suggestion.
+// Measured again on 2026-09-07, on a throwaway document: an insertText at
+// index 30 in SUGGEST mode came back 200 and the read-back carried
+// suggest.xyh4cb4emh7y, so the project is enrolled today. Enrolled today is not
+// a guarantee for tomorrow, and the earlier measurement is what says so. A body
+// that says SUGGEST is a statement of intent; what makes a write trustworthy is
+// the capability probe before it and the read-back after it, both of which live
+// above this package.
 //
-// The capability probe the spec relies on, which would ask the server what it
-// will do before the write goes out, does not exist yet. Until it does, the
-// level-1 write bar rests on a client-supplied field. Widening or narrowing
-// what this permits is a spec decision, not a refactor.
+// The two keys are read exactly, and that is finding 1 of the M1 review.
+// Google's proto-JSON is case-sensitive, so `WRITEMODE` is not the field the
+// server reads. encoding/json matches field names with case folded, so the
+// struct this used to unmarshal into read that body as a suggestion while Docs
+// would have read it as a direct edit. The guard must never be broader than the
+// server on the one field that permits a write.
+//
+// Two keys that fold to the same name are refused for the same reason: which
+// one the server takes is not decided here. A key repeated exactly is refused
+// one layer up, by hasDuplicateKeys.
+//
+// Widening or narrowing what this permits is a spec decision, not a refactor.
 func isSuggestMode(body []byte) bool {
-	var probe struct {
-		WriteControl struct {
-			WriteMode string `json:"writeMode"`
-		} `json:"writeControl"`
-	}
-	if err := json.Unmarshal(body, &probe); err != nil {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(body, &top); err != nil {
 		return false // a body the guard cannot read is not a suggestion
 	}
-	return probe.WriteControl.WriteMode == "SUGGEST"
+	control, ok := exactKey(top, "writeControl")
+	if !ok {
+		return false
+	}
+	var inner map[string]json.RawMessage
+	if err := json.Unmarshal(control, &inner); err != nil {
+		return false
+	}
+	raw, ok := exactKey(inner, "writeMode")
+	if !ok {
+		return false
+	}
+	var mode string
+	if err := json.Unmarshal(raw, &mode); err != nil {
+		return false
+	}
+	return mode == "SUGGEST"
+}
+
+// exactKey returns the value stored under exactly name. It reports false when
+// the key is absent, and when another key in the same object folds to the same
+// name: the server reads one of them and the guard would be reading the other.
+func exactKey(m map[string]json.RawMessage, name string) (json.RawMessage, bool) {
+	v, ok := m[name]
+	if !ok {
+		return nil, false
+	}
+	for k := range m {
+		if k != name && strings.EqualFold(k, name) {
+			return nil, false
+		}
+	}
+	return v, true
+}
+
+// hasDuplicateKeys refuses a body that names the same key twice inside one
+// object. It is finding 2 of the M1 review, and the reason is the invariant the
+// whole package is built on: the guard must judge the bytes the server acts on.
+//
+// encoding/json keeps the last copy of a repeated key and drops the rest, so
+// `{"requests":[],"requests":[{"deleteSuggestion":{}}]}` reads to the guard's
+// own parse as one list and may read to the server as the other. The same trick
+// hides a second `parents` from the create check and a second `action` from the
+// comment check. Nothing gdoc builds repeats a key, so refusing every repeat
+// costs nothing.
+//
+// The names are folded, because that is how encoding/json matches them: two
+// spellings of one field are one field to the parse the guard is protecting.
+//
+// A body this cannot tokenize is not this function's refusal. Its callers
+// unmarshal the same bytes immediately after, and each of them already refuses
+// an unreadable body naming the parse error, which is the more useful message.
+func hasDuplicateKeys(body []byte) error {
+	name, err := duplicateKey(json.NewDecoder(bytes.NewReader(body)))
+	if err != nil {
+		return nil
+	}
+	if name != "" {
+		return refuse("the body names %q twice inside one object, and encoding/json keeps the last copy while the server may read the first", name)
+	}
+	return nil
+}
+
+// frame is one open container in the token walk below: an object tracks the
+// names it has seen and whether the next token in it is a key, and an array
+// tracks neither.
+type frame struct {
+	object bool
+	seen   map[string]bool
+	key    bool
+}
+
+// duplicateKey walks a JSON value as a token stream and returns the first key
+// an object repeats, or "" when none does. The walk is iterative rather than
+// recursive: the body reaching here is capped at maxPeek, and a megabyte of
+// nested brackets would otherwise be a megabyte of stack frames.
+func duplicateKey(dec *json.Decoder) (string, error) {
+	var stack []*frame
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			return "", nil
+		}
+		if err != nil {
+			return "", err
+		}
+		top := (*frame)(nil)
+		if n := len(stack); n > 0 {
+			top = stack[n-1]
+		}
+		// Inside an object, the next token is a key or the closing brace.
+		if top != nil && top.object && top.key {
+			if d, ok := tok.(json.Delim); ok && d == '}' {
+				stack = stack[:len(stack)-1]
+				continue
+			}
+			key, ok := tok.(string)
+			if !ok {
+				return "", fmt.Errorf("an object key is not a string")
+			}
+			folded := strings.ToLower(key)
+			if top.seen[folded] {
+				return key, nil
+			}
+			top.seen[folded] = true
+			top.key = false
+			continue
+		}
+		// Anything else is a value, or the end of an array.
+		if d, ok := tok.(json.Delim); ok {
+			switch d {
+			case '{':
+				markValueRead(top)
+				stack = append(stack, &frame{object: true, seen: map[string]bool{}, key: true})
+				continue
+			case '[':
+				markValueRead(top)
+				stack = append(stack, &frame{})
+				continue
+			default: // '}' or ']'
+				stack = stack[:len(stack)-1]
+				continue
+			}
+		}
+		markValueRead(top)
+	}
+}
+
+// markValueRead tells an enclosing object that the value for its current key is
+// consumed, so the next token there is a key again. An array has no keys, so it
+// records nothing.
+func markValueRead(f *frame) {
+	if f != nil && f.object {
+		f.key = true
+	}
 }
 
 // judgeRequests reads the request kinds inside a batchUpdate body. SPEC.md's
@@ -471,6 +629,9 @@ func isSuggestMode(body []byte) bool {
 // maxPeek is refused rather than carried unread, and a milestone that needs a
 // bigger one raises the cap on purpose.
 func judgeRequests(body []byte) error {
+	if err := hasDuplicateKeys(body); err != nil {
+		return err
+	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(body, &top); err != nil {
 		return refuse("the body of this batchUpdate cannot be read, so the requests in it cannot be judged: %v", err)
