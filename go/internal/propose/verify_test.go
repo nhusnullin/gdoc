@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -222,5 +223,35 @@ func TestVerifyWarnsWhenTheExportCouldNotBeRead(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(warns, " "), "export") {
 		t.Errorf("warnings = %v, and one should name the export", warns)
+	}
+}
+
+// PreviewURL is the only route that can tell a suggestion from a direct edit,
+// so what it asks for is stated here rather than left to the fake's substring
+// match on the view mode. Both parameters carry weight: the view mode is the
+// question being asked, and includeTabsContent is what makes the answer carry
+// any text at all, which is also what the guard's allowlist requires of a Docs
+// read. A third parameter would be refused by the guard, so the count is
+// asserted too.
+func TestPreviewURLAsksForThePreviewViewOfEveryTab(t *testing.T) {
+	u, err := url.Parse(PreviewURL(testDocID))
+	if err != nil {
+		t.Fatalf("PreviewURL() is not a URL: %v", err)
+	}
+	if u.Host != "docs.googleapis.com" || u.Path != "/v1/documents/"+testDocID {
+		t.Errorf("PreviewURL() addresses %q%q, want the Docs read of %s", u.Host, u.Path, testDocID)
+	}
+	q := u.Query()
+	if got := q.Get("suggestionsViewMode"); got != "PREVIEW_WITHOUT_SUGGESTIONS" {
+		t.Errorf("suggestionsViewMode = %q, want PREVIEW_WITHOUT_SUGGESTIONS", got)
+	}
+	if got := q.Get("includeTabsContent"); got != "true" {
+		t.Errorf("includeTabsContent = %q, want true", got)
+	}
+	if len(q) != 2 {
+		t.Errorf("query = %v, want those two parameters and nothing else", q)
+	}
+	if PreviewURL(testDocID) == docs.URL(testDocID) {
+		t.Error("PreviewURL() is the inline read, so the second route reads what the first one did")
 	}
 }

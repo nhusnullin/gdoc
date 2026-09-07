@@ -409,15 +409,57 @@ Rules SPEC states that the skill does not.
 - Modify: `go/internal/atomicfile/atomicfile_test.go`, `go/internal/config/config_test.go` (the two coverage stragglers reach 80%)
 - Modify: none other expected. Fix whatever the checks below break.
 
-- [ ] verify SPEC.md acceptance item 4 is testable end to end: a propose lands as a genuine suggestion (absent under `PREVIEW_WITHOUT_SUGGESTIONS`), with its 🤖 comment anchored to the exact words, verified through the docx export; the unit test over fixtures proves the code path and the live test proves Google
-- [ ] verify SPEC.md acceptance item 6: the probe distinguishes an enrolled project from an unenrolled one without writing to any real document; both fixtures exist and the probe never touches a handed-in id
-- [ ] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
-- [ ] verify every write is verified: grep the writers for `PostJSON` and confirm each call is followed by a read-back the tests cover
-- [ ] verify the guard refuses what SPEC's Never list names, with the guard's own tests: a direct edit on a handed-in id, `action` on a comment, any `*Suggestion` request kind, `PATCH`/`DELETE` on a comment, a create outside the named folder
-- [ ] bring `atomicfile` and `config` to 80% or better with tests of their error paths
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
-- [ ] verify coverage: every exported function under `go/internal/` has a test
-- [ ] commit any fixes this task made
+- [x] verify SPEC.md acceptance item 4 is testable end to end: a propose lands as a genuine suggestion (absent under `PREVIEW_WITHOUT_SUGGESTIONS`), with its 🤖 comment anchored to the exact words, verified through the docx export; the unit test over fixtures proves the code path and the live test proves Google
+- [x] verify SPEC.md acceptance item 6: the probe distinguishes an enrolled project from an unenrolled one without writing to any real document; both fixtures exist and the probe never touches a handed-in id
+- [x] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
+- [x] verify every write is verified: grep the writers for `PostJSON` and confirm each call is followed by a read-back the tests cover
+- [x] verify the guard refuses what SPEC's Never list names, with the guard's own tests: a direct edit on a handed-in id, `action` on a comment, any `*Suggestion` request kind, `PATCH`/`DELETE` on a comment, a create outside the named folder
+- [x] bring `atomicfile` and `config` to 80% or better with tests of their error paths
+- [x] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
+- [x] verify coverage: every exported function under `go/internal/` has a test
+- [x] commit any fixes this task made
+
+**What the sweep found, 2026-09-07:**
+
+- Acceptance 4 holds over fixtures and live. `Checks` carries the three routes
+  as three fields, and each has its own failing case:
+  `TestApplyVerifiesTheHappyPathThreeWays`,
+  `TestApplyFailsThePreviewCheckWhenTheWriteWasADirectEdit` (the direct-edit
+  case, which is the whole point of the preview route) and
+  `TestApplyFailsTheDocxCheckWhenTheCommentIsNotInTheExport`.
+  `TestLiveProposeReplyWithdraw` is the same three against Google.
+- Acceptance 6 holds. `enrolled.json` and `plain.json` are the two answers,
+  and `TestTheProbeDocumentIsNeverHandedIn` states that the probe reaches only
+  the document it created.
+- No judgement leaked. Every json tag under the four new packages is a fact:
+  `enrolled`, `trashed`, `verified`, `checks`, `comment_update_state`,
+  `deleted_suggestion_ids`, `suggestion_ids`. The grep's only hits are prose,
+  and each says the package decides nothing. The one in a message,
+  withdraw.go's "it may have been accepted, rejected or already withdrawn", is
+  uncertainty written down rather than a verdict.
+- Every write is verified. Four production `PostJSON` call sites: the probe's
+  create and its two inserts, read back by `docs.Fetch`; `reply.Post`, read
+  back by `inThread`; `propose.Apply`, read back by `Verify` on three routes;
+  `withdraw.Run`, read back by a second `docs.Fetch` and by
+  `deletedSuggestionIds`.
+- The guard refuses what Never names, each in its own test:
+  `TestAHandedInDocumentIsNeverDirectlyEdited` and `TestSuggestModeIsReadExactly`,
+  `TestTheActionFieldIsRefusedByItsPresence`,
+  `TestASuggestionVerbInABatchUpdateIsRefused`, `TestNoCommentPatchOrDelete`,
+  and `TestCreateOutsideTheNamedFolderIsRefused` with
+  `TestCreateRefusedWithoutANamedFolder`.
+- ➕ `config.Dir` grew a pure `dirFor`, the way v1's `resolve_auth_mode` is
+  pure. The Windows branch decides where the OAuth token is written and no test
+  on this machine could reach it. 60% to 100%.
+- ➕ `atomicfile` reached 84%. The rollback shared by the write, the chmod and
+  the sync had no test, because a write to a good file descriptor does not fail
+  on request; `RLIMIT_FSIZE` set to zero is the one portable way to make it,
+  so that test is unix only and puts the limit back before it asserts.
+- ➕ three exported functions had no test naming them, only coverage through
+  their caller: `propose.PreviewURL`, `withdraw.Span` and `withdraw.Batch`.
+  Each has one now. `PreviewURL`'s found nothing wrong but was worth writing:
+  the fakes match that URL on a substring, so neither parameter was asserted
+  anywhere, and the guard refuses a Docs read carrying a third one.
 
 ---
 

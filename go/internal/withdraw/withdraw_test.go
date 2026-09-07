@@ -491,3 +491,82 @@ func TestMineReadsTheNoteAndNothingElse(t *testing.T) {
 		t.Error("a suggestion was called gdoc's own with no note to say so")
 	}
 }
+
+// Span and Batch are the two halves of the write, and Run is tested over both
+// together. They are stated here on their own as well, because between them
+// they decide which characters leave a document Nail is reading, and a test
+// that has to run the whole command to say so is a test that says it faintly.
+
+// The runs Docs cut one insert into are adjacent, so the span is the first
+// run's start to the last run's end. The deletion side beside them is the
+// author's own words, still written, and it is not in the span.
+func TestSpanIsTheWholeInsertionAndNothingBesideIt(t *testing.T) {
+	d, err := docs.Parse(fixture(t, "split.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := Span(d, testSuggestion)
+	if err != nil {
+		t.Fatalf("Span(): %v", err)
+	}
+	if r.Start != 26 || r.End != 51 {
+		t.Errorf("Span() = %d..%d, want the two runs joined into 26..51", r.Start, r.End)
+	}
+	if r.Tab != d.Tabs[0].ID {
+		t.Errorf("Span() names tab %q, want %q", r.Tab, d.Tabs[0].ID)
+	}
+}
+
+// A suggestion the document does not carry is a refusal naming the id, not an
+// empty range. A zero range would delete from the top of the document.
+func TestSpanRefusesASuggestionThatIsNotPending(t *testing.T) {
+	d, err := docs.Parse(fixture(t, "gone.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := Span(d, testSuggestion)
+	if err == nil {
+		t.Fatalf("Span() = %+v, want a refusal naming the suggestion", r)
+	}
+	if !strings.Contains(err.Error(), testSuggestion) {
+		t.Errorf("Span() error = %v, want the suggestion id named in it", err)
+	}
+}
+
+// Batch is one deleteContentRange over exactly that span, in SUGGEST mode. The
+// mode is what the guard reads before it carries the request, and the range is
+// what Docs acts on, so both are stated as literals.
+func TestBatchIsOneSuggestModeDeleteOverThatSpan(t *testing.T) {
+	var body map[string]any
+	if err := json.Unmarshal(Batch(docs.Range{Tab: "t.0", Start: 26, End: 51}), &body); err != nil {
+		t.Fatalf("Batch() is not JSON: %v", err)
+	}
+	if len(body) != 2 {
+		t.Errorf("the batch carries %v, want requests and writeControl and nothing else", body)
+	}
+	wc, ok := body["writeControl"].(map[string]any)
+	if !ok || len(wc) != 1 || wc["writeMode"] != "SUGGEST" {
+		t.Fatalf("writeControl = %v, want exactly {\"writeMode\":\"SUGGEST\"}", body["writeControl"])
+	}
+	reqs, ok := body["requests"].([]any)
+	if !ok || len(reqs) != 1 {
+		t.Fatalf("requests = %v, want one deleteContentRange", body["requests"])
+	}
+	del, ok := reqs[0].(map[string]any)["deleteContentRange"].(map[string]any)
+	if !ok {
+		t.Fatalf("request = %v, want a deleteContentRange", reqs[0])
+	}
+	rng, ok := del["range"].(map[string]any)
+	if !ok {
+		t.Fatalf("deleteContentRange = %v, want a range", del)
+	}
+	if rng["startIndex"] != float64(26) || rng["endIndex"] != float64(51) {
+		t.Errorf("range = %v, want 26..51", rng)
+	}
+	// No tabId, on purpose. Run refuses a document with more than one tab, so
+	// the range is unambiguous without one, and a milestone that teaches a
+	// write to name a tab is the one that adds it here.
+	if len(rng) != 2 {
+		t.Errorf("range = %v, want startIndex and endIndex and nothing else", rng)
+	}
+}

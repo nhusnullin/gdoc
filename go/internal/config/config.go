@@ -13,25 +13,52 @@ import (
 
 const dirName = "gdoc-agent"
 
+// outside is what Dir reads of the machine it runs on: the platform, and the
+// three values the environment supplies.
+//
+// It exists so dirFor can be a pure function of the case it is handed, which
+// is how the Windows branch is checked on a Mac. v1 does the same with
+// resolve_auth_mode, for the same reason: a branch no test can reach is a
+// branch nobody has checked, and this one decides where the OAuth token is
+// written.
+type outside struct {
+	goos      string
+	configDir string
+	appData   string
+	home      string
+	homeErr   error
+}
+
+// dirFor is the decision, and nothing else. It reads no environment and
+// touches no disk.
+func dirFor(o outside) (string, error) {
+	if o.configDir != "" {
+		return o.configDir, nil
+	}
+	if o.goos == "windows" {
+		if o.appData == "" {
+			return "", errors.New("config: %AppData% is not set")
+		}
+		return filepath.Join(o.appData, dirName), nil
+	}
+	if o.homeErr != nil {
+		return "", o.homeErr
+	}
+	return filepath.Join(o.home, ".config", dirName), nil
+}
+
 // Dir is the directory gdoc's per-user files live in. It fails rather than
 // guessing: a home directory the OS cannot name would otherwise put the token
 // somewhere nobody looks and nobody deletes.
 func Dir() (string, error) {
-	if d := os.Getenv("GDOC_CONFIG_DIR"); d != "" {
-		return d, nil
-	}
-	if runtime.GOOS == "windows" {
-		appData := os.Getenv("AppData")
-		if appData == "" {
-			return "", errors.New("config: %AppData% is not set")
-		}
-		return filepath.Join(appData, dirName), nil
-	}
 	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".config", dirName), nil
+	return dirFor(outside{
+		goos:      runtime.GOOS,
+		configDir: os.Getenv("GDOC_CONFIG_DIR"),
+		appData:   os.Getenv("AppData"),
+		home:      home,
+		homeErr:   err,
+	})
 }
 
 // TokenPath is where the OAuth token file sits. The name is v1's, so a login
