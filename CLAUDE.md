@@ -972,6 +972,22 @@ so, and says to take the entry out by hand once the suggestion is gone.
 Relaxing the two facts to one on that path is a decision for Nail, not a
 refactor.
 
+**Measured 2026-09-07: on a replace proposal, that delete retracts half.** The
+first live write test showed it. Deleting the insertion half removes the new
+words and answers `updatedSummarySuggestionIds`, never `deletedSuggestionIds`,
+and the quoted words stay suggested-deleted under the same id. A second delete
+over them is a no-op, and one delete over both halves marks the new words as
+inserted and deleted at once. The 2026-08-29 measurement that a delete "comes
+back with `deletedSuggestionIds`" was on a pure insertion. The one request that
+retracts the whole suggestion is `rejectSuggestion`, and the guard refuses every
+request kind whose name carries "suggestion", by Nail's rule. So `withdraw`
+today reports `verified: false` on every replace proposal, the live write test
+fails on that step, and both are left that way on purpose: the entry in
+`docs/v2/DECISIONS.md` dated 2026-09-07 holds the measurements and the decision
+is Nail's. Do not make the live test pass by relaxing `withdraw`, and do not
+teach the guard `rejectSuggestion` without him. The 🤖 comment survives the
+half-retraction, so the skill can still reply into it.
+
 **"Usually" is the whole word there, and neither writer gates on it.** Valid
 JSON of the wrong shape is the one failure that reaches the caller with fields
 in hand, because `encoding/json` saves the first type error and keeps decoding.

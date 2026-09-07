@@ -1011,3 +1011,34 @@ a gate, consistent with everything above. The guard caps the blast radius: on a
 handed-in document the agent can only suggest and reply, so the worst a
 colleague's instruction can produce is a suggestion Nail rejects. A colleague
 who can already edit the whole document was always trusted with more than this.
+
+## 2026-09-07. A replace proposal cannot be fully withdrawn. Open, for Nail.
+
+Found by the first live write test, on throwaway documents in the test folder,
+after M3's revmux review had passed. The 2026-08-29 finding that a
+`deleteContentRange` in `SUGGEST` mode "removes it cleanly and comes back with
+`deletedSuggestionIds`" was measured on a **pure insertion**. A `propose` is a
+**replace**: one suggestion id covering a suggested deletion of the quoted words
+and a suggested insertion of the replacement. Five things were measured:
+
+| Sent, on gdoc's own replace proposal | What Docs did |
+|---|---|
+| `deleteContentRange` in `SUGGEST` over the insertion half (what `withdraw` sends) | 200. The inserted words are gone. The answer carries `suggestionResponses[].updatedSummarySuggestionIds: [id]` and **no `deletedSuggestionIds`**. The read-back still carries the quoted words as a suggested deletion under the same id. **Half the proposal stays pending.** |
+| a second `deleteContentRange` in `SUGGEST` over the still-suggested-deleted words | 200, `updatedSummarySuggestionIds` again, and nothing changed. |
+| one `deleteContentRange` in `SUGGEST` over both halves at once | 200. The inserted words become suggested-inserted **and** suggested-deleted under the same id. Worse than before. |
+| `rejectSuggestion {suggestionId}`, in `SUGGEST` mode and plain | **Refused by the guard before it left the machine**: any request kind whose name carries "suggestion" is refused, which is the 2026-08-29 rule "gdoc never accepts and never rejects" in code. Not measured against Google. |
+| the 🤖 comment, after the insertion half is deleted | Survives, `deleted: false`, still anchored by id, quoting words that are no longer in the document. The skill can still reply into it. |
+
+So today `withdraw` reports `verified: false` with two warnings on every
+replace proposal, leaves the entry in the note, and the document keeps a
+suggested deletion gdoc cannot take back. The live write test fails on exactly
+this, and it is left failing on purpose.
+
+The one route that would retract the whole suggestion is `rejectSuggestion` on
+gdoc's own id, and the guard refuses it by Nail's rule. Widening that rule to
+"gdoc may reject a suggestion the note records as its own" is his decision, not
+a refactor: the guard cannot tell whose a suggestion is, so the door would have
+to be a per-run grant the `withdraw` command seeds from `proposals[]`, the way
+`AllowCreateIn` names one folder. The alternatives are to leave `withdraw` as a
+half-retraction that says so, or to make withdrawing a thing Nail does by hand.
+Nothing here is decided.

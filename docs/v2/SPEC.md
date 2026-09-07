@@ -297,6 +297,14 @@ suggest mode, confirmed by `deletedSuggestionIds` in the response and a
 read-back. This does not touch Nail's rule: there was no decision yet to
 resolve. gdoc never accepts, rejects or deletes anyone else's suggestion.
 
+**Measured 2026-09-07.** That holds for a pure insertion. A `propose` is a
+replace, one suggestion id over a suggested deletion and a suggested insertion,
+and the delete above retracts only the insertion half: the quoted words stay
+suggested-deleted, and the answer carries no `deletedSuggestionIds`. The whole
+suggestion goes only through `rejectSuggestion` on gdoc's own id, which the
+guard refuses under the rule in the previous sentence. Open, for Nail. The
+measurements are in DECISIONS.md under that date.
+
 ### Reading suggestions
 
 Lists pending suggestions with their stable ids and quotes what each proposes.
