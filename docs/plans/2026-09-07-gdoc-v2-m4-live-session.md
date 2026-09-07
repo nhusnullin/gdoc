@@ -163,11 +163,15 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 - Consumes: `comments.Wait`, `parseArgs`, `signal.NotifyContext`.
 - Produces: the `--wait` flag; `commentsData.Waited *waitedData` with `polls`, `seconds`, `interrupted`; `dispatch` takes a `context.Context` that `main` cancels on `SIGINT` and `SIGTERM`. Only `comments --wait` reads it today.
 
-- [ ] write the failing tests: `--wait` without `--since` is refused naming `--since`; `--wait 0`, `--wait -1m`, `--wait soon` and `--wait 2h` are each refused naming the value; over `fakeWire` with `once` answers, an empty listing then a listing with news returns the news and `waited.polls: 2`; a listing that fails on the second poll returns `ok: false` with the error and the polls so far in `data`; a cancelled context returns `ok: true`, empty threads, the same cursor and `waited.interrupted: true`; `--witness` with `--wait` witnesses the window that ended the wait; the usage line is unchanged (no new command)
-- [ ] run the tests and watch them fail
-- [ ] implement, with the poll interval as an unexported variable the tests shorten
-- [ ] run the tests, gofmt, vet, `make build`: green; run `bin/gdoc comments <a real url> --since <cursor> --wait 20s` by hand once and watch it return empty at the deadline
-- [ ] commit: `feat(v2): comments --wait polls inside one call and exits on the first news`
+- [x] write the failing tests: `--wait` without `--since` is refused naming `--since`; `--wait 0`, `--wait -1m`, `--wait soon` and `--wait 2h` are each refused naming the value; over `fakeWire` with `once` answers, an empty listing then a listing with news returns the news and `waited.polls: 2`; a listing that fails on the second poll returns `ok: false` with the error and the polls so far in `data`; a cancelled context returns `ok: true`, empty threads, the same cursor and `waited.interrupted: true`; `--witness` with `--wait` witnesses the window that ended the wait; the usage line is unchanged (no new command)
+- [x] run the tests and watch them fail
+- [x] implement, with the poll interval as an unexported variable the tests shorten
+- [x] run the tests, gofmt, vet, `make build`: green; the by-hand run against a real document is manual (skipped, no account or document id in an unattended run; the built binary was smoke tested on both refusal paths, and Post-Completion carries the live run)
+- [x] commit: `feat(v2): comments --wait polls inside one call and exits on the first news`
+
+➕ Four tests and two decisions beyond the list. A run without `--wait` carries no `waited` object at all, because reporting `polls: 1` on a call that never waited says the binary polls when it does not. A wait that reaches its deadline is asserted beside the interrupt, so the two quiet endings are told apart by the flag rather than by the empty window they share. An empty window is not witnessed: the export would be one more request for no question, and on the way out of an interrupted session it would fail on the cancelled context and warn about a read nobody made. `--wait 0s` is refused beside `0`, since `time.ParseDuration` reads both.
+
+➕ `commentsBase` and `commentsResult` are shared by the one-shot listing and the wait, so a window cannot come back described one way and a listing another. `commentsBase` answers with the id the run was given when no poll read the document, which is a wait interrupted before its first read.
 
 ---
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -38,7 +39,7 @@ func TestLoginPrintsTheURLToStderrNotStdout(t *testing.T) {
 	})
 
 	var out, errOut bytes.Buffer
-	code := run([]string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
 	if code != 0 {
 		t.Fatalf("a login that worked must exit 0: %s", out.String())
 	}
@@ -73,7 +74,7 @@ func TestAPanicIsStillOneEnvelope(t *testing.T) {
 	stubLogin(t, func(io.Writer) error { panic("something impossible") })
 
 	var out, errOut bytes.Buffer
-	code := run([]string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
 	if code != 1 {
 		t.Fatalf("a crash must exit 1, got %d", code)
 	}

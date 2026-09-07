@@ -4,11 +4,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"runtime/debug"
 	"strings"
+	"syscall"
 
 	"gdoc/internal/auth"
 	"gdoc/internal/emit"
@@ -25,14 +28,26 @@ var login = func(errOut io.Writer) error {
 }
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	// The signal a live session ends with. Ctrl-C during a wait has to reach the
+	// wait itself, because the answer it prints is the envelope it already has:
+	// one JSON object, ok, no threads, and the cursor it was handed. A default
+	// SIGINT kills the process mid-write, and stdout then carries half an
+	// object, which is the one thing the output contract promises cannot
+	// happen.
+	//
+	// stop before the exit rather than in a defer: os.Exit runs no deferred
+	// call.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	code := run(ctx, os.Args[1:], os.Stdout, os.Stderr)
+	stop()
+	os.Exit(code)
 }
 
 // run turns arguments into one JSON object on out and an exit code. Human
 // words, the login URL included, go to errOut: stdout carries the object and
 // nothing else.
-func run(args []string, out, errOut io.Writer) int {
-	r := safeDispatch(args, errOut)
+func run(ctx context.Context, args []string, out, errOut io.Writer) int {
+	r := safeDispatch(ctx, args, errOut)
 	if err := emit.Print(out, r); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -44,17 +59,20 @@ func run(args []string, out, errOut io.Writer) int {
 // stack trace, nothing at all on stdout, and exits 2, which breaks the one
 // contract every command has. The trace still goes to stderr, where it is
 // readable without being mistaken for output.
-func safeDispatch(args []string, errOut io.Writer) (r emit.Result) {
+func safeDispatch(ctx context.Context, args []string, errOut io.Writer) (r emit.Result) {
 	defer func() {
 		if p := recover(); p != nil {
 			fmt.Fprintf(errOut, "gdoc crashed: %v\n%s\n", p, debug.Stack())
 			r = emit.Result{OK: false, Error: fmt.Sprintf("gdoc crashed: %v", p)}
 		}
 	}()
-	return dispatch(args, errOut)
+	return dispatch(ctx, args, errOut)
 }
 
-func dispatch(args []string, errOut io.Writer) emit.Result {
+// dispatch takes the context so the one command that can be stopped mid-run
+// hears the signal. Every other command makes its requests and ends, so it
+// carries on ignoring it, as it did before there was one.
+func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result {
 	// Exactly two words, and no more. A command that accepts and ignores what
 	// it does not understand tells the user it did something it did not:
 	// `gdoc auth login --token /path` must not read as a plain login.
@@ -74,7 +92,7 @@ func dispatch(args []string, errOut io.Writer) emit.Result {
 		case "read":
 			return cmdRead(args[1:])
 		case "comments":
-			return cmdComments(args[1:])
+			return cmdComments(ctx, args[1:])
 		case "suggestions":
 			return cmdSuggestions(args[1:])
 		case "probe":

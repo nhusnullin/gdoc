@@ -368,8 +368,32 @@ func unplacedWarnings(d *docs.Document) []string {
 	return out
 }
 
+// waitInterval is how long a wait sleeps between polls. It is a constant in
+// the spec's five to fifteen seconds, and a package variable only so a test can
+// drive two polls in no wall time. It is deliberately not a flag: a caller that
+// could set it could poll Drive as fast as it liked, and nothing on the wire
+// would say the interval had changed.
+var waitInterval = 10 * time.Second
+
+// maxWait is the longest one call will look. The skill asks for nine minutes,
+// because the tool that runs the command waits ten at most; the hour is the bar
+// that stops a wait from becoming the watcher principle 1 refuses to have.
+const maxWait = time.Hour
+
+// waitedData is what one wait did, and every field is a fact. How many times it
+// looked, how long it took, and whether the person stopped it. There is no
+// field saying whether what came back was worth anything: that is the skill's,
+// reading the same threads a one-shot listing prints.
+type waitedData struct {
+	Polls       int  `json:"polls"`
+	Seconds     int  `json:"seconds"`
+	Interrupted bool `json:"interrupted"`
+}
+
 // commentsData is what `gdoc comments` prints. The cursor is what the next poll
-// hands back; it is absent when this run has no instant to report.
+// hands back; it is absent when this run has no instant to report. Waited is
+// absent unless --wait was given: reporting one poll on a call that never
+// waited would tell a reader the binary polls when it does not.
 type commentsData struct {
 	DocumentID string            `json:"document_id"`
 	Title      string            `json:"title"`
@@ -377,10 +401,28 @@ type commentsData struct {
 	MultiTab   bool              `json:"multi_tab"`
 	Cursor     string            `json:"cursor,omitempty"`
 	Threads    []comments.Thread `json:"threads"`
+	Waited     *waitedData       `json:"waited,omitempty"`
 }
 
-func cmdComments(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--since": true, "--witness": false})
+// parseWait reads the --wait value. Every refusal quotes what it was given: a
+// caller reading "not a duration" without its own word back cannot tell which
+// argument it wrote wrongly.
+func parseWait(text string) (time.Duration, error) {
+	d, err := time.ParseDuration(text)
+	if err != nil {
+		return 0, fmt.Errorf("--wait %q is not a length of time. Write it as 9m or 90s", text)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("--wait %q is not a length of time to look for", text)
+	}
+	if d > maxWait {
+		return 0, fmt.Errorf("--wait %q is longer than the %s this command will look for", text, maxWait)
+	}
+	return d, nil
+}
+
+func cmdComments(ctx context.Context, raw []string) emit.Result {
+	a, err := parseArgs(raw, flagSet{"--since": true, "--witness": false, "--wait": true})
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -393,41 +435,115 @@ func cmdComments(raw []string) emit.Result {
 			return emit.Result{OK: false, Error: err.Error()}
 		}
 	}
+	var deadline time.Duration
+	if a.has("--wait") {
+		// A wait with no cursor would hand back every thread in the document at
+		// once, which is the one-shot read under another name and reads to a
+		// session as news. The first read is the baseline and takes no --wait.
+		if since == nil {
+			return emit.Result{OK: false,
+				Error: "--wait needs --since: the cursor is what makes a window, and a wait without one answers with the whole document"}
+		}
+		deadline, err = parseWait(a.flags["--wait"])
+		if err != nil {
+			return emit.Result{OK: false, Error: err.Error()}
+		}
+	}
 	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	ctx := context.Background()
-	// The Docs read first: it carries the ranges the threads are joined to, and
-	// the title and the tab count the envelope reports.
-	d, err := docs.Fetch(ctx, r.session, r.id)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
-	}
-	raws, err := comments.Fetch(ctx, r.session, r.id, since)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
-	}
-	threads, unplaced := comments.Threads(raws, d)
 
+	// One poll is the two reads this command has always made, in the same
+	// order: the Docs read first, because it carries the ranges the threads are
+	// joined to and the title and the tab count the envelope reports. The last
+	// document read is kept for those fields, which comments.Waited does not
+	// carry and does not need to.
+	var d *docs.Document
+	poll := func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
+		got, err := docs.Fetch(ctx, r.session, r.id)
+		if err != nil {
+			return nil, nil, err
+		}
+		d = got
+		raws, err := comments.Fetch(ctx, r.session, r.id, since)
+		if err != nil {
+			return nil, nil, err
+		}
+		return got, raws, nil
+	}
+
+	if !a.has("--wait") {
+		got, raws, err := poll(ctx)
+		if err != nil {
+			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		}
+		threads, unplaced := comments.Threads(raws, got)
+		return commentsResult(ctx, r, d, threads, unplaced, comments.NextCursor(since, threads), a.has("--witness"), nil)
+	}
+
+	w, err := comments.Wait(ctx, since, comments.WaitOptions{
+		Interval: waitInterval,
+		Deadline: deadline,
+		Fetch:    poll,
+	})
+	waited := &waitedData{
+		Polls: w.Polls,
+		// Rounded, because the caller reads it to know how long the document was
+		// quiet and not to measure the binary.
+		Seconds:     int((w.Waited + time.Second/2) / time.Second),
+		Interrupted: w.Interrupted,
+	}
+	if err != nil {
+		// A failed poll is the one ending that is a failure, and the polls it
+		// made still go out: the skill says so, waits, and calls again with the
+		// cursor it already had.
+		data := commentsBase(r, d, since)
+		data.Waited = waited
+		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+	}
+	return commentsResult(ctx, r, d, w.Threads, w.Unplaced, w.Cursor, a.has("--witness"), waited)
+}
+
+// commentsBase is the envelope's document fields. The document is nil when no
+// poll got that far, which is a wait interrupted before its first read: the id
+// the run was given is still the truthful answer there, and the rest is absent
+// rather than guessed.
+func commentsBase(r *reach, d *docs.Document, cursor *comments.Cursor) commentsData {
+	data := commentsData{
+		DocumentID: r.id,
+		Cursor:     cursor.String(),
+		Threads:    []comments.Thread{},
+	}
+	if d != nil {
+		data.DocumentID = d.ID
+		data.Title = d.Title
+		data.Tabs = len(d.Tabs)
+		data.MultiTab = d.MultiTab()
+	}
+	return data
+}
+
+// commentsResult is the successful listing, whether one call made it or a wait
+// did. The two paths share it so a window cannot come back described one way
+// and a one-shot listing another.
+func commentsResult(ctx context.Context, r *reach, d *docs.Document, threads []comments.Thread,
+	unplaced []string, cursor *comments.Cursor, wantWitness bool, waited *waitedData) emit.Result {
 	var own []string
 	for _, id := range unplaced {
 		own = append(own, fmt.Sprintf(
 			"comment %s: the Docs read gave it no usable range, so the thread comes back with its quoted text and no position", id))
 	}
-	if a.has("--witness") {
-		var witnessed []comments.Thread
-		witnessed, own = witness(ctx, r, threads, own)
-		threads = witnessed
+	// An empty window has nothing to witness, and the export would be one more
+	// request for no question. On the way out of an interrupted session it would
+	// also fail on the cancelled context and warn about a read nobody made.
+	if wantWitness && len(threads) > 0 {
+		threads, own = witness(ctx, r, threads, own)
 	}
-	return emit.Result{OK: true, Warnings: r.warnings(own...), Data: commentsData{
-		DocumentID: d.ID,
-		Title:      d.Title,
-		Tabs:       len(d.Tabs),
-		MultiTab:   d.MultiTab(),
-		Cursor:     comments.NextCursor(since, threads).String(),
-		Threads:    threads,
-	}}
+	data := commentsBase(r, d, cursor)
+	data.Threads = threads
+	data.Waited = waited
+	return emit.Result{OK: true, Warnings: r.warnings(own...), Data: data}
 }
 
 // witness reads the docx export and sets Witness on every thread. An export

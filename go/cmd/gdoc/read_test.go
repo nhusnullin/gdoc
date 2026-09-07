@@ -782,3 +782,260 @@ func TestTheSnapshotCarriesASuggestionEditedDownToWhitespace(t *testing.T) {
 		t.Errorf("the snapshot must carry the id that is still pending:\n%s", after)
 	}
 }
+
+// --- the wait -------------------------------------------------------------
+
+// shortPolls makes a ten second interval take a millisecond, so a test of two
+// polls costs no wall time. The interval is a variable and not a flag for the
+// reason the plan gives: a caller that could set it could poll Drive as fast as
+// it liked.
+func shortPolls(t *testing.T) {
+	t.Helper()
+	old := waitInterval
+	waitInterval = time.Millisecond
+	t.Cleanup(func() { waitInterval = old })
+}
+
+// waitWire is the two reads one poll makes, with the listing scripted in order.
+// The Docs answer is reusable because every poll reads the document again; the
+// listings are spent one at a time, which is what makes an order testable.
+func waitWire(t *testing.T, listings ...*answer) *fakeWire {
+	t.Helper()
+	f := &fakeWire{answers: []*answer{
+		{method: "GET", match: "docs.googleapis.com", json: readFixture(t, "single-tab.json")},
+	}}
+	f.answers = append(f.answers, listings...)
+	return f
+}
+
+func emptyListing() *answer {
+	return &answer{method: "GET", match: "/comments?", json: `{"comments":[]}`, once: true}
+}
+
+// quietListing is a document that stays quiet however many times it is looked
+// at, which is what a wait that runs to its deadline sees.
+func quietListing() *answer {
+	return &answer{method: "GET", match: "/comments?", json: `{"comments":[]}`}
+}
+
+func newsListing(t *testing.T) *answer {
+	t.Helper()
+	return &answer{method: "GET", match: "/comments?", json: readFixture(t, "comments.json"), once: true}
+}
+
+// The cursor a --wait run is given, and the one the fixture's newest activity
+// advances it to.
+const (
+	waitSince = "eyJ2IjoxLCJ0IjoiMjAyNi0wOS0wMVQwMDowMDowMFoifQ"
+	waitNext  = "eyJ2IjoxLCJ0IjoiMjAyNi0wOS0wNlQxMDo0NTowMFoiLCJpIjpbIkFBQUExMTExIl19"
+)
+
+func waitedOf(t *testing.T, got map[string]any) map[string]any {
+	t.Helper()
+	w, ok := dataOf(t, got)["waited"].(map[string]any)
+	if !ok {
+		t.Fatalf("no waited object: %v", got["data"])
+	}
+	return w
+}
+
+// A wait with no cursor would answer with every thread in the document at once,
+// which is the one-shot read under another name and reads to a session as news.
+// So it is refused naming the flag that is missing.
+func TestAWaitWithoutACursorIsRefusedNamingTheCursor(t *testing.T) {
+	stubWire(t, waitWire(t))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--wait", "9m")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("--wait without --since must be refused: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "--since") {
+		t.Errorf("the error must name --since: %q", msg)
+	}
+}
+
+// Each of these is a wait this command will not make, and each refusal quotes
+// what it was given: a caller reading "not a duration" without its own word
+// back cannot tell which argument it wrote wrongly.
+func TestAWaitRefusesADurationItCannotUse(t *testing.T) {
+	for _, value := range []string{"0", "-1m", "soon", "2h", "0s"} {
+		stubWire(t, waitWire(t))
+		got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", value)
+		if code == 0 || got["ok"] != false {
+			t.Errorf("--wait %q must be refused: %v (exit %d)", value, got, code)
+			continue
+		}
+		if msg, _ := got["error"].(string); !strings.Contains(msg, value) {
+			t.Errorf("the refusal of --wait %q must quote it: %q", value, msg)
+		}
+	}
+}
+
+// The first non-empty window ends the wait: latency is the point of a live
+// session. The polls it took to get there is a fact the caller gets, and the
+// cursor moves on to the newest activity in that window.
+func TestAWaitEndsOnTheFirstWindowWithNewsInIt(t *testing.T) {
+	shortPolls(t)
+	stubWire(t, waitWire(t, emptyListing(), newsListing(t)))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "9m")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments --wait: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	threads, _ := data["threads"].([]any)
+	if len(threads) != 2 {
+		t.Fatalf("want the window the fixture carries: %v", data["threads"])
+	}
+	if data["cursor"] != waitNext {
+		t.Errorf("cursor = %v, want it advanced to the window's newest activity", data["cursor"])
+	}
+	w := waitedOf(t, got)
+	if w["polls"] != float64(2) {
+		t.Errorf("polls = %v, want 2: one empty window and then the news", w["polls"])
+	}
+	if w["interrupted"] != false {
+		t.Errorf("interrupted = %v, want false", w["interrupted"])
+	}
+	if _, has := w["seconds"]; !has {
+		t.Errorf("the wait must say how long it looked: %v", w)
+	}
+}
+
+// A one-shot listing carries no waited object at all. Reporting polls: 1 on a
+// call that never waited would tell a reader the binary polls when it does not.
+func TestAListingWithoutTheFlagCarriesNoWaitedObject(t *testing.T) {
+	stubWire(t, waitWire(t, newsListing(t)))
+
+	got, code := runJSON(t, "comments", fixtureDocID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments: %v (exit %d)", got, code)
+	}
+	if _, has := dataOf(t, got)["waited"]; has {
+		t.Errorf("a run that did not wait must carry no waited object: %v", got["data"])
+	}
+}
+
+// A poll that failed is not retried in silence. A caller told the document was
+// quiet would believe it, so the wait ends with ok: false and still says how
+// many times it looked.
+func TestAFailedPollEndsTheWaitAndSaysHowManyItMade(t *testing.T) {
+	shortPolls(t)
+	stubWire(t, waitWire(t,
+		emptyListing(),
+		&answer{method: "GET", match: "/comments?", err: errors.New("drive said 503"), once: true},
+	))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "9m")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a failed poll must fail the wait: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "503") {
+		t.Errorf("the error must carry what failed: %q", msg)
+	}
+	w := waitedOf(t, got)
+	if w["polls"] != float64(2) {
+		t.Errorf("polls = %v, want the two it made", w["polls"])
+	}
+	if dataOf(t, got)["cursor"] != waitSince {
+		t.Errorf("cursor = %v, want the one handed in: the next call asks the same question",
+			dataOf(t, got)["cursor"])
+	}
+}
+
+// Ctrl-C is how every live session ends, so it is an answer and not a crash:
+// one object, ok: true, no threads, the cursor handed in, and the flag that
+// says which of the two quiet endings this was.
+func TestAnInterruptedWaitIsAnAnswerAndNotAFailure(t *testing.T) {
+	shortPolls(t)
+	stubWire(t, waitWire(t, emptyListing()))
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	got, code := runJSONCtx(t, ctx, "comments", fixtureDocID, "--since", waitSince, "--wait", "9m")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("an interrupt must still be a successful envelope: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	threads, ok := data["threads"].([]any)
+	if !ok || len(threads) != 0 {
+		t.Errorf("threads = %v, want an empty window", data["threads"])
+	}
+	if data["cursor"] != waitSince {
+		t.Errorf("cursor = %v, want the one handed in unchanged", data["cursor"])
+	}
+	if waitedOf(t, got)["interrupted"] != true {
+		t.Errorf("interrupted = %v, want true", waitedOf(t, got)["interrupted"])
+	}
+}
+
+// A wait that reached its deadline is the other quiet ending: no threads, the
+// same cursor, and interrupted false. The skill calls again and says nothing.
+func TestAWaitThatReachesItsDeadlineAnswersEmpty(t *testing.T) {
+	shortPolls(t)
+	stubWire(t, waitWire(t, quietListing()))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "1ms")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a quiet wait is not a failure: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	if threads, _ := data["threads"].([]any); len(threads) != 0 {
+		t.Errorf("threads = %v, want an empty window", data["threads"])
+	}
+	if data["cursor"] != waitSince {
+		t.Errorf("cursor = %v, want the one handed in unchanged", data["cursor"])
+	}
+	if waitedOf(t, got)["interrupted"] != false {
+		t.Errorf("a deadline is not an interrupt: %v", waitedOf(t, got))
+	}
+}
+
+// The witness is a second read over the window, and the window that ended the
+// wait is the one it reads.
+func TestAWitnessAppliesToTheWindowThatEndedTheWait(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t, emptyListing(), newsListing(t))
+	f.answers = append(f.answers, &answer{method: "GET", match: "/export?", bytes: witnessExport(t)})
+	stubWire(t, f)
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "9m", "--witness")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments --wait --witness: %v (exit %d)", got, code)
+	}
+	threads, _ := dataOf(t, got)["threads"].([]any)
+	if len(threads) != 2 {
+		t.Fatalf("threads: %v", threads)
+	}
+	anchored, _ := threads[0].(map[string]any)
+	if anchored["witness"] != "anchored" {
+		t.Errorf("witness = %v, want anchored", anchored["witness"])
+	}
+}
+
+// An empty window has nothing to witness, and an export on the way out of an
+// interrupted session would be one more refused request and one more warning
+// about a read nobody asked a question of.
+func TestAnEmptyWindowIsNotWitnessed(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t, quietListing())
+	stubWire(t, f)
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "1ms", "--witness")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments --wait --witness on a quiet document: %v (exit %d)", got, code)
+	}
+	for _, c := range f.calls {
+		if strings.Contains(c.URL, "/export?") {
+			t.Errorf("an empty window must not be exported: %v", f.calls)
+		}
+	}
+}
+
+// The wait is a flag on a command that already exists, so the usage line is
+// unchanged: there is no wait command, and nothing new to name.
+func TestTheWaitAddsNoCommandToTheUsageLine(t *testing.T) {
+	if strings.Contains(usage, "wait") {
+		t.Errorf("--wait is a flag, not a command: %q", usage)
+	}
+}

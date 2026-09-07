@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -75,8 +76,16 @@ func TestOnlyJSONObjectRefusesAnythingAfterTheObject(t *testing.T) {
 // runJSON runs the command and insists stdout is exactly one JSON object.
 func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 	t.Helper()
+	return runJSONCtx(t, context.Background(), args...)
+}
+
+// runJSONCtx is runJSON with the context main builds from the signal. Only a
+// wait reads it, and the tests that hand in a cancelled one are testing the
+// answer a stopped session gets.
+func runJSONCtx(t *testing.T, ctx context.Context, args ...string) (map[string]any, int) {
+	t.Helper()
 	var buf bytes.Buffer
-	code := run(args, &buf, io.Discard)
+	code := run(ctx, args, &buf, io.Discard)
 	return decodeOne(t, &buf), code
 }
 
