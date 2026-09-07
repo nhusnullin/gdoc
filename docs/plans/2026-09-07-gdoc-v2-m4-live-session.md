@@ -180,11 +180,11 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Files:**
 - Modify: `skills/gdoc-review/SKILL.md` (a "Live mode" section after Step 8, the description line mentions live, and the receipt rule in Step 6 names a colleague who asked)
 
-- [ ] write the section as specified in Technical Details: trigger, the loop block, the nine-minute reason, what a window contains, receipts on gdoc's own replies, `range: null`, the colleague receipt, the old-comment check, stop and totals, dry run
-- [ ] update Step 6 and Step 7 (the receipt and the proposal's `why`): when the marked comment's author is not the account gdoc is signed in as, the 🤖 text names them ("asked by <name>")
-- [ ] update the frontmatter description so the skill is chosen for "review this document live" as well as the one-shot request
-- [ ] read the whole skill once top to bottom for a sentence the live section makes false, and fix it
-- [ ] commit: `feat(v2): the review skill can stay live on one document`
+- [x] write the section as specified in Technical Details: trigger, the loop block, the nine-minute reason, what a window contains, receipts on gdoc's own replies, `range: null`, the colleague receipt, the old-comment check, stop and totals, dry run
+- [x] update Step 6 and Step 7 (the receipt and the proposal's `why`): when the marked comment's author is not the account gdoc is signed in as, the 🤖 text names them ("asked by <name>")
+- [x] update the frontmatter description so the skill is chosen for "review this document live" as well as the one-shot request
+- [x] read the whole skill once top to bottom for a sentence the live section makes false, and fix it
+- [x] commit: `feat(v2): the review skill can stay live on one document`
 
 ---
 
