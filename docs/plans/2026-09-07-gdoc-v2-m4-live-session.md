@@ -144,11 +144,13 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 - Consumes: `Threads`, `NextCursor`, a `Fetch` closure handed in by the caller.
 - Produces: `WaitOptions`, `Waited`, `Wait(ctx, since, o)` as in Technical Details. The sleeper is an unexported package variable, `sleep = time.Sleep`-shaped but taking a context so an interrupt cuts a sleep short, replaced in tests.
 
-- [ ] write the failing tests: the first poll runs at once with no sleep before it; an empty poll then a poll with one thread returns that thread, `Polls: 2`, and a cursor advanced to the thread's instant; a poll that errors returns the error and the polls so far; nothing before the deadline returns empty with the cursor handed in unchanged; a cancelled context returns empty with `Interrupted: true` and no further poll; a window that is only a 🤖 reply is still returned (facts only: the skill reads it as a receipt); `Unplaced` carries the ids `Threads` could not place
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): comments.Wait polls until activity, a deadline or an interrupt`
+- [x] write the failing tests: the first poll runs at once with no sleep before it; an empty poll then a poll with one thread returns that thread, `Polls: 2`, and a cursor advanced to the thread's instant; a poll that errors returns the error and the polls so far; nothing before the deadline returns empty with the cursor handed in unchanged; a cancelled context returns empty with `Interrupted: true` and no further poll; a window that is only a 🤖 reply is still returned (facts only: the skill reads it as a receipt); `Unplaced` carries the ids `Threads` could not place
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): comments.Wait polls until activity, a deadline or an interrupt`
+
+➕ Three tests beyond the list, each for a case the implementation had to decide: the sleep is clamped to what is left of the deadline; a context already cancelled polls nothing; and a poll that failed because the interrupt cut the request short is reported as the interrupt rather than as a failed read. `Wait` also refuses options it cannot run (no poll, a non-positive interval, a negative deadline), naming the field.
 
 ---
 
