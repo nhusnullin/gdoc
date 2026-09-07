@@ -235,12 +235,12 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`, `docs/v2/PLAN.md`, `docs/v2/SPEC.md`
 
-- [ ] update `README.md`: `comments --wait`, the `waited` fields, and how a live review session is started and stopped
-- [ ] update `CLAUDE.md` under "The three read commands": `--wait` requires `--since`, the interval is ten seconds and a constant, the first non-empty window ends the wait, an interrupt is `ok: true` with `interrupted: true`, a failed poll is `ok: false`, and the loop is the skill's; under "The binary prints facts": `Waited` carries counts and a flag and no verdict
-- [ ] update `docs/v2/SPEC.md` "How a comment reaches the agent" with a dated correction: the binary polls inside one call up to a deadline and exits on the first activity, rather than one call per poll, and why (Nail's decision, 2026-09-07)
-- [ ] update `docs/v2/PLAN.md`: mark M4 done with the date, record what it leaves for M8 (the hub-wide live session over every paired document)
-- [ ] run the full test suite one more time
-- [ ] commit: `docs: M4 lands, the live session written down`
+- [x] update `README.md`: `comments --wait`, the `waited` fields, and how a live review session is started and stopped
+- [x] update `CLAUDE.md` under "The three read commands": `--wait` requires `--since`, the interval is ten seconds and a constant, the first non-empty window ends the wait, an interrupt is `ok: true` with `interrupted: true`, a failed poll is `ok: false`, and the loop is the skill's; under "The binary prints facts": `Waited` carries counts and a flag and no verdict
+- [x] update `docs/v2/SPEC.md` "How a comment reaches the agent" with a dated correction: the binary polls inside one call up to a deadline and exits on the first activity, rather than one call per poll, and why (Nail's decision, 2026-09-07)
+- [x] update `docs/v2/PLAN.md`: mark M4 done with the date, record what it leaves for M8 (the hub-wide live session over every paired document)
+- [x] run the full test suite one more time
+- [x] commit: `docs: M4 lands, the live session written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes.
 
 ## Post-Completion

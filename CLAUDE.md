@@ -46,7 +46,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/gapi/` | the authenticated session. The one room that builds a request |
 | `go/internal/docs/` | the Docs read: tabs, the document tree, suggestion ids, comment ranges |
 | `go/internal/view/` | the document as the text `read` prints, and as the tree `--structure` prints |
-| `go/internal/comments/` | Drive's threads joined to the Docs ranges, and the `--since` cursor |
+| `go/internal/comments/` | Drive's threads joined to the Docs ranges, the `--since` cursor, and the `--wait` poll |
 | `go/internal/suggestions/` | what is pending, and what stopped being pending since the snapshot |
 | `go/internal/docx/` | the docx export reader, and the witness match against threads |
 | `go/internal/probe/` | the throwaway document that asks whether SUGGEST is honoured today |
@@ -61,11 +61,12 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1, 2 and 3 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 4 are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
-ways with `read`, `comments` and `suggestions`, and writes four ways with
-`probe`, `reply`, `propose` and `withdraw`. The review skill is rewritten over
-those, and `gdoc` on PATH is v2 from M3 on.
+ways with `read`, `comments` and `suggestions`, writes four ways with
+`probe`, `reply`, `propose` and `withdraw`, and waits for the next comment with
+`comments --wait`. The review skill is rewritten over those and can stay live on
+one document, and `gdoc` on PATH is v2 from M3 on.
 
 ### The auth commands, and what reaches stdout
 
@@ -450,6 +451,15 @@ flag, a reply's `by_gdoc`, a witness of `anchored`, `detached` or `unmatched`,
 and a list called `gone_since_last_look`. Each is a fact with a neutral name.
 None of them is a verdict, and none may grow into one.
 
+`comments.Waited` is that rule under M4's wait. Every field on it is a count, a
+duration, a list or a flag: `Polls`, `Waited`, `Threads`, `Unplaced`, `Cursor`
+and `Interrupted`. It says how many times the binary asked, how long it looked,
+what arrived and whether a signal ended it. Whether a window is work, whether a
+window that is only gdoc's own replies is worth a turn, and when to stop looking
+are the skill's, exactly as they are for a one-shot listing. A field named
+`news`, `idle`, `stale` or `should_retry` there is the same defect the paragraph
+above names.
+
 Two tests state the rule rather than leaving it to review:
 `TestThreadsCarriesEveryFactAndJudgesNone` in `internal/comments`, and
 `TestMatchGivesAnchoredDetachedAndUnmatched` in `internal/docx`. A field named
@@ -467,8 +477,9 @@ every one of them is testable on a fixture, and the fixtures under `testdata/`
 are the specification of what Google actually returns.
 
 - `read <url> [--structure]`: the text projection, and the tree with the flag.
-- `comments <url> [--since CURSOR] [--witness]`: the threads with their ranges,
-  markers, replies and the next cursor.
+- `comments <url> [--since CURSOR] [--wait DURATION] [--witness]`: the threads
+  with their ranges, markers, replies and the next cursor, and with `--wait` the
+  first window of activity after the cursor.
 - `suggestions <url> [--md PATH]`: what is pending, and with a paired file what
   stopped being pending.
 
@@ -674,6 +685,47 @@ on it has made the encoding a contract, and it is not one. The version field is
 there so a later shape is refused by name. A cursor that cannot be decoded is an
 error naming the problem, never silently read as "from the beginning": that
 would report a window nobody asked for and look like a clean poll.
+
+### `--wait` is one call that polls, and the loop is the skill's
+
+M4's live session. `comments <url> --since CURSOR --wait 9m` is the same
+listing, made repeatedly inside one call, and it is still one JSON object and
+still exit 0 if and only if `ok`. `comments.Wait` holds the loop and takes the
+poll as a `Fetch` closure, so the package still holds no session and no URL:
+`cmdComments` builds the two reads it already builds, and a test hands in a
+script.
+
+- **`--wait` requires `--since`.** A wait with no cursor answers with the whole
+  document, which is the one-shot listing under another name and reads to a
+  session as news. It is refused naming the missing flag. The duration is a Go
+  duration, and zero, negative, unreadable or over an hour is refused naming the
+  value.
+- **The interval is ten seconds, a constant, and never a flag.** It sits in the
+  spec's five to fifteen. `waitInterval` in `cmd/gdoc/read.go` is a package
+  variable only so a test can shorten it, and the sleep is clamped to what is
+  left of the deadline. The first poll happens at once, not after an interval.
+- **The first non-empty window ends the wait.** Latency is the point. A window
+  is what `Fetch` narrows to, so gdoc's own 🤖 reply arriving after a poll does
+  end the wait: the binary reports it and the skill reads it as a receipt.
+- **An interrupt is an answer.** `main` builds the context with
+  `signal.NotifyContext` on `SIGINT` and `SIGTERM` and hands it to `dispatch`.
+  Ctrl-C during a wait prints `ok: true` with no threads, the cursor handed in
+  and `waited.interrupted: true`, and exits 0. A poll that failed because the
+  interrupt cut the request short is reported as the interrupt, not as a failed
+  read. The output contract has to hold under the one signal a live session
+  sends every time it ends.
+- **A failed poll is `ok: false`,** carrying the error and the polls so far.
+  Nothing is retried silently: the skill sees the failure, says the window is
+  unread rather than empty, keeps the cursor it had and calls again.
+- **`waited` is absent without `--wait`.** Reporting `polls: 1` on a call that
+  never waited says the binary polls when it does not. An empty window is not
+  witnessed either: the export would be one more request for no question, and on
+  the way out of an interrupted session it would fail on the cancelled context
+  and warn about a read nobody made.
+- **Nothing is kept.** The wait writes no file and touches no config dir, and
+  the cursor it prints is the only thing that carries to the next call. The loop
+  belongs to `skills/gdoc-review/SKILL.md`, which asks for nine minutes because
+  the tool that runs the command gives up at ten.
 
 ### The `gdoc:` front-matter block, schema 1
 

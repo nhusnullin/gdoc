@@ -344,6 +344,24 @@ Google suggestion with a comment saying why. It never edits the document, and it
 can withdraw its own suggestion, which is why proposing needs no confirmation.
 Say "dry run" and it does every step and writes nothing.
 
+Say "live" and the session stays open on that document:
+
+```
+/gdoc-review <google doc url> live
+```
+
+It does the pass above first, then keeps watching that one document. Write a
+marked comment in the browser and the answer appears in its thread a few seconds
+later, while you are still on the paragraph that prompted it. A quiet document
+costs nothing: the waiting happens inside the binary, not in the model. Stop it
+with Ctrl-C or by saying stop, and it prints what the session did: windows seen,
+threads answered, work carried out, changes proposed, files changed in your
+notes. Nothing keeps running after that. There is no watcher and no daemon, and
+liveness ends with the session.
+
+One live session watches one document, the link you gave. Watching every paired
+note in the folder is still planned.
+
 ### Apply what was queued, and publish again
 
 ```
@@ -525,7 +543,7 @@ you paste from the browser, or a bare document id.
 
 ```bash
 bin/gdoc read <url> [--structure]
-bin/gdoc comments <url> [--since CURSOR] [--witness]
+bin/gdoc comments <url> [--since CURSOR] [--wait DURATION] [--witness]
 bin/gdoc suggestions <url> [--md PATH]
 ```
 
@@ -577,6 +595,27 @@ binary matches the three exactly.
 after it. The cursor is opaque: it is the newest activity that run saw, encoded,
 and nothing reads inside it. Nothing writes it down either, so it lives as long
 as whatever is polling.
+
+`--wait` turns that one call into a poll. The binary asks Drive every ten
+seconds inside the call, and comes back the moment something happened after the
+cursor, or at the deadline with an empty window. It needs `--since`, because a
+wait with no cursor answers with the whole document, which is the plain listing
+under another name. The value is a Go duration, `9m` or `90s`, and an hour is
+the most one call will look for. Nothing is written anywhere while it waits, and
+the cursor it prints is all that carries to the next call.
+
+With `--wait` the object carries one more field:
+
+```jsonc
+"waited": { "polls": 12, "seconds": 118, "interrupted": false }
+```
+
+`polls` is how many times it asked, `seconds` how long it looked. A run without
+`--wait` has no `waited` field at all. Ctrl-C during a wait is an answer rather
+than a crash: the object comes back `ok: true` with no threads, the cursor you
+handed in, and `interrupted: true`, and the exit code is still 0. A poll that
+failed ends the wait with `ok: false` and says how many polls it made, so
+whatever is looping can say the window is unread rather than empty.
 
 `--witness` reads the document a second time, as a docx export, and says of each
 thread whether that export carries it `anchored` to text, `detached` from it, or
@@ -749,12 +788,10 @@ text, and v2's `comments` lists the comments.
 
 ## What is planned
 
-**gdoc live: answers while you read.** Today a review is one pass. You run it, it
-answers the comments that were already there, and it stops. Live keeps it open
-instead. You start it once on a document, then carry on reading. Write an `ai:`
-comment and the answer appears in that thread a few seconds later, while you are
-still on the paragraph that prompted it. You never leave the document, and you
-never run anything again. Designed and planned, not built yet.
+**A live session over the whole folder.** Live works today on one document, the
+link you give it. Starting it once and having it watch every note you have
+published, so a comment on any of them is answered without naming which, is
+designed and not built yet.
 
 **Ordinary comments.** Reading and answering comments that carry no marker.
 

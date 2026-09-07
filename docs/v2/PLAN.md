@@ -3,8 +3,8 @@
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
 producing working, testable software. Detailed task-by-task plans live in
 `docs/plans/` and are written when a milestone starts, so each one
-is written against the code that actually exists by then. Milestones 1, 2 and 3
-are written, and all three are done.
+is written against the code that actually exists by then. Milestones 1 to 4
+are written, and all four are done.
 
 ## Principles
 
@@ -215,13 +215,52 @@ What M3 leaves open elsewhere:
 - The Docs read's `comments` key is still decoded loosely, as M2 left it. The
   live write run records the fixture to tighten it against.
 
-### M4. The live session
+### M4. The live session (done 2026-09-07)
 
 Session-scoped polling on the cursor: continuity across polls, partial-read
 behaviour (a poll that could not read half the review says so and does not act
 as if clean), colleague `ai!`, and clean cancellation. The review skill gains
 its live mode. Acceptance: a live run against a real document with a second
 account commenting.
+
+**Landed 2026-09-07.** The polling moved inside the call, on Nail's decision the
+same day: `comments <url> --since CURSOR --wait 9m` asks Drive every ten seconds
+and comes back on the first activity after the cursor, or at the deadline with
+an empty window. One call per poll would have made the latency a minute, because
+a Claude Code session cannot wake more often than that, and would have spent a
+model turn on every quiet tick. `comments.Wait` holds the loop and takes the
+poll as a closure, so the package still holds no session and no URL. The
+envelope gained one object, `waited`, carrying `polls`, `seconds` and
+`interrupted`, and nothing else: it is a count, a duration and a flag, and no
+field in it decides anything. An interrupt is an answer, `ok: true` with no
+threads and the cursor handed in, so the output contract holds under the one
+signal a live session sends every time it ends; a failed poll is `ok: false`
+with the polls so far, so the skill can tell an unread window from an empty one.
+The binary still keeps no state: the wait writes nothing anywhere, and the
+cursor it prints is all that carries to the next call. The review skill gained a
+"Live mode" section, the loop over those calls, and the rule that a receipt on a
+colleague's marked comment names who asked. `internal/live` gained
+`TestLiveWaitSeesANewComment` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`. No
+new import and no new module. Documented in CLAUDE.md under "`--wait` is one
+call that polls" and in the README under "Reading a document".
+
+What M4 leaves for M8:
+
+- One live session watches one document, the link Nail gave. The hub-wide
+  session, one watch over every paired note in the folder, is M8's with the
+  align skill. Nail's decision, 2026-09-07.
+- The wait polls Drive and Docs both on every tick, because the ranges come from
+  the Docs read. A cheaper tick that lists comments alone and reads the document
+  only when something arrived is an optimisation for later, if the quota ever
+  matters.
+- Suggestions accepted or rejected during a live session are not watched. The
+  next `suggestions --md` run reports them as `gone_since_last_look`.
+
+What M4 leaves open elsewhere:
+
+- The acceptance run with a second account commenting is still outstanding. The
+  colleague `ai!` path is exercised by the skill's rule and its wording; the
+  first real proof is a session with a colleague in the margin.
 
 ### M5. Generator parity
 
