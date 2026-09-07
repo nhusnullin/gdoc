@@ -53,6 +53,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/reply/` | one 🤖 reply into a thread, and the thread read back |
 | `go/internal/propose/` | a change as a suggestion, its 🤖 comment, and the three read-backs |
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
+| `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/live/` | the two opt-in end-to-end tests, one read and one write. Tests only, no production code |
@@ -115,7 +116,7 @@ The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
 `gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
-than an oversight. There is no help command: `dispatch` matches the five
+than an oversight. There is no help command: `dispatch` matches the nine
 commands and nothing else, so `--help` comes back as an unknown command with the
 one-line `usage` string in the error. A caller reads the same JSON
 object it reads for every other run, and the exit code still means what it means
@@ -597,9 +598,13 @@ A run carrying both an insertion id and a deletion id prints twice, as the
 deletion then the insertion, because that is what Docs shows. The comment
 marker opens once, on the first copy.
 
-`--structure` is the same document as a tree with character indexes on it, which
-is what M3 needs to place a proposal at an exact position. Neither view is the
-other's summary, so both are kept.
+`--structure` is the same document as a tree with character indexes on it.
+M3 was expected to place a proposal from it and does not: a proposal names text,
+`propose` reads the document itself and finds the words, and the index never
+leaves the run that computed it. Read "A proposal names text, never an index"
+below. The view is kept because neither view is the other's summary, and because
+an index view is what a later milestone would need if one ever places a change
+without quoting it.
 
 ### The cursor is opaque, and it dies with the session
 
@@ -769,6 +774,73 @@ DECISIONS.md says never to act on a stored one. Index lengths on the wire are
 UTF-16 code units, which is what the Docs API counts, so a replacement carrying
 a non-BMP character has its own test.
 
+**A match has to be contiguous, and that is not a detail.** `internal/propose`'s
+index walk reads text runs and skips the rest, but the document numbers what it
+skipped, so words either side of a footnote mark, a picture, an equation or a
+page break read as one string in the walk and are two spans in the document.
+`matches` refuses a match whose span is longer than the words in it, because the
+`deleteContentRange` built from one would mark the skipped content for deletion
+along with them, and all three read-backs would still pass: the inline check
+reads text runs, so the footnote it just proposed deleting is invisible to it.
+`withdraw.Span` refuses two spans with somebody else's words between them for the
+same reason, and this is that rule on the other side. Such a quote comes back as
+a refusal naming what it crossed, not as "not found".
+
+Two things about that check are decisions rather than details. **The span's end
+comes from the last rune of the match, never from the byte behind it.** The
+position of that byte is the start of the next indexed run, so a quote ending
+exactly where a footnote mark or a picture begins would measure a unit too long
+and be refused for crossing a hole it only touches. That is the one refusal a
+reader walks straight into: `read` prints a footnote reference as `[^1]`, so the
+obvious sub-quote is the words right before the mark. **A crossing occurrence
+still counts towards the exactly-once rule.** `FindSpan` refuses a quote that
+occurs once as written text and once across a hole, rather than placing it on
+the contiguous one: picking would choose for the caller, and `Carries` rests on
+that same guarantee, so a dropped crossing copy is one the preview check would
+still find after a direct edit took the other.
+
+**A proposal replaces words with words.** An empty `replacement` is refused in
+`Proposal.Check`, before the probe: the batch would carry an `insertText` with no
+text and a comment anchored on a range of length zero, which Docs rejects, and
+`inlineHolds` looks for an insertion a plain deletion never makes, so it could
+never verify either. A milestone that wants a deletion-only proposal gives it its
+own request shape.
+
+**A line break is refused on both sides, in the same place, for two different
+reasons.**
+
+A `quoted` carrying one is refused because a paragraph's last text run carries
+the paragraph mark itself: the Docs read hands back `...operations team.\n`, so
+a quote ending in a newline matches inside that one paragraph and the span
+`FindSpan` returns ends past the mark. The `deleteContentRange` built from it
+marks the mark for deletion, and accepting the suggestion merges the paragraph
+with the one behind it while the `insertText` puts back a replacement that
+cannot carry a break. Nothing downstream would name it: `inlineHolds` compares
+the deleted runs against that same `quoted`, and `Carries` finds that same
+string in the preview, so all three read-backs hold over a proposal that removes
+a paragraph. A quote with a break in the middle is already unreachable, because
+it spans two paragraphs and the walk indexes one at a time, so the rule costs a
+caller nothing: the words without the trailing mark are always writable instead.
+
+A `replacement` carrying one is refused because of the preview check. `Carries`
+asks one paragraph at a time, and a paragraph ends at its own break, so a string
+whose newline is anywhere but the very end is in no single paragraph and comes
+back false whatever the document holds. A trailing one is the exception: a
+paragraph's last run carries the mark, which is the quote rule above, so a want
+ending in a newline can be found. Either way the answer is worthless. The quote
+rule gives the first question a
+`quoted` that cannot carry one. Nothing gives the second question that, so a
+replacement containing both the quote and a newline would fall past the
+ambiguity arm and report `preview_without_suggestions` as holding on exactly the
+silent direct edit that route exists to name. Both preconditions are enforced at
+the door rather than left implied.
+
+**Every proposal in the file is checked before the first one is sent.**
+`readProposals` runs `Proposal.Check` over the whole list, for the reason it
+refuses an empty list: all of them are in hand, and a third entry turned down
+after the first two have landed is a run that half happened in somebody's
+document, with a probe document created and trashed on the way.
+
 One `batchUpdate` per proposal, three requests inside it, in this order:
 `deleteContentRange` over the quoted span, `insertText` at its start, and
 `insertComment` over the inserted span. One batch because Docs applies the
@@ -785,26 +857,117 @@ cannot:
 | Check | Asks |
 |---|---|
 | `suggestions_inline` | the replacement is in the document, carrying a suggestion id |
-| `preview_without_suggestions` | the quoted words are still there with suggestions hidden, so it is a suggestion and not an edit |
+| `preview_without_suggestions` | the quoted words are still somewhere in the tab with suggestions hidden, so it is a suggestion and not an edit |
 | `docx_anchored` | the docx export carries the 🤖 comment, attached to text |
 
-All three is `verified: true`. Fewer is `ok: true` with `verified: false` and a
-warning naming the route that did not hold, because the write happened: a caller
-told the run failed is a caller that writes it again. The skill reads `verified`
-and decides what to tell Nail. `preview_without_suggestions` is the route that
-would catch the silent direct edit, which is why it is one of the three rather
-than a nicety.
+All three, plus a write that answered `commentUpdateState: ALL_SAVED`, is
+`verified: true`. Anything less is `ok: true` with `verified: false` and a
+warning naming what did not hold, because the write happened: a caller told the
+run failed is a caller that writes it again. The fourth condition is why a
+`verified: false` run can carry three true checks: a batch Docs accepted whose
+answer could not be read leaves no state to report, and the warning there names
+the lost answer rather than blaming a route. The skill reads `verified` and
+decides what to tell Nail. `preview_without_suggestions` is the route that would
+catch the silent direct edit, which is why it is one of the three rather than a
+nicety.
+
+**The preview check asks by words, never at the index.** `r.Start` was counted
+in the view that shows pending suggestions, and the preview hides them, so every
+position after one sits lower there. Looking at that index reported the second
+proposal of every run, and every document already carrying somebody's pending
+insertion, as a direct edit: the one warning that must never cry wolf. `Carries`
+asks whether the tab still holds the quoted words anywhere, which holds up
+because `FindSpan` required them to occur exactly once, so a direct edit usually
+takes the only copy with it.
+
+Usually, because a replacement that contains the quote carries it through the
+edit: the write puts the replacement where the quoted words were, so "reviewed
+annually" is still in the preview inside "reviewed annually by the operations
+team", and the quote alone would report the route as holding on the exact
+failure it exists for. So `Verify` asks a second question in that shape only,
+and it is whether the preview carries the **replacement**. After an honest
+suggestion it does not, because the preview hides the insertion, unless the
+document already read that way before the write, which is a proposal that
+duplicates the words behind it. Those two cannot be told apart from here, so the
+check is false with a warning naming the ambiguity rather than one naming a
+direct edit. Asking for the replacement outside that shape would be the cry-wolf
+mistake again: a replacement that does not contain the quote can occur anywhere
+in the document.
+
+What no question catches is a second copy of the quote inside somebody's pending
+suggested deletion, which the preview still shows. That is the price of asking
+by words, and it is the cheaper of the two mistakes.
+
+**`docx_anchored` gives no answer when two comments read the same words and
+disagree about being attached.** The export carries no Drive comment id, so two
+proposals in one run with the same reason are two comments with one body. Taking
+the first would report one proposal on the strength of the other's comment, so
+when the matches disagree the check is false with a warning naming the
+ambiguity. Duplicates that agree answer correctly for both proposals, and the
+check is whatever they agree on. It is the rule
+`internal/docx`'s own witness follows, on the same join.
 
 **Provenance in `proposals[]` is the permission to withdraw.** `withdraw`
 requires `--md`, and refuses an id the note does not record as gdoc's own. The
 front matter is the only place that memory lives, so a `propose` run without
 `--md` still lands the suggestion and simply forgets it, and the entry is
-recorded whether or not the read-backs held: it is in the document either way,
-and a proposal gdoc has forgotten is one it will refuse to withdraw. The
-suggestion is gone only when `deletedSuggestionIds` names it **and** a fresh
+recorded whether or not the read-backs *held*: a proposal reported
+`verified: false` is in the document either way, and a proposal gdoc has
+forgotten is one it will refuse to withdraw.
+
+**What it cannot record, it names.** An entry needs both ids, and
+`frontmatter.Block.Validate` refuses one missing either, so a change that landed
+without one of them in hand cannot be written down at all. `propose.Record`
+hands those results back to the caller instead of dropping them, and `record`
+turns each into a warning naming the quoted words: the change is in the document
+and `withdraw` will refuse it for ever. **The warning names the route the id
+would have come from**, and the two routes are not the same one: the comment id
+is the batch's own answer, while the suggestion id is read out of the inline
+read-back afterwards. `missingID` in `cmd/gdoc/write.go` is that split. Blaming
+the write for a read-back that failed sends somebody to look at Docs while the
+envelope's other warning is already saying the re-read is what broke. The note is not listed
+in `files_changed` when nothing was added to it. Silence there read as a
+verification gap rather than as a permission thrown away.
+
+**The note is read again just before it is written, by both writers.** The
+pairing is checked before the session opens, and the run then spends seconds to
+tens of seconds on the network: the probe plus a read, a write and three
+read-backs per proposal for `propose`, and two whole-document reads plus a
+`batchUpdate` for `withdraw`. These notes live in a synced vault, so writing the
+bytes the run started with would throw away whatever landed in that window.
+`freshNote` reads the file again, and refuses four things rather than writing
+them: a file it cannot read again, one whose front matter no longer parses, one
+whose `gdoc:` block has gone, and one that now names another document. Each is a
+warning carrying the reason, and nothing is written into the note. The block is
+re-parsed from the fresh bytes too, so a proposal another run recorded in that
+window survives: writing the block this run read into bytes it did not would
+keep the author's prose and still drop that entry. `notePath` therefore keeps
+the path and the block the pairing check read, and not the bytes it read them
+from: a copy held there would only be the stale bytes somebody later wrote
+back.
+
+**A withdrawn suggestion leaves the note only once it has provably left the
+document.** It is gone only when `deletedSuggestionIds` names it **and** a fresh
 read shows no run carrying it, and only then does the entry leave the note.
 Forgetting it while it is still pending would leave gdoc refusing to withdraw
-its own work.
+its own work. The price is a delete Docs accepted whose answer could not be
+read: usually no ids came back, so `verified` stays false, the entry stays in
+the note, and a retry is refused by `Span` rather than by the note. The run says
+so, and says to take the entry out by hand once the suggestion is gone.
+Relaxing the two facts to one on that path is a decision for Nail, not a
+refactor.
+
+**"Usually" is the whole word there, and neither writer gates on it.** Valid
+JSON of the wrong shape is the one failure that reaches the caller with fields
+in hand, because `encoding/json` saves the first type error and keeps decoding.
+What the server really did send is kept: `withdraw` keeps the
+`deletedSuggestionIds` it was given, `propose` keeps the comment id, which is
+the provenance `withdraw` later needs, and `reply` keeps the reply id and reads
+the thread back on it rather than saying the reply could not be looked for. So both warnings are built from what
+was decoded rather than from the path being taken. A withdrawal whose two facts
+both held is reported `verified: true` and its entry does leave the note, and
+the warning then says the answer was lost without telling anybody to take out an
+entry the same run removed.
 
 The 🤖 comment a withdrawn proposal made stays where it is. `commentWrites`
 carries `POST` and nothing else, so deleting or editing a comment is a write the
@@ -815,11 +978,60 @@ comment saying the proposal was withdrawn. A milestone that needs `PATCH` or
 **The 🤖 prefix is the only record of authorship there is.** The Docs API cannot
 set an author, so everything gdoc writes is signed by whoever is logged in.
 Every reply and every comment gdoc writes opens with `🤖 ` and nothing before
-it, and a body that does not is refused. A body carrying markdown is refused
+it. A body carrying markdown is refused
 too, ported from v1's `assert_plain_text`: a Docs thread renders it literally,
-so asterisks and backticks arrive as typed. This is v1's `[gdoc]` rule in v2's
+so asterisks and backticks arrive as typed. That rule lives in
+`internal/plaintext` and both writers ask it: a reply through `reply.Check`, and
+a proposal's `why` through `Proposal.Check`, because the reason is written into a
+thread as a comment. Two copies of one regular expression are two rules that
+drift.
+
+**Both writers ask that rule behind the mark, never in front of it.** The
+heading arm is anchored to a line start, so a `🤖 ` sitting in front of a `# `
+moves the hash off offset zero and the arm cannot fire: asked of the whole
+string, a `# ` on the first line passes while the same words on the second line
+are refused, which is one rule firing or not depending on where the author put
+them. So `Proposal.Check` reads `why` alone, which is what it is given, and
+`reply.Check` trims `Prefix` first, which is exact because the line above it has
+already required the body to open with exactly that.
+
+**The two writers own the mark differently, and a caller has to know which.**
+A reply body arrives with the mark already on it, so `reply.Check` **requires**
+it and refuses a body that does not open with exactly `🤖 `. A proposal's
+`why` arrives without it, because `Batch` writes the comment as `Prefix + Why`,
+so `Proposal.Check` **refuses** a reason that already carries it. An agent
+following the reply sentence when it writes `proposals.json` has its run refused
+at `readProposals`, before anything leaves the machine. The refusal is asked of
+the robot alone rather than the robot and its space, because `🤖the policy`, a
+robot behind a space and a robot behind a newline each land the same doubled
+mark; a whitespace-only reason is refused for the same kind of reason, since the
+comment would be a bare signature and every read-back would still hold over it. This is v1's `[gdoc]` rule in v2's
 shape, and "Identity is never a gate" below is why the marker decides rather
 than the account.
+
+**A write whose answer could not be read is not a write that never happened.**
+`internal/gapi` marks the failures raised after the server answered 2xx, a body
+that is not JSON and a body over the ceiling among them, and a writer package
+asks by behaviour (a `Sent() bool` method) rather than by importing that package:
+naming a `Session` interface is what keeps `net/http` out of those rooms, and an
+imported sentinel would bring it back through the side door. All three writers
+ask it, and each keeps what the answer still carried. In the usual case nothing
+decoded: `reply.Post` then warns and says to check the thread before posting
+again, which is what its own doc comment already promised; `propose.Apply` runs
+the read-backs and reports the proposal with the comment id unknown; and
+`withdraw.Run` runs its read-back and reports the withdrawal it cannot confirm.
+When fields did decode all three report them instead, and `reply.Post` looks the
+reply up in the thread on an id that survived. Read the "Usually" paragraph
+above: the gate is the decoded field, never the path being taken.
+
+**What is not marked is three cases, not two.** A guard refusal never left the
+machine, and a 4xx is Docs rejecting the batch whole: a caller is right to treat
+both as a change that did not happen. A 5xx or a dropped connection is the
+third, and gdoc cannot tell it apart: the request was written and may have been
+applied. Nothing claims otherwise, in either direction, so a caller that sees a
+transport failure or a 5xx reads the document before sending the same write
+again. Widening the mark to cover it would be a decision, and it would make
+every one of those a reported-not-raised failure.
 
 **Nothing here decides what to write.** The body of a reply, the words of a
 proposal and the reason for it arrive already written, in a file the skill

@@ -229,8 +229,22 @@ you signed in as.
 
 Every user of the bundled client draws on the same Google rate limit. If that ever
 bites, create a Desktop app OAuth client of your own and save its JSON to
-`~/.config/gdoc-agent/oauth-client.json`. A file there wins over the bundled
-client, and `gdoc auth status` reports which one is in use.
+`~/.config/gdoc-agent/oauth-client.json`.
+
+The Python tool reads that file, and it wins over the bundled client there:
+
+```bash
+~/.config/gdoc-agent/venv/bin/gdoc auth login
+~/.config/gdoc-agent/venv/bin/gdoc auth status   # says which client is in use
+```
+
+The Go binary does not read it yet. `gdoc auth login` always signs in with the
+bundled client, and `gdoc auth status` reports `client_source: bundled` plus
+`client_file_ignored: true` when the file is there, rather than claiming an
+override that is not wired up. What it does carry over is the refresh: a token
+minted through the Python tool with your own client keeps refreshing under that
+client, whichever binary makes the call. So a login through the Python tool moves
+your quota; a login through the Go binary puts it back on the shared client.
 
 Security is not the reason to do this. A client shipped to many users is a public
 client by definition, per RFC 8252 section 8.5, and `gh` and `gcloud` both ship
@@ -629,9 +643,21 @@ saying why. It reads the file `--from` names, a list of
 the hazard the whole API has, so `propose` reads the document fresh, finds the
 words, and refuses when they occur more than once: quote more of the sentence.
 Text already inside a pending suggestion is not matched, so a proposal on top of
-a proposal is refused too. Each proposal is one `batchUpdate` after its own
-fresh read, because the first change moves the ground under the second, and a
-document with more than one tab stops the run before anything is sent.
+a proposal is refused too. A quote running across a footnote mark, a picture, an
+equation or a page break is refused as well, naming what it crossed: the span
+would take that content with it. An occurrence that crosses one still counts, so
+a quote reading once as plain text and once across a mark is refused as
+ambiguous rather than placed on the plain one. Each proposal is one
+`batchUpdate` after its own fresh read, because the first change moves the
+ground under the second, and a document with more than one tab stops the run
+before anything is sent.
+
+`replacement` may not be empty, and it may not carry a line break: a proposal
+replaces words with words inside one paragraph, and there is neither a
+deletion-only shape nor one that adds a paragraph. `why` becomes the comment, so it must be plain text
+and must not carry the `🤖 ` prefix itself, which gdoc adds. Every proposal in
+the file is checked before the first one is sent, so a bad entry stops the run
+with nothing written.
 
 **`verified` is the read-back, never the status code.** After the batch,
 `propose` reads the document three more ways, and `checks` says which held:
@@ -642,9 +668,12 @@ document with more than one tab stops the run before anything is sent.
 | `preview_without_suggestions` | the original words are still there with suggestions hidden, so it is a suggestion and not an edit |
 | `docx_anchored` | the docx export carries the 🤖 comment, attached to text |
 
-All three is `verified: true`. Fewer is still `ok: true` with `verified: false`
-and a warning naming the route that did not hold, because the write happened and
-hiding that would be worse. The skill reads `verified` and decides what to say.
+All three, plus a write that answered `commentUpdateState: ALL_SAVED`, is
+`verified: true`. Anything less is still `ok: true` with `verified: false` and a
+warning naming what did not hold, because the write happened and hiding that
+would be worse. A batch Docs accepted whose answer could not be read is the case
+where every check holds and `verified` is false, and the warning there names the
+lost answer. The skill reads `verified` and decides what to say.
 
 **`withdraw`** retracts one of gdoc's own pending proposals. It needs `--md`,
 and the reason is the whole rule: the note's `proposals` list is the only record
@@ -658,6 +687,17 @@ With `--md`, `propose` records what it wrote into the note's `gdoc:` block:
 the suggestion id, the comment id, the time and the words that were replaced.
 That record is the permission to withdraw later, so a run without `--md` still
 lands the suggestion and simply forgets it.
+
+The list is not a complete record on its own. A proposal gdoc does not have both
+ids for cannot be written down at all, because an entry missing either fails the
+block's own validation, so the run warns that gdoc cannot withdraw it later. The
+warning says which id and where it would have come from: the comment id is the
+write's own answer, the suggestion id is read back afterwards. The change is in
+the document either way. `files_changed` is per run, not per proposal: the note
+is left out of it only when nothing at all could be added to it, so a run that
+recorded two proposals and lost the third still names the note and carries the
+warning about the one it lost. Read the warnings, not the file list. `gdoc suggestions` is the document's own
+answer, and the note is gdoc's memory of it: read both.
 
 The review skill runs over these commands. It reads the threads, decides which
 ones still need an answer, and writes the reply and proposal files the binary

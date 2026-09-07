@@ -42,6 +42,11 @@ type fakeSession struct {
 	reads  [][]byte
 	batch  []byte
 	failAt map[int]error
+	// afterBatch is a failure raised once the answer has been decoded, which is
+	// the one shape that reaches Run with fields in hand: valid JSON of the
+	// wrong shape, where encoding/json saves the type error and keeps going.
+	// failAt cannot model it, because it answers before the fixture is read.
+	afterBatch error
 }
 
 func (f *fakeSession) record(method, rawURL string, body any) error {
@@ -79,7 +84,10 @@ func (f *fakeSession) PostJSON(_ context.Context, rawURL string, body any, into 
 	if into == nil {
 		return nil
 	}
-	return json.Unmarshal(f.batch, into)
+	if err := json.Unmarshal(f.batch, into); err != nil {
+		return err
+	}
+	return f.afterBatch
 }
 
 func (f *fakeSession) posts() []call {
@@ -342,6 +350,102 @@ func TestRunReportsAReadBackItCouldNotMake(t *testing.T) {
 		t.Error("no warning said the read-back could not be made")
 	}
 }
+
+// TestRunReportsADeleteWhoseAnswerCouldNotBeRead is the difference between a
+// write that never left and a write Docs took. The session marks the second
+// kind, and reporting it as a failure would send the skill back to delete the
+// same suggestion again, over a document that has already changed.
+//
+// Here nothing decoded, which is the usual shape of this path, so
+// deletedSuggestionIds carries nothing, Verified stays false and the note keeps
+// the entry. It is the answer for this answer rather than an invariant of the
+// path: the case below is the same failure over a body that did decode.
+func TestRunReportsADeleteWhoseAnswerCouldNotBeRead(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
+
+	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
+
+	if err != nil {
+		t.Fatalf("a delete the server accepted was reported as never sent: %v", err)
+	}
+	if res.Verified {
+		t.Error("Verified = true on a delete whose answer was never read")
+	}
+	if len(f.calls) != 3 {
+		t.Errorf("calls = %d, and the read-back still runs on a write that landed", len(f.calls))
+	}
+	joined := strings.Join(res.Warnings, " ")
+	if !strings.Contains(joined, "accepted by Docs") {
+		t.Errorf("warnings = %v, and one should say the delete was accepted", res.Warnings)
+	}
+	// The deletedSuggestionIds warning names a direct edit, and an answer
+	// nobody could read says nothing about one. Raising it here would report a
+	// second problem the server never showed.
+	if strings.Contains(joined, "deletedSuggestionIds") {
+		t.Errorf("warnings = %v, and none may read a direct edit out of an answer that was lost", res.Warnings)
+	}
+}
+
+// TestRunKeepsTheIdsDecodedFromAnAnswerThatFailed is the other half of the
+// path above: valid JSON of the wrong shape, where the list the server sent is
+// in hand even though the read failed. Those ids are the server's own word
+// about what it retracted, so throwing them away would report a withdrawal both
+// facts confirm as unverified, and the warning would tell somebody to take an
+// entry out of the note that this run removes itself.
+func TestRunKeepsTheIdsDecodedFromAnAnswerThatFailed(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
+
+	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
+
+	if err != nil {
+		t.Fatalf("a delete the server accepted was reported as never sent: %v", err)
+	}
+	if !res.Verified {
+		t.Errorf("Verified = false, and both facts held: %+v", res)
+	}
+	joined := strings.Join(res.Warnings, " ")
+	if !strings.Contains(joined, "accepted by Docs") {
+		t.Errorf("warnings = %v, and one should say the delete was accepted", res.Warnings)
+	}
+	if strings.Contains(joined, "by hand") {
+		t.Errorf("warnings = %v, and none may say to take out an entry this run removes itself", res.Warnings)
+	}
+}
+
+// TestRunReadsADirectEditOutOfIdsThatDecodedOnAFailedAnswer is the third shape
+// of that path: the list decoded and it names somebody else's suggestion. The
+// warning is gated on the decoded list rather than on the path, the way propose
+// gates on a commentUpdateState it was given, so the alarm fires here. Asking
+// about the path instead threw away the one fact the server did send.
+func TestRunReadsADirectEditOutOfIdsThatDecodedOnAFailedAnswer(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "deleted-other.json")
+	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
+
+	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
+
+	if err != nil {
+		t.Fatalf("a delete the server accepted was reported as never sent: %v", err)
+	}
+	if res.Verified {
+		t.Error("Verified = true on an answer that retracted another suggestion")
+	}
+	joined := strings.Join(res.Warnings, " ")
+	if !strings.Contains(joined, "deletedSuggestionIds") {
+		t.Errorf("warnings = %v, and one should name the list that retracted nothing of gdoc's", res.Warnings)
+	}
+	if !strings.Contains(joined, "accepted by Docs") {
+		t.Errorf("warnings = %v, and one should say the delete was accepted", res.Warnings)
+	}
+}
+
+// acceptedError is what the session hands back for a failure raised after the
+// server accepted the request. The writer packages ask by behaviour, so the fake
+// answers by behaviour too.
+type acceptedError struct{ error }
+
+func (acceptedError) Sent() bool { return true }
 
 func TestRunFailsWhenTheWriteDoesAndSendsNothingElse(t *testing.T) {
 	f := script(t, "pending.json", "gone.json", "deleted.json")

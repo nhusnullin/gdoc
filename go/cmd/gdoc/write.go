@@ -165,7 +165,14 @@ func readBody(path string) (string, error) {
 
 // proposalReport is one proposal as the envelope carries it. Sent is the fact
 // the skill reads first: a run stopped by the probe reports every proposal, and
-// each one says it never left the machine.
+// each one says gdoc got no answer saying it landed.
+//
+// That is what the field means, and it is narrower than "it never left the
+// machine". A guard refusal and a 4xx never changed the document, and a 5xx or
+// a dropped connection is the third case: the request was written and may have
+// been applied, and gdoc cannot tell. The envelope's own error names it on that
+// path, so read the error beside the flag rather than the flag alone, and read
+// the document before proposing the same words again.
 type proposalReport struct {
 	Quoted             string         `json:"quoted"`
 	Replacement        string         `json:"replacement"`
@@ -270,18 +277,19 @@ func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note
 	}
 
 	// One proposal at a time, each after its own fresh read, because the first
-	// one moves the ground under the second. The run stops at the first one
-	// that cannot be sent, and everything already sent is still reported.
+	// one moves the ground under the second. The run stops at the first one that
+	// cannot be sent, and the report still carries one entry per proposal in the
+	// file: each entry answers `sent` for itself, so a stop in the middle names
+	// what landed and what never left rather than shortening the list.
 	results := make([]propose.Result, 0, len(proposals))
-	data.Proposals = data.Proposals[:0]
-	for _, one := range proposals {
+	for i, one := range proposals {
 		res, err := propose.Apply(ctx, r.session, r.id, one)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
 		}
 		results = append(results, res)
-		data.Proposals = append(data.Proposals, sent(res))
+		data.Proposals[i] = sent(res)
 		warns = append(warns, about(one.Quoted, res.Warnings)...)
 	}
 	data.FilesChanged, warns = record(note, results, warns)
@@ -325,15 +333,46 @@ func about(quoted string, warns []string) []string {
 // record writes the provenance of everything that landed, and says which file
 // changed. A proposal whose batch was accepted is remembered whether or not the
 // read-backs held: it is in the document either way, and a proposal gdoc has
-// forgotten is one it will refuse to withdraw.
+// forgotten is one it will refuse to withdraw. What cannot be remembered at all,
+// because an id an entry needs is not in hand, is named in a warning rather than
+// dropped: that is the same loss, and silence about it reads as a verification
+// gap instead of a permission thrown away. missingID says which id and which
+// route it would have come from.
+//
+// The note is read again here rather than reused from the pairing check. Between
+// the two sits the probe, a read and a write per proposal and three read-backs
+// each, which is seconds to tens of seconds; these notes live in a synced vault,
+// and writing the bytes this run started with would throw away whatever landed
+// in that window. A note that has stopped naming this document is left alone and
+// said so, because the proposals belong to a pairing it no longer records.
 func record(note *notePath, results []propose.Result, warns []string) ([]string, []string) {
 	if note == nil || len(results) == 0 {
 		return nil, warns
 	}
-	out, err := propose.Record(note.src, results, now())
+	src, _, err := freshNote(note)
+	if err != nil {
+		return nil, append(warns, fmt.Sprintf(
+			"the proposals were written into the document and %s could not be recorded against them, so gdoc cannot withdraw them later: %v", note.path, err))
+	}
+	out, missed, err := propose.Record(src, results, now())
 	if err != nil {
 		return nil, append(warns, fmt.Sprintf(
 			"the proposals were written into the document and %s could not be updated to record them, so gdoc cannot withdraw them later: %v", note.path, err))
+	}
+	for _, m := range missed {
+		// The change is in the document and there is no id to remember it by, so
+		// withdraw will refuse it for ever. That is the one loss this file exists
+		// to prevent, and it is said out loud rather than left to the reader of a
+		// verification warning to work out.
+		warns = append(warns, fmt.Sprintf(
+			"the proposal %q was written into the document and %s does not record it, because %s; gdoc cannot withdraw it later",
+			m.Quoted, note.path, missingID(m)))
+	}
+	if len(missed) == len(results) {
+		// Nothing was added, so nothing is written and the note is not named as
+		// changed: a file listed in files_changed that gdoc did not touch is a
+		// false fact in the field a caller reads first.
+		return nil, warns
 	}
 	if err := writeFile(note.path, out); err != nil {
 		return nil, append(warns, fmt.Sprintf(
@@ -342,13 +381,57 @@ func record(note *notePath, results []propose.Result, warns []string) ([]string,
 	return []string{note.path}, warns
 }
 
-// notePath is the paired note: where it is, what it holds, and the bytes it
-// held when it was read. The bytes are kept because the write is byte
-// preserving, and rereading the file would be a second answer to a question
-// already asked.
+// missingID names which of the two ids an entry needs is not in hand, and it
+// names the route each one comes from rather than blaming the write for both.
+// The comment id is the batch's own answer; the suggestion id is read out of the
+// inline read-back afterwards, so a read-back that failed leaves an entry that
+// cannot be written down over a write that came back perfectly well. Saying the
+// write came back without an id there sends somebody to look at Docs while the
+// envelope's other warning is already saying the re-read is what broke.
+func missingID(r propose.Result) string {
+	switch {
+	case len(r.SuggestionIDs) == 0 && r.CommentID == "":
+		return "the write came back without a comment id and the read-back could not confirm a suggestion id"
+	case r.CommentID == "":
+		return "the write came back without a comment id"
+	default:
+		return "the read-back could not confirm a suggestion id"
+	}
+}
+
+// freshNote reads the note again and hands back its new bytes and the block in
+// them. A file that changed under the run is fine, and its new bytes are what
+// the block is written into.
+//
+// Four things are refused rather than written, and each one drops the
+// provenance the caller was about to record: a file that cannot be read again,
+// one whose front matter no longer parses, one whose gdoc: block has gone, and
+// one that now names another document. Every caller warns with the reason, so
+// which of the four it was is on the envelope.
+func freshNote(note *notePath) ([]byte, *frontmatter.Block, error) {
+	src, err := os.ReadFile(note.path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("the markdown file could not be read again: %w", err)
+	}
+	block, err := frontmatter.Read(src)
+	if err != nil {
+		return nil, nil, err
+	}
+	if block == nil {
+		return nil, nil, fmt.Errorf("%s no longer carries a gdoc: front matter block", note.path)
+	}
+	if block.DocumentID != note.block.DocumentID {
+		return nil, nil, fmt.Errorf("%s is now paired with document %s, and this run was of %s", note.path, block.DocumentID, note.block.DocumentID)
+	}
+	return src, block, nil
+}
+
+// notePath is the paired note: where it is, and the block the pairing check
+// read. The bytes that check ran over are deliberately not kept. Both writers
+// read the file again through freshNote, for the reason record gives, so a copy
+// held here would only be the stale bytes somebody later wrote back.
 type notePath struct {
 	path  string
-	src   []byte
 	block *frontmatter.Block
 }
 
@@ -377,7 +460,7 @@ func readNote(path, docID string) (*notePath, error) {
 	if block.DocumentID != docID {
 		return nil, fmt.Errorf("%s is paired with document %s, and this run is of %s", path, block.DocumentID, docID)
 	}
-	return &notePath{path: path, src: src, block: block}, nil
+	return &notePath{path: path, block: block}, nil
 }
 
 // readProposals reads the list the skill wrote. An empty list is refused rather
@@ -394,6 +477,15 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)
+	}
+	// Every proposal is checked here, before the probe and before the first
+	// write, for the reason the empty list is refused here: all of them are in
+	// hand, and a third entry refused after the first two have landed is a run
+	// that half happened in somebody's document.
+	for i, p := range out {
+		if err := p.Check(); err != nil {
+			return nil, fmt.Errorf("%s proposals[%d]: %w", path, i, err)
+		}
 	}
 	return out, nil
 }
@@ -465,8 +557,19 @@ func cmdWithdraw(raw []string) emit.Result {
 }
 
 // forget takes the withdrawn proposal out of the note.
+//
+// The note is read again first, for the reason record gives: between the
+// pairing check and here sit two whole-document reads and a batchUpdate, which
+// is seconds on the network, and these notes live in a synced vault. The block
+// is re-parsed from those bytes too, so a proposal recorded into the gdoc: key
+// in that window survives; writing the block this run started with would take
+// the author's prose across and still drop that entry.
 func forget(note *notePath, suggestionID string) ([]string, error) {
-	out, err := frontmatter.Write(note.src, withdraw.Forget(note.block, suggestionID))
+	src, block, err := freshNote(note)
+	if err != nil {
+		return nil, fmt.Errorf("the suggestion was withdrawn and %s still records it: %v", note.path, err)
+	}
+	out, err := frontmatter.Write(src, withdraw.Forget(block, suggestionID))
 	if err != nil {
 		return nil, fmt.Errorf("the suggestion was withdrawn and %s still records it: %v", note.path, err)
 	}

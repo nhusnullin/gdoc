@@ -23,6 +23,25 @@ import (
 	"gdoc/internal/guard"
 )
 
+// sentError marks an error raised after the server had already accepted the
+// request. Everything a caller does about a write depends on that difference: a
+// write reported as never sent is a write somebody sends again, and the first
+// one is already in the document.
+//
+// It is a method rather than an exported sentinel so that the writer packages
+// can ask the question without importing this one. Naming *http.Client is what
+// keeps them out of here, and the interface they name is the whole reason.
+type sentError struct{ err error }
+
+func (e sentError) Error() string { return e.err.Error() }
+func (e sentError) Unwrap() error { return e.err }
+
+// Sent says this failure happened after the request was accepted.
+func (e sentError) Sent() bool { return true }
+
+// sent wraps err as having happened after a 2xx answer.
+func sent(err error) error { return sentError{err: err} }
+
 // maxErrorBody caps what is read from a failed request. The body is never
 // printed, only Google's error.message is, so this is a bound on the parse.
 const maxErrorBody = 1 << 20
@@ -120,7 +139,10 @@ func (s *Session) writeJSON(ctx context.Context, method, rawURL string, body any
 		return nil
 	}
 	if err := json.Unmarshal(answer, into); err != nil {
-		return fmt.Errorf("%s answered 200 with a body that is not JSON: %w", rawURL, err)
+		// The write was accepted: send only returns a body on a 2xx. So this is
+		// a failure to read an answer, never a failure to make the change, and
+		// it is marked as such.
+		return sent(fmt.Errorf("%s answered 200 with a body that is not JSON: %w", rawURL, err))
 	}
 	return nil
 }
@@ -225,7 +247,7 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 	// is not JSON, and both name something the server did not do.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, read+1))
 	if err != nil {
-		return nil, 0, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err)
+		return nil, 0, mark(ok, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err))
 	}
 	if int64(len(body)) > read {
 		if !ok {
@@ -233,9 +255,25 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 			// does not quote it at all. Cutting it here costs nothing.
 			return body[:read], resp.StatusCode, nil
 		}
-		return nil, 0, fmt.Errorf("the answer from %s is larger than the %d bytes this read allows", rawURL, limit)
+		return nil, 0, sent(fmt.Errorf("the answer from %s is larger than the %d bytes this read allows", rawURL, limit))
 	}
 	return body, resp.StatusCode, nil
+}
+
+// mark wraps err as sent when the server had answered 2xx before it happened.
+//
+// It is the most this package can say, and not the whole of what can go wrong.
+// An unmarked failure is one of three: a guard refusal, where nothing left the
+// machine; a 4xx, where Docs rejected the batch whole; and a 5xx or a dropped
+// connection, where the request was written and gdoc cannot tell whether it was
+// applied. The third is not a claim this makes either way, so a caller reading
+// a transport failure or a 5xx should look at the document before sending the
+// same write again.
+func mark(ok bool, err error) error {
+	if !ok {
+		return err
+	}
+	return sent(err)
 }
 
 // refresh exchanges the refresh token, saves the result and says so once. A

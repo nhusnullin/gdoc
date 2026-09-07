@@ -3,6 +3,7 @@ package propose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strings"
 	"testing"
@@ -244,6 +245,153 @@ func TestApplyRefusesAQuoteItCannotPlaceBeforeAnyWrite(t *testing.T) {
 	}
 }
 
+// TestCheckRefusesEachBadProposalByName is the shape rule, asked of the proposal
+// alone. It runs before the probe and before the first write, so a bad third
+// entry stops a run that has changed nothing rather than one that has already
+// landed two suggestions in somebody's document.
+func TestCheckRefusesEachBadProposalByName(t *testing.T) {
+	cases := []struct {
+		name string
+		p    Proposal
+		says string
+	}{
+		{"no quote", Proposal{Replacement: "a", Why: "b"}, "quotes no text"},
+		{"no replacement", Proposal{Quoted: "a", Why: "b"}, "replaces words with words"},
+		// A paragraph's last run carries the paragraph mark, so a quote ending
+		// in a newline matches inside that one paragraph and the span ends past
+		// the mark. The deleteContentRange built from it merges the paragraph
+		// with the one behind it, and all three read-backs hold over it: both
+		// inlineHolds and Carries ask about this same string, which carries the
+		// mark too.
+		{"quote taking the paragraph mark", Proposal{Quoted: "a\n", Replacement: "b", Why: "d"}, "line break"},
+		{"quote with a carriage return", Proposal{Quoted: "a\rb", Replacement: "c", Why: "d"}, "line break"},
+		// Carries asks one paragraph at a time, so a replacement holding a line
+		// break is in no single paragraph and the preview check's second
+		// question can never see it. Refused at the door, the question keeps
+		// the precondition it was written against.
+		{"replacement with a newline", Proposal{Quoted: "a", Replacement: "b\nc", Why: "d"}, "line break"},
+		{"replacement with a carriage return", Proposal{Quoted: "a", Replacement: "b\rc", Why: "d"}, "line break"},
+		{"no reason", Proposal{Quoted: "a", Replacement: "b"}, "no reason"},
+		{"markdown reason", Proposal{Quoted: "a", Replacement: "b", Why: "use **six months**"}, "markdown"},
+		{"backtick reason", Proposal{Quoted: "a", Replacement: "b", Why: "the `annually` wording"}, "markdown"},
+		// The heading arm is anchored to a line start, so asking the rule of
+		// Prefix + Why moves the hash off offset zero and lets this one through
+		// to the thread, where Docs renders it as typed. The same words on a
+		// second line were always refused, which is the same reason written two
+		// ways depending on where the author put it.
+		{"heading reason", Proposal{Quoted: "a", Replacement: "b", Why: "# Six months, not twelve"}, "markdown"},
+		// Batch writes the comment as Prefix + Why. A caller carrying reply's
+		// convention over, where the body must open with the robot, would sign
+		// the comment twice, and every read-back compares against the string
+		// that was sent, so the run would report verified: true over it.
+		{"reason already signed", Proposal{Quoted: "a", Replacement: "b", Why: Prefix + "the policy says six months"}, "already opens with"},
+		// The near misses of the prefix. Each one lands the same doubled mark,
+		// so a check that reads the whole prefix rather than the robot lets all
+		// three through the writer that adds it. reply_test names the same
+		// spellings, on the side that requires the mark.
+		{"reason signed with no space", Proposal{Quoted: "a", Replacement: "b", Why: Robot + "the policy says six months"}, "already opens with"},
+		{"reason signed behind a space", Proposal{Quoted: "a", Replacement: "b", Why: " " + Prefix + "the policy"}, "already opens with"},
+		{"reason signed behind a newline", Proposal{Quoted: "a", Replacement: "b", Why: "\n" + Prefix + "the policy"}, "already opens with"},
+		// A comment that is a bare signature. sameWords normalises whitespace on
+		// both sides, so docx_anchored would match it and the run would report
+		// verified: true over a reason that explains nothing.
+		{"whitespace-only reason", Proposal{Quoted: "a", Replacement: "b", Why: "   \n\t "}, "no reason"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.p.Check()
+			if err == nil {
+				t.Fatalf("Check(%+v) accepted it", c.p)
+			}
+			if !strings.Contains(err.Error(), c.says) {
+				t.Errorf("error = %q, and it should say %q", err, c.says)
+			}
+		})
+	}
+}
+
+// TestApplyRefusesADeletionOnlyProposalBeforeAnyWrite is the empty replacement,
+// end to end. The batch it would build carries an insertText with no text and a
+// comment anchored on a range of length zero, which Docs rejects, and it would
+// reach Google after the probe had created and trashed a document.
+func TestApplyRefusesADeletionOnlyProposalBeforeAnyWrite(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
+
+	_, err := Apply(context.Background(), f, testDocID, Proposal{
+		Quoted: "reviewed annually", Why: "the sentence says nothing"})
+	if err == nil {
+		t.Fatal("a proposal replacing words with nothing was written")
+	}
+	if len(f.calls) != 0 {
+		t.Errorf("the shape was checked after %d requests, and it needs no request at all", len(f.calls))
+	}
+}
+
+// TestApplyReportsABatchWhoseAnswerCouldNotBeRead is the difference between a
+// write that never left and a write the server took. The session marks the
+// second kind, and reporting it as a failure would send the skill back to
+// propose the same change again, on top of the one already in the document.
+func TestApplyReportsABatchWhoseAnswerCouldNotBeRead(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
+	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
+
+	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	if err != nil {
+		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
+	}
+	if res.Verified {
+		t.Error("Verified = true on a write whose answer was never read")
+	}
+	if res.CommentID != "" {
+		t.Errorf("comment id = %q, and the answer carrying it was never read", res.CommentID)
+	}
+	if !strings.Contains(strings.Join(res.Warnings, " "), "accepted by Docs") {
+		t.Errorf("warnings = %v, and one should say the write was accepted", res.Warnings)
+	}
+	// The commentUpdateState warning is asked only of an answer that was read.
+	// Here nothing was read, so reporting that the write "answered" the empty
+	// string names something the server did not do, beside a warning that
+	// already says the answer was lost.
+	if strings.Contains(strings.Join(res.Warnings, " "), "commentUpdateState") {
+		t.Errorf("warnings = %v, and none may quote a state the server never sent", res.Warnings)
+	}
+	if !res.Checks.SuggestionsInline {
+		t.Errorf("checks = %+v, and the read-backs still ran", res.Checks)
+	}
+}
+
+// TestApplyKeepsACommentIdDecodedFromAnAnswerThatFailed is the other half of
+// the path above: valid JSON of the wrong shape, where the comment id is in
+// hand even though the read failed. That id is the provenance withdraw needs,
+// so it is kept, and the warning says what was lost rather than claiming the id
+// is unknown beside a Result that carries it.
+func TestApplyKeepsACommentIdDecodedFromAnAnswerThatFailed(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
+	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
+
+	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	if err != nil {
+		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
+	}
+	if res.CommentID == "" {
+		t.Error("the comment id the answer carried was thrown away with the failure")
+	}
+	joined := strings.Join(res.Warnings, " ")
+	if !strings.Contains(joined, "accepted by Docs") {
+		t.Errorf("warnings = %v, and one should say the write was accepted", res.Warnings)
+	}
+	if strings.Contains(joined, "comment id is unknown") {
+		t.Errorf("warnings = %v, and the comment id is in the Result", res.Warnings)
+	}
+}
+
+// acceptedError is what the session hands back for a failure raised after the
+// server accepted the request. The writer packages ask by behaviour, so the fake
+// answers by behaviour too.
+type acceptedError struct{ error }
+
+func (acceptedError) Sent() bool { return true }
+
 func TestRecordAppendsTheProposalToTheNote(t *testing.T) {
 	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + testDocID + "\n---\n\n# Scope\n")
 	at := time.Date(2026, 9, 7, 9, 0, 0, 0, time.UTC)
@@ -253,9 +401,12 @@ func TestRecordAppendsTheProposalToTheNote(t *testing.T) {
 		CommentID:     "AAAC",
 	}
 
-	out, err := Record(note, []Result{res}, at)
+	out, missed, err := Record(note, []Result{res}, at)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(missed) != 0 {
+		t.Fatalf("missed = %+v, and this result carries both ids", missed)
 	}
 	b, err := frontmatter.Read(out)
 	if err != nil {
@@ -273,11 +424,14 @@ func TestRecordAppendsTheProposalToTheNote(t *testing.T) {
 	}
 }
 
-// TestRecordSkipsAProposalWithNoSuggestionID keeps the note writable. A result
-// with no id is one nothing can withdraw later, and an entry with an empty id
-// is a block that fails its own validation, which would lose the provenance of
-// every other proposal in the same write.
-func TestRecordSkipsAProposalWithNoSuggestionID(t *testing.T) {
+// TestRecordSkipsAProposalWithNoSuggestionIDAndSaysSo keeps the note writable
+// and keeps the loss visible. A result with no id is one nothing can withdraw
+// later, and an entry with an empty id is a block that fails its own
+// validation, which would lose the provenance of every other proposal in the
+// same write. So it is skipped, and it comes back named: a proposal that is in
+// the document and not in the note is the one thing this file exists to stop,
+// and skipping it quietly is that loss with nobody told.
+func TestRecordSkipsAProposalWithNoSuggestionIDAndSaysSo(t *testing.T) {
 	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + testDocID + "\n---\n")
 	at := time.Date(2026, 9, 7, 9, 0, 0, 0, time.UTC)
 	results := []Result{
@@ -285,7 +439,7 @@ func TestRecordSkipsAProposalWithNoSuggestionID(t *testing.T) {
 		{Quoted: "b", SuggestionIDs: []string{"suggest.def"}, CommentID: "AAAD"},
 	}
 
-	out, err := Record(note, results, at)
+	out, missed, err := Record(note, results, at)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -295,6 +449,29 @@ func TestRecordSkipsAProposalWithNoSuggestionID(t *testing.T) {
 	}
 	if len(b.Proposals) != 1 || b.Proposals[0].ID != "suggest.def" {
 		t.Errorf("proposals = %+v", b.Proposals)
+	}
+	if len(missed) != 1 || missed[0].Quoted != "a" {
+		t.Fatalf("missed = %+v, want the one result that could not be remembered", missed)
+	}
+}
+
+// TestRecordLeavesTheNoteAloneWhenNothingCanBeRemembered is the same rule when
+// every result is missing an id. There is nothing to add, so the bytes come back
+// as they went in and the caller has nothing to write: a note reported as
+// changed that gdoc did not change is a false fact in files_changed.
+func TestRecordLeavesTheNoteAloneWhenNothingCanBeRemembered(t *testing.T) {
+	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + testDocID + "\n---\n")
+	at := time.Date(2026, 9, 7, 9, 0, 0, 0, time.UTC)
+
+	out, missed, err := Record(note, []Result{{Quoted: "a", CommentID: "AAAC"}}, at)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(out) != string(note) {
+		t.Errorf("the note was rewritten:\n%s", out)
+	}
+	if len(missed) != 1 {
+		t.Fatalf("missed = %+v", missed)
 	}
 }
 

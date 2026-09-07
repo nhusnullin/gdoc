@@ -19,25 +19,17 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"gdoc/internal/comments"
+	"gdoc/internal/plaintext"
 )
 
 // Prefix is what every reply gdoc writes opens with: the robot and one space,
 // with nothing in front of it. comments.Reply.ByGdoc reads the same prefix, so
-// a reply this package sends is one a later listing recognises.
-const Prefix = "🤖 "
-
-// markdown is what Docs renders literally, ported from v1's assert_plain_text
-// with the bracketed link added. Hyphen bullets are deliberately absent: they
-// read as a list in plain text, so refusing them would cost a reply nothing was
-// wrong with.
-//
-// The heading arm is anchored to a line start under (?m), because a `#` in the
-// middle of a sentence is a number sign somebody typed.
-var markdown = regexp.MustCompile("(?m)(\\*\\*|`|^[ ]{0,3}#{1,6}[ \t]|\\[[^\\]\n]*\\]\\([^)\n]*\\))")
+// a reply this package sends is one a later listing recognises, and
+// internal/propose signs its comments with the same mark.
+const Prefix = plaintext.Prefix
 
 // Result is what one reply left behind. The id and the time come from Drive's
 // answer to the write; Verified comes from reading the thread back, which is a
@@ -79,8 +71,19 @@ func Check(body string) error {
 	if strings.TrimSpace(strings.TrimPrefix(body, Prefix)) == "" {
 		return errors.New("the reply body is empty behind the prefix")
 	}
-	if m := markdown.FindString(body); m != "" {
-		return fmt.Errorf("the reply body carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", strings.TrimSpace(m))
+	// The rule is asked behind the prefix, never of the whole body. The heading
+	// arm is anchored to a line start, so the robot in front of it moves the
+	// first character off offset zero and a reply opening with "# " passes,
+	// while the same words on the second line are refused: the rule would fire
+	// or not depending on where the author put them. The prefix check above has
+	// already run, so the trim is exact, and Prefix carries no markdown of its
+	// own, so the trim can only bring a line start into reach: nothing that was
+	// refused before starts being accepted. It goes the other way on purpose,
+	// and a heading on the first line, which used to pass, is now refused.
+	// Proposal.Check asks the same rule of the reason alone, for the same
+	// reason.
+	if m := plaintext.Markdown(strings.TrimPrefix(body, Prefix)); m != "" {
+		return fmt.Errorf("the reply body carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", m)
 	}
 	return nil
 }
@@ -100,16 +103,39 @@ func Post(ctx context.Context, s Session, docID, commentID, body string) (Result
 		Created string `json:"createdTime"`
 		Content string `json:"content"`
 	}
+	// accepted is set when Drive took the write and its answer could not be read
+	// whole. Raising there would send the skill back to post the reply a second
+	// time, and the first one is in the thread.
+	var accepted error
 	if err := s.PostJSON(ctx, CreateURL(docID, commentID), map[string]any{"content": body}, &answer); err != nil {
-		return Result{}, fmt.Errorf("the reply could not be posted to thread %q: %w", commentID, err)
+		if !sentAnyway(err) {
+			return Result{}, fmt.Errorf("the reply could not be posted to thread %q: %w", commentID, err)
+		}
+		accepted = err
 	}
+	// What did decode is kept, the way propose keeps the comment id and withdraw
+	// keeps the deleted ids. encoding/json saves the first type error and keeps
+	// decoding, so a 200 whose createdTime came back as a number still names the
+	// reply, and throwing that id away would report a reply Drive named in full
+	// as one that could not be looked for.
 	out := Result{ReplyID: answer.ID, Created: answer.Created}
 	if answer.ID == "" {
 		// Drive took the write and said nothing useful about it. Calling that a
 		// failure would send the skill back to post it again, and the first one
 		// may well be sitting in the thread.
+		if accepted != nil {
+			out.Warnings = append(out.Warnings, fmt.Sprintf(
+				"the reply to thread %q was accepted and its answer could not be read, so it could not be looked for in the thread; check the thread before posting again: %v",
+				commentID, accepted))
+			return out, nil
+		}
 		out.Warnings = append(out.Warnings, fmt.Sprintf("Drive answered the reply to thread %q with no reply id, so it could not be looked for in the thread; check the thread before posting again", commentID))
 		return out, nil
+	}
+	if accepted != nil {
+		out.Warnings = append(out.Warnings, fmt.Sprintf(
+			"the reply to thread %q was accepted and its answer could not be read whole, though the part of it that decoded carried the reply id: %v",
+			commentID, accepted))
 	}
 	verified, warn := inThread(ctx, s, docID, commentID, answer.ID, body)
 	out.Verified = verified
@@ -117,6 +143,16 @@ func Post(ctx context.Context, s Session, docID, commentID, body string) (Result
 		out.Warnings = append(out.Warnings, warn)
 	}
 	return out, nil
+}
+
+// sentAnyway says whether the write reached Drive in spite of the error. The
+// session marks the failures raised after the server accepted a request, and
+// this room asks by behaviour rather than by importing that package: naming a
+// Session interface here is what keeps net/http out, and an imported sentinel
+// would bring it back through the side door.
+func sentAnyway(err error) bool {
+	var sent interface{ Sent() bool }
+	return errors.As(err, &sent) && sent.Sent()
 }
 
 // inThread is the read-back: the reply is verified when the listing carries it

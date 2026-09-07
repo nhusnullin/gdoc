@@ -35,6 +35,10 @@ type wireCall struct {
 // once is what makes an order testable. propose reads the document before the
 // write and again after it, through the same URL, so the fixture that comes
 // back first has to be spent before the second one is reached.
+//
+// before runs just as this answer is handed over. It is how a test stands where
+// something else happens in the middle of a run: an edit landing in the paired
+// note while the binary is out on the network, for instance.
 type answer struct {
 	method string
 	match  string
@@ -43,6 +47,7 @@ type answer struct {
 	err    error
 	once   bool
 	used   bool
+	before func()
 }
 
 // fakeWire stands in for the wire, as read_test's fakeSession does, with the
@@ -62,6 +67,9 @@ func (f *fakeWire) find(method, rawURL string) (*answer, error) {
 		}
 		if a.once {
 			a.used = true
+		}
+		if a.before != nil {
+			a.before()
 		}
 		return a, nil
 	}
@@ -538,6 +546,180 @@ func TestProposeNeedsProposalsAndAFolder(t *testing.T) {
 	}
 }
 
+// TestProposeRefusesABadProposalBeforeTheProbe is the shape rule at the door.
+// Every proposal is in hand before anything leaves the machine, so an entry the
+// run would refuse in the middle is refused now: a third proposal turned down
+// after the first two have landed is a run that half happened in somebody's
+// document, and it has created and trashed a probe document on the way.
+func TestProposeRefusesABadProposalBeforeTheProbe(t *testing.T) {
+	for _, tc := range []struct{ name, file, says string }{
+		{"the second carries no reason",
+			`[{"quoted":"a","replacement":"b","why":"c"},{"quoted":"d","replacement":"e"}]`,
+			"proposals[1]"},
+		{"the reason carries markdown",
+			`[{"quoted":"a","replacement":"b","why":"use **six months**"}]`,
+			"markdown"},
+		{"the replacement is empty",
+			`[{"quoted":"a","replacement":"","why":"c"}]`,
+			"replaces words with words"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
+			from := tempFile(t, "proposals.json", tc.file)
+
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+			if code == 0 || got["ok"] != false {
+				t.Fatalf("a proposal that cannot be written must stop the run: %v (exit %d)", got, code)
+			}
+			if msg, _ := got["error"].(string); !strings.Contains(msg, tc.says) {
+				t.Errorf("the error must say %q: %q", tc.says, msg)
+			}
+			if len(f.calls) != 0 {
+				t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+			}
+		})
+	}
+}
+
+// TestProposeReportsEveryProposalWhenOneOfThemCannotBeSent keeps the report one
+// entry per proposal in the file. The run stops at the first one that cannot be
+// sent, and a shortened list makes the skill match the envelope back against the
+// file it wrote to work out what happened to the rest.
+func TestProposeReportsEveryProposalWhenOneOfThemCannotBeSent(t *testing.T) {
+	// The fourth inline answer is the second proposal's own read, appended after
+	// the preview so the preview read cannot spend it: the preview URL carries
+	// the inline match string too, and find takes the first unused answer that
+	// matches. With that read answered, the second proposal is refused by
+	// FindSpan, which is the stop this test is about, rather than by a fake wire
+	// that ran out of answers.
+	answers := append(proposeAnswers(t, true),
+		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-after.json"), once: true})
+	stubWire(t, &fakeWire{answers: answers})
+	// The second quote is not in the document, so Apply refuses it after the
+	// first one has landed.
+	from := tempFile(t, "proposals.json",
+		`[{"quoted":"reviewed annually","replacement":"reviewed every six months","why":"the policy says twice a year"},`+
+			`{"quoted":"reviewed monthly","replacement":"reviewed weekly","why":"the policy says twice a year"}]`)
+
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a proposal that could not be placed must fail the run: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	list, _ := data["proposals"].([]any)
+	if len(list) != 2 {
+		t.Fatalf("proposals = %v, want one entry per proposal in the file", data["proposals"])
+	}
+	first, _ := list[0].(map[string]any)
+	if first["sent"] != true {
+		t.Errorf("the first proposal landed and reports %v", first["sent"])
+	}
+	second, _ := list[1].(map[string]any)
+	if second["sent"] != false {
+		t.Errorf("the second proposal never left and reports %v", second["sent"])
+	}
+	if second["quoted"] != "reviewed monthly" {
+		t.Errorf("the second entry = %v, want the proposal that could not be placed", second)
+	}
+	// The error has to be the placement refusal naming the words, not whatever
+	// else stopped the run: a test that asserts only the report shape passes
+	// just as happily when the second proposal never got as far as FindSpan.
+	if msg, _ := got["error"].(string); !strings.Contains(msg, `"reviewed monthly"`) || !strings.Contains(msg, "was not found in the document") {
+		t.Errorf("error = %q, want the refusal naming the quote that could not be placed", msg)
+	}
+}
+
+// TestProposeSaysSoWhenTheNoteCannotRememberAProposal is the loss the note
+// exists to prevent, said out loud. A change that landed and came back with no
+// suggestion id cannot be written into the front matter, and withdraw reads
+// nothing else, so gdoc will refuse to take back its own work for ever. Silence
+// there reads as a verification gap rather than as a permission thrown away.
+func TestProposeSaysSoWhenTheNoteCannotRememberAProposal(t *testing.T) {
+	answers := proposeAnswers(t, true)
+	// The batch answers with no comment id, so nothing can be recorded.
+	for _, a := range answers {
+		if strings.Contains(a.match, proposeDocID+":batchUpdate") {
+			a.json = `{"documentId":"` + proposeDocID + `","commentUpdateState":"ALL_SAVED"}`
+		}
+	}
+	stubWire(t, &fakeWire{answers: answers})
+	from := tempFile(t, "proposals.json", oneProposal)
+	note := copyFixture(t, "propose-note.md")
+	before := readFixture(t, "propose-note.md")
+
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a change that landed is not a failed run: %v (exit %d)", got, code)
+	}
+	warns := warningsOf(t, got)
+	if !hasWarning(warns, "cannot withdraw it later") {
+		t.Errorf("warnings = %v, and one must say the proposal cannot be withdrawn", got["warnings"])
+	}
+	// The comment id is the only one of the two the batch itself answers with,
+	// and it is the one missing here. Naming the read-back instead would send
+	// somebody to look at their network over an answer Docs gave in full.
+	if !hasWarning(warns, "the write came back without a comment id") {
+		t.Errorf("warnings = %v, and one must name the route the missing id would have come from", got["warnings"])
+	}
+	if hasWarning(warns, "read-back could not confirm") {
+		t.Errorf("warnings = %v, and the read-back read its suggestion id back fine", got["warnings"])
+	}
+	data := dataOf(t, got)
+	if _, has := data["files_changed"]; has {
+		t.Errorf("files_changed = %v, and nothing was added to the note", data["files_changed"])
+	}
+	after, err := os.ReadFile(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != before {
+		t.Errorf("the note was rewritten with nothing to add:\n%s", after)
+	}
+}
+
+// TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes is the read-again rule.
+// The note is read at the start to check the pairing, and the run then spends
+// seconds to tens of seconds on the network: the probe, a read and a write per
+// proposal, three read-backs each. These notes live in a synced vault, so an
+// edit can land in that window, and writing the bytes the run started with would
+// throw it away.
+func TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes(t *testing.T) {
+	note := copyFixture(t, "propose-note.md")
+	answers := proposeAnswers(t, true)
+	// The export is the last request of the run, so this is the closest a test
+	// can stand to somebody saving the file a moment before the note is written.
+	for _, a := range answers {
+		if strings.Contains(a.match, "/export?") {
+			a.before = func() {
+				src, err := os.ReadFile(note)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(note, append(src, []byte("\nA line somebody added while the run was out.\n")...), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	stubWire(t, &fakeWire{answers: answers})
+	from := tempFile(t, "proposals.json", oneProposal)
+
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("propose: %v (exit %d)", got, code)
+	}
+	after, err := os.ReadFile(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(after), "A line somebody added while the run was out.") {
+		t.Errorf("the edit made during the run was overwritten:\n%s", after)
+	}
+	if !strings.Contains(string(after), "suggest.abc") {
+		t.Errorf("the proposal was not recorded:\n%s", after)
+	}
+}
+
 func TestProposeRefusesAnEmptyProposalList(t *testing.T) {
 	f := stubWire(t, &fakeWire{})
 	from := tempFile(t, "proposals.json", "[]")
@@ -616,6 +798,54 @@ func TestWithdrawRetractsAndForgetsTheProposal(t *testing.T) {
 	}
 	if !strings.Contains(string(after), "suggest.other") {
 		t.Errorf("the other proposal was forgotten with it:\n%s", after)
+	}
+}
+
+// TestWithdrawWritesTheNoteTheVaultHasNow is the same rule propose's record
+// holds, on the other write. Between the pairing check and the note being
+// written sit two whole-document reads and a batchUpdate, which is seconds on
+// the network, and these notes live in a synced vault. Writing back the bytes
+// the run started with would throw away whatever landed in that window: the
+// author's own prose, and a proposal another run recorded into the gdoc: block.
+func TestWithdrawWritesTheNoteTheVaultHasNow(t *testing.T) {
+	note := copyFixture(t, "withdraw-note.md")
+	// The sync lands while the write is in flight.
+	landed := func() {
+		src, err := os.ReadFile(note)
+		if err != nil {
+			t.Fatal(err)
+		}
+		next := strings.Replace(string(src),
+			"      quoted: the operations team\n",
+			"      quoted: the operations team\n"+
+				"    - id: suggest.landed\n      comment_id: AAAE\n      at: 2026-09-07T10:07:00Z\n      quoted: annually\n", 1)
+		next = strings.Replace(next, "# Scope", "# Scope and owner", 1)
+		if err := os.WriteFile(note, []byte(next), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stubWire(t, &fakeWire{answers: []*answer{
+		{method: "GET", match: withdrawDocID + "?includeTabsContent", json: readFixture(t, "withdraw-pending.json"), once: true},
+		{method: "POST", match: withdrawDocID + ":batchUpdate", json: readFixture(t, "withdraw-deleted.json"), before: landed},
+		{method: "GET", match: withdrawDocID + "?includeTabsContent", json: readFixture(t, "withdraw-gone.json")},
+	}})
+
+	got, code := runJSON(t, "withdraw", withdrawDocID, "suggest.abc", "--md", note)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("withdraw: %v (exit %d)", got, code)
+	}
+	after, err := os.ReadFile(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(after), "suggest.abc") {
+		t.Errorf("the withdrawn proposal is still recorded:\n%s", after)
+	}
+	if !strings.Contains(string(after), "suggest.landed") {
+		t.Errorf("the proposal that landed while the run was on the network was thrown away:\n%s", after)
+	}
+	if !strings.Contains(string(after), "# Scope and owner") {
+		t.Errorf("the author's edit was thrown away:\n%s", after)
 	}
 }
 

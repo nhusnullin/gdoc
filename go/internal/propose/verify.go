@@ -49,11 +49,30 @@ func Verify(ctx context.Context, s Session, docID string, r docs.Range, p Propos
 	switch {
 	case err != nil:
 		warns = append(warns, fmt.Sprintf("the document could not be read back in the preview view, so the change could not be told from a direct edit: %v", err))
-	case StartsAt(preview, r, p.Quoted):
-		checks.PreviewWithoutSuggestions = true
-	default:
+	case !Carries(preview, r.Tab, p.Quoted):
 		warns = append(warns, fmt.Sprintf(
-			"the preview view does not carry the quoted text %q where the change was made, which is what a direct edit looks like rather than a suggestion", p.Quoted))
+			"the preview view no longer carries the quoted text %q, which is what a direct edit looks like rather than a suggestion", p.Quoted))
+	case strings.Contains(p.Replacement, p.Quoted) && Carries(preview, r.Tab, p.Replacement):
+		// The quoted words being here is usually the answer, and this is the
+		// one shape where it is not. A replacement carrying the quote inside it
+		// carries it into the preview after a direct edit too, because the
+		// write deletes the quote and inserts the replacement at the same
+		// place: "reviewed annually" is still there inside "reviewed annually
+		// by the operations team", and the route would pass on the exact
+		// failure it exists for.
+		//
+		// The replacement is asked about only in that shape, and only as the
+		// second question. After an honest suggestion the preview hides the
+		// insertion, so the replacement is not there unless the document
+		// already read that way before the write, which is a proposal that
+		// duplicates the words behind it. Those two cannot be told apart from
+		// here, so this is no answer rather than an accusation: a false check
+		// and a warning naming the ambiguity, the way the export's own
+		// duplicate rule answers.
+		warns = append(warns, fmt.Sprintf(
+			"the preview view carries the replacement %q, which contains the quoted text, so finding the quoted words there does not tell a suggestion from a direct edit", p.Replacement))
+	default:
+		checks.PreviewWithoutSuggestions = true
 	}
 
 	anchored, why := docxHolds(ctx, s, docID, commentBody)
@@ -137,15 +156,30 @@ func docxHolds(ctx context.Context, s Session, docID, body string) (bool, string
 	if err != nil {
 		return false, fmt.Sprintf("the docx export did not parse, so the comment could not be confirmed as anchored: %v", err)
 	}
+	var hits []docx.Comment
 	for _, c := range f.Comments {
 		if sameWords(c.Text, body) {
-			if c.Anchored {
-				return true, ""
-			}
-			return false, fmt.Sprintf("the export carries the comment %q and it is not attached to any text", body)
+			hits = append(hits, c)
 		}
 	}
-	return false, fmt.Sprintf("the export carries no comment reading %q, so the explanation may not have been saved with the change", body)
+	if len(hits) == 0 {
+		return false, fmt.Sprintf("the export carries no comment reading %q, so the explanation may not have been saved with the change", body)
+	}
+	// Two proposals in one run may carry the same reason, and the export has no
+	// Drive comment id to tell one from the other. Two comments reading the same
+	// words that disagree about being attached give no answer, and taking the
+	// first would report one proposal on the strength of another's comment. It
+	// is the rule internal/docx's own witness follows, on the same join.
+	for _, c := range hits[1:] {
+		if c.Anchored != hits[0].Anchored {
+			return false, fmt.Sprintf(
+				"the export carries %d comments reading %q and they do not agree about being attached to text, so this one could not be told from the others", len(hits), body)
+		}
+	}
+	if hits[0].Anchored {
+		return true, ""
+	}
+	return false, fmt.Sprintf("the export carries the comment %q and it is not attached to any text", body)
 }
 
 // sameWords compares two comment bodies the way internal/docx's own match does:

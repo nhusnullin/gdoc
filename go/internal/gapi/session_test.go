@@ -623,6 +623,70 @@ func TestPostJSONRefusesAnAnswerThatIsNotJSON(t *testing.T) {
 	}
 }
 
+// TestAFailureAfterA2xxIsMarkedAsSent is the difference a writer package acts
+// on. A guard refusal and an unreadable answer both come back as an error, and
+// only one of them means the change never happened. A write reported as never
+// sent is a write somebody sends again, on top of the first.
+func TestAFailureAfterA2xxIsMarkedAsSent(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) { return 200, "not json" }}
+	s := open(t, w)
+
+	err := s.PostJSON(context.Background(), batchURL(), suggestBatch(), &struct{}{})
+	if err == nil {
+		t.Fatal("a 200 carrying no JSON came back as success")
+	}
+	if !wasSent(err) {
+		t.Errorf("error %q is not marked as sent, and the server had already taken the write", err)
+	}
+}
+
+// TestAFailureBeforeTheWireIsNotMarkedAsSent is the other direction, and it is
+// the half that matters most: a refusal the guard made inside the process must
+// never read as a change that happened.
+func TestAFailureBeforeTheWireIsNotMarkedAsSent(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{}
+	s := open(t, w)
+
+	body := suggestBatch()
+	delete(body, "writeControl")
+
+	err := s.PostJSON(context.Background(), batchURL(), body, nil)
+	if err == nil {
+		t.Fatal("a direct edit was carried")
+	}
+	if wasSent(err) {
+		t.Errorf("a guard refusal is marked as sent: %q", err)
+	}
+}
+
+// TestAFailedStatusIsNotMarkedAsSent keeps the mark to the case it means. A
+// batchUpdate answering 4xx applied nothing, so the caller is right to treat it
+// as a change that did not happen.
+func TestAFailedStatusIsNotMarkedAsSent(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) {
+		return 400, `{"error":{"message":"Invalid requests[1].insertText"}}`
+	}}
+	s := open(t, w)
+
+	err := s.PostJSON(context.Background(), batchURL(), suggestBatch(), &struct{}{})
+	if err == nil {
+		t.Fatal("a 400 came back as success")
+	}
+	if wasSent(err) {
+		t.Errorf("a refused write is marked as sent: %q", err)
+	}
+}
+
+// wasSent asks the way the writer packages ask, by behaviour rather than by
+// naming this package's own type.
+func wasSent(err error) bool {
+	var sent interface{ Sent() bool }
+	return errors.As(err, &sent) && sent.Sent()
+}
+
 func TestPostJSONNamesABodyItCannotEncode(t *testing.T) {
 	tokenFile(t, time.Now().Add(time.Hour))
 	w := &wire{}

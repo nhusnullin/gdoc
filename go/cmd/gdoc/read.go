@@ -490,7 +490,7 @@ func cmdSuggestions(raw []string) emit.Result {
 }
 
 // recordSnapshot compares the file's last snapshot against what is pending now
-// and writes the new one. It is the one write anywhere in this milestone, and it
+// and writes the new one. It is the only write the read commands make, and it
 // happens only after a read that fully succeeded.
 //
 // A file paired with another document is refused: writing this document's

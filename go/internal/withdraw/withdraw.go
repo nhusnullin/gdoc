@@ -22,6 +22,7 @@ package withdraw
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"gdoc/internal/docs"
@@ -78,7 +79,8 @@ func Mine(note *frontmatter.Block, suggestionID string) bool {
 // span the suggestion holds, and read it back.
 //
 // It fails only before the write. After the batch has gone out the document has
-// changed, and everything from there is reported rather than raised.
+// changed, and everything from there is reported rather than raised, the
+// failures raised after Docs answered included: see sentAnyway.
 func Run(ctx context.Context, s Session, docID, suggestionID string, note *frontmatter.Block) (Result, error) {
 	out := Result{SuggestionID: suggestionID}
 	if suggestionID == "" {
@@ -104,13 +106,44 @@ func Run(ctx context.Context, s Session, docID, suggestionID string, note *front
 	}
 
 	var answer batchAnswer
+	answerRead := true
+	var sentErr error
 	if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(Batch(r)), &answer); err != nil {
-		return out, fmt.Errorf("the suggestion %q could not be withdrawn: %w", suggestionID, err)
+		if !sentAnyway(err) {
+			return out, fmt.Errorf("the suggestion %q could not be withdrawn: %w", suggestionID, err)
+		}
+		// Docs took the delete and the answer could not be read. Raising here
+		// would report a document that has already changed as one that has not,
+		// and send the skill back to send the delete again. The read-back below
+		// is what says which it was.
+		//
+		// Whatever did decode is kept, the way propose keeps a comment id it
+		// was given. On this path the answer is usually empty, so
+		// deletedSuggestionIds carries nothing and Verified stays false: that
+		// list is one of the two facts it rests on. The exception is valid JSON
+		// of the wrong shape, where encoding/json saves the type error and
+		// keeps going, and the list the server really did send is the server's
+		// own word about what it retracted. Throwing that away would report a
+		// withdrawal both facts confirm as unverified.
+		//
+		// So the warning is built after Verified is known rather than assuming
+		// the worst here: telling the caller to take an entry out of the note
+		// that this same run is about to remove itself is the envelope saying
+		// two opposite things.
+		answerRead = false
+		sentErr = err
 	}
 	out.DeletedSuggestionIDs = answer.deletedIDs()
-	if !contains(out.DeletedSuggestionIDs, suggestionID) {
+	if (answerRead || len(out.DeletedSuggestionIDs) > 0) && !contains(out.DeletedSuggestionIDs, suggestionID) {
 		// Text was deleted and no suggestion was retracted, which is what a
 		// direct edit looks like. The read-back below says which it was.
+		//
+		// The gate is the decoded list, never the path that produced it, which
+		// is the rule propose reads commentUpdateState by. An answer that could
+		// not be read is asked only when a list decoded anyway: an empty list
+		// there is the usual case and says nothing, while a list the server
+		// really did send is its own word about what it retracted, and a list
+		// that names another suggestion is the alarm whichever path carried it.
 		out.Warnings = append(out.Warnings, fmt.Sprintf(
 			"the write did not name %q in deletedSuggestionIds, so Docs deleted the words without saying it retracted the suggestion",
 			suggestionID))
@@ -121,7 +154,27 @@ func Run(ctx context.Context, s Session, docID, suggestionID string, note *front
 		out.Warnings = append(out.Warnings, warn)
 	}
 	out.Verified = gone && contains(out.DeletedSuggestionIDs, suggestionID)
+	if sentErr != nil {
+		msg := fmt.Sprintf("the delete of %q was accepted by Docs and its answer could not be read", suggestionID)
+		if out.Verified {
+			msg += ", though the part of it that decoded named the suggestion in deletedSuggestionIds and the read-back found it gone"
+		} else {
+			msg += ", so the withdrawal cannot be confirmed and the note still records the proposal; check the document, and take the entry out by hand once the suggestion is gone"
+		}
+		out.Warnings = append(out.Warnings, msg+": "+sentErr.Error())
+	}
 	return out, nil
+}
+
+// sentAnyway says whether the delete reached Docs in spite of the error. The
+// session marks the failures raised after the server accepted a request, and
+// this room asks by behaviour rather than by importing that package: naming a
+// Session interface here is what keeps net/http out, and an imported sentinel
+// would bring it back through the side door. propose and reply each ask the
+// same question the same way.
+func sentAnyway(err error) bool {
+	var sent interface{ Sent() bool }
+	return errors.As(err, &sent) && sent.Sent()
 }
 
 // goneFrom is the read-back: a fresh document carries no run under the id.

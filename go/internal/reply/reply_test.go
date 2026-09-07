@@ -36,6 +36,7 @@ type fakeSession struct {
 	created  []byte        // the replies.create answer
 	listing  []byte        // the comments.list answer
 	failAt   map[int]error // fail the nth call, counted from zero
+	partial  map[int][]byte
 	postSeen int
 }
 
@@ -53,6 +54,12 @@ func (f *fakeSession) do(method, rawURL string, body any, into any) error {
 		f.postSeen++
 	}
 	if err := f.failAt[len(f.calls)-1]; err != nil {
+		// partial is a 2xx whose body decoded in part: encoding/json saves the
+		// first type error and keeps decoding, so the fields that did decode are
+		// filled in and the failure still comes back.
+		if raw, ok := f.partial[len(f.calls)-1]; ok && into != nil {
+			_ = json.Unmarshal(raw, into)
+		}
 		return err
 	}
 	answer := f.listing
@@ -144,6 +151,14 @@ func TestCheckRefusesEachBadShapeByName(t *testing.T) {
 		{"bold", "🤖 The **2026** register.", "**"},
 		{"a backtick", "🤖 Run `gdoc read` on it.", "`"},
 		{"a heading on a later line", "🤖 Two things.\n## Second", "#"},
+		// The heading arm is anchored to a line start, so asking the rule of the
+		// body with the prefix still on it moves the hash off offset zero and
+		// lets this one through to the thread, where Docs renders it as typed.
+		// The same words on a second line were always refused, which is the same
+		// rule firing or not depending on where the author put them. Check reads
+		// behind the prefix, which it has already required, so the two agree.
+		{"a heading on the first line", "🤖 # Six months", "#"},
+		{"a deeper heading on the first line", "🤖 ### Six months", "#"},
 		{"a fenced block", "🤖 Like this:\n```\ngdoc read\n```", "`"},
 		{"a link in brackets", "🤖 See [the register](https://example.com).", "["},
 	}
@@ -308,6 +323,67 @@ func TestPostSaysSoWhenDriveAnswersWithNoReplyID(t *testing.T) {
 		t.Error("an answer with no reply id carries no warning")
 	}
 }
+
+// TestPostSaysSoWhenTheAnswerCouldNotBeRead is the difference between a write
+// that never left and a write Drive took. The session marks the second kind, and
+// reporting it as a failure sends the skill back to post the same reply again,
+// on top of the one already in the thread. The package comment on Post states
+// that after the write the run cannot fail, and this is what holds it.
+func TestPostSaysSoWhenTheAnswerCouldNotBeRead(t *testing.T) {
+	f := script()
+	f.failAt[0] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
+
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	if err != nil {
+		t.Fatalf("a reply Drive accepted was reported as never sent: %v", err)
+	}
+	if got.Verified {
+		t.Error("a reply whose answer was never read was reported as verified")
+	}
+	if !strings.Contains(strings.Join(got.Warnings, " "), "check the thread before posting again") {
+		t.Errorf("warnings = %v, and one should say to check the thread", got.Warnings)
+	}
+}
+
+// TestPostKeepsWhatAFailedAnswerStillCarried is the other half of the accepted
+// path, and it is the one propose and withdraw already hold: valid JSON of the
+// wrong shape reaches the caller with fields in hand, because encoding/json
+// saves the first type error and keeps decoding. Throwing the reply id away
+// there reports a reply Drive named in full as one that could not be looked for
+// in the thread, which on that answer is not true: it could have been.
+func TestPostKeepsWhatAFailedAnswerStillCarried(t *testing.T) {
+	f := script()
+	f.failAt[0] = acceptedError{errors.New("the answer could not be read: cannot unmarshal number into createdTime")}
+	f.partial = map[int][]byte{0: []byte(`{"id":"` + testReplyID + `","createdTime":42,"content":` + quote(goodBody) + `}`)}
+
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	if err != nil {
+		t.Fatalf("a reply Drive accepted was reported as never sent: %v", err)
+	}
+	if got.ReplyID != testReplyID {
+		t.Errorf("ReplyID = %q, and the answer that failed still named the reply", got.ReplyID)
+	}
+	if !got.Verified {
+		t.Error("an id that decoded was not looked for in the thread")
+	}
+	if f.postSeen != 1 {
+		t.Errorf("the reply was posted %d times", f.postSeen)
+	}
+	joined := strings.Join(got.Warnings, " ")
+	if !strings.Contains(joined, "could not be read whole") {
+		t.Errorf("warnings = %v, and one should say the answer could not be read whole", got.Warnings)
+	}
+	if strings.Contains(joined, "could not be looked for in the thread") {
+		t.Errorf("warnings = %v, and it was looked for in the thread", got.Warnings)
+	}
+}
+
+// acceptedError is what the session hands back for a failure raised after the
+// server accepted the request. This room asks by behaviour, so the fake answers
+// by behaviour too.
+type acceptedError struct{ error }
+
+func (acceptedError) Sent() bool { return true }
 
 func TestAReadBackThatFailedIsAWarningRatherThanAnError(t *testing.T) {
 	f := script()

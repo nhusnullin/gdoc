@@ -1,0 +1,20 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "A sentence with a footnote mark inside it",
+  "revisionId": "ALm37BXfootnote",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 69, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 34, "textRun": {
+          "content": "The supplier register is reviewed",
+          "textStyle": {}}},
+        {"startIndex": 34, "endIndex": 35, "footnoteReference": {
+          "footnoteId": "kix.fn1", "footnoteNumber": "1", "textStyle": {}}},
+        {"startIndex": 35, "endIndex": 69, "textRun": {
+          "content": " annually by the operations team.\n",
+          "textStyle": {}}}
+      ]}}
+  ]}
+}

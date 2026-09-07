@@ -47,6 +47,11 @@ type fakeSession struct {
 	batch   []byte
 	export  []byte
 	failAt  map[int]error
+	// afterBatch is a failure raised once the answer has been decoded, which is
+	// the one shape that reaches Apply with fields in hand: valid JSON of the
+	// wrong shape, where encoding/json saves the type error and keeps going.
+	// failAt cannot model it, because it answers before the fixture is read.
+	afterBatch error
 }
 
 func (f *fakeSession) record(method, rawURL string, body any) error {
@@ -98,7 +103,10 @@ func (f *fakeSession) PostJSON(_ context.Context, rawURL string, body any, into 
 	if into == nil {
 		return nil
 	}
-	return json.Unmarshal(f.batch, into)
+	if err := json.Unmarshal(f.batch, into); err != nil {
+		return err
+	}
+	return f.afterBatch
 }
 
 // script is a Google that answers every route, each from a named fixture.
@@ -148,6 +156,12 @@ func exportDocx(t *testing.T, shape exportShape) []byte {
 	if shape == withoutComment {
 		parts = map[string]string{"word/document.xml": bareXML}
 	}
+	return zipParts(t, parts)
+}
+
+// zipParts is the docx a fixture describes, as bytes.
+func zipParts(t *testing.T, parts map[string]string) []byte {
+	t.Helper()
 	var buf bytes.Buffer
 	z := zip.NewWriter(&buf)
 	for name, body := range parts {
@@ -205,6 +219,134 @@ func TestVerifyReadsThePreviewThroughItsOwnView(t *testing.T) {
 	if !sawInline || !sawPreview || !sawExport {
 		t.Errorf("routes read: inline=%v preview=%v export=%v", sawInline, sawPreview, sawExport)
 	}
+}
+
+// TestVerifyReadsThePreviewByWordsRatherThanAtTheIndex is the defect that made
+// the second proposal of every run report a direct edit. r.Start is counted in
+// the view that shows pending suggestions; the preview hides them, so every
+// position after one sits lower there. The span here begins seven units past the
+// quoted words, which is where an earlier pending insertion of "really " would
+// have put it, and the preview plainly carries the words. The check has to find
+// them: this is the one route that names a silent direct edit, and a route that
+// cries wolf is one people stop reading.
+func TestVerifyReadsThePreviewByWordsRatherThanAtTheIndex(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
+	f.inline = f.inline[1:]
+
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(33, 50), testProposal, "🤖 "+testProposal.Why)
+
+	if !checks.PreviewWithoutSuggestions {
+		t.Errorf("PreviewWithoutSuggestions = false where the preview carries %q: %v", testProposal.Quoted, warns)
+	}
+}
+
+// TestVerifyStillCatchesADirectEditInThePreview is the half that must not be
+// lost with the index. A write Google made as a plain edit leaves the
+// replacement where the quoted words were, and FindSpan required those words to
+// occur exactly once, so the preview no longer carries them anywhere.
+func TestVerifyStillCatchesADirectEditInThePreview(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview-edited.json", "batch-saved.json", withComment)
+	f.inline = f.inline[1:]
+
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, "🤖 "+testProposal.Why)
+
+	if checks.PreviewWithoutSuggestions {
+		t.Error("PreviewWithoutSuggestions = true on a preview carrying the replacement, which is a direct edit")
+	}
+	if !strings.Contains(strings.Join(warns, " "), "direct edit") {
+		t.Errorf("warnings = %v, and one should name the direct edit", warns)
+	}
+}
+
+// addWords is the proposal shape whose replacement carries the quoted words
+// inside it, which is what a caller writes after FindSpan tells them to quote
+// more of the sentence.
+var addWords = Proposal{
+	Quoted:      "reviewed annually",
+	Replacement: "reviewed annually by the operations team",
+	Why:         "say who reviews it",
+}
+
+// TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote is the hole a
+// by-words search opens on its own. The write deletes the quoted words and puts
+// the replacement in their place, so a replacement containing them leaves them
+// in the preview after a direct edit as well as after a suggestion. Asking only
+// for the quote would report the silent direct edit as the route holding, on
+// the one route that exists to catch it.
+func TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview-edited-containing.json", "batch-saved.json", withComment)
+	f.inline = f.inline[1:]
+
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), addWords, "🤖 "+addWords.Why)
+
+	if checks.PreviewWithoutSuggestions {
+		t.Error("PreviewWithoutSuggestions = true on a preview carrying the replacement, which is a direct edit the quote alone cannot see")
+	}
+	if !strings.Contains(strings.Join(warns, " "), addWords.Replacement) {
+		t.Errorf("warnings = %v, and one should name the replacement the preview carries", warns)
+	}
+}
+
+// TestVerifyDoesNotCryWolfOnAnHonestAddWordsProposal is the other half. The
+// preview hides the insertion, so an honest suggestion of the same shape leaves
+// the quoted words and no replacement, and the route has to hold: a check that
+// failed on every add-words proposal is one people stop reading.
+func TestVerifyDoesNotCryWolfOnAnHonestAddWordsProposal(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview-plain.json", "batch-saved.json", withComment)
+	f.inline = f.inline[1:]
+
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), addWords, "🤖 "+addWords.Why)
+
+	if !checks.PreviewWithoutSuggestions {
+		t.Errorf("PreviewWithoutSuggestions = false where the preview carries the quoted words and not the replacement: %v", warns)
+	}
+}
+
+// TestDocxHoldsRefusesTwoCommentsThatDisagree is the ambiguity rule, on the join
+// internal/docx already states it for. The export carries no Drive comment id,
+// so two proposals in one run carrying the same reason are two comments reading
+// the same words. Taking the first would report one proposal on the strength of
+// the other's comment, so neither answers.
+func TestDocxHoldsRefusesTwoCommentsThatDisagree(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
+	f.export = twoCommentsDocx(t)
+
+	held, why := docxHolds(context.Background(), f, testDocID, "🤖 "+testProposal.Why)
+
+	if held {
+		t.Error("docx_anchored = true where two comments read the same words and only one is attached")
+	}
+	if !strings.Contains(why, "do not agree") {
+		t.Errorf("warning = %q, and it should say the two comments do not agree", why)
+	}
+}
+
+// twoCommentsDocx is an export carrying the same comment body twice, one
+// anchored and one floating. It is the shape two proposals with one reason make.
+func twoCommentsDocx(t *testing.T) []byte {
+	t.Helper()
+	const commentsXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:comment w:id="0" w:author="Nail Khusnullin" w:date="2026-09-07T09:00:00Z">
+    <w:p><w:r><w:t>🤖 the policy says twice a year</w:t></w:r></w:p>
+  </w:comment>
+  <w:comment w:id="1" w:author="Nail Khusnullin" w:date="2026-09-07T09:01:00Z">
+    <w:p><w:r><w:t>🤖 the policy says twice a year</w:t></w:r></w:p>
+  </w:comment>
+</w:comments>`
+	const documentXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:commentRangeStart w:id="0"/>
+      <w:r><w:t>reviewed every six months</w:t></w:r>
+      <w:commentRangeEnd w:id="0"/>
+      <w:r><w:commentReference w:id="0"/></w:r>
+      <w:r><w:commentReference w:id="1"/></w:r>
+    </w:p>
+  </w:body>
+</w:document>`
+	return zipParts(t, map[string]string{"word/document.xml": documentXML, "word/comments.xml": commentsXML})
 }
 
 // TestVerifyWarnsWhenTheExportCouldNotBeRead keeps a failed read out of the

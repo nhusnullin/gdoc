@@ -19,8 +19,10 @@ import (
 // separately is how the second answer drifts from the first.
 type indexed struct {
 	text string
-	// pos holds one document index per byte offset, plus one at the end, so a
-	// match at byte offset i spans pos[i] to pos[i+len].
+	// pos holds one document index per byte offset, and nothing past the last
+	// one. A match starts at pos[i], and its end is derived from the last rune
+	// of the match rather than from the byte behind it: see matches for why the
+	// byte behind it is the wrong place to ask.
 	pos []int
 	// suggested holds one flag per byte offset: true when that byte came out of
 	// a run carrying an insertion or a deletion id.
@@ -36,7 +38,10 @@ type indexed struct {
 //
 // Exactly one match is required. None is a refusal, and so is more than one:
 // picking the first would place the change somewhere nobody chose, and the
-// caller can always quote more of the sentence.
+// caller can always quote more of the sentence. An occurrence running across
+// content the walk does not index counts towards that, so a quote that occurs
+// once contiguously and once across a footnote mark is refused rather than
+// placed on the contiguous one.
 //
 // Indexes are UTF-16 code units, which is what the Docs API counts. A rune
 // outside the basic plane, an emoji most of the time, is two of them.
@@ -50,13 +55,30 @@ func FindSpan(d *docs.Document, quoted string) (docs.Range, error) {
 	tab := d.Tabs[0]
 
 	var found []docs.Range
+	crossed := 0
 	for _, p := range paragraphs(tab.Body) {
-		found = append(found, p.matches(tab.ID, quoted)...)
+		hits, over := p.matches(tab.ID, quoted)
+		found = append(found, hits...)
+		crossed += over
 	}
-	switch len(found) {
-	case 1:
+	switch {
+	case crossed > 0 && len(found) == 0:
+		return docs.Range{}, fmt.Errorf(
+			"the quoted text %q runs across content this read does not index, a footnote mark, a picture or a page break among them, so the span would take that content with it; quote a shorter run of words that does not cross it", quoted)
+	case crossed > 0:
+		// A crossing occurrence is still an occurrence. Placing the contiguous
+		// one and saying nothing would pick for the caller, on a document where
+		// the words they quoted appear more than once, which is the thing the
+		// exactly-once rule exists to refuse. It is also what Carries rests on:
+		// its doc comment reads the guarantee as "exactly once as written text",
+		// and a dropped crossing match would be a second copy it can still find
+		// after a direct edit took the first.
+		return docs.Range{}, fmt.Errorf(
+			"the quoted text %q occurs %d times as written text and %d more across content this read does not index, a footnote mark, a picture or a page break among them, so which occurrence was meant is not clear; quote more of the sentence",
+			quoted, len(found), crossed)
+	case len(found) == 1:
 		return found[0], nil
-	case 0:
+	case len(found) == 0:
 		// Text inside a pending suggestion is not text a proposal may stand on,
 		// and it lands here rather than in its own message: from the caller's
 		// side both mean the same thing, which is that these words are not
@@ -67,44 +89,83 @@ func FindSpan(d *docs.Document, quoted string) (docs.Range, error) {
 	}
 }
 
-// StartsAt says whether the document carries want at the index r begins at.
+// Carries says whether the tab still holds want as written text.
 //
-// It is the second read-back's whole question. In the view that hides pending
-// suggestions the original words must still be there, because a suggestion
-// changes nothing until somebody accepts it. Finding the replacement there
-// instead means the write was a direct edit wearing a suggestion's clothes.
-func StartsAt(d *docs.Document, r docs.Range, want string) bool {
+// It is the second read-back's whole question, and it is asked by words rather
+// than by index on purpose. The index the write was built from was counted in
+// the view that shows pending suggestions; the preview hides them, so every
+// position after one sits lower there. Asking at that index reports the second
+// proposal of every run, and any document already carrying somebody's pending
+// insertion, as a direct edit, which is the one warning that must never cry
+// wolf.
+//
+// FindSpan has already required the quoted words to occur exactly once as
+// written text, so a direct edit usually takes the only copy with it and this
+// comes back false. Two things it cannot see on its own, and both are the price
+// of asking by words rather than at an index:
+//
+// A replacement that contains the quote carries it through a direct edit, since
+// the write puts the replacement where the quote was, so the words are still
+// here and this still comes back true. Verify asks the second question in that
+// shape, and this is why it has to.
+//
+// A second copy sitting inside somebody's pending suggested deletion is still
+// shown by the preview, so a direct edit that took the written copy leaves this
+// one behind. Nothing asks a second question there, and it is the cheaper of
+// the two mistakes.
+func Carries(d *docs.Document, tabID, want string) bool {
 	for _, t := range d.Tabs {
-		if t.ID != r.Tab {
+		if t.ID != tabID {
 			continue
 		}
 		for _, p := range paragraphs(t.Body) {
-			// A paragraph's last index is the next paragraph's first, because
-			// the newline belongs to this one. So an offset at the very end of
-			// the text is this paragraph answering about the next paragraph's
-			// first character, and the walk goes on instead.
-			if off, ok := p.offsetOf(r.Start); ok && off < len(p.text) {
-				return strings.HasPrefix(p.text[off:], want)
+			if strings.Contains(p.text, want) {
+				return true
 			}
 		}
 	}
 	return false
 }
 
-// matches is every place quoted occurs in this paragraph as written text.
-func (p indexed) matches(tabID, quoted string) []docs.Range {
-	var out []docs.Range
+// matches is every place quoted occurs in this paragraph as written text, and
+// the number of places it occurs across something the walk does not index.
+//
+// The second number is why this is not a plain search. index skips a run it has
+// no text for, a footnote mark, a picture, an equation, and drops a page break
+// altogether, but the document numbers them all, so the text either side of one
+// is contiguous here and is not contiguous in the document. A match spanning
+// that hole gives a range longer than the words in it, and the
+// deleteContentRange built from it marks the skipped content for deletion too.
+// withdraw.Span refuses two spans with somebody else's words between them for
+// the same reason; this is that rule on this side.
+func (p indexed) matches(tabID, quoted string) (out []docs.Range, crossed int) {
+	if quoted == "" {
+		return nil, 0
+	}
+	// The end is derived from the last rune of the match, never from the byte
+	// behind it. pos of that byte is the start of the next indexed run, so on a
+	// quote ending exactly where a footnote mark, a picture or a page break
+	// begins it sits a unit or more past the words, and the quote would be
+	// refused for crossing a hole it only touches.
+	_, size := utf8.DecodeLastRuneInString(quoted)
+	tail := utf16Len(quoted[len(quoted)-size:])
 	for at := 0; ; {
 		i := strings.Index(p.text[at:], quoted)
 		if i < 0 {
-			return out
+			return out, crossed
 		}
 		i += at
 		at = i + 1 // one byte, not one match: two matches may overlap.
 		if p.anySuggested(i, i+len(quoted)) {
 			continue
 		}
-		out = append(out, docs.Range{Tab: tabID, Start: p.pos[i], End: p.pos[i+len(quoted)]})
+		start := p.pos[i]
+		end := start + utf16Len(quoted)
+		if p.pos[i+len(quoted)-size] != end-tail {
+			crossed++
+			continue
+		}
+		out = append(out, docs.Range{Tab: tabID, Start: start, End: end})
 	}
 }
 
@@ -117,17 +178,6 @@ func (p indexed) anySuggested(start, end int) bool {
 		}
 	}
 	return false
-}
-
-// offsetOf turns a document index back into a byte offset in this paragraph's
-// text, when the index is one this paragraph covers.
-func (p indexed) offsetOf(index int) (int, bool) {
-	for off, at := range p.pos {
-		if at == index {
-			return off, true
-		}
-	}
-	return 0, false
 }
 
 // paragraphs is every paragraph of a body, indexed, tables walked into.
@@ -159,7 +209,6 @@ func paragraphs(bs []docs.Block) []indexed {
 func index(runs []docs.Run) indexed {
 	var b strings.Builder
 	var p indexed
-	end := 0
 	for _, r := range runs {
 		if r.Kind != docs.KindText {
 			continue
@@ -177,11 +226,13 @@ func index(runs []docs.Run) indexed {
 			off += size
 		}
 		b.WriteString(r.Text)
-		end = r.EndIndex
 	}
 	p.text = b.String()
-	// One index per byte, and one more for the position just past the last
-	// byte, so a match ending at the end of the paragraph has an end index.
-	p.pos = append(p.pos, end)
+	// One index per byte and no more. There used to be an extra entry for the
+	// position just past the last byte, back when a match spanned pos[i] to
+	// pos[i+len]; that is the scheme matches no longer uses, because pos of the
+	// byte behind a match is the start of the next indexed run and measures a
+	// quote that merely touches a footnote mark as crossing it. Nothing reads
+	// past the last byte now, so nothing is stored there.
 	return p
 }

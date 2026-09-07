@@ -352,9 +352,12 @@ func replyTo(t *testing.T, ctx context.Context, s *gapi.Session, docID string, r
 func withdrawFrom(t *testing.T, ctx context.Context, s *gapi.Session, docID string, result propose.Result) {
 	t.Helper()
 	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + docID + "\n---\n\n# Live write test\n")
-	recorded, err := propose.Record(note, []propose.Result{result}, time.Now().UTC())
+	recorded, missed, err := propose.Record(note, []propose.Result{result}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("the proposal could not be recorded in the note: %v", err)
+	}
+	if len(missed) != 0 {
+		t.Fatalf("the live proposal could not be remembered: %+v", missed)
 	}
 	block, err := frontmatter.Read(recorded)
 	if err != nil {

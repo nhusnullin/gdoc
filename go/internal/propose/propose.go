@@ -8,8 +8,9 @@
 // morning the answer was a silent direct edit. So the run does not stop at a
 // 200. It reads the document with suggestions inline, reads it again with them
 // hidden, and exports the docx to see whether the comment is really anchored.
-// All three holding is Verified; fewer is the write reported with the route
-// that did not hold named.
+// All three holding, plus a write that answered commentUpdateState ALL_SAVED,
+// is Verified; anything less is the write reported with the route or the
+// answer that did not hold named.
 //
 // Nothing here decides whether a change is worth proposing, or what to say in
 // the comment. The words arrive written and the placement arrives quoted. This
@@ -19,19 +20,26 @@ package propose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 	"unicode/utf16"
 
 	"gdoc/internal/docs"
 	"gdoc/internal/frontmatter"
+	"gdoc/internal/plaintext"
 )
 
 // Prefix is what every comment gdoc writes opens with. It is the same mark
 // reply puts on a reply, and it is the only record of authorship there is: the
 // Docs API cannot set an author, so everything gdoc writes is signed by
 // whoever is logged in, and the robot is what tells the two apart.
-const Prefix = "🤖 "
+const Prefix = plaintext.Prefix
+
+// Robot is the mark without its space, which is what Check asks about. See
+// plaintext.Robot for why the check is not the prefix.
+const Robot = plaintext.Robot
 
 // Proposal is one change, as the skill hands it over: the words to replace, the
 // words to put there, why, and optionally who should answer for it.
@@ -46,6 +54,100 @@ type Proposal struct {
 	Assignee    string `json:"assignee,omitempty"`
 }
 
+// Check is the shape rule for one proposal, as shape rather than as meaning. It
+// answers from the proposal alone, so the caller can ask it of every proposal
+// in the file before the first one leaves the machine: a third entry refused
+// after the first two have landed is a run that half happened.
+//
+// A replacement of nothing is refused rather than sent. The batch would carry
+// an insertText with no text and a comment anchored on a range of length zero,
+// which is a body Docs rejects, and inlineHolds looks for an insertion that a
+// plain deletion never makes, so the write could never verify either. A
+// milestone that wants a deletion-only proposal gives it its own request shape.
+func (p Proposal) Check() error {
+	if p.Quoted == "" {
+		return errors.New("the proposal quotes no text, so there is nothing to replace")
+	}
+	if p.Replacement == "" {
+		return fmt.Errorf("the proposal replaces %q with nothing; a proposal replaces words with words, and a plain deletion is not a shape this write has", p.Quoted)
+	}
+	// Words with words is one paragraph's worth of words, on both sides, and
+	// each side is refused here for its own reason.
+	//
+	// The quote is refused because a paragraph's last run carries the paragraph
+	// mark itself: the Docs read hands back "...operations team.\n", so a quote
+	// ending in a newline matches inside that one paragraph, and the span
+	// FindSpan returns ends past the mark. The deleteContentRange built from it
+	// then marks the mark for deletion, and accepting the suggestion merges the
+	// paragraph with the one behind it while the insertText puts back a
+	// replacement that cannot carry a break. Nothing downstream names it:
+	// inlineHolds compares the deleted runs against this same Quoted, and
+	// Carries finds this same string in the preview, so all three read-backs
+	// hold over a proposal that removes a paragraph. A quote with a break in the
+	// middle of it is already unreachable, because it spans two paragraphs and
+	// the walk indexes one at a time, so this costs a caller nothing: the words
+	// without the trailing mark are always writable instead.
+	if strings.ContainsAny(p.Quoted, "\n\r") {
+		return fmt.Errorf("the quoted text %q carries a line break; a proposal replaces words with words inside one paragraph, and a quote that takes the paragraph mark with it is a change that removes a paragraph", p.Quoted)
+	}
+	// The replacement is refused because of the preview check. Carries asks each
+	// paragraph on its own, and a paragraph ends at its own break, so a want
+	// whose newline is anywhere but the very end is in no single paragraph and
+	// comes back false whatever the document holds. A trailing one is the
+	// exception rather than the rule: a paragraph's last run carries the mark,
+	// as the quote rule above says, so a want ending in a newline can be found.
+	// Either way the answer is worthless. The rule above gives the first
+	// question a Quoted that cannot carry a break; nothing gives the second
+	// question that, and a replacement that contains the quote and a newline
+	// together would slip past the ambiguity arm and report the preview route
+	// as holding on exactly the silent direct edit it exists to name.
+	if strings.ContainsAny(p.Replacement, "\n\r") {
+		return fmt.Errorf("the replacement %q carries a line break; a proposal replaces words with words inside one paragraph, and a change that adds a paragraph is not a shape this write has", p.Replacement)
+	}
+	// Both tests read the reason with its surrounding space taken off, which is
+	// the same shape reply.Check reads a body in. A reason of nothing but spaces
+	// is a comment that is a bare signature, and sameWords normalises whitespace
+	// on both sides, so the export would still match it and the run would report
+	// verified: true over an explanation that says nothing.
+	why := strings.TrimSpace(p.Why)
+	if why == "" {
+		return errors.New("the proposal carries no reason, and a suggestion nobody explained is one Nail has to guess at")
+	}
+	// Batch writes the comment as Prefix + Why, so a reason that already opens
+	// with the robot lands as two of them. reply.Check requires the prefix and
+	// this one refuses it, which is the two writers disagreeing about who owns
+	// the marker: a caller carrying the reply convention over would sign the
+	// comment twice, and nothing downstream would catch it. docxHolds compares
+	// against the string that was sent, so all three read-backs pass and the
+	// run reports verified: true over a doubled mark in the one string that
+	// records who wrote the comment.
+	//
+	// The test is the robot itself rather than the robot and its space, because
+	// every near miss lands the same doubled mark: "\U0001F916the policy", a robot
+	// behind a newline, a robot behind a leading space. reply_test names those
+	// spellings one by one, and refusing only the exact prefix here would let
+	// each of them through the writer that adds the mark.
+	if strings.HasPrefix(why, Robot) {
+		return fmt.Errorf("the reason for the proposal already opens with %q, and gdoc adds it; write the reason without it", Prefix)
+	}
+	// The reason is written into a comment thread, where Docs renders markdown
+	// literally. It is the same rule reply.Check holds over a reply, and it is
+	// held here because this is the other place gdoc writes into a thread.
+	//
+	// The rule is asked of the reason alone, never of Prefix + Why. The heading
+	// arm is anchored to a line start, so the prefix in front of it moves the
+	// first character of the reason off offset zero and a reason opening with
+	// "# " passes: the comment then lands with the hash rendered literally,
+	// which is the one thing this check exists to refuse. reply.Check asks it
+	// behind the prefix for the same reason: there the body arrives with the
+	// mark already on it, and Check has required it by then, so trimming it is
+	// exact and a heading on the reply's first line is refused too.
+	if m := plaintext.Markdown(p.Why); m != "" {
+		return fmt.Errorf("the reason for the proposal carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", m)
+	}
+	return nil
+}
+
 // Checks is which of the three read-backs held. They are three routes to one
 // question, and each answers a part of it the other two cannot: the inline view
 // says the text is there as a suggestion, the preview says it is not there as
@@ -56,7 +158,12 @@ type Checks struct {
 	DocxAnchored              bool `json:"docx_anchored"`
 }
 
-// all says whether every route held. Verified means this and nothing else.
+// all says whether every route held.
+//
+// It is not the whole of Verified. Apply requires this and an answered
+// commentUpdateState of ALL_SAVED, so a batch Docs accepted whose answer could
+// not be read comes back with every route holding and Verified false. The
+// warning there names the answer that was lost, and no route is blamed for it.
 func (c Checks) all() bool {
 	return c.SuggestionsInline && c.PreviewWithoutSuggestions && c.DocxAnchored
 }
@@ -98,11 +205,8 @@ type Session interface {
 // exists, and everything from there is reported rather than raised.
 func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
 	out := Result{Quoted: p.Quoted, Replacement: p.Replacement}
-	if p.Replacement == "" && p.Quoted == "" {
-		return out, fmt.Errorf("the proposal says nothing to change")
-	}
-	if p.Why == "" {
-		return out, fmt.Errorf("the proposal carries no reason, and a suggestion nobody explained is one Nail has to guess at")
+	if err := p.Check(); err != nil {
+		return out, err
 	}
 	d, err := docs.Fetch(ctx, s, docID)
 	if err != nil {
@@ -120,14 +224,49 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 	}
 
 	var answer batchAnswer
+	answerRead := true
+	var sentErr error
 	if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(Batch(r, p)), &answer); err != nil {
-		return out, fmt.Errorf("the proposal could not be written: %w", err)
+		if !sentAnyway(err) {
+			return out, fmt.Errorf("the proposal could not be written: %w", err)
+		}
+		// Docs took the batch and the answer could not be read. Raising here
+		// would report a change that is in the document as one that never left
+		// the machine, and the read-backs below are exactly what says which it
+		// was. The comment id is usually lost with the answer, so Record cannot
+		// remember this one, and the warning below says so when it really is
+		// missing rather than whenever this path was taken.
+		answerRead = false
+		sentErr = err
 	}
+	// On the path above these are usually empty, and the warning already says
+	// why: an invalid body is rejected whole, because json.Unmarshal validates
+	// the input before it decodes any of it, and a body over the ceiling never
+	// reaches the decoder. The one exception is valid JSON of the wrong shape,
+	// where encoding/json saves the type error and keeps going, so whatever the
+	// server really did send is kept. It is kept on purpose: a comment id that
+	// was decoded is the provenance withdraw needs, and throwing it away is the
+	// one loss this package exists to avoid.
 	out.CommentID = answer.commentID()
 	out.CommentUpdateState = answer.state()
-	if out.CommentUpdateState != stateAllSaved {
+	if sentErr != nil {
+		msg := "the proposal was accepted by Docs and its answer could not be read"
+		if out.CommentID == "" {
+			msg += ", so the comment id is unknown"
+		} else {
+			msg += ", though the part of it that decoded carried the comment id"
+		}
+		out.Warnings = append(out.Warnings, msg+": "+sentErr.Error())
+	}
+	if (answerRead || out.CommentUpdateState != "") && out.CommentUpdateState != stateAllSaved {
 		// The text can land while the comment is lost, and the status code says
 		// nothing about it. This is the field that does.
+		//
+		// An answer that could not be read is asked only when it left a state
+		// behind anyway. Saying the write "answered" the empty string names
+		// something the server did not do, on top of a warning a few lines up
+		// that already says the answer was lost; a state that really was
+		// decoded is the server's own word and is reported.
 		out.Warnings = append(out.Warnings, fmt.Sprintf(
 			"the write answered commentUpdateState %q rather than %q, so the change may be in the document without the comment that explains it",
 			out.CommentUpdateState, stateAllSaved))
@@ -139,6 +278,16 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 	out.Warnings = append(out.Warnings, warns...)
 	out.Verified = checks.all() && out.CommentUpdateState == stateAllSaved
 	return out, nil
+}
+
+// sentAnyway says whether the write reached Docs in spite of the error. The
+// session marks the failures raised after the server accepted a request, and
+// this room asks by behaviour rather than by importing that package: naming a
+// Session interface here is what keeps net/http out, and an imported sentinel
+// would bring it back through the side door.
+func sentAnyway(err error) bool {
+	var sent interface{ Sent() bool }
+	return errors.As(err, &sent) && sent.Sent()
 }
 
 // stateAllSaved is the one commentUpdateState that means the comment landed
@@ -251,28 +400,41 @@ func (a batchAnswer) state() string {
 // suggestion gdoc cannot find here is somebody else's, and gdoc does not
 // retract those.
 //
-// A result with no suggestion id is skipped rather than written with an empty
-// one. An entry with no id fails the block's own validation, and that would
-// lose the provenance of every other proposal in the same write, which is the
-// worse of the two losses.
-func Record(note []byte, results []Result, at time.Time) ([]byte, error) {
+// A result with no suggestion id or no comment id cannot be written: an entry
+// missing either fails the block's own validation, and that would lose the
+// provenance of every other proposal in the same write, which is the worse of
+// the two losses. Those results come back in the second return value instead,
+// because losing them quietly is what leaves gdoc refusing to withdraw a
+// suggestion it wrote. The caller says so.
+func Record(note []byte, results []Result, at time.Time) ([]byte, []Result, error) {
 	b, err := frontmatter.Read(note)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if b == nil {
-		return nil, fmt.Errorf("the note carries no gdoc: block, so there is nowhere to record the proposals")
+		return nil, nil, fmt.Errorf("the note carries no gdoc: block, so there is nowhere to record the proposals")
+	}
+	entries, missed := recorded(results, at)
+	if len(entries) == 0 {
+		return note, missed, nil
 	}
 	next := *b
-	next.Proposals = append(append([]frontmatter.Proposal{}, b.Proposals...), recorded(results, at)...)
-	return frontmatter.Write(note, &next)
+	next.Proposals = append(append([]frontmatter.Proposal{}, b.Proposals...), entries...)
+	out, err := frontmatter.Write(note, &next)
+	if err != nil {
+		return nil, nil, err
+	}
+	return out, missed, nil
 }
 
-// recorded is the results that can be remembered, as front matter entries.
-func recorded(results []Result, at time.Time) []frontmatter.Proposal {
+// recorded is the results that can be remembered, as front matter entries, and
+// the results that cannot.
+func recorded(results []Result, at time.Time) ([]frontmatter.Proposal, []Result) {
 	var out []frontmatter.Proposal
+	var missed []Result
 	for _, r := range results {
 		if len(r.SuggestionIDs) == 0 || r.CommentID == "" {
+			missed = append(missed, r)
 			continue
 		}
 		out = append(out, frontmatter.Proposal{
@@ -282,5 +444,5 @@ func recorded(results []Result, at time.Time) []frontmatter.Proposal {
 			Quoted:    r.Quoted,
 		})
 	}
-	return out
+	return out, missed
 }
