@@ -357,6 +357,26 @@ The `insertComment` payload is undocumented. It is:
 Not `anchor`, not `quotedRange`, not `comment`. Every other shape is
 `Cannot find field`.
 
+The answer is undocumented too, and it was measured on 2026-09-07, on a
+throwaway document in the test folder, because the first live write test
+guessed it wrong and lost the comment id. The `insertComment` reply carries a
+`commentThread`, and the id is one level down:
+
+```json
+{"replies": [{}, {}, {"insertComment": {"commentThread": {
+   "commentId": "AAAC…", "anchorId": "kix.…",
+   "headPost": {"postId": "AAAC…", "content": "🤖 …", "author": {"me": true}, "…": "…"},
+   "status": "OPEN", "plainTextQuote": "the inserted words"}}}],
+ "suggestionResponses": [{"createdSuggestionIds": ["suggest.…"]},
+                         {"updatedSummarySuggestionIds": ["suggest.…"]},
+                         {"updatedSummarySuggestionIds": ["suggest.…"]}],
+ "commentUpdateState": "ALL_SAVED", "writeControl": {"requiredRevisionId": "…"}}
+```
+
+`go/internal/propose/testdata/batch-saved-measured.json` is that answer with
+the ids replaced. `propose` reads `commentThread.commentId` first and the flat
+`insertComment.commentId` it had guessed as a fallback.
+
 The day's behaviour is worth recording, because it explains three contradictory
 readings: that morning `SUGGEST` returned **200 and silently made a direct edit**;
 by midday it returned **400 Unsupported WriteControl mode**; by evening it worked.

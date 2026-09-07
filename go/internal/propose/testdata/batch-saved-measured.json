@@ -1,0 +1,37 @@
+{
+  "replies": [
+    {},
+    {},
+    {
+      "insertComment": {
+        "commentThread": {
+          "commentId": "AAACMeAsUrEd",
+          "anchorId": "kix.cmxtqz2d2q70",
+          "headPost": {
+            "postId": "AAACMeAsUrEd",
+            "content": "🤖 the policy says twice a year",
+            "contentHtml": "🤖 the policy says twice a year",
+            "author": {
+              "displayName": "Nail Khusnullin",
+              "me": true,
+              "user": "users/000000000000000000000"
+            },
+            "createTime": "2026-09-07T15:49:15.933Z",
+            "updateTime": "2026-09-07T15:49:15.933Z",
+            "commentAction": "NO_COMMENT_ACTION_CHANGE"
+          },
+          "status": "OPEN",
+          "plainTextQuote": "reviewed every six months"
+        }
+      }
+    }
+  ],
+  "writeControl": {"requiredRevisionId": "ALm37BXafter"},
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "suggestionResponses": [
+    {"createdSuggestionIds": ["suggest.abc"]},
+    {"updatedSummarySuggestionIds": ["suggest.abc"]},
+    {"updatedSummarySuggestionIds": ["suggest.abc"]}
+  ],
+  "commentUpdateState": "ALL_SAVED"
+}

@@ -117,6 +117,31 @@ func TestApplyVerifiesTheHappyPathThreeWays(t *testing.T) {
 	}
 }
 
+// TestApplyReadsTheCommentIDFromTheCommentThread is the shape Docs actually
+// answers with, measured on 2026-09-07 on a throwaway document in the test
+// folder: the id sits under insertComment.commentThread.commentId, beside an
+// anchorId, the headPost and plainTextQuote. The first live write test failed
+// on the flat insertComment.commentId the code had guessed, so a proposal
+// landed with no comment id and withdraw would have refused it for ever. The
+// fixture is that answer with the ids replaced.
+func TestApplyReadsTheCommentIDFromTheCommentThread(t *testing.T) {
+	f := script(t, "before.json", "after.json", "preview.json", "batch-saved-measured.json", withComment)
+
+	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.CommentID != "AAACMeAsUrEd" {
+		t.Errorf("comment id = %q, want the commentThread's AAACMeAsUrEd", res.CommentID)
+	}
+	if res.CommentUpdateState != "ALL_SAVED" {
+		t.Errorf("state = %q", res.CommentUpdateState)
+	}
+	if !res.Verified {
+		t.Errorf("Verified = false, checks = %+v, warnings = %v", res.Checks, res.Warnings)
+	}
+}
+
 // TestApplyReadsTheDocumentItselfThenWritesOnce is the order the whole design
 // rests on: an index is computed from a read made a moment earlier, never
 // carried in from outside.

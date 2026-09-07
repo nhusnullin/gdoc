@@ -350,12 +350,21 @@ func BatchURL(docID string) string {
 
 // batchAnswer is what came back from the write.
 //
-// The comment fields are read from two places because the preview's response
-// shape is not in the public reference: the state has been seen at the top of
-// the answer, and a per-request reply is where the rest of the API puts what a
-// request produced. Reading both is a few lines; reporting a comment id as
-// missing because it arrived one level down would send somebody looking for a
-// comment that is sitting in the document.
+// The preview's response shape is not in the public reference, so it was
+// measured, on 2026-09-07, on a throwaway document in the test folder. The
+// insertComment reply carries a commentThread, and the id is
+// replies[i].insertComment.commentThread.commentId, beside an anchorId, the
+// headPost that is the comment's first post, a status and plainTextQuote. The
+// state sits at the top of the answer as commentUpdateState, and a
+// suggestionResponses list beside it names the suggestion ids each request
+// created or touched.
+//
+// The flat insertComment.commentId was the guess made before the measurement.
+// It stays as a fallback because reading one more field costs nothing, and
+// reporting a comment id as missing because it arrived at a level this struct
+// did not name is exactly what the first live write test did: the proposal
+// landed, the id was in the answer, and withdraw would have refused it for
+// ever. testdata/batch-saved-measured.json is the measured answer.
 type batchAnswer struct {
 	DocumentID         string `json:"documentId"`
 	CommentUpdateState string `json:"commentUpdateState"`
@@ -364,6 +373,10 @@ type batchAnswer struct {
 		InsertComment      *struct {
 			CommentID          string `json:"commentId"`
 			CommentUpdateState string `json:"commentUpdateState"`
+			CommentThread      *struct {
+				CommentID string `json:"commentId"`
+				AnchorID  string `json:"anchorId"`
+			} `json:"commentThread"`
 		} `json:"insertComment"`
 	} `json:"replies"`
 	WriteControl struct {
@@ -373,7 +386,13 @@ type batchAnswer struct {
 
 func (a batchAnswer) commentID() string {
 	for _, r := range a.Replies {
-		if r.InsertComment != nil && r.InsertComment.CommentID != "" {
+		if r.InsertComment == nil {
+			continue
+		}
+		if t := r.InsertComment.CommentThread; t != nil && t.CommentID != "" {
+			return t.CommentID
+		}
+		if r.InsertComment.CommentID != "" {
 			return r.InsertComment.CommentID
 		}
 	}
