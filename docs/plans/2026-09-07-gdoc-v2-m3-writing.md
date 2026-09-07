@@ -207,14 +207,15 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Consumes: the session interface; `comments.Fetch` for the read-back.
 - Produces:
   - `reply.Check(body string) error`: refuses an empty body, a body not opening with `🤖 ` (exactly the robot and one space, nothing before), and a body carrying markdown, with v1's pattern ported from `gdoc/reply.py` and its tests (`**`, backticks, a `#` heading at a line start, a fenced block, a link in brackets).
-  - `reply.Post(ctx, s Session, docID, commentID, body string) (Result, error)` with `type Result struct { ReplyID, Created string; Verified bool }`: `POST /drive/v3/files/{id}/comments/{cid}/replies?fields=id,createdTime,content` with `{content: body}`, then `comments.Fetch` of the one thread and `Verified` true iff a reply with that id and that content is in it. The body sent is exactly the body checked; nothing is appended (v1 appended `[gdoc]`; v2's mark is the prefix the skill wrote).
+  - ➕ `Result.Warnings`, added here, the same shape `probe.Report` grew for the same reason. Everything that can go wrong after the write is a fact about a reply that already exists: an answer carrying no reply id, a read-back that failed, a thread that does not show the reply. Raising any of them would send the skill back to post the reply a second time, and Drive may well have taken the first. So `Post` fails only before it writes, and reports afterwards.
+  - `reply.Post(ctx, s Session, docID, commentID, body string) (Result, error)` with `type Result struct { ReplyID, Created string; Verified bool; Warnings []string }`: `POST /drive/v3/files/{id}/comments/{cid}/replies?fields=id,createdTime,content` with `{content: body}`, then `comments.Fetch` of the one thread and `Verified` true iff a reply with that id and that content is in it. The body sent is exactly the body checked; nothing is appended (v1 appended `[gdoc]`; v2's mark is the prefix the skill wrote).
 - The two-message rule (an acknowledgment and a receipt at most) is the skill's: the binary posts one reply per call and knows nothing about the previous one.
 
-- [ ] write the failing tests: `Check` accepts `🤖 The 2026 register.` and refuses each bad shape by name; `Post` sends the body verbatim to the replies URL with only `fields` in the query; the read-back marks `Verified` true when the reply is in the thread and false when it is not, with the reply id still reported; a guard refusal on a document not in the policy reaches the caller
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): reply posts one 🤖 reply through Drive and reads the thread back`
+- [x] write the failing tests: `Check` accepts `🤖 The 2026 register.` and refuses each bad shape by name; `Post` sends the body verbatim to the replies URL with only `fields` in the query; the read-back marks `Verified` true when the reply is in the thread and false when it is not, with the reply id still reported; a guard refusal on a document not in the policy reaches the caller
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): reply posts one 🤖 reply through Drive and reads the thread back`
 
 ---
 
