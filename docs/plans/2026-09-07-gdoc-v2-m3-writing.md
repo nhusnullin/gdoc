@@ -268,11 +268,18 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Consumes: the session interface; `docs`; `frontmatter`.
 - Produces: `withdraw.Run(ctx, s Session, docID, suggestionID string, note *frontmatter.Block) (Result, error)` with `type Result struct { SuggestionID string; DeletedSuggestionIDs []string; Verified bool }`: refuses an id not in `note.Proposals`; finds the runs carrying the id; one SUGGEST `deleteContentRange`; `Verified` iff the answer's `deletedSuggestionIds` contains the id and the read-back carries no run with it. `withdraw.Forget(note *frontmatter.Block, suggestionID string) *frontmatter.Block` returns a new block without the entry.
 
-- [ ] write the failing tests: an id not in the note is refused before any request; the happy path deletes the right span and is `Verified`; an answer without `deletedSuggestionIds` is `Verified: false` with a warning; `Forget` leaves the other proposals in place and does not mutate its input
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): withdraw retracts one of gdoc's own suggestions and proves it is gone`
+- [x] write the failing tests: an id not in the note is refused before any request; the happy path deletes the right span and is `Verified`; an answer without `deletedSuggestionIds` is `Verified: false` with a warning; `Forget` leaves the other proposals in place and does not mutate its input
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): withdraw retracts one of gdoc's own suggestions and proves it is gone`
+
+**Discovered while implementing:**
+
+- ➕ `withdraw.Span` and `withdraw.Mine`, exported beside `Run`. `Mine` is the permission question in one function, so Task 7's command asks the same question this package asks rather than writing a second copy of it. `Span` is the placement, next to the code that reads the document, as `propose.FindSpan` is.
+- ➕ `Span` deletes the insertion side alone and refuses runs that are not one span. Two spans carrying the one id with other words between them would take those words with them, and they are not gdoc's to touch. Failing closed is the right direction to be wrong in.
+- ➕ The read-back asks whether any run still carries the id on **either** side, insertion or deletion. A run still marked for deletion under the id is the other half of a proposal that is still pending, and reporting that as withdrawn would leave Nail's own words marked to disappear.
+- ➕ `withdraw.BatchURL` is `propose.BatchURL`, not a second copy of the same string. The two packages write through one endpoint and one spelling of it.
 
 ---
 
