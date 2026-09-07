@@ -701,6 +701,34 @@ Nail confirmed both in the M2 review, 2026-09-07: `AllowCreateIn` stays, and a
 comment whose range the Docs read did not place is a warning on the envelope,
 never an error. Do not reopen either without him.
 
+### Running a milestone
+
+A milestone is a plan under `docs/plans/`, executed by ralphex and reviewed by
+revmux. The plan and the `.ralphex/` configuration are committed on `main`
+before the run starts, because ralphex creates the feature branch from `main`
+and the reviewer would otherwise see its own scripts as new code.
+
+Review is revmux only, Nail's decision after M2 (2026-09-07). ralphex's full
+mode runs its own Claude review rounds before the external tool and has no
+switch that drops only those, so a milestone runs as two commands from a
+normal terminal, not from inside a Claude Code session:
+
+```bash
+ralphex --tasks-only docs/plans/<plan>.md
+```
+
+```bash
+ralphex --external-only
+```
+
+The first executes the tasks, one commit each, on the feature branch. The
+second runs revmux through `.ralphex/scripts/revmux-review.sh` until a clean
+round or `review_patience` unchanged rounds, then one post-external
+critical/major check. The plan moves to `docs/plans/completed/` when the run
+finishes; if the run is cut short (the M2 run stopped on the Claude session
+limit in round 6), the fixes revmux produced sit uncommitted in the working
+tree and the plan move is done by hand.
+
 ### Building
 
 | Command | Does |

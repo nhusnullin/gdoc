@@ -187,7 +187,9 @@ custom_review_script = .ralphex/scripts/revmux-review.sh
 # N consecutive rounds produce no commits (Claude wins the dispute).
 # 0 = disabled (loop runs to max iterations)
 # default: 0
-# review_patience = 0
+# Nail, 2026-09-07: M2's external loop plateaued at 10, 3, 2, 3, 3 minor findings
+# and ran until the session limit stopped it. Two unchanged rounds is enough.
+review_patience = 2
 
 # session_timeout: maximum duration for a single executor session
 # kills hanging sessions (e.g., agent started a blocking operation)
