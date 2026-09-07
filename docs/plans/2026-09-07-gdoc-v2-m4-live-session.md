@@ -196,9 +196,11 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Interfaces:**
 - Consumes: `createSubject`, `trashSubject`, `comments.Fetch`, `comments.NextCursor`, `comments.Wait`, the guard's `POST {id}/comments`.
 
-- [ ] write `TestLiveWaitSeesANewComment` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: create a document in the test folder with one sentence; read its threads once and take the baseline cursor; start `Wait` with a 90-second deadline and a 5-second interval in a goroutine; after one interval post `ai? live wait test` as a comment through Drive's `comments.create`; assert the wait returns one thread carrying that content with marker `ai?`, an advanced cursor, and `Polls` at least 2; then call `Wait` once more with the new cursor and a 15-second deadline and assert it returns empty with the cursor unchanged; trash the document
-- [ ] run it once on this machine and record the timings in the test's log lines
-- [ ] commit: `test(v2): the opt-in live wait sees a comment posted while it waits`
+- [x] write `TestLiveWaitSeesANewComment` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: create a document in the test folder with one sentence; read its threads once and take the baseline cursor; start `Wait` with a 90-second deadline and a 5-second interval in a goroutine; after one interval post `ai? live wait test` as a comment through Drive's `comments.create`; assert the wait returns one thread carrying that content with marker `ai?`, an advanced cursor, and `Polls` at least 2; then call `Wait` once more with the new cursor and a 15-second deadline and assert it returns empty with the cursor unchanged; trash the document
+- [x] run it once on this machine (skipped, not automatable: an unattended run has no account to sign in as, and the run creates a real document in Nail's Drive. Post-Completion carries it, and the log lines it will print are written)
+- [x] commit: `test(v2): the opt-in live wait sees a comment posted while it waits`
+
+➕ Two things beyond the list. The writer runs on the goroutine and the wait on the test's own, rather than the other way round, so the wait's answer and its error stay off a channel; the observable order is the same, the comment is written one interval into a running wait. And the poster gets its own `gapi.Session` on the same policy: a Session refreshes its own token in place, so sharing one across two goroutines is a race `-race` would report, and the policy is the part that is mutex guarded. The test also asserts the wait answered before its deadline and was not interrupted, which is what tells the news apart from the two quiet endings that share an empty window, and it logs the thread as unplaced: a comment created through Drive carries no anchor, so this is what the skill's `range: null` case looks like against Google.
 
 ---
 
