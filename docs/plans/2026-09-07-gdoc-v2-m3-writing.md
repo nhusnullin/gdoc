@@ -168,11 +168,11 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 **Interfaces:**
 - Produces: `(*Session).PostJSON(ctx, rawURL string, body any, into any) error`: marshals `body`, sends `POST` with `Content-Type: application/json` and the bearer, through the same expired-token and one-401 refresh policy `get` has, decodes a 2xx answer into `into`. The request is built with `GetBody` set, so the guard's peek reads the same bytes the wire sends and a retry after a 401 resends them. `into == nil` discards the answer. The package doc comment loses "Everything here is a GET".
 
-- [ ] write the failing tests over a fake wire: the body arrives as sent with the JSON content type; a 401 refreshes once and the retried request carries the same body; a 400 with a Google error body surfaces `message` and the status; a guard refusal (a `batchUpdate` on a handed-in id without SUGGEST) comes back as the refusal and the fake saw nothing
-- [ ] run the tests and watch them fail
-- [ ] implement `PostJSON` by extracting the refresh loop from `get` into one function both call
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): gapi posts JSON through the guard with the same refresh policy`
+- [x] write the failing tests over a fake wire: the body arrives as sent with the JSON content type; a 401 refreshes once and the retried request carries the same body; a 400 with a Google error body surfaces `message` and the status; a guard refusal (a `batchUpdate` on a handed-in id without SUGGEST) comes back as the refusal and the fake saw nothing
+- [x] run the tests and watch them fail
+- [x] implement `PostJSON` by extracting the refresh loop from `get` into one function both call
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): gapi posts JSON through the guard with the same refresh policy`
 
 ---
 
