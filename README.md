@@ -76,12 +76,21 @@ Anything else is left alone. A comment starting "AI tools are changing" is not a
 prompt.
 
 **Answers in the thread.** Replies are plain text, posted into the comment thread
-where you asked. The agent never resolves a comment. You resolve it, because
+where you asked, and each one opens with 🤖 so a later run can tell them from
+everybody else's. The agent never resolves a comment. You resolve it, because
 resolving means you accepted the answer.
+
+**Proposes changes as suggestions.** When the answer is a change to the
+document's own words, it writes that as a native Google suggestion with a comment
+saying why, and proves it landed as a suggestion rather than an edit before it
+tells you so. It can take its own suggestion back. It never edits the document.
 
 **Queues the big ones.** Document-wide items are written to a queue file beside
 your markdown. Nothing is dropped silently. An item stays queued until it is
-applied or you remove it.
+applied or you remove it. The review skill fills that queue no longer: it was
+rewritten for the Go binary, and it now carries an `ai!` out in your notes there
+and then, and receipts it in the thread. `/gdoc-apply` still reads the queue, so
+anything already in one is still applied, and publishing is unchanged.
 
 **Publishes.** It renders your markdown through the house .docx template and
 uploads it to Drive as a new Google Doc. You get the cover page, the running head,
@@ -127,10 +136,16 @@ cd gdoc
 
 If GitHub says the repository does not exist, it is private. Ask Nail for access.
 
-`install.sh` creates a venv at `~/.config/gdoc-agent/venv`, installs the tool into
-it, links `gdoc` into `~/.local/bin` so it is on your PATH, and links the two
-skills into `~/.claude/skills/` so Claude Code can find them. It prints the commit
-you are running. Safe to re-run: every step checks the current state first.
+`install.sh` creates a venv at `~/.config/gdoc-agent/venv`, installs the Python
+tool into it, builds the Go binary, links `gdoc` in `~/.local/bin` to the Go
+binary so it is on your PATH, and links the skills into `~/.claude/skills/` so
+Claude Code can find them. It prints the commit you are running. Safe to re-run:
+every step checks the current state first.
+
+`gdoc` on your PATH is the Go binary. The Python tool this README mostly
+describes is `~/.config/gdoc-agent/venv/bin/gdoc`, which is the full path its own
+skills call, so both keep working. "The Go rewrite" below says what the Go
+binary does.
 
 If it says `~/.local/bin` is not on your PATH, it prints the one line to add.
 
@@ -143,19 +158,29 @@ dependencies change or a new skill is added.
 gdoc auth login
 ```
 
-A browser opens, you approve, and that is the whole step. There is no OAuth client
-to create and no config file to edit: gdoc ships its client, and the login writes
-`auth_mode` for you.
+`gdoc` is the Go binary, so this prints a sign-in link rather than opening a
+browser for you. Open it, approve, and it saves the token. There is no OAuth
+client to create and no config file to edit: gdoc ships its client.
 
 You can skip this step entirely. Run `/gdoc-review <url>` and the skill notices
 there is no token, asks whether to sign you in, and does it.
 
-To check, or to change your mind later:
+To check:
 
 ```bash
-gdoc auth status               # which credential, and whether it works
-gdoc auth logout               # delete the local token
-gdoc auth use service_account  # switch credential, if a key is installed
+gdoc auth status   # whether a token is there, whether it expired, what it is missing
+```
+
+Both tools read the same token file, so one login covers both in most cases. The
+one exception: the Go login asks for the Docs read/write scope, because writing
+suggestions needs it, and the Python tool checks that what *it* asked for is in
+the file. So after a Go login, `gdoc edits` on the Python side asks you to sign
+in through it once more. Its own commands are the ones that switch credential:
+
+```bash
+~/.config/gdoc-agent/venv/bin/gdoc auth status               # which credential, and whether it works
+~/.config/gdoc-agent/venv/bin/gdoc auth logout               # delete the local token
+~/.config/gdoc-agent/venv/bin/gdoc auth use service_account  # switch credential, if a key is installed
 ```
 
 The token lands in `~/.config/gdoc-agent/oauth-token.json`, mode `0600`, and never
@@ -196,9 +221,9 @@ In Claude Code, from the folder that holds your markdown:
 /gdoc-review <google doc url>
 ```
 
-It reads the comments and shows you what it found, then asks before posting
-anything. If it cannot see the document at all, run `gdoc auth status` and check
-which account you signed in as.
+It reads the comments, tells you what it found, and answers the marked ones. If
+it cannot see the document at all, run `gdoc auth status` and check which account
+you signed in as.
 
 ### Optional: bring your own OAuth client
 
@@ -294,11 +319,16 @@ house template can use, including the revision table. All of them are optional.
 /gdoc-review <google doc url>
 ```
 
-It shows you what it found and stops. Nothing is posted until you say so.
+This skill runs on the Go binary now. It lists what it found, then acts: a
+marker is your instruction, so it does not ask again. `ai?` is answered in its
+thread, `ai!` is carried out in your notes and receipted in the thread, and `ai:`
+leaves the choice to it and it says which one it took. An unmarked comment is
+never acted on.
 
-For each comment it either answers in the thread or queues the item and says so in
-the thread, so anyone reading the document can see the change was noticed and is
-coming.
+When the answer is a change to the document's own words, it proposes that as a
+Google suggestion with a comment saying why. It never edits the document, and it
+can withdraw its own suggestion, which is why proposing needs no confirmation.
+Say "dry run" and it does every step and writes nothing.
 
 ### Apply what was queued, and publish again
 
@@ -545,6 +575,95 @@ since the last look, by comparing against the snapshot in that file's front
 matter, then writes the new snapshot. That write happens only after a read that
 fully succeeded, and only into a file already paired with the document you read.
 
+### Writing into a document
+
+Four commands write, and every change they make inside a Google Doc is a
+suggestion. Nothing edits a document directly, and the guard refuses the attempt
+inside the process: a `batchUpdate` on a document you handed in is carried only
+when the body says `writeMode: SUGGEST`.
+
+```bash
+gdoc probe --folder <folder url or id>
+gdoc reply <url> <comment id> --body-file reply.txt
+gdoc propose <url> --from proposals.json --folder <probe folder> [--md note.md]
+gdoc withdraw <url> <suggestion id> --md note.md
+```
+
+None of them decides what to write. The body of a reply, the words of a proposal
+and the reason for it arrive already written, in a file the skill wrote.
+
+**`probe`** asks Google whether suggestions are honoured for this project today.
+It creates a throwaway document in the folder you name, writes one sentence into
+it directly, suggests one word inside that sentence, reads the document back,
+and trashes it. `enrolled: true` means the suggested word came back carrying a
+suggestion id. `enrolled: false` means it came back as plain text, which is a
+silent direct edit: the exact failure this asks about. The report names
+`probe_document_id` and says whether the trash succeeded, so a document left
+behind is named rather than lost.
+
+The probe exists because the field that makes a write a suggestion is not in the
+public Docs discovery document, and one morning that call returned 200 and
+edited the document for real. `docs/v2/BLOCKED-BY-API.md` records both
+measurements. So `propose` runs the probe every time, on a document of its own,
+and sends nothing when the answer is no.
+
+**`reply`** posts one reply into a comment thread and reads the thread back to
+see it there. The body must open with `🤖 ` and nothing before it, which is how
+a later run tells gdoc's own replies from everybody else's, and it must be plain
+text: a Docs thread renders markdown literally, so asterisks and backticks
+arrive as typed. Both are refused naming what was found.
+
+**`propose`** writes a change as a native suggestion with a comment beside it
+saying why. It reads the file `--from` names, a list of
+`{quoted, replacement, why, assignee?}`:
+
+```json
+[{
+  "quoted": "reviewed annually",
+  "replacement": "reviewed every six months",
+  "why": "the policy above says six months"
+}]
+```
+
+`quoted` is text, never a position. An index worked out from an earlier read is
+the hazard the whole API has, so `propose` reads the document fresh, finds the
+words, and refuses when they occur more than once: quote more of the sentence.
+Text already inside a pending suggestion is not matched, so a proposal on top of
+a proposal is refused too. Each proposal is one `batchUpdate` after its own
+fresh read, because the first change moves the ground under the second, and a
+document with more than one tab stops the run before anything is sent.
+
+**`verified` is the read-back, never the status code.** After the batch,
+`propose` reads the document three more ways, and `checks` says which held:
+
+| Check | Asks |
+|---|---|
+| `suggestions_inline` | the replacement is there, carrying a suggestion id |
+| `preview_without_suggestions` | the original words are still there with suggestions hidden, so it is a suggestion and not an edit |
+| `docx_anchored` | the docx export carries the 🤖 comment, attached to text |
+
+All three is `verified: true`. Fewer is still `ok: true` with `verified: false`
+and a warning naming the route that did not hold, because the write happened and
+hiding that would be worse. The skill reads `verified` and decides what to say.
+
+**`withdraw`** retracts one of gdoc's own pending proposals. It needs `--md`,
+and the reason is the whole rule: the note's `proposals` list is the only record
+of which suggestions gdoc wrote, and gdoc withdraws only those. An id that is
+not in there is refused. The suggestion is gone only when the answer names it in
+`deletedSuggestionIds` and a fresh read shows no run carrying it; only then does
+the entry leave the note. The 🤖 comment stays where it is, because deleting a
+comment is a write the guard does not carry.
+
+With `--md`, `propose` records what it wrote into the note's `gdoc:` block:
+the suggestion id, the comment id, the time and the words that were replaced.
+That record is the permission to withdraw later, so a run without `--md` still
+lands the suggestion and simply forgets it.
+
+The review skill runs over these commands. It reads the threads, decides which
+ones still need an answer, and writes the reply and proposal files the binary
+sends. The binary reports facts either way: there is no `handled` field, and no
+rule in Go that says a comment is answered.
+
 ### The `gdoc:` block
 
 A markdown note paired with a Go-published document carries one key in its front
@@ -574,8 +693,16 @@ your line endings and the trailing newline come back byte for byte, and the file
 is replaced through a temporary file and a rename, so a failed write cannot
 truncate your note.
 
-The `gdoc` on your PATH is still the Python tool this README describes. `bin/gdoc`
-is the new one, and nothing installs it yet.
+The `gdoc` on your PATH is the Go binary from here on. `./install.sh` links
+`~/.local/bin/gdoc` to `bin/gdoc`, and the temporary second name `gdoc2` is
+removed. The Python tool is still there and still does the publishing: it is
+`~/.config/gdoc-agent/venv/bin/gdoc`, which is the full path its two skills call,
+so nothing about them changed. Every `gdoc ...` example outside this section is
+the Python tool, and needs that path now.
+
+One word means two things across the two tools, and it is worth knowing before
+you type it. v1's `read` lists the comments. v2's `read` prints the document
+text, and v2's `comments` lists the comments.
 
 ## What is planned
 

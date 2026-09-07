@@ -468,12 +468,34 @@ Rules SPEC states that the skill does not.
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`, `docs/v2/PLAN.md`
 
-- [ ] update `README.md`: the four write commands, `proposals.json`, the probe, what `verified` and `checks` mean, and that the review skill runs over `gdoc2`
-- [ ] update `CLAUDE.md` under "v2 lives at `go/`": every document write is a suggestion and the guard holds it; the probe runs on every `propose` and creates in the test folder; the three read-backs and what `verified: false` means; provenance in `proposals[]` is the permission to withdraw; `commentWrites` carries no `PATCH`/`DELETE` until a caller arrives; the skill decides which threads need an answer and the binary does not; `gdoc` on PATH is v2 from this milestone and `gdoc2` is gone, while v1's skills keep calling the venv binary by its full path (correcting the M2 note about `gdoc2`)
-- [ ] update `docs/v2/PLAN.md`: mark M3 done with the date, record what it left for M4 (the live session polls `comments --since` and the same skill acts on what arrives) and for M6 (`AllowCreateIn` now has a production caller, the probe)
-- [ ] run the full test suite one more time
-- [ ] commit: `docs: M3 lands, the writes, the probe and the review skill written down`
+- [x] update `README.md`: the four write commands, `proposals.json`, the probe, what `verified` and `checks` mean, and that the review skill runs over `gdoc` (not `gdoc2`: Task 7 made `gdoc` on PATH the Go binary and removed the second name, so this checkbox's wording was superseded by the plan's own Overview)
+- [x] update `CLAUDE.md` under "v2 lives at `go/`": every document write is a suggestion and the guard holds it; the probe runs on every `propose` and creates in the test folder; the three read-backs and what `verified: false` means; provenance in `proposals[]` is the permission to withdraw; `commentWrites` carries no `PATCH`/`DELETE` until a caller arrives; the skill decides which threads need an answer and the binary does not; `gdoc` on PATH is v2 from this milestone and `gdoc2` is gone, while v1's skills keep calling the venv binary by its full path (correcting the M2 note about `gdoc2`)
+- [x] update `docs/v2/PLAN.md`: mark M3 done with the date, record what it left for M4 (the live session polls `comments --since` and the same skill acts on what arrives) and for M6 (`AllowCreateIn` now has a production caller, the probe)
+- [x] run the full test suite one more time
+- [x] commit: `docs: M3 lands, the writes, the probe and the review skill written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes.
+
+**What the documentation pass changed, 2026-09-07:**
+
+- `README.md` gained "Writing into a document": the four commands, the
+  `proposals.json` shape, why the probe runs every time, and the table of what
+  each of the three checks asks. Four statements elsewhere in it had gone false
+  when Task 7 repointed `gdoc`, and each is corrected rather than left: the
+  install description, the sign-in step (the Go login prints a link and asks for
+  the wider scope, so the Python tool's own `auth` commands are named by their
+  full path), what `/gdoc-review` does now that it acts rather than asks, and
+  the closing paragraph that said nothing installed the Go binary yet. The v1
+  queue bullet says the review skill no longer fills the queue and that
+  `/gdoc-apply` still reads it.
+- `CLAUDE.md` gained "The four write commands, and none of them trusts a
+  success", and the `gdoc2` paragraph under Building is replaced by the M3
+  arrangement with the superseded note called out by name. The Never list says
+  the rule is unchanged for v2 and why `PREVIEW_WITHOUT_SUGGESTIONS` is one of
+  the three routes.
+- `docs/v2/PLAN.md` marks M3 done, and answers the M2 bullet that told M3 not to
+  invent an `AllowCreateIn` caller: it invented none and found a real one. The
+  standing fact about live writes is corrected too, because it named M6 as the
+  first milestone with a production writer and M3 turned out to be it.
 
 ## Post-Completion
 

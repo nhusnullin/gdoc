@@ -37,7 +37,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 
 | Path | Holds |
 |---|---|
-| `go/cmd/gdoc/` | `main.go` and `read.go`. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | `main.go`, `read.go` and `write.go`. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -49,16 +49,22 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/comments/` | Drive's threads joined to the Docs ranges, and the `--since` cursor |
 | `go/internal/suggestions/` | what is pending, and what stopped being pending since the snapshot |
 | `go/internal/docx/` | the docx export reader, and the witness match against threads |
+| `go/internal/probe/` | the throwaway document that asks whether SUGGEST is honoured today |
+| `go/internal/reply/` | one 🤖 reply into a thread, and the thread read back |
+| `go/internal/propose/` | a change as a suggestion, its 🤖 comment, and the three read-backs |
+| `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the one opt-in end-to-end test. Tests only, no production code |
+| `go/internal/live/` | the two opt-in end-to-end tests, one read and one write. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 and 2 are done: the binary exists, prints the envelope, owns
-the network, can log in and report its OAuth state, and reads a document three
-ways with `read`, `comments` and `suggestions`.
+order. Milestones 1, 2 and 3 are done: the binary exists, prints the envelope,
+owns the network, can log in and report its OAuth state, reads a document three
+ways with `read`, `comments` and `suggestions`, and writes four ways with
+`probe`, `reply`, `propose` and `withdraw`. The review skill is rewritten over
+those, and `gdoc` on PATH is v2 from M3 on.
 
 ### The auth commands, and what reaches stdout
 
@@ -649,8 +655,11 @@ would report a window nobody asked for and look like a clean poll.
 
 `internal/frontmatter` owns one key in a note's YAML front matter and nothing
 else in the file. It carries `schema`, `document_id`, `folder_id`, a `published`
-record (M6 writes it), the `suggestions_seen` snapshot and `proposals` (M3
-writes those; M2 defines the shape and carries them through untouched).
+record (M6 writes it), the `suggestions_seen` snapshot and `proposals`, which
+`propose` writes and `withdraw` reads and shortens. A proposal is
+`{id, comment_id, at, quoted}`: the suggestion id, the comment `insertComment`
+returned, the time, and the words that were replaced. `quoted` arrived in M3 and
+is optional in the decoder, so a note written under M2 still reads.
 
 Six rules, and each one has a reason:
 
@@ -708,6 +717,119 @@ Six rules, and each one has a reason:
   from the filtered list forgets that suggestion, so the run that later sees it
   accepted or rejected has no record it was ever there and reports nothing.
 
+### The four write commands, and none of them trusts a success
+
+`probe`, `reply`, `propose` and `withdraw`. They are the read commands with one
+thing added, something leaves the machine, so the shape is the same: turn the
+argument into an id, open a `guard.Policy` holding exactly that id, open a
+`gapi.Session`, hand it to a writer package. The writers make one request, read
+the answer, and then read again through a route the write did not go out on.
+
+**Every change inside a Google Doc is a suggestion, and the guard holds it.**
+Not the call site. A `batchUpdate` on a handed-in document is refused inside the
+process unless the body says `writeMode: SUGGEST`, which is `LevelSuggest` and
+is the only level a handed-in id ever gets. Nothing in these packages can widen
+that by phrasing a request differently. Read "the guard owns the wire" above for
+what `isSuggestMode` reads and why it reads it exactly.
+
+**The probe runs on every `propose`, and it creates its own document.** What
+makes a write a suggestion is `writeMode`, a field the client supplies, absent
+from the public discovery document, and one morning the same call returned 200
+and made a direct edit. `docs/v2/BLOCKED-BY-API.md` holds both measurements. So
+the guard's refusal is about gdoc's own words, and the probe is the question of
+what Google does with them: create a document in the folder the run named, write
+a sentence directly, suggest a word inside it, read back with
+`SUGGESTIONS_INLINE`, then trash it and confirm the trash. `enrolled` is true
+only when the word came back carrying a suggestion id. A word that came back as
+plain text is `enrolled: false`, and `propose` sends nothing.
+
+Three rules about the probe that are decisions rather than details:
+
+- **It runs every time, and nothing caches the answer.** The binary is one-shot
+  and holds no hidden state, so there is nowhere to put it, and an asserted
+  "already probed" from outside reopens the exact failure the probe prevents.
+- **It never touches the document being reviewed.** `propose` opens one policy
+  with two doors: the document at `LevelSuggest`, and the probe's folder as the
+  one place a create may land. The probe document's id is learned from the
+  create the guard carried, never handed in.
+  `TestTheProbeDocumentIsNeverHandedIn` states it.
+- **Every failure path still trashes, and the report names the document.** A
+  probe document left behind is named in `probe_document_id` with
+  `trashed: false`, never silent.
+
+The probe is `AllowCreateIn`'s first production caller. PLAN.md expected that to
+be M6's publish, and M3 arrived first.
+
+**A proposal names text, never an index.** The skill hands over the exact words
+to replace, `propose` reads the document fresh and finds them, and refuses when
+they occur more than once: quote more of the sentence. Text already inside a
+pending suggestion does not match, so a proposal on top of a proposal is
+refused. An index computed a minute ago is the hazard the whole API has, and
+DECISIONS.md says never to act on a stored one. Index lengths on the wire are
+UTF-16 code units, which is what the Docs API counts, so a replacement carrying
+a non-BMP character has its own test.
+
+One `batchUpdate` per proposal, three requests inside it, in this order:
+`deleteContentRange` over the quoted span, `insertText` at its start, and
+`insertComment` over the inserted span. One batch because Docs applies the
+requests in order with consistent indexes, so the comment lands on the span the
+insert made. Two proposals are two batches, each after its own fresh read,
+because the first moves the ground under the second. A document with more than
+one tab stops the run before anything is sent, the probe included: a range means
+nothing without saying which tab it is in.
+
+**`verified` is three read-backs, and `verified: false` is not a failure.**
+`Checks` carries them as three fields, and each answers something the other two
+cannot:
+
+| Check | Asks |
+|---|---|
+| `suggestions_inline` | the replacement is in the document, carrying a suggestion id |
+| `preview_without_suggestions` | the quoted words are still there with suggestions hidden, so it is a suggestion and not an edit |
+| `docx_anchored` | the docx export carries the 🤖 comment, attached to text |
+
+All three is `verified: true`. Fewer is `ok: true` with `verified: false` and a
+warning naming the route that did not hold, because the write happened: a caller
+told the run failed is a caller that writes it again. The skill reads `verified`
+and decides what to tell Nail. `preview_without_suggestions` is the route that
+would catch the silent direct edit, which is why it is one of the three rather
+than a nicety.
+
+**Provenance in `proposals[]` is the permission to withdraw.** `withdraw`
+requires `--md`, and refuses an id the note does not record as gdoc's own. The
+front matter is the only place that memory lives, so a `propose` run without
+`--md` still lands the suggestion and simply forgets it, and the entry is
+recorded whether or not the read-backs held: it is in the document either way,
+and a proposal gdoc has forgotten is one it will refuse to withdraw. The
+suggestion is gone only when `deletedSuggestionIds` names it **and** a fresh
+read shows no run carrying it, and only then does the entry leave the note.
+Forgetting it while it is still pending would leave gdoc refusing to withdraw
+its own work.
+
+The 🤖 comment a withdrawn proposal made stays where it is. `commentWrites`
+carries `POST` and nothing else, so deleting or editing a comment is a write the
+guard does not carry, and no command here needs one. The skill replies to the
+comment saying the proposal was withdrawn. A milestone that needs `PATCH` or
+`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7.
+
+**The 🤖 prefix is the only record of authorship there is.** The Docs API cannot
+set an author, so everything gdoc writes is signed by whoever is logged in.
+Every reply and every comment gdoc writes opens with `🤖 ` and nothing before
+it, and a body that does not is refused. A body carrying markdown is refused
+too, ported from v1's `assert_plain_text`: a Docs thread renders it literally,
+so asterisks and backticks arrive as typed. This is v1's `[gdoc]` rule in v2's
+shape, and "Identity is never a gate" below is why the marker decides rather
+than the account.
+
+**Nothing here decides what to write.** The body of a reply, the words of a
+proposal and the reason for it arrive already written, in a file the skill
+wrote: `--body-file` for a reply, `--from proposals.json` for a proposal, a list
+of `{quoted, replacement, why, assignee?}`. The skill reads the threads and
+decides which ones still need an answer; the binary reports the marker,
+`resolved`, `by_gdoc` and the witness, and says nothing about what any of them
+means. That is M2's line, held. Read "The binary prints facts, and the skills
+judge" above.
+
 ### `GrantInPlace` is gone until M7, and `AllowCreateIn` stayed
 
 PLAN.md M2 asked that a guard door with no production caller be deleted rather
@@ -723,6 +845,11 @@ production callers here, which is the other half of what M2 was asked to settle.
 Nail confirmed both in the M2 review, 2026-09-07: `AllowCreateIn` stays, and a
 comment whose range the Docs read did not place is a warning on the envelope,
 never an error. Do not reopen either without him.
+
+M3 settled the `AllowCreateIn` half. It has a production caller now, the
+capability probe, which creates the throwaway document it asks its question on.
+So the door M2 kept on the strength of M6 needing it was wanted well before M6,
+and keeping it was right for a reason nobody had yet.
 
 ### Running a milestone
 
@@ -761,20 +888,35 @@ tree and the plan move is done by hand.
 | `make build` | `bin/gdoc`, for this machine |
 | `make dist` | the three platform binaries |
 
-On Nail's machine `gdoc` on PATH is still v1: `~/.local/bin/gdoc` links to the
-Python venv, and both skills call v1's commands. v2 is `gdoc2`, a symlink from
-`~/.local/bin/gdoc2` to this repo's `bin/gdoc`, so `make build` refreshes it
-with no reinstall (Nail's choice, 2026-09-07). The two share one word with two
-meanings: v1 `read` lists comments, v2 `read` prints the text and v2
-`comments` lists comments. `gdoc` moves to v2 when the skills do, in M3, and
-the install story proper is M9.
+**`gdoc` on PATH is v2, and `gdoc2` is gone.** M3 repointed it:
+`~/.local/bin/gdoc` links to this repo's `bin/gdoc`, so `make build` refreshes
+it with no reinstall, and `install.sh` removes the `gdoc2` link it made earlier
+rather than leaving one word with two meanings. `gdoc2` was Nail's temporary
+name for testing v2 beside v1 (2026-09-07); the M2 note here that described it
+as the permanent arrangement is superseded by this paragraph.
 
-`GDOC_LIVE_TEST=1` runs the one opt-in end-to-end test, in `go/internal/live`.
+v1 is untouched by that. Both v1 skills call the venv binary by its full path,
+`$HOME/.config/gdoc-agent/venv/bin/gdoc`, never `gdoc` on PATH, so repointing
+the link breaks neither of them. What it does change is what a person typing
+`gdoc` gets, and the two tools share one word with two meanings: v1 `read`
+lists comments, v2 `read` prints the document text and v2 `comments` lists
+comments. The install story proper, one file copied to a machine with nothing
+else on it, is still M9.
+
+`GDOC_LIVE_TEST=1` runs the opt-in end-to-end read test, in `go/internal/live`.
 It then needs `GDOC_LIVE_DOC_ID=<document id>`, and there is no default: the
 guard is opened with exactly the document the run names. It reads, and creates
 nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
+
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the write test beside it. It creates
+its own document in the Drive test folder, proposes into it, replies, withdraws
+and trashes it, asserting every read-back on the way, and it writes only to
+documents it made. Two variables rather than one, because a live read is
+somebody's document and a live write is a document that did not exist a second
+ago: the second is a different decision, and it is made on purpose each time.
+The unattended run sets neither.
 
 `make dist` builds darwin/arm64, darwin/amd64 and windows/amd64 with
 `CGO_ENABLED=0`, so each one is static and the binary is the whole dependency.
@@ -1136,7 +1278,11 @@ instead, as with the 40-twip cell margin.
 - Never edit a reviewed Google Doc. Under `service_account` the credential
   cannot. Under `oauth` it could: `gdoc/guard.py` bounds which files are
   reachable, not what may be done inside one. Nothing in gdoc edits a document,
-  and nothing may start.
+  and nothing may start. v2 writes into a document and this rule is unchanged:
+  every write is a suggestion, `go/internal/guard` refuses a `batchUpdate`
+  without `writeMode: SUGGEST`, and the read-back through
+  `PREVIEW_WITHOUT_SUGGESTIONS` is there because Google has broken that promise
+  once.
 - Never commit anything from `~/.config/gdoc-agent/`.
 - Never post markdown into a comment thread. The CLI refuses it for a reason.
 

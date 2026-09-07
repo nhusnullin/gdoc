@@ -3,8 +3,8 @@
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
 producing working, testable software. Detailed task-by-task plans live in
 `docs/plans/` and are written when a milestone starts, so each one
-is written against the code that actually exists by then. Milestones 1 and 2
-are written, and both are done.
+is written against the code that actually exists by then. Milestones 1, 2 and 3
+are written, and all three are done.
 
 ## Principles
 
@@ -38,8 +38,11 @@ Strains: none.
   at a document the run names and reads nothing else: `internal/live` skips
   unless `GDOC_LIVE_TEST=1` and then needs `GDOC_LIVE_DOC_ID`, with no default.
   A live **write** follows v1's convention: create documents only in the Drive
-  test folder, and never touch a document gdoc did not create. M6 is the first
-  milestone with a production writer to run one.
+  test folder, and never touch a document gdoc did not create. M3 turned out to
+  be the first milestone with a production writer, not M6: the capability probe
+  creates a document. The write test is behind a second variable,
+  `GDOC_LIVE_WRITE=1`, on top of `GDOC_LIVE_TEST=1`, because a live write is a
+  different decision from a live read and is made on purpose each time.
 
 ## The milestones
 
@@ -129,7 +132,10 @@ What M2 leaves for M3:
   documented, so the decoder is loose on purpose. The first live run records a
   redacted fixture, and `docs.CommentRanges` is tightened to that shape then.
 - `AllowCreateIn` still has no production caller. Its first one is M6's
-  publish, and M3 must not invent one to make a test pass.
+  publish, and M3 must not invent one to make a test pass. **Answered by M3:**
+  it invented nothing for a test, and it found a production caller anyway. The
+  capability probe has to create a document to ask its question on, and it is
+  the one door a create may go through.
 - The review skill reads `comments` and `read` and does all the judging. The
   binary reports the marker, `resolved`, `by_gdoc`, the witness and
   `gone_since_last_look`, and nothing in Go says what any of them means. M3 is
@@ -148,7 +154,7 @@ What M2 leaves for M3:
 +1,101,824 on windows/amd64, each about +9.4%) and half is the eight new
 packages. All three targets still build with `CGO_ENABLED=0`.
 
-### M3. Writing, and the first usable review
+### M3. Writing, and the first usable review (done 2026-09-07)
 
 The capability probe, run on every `propose` invocation against a throwaway
 document, with cleanup on every failure path. `reply` with the 🤖 prefix and
@@ -159,6 +165,53 @@ proven to be gdoc's own, confirmed by `deletedSuggestionIds` **and** a
 read-back. Then the **non-live review skill**: marked comment in, hub-context
 answer or proposal out, verified on a real document end to end. **v2 becomes
 daily-usable here.** Acceptance: spec items 4 and 6.
+
+**Landed 2026-09-07.** Four write commands, and every change inside a Google Doc
+is a suggestion the guard holds to `writeMode: SUGGEST`. `probe` creates a
+throwaway document in the folder it was given, suggests a word in it, reads it
+back and trashes it, and `propose` runs it every time rather than caching an
+answer the binary has nowhere to keep. `reply` posts one 🤖 reply and reads the
+thread back. `propose` writes one `batchUpdate` per proposal after its own fresh
+read, finds the span by the words rather than an index, and reports `verified`
+as three read-backs: `suggestions_inline`, `preview_without_suggestions` and
+`docx_anchored`. Fewer than three is `ok: true` with `verified: false` and the
+route named, because the write happened. `withdraw` retracts only what the
+note's `proposals[]` records as gdoc's own, and only when `deletedSuggestionIds`
+and a fresh read agree it is gone. The review skill is rewritten over those
+commands and does all the judging; the binary grew no field that decides
+anything. The five revmux findings on the M1 guard were fixed before any of it
+was written, and `PATCH` and `DELETE` on a comment left `commentWrites` because
+nothing here calls them. `gdoc` on PATH is the Go binary now and `gdoc2` is
+gone. The result is documented in CLAUDE.md under "The four write commands" and
+in the README under "Writing into a document".
+
+What M3 leaves for M4:
+
+- The skill written here is the one-pass one. M4's live session polls
+  `comments --since` on the cursor this binary already prints, and the same
+  skill acts on what arrives, so the work is the loop and the partial-read
+  behaviour rather than a second set of write commands.
+- A poll that could not read half the review must say so and not act as if the
+  review were clean. The one-pass skill has no equivalent, because a failed read
+  simply stops the run.
+
+What M3 leaves for M6:
+
+- `AllowCreateIn` has a production caller now, the probe, rather than waiting
+  for M6 as M2 expected. M6's publish is a second caller of the same door, and
+  the create path it needs, the parent check, the upload-shape check and the
+  response learning, has been exercised against Drive by every `propose` run.
+- The probe's create is a bare `files.create` with a JSON body. M6's is a
+  multipart upload, which `checkUploadShape` permits and nothing has sent yet,
+  so the first real test of that grammar is still M6's.
+
+What M3 leaves open elsewhere:
+
+- Deleting or editing a comment gdoc wrote is not carried by the guard. A
+  withdrawn proposal's 🤖 comment stays, with a reply saying so. M7 or M8 adds
+  the method back beside a caller.
+- The Docs read's `comments` key is still decoded loosely, as M2 left it. The
+  live write run records the fixture to tighten it against.
 
 ### M4. The live session
 
