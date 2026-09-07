@@ -13,6 +13,7 @@ VENV="$HOME/.config/gdoc-agent/venv"
 CONFIG_DIR="$HOME/.config/gdoc-agent"
 SKILLS_DIR="$HOME/.claude/skills"
 BIN_DIR="$HOME/.local/bin"
+GO_BIN="$REPO/bin/gdoc"
 SKILLS=(gdoc-review gdoc-apply)
 
 fail() {
@@ -39,11 +40,27 @@ fi
 [ -x "$VENV/bin/gdoc" ] || fail "the gdoc command was not created. Check [project.scripts] in pyproject.toml"
 
 # --------------------------------------------------------------------------
+# The v2 binary
+# --------------------------------------------------------------------------
+#
+# One static binary, built from go/. It is what `gdoc` on PATH means from M3
+# onwards. v1 stays installed and reachable at $VENV/bin/gdoc, which is the
+# path its two skills call, so nothing about them changes.
+
+if command -v go >/dev/null 2>&1; then
+    make -C "$REPO" build >/dev/null || fail "go build failed. Run: make build"
+    [ -x "$GO_BIN" ] || fail "make build wrote no $GO_BIN"
+elif [ -x "$GO_BIN" ]; then
+    warn "go is not on PATH, so $GO_BIN was not rebuilt. The one already there is used."
+else
+    fail "go is not on PATH and there is no $GO_BIN. Install Go, then re-run."
+fi
+
+# --------------------------------------------------------------------------
 # One command on PATH
 # --------------------------------------------------------------------------
 #
-# Linked rather than copied, so it follows the venv with no reinstall. The venv
-# script carries an absolute shebang, so a symlink to it resolves correctly.
+# Linked rather than copied, so `make build` refreshes it with no reinstall.
 #
 # ~/.local/bin because that is where pipx and uv put tools. It is not on the
 # macOS default PATH, which is /etc/paths plus /etc/paths.d, so the check below
@@ -53,13 +70,24 @@ mkdir -p "$BIN_DIR"
 link="$BIN_DIR/gdoc"
 
 if [ -L "$link" ]; then
-    [ "$(readlink "$link")" = "$VENV/bin/gdoc" ] || ln -sf "$VENV/bin/gdoc" "$link"
+    # An older install pointed this at the venv script. Repointing it is the
+    # upgrade, and the v1 skills are unaffected: they name the venv path in full.
+    [ "$(readlink "$link")" = "$GO_BIN" ] || ln -sf "$GO_BIN" "$link"
 elif [ -e "$link" ]; then
     # Somebody else's gdoc. Leave it: shadowing a real program is worse than
     # asking the person to look.
     warn "$link exists and is not a link to this install. Left alone."
 else
-    ln -s "$VENV/bin/gdoc" "$link"
+    ln -s "$GO_BIN" "$link"
+fi
+
+# gdoc2 was the temporary name v2 was tested under, beside v1. `gdoc` is v2 now,
+# so the second name is removed rather than left to mean the same thing twice.
+if [ -L "$BIN_DIR/gdoc2" ]; then
+    rm "$BIN_DIR/gdoc2"
+    printf 'install: removed %s/gdoc2. gdoc is the Go binary now.\n' "$BIN_DIR"
+elif [ -e "$BIN_DIR/gdoc2" ]; then
+    warn "$BIN_DIR/gdoc2 exists and is not a link to this install. Left alone."
 fi
 
 case ":$PATH:" in
@@ -67,7 +95,7 @@ case ":$PATH:" in
     *)
         printf 'install: %s is not on your PATH. Add it with:\n' "$BIN_DIR" >&2
         printf '  echo '"'"'export PATH="$HOME/.local/bin:$PATH"'"'"' >> ~/.zshrc\n' >&2
-        printf 'install: until then, call it as %s/bin/gdoc\n' "$VENV" >&2
+        printf 'install: until then, call it as %s\n' "$GO_BIN" >&2
         ;;
 esac
 
@@ -157,7 +185,8 @@ state=""
 printf '\ngdoc installed\n\n'
 printf '  source   %s\n' "$REPO"
 printf '  version  %s on %s%s\n' "$commit" "$branch" "$state"
-printf '  cli      %s\n' "$VENV/bin/gdoc"
+printf '  gdoc     %s (v2, the Go binary)\n' "$GO_BIN"
+printf '  v1 cli   %s (what the v1 skills call)\n' "$VENV/bin/gdoc"
 printf '\n  skills (linked, so edits are live with no reinstall)\n'
 for skill in "${SKILLS[@]}"; do
     printf '    %-12s -> %s\n' "$skill" "$(readlink "$SKILLS_DIR/$skill")"

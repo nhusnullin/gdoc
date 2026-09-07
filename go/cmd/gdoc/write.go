@@ -1,0 +1,477 @@
+// The four write commands, and the arguments they take.
+//
+// They are the read commands with one thing added: something leaves the
+// machine. So the shape is the same, and two rules are added to it. Every write
+// into a document is a suggestion, which the guard holds by refusing a
+// batchUpdate on a handed-in id whose body does not say SUGGEST. And every
+// write is read back through another route before the envelope calls it
+// verified, because a status code is Google agreeing with itself.
+//
+// Nothing here decides what to write. The body of a reply, the words of a
+// proposal and the reason for it arrive written, in a file the skill wrote.
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+
+	"gdoc/internal/docs"
+	"gdoc/internal/emit"
+	"gdoc/internal/frontmatter"
+	"gdoc/internal/guard"
+	"gdoc/internal/probe"
+	"gdoc/internal/propose"
+	"gdoc/internal/reply"
+	"gdoc/internal/withdraw"
+)
+
+// probeData is what `gdoc probe` prints, and what rides inside a propose run.
+// The report's own warnings are hoisted onto the envelope instead, where every
+// other warning in this binary lives.
+type probeData struct {
+	Enrolled        bool     `json:"enrolled"`
+	ProbeDocumentID string   `json:"probe_document_id,omitempty"`
+	Trashed         bool     `json:"trashed"`
+	SuggestionIDs   []string `json:"suggestion_ids,omitempty"`
+}
+
+func probeReport(r probe.Report) probeData {
+	return probeData{
+		Enrolled:        r.Enrolled,
+		ProbeDocumentID: r.ProbeDocumentID,
+		Trashed:         r.Trashed,
+		SuggestionIDs:   r.SuggestionIDs,
+	}
+}
+
+// openFolder is open's twin for a command whose reach is a folder to create in
+// rather than a document to read. The policy has one door open, and it is the
+// create: the probe document is learned from the answer, never handed in.
+func openFolder(target string) (string, session, error) {
+	id, err := folderID(target)
+	if err != nil {
+		return "", nil, err
+	}
+	p := guard.NewPolicy()
+	p.AllowCreateIn(id)
+	s, err := openSession(p)
+	if err != nil {
+		return "", nil, err
+	}
+	return id, s, nil
+}
+
+// required reads a flag the command cannot run without, naming it when it is
+// missing. A command that guessed a default here would write somewhere nobody
+// pointed it at.
+func required(a *args, name string) (string, error) {
+	if !a.has(name) {
+		return "", fmt.Errorf("this command needs %s", name)
+	}
+	return a.flags[name], nil
+}
+
+func cmdProbe(raw []string) emit.Result {
+	a, err := parseArgsN(raw, flagSet{"--folder": true}, 0)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	folder, err := required(a, "--folder")
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	id, s, err := openFolder(folder)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	report, err := probe.Run(context.Background(), s, id)
+	warns := append(append([]string{}, s.Warnings()...), report.Warnings...)
+	if err != nil {
+		// The report goes out beside the error: a create that succeeded and a
+		// step that then failed is exactly the run where the document id is
+		// worth most, because somebody may have to go and look at it.
+		return emit.Result{OK: false, Error: err.Error(), Data: probeReport(report), Warnings: warns}
+	}
+	return emit.Result{OK: true, Data: probeReport(report), Warnings: warns}
+}
+
+// replyData is what `gdoc reply` prints. Verified is the read-back rather than
+// the status code: Drive answering 200 is Drive agreeing with itself.
+type replyData struct {
+	DocumentID string `json:"document_id"`
+	CommentID  string `json:"comment_id"`
+	ReplyID    string `json:"reply_id,omitempty"`
+	Created    string `json:"created,omitempty"`
+	Verified   bool   `json:"verified"`
+}
+
+func cmdReply(raw []string) emit.Result {
+	a, err := parseArgsN(raw, flagSet{"--body-file": true}, 2)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	path, err := required(a, "--body-file")
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	commentID := a.at(1)
+	if commentID == "" {
+		return emit.Result{OK: false, Error: "this command needs the comment id of the thread to reply in"}
+	}
+	body, err := readBody(path)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	// Before the session, and so before anything reaches Drive: a body Docs
+	// would render literally is a mistake in the call, not something a write
+	// could fix.
+	if err := reply.Check(body); err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	r, err := open(a.target())
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	res, err := reply.Post(context.Background(), r.session, r.id, commentID, body)
+	data := replyData{
+		DocumentID: r.id,
+		CommentID:  commentID,
+		ReplyID:    res.ReplyID,
+		Created:    res.Created,
+		Verified:   res.Verified,
+	}
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+	}
+	return emit.Result{OK: true, Data: data, Warnings: r.warnings(res.Warnings...)}
+}
+
+// readBody reads the reply body out of the file the skill wrote.
+//
+// The trailing newline a text file ends with is not part of what was said, and
+// it is dropped: the read-back compares the words Drive stored against the
+// words that were sent, and a newline Drive trimmed would report a reply that
+// is plainly in the thread as unverified.
+func readBody(path string) (string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("the reply body file could not be read: %w", err)
+	}
+	return strings.TrimRight(string(raw), " \t\r\n"), nil
+}
+
+// proposalReport is one proposal as the envelope carries it. Sent is the fact
+// the skill reads first: a run stopped by the probe reports every proposal, and
+// each one says it never left the machine.
+type proposalReport struct {
+	Quoted             string         `json:"quoted"`
+	Replacement        string         `json:"replacement"`
+	Sent               bool           `json:"sent"`
+	SuggestionIDs      []string       `json:"suggestion_ids,omitempty"`
+	CommentID          string         `json:"comment_id,omitempty"`
+	CommentUpdateState string         `json:"comment_update_state,omitempty"`
+	Verified           bool           `json:"verified"`
+	Checks             propose.Checks `json:"checks"`
+}
+
+// proposeData is what `gdoc propose` prints.
+type proposeData struct {
+	DocumentID   string           `json:"document_id"`
+	Tabs         int              `json:"tabs"`
+	MultiTab     bool             `json:"multi_tab"`
+	Probe        *probeData       `json:"probe,omitempty"`
+	Proposals    []proposalReport `json:"proposals"`
+	FilesChanged []string         `json:"files_changed,omitempty"`
+}
+
+func cmdPropose(raw []string) emit.Result {
+	a, err := parseArgs(raw, flagSet{"--from": true, "--folder": true, "--md": true})
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	from, err := required(a, "--from")
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	folder, err := required(a, "--folder")
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	proposals, err := readProposals(from)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	docID, err := documentID(a.target())
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	probeFolder, err := folderID(folder)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	// The note is checked before the session is opened. A note paired with
+	// another document would be handed this document's provenance, and
+	// provenance is the permission withdraw reads.
+	note, err := pairedNote(a, docID)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+
+	// One policy, two doors: the document at LevelSuggest, and the probe's
+	// folder as the one place a create may land. The probe document itself is
+	// learned from the create the guard carried.
+	p := guard.NewPolicy()
+	p.AllowFile(docID, guard.LevelSuggest)
+	p.AllowCreateIn(probeFolder)
+	s, err := openSession(p)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	r := &reach{id: docID, session: s}
+	return runPropose(r, probeFolder, proposals, note)
+}
+
+// runPropose is the run itself: read, probe, then one proposal at a time.
+func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note *notePath) emit.Result {
+	ctx := context.Background()
+	var warns []string
+
+	d, err := docs.Fetch(ctx, r.session, r.id)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+	}
+	data := proposeData{
+		DocumentID: r.id,
+		Tabs:       len(d.Tabs),
+		MultiTab:   d.MultiTab(),
+		Proposals:  notSent(proposals),
+	}
+	if d.MultiTab() {
+		// A proposal names one range, and a range means nothing without saying
+		// which tab it is in. Nothing is sent, the probe included.
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(),
+			Error: fmt.Sprintf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))}
+	}
+
+	report, err := probe.Run(ctx, r.session, probeFolder)
+	shown := probeReport(report)
+	data.Probe = &shown
+	warns = append(warns, report.Warnings...)
+	if err != nil {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+			Error: fmt.Sprintf("the capability probe could not be run, so whether SUGGEST is honoured today is unknown and nothing was proposed: %v", err)}
+	}
+	if !report.Enrolled {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+			Error: "the probe document came back with the suggested word as plain text, so SUGGEST is not honoured for this project today and nothing was proposed"}
+	}
+
+	// One proposal at a time, each after its own fresh read, because the first
+	// one moves the ground under the second. The run stops at the first one
+	// that cannot be sent, and everything already sent is still reported.
+	results := make([]propose.Result, 0, len(proposals))
+	data.Proposals = data.Proposals[:0]
+	for _, one := range proposals {
+		res, err := propose.Apply(ctx, r.session, r.id, one)
+		if err != nil {
+			data.FilesChanged, warns = record(note, results, warns)
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
+		}
+		results = append(results, res)
+		data.Proposals = append(data.Proposals, sent(res))
+		warns = append(warns, about(one.Quoted, res.Warnings)...)
+	}
+	data.FilesChanged, warns = record(note, results, warns)
+	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
+}
+
+// notSent is every proposal as it stands before anything has left the machine.
+func notSent(proposals []propose.Proposal) []proposalReport {
+	out := make([]proposalReport, 0, len(proposals))
+	for _, p := range proposals {
+		out = append(out, proposalReport{Quoted: p.Quoted, Replacement: p.Replacement})
+	}
+	return out
+}
+
+// sent is one applied proposal as the envelope carries it.
+func sent(r propose.Result) proposalReport {
+	return proposalReport{
+		Quoted:             r.Quoted,
+		Replacement:        r.Replacement,
+		Sent:               true,
+		SuggestionIDs:      r.SuggestionIDs,
+		CommentID:          r.CommentID,
+		CommentUpdateState: r.CommentUpdateState,
+		Verified:           r.Verified,
+		Checks:             r.Checks,
+	}
+}
+
+// about names which proposal a warning belongs to. The envelope carries one
+// list, and a run with two proposals in it would otherwise report a route that
+// did not hold without saying which change it was about.
+func about(quoted string, warns []string) []string {
+	out := make([]string, 0, len(warns))
+	for _, w := range warns {
+		out = append(out, fmt.Sprintf("proposal %q: %s", quoted, w))
+	}
+	return out
+}
+
+// record writes the provenance of everything that landed, and says which file
+// changed. A proposal whose batch was accepted is remembered whether or not the
+// read-backs held: it is in the document either way, and a proposal gdoc has
+// forgotten is one it will refuse to withdraw.
+func record(note *notePath, results []propose.Result, warns []string) ([]string, []string) {
+	if note == nil || len(results) == 0 {
+		return nil, warns
+	}
+	out, err := propose.Record(note.src, results, now())
+	if err != nil {
+		return nil, append(warns, fmt.Sprintf(
+			"the proposals were written into the document and %s could not be updated to record them, so gdoc cannot withdraw them later: %v", note.path, err))
+	}
+	if err := writeFile(note.path, out); err != nil {
+		return nil, append(warns, fmt.Sprintf(
+			"the proposals were written into the document and %s could not be written, so gdoc cannot withdraw them later: %v", note.path, err))
+	}
+	return []string{note.path}, warns
+}
+
+// notePath is the paired note: where it is, what it holds, and the bytes it
+// held when it was read. The bytes are kept because the write is byte
+// preserving, and rereading the file would be a second answer to a question
+// already asked.
+type notePath struct {
+	path  string
+	src   []byte
+	block *frontmatter.Block
+}
+
+// pairedNote reads the note --md named and checks it belongs to this document.
+// A command given no --md has no note, which is not an error: propose without
+// one still writes the suggestion, and only the memory of it is lost.
+func pairedNote(a *args, docID string) (*notePath, error) {
+	if !a.has("--md") {
+		return nil, nil
+	}
+	return readNote(a.flags["--md"], docID)
+}
+
+func readNote(path, docID string) (*notePath, error) {
+	src, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("the markdown file could not be read: %w", err)
+	}
+	block, err := frontmatter.Read(src)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, fmt.Errorf("%s carries no gdoc: front matter, so it is not paired with a document", path)
+	}
+	if block.DocumentID != docID {
+		return nil, fmt.Errorf("%s is paired with document %s, and this run is of %s", path, block.DocumentID, docID)
+	}
+	return &notePath{path: path, src: src, block: block}, nil
+}
+
+// readProposals reads the list the skill wrote. An empty list is refused rather
+// than run: a probe document would be created and trashed for a run with
+// nothing to propose.
+func readProposals(path string) ([]propose.Proposal, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("the proposals file could not be read: %w", err)
+	}
+	var out []propose.Proposal
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("%s is not a list of proposals: %w", path, err)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)
+	}
+	return out, nil
+}
+
+// withdrawData is what `gdoc withdraw` prints.
+type withdrawData struct {
+	DocumentID           string   `json:"document_id"`
+	SuggestionID         string   `json:"suggestion_id"`
+	DeletedSuggestionIDs []string `json:"deleted_suggestion_ids,omitempty"`
+	Verified             bool     `json:"verified"`
+	FilesChanged         []string `json:"files_changed,omitempty"`
+}
+
+func cmdWithdraw(raw []string) emit.Result {
+	a, err := parseArgsN(raw, flagSet{"--md": true}, 2)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	suggestionID := a.at(1)
+	if suggestionID == "" {
+		return emit.Result{OK: false, Error: "this command needs the id of the suggestion to withdraw"}
+	}
+	// The note is not optional here, and the message says why: it is the only
+	// record of which suggestions are gdoc's own, and gdoc retracts nothing
+	// else.
+	if !a.has("--md") {
+		return emit.Result{OK: false,
+			Error: "this command needs --md: the note's proposals are the only record of which suggestions gdoc wrote, and gdoc withdraws only those"}
+	}
+	docID, err := documentID(a.target())
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	note, err := readNote(a.flags["--md"], docID)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	if !withdraw.Mine(note.block, suggestionID) {
+		return emit.Result{OK: false, Error: fmt.Sprintf(
+			"%s does not record %q as one of gdoc's own proposals, and gdoc withdraws only what it proposed", note.path, suggestionID)}
+	}
+	r, err := open(a.target())
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	res, err := withdraw.Run(context.Background(), r.session, r.id, suggestionID, note.block)
+	data := withdrawData{
+		DocumentID:           r.id,
+		SuggestionID:         suggestionID,
+		DeletedSuggestionIDs: res.DeletedSuggestionIDs,
+		Verified:             res.Verified,
+	}
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+	}
+	warns := res.Warnings
+	if res.Verified {
+		// The entry leaves the note only when the suggestion has provably left
+		// the document. Forgetting it while it is still pending would leave
+		// gdoc refusing to withdraw its own work.
+		changed, err := forget(note, suggestionID)
+		if err != nil {
+			warns = append(warns, err.Error())
+		} else {
+			data.FilesChanged = changed
+		}
+	}
+	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
+}
+
+// forget takes the withdrawn proposal out of the note.
+func forget(note *notePath, suggestionID string) ([]string, error) {
+	out, err := frontmatter.Write(note.src, withdraw.Forget(note.block, suggestionID))
+	if err != nil {
+		return nil, fmt.Errorf("the suggestion was withdrawn and %s still records it: %v", note.path, err)
+	}
+	if err := writeFile(note.path, out); err != nil {
+		return nil, fmt.Errorf("the suggestion was withdrawn and %s could not be written, so it still records it: %v", note.path, err)
+	}
+	return []string{note.path}, nil
+}

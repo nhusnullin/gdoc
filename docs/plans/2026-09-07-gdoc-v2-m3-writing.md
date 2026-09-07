@@ -298,13 +298,22 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Argument parsing is strict, as before. The folder argument accepts a Drive folder URL or a bare id (the folder half of v1's `docid.py`, added to `documentID`'s file).
 - `usage` becomes `Commands: auth status, auth login, read, comments, suggestions, probe, reply, propose, withdraw`.
 
-- [ ] write the failing command tests over the stubbed session and fixtures: each command prints exactly one JSON object; `probe` reports the fixture's verdict; `reply` with a markdown body fails before any request and names the offending text; `propose` with a not-enrolled probe sends nothing and fails naming it; `propose --md` records provenance for an accepted-but-unverified proposal and leaves the rest of the note byte-identical; `propose --md` on a note whose `document_id` differs fails before any write; `withdraw` without `--md` fails naming it; the unknown-command error lists the nine commands
-- [ ] run the tests and watch them fail
-- [ ] implement `write.go`, wire `dispatch`
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`: green
-- [ ] update `install.sh`: after the v1 venv step it keeps, run `make build` and link `~/.local/bin/gdoc` to `bin/gdoc` (replacing the link to the venv binary), remove a `~/.local/bin/gdoc2` link when one exists, and print which binary `gdoc` now is; it stays safe to re-run. v1's two skills are untouched: they name the venv binary by its full path
-- [ ] run `./install.sh` on this machine and confirm `gdoc auth status` prints v2's envelope and `gdoc2` is gone from PATH
-- [ ] commit: `feat(v2): probe, reply, propose and withdraw on the envelope; gdoc on PATH is v2`
+- [x] write the failing command tests over the stubbed session and fixtures: each command prints exactly one JSON object; `probe` reports the fixture's verdict; `reply` with a markdown body fails before any request and names the offending text; `propose` with a not-enrolled probe sends nothing and fails naming it; `propose --md` records provenance for an accepted-but-unverified proposal and leaves the rest of the note byte-identical; `propose --md` on a note whose `document_id` differs fails before any write; `withdraw` without `--md` fails naming it; the unknown-command error lists the nine commands
+- [x] run the tests and watch them fail
+- [x] implement `write.go`, wire `dispatch`
+- [x] run the full suite with `-race`, gofmt, vet, `make build`: green
+- [x] update `install.sh`: after the v1 venv step it keeps, run `make build` and link `~/.local/bin/gdoc` to `bin/gdoc` (replacing the link to the venv binary), remove a `~/.local/bin/gdoc2` link when one exists, and print which binary `gdoc` now is; it stays safe to re-run. v1's two skills are untouched: they name the venv binary by its full path
+- [x] run `./install.sh` on this machine and confirm `gdoc auth status` prints v2's envelope and `gdoc2` is gone from PATH
+- [x] commit: `feat(v2): probe, reply, propose and withdraw on the envelope; gdoc on PATH is v2`
+
+**Discovered while implementing:**
+
+- ➕ `parseArgsN` beside `parseArgs`, and `args.positional` in place of `args.target`. `probe` takes no document and `reply` and `withdraw` take two words, so the count is a parameter. It is exact in both directions: one word too many is refused because a command that ignores what it did not understand tells the caller it did something it did not, and one too few is refused because the missing word is what the command is about.
+- ➕ `session` gains `PostJSON` and `PatchJSON`. One interface for every command, so a stub in `cmd/gdoc` is one type. The read commands' fake refuses both verbs by name, so a read command that grew a write fails there.
+- ➕ `propose` reads the document once before the probe. The envelope reports `tabs` and `multi_tab`, and a multi-tab document then stops the run before a probe document is created rather than after: "nothing is sent" includes the throwaway.
+- ➕ `readBody` trims the trailing newline a text file ends with. The read-back compares the words Drive stored against the words that were sent, and a newline Drive trimmed would report a reply that is plainly in the thread as unverified.
+- ➕ A per-proposal warning is prefixed with the quoted words. The envelope carries one warning list, so a run with two proposals would otherwise name a route that did not hold without saying which change it was about.
+- ➕ `install.sh` builds the Go binary itself. Without `go` on PATH it uses an existing `bin/gdoc` with a warning, and fails only when there is neither.
 
 ---
 
