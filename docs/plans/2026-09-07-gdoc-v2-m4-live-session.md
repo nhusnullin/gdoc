@@ -209,13 +209,24 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Files:**
 - Modify: whatever the checks below break.
 
-- [ ] verify PLAN.md M4's four items are covered: continuity across polls (the cursor from each answer feeds the next, Task 1 and 2 tests), partial-read behaviour (a failed poll is `ok: false` and the skill says so and does not report clean, Task 2 and 3), colleague `ai!` (Task 3's receipt rule), clean cancellation (Task 2's interrupt)
-- [ ] verify the binary kept no state: grep `internal/comments/wait.go` and `cmd/gdoc/read.go` for any write to disk or to the config dir; there must be none
-- [ ] verify no judgement leaked into Go: grep `wait.go` and the `comments` command for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
-- [ ] verify the boundary test still passes and its allowlists did not change
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
-- [ ] verify coverage: every exported function under `go/internal/` has a test, `comments` and `cmd/gdoc` at or above 80%
-- [ ] commit any fixes this task made
+- [x] verify PLAN.md M4's four items are covered: continuity across polls (the cursor from each answer feeds the next, Task 1 and 2 tests), partial-read behaviour (a failed poll is `ok: false` and the skill says so and does not report clean, Task 2 and 3), colleague `ai!` (Task 3's receipt rule), clean cancellation (Task 2's interrupt)
+- [x] verify the binary kept no state: grep `internal/comments/wait.go` and `cmd/gdoc/read.go` for any write to disk or to the config dir; there must be none
+- [x] verify no judgement leaked into Go: grep `wait.go` and the `comments` command for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
+- [x] verify the boundary test still passes and its allowlists did not change
+- [x] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
+- [x] verify coverage: every exported function under `go/internal/` has a test, `comments` and `cmd/gdoc` at or above 80%
+- [x] commit any fixes this task made
+
+**What the six checks found.**
+
+- **The four M4 items.** Continuity: `TestWaitReturnsTheFirstWindowWithActivityAndAdvancesTheCursor` and `TestWaitAtItsDeadlineIsEmptyWithTheCursorItWasGiven` in `internal/comments`, with `TestAWaitEndsOnTheFirstWindowWithNewsInIt` on the envelope, so the cursor an answer carries is the one the next call is given whether or not the window had news. Partial read: `TestWaitCarriesAFailedPollOutWithThePollsSoFar` and `TestAFailedPollEndsTheWaitAndSaysHowManyItMade`, plus the skill's rule to print the error and not report clean. Colleague `ai!`: `skills/gdoc-review/SKILL.md`, "Name a colleague who asked". Cancellation: five tests, `TestAnInterruptEndsTheWaitAsAnAnswer` through `TestAnInterruptedWaitIsAnAnswerAndNotAFailure`.
+- **No state.** The only disk write anywhere in `read.go` is `recordSnapshot`, which has exactly one caller, `suggestions --md`. `cmdComments` cannot reach it, and `wait.go` opens no file at all.
+- **No judgement.** Every field on `WaitOptions` and `Waited` is a duration, a count, a list or a flag. The one grep hit outside a comment is `read.go:218`, the error naming a flag given twice, which is a refusal rather than a verdict.
+- **The boundary.** All ten tests pass and `go/boundary/boundary_test.go` has not been touched since M2, so neither allowlist moved. M4 added no import and no module.
+- **The suite.** `-race` green across 21 packages, gofmt and vet clean, `make build` and `make dist` build all three targets.
+- **Coverage.** `comments` 96.9%, `cmd/gdoc` 85.6%, both above the 80% bar.
+
+➕ One fix, in code M4 did not write. The exported-function audit over `go/internal/` found a single gap: `sentError.Unwrap` in `internal/gapi`, with no test. The writer packages ask `errors.As(err, &sent)`, which matches the type itself and never walks the chain, so an `Unwrap` returning nil would pass every existing test while silently breaking the first caller that asks `errors.Is` what a sent failure actually was. `TestASentErrorStillCarriesItsCause` closes it, and it was watched failing against a broken `Unwrap` before it was kept. `internal/gapi` is at 91.9%.
 
 ---
 
