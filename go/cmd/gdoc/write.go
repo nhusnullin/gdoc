@@ -508,11 +508,11 @@ func readProposals(path string) ([]propose.Proposal, error) {
 
 // withdrawData is what `gdoc withdraw` prints.
 type withdrawData struct {
-	DocumentID           string   `json:"document_id"`
-	SuggestionID         string   `json:"suggestion_id"`
-	DeletedSuggestionIDs []string `json:"deleted_suggestion_ids,omitempty"`
-	Verified             bool     `json:"verified"`
-	FilesChanged         []string `json:"files_changed,omitempty"`
+	DocumentID            string   `json:"document_id"`
+	SuggestionID          string   `json:"suggestion_id"`
+	RejectedSuggestionIDs []string `json:"rejected_suggestion_ids,omitempty"`
+	Verified              bool     `json:"verified"`
+	FilesChanged          []string `json:"files_changed,omitempty"`
 }
 
 func cmdWithdraw(raw []string) emit.Result {
@@ -543,16 +543,20 @@ func cmdWithdraw(raw []string) emit.Result {
 		return emit.Result{OK: false, Error: fmt.Sprintf(
 			"%s does not record %q as one of gdoc's own proposals, and gdoc withdraws only what it proposed", note.path, suggestionID)}
 	}
-	r, err := open(a.target())
+	// The grant is the note's answer handed to the guard: Mine said above that
+	// this id is gdoc's own, and AllowReject is how the guard learns it for
+	// this run. The guard refuses a rejectSuggestion naming any other id, so
+	// the permission read from the note is also the permission on the wire.
+	r, err := open(a.target(), func(p *guard.Policy) { p.AllowReject(suggestionID) })
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	res, err := withdraw.Run(context.Background(), r.session, r.id, suggestionID, note.block)
 	data := withdrawData{
-		DocumentID:           r.id,
-		SuggestionID:         suggestionID,
-		DeletedSuggestionIDs: res.DeletedSuggestionIDs,
-		Verified:             res.Verified,
+		DocumentID:            r.id,
+		SuggestionID:          suggestionID,
+		RejectedSuggestionIDs: res.RejectedSuggestionIDs,
+		Verified:              res.Verified,
 	}
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}

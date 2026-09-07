@@ -46,14 +46,40 @@ func (l Level) String() string {
 type Policy struct {
 	mu       sync.RWMutex
 	files    map[string]Level
-	createIn string   // folder id a create may target; empty means no creates
-	warnings []string // things the guard could not do quietly, for the command to report
+	createIn string          // folder id a create may target; empty means no creates
+	rejects  map[string]bool // suggestion ids a rejectSuggestion may name; empty means none
+	warnings []string        // things the guard could not do quietly, for the command to report
 }
 
 // NewPolicy returns a policy that refuses everything. A command opens it one id
 // at a time, so a command that forgot to say which document it is for gets a
 // refusal rather than the whole of Drive.
-func NewPolicy() *Policy { return &Policy{files: map[string]Level{}} }
+func NewPolicy() *Policy { return &Policy{files: map[string]Level{}, rejects: map[string]bool{}} }
+
+// AllowReject names one suggestion a rejectSuggestion request may act on.
+//
+// Nail's decision, 2026-09-07: gdoc may reject a suggestion the note records as
+// its own, because that is the only request that retracts a whole replace
+// proposal. The guard cannot tell whose a suggestion is, so the permission is
+// provenance, read from the note by the withdraw command, and this is how the
+// command hands it in for one run. It is one id, not the verb: acceptSuggestion
+// and deleteSuggestion stay refused whatever id they name, and a
+// rejectSuggestion naming any other id is refused too. Nothing else gdoc does
+// grants this, and the grant dies with the process.
+func (p *Policy) AllowReject(suggestionID string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if suggestionID != "" {
+		p.rejects[suggestionID] = true
+	}
+}
+
+// mayReject reports whether a rejectSuggestion may name this id.
+func (p *Policy) mayReject(suggestionID string) bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.rejects[suggestionID]
+}
 
 // AllowFile puts a handed-in id in the set at the level it was handed in at.
 func (p *Policy) AllowFile(id string, lvl Level) {
@@ -212,7 +238,7 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 	case method == "GET" && verb == "":
 		return checkQuery(u, docsReadParams)
 	case method == "POST" && verb == "batchUpdate":
-		if err := judgeRequests(body); err != nil {
+		if err := p.judgeRequests(body); err != nil {
 			return err
 		}
 		if lvl == LevelFull || isSuggestMode(body) {
@@ -630,16 +656,24 @@ func markValueRead(f *frame) {
 //
 // So the family is refused rather than the three names: a kind whose name
 // carries "suggestion" acts on one, and a fourth spelling of the same idea is
-// refused before anybody has read about it. Note what that does not touch.
-// Withdrawing gdoc's own proposal is deleteContentRange in suggest mode, which
-// acts on a range and names no suggestion, and every ordinary request kind a
-// later milestone needs carries unchanged.
+// refused before anybody has read about it. Every ordinary request kind a later
+// milestone needs carries unchanged.
+//
+// The one door in that wall is AllowReject, Nail's decision of 2026-09-07. A
+// rejectSuggestion is carried when it is spelled exactly, carries exactly one
+// field, suggestionId spelled exactly, and that id is one the policy was
+// granted for this run. Exactly, because Google's proto-JSON is case-sensitive
+// while encoding/json is not, and the guard must never be broader than the
+// server on the one field that permits a write: isSuggestMode holds the same
+// rule on writeMode. A second field beside the id is refused because nobody
+// here has read what it does. Everything else in the family, the two other
+// verbs included, is refused whatever id it names.
 //
 // A body this cannot read is refused, at both levels. That covers a body past
 // the transport's peek, which arrives here truncated: a batchUpdate longer than
 // maxPeek is refused rather than carried unread, and a milestone that needs a
 // bigger one raises the cap on purpose.
-func judgeRequests(body []byte) error {
+func (p *Policy) judgeRequests(body []byte) error {
 	if err := hasDuplicateKeys(body); err != nil {
 		return err
 	}
@@ -676,11 +710,42 @@ func judgeRequests(body []byte) error {
 		if len(req) != 1 {
 			return refuse("a request in this batchUpdate names %d kinds, and a request names one", len(req))
 		}
-		for kind := range req {
+		for kind, raw := range req {
+			if kind == "rejectSuggestion" {
+				if err := p.checkGrantedReject(raw); err != nil {
+					return err
+				}
+				continue
+			}
 			if strings.Contains(strings.ToLower(kind), "suggestion") {
 				return refuse("%q acts on a suggestion, and gdoc never accepts, rejects or deletes anyone else's", kind)
 			}
 		}
+	}
+	return nil
+}
+
+// checkGrantedReject judges the body of one rejectSuggestion request against
+// the run's grant. The shape is exact: one key, suggestionId, a string, and an
+// id AllowReject named. Read judgeRequests for why exact.
+func (p *Policy) checkGrantedReject(raw json.RawMessage) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return refuse("the rejectSuggestion in this batchUpdate cannot be read: %v", err)
+	}
+	if len(fields) != 1 {
+		return refuse("a rejectSuggestion carries exactly one field, suggestionId, and this one carries %d", len(fields))
+	}
+	idRaw, ok := fields["suggestionId"]
+	if !ok {
+		return refuse("a rejectSuggestion names the suggestion in suggestionId, spelled exactly, and this one does not")
+	}
+	var id string
+	if err := json.Unmarshal(idRaw, &id); err != nil || id == "" {
+		return refuse("the suggestionId of a rejectSuggestion is one non-empty string")
+	}
+	if !p.mayReject(id) {
+		return refuse("rejectSuggestion names %q, which is not one of gdoc's own proposals in this run, and gdoc never accepts, rejects or deletes anyone else's", id)
 	}
 	return nil
 }

@@ -678,10 +678,13 @@ lost answer. The skill reads `verified` and decides what to say.
 **`withdraw`** retracts one of gdoc's own pending proposals. It needs `--md`,
 and the reason is the whole rule: the note's `proposals` list is the only record
 of which suggestions gdoc wrote, and gdoc withdraws only those. An id that is
-not in there is refused. The suggestion is gone only when the answer names it in
-`deletedSuggestionIds` and a fresh read shows no run carrying it; only then does
-the entry leave the note. The 🤖 comment stays where it is, because deleting a
-comment is a write the guard does not carry.
+not in there is refused. The write is a `rejectSuggestion` naming that id, and
+the guard carries it only because the command granted exactly that id for this
+run: gdoc still never accepts, rejects or deletes anyone else's suggestion. The
+suggestion is gone only when the answer names it in `rejectedSuggestionIds` and
+a fresh read shows no run carrying it on either side; only then does the entry
+leave the note. The 🤖 comment stays where it is, because deleting a comment is
+a write the guard does not carry.
 
 With `--md`, `propose` records what it wrote into the note's `gdoc:` block:
 the suggestion id, the comment id, the time and the words that were replaced.

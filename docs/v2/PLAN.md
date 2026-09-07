@@ -161,7 +161,7 @@ document, with cleanup on every failure path. `reply` with the 🤖 prefix and
 `commentUpdateState`. `propose` in SUGGEST mode: anchored 🤖 comment, read-back
 (absent under `PREVIEW_WITHOUT_SUGGESTIONS`, span reads as intended), and
 comment attachment proven through the docx export. Withdraw: only a proposal
-proven to be gdoc's own, confirmed by `deletedSuggestionIds` **and** a
+proven to be gdoc's own, confirmed by the answer naming the id **and** a
 read-back. Then the **non-live review skill**: marked comment in, hub-context
 answer or proposal out, verified on a real document end to end. **v2 becomes
 daily-usable here.** Acceptance: spec items 4 and 6.
@@ -176,8 +176,10 @@ read, finds the span by the words rather than an index, and reports `verified`
 as three read-backs: `suggestions_inline`, `preview_without_suggestions` and
 `docx_anchored`. Fewer than three is `ok: true` with `verified: false` and the
 route named, because the write happened. `withdraw` retracts only what the
-note's `proposals[]` records as gdoc's own, and only when `deletedSuggestionIds`
-and a fresh read agree it is gone. The review skill is rewritten over those
+note's `proposals[]` records as gdoc's own, through a `rejectSuggestion` the
+guard carries only for that granted id (Nail's decision, 2026-09-07, after the
+live write test showed a delete retracts half of a replace proposal), and only
+when `rejectedSuggestionIds` and a fresh read agree it is gone. The review skill is rewritten over those
 commands and does all the judging; the binary grew no field that decides
 anything. The five revmux findings on the M1 guard were fixed before any of it
 was written, and `PATCH` and `DELETE` on a comment left `commentWrites` because

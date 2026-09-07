@@ -1,7 +1,0 @@
-{
-  "documentId": "1WiThDrAw00000000000000000000000000000000",
-  "replies": [
-    {"deleteContentRange": {"deletedSuggestionIds": ["suggest.abc"]}}
-  ],
-  "writeControl": {"requiredRevisionId": "ALm37BXgone"}
-}

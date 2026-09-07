@@ -195,6 +195,15 @@ policy. Those are still principle 3's two doors, ported. Naming a folder to
 create in does not put that folder in the reachable set: it is a create target,
 not a third door.
 
+`AllowReject` is the same kind of thing as `AllowCreateIn`: a per-run grant
+naming one object, not a level and not a file. The guard refuses every
+`batchUpdate` request kind whose name carries "suggestion", and `AllowReject(id)`
+opens exactly one shape through that wall, a `rejectSuggestion` spelled exactly
+and carrying exactly `{"suggestionId": <that id>}`. `cmdWithdraw` seeds it from
+the note's `proposals[]`, which is the only record of what gdoc itself wrote.
+Nail's decision, 2026-09-07; read "A withdrawal is a `rejectSuggestion` on
+gdoc's own id" below for why a delete could not do the job.
+
 **Read this before trusting the level-1 write bar.** What keeps a handed-in
 document read-and-suggest only is `writeControl.writeMode == "SUGGEST"` in the
 request body, which is a field the client itself supplies.
@@ -961,38 +970,57 @@ the path and the block the pairing check read, and not the bytes it read them
 from: a copy held there would only be the stale bytes somebody later wrote
 back.
 
-**A withdrawn suggestion leaves the note only once it has provably left the
-document.** It is gone only when `deletedSuggestionIds` names it **and** a fresh
-read shows no run carrying it, and only then does the entry leave the note.
-Forgetting it while it is still pending would leave gdoc refusing to withdraw
-its own work. The price is a delete Docs accepted whose answer could not be
-read: usually no ids came back, so `verified` stays false, the entry stays in
-the note, and a retry is refused by `Span` rather than by the note. The run says
-so, and says to take the entry out by hand once the suggestion is gone.
-Relaxing the two facts to one on that path is a decision for Nail, not a
-refactor.
+**A withdrawal is a `rejectSuggestion` on gdoc's own id, and that is Nail's
+decision of 2026-09-07.** It was a `deleteContentRange` in SUGGEST mode over the
+insertion until the first live write test ran, after the revmux review had
+passed. A `propose` is a replace, one suggestion id over a suggested deletion
+and a suggested insertion, and that delete retracts only the insertion half:
+the new words go, Docs answers `updatedSummarySuggestionIds` rather than
+`deletedSuggestionIds`, and the quoted words stay suggested-deleted under the
+same id. A second delete over them is a no-op, and one delete over both halves
+marks the new words inserted and deleted at once. The 2026-08-29 measurement
+that a delete "comes back with `deletedSuggestionIds`" was on a pure insertion.
+`rejectSuggestion` takes the whole thing back in one request, in SUGGEST mode:
+the document reads as it did before the proposal, the answer names the id in
+`suggestionResponses[].rejectedSuggestionIds`, and the 🤖 comment survives,
+still anchored by id, so the skill can reply into it. The five measurements are
+in `docs/v2/DECISIONS.md` under that date.
 
-**Measured 2026-09-07: on a replace proposal, that delete retracts half.** The
-first live write test showed it. Deleting the insertion half removes the new
-words and answers `updatedSummarySuggestionIds`, never `deletedSuggestionIds`,
-and the quoted words stay suggested-deleted under the same id. A second delete
-over them is a no-op, and one delete over both halves marks the new words as
-inserted and deleted at once. The 2026-08-29 measurement that a delete "comes
-back with `deletedSuggestionIds`" was on a pure insertion. The one request that
-retracts the whole suggestion is `rejectSuggestion`, and the guard refuses every
-request kind whose name carries "suggestion", by Nail's rule. So `withdraw`
-today reports `verified: false` on every replace proposal, the live write test
-fails on that step, and both are left that way on purpose: the entry in
-`docs/v2/DECISIONS.md` dated 2026-09-07 holds the measurements and the decision
-is Nail's. Do not make the live test pass by relaxing `withdraw`, and do not
-teach the guard `rejectSuggestion` without him. The 🤖 comment survives the
-half-retraction, so the skill can still reply into it.
+**The permission is provenance, and the guard holds it as a per-run grant.**
+The guard refuses every request kind whose name carries "suggestion", and that
+rule stands: gdoc never accepts, rejects or deletes anyone else's. The one door
+is `Policy.AllowReject(id)`, which `cmdWithdraw` seeds with the suggestion the
+note's `proposals[]` records as gdoc's own, after `Mine` has said so and before
+the session is built. The guard then carries a `rejectSuggestion` only when it
+is spelled exactly, carries exactly `{"suggestionId": <that id>}` and nothing
+beside it, and the id is the granted one. `acceptSuggestion` and
+`deleteSuggestion` stay refused whatever id they name, a `rejectSuggestion`
+naming another id is refused, and a second field beside the id is refused
+because nobody here has read what it does. `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`
+in `internal/guard` states all of it. The grant is one id and dies with the
+process. Nothing else gdoc does grants it, and widening it is Nail's decision.
+
+**A withdrawn suggestion leaves the note only once it has provably left the
+document.** It is gone only when `rejectedSuggestionIds` names it **and** a
+fresh read shows no run carrying it on either side, and only then does the
+entry leave the note. Either side, because a run still suggested-deleted under
+the id is half a proposal still pending, and it is the half the old delete used
+to leave behind: `withdraw` takes those back too, so a document the old
+withdraw half-retracted is repaired by running it again. A reject names no
+range, so a document with more than one tab is withdrawn from like any other.
+Forgetting the entry while the suggestion is still pending would leave gdoc
+refusing to withdraw its own work. The price is a reject Docs accepted whose
+answer could not be read: usually no ids came back, so `verified` stays false,
+the entry stays in the note, and a retry is refused by the pending check rather
+than by the note. The run says so, and says to take the entry out by hand once
+the suggestion is gone. Relaxing the two facts to one on that path is a
+decision for Nail, not a refactor.
 
 **"Usually" is the whole word there, and neither writer gates on it.** Valid
 JSON of the wrong shape is the one failure that reaches the caller with fields
 in hand, because `encoding/json` saves the first type error and keeps decoding.
 What the server really did send is kept: `withdraw` keeps the
-`deletedSuggestionIds` it was given, `propose` keeps the comment id, which is
+`rejectedSuggestionIds` it was given, `propose` keeps the comment id, which is
 the provenance `withdraw` later needs, and `reply` keeps the reply id and reads
 the thread back on it rather than saying the reply could not be looked for. So both warnings are built from what
 was decoded rather than from the path being taken. A withdrawal whose two facts

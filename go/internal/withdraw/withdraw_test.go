@@ -140,7 +140,7 @@ func note(ids ...string) *frontmatter.Block {
 // gdoc has of its own work, and a suggestion missing from it is somebody
 // else's. The refusal has to land before the read, not after it.
 func TestRunRefusesASuggestionTheNoteDoesNotName(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 
 	_, err := Run(context.Background(), f, testDocID, otherSuggestion, note(testSuggestion))
 
@@ -156,7 +156,7 @@ func TestRunRefusesASuggestionTheNoteDoesNotName(t *testing.T) {
 }
 
 func TestRunRefusesWhenTheNoteIsMissing(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 
 	_, err := Run(context.Background(), f, testDocID, testSuggestion, nil)
 
@@ -168,8 +168,8 @@ func TestRunRefusesWhenTheNoteIsMissing(t *testing.T) {
 	}
 }
 
-func TestRunDeletesTheSuggestedSpanAndVerifiesItIsGone(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+func TestRunRejectsTheSuggestionAndVerifiesItIsGone(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
@@ -182,19 +182,20 @@ func TestRunDeletesTheSuggestedSpanAndVerifiesItIsGone(t *testing.T) {
 	if res.SuggestionID != testSuggestion {
 		t.Errorf("SuggestionID = %q", res.SuggestionID)
 	}
-	if len(res.DeletedSuggestionIDs) != 1 || res.DeletedSuggestionIDs[0] != testSuggestion {
-		t.Errorf("DeletedSuggestionIDs = %v", res.DeletedSuggestionIDs)
+	if len(res.RejectedSuggestionIDs) != 1 || res.RejectedSuggestionIDs[0] != testSuggestion {
+		t.Errorf("RejectedSuggestionIDs = %v", res.RejectedSuggestionIDs)
 	}
 	if len(res.Warnings) != 0 {
 		t.Errorf("warnings = %v on a run where everything held", res.Warnings)
 	}
 }
 
-// TestRunSendsOneSuggestModeDeleteOverTheInsertion is what actually goes on the
-// wire. The span is the runs carrying the id, and the write mode is what keeps
-// the retraction itself a suggestion rather than an edit.
-func TestRunSendsOneSuggestModeDeleteOverTheInsertion(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+// TestRunSendsOneSuggestModeRejectNamingTheId is what actually goes on the
+// wire. The request is the exact shape the guard's grant opens: rejectSuggestion
+// carrying suggestionId and nothing beside it, and the write mode is what the
+// guard requires of every batchUpdate on a handed-in document.
+func TestRunSendsOneSuggestModeRejectNamingTheId(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 
 	if _, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -218,39 +219,23 @@ func TestRunSendsOneSuggestModeDeleteOverTheInsertion(t *testing.T) {
 	}
 	reqs, ok := body["requests"].([]any)
 	if !ok || len(reqs) != 1 {
-		t.Fatalf("requests = %v, want one deleteContentRange", body["requests"])
+		t.Fatalf("requests = %v, want one rejectSuggestion", body["requests"])
 	}
-	rng := reqs[0].(map[string]any)["deleteContentRange"].(map[string]any)["range"].(map[string]any)
-	if rng["startIndex"] != float64(26) || rng["endIndex"] != float64(51) {
-		t.Errorf("deleteContentRange range = %v, want the inserted span 26..51", rng)
+	req := reqs[0].(map[string]any)
+	rej, ok := req["rejectSuggestion"].(map[string]any)
+	if !ok || len(req) != 1 {
+		t.Fatalf("request = %v, want exactly one rejectSuggestion", req)
 	}
-}
-
-// TestRunJoinsTheRunsDocsCutTheInsertInto is the same hazard the read-back has:
-// Docs splits one insert into as many runs as it likes, and the span to delete
-// is all of them, not the first.
-func TestRunJoinsTheRunsDocsCutTheInsertInto(t *testing.T) {
-	f := script(t, "split.json", "gone.json", "deleted.json")
-
-	if _, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion)); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	var body map[string]any
-	if err := json.Unmarshal(f.posts()[0].body, &body); err != nil {
-		t.Fatal(err)
-	}
-	rng := body["requests"].([]any)[0].(map[string]any)["deleteContentRange"].(map[string]any)["range"].(map[string]any)
-	if rng["startIndex"] != float64(26) || rng["endIndex"] != float64(51) {
-		t.Errorf("range = %v, want the two runs joined into 26..51", rng)
+	if len(rej) != 1 || rej["suggestionId"] != testSuggestion {
+		t.Errorf("rejectSuggestion = %v, want exactly {\"suggestionId\":%q}", rej, testSuggestion)
 	}
 }
 
 // TestRunReadsTheDocumentItselfBeforeWriting is the rule the whole design
-// rests on: the index is computed from a read made a moment earlier, never
-// handed in from outside.
+// rests on: whether the suggestion is still pending is answered by a read made a
+// moment earlier, never assumed from the note.
 func TestRunReadsTheDocumentItselfBeforeWriting(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 
 	if _, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -270,34 +255,31 @@ func TestRunReadsTheDocumentItselfBeforeWriting(t *testing.T) {
 	}
 }
 
-// TestRunIsUnverifiedWhenTheAnswerNamesNoDeletedSuggestion is the first of the
-// two checks. A 200 that mentions no suggestion id is Docs having deleted text
-// without retracting anything, which is the shape of a silent direct edit.
-func TestRunIsUnverifiedWhenTheAnswerNamesNoDeletedSuggestion(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "silent.json")
+// TestRunTakesBackAProposalOnlyItsDeletionHalfStillCarries is the recovery
+// path for what the delete-based withdraw left behind before 2026-09-07: the
+// inserted words gone, the quoted words still suggested-deleted under the id.
+// Either side counts as pending, so the reject goes out and takes it back.
+func TestRunTakesBackAProposalOnlyItsDeletionHalfStillCarries(t *testing.T) {
+	f := script(t, "half.json", "gone.json", "rejected.json")
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.Verified {
-		t.Error("Verified = true on an answer that named no deleted suggestion")
+	if !res.Verified {
+		t.Errorf("Verified = false, warnings = %v", res.Warnings)
 	}
-	if len(res.Warnings) == 0 {
-		t.Fatal("no warning said why the withdrawal could not be confirmed")
-	}
-	if !strings.Contains(strings.Join(res.Warnings, " "), testSuggestion) {
-		t.Errorf("warnings = %v, and they should name the suggestion", res.Warnings)
+	if len(f.posts()) != 1 {
+		t.Errorf("writes = %d, want the one reject", len(f.posts()))
 	}
 }
 
-// TestRunReadsTheDeletedIdsFromAPerRequestReply is the same field one level
-// down. The shape is measured rather than documented, so both places are read:
-// reporting the withdrawal as unconfirmed because the id arrived nested would
-// send somebody looking for a suggestion that is already gone.
-func TestRunReadsTheDeletedIdsFromAPerRequestReply(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted-in-reply.json")
+// TestRunWithdrawsFromADocumentWithMoreThanOneTab: a reject names an id, not a
+// range, so the tab the suggestion sits in does not matter. The delete-based
+// withdraw refused these documents; this one has no reason to.
+func TestRunWithdrawsFromADocumentWithMoreThanOneTab(t *testing.T) {
+	f := script(t, "two-tabs.json", "gone.json", "rejected.json")
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
@@ -309,11 +291,37 @@ func TestRunReadsTheDeletedIdsFromAPerRequestReply(t *testing.T) {
 	}
 }
 
+// TestRunIsUnverifiedWhenTheAnswerNamesNoRejectedSuggestion is the first of the
+// two checks. A 200 that mentions no rejected id is Docs having done something
+// other than what was asked; updatedSummarySuggestionIds, which the half
+// retraction used to answer, is not it.
+func TestRunIsUnverifiedWhenTheAnswerNamesNoRejectedSuggestion(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "silent.json")
+
+	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Verified {
+		t.Error("Verified = true on an answer that named no rejected suggestion")
+	}
+	if len(res.RejectedSuggestionIDs) != 0 {
+		t.Errorf("RejectedSuggestionIDs = %v, and updatedSummarySuggestionIds is not a rejection", res.RejectedSuggestionIDs)
+	}
+	if len(res.Warnings) == 0 {
+		t.Fatal("no warning said why the withdrawal could not be confirmed")
+	}
+	if !strings.Contains(strings.Join(res.Warnings, " "), testSuggestion) {
+		t.Errorf("warnings = %v, and they should name the suggestion", res.Warnings)
+	}
+}
+
 // TestRunIsUnverifiedWhenTheReadBackStillCarriesTheId is the second check, and
 // the one the answer cannot give. The write agreeing with itself is not the
 // question; whether the suggestion is still in the document is.
 func TestRunIsUnverifiedWhenTheReadBackStillCarriesTheId(t *testing.T) {
-	f := script(t, "pending.json", "pending.json", "deleted.json")
+	f := script(t, "pending.json", "pending.json", "rejected.json")
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
@@ -328,11 +336,27 @@ func TestRunIsUnverifiedWhenTheReadBackStillCarriesTheId(t *testing.T) {
 	}
 }
 
+// TestRunIsUnverifiedWhenTheReadBackStillCarriesTheDeletionHalf is the same
+// check on the shape that made this package change: the words came out and the
+// suggested deletion stayed. Half gone is not gone.
+func TestRunIsUnverifiedWhenTheReadBackStillCarriesTheDeletionHalf(t *testing.T) {
+	f := script(t, "pending.json", "half.json", "rejected.json")
+
+	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Verified {
+		t.Error("Verified = true while the quoted words are still suggested-deleted under the id")
+	}
+}
+
 // TestRunReportsAReadBackItCouldNotMake is the same rule as everywhere else in
 // this milestone: after the write nothing fails, because the change has already
 // happened and a caller told the run failed is a caller that writes it again.
 func TestRunReportsAReadBackItCouldNotMake(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 	f.failAt[2] = errors.New("Drive said no")
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
@@ -343,100 +367,100 @@ func TestRunReportsAReadBackItCouldNotMake(t *testing.T) {
 	if res.Verified {
 		t.Error("Verified = true on a read-back that never came back")
 	}
-	if len(res.DeletedSuggestionIDs) != 1 {
-		t.Errorf("DeletedSuggestionIDs = %v, and the answer's ids are still a fact", res.DeletedSuggestionIDs)
+	if len(res.RejectedSuggestionIDs) != 1 {
+		t.Errorf("RejectedSuggestionIDs = %v, and the answer's ids are still a fact", res.RejectedSuggestionIDs)
 	}
 	if len(res.Warnings) == 0 {
 		t.Error("no warning said the read-back could not be made")
 	}
 }
 
-// TestRunReportsADeleteWhoseAnswerCouldNotBeRead is the difference between a
+// TestRunReportsARejectWhoseAnswerCouldNotBeRead is the difference between a
 // write that never left and a write Docs took. The session marks the second
-// kind, and reporting it as a failure would send the skill back to delete the
+// kind, and reporting it as a failure would send the skill back to reject the
 // same suggestion again, over a document that has already changed.
 //
 // Here nothing decoded, which is the usual shape of this path, so
-// deletedSuggestionIds carries nothing, Verified stays false and the note keeps
+// rejectedSuggestionIds carries nothing, Verified stays false and the note keeps
 // the entry. It is the answer for this answer rather than an invariant of the
 // path: the case below is the same failure over a body that did decode.
-func TestRunReportsADeleteWhoseAnswerCouldNotBeRead(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+func TestRunReportsARejectWhoseAnswerCouldNotBeRead(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
 	if err != nil {
-		t.Fatalf("a delete the server accepted was reported as never sent: %v", err)
+		t.Fatalf("a reject the server accepted was reported as never sent: %v", err)
 	}
 	if res.Verified {
-		t.Error("Verified = true on a delete whose answer was never read")
+		t.Error("Verified = true on a reject whose answer was never read")
 	}
 	if len(f.calls) != 3 {
 		t.Errorf("calls = %d, and the read-back still runs on a write that landed", len(f.calls))
 	}
 	joined := strings.Join(res.Warnings, " ")
 	if !strings.Contains(joined, "accepted by Docs") {
-		t.Errorf("warnings = %v, and one should say the delete was accepted", res.Warnings)
+		t.Errorf("warnings = %v, and one should say the reject was accepted", res.Warnings)
 	}
-	// The deletedSuggestionIds warning names a direct edit, and an answer
-	// nobody could read says nothing about one. Raising it here would report a
-	// second problem the server never showed.
-	if strings.Contains(joined, "deletedSuggestionIds") {
-		t.Errorf("warnings = %v, and none may read a direct edit out of an answer that was lost", res.Warnings)
+	// The rejectedSuggestionIds warning names an answer that did something
+	// else, and an answer nobody could read says nothing about one. Raising it
+	// here would report a second problem the server never showed.
+	if strings.Contains(joined, "rejectedSuggestionIds") {
+		t.Errorf("warnings = %v, and none may read a wrong answer out of an answer that was lost", res.Warnings)
 	}
 }
 
 // TestRunKeepsTheIdsDecodedFromAnAnswerThatFailed is the other half of the
 // path above: valid JSON of the wrong shape, where the list the server sent is
 // in hand even though the read failed. Those ids are the server's own word
-// about what it retracted, so throwing them away would report a withdrawal both
+// about what it rejected, so throwing them away would report a withdrawal both
 // facts confirm as unverified, and the warning would tell somebody to take an
 // entry out of the note that this run removes itself.
 func TestRunKeepsTheIdsDecodedFromAnAnswerThatFailed(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
 	if err != nil {
-		t.Fatalf("a delete the server accepted was reported as never sent: %v", err)
+		t.Fatalf("a reject the server accepted was reported as never sent: %v", err)
 	}
 	if !res.Verified {
 		t.Errorf("Verified = false, and both facts held: %+v", res)
 	}
 	joined := strings.Join(res.Warnings, " ")
 	if !strings.Contains(joined, "accepted by Docs") {
-		t.Errorf("warnings = %v, and one should say the delete was accepted", res.Warnings)
+		t.Errorf("warnings = %v, and one should say the reject was accepted", res.Warnings)
 	}
 	if strings.Contains(joined, "by hand") {
 		t.Errorf("warnings = %v, and none may say to take out an entry this run removes itself", res.Warnings)
 	}
 }
 
-// TestRunReadsADirectEditOutOfIdsThatDecodedOnAFailedAnswer is the third shape
-// of that path: the list decoded and it names somebody else's suggestion. The
-// warning is gated on the decoded list rather than on the path, the way propose
-// gates on a commentUpdateState it was given, so the alarm fires here. Asking
-// about the path instead threw away the one fact the server did send.
-func TestRunReadsADirectEditOutOfIdsThatDecodedOnAFailedAnswer(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted-other.json")
+// TestRunReadsAnotherSuggestionOutOfIdsThatDecodedOnAFailedAnswer is the third
+// shape of that path: the list decoded and it names somebody else's suggestion.
+// The warning is gated on the decoded list rather than on the path, the way
+// propose gates on a commentUpdateState it was given, so the alarm fires here.
+// Asking about the path instead threw away the one fact the server did send.
+func TestRunReadsAnotherSuggestionOutOfIdsThatDecodedOnAFailedAnswer(t *testing.T) {
+	f := script(t, "pending.json", "gone.json", "rejected-other.json")
 	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
 
 	res, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
 	if err != nil {
-		t.Fatalf("a delete the server accepted was reported as never sent: %v", err)
+		t.Fatalf("a reject the server accepted was reported as never sent: %v", err)
 	}
 	if res.Verified {
-		t.Error("Verified = true on an answer that retracted another suggestion")
+		t.Error("Verified = true on an answer that rejected another suggestion")
 	}
 	joined := strings.Join(res.Warnings, " ")
-	if !strings.Contains(joined, "deletedSuggestionIds") {
-		t.Errorf("warnings = %v, and one should name the list that retracted nothing of gdoc's", res.Warnings)
+	if !strings.Contains(joined, "rejectedSuggestionIds") {
+		t.Errorf("warnings = %v, and one should name the list that rejected nothing of gdoc's", res.Warnings)
 	}
 	if !strings.Contains(joined, "accepted by Docs") {
-		t.Errorf("warnings = %v, and one should say the delete was accepted", res.Warnings)
+		t.Errorf("warnings = %v, and one should say the reject was accepted", res.Warnings)
 	}
 }
 
@@ -448,7 +472,7 @@ type acceptedError struct{ error }
 func (acceptedError) Sent() bool { return true }
 
 func TestRunFailsWhenTheWriteDoesAndSendsNothingElse(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 	f.failAt[1] = errors.New("the guard refused it")
 
 	_, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
@@ -462,10 +486,10 @@ func TestRunFailsWhenTheWriteDoesAndSendsNothingElse(t *testing.T) {
 }
 
 // TestRunRefusesASuggestionTheDocumentDoesNotCarry is the note and the document
-// disagreeing. Deleting nothing would be reported as a withdrawal, and the
-// entry would leave the note with the suggestion still pending.
+// disagreeing. Rejecting nothing would be reported as a withdrawal, and the
+// entry would leave the note with nothing to show for it.
 func TestRunRefusesASuggestionTheDocumentDoesNotCarry(t *testing.T) {
-	f := script(t, "gone.json", "gone.json", "deleted.json")
+	f := script(t, "gone.json", "gone.json", "rejected.json")
 
 	_, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
 
@@ -480,40 +504,8 @@ func TestRunRefusesASuggestionTheDocumentDoesNotCarry(t *testing.T) {
 	}
 }
 
-// TestRunRefusesRunsThatAreNotOneSpan is the fail-closed direction. Deleting
-// from the first run to the last would take somebody else's words in between
-// with it, and those words are not gdoc's to touch.
-func TestRunRefusesRunsThatAreNotOneSpan(t *testing.T) {
-	f := script(t, "apart.json", "gone.json", "deleted.json")
-
-	_, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
-
-	if err == nil {
-		t.Fatal("two spans with other words between them were deleted as one")
-	}
-	if len(f.posts()) != 0 {
-		t.Error("a write went out over text the suggestion does not cover")
-	}
-}
-
-func TestRunRefusesADocumentWithMoreThanOneTab(t *testing.T) {
-	f := script(t, "two-tabs.json", "gone.json", "deleted.json")
-
-	_, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
-
-	if err == nil {
-		t.Fatal("a write was placed in a document with more than one tab")
-	}
-	if !strings.Contains(err.Error(), "tab") {
-		t.Errorf("error = %q, and it should say which shape it refused", err)
-	}
-	if len(f.posts()) != 0 {
-		t.Error("a write went out into a document with more than one tab")
-	}
-}
-
 func TestRunFailsWhenTheDocumentCannotBeRead(t *testing.T) {
-	f := script(t, "pending.json", "gone.json", "deleted.json")
+	f := script(t, "pending.json", "gone.json", "rejected.json")
 	f.failAt[0] = errors.New("Docs said no")
 
 	_, err := Run(context.Background(), f, testDocID, testSuggestion, note(testSuggestion))
@@ -596,53 +588,12 @@ func TestMineReadsTheNoteAndNothingElse(t *testing.T) {
 	}
 }
 
-// Span and Batch are the two halves of the write, and Run is tested over both
-// together. They are stated here on their own as well, because between them
-// they decide which characters leave a document Nail is reading, and a test
-// that has to run the whole command to say so is a test that says it faintly.
-
-// The runs Docs cut one insert into are adjacent, so the span is the first
-// run's start to the last run's end. The deletion side beside them is the
-// author's own words, still written, and it is not in the span.
-func TestSpanIsTheWholeInsertionAndNothingBesideIt(t *testing.T) {
-	d, err := docs.Parse(fixture(t, "split.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	r, err := Span(d, testSuggestion)
-	if err != nil {
-		t.Fatalf("Span(): %v", err)
-	}
-	if r.Start != 26 || r.End != 51 {
-		t.Errorf("Span() = %d..%d, want the two runs joined into 26..51", r.Start, r.End)
-	}
-	if r.Tab != d.Tabs[0].ID {
-		t.Errorf("Span() names tab %q, want %q", r.Tab, d.Tabs[0].ID)
-	}
-}
-
-// A suggestion the document does not carry is a refusal naming the id, not an
-// empty range. A zero range would delete from the top of the document.
-func TestSpanRefusesASuggestionThatIsNotPending(t *testing.T) {
-	d, err := docs.Parse(fixture(t, "gone.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	r, err := Span(d, testSuggestion)
-	if err == nil {
-		t.Fatalf("Span() = %+v, want a refusal naming the suggestion", r)
-	}
-	if !strings.Contains(err.Error(), testSuggestion) {
-		t.Errorf("Span() error = %v, want the suggestion id named in it", err)
-	}
-}
-
-// Batch is one deleteContentRange over exactly that span, in SUGGEST mode. The
-// mode is what the guard reads before it carries the request, and the range is
-// what Docs acts on, so both are stated as literals.
-func TestBatchIsOneSuggestModeDeleteOverThatSpan(t *testing.T) {
+// Batch is stated on its own as well as through Run, because it is the exact
+// shape the guard's grant opens, and a test that has to run the whole command
+// to say so is a test that says it faintly.
+func TestBatchIsOneSuggestModeRejectNamingTheId(t *testing.T) {
 	var body map[string]any
-	if err := json.Unmarshal(Batch(docs.Range{Tab: "t.0", Start: 26, End: 51}), &body); err != nil {
+	if err := json.Unmarshal(Batch(testSuggestion), &body); err != nil {
 		t.Fatalf("Batch() is not JSON: %v", err)
 	}
 	if len(body) != 2 {
@@ -654,23 +605,16 @@ func TestBatchIsOneSuggestModeDeleteOverThatSpan(t *testing.T) {
 	}
 	reqs, ok := body["requests"].([]any)
 	if !ok || len(reqs) != 1 {
-		t.Fatalf("requests = %v, want one deleteContentRange", body["requests"])
+		t.Fatalf("requests = %v, want one rejectSuggestion", body["requests"])
 	}
-	del, ok := reqs[0].(map[string]any)["deleteContentRange"].(map[string]any)
-	if !ok {
-		t.Fatalf("request = %v, want a deleteContentRange", reqs[0])
+	req := reqs[0].(map[string]any)
+	rej, ok := req["rejectSuggestion"].(map[string]any)
+	if !ok || len(req) != 1 {
+		t.Fatalf("request = %v, want exactly one rejectSuggestion", req)
 	}
-	rng, ok := del["range"].(map[string]any)
-	if !ok {
-		t.Fatalf("deleteContentRange = %v, want a range", del)
-	}
-	if rng["startIndex"] != float64(26) || rng["endIndex"] != float64(51) {
-		t.Errorf("range = %v, want 26..51", rng)
-	}
-	// No tabId, on purpose. Run refuses a document with more than one tab, so
-	// the range is unambiguous without one, and a milestone that teaches a
-	// write to name a tab is the one that adds it here.
-	if len(rng) != 2 {
-		t.Errorf("range = %v, want startIndex and endIndex and nothing else", rng)
+	// suggestionId and nothing else: a second field is one the guard refuses,
+	// because nobody here has read what it does.
+	if len(rej) != 1 || rej["suggestionId"] != testSuggestion {
+		t.Errorf("rejectSuggestion = %v, want exactly {\"suggestionId\":%q}", rej, testSuggestion)
 	}
 }

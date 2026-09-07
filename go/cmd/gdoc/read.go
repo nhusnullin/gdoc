@@ -279,13 +279,22 @@ type reach struct {
 // open turns the argument into a reach. The policy is opened at LevelSuggest,
 // which is what a handed-in document gets: read, comment and suggest, and never
 // a direct edit.
-func open(target string) (*reach, error) {
+//
+// grants are applied to the policy before the session is built, so the first
+// request in the program's history is judged against them. The one caller
+// today is withdraw, handing in AllowReject for the suggestion the note records
+// as gdoc's own. A grant is per run and names one thing; nothing here widens
+// the level.
+func open(target string, grants ...func(*guard.Policy)) (*reach, error) {
 	id, err := documentID(target)
 	if err != nil {
 		return nil, err
 	}
 	p := guard.NewPolicy()
 	p.AllowFile(id, guard.LevelSuggest)
+	for _, grant := range grants {
+		grant(p)
+	}
 	s, err := openSession(p)
 	if err != nil {
 		return nil, err

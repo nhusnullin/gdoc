@@ -789,7 +789,7 @@ func TestWithdrawRefusesASuggestionTheNoteDoesNotRecord(t *testing.T) {
 func TestWithdrawRetractsAndForgetsTheProposal(t *testing.T) {
 	stubWire(t, &fakeWire{answers: []*answer{
 		{method: "GET", match: withdrawDocID + "?includeTabsContent", json: readFixture(t, "withdraw-pending.json"), once: true},
-		{method: "POST", match: withdrawDocID + ":batchUpdate", json: readFixture(t, "withdraw-deleted.json")},
+		{method: "POST", match: withdrawDocID + ":batchUpdate", json: readFixture(t, "withdraw-rejected.json")},
 		{method: "GET", match: withdrawDocID + "?includeTabsContent", json: readFixture(t, "withdraw-gone.json")},
 	}})
 	note := copyFixture(t, "withdraw-note.md")
@@ -802,9 +802,9 @@ func TestWithdrawRetractsAndForgetsTheProposal(t *testing.T) {
 	if data["verified"] != true {
 		t.Fatalf("the answer named the id and the read-back shows it gone: %v", data)
 	}
-	ids, _ := data["deleted_suggestion_ids"].([]any)
+	ids, _ := data["rejected_suggestion_ids"].([]any)
 	if len(ids) != 1 || ids[0] != "suggest.abc" {
-		t.Errorf("deleted_suggestion_ids = %v", data["deleted_suggestion_ids"])
+		t.Errorf("rejected_suggestion_ids = %v", data["rejected_suggestion_ids"])
 	}
 	files, _ := data["files_changed"].([]any)
 	if len(files) != 1 || files[0] != note {
@@ -848,7 +848,7 @@ func TestWithdrawWritesTheNoteTheVaultHasNow(t *testing.T) {
 	}
 	stubWire(t, &fakeWire{answers: []*answer{
 		{method: "GET", match: withdrawDocID + "?includeTabsContent", json: readFixture(t, "withdraw-pending.json"), once: true},
-		{method: "POST", match: withdrawDocID + ":batchUpdate", json: readFixture(t, "withdraw-deleted.json"), before: landed},
+		{method: "POST", match: withdrawDocID + ":batchUpdate", json: readFixture(t, "withdraw-rejected.json"), before: landed},
 		{method: "GET", match: withdrawDocID + "?includeTabsContent", json: readFixture(t, "withdraw-gone.json")},
 	}})
 

@@ -292,18 +292,22 @@ and reads back after landing.
 
 ### Withdrawing a proposal
 
-gdoc may retract its own pending, unaccepted suggestion: `deleteContentRange` in
-suggest mode, confirmed by `deletedSuggestionIds` in the response and a
-read-back. This does not touch Nail's rule: there was no decision yet to
-resolve. gdoc never accepts, rejects or deletes anyone else's suggestion.
+gdoc may retract its own pending, unaccepted suggestion: `rejectSuggestion`
+naming the id, in suggest mode, confirmed by `rejectedSuggestionIds` in the
+response and a read-back showing no run under the id on either side. This does
+not touch Nail's rule: there was no decision yet to resolve. gdoc never
+accepts, rejects or deletes anyone else's suggestion, and the guard holds that:
+it refuses every request kind whose name carries "suggestion", and the one door
+is a per-run grant the `withdraw` command seeds with the id the note's
+`proposals[]` records as gdoc's own. A `rejectSuggestion` naming any other id is
+refused before it leaves the machine.
 
-**Measured 2026-09-07.** That holds for a pure insertion. A `propose` is a
-replace, one suggestion id over a suggested deletion and a suggested insertion,
-and the delete above retracts only the insertion half: the quoted words stay
-suggested-deleted, and the answer carries no `deletedSuggestionIds`. The whole
-suggestion goes only through `rejectSuggestion` on gdoc's own id, which the
-guard refuses under the rule in the previous sentence. Open, for Nail. The
-measurements are in DECISIONS.md under that date.
+**Corrected 2026-09-07, Nail's decision.** This section used to say
+`deleteContentRange` in suggest mode, confirmed by `deletedSuggestionIds`. That
+was measured on a pure insertion. A `propose` is a replace, and the delete
+retracts only the insertion half: the quoted words stay suggested-deleted under
+the same id and the answer carries no `deletedSuggestionIds`. The measurements
+are in DECISIONS.md under that date.
 
 ### Reading suggestions
 
@@ -409,7 +413,9 @@ skill rule where it cannot.
 
 - Never direct-edit a document gdoc did not create. Guard-enforced.
 - Never replace the body of a document that exists. Guard-enforced.
-- Never accept, reject or delete anyone else's suggestion.
+- Never accept, reject or delete anyone else's suggestion. Guard-enforced: the
+  only `rejectSuggestion` that carries names the id `withdraw` granted from the
+  note's `proposals[]`, which is gdoc's own.
 - Never resolve or reopen a comment thread.
 - Never delete from the hub.
 - Never run git, in the binary or in the skills.

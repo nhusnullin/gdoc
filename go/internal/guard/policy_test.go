@@ -572,6 +572,65 @@ func TestASuggestionVerbInABatchUpdateIsRefused(t *testing.T) {
 	}
 }
 
+// Nail's decision, 2026-09-07: gdoc may reject a suggestion the note records as
+// its own, because that is the only request that retracts a whole replace
+// proposal (DECISIONS.md, same date). The guard cannot tell whose a suggestion
+// is, so the door is a per-run grant the withdraw command seeds from the note,
+// the way AllowCreateIn names one folder. The grant is one id, and it opens
+// exactly one request shape: rejectSuggestion, spelled exactly, carrying
+// exactly {"suggestionId": <that id>}. Everything else in the family stays
+// refused, at both levels.
+func TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.Learn("MADE1")
+	p.AllowReject("suggest.mine")
+	handed := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
+	made := mustURL(t, "https://docs.googleapis.com/v1/documents/MADE1:batchUpdate")
+
+	granted := `{"requests":[{"rejectSuggestion":{"suggestionId":"suggest.mine"}}],"writeControl":{"writeMode":"SUGGEST"}}`
+	if err := p.Judge("POST", handed, []byte(granted)); err != nil {
+		t.Errorf("a granted rejectSuggestion must carry on a handed-in document: %v", err)
+	}
+	if err := p.Judge("POST", made, []byte(granted)); err != nil {
+		t.Errorf("a granted rejectSuggestion must carry on a document gdoc created: %v", err)
+	}
+
+	refused := []string{
+		// Another id: the grant is one suggestion, not the verb.
+		`{"requests":[{"rejectSuggestion":{"suggestionId":"suggest.theirs"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// The granted id under the other two verbs: rejecting is what was granted.
+		`{"requests":[{"acceptSuggestion":{"suggestionId":"suggest.mine"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"deleteSuggestion":{"suggestionId":"suggest.mine"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// A spelling the server may or may not read as the same kind. The guard
+		// is never broader than the server on the field that permits a write.
+		`{"requests":[{"RejectSuggestion":{"suggestionId":"suggest.mine"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"rejectSuggestion":{"SuggestionId":"suggest.mine"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// A second field beside the id, which the guard has not read about.
+		`{"requests":[{"rejectSuggestion":{"suggestionId":"suggest.mine","tabId":"t.0"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// No id at all, and an id that is not a string.
+		`{"requests":[{"rejectSuggestion":{}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		`{"requests":[{"rejectSuggestion":{"suggestionId":["suggest.mine"]}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+		// The granted one riding beside another id in the same batch.
+		`{"requests":[{"rejectSuggestion":{"suggestionId":"suggest.mine"}},{"rejectSuggestion":{"suggestionId":"suggest.theirs"}}],"writeControl":{"writeMode":"SUGGEST"}}`,
+	}
+	for _, body := range refused {
+		if p.Judge("POST", handed, []byte(body)) == nil {
+			t.Errorf("%s must be refused at the suggest level", body)
+		}
+		if p.Judge("POST", made, []byte(body)) == nil {
+			t.Errorf("%s must be refused on a document gdoc created", body)
+		}
+	}
+
+	// A policy nobody granted refuses the same body the granted one carried.
+	q := NewPolicy()
+	q.AllowFile("DOC1", LevelSuggest)
+	if q.Judge("POST", handed, []byte(granted)) == nil {
+		t.Error("rejectSuggestion must be refused on a policy with no grant")
+	}
+}
+
 // The other direction. An ordinary request still carries, and so does the one
 // SPEC.md names for withdrawing gdoc's own proposal: deleteContentRange in
 // suggest mode, which acts on a range and names no suggestion at all.
