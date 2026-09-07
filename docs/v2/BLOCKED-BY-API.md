@@ -40,7 +40,7 @@ writeControl.writeMode
 
 | What | Status |
 |---|---|
-| **Writing a suggestion** (`writeMode: SUGGEST`) | `400 "Unsupported WriteControl mode."` Note it changed behaviour during the day: that morning the same call returned **200 and silently made a direct edit**. Never send it and trust the status code. |
+| **Writing a suggestion** (`writeMode: SUGGEST`) | `400 "Unsupported WriteControl mode."` Note it changed behaviour during the day: that morning the same call returned **200 and silently made a direct edit**. Never send it and trust the status code. **Measured again 2026-09-07, before M3:** on a throwaway document in the test folder, a SUGGEST insert returned 200 and the read-back with `SUGGESTIONS_INLINE` carried `suggest.xyh4cb4emh7y` on the inserted word. The project is enrolled today. The rule stands unchanged: probe on every `propose` run, read back after every write, because the same call has been seen doing both. |
 | **Accepting, rejecting or deleting a suggestion** | Gated. So even with suggestions, gdoc could not resolve them for Nail. |
 | **Creating an anchored comment properly** (`insertComment`) | Gated. Would retire anchor banking entirely. |
 | **Reading who wrote a suggestion** (`PostAuthor`) | Gated. Note authorship is **output only** and can never be set: a suggestion made through the API is authored by the credential. A tracked-changes import preserves a custom `w:author`, so the older route is better on attribution. |
