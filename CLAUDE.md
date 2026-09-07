@@ -697,6 +697,9 @@ create path is built on it: the parent check, the upload-shape check and the
 response learning all read it, and deleting it would mean deleting the create
 half of the guard that M6 needs. `AllowFile` and `Token.Refresh` got their first
 production callers here, which is the other half of what M2 was asked to settle.
+Nail confirmed both in the M2 review, 2026-09-07: `AllowCreateIn` stays, and a
+comment whose range the Docs read did not place is a warning on the envelope,
+never an error. Do not reopen either without him.
 
 ### Building
 
