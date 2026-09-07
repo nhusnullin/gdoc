@@ -1,0 +1,15 @@
+# Scope
+
+The supplier register is reviewed {-annually-}[s:suggest.a1]{+every quarter+}[s:suggest.a1] by [[c:AAAA1111]]the operations team[[/c]].
+
+## Controls
+
+- Check the register
+
+  - Escalate exceptions
+
+A literal \{+marker\+} and \[[brackets\]] stay text.
+
+Control | Owner
+--- | ---
+Register review | Operations

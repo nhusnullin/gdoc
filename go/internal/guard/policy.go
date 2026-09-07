@@ -19,7 +19,7 @@ type Level int
 
 const (
 	LevelSuggest Level = 1 // handed in: read, comment, suggest. Never direct-edit.
-	LevelFull    Level = 2 // created by gdoc, or explicitly granted in-place.
+	LevelFull    Level = 2 // created by gdoc. The only door to it is Learn.
 )
 
 // String names a level for a refusal message. A reader who has to translate a
@@ -69,15 +69,6 @@ func (p *Policy) AllowCreateIn(folderID string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.createIn = folderID
-}
-
-// GrantInPlace upgrades an id already in the set. It is not a third door.
-func (p *Policy) GrantInPlace(id string) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if _, known := p.files[id]; known {
-		p.files[id] = LevelFull
-	}
 }
 
 // Learn is the second door: an id that came back from a create the guard

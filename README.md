@@ -430,7 +430,7 @@ code, because the cover and the tables are found by their placeholder text.
 
 A second implementation lives at `go/`: one static binary, no Python, no pandoc,
 nothing to install beside it. It is being built a milestone at a time
-(`docs/v2/PLAN.md`), and so far it does one job, the credential.
+(`docs/v2/PLAN.md`). It holds the credential, and it reads.
 
 ```bash
 make build   # bin/gdoc, for this machine
@@ -473,6 +473,106 @@ tool once more. Nothing else in either tool is affected.
 
 `GDOC_CONFIG_DIR` moves both files somewhere else, which is what the Go test
 suite uses so tests never touch your real config.
+
+### Reading a document
+
+Three commands read, and none of them writes to Drive. Each one takes the URL
+you paste from the browser, or a bare document id.
+
+```bash
+bin/gdoc read <url> [--structure]
+bin/gdoc comments <url> [--since CURSOR] [--witness]
+bin/gdoc suggestions <url> [--md PATH]
+```
+
+They print facts and nothing else. Whether a comment is answered, whether a
+suggestion that disappeared was accepted or thrown away, whether the document
+and your markdown have drifted apart in a way that matters: none of that is
+decided in Go. The skill reads the JSON and judges.
+
+**`read`** gives you the document as one string of text, with everything that is
+pending marked in it:
+
+| In the text | Means |
+|---|---|
+| `# Heading` | a heading, one `#` per level |
+| `{+text+}[s:ID]` | a pending suggested insertion, and its id |
+| `{-text-}[s:ID]` | a pending suggested deletion, and its id |
+| `[[c:ID]]text[[/c]]` | the text a comment is attached to, and the comment id |
+| `<!-- tab t.0: Title -->` | the tab that follows, on a document with more than one |
+| `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet, with a warning |
+
+If the document's own text contains one of those markers, it comes back with a
+backslash in front of it, and a backslash the author typed comes back doubled.
+So the rule for reading the text back is a parity: an even run of backslashes is
+the author's own text and the marker behind it is gdoc's, an odd run ends in
+gdoc's escape and the marker behind it is the author's. The escaping is done one
+text run at a time, so a marker whose two halves fall in two runs, or a document
+character sitting against one of gdoc's own markers, can still reach the text
+unescaped. That gap is written up in
+`docs/backlog/escaping-across-run-boundaries.md`. `[object]`
+is an embedded object the read could not classify: calling it an image would be
+a guess. Tables become pipe tables, with a literal `|` in a cell escaped as
+`\|` so the row keeps its shape, and footnotes are appended after a `---` line.
+Lists come back as `- ` items, two spaces of indent per level, so a numbered
+list reads back as a bulleted one: telling the two apart needs the document's
+`lists` map, which this milestone does not read. `--structure`
+adds the document tree with character indexes on it, which is what a later
+milestone needs to place a suggestion at an exact position. The text is not a
+summary of the structure, and the structure is not a summary of the text.
+
+**`comments`** lists the threads. Each one carries its author, its content, its
+replies, whether it is resolved, the sentence it quotes, and the character range
+the Docs read placed it at. A thread the Docs read could not place comes back
+with `range: null` and a warning, rather than failing the whole listing. The
+marker is a fact too: `ai:`, `ai?`, `ai!` or `none`, taken from the first word.
+`@ai` is not one of them. The Python tool still accepts that old form; the Go
+binary matches the three exactly.
+
+`--since` takes the `cursor` a previous run printed and asks for what changed
+after it. The cursor is opaque: it is the newest activity that run saw, encoded,
+and nothing reads inside it. Nothing writes it down either, so it lives as long
+as whatever is polling.
+
+`--witness` reads the document a second time, as a docx export, and says of each
+thread whether that export carries it `anchored` to text, `detached` from it, or
+`unmatched`. The export is the only truthful answer to "is this comment still
+attached to anything", which is why it is a second read rather than a field.
+
+**`suggestions`** lists what is pending, each with a stable id, the heading it
+sits under and its text. With `--md` it also reports what stopped being pending
+since the last look, by comparing against the snapshot in that file's front
+matter, then writes the new snapshot. That write happens only after a read that
+fully succeeded, and only into a file already paired with the document you read.
+
+### The `gdoc:` block
+
+A markdown note paired with a Go-published document carries one key in its front
+matter, and everything else in there stays the author's:
+
+```yaml
+---
+title: Supplier register policy
+gdoc:
+  schema: 1
+  document_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd
+  folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr
+  suggestions_seen:
+    at: 2026-09-06T11:00:00Z
+    items:
+      - id: suggest.abc123
+        kind: insertion
+        section: Scope
+        text: "critical "
+---
+```
+
+The read is strict. An unknown key, a key given twice, a missing `document_id`
+or a `schema` this version does not know is refused naming the key, and the file
+is left alone. The write touches the `gdoc:` lines and nothing else: your keys,
+your line endings and the trailing newline come back byte for byte, and the file
+is replaced through a temporary file and a rename, so a failed write cannot
+truncate your note.
 
 The `gdoc` on your PATH is still the Python tool this README describes. `bin/gdoc`
 is the new one, and nothing installs it yet.

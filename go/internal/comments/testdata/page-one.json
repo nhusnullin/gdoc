@@ -1,0 +1,37 @@
+{
+  "nextPageToken": "PAGE2",
+  "comments": [
+    {
+      "id": "AAAA1111",
+      "author": {"displayName": "Nail Khusnullin", "me": true},
+      "createdTime": "2026-09-06T10:00:00Z",
+      "modifiedTime": "2026-09-06T10:30:00Z",
+      "content": "ai? which register does this refer to",
+      "resolved": false,
+      "quotedFileContent": {"value": "the operations team"},
+      "replies": [
+        {
+          "id": "R1",
+          "author": {"displayName": "Nail Khusnullin", "me": true},
+          "createdTime": "2026-09-06T10:30:00Z",
+          "content": "🤖 The 2026 register."
+        },
+        {
+          "id": "R2",
+          "author": {"displayName": "Ada Lovelace", "me": false},
+          "createdTime": "2026-09-06T10:45:00Z",
+          "content": "thanks, that answers it"
+        }
+      ]
+    },
+    {
+      "id": "BBBB2222",
+      "author": {"displayName": "Ada Lovelace", "me": false},
+      "createdTime": "2026-09-06T09:00:00Z",
+      "modifiedTime": "2026-09-06T09:00:00Z",
+      "content": "  ai! rewrite this paragraph",
+      "resolved": false,
+      "replies": []
+    }
+  ]
+}

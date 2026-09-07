@@ -1,0 +1,40 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "Objects and a footnote",
+  "revisionId": "ALm37BXobjects",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 17, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 1, "endIndex": 5, "textRun": {"content": "See ", "textStyle": {}}},
+              {"startIndex": 5, "endIndex": 6, "inlineObjectElement": {"inlineObjectId": "kix.img1", "textStyle": {}}},
+              {"startIndex": 6, "endIndex": 11, "textRun": {"content": " and ", "textStyle": {}}},
+              {"startIndex": 11, "endIndex": 12, "inlineObjectElement": {"inlineObjectId": "kix.draw1", "textStyle": {}}},
+              {"startIndex": 12, "endIndex": 13, "inlineObjectElement": {"inlineObjectId": "kix.obj1", "textStyle": {}}},
+              {"startIndex": 13, "endIndex": 14, "equation": {"suggestedInsertionIds": []}},
+              {"startIndex": 14, "endIndex": 15, "footnoteReference": {"footnoteId": "kix.fn1", "footnoteNumber": "1", "textStyle": {}}},
+              {"startIndex": 15, "endIndex": 17, "textRun": {"content": ".\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "footnotes": {
+          "kix.fn1": {"footnoteId": "kix.fn1", "content": [
+            {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+            {"startIndex": 1, "endIndex": 25, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+              "elements": [{"startIndex": 1, "endIndex": 25, "textRun": {"content": "Measured on 2026-09-06.\n", "textStyle": {}}}]}}
+          ]}
+        },
+        "inlineObjects": {
+          "kix.img1": {"objectId": "kix.img1", "inlineObjectProperties": {"embeddedObject": {"imageProperties": {"contentUri": "https://lh3.googleusercontent.com/x"}}}},
+          "kix.draw1": {"objectId": "kix.draw1", "inlineObjectProperties": {"embeddedObject": {"embeddedDrawingProperties": {}}}},
+          "kix.obj1": {"objectId": "kix.obj1", "inlineObjectProperties": {"embeddedObject": {"title": "A thing Docs describes with neither property"}}}
+        }
+      }
+    }
+  ]
+}

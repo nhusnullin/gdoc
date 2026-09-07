@@ -1,0 +1,46 @@
+{
+  "documentId": "ANCHORS",
+  "title": "anchors fixture",
+  "revisionId": "rev-anchors",
+  "suggestionsViewMode": "SUGGESTIONS_INLINE",
+  "commentsViewMode": "COMMENTS_VIEW_MODE_INCLUDED",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "Tab 1", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 1, "endIndex": 40, "paragraph": {"elements": [
+            {"startIndex": 1, "endIndex": 40, "textRun": {"content": "First sentence with a commented span.\n"}}
+          ]}}
+        ]},
+        "commentAnchors": {
+          "kix.first": {"anchorId": "kix.first", "ranges": [{"startIndex": 7, "endIndex": 15}]},
+          "kix.two-ranges": {"anchorId": "kix.two-ranges", "ranges": [{"startIndex": 22, "endIndex": 31}, {"startIndex": 33, "endIndex": 37}]}
+        }
+      }
+    },
+    {
+      "tabProperties": {"tabId": "t.1", "title": "Tab 2", "index": 1},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 1, "endIndex": 30, "paragraph": {"elements": [
+            {"startIndex": 1, "endIndex": 30, "textRun": {"content": "Second tab, second comment.\n"}}
+          ]}}
+        ]},
+        "commentAnchors": {
+          "kix.second-tab": {"anchorId": "kix.second-tab", "ranges": [{"startIndex": 13, "endIndex": 27}]}
+        }
+      }
+    }
+  ],
+  "comments": [
+    {"commentId": "C-FIRST", "anchorId": "kix.first", "status": "OPEN", "plainTextQuote": "sentence",
+     "headPost": {"postId": "C-FIRST", "content": "placeholder", "author": {"displayName": "Someone", "me": false}, "createTime": "2026-09-06T10:00:00.000Z", "updateTime": "2026-09-06T10:00:00.000Z", "commentAction": "NO_COMMENT_ACTION_CHANGE"}},
+    {"commentId": "C-TWO", "anchorId": "kix.two-ranges", "status": "OPEN", "plainTextQuote": "commented span",
+     "headPost": {"postId": "C-TWO", "content": "placeholder", "author": {"displayName": "Someone", "me": false}, "createTime": "2026-09-06T10:00:00.000Z", "updateTime": "2026-09-06T10:00:00.000Z", "commentAction": "NO_COMMENT_ACTION_CHANGE"}},
+    {"commentId": "C-SECOND", "anchorId": "kix.second-tab", "status": "OPEN", "plainTextQuote": "second comment",
+     "headPost": {"postId": "C-SECOND", "content": "placeholder", "author": {"displayName": "Someone", "me": false}, "createTime": "2026-09-06T10:00:00.000Z", "updateTime": "2026-09-06T10:00:00.000Z", "commentAction": "NO_COMMENT_ACTION_CHANGE"}},
+    {"commentId": "C-LOST", "anchorId": "kix.nowhere", "status": "OPEN", "plainTextQuote": "gone",
+     "headPost": {"postId": "C-LOST", "content": "placeholder", "author": {"displayName": "Someone", "me": false}, "createTime": "2026-09-06T10:00:00.000Z", "updateTime": "2026-09-06T10:00:00.000Z", "commentAction": "NO_COMMENT_ACTION_CHANGE"}}
+  ]
+}

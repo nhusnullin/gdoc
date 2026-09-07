@@ -1,0 +1,14 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "Before tabs existed",
+  "revisionId": "ALm37BXpreTabs",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 9, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "TITLE"},
+      "elements": [{"startIndex": 1, "endIndex": 9, "textRun": {"content": "Old doc\n", "textStyle": {}}}]}},
+    {"startIndex": 9, "endIndex": 30, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [{"startIndex": 9, "endIndex": 30, "textRun": {"content": "One body, no tabs.\n", "textStyle": {}}}]}}
+  ]}
+}

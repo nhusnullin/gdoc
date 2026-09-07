@@ -180,6 +180,24 @@ func TestUnknownCommandFailsAndNamesItself(t *testing.T) {
 	}
 }
 
+// There is no help command: a caller reads the same JSON object it reads for
+// every other run, so the usage line is the whole of the help and it has to
+// name every command that exists.
+func TestTheUsageLineNamesEveryCommand(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	got, code := runJSON(t, "--help")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("there is no help command, so --help must fail: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	for _, command := range []string{"auth status", "auth login", "read", "comments", "suggestions"} {
+		if !strings.Contains(msg, command) {
+			t.Errorf("the usage line must name %q: %q", command, msg)
+		}
+	}
+}
+
 // A token granted less than gdoc asked for still reports ok, and says which
 // scope is missing. This is the granular consent screen: somebody ticked Docs
 // and left Drive unticked. A v1 token is NOT this case, because the full Drive

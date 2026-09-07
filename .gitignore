@@ -23,3 +23,6 @@ docs/gdoc/*/out/
 
 # Compiled Go binaries, rebuilt by `make build` and `make dist`
 bin/
+
+# the live test's recordings hold a real document's content; the shape lives in go/internal/docs/testdata/anchors.json
+go/internal/live/testdata/

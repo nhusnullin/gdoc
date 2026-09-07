@@ -116,7 +116,7 @@ Rules: `schema` is required and must be `1`; `document_id` is required and must 
 **The `read` text.** A deterministic projection of the document tree, one string:
 
 - A paragraph with `namedStyleType` `HEADING_n` becomes a line of `n` `#` characters, a space, and its text. `TITLE` and `SUBTITLE` paragraphs are plain paragraphs (the title is also on the envelope). Other paragraphs are their text on one line; a paragraph with a `bullet` becomes `- ` plus its text, indented two spaces per `nestingLevel`. Paragraphs are separated by one blank line.
-- A table becomes a pipe table: one row per `tableRow`, cells separated by ` | `, a `---` separator row after the first row, newlines inside a cell replaced by a space.
+- A table becomes a pipe table: one row per `tableRow`, cells separated by ` | `, a `---` separator row after the first row, newlines inside a cell replaced by a space, and a `|` the author typed inside a cell escaped as `\|`.
 - A text run carrying `suggestedInsertionIds` is printed as `{+text+}[s:ID]`; one carrying `suggestedDeletionIds` as `{-text-}[s:ID]`. Adjacent runs with the same id and kind print as one span. A run carrying both is printed as a deletion then an insertion, because that is what Docs shows.
 - A comment range from the Docs read wraps its text as `[[c:ID]]text[[/c]]`, where `ID` is the Drive comment id. Ranges that nest or overlap are opened and closed in index order; a range the reader cannot place is not printed and its id goes to `warnings`.
 - Literal `{+`, `{-`, `+}`, `-}`, `[[` and `]]` in the document's own text are escaped with a backslash, so a marker in the output is always gdoc's.
@@ -181,10 +181,26 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 **Interfaces:**
 - Produces: `github.com/goccy/go-yaml v1.19.2` in `go.mod`; `TestNoThirdPartyDependencies` passes with exactly that module allowed and still refuses any other. This is the one-line widening PLAN.md and CLAUDE.md describe: the milestone that first needs a module adds its path, and nothing else.
 
-- [ ] write the failing test change first: add `"github.com/goccy/go-yaml": "the gdoc: front matter and house.yaml; reason in SPEC.md"` to `allowedModules`, and make sure a canary asserts an unlisted module path in a scratch `go.mod` string is still refused
-- [ ] run `cd go && go get github.com/goccy/go-yaml@v1.19.2 && go mod tidy` and confirm `go.sum` names no module other than go-yaml itself (PLAN.md: zero transitive modules; if `go mod tidy` pulls anything else, stop and record it with ⚠️ rather than allowlisting it)
-- [ ] run the boundary test: green, and the refusal canary still fails on the unlisted path
-- [ ] commit: `feat(v2): goccy/go-yaml enters, admitted by name in the boundary test`
+- [x] write the failing test change first: add `"github.com/goccy/go-yaml": "the gdoc: front matter and house.yaml; reason in SPEC.md"` to `allowedModules`, and make sure a canary asserts an unlisted module path in a scratch `go.mod` string is still refused
+- [x] run `cd go && go get github.com/goccy/go-yaml@v1.19.2 && go mod tidy` and confirm `go.sum` names no module other than go-yaml itself (PLAN.md: zero transitive modules; if `go mod tidy` pulls anything else, stop and record it with ⚠️ rather than allowlisting it)
+- [x] run the boundary test: green, and the refusal canary still fails on the unlisted path
+- [x] commit: `feat(v2): goccy/go-yaml enters, admitted by name in the boundary test`
+
+⚠️ `go mod tidy` is deferred to Task 2. Nothing imports go-yaml yet, so tidy deletes the
+require line it was just given, and Task 1 would commit an empty `go.mod` again. `go get`
+alone was run, and `go.sum` names go-yaml and nothing else, which is the zero-transitive-
+modules claim PLAN.md makes, confirmed. The require line carries `// indirect` until
+`internal/frontmatter` imports it in Task 2, which is the honest marker for "required, not
+yet used". Task 2 runs `go mod tidy` and the marker goes.
+
+➕ `allowedModules` changed shape from `map[string]bool` to `map[string]string`, path against
+reason, so the reason lives beside the entry rather than in the comment above the map. Two
+tests were added with it: `TestAllowedModulesAreReallyRequired` is the disappearance half,
+which fails when the map names a module `go.mod` no longer requires, and
+`TestAllowedModulesStillRefusesAnUnlistedPath` is the canary the checkbox above asks for. The
+judgement moved into `unlistedModules` and `summedModules` so scratch text can be put through
+it: once a module is both listed and required, a test that only reads the real files passes
+whether the refusal still works or not.
 
 ---
 
@@ -204,13 +220,13 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
   - `(*Block).Validate() error`: the rules under "The front-matter block" above.
 - The span is found by lines, never by re-marshalling the author's YAML: a top-level key is a line matching `^gdoc:` inside the `---` delimiters, and its span runs to the next line that starts at column 0 with a non-space character, or to the closing delimiter.
 
-- [ ] write the failing tests for `Read`: each fixture, asserting the nil-nil cases, the decoded values of the full block, and one refusal per invalid fixture with the key named in the error
-- [ ] write the failing tests for `Write`: `Read` then `Write` of an unchanged block is byte-identical; changing one field changes only lines inside the `gdoc:` span (line diff: no other line moved); CRLF stays CRLF; a file without front matter gains delimiters and the block and nothing else; a file with a `title:` and no `gdoc:` keeps its `title:` line byte-identical; an invalid block returns the error and the input unchanged
-- [ ] write the failing tests for `Validate`: missing `document_id`, `schema: 2`, an unknown `kind`, a proposal without an id
-- [ ] run `cd go && go test ./internal/frontmatter/` and watch it fail
-- [ ] implement `schema.go` and `frontmatter.go`
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the gdoc: front-matter block, strict in, byte-preserving out`
+- [x] write the failing tests for `Read`: each fixture, asserting the nil-nil cases, the decoded values of the full block, and one refusal per invalid fixture with the key named in the error
+- [x] write the failing tests for `Write`: `Read` then `Write` of an unchanged block is byte-identical; changing one field changes only lines inside the `gdoc:` span (line diff: no other line moved); CRLF stays CRLF; a file without front matter gains delimiters and the block and nothing else; a file with a `title:` and no `gdoc:` keeps its `title:` line byte-identical; an invalid block returns the error and the input unchanged
+- [x] write the failing tests for `Validate`: missing `document_id`, `schema: 2`, an unknown `kind`, a proposal without an id
+- [x] run `cd go && go test ./internal/frontmatter/` and watch it fail
+- [x] implement `schema.go` and `frontmatter.go`
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the gdoc: front-matter block, strict in, byte-preserving out`
 
 ---
 
@@ -230,12 +246,12 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
   - `(*Session).Warnings() []string`: the policy's `Warnings()` plus the session's own, in that order.
 - Boundary: `internal/gapi` names `*http.Request` and `*http.Client` and builds neither, so it joins `allowed` with the comment "builds requests and sets the bearer; takes the guard's client as a parameter, and builders below proves it never makes one", and stays out of `builders`. Write the allowlist change first, watch the boundary test fail on the missing room, then create the package.
 
-- [ ] add `internal/gapi` to `allowed` in the boundary test and run it: FAIL, the room does not exist yet
-- [ ] write the failing session tests over a fake `RoundTripper` under a temp `GDOC_CONFIG_DIR` with a fixture token: exactly one `Bearer` header; an expired fixture token triggers exactly one refresh POST before the GET, the saved file carries the new access token, and `Warnings()` says so; a 401 triggers one refresh and one retry; two 401s produce the named error and no further request; a 404 with a Google error body surfaces `message` and the status; `GetBytes` stops at `limit`; a policy with no `AllowFile` refuses the read with a guard refusal
-- [ ] run the tests and watch them fail
-- [ ] implement `session.go`
-- [ ] run the full suite including the boundary test: green in both directions (on a scratch copy, remove the `net/http` import from `session.go` and confirm the disappearance check fires)
-- [ ] commit: `feat(v2): gapi session: bearer, refresh on expiry and on one 401, through the guard`
+- [x] add `internal/gapi` to `allowed` in the boundary test and run it: FAIL, the room does not exist yet
+- [x] write the failing session tests over a fake `RoundTripper` under a temp `GDOC_CONFIG_DIR` with a fixture token: exactly one `Bearer` header; an expired fixture token triggers exactly one refresh POST before the GET, the saved file carries the new access token, and `Warnings()` says so; a 401 triggers one refresh and one retry; two 401s produce the named error and no further request; a 404 with a Google error body surfaces `message` and the status; `GetBytes` stops at `limit`; a policy with no `AllowFile` refuses the read with a guard refusal
+- [x] run the tests and watch them fail
+- [x] implement `session.go`
+- [x] run the full suite including the boundary test: green in both directions (on a scratch copy, remove the `net/http` import from `session.go` and confirm the disappearance check fires)
+- [x] commit: `feat(v2): gapi session: bearer, refresh on expiry and on one 401, through the guard`
 
 ---
 
@@ -258,11 +274,21 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
   - The pre-tabs shape: when the JSON has no `tabs`, the top-level `body` is the one tab with id `t.0`.
   - `CommentRanges` decodes the top-level `comments` array loosely (`id`, and a range under whatever key the measured shape uses: try `range`, then `anchor.range`, then top-level `startIndex`/`endIndex`). An entry without a readable range goes to `Unplaced`. ⚠️ The shape is measured, not documented: the first live run records a redacted fixture into `testdata/` and the decoder is tightened to it in a follow-up commit.
 
-- [ ] write the failing tests on the fixtures: two tabs and `MultiTab()`; the pre-tabs fixture reads as one tab `t.0`; headings carry their style and table text lands in cells in reading order; runs carry their suggestion ids; the image and footnote runs carry their kinds and the footnote text is in `Footnotes`; `CommentRanges` places the ranged comment and lists the unplaced one; `URL` carries the three parameters and nothing else; `Fetch` over a fake wire sends `includeTabsContent=true` (assert on the request the fake saw)
-- [ ] run the tests and watch them fail
-- [ ] implement `docs.go` and `walk.go`; fix the `docsReadParams` comment
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the Docs read with tabs, the document tree, suggestion ids and comment ranges`
+- [x] write the failing tests on the fixtures: two tabs and `MultiTab()`; the pre-tabs fixture reads as one tab `t.0`; headings carry their style and table text lands in cells in reading order; runs carry their suggestion ids; the image and footnote runs carry their kinds and the footnote text is in `Footnotes`; `CommentRanges` places the ranged comment and lists the unplaced one; `URL` carries the three parameters and nothing else; `Fetch` over a fake wire sends `includeTabsContent=true` (assert on the request the fake saw)
+- [x] run the tests and watch them fail
+- [x] implement `docs.go` and `walk.go`; fix the `docsReadParams` comment
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the Docs read with tabs, the document tree, suggestion ids and comment ranges`
+
+➕ `Fetch` takes `docs.Reader`, a one-method interface (`GetJSON`), not `*gapi.Session`. A `*gapi.Session` satisfies it, so no caller changes. The reason is the boundary test: its import allowlist reads test files too, so a fake `http.RoundTripper` in `docs_test.go` would have made `internal/docs` a fifth room that names `net/http`. The interface keeps the reader pure and its tests wire-free, and the fake records the URL the reader built, which is the assertion the task asked for. Every reader package after this one takes the same seam.
+
+➕ The guard-refusal case moved out of `internal/docs`: with no wire in the room, the test that a refused id never reaches the transport belongs to the command layer, where Task 10 already asks for it. What `docs_test.go` proves instead is that `Fetch` hands the session's refusal back unwrapped.
+
+➕ The `params.go` change is not comment-only. `driveExportParams` lost `supportsAllDrives` as well, on the measurement recorded under Task 8: an allowlist naming a parameter its method does not define permits a request nothing should send. `docsReadParams` itself is unchanged and still holds five.
+
+➕ `(*Document).Places(r Range) bool` and `(Tab).Places(r Range) bool` were added after Task 7: the range-placement rule was written once in `internal/view` and once in `internal/comments`, and a range one command marks while the other refuses is a false fact in whichever field the skill reads. The rule is one place now: the range ends after it starts, it names a tab that exists, and both endpoints fall inside that tab's text runs. `Document.Places` is that over every tab, `Tab.Places` over one. A walk arms from the tab's form, because two tabs can share an id when one carries no `tabId` and takes the default `t.0`, and the document form answers off the first of them.
+
+➕ `Run.Kind` has a sixth value, `object`: an embedded object carrying neither `imageProperties` nor `embeddedDrawingProperties`. Calling it an image would be a guess, and this package reports rather than guesses. Task 5's projection prints `[object]` for it.
 
 ---
 
@@ -277,12 +303,16 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 - Consumes: `docs.Document`.
 - Produces: `view.Text(d *docs.Document) (string, []string)`: the projection under "The `read` text" in Technical Details, and the warnings it raised (placeholders printed, ranges not placed). Deterministic: the same document gives the same bytes. `view.Structure(d *docs.Document) any`: the tree as the `structure` field, with `start_index`/`end_index` on every paragraph and run, JSON tags in snake_case.
 
-- [ ] write the failing golden tests, one per `docs` fixture: headings become `#` lines; bullets become `- ` with nesting; the table becomes a pipe table; the split insertion runs print as one `{+...+}[s:ID]` span and the deletion as `{-...-}[s:ID]`; the comment range wraps its text with `[[c:ID]]`/`[[/c]]`; a literal `{+` in document text comes out escaped; the two-tab fixture has two `<!-- tab -->` lines and the single-tab one has none; the image prints `[image]` and raises a warning; the footnote prints `[^1]` and its text after `---`; the output ends with exactly one `\n`
-- [ ] write the failing test for `Structure`: round-trips through `encoding/json` and carries the indexes of the fixture's first run
-- [ ] run the tests and watch them fail
-- [ ] implement `text.go`
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): read's text projection, suggestions inline and comment anchors marked`
+- [x] write the failing golden tests, one per `docs` fixture: headings become `#` lines; bullets become `- ` with nesting; the table becomes a pipe table; the split insertion runs print as one `{+...+}[s:ID]` span and the deletion as `{-...-}[s:ID]`; the comment range wraps its text with `[[c:ID]]`/`[[/c]]`; a literal `{+` in document text comes out escaped; the two-tab fixture has two `<!-- tab -->` lines and the single-tab one has none; the image prints `[image]` and raises a warning; the footnote prints `[^1]` and its text after `---`; the output ends with exactly one `\n`
+- [x] write the failing test for `Structure`: round-trips through `encoding/json` and carries the indexes of the fixture's first run
+- [x] run the tests and watch them fail
+- [x] implement `text.go`
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): read's text projection, suggestions inline and comment anchors marked`
+
+➕ **A `|` the author typed inside a table cell is escaped as `\|`.** The plan's pipe-table rule above named the separator and not the escaping. Unescaped, an ordinary cell value changes the table's shape: a two-cell row holding `A | B` reads back as three columns under a two-column separator. The escaping happens on the row, after the marker escaping has doubled the author's backslashes, so the parity rule a reader uses on a marker holds on a pipe too. `TestAPipeInsideACellDoesNotAddAColumn` is that rule.
+
+➕ `startTab` does not hold its own copy of the placement rule. It warns from `docs.Document.Places` and arms from `docs.Tab.Places`, so `read` and `comments` cannot drift apart on which ranges are positions, and the markers are never armed on a tab whose own text does not hold them. `unplacedWarning` is wording only: it names which half of the rule the range failed, and `Places` has already refused it.
 
 ---
 
@@ -295,15 +325,18 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 **Interfaces:**
 - Consumes: `docs.Document`, `frontmatter.SuggestionsSeen`.
 - Produces:
-  - `type Pending struct { ID, Kind, Section, Text string }` and `suggestions.Pending(d *docs.Document) []Pending`: port of `gdoc/suggestions.py`. Runs sharing one id and kind are joined in order; `Section` is the text of the heading above, `""` before the first; tables are walked; empty text after trimming is dropped; every id a run carries is reported (v1 took `ids[0]`; a run with two ids is two suggestions).
-  - `type Gone struct { ID, Kind, Section, Text string; SeenAt time.Time }` and `suggestions.Gone(seen *frontmatter.SuggestionsSeen, now []Pending) []Gone`: every item in `seen` whose id is not in `now`, with what it said last time. A fact. Whether it was accepted or rejected is the skill's, reading `read`'s text.
+  - `type Pending struct { ID, Kind, Section, Text string }` and `suggestions.List(d *docs.Document) []Pending`: port of `gdoc/suggestions.py`. Runs sharing one id and kind are joined in order; `Section` is the text of the heading above, `""` before the first; tables are walked; empty text after trimming is dropped; every id a run carries is reported (v1 took `ids[0]`; a run with two ids is two suggestions).
+  - `type Gone struct { Pending; SeenAt time.Time }` and `suggestions.GoneSince(seen *frontmatter.SuggestionsSeen, now []Pending) []Gone`: every item in `seen` whose id is not in `now`, with what it said last time. A fact. Whether it was accepted or rejected is the skill's, reading `read`'s text.
   - `suggestions.Snapshot(now []Pending, at time.Time) *frontmatter.SuggestionsSeen`.
 
-- [ ] write the failing tests: two runs one id join to one pending; a run with two ids is two pendings; heading context follows the walk into a table; `Gone` lists exactly the ids that left and carries their old text and `seen_at`; `Gone` with a nil snapshot is empty; `Snapshot` round-trips through `frontmatter.Write` and `Read`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): pending suggestions with stable ids, and what stopped being pending`
+- ⚠️ Naming deviation from the plan, forced by Go: a package cannot hold a type and a function under one name, so `Pending` and `Gone` stayed the types and the functions became `List` and `GoneSince`. `Gone` embeds `Pending`, so `encoding/json` still flattens it to the `id`/`kind`/`section`/`text`/`seen_at` object the Output shapes section prints.
+- ➕ Two decisions the plan did not state, both written into the code's comments: heading context resets at each tab boundary (a heading in one tab is not above anything in the next), and only a text run is read as a suggestion (a footnote reference carries its number as text, so a suggested footnote would otherwise be reported as the insertion of "1").
+
+- [x] write the failing tests: two runs one id join to one pending; a run with two ids is two pendings; heading context follows the walk into a table; `Gone` lists exactly the ids that left and carries their old text and `seen_at`; `Gone` with a nil snapshot is empty; `Snapshot` round-trips through `frontmatter.Write` and `Read`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): pending suggestions with stable ids, and what stopped being pending`
 
 ---
 
@@ -324,11 +357,17 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
   - `comments.Threads(raw []RawComment, d *docs.Document) ([]Thread, []string)`: joins ranges by id, sets `Marker` and `ByGdoc` per Technical Details, returns the ids the Docs read did not place.
   - `type Cursor struct { At time.Time }`, `comments.ParseCursor(s string) (*Cursor, error)` (refuses anything not `v:1`), `comments.NextCursor(prev *Cursor, threads []Thread) *Cursor` (newest `Modified` and reply `Created` seen, else `prev`), `(*Cursor).String() string`.
 
-- [ ] write the failing tests: `ListURL` carries exactly the allowed parameters and adds `startModifiedTime` only with a cursor; `Fetch` over a fake wire follows two pages and stops; markers for `ai:`, `ai?`, `ai!`, `AI:` (not a marker: exact match) and `none`; `ByGdoc` true only for a reply opening with 🤖; `Resolved` passes through; a thread without a range has `Range == nil` and its id in the unplaced list; `NextCursor` picks the newest time across comments and replies and falls back to `prev`; `ParseCursor` refuses `v:2` and non-base64, and round-trips `String()`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): comment threads as facts, with ranges, markers and the --since cursor`
+- ⚠️ **`supportsAllDrives` is not on this call, and the plan's URL above is wrong about it.** `comments.list` does not define the parameter: it belongs to the files collection, and the guard's `driveCommentListParams`, written from the Drive v3 reference, names `fields`, `pageSize`, `pageToken`, `includeDeleted` and `startModifiedTime` and not that one. Sending it would be refused inside the process by the guard's own query allowlist, so every comments read would die before the wire. The shared-drive 404 the global constraint describes is a files-collection problem; a comment collection hangs off a file already addressed by id. The milestone's other Drive read, the docx export in Task 8, does not carry it either, for the same reason: see Task 8. `files.create` in the live test does define it, and keeps it.
+- ➕ `ListURL` builds its query through `url.Values.Encode` rather than concatenation. A page token is Drive's opaque string, and one carrying an `&` would end the parameter and start another: the request on the wire would then not be the request the guard judged. The test proves the URL by handing it to a real `guard.Policy.Judge`, not by comparing it to a second copy of the allowlist, which would pass while the command failed.
+- ⚠️ `Fetch` takes a local `Reader` interface (one `GetJSON`) rather than `*gapi.Session`, the same deviation `internal/docs` made and for the same reason: this room may not name `net/http`, and a test of it must not have to.
+- ➕ **The cursor carries a third field, `i`, and the plan's shape above is short by it.** The encoding is `base64url(JSON{"v":1,"t":"<RFC3339 UTC>","i":["<comment id>"]})` and `Cursor` is `struct { At time.Time; Ids []string }`. `t` keeps its milliseconds, because Drive sends them and a floor rounded down to the second re-reports the same thread on every poll for ever. `i` names the threads whose own newest instant was `t`: `startModifiedTime` is an inclusive bound, so `Fetch` narrows the answer to what is strictly newer, and two comments sharing one millisecond with only the first reported cannot be told apart by any comparison on instants. The version stays 1, because a cursor written before `i` existed still reads and costs one repeated thread rather than a lost one. Written up in full in CLAUDE.md.
+- ➕ Three decisions the plan did not state, all written into the code's comments: `Threads` tolerates a nil document (no ranges, every thread unplaced) because the witness path reads threads with no Docs read behind them; a thread's `Replies` is never nil, so an empty thread prints `[]` rather than `null`; and `prev` is the cursor's floor rather than only its fallback, because a cursor that goes backwards makes the next poll re-report what this one just reported. A `modifiedTime` that does not parse is stepped over rather than failing the listing: one repeated thread is cheaper than a failed review.
+
+- [x] write the failing tests: `ListURL` carries exactly the allowed parameters and adds `startModifiedTime` only with a cursor; `Fetch` over a fake wire follows two pages and stops; markers for `ai:`, `ai?`, `ai!`, `AI:` (not a marker: exact match) and `none`; `ByGdoc` true only for a reply opening with 🤖; `Resolved` passes through; a thread without a range has `Range == nil` and its id in the unplaced list; `NextCursor` picks the newest time across comments and replies and falls back to `prev`; `ParseCursor` refuses `v:2` and non-base64, and round-trips `String()`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): comment threads as facts, with ranges, markers and the --since cursor`
 
 ---
 
@@ -345,13 +384,19 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 - Produces:
   - `docx.Export(ctx, s *gapi.Session, id string) ([]byte, error)` and `docx.Parse(b []byte) (*File, error)`.
   - `type File struct { Comments []Comment }`, `type Comment struct { ID, Author, Date, Text string; Anchored bool; Span string }`: from `word/comments.xml` (`w:comment` with `w:id`, `w:author`, `w:date`, concatenated `w:t`); `Anchored` true when `word/document.xml` carries a `w:commentRangeStart` with that id, `Span` the concatenated `w:t` text between it and its `w:commentRangeEnd`. `encoding/xml`, namespace by URI, read-only.
-  - `docx.Match(threads []comments.Thread, f *File) []comments.Thread`: sets `Witness` on a copy of each thread: `anchored` when a docx comment with the same normalised content (and the same author display name when the docx has one) has `Anchored`; `detached` when matched and not anchored; `unmatched` when nothing matches. Replies are not matched: the witness question is whether the thread is attached, and the first comment is the thread.
+  - `docx.Match(threads []comments.Thread, f *File) []comments.Thread`: sets `Witness` on a copy of each thread: `anchored` when a docx comment with the same normalised content (and the same author display name when the docx has one) has `Anchored`; `detached` when matched and not anchored; `unmatched` when nothing matches, or when two or more unused candidates match and disagree about being anchored. Replies are not matched: the witness question is whether the thread is attached, and the first comment is the thread.
 
-- [ ] write the failing tests: `Parse` on the helper-built docx finds two comments, one anchored with the right span and one detached; a docx without `word/comments.xml` parses to zero comments; a zip that is not a docx is refused by name; `Match` gives `anchored`, `detached` and `unmatched` across three threads and leaves the input slice untouched; `Export` over a fake wire asks for the docx mime and `supportsAllDrives=true`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the docx export reader, and the witness match against comment threads`
+- ⚠️ `Export` takes a local `Reader` interface (one `GetBytes`) rather than `*gapi.Session`, the same deviation `internal/docs` and `internal/comments` made and for the same reason: this room may not name `net/http`, and a test of it must not have to.
+- ➕ Four decisions the plan did not state, all written into the code's comments: a zip with no `word/document.xml` is refused by name, because a failed export is usually an HTML sign-in page and reading that as a document with no comments would report every thread as detached; a part that does not parse is refused naming the part, for the same reason; the join is on the comment's normalised words because `w:id` in the docx is the export's own numbering and carries no Drive comment id; and one exported comment answers for one thread, so two threads with the same words take two of them rather than both taking the first.
+- ➕ **Two candidates that disagree give no answer.** When more than one unused exported comment matches a thread and they do not all agree on `Anchored`, `find` returns nothing and the thread comes back `unmatched`, which is the amendment to the interface line above. Neither side is ordered against the other: Drive's `comments.list` defines no ordering and `word/comments.xml` is numbered by the export, so first-fit would hand one of the two thread ids the other's witness. `--since` makes it reachable with one thread in view, because the listing is narrowed to the cursor window and the export is not. `detached` means the text this thread was written about is gone, so pinning it on the wrong id points the skill at the wrong sentence. `TestAnAmbiguousWitnessIsUnmatchedRatherThanGuessed` and `TestOneThreadWithTwoDisagreeingCandidatesIsUnmatched` are that rule.
+- ➕ Elements are matched by the WordprocessingML namespace URI, never by the `w:` prefix, and every part read is bounded by `MaxExportBytes`. A prefix is the document's choice, and an unbounded decompression is a memory limit somebody else sets.
+- ⚠️ **`supportsAllDrives` is not on the export either, and the plan's URL above is wrong about it.** Measured against the live Drive v3 discovery document on 2026-09-06, `files.export` defines `fileId` and `mimeType` and nothing else; `supportsAllDrives` lives on `files.get`. So `ExportURL` carries `mimeType` alone, and `driveExportParams` in `go/internal/guard/params.go` had `supportsAllDrives` removed with it: an allowlist naming a parameter the method does not have permits a request nothing should send. Sending one the method does not define is one the server may reject, and it would take every `--witness` run with it. The global constraint at the top of this plan is about the files collection, which is where the live test's `files.create` still carries it.
+
+- [x] write the failing tests: `Parse` on the helper-built docx finds two comments, one anchored with the right span and one detached; a docx without `word/comments.xml` parses to zero comments; a zip that is not a docx is refused by name; `Match` gives `anchored`, `detached` and `unmatched` across three threads and leaves the input slice untouched; `Export` over a fake wire asks for the docx mime and nothing else, and the URL it builds is one a real `guard.Policy` carries
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the docx export reader, and the witness match against comment threads`
 
 ---
 
@@ -369,22 +414,27 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 - Consumes: everything Tasks 1 to 8 produced.
 - Produces:
   - `gdoc read <url> [--structure]`, `gdoc comments <url> [--since CURSOR] [--witness]`, `gdoc suggestions <url> [--md PATH]`, each printing the `data` shape under Technical Details, with `warnings` from `Session.Warnings()` plus the command's own.
-  - `documentID` accepts `/document/d/{id}` and `?id={id}` URLs and a bare id of 20 or more `[A-Za-z0-9_-]`; anything else is refused quoting the input. A folder parser is not built: no M2 command takes a folder.
+  - `documentID` accepts `/document/d/{id}` URLs, the same with the optional `u/<n>/` account segment in front of the `d/`, `?id={id}` URLs, and a bare id of 20 or more `[A-Za-z0-9_-]`; anything else is refused quoting the input. A folder parser is not built: no M2 command takes a folder.
   - Argument parsing is strict, as `dispatch` already is: an unknown flag, a repeated flag, a missing value or an extra positional argument fails naming it. Nothing is ignored.
   - The policy is opened with exactly one id: `p.AllowFile(id, guard.LevelSuggest)`.
-  - `suggestions --md`: after a successful read, `frontmatter.Read` the file; refuse when the block's `document_id` is not the document read (writing another document's observation into this file is the wrong file); compute `Gone`; write the new snapshot with `frontmatter.Write` through a temp file in the same directory plus `os.Rename`, as `auth.Save` does; report `files_changed`. A read that failed writes nothing and the envelope says so.
+  - `suggestions --md`: after a successful read, `frontmatter.Read` the file; refuse when the block's `document_id` is not the document read (writing another document's observation into this file is the wrong file); compute `Gone`; write the new snapshot with `frontmatter.Write` through a temp file in the same directory plus `os.Rename`, as `auth.Save` does; report `files_changed`. ⚠️ That write became its own package, `go/internal/atomicfile`, and `auth.Save` was moved onto it: two rooms doing the temp-file-and-rename dance slightly differently is how one of them loses a file's mode. The plan named neither the package nor the move. A read that failed writes nothing and the envelope says so.
   - A session factory behind a package variable, as `login` is, so the command tests stand in for the wire: `var openSession = func(p *guard.Policy) (*gapi.Session, error)`.
   - `usage` becomes `Commands: auth status, auth login, read, comments, suggestions`.
-- PLAN.md M2 says `GrantInPlace`, `AllowCreateIn` and `Token.Refresh` are deleted if M2 lands without a production caller. `Token.Refresh` gains one in Task 3. `GrantInPlace` has none and nothing depends on it: delete it with its tests; M7 adds it back beside its caller. ⚠️ `AllowCreateIn` also has no production caller in M2, but the transport's create path (`checkParent`, `learnFromCreate`, the parent-check refusals, the upload-shape checks) is built on `createIn` and tested through it, so deleting it deletes the second door and a page of guard tests. This plan keeps it and says so here; Nail can flip that decision in review.
+- PLAN.md M2 says `GrantInPlace`, `AllowCreateIn` and `Token.Refresh` are deleted if M2 lands without a production caller. `Token.Refresh` gains one in Task 3. `GrantInPlace` has none and nothing depends on it: delete it with its tests; M7 adds it back beside its caller. ⚠️ `AllowCreateIn` also has no production caller in M2, but the transport's create path (`checkParent`, `learnFromCreate`, the parent-check refusals, the upload-shape checks) is built on `createIn` and tested through it, so deleting it deletes the second door and a page of guard tests. This plan keeps it and says so here. Decided by Nail in review, 2026-09-07: kept.
 - The live test: gated on `GDOC_LIVE_TEST=1`, skipping with a message otherwise. It opens a policy with `AllowCreateIn` on the test folder, creates a Docs file there (`files.create` with `supportsAllDrives=true`; the guard learns the id at `LevelFull`), inserts two paragraphs and a heading, creates one Drive comment on a word, runs `read` and `comments --witness` through the real code path, asserts the heading is a `#` line and the comment's text is wrapped with `[[c:ID]]`, asserts one thread with `marker: none` and `witness` not `unmatched`, saves the export and the Docs read as redacted fixtures only when `GDOC_LIVE_RECORD=1`, and trashes the file, asserting `trashed: true` on the read-back. This is the one place M2 writes to Drive, on a document the run itself created.
 
-- [ ] write the failing command tests over a stubbed `openSession` and fixtures: each command prints exactly one JSON object (`decodeOne`); `read` carries the golden text and no `structure` without the flag, and the tree with it; `comments` puts the policy's and the session's warnings on the envelope and reports an unplaced thread; `--since` with a bad cursor fails naming it; `--witness` sets `witness` per thread; `suggestions --md` on a fixture file with a matching `document_id` writes the snapshot, leaves every other line byte-identical, reports `gone_since_last_look` and `files_changed`; `suggestions --md` on a file whose `document_id` differs fails and leaves the file untouched; `suggestions --md` when the read fails leaves the file untouched; `documentID` accepts the two URL shapes and a bare id and refuses a short id quoting it; an unknown flag, a repeated flag and an extra argument each fail naming the offender; `usage` in the unknown-command error lists the five commands
-- [ ] write the failing guard test change: remove `TestGrantInPlaceUpgrades` and every `GrantInPlace` reference; the package must compile without the method
-- [ ] run the tests and watch them fail
-- [ ] implement `read.go`, wire `dispatch`, delete `GrantInPlace`
-- [ ] write the live test, run it with the variable unset and confirm it skips with a message; do not run it live in the unattended run
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`: green
-- [ ] commit: `feat(v2): read, comments and suggestions on the envelope; GrantInPlace leaves until M7`
+- ⚠️ **The session seam is an interface, not `*gapi.Session`.** The plan wrote `var openSession = func(p *guard.Policy) (*gapi.Session, error)`. A stub for the concrete type has to build an `http.RoundTripper`, which means `cmd/gdoc` naming `net/http`, and the boundary test's import allowlist would then have to admit a room that only fakes the wire. So `read.go` declares a three-method `session` interface (`GetJSON`, `GetBytes`, `Warnings`) and `openSession` returns that. The factory is still one package variable, `login`'s pattern, and production still gets `gapi.Open(p, nil)`.
+- ⚠️ **The live test reads and writes nothing to Drive.** The plan's version created a document in the test folder, wrote a comment into it and trashed it. A create and a comment are POSTs, `internal/live` would have to build them, and building a request means naming `net/http`: the import allowlist cannot admit a package whose only files are tests, because the disappearance half reads production files only and would then fail for the opposite reason. So `internal/live/live_test.go` is a read of a document the run names in `GDOC_LIVE_DOC_ID`, through `gapi.Open`, `docs.Parse`, `view.Text`, `comments.Fetch`/`Threads` and `docx.Export`/`Parse`/`Match`, with `GDOC_LIVE_RECORD=1` writing the two answers into `testdata/` for a person to redact. A live write belongs to M6, which has a production writer to run it through. Nail can flip that in review.
+
+- [x] write the failing command tests over a stubbed `openSession` and fixtures: each command prints exactly one JSON object (`decodeOne`); `read` carries the golden text and no `structure` without the flag, and the tree with it; `comments` puts the policy's and the session's warnings on the envelope and reports an unplaced thread; `--since` with a bad cursor fails naming it; `--witness` sets `witness` per thread; `suggestions --md` on a fixture file with a matching `document_id` writes the snapshot, leaves every other line byte-identical, reports `gone_since_last_look` and `files_changed`; `suggestions --md` on a file whose `document_id` differs fails and leaves the file untouched; `suggestions --md` when the read fails leaves the file untouched; `documentID` accepts the three URL shapes and a bare id and refuses a short id quoting it; an unknown flag, a repeated flag and an extra argument each fail naming the offender; `usage` in the unknown-command error lists the five commands
+- [x] write the failing guard test change: remove `TestGrantInPlaceUpgrades` and every `GrantInPlace` reference; the package must compile without the method
+- [x] run the tests and watch them fail
+- [x] implement `read.go`, wire `dispatch`, delete `GrantInPlace`
+- [x] write the live test, run it with the variable unset and confirm it skips with a message; do not run it live in the unattended run
+- [x] run the full suite with `-race`, gofmt, vet, `make build`: green
+- [x] commit: `feat(v2): read, comments and suggestions on the envelope; GrantInPlace leaves until M7`
+
+➕ **`documentID` reads a third URL shape, `/document/u/<n>/d/{id}`.** v1's two patterns are ported, and they miss the account segment the browser puts in the address bar of anybody signed into more than one Google account. That is the URL Nail pastes, and refusing it as "not a Google Docs URL" names the wrong problem. The segment is `u/` plus digits only, so `u/x/` is still refused, and the Produces line above is amended.
 
 ---
 
@@ -396,17 +446,78 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 **Interfaces:**
 - Consumes: everything Tasks 1 to 9 produced. Produces: proof that PLAN.md's M2 description, as corrected 2026-09-06, holds: `documents.get` with `includeTabsContent=true`, tab detection, `read` as text with suggestions inline and anchors marked plus the structure on a flag, threads with real ranges and markers as facts, the opaque cursor, pending suggestions with stable ids and what stopped being pending, the docx reader, the versioned front-matter block, strict YAML.
 
-- [ ] verify every item in the Overview and in PLAN.md M2 is implemented, by reading each command's test and the fixture it runs on
-- [ ] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`; each hit is either a fact with a different name or a defect to remove
-- [ ] verify the reads are guard-bounded: a command test where the fake wire fails the test if anything reaches it proves a refused id never reaches the transport (mirror `acceptance_test.go`)
-- [ ] verify the boundary test in both directions on a scratch copy: a stray `net/http` in `internal/comments` fails it; removing the import from `internal/gapi/session.go` fails it; a second module in `go.mod` fails it
-- [ ] verify front-matter preservation on real files: `frontmatter.Write` of an unchanged block on a fixture with front matter, then `cmp` the bytes
-- [ ] run the full test suite: `cd go && go test -race ./...`
-- [ ] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
-- [ ] run the vet check: `cd go && go vet ./...`
-- [ ] verify coverage: every exported function under `go/internal/` has a test (`cd go && go test ./... -cover`); add tests rather than lowering the bar
-- [ ] verify `make build` and `make dist` still produce the binaries with `CGO_ENABLED=0`, and record the binary size delta from the YAML module in this plan with a ➕ line
-- [ ] commit any fixes this task made
+- [x] verify every item in the Overview and in PLAN.md M2 is implemented, by reading each command's test and the fixture it runs on
+- [x] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`; each hit is either a fact with a different name or a defect to remove
+- [x] verify the reads are guard-bounded: a command test where the fake wire fails the test if anything reaches it proves a refused id never reaches the transport (mirror `acceptance_test.go`)
+- [x] verify the boundary test in both directions on a scratch copy: a stray `net/http` in `internal/comments` fails it; removing the import from `internal/gapi/session.go` fails it; a second module in `go.mod` fails it
+- [x] verify front-matter preservation on real files: `frontmatter.Write` of an unchanged block on a fixture with front matter, then `cmp` the bytes
+- [x] run the full test suite: `cd go && go test -race ./...`
+- [x] run the formatter check: `cd go && gofmt -l . && test -z "$(gofmt -l .)"`
+- [x] run the vet check: `cd go && go vet ./...`
+- [x] verify coverage: every exported function under `go/internal/` has a test (`cd go && go test ./... -cover`); add tests rather than lowering the bar
+- [x] verify `make build` and `make dist` still produce the binaries with `CGO_ENABLED=0`, and record the binary size delta from the YAML module in this plan with a ➕ line
+- [x] commit any fixes this task made
+
+**What the checks found, and what they cost.**
+
+➕ The guard-bounded check needed a second half and got one:
+`go/internal/gapi/acceptance_test.go`, `internal/guard/acceptance_test.go`'s
+`neverCalled` transport brought to the room where a session is what carries a
+read. `cmd/gdoc`'s `TestAReadIsBoundedToTheOneDocumentItWasGiven` already put the
+policy the command built through `Policy.Judge`, which proves the setup; it does
+not prove a refused read never reaches the wire, because that test stubs the
+session out entirely. The new test builds the policy the way `open()` does, one
+`AllowFile` at `LevelSuggest`, and sends the URLs the three commands actually
+build (`docs.URL`, `comments.ListURL`, `docx.ExportURL`, taken from the packages
+rather than retyped) for another document, over a transport that fails the test
+on contact. Both `GetJSON` and `GetBytes` are covered. It was watched failing:
+adding the other id to the policy fires the transport on all four cases.
+
+➕ One coverage hole, and a test rather than a lower bar. `view`'s `plain` had
+zero coverage: it prints the second copy of a run carrying both an insertion and
+a deletion id, text suggested and then suggested away, and no fixture had one.
+`TestTextSuggestedAndThenSuggestedAwayPrintsTwiceAndIsMarkedOnce` covers it and
+states the rule the code comment claims: the text prints twice, the comment
+marker opens once, and it belongs to the first copy. After it, no function
+anywhere under `go/internal/` has zero coverage, and the total is 93.3%.
+
+⚠️ The boundary test does not count `import _ "net/http"`, and that is correct
+rather than a hole: `httpRefs` skips a blank import with the comment "a blank
+import cannot name anything", and a package that cannot name the type cannot
+build a client out of it either. The first attempt at the scratch check used a
+blank import and passed, which looked like a miss and was not. A real import
+fails it, under the canonical name and under an alias, and both were watched.
+
+➕ All three boundary directions were watched failing on a scratch copy of the
+repo at `HEAD`: a used `net/http` in `internal/comments` fails
+`TestNetHTTPStaysInItsRooms` naming the room and the four that may; deleting the
+import from `internal/gapi/session.go` fails the same test's disappearance half;
+a second `require` line fails `TestNoThirdPartyDependencies` twice, once for
+`go.mod` and once for `go.sum`.
+
+➕ Front-matter preservation was checked outside the suite, on files nobody wrote
+for it. Every fixture carrying a readable `gdoc:` block round-trips
+byte-identical under `cmp`, CRLF included. On five real files with no block at
+all, two hub notes and this repo's `README.md`, `CLAUDE.md` and
+`docs/v2/SPEC.md`, `Write` adds the block for exactly 83 bytes and every original
+line survives in order.
+
+➕ **The binary size delta.** `make build` and `make dist` both still produce
+their binaries, `CGO_ENABLED=0`, and `file` reports Mach-O arm64 and PE32+ for
+Windows. Two measurements, because the milestone's growth and the module's are
+not the same number. go-yaml alone, measured against a build of `HEAD` with the
+module dropped and its two calls stubbed:
+
+| Target | Without go-yaml | With | Delta |
+|---|---|---|---|
+| darwin/arm64 | 11,092,994 | 12,132,722 | +1,039,728 (+9.4%) |
+| darwin/amd64 | 11,858,512 | 12,980,240 | +1,121,728 (+9.5%) |
+| windows/amd64 | 11,758,080 | 12,859,904 | +1,101,824 (+9.4%) |
+
+All of M2 against M1's last binary (`47c638b^`), which is the number a person
+downloading the tool sees: darwin/arm64 10,162,818 to 12,132,722, +1,969,904
+(+19.4%). So roughly half the milestone's growth is the YAML module and half is
+the eight new packages.
 
 ---
 
@@ -420,11 +531,11 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 **Interfaces:**
 - Produces: the repo's account of what now exists, so M3 starts from documentation that matches the tree.
 
-- [ ] update `README.md`: the three read commands, their arguments, the `read` text conventions (`{+ +}`, `{- -}`, `[s:ID]`, `[[c:ID]]`), the cursor, `--witness`, `--md`, and the `gdoc:` block a paired note carries
-- [ ] update `CLAUDE.md` under "v2 lives at `go/`": the facts-only rule and the test for it; the four rooms of the import allowlist and why `internal/gapi` is one; `allowedModules` holds go-yaml; the front-matter block version 1 and its rules (strict decode, byte-preserving write, snapshot written only after a successful read); `read`'s text conventions and the escaping rule; the cursor is opaque and dies with the session; `GrantInPlace` is gone until M7 and `AllowCreateIn` stayed, with the reason; pictures and drawings are in the backlog
-- [ ] update `docs/v2/PLAN.md`: mark M2 done with the date, record what it left for M3 (the Docs `comments` range shape is measured from the live fixture; `AllowCreateIn` has its first production caller in M6; the review skill reads `comments` and judges), and the binary size delta
-- [ ] run the full test suite one more time: `cd go && go test -race ./...`
-- [ ] commit the documentation updates: `docs: M2 lands, the read commands and the front-matter block written down`
+- [x] update `README.md`: the three read commands, their arguments, the `read` text conventions (`{+ +}`, `{- -}`, `[s:ID]`, `[[c:ID]]`), the cursor, `--witness`, `--md`, and the `gdoc:` block a paired note carries
+- [x] update `CLAUDE.md` under "v2 lives at `go/`": the facts-only rule and the test for it; the four rooms of the import allowlist and why `internal/gapi` is one; `allowedModules` holds go-yaml; the front-matter block version 1 and its rules (strict decode, byte-preserving write, snapshot written only after a successful read); `read`'s text conventions and the escaping rule; the cursor is opaque and dies with the session; `GrantInPlace` is gone until M7 and `AllowCreateIn` stayed, with the reason; pictures and drawings are in the backlog
+- [x] update `docs/v2/PLAN.md`: mark M2 done with the date, record what it left for M3 (the Docs `comments` range shape is measured from the live fixture; `AllowCreateIn` has its first production caller in M6; the review skill reads `comments` and judges), and the binary size delta
+- [x] run the full test suite one more time: `cd go && go test -race ./...`
+- [x] commit the documentation updates: `docs: M2 lands, the read commands and the front-matter block written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes. Nobody here moves it, so this is not a checkbox.
 
 ## Post-Completion
@@ -439,7 +550,9 @@ Warnings ride in the envelope's `warnings`: the policy's `Warnings()`, a token t
 
 **Known and out of scope for this plan:**
 
-- Pictures, diagrams and Google Drawings print as placeholders. `docs/backlog/read-pictures-and-drawings.md`.
+- Pictures, diagrams and Google Drawings print as placeholders, and a positioned object prints nothing at all. `docs/backlog/read-pictures-and-drawings.md`.
+- A marker whose two halves fall in two text runs, or a document character sitting against one of gdoc's own markers, reaches the text unescaped. Found during Task 5, so the statement above about literals always being escaped is true per run rather than per document. `docs/backlog/escaping-across-run-boundaries.md`.
+- A suggestion inside a footnote is in neither `read`'s markers nor `pending`, and nothing warns. Found during Task 6, so Task 6's silent-failure promise holds for body content and not for footnote content. `docs/backlog/suggestions-inside-footnotes.md`.
 - Numbered lists print as `- ` like bulleted ones: telling them apart needs the `lists` map and its glyph types. A ➕ candidate for M3 if the review skill needs it.
 - The revmux review of the M1 guard (2026-09-06) reported one major and four minor findings in `go/internal/guard`: `isSuggestMode` reads `writeControl` more loosely than the server does; a repeated JSON key collapses before `judgeRequests` and `checkParent` see it; `DELETE` and `PATCH` on any comment are carried at `LevelSuggest`; `resumable` uploads can never complete; nothing tests that a refused request closes the body. None is a read path, so none is in this plan. They belong to M3, the first milestone that sends a write, and are recorded here so they are not lost.
 

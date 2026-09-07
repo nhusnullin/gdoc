@@ -1,0 +1,80 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXsingleTab",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "Policy", "index": 0},
+      "documentTab": {
+        "body": {
+          "content": [
+            {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+            {"startIndex": 1, "endIndex": 7, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "HEADING_1"},
+              "elements": [
+                {"startIndex": 1, "endIndex": 7, "textRun": {"content": "Scope\n", "textStyle": {}}}
+              ]}},
+            {"startIndex": 7, "endIndex": 87, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+              "elements": [
+                {"startIndex": 7, "endIndex": 41, "textRun": {"content": "The supplier register is reviewed ", "textStyle": {}}},
+                {"startIndex": 41, "endIndex": 49, "textRun": {"content": "annually", "textStyle": {}, "suggestedDeletionIds": ["suggest.a1"]}},
+                {"startIndex": 49, "endIndex": 55, "textRun": {"content": "every ", "textStyle": {}, "suggestedInsertionIds": ["suggest.a1"]}},
+                {"startIndex": 55, "endIndex": 62, "textRun": {"content": "quarter", "textStyle": {"bold": true}, "suggestedInsertionIds": ["suggest.a1"]}},
+                {"startIndex": 62, "endIndex": 66, "textRun": {"content": " by ", "textStyle": {}}},
+                {"startIndex": 66, "endIndex": 85, "textRun": {"content": "the operations team", "textStyle": {}}},
+                {"startIndex": 85, "endIndex": 87, "textRun": {"content": ".\n", "textStyle": {}}}
+              ]}},
+            {"startIndex": 87, "endIndex": 96, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "HEADING_2"},
+              "elements": [
+                {"startIndex": 87, "endIndex": 96, "textRun": {"content": "Controls\n", "textStyle": {}}}
+              ]}},
+            {"startIndex": 96, "endIndex": 115, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+              "bullet": {"listId": "kix.list1"},
+              "elements": [
+                {"startIndex": 96, "endIndex": 115, "textRun": {"content": "Check the register\n", "textStyle": {}}}
+              ]}},
+            {"startIndex": 115, "endIndex": 135, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+              "bullet": {"listId": "kix.list1", "nestingLevel": 1},
+              "elements": [
+                {"startIndex": 115, "endIndex": 135, "textRun": {"content": "Escalate exceptions\n", "textStyle": {}}}
+              ]}},
+            {"startIndex": 135, "endIndex": 184, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+              "elements": [
+                {"startIndex": 135, "endIndex": 184, "textRun": {"content": "A literal {+marker+} and [[brackets]] stay text.\n", "textStyle": {}}}
+              ]}},
+            {"startIndex": 184, "endIndex": 232, "table": {
+              "rows": 2,
+              "columns": 2,
+              "tableRows": [
+                {"startIndex": 185, "endIndex": 203, "tableCells": [
+                  {"startIndex": 186, "endIndex": 194, "content": [
+                    {"startIndex": 186, "endIndex": 194, "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"}, "elements": [
+                      {"startIndex": 186, "endIndex": 194, "textRun": {"content": "Control\n", "textStyle": {}}}]}}]},
+                  {"startIndex": 194, "endIndex": 200, "content": [
+                    {"startIndex": 194, "endIndex": 200, "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"}, "elements": [
+                      {"startIndex": 194, "endIndex": 200, "textRun": {"content": "Owner\n", "textStyle": {}}}]}}]}
+                ]},
+                {"startIndex": 203, "endIndex": 231, "tableCells": [
+                  {"startIndex": 204, "endIndex": 220, "content": [
+                    {"startIndex": 204, "endIndex": 220, "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"}, "elements": [
+                      {"startIndex": 204, "endIndex": 220, "textRun": {"content": "Register review\n", "textStyle": {}}}]}}]},
+                  {"startIndex": 220, "endIndex": 231, "content": [
+                    {"startIndex": 220, "endIndex": 231, "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"}, "elements": [
+                      {"startIndex": 220, "endIndex": 231, "textRun": {"content": "Operations\n", "textStyle": {}}}]}}]}
+                ]}
+              ]}}
+          ]
+        }
+      }
+    }
+  ],
+  "comments": [
+    {"id": "AAAA1111", "range": {"startIndex": 66, "endIndex": 85}, "quotedFileContent": {"value": "the operations team"}},
+    {"id": "BBBB2222", "quotedFileContent": {"value": "a sentence that left"}}
+  ]
+}

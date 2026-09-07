@@ -123,9 +123,12 @@ Serves principle 3. This is the safety property everything else stands on.
   may build an HTTP client or reach a package-level dialer such as `http.Get`.
   Naming `net/http` is not the same thing as dialing with it, and the boundary
   test draws that line: a second, wider allowlist says who may import the type
-  at all, and `internal/auth` and `internal/auth/loopback` are on it.
-  `internal/auth` takes the guard's client as a parameter and sends requests
-  through it; `loopback` runs an `http.Server`, and serving is not building.
+  at all, and `internal/auth`, `internal/auth/loopback` and `internal/gapi` are
+  on it. `internal/auth` takes the guard's client as a parameter and sends
+  requests through it; `loopback` runs an `http.Server`, and serving is not
+  building; `internal/gapi` builds the `*http.Request` every read goes out as
+  and sets the bearer on it, and the client it sends them on is a parameter, so
+  the builder allowlist is what proves it makes none.
   Both checks fail in both directions, so a room that stops owning what it was
   listed for fails too. This is the v1 allowlist test, made stronger by owning
   the transport instead of wrapping a client.
@@ -297,9 +300,15 @@ resolve. gdoc never accepts, rejects or deletes anyone else's suggestion.
 ### Reading suggestions
 
 Lists pending suggestions with their stable ids and quotes what each proposes.
-On a later read it reports which were resolved and how: an accepted suggestion's
-text became ordinary text, a rejected one's did not. gdoc learns decisions by
-reading; it never makes them.
+On a later read it reports which ids stopped being pending. gdoc never accepts,
+rejects or deletes anyone else's suggestion.
+
+**Corrected 2026-09-06.** This section used to say the binary reports which
+suggestions were resolved *and how*. Withdrawn, for the same reason the comment
+heuristic was. Whether a suggestion that left was accepted or thrown away is not
+in the API: the id is gone either way. So the binary reports
+`gone_since_last_look`, which is the id, what it said at the last snapshot, and
+when that snapshot was taken. The skill reads `read`'s text and decides.
 
 ### The diff (what `align` composes)
 
