@@ -1,0 +1,37 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "Two tabs",
+  "revisionId": "ALm37BXtwoTabs",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "Overview", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 10, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "HEADING_1"},
+            "elements": [{"startIndex": 1, "endIndex": 10, "textRun": {"content": "Overview\n", "textStyle": {}}}]}},
+          {"startIndex": 10, "endIndex": 33, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [{"startIndex": 10, "endIndex": 33, "textRun": {"content": "The first tab's text.\n", "textStyle": {}}}]}}
+        ]}
+      },
+      "childTabs": [
+        {
+          "tabProperties": {"tabId": "t.1", "title": "Detail", "index": 0},
+          "documentTab": {
+            "body": {"content": [
+              {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+              {"startIndex": 1, "endIndex": 8, "paragraph": {
+                "paragraphStyle": {"namedStyleType": "HEADING_1"},
+                "elements": [{"startIndex": 1, "endIndex": 8, "textRun": {"content": "Detail\n", "textStyle": {}}}]}},
+              {"startIndex": 8, "endIndex": 32, "paragraph": {
+                "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                "elements": [{"startIndex": 8, "endIndex": 32, "textRun": {"content": "The second tab's text.\n", "textStyle": {}}}]}}
+            ]}
+          }
+        }
+      ]
+    }
+  ]
+}

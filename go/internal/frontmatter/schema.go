@@ -62,12 +62,18 @@ type SuggestionSeen struct {
 	Text    string `yaml:"text"`
 }
 
-// Proposal is one of gdoc's own suggestions. M3 writes these; M2 only carries
+// Proposal is one of gdoc's own suggestions. M3 writes these; M2 only carried
 // them through a read and a write unchanged.
+//
+// Quoted is the text the proposal replaced. It is what a later run shows Nail
+// when it says which proposal it is about to withdraw, and it is optional in
+// the decoder because a note paired under M2 carries proposals without it: a
+// strict read there would unpair every note gdoc has already written.
 type Proposal struct {
 	ID        string    `yaml:"id"`
 	CommentID string    `yaml:"comment_id"`
 	At        time.Time `yaml:"at"`
+	Quoted    string    `yaml:"quoted,omitempty"`
 }
 
 // Validate reports the first rule the block breaks, naming the key. A block

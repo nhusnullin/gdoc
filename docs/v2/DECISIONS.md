@@ -357,6 +357,26 @@ The `insertComment` payload is undocumented. It is:
 Not `anchor`, not `quotedRange`, not `comment`. Every other shape is
 `Cannot find field`.
 
+The answer is undocumented too, and it was measured on 2026-09-07, on a
+throwaway document in the test folder, because the first live write test
+guessed it wrong and lost the comment id. The `insertComment` reply carries a
+`commentThread`, and the id is one level down:
+
+```json
+{"replies": [{}, {}, {"insertComment": {"commentThread": {
+   "commentId": "AAAC…", "anchorId": "kix.…",
+   "headPost": {"postId": "AAAC…", "content": "🤖 …", "author": {"me": true}, "…": "…"},
+   "status": "OPEN", "plainTextQuote": "the inserted words"}}}],
+ "suggestionResponses": [{"createdSuggestionIds": ["suggest.…"]},
+                         {"updatedSummarySuggestionIds": ["suggest.…"]},
+                         {"updatedSummarySuggestionIds": ["suggest.…"]}],
+ "commentUpdateState": "ALL_SAVED", "writeControl": {"requiredRevisionId": "…"}}
+```
+
+`go/internal/propose/testdata/batch-saved-measured.json` is that answer with
+the ids replaced. `propose` reads `commentThread.commentId` first and the flat
+`insertComment.commentId` it had guessed as a fallback.
+
 The day's behaviour is worth recording, because it explains three contradictory
 readings: that morning `SUGGEST` returned **200 and silently made a direct edit**;
 by midday it returned **400 Unsupported WriteControl mode**; by evening it worked.
@@ -403,6 +423,11 @@ option available.
 
 Nail's rule. `acceptSuggestion` and `rejectSuggestion` work and will not be used.
 Resolving a proposal is his hand, in the document, and is not delegated.
+
+*Narrowed 2026-09-07, Nail's call: `rejectSuggestion` is used on gdoc's own
+proposals, and on nothing else, because it is the only request that withdraws a
+replace proposal whole. The guard carries it for one granted id per run. See
+"A replace proposal cannot be fully withdrawn" below.*
 
 This raised a question and answered it. An earlier decision says the hub markdown
 changes when a proposal is **accepted**. If gdoc never accepts, how does it know?
@@ -991,3 +1016,56 @@ a gate, consistent with everything above. The guard caps the blast radius: on a
 handed-in document the agent can only suggest and reply, so the worst a
 colleague's instruction can produce is a suggestion Nail rejects. A colleague
 who can already edit the whole document was always trusted with more than this.
+
+## 2026-09-07. A replace proposal cannot be fully withdrawn by a delete. Decided: reject gdoc's own.
+
+Found by the first live write test, on throwaway documents in the test folder,
+after M3's revmux review had passed. The 2026-08-29 finding that a
+`deleteContentRange` in `SUGGEST` mode "removes it cleanly and comes back with
+`deletedSuggestionIds`" was measured on a **pure insertion**. A `propose` is a
+**replace**: one suggestion id covering a suggested deletion of the quoted words
+and a suggested insertion of the replacement. Five things were measured:
+
+| Sent, on gdoc's own replace proposal | What Docs did |
+|---|---|
+| `deleteContentRange` in `SUGGEST` over the insertion half (what `withdraw` sends) | 200. The inserted words are gone. The answer carries `suggestionResponses[].updatedSummarySuggestionIds: [id]` and **no `deletedSuggestionIds`**. The read-back still carries the quoted words as a suggested deletion under the same id. **Half the proposal stays pending.** |
+| a second `deleteContentRange` in `SUGGEST` over the still-suggested-deleted words | 200, `updatedSummarySuggestionIds` again, and nothing changed. |
+| one `deleteContentRange` in `SUGGEST` over both halves at once | 200. The inserted words become suggested-inserted **and** suggested-deleted under the same id. Worse than before. |
+| `rejectSuggestion {suggestionId}`, in `SUGGEST` mode and plain | **Refused by the guard before it left the machine**: any request kind whose name carries "suggestion" is refused, which is the 2026-08-29 rule "gdoc never accepts and never rejects" in code. Not measured against Google. |
+| the 🤖 comment, after the insertion half is deleted | Survives, `deleted: false`, still anchored by id, quoting words that are no longer in the document. The skill can still reply into it. |
+
+So today `withdraw` reports `verified: false` with two warnings on every
+replace proposal, leaves the entry in the note, and the document keeps a
+suggested deletion gdoc cannot take back. The live write test fails on exactly
+this, and it is left failing on purpose.
+
+The one route that would retract the whole suggestion is `rejectSuggestion` on
+gdoc's own id, and the guard refuses it by Nail's rule. Widening that rule to
+"gdoc may reject a suggestion the note records as its own" is his decision, not
+a refactor: the guard cannot tell whose a suggestion is, so the door would have
+to be a per-run grant the `withdraw` command seeds from `proposals[]`, the way
+`AllowCreateIn` names one folder. The alternatives are to leave `withdraw` as a
+half-retraction that says so, or to make withdrawing a thing Nail does by hand.
+
+**Decided the same day. Nail: "allow reject on own ids; merge after the fix."**
+Measured before it was built, through the new door and not around the guard:
+`rejectSuggestion {suggestionId}` inside a `writeMode: SUGGEST` batch returns
+200, the document reads exactly as it did before the proposal, the answer
+carries `suggestionResponses[].rejectedSuggestionIds: [id]` with
+`commentUpdateState: ALL_SAVED`, and the 🤖 comment survives, `deleted: false`,
+still anchored by id. The same request without `writeMode` behaves the same, so
+the guard's SUGGEST requirement on a handed-in document stays as it was.
+
+What changed: `Policy.AllowReject(id)` is the per-run grant, seeded by
+`cmdWithdraw` from the note's `proposals[]` after `Mine` has answered; the guard
+carries a `rejectSuggestion` only when it is spelled exactly, carries exactly
+`{"suggestionId": <that id>}`, and the id is the granted one, while
+`acceptSuggestion`, `deleteSuggestion`, any other id and any second field stay
+refused; `withdraw` sends that one request, checks that the document still
+carries the id on either side before it writes, and is verified when
+`rejectedSuggestionIds` names the id and a fresh read carries no run under it.
+A document the old delete half-retracted is repaired by running `withdraw`
+again, because a run still suggested-deleted under the id counts as pending.
+The multi-tab refusal went with the range. The live write test passes end to
+end. The rule "gdoc never accepts, rejects or deletes anyone else's suggestion"
+is unchanged and is now guard-enforced rather than a family ban.

@@ -15,7 +15,7 @@ import (
 	"gdoc/internal/guard"
 )
 
-const usage = "Commands: auth status, auth login, read, comments, suggestions"
+const usage = "Commands: auth status, auth login, read, comments, suggestions, probe, reply, propose, withdraw"
 
 // login is the login flow behind a variable so a test can stand in for the
 // browser trip. The client is the guard's, so even the token exchange passes a
@@ -66,9 +66,9 @@ func dispatch(args []string, errOut io.Writer) emit.Result {
 			return authLogin(errOut)
 		}
 	}
-	// The read commands take their own arguments, so they are matched on the
-	// first word and parse the rest themselves. Strictly: parseArgs refuses an
-	// unknown flag, a repeated one and an extra positional argument.
+	// The read and write commands take their own arguments, so they are matched
+	// on the first word and parse the rest themselves. Strictly: parseArgs
+	// refuses an unknown flag, a repeated one and an extra positional argument.
 	if len(args) > 0 {
 		switch args[0] {
 		case "read":
@@ -77,6 +77,14 @@ func dispatch(args []string, errOut io.Writer) emit.Result {
 			return cmdComments(args[1:])
 		case "suggestions":
 			return cmdSuggestions(args[1:])
+		case "probe":
+			return cmdProbe(args[1:])
+		case "reply":
+			return cmdReply(args[1:])
+		case "propose":
+			return cmdPropose(args[1:])
+		case "withdraw":
+			return cmdWithdraw(args[1:])
 		}
 	}
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown

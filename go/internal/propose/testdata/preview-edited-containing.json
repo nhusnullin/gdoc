@@ -1,0 +1,15 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "A direct edit whose replacement carries the quoted words inside it",
+  "revisionId": "ALm37BXcontaining",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 105, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 105, "textRun": {
+          "content": "The supplier register is reviewed annually by the operations team by the operations team.\n",
+          "textStyle": {}}}
+      ]}}
+  ]}
+}

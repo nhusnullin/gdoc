@@ -62,6 +62,17 @@ func (f *fakeSession) GetBytes(_ context.Context, rawURL string, _ int64) ([]byt
 	return nil, fmt.Errorf("the fake session has no answer for %s", rawURL)
 }
 
+// The read commands write nothing, so the fake read session refuses both write
+// verbs rather than recording them. A read command that grew a POST would fail
+// here by name, which is the point.
+func (f *fakeSession) PostJSON(_ context.Context, rawURL string, _ any, _ any) error {
+	return fmt.Errorf("a read command must not POST: %s", rawURL)
+}
+
+func (f *fakeSession) PatchJSON(_ context.Context, rawURL string, _ any, _ any) error {
+	return fmt.Errorf("a read command must not PATCH: %s", rawURL)
+}
+
 func (f *fakeSession) Warnings() []string { return f.warnings }
 
 // stubSession stands in for gapi.Open and keeps the policy the command opened,

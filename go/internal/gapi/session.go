@@ -5,10 +5,12 @@
 // is what stops the bearer, the Accept header and the refresh rule from being
 // written three slightly different ways in three reader packages.
 //
-// Everything here is a GET. Nothing in this package writes to Docs or Drive.
+// A read is a GET and a write is a POST or a PATCH carrying JSON, and all three
+// go through one refresh policy, in send below.
 package gapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +22,25 @@ import (
 	"gdoc/internal/auth"
 	"gdoc/internal/guard"
 )
+
+// sentError marks an error raised after the server had already accepted the
+// request. Everything a caller does about a write depends on that difference: a
+// write reported as never sent is a write somebody sends again, and the first
+// one is already in the document.
+//
+// It is a method rather than an exported sentinel so that the writer packages
+// can ask the question without importing this one. Naming *http.Client is what
+// keeps them out of here, and the interface they name is the whole reason.
+type sentError struct{ err error }
+
+func (e sentError) Error() string { return e.err.Error() }
+func (e sentError) Unwrap() error { return e.err }
+
+// Sent says this failure happened after the request was accepted.
+func (e sentError) Sent() bool { return true }
+
+// sent wraps err as having happened after a 2xx answer.
+func sent(err error) error { return sentError{err: err} }
 
 // maxErrorBody caps what is read from a failed request. The body is never
 // printed, only Google's error.message is, so this is a bound on the parse.
@@ -81,18 +102,101 @@ func (s *Session) GetBytes(ctx context.Context, rawURL string, limit int64) ([]b
 	return s.get(ctx, rawURL, "*/*", limit)
 }
 
-// get is the whole refresh policy in one place. An expired token is refreshed
+// PostJSON sends body to rawURL as JSON and decodes the answer into `into`. An
+// `into` of nil discards the answer, which is what a write whose only useful
+// fact is that it succeeded wants.
+//
+// The body is marshalled once and each attempt is built over the same bytes, so
+// the retry after a 401 sends what the first attempt sent. A body encoded again
+// per attempt would be a second chance for the two to differ, and a body read
+// once would make the retry an empty batchUpdate: a write that did nothing
+// while the envelope said it had been sent.
+func (s *Session) PostJSON(ctx context.Context, rawURL string, body any, into any) error {
+	return s.writeJSON(ctx, http.MethodPost, rawURL, body, into)
+}
+
+// PatchJSON is PostJSON on the other write verb. Drive spells trashing a file
+// as files.update, which is a PATCH, and the guard carries it only on a file
+// gdoc itself created. The probe is what needs it: a throwaway document it
+// cannot put in the trash is a document left in somebody's Drive.
+func (s *Session) PatchJSON(ctx context.Context, rawURL string, body any, into any) error {
+	return s.writeJSON(ctx, http.MethodPatch, rawURL, body, into)
+}
+
+// writeJSON is both write verbs in one place, for the reason this package
+// exists: a second copy of the marshal, the headers and the refresh rule is a
+// second place for them to drift.
+func (s *Session) writeJSON(ctx context.Context, method, rawURL string, body any, into any) error {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("the body for %s could not be encoded as JSON: %w", rawURL, err)
+	}
+	answer, err := s.send(ctx, rawURL, s.bodyRequest(method, rawURL, raw), MaxJSONBody)
+	if err != nil {
+		return err
+	}
+	if into == nil {
+		return nil
+	}
+	if err := json.Unmarshal(answer, into); err != nil {
+		// The write was accepted: send only returns a body on a 2xx. So this is
+		// a failure to read an answer, never a failure to make the change, and
+		// it is marked as such.
+		return sent(fmt.Errorf("%s answered 200 with a body that is not JSON: %w", rawURL, err))
+	}
+	return nil
+}
+
+// get reads rawURL. It is send over a GET, and the shape is kept so the two
+// read helpers above stay one line each.
+func (s *Session) get(ctx context.Context, rawURL, accept string, limit int64) ([]byte, error) {
+	return s.send(ctx, rawURL, s.getRequest(rawURL, accept), limit)
+}
+
+// requestFor builds the request one attempt sends. It is a function rather than
+// a request because a request carries its body in a reader that is read once,
+// and the retry after a 401 needs a body of its own.
+type requestFor func(ctx context.Context) (*http.Request, error)
+
+// getRequest is a read: no body, and the Accept the caller asked for.
+func (s *Session) getRequest(rawURL, accept string) requestFor {
+	return func(ctx context.Context) (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", accept)
+		return req, nil
+	}
+}
+
+// bodyRequest is a write. bytes.Reader is what makes http.NewRequestWithContext
+// set ContentLength and GetBody itself, so the guard peeks the same bytes the
+// wire carries and the transport can rewind a broken connection over them.
+func (s *Session) bodyRequest(method, rawURL string, raw []byte) requestFor {
+	return func(ctx context.Context) (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, method, rawURL, bytes.NewReader(raw))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		return req, nil
+	}
+}
+
+// send is the whole refresh policy in one place. An expired token is refreshed
 // before the first request goes out, and a 401 is refreshed once and the
 // request retried once. A second 401 is not a third attempt: the token is being
 // refused for a reason a refresh does not fix, and saying so is more use than
 // another round trip.
-func (s *Session) get(ctx context.Context, rawURL, accept string, limit int64) ([]byte, error) {
+func (s *Session) send(ctx context.Context, rawURL string, build requestFor, limit int64) ([]byte, error) {
 	if s.token.Expired() {
 		if err := s.refresh(); err != nil {
 			return nil, err
 		}
 	}
-	body, status, err := s.attempt(ctx, rawURL, accept, limit)
+	body, status, err := s.attempt(ctx, build, limit, rawURL)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +204,7 @@ func (s *Session) get(ctx context.Context, rawURL, accept string, limit int64) (
 		if err := s.refresh(); err != nil {
 			return nil, err
 		}
-		body, status, err = s.attempt(ctx, rawURL, accept, limit)
+		body, status, err = s.attempt(ctx, build, limit, rawURL)
 		if err != nil {
 			return nil, err
 		}
@@ -117,15 +221,14 @@ func (s *Session) get(ctx context.Context, rawURL, accept string, limit int64) (
 // attempt sends one request and returns its body and status. A transport error,
 // which is what a guard refusal is, comes back as the error; a status the
 // caller has to decide about does not.
-func (s *Session) attempt(ctx context.Context, rawURL, accept string, limit int64) ([]byte, int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, rawURL string) ([]byte, int, error) {
+	req, err := build(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 	// Set, not Add: two Authorization values are two credentials, and the guard
 	// refuses the request rather than letting the server pick.
 	req.Header.Set("Authorization", "Bearer "+s.token.AccessToken)
-	req.Header.Set("Accept", accept)
 
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -144,7 +247,7 @@ func (s *Session) attempt(ctx context.Context, rawURL, accept string, limit int6
 	// is not JSON, and both name something the server did not do.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, read+1))
 	if err != nil {
-		return nil, 0, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err)
+		return nil, 0, mark(ok, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err))
 	}
 	if int64(len(body)) > read {
 		if !ok {
@@ -152,9 +255,25 @@ func (s *Session) attempt(ctx context.Context, rawURL, accept string, limit int6
 			// does not quote it at all. Cutting it here costs nothing.
 			return body[:read], resp.StatusCode, nil
 		}
-		return nil, 0, fmt.Errorf("the answer from %s is larger than the %d bytes this read allows", rawURL, limit)
+		return nil, 0, sent(fmt.Errorf("the answer from %s is larger than the %d bytes this read allows", rawURL, limit))
 	}
 	return body, resp.StatusCode, nil
+}
+
+// mark wraps err as sent when the server had answered 2xx before it happened.
+//
+// It is the most this package can say, and not the whole of what can go wrong.
+// An unmarked failure is one of three: a guard refusal, where nothing left the
+// machine; a 4xx, where Docs rejected the batch whole; and a 5xx or a dropped
+// connection, where the request was written and gdoc cannot tell whether it was
+// applied. The third is not a claim this makes either way, so a caller reading
+// a transport failure or a 5xx should look at the document before sending the
+// same write again.
+func mark(ok bool, err error) error {
+	if !ok {
+		return err
+	}
+	return sent(err)
 }
 
 // refresh exchanges the refresh token, saves the result and says so once. A

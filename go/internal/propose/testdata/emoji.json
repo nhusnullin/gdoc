@@ -1,0 +1,14 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "A paragraph opening with an emoji, in one run",
+  "revisionId": "ALm37BXemoji",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 28, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 28, "textRun": {
+          "content": "🤖 reviewed annually here.\n", "textStyle": {}}}
+      ]}}
+  ]}
+}

@@ -1,0 +1,26 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "Docs cut the one insert into two runs",
+  "revisionId": "ALm37BXsplit",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 93, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 26, "textRun": {"content": "The supplier register is ", "textStyle": {}}},
+        {"startIndex": 26, "endIndex": 35, "textRun": {
+          "content": "reviewed ",
+          "suggestedInsertionIds": ["suggest.abc"],
+          "textStyle": {}}},
+        {"startIndex": 35, "endIndex": 51, "textRun": {
+          "content": "every six months",
+          "suggestedInsertionIds": ["suggest.abc"],
+          "textStyle": {}}},
+        {"startIndex": 51, "endIndex": 68, "textRun": {
+          "content": "reviewed annually",
+          "suggestedDeletionIds": ["suggest.abc"],
+          "textStyle": {}}},
+        {"startIndex": 68, "endIndex": 93, "textRun": {"content": " by the operations team.\n", "textStyle": {}}}
+      ]}}
+  ]}
+}

@@ -1,0 +1,27 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "The same words twice, once across a footnote mark",
+  "revisionId": "ALm37BXfootnotetwice",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 36, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 36, "textRun": {
+          "content": "The register is reviewed annually.\n",
+          "textStyle": {}}}
+      ]}},
+    {"startIndex": 36, "endIndex": 74, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 36, "endIndex": 56, "textRun": {
+          "content": "The list is reviewed",
+          "textStyle": {}}},
+        {"startIndex": 56, "endIndex": 57, "footnoteReference": {
+          "footnoteId": "kix.fn1", "footnoteNumber": "1", "textStyle": {}}},
+        {"startIndex": 57, "endIndex": 74, "textRun": {
+          "content": " annually today.\n",
+          "textStyle": {}}}
+      ]}}
+  ]}
+}

@@ -152,11 +152,11 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
   5. A request body type in the tests that records `Close`, and one test per refusal path (unreadable body, wire mismatch, policy refusal, parent-check refusal) asserting the body was closed, so the `RoundTripper` contract the comment claims is held by a test.
 - ⚠️ Finding 6 from the same review, the `docsReadParams` comment, was fixed in M2.
 
-- [ ] write the failing tests, one per finding: `{"WriteControl":{"WRITEMODE":"SUGGEST"}}` and a doubled `writeControl` are refused as direct edits; a doubled `requests` key, a doubled `action` key and a doubled `parents` key are each refused by name; `PATCH` and `DELETE` on `{id}/comments/C1` and on a reply are refused with the rule in the message; `uploadType=resumable` is refused; each refusal path closes the body
-- [ ] run `cd go && go test ./internal/guard/` and watch the new tests fail
-- [ ] implement the five changes; update the `isSuggestMode` doc comment and the CLAUDE.md caveat with the 2026-09-07 measurement, keeping the rule that the probe and the read-back are what make a write trustworthy
-- [ ] run the guard tests, the boundary test, gofmt, vet: green
-- [ ] commit: `fix(v2): the guard reads writeMode exactly, refuses repeated keys, and carries no comment PATCH or DELETE`
+- [x] write the failing tests, one per finding: `{"WriteControl":{"WRITEMODE":"SUGGEST"}}` and a doubled `writeControl` are refused as direct edits; a doubled `requests` key, a doubled `action` key and a doubled `parents` key are each refused by name; `PATCH` and `DELETE` on `{id}/comments/C1` and on a reply are refused with the rule in the message; `uploadType=resumable` is refused; each refusal path closes the body
+- [x] run `cd go && go test ./internal/guard/` and watch the new tests fail
+- [x] implement the five changes; update the `isSuggestMode` doc comment and the CLAUDE.md caveat with the 2026-09-07 measurement, keeping the rule that the probe and the read-back are what make a write trustworthy
+- [x] run the guard tests, the boundary test, gofmt, vet: green
+- [x] commit: `fix(v2): the guard reads writeMode exactly, refuses repeated keys, and carries no comment PATCH or DELETE`
 
 ---
 
@@ -168,11 +168,11 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 **Interfaces:**
 - Produces: `(*Session).PostJSON(ctx, rawURL string, body any, into any) error`: marshals `body`, sends `POST` with `Content-Type: application/json` and the bearer, through the same expired-token and one-401 refresh policy `get` has, decodes a 2xx answer into `into`. The request is built with `GetBody` set, so the guard's peek reads the same bytes the wire sends and a retry after a 401 resends them. `into == nil` discards the answer. The package doc comment loses "Everything here is a GET".
 
-- [ ] write the failing tests over a fake wire: the body arrives as sent with the JSON content type; a 401 refreshes once and the retried request carries the same body; a 400 with a Google error body surfaces `message` and the status; a guard refusal (a `batchUpdate` on a handed-in id without SUGGEST) comes back as the refusal and the fake saw nothing
-- [ ] run the tests and watch them fail
-- [ ] implement `PostJSON` by extracting the refresh loop from `get` into one function both call
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): gapi posts JSON through the guard with the same refresh policy`
+- [x] write the failing tests over a fake wire: the body arrives as sent with the JSON content type; a 401 refreshes once and the retried request carries the same body; a 400 with a Google error body surfaces `message` and the status; a guard refusal (a `batchUpdate` on a handed-in id without SUGGEST) comes back as the refusal and the fake saw nothing
+- [x] run the tests and watch them fail
+- [x] implement `PostJSON` by extracting the refresh loop from `get` into one function both call
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): gapi posts JSON through the guard with the same refresh policy`
 
 ---
 
@@ -181,17 +181,20 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 **Files:**
 - Create: `go/internal/probe/probe.go`, `go/internal/probe/probe_test.go`
 - Create: `go/internal/probe/testdata/*.json` (a `SUGGESTIONS_INLINE` answer with the word carrying an insertion id; the same answer with the word as plain text; a `files.get` answer with `trashed: true`)
+- Modify: `go/internal/gapi/session.go`, `go/internal/gapi/session_test.go` (`PatchJSON`, the verb the trash needs)
 
 **Interfaces:**
-- Consumes: a session interface with `GetJSON` and `PostJSON`; `docs.Parse` for the read-back.
+- Consumes: a session interface with `GetJSON`, `PostJSON` and `PatchJSON`; `docs.Fetch`, which is `docs.Parse` over the same read the three read commands make.
+- ➕ `gapi.PatchJSON`, added here. The trash is `files.update {trashed: true}`, which Drive spells as a PATCH, and Task 2 added the POST alone. It is `PostJSON` on the other verb: both call one `writeJSON`, so the marshal, the headers and the refresh rule stay in one place. Its tests are in `internal/gapi`: the patch the trash needs, a 401 that refreshes once and retries with the same bytes, and a PATCH of a handed-in file refused by the guard before the wire.
+- ➕ `Report.Warnings`, added here. The trash is not the probe's question, so a trash that failed is a warning rather than an error, and the reason it failed has to survive beside `Trashed: false`. The command in Task 7 puts these on the envelope.
 - Produces: `type Report struct { Enrolled bool; ProbeDocumentID string; Trashed bool; SuggestionIDs []string }` and `probe.Run(ctx, s Session, folderID string) (Report, error)`: the sequence under "The probe" in Technical Details. The create names exactly `folderID` as its parent, which is how the guard's `AllowCreateIn` lets it through and learns the id at `LevelFull`. Trash runs on every path after the create succeeded, including an error mid-way, and its outcome is in the report. An error after the create carries the report too, so the document id is never lost.
 - The policy for a probe is `AllowCreateIn(folderID)` and nothing else: the probe document is learned, not handed in.
 
-- [ ] write the failing tests: the enrolled fixture gives `Enrolled: true` with the id; the plain-text fixture gives `Enrolled: false`; a failing SUGGEST write still trashes and reports `Trashed`; a create whose answer has no id is an error naming the folder; the requests the fake saw are, in order, create, direct insert, SUGGEST insert, read, trash, get; the direct insert has no `writeControl` and the SUGGEST insert has exactly `{"writeMode":"SUGGEST"}`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the capability probe, a throwaway document that says whether SUGGEST is honoured`
+- [x] write the failing tests: the enrolled fixture gives `Enrolled: true` with the id; the plain-text fixture gives `Enrolled: false`; a failing SUGGEST write still trashes and reports `Trashed`; a create whose answer has no id is an error naming the folder; the requests the fake saw are, in order, create, direct insert, SUGGEST insert, read, trash, get; the direct insert has no `writeControl` and the SUGGEST insert has exactly `{"writeMode":"SUGGEST"}`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the capability probe, a throwaway document that says whether SUGGEST is honoured`
 
 ---
 
@@ -204,14 +207,15 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Consumes: the session interface; `comments.Fetch` for the read-back.
 - Produces:
   - `reply.Check(body string) error`: refuses an empty body, a body not opening with `🤖 ` (exactly the robot and one space, nothing before), and a body carrying markdown, with v1's pattern ported from `gdoc/reply.py` and its tests (`**`, backticks, a `#` heading at a line start, a fenced block, a link in brackets).
-  - `reply.Post(ctx, s Session, docID, commentID, body string) (Result, error)` with `type Result struct { ReplyID, Created string; Verified bool }`: `POST /drive/v3/files/{id}/comments/{cid}/replies?fields=id,createdTime,content` with `{content: body}`, then `comments.Fetch` of the one thread and `Verified` true iff a reply with that id and that content is in it. The body sent is exactly the body checked; nothing is appended (v1 appended `[gdoc]`; v2's mark is the prefix the skill wrote).
+  - ➕ `Result.Warnings`, added here, the same shape `probe.Report` grew for the same reason. Everything that can go wrong after the write is a fact about a reply that already exists: an answer carrying no reply id, a read-back that failed, a thread that does not show the reply. Raising any of them would send the skill back to post the reply a second time, and Drive may well have taken the first. So `Post` fails only before it writes, and reports afterwards.
+  - `reply.Post(ctx, s Session, docID, commentID, body string) (Result, error)` with `type Result struct { ReplyID, Created string; Verified bool; Warnings []string }`: `POST /drive/v3/files/{id}/comments/{cid}/replies?fields=id,createdTime,content` with `{content: body}`, then `comments.Fetch` of the one thread and `Verified` true iff a reply with that id and that content is in it. The body sent is exactly the body checked; nothing is appended (v1 appended `[gdoc]`; v2's mark is the prefix the skill wrote).
 - The two-message rule (an acknowledgment and a receipt at most) is the skill's: the binary posts one reply per call and knows nothing about the previous one.
 
-- [ ] write the failing tests: `Check` accepts `🤖 The 2026 register.` and refuses each bad shape by name; `Post` sends the body verbatim to the replies URL with only `fields` in the query; the read-back marks `Verified` true when the reply is in the thread and false when it is not, with the reply id still reported; a guard refusal on a document not in the policy reaches the caller
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): reply posts one 🤖 reply through Drive and reads the thread back`
+- [x] write the failing tests: `Check` accepts `🤖 The 2026 register.` and refuses each bad shape by name; `Post` sends the body verbatim to the replies URL with only `fields` in the query; the read-back marks `Verified` true when the reply is in the thread and false when it is not, with the reply id still reported; a guard refusal on a document not in the policy reaches the caller
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): reply posts one 🤖 reply through Drive and reads the thread back`
 
 ---
 
@@ -237,14 +241,20 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
   - `propose.Record(note []byte, results []Result, at time.Time) ([]byte, error)`: appends to `proposals[]` through `frontmatter.Write`.
 - A document with `MultiTab()` is refused before any write, naming the tab count.
 
-- [ ] write the failing tests for `FindSpan`: one match gives the range in UTF-16 units (a fixture paragraph with an emoji before the match proves it); no match and two matches refuse by name; a match inside a suggested run refuses
-- [ ] write the failing tests for `Batch`: three requests in order, the comment content opens with `🤖 `, the assignee is present only when given, `writeControl` is exact
-- [ ] write the failing tests for `Apply` and `Verify` over a fake wire that answers the read-backs from fixtures: the happy path is `Verified: true` with all three checks; an `ALL_FAILED_UNKNOWN_REASON` answer is `Verified: false` with the state reported; a preview that shows the replacement (a direct edit happened) fails the second check and warns; a docx without the comment fails the third; a two-tab document is refused before the fake sees a POST
-- [ ] write the failing schema test: `proposals[]` with and without `quoted` both read
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): propose writes a suggestion with an anchored 🤖 comment and verifies it three ways`
+- [x] write the failing tests for `FindSpan`: one match gives the range in UTF-16 units (a fixture paragraph with an emoji before the match proves it); no match and two matches refuse by name; a match inside a suggested run refuses
+- [x] write the failing tests for `Batch`: three requests in order, the comment content opens with `🤖 `, the assignee is present only when given, `writeControl` is exact
+- [x] write the failing tests for `Apply` and `Verify` over a fake wire that answers the read-backs from fixtures: the happy path is `Verified: true` with all three checks; an `ALL_FAILED_UNKNOWN_REASON` answer is `Verified: false` with the state reported; a preview that shows the replacement (a direct edit happened) fails the second check and warns; a docx without the comment fails the third; a two-tab document is refused before the fake sees a POST
+- [x] write the failing schema test: `proposals[]` with and without `quoted` both read
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): propose writes a suggestion with an anchored 🤖 comment and verifies it three ways`
+
+- ➕ `insertComment` carries `content` and `range` at the top of the request, not nested under a `comment` key. This plan's Technical Details said `comment: {content: ...}`; DECISIONS.md 2026-08-29 measured the shape and every other spelling answers `Cannot find field`. The measured shape is what `Batch` sends.
+- ➕ `Result.Warnings`, the same field `probe.Report` and `reply.Result` grew for the same reason: after the batch has gone out the change exists, so a read-back that failed is reported rather than raised.
+- ➕ `propose.StartsAt` and `propose.PreviewURL`, exported beside `FindSpan`. The preview check is a question about a place in a document, so it belongs next to the code that found the place, and Task 7's command tests read the URL to tell the two views apart.
+- ➕ `Record` skips a result with no suggestion id rather than writing an entry with an empty one. An empty id fails the block's own validation, which would lose the provenance of every other proposal in the same write.
+- ➕ `FindSpan` searches table cells as well as body paragraphs. A cell's paragraphs carry their own indexes in the same tab, and refusing to look there would report "not found" about words that are plainly on screen.
 
 ---
 
@@ -258,11 +268,18 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Consumes: the session interface; `docs`; `frontmatter`.
 - Produces: `withdraw.Run(ctx, s Session, docID, suggestionID string, note *frontmatter.Block) (Result, error)` with `type Result struct { SuggestionID string; DeletedSuggestionIDs []string; Verified bool }`: refuses an id not in `note.Proposals`; finds the runs carrying the id; one SUGGEST `deleteContentRange`; `Verified` iff the answer's `deletedSuggestionIds` contains the id and the read-back carries no run with it. `withdraw.Forget(note *frontmatter.Block, suggestionID string) *frontmatter.Block` returns a new block without the entry.
 
-- [ ] write the failing tests: an id not in the note is refused before any request; the happy path deletes the right span and is `Verified`; an answer without `deletedSuggestionIds` is `Verified: false` with a warning; `Forget` leaves the other proposals in place and does not mutate its input
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): withdraw retracts one of gdoc's own suggestions and proves it is gone`
+- [x] write the failing tests: an id not in the note is refused before any request; the happy path deletes the right span and is `Verified`; an answer without `deletedSuggestionIds` is `Verified: false` with a warning; `Forget` leaves the other proposals in place and does not mutate its input
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): withdraw retracts one of gdoc's own suggestions and proves it is gone`
+
+**Discovered while implementing:**
+
+- ➕ `withdraw.Span` and `withdraw.Mine`, exported beside `Run`. `Mine` is the permission question in one function, so Task 7's command asks the same question this package asks rather than writing a second copy of it. `Span` is the placement, next to the code that reads the document, as `propose.FindSpan` is.
+- ➕ `Span` deletes the insertion side alone and refuses runs that are not one span. Two spans carrying the one id with other words between them would take those words with them, and they are not gdoc's to touch. Failing closed is the right direction to be wrong in.
+- ➕ The read-back asks whether any run still carries the id on **either** side, insertion or deletion. A run still marked for deletion under the id is the other half of a proposal that is still pending, and reporting that as withdrawn would leave Nail's own words marked to disappear.
+- ➕ `withdraw.BatchURL` is `propose.BatchURL`, not a second copy of the same string. The two packages write through one endpoint and one spelling of it.
 
 ---
 
@@ -281,13 +298,22 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Argument parsing is strict, as before. The folder argument accepts a Drive folder URL or a bare id (the folder half of v1's `docid.py`, added to `documentID`'s file).
 - `usage` becomes `Commands: auth status, auth login, read, comments, suggestions, probe, reply, propose, withdraw`.
 
-- [ ] write the failing command tests over the stubbed session and fixtures: each command prints exactly one JSON object; `probe` reports the fixture's verdict; `reply` with a markdown body fails before any request and names the offending text; `propose` with a not-enrolled probe sends nothing and fails naming it; `propose --md` records provenance for an accepted-but-unverified proposal and leaves the rest of the note byte-identical; `propose --md` on a note whose `document_id` differs fails before any write; `withdraw` without `--md` fails naming it; the unknown-command error lists the nine commands
-- [ ] run the tests and watch them fail
-- [ ] implement `write.go`, wire `dispatch`
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`: green
-- [ ] update `install.sh`: after the v1 venv step it keeps, run `make build` and link `~/.local/bin/gdoc` to `bin/gdoc` (replacing the link to the venv binary), remove a `~/.local/bin/gdoc2` link when one exists, and print which binary `gdoc` now is; it stays safe to re-run. v1's two skills are untouched: they name the venv binary by its full path
-- [ ] run `./install.sh` on this machine and confirm `gdoc auth status` prints v2's envelope and `gdoc2` is gone from PATH
-- [ ] commit: `feat(v2): probe, reply, propose and withdraw on the envelope; gdoc on PATH is v2`
+- [x] write the failing command tests over the stubbed session and fixtures: each command prints exactly one JSON object; `probe` reports the fixture's verdict; `reply` with a markdown body fails before any request and names the offending text; `propose` with a not-enrolled probe sends nothing and fails naming it; `propose --md` records provenance for an accepted-but-unverified proposal and leaves the rest of the note byte-identical; `propose --md` on a note whose `document_id` differs fails before any write; `withdraw` without `--md` fails naming it; the unknown-command error lists the nine commands
+- [x] run the tests and watch them fail
+- [x] implement `write.go`, wire `dispatch`
+- [x] run the full suite with `-race`, gofmt, vet, `make build`: green
+- [x] update `install.sh`: after the v1 venv step it keeps, run `make build` and link `~/.local/bin/gdoc` to `bin/gdoc` (replacing the link to the venv binary), remove a `~/.local/bin/gdoc2` link when one exists, and print which binary `gdoc` now is; it stays safe to re-run. v1's two skills are untouched: they name the venv binary by its full path
+- [x] run `./install.sh` on this machine and confirm `gdoc auth status` prints v2's envelope and `gdoc2` is gone from PATH
+- [x] commit: `feat(v2): probe, reply, propose and withdraw on the envelope; gdoc on PATH is v2`
+
+**Discovered while implementing:**
+
+- ➕ `parseArgsN` beside `parseArgs`, and `args.positional` in place of `args.target`. `probe` takes no document and `reply` and `withdraw` take two words, so the count is a parameter. It is exact in both directions: one word too many is refused because a command that ignores what it did not understand tells the caller it did something it did not, and one too few is refused because the missing word is what the command is about.
+- ➕ `session` gains `PostJSON` and `PatchJSON`. One interface for every command, so a stub in `cmd/gdoc` is one type. The read commands' fake refuses both verbs by name, so a read command that grew a write fails there.
+- ➕ `propose` reads the document once before the probe. The envelope reports `tabs` and `multi_tab`, and a multi-tab document then stops the run before a probe document is created rather than after: "nothing is sent" includes the throwaway.
+- ➕ `readBody` trims the trailing newline a text file ends with. The read-back compares the words Drive stored against the words that were sent, and a newline Drive trimmed would report a reply that is plainly in the thread as unverified.
+- ➕ A per-proposal warning is prefixed with the quoted words. The envelope carries one warning list, so a run with two proposals would otherwise name a route that did not hold without saying which change it was about.
+- ➕ `install.sh` builds the Go binary itself. Without `go` on PATH it uses an existing `bin/gdoc` with a warning, and fails only when there is neither.
 
 ---
 
@@ -311,10 +337,55 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
   - Removed from v1's skill: `capture`, `pending.md`, `edits`, `baseline`, `--terminal-only` (replaced by "say what you would post" when Nail asks for a dry run), the service-account branch.
 - The skill is a product artifact: a change to it is reviewed like code, and the revmux round reads it.
 
-- [ ] write the skill, section by section as above, plain English, short sentences, no em dashes
-- [ ] read it against SPEC.md "Skills", "How a comment reaches the agent" and "Never", and list in this plan any rule the skill states that SPEC does not, or the reverse
-- [ ] check `install.sh` still links the directory and that `~/.claude/skills/gdoc-review` resolves to it
-- [ ] commit: `feat(v2): the review skill, rewritten over gdoc comments, read, reply and propose`
+- [x] write the skill, section by section as above, plain English, short sentences, no em dashes
+- [x] read it against SPEC.md "Skills", "How a comment reaches the agent" and "Never", and list in this plan any rule the skill states that SPEC does not, or the reverse
+- [x] check `install.sh` still links the directory and that `~/.claude/skills/gdoc-review` resolves to it
+- [x] commit: `feat(v2): the review skill, rewritten over gdoc comments, read, reply and propose`
+
+**Read against SPEC.md, and where the two do not line up:**
+
+Rules the skill states that SPEC does not. Each is judgement, which is what a
+skill is for, and none of them widens what the binary may do.
+
+- **The dry run.** "Say what you would post" replaces v1's `--terminal-only`.
+  SPEC has no dry run because it describes the binary, and the binary has no
+  mode: not writing is the skill not calling `reply` or `propose`.
+- **All-comments mode.** v1's per-comment picking, kept. SPEC says an unmarked
+  comment is never acted on, and this mode does not break that: Nail picks each
+  one, which is the instruction the marker would have been.
+- **The stop-and-ask list.** The hub leak of 18 August, a note the root marks
+  confidential, an answer the skill is not confident is true, a genuinely
+  ambiguous comment, a second reply to an answered thread. SPEC's "Never prompt"
+  is about the binary, and these are the skill asking, which is the opposite
+  half of the same rule.
+- **The shape of a reply**: the answer first, one reason line, sources last. And
+  grounding in `$ROOT` in both languages. SPEC says `ai?` is answered from the
+  hub and stops there.
+- **A resolved thread is not work.** SPEC says gdoc never resolves and never
+  reopens, and says nothing about reading the flag. Nail resolves when he
+  accepts, so the flag is his answer.
+- **The receipt names where the work landed, and says less on a document shared
+  outside Altery.** SPEC says the receipt is written last and only after the
+  action landed; what it may contain is the hub-leak rule, which is the skill's.
+- **The probe folder is a constant in the skill.** SPEC leaves the folder to the
+  caller. The skill names Nail's Drive test folder so `propose` is one command.
+
+Rules SPEC states that the skill does not.
+
+- **The live session.** SPEC's review session "can run live", polling on the
+  `--since` cursor until Nail stops it. That is M4, so the skill reads
+  `--since` nowhere and the loop is not written yet. `comments` already emits
+  the cursor.
+- **One writer per document.** SPEC serializes proposals within a document. The
+  skill makes one `propose` call per document and the binary serializes the
+  proposals inside it, each after its own fresh read, so there is nothing left
+  for the skill to state.
+- **Never replace the body of a document that exists**, and **never export a
+  PDF**. The first has no skill counterpart in M3: there is no publish command
+  yet, and the guard refuses it. The second is in the skill's Never list even
+  though nothing here could do it, because it is a habit rather than a call.
+- **Never prompt.** The binary's rule, and the skill's opposite: it asks Nail in
+  five named cases and nowhere else.
 
 ---
 
@@ -326,9 +397,9 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 **Interfaces:**
 - Produces: `TestLiveProposeReplyWithdraw`, gated on `GDOC_LIVE_TEST=1` and `GDOC_LIVE_WRITE=1`, skipping with a message otherwise. It opens a policy with `AllowCreateIn` on the test folder, runs `probe.Run` (which creates and trashes its own document), creates a second document there with one sentence, proposes a replacement into it and asserts `Verified` with all three checks, replies `🤖 ...` to the comment the proposal made and asserts `Verified`, withdraws the proposal and asserts `Verified`, then trashes the document and asserts `trashed: true`. Every document it touches is one it created. With `GDOC_LIVE_RECORD=1` it saves the `batchUpdate` answer and the `SUGGESTIONS_INLINE` read as redacted fixtures for `propose`'s tests to be tightened against.
 
-- [ ] write the test, run it with the variables unset and confirm it skips with a message
-- [ ] run the full suite: green; do not run it live in the unattended run
-- [ ] commit: `test(v2): the opt-in live write: probe, propose, reply, withdraw, trash`
+- [x] write the test, run it with the variables unset and confirm it skips with a message
+- [x] run the full suite: green; do not run it live in the unattended run
+- [x] commit: `test(v2): the opt-in live write: probe, propose, reply, withdraw, trash`
 
 ---
 
@@ -338,15 +409,57 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 - Modify: `go/internal/atomicfile/atomicfile_test.go`, `go/internal/config/config_test.go` (the two coverage stragglers reach 80%)
 - Modify: none other expected. Fix whatever the checks below break.
 
-- [ ] verify SPEC.md acceptance item 4 is testable end to end: a propose lands as a genuine suggestion (absent under `PREVIEW_WITHOUT_SUGGESTIONS`), with its 🤖 comment anchored to the exact words, verified through the docx export; the unit test over fixtures proves the code path and the live test proves Google
-- [ ] verify SPEC.md acceptance item 6: the probe distinguishes an enrolled project from an unenrolled one without writing to any real document; both fixtures exist and the probe never touches a handed-in id
-- [ ] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
-- [ ] verify every write is verified: grep the writers for `PostJSON` and confirm each call is followed by a read-back the tests cover
-- [ ] verify the guard refuses what SPEC's Never list names, with the guard's own tests: a direct edit on a handed-in id, `action` on a comment, any `*Suggestion` request kind, `PATCH`/`DELETE` on a comment, a create outside the named folder
-- [ ] bring `atomicfile` and `config` to 80% or better with tests of their error paths
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
-- [ ] verify coverage: every exported function under `go/internal/` has a test
-- [ ] commit any fixes this task made
+- [x] verify SPEC.md acceptance item 4 is testable end to end: a propose lands as a genuine suggestion (absent under `PREVIEW_WITHOUT_SUGGESTIONS`), with its 🤖 comment anchored to the exact words, verified through the docx export; the unit test over fixtures proves the code path and the live test proves Google
+- [x] verify SPEC.md acceptance item 6: the probe distinguishes an enrolled project from an unenrolled one without writing to any real document; both fixtures exist and the probe never touches a handed-in id
+- [x] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
+- [x] verify every write is verified: grep the writers for `PostJSON` and confirm each call is followed by a read-back the tests cover
+- [x] verify the guard refuses what SPEC's Never list names, with the guard's own tests: a direct edit on a handed-in id, `action` on a comment, any `*Suggestion` request kind, `PATCH`/`DELETE` on a comment, a create outside the named folder
+- [x] bring `atomicfile` and `config` to 80% or better with tests of their error paths
+- [x] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
+- [x] verify coverage: every exported function under `go/internal/` has a test
+- [x] commit any fixes this task made
+
+**What the sweep found, 2026-09-07:**
+
+- Acceptance 4 holds over fixtures and live. `Checks` carries the three routes
+  as three fields, and each has its own failing case:
+  `TestApplyVerifiesTheHappyPathThreeWays`,
+  `TestApplyFailsThePreviewCheckWhenTheWriteWasADirectEdit` (the direct-edit
+  case, which is the whole point of the preview route) and
+  `TestApplyFailsTheDocxCheckWhenTheCommentIsNotInTheExport`.
+  `TestLiveProposeReplyWithdraw` is the same three against Google.
+- Acceptance 6 holds. `enrolled.json` and `plain.json` are the two answers,
+  and `TestTheProbeDocumentIsNeverHandedIn` states that the probe reaches only
+  the document it created.
+- No judgement leaked. Every json tag under the four new packages is a fact:
+  `enrolled`, `trashed`, `verified`, `checks`, `comment_update_state`,
+  `deleted_suggestion_ids`, `suggestion_ids`. The grep's only hits are prose,
+  and each says the package decides nothing. The one in a message,
+  withdraw.go's "it may have been accepted, rejected or already withdrawn", is
+  uncertainty written down rather than a verdict.
+- Every write is verified. Four production `PostJSON` call sites: the probe's
+  create and its two inserts, read back by `docs.Fetch`; `reply.Post`, read
+  back by `inThread`; `propose.Apply`, read back by `Verify` on three routes;
+  `withdraw.Run`, read back by a second `docs.Fetch` and by
+  `deletedSuggestionIds`.
+- The guard refuses what Never names, each in its own test:
+  `TestAHandedInDocumentIsNeverDirectlyEdited` and `TestSuggestModeIsReadExactly`,
+  `TestTheActionFieldIsRefusedByItsPresence`,
+  `TestASuggestionVerbInABatchUpdateIsRefused`, `TestNoCommentPatchOrDelete`,
+  and `TestCreateOutsideTheNamedFolderIsRefused` with
+  `TestCreateRefusedWithoutANamedFolder`.
+- ➕ `config.Dir` grew a pure `dirFor`, the way v1's `resolve_auth_mode` is
+  pure. The Windows branch decides where the OAuth token is written and no test
+  on this machine could reach it. 60% to 100%.
+- ➕ `atomicfile` reached 84%. The rollback shared by the write, the chmod and
+  the sync had no test, because a write to a good file descriptor does not fail
+  on request; `RLIMIT_FSIZE` set to zero is the one portable way to make it,
+  so that test is unix only and puts the limit back before it asserts.
+- ➕ three exported functions had no test naming them, only coverage through
+  their caller: `propose.PreviewURL`, `withdraw.Span` and `withdraw.Batch`.
+  Each has one now. `PreviewURL`'s found nothing wrong but was worth writing:
+  the fakes match that URL on a substring, so neither parameter was asserted
+  anywhere, and the guard refuses a Docs read carrying a third one.
 
 ---
 
@@ -355,12 +468,34 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`, `docs/v2/PLAN.md`
 
-- [ ] update `README.md`: the four write commands, `proposals.json`, the probe, what `verified` and `checks` mean, and that the review skill runs over `gdoc2`
-- [ ] update `CLAUDE.md` under "v2 lives at `go/`": every document write is a suggestion and the guard holds it; the probe runs on every `propose` and creates in the test folder; the three read-backs and what `verified: false` means; provenance in `proposals[]` is the permission to withdraw; `commentWrites` carries no `PATCH`/`DELETE` until a caller arrives; the skill decides which threads need an answer and the binary does not; `gdoc` on PATH is v2 from this milestone and `gdoc2` is gone, while v1's skills keep calling the venv binary by its full path (correcting the M2 note about `gdoc2`)
-- [ ] update `docs/v2/PLAN.md`: mark M3 done with the date, record what it left for M4 (the live session polls `comments --since` and the same skill acts on what arrives) and for M6 (`AllowCreateIn` now has a production caller, the probe)
-- [ ] run the full test suite one more time
-- [ ] commit: `docs: M3 lands, the writes, the probe and the review skill written down`
+- [x] update `README.md`: the four write commands, `proposals.json`, the probe, what `verified` and `checks` mean, and that the review skill runs over `gdoc` (not `gdoc2`: Task 7 made `gdoc` on PATH the Go binary and removed the second name, so this checkbox's wording was superseded by the plan's own Overview)
+- [x] update `CLAUDE.md` under "v2 lives at `go/`": every document write is a suggestion and the guard holds it; the probe runs on every `propose` and creates in the test folder; the three read-backs and what `verified: false` means; provenance in `proposals[]` is the permission to withdraw; `commentWrites` carries no `PATCH`/`DELETE` until a caller arrives; the skill decides which threads need an answer and the binary does not; `gdoc` on PATH is v2 from this milestone and `gdoc2` is gone, while v1's skills keep calling the venv binary by its full path (correcting the M2 note about `gdoc2`)
+- [x] update `docs/v2/PLAN.md`: mark M3 done with the date, record what it left for M4 (the live session polls `comments --since` and the same skill acts on what arrives) and for M6 (`AllowCreateIn` now has a production caller, the probe)
+- [x] run the full test suite one more time
+- [x] commit: `docs: M3 lands, the writes, the probe and the review skill written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes.
+
+**What the documentation pass changed, 2026-09-07:**
+
+- `README.md` gained "Writing into a document": the four commands, the
+  `proposals.json` shape, why the probe runs every time, and the table of what
+  each of the three checks asks. Four statements elsewhere in it had gone false
+  when Task 7 repointed `gdoc`, and each is corrected rather than left: the
+  install description, the sign-in step (the Go login prints a link and asks for
+  the wider scope, so the Python tool's own `auth` commands are named by their
+  full path), what `/gdoc-review` does now that it acts rather than asks, and
+  the closing paragraph that said nothing installed the Go binary yet. The v1
+  queue bullet says the review skill no longer fills the queue and that
+  `/gdoc-apply` still reads it.
+- `CLAUDE.md` gained "The four write commands, and none of them trusts a
+  success", and the `gdoc2` paragraph under Building is replaced by the M3
+  arrangement with the superseded note called out by name. The Never list says
+  the rule is unchanged for v2 and why `PREVIEW_WITHOUT_SUGGESTIONS` is one of
+  the three routes.
+- `docs/v2/PLAN.md` marks M3 done, and answers the M2 bullet that told M3 not to
+  invent an `AllowCreateIn` caller: it invented none and found a real one. The
+  standing fact about live writes is corrected too, because it named M6 as the
+  first milestone with a production writer and M3 turned out to be it.
 
 ## Post-Completion
 

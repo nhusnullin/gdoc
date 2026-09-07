@@ -1,0 +1,18 @@
+{
+  "documentId": "1PrOpOsE000000000000000000000000000000000",
+  "title": "The same words twice",
+  "revisionId": "ALm37BXtwice",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 46, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 46, "textRun": {"content": "The register is reviewed annually by anyone.\n", "textStyle": {}}}
+      ]}},
+    {"startIndex": 46, "endIndex": 87, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 46, "endIndex": 87, "textRun": {"content": "The policy is reviewed annually as well.\n", "textStyle": {}}}
+      ]}}
+  ]}
+}

@@ -133,3 +133,16 @@ func TestTheOldContentsSurviveUntilTheRename(t *testing.T) {
 		t.Errorf("the directory holds %d entries, want just the file", len(entries))
 	}
 }
+
+// A directory that is not there is the first thing that can fail, and it fails
+// before anything is created. The caller gets the error rather than a file
+// written somewhere else.
+func TestReplaceFailsWhenTheDirectoryIsNotThere(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "absent", "note.md")
+	if err := Replace(path, []byte("x"), 0o644); err == nil {
+		t.Fatal("Replace() into a directory that does not exist = nil, want an error")
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Error("the file was written anyway")
+	}
+}

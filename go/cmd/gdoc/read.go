@@ -39,6 +39,8 @@ import (
 type session interface {
 	GetJSON(ctx context.Context, rawURL string, into any) error
 	GetBytes(ctx context.Context, rawURL string, limit int64) ([]byte, error)
+	PostJSON(ctx context.Context, rawURL string, body any, into any) error
+	PatchJSON(ctx context.Context, rawURL string, body any, into any) error
 	Warnings() []string
 }
 
@@ -76,11 +78,44 @@ var docURLPatterns = []*regexp.Regexp{
 // as a 404 naming neither mistake.
 var driveID = regexp.MustCompile(`^[A-Za-z0-9_-]{20,}$`)
 
+// folderURLPattern is the shape a Drive folder URL has, ported from v1's
+// gdoc/docid.py. Opening the folder and copying the address bar is what a
+// person has at hand, so it is what the tool takes.
+var folderURLPattern = regexp.MustCompile(`/folders/([A-Za-z0-9_-]+)`)
+
+// documentURLPattern is a document URL, recognised here only so that handing
+// one to --folder is refused by name. A document URL carries a valid-looking
+// id, so passing it through would create the probe document nowhere and come
+// back as a 404 naming neither mistake.
+var documentURLPattern = regexp.MustCompile(`/document/(?:u/\d+/)?d/[A-Za-z0-9_-]+`)
+
+// folderID turns the argument into a Drive folder id: a folder URL, or a bare
+// id. It is documentID's twin, and the two are deliberately not one function:
+// a folder and a document are different things to be pointed at, and the whole
+// value of the check is that each refuses the other's URL by name.
+func folderID(arg string) (string, error) {
+	text := strings.TrimSpace(arg)
+	if m := folderURLPattern.FindStringSubmatch(text); m != nil {
+		if !driveID.MatchString(m[1]) {
+			return "", fmt.Errorf("%q names %q, which is too short to be a Drive folder id", text, m[1])
+		}
+		return m[1], nil
+	}
+	if documentURLPattern.MatchString(text) {
+		return "", fmt.Errorf("%q is a document, not a folder", text)
+	}
+	if driveID.MatchString(text) {
+		return text, nil
+	}
+	if text == "" {
+		return "", errors.New("this command needs a folder: a Drive folder URL or a folder id")
+	}
+	return "", fmt.Errorf("%q is not a Drive folder URL or a folder id", text)
+}
+
 // documentID turns the argument into a document id. A bare id is accepted
 // because it costs one line, and anything else is refused quoting the input:
 // every caller needs an id, and a silent empty one surfaces later as a 404.
-//
-// No folder parser is built here. No read command takes a folder.
 func documentID(arg string) (string, error) {
 	text := strings.TrimSpace(arg)
 	for _, re := range docURLPatterns {
@@ -120,11 +155,25 @@ func (fs flagSet) names() string {
 	return strings.Join(out, ", ")
 }
 
-// args is one command's arguments after parsing: the document it was pointed
-// at, and the flags it was given.
+// args is one command's arguments after parsing: the words it was pointed at,
+// in the order they were written, and the flags it was given.
 type args struct {
-	target string
-	flags  map[string]string
+	positional []string
+	flags      map[string]string
+}
+
+// target is the first positional argument, which every command that names a
+// document takes first.
+func (a *args) target() string { return a.at(0) }
+
+// at is one positional argument, or the empty string when the command took
+// fewer than that. The count is checked in parseArgs, so a caller reading a
+// word it asked for always gets one.
+func (a *args) at(i int) string {
+	if i >= len(a.positional) {
+		return ""
+	}
+	return a.positional[i]
 }
 
 // has reports whether the flag was given at all, whatever its value.
@@ -138,15 +187,26 @@ func (a *args) has(name string) bool {
 // offender. Nothing is accepted and ignored: a command that quietly drops what
 // it did not understand tells the caller it did something it did not.
 func parseArgs(raw []string, spec flagSet) (*args, error) {
+	return parseArgsN(raw, spec, 1)
+}
+
+// parseArgsN is parseArgs for a command that takes a different number of words
+// before its flags: none for probe, which names a folder with a flag, and two
+// for reply and withdraw, which name a document and then a thing inside it.
+//
+// want is exact in both directions. One word too many is refused because a
+// command that ignores what it did not understand tells the caller it did
+// something it did not, and one too few is refused because the missing word is
+// what the command is about.
+func parseArgsN(raw []string, spec flagSet, want int) (*args, error) {
 	a := &args{flags: map[string]string{}}
-	haveTarget := false
 	for i := 0; i < len(raw); i++ {
 		arg := raw[i]
 		if !strings.HasPrefix(arg, "-") {
-			if haveTarget {
-				return nil, fmt.Errorf("%q is an extra argument: this command takes one document", arg)
+			if len(a.positional) == want {
+				return nil, fmt.Errorf("%q is an extra argument: this command takes %s", arg, words(want))
 			}
-			a.target, haveTarget = arg, true
+			a.positional = append(a.positional, arg)
 			continue
 		}
 		name, value, joined := strings.Cut(arg, "=")
@@ -180,10 +240,25 @@ func parseArgs(raw []string, spec flagSet) (*args, error) {
 			a.flags[name] = raw[i]
 		}
 	}
-	if !haveTarget {
-		return nil, errors.New("this command needs a document: a Google Docs URL or a document id")
+	if len(a.positional) < want {
+		if want == 1 {
+			return nil, errors.New("this command needs a document: a Google Docs URL or a document id")
+		}
+		return nil, fmt.Errorf("this command takes %s, and %d were given", words(want), len(a.positional))
 	}
 	return a, nil
+}
+
+// words says how many arguments a command takes, in a sentence.
+func words(n int) string {
+	switch n {
+	case 0:
+		return "no arguments"
+	case 1:
+		return "one document"
+	default:
+		return fmt.Sprintf("%d arguments", n)
+	}
 }
 
 // knows reports whether the argument names a flag of this command. It is the
@@ -204,13 +279,22 @@ type reach struct {
 // open turns the argument into a reach. The policy is opened at LevelSuggest,
 // which is what a handed-in document gets: read, comment and suggest, and never
 // a direct edit.
-func open(target string) (*reach, error) {
+//
+// grants are applied to the policy before the session is built, so the first
+// request in the program's history is judged against them. The one caller
+// today is withdraw, handing in AllowReject for the suggestion the note records
+// as gdoc's own. A grant is per run and names one thing; nothing here widens
+// the level.
+func open(target string, grants ...func(*guard.Policy)) (*reach, error) {
 	id, err := documentID(target)
 	if err != nil {
 		return nil, err
 	}
 	p := guard.NewPolicy()
 	p.AllowFile(id, guard.LevelSuggest)
+	for _, grant := range grants {
+		grant(p)
+	}
 	s, err := openSession(p)
 	if err != nil {
 		return nil, err
@@ -247,7 +331,7 @@ func cmdRead(raw []string) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	r, err := open(a.target)
+	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -309,7 +393,7 @@ func cmdComments(raw []string) emit.Result {
 			return emit.Result{OK: false, Error: err.Error()}
 		}
 	}
-	r, err := open(a.target)
+	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -381,7 +465,7 @@ func cmdSuggestions(raw []string) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	r, err := open(a.target)
+	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -415,7 +499,7 @@ func cmdSuggestions(raw []string) emit.Result {
 }
 
 // recordSnapshot compares the file's last snapshot against what is pending now
-// and writes the new one. It is the one write anywhere in this milestone, and it
+// and writes the new one. It is the only write the read commands make, and it
 // happens only after a read that fully succeeded.
 //
 // A file paired with another document is refused: writing this document's
