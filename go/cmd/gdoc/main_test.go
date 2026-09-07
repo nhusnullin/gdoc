@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -297,5 +299,41 @@ func TestNoArgumentsFails(t *testing.T) {
 	}
 	if !strings.Contains(msg, "needs a command") || !strings.Contains(msg, "auth status") {
 		t.Errorf("the error must say what is missing and what exists: %q", msg)
+	}
+}
+
+// The signal trap belongs to the wait, and to nothing else.
+//
+// signal.Notify takes the default kill away from the whole process for as long
+// as it is installed, and NotifyContext never puts it back on its own. Trapped
+// in main, Ctrl-C would stop being an answer for every command that does not
+// read the context: `auth login` would hold the terminal for its whole login
+// timeout, and a `propose` in the middle of writing into somebody's document
+// could not be stopped at all. So exactly one file names os/signal, and it is
+// the one holding the wait.
+//
+// The check fails in both directions, like the boundary tests: it fails when
+// the import spreads, and it fails when read.go stops installing one.
+func TestOnlyTheWaitTrapsTheSignal(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var traps []string
+	for _, name := range files {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), `"os/signal"`) {
+			traps = append(traps, name)
+		}
+	}
+	sort.Strings(traps)
+	if !reflect.DeepEqual(traps, []string{"read.go"}) {
+		t.Errorf("os/signal is named in %v, and only read.go's wait may trap a signal", traps)
 	}
 }

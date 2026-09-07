@@ -5,6 +5,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -70,8 +71,8 @@ func buildAuthURL(redirect, state string) (verifier, authURL string) {
 
 // exchangeCode turns the callback's code into a token. The client comes from
 // internal/guard, so this POST is judged like every other request.
-func exchangeCode(c *http.Client, code, verifier, redirect string) (Token, error) {
-	r, err := postTokenForm(c, TokenURI, url.Values{
+func exchangeCode(ctx context.Context, c *http.Client, code, verifier, redirect string) (Token, error) {
+	r, err := postTokenForm(ctx, c, TokenURI, url.Values{
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
 		"code_verifier": {verifier},
@@ -175,7 +176,10 @@ func Login(c *http.Client, w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	tok, err := exchangeCode(c, code, verifier, redirect)
+	// The login has no context of its own: nothing above it can cancel a run
+	// that is already waiting on a browser, and loginTimeout is what bounds the
+	// wait. The exchange after it is bounded by the client's timeout.
+	tok, err := exchangeCode(context.Background(), c, code, verifier, redirect)
 	if err != nil {
 		return err
 	}

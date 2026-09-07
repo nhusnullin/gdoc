@@ -73,8 +73,10 @@ $GDOC read <url>
 `content` and `by_gdoc`, which is true when it opens with 🤖.
 
 The envelope carries `cursor` beside the threads: the position of the newest
-activity this read saw. A one-shot run has no use for it. Live mode does, so
-keep it.
+activity this read saw, or, on a document nobody has commented on, a position
+dated from the run's own clock so that live mode has somewhere to start. Every
+listing carries one. A one-shot run has no use for it. Live mode does, so keep
+it.
 
 `read` gives the document's text, with `[[c:ID]]words[[/c]]` around the span a
 comment is attached to and `{+text+}[s:ID]` around a pending suggestion. That is
@@ -434,11 +436,20 @@ report are printed as they always are. Then the session starts watching.
 One session watches one document, the link Nail gave. There is no hub-wide
 watch.
 
-The loop. `CURSOR` starts as the `cursor` from Step 1's `comments` run:
+The loop. `CURSOR` starts as the `cursor` from Step 1's `comments` run. That
+run always prints one, a document with no comments in it included: there is
+nothing to construct by hand and nothing to work around.
 
 ```bash
 $GDOC comments <url> --since "$CURSOR" --wait 9m
 ```
+
+Run it with the Bash tool's `timeout` set to `600000`, ten minutes in
+milliseconds. The default is two minutes, so a nine minute wait left on the
+default is cut short at two: killed outright it is a timeout matching none of
+the four paths below, and killed with a signal it comes back
+`waited.interrupted: true`, which reads as Nail having stopped the session. Set
+the timeout on every call in this loop.
 
 That one call blocks. The binary polls Drive every ten seconds inside it and
 comes back on the first activity after the cursor, or at the deadline with an
@@ -458,8 +469,9 @@ object and take one of four paths:
   stop.
 
 Nine minutes, and never more. The binary would look for an hour, but the tool
-that runs the command gives up at ten, and a wait killed at ten minutes takes
-its answer with it. Ask for nine.
+that runs the command gives up at ten even when it is asked for its longest, and
+a wait killed at ten minutes takes its answer with it. Ask for nine, and set the
+tool's timeout to ten.
 
 `--wait` needs `--since`. The first read is the baseline and takes no wait: a
 wait with no cursor answers with the whole document, which is Step 1 under
@@ -480,7 +492,10 @@ the binary reports what arrived and judges none of it, exactly as in Step 2.
 - An unmarked reply is still reported and never acted on.
 - `--witness` works in a window as it works in a one-shot listing. An empty
   window is not witnessed, so `waited.polls` with no threads carries no witness
-  and that is not a gap.
+  and that is not a gap. After a wait the export runs on what is left of the
+  nine minutes, so a window that arrives near the deadline can come back with
+  every thread `unmatched` and a warning saying the export was cut short. That
+  is the witness missing, not the threads.
 
 ### Before acting on a marked comment that may be old
 

@@ -12,9 +12,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"regexp"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"gdoc/internal/atomicfile"
@@ -55,8 +57,15 @@ var openSession = func(p *guard.Policy) (session, error) {
 	return s, nil
 }
 
-// now is the clock the snapshot is stamped with, behind a variable so a test
-// states the line it expects rather than parsing one back.
+// now is this run's clock, read in three places: it stamps the suggestions
+// snapshot, it dates a proposal in the note, and it dates a baseline cursor
+// when the listing carried no instant of its own. It is behind a variable so a
+// test can fix the instant all three are measured from.
+//
+// The cursor is the consequential one. A wrong snapshot stamp writes a wrong
+// line into a note; a wrong cursor instant is compared at Drive as
+// startModifiedTime, and a cursor that never moves backwards loses every
+// comment written behind it. Read cursorFloor for the rest of that.
 var now = time.Now
 
 // docURLPatterns are the URL shapes Nail pastes, ported from v1's
@@ -391,17 +400,64 @@ type waitedData struct {
 }
 
 // commentsData is what `gdoc comments` prints. The cursor is what the next poll
-// hands back; it is absent when this run has no instant to report. Waited is
-// absent unless --wait was given: reporting one poll on a call that never
-// waited would tell a reader the binary polls when it does not.
+// hands back, and every listing prints one: a run whose threads carried no
+// instant is dated from this run's clock instead, which is startCursor below.
+// So the field carries no omitempty, because there is no listing it would fire
+// on and a reader handling an absent cursor would be handling a state the
+// binary cannot produce. Waited is absent unless --wait was given: reporting
+// one poll on a call that never waited would tell a reader the binary polls
+// when it does not.
 type commentsData struct {
 	DocumentID string            `json:"document_id"`
 	Title      string            `json:"title"`
 	Tabs       int               `json:"tabs"`
 	MultiTab   bool              `json:"multi_tab"`
-	Cursor     string            `json:"cursor,omitempty"`
+	Cursor     string            `json:"cursor"`
 	Threads    []comments.Thread `json:"threads"`
 	Waited     *waitedData       `json:"waited,omitempty"`
+}
+
+// cursorFloor is how far back a baseline cursor is dated when the listing gave
+// no instant to date it from. What it covers is the offset between this
+// machine's clock and Drive's, because the instant is read here and compared
+// there: Drive applies it as startModifiedTime and withholds everything older.
+// A clock five minutes fast would otherwise put the cursor five minutes into
+// Drive's future and lose every comment written in that window, permanently,
+// because the cursor never moves backwards.
+//
+// So the floor is generous rather than tight. It is not a round trip, and it is
+// not paying for the reads either: startCursor is dated from the instant before
+// the poll, not the instant after it. Being early costs nothing here, because
+// this is only reached when the listing carried no readable instant at all,
+// which is a document with no comments in it; being late loses a comment
+// outright.
+const cursorFloor = 5 * time.Minute
+
+// startCursor is the cursor a listing hands the next call, and it is where a
+// live session on a quiet document starts.
+//
+// NextCursor answers nil when nothing it saw carried an instant, which is every
+// document that has no comments in it yet. That is the honest answer to "what
+// is the newest activity here", and it is unusable as a starting point: --wait
+// needs --since, and there would be no cursor to give it, so live mode could
+// not start on the one document it is most often started on.
+//
+// So a listing with no instant of its own is dated from this run's clock,
+// biased backwards. Backwards rather than forwards because a clock a little
+// ahead of Drive's would otherwise tell the next poll to withhold a comment
+// written in the meantime, and losing a comment is the wrong direction to be
+// wrong in. It is the same argument Cursor.narrow makes at the boundary.
+//
+// at is read before the poll rather than after it, and the caller passes it in
+// for that reason. Read afterwards, the reads themselves spend the floor: two
+// slow reads put the cursor after the moment the listing went out, and a
+// comment written while the baseline was being read falls into a window no poll
+// ever asks for again.
+func startCursor(c *comments.Cursor, at time.Time) *comments.Cursor {
+	if c != nil {
+		return c
+	}
+	return &comments.Cursor{At: at.Add(-cursorFloor)}
 }
 
 // parseWait reads the --wait value. Every refusal quotes what it was given: a
@@ -454,39 +510,75 @@ func cmdComments(ctx context.Context, raw []string) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
-	// One poll is the two reads this command has always made, in the same
-	// order: the Docs read first, because it carries the ranges the threads are
-	// joined to and the title and the tab count the envelope reports. The last
-	// document read is kept for those fields, which comments.Waited does not
-	// carry and does not need to.
+	// One poll is the two reads this command has always made: the comment
+	// listing, then the Docs read that carries the ranges the threads are
+	// joined to and the title and the tab count the envelope reports.
+	//
+	// The listing goes first, and the order is the whole of it. A comment
+	// written between the two reads is in whichever of them ran second. Listed
+	// first, it is a comment the Docs read has not got to yet and the next poll
+	// reports it with its range. Read first, it is a comment in the listing with
+	// no anchor in a document read a moment before it existed, so the thread
+	// comes back placed nowhere, the cursor moves past it, and the skill is told
+	// a thread it could have proposed into cannot be. A wait ends on exactly the
+	// poll that first sees a new comment, which is the poll the race is live on.
+	//
+	// The last document read is kept for the envelope's fields, which
+	// comments.Waited does not carry and does not need to.
 	var d *docs.Document
 	poll := func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
+		raws, err := comments.Fetch(ctx, r.session, r.id, since)
+		if err != nil {
+			return nil, nil, err
+		}
 		got, err := docs.Fetch(ctx, r.session, r.id)
 		if err != nil {
 			return nil, nil, err
 		}
 		d = got
-		raws, err := comments.Fetch(ctx, r.session, r.id, since)
-		if err != nil {
-			return nil, nil, err
-		}
 		return got, raws, nil
 	}
 
 	if !a.has("--wait") {
+		// Before the poll, because it is what a baseline cursor is dated from
+		// and the reads must not spend the floor it is biased by.
+		at := now()
 		got, raws, err := poll(ctx)
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 		}
 		threads, unplaced := comments.Threads(raws, got)
-		return commentsResult(ctx, r, d, threads, unplaced, comments.NextCursor(since, threads), a.has("--witness"), nil)
+		return commentsResult(ctx, r, d, threads, unplaced,
+			startCursor(comments.NextCursor(since, threads), at), a.has("--witness"), nil)
 	}
 
-	w, err := comments.Wait(ctx, since, comments.WaitOptions{
+	// The wait hears Ctrl-C, and only the wait. A wait is the one run with an
+	// answer already in hand when the person stops it: the envelope this call
+	// already has, one JSON object, ok, no threads, and the cursor it was
+	// handed. A default SIGINT there takes that answer with the process.
+	//
+	// It is installed here rather than in main because signal.Notify takes the
+	// default kill away from the whole process for as long as it is on. Every
+	// other command, `propose` included, keeps dying on the first Ctrl-C the way
+	// it always did.
+	//
+	// The trap is on the wait's own context, not on the caller's, so what runs
+	// after the wait cannot be quietly cancelled by it. defer is the safety net;
+	// the stop that matters is the one on the line after the wait.
+	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	w, err := comments.Wait(sigCtx, since, comments.WaitOptions{
 		Interval: waitInterval,
 		Deadline: deadline,
 		Fetch:    poll,
 	})
+	// Off the moment the wait is over. What follows is a --witness export, and
+	// a Ctrl-C during that must kill the run the way it kills every other
+	// command: swallowed, it cancels the export instead, and the answer goes
+	// out ok with every thread reported unmatched and interrupted false beside
+	// it, which is the interrupt wearing the document's name.
+	stop()
 	waited := &waitedData{
 		Polls: w.Polls,
 		// Rounded, because the caller reads it to know how long the document was
@@ -502,13 +594,40 @@ func cmdComments(ctx context.Context, raw []string) emit.Result {
 		data.Waited = waited
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
 	}
-	return commentsResult(ctx, r, d, w.Threads, w.Unplaced, w.Cursor, a.has("--witness"), waited)
+	// The deadline bounds the call, and a --witness export is part of the call.
+	// Left unbounded it runs on the guard's own client timeout, minutes on top
+	// of the wait, so a `--wait 9m --witness` answering at fourteen minutes is
+	// killed by the harness that waits ten and prints nothing at all. An export
+	// cut short by what is left is a warning naming it, on an envelope that
+	// still carries the threads.
+	rest, cancel := context.WithTimeout(ctx, deadline-w.Waited)
+	defer cancel()
+	return commentsResult(rest, r, d, w.Threads, w.Unplaced, w.Cursor, a.has("--witness"), waited)
 }
 
-// commentsBase is the envelope's document fields. The document is nil when no
-// poll got that far, which is a wait interrupted before its first read: the id
-// the run was given is still the truthful answer there, and the rest is absent
-// rather than guessed.
+// commentsBase is the envelope's document fields. The document is nil whenever
+// no poll finished both of its reads: the id the run was given is still the
+// truthful answer there, and title, tabs and multi_tab come back as their zero
+// values, on an envelope that carries no threads either.
+//
+// They are not omitted, because the skill reads multi_tab on every listing and
+// dropping it from the single-tab case would be a bigger change to the
+// envelope than the empty title is worth.
+//
+// polls is not what tells those cases apart, and reading it that way is the
+// mistake to avoid. There are four of them:
+//
+//   - a first poll cut short by the signal: polls 1, ok true, interrupted true;
+//   - a first poll that failed at either read: polls 1, ok false;
+//   - a wait whose context was already done before it looked: polls 0, ok true,
+//     interrupted true;
+//   - a first poll cut short by the deadline: polls 1, ok true, interrupted
+//     false, which is the same shape as an ordinary quiet window and is told
+//     from one by tabs: 0, because a window that polled to the end carries the
+//     document's fields.
+//
+// So ok and interrupted separate the first three, and the nil document itself
+// is what separates the fourth from a window that found nothing.
 func commentsBase(r *reach, d *docs.Document, cursor *comments.Cursor) commentsData {
 	data := commentsData{
 		DocumentID: r.id,

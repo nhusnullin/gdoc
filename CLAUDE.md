@@ -485,6 +485,15 @@ are the specification of what Google actually returns.
 
 Rules that hold across all three:
 
+- **A poll reads the listing first and the document second.** Both reads are
+  needed either way, so the order is free, and what it decides is which comments
+  the Docs read can place. A comment written in the gap between them is in
+  whichever read ran after it: listed first, the next poll places it; read
+  first, it is a comment in the listing with no anchor in a document read a
+  moment before it existed, so `Threads` reports it `unplaced`, the cursor moves
+  past it, and the skill is told a thread it could have proposed into cannot be.
+  A wait ends on exactly the poll that first sees a new comment, which is the
+  poll the race is live on. `internal/live`'s `poller` spells the same order.
 - **One Docs read, three views.** `documents.get` with
   `includeTabsContent=true`, `suggestionsViewMode=SUGGESTIONS_INLINE` and
   `commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED` carries the structure, the
@@ -680,6 +689,30 @@ A cursor written before `i` existed still reads, and the version stays 1 for tha
 reason: the ids only ever narrow further, so their absence costs one repeated
 thread and never a lost one.
 
+**A listing always prints a cursor, and the empty one is dated from the clock.**
+`NextCursor` answers nil when nothing it saw carried an instant, which is every
+document nobody has commented on yet. That is the honest answer to "what is the
+newest activity here" and it is useless as a starting point: `--wait` needs
+`--since`, so a live session could not start on the document it is most often
+started on. `startCursor` in `cmd/gdoc/read.go` dates that case from this run's
+clock, less `cursorFloor`. Backwards rather than forwards, because a clock a
+little ahead of Drive's would tell the next poll to withhold a comment written
+in the meantime, and losing a comment is the wrong direction to be wrong in. It
+is the same argument `Cursor.narrow` makes at the boundary.
+
+**The floor is five minutes, and what it pays for is clock skew.** The instant
+is read here and compared at Drive, which applies it as `startModifiedTime` and
+withholds everything older, so what the floor has to cover is the offset between
+the two clocks. A machine five minutes fast would otherwise put the baseline
+cursor five minutes into Drive's future and lose every comment written in that
+window for good, because the cursor never moves backwards. Being early costs
+nothing to set against that: this is only reached when the listing carried no
+readable instant at all, which is a document nobody has commented on. **The
+clock is read before the two reads, not after them**, and the caller passes the
+instant in for that reason: read afterwards, the reads spend the floor, and a
+comment written while a slow baseline was being read falls into a window no poll
+asks for again.
+
 It is opaque on purpose. A caller that decodes the instant and does arithmetic
 on it has made the encoding a contract, and it is not one. The version field is
 there so a later shape is refused by name. A cursor that cannot be decoded is an
@@ -702,18 +735,65 @@ script.
   value.
 - **The interval is ten seconds, a constant, and never a flag.** It sits in the
   spec's five to fifteen. `waitInterval` in `cmd/gdoc/read.go` is a package
-  variable only so a test can shorten it, and the sleep is clamped to what is
-  left of the deadline. The first poll happens at once, not after an interval.
+  variable only so a test can shorten it, and the last sleep is clamped to what
+  is left of the deadline. The first poll happens at once, not after an
+  interval, and the last gap is slept out rather than polled on: a poll started
+  on the instant the deadline lands on runs on a context that is already done,
+  so it sends nothing and `polls` would count a request that never left the
+  process.
 - **The first non-empty window ends the wait.** Latency is the point. A window
   is what `Fetch` narrows to, so gdoc's own 🤖 reply arriving after a poll does
   end the wait: the binary reports it and the skill reads it as a receipt.
-- **An interrupt is an answer.** `main` builds the context with
-  `signal.NotifyContext` on `SIGINT` and `SIGTERM` and hands it to `dispatch`.
-  Ctrl-C during a wait prints `ok: true` with no threads, the cursor handed in
-  and `waited.interrupted: true`, and exits 0. A poll that failed because the
+- **An interrupt is an answer, and only the wait traps one.** `cmdComments`
+  installs `signal.NotifyContext` on `SIGINT` and `SIGTERM` around the wait
+  itself and takes it off on the way out. Ctrl-C during a wait prints
+  `ok: true` with no threads, the cursor handed in and
+  `waited.interrupted: true`, and exits 0. A poll that failed because the
   interrupt cut the request short is reported as the interrupt, not as a failed
   read. The output contract has to hold under the one signal a live session
   sends every time it ends.
+
+  **The trap comes off the moment the wait returns, and the wait gets its own
+  context rather than shadowing the caller's.** What runs after a wait is the
+  `--witness` export, and a Ctrl-C there has to kill the run the way it kills
+  every other command. Swallowed, it cancels the export instead: the run then
+  prints `ok: true` with every thread `unmatched` and `interrupted: false`
+  beside it, which is the interrupt wearing the document's name, and the skill
+  reads that as a window and acts on it.
+
+  **It is not in `main`, and that is the decision.** `signal.Notify` takes the
+  default kill away from the whole process for as long as it is installed, and
+  `NotifyContext` never puts it back on its own. Trapped in `main`, Ctrl-C
+  stopped being an answer for every command that does not read the context:
+  `auth login` would hold the terminal for its three minute login timeout, and a
+  `propose` in the middle of writing into somebody's document could not be
+  stopped at all. `TestOnlyTheWaitTrapsTheSignal` in `cmd/gdoc` states it, in
+  both directions: `os/signal` is named in `read.go` and in no other production
+  file there. `dispatch` still takes a context, because a test hands a wait one
+  that is already done.
+- **The deadline bounds the call, not just the gaps between polls.** `Wait`
+  derives a second context with `context.WithTimeout(ctx, o.Deadline)` and polls
+  on that. Without it the only bound on one poll is the client's own timeout,
+  which is minutes and applies per request, so a poll that stalled at 8m50s
+  carried a `--wait 9m` call past the ten minutes the nine was chosen to fit
+  inside, and the harness then killed it with a signal the answer reports as
+  `interrupted`. The two contexts stay apart on purpose: the caller's being done
+  is the person, and the derived one being done is the deadline, which is an
+  empty window and not a failure.
+
+  Every request inside a poll carries that context, the token refresh included.
+  `gapi.Session.refresh` takes the caller's context and `auth.Token.Refresh`
+  builds its POST with it, rather than through `http.Client.Post`. Sent without
+  one, the refresh was the single request in a poll that neither the deadline
+  nor a Ctrl-C could reach: its only bound was the guard's five minute client
+  timeout, which is exactly the overrun the derived context exists to stop.
+
+  **A `--witness` export after a wait is part of the call, so it runs on what is
+  left of the deadline.** Left unbounded it has only the guard's own client
+  timeout, five minutes on top of the wait, so `--wait 9m --witness` could
+  answer at fourteen minutes and be killed by the harness that waits ten, which
+  prints nothing at all. An export cut short by the remainder is a warning
+  naming it, on an envelope that still carries the threads.
 - **A failed poll is `ok: false`,** carrying the error and the polls so far.
   Nothing is retried silently: the skill sees the failure, says the window is
   unread rather than empty, keeps the cursor it had and calls again.
@@ -725,7 +805,9 @@ script.
 - **Nothing is kept.** The wait writes no file and touches no config dir, and
   the cursor it prints is the only thing that carries to the next call. The loop
   belongs to `skills/gdoc-review/SKILL.md`, which asks for nine minutes because
-  the tool that runs the command gives up at ten.
+  the tool that runs the command gives up at ten, and which sets that tool's own
+  timeout to ten minutes: its default is two, and a wait cut short at two is
+  either an unmatched timeout or a signal the answer reports as `interrupted`.
 
 ### The `gdoc:` front-matter block, schema 1
 

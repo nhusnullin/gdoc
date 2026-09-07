@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"runtime/debug"
 	"strings"
-	"syscall"
 
 	"gdoc/internal/auth"
 	"gdoc/internal/emit"
@@ -28,19 +26,13 @@ var login = func(errOut io.Writer) error {
 }
 
 func main() {
-	// The signal a live session ends with. Ctrl-C during a wait has to reach the
-	// wait itself, because the answer it prints is the envelope it already has:
-	// one JSON object, ok, no threads, and the cursor it was handed. A default
-	// SIGINT kills the process mid-write, and stdout then carries half an
-	// object, which is the one thing the output contract promises cannot
-	// happen.
-	//
-	// stop before the exit rather than in a defer: os.Exit runs no deferred
-	// call.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	code := run(ctx, os.Args[1:], os.Stdout, os.Stderr)
-	stop()
-	os.Exit(code)
+	// No signal handling here, and that is deliberate. The one run that has to
+	// hear Ctrl-C is a wait, and it installs its own handler for the length of
+	// the wait and takes it off again: see cmdComments. Trapping the signal for
+	// the whole process would take the default kill away from every other
+	// command, and a `gdoc propose` that cannot be stopped is worse than one
+	// that dies where it stands.
+	os.Exit(run(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
 }
 
 // run turns arguments into one JSON object on out and an exit code. Human
@@ -69,9 +61,10 @@ func safeDispatch(ctx context.Context, args []string, errOut io.Writer) (r emit.
 	return dispatch(ctx, args, errOut)
 }
 
-// dispatch takes the context so the one command that can be stopped mid-run
-// hears the signal. Every other command makes its requests and ends, so it
-// carries on ignoring it, as it did before there was one.
+// dispatch takes the context so a test can hand a wait one that is already
+// done, which is the answer a stopped session gets. The signal itself is
+// trapped inside the wait rather than here: every other command makes its
+// requests and ends, and Ctrl-C kills it the way it always did.
 func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result {
 	// Exactly two words, and no more. A command that accepts and ignores what
 	// it does not understand tells the user it did something it did not:

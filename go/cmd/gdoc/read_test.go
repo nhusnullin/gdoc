@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"gdoc/internal/comments"
 	"gdoc/internal/guard"
 )
 
@@ -1013,6 +1014,64 @@ func TestAWitnessAppliesToTheWindowThatEndedTheWait(t *testing.T) {
 	}
 }
 
+// The deadline bounds the call, and a --witness export is part of the call.
+// Unbounded it runs on the guard's own client timeout, minutes on top of the
+// wait, so a nine minute wait can answer at fourteen and be killed by the
+// harness that waits ten, which prints nothing at all.
+func TestTheWitnessAfterAWaitIsBoundedByWhatIsLeftOfTheDeadline(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t, emptyListing(), newsListing(t))
+	f.answers = append(f.answers, &answer{method: "GET", match: "/export?", bytes: witnessExport(t)})
+	stubWire(t, f)
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "9m", "--witness")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments --wait --witness: %v (exit %d)", got, code)
+	}
+	if f.bytesCtx == nil {
+		t.Fatal("the export was never made, so there is nothing to say about what bounded it")
+	}
+	at, ok := f.bytesCtx.Deadline()
+	if !ok {
+		t.Fatal("the export after a wait carries no deadline, so the call is bounded only by the client timeout")
+	}
+	if left := time.Until(at); left > 9*time.Minute {
+		t.Errorf("the export has %v to run, which is more than the wait it followed", left)
+	}
+}
+
+// The clock a baseline cursor is dated from is read before the two reads, not
+// after them. Read after, the reads spend the floor: a comment written while
+// the baseline was being read then falls behind the cursor, and Drive withholds
+// it from every poll that follows.
+func TestTheBaselineCursorIsDatedFromBeforeTheReadsRatherThanAfterThem(t *testing.T) {
+	start := time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)
+	clock := start
+	f := waitWire(t, quietListing())
+	for _, a := range f.answers {
+		a.before = func() { clock = clock.Add(2 * time.Minute) }
+	}
+	stubWire(t, f)
+	old := now
+	now = func() time.Time { return clock }
+	t.Cleanup(func() { now = old })
+
+	got, code := runJSON(t, "comments", fixtureDocID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments on a document with no threads: %v (exit %d)", got, code)
+	}
+	text, _ := dataOf(t, got)["cursor"].(string)
+	c, err := comments.ParseCursor(text)
+	if err != nil {
+		t.Fatalf("the cursor it printed is not one it can read back: %v", err)
+	}
+	want := time.Date(2026, 9, 7, 11, 55, 0, 0, time.UTC)
+	if !c.At.Equal(want) {
+		t.Errorf("the cursor is dated %s, want %s: the reads took four minutes and must not have spent the floor",
+			c.At, want)
+	}
+}
+
 // An empty window has nothing to witness, and an export on the way out of an
 // interrupted session would be one more refused request and one more warning
 // about a read nobody asked a question of.
@@ -1037,5 +1096,64 @@ func TestAnEmptyWindowIsNotWitnessed(t *testing.T) {
 func TestTheWaitAddsNoCommandToTheUsageLine(t *testing.T) {
 	if strings.Contains(usage, "wait") {
 		t.Errorf("--wait is a flag, not a command: %q", usage)
+	}
+}
+
+// The first listing of a live session is taken on a document nobody has
+// commented on yet, and it still has to hand back a cursor: --wait needs
+// --since, and a listing that answered with no cursor at all would leave the
+// skill nothing to start its loop with.
+func TestAnEmptyListingStillHandsBackACursorAWaitCanUse(t *testing.T) {
+	f := docsAndComments(t)
+	f.json["/comments?"] = `{"comments":[]}`
+	stubSession(t, f)
+	stubNow(t, time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC))
+
+	got, code := runJSON(t, "comments", fixtureDocID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments on a document with no threads: %v (exit %d)", got, code)
+	}
+	text, _ := dataOf(t, got)["cursor"].(string)
+	if text == "" {
+		t.Fatal("a listing with no threads printed no cursor, so a live session cannot start on it")
+	}
+	c, err := comments.ParseCursor(text)
+	if err != nil {
+		t.Fatalf("the cursor it printed is not one it can read back: %v", err)
+	}
+	// Dated behind the run's own clock, never ahead of it: a cursor in the
+	// future tells the next poll to withhold a comment written in the meantime,
+	// and losing a comment is the wrong direction to be wrong in. The five
+	// minutes are written out rather than read off the constant, because a test
+	// that mirrors the constant follows it wherever it is set to.
+	want := time.Date(2026, 9, 7, 11, 55, 0, 0, time.UTC)
+	if !c.At.Equal(want) {
+		t.Errorf("the cursor is dated %s, want the run's clock less five minutes (%s)", c.At, want)
+	}
+	if len(c.Ids) != 0 {
+		t.Errorf("the cursor names threads %v, and the listing carried none", c.Ids)
+	}
+}
+
+// The listing is read before the document, and the order is the whole of it. A
+// comment written between the two reads is placed by the read that runs after
+// it; read the document first and that comment comes back with no range, the
+// cursor moves past it, and the skill is told a thread it could have proposed
+// into cannot be.
+func TestThePollReadsTheListingBeforeTheDocument(t *testing.T) {
+	f := stubSession(t, docsAndComments(t))
+
+	got, code := runJSON(t, "comments", fixtureDocID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments: %v (exit %d)", got, code)
+	}
+	if len(f.urls) < 2 {
+		t.Fatalf("a poll is two reads, and this one made %d: %v", len(f.urls), f.urls)
+	}
+	if !strings.Contains(f.urls[0], "/comments?") {
+		t.Errorf("the first read is %q, want the comment listing", f.urls[0])
+	}
+	if !strings.Contains(f.urls[1], "docs.googleapis.com") {
+		t.Errorf("the second read is %q, want the Docs read", f.urls[1])
 	}
 }

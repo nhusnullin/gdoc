@@ -102,12 +102,30 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 	// window as null.
 	out := Waited{Threads: []Thread{}, Cursor: since}
 
+	// The deadline bounds the whole call, not just the gaps between polls. The
+	// only other bound on one poll is the client's own timeout, which is
+	// minutes and applies per request, so a poll that stalls late in the window
+	// could carry a nine minute wait well past the ten the nine was chosen to
+	// fit inside. What ends such a call is the harness killing it, and a killed
+	// wait comes back as interrupted, which the skill reads as the person
+	// having stopped the session.
+	//
+	// It is a second context rather than the caller's, so the two endings stay
+	// apart: ctx being done is the signal, and this one being done is the
+	// deadline, which is an empty window and not a failure.
+	poll := ctx
+	if o.Deadline > 0 {
+		var cancel context.CancelFunc
+		poll, cancel = context.WithTimeout(ctx, o.Deadline)
+		defer cancel()
+	}
+
 	for {
 		if ctx.Err() != nil {
 			return interrupted(out, start), nil
 		}
 
-		d, raw, err := o.Fetch(ctx)
+		d, raw, err := o.Fetch(poll)
 		out.Polls++
 		if err != nil {
 			if ctx.Err() != nil {
@@ -115,6 +133,13 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 				// Blaming Drive for the person's Ctrl-C would send somebody to
 				// look at a read that was fine.
 				return interrupted(out, start), nil
+			}
+			if poll.Err() != nil {
+				// The deadline cut the poll short. That is the quiet ending
+				// this call already has a shape for: no threads, the cursor
+				// handed in, and the next call asks the same question.
+				out.Waited = now().Sub(start)
+				return out, nil
 			}
 			out.Waited = now().Sub(start)
 			return out, err
@@ -134,13 +159,24 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 			out.Waited = now().Sub(start)
 			return out, nil
 		}
-		// Clamped to what is left, so a nine minute deadline answers at nine
-		// minutes rather than at nine minutes and one interval.
-		wait := o.Interval
-		if left < wait {
-			wait = left
+		if left <= o.Interval {
+			// Less than an interval is left, so this is the last of the wait.
+			// It sleeps out the remainder rather than polling on the boundary:
+			// a nine minute deadline answers at nine minutes, not at nine
+			// minutes and one interval, and not one poll short of nine either.
+			//
+			// The poll that used to run there is why this is a return. The
+			// derived context is done by the instant the clamped sleep lands
+			// on, so both reads failed at once, nothing reached Drive, and
+			// polls counted a request that never left the process.
+			sleep(ctx, left)
+			if ctx.Err() != nil {
+				return interrupted(out, start), nil
+			}
+			out.Waited = now().Sub(start)
+			return out, nil
 		}
-		sleep(ctx, wait)
+		sleep(ctx, o.Interval)
 	}
 }
 

@@ -360,3 +360,114 @@ func TestTheDefaultSleeperEndsEarlyOnAnInterrupt(t *testing.T) {
 		t.Errorf("the sleeper took %v on a cancelled context", time.Since(start))
 	}
 }
+
+func TestTheDeadlineBoundsTheCallAndNotOnlyTheGapsBetweenPolls(t *testing.T) {
+	// A poll that stalls is the one way a wait can outlive its deadline: the
+	// only other bound on one is the client's timeout, which is minutes and
+	// applies per request. A nine minute wait that answers at fourteen is
+	// killed by the harness, and a killed wait comes back as interrupted, which
+	// the skill reads as the person having stopped the session.
+	//
+	// So the deadline is checked with a real clock here, and the fake one the
+	// other tests drive is deliberately not in the way.
+	since := &Cursor{At: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
+	polls := 0
+	stalled := func(ctx context.Context) (*docs.Document, []RawComment, error) {
+		polls++
+		<-ctx.Done()
+		return nil, nil, ctx.Err()
+	}
+
+	// On its own goroutine, so a Wait that never returns fails here in five
+	// seconds naming the deadline rather than hanging until go test's own
+	// timeout ten minutes later. Without the derived context the poll blocks on
+	// a background context that is never done, which is exactly the regression
+	// this test is for, and a regression has to report itself.
+	type answer struct {
+		w   Waited
+		err error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		w, err := Wait(context.Background(), since, WaitOptions{
+			Interval: 10 * time.Second,
+			Deadline: 50 * time.Millisecond,
+			Fetch:    stalled,
+		})
+		done <- answer{w, err}
+	}()
+
+	var w Waited
+	var err error
+	select {
+	case a := <-done:
+		w, err = a.w, a.err
+	case <-time.After(5 * time.Second):
+		t.Fatal("the wait had not answered five seconds into a 50ms deadline, so the stalled poll was unbounded")
+	}
+
+	if err != nil {
+		// The deadline is a quiet ending, not a failed poll: the request was
+		// cut short by this call's own clock and nothing about Drive is known.
+		t.Fatalf("the deadline came back as a failure: %v", err)
+	}
+	if polls != 1 {
+		t.Errorf("the wait polled %d times, and the first one never returned on its own", polls)
+	}
+	if len(w.Threads) != 0 {
+		t.Errorf("threads = %v, want none: the poll never answered", w.Threads)
+	}
+	if w.Interrupted {
+		t.Error("interrupted is true, and nothing sent a signal: a harness reading it stops the session")
+	}
+	if w.Cursor != since {
+		t.Errorf("cursor = %v, want the one handed in: the next call asks the same question", w.Cursor)
+	}
+}
+
+func TestAnInterruptDuringAStalledPollIsStillAnInterrupt(t *testing.T) {
+	// The two contexts must not fold into one. A signal during a poll that the
+	// deadline would also have cut is the person stopping the session, and the
+	// flag is the only thing that says so.
+	ctx, cancel := context.WithCancel(context.Background())
+	stalled := func(ctx context.Context) (*docs.Document, []RawComment, error) {
+		cancel()
+		<-ctx.Done()
+		return nil, nil, ctx.Err()
+	}
+
+	w, err := Wait(ctx, nil, WaitOptions{
+		Interval: 10 * time.Second,
+		Deadline: time.Minute,
+		Fetch:    stalled,
+	})
+
+	if err != nil {
+		t.Fatalf("an interrupt is an answer, not a failure: %v", err)
+	}
+	if !w.Interrupted {
+		t.Error("interrupted is false, and the context was cancelled during the poll")
+	}
+}
+
+func TestTheWaitDoesNotPollOnTheDeadlineItHasAlreadyRunOutOf(t *testing.T) {
+	// Thirty seconds at a ten second interval is three polls, not four. The
+	// fourth used to run on the instant the last sleep landed on, which is the
+	// instant the derived context is done, so both reads failed at once and
+	// nothing reached Drive. polls is what the skill reads to know how many
+	// times the binary asked, and a request that never left the process is not
+	// an ask. The script holds three answers, so a fourth poll fails here.
+	s := newScript(t, quiet(), quiet(), quiet())
+
+	got, err := Wait(context.Background(), nil, s.options(10*time.Second, 30*time.Second))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Polls != 3 {
+		t.Errorf("Polls = %d, want 3 inside a 30 second deadline at a 10 second interval", got.Polls)
+	}
+	if got.Waited != 30*time.Second {
+		t.Errorf("Waited = %v, want the whole deadline: the last gap is slept out, not cut short", got.Waited)
+	}
+}

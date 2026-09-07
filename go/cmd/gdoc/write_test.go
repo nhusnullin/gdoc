@@ -58,6 +58,10 @@ type fakeWire struct {
 	calls    []wireCall
 	warnings []string
 	policy   *guard.Policy
+	// bytesCtx is the context the last GetBytes was made on. The docx export
+	// is the one read that happens after a wait, so it is the one a test asks
+	// what it was bounded by.
+	bytesCtx context.Context
 }
 
 func (f *fakeWire) find(method, rawURL string) (*answer, error) {
@@ -88,8 +92,9 @@ func (f *fakeWire) GetJSON(_ context.Context, rawURL string, into any) error {
 	return json.Unmarshal([]byte(a.json), into)
 }
 
-func (f *fakeWire) GetBytes(_ context.Context, rawURL string, _ int64) ([]byte, error) {
+func (f *fakeWire) GetBytes(ctx context.Context, rawURL string, _ int64) ([]byte, error) {
 	f.calls = append(f.calls, wireCall{Method: "GET", URL: rawURL})
+	f.bytesCtx = ctx
 	a, err := f.find("GET", rawURL)
 	if err != nil {
 		return nil, err

@@ -593,7 +593,10 @@ binary matches the three exactly.
 
 `--since` takes the `cursor` a previous run printed and asks for what changed
 after it. The cursor is opaque: it is the newest activity that run saw, encoded,
-and nothing reads inside it. Nothing writes it down either, so it lives as long
+and nothing reads inside it. Every listing prints one, so a live session can
+start on any document: where the run saw no activity at all, which is a document
+nobody has commented on, the cursor is dated from the run's own clock a few
+minutes back rather than from anything anybody did. Nothing writes it down either, so it lives as long
 as whatever is polling.
 
 `--wait` turns that one call into a poll. The binary asks Drive every ten

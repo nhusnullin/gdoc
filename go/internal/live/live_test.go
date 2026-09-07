@@ -539,19 +539,29 @@ func TestLiveWaitSeesANewComment(t *testing.T) {
 
 	// The baseline, exactly as the skill takes it: one listing, and the cursor
 	// the run would have printed. A document created a moment ago has no
-	// comments, so this is a nil cursor, and the wait below starts from the
-	// beginning of a document with nothing in it.
+	// comments, so NextCursor answers nil and the cursor is dated from the
+	// clock, which is what the command prints there and what the wait below
+	// actually starts from: a real startModifiedTime on the wire, narrowed at a
+	// boundary a nil cursor would never reach.
 	base := baselineCursor(t, ctx, s, docID)
 
 	// The comment is written while the wait is running, one interval in, so the
 	// first poll is the empty window and a later one carries the news. The
 	// goroutine is the writer rather than the wait so that the wait's answer and
 	// its error stay on the test's own goroutine.
-	posted := make(chan string, 1)
+	posted := make(chan struct{})
+	var commentID string
 	go func() {
+		defer close(posted)
 		time.Sleep(waitInterval + time.Second)
-		posted <- postComment(t, ctx, writer, docID, waitComment)
+		commentID = postComment(t, ctx, writer, docID, waitComment)
 	}()
+	// Joined on every way out of this test, not only the one that reads the id
+	// below. postComment reports through t.Errorf, and a t.Fatalf here while it
+	// is inside its write would leave it logging into a test that has already
+	// returned, which panics on top of the failure it was reporting. The
+	// channel is closed rather than sent on, so both receives return.
+	defer func() { <-posted }()
 
 	started := time.Now()
 	w, err := comments.Wait(ctx, base, comments.WaitOptions{
@@ -562,7 +572,7 @@ func TestLiveWaitSeesANewComment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the wait failed after %d polls in %s: %v", w.Polls, time.Since(started).Round(time.Millisecond), err)
 	}
-	commentID := <-posted
+	<-posted
 	t.Logf("wait 1: %d polls, %s waited, %d threads, comment %s posted while it ran",
 		w.Polls, w.Waited.Round(time.Millisecond), len(w.Threads), commentID)
 
@@ -626,17 +636,20 @@ func TestLiveWaitSeesANewComment(t *testing.T) {
 	}
 }
 
-// poller is the poll the command builds: the Docs read for the ranges, then the
-// comment listing narrowed to the cursor. It is spelled here rather than
+// poller is the poll the command builds: the comment listing narrowed to the
+// cursor, then the Docs read for the ranges. It is spelled here rather than
 // imported because cmd/gdoc builds it inline, and what this test is asserting
-// is Wait over the real two reads.
+// is Wait over the real two reads. The order is the command's, and it is the
+// order for the command's reason: a comment written between the two reads is
+// placed by the read that runs after it rather than missed by the one that ran
+// before it.
 func poller(s *gapi.Session, docID string, since *comments.Cursor) comments.Poll {
 	return func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
-		d, err := docs.Fetch(ctx, s, docID)
+		raws, err := comments.Fetch(ctx, s, docID, since)
 		if err != nil {
 			return nil, nil, err
 		}
-		raws, err := comments.Fetch(ctx, s, docID, since)
+		d, err := docs.Fetch(ctx, s, docID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -646,24 +659,45 @@ func poller(s *gapi.Session, docID string, since *comments.Cursor) comments.Poll
 
 // baselineCursor is the first listing of a live session: no cursor, everything
 // the document already carries, and the cursor the next call starts from.
+//
+// The two reads are in the command's order, the listing first, for the
+// command's reason: a comment written between them is placed by the read that
+// runs after it rather than missed by the one that ran before it. The clock is
+// read before either of them, because that is what dates the cursor when the
+// listing has no instant of its own, and reads that spent the floor would leave
+// a window nobody asks for again.
+//
+// The fallback is the command's too. NextCursor answers nil on a document with
+// no comments, and cmd/gdoc's startCursor dates that case from the clock, so a
+// helper handing back nil would send the wait down a path the binary never
+// takes: no startModifiedTime on the wire and nothing for narrow to do.
 func baselineCursor(t *testing.T, ctx context.Context, s *gapi.Session, docID string) *comments.Cursor {
 	t.Helper()
-	d, err := docs.Fetch(ctx, s, docID)
-	if err != nil {
-		t.Fatalf("the baseline document read failed: %v", err)
-	}
+	at := time.Now()
 	raws, err := comments.Fetch(ctx, s, docID, nil)
 	if err != nil {
 		t.Fatalf("the baseline comment listing failed: %v", err)
+	}
+	d, err := docs.Fetch(ctx, s, docID)
+	if err != nil {
+		t.Fatalf("the baseline document read failed: %v", err)
 	}
 	threads, _ := comments.Threads(raws, d)
 	if len(threads) != 0 {
 		t.Fatalf("the document was created a moment ago and already carries %d threads", len(threads))
 	}
 	cursor := comments.NextCursor(nil, threads)
+	if cursor == nil {
+		cursor = &comments.Cursor{At: at.Add(-baselineFloor)}
+	}
 	t.Logf("baseline: %d threads, cursor %q", len(threads), cursor.String())
 	return cursor
 }
+
+// baselineFloor is cmd/gdoc's cursorFloor, spelled here because that constant
+// is in package main and cannot be imported. The two have to agree: this test
+// is the one place the clock-derived cursor meets real Drive.
+const baselineFloor = 5 * time.Minute
 
 // postComment writes one comment into the document, the way a person's comment
 // arrives: Drive's comments.create, which the guard carries as a POST on the

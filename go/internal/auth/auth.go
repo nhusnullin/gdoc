@@ -11,6 +11,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -150,8 +151,21 @@ type tokenResponse struct {
 // postTokenForm is the one place that talks to the token endpoint. Both the
 // refresh and the login code exchange go through it, so a 200 nobody can parse,
 // a non-200, and a 200 with no token all fail the same way in both.
-func postTokenForm(c *http.Client, uri string, form url.Values, what string) (tokenResponse, error) {
-	resp, err := c.Post(uri, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+//
+// It carries the caller's context, like every other request gdoc makes. A
+// refresh happens inside a poll, and a poll inside `comments --wait` runs on
+// that call's deadline: sent with http.Client.Post the POST would have carried
+// no context at all, so its only bound was the guard's own client timeout,
+// which is five minutes on top of the wait. A token endpoint that accepts and
+// never answers would then take a nine minute wait past the ten it was chosen
+// to fit inside, and a Ctrl-C could not end it either.
+func postTokenForm(ctx context.Context, c *http.Client, uri string, form url.Values, what string) (tokenResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, strings.NewReader(form.Encode()))
+	if err != nil {
+		return tokenResponse{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := c.Do(req)
 	if err != nil {
 		return tokenResponse{}, err
 	}
@@ -175,8 +189,8 @@ func postTokenForm(c *http.Client, uri string, form url.Values, what string) (to
 
 // Refresh exchanges the refresh token for a new access token. The client comes
 // from internal/guard, so this POST is judged like every other request.
-func (t Token) Refresh(c *http.Client) (Token, error) {
-	r, err := postTokenForm(c, t.TokenURI, url.Values{
+func (t Token) Refresh(ctx context.Context, c *http.Client) (Token, error) {
+	r, err := postTokenForm(ctx, c, t.TokenURI, url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {t.RefreshToken},
 		"client_id":     {t.ClientID},

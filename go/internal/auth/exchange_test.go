@@ -4,6 +4,7 @@ package auth
 // of when it comes back.
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"reflect"
@@ -17,7 +18,7 @@ func TestExchangeSendsVerifierAndSaves(t *testing.T) {
 	rt := &formRT{}
 	c := &http.Client{Transport: rt}
 
-	tok, err := exchangeCode(c, "CODE7", "VERIF7", "http://127.0.0.1:9999/callback")
+	tok, err := exchangeCode(context.Background(), c, "CODE7", "VERIF7", "http://127.0.0.1:9999/callback")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +51,7 @@ func TestExchangeReportsAFailedCode(t *testing.T) {
 			`{"error":"invalid_grant"}`))}, nil
 	})}
 
-	if _, err := exchangeCode(c, "STALE", "V", "http://127.0.0.1:9999/callback"); err == nil {
+	if _, err := exchangeCode(context.Background(), c, "STALE", "V", "http://127.0.0.1:9999/callback"); err == nil {
 		t.Fatal("a 400 from the token endpoint must be an error")
 	} else if !strings.Contains(err.Error(), "invalid_grant") {
 		t.Fatalf("the error must name what the endpoint said: %v", err)
@@ -63,7 +64,7 @@ func TestExchangeRefusesA200WithNoToken(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	c := &http.Client{Transport: jsonRT(`{"expires_in":3600}`)}
 
-	if _, err := exchangeCode(c, "CODE", "V", "http://127.0.0.1:9999/callback"); err == nil {
+	if _, err := exchangeCode(context.Background(), c, "CODE", "V", "http://127.0.0.1:9999/callback"); err == nil {
 		t.Fatal("a 200 with no access token must not pass")
 	}
 }
@@ -77,7 +78,7 @@ func TestExchangeRefusesA200WithNoRefreshToken(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	c := &http.Client{Transport: jsonRT(`{"access_token":"A","expires_in":3600}`)}
 
-	_, err := exchangeCode(c, "CODE", "V", "http://127.0.0.1:9999/callback")
+	_, err := exchangeCode(context.Background(), c, "CODE", "V", "http://127.0.0.1:9999/callback")
 	if err == nil {
 		t.Fatal("a code exchange with no refresh token must not pass")
 	}
@@ -96,7 +97,7 @@ func TestExchangeRecordsTheGrantedScopesNotTheRequestedOnes(t *testing.T) {
 		`{"access_token":"A","refresh_token":"R","expires_in":3600,` +
 			`"scope":"https://www.googleapis.com/auth/drive"}`)}
 
-	tok, err := exchangeCode(c, "CODE", "V", "http://127.0.0.1:9999/callback")
+	tok, err := exchangeCode(context.Background(), c, "CODE", "V", "http://127.0.0.1:9999/callback")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func TestExchangeFallsBackToTheRequestedScopesWhenTheEndpointSaysNothing(t *test
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	c := &http.Client{Transport: jsonRT(`{"access_token":"A","refresh_token":"R","expires_in":3600}`)}
 
-	tok, err := exchangeCode(c, "CODE", "V", "http://127.0.0.1:9999/callback")
+	tok, err := exchangeCode(context.Background(), c, "CODE", "V", "http://127.0.0.1:9999/callback")
 	if err != nil {
 		t.Fatal(err)
 	}
