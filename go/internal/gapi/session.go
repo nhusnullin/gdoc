@@ -5,8 +5,8 @@
 // is what stops the bearer, the Accept header and the refresh rule from being
 // written three slightly different ways in three reader packages.
 //
-// A read is a GET and a write is a POST carrying JSON, and both go through one
-// refresh policy, in send below.
+// A read is a GET and a write is a POST or a PATCH carrying JSON, and all three
+// go through one refresh policy, in send below.
 package gapi
 
 import (
@@ -93,11 +93,26 @@ func (s *Session) GetBytes(ctx context.Context, rawURL string, limit int64) ([]b
 // once would make the retry an empty batchUpdate: a write that did nothing
 // while the envelope said it had been sent.
 func (s *Session) PostJSON(ctx context.Context, rawURL string, body any, into any) error {
+	return s.writeJSON(ctx, http.MethodPost, rawURL, body, into)
+}
+
+// PatchJSON is PostJSON on the other write verb. Drive spells trashing a file
+// as files.update, which is a PATCH, and the guard carries it only on a file
+// gdoc itself created. The probe is what needs it: a throwaway document it
+// cannot put in the trash is a document left in somebody's Drive.
+func (s *Session) PatchJSON(ctx context.Context, rawURL string, body any, into any) error {
+	return s.writeJSON(ctx, http.MethodPatch, rawURL, body, into)
+}
+
+// writeJSON is both write verbs in one place, for the reason this package
+// exists: a second copy of the marshal, the headers and the refresh rule is a
+// second place for them to drift.
+func (s *Session) writeJSON(ctx context.Context, method, rawURL string, body any, into any) error {
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return fmt.Errorf("the body for %s could not be encoded as JSON: %w", rawURL, err)
 	}
-	answer, err := s.send(ctx, rawURL, s.postRequest(rawURL, raw), MaxJSONBody)
+	answer, err := s.send(ctx, rawURL, s.bodyRequest(method, rawURL, raw), MaxJSONBody)
 	if err != nil {
 		return err
 	}
@@ -133,12 +148,12 @@ func (s *Session) getRequest(rawURL, accept string) requestFor {
 	}
 }
 
-// postRequest is a write. bytes.Reader is what makes http.NewRequestWithContext
+// bodyRequest is a write. bytes.Reader is what makes http.NewRequestWithContext
 // set ContentLength and GetBody itself, so the guard peeks the same bytes the
 // wire carries and the transport can rewind a broken connection over them.
-func (s *Session) postRequest(rawURL string, raw []byte) requestFor {
+func (s *Session) bodyRequest(method, rawURL string, raw []byte) requestFor {
 	return func(ctx context.Context) (*http.Request, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(raw))
+		req, err := http.NewRequestWithContext(ctx, method, rawURL, bytes.NewReader(raw))
 		if err != nil {
 			return nil, err
 		}

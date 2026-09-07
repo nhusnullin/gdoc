@@ -636,3 +636,109 @@ func TestPostJSONNamesABodyItCannotEncode(t *testing.T) {
 		t.Errorf("the fake wire saw %d requests; a body that could not be encoded must not reach it", n)
 	}
 }
+
+// TestPatchJSONSendsThePatchTheTrashNeeds is the one PATCH gdoc makes:
+// files.update on a document gdoc created, to put it in the trash. A create
+// gdoc cannot undo is a document left in somebody's Drive.
+func TestPatchJSONSendsThePatchTheTrashNeeds(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) {
+		return 200, `{"id":"` + createdID + `","trashed":true}`
+	}}
+	s := openCreated(t, w)
+
+	var into struct {
+		Trashed bool `json:"trashed"`
+	}
+	body := map[string]any{"trashed": true}
+	if err := s.PatchJSON(context.Background(), trashURL(), body, &into); err != nil {
+		t.Fatalf("PatchJSON: %v", err)
+	}
+	if !into.Trashed {
+		t.Error("the answer decoded with trashed false")
+	}
+	reqs := w.requests()
+	if len(reqs) != 1 {
+		t.Fatalf("sent %d requests, want 1", len(reqs))
+	}
+	if reqs[0].Method != http.MethodPatch {
+		t.Errorf("method = %q, want PATCH", reqs[0].Method)
+	}
+	if reqs[0].ContentType != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", reqs[0].ContentType)
+	}
+	want, err := json.Marshal(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reqs[0].Body != string(want) {
+		t.Errorf("body on the wire = %q, want %q", reqs[0].Body, want)
+	}
+}
+
+// TestPatchJSONOnAHandedInFileIsRefusedByTheGuard is the level bar seen from
+// the session: only a file gdoc created may be changed in place, and the
+// refusal arrives before anything reaches the wire.
+func TestPatchJSONOnAHandedInFileIsRefusedByTheGuard(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{}
+	s := open(t, w)
+
+	err := s.PatchJSON(context.Background(), "https://www.googleapis.com/drive/v3/files/"+docID+"?supportsAllDrives=true", map[string]any{"trashed": true}, nil)
+	if err == nil {
+		t.Fatal("a PATCH of a handed-in file was carried")
+	}
+	if !strings.Contains(err.Error(), "guard refused") {
+		t.Errorf("error = %v, want the guard's refusal", err)
+	}
+	if n := len(w.requests()); n != 0 {
+		t.Errorf("the wire saw %d requests, want none", n)
+	}
+}
+
+// TestA401OnAPatchRefreshesOnceAndTheRetryCarriesTheSameBody is the POST rule
+// on the other write verb: one refresh, one retry, and the same bytes.
+func TestA401OnAPatchRefreshesOnceAndTheRetryCarriesTheSameBody(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) {
+		if n == 0 {
+			return 401, `{"error":{"message":"Invalid Credentials"}}`
+		}
+		return 200, `{"trashed":true}`
+	}}
+	s := openCreated(t, w)
+
+	body := map[string]any{"trashed": true}
+	if err := s.PatchJSON(context.Background(), trashURL(), body, nil); err != nil {
+		t.Fatalf("PatchJSON: %v", err)
+	}
+	reqs := w.requests()
+	if len(reqs) != 3 {
+		t.Fatalf("sent %d requests, want the patch, the refresh and the retry: %+v", len(reqs), reqs)
+	}
+	if reqs[1].Host != "oauth2.googleapis.com" {
+		t.Errorf("second request was to %s, want the token host", reqs[1].Host)
+	}
+	if reqs[2].Body != reqs[0].Body || reqs[2].Body == "" {
+		t.Errorf("the retry sent %q, want the same body as the first attempt %q", reqs[2].Body, reqs[0].Body)
+	}
+}
+
+const createdID = "1CrEaTeD000000000000000000000000000000000"
+
+func trashURL() string {
+	return "https://www.googleapis.com/drive/v3/files/" + createdID + "?supportsAllDrives=true"
+}
+
+// openCreated builds a session whose one reachable file is one gdoc created,
+// which is the only level a PATCH is carried at.
+func openCreated(t *testing.T, w *wire) *Session {
+	t.Helper()
+	p := guard.NewPolicy()
+	p.Learn(createdID)
+	s, err := Open(p, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}

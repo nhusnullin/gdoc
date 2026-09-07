@@ -181,17 +181,20 @@ Warnings ride in `warnings`: the policy's, the session's, a read-back route that
 **Files:**
 - Create: `go/internal/probe/probe.go`, `go/internal/probe/probe_test.go`
 - Create: `go/internal/probe/testdata/*.json` (a `SUGGESTIONS_INLINE` answer with the word carrying an insertion id; the same answer with the word as plain text; a `files.get` answer with `trashed: true`)
+- Modify: `go/internal/gapi/session.go`, `go/internal/gapi/session_test.go` (`PatchJSON`, the verb the trash needs)
 
 **Interfaces:**
-- Consumes: a session interface with `GetJSON` and `PostJSON`; `docs.Parse` for the read-back.
+- Consumes: a session interface with `GetJSON`, `PostJSON` and `PatchJSON`; `docs.Fetch`, which is `docs.Parse` over the same read the three read commands make.
+- ➕ `gapi.PatchJSON`, added here. The trash is `files.update {trashed: true}`, which Drive spells as a PATCH, and Task 2 added the POST alone. It is `PostJSON` on the other verb: both call one `writeJSON`, so the marshal, the headers and the refresh rule stay in one place. Its tests are in `internal/gapi`: the patch the trash needs, a 401 that refreshes once and retries with the same bytes, and a PATCH of a handed-in file refused by the guard before the wire.
+- ➕ `Report.Warnings`, added here. The trash is not the probe's question, so a trash that failed is a warning rather than an error, and the reason it failed has to survive beside `Trashed: false`. The command in Task 7 puts these on the envelope.
 - Produces: `type Report struct { Enrolled bool; ProbeDocumentID string; Trashed bool; SuggestionIDs []string }` and `probe.Run(ctx, s Session, folderID string) (Report, error)`: the sequence under "The probe" in Technical Details. The create names exactly `folderID` as its parent, which is how the guard's `AllowCreateIn` lets it through and learns the id at `LevelFull`. Trash runs on every path after the create succeeded, including an error mid-way, and its outcome is in the report. An error after the create carries the report too, so the document id is never lost.
 - The policy for a probe is `AllowCreateIn(folderID)` and nothing else: the probe document is learned, not handed in.
 
-- [ ] write the failing tests: the enrolled fixture gives `Enrolled: true` with the id; the plain-text fixture gives `Enrolled: false`; a failing SUGGEST write still trashes and reports `Trashed`; a create whose answer has no id is an error naming the folder; the requests the fake saw are, in order, create, direct insert, SUGGEST insert, read, trash, get; the direct insert has no `writeControl` and the SUGGEST insert has exactly `{"writeMode":"SUGGEST"}`
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): the capability probe, a throwaway document that says whether SUGGEST is honoured`
+- [x] write the failing tests: the enrolled fixture gives `Enrolled: true` with the id; the plain-text fixture gives `Enrolled: false`; a failing SUGGEST write still trashes and reports `Trashed`; a create whose answer has no id is an error naming the folder; the requests the fake saw are, in order, create, direct insert, SUGGEST insert, read, trash, get; the direct insert has no `writeControl` and the SUGGEST insert has exactly `{"writeMode":"SUGGEST"}`
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): the capability probe, a throwaway document that says whether SUGGEST is honoured`
 
 ---
 

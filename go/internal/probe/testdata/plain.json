@@ -1,0 +1,15 @@
+{
+  "documentId": "1PrObE0000000000000000000000000000000000",
+  "title": "gdoc probe 2026-09-07T10:00:00Z",
+  "revisionId": "ALm37BXprobe1",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 77, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 77, "textRun": {
+          "content": "The supplier register is reviewed critical annually by the operations team.\n",
+          "textStyle": {}}}
+      ]}}
+  ]}
+}
