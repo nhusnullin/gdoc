@@ -14,7 +14,7 @@ master.
 
 | | |
 |---|---|
-| `house.yaml` | the whole house style, 1,110 lines, logo included as base64 |
+| `house.yaml` | the whole house style, 1,110 lines, logo included as base64. **Superseded:** the live copy is `go/internal/house/house.yaml`, embedded in the binary. This one stays as the spike's own record |
 | `house-small.yaml` | the 164-line subset, kept only to show what the hybrid option would have looked like |
 | `gen.py` | config plus markdown to a `.docx`. **Reads no master.** |
 | `compare.py` | **the drift test.** 160 items, renders both ways and reports every difference |

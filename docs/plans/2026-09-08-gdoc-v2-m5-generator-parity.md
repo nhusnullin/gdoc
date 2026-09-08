@@ -125,11 +125,11 @@ Key design decisions and why:
 **Interfaces:**
 - Produces: `house.Config` and its nested types mirroring the YAML; `house.Load() (*Config, error)` for the embedded file; `house.LoadFile(path string) (*Config, error)`; `Config.Validate()` for what YAML cannot say (nine styles present, `front_matter` names only known blocks and existing table refs, the logo decodes as PNG of the stated pixel size).
 
-- [ ] write the failing tests: the embedded file loads; page width is `595.28` and height `841.89` as literals; `styles.heading_1` is 16pt, bold, `#22265F`, 12pt before, keep with next; `heading_numbering.level1_format` is `{n}-{title}`; `toc.instr` carries `Heading 1,1,Heading 2,2,Heading 3,3`; `front_matter` has 13 blocks in the order cover, label, table, blank, table, blank, legend, blank, label, table, blank, label, toc (check the actual order against the file first and state it as literals); an unknown key is refused naming it; a `front_matter` block naming a table that is not in `tables` is refused; the logo base64 decodes and is a PNG of the stated pixel size; `LoadFile` on a missing path is an error naming the path
-- [ ] run the tests and watch them fail
-- [ ] implement, with `//go:embed house.yaml` and `yaml.Strict()`
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): house.yaml parsed and embedded, the house style as a file`
+- [x] write the failing tests: the embedded file loads; page width is `595.28` and height `841.89` as literals; `styles.heading_1` is 16pt, bold, `#22265F`, 12pt before, keep with next; `heading_numbering.level1_format` is `{n}-{title}`; `toc.instr` carries `Heading 1,1,Heading 2,2,Heading 3,3`; `front_matter` has 13 blocks in the order cover, label, table, blank, table, blank, legend, blank, label, table, blank, label, toc (check the actual order against the file first and state it as literals); an unknown key is refused naming it; a `front_matter` block naming a table that is not in `tables` is refused; the logo base64 decodes and is a PNG of the stated pixel size; `LoadFile` on a missing path is an error naming the path
+- [x] run the tests and watch them fail
+- [x] implement, with `//go:embed house.yaml` and `yaml.Strict()`
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): house.yaml parsed and embedded, the house style as a file`
 
 ---
 
