@@ -14,16 +14,25 @@ master.
 
 | | |
 |---|---|
-| `house.yaml` | the whole house style, 1,110 lines, logo included as base64 |
+| `house.yaml` | the whole house style, 1,110 lines, logo included as base64. **Superseded:** the live copy is `go/internal/house/house.yaml`, embedded in the binary. This one stays as the spike's own record |
 | `house-small.yaml` | the 164-line subset, kept only to show what the hybrid option would have looked like |
-| `gen.py` | config plus markdown to a `.docx`. **Reads no master.** |
-| `compare.py` | **the drift test.** 160 items, renders both ways and reports every difference |
+| `gen.py` | config plus markdown to a `.docx`. **Reads no master. Ported:** the live one is `go/internal/render` and `go/internal/body` |
+| `compare.py` | **the drift test.** 160 items, renders both ways and reports every difference. **Ported:** the live one is `go/internal/drift` |
 | `make_config.py`, `extract_tables.py` | the one-time extraction from the master |
 | `style-profile.json` | the same style read back out of Google, cross-checked against the master |
 
 `compare.py` is the important one. The config decision is only safe because this
 exists: it fails when a value drifts, and without it the config is a promise rather
-than a checked fact. Last run: **137 of 160 identical, worst position offset 2.5pt.**
+than a checked fact. Last run here: **137 of 160 identical, worst position offset 2.5pt.**
+
+All three are superseded by M5, which ported them. `house.yaml` is embedded in
+the binary at `go/internal/house/house.yaml`; `gen.py`'s shell is
+`go/internal/render` and the body walker is `go/internal/body`, both on etree
+rather than on string concatenation; `compare.py` is `go/internal/drift`, whose
+item list is read two ways, offline against the master's XML in `make test` and
+live against a Docs API answer. The three PDF items are dropped, because gdoc
+never exports a PDF. These files stay as the spike's own record, and nothing
+reads them at runtime.
 
 ## `probes/` — what Google's API actually does
 

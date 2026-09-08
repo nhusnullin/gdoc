@@ -366,16 +366,28 @@ func TestEveryTargetThatWritesIntoBinMakesIt(t *testing.T) {
 //	github.com/yuin/goldmark  the hub markdown, likely first needed at M5
 //	github.com/goccy/go-yaml  the gdoc: front matter and house.yaml
 //
-// M2 added the third. The milestone that first needs one of the others adds its
-// path here and nothing else. It does not delete this test, and it does not
-// widen it to "whatever go.mod says". A fourth module needs its reason in
-// SPEC.md before its line in this map; the open candidate is sergi/go-diff at
-// M8.
+// M2 added the yaml one, and M5 the other two, which is all three SPEC.md
+// agreed. A milestone adds its path here and nothing else. It does not delete
+// this test, and it does not widen it to "whatever go.mod says". A fourth
+// module needs its reason in SPEC.md before its line in this map; the open
+// candidate is sergi/go-diff at M8.
 var allowedModules = map[string]string{
 	// M2 needs it for the gdoc: front-matter block, and M5 for house.yaml. It
 	// decodes strictly, which is what a block that must be refused rather than
 	// half-read needs, and it carries no transitive modules of its own.
 	"github.com/goccy/go-yaml": "the gdoc: front matter and house.yaml; reason in SPEC.md",
+
+	// M5 writes OOXML, and encoding/xml corrupts it: it rewrites namespace
+	// prefixes and drops the attribute order Word reads, so a part that went
+	// through it comes back as a document Word repairs. etree keeps the tree as
+	// it was written.
+	"github.com/beevik/etree": "OOXML, because encoding/xml corrupts it; reason in SPEC.md",
+
+	// M5 parses the hub markdown with it: nested lists, bold, italic, links,
+	// images in headings, and ==mark== as an extension in about 55 lines. The
+	// alternative is a parser written here, in the room where the body's
+	// fidelity lives.
+	"github.com/yuin/goldmark": "the hub markdown, images in headings included; reason in SPEC.md",
 }
 
 // TestNoThirdPartyDependencies keeps the module list a property of the tree

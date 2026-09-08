@@ -37,7 +37,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 
 | Path | Holds |
 |---|---|
-| `go/cmd/gdoc/` | `main.go`, `read.go` and `write.go`. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | `main.go`, `read.go`, `write.go` and `build.go`. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -55,18 +55,24 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
+| `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
+| `go/internal/render/` | the docx itself: the twelve parts and the logo, the cover, the tables, the header and footer, the contents field |
+| `go/internal/body/` | the note's markdown walked with goldmark into the house style's own paragraphs |
+| `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
+| `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/live/` | the three opt-in end-to-end tests, one read and two writes. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 4 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 5 are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
-`probe`, `reply`, `propose` and `withdraw`, and waits for the next comment with
-`comments --wait`. The review skill is rewritten over those and can stay live on
-one document, and `gdoc` on PATH is v2 from M3 on.
+`probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
+`comments --wait`, and builds a house-style docx from a note with `build`. The
+review skill is rewritten over those and can stay live on one document, and
+`gdoc` on PATH is v2 from M3 on. Uploading what `build` wrote is M6's.
 
 ### The auth commands, and what reaches stdout
 
@@ -117,7 +123,7 @@ The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
 `gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
-than an oversight. There is no help command: `dispatch` matches the nine
+than an oversight. There is no help command: `dispatch` matches the ten
 commands and nothing else, so `--help` comes back as an unknown command with the
 one-line `usage` string in the error. A caller reads the same JSON
 object it reads for every other run, and the exit code still means what it means
@@ -1267,6 +1273,349 @@ M3 settled the `AllowCreateIn` half. It has a production caller now, the
 capability probe, which creates the throwaway document it asks its question on.
 So the door M2 kept on the strength of M6 needing it was wanted well before M6,
 and keeping it was right for a reason nobody had yet.
+
+### The generator reads `house.yaml` and nothing else
+
+M5. `gdoc build --md note.md --out file.docx` turns a note into an Altery
+house-style docx, and it is the one command that reaches nothing at all. Five
+rooms: `house` parses the style, `cover` reads the author's front matter, `body`
+walks the markdown, `render` writes the parts, and `drift` measures the result
+against the master. Publishing what it wrote is M6's.
+
+**The style is a file, and the master is provenance.** Nail's decision of
+2026-08-29, in `docs/v2/DECISIONS.md`. `house.yaml` states the page geometry,
+the nine named styles, the cover, the header and footer with the positioned
+logo, the three front-matter tables cell by cell, the legend, the live contents
+field, the heading numbering and the logo as base64. Nothing reads
+`gdoc/templates/altery-group-policy-v1.0/template.docx` at runtime, and nothing
+copies a master and edits it: the docx is written from the config, part by part.
+That is the failure v1 had, where the surgery file became the real template and
+the master stopped describing the output.
+
+**It is embedded, and `--house` replaces it for one run.** `//go:embed
+house.yaml` in `internal/house`, so installing gdoc is still one file.
+`house.LoadFile(path)` parses a named copy under the same strict rules, which is
+how a change to the style is reviewed before it is committed, and `data.house`
+names `"embedded"` or the path so a document built from a draft says which. The
+spike copy at `docs/v2/spikes/config/house.yaml` is superseded and says so.
+
+**Points stay points.** `house` stores every measurement in points, and twips,
+half-points and EMU are computed at the writer. One value in the file has one
+meaning, and a unit conversion lives in one room.
+
+**A highlight is a name, and `Validate` refuses anything else.** `w:highlight`
+takes one of OOXML's seventeen names, never a colour, while every other colour
+in the file is hex: a `'#FFFF00'` in the revision row reached the part as
+`w:val="#FFFF00"`, which Word repairs the document over rather than showing.
+Writing hex there is the natural mistake and nothing downstream would have
+named it, so the file is checked at the door.
+
+**Nothing is concatenated into XML.** `render` and `body` build elements with
+etree and serialise them, so every `w:t` is escaped by the library. gen.py, the
+Python spike this was ported from, concatenated strings, and one `&` in a note's
+title breaks a part that way. A value from the note or from the config never
+reaches the XML as text somebody formatted.
+
+**A properties element is a sequence, and Word reads one out of order as a
+document to repair.** That holds for `w:pPr`, where `para` writes the children
+in schema order for that reason, for `w:tblPr`, where the schema is
+`tblStyle, tblW, jc, tblCellSpacing, tblInd, tblBorders, shd, tblLayout,
+tblCellMar, tblLook`, and for `word/settings.xml`, where `CT_Settings` puts
+`evenAndOddHeaders` a long way in front of `updateFields` and gen.py wrote the
+two the other way round. Both table writers used to break it, `render/front.go`
+with `tblLayout` in front of `tblBorders` and `body/table.go` with
+`tblCellMar` in front of `tblLayout`, and neither the goldens nor the drift
+gate reads child order. So each writer has its own order test now, stating the
+sequence it writes as a literal list of tags:
+`TestTheFrontMatterTablesPropertiesAreInSchemaOrder` and
+`TestATablesPropertiesAreInSchemaOrder`, beside the `w:pPr` one that came
+first.
+
+**Every list level states `w:start`.** ECMA-376 17.9.26 reads an omitted start
+as zero, so the nested numbered levels, which carried none, opened a sub-list
+at "0." and printed every item under it one lower than the author wrote. The
+master states it on all sixty-three of its own levels. Nothing else would have
+caught it: `drift.Items` has no numbering row, so neither gate reads that part.
+
+**A numbered list whose numbers are not the author's says so, and the number
+stays wrong.** Two shapes. `numbering.xml` defines one `w:num` per list kind,
+so every ordered list in the body names the same one and a second top-level
+list carries on from the first: the author's 1. and 2. print as 3. and 4.
+Every level of that part states `w:start` 1, so an author's "5." opens at 1
+whatever depth it sits at. `warnListNumbers` names the line for both. The
+structural fix is `docs/backlog/one-numbered-list-per-document.md`; the silence
+was not deferred with it, because the prose around a list cross-references the
+numbers the author wrote. A **nested** list is deliberately not in the count:
+an absent `w:lvlRestart` restarts a level whenever the level above it moves, so
+the sub-lists under two items of one list each start again on their own, and
+warning there would be the cry-wolf warning this tool avoids everywhere else.
+
+**A heading that skips a level is numbered with a zero in it, and says so.**
+`headingNumberer.prefix` builds the number from every counter down to the
+heading's own level, so a `###` under a `#` reads `1.0.1-`, and each heading
+under it inherits that zero. The number is v1's and is left as it is: changing
+it is a decision for Nail, so `prefix` reports the zero as its second return
+and the walker names the line. `01-kitchen-sink.md` carries all three of these
+cases on purpose, which is how they were found.
+
+**No network in the render path, and it is a property of the tree.** None of
+`house`, `render`, `body`, `cover` or `drift` imports `net/http` or
+`internal/gapi`, and none imports `guard` or `auth` either. `cmd/gdoc/build.go`
+opens no policy and no session, because there is no wire to judge. Two of the
+packages carry the rule as their own test, which also bans `os/exec`. The
+boundary test's import and builder allowlists did not change at M5, and a
+generator that needed a line in either of them would be a generator doing
+something it was never meant to do.
+
+**A house-style test states its value as a literal.** v1's rule, ported: `if got
+!= 595.28`, never `if got != cfg.Page.WidthPt`. A test that reads the constant it
+checks is a mirror, and it follows the constant wherever somebody moves it. Every
+`cfg.` inside these tests is the printed actual in a `t.Errorf`, with the want
+written out beside it as a number.
+
+**The gate runs both ways, and the item list is written once.** `drift.Items` is
+the list, ported from `compare.py`: each item has a name, a tolerance and one
+reader, and `Source` gives that reader both a docx and a Docs answer to read
+from. Two extractors written out by hand would be two chances for one row to
+mean one thing offline and another live, and the two gates would then disagree
+without either failing.
+
+- **Offline, in `make test`.** `TestTheOfflineGate` builds `03-policy.md` from
+  the embedded config and reads the master docx beside it. 169 items on
+  2026-09-08: 142 IDENTICAL, 2 CLOSE, 22 DIFFERENT, 3 MISSING, and every
+  DIFFERENT or MISSING row is named in `drift.Known` with the reason it is
+  there. A CLOSE row is never in `Known` and cannot be: `Unexplained` only ever
+  asks for an entry on the two verdicts that fail the gate.
+  `TestTheGateReadsTheWholeList` states that the gate reads every item rather
+  than a subset, which is what makes "no new differences" mean anything, and
+  `TestEveryKnownDifferenceStillDiffers` is the other direction over `Known`:
+  an entry whose row has gone IDENTICAL exempts that row for ever, so it fails
+  rather than sitting there.
+- **Live, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`.** Uploads both documents
+  with conversion, reads both through the Docs API and runs the same list. That
+  is the measurement that means something, because Google's import is part of
+  the result. **It does not exist yet**, and the reason is not the token: it
+  needs the guard to read the first MIME part of a multipart create and `gapi`
+  to have a multipart write, both of which are M6's. The `FromDoc` half of every
+  item is written and tested against a fixture, so what is missing is the
+  upload rather than the comparison.
+
+**`drift.Known` holds twenty-five names, and DECISIONS.md counted two.**
+Neither number is wrong, and the difference is what the offline gate reads. It
+reads XML, where the master states a heading colour and a heading indent on the
+style and then overrides both on every paragraph that uses them, while
+`house.yaml` states the effective one a reader sees; that is eight rows. The two
+documents also hold different words, the master being the template with "xxx"
+where a title goes, so every row that reads text rather than a measurement
+differs for that reason and only that reason. Seven of the twenty-five are the
+front matter the note fills in: the master leaves the owner and the approval
+dates blank, keeps its "xx" revision row and a blank row behind it, and was
+captured with Internal marked, while the built document carries the note's own
+owner, its revisions and the class it declares. The live gate reads what Docs resolved, so
+most of those rows would answer IDENTICAL there. The 0.001pt logo rounding
+DECISIONS.md counted is not in `Known` at all: it is inside the item's two-point
+tolerance, so it comes back CLOSE. Adding a name to `Known` is a decision
+somebody writes down with its reason, not a test somebody loosens.
+
+**`Known` explains a difference between the two documents, and never a fault in
+this package.** `Row.Bug` is that split. A reading that did not line up, by name
+or by length, and two halves of one row answering in different types are all
+faults here, so they set it, and `Unexplained` returns a row carrying it
+whatever `Known` says about that name. Ten of the twenty-five names carry rows
+that can go wrong that way, so filtering on the name alone dropped them and the
+gate passed in silence. The type check is the arm that found it: two halves of
+one row are one question asked two ways, so they answer in one type, and the
+`%v` fallback behind them read `"1"` against `1.0` as IDENTICAL.
+
+**Two readers had a hole each, and both are closed.** `Docx.Style` folded the
+document defaults in before it walked the style chain, and the chain is empty
+when the style is absent, so a style that is in no file at all came back stating
+11pt Calibri at 115% while its own doc comment promised nothing. The master
+states the same defaults, so dropping a named style from `house.yaml` put six of
+that style's eleven rows IDENTICAL on both sides and the gate passed on a style
+that no longer existed. `round3` is the other: it cast through `int64`, and Go
+leaves that conversion out of range implementation dependent, so `NaN` read as 0
+on darwin/arm64 and as -9.2e15 on darwin/amd64. `make dist` ships both, so one
+document measured two ways gave one gate two answers. It goes through
+`math.Round` now, which hands `NaN` back and puts the row DIFFERENT rather than
+inventing a number.
+
+**The three PDF items are dropped, on purpose.** `compare.py` read a PDF export
+for a page count, a page-1 size and a page-1 image count. SPEC's Never list says
+gdoc never exports a PDF, so neither gate does. The page count was one of the two
+real differences DECISIONS.md counted, and it came from a stale contents list in
+the master rather than from the style. 160 was compare.py's count including
+those three; 157 without them, plus `bold` and `italic` for all nine named
+styles, is 169. Every item compare.py printed is findable here under
+compare.py's own name.
+
+**The contents list is a Word field, not a measured list.** `house.yaml` states
+the instruction and the writer emits the field, so Word fills it in on a refresh
+and Docs imports it as a live contents list. That is why M6 uploads once and has
+no measuring pass, which is what v1 needs a second upload and a PDF export for.
+
+**One list item takes at most one marker, whatever it holds.** The marker goes
+on the first paragraph the item actually emits, and every paragraph after it
+takes the item's indent and no marker. A continuation paragraph and a block
+quote both used to number themselves as items, so an author's "2." printed as
+"3.". The hanging indent goes with the marker for the same reason: written on a
+paragraph with no number to fill it, it starts that paragraph's first line in
+the number's own column.
+
+**At most, because an item can hold nothing that carries a marker, and then it
+takes none and says so.** An item that is only a table, only a code block, only
+a block of HTML or empty emits no list paragraph, so `pendingMark` is still
+armed when `itemBlocks` returns and the run warns. What it costs depends on the
+list, so the sentence does too: a number is a count Word carries on, so the
+items after it print one lower and the author's "3." reads as "2.", while a
+bullet is not a count, so a bulleted item loses only its own bullet and its
+indent and nothing after it moves. Telling an author to check numbering that is
+not wrong is the cry-wolf warning this tool avoids everywhere else. A table is
+the case that used to reach this in silence: it renders, at body width rather
+than inside the item, so the document looks deliberate and only the list is
+wrong.
+
+**The line that warning names comes from inside the item.** A goldmark
+`ListItem` carries no source position: its `Offset` is a column inside the
+line, and lines are appended to leaf blocks only. So `itemLine` reads the first
+descendant that has one, a fence being read one line above its own first line
+of code the way the code block's own warning reads it, and falls back to the
+nearest sibling item for an item holding nothing positioned at all. Asking the
+item resolved to line 1, which in a note is the front matter's own delimiter:
+the wrong end of the file to send somebody to.
+
+**The marker is pending on the renderer, and that is not a detail.** Nothing
+the walker can read off a child says which child emits the item's first
+paragraph. A block quote is a container whose paragraphs come back through
+`block`, so an item that is nothing but a quote has no `*ast.Paragraph` child at
+all and marking only those left it with no number anywhere in it. Handing the
+marker to the item's first child instead breaks the mirror of that, an item
+opening with a fenced code block, which renders nothing and would spend the
+marker on a paragraph nobody sees. So `itemBlocks` arms `pendingMark`,
+`paragraphBlock` spends it, and `itemBlocks` puts the outer item's back on the
+way out so a nested list takes its own.
+
+**What the walker will not render is a warning naming the line, never a silent
+drop.** Fenced and indented code blocks, blocks of HTML, inline HTML, footnotes,
+and the list marker an item holding none of those can carry. Nail
+decided code blocks stay out of the house style, and a note carrying one has to
+say so on the envelope. A picture inside a list item, a block quote or a table
+cell is the same answer: the house style puts a figure on a centred line of its
+own, which it cannot be there. All three used to collect the picture and throw
+it away, so a bullet naming one published with no picture, no warning and an
+image count of nought, and inline HTML in a cell or a quote was dropped the same
+way. A picture at an `http` address is a **refusal** rather
+than a warning, v1's rule: a document built from a link is one that breaks when
+the link expires. A relative path is resolved against the note's own directory
+and a `data:` URI is decoded, because those bytes arrived with the markdown.
+
+**The footnote extension is on so that a footnote can be refused.** With it off,
+`[^1]` and `[^1]: the text` are ordinary markdown text, so they published as
+prose with nothing on the envelope. That is not a hypothetical note: `read`
+writes a document's footnotes in exactly that shape, a marker in the prose and
+the definitions after a `---` line, so a note pulled out of a Doc and built back
+into one carried the markers into the published document. goldmark collects
+every definition into one list at the end of the file whatever order they were
+written in, so each footnote is named by its own line rather than the list's.
+
+**An email autolink carries the `mailto:` scheme, and the label does not.**
+goldmark puts the scheme on in its HTML renderer and never in `AutoLink.URL`, so
+the address arrives at `inline.go` bare. Written into a relationship as it
+arrives it is a relative URI reference, which Word resolves against the
+document's own location: the link opens nothing, and a contact address is
+ordinary in a policy. The run's text stays the bare address, which is what the
+author typed. An internal anchor link is the case still open, in
+`docs/backlog/internal-anchor-links.md`.
+
+**`cover` reads v1's keys, and refuses to invent a title.** `title` required;
+`alt_title`, `doc_type`, `version`, `date`, `owner`, `last_approval`,
+`review_frequency`, `board_ratification`, `distribution`, `classification`,
+`heading_numbering` and `revisions` optional. The five after `owner` are the
+five rows of the version-control table, which is v1's `VERSION_CONTROL_LABELS`.
+The names are v1's so a note written for the Python tool builds here with no
+edits. A key this package does not read is carried, never refused, and the
+`gdoc:` block is `internal/frontmatter`'s and is skipped here whatever it holds: two readers of
+one block are two rules that drift. A missing title is a refusal carrying a
+candidate drawn from the first heading or the file name, and the skill proposes
+it. Nothing in Go writes a title into somebody's note.
+`classification` is the one value still validated, because it shades a fixed row
+in the front matter, so an unknown value would silently shade nothing.
+
+**A header or footer line carries its own size on the paragraph mark.** An
+empty line's height is its paragraph mark's size, and `house.yaml` states 9pt on
+the two lines under the running head and 12pt on the footer's blank line, which
+is what the master carries there. `house.Paragraph.SizePt` and `.Color` were
+parsed and never written, so all three fell back to the document's 11pt default
+and the running head block came out taller than the master's. `regionMark` is
+where that lives now. No drift item reads a paragraph mark, in either gate, so
+nothing would have named it: the Docs API has no paragraph mark to read, which
+is why the row is not there.
+
+**A missing `version` and a missing `date` both take v1's default**, `1.0` and
+the month the build runs in. Neither is tidiness: a cover line whose field is
+empty prints the template's own words instead, so a note stating no date
+published a page one reading "May 2025" in yellow, which is when the master was
+captured. Every other optional key leaves its line or its row blank, which reads
+as blank rather than as somebody else's value.
+
+**The note's own words reach the front matter, and one of them is a mark.**
+`render.placeholder` resolves the cover fields, and a run or a cell paragraph
+naming one prints the note's value with the template's yellow and red taken off
+it, which is v1's `_clear_placeholder_marks`. Three rules sit on top of that,
+and each closes a document the generator used to publish:
+
+- **A cover line naming `with:` is left out when that field is empty.** The
+  master offers the title twice, either side of an `or`, for a person filling
+  the cover in by hand to pick one. Printing both published page one reading the
+  title, then "or", then the template's own highlighted "(Name of)
+  Framework/Policy".
+- **The `Version: ` label is a run, and only the number beside it is the
+  note's.** A line-level placeholder replaces the whole paragraph, so the word
+  went with it.
+- **A cell naming a `classification:` is shaded only when the note declares that
+  class.** The master was captured with Internal marked, so writing its fills
+  verbatim marked every document Internal whatever the note said. A wrong mark
+  is worse than a blank cell. It is v1's `mark_classification`, and
+  `repeat: revisions` on a row is v1's `fill_revisions`: one row per revision
+  the note declares, with `without: revisions` taking the blank row out. A note
+  that declares none keeps the template's own rows, which is v1's early return.
+
+**The build reports facts.** `out`, `bytes`, `title`, `running_head`, `house`
+and a `body` object of counts. There is no field saying the document is good.
+That is answered by opening it in Word or in Drive, which is M5's half of "the
+binary prints facts, and the skills judge".
+
+**`--out` never overwrites without `--force`,** and the write goes through
+`internal/atomicfile`. Not knowing must never resolve to overwrite, which is
+v1's `write_baseline` rule in a second place. A directory at `--out` is refused
+whatever the flag says: `--force` is somebody agreeing to replace a document,
+not a folder.
+
+**And `--force` is never consent to replace an input.** An `--out` naming the
+note, the `--house` file or one of the note's own pictures is refused, compared
+with `os.SameFile` so a second spelling of one path is still that path. The
+pictures are the half that cannot be checked at the door: which files they are
+is only known once the walk has read the note, so `body.Result.Sources` carries
+them back and `cmdBuild` asks again after the walk and before anything is
+written. `--out diagram.png --force` used to embed the picture and then write
+the document over it, leaving the note pointing at a .docx.
+
+**`Sources` names every picture the note names, placed or not.** A picture
+inside a list item, a block quote or a table cell is warned about and left out,
+and it is still a file the run must not write over. Recording only the embedded
+ones left that case worse than the one the check was written for: the bytes were
+in no `word/media/` either, so the picture was simply gone. `imagePath` is the
+one resolver both halves use, and it is empty for a `data:` URI and for a link,
+because neither is a file.
+
+**`allowedModules` names three now, which is all SPEC.md agreed.** M5 added
+`beevik/etree`, because `encoding/xml` rewrites namespace prefixes and drops the
+attribute order Word reads, and `yuin/goldmark`, for the markdown. Neither
+brings a transitive module: `go list -m all` is those two plus `goccy/go-yaml`
+and nothing else. About 1.4 MB per platform binary for the pair, which is the
+price the plan agreed for a markdown parser and an XML tree that does not
+corrupt OOXML. A fourth module needs its reason in SPEC.md before its line in
+the map, and the open candidate is still `sergi/go-diff` at M8.
 
 ### Running a milestone
 

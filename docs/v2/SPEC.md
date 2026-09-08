@@ -357,11 +357,29 @@ heading numbering, and the logo as base64. The generator reads it plus markdown
 and emits a docx. Nothing reads the master `.docx` at runtime; it stays in the
 repo as provenance and as the drift test's fixture.
 
-The generator and the drift test exist today as Python spikes (`config/gen.py`,
-`config/compare.py`) and are ported to Go. **The 160-item comparison is the
-acceptance gate:** it renders from the config and from the master and fails on
-any drift beyond the two known real differences (a 0.001pt logo rounding, a
-stale-TOC page count).
+The generator and the drift test existed as Python spikes (`config/gen.py`,
+`config/compare.py`) and were ported to Go at M5. **The comparison is the
+acceptance gate, and it runs both ways.** The list of measured values is written
+once, with one reader per item; offline that reader is given the docx XML and
+live it is given a Docs API answer, so a row that fails in one gate is findable
+in the other.
+
+- **Offline**, in `make test`, on every commit: it builds from the config, reads
+  the master, and fails on any difference not named in the list of known ones
+  with its reason.
+- **Live**, opt-in: it uploads both documents with conversion and reads both
+  through the Docs API. That is the measurement that means something, because
+  Google's import is part of the result. It waits on the multipart upload the
+  publish milestone builds.
+
+**The three PDF items are out.** `compare.py` read a PDF export for a page
+count, a page-1 size and a page-1 image count. The Never list says gdoc never
+exports a PDF, so neither gate does. The page count was one of the two known
+real differences anyway, and it came from a stale contents list in the master
+rather than from the style. The other, a 0.001pt rounding on the logo offset, is
+inside that item's tolerance and reads as CLOSE. Dropping the three took 160 to
+157; adding bold and italic for all nine named styles took it to 169. Every item
+`compare.py` printed is findable under its own name.
 
 House-style tests state house values as literals, never by reading the constant
 they test. The v1 rule carries over unchanged.
