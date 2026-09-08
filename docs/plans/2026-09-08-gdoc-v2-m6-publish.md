@@ -310,12 +310,29 @@ did not move.
 
 ### Task 8: the two live tests
 
-- [ ] `TestLivePublish` in `go/internal/live`, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: publish a temp note into the test folder, assert the read-back, the title, the one tab and the note's written block, then trash the document.
-- [ ] `TestLiveDrift` beside it: build `03-policy.md`, upload it and the master with conversion, read both through the Docs API, run the 169-item list, print the table, fail on any verdict that is not IDENTICAL, CLOSE or a named known difference, and trash both documents.
-- [ ] Assert the three rows that answer SPEC acceptance item 3 by name: the positioned logo, the TOC field, and the footer page numbers.
-- [ ] Record what the live table actually says in this plan under Post-Completion, including any row that has to join `drift.Known` with its reason. A row joining `Known` is a decision Nail takes, not a test somebody loosens.
-- [ ] `cd go && go test -race ./...` passes, and the live pair runs clean on Nail's machine.
-- [ ] `git commit -m "test(v2): the live publish and the live drift gate"`
+- [x] `TestLivePublish` in `go/internal/live`, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: publish a temp note into the test folder, assert the read-back, the title, the one tab and the note's written block, then trash the document.
+- [x] `TestLiveDrift` beside it: build `03-policy.md`, upload it and the master with conversion, read both through the Docs API, run the 169-item list, print the table, fail on any verdict that is not IDENTICAL, CLOSE or a named known difference, and trash both documents.
+- [x] Assert the three rows that answer SPEC acceptance item 3 by name: the positioned logo, the TOC field, and the footer page numbers.
+- [x] Record what the live table actually says in this plan under Post-Completion, including any row that has to join `drift.Known` with its reason. A row joining `Known` is a decision Nail takes, not a test somebody loosens. **(not automatable here: the table only exists after a live run, which creates real documents in Nail's Drive and is Nail's decision each time. Post-Completion carries the empty row waiting for it.)**
+- [x] `cd go && go test -race ./...` passes, and the live pair runs clean on Nail's machine. **(the suite passes, and both new tests skip without the two variables. The live half is Nail's run: the unattended run sets neither variable.)**
+- [x] `git commit -m "test(v2): the live publish and the live drift gate"`
+
+**The live drift read is not `docs.URL`, and that is the one thing this task
+discovered.** `docs.URL` asks for `includeTabsContent=true`, which moves the
+content into `tabs[]` and leaves the legacy `body`, `headers` and `footers`
+empty. Those legacy fields are exactly what `drift.Doc` reads, and they carry
+the first tab, which is the whole of a document converted from one docx. Read
+through `docs.URL` the gate would answer nil for every body, header and footer
+row and pass on a document it never looked inside. So `readForDrift` spells a
+bare `documents.get` with no query at all, which the guard's `docsReadParams`
+allowlist carries because an empty query names no parameter.
+
+➕ `TestTheLiveFixturesRenderWithNoNetwork`, in the same file and in `make test`.
+Both live tests render a note before they reach Drive. A note that stopped
+rendering, or a fixture path that moved, would otherwise be found by Nail in
+the middle of a live run rather than by the suite, so this renders both notes,
+checks each makes a publishable upload, and opens the master. It asks for
+neither live variable, because there is nothing in it to protect.
 
 ### Task 9: documentation and the size delta
 
@@ -329,6 +346,11 @@ did not move.
 ## Post-Completion
 
 - Nail publishes a real note and opens the document in Drive.
-- Nail reads the live drift table and decides on any row that has to join `drift.Known`.
+- Nail reads the live drift table and decides on any row that has to join `drift.Known`. The table is printed by `TestLiveDrift` under `-v`, with the summary line in front of it, and it goes here when the run has happened:
+
+  ```
+  (the live table, built vs master: recorded after the first live run)
+  ```
+
 - The binary-size delta per platform, recorded in PLAN.md.
 - Still outstanding from earlier milestones, and Nail's: M4's live session with a second account commenting, and M5's built docx opened in Word beside a v1-published copy.
