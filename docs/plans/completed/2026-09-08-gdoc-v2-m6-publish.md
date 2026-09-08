@@ -336,12 +336,32 @@ neither live variable, because there is nothing in it to protect.
 
 ### Task 9: documentation and the size delta
 
-- [ ] CLAUDE.md: `publish` under the write commands; the multipart create and the three-signal rule in the guard section; the changed publish record; the live drift gate moving from "does not exist yet" to what it measures.
-- [ ] README: publishing a note.
-- [ ] `docs/v2/PLAN.md`: the M6 "Landed" paragraph, the "What M6 leaves for M7" list, the binary-size table against `e77d9f3`, and acceptance items 2 and 3 marked with the test that answers each.
-- [ ] Note that `publish` has no skill caller: it is Nail-invoked, and wiring it into a skill is M9's with the install story.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `git commit -m "docs: M6 landed"`
+- [x] CLAUDE.md: `publish` under the write commands; the multipart create and the three-signal rule in the guard section; the changed publish record; the live drift gate moving from "does not exist yet" to what it measures.
+- [x] README: publishing a note.
+- [x] `docs/v2/PLAN.md`: the M6 "Landed" paragraph, the "What M6 leaves for M7" list, the binary-size table against `e77d9f3`, and acceptance items 2 and 3 marked with the test that answers each.
+- [x] Note that `publish` has no skill caller: it is Nail-invoked, and wiring it into a skill is M9's with the install story.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `git commit -m "docs: M6 landed"`
+
+**Two new CLAUDE.md sections rather than one.** "The multipart create is three
+signals that have to agree" sits in the guard's own run of sections, because it
+is a rule about the wire and belongs beside the two allowlists and the plain-path
+rule rather than inside publish's story. "`publish` is the fifth write, and it
+makes the document rather than changing one" sits after the four write commands,
+and its title says the one way it differs from them: there is no handed-in
+document, so the policy opens with a folder and no file at all.
+
+**The size delta is about 90 KB per platform, measured against `e77d9f3`** by
+building `make dist` in a worktree at that commit and again at HEAD. The module
+graph gained nothing: `go list -m all` is still the same three. M5 cost 1.4 MB
+for a markdown parser and an XML tree; M6 cost a fifteenth of that, because
+`mime/multipart` and `crypto/rand` were already reachable from the standard
+library the binary links.
+
+Three earlier lists were corrected in PLAN.md rather than left standing. "What
+M5 leaves for M6" named four things and all four are settled, "What M3 leaves
+for M6" named the multipart grammar as untested and it is tested now, and M5's
+open list carried `drift`'s missing style fallback, which Task 7 closed.
 
 ## Post-Completion
 

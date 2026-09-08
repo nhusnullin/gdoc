@@ -492,7 +492,8 @@ code, because the cover and the tables are found by their placeholder text.
 
 A second implementation lives at `go/`: one static binary, no Python, no pandoc,
 nothing to install beside it. It is being built a milestone at a time
-(`docs/v2/PLAN.md`). It holds the credential, and it reads.
+(`docs/v2/PLAN.md`). It holds the credential, it reads, it writes suggestions,
+and since M6 it builds a house-style document and publishes it.
 
 ```bash
 make build   # bin/gdoc, for this machine
@@ -755,7 +756,8 @@ rule in Go that says a comment is answered.
 
 `gdoc build` turns a note into an Altery house-style `.docx` on your own
 machine. It reaches nothing: no Drive, no Docs, no network at all, and it runs
-no other program. Uploading the result into Drive is the next milestone.
+no other program. `gdoc publish`, below, is the same render with the upload
+behind it.
 
 ```bash
 gdoc build --md note.md --out note.docx [--house house.yaml] [--force]
@@ -869,6 +871,73 @@ different words. A row inside its own tolerance reads as close and needs no
 entry. Any other difference fails the test suite, so the style cannot drift away
 from the master quietly.
 
+### Publishing the document
+
+`gdoc publish` does what `build` does and then puts the result into Drive as a
+Google Doc, in one folder you name, and writes the pairing back into your note.
+
+```bash
+gdoc publish --md note.md --folder-id FOLDER [--house house.yaml]
+```
+
+The note is rendered exactly the way `build` renders it, so everything in the
+section above applies: the same front-matter keys, the same warnings, the same
+refusals. The docx bytes are uploaded with conversion, so Drive turns them into
+a document rather than leaving a .docx sitting in a folder.
+
+The folder is the only thing the run can reach. No document is in reach when it
+starts, and the new document's id comes back from the create the tool itself
+made. There is no `--folder-id` default and no fallback to the folder in your
+note: a note that already names a document is refused before anything leaves
+your machine. Publishing a second version of a note is M7's `restyle --new`.
+
+Three things are checked after the upload, and each answers something the other
+two cannot: the document reads back through the Docs API, it has exactly one
+tab, and Drive can export it as a .docx again. `verified` is the three together.
+Fewer than three is still `ok: true` with the check that did not hold named,
+because a document that exists is a document that exists, and being told the run
+failed is what makes somebody upload a second one.
+
+If the upload worked but your note could not be written, the document goes back:
+it is trashed and the trash is confirmed, and the output says `rolled_back:
+true` with no document id. Only if that also fails do you get the live id and
+what to do with it. The reason is not tidiness. A document nobody's note points
+at is one the next publish makes a second of.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "document_id": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+    "folder_id": "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr",
+    "url": "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd/edit",
+    "title": "Supplier Register Policy",
+    "house": "embedded",
+    "bytes": 48213,
+    "tabs": 1,
+    "verified": true,
+    "checks": {"read_back": true, "one_tab": true, "docx_export": true},
+    "files_changed": ["/Users/you/notes/supplier-register-policy.md"],
+    "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1}
+  },
+  "warnings": []
+}
+```
+
+Your note is read again just before it is written, because the upload takes
+seconds and these notes live in a synced vault. If it changed in that window, in
+its body or in its front matter, nothing is written and the document is rolled
+back: the file on disk is no longer the one that was rendered, and publishing it
+as though it were would pair your note with a document it does not match.
+
+There is a second test that only runs when you ask for it, and it is the one
+that means something: it builds the document, uploads it and the Word master
+side by side, reads both back through the Docs API, and compares the same 169
+values. Google's import is part of that reading, so a difference that shows up
+there and not offline is Drive's doing rather than the generator's. It creates
+two real documents and trashes them, so it is behind two environment variables
+and never runs by itself.
+
 ### The `gdoc:` block
 
 A markdown note paired with a Go-published document carries one key in its front
@@ -881,6 +950,10 @@ gdoc:
   schema: 1
   document_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd
   folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr
+  published:
+    at: 2026-09-08T10:14:00Z
+    title: Supplier register policy
+    house: embedded
   suggestions_seen:
     at: 2026-09-06T11:00:00Z
     items:
@@ -898,6 +971,12 @@ your line endings and the trailing newline come back byte for byte, and the file
 is replaced through a temporary file and a rename, so a failed write cannot
 truncate your note.
 
+`gdoc publish` is the only thing that writes this block. A note the Python tool
+published carries `gdoc: <id>` as a plain string instead, and the Go binary
+refuses to read that: it names the shape and tells you to rewrite the line by
+hand once, or to publish the note again with `gdoc publish`. Building is
+unaffected, because `gdoc build` skips the `gdoc:` key whatever is in it.
+
 The `gdoc` on your PATH is the Go binary from here on. `./install.sh` links
 `~/.local/bin/gdoc` to `bin/gdoc`, and the temporary second name `gdoc2` is
 removed. The Python tool is still there and still does the publishing: it is
@@ -911,10 +990,9 @@ text, and v2's `comments` lists the comments.
 
 ## What is planned
 
-**Publishing from the Go binary.** `gdoc build` writes the docx today and stops
-there. Uploading it into Drive with conversion, verifying the result and writing
-the ids back into the note is the next milestone. Until then the Python tool
-publishes.
+**Restyling a document in place.** `gdoc publish` makes a new document from a
+note. Taking a document that already exists and giving it the house style,
+keeping its comments and suggestions, is the next milestone.
 
 **A live session over the whole folder.** Live works today on one document, the
 link you give it. Starting it once and having it watch every note you have

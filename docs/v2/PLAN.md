@@ -205,8 +205,9 @@ What M3 leaves for M6:
   the create path it needs, the parent check, the upload-shape check and the
   response learning, has been exercised against Drive by every `propose` run.
 - The probe's create is a bare `files.create` with a JSON body. M6's is a
-  multipart upload, which `checkUploadShape` permits and nothing has sent yet,
-  so the first real test of that grammar is still M6's.
+  multipart upload, which `checkUploadShape` permits and nothing had sent yet,
+  so the first real test of that grammar was M6's. **Done**: the guard reads the
+  first MIME part now, on the three-signal rule under M6 below.
 
 What M3 leaves open elsewhere:
 
@@ -314,24 +315,21 @@ last M4 commit, is about 1.4 MB per platform:
 Documented in CLAUDE.md under "The generator reads `house.yaml` and nothing
 else" and in the README under "Building the document".
 
-What M5 leaves for M6:
+What M5 left for M6, all four **settled** on 2026-09-08 and written up under M6
+below:
 
 - **The upload.** `build` writes a file and stops. Uploading it with conversion,
-  verifying by export and trashing on a failed front-matter write is M6's.
-- **The live drift gate.** `TestLiveDrift` is not written. It needs the guard to
-  read the first MIME part of a multipart create and `gapi` to have a multipart
-  write, both of which are M6's, and both of which touch the room CLAUDE.md
-  names as Nail's decision. The `FromDoc` half of every item is written and
-  tested against a fixture, so the comparison is there and the upload is not.
-- **The `gdoc:` block written by the publish.** `build` never touches the note.
-  M6's publish writes the ids and the publish record to the M2 schema.
+  verifying by export and trashing on a failed front-matter write is `publish`.
+- **The live drift gate.** `TestLiveDrift` is written and runs, on the guard's
+  multipart create and `gapi.PostMultipart`.
+- **The `gdoc:` block written by the publish.** `publish` writes the ids and the
+  publish record, and it is the block's only writer.
 - **The v1 front matter migration.** A note v1 published carries `gdoc: <id>` as
   a plain string and v2's strict reader refuses it. `cover` is unaffected,
   because it skips the `gdoc:` key whatever it holds, so a v1 note builds today;
-  it is `propose --md` and `withdraw` that cannot read the pairing. Nail decides
-  the shape in M6. **Settled**, 2026-09-08: the reader keeps refusing it and
-  publish is the only writer of the block. The backlog item is deleted and the
-  entry is in `docs/v2/DECISIONS.md` under that date.
+  it is `propose --md` and `withdraw` that cannot read the pairing. The reader
+  keeps refusing it and publish is the only writer of the block. The backlog
+  item is deleted and the entry is in `docs/v2/DECISIONS.md` under that date.
 
 What M5 leaves open elsewhere:
 
@@ -346,11 +344,10 @@ What M5 leaves open elsewhere:
   the two sides now measure. Fourteen of the twenty-five are measurements
   rather than words, and `docs/backlog/drift-known-pins-no-value.md` says what
   pinning the pair would buy.
-- `drift`'s `FromDoc` half reads what a Docs answer states on the run or the
-  paragraph and resolves no style behind it, so a live row whose value is
-  inherited reads nil on both sides and passes.
-  `docs/backlog/drift-fromdoc-style-fallback.md` holds it, and it has to be
-  settled with M6's upload, which is what makes the live gate runnable.
+- `drift`'s `FromDoc` half read what a Docs answer states on the run or the
+  paragraph and resolved no style behind it, so a live row whose value was
+  inherited read nil on both sides and passed. **Settled at M6**: `Doc.resolve`
+  walks the chain and the backlog item is deleted.
 - One template. Everything is measured against `altery-group-policy-v1.0`.
 - The acceptance run by hand, a built docx opened in Word and in Drive beside
   the same note published by v1, is Nail's.
@@ -363,6 +360,126 @@ Failure policy is rollback-first: if the front-matter write fails after a
 successful upload, trash the created document and verify `trashed=true`; only
 if the rollback also fails does the error carry the live id and the exact
 recovery steps. Acceptance: spec items 2 and 3.
+
+**Landed 2026-09-08.** `gdoc publish --md note.md --folder-id FOLDER` renders
+the note the way `build` renders it, uploads the bytes with conversion into the
+one folder the run was given, reads the new document back three ways, and
+records the pairing in the note. It is the only writer of the `gdoc:` block.
+The policy opens with `AllowCreateIn` and no file at all, so the run's only door
+is the folder and the new document's id is learned from the create the guard
+itself carried.
+
+The upload is what three other pieces had been waiting for, and all three are
+settled. The guard judges a multipart create now: `multipartCreate` reads the
+same three signals Drive picks its parser from, the `/upload` path, the
+`uploadType` or `upload_protocol` value and the media type, and refuses the
+request unless all three agree or none does. `metadataPart` takes the boundary
+off the header through `mime.ParseMediaType`, reads the first part with
+`NextRawPart`, requires its media type to be JSON, refuses a
+`Content-Transfer-Encoding` and any header outside `content-type`, and hands the
+bytes to the same duplicate-key and parents check a plain JSON create goes
+through. `gapi` gained `Session.PostMultipart`, which builds the whole body and
+its boundary once from `crypto/rand`, so the 401 retry sends the same bytes and
+the same boundary. And `TestLiveDrift` exists and runs.
+
+`verified` is three read-backs: the Docs read, the tab count, and a docx export
+that reads as a docx. Fewer than three is `ok: true` with `verified: false` and
+the route named, the way `propose` reports, because a document that exists is a
+document that exists. The failure policy is rollback-first: a front-matter write
+that failed after a successful upload trashes the document and confirms the
+trash, and only a rollback that also failed puts the live id on the envelope
+with the recovery steps. `rolled_back` is a `*bool` so that a clean run says
+nothing about a rollback nobody tried. The trash itself moved into
+`internal/drive`, because `probe` and `publish` both believe the same rule: an
+unconfirmed trash is a failure, and two copies of that are two chances for one
+of them to report a document gone that is still there.
+
+`build` and `publish` render through one function, `renderNote`, returning one
+`noteDocx`, and `TestBuildAndPublishRenderTheSameBytes` compares the file
+`build` wrote against the part `publish` uploaded so the two cannot drift. The
+re-read before the note is written is publish's own inverse of `freshNote`: it
+refuses a block that has **appeared**, and it compares the whole file rather
+than the body alone, because the author's front matter feeds the cover.
+
+Two decisions Nail took on 2026-09-08, both in `docs/v2/DECISIONS.md`. The
+publish record drops `revision_id` and is `{at, title, house}`: a Drive revision
+id needs a route the guard does not carry, for a field nothing reads. And v2's
+reader keeps refusing v1's plain `gdoc: <id>` string, with publish the only
+writer of the block, so no schema-0 shape enters the reader; a note v1 published
+is rewritten by hand once or republished by v2.
+
+`drift.Doc` resolves a style behind a value now, which the live gate needed:
+`textRun.textStyle`, then the paragraph's `namedStyleType`, then
+`namedStyles[type]`, then `namedStyles["NORMAL_TEXT"]`, with paragraph
+properties folding down the same chain. A property is taken only when the
+message carries it, because an absent `bold` on a run is that run inheriting. A
+style the answer does not carry is still not found, which is what the docx half
+answers too. `docsSilent` pins the 71 names the fixture is expected to answer
+nil for, so a row that starts reading nil fails rather than passing as IDENTICAL
+against another nil. Nothing was re-baselined: the offline gate reads two docx
+files, so its 169 rows did not move.
+
+`TestLiveDrift` is the live gate, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`.
+It builds `03-policy.md`, uploads it and the master with conversion, reads both
+through the Docs API, runs the same 169-item list, prints the table, fails on
+any verdict that is not IDENTICAL, CLOSE or a name in `drift.Known`, and trashes
+both documents. Its read is a bare `documents.get` with no query, not `docs.URL`:
+`includeTabsContent=true` moves the content into `tabs[]` and empties the legacy
+`body`, `headers` and `footers`, which are exactly what `drift.Doc` reads, so
+through `docs.URL` the gate would answer nil for every one of those rows and
+pass on a document it never looked inside. `TestLivePublish` is beside it, and
+`TestTheLiveFixturesRenderWithNoNetwork` renders both notes in `make test` so a
+fixture that moved is found there rather than in the middle of a live run.
+
+`allowedModules` did not change and the module graph gained nothing: `go list -m
+all` is still `beevik/etree`, `goccy/go-yaml` and `yuin/goldmark`. The
+binary-size delta against `e77d9f3`, the last M5 commit, is about 90 KB per
+platform:
+
+| Platform | M5 (e77d9f3) | M6 | Delta |
+|---|---|---|---|
+| darwin/arm64 | 13,881,474 | 13,952,082 | +70,608 (+0.5%) |
+| darwin/amd64 | 14,838,832 | 14,933,472 | +94,640 (+0.6%) |
+| windows/amd64 | 14,676,480 | 14,768,640 | +92,160 (+0.6%) |
+
+Acceptance: **spec item 2** is answered by `TestLivePublish`, which publishes a
+note and asserts the read-back, the title, the one tab and the block written
+into the note. **Spec item 3** ("the positioned logo, a live contents list and
+footer page numbers, verified by export") is answered by `TestLiveDrift`'s
+`acceptance`, which asks each of the three twice: the value, so a generator that
+stopped emitting it fails rather than matching a master that lost it too, and
+the verdict, so a value that survived Google's import as something else fails as
+well.
+
+Documented in CLAUDE.md under "The multipart create is three signals that have
+to agree" and "`publish` is the fifth write, and it makes the document rather
+than changing one", and in the README under "Publishing the document".
+
+What M6 leaves for M7:
+
+- **A second version of a note.** `publish` refuses a note that already names a
+  document. Replacing the paired document, and the state transition that gives
+  the note the new id and a fresh publish record in the same change, is
+  `restyle --new`'s.
+- **`GrantInPlace`.** Still deleted, still M7's, and the level it raises to is
+  still Nail's decision then.
+- **Editing or deleting a comment.** `commentWrites` is still `POST` alone, so
+  the 🤖 comment a withdrawn proposal made stays where it is.
+
+What M6 leaves open elsewhere:
+
+- `publish` has no skill caller. It is Nail-invoked, and wiring it into a skill
+  is M9's with the install story.
+- A resumable upload is still refused. The guard carries neither the `PUT` nor
+  `upload_id`, so the shape could never finish, and nothing here needs one: a
+  house-style docx is tens of kilobytes.
+- The live drift table has not been read by a person yet, so no row has joined
+  `drift.Known` for a reason the live gate found. That is Nail's, and a row
+  joining `Known` is a decision written down with its reason, never a test
+  somebody loosens.
+- The offline gate's `Known` still exempts a row by name rather than by value,
+  which `docs/backlog/drift-known-pins-no-value.md` holds.
+- One template. Everything is still measured against `altery-group-policy-v1.0`.
 
 ### M7. Restyle
 
