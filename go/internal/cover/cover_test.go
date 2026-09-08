@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 // note builds a markdown file out of a front-matter block and a body, so a
@@ -44,6 +45,32 @@ func TestANoteWithOnlyATitleReadsWithNumberingOnAndNoRevisions(t *testing.T) {
 	}
 	if string(body) != "# Purpose\n" {
 		t.Errorf("body = %q, want the markdown behind the front matter", body)
+	}
+}
+
+// TestANoteWithNoDateIsDatedThisMonth. Left empty, the date reached the cover
+// as the template's own highlighted "May 2025", so every note that stated no
+// date published a page one dated to whenever the master was captured. v1
+// prints the current month instead.
+func TestANoteWithNoDateIsDatedThisMonth(t *testing.T) {
+	frozen := time.Date(2026, time.September, 8, 12, 0, 0, 0, time.UTC)
+	now = func() time.Time { return frozen }
+	t.Cleanup(func() { now = time.Now })
+
+	f, _ := read(t, note("title: A Policy", ""))
+
+	if f.Date != "September 2026" {
+		t.Errorf("date = %q, want September 2026", f.Date)
+	}
+}
+
+// TestANoteThatStatesADateKeepsIt guards the default against taking a date the
+// author wrote.
+func TestANoteThatStatesADateKeepsIt(t *testing.T) {
+	f, _ := read(t, note("title: A Policy\ndate: 2026-08-01", ""))
+
+	if f.Date != "1 August 2026" {
+		t.Errorf("date = %q, want 1 August 2026", f.Date)
 	}
 }
 

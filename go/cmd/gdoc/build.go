@@ -69,7 +69,7 @@ func cmdBuild(raw []string) emit.Result {
 	}
 	// --force is consent to replace the document being written, never consent
 	// to replace what the run was told to read.
-	if err := notAnInput(out, map[string]string{"--md": md, "--house": a.flags["--house"]}); err != nil {
+	if err := notAnInput(out, input{"--md", md}, input{"--house", a.flags["--house"]}); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
@@ -93,6 +93,14 @@ func cmdBuild(raw []string) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
+	// The note's pictures are inputs too, and which files they are is only
+	// known once the walk has read them. Asked before the walk, the check
+	// covered the two flags and left `--out diagram.png --force` replacing the
+	// picture it had just embedded.
+	if err := notAnInput(out, pictures(walked.Sources)...); err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+
 	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -139,31 +147,48 @@ func freeToWrite(out string, force bool) error {
 	return nil
 }
 
+// input is one file this run reads, and what to call it in a refusal.
+type input struct {
+	name string
+	path string
+}
+
+// pictures names the note's own pictures as inputs.
+func pictures(paths []string) []input {
+	inputs := make([]input, 0, len(paths))
+	for _, path := range paths {
+		inputs = append(inputs, input{"a picture the note names", path})
+	}
+	return inputs
+}
+
 // notAnInput refuses an --out that names a file this run reads.
 //
 // `--out note.md --force` read the note, rendered it, and then replaced it with
 // the .docx, so the source the document was built from was gone the moment it
-// was built. --force says a document may be replaced; nothing says the note or
-// the style file may be. Two paths spelled differently are compared by
+// was built. `--out diagram.png --force` is the same thing one step along: the
+// picture is embedded and then written over, so the note points at a .docx from
+// then on. --force says a document may be replaced; nothing says the note, the
+// style file or a picture may be. Two paths spelled differently are compared by
 // os.SameFile rather than by their text, because "note.md" and "./note.md" are
 // one file and a symlink into another directory is too.
-func notAnInput(out string, inputs map[string]string) error {
+func notAnInput(out string, inputs ...input) error {
 	written, err := os.Stat(out)
 	if err != nil {
 		// Nothing is there to alias. A path that cannot be looked at was
 		// already refused by freeToWrite.
 		return nil
 	}
-	for flag, path := range inputs {
-		if path == "" {
+	for _, in := range inputs {
+		if in.path == "" {
 			continue
 		}
-		read, err := os.Stat(path)
+		read, err := os.Stat(in.path)
 		if err != nil {
 			continue
 		}
 		if os.SameFile(written, read) {
-			return fmt.Errorf("--out names the same file as %s (%s), and a build would replace what it reads", flag, path)
+			return fmt.Errorf("--out names the same file as %s (%s), and a build would replace what it reads", in.name, in.path)
 		}
 	}
 	return nil

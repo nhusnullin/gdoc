@@ -325,6 +325,11 @@ func (r *renderer) heading(level int, runs []Run, pageBreak bool) *etree.Element
 }
 
 // listItem is one bullet or one numbered item, at the level it sits at.
+//
+// The hanging indent is the marker's own column, so a paragraph with no marker
+// does not get one: written on a continuation paragraph, w:hanging starts its
+// first line in the column the number would have sat in and leaves the rest of
+// the paragraph a step to the right of it.
 func (r *renderer) listItem(runs []Run, numID string, level int, ordered bool) *etree.Element {
 	indent, hanging := r.cfg.Body.Bullet.IndentStartPt, r.cfg.Body.Bullet.HangingPt
 	if ordered {
@@ -334,12 +339,16 @@ func (r *renderer) listItem(runs []Run, numID string, level int, ordered bool) *
 	before, after := 0.0, listItemSpacePt
 	size := r.cfg.Body.SizePt
 	mark := runOpts{SizePt: &size}
+	hangingPt := &hanging
+	if numID == "" {
+		hangingPt = nil
+	}
 	p := r.para(paraOpts{
 		Align:     r.cfg.Body.Align,
 		BeforePt:  &before,
 		AfterPt:   &after,
 		IndentPt:  &indent,
-		HangingPt: &hanging,
+		HangingPt: hangingPt,
 		NumID:     numID,
 		ILvl:      level,
 		Mark:      &mark,

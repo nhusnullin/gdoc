@@ -207,39 +207,63 @@ func shorten(value string) string {
 	return value
 }
 
-// readImage is the bytes of one picture, however the note names it.
-func readImage(target, base string, line int) ([]byte, error) {
+// imagePath is the file a picture names, resolved against the note's own
+// directory. It says nothing about whether that file is there, and it is empty
+// for a picture that is not a file at all: a data URI came with the markdown,
+// a link is refused rather than downloaded, and a relative target with no
+// directory to resolve it against cannot be placed.
+//
+// It is what readImage reads from and what warnImages records, so a picture the
+// walk left out is still a file the run must not write over.
+func imagePath(target, base string) string {
+	if isDataURI(target) || isRemote(target) {
+		return ""
+	}
+	if filepath.IsAbs(target) {
+		return target
+	}
+	if base == "" {
+		return ""
+	}
+	return filepath.Join(base, target)
+}
+
+// readImage is the bytes of one picture, however the note names it, and the
+// file they came from. A picture written inline as a data URI came with the
+// markdown and has no file, so the path is empty for one.
+func readImage(target, base string, line int) ([]byte, string, error) {
 	switch {
 	case isDataURI(target):
-		return decodeDataURI(target)
+		data, err := decodeDataURI(target)
+		return data, "", err
 	case isRemote(target):
-		return nil, fmt.Errorf("line %d: the picture at %s is a link, not a file, "+
+		return nil, "", fmt.Errorf("line %d: the picture at %s is a link, not a file, "+
 			"and nothing here downloads. Pull the document again with its pictures "+
 			"beside the markdown and publish that", line, target)
 	}
-	path := target
-	if !filepath.IsAbs(path) {
-		if base == "" {
-			return nil, fmt.Errorf("line %d: the note has a picture (%s) and no "+
-				"directory to resolve it against", line, target)
-		}
-		path = filepath.Join(base, target)
+	path := imagePath(target, base)
+	if path == "" {
+		return nil, "", fmt.Errorf("line %d: the note has a picture (%s) and no "+
+			"directory to resolve it against", line, target)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("line %d: the picture %s could not be read, looked in %s",
+		return nil, "", fmt.Errorf("line %d: the picture %s could not be read, looked in %s",
 			line, target, base)
 	}
-	return data, nil
+	return data, path, nil
 }
 
 // place reads one picture and returns the centred paragraph that holds it,
 // with the media part it needs. A picture wider than the text column is scaled
 // down to it, and never scaled up.
 func (r *renderer) place(target string, line int) (*etree.Element, error) {
-	data, err := readImage(target, r.base, line)
+	data, path, err := readImage(target, r.base, line)
 	if err != nil {
 		return nil, err
+	}
+	if path != "" {
+		r.sources = append(r.sources, path)
 	}
 	info, err := identify(data)
 	if err != nil {

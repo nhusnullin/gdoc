@@ -758,7 +758,7 @@ tables:
         paragraphs:
         - runs:
           - text: '[Relevant Board Level Committee]'
-            highlight: '#FFFF00'
+            highlight: yellow
             size_pt: 12.0
           space_before_pt: 0.0
           space_after_pt: 0.0

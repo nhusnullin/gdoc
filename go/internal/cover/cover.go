@@ -46,6 +46,13 @@ var Classifications = map[string]string{
 // DefaultVersion is what a note that states no version publishes as.
 const DefaultVersion = "1.0"
 
+// defaultDateLayout is the month a note that states no date publishes as,
+// which is v1's "%B %Y".
+const defaultDateLayout = "January 2006"
+
+// now is a variable so a test can freeze the month.
+var now = time.Now
+
 // DefaultClassification is the key a note that states none is read as.
 const DefaultClassification = "internal"
 
@@ -245,6 +252,12 @@ func Read(src []byte) (Fields, []byte, error) {
 	}
 	if f.Version == "" {
 		f.Version = DefaultVersion
+	}
+	if f.Date == "" {
+		// v1's rule. Left empty, the cover line keeps the template's own
+		// highlighted "May 2025", so a note that states no date published a
+		// page one dated to whenever the master was captured.
+		f.Date = now().Format(defaultDateLayout)
 	}
 	return f, []byte(body), nil
 }

@@ -533,6 +533,141 @@ func TestALooseListItemIsOneItem(t *testing.T) {
 	}
 }
 
+// TestALooseContinuationKeepsTheIndentAndNotTheHang. The hanging indent is the
+// marker's own column. Written on a paragraph with no marker to fill it, Word
+// starts that paragraph's first line 18pt to the left of the item's own words.
+func TestALooseContinuationKeepsTheIndentAndNotTheHang(t *testing.T) {
+	out := walk(t, strings.Join([]string{
+		"1. The provider is assessed annually.",
+		"",
+		"   The assessment covers financial standing.",
+		"",
+	}, "\n"))
+	if len(out.Blocks) != 2 {
+		t.Fatalf("%d blocks, want the item and its continuation", len(out.Blocks))
+	}
+	item, continuation := find(out.Blocks[0], "w:ind"), find(out.Blocks[1], "w:ind")
+	// 36pt of indent, in twips, which is what house.yaml states for a numbered
+	// list at the first level.
+	if got := attr(t, item, "w:left"); got != "720" {
+		t.Errorf("the item is indented %s twips, want 720", got)
+	}
+	if got := attr(t, continuation, "w:left"); got != "720" {
+		t.Errorf("the continuation is indented %s twips, want the item's 720", got)
+	}
+	if got := attr(t, item, "w:hanging"); got != "360" {
+		t.Errorf("the item hangs %s twips, want 360", got)
+	}
+	if a := continuation.SelectAttr("w:hanging"); a != nil {
+		t.Errorf("the continuation hangs %s twips, want no hanging indent at all", a.Value)
+	}
+}
+
+// TestAnItemTakesExactlyOneMarkerWhateverItHolds. The marker goes on the first
+// paragraph the item emits, and every case here is a way of getting that wrong
+// in one direction or the other.
+//
+// A quote hands its own paragraphs back to block, so a quote carrying the
+// item's marker numbered itself as an item and the author's "2." printed as
+// "3.". Marking only the item's *ast.Paragraph children fixes that and breaks
+// its mirror, an item that is nothing but a quote, which then has no
+// *ast.Paragraph child and takes no number at all. Marking the item's first
+// child instead breaks the third, an item opening with a fenced code block,
+// which renders nothing and would swallow the marker.
+func TestAnItemTakesExactlyOneMarkerWhateverItHolds(t *testing.T) {
+	cases := []struct {
+		name     string
+		markdown []string
+		want     int
+	}{
+		{
+			name: "a quote after the item's own words",
+			markdown: []string{
+				"1. The provider is assessed annually.",
+				"",
+				"   > Assessment covers financial standing.",
+				"",
+				"2. The register is reviewed quarterly.",
+			},
+			want: 2,
+		},
+		{
+			name: "a quote as the whole of an item",
+			markdown: []string{
+				"1. The provider is assessed annually.",
+				"",
+				"2. > Assessment covers financial standing.",
+				"",
+				"3. The register is reviewed quarterly.",
+			},
+			want: 3,
+		},
+		{
+			name: "a code block before the item's own words",
+			markdown: []string{
+				"1. The provider is assessed annually.",
+				"",
+				"2. ```",
+				"   assess(provider)",
+				"   ```",
+				"",
+				"   The register is reviewed quarterly.",
+			},
+			want: 2,
+		},
+		{
+			name: "a continuation paragraph",
+			markdown: []string{
+				"1. The provider is assessed annually.",
+				"",
+				"   Assessment covers financial standing.",
+				"",
+				"2. The register is reviewed quarterly.",
+			},
+			want: 2,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			out := walk(t, strings.Join(append(c.markdown, ""), "\n"))
+			var marked int
+			for _, block := range out.Blocks {
+				if find(block, "w:numPr") != nil {
+					marked++
+				}
+			}
+			if marked != c.want {
+				t.Errorf("%d paragraphs carry the list marker, want the %d items the note wrote",
+					marked, c.want)
+			}
+		})
+	}
+}
+
+// TestANestedListTakesItsOwnMarkersAndLeavesTheOuterItemsAlone. The marker is
+// the renderer's now, so a sub-list walked from inside an item has to put the
+// outer item's back on the way out.
+func TestANestedListTakesItsOwnMarkersAndLeavesTheOuterItemsAlone(t *testing.T) {
+	out := walk(t, strings.Join([]string{
+		"1. The provider is assessed annually.",
+		"",
+		"   - Financial standing.",
+		"   - Operational history.",
+		"",
+		"2. The register is reviewed quarterly.",
+		"",
+	}, "\n"))
+	var marked int
+	for _, block := range out.Blocks {
+		if find(block, "w:numPr") != nil {
+			marked++
+		}
+	}
+	if marked != 4 {
+		t.Errorf("%d paragraphs carry a list marker, want the two items and the two nested ones", marked)
+	}
+}
+
 // TestAQuoteInsideAQuoteIsIndentedTwice. The depth used to be a parameter with
 // one call site and one value, so "> >" was indented exactly as far as ">".
 func TestAQuoteInsideAQuoteIsIndentedTwice(t *testing.T) {

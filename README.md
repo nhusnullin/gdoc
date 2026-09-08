@@ -784,7 +784,7 @@ written for that publishes here with no edits:
 | `alt_title` | the second title line on the cover, under the word `or`, and the running head. A note that states none prints neither line |
 | `doc_type` | joined to the title on the cover, so `Third Party Risk` plus `Policy`. Free text, and a title that already ends in its own type is left alone |
 | `version` | the cover, behind the word `Version:`. `1.0` when the note states none |
-| `date` | rendered on the cover in UK long form |
+| `date` | rendered on the cover in UK long form. The month the build runs in when the note states none |
 | `owner` | the Document Owner row of the version-control table |
 | `last_approval` | the Date of Last Approval row |
 | `review_frequency` | the Review Frequency row |
@@ -844,10 +844,12 @@ There is one test that keeps this honest on every commit. It builds a document
 from the embedded style, opens the Word master the style was extracted from, and
 compares 169 measured values across the two: page geometry, all nine styles, the
 header, the footer, the logo's position, the contents field, the three tables
-and the body. Every row that is not identical is named in a list with the reason
-it is there, most of them because the master states a value twice and because
-the two documents hold different words. Any other difference fails the test
-suite, so the style cannot drift away from the master quietly.
+and the body. Every row that differs, and every row the master has nothing to
+compare against, is named in a list with the reason it is there, most of them
+because the master states a value twice and because the two documents hold
+different words. A row inside its own tolerance reads as close and needs no
+entry. Any other difference fails the test suite, so the style cannot drift away
+from the master quietly.
 
 ### The `gdoc:` block
 

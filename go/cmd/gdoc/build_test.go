@@ -252,6 +252,66 @@ func TestBuildRefusesAnOutThatNamesAnInput(t *testing.T) {
 	}
 }
 
+// TestBuildRefusesAnOutThatNamesAPicture is the same rule over an input the
+// flags do not name. The pictures a note holds are only known once the walk has
+// read them, so a check made before the walk left `--out diagram.png --force`
+// embedding the picture and then writing the document over it: the note's own
+// reference pointed at a .docx from then on.
+func TestBuildRefusesAnOutThatNamesAPicture(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "a picture the walk embedded",
+			body: "![badge](badge.png)\n",
+		},
+		{
+			// The house style puts a figure on a centred line of its own, so a
+			// picture in a bullet is warned about and left out. The note still
+			// names the file, and the run must still not write over it: this
+			// case is the worse of the two, because the bytes are not in
+			// word/media/ either and the picture is simply gone.
+			name: "a picture the walk only warned about",
+			body: "- see ![badge](badge.png)\n",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			noSession(t)
+			dir := t.TempDir()
+			picture := filepath.Join(dir, "badge.png")
+			png, err := os.ReadFile(filepath.Join("..", "..", "internal", "body", "testdata", "docs", "badge.png"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(picture, png, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			md := filepath.Join(dir, "note.md")
+			note := "---\ntitle: A Policy\n---\n\n# Purpose\n\n" + c.body
+			if err := os.WriteFile(md, []byte(note), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			got, code := runJSON(t, "build", "--md", md, "--out", picture, "--force")
+			if code == 0 || got["ok"] != false {
+				t.Fatalf("an --out that names a picture the note holds must be refused: %v (exit %d)", got, code)
+			}
+			if msg, _ := got["error"].(string); !strings.Contains(msg, "picture") {
+				t.Errorf("the error must say what it collides with: %q", msg)
+			}
+			after, err := os.ReadFile(picture)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(png, after) {
+				t.Fatal("the picture was replaced by the document built from the note that names it")
+			}
+		})
+	}
+}
+
 func TestBuildReportsTheHouseFileItWasGiven(t *testing.T) {
 	noSession(t)
 	dir, md := buildNote(t)

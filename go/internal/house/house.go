@@ -429,9 +429,14 @@ func (c *Config) LogoBytes() ([]byte, error) {
 
 // Validate says what YAML cannot: the nine styles are there and nothing else
 // is, every front_matter block names a kind that exists and a ref that is
-// there, and the logo really is a PNG of the size the file states. Each of
-// those is something render reads by name, so a config that fails one here is
-// a document it would build silently wrong.
+// there, every highlight is one of OOXML's names rather than a colour, and the
+// logo really is a PNG of the size the file states. Each of those is something
+// render reads by name, so a config that fails one here is a document it would
+// build silently wrong.
+//
+// The list is meant to stay complete: a check added below without a clause
+// here leaves --house refusing a draft for a reason this contract never
+// mentions.
 func (c *Config) Validate() error {
 	if err := c.validateStyles(); err != nil {
 		return err
@@ -439,7 +444,124 @@ func (c *Config) Validate() error {
 	if err := c.validateFrontMatter(); err != nil {
 		return err
 	}
+	if err := c.validateHighlights(); err != nil {
+		return err
+	}
 	return c.validateLogo()
+}
+
+// highlightNames is OOXML's ST_HighlightColor, which is the whole of what
+// w:highlight takes.
+var highlightNames = map[string]bool{
+	"black": true, "blue": true, "cyan": true, "darkBlue": true,
+	"darkCyan": true, "darkGray": true, "darkGreen": true, "darkMagenta": true,
+	"darkRed": true, "darkYellow": true, "green": true, "lightGray": true,
+	"magenta": true, "none": true, "red": true, "white": true, "yellow": true,
+}
+
+// validateHighlights refuses a highlight the writer cannot spell.
+//
+// w:highlight takes a name from a fixed list, never a colour: a '#FFFF00' in
+// the file reached the part as w:val="#FFFF00", which is not conforming OOXML,
+// and Word repairs the document rather than showing the mark. Every other
+// colour in the file is a hex value, so writing one here is the natural
+// mistake and nothing downstream would have named it.
+func (c *Config) validateHighlights() error {
+	if err := checkCoverHighlights(c.Cover.Lines); err != nil {
+		return err
+	}
+	// The walk is ordered, and the tables are sorted, because the first bad
+	// highlight is the one reported: over a map, a draft misspelling two of
+	// them is refused naming a different one on each run, and somebody fixing
+	// them one at a time is sent somewhere else every time. validateStyles
+	// sorts for the same reason.
+	sections := []struct {
+		name    string
+		section Section
+	}{{"header", c.Header}, {"footer", c.Footer}}
+	for _, entry := range sections {
+		if err := checkSectionHighlights(entry.name, entry.section); err != nil {
+			return err
+		}
+	}
+	names := make([]string, 0, len(c.Tables))
+	for name := range c.Tables {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if err := checkTableHighlights(name, c.Tables[name]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkHighlight refuses one value that is not a highlight name. An empty one
+// is a run asking for no highlight at all.
+func checkHighlight(where, value string) error {
+	if value == "" || highlightNames[value] {
+		return nil
+	}
+	return fmt.Errorf("%s: %q is not a highlight name", where, value)
+}
+
+// checkRunHighlights is every run of one paragraph, one cell or one cover line.
+func checkRunHighlights(where string, list []Run) error {
+	for i, run := range list {
+		if err := checkHighlight(fmt.Sprintf("%s.runs[%d]", where, i), run.Highlight); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkCoverHighlights is the cover's lines: each line's own highlight, which a
+// whole-line placeholder carries, and then its runs.
+func checkCoverHighlights(lines []CoverLine) error {
+	for i, line := range lines {
+		where := fmt.Sprintf("cover.lines[%d]", i)
+		if err := checkHighlight(where, line.Highlight); err != nil {
+			return err
+		}
+		if err := checkRunHighlights(where, line.Runs); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkSectionHighlights is a header or a footer, both of its regions.
+func checkSectionHighlights(name string, section Section) error {
+	regions := []struct {
+		name   string
+		region Region
+	}{{"first", section.First}, {"default", section.Default}}
+	for _, entry := range regions {
+		for i, paragraph := range entry.region.Paragraphs {
+			where := fmt.Sprintf("%s.%s.paragraphs[%d]", name, entry.name, i)
+			if err := checkRunHighlights(where, paragraph.Runs); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkTableHighlights is one front-matter table, cell paragraph by cell
+// paragraph. The revision row is where a hex value was really written.
+func checkTableHighlights(name string, table Table) error {
+	for ri, row := range table.Rows {
+		for ci, cell := range row.Cells {
+			for pi, paragraph := range cell.Paragraphs {
+				where := fmt.Sprintf("tables.%s.rows[%d].cells[%d].paragraphs[%d]", name, ri, ci, pi)
+				if err := checkRunHighlights(where, paragraph.Runs); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // validateStyles requires exactly the nine names, no more and no fewer.

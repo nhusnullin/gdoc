@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/jpeg"
 	"image/png"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -164,7 +165,7 @@ func TestAGIFIsRefusedByName(t *testing.T) {
 // The refusal a note's author reads names the line and the file, because the
 // note is where the problem is.
 func TestAPictureThatIsNotThereNamesTheLineAndTheFile(t *testing.T) {
-	_, err := readImage("missing.png", "testdata/docs", 12)
+	_, _, err := readImage("missing.png", "testdata/docs", 12)
 	if err == nil {
 		t.Fatal("a missing picture was accepted")
 	}
@@ -177,11 +178,14 @@ func TestAPictureThatIsNotThereNamesTheLineAndTheFile(t *testing.T) {
 
 // A picture named by a relative path is read from the note's own directory.
 func TestARelativePathIsReadFromTheNotesDirectory(t *testing.T) {
-	data, err := readImage("badge.png", "testdata/docs", 1)
+	data, path, err := readImage("badge.png", "testdata/docs", 1)
 	if err != nil {
 		t.Fatalf("readImage: %v", err)
 	}
 	if len(data) == 0 {
 		t.Error("the picture read as no bytes")
+	}
+	if want := filepath.Join("testdata", "docs", "badge.png"); path != want {
+		t.Errorf("the picture was read from %q, want %q", path, want)
 	}
 }

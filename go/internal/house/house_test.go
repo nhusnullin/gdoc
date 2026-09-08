@@ -308,6 +308,79 @@ func TestAMissingStyleIsRefusedNamingIt(t *testing.T) {
 	}
 }
 
+// TestAHighlightThatIsAColourIsRefused. w:highlight takes a name from OOXML's
+// fixed list, never a hex value: a '#FFFF00' reached the part as
+// w:val="#FFFF00", which Word repairs the document over. Every other colour in
+// the file is hex, so writing one here is the natural mistake.
+//
+// Each arm of the walk is driven at its own anchor rather than at the first
+// highlight in the file. The value that was actually written as a colour was a
+// revision-history cell, and a case that replaces the first match only ever
+// reaches the cover, so the table loop and the header loop could both be
+// deleted and this test would stay green.
+func TestAHighlightThatIsAColourIsRefused(t *testing.T) {
+	cases := []struct {
+		name   string
+		find   string
+		put    string
+		where  string
+		absent string
+	}{
+		{
+			// cover.lines[N].runs[N], the cover's own run.
+			name:  "a cover line's run",
+			find:  "    placeholder: title\n    space_before_pt: 0\n    space_after_pt: 0\n    runs:\n    - text: (Name of)\n      highlight: yellow\n",
+			put:   "    placeholder: title\n    space_before_pt: 0\n    space_after_pt: 0\n    runs:\n    - text: (Name of)\n      highlight: '#FFFF00'\n",
+			where: "cover.lines[",
+		},
+		{
+			// cover.lines[N], the line's own highlight rather than a run's.
+			name:   "a cover line itself",
+			find:   "  - text: May 2025\n    size_pt: 20\n    highlight: yellow\n",
+			put:    "  - text: May 2025\n    size_pt: 20\n    highlight: '#FFFF00'\n",
+			where:  "cover.lines[",
+			absent: ".runs[",
+		},
+		{
+			// header.default.paragraphs[N].runs[N]. The file states no
+			// highlight in a header or a footer, so this one is added.
+			name:  "a header run",
+			find:  "      - text: Altery - xxx Policy\n        size_pt: 12\n",
+			put:   "      - text: Altery - xxx Policy\n        size_pt: 12\n        highlight: '#FFFF00'\n",
+			where: "header.default.paragraphs[0].runs[0]",
+		},
+		{
+			// tables.revision_history, which is where the value that was
+			// really written as a colour lived.
+			name:  "a table cell's run",
+			find:  "          - text: '[Relevant Board Level Committee]'\n            highlight: yellow\n",
+			put:   "          - text: '[Relevant Board Level Committee]'\n            highlight: '#FFFF00'\n",
+			where: "tables.revision_history",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if bytes.Count(embedded, []byte(c.find)) != 1 {
+				t.Fatalf("the anchor %q is not in house.yaml exactly once", c.find)
+			}
+			src := bytes.Replace(embedded, []byte(c.find), []byte(c.put), 1)
+			_, err := LoadFile(write(t, src))
+			if err == nil {
+				t.Fatal("a highlight written as a colour was accepted")
+			}
+			if !strings.Contains(err.Error(), "#FFFF00") {
+				t.Errorf("error %q does not name the value it refused", err)
+			}
+			if !strings.Contains(err.Error(), c.where) {
+				t.Errorf("error %q does not name %s, so another arm answered first", err, c.where)
+			}
+			if c.absent != "" && strings.Contains(err.Error(), c.absent) {
+				t.Errorf("error %q names %s, so a run answered rather than the line itself", err, c.absent)
+			}
+		})
+	}
+}
+
 func TestALogoThatIsNotAPNGIsRefused(t *testing.T) {
 	bad := base64.StdEncoding.EncodeToString([]byte("this is not a png"))
 	cut := bytes.Index(embedded, []byte("  base64: |-\n"))

@@ -49,12 +49,20 @@ type Counts struct {
 }
 
 // Result is one walk: the blocks, the relationships they name, what could not
-// be rendered, and the counts.
+// be rendered, the counts, and the files the walk read.
+//
+// Sources is every picture the note named as a file, resolved against the
+// note's own directory, whether or not the walk placed it: a picture inside a
+// bullet is left out of the document and is still a file the run read the note
+// for. The caller is the one that knows where it is about to write, and a
+// picture is an input the run must not replace. A path in here is what the note
+// named, not a promise the file is there.
 type Result struct {
 	Blocks   []*etree.Element
 	Media    []Media
 	Warnings []string
 	Counts   Counts
+	Sources  []string
 }
 
 // renderer holds the state one walk needs.
@@ -68,6 +76,12 @@ type renderer struct {
 	media    []Media
 	warnings []string
 	counts   Counts
+	sources  []string
+
+	// pendingMark is the list marker the item being walked has not spent yet.
+	// It is the renderer's rather than a field on listCtx because the block
+	// that spends it can be a container or two down from the item.
+	pendingMark bool
 
 	relID      int
 	linkIDs    map[string]string
@@ -115,7 +129,8 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	if r.err != nil {
 		return Result{}, r.err
 	}
-	return Result{Blocks: r.blocks, Media: r.media, Warnings: r.warnings, Counts: r.counts}, nil
+	return Result{Blocks: r.blocks, Media: r.media, Warnings: r.warnings,
+		Counts: r.counts, Sources: r.sources}, nil
 }
 
 // parse is goldmark, configured to the extension set v1 asks pandoc for: pipe
@@ -252,12 +267,14 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 }
 
 // listCtx is what a block inherits from the list it sits in: the list in
-// numbering.xml it belongs to, and whether it is the block that carries the
-// marker. A loose list item holds one paragraph per block, and only the first
-// of them is the item.
+// numbering.xml it belongs to, which is what the item's indent is read off.
+//
+// Whether a block carries the item's marker is not in here. The marker belongs
+// to the first paragraph the item actually emits, and which block that is
+// cannot be read off a node type from outside: it is the renderer's own
+// pendingMark, which itemBlocks arms and paragraphBlock spends.
 type listCtx struct {
-	numID  string
-	marked bool
+	numID string
 }
 
 // walk renders a block subtree. level counts list nesting: 0 is the body, 1 is
@@ -271,25 +288,33 @@ func (r *renderer) walk(parent ast.Node, level int, list listCtx) error {
 	return nil
 }
 
-// itemBlocks renders one list item, and only its first paragraph takes the
-// marker.
+// itemBlocks renders one list item, and the item's marker goes on the first
+// paragraph the item actually emits.
 //
 // goldmark gives a loose item one *ast.Paragraph per block, so numbering every
 // one of them turns a two-paragraph item into two items: the author's "2."
 // prints as "3.", and a bulleted list grows a bullet on every continuation
 // paragraph. A continuation keeps the item's indent and takes no marker.
+//
+// The marker is pending rather than handed to a child chosen here, because
+// neither the node type nor the position says which child emits the item's
+// first paragraph. A block quote is a container whose paragraphs come back
+// through block, so an item that is nothing but a quote has no *ast.Paragraph
+// child at all: marking only those left that item with no number anywhere in
+// it, and the author's "3." printed as "2.". Handing the marker to the item's
+// first child instead breaks the mirror of that, an item opening with a fenced
+// code block, which is a child that renders nothing and would spend the marker
+// on a paragraph nobody sees. Pending, both take exactly one marker.
 func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
-	marked := false
+	// A nested list is walked from inside this loop, so the item's own marker
+	// is put back on the way out: the sub-list's items arm and spend their own,
+	// and an outer item whose first paragraph comes after the sub-list still
+	// has one waiting.
+	outer := r.pendingMark
+	r.pendingMark = true
+	defer func() { r.pendingMark = outer }()
 	for node := item.FirstChild(); node != nil; node = node.NextSibling() {
-		list := listCtx{numID: numID, marked: true}
-		switch node.(type) {
-		case *ast.Paragraph, *ast.TextBlock:
-			if marked {
-				list.marked = false
-			}
-			marked = true
-		}
-		if err := r.block(node, level, list); err != nil {
+		if err := r.block(node, level, listCtx{numID: numID}); err != nil {
 			return err
 		}
 	}
@@ -448,12 +473,15 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		r.emit(r.paragraph(runs))
 		r.counts.Paragraphs++
 	} else {
-		// A continuation paragraph of a loose item keeps the item's indent and
-		// takes no marker, so numID is empty and the ordered-list geometry is
-		// read off the list rather than off the marker being written.
-		numID := list.numID
-		if !list.marked {
-			numID = ""
+		// The first paragraph an item emits spends the item's marker, and
+		// every paragraph after it keeps the indent and takes none: numbering
+		// a continuation turns one item into two, so the author's "2." prints
+		// as "3.". numID is then empty and the ordered-list geometry is read
+		// off the list rather than off the marker being written.
+		numID := ""
+		if r.pendingMark {
+			numID = list.numID
+			r.pendingMark = false
 		}
 		r.emit(r.listItem(runs, numID, min(level-1, maxListLevel),
 			list.numID == render.NumberNumID))
@@ -524,9 +552,19 @@ func (r *renderer) warnRawHTML(node ast.Node, line int) {
 // block form follows: what was left out is named, never dropped in silence,
 // and a picture that vanished is only found once somebody reads the published
 // document.
+// A picture left out here is still a file the note names, so it is recorded
+// beside the ones that were embedded. Without that, `--out diagram.png --force`
+// on a note whose only picture sits in a bullet passed the caller's check and
+// wrote the document over the picture: the same loss the check exists for, and
+// worse, because nothing had read those bytes into the document either.
 func (r *renderer) warnImages(images []ImageRef, line int, where string) {
 	if len(images) == 0 {
 		return
+	}
+	for _, image := range images {
+		if path := imagePath(image.Target, r.base); path != "" {
+			r.sources = append(r.sources, path)
+		}
 	}
 	r.warn("line %d: a picture inside %s is not rendered in the house style and was left out",
 		line, where)

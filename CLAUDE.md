@@ -1303,6 +1303,13 @@ spike copy at `docs/v2/spikes/config/house.yaml` is superseded and says so.
 half-points and EMU are computed at the writer. One value in the file has one
 meaning, and a unit conversion lives in one room.
 
+**A highlight is a name, and `Validate` refuses anything else.** `w:highlight`
+takes one of OOXML's seventeen names, never a colour, while every other colour
+in the file is hex: a `'#FFFF00'` in the revision row reached the part as
+`w:val="#FFFF00"`, which Word repairs the document over rather than showing.
+Writing hex there is the natural mistake and nothing downstream would have
+named it, so the file is checked at the door.
+
 **Nothing is concatenated into XML.** `render` and `body` build elements with
 etree and serialise them, so every `w:t` is escaped by the library. gen.py, the
 Python spike this was ported from, concatenated strings, and one `&` in a note's
@@ -1382,6 +1389,25 @@ the instruction and the writer emits the field, so Word fills it in on a refresh
 and Docs imports it as a live contents list. That is why M6 uploads once and has
 no measuring pass, which is what v1 needs a second upload and a PDF export for.
 
+**One list item takes one marker, whatever it holds.** The marker goes on the
+first paragraph the item actually emits, and every paragraph after it takes the
+item's indent and no marker. A continuation paragraph and a block quote both
+used to number themselves as items, so an author's "2." printed as "3.". The
+hanging indent goes with the marker for the same reason: written on a paragraph
+with no number to fill it, it starts that paragraph's first line in the number's
+own column.
+
+**The marker is pending on the renderer, and that is not a detail.** Nothing
+the walker can read off a child says which child emits the item's first
+paragraph. A block quote is a container whose paragraphs come back through
+`block`, so an item that is nothing but a quote has no `*ast.Paragraph` child at
+all and marking only those left it with no number anywhere in it. Handing the
+marker to the item's first child instead breaks the mirror of that, an item
+opening with a fenced code block, which renders nothing and would spend the
+marker on a paragraph nobody sees. So `itemBlocks` arms `pendingMark`,
+`paragraphBlock` spends it, and `itemBlocks` puts the outer item's back on the
+way out so a nested list takes its own.
+
 **What the walker will not render is a warning naming the line, never a silent
 drop.** Fenced and indented code blocks, blocks of HTML and inline HTML. Nail
 decided code blocks stay out of the house style, and a note carrying one has to
@@ -1408,6 +1434,13 @@ candidate drawn from the first heading or the file name, and the skill proposes
 it. Nothing in Go writes a title into somebody's note.
 `classification` is the one value still validated, because it shades a fixed row
 in the front matter, so an unknown value would silently shade nothing.
+
+**A missing `version` and a missing `date` both take v1's default**, `1.0` and
+the month the build runs in. Neither is tidiness: a cover line whose field is
+empty prints the template's own words instead, so a note stating no date
+published a page one reading "May 2025" in yellow, which is when the master was
+captured. Every other optional key leaves its line or its row blank, which reads
+as blank rather than as somebody else's value.
 
 **The note's own words reach the front matter, and one of them is a mark.**
 `render.placeholder` resolves the cover fields, and a run or a cell paragraph
@@ -1441,6 +1474,23 @@ binary prints facts, and the skills judge".
 v1's `write_baseline` rule in a second place. A directory at `--out` is refused
 whatever the flag says: `--force` is somebody agreeing to replace a document,
 not a folder.
+
+**And `--force` is never consent to replace an input.** An `--out` naming the
+note, the `--house` file or one of the note's own pictures is refused, compared
+with `os.SameFile` so a second spelling of one path is still that path. The
+pictures are the half that cannot be checked at the door: which files they are
+is only known once the walk has read the note, so `body.Result.Sources` carries
+them back and `cmdBuild` asks again after the walk and before anything is
+written. `--out diagram.png --force` used to embed the picture and then write
+the document over it, leaving the note pointing at a .docx.
+
+**`Sources` names every picture the note names, placed or not.** A picture
+inside a list item, a block quote or a table cell is warned about and left out,
+and it is still a file the run must not write over. Recording only the embedded
+ones left that case worse than the one the check was written for: the bytes were
+in no `word/media/` either, so the picture was simply gone. `imagePath` is the
+one resolver both halves use, and it is empty for a `data:` URI and for a link,
+because neither is a file.
 
 **`allowedModules` names three now, which is all SPEC.md agreed.** M5 added
 `beevik/etree`, because `encoding/xml` rewrites namespace prefixes and drops the
