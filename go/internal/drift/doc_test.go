@@ -125,6 +125,9 @@ func TestFromDocReadsTheDocsAnswer(t *testing.T) {
 	if got := d.PageNumberStart(); got != 1.0 {
 		t.Errorf("the page numbers start at %v", got)
 	}
+	if got := d.CustomHeaderFooterMargins(); got != true {
+		t.Errorf("useCustomHeaderFooterMargins read %v, and the house style sets both distances", got)
+	}
 	for _, c := range []struct{ kind, which string }{
 		{"header", "first"}, {"header", "default"}, {"footer", "first"}, {"footer", "default"},
 	} {

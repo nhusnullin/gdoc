@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -355,4 +356,18 @@ func write(t *testing.T, src []byte) string {
 		t.Fatalf("write %s: %v", path, err)
 	}
 	return path
+}
+
+// TestUsableWidthIsTheSpaceBetweenTheSideMargins states the width a body table
+// and a full-width image are sized to, as a literal. A4 is 595.28 points wide
+// and the two side margins are 51.05 each, so what is left is 493.18.
+func TestUsableWidthIsTheSpaceBetweenTheSideMargins(t *testing.T) {
+	if got := load(t).Page.UsableWidthPt(); math.Abs(got-493.18) > 0.005 {
+		t.Errorf("usable width = %v points, want 493.18", got)
+	}
+	// The arithmetic on its own, so a page whose margins differ still reads.
+	p := Page{WidthPt: 100, MarginLeftPt: 10, MarginRightPt: 15}
+	if got := p.UsableWidthPt(); got != 75 {
+		t.Errorf("a 100pt page inside 10 and 15 leaves %v points, want 75", got)
+	}
 }

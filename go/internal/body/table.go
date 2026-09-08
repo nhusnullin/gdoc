@@ -231,14 +231,14 @@ func columnWidths(rows [][][]Run, columns int, usablePt float64) []int {
 	// The columns have to add up to the table: rounding leaves a twip or two
 	// over, and a fixed-layout table whose grid disagrees with its width is one
 	// Word lays out its own way.
-	if drift := sum(widths) - total; drift != 0 {
+	if over := sum(widths) - total; over != 0 {
 		widest := 0
 		for i, width := range widths {
 			if width > widths[widest] {
 				widest = i
 			}
 		}
-		widths[widest] -= drift
+		widths[widest] -= over
 	}
 	return widths
 }

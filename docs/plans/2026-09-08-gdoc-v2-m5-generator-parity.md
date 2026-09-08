@@ -531,15 +531,107 @@ footers then read as the same footer. The Docs half prints the same field as
 **Files:**
 - Modify: whatever the checks below break.
 
-- [ ] verify PLAN.md M5's gate: the 160 items with no new differences. Run the live gate once on this machine; if the token is not available to the run, say so here rather than skipping silently
-- [ ] verify the module graph gained nothing transitive: `go mod graph` lists exactly `goccy/go-yaml`, `beevik/etree`, `yuin/goldmark` and the standard library
-- [ ] record the cross-platform binary-size delta: `make dist` sizes for darwin/arm64, darwin/amd64 and windows/amd64, before Task 2 (from the M4 build) and after Task 7, in this plan
-- [ ] verify no network in the render path: none of `house`, `render`, `body`, `cover`, `drift` imports `net/http` or `internal/gapi`, and the boundary test's allowlists are unchanged
-- [ ] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift` as a field name (the package name is fine), `should`, `decide`
-- [ ] verify every house-style test states its value as a literal: grep the new tests for `cfg.` and `house.` on the right-hand side of a comparison, and rewrite any that read the constant
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
-- [ ] verify coverage: every exported function under `go/internal/` has a test, the five new packages at or above 80%
-- [ ] commit any fixes this task made
+- [x] verify PLAN.md M5's gate: the 160 items with no new differences. Run the live gate once on this machine; if the token is not available to the run, say so here rather than skipping silently
+- [x] verify the module graph gained nothing transitive: `go mod graph` lists exactly `goccy/go-yaml`, `beevik/etree`, `yuin/goldmark` and the standard library
+- [x] record the cross-platform binary-size delta: `make dist` sizes for darwin/arm64, darwin/amd64 and windows/amd64, before Task 2 (from the M4 build) and after Task 7, in this plan
+- [x] verify no network in the render path: none of `house`, `render`, `body`, `cover`, `drift` imports `net/http` or `internal/gapi`, and the boundary test's allowlists are unchanged
+- [x] verify no judgement leaked into Go: grep the new packages for `handled`, `accepted`, `rejected`, `matters`, `drift` as a field name (the package name is fine), `should`, `decide`
+- [x] verify every house-style test states its value as a literal: grep the new tests for `cfg.` and `house.` on the right-hand side of a comparison, and rewrite any that read the constant
+- [x] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
+- [x] verify coverage: every exported function under `go/internal/` has a test, the five new packages at or above 80%
+- [x] commit any fixes this task made
+
+**The gate, 2026-09-08.** The offline gate is green: 169 items, 149 IDENTICAL,
+2 CLOSE, 15 DIFFERENT, 3 MISSING, and every row that is not IDENTICAL is in
+`drift.Known` with its reason. That is Task 7's table unchanged, so this run
+found no new difference. `TestTheGateReadsTheWholeList` states that the gate
+reads every item rather than a subset, which is what makes "no new differences"
+mean something.
+
+**PLAN.md says 160 and the gate has 169, and neither number is wrong.** 160 was
+compare.py's count on 2026-08-29 including the three PDF items. This plan drops
+those three, which is 157, and adds `bold` and `italic` for all nine named
+styles unconditionally, which is the ➕ under Task 7. Every item compare.py
+printed is findable here under compare.py's own name.
+
+⚠️ **The live gate did not run, and the reason is not the token.** The token is
+present on this machine and the other three live tests can reach Drive with it.
+`TestLiveDrift` does not exist: writing it means teaching the guard to read the
+first MIME part of a multipart create and giving `gapi` a multipart write, both
+of which are M6's and both of which touch the room CLAUDE.md names as Nail's
+decision. The ⚠️ under Task 7 records it in full. `GDOC_LIVE_TEST=1
+GDOC_LIVE_WRITE=1 go test -run TestLiveDrift ./internal/live/` answers
+`no tests to run`, which is the honest state rather than a skip.
+
+**The module graph gained nothing transitive.** `go mod graph` names four edges
+out of `gdoc`: `beevik/etree@v1.8.0`, `goccy/go-yaml@v1.19.2`,
+`yuin/goldmark@v1.8.6` and `go@1.27.0`. Each of the three names only its own Go
+version and no module. `go list -m all` is those three and nothing else, which
+is what `allowedModules` says.
+
+**The binary-size delta.** `make dist` at `c876576`, the last M4 commit, against
+`make dist` here. About 1.4 MB per platform for etree and goldmark together,
+which is the cost the plan agreed for a markdown parser and an XML tree that
+does not corrupt OOXML.
+
+| Platform | M4 (c876576) | M5 (Task 7) | Delta |
+|---|---|---|---|
+| darwin/arm64 | 12,393,250 | 13,786,466 | +1,393,216 (+11.2%) |
+| darwin/amd64 | 13,271,536 | 14,728,192 | +1,456,656 (+11.0%) |
+| windows/amd64 | 13,133,312 | 14,564,864 | +1,431,552 (+10.9%) |
+
+**No network in the render path.** `go list -deps` on each of `house`, `render`,
+`body`, `cover` and `drift` names neither `net/http` nor `gdoc/internal/gapi`,
+and neither `guard` nor `auth` either. Two of the packages already carry that
+rule as their own test (`internal/house/house_test.go`,
+`internal/body/body_test.go`), which also bans `os/exec`. `cmd/gdoc/build.go`
+imports `atomicfile`, `body`, `cover`, `emit`, `house` and `render`, so the
+command opens no policy and no session. The boundary test's diff since M4 is
+`allowedModules` and nothing else: the import allowlist and the builder
+allowlist are untouched.
+
+**No judgement leaked into Go.** Grepping the five packages and `build.go` with
+the comments stripped finds no `handled`, `accepted`, `rejected`, `matters`,
+`should` or `decide` as an identifier. The six hits are all in comments, and all
+of them say the opposite ("Nothing here decides what belongs on the front page",
+"whether a difference matters is Nail's"). `drift` appeared once as an
+identifier, a local in `internal/body/table.go` holding the twip or two left
+over when column widths are rounded. Renamed to `over`: the word means the built
+docx against the master everywhere else in this tree, and one word with two
+meanings inside one milestone is the thing worth spending a line to avoid.
+
+**Every house-style test states its value as a literal.** No test in the five
+packages compares a value to `cfg.`, `house.` or a config field. Every `cfg.`
+inside those tests is the printed actual in a `t.Errorf`, with the want written
+out beside it as a number ("page.width_pt = %v, want 595.28"). The
+table-driven cases carry literals in the table.
+
+➕ **Three exported functions had no test, and now do.** The audit was a script
+over every exported function under `go/internal/` against every `_test.go` in
+the tree, and the per-function coverage profile confirmed each hit.
+
+- `house.Page.UsableWidthPt` was at 0%. It is a house-style value, so
+  `TestUsableWidthIsTheSpaceBetweenTheSideMargins` states it as a literal: A4 at
+  595.28 inside two 51.05 margins leaves 493.18, plus the arithmetic on its own
+  page so a different geometry still reads.
+- `body.Highlight.Kind` and `body.Highlight.Dump` were at 0%. They are
+  `ast.Node`'s, so goldmark calls them and this package never does.
+  `internal/body/mark_test.go` walks a parsed `==marked==` span to the node,
+  states the kind is `Highlight`, and captures `Dump` to prove the node can be
+  printed by whoever is working out why a document came out wrong.
+- `drift.Docx.CustomHeaderFooterMargins` and `drift.Doc.CustomHeaderFooterMargins`
+  were reached only through the item list. Both now carry a direct assertion in
+  `drift_test.go` and `doc_test.go` beside the other section facts.
+
+The rest of the audit's hits are exercised without being named: the remaining
+`mark.go` methods (`Trigger`, `Parse`, `IsDelimiter`, `CanOpenCloser`,
+`OnMatch`, `Extend`) are all at 100% through the two mark tests, `render.IsLink`
+is at 100%, and `gapi.Unwrap` is at 100% through `errors.Is`.
+
+**Coverage, and the full suite.** `go test -race -count=1 ./...` is green across
+all 25 packages. `make vet` (vet plus the gofmt check), `make build` and
+`make dist` are green. The five new packages: `house` 85.0%, `render` 94.1%,
+`body` 92.8%, `cover` 91.9%, `drift` 91.7%. `cmd/gdoc` is 86.5%.
 
 ---
 

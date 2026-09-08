@@ -58,6 +58,12 @@ func TestFromDocxReadsTheMaster(t *testing.T) {
 	if got := d.PageNumberStart(); got != 1.0 {
 		t.Errorf("the master's page numbers start at %v, and the house style starts them at 1", got)
 	}
+	// The house style sets both header and footer distances on the section, so
+	// the master states them rather than leaving Word its defaults. Docs reports
+	// the same fact as useCustomHeaderFooterMargins, which is why the item exists.
+	if got := d.CustomHeaderFooterMargins(); got != true {
+		t.Errorf("the master's section states no header and footer distances, and pgMar read %v", got)
+	}
 	for _, c := range []struct{ kind, which string }{
 		{"header", "first"}, {"header", "default"}, {"footer", "first"}, {"footer", "default"},
 	} {
