@@ -144,11 +144,13 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 - Consumes: `Threads`, `NextCursor`, a `Fetch` closure handed in by the caller.
 - Produces: `WaitOptions`, `Waited`, `Wait(ctx, since, o)` as in Technical Details. The sleeper is an unexported package variable, `sleep = time.Sleep`-shaped but taking a context so an interrupt cuts a sleep short, replaced in tests.
 
-- [ ] write the failing tests: the first poll runs at once with no sleep before it; an empty poll then a poll with one thread returns that thread, `Polls: 2`, and a cursor advanced to the thread's instant; a poll that errors returns the error and the polls so far; nothing before the deadline returns empty with the cursor handed in unchanged; a cancelled context returns empty with `Interrupted: true` and no further poll; a window that is only a 🤖 reply is still returned (facts only: the skill reads it as a receipt); `Unplaced` carries the ids `Threads` could not place
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): comments.Wait polls until activity, a deadline or an interrupt`
+- [x] write the failing tests: the first poll runs at once with no sleep before it; an empty poll then a poll with one thread returns that thread, `Polls: 2`, and a cursor advanced to the thread's instant; a poll that errors returns the error and the polls so far; nothing before the deadline returns empty with the cursor handed in unchanged; a cancelled context returns empty with `Interrupted: true` and no further poll; a window that is only a 🤖 reply is still returned (facts only: the skill reads it as a receipt); `Unplaced` carries the ids `Threads` could not place
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): comments.Wait polls until activity, a deadline or an interrupt`
+
+➕ Three tests beyond the list, each for a case the implementation had to decide: the sleep is clamped to what is left of the deadline; a context already cancelled polls nothing; and a poll that failed because the interrupt cut the request short is reported as the interrupt rather than as a failed read. `Wait` also refuses options it cannot run (no poll, a non-positive interval, a negative deadline), naming the field.
 
 ---
 
@@ -161,11 +163,19 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 - Consumes: `comments.Wait`, `parseArgs`, `signal.NotifyContext`.
 - Produces: the `--wait` flag; `commentsData.Waited *waitedData` with `polls`, `seconds`, `interrupted`; `dispatch` takes a `context.Context` that `main` cancels on `SIGINT` and `SIGTERM`. Only `comments --wait` reads it today.
 
-- [ ] write the failing tests: `--wait` without `--since` is refused naming `--since`; `--wait 0`, `--wait -1m`, `--wait soon` and `--wait 2h` are each refused naming the value; over `fakeWire` with `once` answers, an empty listing then a listing with news returns the news and `waited.polls: 2`; a listing that fails on the second poll returns `ok: false` with the error and the polls so far in `data`; a cancelled context returns `ok: true`, empty threads, the same cursor and `waited.interrupted: true`; `--witness` with `--wait` witnesses the window that ended the wait; the usage line is unchanged (no new command)
-- [ ] run the tests and watch them fail
-- [ ] implement, with the poll interval as an unexported variable the tests shorten
-- [ ] run the tests, gofmt, vet, `make build`: green; run `bin/gdoc comments <a real url> --since <cursor> --wait 20s` by hand once and watch it return empty at the deadline
-- [ ] commit: `feat(v2): comments --wait polls inside one call and exits on the first news`
+- [x] write the failing tests: `--wait` without `--since` is refused naming `--since`; `--wait 0`, `--wait -1m`, `--wait soon` and `--wait 2h` are each refused naming the value; over `fakeWire` with `once` answers, an empty listing then a listing with news returns the news and `waited.polls: 2`; a listing that fails on the second poll returns `ok: false` with the error and the polls so far in `data`; a cancelled context returns `ok: true`, empty threads, the same cursor and `waited.interrupted: true`; `--witness` with `--wait` witnesses the window that ended the wait; the usage line is unchanged (no new command)
+- [x] run the tests and watch them fail
+- [x] implement, with the poll interval as an unexported variable the tests shorten
+- [x] run the tests, gofmt, vet, `make build`: green; the by-hand run against a real document is manual (skipped, no account or document id in an unattended run; the built binary was smoke tested on both refusal paths, and Post-Completion carries the live run)
+- [x] commit: `feat(v2): comments --wait polls inside one call and exits on the first news`
+
+➕ Four tests and two decisions beyond the list. A run without `--wait` carries no `waited` object at all, because reporting `polls: 1` on a call that never waited says the binary polls when it does not. A wait that reaches its deadline is asserted beside the interrupt, so the two quiet endings are told apart by the flag rather than by the empty window they share. An empty window is not witnessed: the export would be one more request for no question, and an interrupted wait is that same case, because it comes back with no threads. `--wait 0s` is refused beside `0`, since `time.ParseDuration` reads both.
+
+➕ `commentsBase` and `commentsResult` are shared by the one-shot listing and the wait, so a window cannot come back described one way and a listing another. `commentsBase` answers with the id the run was given when no poll read the document, which is a wait interrupted before its first read.
+
+➕ "Nothing is written anywhere during a wait, on disk or in the config dir" in the constraints above is one word too strong, and the departure is the credential rather than anything the wait learned. A poll goes out through `gapi.Session.send`, which refreshes an expired or rejected access token and calls `auth.Save`, replacing `oauth-token.json` in the config dir; a nine-minute wait crossing a token expiry does exactly that, as every other command does. What holds is the sentence the constraint was written for: the wait writes no file of its own, and the cursor it prints is all that carries to the next call. README.md, CLAUDE.md, SPEC.md and PLAN.md carry the qualified wording.
+
+➕ The signal trap moved out of `main.go`. The task as written above (and the Context and Approach sections) has `main` installing `signal.NotifyContext` and handing the context down through `dispatch`. It is installed in `cmdComments` instead, around the wait alone, and taken off on the line after it. `signal.Notify` takes the default kill away from the whole process for as long as it is on, and `NotifyContext` never puts it back on its own: trapped in `main`, `auth login` would hold the terminal for its three minute login timeout and a `propose` halfway through writing into somebody's document could not be stopped at all. `TestOnlyTheWaitTrapsTheSignal` states it in both directions, `os/signal` being named in `read.go` and in no other production file in the package. `dispatch` still takes a `context.Context`, because a test hands a wait one that is already done.
 
 ---
 
@@ -174,11 +184,11 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Files:**
 - Modify: `skills/gdoc-review/SKILL.md` (a "Live mode" section after Step 8, the description line mentions live, and the receipt rule in Step 6 names a colleague who asked)
 
-- [ ] write the section as specified in Technical Details: trigger, the loop block, the nine-minute reason, what a window contains, receipts on gdoc's own replies, `range: null`, the colleague receipt, the old-comment check, stop and totals, dry run
-- [ ] update Step 6 and Step 7 (the receipt and the proposal's `why`): when the marked comment's author is not the account gdoc is signed in as, the 🤖 text names them ("asked by <name>")
-- [ ] update the frontmatter description so the skill is chosen for "review this document live" as well as the one-shot request
-- [ ] read the whole skill once top to bottom for a sentence the live section makes false, and fix it
-- [ ] commit: `feat(v2): the review skill can stay live on one document`
+- [x] write the section as specified in Technical Details: trigger, the loop block, the nine-minute reason, what a window contains, receipts on gdoc's own replies, `range: null`, the colleague receipt, the old-comment check, stop and totals, dry run
+- [x] update Step 6 and Step 7 (the receipt and the proposal's `why`): when the marked comment's author is not the account gdoc is signed in as, the 🤖 text names them ("asked by <name>")
+- [x] update the frontmatter description so the skill is chosen for "review this document live" as well as the one-shot request
+- [x] read the whole skill once top to bottom for a sentence the live section makes false, and fix it
+- [x] commit: `feat(v2): the review skill can stay live on one document`
 
 ---
 
@@ -190,9 +200,11 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Interfaces:**
 - Consumes: `createSubject`, `trashSubject`, `comments.Fetch`, `comments.NextCursor`, `comments.Wait`, the guard's `POST {id}/comments`.
 
-- [ ] write `TestLiveWaitSeesANewComment` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: create a document in the test folder with one sentence; read its threads once and take the baseline cursor; start `Wait` with a 90-second deadline and a 5-second interval in a goroutine; after one interval post `ai? live wait test` as a comment through Drive's `comments.create`; assert the wait returns one thread carrying that content with marker `ai?`, an advanced cursor, and `Polls` at least 2; then call `Wait` once more with the new cursor and a 15-second deadline and assert it returns empty with the cursor unchanged; trash the document
-- [ ] run it once on this machine and record the timings in the test's log lines
-- [ ] commit: `test(v2): the opt-in live wait sees a comment posted while it waits`
+- [x] write `TestLiveWaitSeesANewComment` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: create a document in the test folder with one sentence; read its threads once and take the baseline cursor; start `Wait` with a 90-second deadline and a 5-second interval in a goroutine; after one interval post `ai? live wait test` as a comment through Drive's `comments.create`; assert the wait returns one thread carrying that content with marker `ai?`, an advanced cursor, and `Polls` at least 2; then call `Wait` once more with the new cursor and a 15-second deadline and assert it returns empty with the cursor unchanged; trash the document
+- [x] run it once on this machine (skipped, not automatable: an unattended run has no account to sign in as, and the run creates a real document in Nail's Drive. Post-Completion carries it, and the log lines it will print are written)
+- [x] commit: `test(v2): the opt-in live wait sees a comment posted while it waits`
+
+➕ Two things beyond the list. The writer runs on the goroutine and the wait on the test's own, rather than the other way round, so the wait's answer and its error stay off a channel; the observable order is the same, the comment is written one interval into a running wait. And the poster gets its own `gapi.Session` on the same policy: a Session refreshes its own token in place, so sharing one across two goroutines is a race `-race` would report, and the policy is the part that is mutex guarded. The test also asserts the wait answered before its deadline and was not interrupted, which is what tells the news apart from the two quiet endings that share an empty window, and it logs the thread as unplaced: a comment created through Drive carries no anchor, so this is what the skill's `range: null` case looks like against Google.
 
 ---
 
@@ -201,13 +213,24 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Files:**
 - Modify: whatever the checks below break.
 
-- [ ] verify PLAN.md M4's four items are covered: continuity across polls (the cursor from each answer feeds the next, Task 1 and 2 tests), partial-read behaviour (a failed poll is `ok: false` and the skill says so and does not report clean, Task 2 and 3), colleague `ai!` (Task 3's receipt rule), clean cancellation (Task 2's interrupt)
-- [ ] verify the binary kept no state: grep `internal/comments/wait.go` and `cmd/gdoc/read.go` for any write to disk or to the config dir; there must be none
-- [ ] verify no judgement leaked into Go: grep `wait.go` and the `comments` command for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
-- [ ] verify the boundary test still passes and its allowlists did not change
-- [ ] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
-- [ ] verify coverage: every exported function under `go/internal/` has a test, `comments` and `cmd/gdoc` at or above 80%
-- [ ] commit any fixes this task made
+- [x] verify PLAN.md M4's four items are covered: continuity across polls (the cursor from each answer feeds the next, Task 1 and 2 tests), partial-read behaviour (a failed poll is `ok: false` and the skill says so and does not report clean, Task 2 and 3), colleague `ai!` (Task 3's receipt rule), clean cancellation (Task 2's interrupt)
+- [x] verify the binary kept no state: grep `internal/comments/wait.go` and `cmd/gdoc/read.go` for any write to disk or to the config dir; there must be none
+- [x] verify no judgement leaked into Go: grep `wait.go` and the `comments` command for `handled`, `accepted`, `rejected`, `matters`, `drift`, `should`, `decide`; each hit is a fact with a different name or a defect
+- [x] verify the boundary test still passes and its allowlists did not change
+- [x] run the full suite with `-race`, gofmt, vet, `make build`, `make dist`
+- [x] verify coverage: every exported function under `go/internal/` has a test, `comments` and `cmd/gdoc` at or above 80%
+- [x] commit any fixes this task made
+
+**What the six checks found.**
+
+- **The four M4 items.** Continuity: `TestWaitReturnsTheFirstWindowWithActivityAndAdvancesTheCursor` and `TestWaitAtItsDeadlineIsEmptyWithTheCursorItWasGiven` in `internal/comments`, with `TestAWaitEndsOnTheFirstWindowWithNewsInIt` on the envelope, so the cursor an answer carries is the one the next call is given whether or not the window had news. Partial read: `TestWaitCarriesAFailedPollOutWithThePollsSoFar` and `TestAFailedPollEndsTheWaitAndSaysHowManyItMade`, plus the skill's rule to print the error and not report clean. Colleague `ai!`: `skills/gdoc-review/SKILL.md`, "Name a colleague who asked". Cancellation: five tests, `TestAnInterruptEndsTheWaitAsAnAnswer` through `TestAnInterruptedWaitIsAnAnswerAndNotAFailure`.
+- **No state.** The only disk write anywhere in `read.go` is `recordSnapshot`, which has exactly one caller, `suggestions --md`. `cmdComments` cannot reach it, and `wait.go` opens no file at all.
+- **No judgement.** Every field on `WaitOptions` and `Waited` is a duration, a count, a list or a flag. The one grep hit outside a comment is `read.go:218`, the error naming a flag given twice, which is a refusal rather than a verdict.
+- **The boundary.** All ten tests pass and `go/boundary/boundary_test.go` has not been touched since M2, so neither allowlist moved. M4 added no import and no module.
+- **The suite.** `-race` green across 21 packages, gofmt and vet clean, `make build` and `make dist` build all three targets.
+- **Coverage.** `comments` 96.9%, `cmd/gdoc` 85.6%, both above the 80% bar.
+
+➕ One fix, in code M4 did not write. The exported-function audit over `go/internal/` found a single gap: `sentError.Unwrap` in `internal/gapi`, with no test. The writer packages ask `errors.As(err, &sent)`, which matches the type itself and never walks the chain, so an `Unwrap` returning nil would pass every existing test while silently breaking the first caller that asks `errors.Is` what a sent failure actually was. `TestASentErrorStillCarriesItsCause` closes it, and it was watched failing against a broken `Unwrap` before it was kept. `internal/gapi` is at 91.9%.
 
 ---
 
@@ -216,12 +239,12 @@ The loop: poll; if the poll errored, return the error with `Polls` so far; join 
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`, `docs/v2/PLAN.md`, `docs/v2/SPEC.md`
 
-- [ ] update `README.md`: `comments --wait`, the `waited` fields, and how a live review session is started and stopped
-- [ ] update `CLAUDE.md` under "The three read commands": `--wait` requires `--since`, the interval is ten seconds and a constant, the first non-empty window ends the wait, an interrupt is `ok: true` with `interrupted: true`, a failed poll is `ok: false`, and the loop is the skill's; under "The binary prints facts": `Waited` carries counts and a flag and no verdict
-- [ ] update `docs/v2/SPEC.md` "How a comment reaches the agent" with a dated correction: the binary polls inside one call up to a deadline and exits on the first activity, rather than one call per poll, and why (Nail's decision, 2026-09-07)
-- [ ] update `docs/v2/PLAN.md`: mark M4 done with the date, record what it leaves for M8 (the hub-wide live session over every paired document)
-- [ ] run the full test suite one more time
-- [ ] commit: `docs: M4 lands, the live session written down`
+- [x] update `README.md`: `comments --wait`, the `waited` fields, and how a live review session is started and stopped
+- [x] update `CLAUDE.md` under "The three read commands": `--wait` requires `--since`, the interval is ten seconds and a constant, the first non-empty window ends the wait, an interrupt is `ok: true` with `interrupted: true`, a failed poll is `ok: false`, and the loop is the skill's; under "The binary prints facts": `Waited` carries counts and a flag and no verdict
+- [x] update `docs/v2/SPEC.md` "How a comment reaches the agent" with a dated correction: the binary polls inside one call up to a deadline and exits on the first activity, rather than one call per poll, and why (Nail's decision, 2026-09-07)
+- [x] update `docs/v2/PLAN.md`: mark M4 done with the date, record what it leaves for M8 (the hub-wide live session over every paired document)
+- [x] run the full test suite one more time
+- [x] commit: `docs: M4 lands, the live session written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes.
 
 ## Post-Completion

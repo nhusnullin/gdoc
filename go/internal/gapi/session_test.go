@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -805,4 +806,25 @@ func openCreated(t *testing.T, w *wire) *Session {
 		t.Fatal(err)
 	}
 	return s
+}
+
+// TestASentErrorStillCarriesItsCause is the other half of wasSent. The writer
+// packages ask by behaviour and never walk the chain, so nothing else here
+// exercises the unwrap: a Sent() that answered true over a cause errors.Is
+// could not reach would look correct in every existing test and silently break
+// the first caller that asks what the failure actually was.
+func TestASentErrorStillCarriesItsCause(t *testing.T) {
+	cause := errors.New("the cause the caller asks for")
+
+	err := mark(true, fmt.Errorf("the server answered 200 and then: %w", cause))
+
+	if !wasSent(err) {
+		t.Fatalf("err = %q, want it marked as sent", err)
+	}
+	if !errors.Is(err, cause) {
+		t.Errorf("errors.Is could not reach the cause through the sent error: %q", err)
+	}
+	if !errors.Is(mark(false, fmt.Errorf("nothing was sent: %w", cause)), cause) {
+		t.Error("an unmarked error lost its cause too, so the wrapping itself is wrong")
+	}
 }

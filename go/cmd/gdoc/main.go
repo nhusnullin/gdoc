@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -25,14 +26,20 @@ var login = func(errOut io.Writer) error {
 }
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	// No signal handling here, and that is deliberate. The one run that has to
+	// hear Ctrl-C is a wait, and it installs its own handler for the length of
+	// the wait and takes it off again: see cmdComments. Trapping the signal for
+	// the whole process would take the default kill away from every other
+	// command, and a `gdoc propose` that cannot be stopped is worse than one
+	// that dies where it stands.
+	os.Exit(run(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
 }
 
 // run turns arguments into one JSON object on out and an exit code. Human
 // words, the login URL included, go to errOut: stdout carries the object and
 // nothing else.
-func run(args []string, out, errOut io.Writer) int {
-	r := safeDispatch(args, errOut)
+func run(ctx context.Context, args []string, out, errOut io.Writer) int {
+	r := safeDispatch(ctx, args, errOut)
 	if err := emit.Print(out, r); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -44,17 +51,21 @@ func run(args []string, out, errOut io.Writer) int {
 // stack trace, nothing at all on stdout, and exits 2, which breaks the one
 // contract every command has. The trace still goes to stderr, where it is
 // readable without being mistaken for output.
-func safeDispatch(args []string, errOut io.Writer) (r emit.Result) {
+func safeDispatch(ctx context.Context, args []string, errOut io.Writer) (r emit.Result) {
 	defer func() {
 		if p := recover(); p != nil {
 			fmt.Fprintf(errOut, "gdoc crashed: %v\n%s\n", p, debug.Stack())
 			r = emit.Result{OK: false, Error: fmt.Sprintf("gdoc crashed: %v", p)}
 		}
 	}()
-	return dispatch(args, errOut)
+	return dispatch(ctx, args, errOut)
 }
 
-func dispatch(args []string, errOut io.Writer) emit.Result {
+// dispatch takes the context so a test can hand a wait one that is already
+// done, which is the answer a stopped session gets. The signal itself is
+// trapped inside the wait rather than here: every other command makes its
+// requests and ends, and Ctrl-C kills it the way it always did.
+func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result {
 	// Exactly two words, and no more. A command that accepts and ignores what
 	// it does not understand tells the user it did something it did not:
 	// `gdoc auth login --token /path` must not read as a plain login.
@@ -74,7 +85,7 @@ func dispatch(args []string, errOut io.Writer) emit.Result {
 		case "read":
 			return cmdRead(args[1:])
 		case "comments":
-			return cmdComments(args[1:])
+			return cmdComments(ctx, args[1:])
 		case "suggestions":
 			return cmdSuggestions(args[1:])
 		case "probe":

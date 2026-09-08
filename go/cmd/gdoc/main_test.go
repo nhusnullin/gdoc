@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -75,8 +78,16 @@ func TestOnlyJSONObjectRefusesAnythingAfterTheObject(t *testing.T) {
 // runJSON runs the command and insists stdout is exactly one JSON object.
 func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 	t.Helper()
+	return runJSONCtx(t, context.Background(), args...)
+}
+
+// runJSONCtx is runJSON with the context main builds from the signal. Only a
+// wait reads it, and the tests that hand in a cancelled one are testing the
+// answer a stopped session gets.
+func runJSONCtx(t *testing.T, ctx context.Context, args ...string) (map[string]any, int) {
+	t.Helper()
 	var buf bytes.Buffer
-	code := run(args, &buf, io.Discard)
+	code := run(ctx, args, &buf, io.Discard)
 	return decodeOne(t, &buf), code
 }
 
@@ -288,5 +299,41 @@ func TestNoArgumentsFails(t *testing.T) {
 	}
 	if !strings.Contains(msg, "needs a command") || !strings.Contains(msg, "auth status") {
 		t.Errorf("the error must say what is missing and what exists: %q", msg)
+	}
+}
+
+// The signal trap belongs to the wait, and to nothing else.
+//
+// signal.Notify takes the default kill away from the whole process for as long
+// as it is installed, and NotifyContext never puts it back on its own. Trapped
+// in main, Ctrl-C would stop being an answer for every command that does not
+// read the context: `auth login` would hold the terminal for its whole login
+// timeout, and a `propose` in the middle of writing into somebody's document
+// could not be stopped at all. So exactly one file names os/signal, and it is
+// the one holding the wait.
+//
+// The check fails in both directions, like the boundary tests: it fails when
+// the import spreads, and it fails when read.go stops installing one.
+func TestOnlyTheWaitTrapsTheSignal(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var traps []string
+	for _, name := range files {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), `"os/signal"`) {
+			traps = append(traps, name)
+		}
+	}
+	sort.Strings(traps)
+	if !reflect.DeepEqual(traps, []string{"read.go"}) {
+		t.Errorf("os/signal is named in %v, and only read.go's wait may trap a signal", traps)
 	}
 }

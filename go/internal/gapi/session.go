@@ -192,7 +192,7 @@ func (s *Session) bodyRequest(method, rawURL string, raw []byte) requestFor {
 // another round trip.
 func (s *Session) send(ctx context.Context, rawURL string, build requestFor, limit int64) ([]byte, error) {
 	if s.token.Expired() {
-		if err := s.refresh(); err != nil {
+		if err := s.refresh(ctx); err != nil {
 			return nil, err
 		}
 	}
@@ -201,7 +201,7 @@ func (s *Session) send(ctx context.Context, rawURL string, build requestFor, lim
 		return nil, err
 	}
 	if status == http.StatusUnauthorized {
-		if err := s.refresh(); err != nil {
+		if err := s.refresh(ctx); err != nil {
 			return nil, err
 		}
 		body, status, err = s.attempt(ctx, build, limit, rawURL)
@@ -279,8 +279,13 @@ func mark(ok bool, err error) error {
 // refresh exchanges the refresh token, saves the result and says so once. A
 // refresh that fails names the failure and saves nothing: a half-written token
 // is worse than an expired one.
-func (s *Session) refresh() error {
-	tok, err := s.token.Refresh(s.client)
+//
+// It carries the caller's context, because a refresh is one more request inside
+// whatever the caller is bounded by. A poll inside `comments --wait` runs on
+// that call's deadline, and a refresh that ignored it would be the one request
+// in a poll that neither the deadline nor a Ctrl-C could reach.
+func (s *Session) refresh(ctx context.Context) error {
+	tok, err := s.token.Refresh(ctx, s.client)
 	if err != nil {
 		return fmt.Errorf("the access token could not be refreshed: %w", err)
 	}

@@ -46,7 +46,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/gapi/` | the authenticated session. The one room that builds a request |
 | `go/internal/docs/` | the Docs read: tabs, the document tree, suggestion ids, comment ranges |
 | `go/internal/view/` | the document as the text `read` prints, and as the tree `--structure` prints |
-| `go/internal/comments/` | Drive's threads joined to the Docs ranges, and the `--since` cursor |
+| `go/internal/comments/` | Drive's threads joined to the Docs ranges, the `--since` cursor, and the `--wait` poll |
 | `go/internal/suggestions/` | what is pending, and what stopped being pending since the snapshot |
 | `go/internal/docx/` | the docx export reader, and the witness match against threads |
 | `go/internal/probe/` | the throwaway document that asks whether SUGGEST is honoured today |
@@ -56,16 +56,17 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the two opt-in end-to-end tests, one read and one write. Tests only, no production code |
+| `go/internal/live/` | the three opt-in end-to-end tests, one read and two writes. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1, 2 and 3 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 4 are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
-ways with `read`, `comments` and `suggestions`, and writes four ways with
-`probe`, `reply`, `propose` and `withdraw`. The review skill is rewritten over
-those, and `gdoc` on PATH is v2 from M3 on.
+ways with `read`, `comments` and `suggestions`, writes four ways with
+`probe`, `reply`, `propose` and `withdraw`, and waits for the next comment with
+`comments --wait`. The review skill is rewritten over those and can stay live on
+one document, and `gdoc` on PATH is v2 from M3 on.
 
 ### The auth commands, and what reaches stdout
 
@@ -450,6 +451,15 @@ flag, a reply's `by_gdoc`, a witness of `anchored`, `detached` or `unmatched`,
 and a list called `gone_since_last_look`. Each is a fact with a neutral name.
 None of them is a verdict, and none may grow into one.
 
+`comments.Waited` is that rule under M4's wait. Every field on it is a count, a
+duration, a list or a flag: `Polls`, `Waited`, `Threads`, `Unplaced`, `Cursor`
+and `Interrupted`. It says how many times the binary asked, how long it looked,
+what arrived and whether a signal ended it. Whether a window is work, whether a
+window that is only gdoc's own replies is worth a turn, and when to stop looking
+are the skill's, exactly as they are for a one-shot listing. A field named
+`news`, `idle`, `stale` or `should_retry` there is the same defect the paragraph
+above names.
+
 Two tests state the rule rather than leaving it to review:
 `TestThreadsCarriesEveryFactAndJudgesNone` in `internal/comments`, and
 `TestMatchGivesAnchoredDetachedAndUnmatched` in `internal/docx`. A field named
@@ -467,13 +477,23 @@ every one of them is testable on a fixture, and the fixtures under `testdata/`
 are the specification of what Google actually returns.
 
 - `read <url> [--structure]`: the text projection, and the tree with the flag.
-- `comments <url> [--since CURSOR] [--witness]`: the threads with their ranges,
-  markers, replies and the next cursor.
+- `comments <url> [--since CURSOR] [--wait DURATION] [--witness]`: the threads
+  with their ranges, markers, replies and the next cursor, and with `--wait` the
+  first window of activity after the cursor.
 - `suggestions <url> [--md PATH]`: what is pending, and with a paired file what
   stopped being pending.
 
 Rules that hold across all three:
 
+- **A poll reads the listing first and the document second.** Both reads are
+  needed either way, so the order is free, and what it decides is which comments
+  the Docs read can place. A comment written in the gap between them is in
+  whichever read ran after it: listed first, the next poll places it; read
+  first, it is a comment in the listing with no anchor in a document read a
+  moment before it existed, so `Threads` reports it `unplaced`, the cursor moves
+  past it, and the skill is told a thread it could have proposed into cannot be.
+  A wait ends on exactly the poll that first sees a new comment, which is the
+  poll the race is live on. `internal/live`'s `poller` spells the same order.
 - **One Docs read, three views.** `documents.get` with
   `includeTabsContent=true`, `suggestionsViewMode=SUGGESTIONS_INLINE` and
   `commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED` carries the structure, the
@@ -669,11 +689,132 @@ A cursor written before `i` existed still reads, and the version stays 1 for tha
 reason: the ids only ever narrow further, so their absence costs one repeated
 thread and never a lost one.
 
+**A listing always prints a cursor, and the empty one is dated from the clock.**
+`NextCursor` answers nil when nothing it saw carried an instant, which is every
+document nobody has commented on yet. That is the honest answer to "what is the
+newest activity here" and it is useless as a starting point: `--wait` needs
+`--since`, so a live session could not start on the document it is most often
+started on. `startCursor` in `cmd/gdoc/read.go` dates that case from this run's
+clock, less `cursorFloor`. Backwards rather than forwards, because a clock a
+little ahead of Drive's would tell the next poll to withhold a comment written
+in the meantime, and losing a comment is the wrong direction to be wrong in. It
+is the same argument `Cursor.narrow` makes at the boundary.
+
+**The floor is five minutes, and what it pays for is clock skew.** The instant
+is read here and compared at Drive, which applies it as `startModifiedTime` and
+withholds everything older, so what the floor has to cover is the offset between
+the two clocks. A machine five minutes fast would otherwise put the baseline
+cursor five minutes into Drive's future and lose every comment written in that
+window for good, because the cursor never moves backwards. Being early costs
+nothing to set against that: this is only reached when the listing carried no
+readable instant at all, which is a document nobody has commented on. **The
+clock is read before the two reads, not after them**, and the caller passes the
+instant in for that reason: read afterwards, the reads spend the floor, and a
+comment written while a slow baseline was being read falls into a window no poll
+asks for again.
+
 It is opaque on purpose. A caller that decodes the instant and does arithmetic
 on it has made the encoding a contract, and it is not one. The version field is
 there so a later shape is refused by name. A cursor that cannot be decoded is an
 error naming the problem, never silently read as "from the beginning": that
 would report a window nobody asked for and look like a clean poll.
+
+### `--wait` is one call that polls, and the loop is the skill's
+
+M4's live session. `comments <url> --since CURSOR --wait 9m` is the same
+listing, made repeatedly inside one call, and it is still one JSON object and
+still exit 0 if and only if `ok`. `comments.Wait` holds the loop and takes the
+poll as a `Fetch` closure, so the package still holds no session and no URL:
+`cmdComments` builds the two reads it already builds, and a test hands in a
+script.
+
+- **`--wait` requires `--since`.** A wait with no cursor answers with the whole
+  document, which is the one-shot listing under another name and reads to a
+  session as news. It is refused naming the missing flag. The duration is a Go
+  duration, and zero, negative, unreadable or over an hour is refused naming the
+  value.
+- **The interval is ten seconds, a constant, and never a flag.** It sits in the
+  spec's five to fifteen. `waitInterval` in `cmd/gdoc/read.go` is a package
+  variable only so a test can shorten it, and the last sleep is clamped to what
+  is left of the deadline. The first poll happens at once, not after an
+  interval, and the last gap is slept out rather than polled on: a poll started
+  on the instant the deadline lands on runs on a context that is already done,
+  so it sends nothing and `polls` would count a request that never left the
+  process.
+- **The first non-empty window ends the wait.** Latency is the point. A window
+  is what `Fetch` narrows to, so gdoc's own 🤖 reply arriving after a poll does
+  end the wait: the binary reports it and the skill reads it as a receipt.
+- **An interrupt is an answer, and only the wait traps one.** `cmdComments`
+  installs `signal.NotifyContext` on `SIGINT` and `SIGTERM` around the wait
+  itself and takes it off on the way out. Ctrl-C during a wait prints
+  `ok: true` with no threads, the cursor handed in and
+  `waited.interrupted: true`, and exits 0. A poll that failed because the
+  interrupt cut the request short is reported as the interrupt, not as a failed
+  read. The output contract has to hold under the one signal a live session
+  sends every time it ends.
+
+  **The trap comes off the moment the wait returns, and the wait gets its own
+  context rather than shadowing the caller's.** What runs after a wait is the
+  `--witness` export, and a Ctrl-C there has to kill the run the way it kills
+  every other command. `stop()` is what puts the default kill back. Left
+  installed, the handler holds that kill off until the command returns, while
+  the export runs on the caller's context, which the signal never reaches: the
+  Ctrl-C then does nothing at all, and the run answers as though nobody had
+  pressed it. The wait's own context is the other half of the same rule. It is
+  derived from the caller's rather than shadowing it, so what runs after the
+  wait cannot be quietly cancelled by the signal that ended the wait.
+
+  **It is not in `main`, and that is the decision.** `signal.Notify` takes the
+  default kill away from the whole process for as long as it is installed, and
+  `NotifyContext` never puts it back on its own. Trapped in `main`, Ctrl-C
+  stopped being an answer for every command that does not read the context:
+  `auth login` would hold the terminal for its three minute login timeout, and a
+  `propose` in the middle of writing into somebody's document could not be
+  stopped at all. `TestOnlyTheWaitTrapsTheSignal` in `cmd/gdoc` states it, in
+  both directions: `os/signal` is named in `read.go` and in no other production
+  file there. `dispatch` still takes a context, because a test hands a wait one
+  that is already done.
+- **The deadline bounds the call, not just the gaps between polls.** `Wait`
+  derives a second context with `context.WithTimeout(ctx, o.Deadline)` and polls
+  on that. Without it the only bound on one poll is the client's own timeout,
+  which is minutes and applies per request, so a poll that stalled at 8m50s
+  carried a `--wait 9m` call past the ten minutes the nine was chosen to fit
+  inside, and the harness then killed it with a signal the answer reports as
+  `interrupted`. The two contexts stay apart on purpose: the caller's being done
+  is the person, and the derived one being done is the deadline, which is an
+  empty window and not a failure.
+
+  Every request inside a poll carries that context, the token refresh included.
+  `gapi.Session.refresh` takes the caller's context and `auth.Token.Refresh`
+  builds its POST with it, rather than through `http.Client.Post`. Sent without
+  one, the refresh was the single request in a poll that neither the deadline
+  nor a Ctrl-C could reach: its only bound was the guard's five minute client
+  timeout, which is exactly the overrun the derived context exists to stop.
+
+  **A `--witness` export after a wait is part of the call, so it runs on what is
+  left of the deadline.** Left unbounded it has only the guard's own client
+  timeout, five minutes on top of the wait, so `--wait 9m --witness` could
+  answer at fourteen minutes and be killed by the harness that waits ten, which
+  prints nothing at all. An export cut short by the remainder is a warning
+  naming it, on an envelope that still carries the threads.
+- **A failed poll is `ok: false`,** carrying the error and the polls so far.
+  Nothing is retried silently: the skill sees the failure, says the window is
+  unread rather than empty, keeps the cursor it had and calls again.
+- **`waited` is absent without `--wait`.** Reporting `polls: 1` on a call that
+  never waited says the binary polls when it does not. An empty window is not
+  witnessed either: the export would be one more request for no question. An
+  interrupted wait is that same case rather than a second one, because it comes
+  back with no threads.
+- **Nothing is kept.** The wait writes no file of its own and keeps no session
+  state, and the cursor it prints is the only thing that carries to the next
+  call. The one thing it can write is the OAuth token file: a poll goes through
+  `gapi.Session.send`, which refreshes an expired or rejected token and saves
+  it, exactly as every other command does. That is the credential rather than
+  anything the wait learned. The loop
+  belongs to `skills/gdoc-review/SKILL.md`, which asks for nine minutes because
+  the tool that runs the command gives up at ten, and which sets that tool's own
+  timeout to ten minutes: its default is two, and a wait cut short at two is
+  either an unmatched timeout or a signal the answer reports as `interrupted`.
 
 ### The `gdoc:` front-matter block, schema 1
 
@@ -1186,10 +1327,14 @@ nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
 
-`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the write test beside it. It creates
-its own document in the Drive test folder, proposes into it, replies, withdraws
-and trashes it, asserting every read-back on the way, and it writes only to
-documents it made. Two variables rather than one, because a live read is
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the two write tests beside it, and
+each creates its own document in the Drive test folder. The first proposes into
+it, replies, withdraws and trashes it, asserting every read-back on the way. The
+second is M4's: it starts a wait, posts a comment into the document while that
+wait is running, checks the comment came back before the deadline, then waits
+again on the cursor it was handed and checks that window is empty, up to 90
+seconds and then 15, and trashes the document. Both write only to documents they
+made. Two variables rather than one, because a live read is
 somebody's document and a live write is a document that did not exist a second
 ago: the second is a different decision, and it is made on purpose each time.
 The unattended run sets neither.

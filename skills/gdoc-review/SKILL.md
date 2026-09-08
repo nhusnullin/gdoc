@@ -1,6 +1,6 @@
 ---
 name: gdoc-review
-description: Use when Nail gives a Google Doc link and wants the marked comments in it handled. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions.
+description: Use when Nail gives a Google Doc link and wants the marked comments in it handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until Nail stops it.
 ---
 
 # Google Docs review
@@ -38,6 +38,10 @@ There is no local record of which comments were handled. The 🤖 reply in the
 thread is the receipt, and the document is the ledger. Every run recomputes the
 open work from the threads alone.
 
+A live session holds one cursor, in this conversation and nowhere else. It dies
+with the session. It says where the last window ended, never what was handled,
+so the rule above is unchanged: the thread is still the only receipt.
+
 ## If the credential is not working
 
 Any command can fail with no token or a permission error. Run `$GDOC auth
@@ -67,6 +71,12 @@ $GDOC read <url>
 `modified`, `content`, `marker` (`ai:`, `ai?`, `ai!` or `none`), `resolved`,
 `quoted`, `range`, and `replies`. Each reply carries `id`, `author`, `created`,
 `content` and `by_gdoc`, which is true when it opens with 🤖.
+
+The envelope carries `cursor` beside the threads: the position of the newest
+activity this read saw, or, on a document nobody has commented on, a position
+dated from the run's own clock so that live mode has somewhere to start. Every
+listing carries one. A one-shot run has no use for it. Live mode does, so keep
+it.
 
 `read` gives the document's text, with `[[c:ID]]words[[/c]]` around the span a
 comment is attached to and `{+text+}[s:ID]` around a pending suggestion. That is
@@ -194,6 +204,27 @@ outside Altery, say what changed without naming internal files.
 
 Never delete a file from the hub. Editing is the whole of what `ai!` may do.
 
+### Name a colleague who asked
+
+When the marked comment was written by somebody other than the account gdoc is
+signed in as, the receipt names them:
+
+```
+🤖 Done, asked by William Mejia. Added to domains/regulatory/decisions.md.
+```
+
+The document already shows who wrote the comment. Saying it in the receipt puts
+it where the delegation happened, so a reader scrolling the margin sees that the
+work came from William and not from whoever gdoc posts as.
+
+The signed-in name is the `author` on gdoc's own replies in this document, the
+ones with `by_gdoc: true`. When the document carries none yet, treat Nail as the
+account: it is his login, and naming him in his own receipt is the one mistake
+this rule must not make. Nail's own comments are never named.
+
+Identity is still never a gate. The marker decides whether a comment is work,
+and this changes the wording of a receipt and nothing else.
+
 ## Step 7: Propose a change to the document
 
 When the right answer is different words in the document, propose them. A
@@ -256,6 +287,11 @@ is what the reader sees, so write it for the reader, in plain text. Markdown is
 refused before anything is sent, because a Docs thread renders asterisks and
 backticks as typed.
 
+When the comment that asked for the change was written by somebody other than
+the signed-in account, `why` names them the same way the receipt does: `Asked by
+William Mejia. The CBC letter of 12 August asks for a six month cycle.` The rule
+and its one exception are in Step 6.
+
 Every proposal in the file is checked before the first one is written, so a bad
 entry stops the run with nothing sent. Once writing starts the run stops at the
 first proposal it cannot place, and the report still carries one entry per
@@ -308,7 +344,11 @@ your own. Accepting is Nail's.
 
 ## Two messages at most
 
-A thread carries an acknowledgment and a receipt, and nothing else.
+A thread carries an acknowledgment and a receipt per piece of work, and nothing
+else. A thread you answered can ask again: a marked comment or reply written
+after gdoc's last 🤖 reply is new work, and it gets its own pair. Live mode
+makes that ordinary rather than rare, because the session sees the second
+question arrive.
 
 - Write the acknowledgment only when the work will take noticeably long. One
   line, reader language: `🤖 Looking into this now.`
@@ -387,6 +427,108 @@ If you could not read half the review, say so and do not report clean. A
 `comments` run with warnings, a thread whose range came back null, a suggestions
 read that failed: each one means part of the review was invisible on this run.
 
+## Live mode
+
+Nail says "live" in the request, and the session stays open on that one
+document. Everything above runs first, once, and its Step 3 list and Step 8
+report are printed as they always are. Then the session starts watching.
+
+One session watches one document, the link Nail gave. There is no hub-wide
+watch.
+
+The loop. `CURSOR` starts as the `cursor` from Step 1's `comments` run. That
+run always prints one, a document with no comments in it included: there is
+nothing to construct by hand and nothing to work around.
+
+```bash
+$GDOC comments <url> --since "$CURSOR" --wait 9m
+```
+
+Run it with the Bash tool's `timeout` set to `600000`, ten minutes in
+milliseconds. The default is two minutes, so a nine minute wait left on the
+default is cut short at two: killed outright it is a timeout matching none of
+the four paths below, and killed with a signal it comes back
+`waited.interrupted: true`, which reads as Nail having stopped the session. Set
+the timeout on every call in this loop.
+
+That one call blocks. The binary polls Drive every ten seconds inside it and
+comes back on the first activity after the cursor, or at the deadline with an
+empty window. So a quiet document costs one call and no thinking. Read the
+object and take one of four paths:
+
+- **`ok: true`, `threads: []`, `waited.interrupted: false`.** Nothing happened
+  in those nine minutes. Print nothing at all. Call again with the same cursor.
+- **`ok: true` with threads.** This is a window. Run Steps 2 to 8 over exactly
+  those threads. Print the Step 8 report. Set `CURSOR` to the answer's `cursor`
+  and call again.
+- **`ok: false`.** A poll failed. Print the error, wait thirty seconds, call
+  again with the cursor you already had. Never move the cursor past a failed
+  poll: that window is unread, not empty. Three failures in a row and you stop
+  and say so.
+- **`waited.interrupted: true`.** Nail stopped it. Print the totals below and
+  stop.
+
+Nine minutes, and never more. The binary would look for an hour, but the tool
+that runs the command gives up at ten even when it is asked for its longest, and
+a wait killed at ten minutes takes its answer with it. Ask for nine, and set the
+tool's timeout to ten.
+
+`--wait` needs `--since`. The first read is the baseline and takes no wait: a
+wait with no cursor answers with the whole document, which is Step 1 under
+another name and reads to a session as news.
+
+### What a window contains
+
+Everything with activity after the cursor. That includes gdoc's own replies:
+the binary reports what arrived and judges none of it, exactly as in Step 2.
+
+- A window that is only gdoc's own 🤖 replies coming back is not work. Say
+  nothing, take the new cursor, call again. It does not loop, because the new
+  cursor is past those replies.
+- A thread whose `range` is `null` can be answered and cannot be proposed into.
+  Say which when it matters, and answer it in the thread.
+- A thread that was answered before and now carries a new marked comment is new
+  work. Step 2 already says so, and "Two messages at most" is per piece of work.
+- An unmarked reply is still reported and never acted on.
+- `--witness` works in a window as it works in a one-shot listing. An empty
+  window is not witnessed, so `waited.polls` with no threads carries no witness
+  and that is not a gap. After a wait the export runs on what is left of the
+  nine minutes, so a window that arrives near the deadline can come back with
+  every thread `unmatched` and a warning saying the export was cut short. That
+  is the witness missing, not the threads.
+
+### Before acting on a marked comment that may be old
+
+A cursor can come from a session that ended, or be pasted in by hand, so a
+window can carry a comment gdoc already acted on. Run the check from Step 2
+before acting: `$GDOC suggestions <url>` and the paired note's `proposals`. When
+the work is already there, write the missing receipt rather than doing it twice.
+
+### Stop, and the totals
+
+Nail stops it with Ctrl-C or by saying stop. An answer carrying
+`waited.interrupted: true` is Nail stopping, not a failure: the object says
+`ok: true` and the cursor is the one handed in.
+
+Then print the session's totals, in the shape of the Step 8 report:
+
+```
+live session ended after 4 windows, 47 minutes
+answered   3 threads
+carried    1 thread
+proposed   2 changes, 1 of them NOT verified: docx_anchored failed
+files changed in the hub: domains/regulatory/decisions.md, policy.md
+2 unmarked replies reported, acted on none
+1 poll failed and was retried
+```
+
+Report the failed polls. A session that could not read part of its own watch
+must not read as a clean one, which is Step 8's rule over the whole session.
+
+Dry run applies here as it does everywhere else: print each reply and each
+proposal instead of posting it, keep waiting, and say at the end that nothing
+was posted.
+
 ## Never
 
 - Never edit the document. Every change to its words is a suggestion, and the
@@ -403,8 +545,9 @@ read that failed: each one means part of the review was invisible on this run.
 - Never trust a status code. Read `verified`, and `checks` where it is there.
 - Never act on an unmarked comment unless Nail asked for all-comments mode and
   picked that one.
-- Never reply twice to the same thread, unless Nail picked an answered thread
-  and you said so before posting.
+- Never reply twice to the same piece of work. A thread that asks again gets a
+  second answer, and so does an answered thread Nail picked in all-comments
+  mode, where you say so before posting.
 - Never write to a multi-tab document.
 - Never export a PDF. Nail downloads it from the browser.
 - Never post a reply you did not print in full afterwards. That printing is the

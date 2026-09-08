@@ -2,25 +2,28 @@
 // guard, and real Google Docs. Everything here is skipped unless
 // GDOC_LIVE_TEST=1, so `go test ./...` on any machine runs nothing.
 //
-// There are two tests, and they reach Drive in different ways.
+// There are three tests, and they reach Drive in different ways.
 //
 // The read test is pointed at a document by GDOC_LIVE_DOC_ID, with no default,
 // and it writes nothing. The guard is opened with exactly the id the run was
 // given, and a run that names none has nothing to read.
 //
-// The write test needs GDOC_LIVE_WRITE=1 as well, and it touches only documents
-// it created itself, in the test folder. M2 could not have this test: a create
-// and a comment are POST requests, this package would have to build them, and
-// building a request means naming net/http, which the boundary test allows in
-// four rooms and not in a package whose only files are tests. M3 has the
-// production writers, so the test drives probe, propose, reply and withdraw and
-// still builds no request of its own.
+// The two write tests need GDOC_LIVE_WRITE=1 as well, and each touches only
+// documents it created itself, in the test folder. M2 could not have them: a
+// create and a comment are POST requests, this package would have to build
+// them, and building a request means naming net/http, which the boundary test
+// allows in four rooms and not in a package whose only files are tests. M3 has
+// the production writers, so the first drives probe, propose, reply and
+// withdraw and still builds no request of its own. M4 adds the second, which
+// waits while a comment is written into a document it made and asserts the wait
+// saw it.
 package live
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -474,4 +477,254 @@ func fileURL(id string) string {
 
 func trashedURL(id string) string {
 	return "https://www.googleapis.com/drive/v3/files/" + id + "?fields=trashed&supportsAllDrives=true"
+}
+
+// The wait test's own words and timings. The deadline is long enough that a
+// Drive listing which takes a moment to show a new comment still lands inside
+// it, and the interval is short enough that the second poll is the one that
+// sees it. Both are passed to Wait rather than set on the command's constant:
+// WaitOptions carries them, so this test drives its own pace without touching
+// what the binary does.
+const (
+	waitComment  = "ai? live wait test"
+	waitDeadline = 90 * time.Second
+	waitInterval = 5 * time.Second
+
+	// quietDeadline is the second wait, the one that must find nothing. It is
+	// short because a document with one comment already reported has nothing to
+	// wait for, and a long deadline would only make the test slow.
+	quietDeadline = 15 * time.Second
+)
+
+// TestLiveWaitSeesANewComment is the live half of M4: a wait that is running
+// when somebody writes a comment comes back with that comment, before its
+// deadline, with a cursor the next call can use.
+//
+// It creates its own document in the test folder and trashes it, like the write
+// test above. The comment it waits for is one it posts itself, through the same
+// Drive route a person's comment arrives on, because there is nobody at a
+// browser during an unattended run.
+//
+// The second half is the quiet case, and it is the half a wait can fail
+// silently at: a cursor that did not really advance makes the same comment news
+// on every poll for ever, and a wait that answers empty on the cursor it just
+// handed back is what says the advance was real.
+func TestLiveWaitSeesANewComment(t *testing.T) {
+	if os.Getenv(liveVar) != "1" || os.Getenv(writeVar) != "1" {
+		t.Skipf("skipped: set %s=1 and %s=1 to create a document in the Drive test folder and wait for a comment in it; %s names another folder", liveVar, writeVar, folderVar)
+	}
+	folder := strings.TrimSpace(os.Getenv(folderVar))
+	if folder == "" {
+		folder = testFolder
+	}
+	t.Logf("creating in folder %s", folder)
+
+	p := guard.NewPolicy()
+	p.AllowCreateIn(folder)
+	s, err := gapi.Open(p, nil)
+	if err != nil {
+		t.Fatalf("the session could not be opened: %v", err)
+	}
+	// A second session on the same policy, for the goroutine that writes the
+	// comment. The policy is mutex guarded and safe to share; a Session is not,
+	// because it refreshes its own token in place, and a race there is not what
+	// this test is asking about.
+	writer, err := gapi.Open(p, nil)
+	if err != nil {
+		t.Fatalf("the writing session could not be opened: %v", err)
+	}
+	ctx := context.Background()
+
+	docID := createSubject(t, ctx, s, folder)
+
+	// The baseline, exactly as the skill takes it: one listing, and the cursor
+	// the run would have printed. A document created a moment ago has no
+	// comments, so NextCursor answers nil and the cursor is dated from the
+	// clock, which is what the command prints there and what the wait below
+	// actually starts from: a real startModifiedTime on the wire, narrowed at a
+	// boundary a nil cursor would never reach.
+	base := baselineCursor(t, ctx, s, docID)
+
+	// The comment is written while the wait is running, one interval in, so the
+	// first poll is the empty window and a later one carries the news. The
+	// goroutine is the writer rather than the wait so that the wait's answer and
+	// its error stay on the test's own goroutine.
+	posted := make(chan struct{})
+	var commentID string
+	go func() {
+		defer close(posted)
+		time.Sleep(waitInterval + time.Second)
+		commentID = postComment(t, ctx, writer, docID, waitComment)
+	}()
+	// Joined on every way out of this test, not only the one that reads the id
+	// below. postComment reports through t.Errorf, and a t.Fatalf here while it
+	// is inside its write would leave it logging into a test that has already
+	// returned, which panics on top of the failure it was reporting. The
+	// channel is closed rather than sent on, so both receives return.
+	defer func() { <-posted }()
+
+	started := time.Now()
+	w, err := comments.Wait(ctx, base, comments.WaitOptions{
+		Interval: waitInterval,
+		Deadline: waitDeadline,
+		Fetch:    poller(s, docID, base),
+	})
+	if err != nil {
+		t.Fatalf("the wait failed after %d polls in %s: %v", w.Polls, time.Since(started).Round(time.Millisecond), err)
+	}
+	<-posted
+	t.Logf("wait 1: %d polls, %s waited, %d threads, comment %s posted while it ran",
+		w.Polls, w.Waited.Round(time.Millisecond), len(w.Threads), commentID)
+
+	if w.Interrupted {
+		t.Fatal("the wait reports it was interrupted, and nothing sent it a signal")
+	}
+	if len(w.Threads) != 1 {
+		t.Fatalf("the wait came back with %d threads, and one comment was written while it ran", len(w.Threads))
+	}
+	got := w.Threads[0]
+	if got.ID != commentID {
+		t.Errorf("the wait came back with thread %q, and %q is the comment that was posted", got.ID, commentID)
+	}
+	if got.Content != waitComment {
+		t.Errorf("the thread reads %q, and %q was written", got.Content, waitComment)
+	}
+	if got.Marker != "ai?" {
+		t.Errorf("the thread carries marker %q, and %q opens with ai?", got.Marker, waitComment)
+	}
+	if w.Polls < 2 {
+		t.Errorf("the wait answered on poll %d, and the comment was written after the first one", w.Polls)
+	}
+	if w.Waited >= waitDeadline {
+		t.Errorf("the wait took %s, which is its whole deadline: it answered at the deadline rather than on the news", w.Waited)
+	}
+	if w.Cursor == nil {
+		t.Fatal("the wait came back with news and no cursor, so the next call has nowhere to start")
+	}
+	if w.Cursor.String() == base.String() {
+		t.Errorf("the cursor did not move: it is still %q, and a thread arrived", base.String())
+	}
+	// A comment created through Drive carries no anchor, so the Docs read places
+	// no range on it. That is a fact about this comment and not a fault: the
+	// live section of the skill says such a thread can be answered and cannot be
+	// proposed into, and this is what one looks like.
+	if got.Range != nil {
+		t.Logf("the thread came back placed at %+v, which a Drive comment with no anchor usually is not", *got.Range)
+	}
+	t.Logf("thread %s: marker %s, unplaced %v, cursor %s", got.ID, got.Marker, w.Unplaced, w.Cursor.String())
+
+	// The same document, the cursor the wait just handed back, and nothing
+	// written this time. It must run out its deadline and come back empty.
+	quiet := time.Now()
+	q, err := comments.Wait(ctx, w.Cursor, comments.WaitOptions{
+		Interval: waitInterval,
+		Deadline: quietDeadline,
+		Fetch:    poller(s, docID, w.Cursor),
+	})
+	if err != nil {
+		t.Fatalf("the quiet wait failed after %d polls in %s: %v", q.Polls, time.Since(quiet).Round(time.Millisecond), err)
+	}
+	t.Logf("wait 2: %d polls, %s waited, %d threads", q.Polls, q.Waited.Round(time.Millisecond), len(q.Threads))
+	if len(q.Threads) != 0 {
+		t.Errorf("the quiet wait came back with %d threads, and the only comment in the document was already reported", len(q.Threads))
+	}
+	if q.Interrupted {
+		t.Error("the quiet wait reports it was interrupted, and nothing sent it a signal")
+	}
+	if q.Cursor.String() != w.Cursor.String() {
+		t.Errorf("the quiet wait moved the cursor from %q to %q, and it saw nothing", w.Cursor.String(), q.Cursor.String())
+	}
+}
+
+// poller is the poll the command builds: the comment listing narrowed to the
+// cursor, then the Docs read for the ranges. It is spelled here rather than
+// imported because cmd/gdoc builds it inline, and what this test is asserting
+// is Wait over the real two reads. The order is the command's, and it is the
+// order for the command's reason: a comment written between the two reads is
+// placed by the read that runs after it rather than missed by the one that ran
+// before it.
+func poller(s *gapi.Session, docID string, since *comments.Cursor) comments.Poll {
+	return func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
+		raws, err := comments.Fetch(ctx, s, docID, since)
+		if err != nil {
+			return nil, nil, err
+		}
+		d, err := docs.Fetch(ctx, s, docID)
+		if err != nil {
+			return nil, nil, err
+		}
+		return d, raws, nil
+	}
+}
+
+// baselineCursor is the first listing of a live session: no cursor, everything
+// the document already carries, and the cursor the next call starts from.
+//
+// The two reads are in the command's order, the listing first, for the
+// command's reason: a comment written between them is placed by the read that
+// runs after it rather than missed by the one that ran before it. The clock is
+// read before either of them, because that is what dates the cursor when the
+// listing has no instant of its own, and reads that spent the floor would leave
+// a window nobody asks for again.
+//
+// The fallback is the command's too. NextCursor answers nil on a document with
+// no comments, and cmd/gdoc's startCursor dates that case from the clock, so a
+// helper handing back nil would send the wait down a path the binary never
+// takes: no startModifiedTime on the wire and nothing for narrow to do.
+func baselineCursor(t *testing.T, ctx context.Context, s *gapi.Session, docID string) *comments.Cursor {
+	t.Helper()
+	at := time.Now()
+	raws, err := comments.Fetch(ctx, s, docID, nil)
+	if err != nil {
+		t.Fatalf("the baseline comment listing failed: %v", err)
+	}
+	d, err := docs.Fetch(ctx, s, docID)
+	if err != nil {
+		t.Fatalf("the baseline document read failed: %v", err)
+	}
+	threads, _ := comments.Threads(raws, d)
+	if len(threads) != 0 {
+		t.Fatalf("the document was created a moment ago and already carries %d threads", len(threads))
+	}
+	cursor := comments.NextCursor(nil, threads)
+	if cursor == nil {
+		cursor = &comments.Cursor{At: at.Add(-baselineFloor)}
+	}
+	t.Logf("baseline: %d threads, cursor %q", len(threads), cursor.String())
+	return cursor
+}
+
+// baselineFloor is cmd/gdoc's cursorFloor, spelled here because that constant
+// is in package main and cannot be imported. The two have to agree: this test
+// is the one place the clock-derived cursor meets real Drive.
+const baselineFloor = 5 * time.Minute
+
+// postComment writes one comment into the document, the way a person's comment
+// arrives: Drive's comments.create, which the guard carries as a POST on the
+// comment collection. It is unanchored, because an anchor is an opaque string
+// gdoc builds nowhere.
+//
+// It runs on its own goroutine, so it reports through t.Errorf and hands back
+// an empty id rather than calling t.Fatalf, which may only be called from the
+// goroutine running the test.
+func postComment(t *testing.T, ctx context.Context, s *gapi.Session, docID, content string) string {
+	t.Helper()
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := s.PostJSON(ctx, commentURL(docID), map[string]any{"content": content}, &created); err != nil {
+		t.Errorf("the comment could not be written into %q: %v", docID, err)
+		return ""
+	}
+	if created.ID == "" {
+		t.Errorf("the comment write into %q answered with no comment id", docID)
+	}
+	return created.ID
+}
+
+// commentURL is Drive's comments.create. `fields` is not optional here: Drive
+// refuses a comment write that does not say what it wants back.
+func commentURL(id string) string {
+	q := url.Values{"fields": {"id,createdTime,modifiedTime"}}
+	return "https://www.googleapis.com/drive/v3/files/" + id + "/comments?" + q.Encode()
 }

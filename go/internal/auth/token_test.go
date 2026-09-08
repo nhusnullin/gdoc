@@ -3,6 +3,7 @@ package auth
 // The token file itself: reading it, refreshing it, writing it back.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -62,7 +63,7 @@ func TestRefreshKeepsOldRefreshToken(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
 	rt := &formRT{body: `{"access_token":"NEW","expires_in":3600}`}
-	got, err := tok.Refresh(&http.Client{Transport: rt})
+	got, err := tok.Refresh(context.Background(), &http.Client{Transport: rt})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +84,7 @@ func TestRefreshKeepsOldRefreshToken(t *testing.T) {
 func TestRefreshTakesANewRefreshTokenWhenGiven(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	got, err := tok.Refresh(&http.Client{Transport: &formRT{body: `{"access_token":"NEW","refresh_token":"R2","expires_in":3600}`}})
+	got, err := tok.Refresh(context.Background(), &http.Client{Transport: &formRT{body: `{"access_token":"NEW","refresh_token":"R2","expires_in":3600}`}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +96,7 @@ func TestRefreshTakesANewRefreshTokenWhenGiven(t *testing.T) {
 func TestRefreshReportsTheEndpointError(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	_, err := tok.Refresh(&http.Client{Transport: &formRT{status: 400, body: `{"error":"invalid_grant"}`}})
+	_, err := tok.Refresh(context.Background(), &http.Client{Transport: &formRT{status: 400, body: `{"error":"invalid_grant"}`}})
 	if err == nil || !strings.Contains(err.Error(), "invalid_grant") {
 		t.Fatalf("want the endpoint error named, got %v", err)
 	}
@@ -104,7 +105,7 @@ func TestRefreshReportsTheEndpointError(t *testing.T) {
 func TestRefuse200WithNoAccessToken(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()
-	if _, err := tok.Refresh(&http.Client{Transport: &formRT{body: `{"expires_in":3600}`}}); err == nil {
+	if _, err := tok.Refresh(context.Background(), &http.Client{Transport: &formRT{body: `{"expires_in":3600}`}}); err == nil {
 		t.Fatal("a 200 with no access token must not pass")
 	}
 }
@@ -117,7 +118,7 @@ func TestRefreshReportsATransportFailure(t *testing.T) {
 	c := &http.Client{Transport: rtFunc(func(*http.Request) (*http.Response, error) {
 		return nil, errors.New("guard refused: host \"evil\"")
 	})}
-	if _, err := tok.Refresh(c); err == nil {
+	if _, err := tok.Refresh(context.Background(), c); err == nil {
 		t.Fatal("a refused POST must fail the refresh")
 	} else if !strings.Contains(err.Error(), "guard refused") {
 		t.Fatalf("the error must carry what went wrong: %v", err)
@@ -290,5 +291,30 @@ func TestExpiredWithNoExpiry(t *testing.T) {
 	var t0 Token
 	if !t0.Expired() {
 		t.Fatal("a token with no expiry is expired")
+	}
+}
+
+// A refresh is one more request inside whatever the caller is bounded by. The
+// one that matters is a poll inside `comments --wait`, which runs on that
+// call's deadline: sent without the context, the POST's only bound was the
+// guard's five minute client timeout, so a token endpoint that never answered
+// carried a nine minute wait past the ten it was chosen to fit inside, and a
+// Ctrl-C could not end it either.
+func TestARefreshCarriesTheCallersContext(t *testing.T) {
+	writeFixture(t)
+	tok, _ := Load()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	var carried error
+	c := &http.Client{Transport: rtFunc(func(r *http.Request) (*http.Response, error) {
+		carried = r.Context().Err()
+		return nil, errors.New("the endpoint was not reachable")
+	})}
+
+	if _, err := tok.Refresh(ctx, c); err == nil {
+		t.Fatal("a refresh whose request could not be sent must fail")
+	}
+	if carried == nil {
+		t.Error("the POST carried a context of its own, so neither a deadline nor a Ctrl-C above it can reach the refresh")
 	}
 }

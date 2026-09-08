@@ -232,7 +232,11 @@ before a write happens. Nothing about the original is ever modified in survey.
 
 Lists threads with real character ranges (`commentsViewMode`, which requires
 `includeTabsContent=true`). Takes a `--since` cursor and reports only activity
-after it, so a live session's poll is one cheap call. The cursor is an opaque
+after it, so a live session's poll is one cheap call. `--wait` makes that call
+poll: it repeats the same listing every ten seconds and returns the first window
+with activity in it, or an empty one at the deadline. It needs `--since`, and it keeps no state of
+its own: the one file it can touch is the saved OAuth token, which any command
+replaces when the access token has to be refreshed. The cursor is an opaque
 value the binary emits and the caller hands back; the live skill holds it for
 the session and it dies with the session. Anything that must survive across
 sessions lives in the front matter, nowhere else. Reports the marker on
@@ -387,11 +391,13 @@ because it is design, not wiring.
 - **There is no watcher.** Nothing runs on its own. A comment written today
   waits, visible in the document, until a session looks.
 - **A session can stay live.** Once launched, a review session may keep the
-  document's comments in view: the skill loops, and every 5 to 15 seconds the
-  binary makes one cheap call, "activity since this cursor", and exits. New
-  marked comments are acted on within seconds, and the conversation lives in
-  the document. The loop is the skill's; the binary stays one-shot. Liveness
-  ends with the session.
+  document's comments in view: the skill calls
+  `comments <url> --since CURSOR --wait 9m`, and that one call asks Drive
+  "activity since this cursor" every ten seconds until something arrives or the
+  deadline passes, then exits. New marked comments are acted on within seconds,
+  and the conversation lives in the document. The loop over those calls is the
+  skill's; the binary stays one-shot and keeps nothing but the cursor it prints.
+  Liveness ends with the session.
 - **The loop starts when Nail starts it.** He opens a session in the hub folder
   (or runs the review skill there). The hub being the working directory is what
   gives the agent its context: the notes, the decision log, the raw material.
@@ -405,6 +411,22 @@ because it is design, not wiring.
 What stays out of the spec: how a session is launched, scheduled or named. That
 is ordinary Claude usage, not gdoc's concern, and it goes in the plan only where
 the skill needs a convention.
+
+**Corrected 2026-09-07, Nail's decision.** This section used to say the skill
+loops and the binary makes one cheap call every 5 to 15 seconds, one call per
+poll. The polling moved inside the call: `--wait` looks for up to a deadline and
+comes back on the first activity after the cursor. The reason is the tool that
+runs the command. A Claude Code session cannot wake more often than once a
+minute, so a call per poll makes the latency a minute rather than seconds, and
+every idle tick spends a model turn on a document where nothing happened. With
+the wait inside the binary a quiet document costs one call and no thinking. What
+did not change: the binary is still one-shot, still prints one JSON object, and
+still keeps no state between calls. What is new on the envelope is `waited`, a
+count of polls, the seconds looked and whether a signal ended it. An interrupt
+is an answer (`ok: true`, no threads, the cursor handed in), and a failed poll
+is `ok: false` with the polls so far, so the skill can tell an unread window
+from an empty one. The skill asks for nine minutes because its Bash tool gives
+up at ten.
 
 ## Never
 
