@@ -181,11 +181,57 @@ imports goldmark, and Task 8 records that delta against the numbers above.
 - Consumes: `house.Config`, `cover.Fields` (Task 5 defines it; this task uses a stub struct with title, alt title, running head, version, date, revisions, and a stand-in is replaced in Task 5), body elements.
 - Produces: `render.Build`, `render.Package` with `Parts []Part{Name string; Data []byte}` in zip order, `Package.WriteTo(io.Writer) error`.
 
-- [ ] write the failing tests: `Build` with an empty body produces exactly the eleven XML parts and the logo; every part parses with etree; `styles.xml` defines the nine styles with the house literals (Heading1 32 half-points, bold, `22265F`, 240 twips before); `numbering.xml` has two abstract lists with the three bullet glyphs `●`, `○`, `■` and the numbered formats at the house indents; `header2.xml` carries a `wp:anchor` with the logo's extents and offsets in EMU derived from the house points and `behindDoc` as the config says; `header1.xml` carries the running head text and the orange run; `document.xml` opens with the cover lines at 29pt bold centred, then the three tables with the row heights, cell fills (`#F5D1AE` on the first cell of version control), padding and border widths from the config, then the TOC field with the house `instr` and the `w:fldChar begin/separate/end` sequence, then the `sectPr` with A4 in twips (`11906` by `16838`), margins, `titlePg`, and the four references; a title containing `&` and `<` is escaped; the zip lists `[Content_Types].xml` first
-- [ ] run the tests and watch them fail
-- [ ] implement, porting gen.py function by function and reading every value from the config
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): render builds the house docx shell from house.yaml`
+- [x] write the failing tests: `Build` with an empty body produces exactly the eleven XML parts and the logo; every part parses with etree; `styles.xml` defines the nine styles with the house literals (Heading1 32 half-points, bold, `22265F`, 240 twips before); `numbering.xml` has two abstract lists with the three bullet glyphs `●`, `○`, `■` and the numbered formats at the house indents; `header2.xml` carries a `wp:anchor` with the logo's extents and offsets in EMU derived from the house points and `behindDoc` as the config says; `header1.xml` carries the running head text and the orange run; `document.xml` opens with the cover lines at 29pt bold centred, then the three tables with the row heights, cell fills (`#F5D1AE` on the first cell of version control), padding and border widths from the config, then the TOC field with the house `instr` and the `w:fldChar begin/separate/end` sequence, then the `sectPr` with A4 in twips (`11906` by `16838`), margins, `titlePg`, and the four references; a title containing `&` and `<` is escaped; the zip lists `[Content_Types].xml` first
+- [x] run the tests and watch them fail
+- [x] implement, porting gen.py function by function and reading every value from the config
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): render builds the house docx shell from house.yaml`
+
+**Notes:**
+
+The parts are **twelve** XML parts plus the logo, not eleven: `[Content_Types].xml`,
+`_rels/.rels`, `word/_rels/document.xml.rels`, `word/_rels/header2.xml.rels`,
+`document.xml`, `styles.xml`, `numbering.xml`, `settings.xml`, `header1.xml`,
+`header2.xml`, `footer1.xml`, `footer2.xml`, then `word/media/logo.png`. The
+Technical Details section above lists all twelve, so the count in the checkbox
+was the slip. The test names them as literals, in zip order.
+
+`Package.Write(io.Writer) error`, not `WriteTo`. `go vet` reads the name
+`WriteTo` as `io.WriterTo` and requires `(int64, error)`, which is a byte count
+nothing here has to offer, and `make vet` is a gate.
+
+`behindDoc` is `0`, which is gen.py's value: `house.yaml`'s `logo.anchor` states
+`in`, `relative_h`, `offset_x_pt`, `relative_v`, `offset_y_pt`, `wrap` and
+`wrap_dist_pt`, and no `behind_doc` key. What the anchor does read from the
+config is the wrap: `square` writes `wp:wrapSquare`, and any other value is
+refused by name rather than written as a square anyway.
+
+Three cover questions this task did not settle, and each belongs to Task 5:
+
+- The house file offers the title line twice, either side of an `or`, so a
+  person filling the cover in by hand picks one. Nothing marks the second as an
+  alternative, so a note with a title renders as the title, then `or`, then the
+  template's highlighted placeholder. ⚠️ Task 5 decides how a filled title
+  collapses the pair.
+- The version line's own runs read `Version: ` then a highlighted `1.0`. A note
+  that gives a version replaces the whole line with its value, gen.py's rule, so
+  the word `Version:` goes with it. ⚠️ Task 5 decides whether the label stays.
+- `Fields.Revisions` is carried and not placed. The revision history table is
+  spelled out cell by cell in `house.yaml`, so a note's own rows have nowhere to
+  go until the cover milestone.
+
+`render` imports `archive/zip`, `etree` and `internal/house`, and nothing else
+outside the standard library. No `net/http`, no `internal/gapi`, no `os/exec`.
+
+Coverage: 94.1% of statements. The goldens under `testdata/` are the eleven
+parts a build with an empty body writes, `document.xml` excepted, which is
+asserted value by value instead. `go test ./internal/render -update` rewrites
+them.
+
+The built file was read back with python-docx as a check that Word can open it:
+three tables, 33 paragraphs, A4 at 7560310 by 10692130 EMU, and a different
+first page.
+
 
 ---
 
