@@ -1318,9 +1318,11 @@ reaches the XML as text somebody formatted.
 
 **A properties element is a sequence, and Word reads one out of order as a
 document to repair.** That holds for `w:pPr`, where `para` writes the children
-in schema order for that reason, and for `w:tblPr`, where the schema is
+in schema order for that reason, for `w:tblPr`, where the schema is
 `tblStyle, tblW, jc, tblCellSpacing, tblInd, tblBorders, shd, tblLayout,
-tblCellMar, tblLook`. Both table writers used to break it, `render/front.go`
+tblCellMar, tblLook`, and for `word/settings.xml`, where `CT_Settings` puts
+`evenAndOddHeaders` a long way in front of `updateFields` and gen.py wrote the
+two the other way round. Both table writers used to break it, `render/front.go`
 with `tblLayout` in front of `tblBorders` and `body/table.go` with
 `tblCellMar` in front of `tblLayout`, and neither the goldens nor the drift
 gate reads child order. So each writer has its own order test now, stating the
@@ -1450,8 +1452,8 @@ marker on a paragraph nobody sees. So `itemBlocks` arms `pendingMark`,
 way out so a nested list takes its own.
 
 **What the walker will not render is a warning naming the line, never a silent
-drop.** Fenced and indented code blocks, blocks of HTML, inline HTML, and the
-list marker an item holding none of those can carry. Nail
+drop.** Fenced and indented code blocks, blocks of HTML, inline HTML, footnotes,
+and the list marker an item holding none of those can carry. Nail
 decided code blocks stay out of the house style, and a note carrying one has to
 say so on the envelope. A picture inside a list item, a block quote or a table
 cell is the same answer: the house style puts a figure on a centred line of its
@@ -1462,6 +1464,24 @@ way. A picture at an `http` address is a **refusal** rather
 than a warning, v1's rule: a document built from a link is one that breaks when
 the link expires. A relative path is resolved against the note's own directory
 and a `data:` URI is decoded, because those bytes arrived with the markdown.
+
+**The footnote extension is on so that a footnote can be refused.** With it off,
+`[^1]` and `[^1]: the text` are ordinary markdown text, so they published as
+prose with nothing on the envelope. That is not a hypothetical note: `read`
+writes a document's footnotes in exactly that shape, a marker in the prose and
+the definitions after a `---` line, so a note pulled out of a Doc and built back
+into one carried the markers into the published document. goldmark collects
+every definition into one list at the end of the file whatever order they were
+written in, so each footnote is named by its own line rather than the list's.
+
+**An email autolink carries the `mailto:` scheme, and the label does not.**
+goldmark puts the scheme on in its HTML renderer and never in `AutoLink.URL`, so
+the address arrives at `inline.go` bare. Written into a relationship as it
+arrives it is a relative URI reference, which Word resolves against the
+document's own location: the link opens nothing, and a contact address is
+ordinary in a policy. The run's text stays the bare address, which is what the
+author typed. An internal anchor link is the case still open, in
+`docs/backlog/internal-anchor-links.md`.
 
 **`cover` reads v1's keys, and refuses to invent a title.** `title` required;
 `alt_title`, `doc_type`, `version`, `date`, `owner`, `last_approval`,
@@ -1476,6 +1496,16 @@ candidate drawn from the first heading or the file name, and the skill proposes
 it. Nothing in Go writes a title into somebody's note.
 `classification` is the one value still validated, because it shades a fixed row
 in the front matter, so an unknown value would silently shade nothing.
+
+**A header or footer line carries its own size on the paragraph mark.** An
+empty line's height is its paragraph mark's size, and `house.yaml` states 9pt on
+the two lines under the running head and 12pt on the footer's blank line, which
+is what the master carries there. `house.Paragraph.SizePt` and `.Color` were
+parsed and never written, so all three fell back to the document's 11pt default
+and the running head block came out taller than the master's. `regionMark` is
+where that lives now. No drift item reads a paragraph mark, in either gate, so
+nothing would have named it: the Docs API has no paragraph mark to read, which
+is why the row is not there.
 
 **A missing `version` and a missing `date` both take v1's default**, `1.0` and
 the month the build runs in. Neither is tidiness: a cover line whose field is

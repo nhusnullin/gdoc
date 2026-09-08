@@ -160,6 +160,13 @@ func parse() goldmark.Markdown {
 				}),
 			),
 			Mark,
+			// Footnotes are not in the house style, and the extension is
+			// what makes that a warning rather than a silent publish: with
+			// it off, "[^1]" and "[^1]: the detail" are ordinary text, so a
+			// note read back out of a Google Doc, where `read` writes its
+			// footnotes in exactly that shape, publishes the markers as
+			// prose.
+			extension.Footnote,
 		),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 	)
@@ -445,8 +452,10 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		//
 		// The line named is the fence, which is what the author sees. A fenced
 		// block's own lines start at its first line of code, one further down.
+		// An empty fence carries no lines at all, so r.line falls back to 1
+		// and the step back would name line 0, which is no line in any file.
 		r.warn("line %d: a code block is not rendered in the house style and was left out",
-			r.line(node)-1)
+			max(r.line(node)-1, 1))
 		r.afterTable = false
 		return nil
 
@@ -464,6 +473,21 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 	case *ast.HTMLBlock:
 		r.warn("line %d: a block of HTML is not rendered in the house style and was left out",
 			r.line(node))
+		r.afterTable = false
+		return nil
+
+	case *east.FootnoteList:
+		// goldmark collects every footnote definition into one list at the
+		// end of the document, whatever order the author wrote them in, so
+		// each one is named by its own line rather than by the list's.
+		for note := typed.FirstChild(); note != nil; note = note.NextSibling() {
+			line := 1
+			if at, ok := r.descendantLine(note); ok {
+				line = at
+			}
+			r.warn("line %d: a footnote is not rendered in the house style and was left out",
+				line)
+		}
 		r.afterTable = false
 		return nil
 

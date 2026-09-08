@@ -147,3 +147,44 @@ func TestTheFirstPageFooterIsIndentedTheWayTheHouseSaysAndCarriesItsTabs(t *test
 		t.Errorf("the first page footer line spacing is %q, want 480 (2.0)", got)
 	}
 }
+
+// The running head's rule line and the blank line under it are 9pt, and the
+// height of a line carrying no words is its paragraph mark's own size. Written
+// without one, both fell back to the document's 11pt default and the running
+// head block came out taller than the master's. The master carries
+// w:sz 18 on the paragraph mark of both.
+func TestTheRunningHeadsOwnLinesCarryTheirSizeOnTheParagraphMark(t *testing.T) {
+	pkg := build(t)
+	doc := parse(t, part(t, pkg, "word/header1.xml"))
+	paragraphs := doc.FindElement("//w:hdr").ChildElements()
+	if len(paragraphs) != 3 {
+		t.Fatalf("the running head carries %d paragraphs, want 3", len(paragraphs))
+	}
+	for _, i := range []int{1, 2} {
+		mark := paragraphs[i].FindElement("w:pPr/w:rPr")
+		if mark == nil {
+			t.Errorf("header paragraph %d carries no paragraph mark, so its height is the document default", i+1)
+			continue
+		}
+		if got := mark.FindElement("w:sz").SelectAttrValue("w:val", ""); got != "18" {
+			t.Errorf("header paragraph %d mark size = %q, want 18 half-points (9pt)", i+1, got)
+		}
+	}
+}
+
+// The footer's own blank line is 12pt navy, for the same reason.
+func TestTheFootersBlankLineCarriesItsSizeAndColourOnTheParagraphMark(t *testing.T) {
+	pkg := build(t)
+	doc := parse(t, part(t, pkg, "word/footer1.xml"))
+	first := doc.FindElement("//w:ftr").ChildElements()[0]
+	mark := first.FindElement("w:pPr/w:rPr")
+	if mark == nil {
+		t.Fatal("the footer's first paragraph carries no paragraph mark, so its height is the document default")
+	}
+	if got := mark.FindElement("w:sz").SelectAttrValue("w:val", ""); got != "24" {
+		t.Errorf("footer mark size = %q, want 24 half-points (12pt)", got)
+	}
+	if got := mark.FindElement("w:color").SelectAttrValue("w:val", ""); got != "22265f" {
+		t.Errorf("footer mark colour = %q, want 22265f", got)
+	}
+}

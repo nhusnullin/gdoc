@@ -977,3 +977,63 @@ func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 		})
 	}
 }
+
+// A footnote warns naming the author's own line and reaches no paragraph.
+//
+// The path is not hypothetical: v2's own `read` writes a document's footnotes
+// as "[^1]" in the prose and "[^1]: the text" after a rule, so a note pulled
+// out of a Google Doc and built back into one carried the markers as published
+// prose. The extension is what turns that into a warning.
+func TestAFootnoteWarnsAndIsLeftOut(t *testing.T) {
+	out := walk(t, "A claim.[^1]\n\nMore words.\n\n[^1]: The supporting detail.\n")
+
+	if len(out.Warnings) != 1 {
+		t.Fatalf("the result carries %d warnings, want 1: %v", len(out.Warnings), out.Warnings)
+	}
+	if !strings.Contains(out.Warnings[0], "line 5") {
+		t.Errorf("the warning does not name line 5, where the note is: %s", out.Warnings[0])
+	}
+	if !strings.Contains(out.Warnings[0], "footnote") {
+		t.Errorf("the warning does not say what was left out: %s", out.Warnings[0])
+	}
+	got := serialise(t, out.Blocks)
+	for _, unwanted := range []string{"supporting detail", "[^1]"} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("%q reached the document:\n%s", unwanted, got)
+		}
+	}
+	if out.Counts.Paragraphs != 2 {
+		t.Errorf("counted %d paragraphs, want the two the author wrote", out.Counts.Paragraphs)
+	}
+}
+
+// Every footnote is named, and by its own line rather than the list's: goldmark
+// collects the definitions into one list at the end of the document, so the
+// list's own position says nothing about where the author wrote them.
+func TestEveryFootnoteIsNamedByItsOwnLine(t *testing.T) {
+	out := walk(t, "A claim.[^a] Another.[^b]\n\n[^a]: The first detail.\n\n[^b]: The second.\n")
+
+	if len(out.Warnings) != 2 {
+		t.Fatalf("the result carries %d warnings, want 2: %v", len(out.Warnings), out.Warnings)
+	}
+	lines := strings.Join(out.Warnings, "\n")
+	for _, want := range []string{"line 3", "line 5"} {
+		if !strings.Contains(lines, want) {
+			t.Errorf("no warning names %s:\n%s", want, lines)
+		}
+	}
+}
+
+// An empty fence names the line the author sees, and never line 0. The fenced
+// arm steps one line back from the block's first line of code, and an empty
+// fence has no lines at all.
+func TestAnEmptyFenceNamesARealLine(t *testing.T) {
+	out := walk(t, "Words.\n\n```\n```\n")
+
+	if len(out.Warnings) != 1 {
+		t.Fatalf("the result carries %d warnings, want 1: %v", len(out.Warnings), out.Warnings)
+	}
+	if strings.Contains(out.Warnings[0], "line 0") {
+		t.Errorf("the warning names line 0, which is no line in any file: %s", out.Warnings[0])
+	}
+}

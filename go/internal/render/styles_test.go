@@ -120,3 +120,26 @@ func TestTheDocumentDefaultsAreElevenPointCalibriAtOnePointOneFive(t *testing.T)
 		t.Errorf("the default space after is %q, want 120 twips", got)
 	}
 }
+
+// word/settings.xml is a sequence like every other properties element here.
+// CT_Settings puts evenAndOddHeaders a long way before updateFields, and Word
+// reads a part whose children are out of order as a document to repair. The
+// sequence is written out as a literal list, the way the two table writers and
+// w:pPr state theirs.
+func TestSettingsChildrenAreInSchemaOrder(t *testing.T) {
+	pkg := build(t)
+	doc := parse(t, part(t, pkg, "word/settings.xml"))
+	var got []string
+	for _, e := range doc.FindElement("//w:settings").ChildElements() {
+		got = append(got, e.Tag)
+	}
+	want := []string{"evenAndOddHeaders", "updateFields"}
+	if len(got) != len(want) {
+		t.Fatalf("settings carries %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("settings child %d is %q, want %q (order: %v)", i, got[i], want[i], got)
+		}
+	}
+}

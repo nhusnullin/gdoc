@@ -173,3 +173,35 @@ func TestStrikethroughKeepsItsTextAndItsMark(t *testing.T) {
 		t.Errorf("struck run = %#v, want the strike carried onto it", got)
 	}
 }
+
+// An email autolink carries the mailto: scheme, because goldmark puts it on in
+// its HTML renderer and never in URL(). Written into a relationship bare, the
+// address is a relative URI reference: Word resolves it against the document's
+// own location and the link opens nothing. The label stays bare.
+func TestAnEmailAutolinkCarriesTheMailtoScheme(t *testing.T) {
+	for _, markdown := range []string{
+		"write to <nail@altery.com> if unsure\n",
+		"write to nail@altery.com if unsure\n",
+	} {
+		runs := firstBlockRuns(t, markdown)
+
+		got := runCarrying(t, runs, "nail@altery.com")
+		if got.Link != "mailto:nail@altery.com" {
+			t.Errorf("%q: link = %q, want mailto:nail@altery.com", markdown, got.Link)
+		}
+		if got.Text != "nail@altery.com" {
+			t.Errorf("%q: text = %q, want the bare address", markdown, got.Text)
+		}
+	}
+}
+
+// A web autolink is left exactly as it is: the scheme is already in it, and
+// prefixing one would break every link in a note.
+func TestAWebAutolinkKeepsItsOwnScheme(t *testing.T) {
+	runs := firstBlockRuns(t, "see https://example.com/h for more\n")
+
+	got := runCarrying(t, runs, "https://example.com/h")
+	if got.Link != "https://example.com/h" {
+		t.Errorf("link = %q, want the destination untouched", got.Link)
+	}
+}

@@ -108,7 +108,12 @@ func (b *builder) styleElement(id, name string, s house.Style, based string, isD
 // the contents list arrive filled in rather than empty.
 func (b *builder) settingsPart() []byte {
 	doc, root := newPart("w:settings")
-	sub(root, "w:updateFields", "w:val", "true")
+	// CT_Settings is a sequence like every other properties element here, and
+	// evenAndOddHeaders comes a long way before updateFields in it. Written
+	// the other way round, which is what the Python spike wrote, Word reads
+	// the part as a document to repair. gen.py had the same order and the
+	// master carries neither element, so nothing downstream would name it.
 	sub(root, "w:evenAndOddHeaders", "w:val", "false")
+	sub(root, "w:updateFields", "w:val", "true")
 	return b.serialise(doc, "word/settings.xml")
 }

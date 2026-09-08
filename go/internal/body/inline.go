@@ -121,8 +121,24 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 			appendInline(out, typed, source, next)
 		case *ast.AutoLink:
 			label := string(typed.URL(source))
+			// goldmark puts the mailto: scheme on an email autolink in its
+			// HTML renderer, never in URL(), so the address arrives here
+			// bare. Written into a relationship as-is it is a relative URI
+			// reference, which Word resolves against the document's own
+			// location: the link opens nothing. The label stays bare, which
+			// is the address the author typed.
+			target := label
+			if typed.AutoLinkType == ast.AutoLinkEmail &&
+				!strings.HasPrefix(strings.ToLower(target), "mailto:") {
+				target = "mailto:" + target
+			}
 			*out = append(*out, Run{Text: label, Bold: m.bold, Italic: m.italic,
-				Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: label})
+				Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: target})
+		case *east.FootnoteLink, *east.FootnoteBacklink:
+			// The reference to a footnote the walker does not render. The
+			// warning is on the footnote itself, where the author's own line
+			// is, so the marker leaves no half of a footnote behind here.
+			continue
 		case *ast.Image:
 			// Handled by collectImages. Its alt text is not rendered here,
 			// which matches the reference renderer: an image inside a

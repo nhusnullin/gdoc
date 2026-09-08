@@ -31,6 +31,7 @@ func (b *builder) footerPart(region house.Region, name string) []byte {
 			After:       spec.SpaceAfterPt,
 			Line:        lineOr(spec.LineSpacing, region.LineSpacing),
 			IndentStart: region.IndentStartPt,
+			Mark:        regionMark(spec),
 		})
 		b.regionRuns(p, spec)
 		root.AddChild(p)
@@ -50,6 +51,7 @@ func (b *builder) regionParagraph(spec house.Paragraph, region house.Region, log
 		Before: spec.SpaceBeforePt,
 		After:  spec.SpaceAfterPt,
 		Line:   lineOr(spec.LineSpacing, region.LineSpacing),
+		Mark:   regionMark(spec),
 	})
 	if spec.Rule != nil {
 		b.ruleRun(p, *spec.Rule)
@@ -64,6 +66,22 @@ func (b *builder) regionParagraph(spec house.Paragraph, region house.Region, log
 		b.logoDrawing(p)
 	}
 	return p
+}
+
+// regionMark is the paragraph mark's own run properties, which is where a
+// header or footer paragraph's own size and colour belong.
+//
+// It is not decoration. An empty line's height is its paragraph mark's size,
+// so the two 9pt lines under the running head and the 12pt line above the
+// footer text fell back to the document's 11pt default and the block came out
+// taller than the master's. The house file states those sizes on the
+// paragraph, and the master carries them on the paragraph mark.
+func regionMark(spec house.Paragraph) *runOpts {
+	o := runOpts{SizePt: spec.SizePt, Color: spec.Color}
+	if o.empty() {
+		return nil
+	}
+	return &o
 }
 
 // regionRuns writes a header or footer paragraph's runs: words, tabs, or the

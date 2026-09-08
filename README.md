@@ -811,8 +811,11 @@ a document built from a link is a document that breaks when the link expires.
 
 Code blocks are not rendered. The house style has nothing to render them in, so
 a note carrying one gets a warning naming the line and the block is left out
-rather than dropped in silence. Blocks of HTML and inline HTML are the same
-answer. So is a picture inside a list item, a block quote or a table cell: the
+rather than dropped in silence. Blocks of HTML, inline HTML and footnotes are
+the same answer. Footnotes matter more than they look: `gdoc read` writes a
+document's footnotes as `[^1]` in the prose and the definitions after a `---`
+line, so a note pulled out of a Doc carries them, and each one is named by the
+line the author wrote it on. So is a picture inside a list item, a block quote or a table cell: the
 house style puts a figure on a centred line of its own, which it cannot be
 there, and the warning names the line.
 
