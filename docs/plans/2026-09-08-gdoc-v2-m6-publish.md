@@ -157,12 +157,12 @@ Three failure shapes, and each says something different:
 
 ### Task 2: `gapi` gains a multipart write
 
-- [ ] Test first in `go/internal/gapi/session_test.go`: the request carries `multipart/related` with its boundary, the JSON metadata part first and the file part second, the bearer, and the caller's context; the 401 retry sends **the same bytes and the same boundary**; a 2xx answer that does not decode is marked `Sent()`, and a guard refusal is not.
-- [ ] Implement `Session.PostMultipart(ctx, rawURL string, meta any, part []byte, partType string, into any) error`. The whole body and its boundary are built once, before the closure, from `crypto/rand`; the closure only wraps those bytes in a request.
-- [ ] Give `bodyRequest` a content-type parameter rather than reusing it as it is, since it hardcodes `application/json` today. `PostJSON` and `PatchJSON` pass the same value they set now.
-- [ ] The metadata part is encoded with `encoding/json`, so nothing a note holds reaches the wire as text somebody formatted.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): a multipart write in gapi"`
+- [x] Test first in `go/internal/gapi/session_test.go`: the request carries `multipart/related` with its boundary, the JSON metadata part first and the file part second, the bearer, and the caller's context; the 401 retry sends **the same bytes and the same boundary**; a 2xx answer that does not decode is marked `Sent()`, and a guard refusal is not.
+- [x] Implement `Session.PostMultipart(ctx, rawURL string, meta any, part []byte, partType string, into any) error`. The whole body and its boundary are built once, before the closure, from `crypto/rand`; the closure only wraps those bytes in a request.
+- [x] Give `bodyRequest` a content-type parameter rather than reusing it as it is, since it hardcodes `application/json` today. `PostJSON` and `PatchJSON` pass the same value they set now.
+- [x] The metadata part is encoded with `encoding/json`, so nothing a note holds reaches the wire as text somebody formatted.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): a multipart write in gapi"`
 
 ### Task 3: the publish record's shape
 

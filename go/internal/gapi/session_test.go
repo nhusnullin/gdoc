@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -826,5 +828,331 @@ func TestASentErrorStillCarriesItsCause(t *testing.T) {
 	}
 	if !errors.Is(mark(false, fmt.Errorf("nothing was sent: %w", cause)), cause) {
 		t.Error("an unmarked error lost its cause too, so the wrapping itself is wrong")
+	}
+}
+
+// The multipart write is M6's. A publish uploads a docx with conversion, which
+// Drive takes as one multipart/related body: a JSON metadata part naming the
+// folder and the title, then the file's bytes. The guard judges that body by
+// reading the first part, so everything below is about the request the guard
+// judged being the request that goes on the wire.
+
+const uploadFolder = "0BxFolder00000000000000000000000000000000"
+
+// uploadURL is the create route a multipart upload goes out on. The three
+// signals the guard reads are here: the /upload path and uploadType=multipart,
+// and PostMultipart sets the third, the media type.
+func uploadURL() string {
+	return "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true"
+}
+
+// openCreating builds a session whose only door is one folder to create in,
+// which is the policy cmdPublish opens.
+func openCreating(t *testing.T, w *wire) *Session {
+	t.Helper()
+	p := guard.NewPolicy()
+	p.AllowCreateIn(uploadFolder)
+	s, err := Open(p, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// uploadMeta is the metadata part a publish sends: the folder, the title and
+// the conversion Drive is being asked for.
+func uploadMeta() map[string]any {
+	return map[string]any{
+		"name":     "Supplier Register Policy",
+		"parents":  []string{uploadFolder},
+		"mimeType": "application/vnd.google-apps.document",
+	}
+}
+
+const docxType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+// docxBytes stands in for a rendered document. It opens with the zip magic and
+// carries a CR LF, so a body assembled by hand rather than by mime/multipart
+// would show up as a part that ends in the wrong place.
+var docxBytes = []byte("PK\x03\x04\r\n--not-a-boundary\r\nbytes")
+
+// readParts splits a recorded request back into its parts, the way Drive's own
+// parser would: the boundary comes from the Content-Type header and never from
+// the body.
+func readParts(t *testing.T, r seen) []struct {
+	Type string
+	Body []byte
+} {
+	t.Helper()
+	mediaType, params, err := mime.ParseMediaType(r.ContentType)
+	if err != nil {
+		t.Fatalf("Content-Type %q cannot be read: %v", r.ContentType, err)
+	}
+	if mediaType != "multipart/related" {
+		t.Fatalf("media type = %q, want multipart/related", mediaType)
+	}
+	if params["boundary"] == "" {
+		t.Fatal("the Content-Type names no boundary, so nothing can tell where the metadata ends")
+	}
+	var out []struct {
+		Type string
+		Body []byte
+	}
+	mr := multipart.NewReader(strings.NewReader(r.Body), params["boundary"])
+	for {
+		part, err := mr.NextRawPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("part %d could not be read: %v", len(out)+1, err)
+		}
+		body, err := io.ReadAll(part)
+		if err != nil {
+			t.Fatalf("part %d could not be read: %v", len(out)+1, err)
+		}
+		if got := len(part.Header); got != 1 {
+			t.Errorf("part %d carries %d headers %v, want only its Content-Type", len(out)+1, got, part.Header)
+		}
+		out = append(out, struct {
+			Type string
+			Body []byte
+		}{part.Header.Get("Content-Type"), body})
+	}
+	return out
+}
+
+// TestPostMultipartSendsTheMetadataFirstAndTheFileSecond is the shape Drive
+// reads and the shape the guard judges. The order is not a nicety: the guard
+// reads the first part and stops, so a file part written first would be a
+// create whose parents nothing can check.
+func TestPostMultipartSendsTheMetadataFirstAndTheFileSecond(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) {
+		return 200, `{"id":"` + createdID + `","name":"Supplier Register Policy"}`
+	}}
+	s := openCreating(t, w)
+
+	var into struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	err := s.PostMultipart(context.Background(), uploadURL(), uploadMeta(), docxBytes, docxType, &into)
+	if err != nil {
+		t.Fatalf("PostMultipart: %v", err)
+	}
+	if into.ID != createdID || into.Name != "Supplier Register Policy" {
+		t.Errorf("decoded %+v, want the new id and the title", into)
+	}
+	reqs := w.requests()
+	if len(reqs) != 1 {
+		t.Fatalf("sent %d requests, want 1: %+v", len(reqs), reqs)
+	}
+	if reqs[0].Method != http.MethodPost {
+		t.Errorf("method = %q, want POST", reqs[0].Method)
+	}
+	if got := reqs[0].Auth; len(got) != 1 || got[0] != "Bearer OLD" {
+		t.Errorf("Authorization = %v, want exactly one bearer", got)
+	}
+	if reqs[0].Accept != "application/json" {
+		t.Errorf("Accept = %q, want application/json", reqs[0].Accept)
+	}
+	parts := readParts(t, reqs[0])
+	if len(parts) != 2 {
+		t.Fatalf("the body carries %d parts, want the metadata then the file", len(parts))
+	}
+	if mediaType, _, err := mime.ParseMediaType(parts[0].Type); err != nil || mediaType != "application/json" {
+		t.Errorf("the first part's Content-Type = %q, want application/json", parts[0].Type)
+	}
+	// The metadata is encoded with encoding/json, so nothing a note holds
+	// reaches the wire as text somebody formatted.
+	wantMeta, err := json.Marshal(uploadMeta())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(parts[0].Body) != string(wantMeta) {
+		t.Errorf("the metadata part = %q, want %q", parts[0].Body, wantMeta)
+	}
+	if parts[1].Type != docxType {
+		t.Errorf("the file part's Content-Type = %q, want %q", parts[1].Type, docxType)
+	}
+	if string(parts[1].Body) != string(docxBytes) {
+		t.Errorf("the file part = %q, want the bytes it was given %q", parts[1].Body, docxBytes)
+	}
+}
+
+// TestPostMultipartCarriesTheCallersContext is the rule every other request
+// here follows: a publish runs inside whatever bounds its caller has, and a
+// request that built its own background context is the one nothing can cancel.
+func TestPostMultipartCarriesTheCallersContext(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	type key struct{}
+	var carried bool
+	w := &wire{}
+	w.answer = func(n int, r *http.Request) (int, string) {
+		carried = r.Context().Value(key{}) == "the caller's"
+		return 200, `{"id":"` + createdID + `"}`
+	}
+	s := openCreating(t, w)
+
+	ctx := context.WithValue(context.Background(), key{}, "the caller's")
+	if err := s.PostMultipart(ctx, uploadURL(), uploadMeta(), docxBytes, docxType, nil); err != nil {
+		t.Fatalf("PostMultipart: %v", err)
+	}
+	if !carried {
+		t.Error("the request did not carry the caller's context")
+	}
+}
+
+// TestA401OnAMultipartRetriesWithTheSameBytesAndBoundary is why the body is
+// built once, outside the closure send rebuilds the request through. A boundary
+// generated per attempt would send bytes the guard never judged, which is the
+// one thing this whole package exists to prevent.
+func TestA401OnAMultipartRetriesWithTheSameBytesAndBoundary(t *testing.T) {
+	path := tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) {
+		if n == 0 {
+			return 401, `{"error":{"message":"Invalid Credentials"}}`
+		}
+		return 200, `{"id":"` + createdID + `"}`
+	}}
+	s := openCreating(t, w)
+
+	if err := s.PostMultipart(context.Background(), uploadURL(), uploadMeta(), docxBytes, docxType, nil); err != nil {
+		t.Fatalf("PostMultipart: %v", err)
+	}
+	reqs := w.requests()
+	if len(reqs) != 3 {
+		t.Fatalf("sent %d requests, want the upload, the refresh and the retry: %+v", len(reqs), reqs)
+	}
+	if reqs[1].Host != "oauth2.googleapis.com" {
+		t.Errorf("second request was to %s, want the token host", reqs[1].Host)
+	}
+	if got := reqs[2].Auth; len(got) != 1 || got[0] != "Bearer NEW" {
+		t.Errorf("the retry carried %v, want the refreshed token", got)
+	}
+	if reqs[2].Body != reqs[0].Body || reqs[2].Body == "" {
+		t.Errorf("the retry sent %d bytes, want the same body as the first attempt's %d", len(reqs[2].Body), len(reqs[0].Body))
+	}
+	if reqs[2].ContentType != reqs[0].ContentType {
+		t.Errorf("the retry declared %q, want the first attempt's boundary %q", reqs[2].ContentType, reqs[0].ContentType)
+	}
+	if got := savedToken(t, path).AccessToken; got != "NEW" {
+		t.Errorf("saved access token = %q, want NEW", got)
+	}
+}
+
+// TestTwoMultipartUploadsUseDifferentBoundaries keeps the boundary a fresh
+// random value per call rather than a constant. A constant is a string a
+// caller's own bytes could carry, and the part that ends early is then the
+// metadata part the guard judged.
+func TestTwoMultipartUploadsUseDifferentBoundaries(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) { return 200, `{"id":"` + createdID + `"}` }}
+	s := openCreating(t, w)
+
+	for i := 0; i < 2; i++ {
+		if err := s.PostMultipart(context.Background(), uploadURL(), uploadMeta(), docxBytes, docxType, nil); err != nil {
+			t.Fatalf("PostMultipart %d: %v", i, err)
+		}
+	}
+	reqs := w.requests()
+	if len(reqs) != 2 {
+		t.Fatalf("sent %d requests, want 2", len(reqs))
+	}
+	if reqs[0].ContentType == reqs[1].ContentType {
+		t.Errorf("both uploads declared %q, want a boundary drawn fresh each time", reqs[0].ContentType)
+	}
+}
+
+// TestAMultipartAnswerThatIsNotJSONIsMarkedAsSent is the difference publish
+// acts on. Drive made the document, and the answer carrying its id is what
+// could not be read: a caller told the upload failed is a caller that uploads a
+// second document.
+func TestAMultipartAnswerThatIsNotJSONIsMarkedAsSent(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) { return 200, "not json" }}
+	s := openCreating(t, w)
+
+	err := s.PostMultipart(context.Background(), uploadURL(), uploadMeta(), docxBytes, docxType, &struct{}{})
+	if err == nil {
+		t.Fatal("a 200 carrying no JSON came back as success")
+	}
+	if !wasSent(err) {
+		t.Errorf("error %q is not marked as sent, and Drive had already made the document", err)
+	}
+}
+
+// TestAMultipartCreateTheGuardRefusesIsNotMarkedAsSent is the other direction,
+// and it is the half that matters most: an upload naming a folder this run was
+// never given must never read as a document that exists.
+func TestAMultipartCreateTheGuardRefusesIsNotMarkedAsSent(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{}
+	s := openCreating(t, w)
+
+	meta := uploadMeta()
+	meta["parents"] = []string{"0BxSomeoneElsesFolder000000000000000000"}
+
+	err := s.PostMultipart(context.Background(), uploadURL(), meta, docxBytes, docxType, nil)
+	if err == nil {
+		t.Fatal("an upload into a folder nobody named was carried")
+	}
+	if !strings.Contains(err.Error(), "guard refused") {
+		t.Errorf("error = %q, want the guard's refusal", err)
+	}
+	if wasSent(err) {
+		t.Errorf("a guard refusal is marked as sent: %q", err)
+	}
+	if n := len(w.requests()); n != 0 {
+		t.Errorf("the fake wire saw %d requests; a refused upload must not reach it", n)
+	}
+}
+
+// TestPostMultipartNamesMetadataItCannotEncode keeps a body that cannot be
+// built off the wire, the way PostJSON does.
+func TestPostMultipartNamesMetadataItCannotEncode(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{}
+	s := openCreating(t, w)
+
+	err := s.PostMultipart(context.Background(), uploadURL(), make(chan int), docxBytes, docxType, nil)
+	if err == nil {
+		t.Fatal("metadata that cannot be encoded came back as success")
+	}
+	if wasSent(err) {
+		t.Errorf("a body that never left the machine is marked as sent: %q", err)
+	}
+	if n := len(w.requests()); n != 0 {
+		t.Errorf("the fake wire saw %d requests; a body that could not be encoded must not reach it", n)
+	}
+}
+
+// TestAMultipartUploadIsCarriedAndTeachesThePolicy is the two halves of M6
+// meeting: the body gapi builds is the body the guard's own parser reads, and
+// the id that comes back is learned from the create the guard carried. Written
+// separately they could each be right and still disagree.
+func TestAMultipartUploadIsCarriedAndTeachesThePolicy(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) { return 200, `{"id":"` + createdID + `"}` }}
+	p := guard.NewPolicy()
+	p.AllowCreateIn(uploadFolder)
+	s, err := Open(p, w)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PostMultipart(context.Background(), uploadURL(), uploadMeta(), docxBytes, docxType, nil); err != nil {
+		t.Fatalf("PostMultipart: %v", err)
+	}
+	if n := len(w.requests()); n != 1 {
+		t.Fatalf("sent %d requests, want the upload", n)
+	}
+	// The new document is reachable now, and only because the guard carried the
+	// create that made it. A trash on the rollback path depends on this.
+	if err := s.PatchJSON(context.Background(), trashURL(), map[string]any{"trashed": true}, nil); err != nil {
+		t.Errorf("the id the create returned was not learned: %v", err)
+	}
+	if len(p.Warnings()) != 0 {
+		t.Errorf("Warnings() = %v, want none on a create whose answer read", p.Warnings())
 	}
 }
