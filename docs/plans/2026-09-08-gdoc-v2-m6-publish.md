@@ -202,12 +202,57 @@ statements, against the 80% the plan asks for.
 
 ### Task 5: the `publish` command, and the re-read rule that is publish's own
 
-- [ ] Test first in `go/cmd/gdoc/publish_test.go`: strict argument parsing in every shape; a note that already carries a `gdoc:` block, refused before anything leaves the machine; a note whose block **appeared** during the upload, rolled back; a note whose **body changed** under the render, rolled back; a note that could not be read again, rolled back; and the envelope on each.
-- [ ] Implement `cmdPublish` in `go/cmd/gdoc/publish.go`: render, open the policy with `AllowCreateIn` and nothing else, open the session, call `publish.Run`, re-read the note, write the block, and roll back on any failure of the last two.
-- [ ] Extract the render step `build` and `publish` share into one function returning one struct, carrying `title`, `house`, `bytes` and the body counts, so the two commands cannot print overlapping shapes that drift. Carry over `cmdBuild`'s `readHouse`, `pictures`, `notAnInput` and `absolute` helpers whole rather than re-deriving them.
-- [ ] `dispatch` gains `publish`, and the usage string with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc publish"`
+- [x] Test first in `go/cmd/gdoc/publish_test.go`: strict argument parsing in every shape; a note that already carries a `gdoc:` block, refused before anything leaves the machine; a note whose block **appeared** during the upload, rolled back; a note whose **body changed** under the render, rolled back; a note that could not be read again, rolled back; and the envelope on each.
+- [x] Implement `cmdPublish` in `go/cmd/gdoc/publish.go`: render, open the policy with `AllowCreateIn` and nothing else, open the session, call `publish.Run`, re-read the note, write the block, and roll back on any failure of the last two.
+- [x] Extract the render step `build` and `publish` share into one function returning one struct, carrying `title`, `house`, `bytes` and the body counts, so the two commands cannot print overlapping shapes that drift. Carry over `cmdBuild`'s `readHouse`, `pictures`, `notAnInput` and `absolute` helpers whole rather than re-deriving them.
+- [x] `dispatch` gains `publish`, and the usage string with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc publish"`
+
+**The shared render is `noteSource` and `renderNote`, both in `build.go`.**
+`renderNote` returns one `noteDocx`: the bytes, the cover title, the running
+head, the style's name, the walker's counts, the pictures the note names and the
+warnings. `cmdBuild` writes the bytes and `cmdPublish` uploads them, and
+`TestBuildAndPublishRenderTheSameBytes` compares the file `build` wrote against
+the part `publish` uploaded, so the two cannot drift. The four helpers were
+carried over whole: `readHouse` is called inside `renderNote`, and `pictures`,
+`notAnInput` and `absolute` stayed in `cmdBuild`, because publish has no `--out`
+and so has no file to alias.
+
+`noteSource` is separate from `renderNote` for publish's sake. Publish needs the
+note's bytes twice over: the `gdoc:` block it refuses to republish is read out
+of them before the render, and the same bytes are what `pair` compares the
+re-read against.
+
+**The re-read refuses four things, and each one is a rollback.** A note that
+could not be read again, one whose front matter no longer parses, one whose
+block has **appeared**, and one whose bytes changed at all. The third is the
+inverse of `freshNote`'s rule, which is what the plan called for. The fourth is
+written as the whole file rather than the body alone: the author's own front
+matter feeds the cover, so a title edited during the upload is as stale a render
+as an edited paragraph, and there is no honest way to call one of them a change
+and the other not.
+
+**`rolled_back` is a `*bool`, absent on a run that recorded the pairing.** With
+a plain bool and `omitempty` the failed-rollback case, which is the run where
+the live id matters most, would have printed nothing at all; without
+`omitempty` every clean publish would say `rolled_back: false` about a rollback
+nobody tried. A rollback that held clears `document_id` and `url`, because
+naming a document that has gone sends somebody to look for it.
+
+**`title` on the envelope is the read-back's and `published.title` in the note
+is the cover's.** They are two different facts: what Drive named the file, and
+what went on the cover. `publish.Run` already warns when they disagree, and a
+read-back that did not happen leaves the envelope's field out rather than
+filling it in with the title that was asked for.
+
+`session` in `cmd/gdoc` gained `PostMultipart`, so it satisfies
+`publish.Session`. Both test fakes gained it too: `fakeWire` records the
+metadata part as the call's body and keeps the file part beside it, and
+`fakeSession` refuses it by name, the way it already refuses a POST from a read
+command.
+
+Coverage: `cmd/gdoc` is at 87.7% of statements.
 
 ### Task 6: the v1 pairing decision, written down
 

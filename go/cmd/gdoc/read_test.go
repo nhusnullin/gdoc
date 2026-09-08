@@ -74,6 +74,10 @@ func (f *fakeSession) PatchJSON(_ context.Context, rawURL string, _ any, _ any) 
 	return fmt.Errorf("a read command must not PATCH: %s", rawURL)
 }
 
+func (f *fakeSession) PostMultipart(_ context.Context, rawURL string, _ any, _ []byte, _ string, _ any) error {
+	return fmt.Errorf("a read command must not upload: %s", rawURL)
+}
+
 func (f *fakeSession) Warnings() []string { return f.warnings }
 
 // stubSession stands in for gapi.Open and keeps the policy the command opened,
