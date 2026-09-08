@@ -29,6 +29,11 @@ type wireCall struct {
 	Method string
 	URL    string
 	Body   []byte
+	// Part and PartType are the second half of a multipart create: the file
+	// bytes and what they are. They are empty on every other call, which is
+	// also how a test finds the create among the reads.
+	Part     []byte
+	PartType string
 }
 
 // answer is one canned reply, matched on the method and a substring of the URL.
@@ -126,6 +131,29 @@ func (f *fakeWire) write(_ context.Context, method, rawURL string, body any, int
 	}
 	f.calls = append(f.calls, wireCall{Method: method, URL: rawURL, Body: raw})
 	a, err := f.find(method, rawURL)
+	if err != nil {
+		return err
+	}
+	if a.err != nil {
+		return a.err
+	}
+	if into == nil || a.json == "" {
+		return nil
+	}
+	return json.Unmarshal([]byte(a.json), into)
+}
+
+// PostMultipart is the upload. The metadata part is recorded as the body, so a
+// test reads it the way it reads every other write, and the file part is kept
+// beside it: what a publish uploaded is the half of the contract this package
+// owns.
+func (f *fakeWire) PostMultipart(_ context.Context, rawURL string, meta any, part []byte, partType string, into any) error {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	f.calls = append(f.calls, wireCall{Method: "POST", URL: rawURL, Body: raw, Part: part, PartType: partType})
+	a, err := f.find("POST", rawURL)
 	if err != nil {
 		return err
 	}

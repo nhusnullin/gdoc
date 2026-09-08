@@ -40,10 +40,17 @@ type Block struct {
 	Proposals       []Proposal       `yaml:"proposals,omitempty"`
 }
 
-// Published is what publish (M6) records about the version it made.
+// Published is what publish records about the document it made: when it was
+// made, the title that went on its cover, and where the house style came from,
+// either "embedded" or the path a --house run named.
+//
+// There is no revision id. Reading one back would need a Drive route the guard
+// does not carry, for a field nothing here reads, so a block carrying
+// revision_id is refused by name under the strict read.
 type Published struct {
-	At         time.Time `yaml:"at"`
-	RevisionID string    `yaml:"revision_id"`
+	At    time.Time `yaml:"at"`
+	Title string    `yaml:"title"`
+	House string    `yaml:"house,omitempty"`
 }
 
 // SuggestionsSeen is the snapshot `gdoc suggestions --md` writes after a
@@ -96,6 +103,14 @@ func (b *Block) Validate() error {
 	}
 	if b.FolderID != "" && !driveID.MatchString(b.FolderID) {
 		return fmt.Errorf("gdoc front matter: folder_id %q is not a Drive id", b.FolderID)
+	}
+	if b.Published != nil {
+		if b.Published.At.IsZero() {
+			return fmt.Errorf("gdoc front matter: published.at is required")
+		}
+		if b.Published.Title == "" {
+			return fmt.Errorf("gdoc front matter: published.title is required")
+		}
 	}
 	if b.SuggestionsSeen != nil {
 		for i, item := range b.SuggestionsSeen.Items {

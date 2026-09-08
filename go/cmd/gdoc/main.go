@@ -16,7 +16,7 @@ import (
 	"gdoc/internal/guard"
 )
 
-const usage = "Commands: auth status, auth login, read, comments, suggestions, probe, reply, propose, withdraw, build"
+const usage = "Commands: auth status, auth login, read, comments, suggestions, probe, reply, propose, withdraw, build, publish"
 
 // login is the login flow behind a variable so a test can stand in for the
 // browser trip. The client is the guard's, so even the token exchange passes a
@@ -98,6 +98,8 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 			return cmdWithdraw(args[1:])
 		case "build":
 			return cmdBuild(args[1:])
+		case "publish":
+			return cmdPublish(args[1:])
 		}
 	}
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown

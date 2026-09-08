@@ -78,6 +78,9 @@ func readFrom(d *document) (*Block, error) {
 	span := normalize(strings.Join(d.lines[d.gdocStart:d.gdocEnd], ""))
 	var w wrapper
 	if err := yaml.UnmarshalWithOptions([]byte(span), &w, yaml.Strict()); err != nil {
+		if id, ok := v1Pairing(span); ok {
+			return nil, v1Refusal(id)
+		}
 		return nil, fmt.Errorf("gdoc front matter: %w", err)
 	}
 	if w.Gdoc == nil {
@@ -87,6 +90,35 @@ func readFrom(d *document) (*Block, error) {
 		return nil, err
 	}
 	return w.Gdoc, nil
+}
+
+// v1Pairing reports the id when the gdoc: key holds a plain string, which is
+// how v1's `gdoc generate` wrote the pairing. It is asked only once the strict
+// read has already refused the span, so it costs nothing on a block that reads.
+//
+// A key holding any other scalar is not v1's pairing and does not get v1's
+// sentence: telling somebody to rewrite `gdoc: 3` as a document id sends them
+// the wrong way.
+func v1Pairing(span string) (string, bool) {
+	var loose struct {
+		Gdoc any `yaml:"gdoc"`
+	}
+	if err := yaml.Unmarshal([]byte(span), &loose); err != nil {
+		return "", false
+	}
+	id, ok := loose.Gdoc.(string)
+	return id, ok
+}
+
+// v1Refusal is the whole migration story a person gets, because there is no
+// other one. Nail decided on 2026-09-08 that the reader keeps refusing v1's
+// shape: publish is the only command that creates the block, and the three that
+// write into one refuse a note that has none, so no schema-0 shape enters the
+// reader. So the refusal names the shape it found, the id inside it, and
+// the two ways out.
+func v1Refusal(id string) error {
+	return fmt.Errorf("gdoc front matter: the %s: key is the plain string %q, which is how v1 wrote the pairing, and this gdoc reads a block; write it as a %s: block carrying schema: %d and document_id: %s, or take the line out and pair the note again with gdoc publish",
+		key, id, key, Schema, id)
 }
 
 // Write returns src with the gdoc: block replaced, added inside the existing

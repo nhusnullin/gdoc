@@ -9,8 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"strings"
 	"time"
@@ -172,7 +175,7 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	create := isCreate(req.URL, req.Method)
 	if create {
-		if err := t.checkParent(body); err != nil {
+		if err := t.checkParent(req, body); err != nil {
 			closeBody(send)
 			return nil, err
 		}
@@ -365,22 +368,189 @@ func isCreate(u *url.URL, method string) bool {
 // command was given. A create whose parents the guard cannot read is refused:
 // not knowing never resolves to carrying it.
 //
-// That includes a multipart upload today. The body of a multipart create opens
-// with the MIME boundary, not with the metadata object, so this parse fails and
-// the create is refused. The /upload grammar the policy allows is therefore
-// unreachable until something here reads the first MIME part, which is M6's
-// job: it is the milestone that publishes a docx. Failing closed is the right
-// direction to be wrong in, so it stays refused rather than half-parsed.
-func (t *transport) checkParent(body []byte) error {
-	if err := hasDuplicateKeys(body); err != nil {
+// There are two body shapes, and multipartCreate decides which one this is
+// before a single byte is parsed. A plain JSON create is the whole body. A
+// multipart create is the first MIME part, and everything behind that part is
+// opaque bytes the guard does not read. Either way the metadata reaches the
+// same duplicate-key and parents check, which is the point of splitting the
+// parse out rather than writing the rule twice.
+func (t *transport) checkParent(req *http.Request, body []byte) error {
+	isMultipart, params, err := multipartCreate(req)
+	if err != nil {
 		return err
 	}
-	var meta struct {
+	meta := body
+	if isMultipart {
+		if meta, err = metadataPart(params["boundary"], body); err != nil {
+			return err
+		}
+	}
+	return t.checkParentMetadata(meta)
+}
+
+// checkParentMetadata is the rule itself, over the bytes that carry the create's
+// metadata whichever shape the request took.
+func (t *transport) checkParentMetadata(meta []byte) error {
+	if err := hasDuplicateKeys(meta); err != nil {
+		return err
+	}
+	var parsed struct {
 		Parents []string `json:"parents"`
 	}
 	folder := t.policy.createFolder()
-	if err := json.Unmarshal(body, &meta); err != nil || len(meta.Parents) != 1 || meta.Parents[0] != folder {
+	if err := json.Unmarshal(meta, &parsed); err != nil || len(parsed.Parents) != 1 || parsed.Parents[0] != folder {
 		return fmt.Errorf("guard refused: create must name exactly the folder %q", folder)
+	}
+	return nil
+}
+
+// multipartRelated is the media type a multipart create carries. Drive's own
+// documentation names it, and it is the third of the three signals below.
+const multipartRelated = "multipart/related"
+
+// multipartCreate reports whether this create's body is multipart, and refuses
+// the request when the three signals that decide it disagree.
+//
+// Drive picks the parser for a create body from three things: the /upload path,
+// the uploadType or upload_protocol value, and the media type on the request.
+// The guard has to pick its parser from the same three, because a guard reading
+// JSON where Drive reads multipart, or the reverse, is judging a request it is
+// not sending. That is the class "Authorization" beside "authorization" belongs
+// to, and it is the one this package exists to close.
+//
+// Before M6 the guard picked from nothing at all: it tried JSON and refused
+// whatever would not parse. Two mismatches failed closed under that, and by
+// luck rather than by design. Drive refuses a JSON body sent under
+// uploadType=multipart, so no 2xx came back and no id was learned; and a
+// multipart body with no upload parameter died on the guard's own JSON parse.
+// Teaching the guard to parse multipart is exactly what would have turned both
+// into a body judged one way and sent another, so this rule lands with the
+// parse and never after it.
+//
+// All three or none. A create that states some of them is refused naming what
+// each one said, because the guard has no basis for deciding which of the three
+// Drive will obey.
+// The media type's own parameters come back with the answer, because the
+// boundary metadataPart needs is one of them and parsing the header twice is
+// two readings of one value.
+func multipartCreate(req *http.Request) (bool, map[string]string, error) {
+	onUploadPath := strings.HasPrefix(req.URL.Path, "/upload")
+	byParameter := uploadShape(req.URL) == "multipart"
+	mediaType, params, err := requestMediaType(req)
+	if err != nil {
+		return false, nil, err
+	}
+	byMediaType := mediaType == multipartRelated
+	switch {
+	case onUploadPath && byParameter && byMediaType:
+		return true, params, nil
+	case !onUploadPath && !byParameter && !byMediaType:
+		return false, nil, nil
+	}
+	return false, nil, refuse("a multipart create is three signals that have to agree, and this one has the /upload path %v, a multipart upload parameter %v and the media type %q: Drive picks its body parser from all three, so a disagreement is a body judged one way and sent another",
+		onUploadPath, byParameter, mediaType)
+}
+
+// requestMediaType is the request's own media type, folded, with its parameters
+// dropped. An absent Content-Type is "", which is not multipart and so reads as
+// a plain JSON create.
+//
+// It walks the raw header map rather than calling Header.Get, which
+// canonicalises the key it looks up and so finds nothing stored as
+// "content-type". checkWireMatchesJudgment has already refused a request
+// carrying two spellings of one header name, so there is at most one value to
+// find here.
+func requestMediaType(req *http.Request) (string, map[string]string, error) {
+	raw := headerValue(req.Header, "Content-Type")
+	if raw == "" {
+		return "", nil, nil
+	}
+	mediaType, params, err := mime.ParseMediaType(raw)
+	if err != nil {
+		return "", nil, refuse("the Content-Type %q cannot be read, so the guard cannot tell how Drive will parse the body: %v", raw, err)
+	}
+	return strings.ToLower(mediaType), params, nil
+}
+
+func headerValue(h http.Header, name string) string {
+	for key, vals := range h {
+		if strings.EqualFold(key, name) && len(vals) > 0 {
+			return vals[0]
+		}
+	}
+	return ""
+}
+
+// metadataPart returns the bytes of a multipart create's first part, which is
+// the metadata Drive reads the parents out of.
+//
+// The boundary is a parameter multipartCreate read off the Content-Type header,
+// never anything found in the body. Scanning the body for something that looks
+// like a boundary would let the file's own bytes move where the guard thinks
+// the metadata ends, and the header is the value Google's own parser uses.
+// mime.ParseMediaType, which read it, also refuses a boundary given twice,
+// where a hand-rolled split would take one of the two and leave the server the
+// other.
+//
+// The guard reads the first part and stops. Its media type must be JSON,
+// because a part the guard reads as JSON while Drive reads it as something else
+// is the same mismatch one layer in, and it may carry no
+// Content-Transfer-Encoding: the guard reads raw bytes and Drive would decode
+// them. Everything behind that part is opaque.
+//
+// body is the peek, so a metadata part whose closing boundary sits past the cap
+// ends the part read short and is refused rather than judged half-read. The
+// metadata part is small and first, so no request gdoc builds can reach that;
+// one somebody adds later can, and the refusal is how they find out.
+func metadataPart(boundary string, body []byte) ([]byte, error) {
+	if boundary == "" {
+		return nil, refuse("the request's multipart/related Content-Type names no boundary, so the guard cannot tell where the metadata part ends")
+	}
+	// NextRawPart, not NextPart: NextPart decodes a quoted-printable part, and
+	// the guard must read the bytes Drive is sent rather than a decoding of
+	// them. An encoded part is refused below instead.
+	part, err := multipart.NewReader(bytes.NewReader(body), boundary).NextRawPart()
+	if err != nil {
+		return nil, refuse("the multipart body's first part could not be read within the first %d bytes: %v", maxPeek, err)
+	}
+	defer part.Close()
+	if err := checkPartHeaders(part.Header); err != nil {
+		return nil, err
+	}
+	meta, err := io.ReadAll(part)
+	if err != nil {
+		return nil, refuse("the multipart body's metadata part could not be read within the first %d bytes: %v", maxPeek, err)
+	}
+	return meta, nil
+}
+
+// allowedPartHeaders are the headers the metadata part may carry. It is an
+// allowlist for the same reason the request's own header rule is one: a header
+// is another spelling of something that changes what the server does with the
+// bytes, and blocking them one at a time needs a patch each time somebody finds
+// another. gdoc writes exactly one header on this part.
+var allowedPartHeaders = map[string]bool{"content-type": true}
+
+func checkPartHeaders(h textproto.MIMEHeader) error {
+	for key, vals := range h {
+		lower := strings.ToLower(key)
+		if strings.EqualFold(key, "Content-Transfer-Encoding") {
+			return refuse("the metadata part carries Content-Transfer-Encoding %q: the guard reads the part's raw bytes and Drive would decode them, so the two would read one body two ways", strings.Join(vals, ","))
+		}
+		if !allowedPartHeaders[lower] {
+			return refuse("the metadata part carries the header %q, which is not one gdoc writes and which the guard has decided nothing about", key)
+		}
+		if len(vals) != 1 {
+			return refuse("the metadata part carries %d values for the header %q, and which one the server reads is not decided here", len(vals), key)
+		}
+	}
+	raw := h.Get("Content-Type")
+	mediaType, _, err := mime.ParseMediaType(raw)
+	if err != nil {
+		return refuse("the metadata part's Content-Type %q cannot be read, so the guard cannot tell how Drive will parse it: %v", raw, err)
+	}
+	if !strings.EqualFold(mediaType, "application/json") {
+		return refuse("the metadata part's media type is %q, and the guard reads the parents out of JSON: a part it read as JSON while Drive read it as something else is one body read two ways", mediaType)
 	}
 	return nil
 }

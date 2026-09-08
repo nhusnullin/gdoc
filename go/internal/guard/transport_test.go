@@ -134,19 +134,29 @@ func TestCreateWithUnreadableParentsIsRefused(t *testing.T) {
 	}
 }
 
-func TestUploadCreateAlsoTeachesThePolicy(t *testing.T) {
+// TestUploadCreateWithADisagreeingBodyIsRefused was the carry until M6. The
+// request says uploadType=multipart and sends a plain JSON body, so Drive
+// parses it as multipart and the guard parsed it as JSON: two readings of one
+// body. It failed closed by luck rather than by design, because Drive refuses
+// the request and no 2xx ever came back to learn an id from. Now that the guard
+// can parse multipart, the disagreement is refused by name, before the wire.
+//
+// The carry lives in multipart_test.go, where all three signals agree.
+func TestUploadCreateWithADisagreeingBodyIsRefused(t *testing.T) {
 	f := &fake{status: 200, body: `{"id":"UPLOADED"}`}
 	p := NewPolicy()
 	p.AllowCreateIn("FOLDER1")
 	c := NewClient(p, f)
-	resp, err := c.Post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+	_, err := c.Post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
 		"application/json", bytes.NewReader([]byte(`{"parents":["FOLDER1"]}`)))
-	if err != nil {
-		t.Fatal(err)
+	if err == nil || !strings.Contains(err.Error(), "guard refused") {
+		t.Fatalf("want a guard refusal, got %v", err)
 	}
-	resp.Body.Close()
-	if p.files["UPLOADED"] != LevelFull {
-		t.Fatal("the uploaded create was not learned at LevelFull")
+	if len(f.seen) != 0 {
+		t.Fatal("it reached the wire")
+	}
+	if _, known := p.files["UPLOADED"]; known {
+		t.Fatal("an id was learned from a create the guard read the wrong way")
 	}
 }
 
@@ -286,27 +296,8 @@ func TestABigCreateResponseSurvivesThePeek(t *testing.T) {
 	}
 }
 
-// A multipart create is refused today: its body opens with the MIME boundary,
-// not with the metadata object. This pins the refusal so M6 notices it has to
-// read the first part rather than discovering the /upload grammar is dead.
-func TestAMultipartCreateIsRefusedForNow(t *testing.T) {
-	f := &fake{status: 200, body: `{"id":"X"}`}
-	p := NewPolicy()
-	p.AllowCreateIn("FOLDER1")
-	c := NewClient(p, f)
-	body := "--BOUND\r\nContent-Type: application/json\r\n\r\n{\"parents\":[\"FOLDER1\"]}\r\n--BOUND--\r\n"
-	_, err := c.Post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-		"multipart/related; boundary=BOUND", strings.NewReader(body))
-	if err == nil || !strings.Contains(err.Error(), "guard refused") {
-		t.Fatalf("a multipart create is refused until something reads the first part, got %v", err)
-	}
-	if len(f.seen) != 0 {
-		t.Fatal("it reached the wire")
-	}
-}
-
 // A create whose metadata sits past the peek is refused rather than carried
-// unread.
+// unread. The multipart half of the same rule is in multipart_test.go.
 func TestACreateBiggerThanThePeekIsRefused(t *testing.T) {
 	f := &fake{status: 200, body: `{"id":"X"}`}
 	p := NewPolicy()

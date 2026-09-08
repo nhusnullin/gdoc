@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/drive"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/suggestions"
 )
@@ -128,7 +129,12 @@ func create(ctx context.Context, s Session, folderID string) (string, error) {
 		if sentAnyway(err) {
 			return "", fmt.Errorf("Drive accepted the create and its answer could not be read, so a probe document may be in folder %q with no id for gdoc to name or trash it: %w", folderID, err)
 		}
-		return "", fmt.Errorf("the probe document could not be created in folder %q: %w", folderID, err)
+		// Everything else says the create failed and claims nothing about what
+		// is in the folder. A guard refusal never left the machine and a 4xx is
+		// Drive turning the create down, but a 5xx or a dropped connection is
+		// neither, and gdoc cannot tell it apart from them. The wrapped error
+		// carries the status, which is the only thing here that can say which.
+		return "", fmt.Errorf("the create of the probe document in folder %q failed: %w", folderID, err)
 	}
 	if answer.ID == "" {
 		// Without an id nothing further is reachable: the guard learns the new
@@ -220,21 +226,29 @@ func insertionIDs(d *docs.Document) []string {
 
 // trash puts the document away and confirms it went. It answers with the fact
 // and the warnings rather than an error: the probe's question is whether
-// SUGGEST is honoured, and a document that is still in the folder does not
-// change that answer. It does need saying out loud, which is what the warning
-// is for.
+// SUGGEST is honoured, and a document left in the folder does not change that
+// answer. It does need saying out loud, which is what the warning is for.
+//
+// The three steps are internal/drive's, because publish takes its document back
+// the same way and a second copy of them is a second chance for the two to
+// disagree about whether an unconfirmed trash counts as a trash. What stays here
+// is what the document is and what a failure costs.
+//
+// The warning says the document **may** still be in the folder, and never that
+// it is, because it is one string over drive.Trash's three failures and it takes
+// the weakest of the three. Only one of them knows where the file is: a
+// read-back answering trashed: false is Drive saying the document is there, and
+// this prefix understates it by one word. The other two do not. A failed PATCH
+// covers a 5xx and a dropped connection, which Drive may have applied, and an
+// unconfirmed read-back says nothing either way: a warning opening with "is
+// still in the folder" in front of "Drive took the trash and could not be asked
+// to confirm it" contradicts itself in one sentence and sends somebody to delete
+// a document that is almost certainly already trashed. Understating the one is
+// the cheaper mistake, because not knowing must never resolve to a fact, in
+// either direction.
 func trash(ctx context.Context, s Session, id string) (bool, []string) {
-	if err := s.PatchJSON(ctx, fileURL(id), map[string]any{"trashed": true}, nil); err != nil {
-		return false, []string{fmt.Sprintf("the probe document %q could not be trashed and is still in the folder: %v", id, err)}
-	}
-	var answer struct {
-		Trashed bool `json:"trashed"`
-	}
-	if err := s.GetJSON(ctx, trashedURL(id), &answer); err != nil {
-		return false, []string{fmt.Sprintf("the probe document %q was trashed, but Drive could not be asked to confirm it: %v", id, err)}
-	}
-	if !answer.Trashed {
-		return false, []string{fmt.Sprintf("the probe document %q was trashed and Drive still reports it as not trashed", id)}
+	if err := drive.Trash(ctx, s, id); err != nil {
+		return false, []string{fmt.Sprintf("the probe document %q may still be in the folder: %v", id, err)}
 	}
 	return true, nil
 }
@@ -249,16 +263,6 @@ func createURL() string {
 // batchURL is the one write path the Docs API has.
 func batchURL(id string) string {
 	return "https://docs.googleapis.com/v1/documents/" + id + ":batchUpdate"
-}
-
-// fileURL is files.update, which is how Drive spells trashing.
-func fileURL(id string) string {
-	return "https://www.googleapis.com/drive/v3/files/" + id + "?supportsAllDrives=true"
-}
-
-// trashedURL is files.get asking the one question the confirmation has.
-func trashedURL(id string) string {
-	return "https://www.googleapis.com/drive/v3/files/" + id + "?fields=trashed&supportsAllDrives=true"
 }
 
 // sentAnyway says whether the request reached Drive in spite of the error. The

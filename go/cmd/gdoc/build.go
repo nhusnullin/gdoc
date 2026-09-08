@@ -4,7 +4,8 @@
 // no policy and no session, because there is no wire to judge: the house style
 // is embedded in the binary, the pictures come from the note's own directory,
 // and the file is written through internal/atomicfile. Publishing the result
-// into Drive is M6's, and it is a different command.
+// into Drive is `gdoc publish`, a different command, and it renders through the
+// same renderNote below rather than through a second path.
 //
 // Nothing here decides anything either. The cover words are the note's, the
 // sizes and colours are house.yaml's, and what the walker could not render is a
@@ -73,58 +74,105 @@ func cmdBuild(raw []string) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
-	source, err := os.ReadFile(md)
-	if err != nil {
-		return emit.Result{OK: false, Error: fmt.Sprintf("the note could not be read: %v", err)}
-	}
-	fields, markdown, err := cover.Read(source)
-	if err != nil {
-		return emit.Result{OK: false, Error: titleError(err, string(markdown), md)}
-	}
-
-	cfg, style, err := readHouse(a)
+	source, err := noteSource(md)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-
-	// The note's own directory, because a picture in a note is written relative
-	// to the note rather than to wherever the command was run from.
-	walked, err := body.Render(cfg, keepLines(source, markdown), filepath.Dir(md), fields.HeadingNumbering)
+	doc, err := renderNote(source, md, a)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	// The note's pictures are inputs too, and which files they are is only
 	// known once the walk has read them. Asked before the walk, the check
 	// covered the two flags and left `--out diagram.png --force` replacing the
-	// picture it had just embedded.
-	if err := notAnInput(out, pictures(walked.Sources)...); err != nil {
+	// picture it had just embedded. Nothing has been written yet, because the
+	// render zips into memory.
+	if err := notAnInput(out, pictures(doc.Sources)...); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
+	if err := atomicfile.Replace(out, doc.Docx, atomicfile.ModeOf(out, buildMode)); err != nil {
+		return emit.Result{OK: false, Error: fmt.Sprintf("the document could not be written: %v", err),
+			Warnings: doc.Warnings}
+	}
 
+	return emit.Result{OK: true, Warnings: doc.Warnings, Data: buildData{
+		Out:         absolute(out),
+		Bytes:       int64(len(doc.Docx)),
+		Title:       doc.Title,
+		RunningHead: doc.RunningHead,
+		House:       doc.House,
+		Body:        doc.Counts,
+	}}
+}
+
+// noteDocx is one note rendered: the bytes, the words the cover took off it,
+// the style it was built from, what the walker counted, the pictures it read
+// and what it could not render.
+//
+// Both commands that turn a note into a document print from this one struct.
+// build writes the bytes to a file and publish uploads them, and two renders
+// written twice would be two documents that slowly stopped being the same one.
+type noteDocx struct {
+	Docx        []byte
+	Title       string
+	RunningHead string
+	House       string
+	Counts      body.Counts
+	Sources     []string
+	Warnings    []string
+}
+
+// noteSource reads the note both commands start from. It is one function because
+// publish reads the bytes for its own reason as well: the block it refuses to
+// republish is in them, and the same bytes are what the re-read after the
+// upload is compared against.
+func noteSource(md string) ([]byte, error) {
+	source, err := os.ReadFile(md)
+	if err != nil {
+		return nil, fmt.Errorf("the note could not be read: %v", err)
+	}
+	return source, nil
+}
+
+// renderNote turns the note into docx bytes. It reaches nothing and writes
+// nothing: the house style is embedded or named by --house, the pictures come
+// from the note's own directory, and the package is zipped into memory.
+//
+// Zipping whole before the caller does anything with the bytes is deliberate. A
+// package that cannot be serialised leaves no half a file behind under the name
+// somebody asked for, and no half a document in somebody's Drive.
+func renderNote(source []byte, md string, a *args) (*noteDocx, error) {
+	fields, markdown, err := cover.Read(source)
+	if err != nil {
+		return nil, errors.New(titleError(err, string(markdown), md))
+	}
+	cfg, style, err := readHouse(a)
+	if err != nil {
+		return nil, err
+	}
+	// The note's own directory, because a picture in a note is written relative
+	// to the note rather than to wherever the command was run from.
+	walked, err := body.Render(cfg, keepLines(source, markdown), filepath.Dir(md), fields.HeadingNumbering)
+	if err != nil {
+		return nil, err
+	}
 	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return nil, err
 	}
-
-	// Zipped whole before anything is written, so a package that cannot be
-	// serialised leaves no half a file behind under the name somebody asked for.
 	var buf bytes.Buffer
 	if err := pkg.Write(&buf); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return nil, err
 	}
-	if err := atomicfile.Replace(out, buf.Bytes(), atomicfile.ModeOf(out, buildMode)); err != nil {
-		return emit.Result{OK: false, Error: fmt.Sprintf("the document could not be written: %v", err),
-			Warnings: walked.Warnings}
-	}
-
-	return emit.Result{OK: true, Warnings: walked.Warnings, Data: buildData{
-		Out:         absolute(out),
-		Bytes:       int64(buf.Len()),
+	return &noteDocx{
+		Docx:        buf.Bytes(),
 		Title:       fields.CoverTitle(),
 		RunningHead: fields.RunningHead(),
 		House:       style,
-		Body:        walked.Counts,
-	}}
+		Counts:      walked.Counts,
+		Sources:     walked.Sources,
+		Warnings:    walked.Warnings,
+	}, nil
 }
 
 // freeToWrite refuses a file that is already there unless --force says

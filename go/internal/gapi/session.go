@@ -5,8 +5,9 @@
 // is what stops the bearer, the Accept header and the refresh rule from being
 // written three slightly different ways in three reader packages.
 //
-// A read is a GET and a write is a POST or a PATCH carrying JSON, and all three
-// go through one refresh policy, in send below.
+// A read is a GET, and a write is a POST or a PATCH carrying JSON or a POST
+// carrying a multipart/related upload. All of them go through one refresh
+// policy, in send below.
 package gapi
 
 import (
@@ -16,7 +17,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
 
 	"gdoc/internal/auth"
@@ -123,6 +127,91 @@ func (s *Session) PatchJSON(ctx context.Context, rawURL string, body any, into a
 	return s.writeJSON(ctx, http.MethodPatch, rawURL, body, into)
 }
 
+// PostMultipart uploads part to rawURL as a multipart/related create: a JSON
+// metadata part first, then the bytes, which is the one body shape Drive takes
+// a file and its metadata in. It is what a publish sends, and the guard reads
+// the metadata part out of it to check the folder before anything goes out.
+//
+// The whole body and its boundary are built once, here, and not inside the
+// closure send rebuilds the request through. A boundary drawn per attempt would
+// put different bytes on the retry than on the attempt the guard judged, which
+// is the one thing this package exists to prevent.
+func (s *Session) PostMultipart(ctx context.Context, rawURL string, meta any, part []byte, partType string, into any) error {
+	body, contentType, err := relatedBody(meta, part, partType)
+	if err != nil {
+		return fmt.Errorf("the upload for %s could not be built: %w", rawURL, err)
+	}
+	answer, err := s.send(ctx, rawURL, s.bodyRequest(http.MethodPost, rawURL, body, contentType), MaxJSONBody)
+	if err != nil {
+		return err
+	}
+	if into == nil {
+		return nil
+	}
+	if err := json.Unmarshal(answer, into); err != nil {
+		// Drive made the file: send only returns a body on a 2xx. So this is a
+		// lost answer rather than a create that did not happen, and a caller
+		// told otherwise uploads a second document.
+		return sent(fmt.Errorf("%s answered 200 with a body that is not JSON: %w", rawURL, err))
+	}
+	return nil
+}
+
+// relatedBody assembles the two parts and returns the bytes and the media type
+// that names their boundary.
+//
+// The metadata is encoded with encoding/json, so nothing a note holds reaches
+// the wire as text somebody formatted. The parts are written with
+// mime/multipart, whose boundary comes from crypto/rand: a constant would be a
+// string the file's own bytes could carry, and the part that then ended early
+// is the metadata part the guard judged. Each part carries its Content-Type and
+// no other header, which is what the guard allows and what Drive needs.
+func relatedBody(meta any, part []byte, partType string) ([]byte, string, error) {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return nil, "", fmt.Errorf("the metadata could not be encoded as JSON: %w", err)
+	}
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	if err := writePart(w, metadataType, raw); err != nil {
+		return nil, "", err
+	}
+	if err := writePart(w, partType, part); err != nil {
+		return nil, "", err
+	}
+	if err := w.Close(); err != nil {
+		return nil, "", err
+	}
+	// FormatMediaType, not a concatenation: it quotes a boundary that needs it,
+	// and it is the shape mime.ParseMediaType reads back, which is what the
+	// guard and Drive both parse the header with.
+	contentType := mime.FormatMediaType(multipartRelated, map[string]string{"boundary": w.Boundary()})
+	if contentType == "" {
+		return nil, "", fmt.Errorf("the boundary %q cannot be written into a Content-Type", w.Boundary())
+	}
+	return buf.Bytes(), contentType, nil
+}
+
+// metadataType is the media type Google's own documentation puts on the
+// metadata part of a multipart create.
+const metadataType = "application/json; charset=UTF-8"
+
+// multipartRelated is the media type of the whole body. Drive picks its parser
+// from this, the /upload path and the uploadType parameter together, and the
+// guard refuses the request when the three disagree.
+const multipartRelated = "multipart/related"
+
+func writePart(w *multipart.Writer, contentType string, body []byte) error {
+	h := make(textproto.MIMEHeader, 1)
+	h.Set("Content-Type", contentType)
+	part, err := w.CreatePart(h)
+	if err != nil {
+		return err
+	}
+	_, err = part.Write(body)
+	return err
+}
+
 // writeJSON is both write verbs in one place, for the reason this package
 // exists: a second copy of the marshal, the headers and the refresh rule is a
 // second place for them to drift.
@@ -131,7 +220,7 @@ func (s *Session) writeJSON(ctx context.Context, method, rawURL string, body any
 	if err != nil {
 		return fmt.Errorf("the body for %s could not be encoded as JSON: %w", rawURL, err)
 	}
-	answer, err := s.send(ctx, rawURL, s.bodyRequest(method, rawURL, raw), MaxJSONBody)
+	answer, err := s.send(ctx, rawURL, s.bodyRequest(method, rawURL, raw, "application/json"), MaxJSONBody)
 	if err != nil {
 		return err
 	}
@@ -173,13 +262,18 @@ func (s *Session) getRequest(rawURL, accept string) requestFor {
 // bodyRequest is a write. bytes.Reader is what makes http.NewRequestWithContext
 // set ContentLength and GetBody itself, so the guard peeks the same bytes the
 // wire carries and the transport can rewind a broken connection over them.
-func (s *Session) bodyRequest(method, rawURL string, raw []byte) requestFor {
+//
+// The content type is the caller's, because a multipart body's own type names
+// the boundary the parts were written with. Building that header here would be
+// a second place the boundary is decided, and the guard reads the body the way
+// this header says it is written.
+func (s *Session) bodyRequest(method, rawURL string, raw []byte, contentType string) requestFor {
 	return func(ctx context.Context) (*http.Request, error) {
 		req, err := http.NewRequestWithContext(ctx, method, rawURL, bytes.NewReader(raw))
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 		req.Header.Set("Accept", "application/json")
 		return req, nil
 	}

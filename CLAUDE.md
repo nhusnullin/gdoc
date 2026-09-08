@@ -37,7 +37,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 
 | Path | Holds |
 |---|---|
-| `go/cmd/gdoc/` | `main.go`, `read.go`, `write.go` and `build.go`. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | `main.go`, `read.go`, `write.go`, `build.go` and `publish.go`. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -53,6 +53,8 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/reply/` | one 🤖 reply into a thread, and the thread read back |
 | `go/internal/propose/` | a change as a suggestion, its 🤖 comment, and the three read-backs |
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
+| `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
+| `go/internal/drive/` | the trash, its confirming read, and nothing else Drive does |
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
@@ -61,18 +63,19 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the three opt-in end-to-end tests, one read and two writes. Tests only, no production code |
+| `go/internal/live/` | the opt-in end-to-end tests, one read and four writes, plus the one render check that asks for no network. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 5 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 6 are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
 `probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
-`comments --wait`, and builds a house-style docx from a note with `build`. The
-review skill is rewritten over those and can stay live on one document, and
-`gdoc` on PATH is v2 from M3 on. Uploading what `build` wrote is M6's.
+`comments --wait`, builds a house-style docx from a note with `build`, and puts
+that docx into Drive as a Google Doc with `publish`. The review skill is
+rewritten over those and can stay live on one document, and `gdoc` on PATH is v2
+from M3 on. Restyling a document in place is M7's.
 
 ### The auth commands, and what reaches stdout
 
@@ -123,7 +126,7 @@ The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
 `gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
-than an oversight. There is no help command: `dispatch` matches the ten
+than an oversight. There is no help command: `dispatch` matches the eleven
 commands and nothing else, so `--help` comes back as an unknown command with the
 one-line `usage` string in the error. A caller reads the same JSON
 object it reads for every other run, and the exit code still means what it means
@@ -194,7 +197,9 @@ either method. The milestone that needs one adds it back beside its caller, the
 way `GrantInPlace` returns at M7. `uploadShapes` is `multipart` alone for a
 related reason: a resumable create is two legs, the guard carries neither the
 `PUT` nor `upload_id`, so the shape could never finish and a half-permitted
-route reads as a working one.
+route reads as a working one. M6 opened the multipart half of that list, and
+"The multipart create is three signals that have to agree" below is the rule
+that came with it.
 
 A create is refused unless it names exactly the one folder the run was given,
 and the transport reads the create's response for the new id and teaches the
@@ -250,10 +255,10 @@ The guard judges the request it actually sends. It refuses
 `X-HTTP-Method-Override` and its two cousins, and a `_method` query parameter,
 because Google's REST stack performs the overridden method: a GET the guard
 allowed would arrive as a DELETE it never saw. A create it cannot read the
-parents of is refused, which today includes a multipart upload: that body opens
-with the MIME boundary, so the `/upload` grammar is unreachable until M6 teaches
-the transport to read the first MIME part. Failing closed is the right direction
-to be wrong in.
+parents of is refused, and since M6 that no longer means every multipart upload:
+the transport reads the first MIME part and takes the parents out of it. What is
+still refused is a body whose parents the guard cannot reach, a resumable create
+among them. Failing closed is the right direction to be wrong in.
 
 Three more shapes belong to that same rule, and each closes a way the request on
 the wire differed from the one that was judged. The two allowlists below them,
@@ -342,6 +347,55 @@ that person. What the guard still bounds is which files are reachable and what
 may be done to them, which is principle 3's actual claim. Nothing here is a
 claim about identity. The refusal never prints the header value, because a
 refusal goes into the JSON the caller reports.
+
+### The multipart create is three signals that have to agree
+
+M6's upload. Drive picks the parser for a create body from three things: the
+`/upload` path prefix, the `uploadType` or `upload_protocol` value, and the
+media type on the request. `multipartCreate` reads the same three and refuses
+the request unless all three say multipart or none of them does. A guard reading
+JSON where Drive reads multipart, or the reverse, is judging a request it is not
+sending, which is the class `Authorization` beside `authorization` belongs to.
+
+Before M6 the guard picked from nothing: it tried JSON and refused whatever
+would not parse. Two of the three mismatches failed closed under that, by luck
+rather than by design. Drive rejects a JSON body sent under
+`uploadType=multipart`, so no 2xx came back and no id was learned, and a
+multipart body with no upload parameter died on the guard's own JSON parse.
+Teaching the guard to parse multipart is exactly what would have turned both
+into a body judged one way and sent another, so the agreement rule lands with
+the parse and never after it.
+
+- **The boundary comes off the header, never out of the body.**
+  `mime.ParseMediaType` reads it, which is the same value Google's own parser
+  uses, and it refuses a `boundary` given twice where a hand-rolled split would
+  take one and leave the server the other. A guard that scanned the body for
+  something boundary-shaped would let the file's own bytes move where it thinks
+  the metadata ends, so a test sends a file carrying the boundary string inside
+  it.
+- **The first part only, and it must be JSON.** `metadataPart` reads one part
+  with `mime/multipart` and hands its bytes to the same duplicate-key and
+  parents check a plain JSON create goes through. Everything behind that part is
+  opaque. A part whose media type is not JSON is refused: the guard reading it
+  as JSON while Drive reads it as something else is the same mismatch one layer
+  in.
+- **`NextRawPart`, and no `Content-Transfer-Encoding`.** `NextPart` decodes a
+  quoted-printable part, and the guard must read the bytes Drive is sent rather
+  than a decoding of them. So the read is raw and an encoded part is refused
+  instead. `allowedPartHeaders` is `content-type` alone, an allowlist for the
+  reason the request's own header rule is one, and a header given twice is
+  refused because which one the server reads is not decided here.
+- **The part is read out of the peek.** A metadata part whose closing boundary
+  sits past `maxPeek` ends the read short and is refused rather than judged
+  half-read. Nothing gdoc builds can reach that: the metadata part is small and
+  first. Something somebody adds later can, and the refusal is how they find
+  out.
+
+A multipart create with no `AllowCreateIn` grant is refused like any other
+create, and a well-formed one naming exactly the granted folder is carried, with
+`learnFromCreate` putting the new id at `LevelFull` off the create's own answer.
+`TestAMultipartCreateIsRefusedForNow` was inverted at M6 rather than deleted:
+the pin it left is spent, and the test now states the carry.
 
 ### The guard judges plain paths only
 
@@ -826,11 +880,31 @@ script.
 
 `internal/frontmatter` owns one key in a note's YAML front matter and nothing
 else in the file. It carries `schema`, `document_id`, `folder_id`, a `published`
-record (M6 writes it), the `suggestions_seen` snapshot and `proposals`, which
+record, the `suggestions_seen` snapshot and `proposals`, which
 `propose` writes and `withdraw` reads and shortens. A proposal is
 `{id, comment_id, at, quoted}`: the suggestion id, the comment `insertComment`
 returned, the time, and the words that were replaced. `quoted` arrived in M3 and
 is optional in the decoder, so a note written under M2 still reads.
+
+**The publish record is `{at, title, house}`, and `publish` is its only
+writer.** When the run happened, the title that went on the cover, and whether
+the style came from the embedded file or from a `--house` path. M2's design
+carried a `revision_id` beside those and M6 dropped it, Nail's decision of
+2026-09-08: reading a Drive revision id needs a route the guard does not carry,
+for a field nothing reads. `Validate` refuses a `published` missing `at` or
+`title`, and a block still naming `revision_id` is refused by name under
+`yaml.Strict()` like any other unknown key.
+
+**A v1 note is not readable here, and that is the decision rather than a gap.**
+v1 writes `gdoc: <id>` as a plain string, and v2's reader keeps refusing it. The
+refusal names the shape and says what to do: rewrite the line by hand once, or
+republish the note with `gdoc publish`. `publish` being the only command that
+**creates** the block is what makes that true, and it means no schema-0 shape
+ever enters the reader. `suggestions --md`, `propose --md` and `withdraw` write
+the block too, but each of them refuses a note that has none, so none of them
+can pair a note. Nail's decision of 2026-09-08, in `docs/v2/DECISIONS.md`. `cover` is
+unaffected either way, because it skips the `gdoc:` key whatever it holds, so a
+v1 note still builds.
 
 Six rules, and each one has a reason:
 
@@ -1253,6 +1327,94 @@ decides which ones still need an answer; the binary reports the marker,
 means. That is M2's line, held. Read "The binary prints facts, and the skills
 judge" above.
 
+### `publish` is the fifth write, and it makes the document rather than changing one
+
+M6. `gdoc publish --md note.md --folder-id FOLDER` renders the note the way
+`build` renders it, uploads the bytes with conversion into the one folder the
+run was given, reads the new document back three ways, and records the pairing
+in the note. It is the only command that creates the `gdoc:` block: the three
+that also write it, `suggestions --md`, `propose --md` and `withdraw`, each
+refuse a note that carries none.
+
+It is a write command with the other four's shape and one difference: there is
+no handed-in document. The policy opens with `AllowCreateIn` and **no file at
+all**, so the run's only door is the folder, and the new document's id is
+learned from the create the guard itself carried. `--md` and `--folder-id` are
+both required, and there is no fallback to the note's own `folder_id`: a note
+whose block reads at all carries a `document_id`, and publish refuses that note
+before anything leaves the machine.
+
+**Not knowing never resolves to keeping the document.** A pairing that could not
+be recorded leaves a document nobody knows about, and the next publish of the
+same note makes a second one. So a failed front-matter write is rolled back:
+`publish.Rollback` trashes the document and reads it back, and only a rollback
+that also failed puts the live id on the envelope with the recovery steps. That
+failure policy is PLAN.md M6's; SPEC's `publish` section states no rollback rule
+at all. Three failure shapes, and each says something different:
+
+| Shape | Says |
+|---|---|
+| the write failed, the rollback held | `ok: false`, no `document_id`, `rolled_back: true` |
+| the write failed, the rollback did not | `ok: false`, the live id, `rolled_back: false`, and a warning naming the document to trash by hand |
+| the create Drive accepted could not be read | there is no id to verify, record or trash, so the error names the **folder** and says a document may be in it |
+
+The third is `probe.create`'s shape, for the same reason: the guard learned no
+id either, so it would refuse the trash in any case.
+
+**`rolled_back` is a `*bool`, absent on a run that recorded the pairing.** With
+a plain bool and `omitempty` the failed-rollback case, which is the run where
+the live id matters most, would print nothing at all; without `omitempty` every
+clean publish would say `rolled_back: false` about a rollback nobody tried. A
+rollback that held clears `document_id` and `url`, because naming a document
+that has gone sends somebody to look for it.
+
+**`verified` is three read-backs, and `verified: false` is not a failure.** The
+Docs read says the document is there and readable, the tab count says it is one
+document rather than a shape a later command would refuse, and the docx export
+says Drive can hand it back as the format it came in as. Fewer than three is
+`ok: true` with `verified: false` and the route named, exactly as `propose`
+reports: a document that exists is a document that exists, and a caller told the
+run failed is a caller that uploads a second one. The export check reuses
+`internal/docx`'s `ExportURL`, `Export` and `Parse` rather than a second export
+path.
+
+**`title` on the envelope is the read-back's, and `published.title` in the note
+is the cover's.** Two different facts: what Drive named the file, and what went
+on the cover. `publish.Run` warns when they disagree, and it is not a fourth
+check, because Drive takes the name from the metadata part and the usual answer
+is that they match. A read-back that did not happen leaves the envelope's field
+out rather than filling it in with the title that was asked for.
+
+**The note is read again just before it is written, and the rule is publish's
+own.** The other writers' `freshNote` refuses a block that has **gone**;
+publish refuses one that has **appeared**, which is the inverse. Four refusals,
+each of them a rollback: a note that could not be read again, one whose front
+matter no longer parses, one whose block appeared during the upload, and one
+whose bytes changed at all. The fourth is the whole file rather than the body
+alone, because the author's own front matter feeds the cover: a title edited
+during the upload is as stale a render as an edited paragraph, and there is no
+honest way to call one a change and the other not.
+
+**`build` and `publish` render through one function.** `noteSource` reads the
+note's bytes and `renderNote` turns them into one `noteDocx`: the bytes, the
+cover title, the running head, the style's name, the walker's counts, the
+pictures the note names and the warnings. `cmdBuild` writes those bytes and
+`cmdPublish` uploads them, and `TestBuildAndPublishRenderTheSameBytes` compares
+the file `build` wrote against the part `publish` uploaded, so the two commands
+cannot print overlapping shapes that drift. `noteSource` is separate for
+publish's sake: publish needs the note's bytes twice, once for the block it
+refuses to republish and once as what the re-read is compared against.
+
+**`internal/drive` is the trash, and it exists because two callers believe the
+same rule.** `FileURL`, `TrashedURL` and `Trash`: the PATCH, the confirming
+read, and the rule that the read is what is believed. `probe.trash` and
+`publish.Rollback` both call it. An unconfirmed trash counts as a failure in
+both, and two copies of that rule are two chances for one of them to start
+reporting a document as gone that is still there.
+
+**`publish` has no skill caller.** It is Nail-invoked. Wiring it into a skill is
+M9's, with the install story.
+
 ### `GrantInPlace` is gone until M7, and `AllowCreateIn` stayed
 
 PLAN.md M2 asked that a guard door with no production caller be deleted rather
@@ -1263,7 +1425,8 @@ for Nail then, not something to restore from git because a test wants it.
 `AllowCreateIn` stayed even though M2 calls it nowhere. The transport's whole
 create path is built on it: the parent check, the upload-shape check and the
 response learning all read it, and deleting it would mean deleting the create
-half of the guard that M6 needs. `AllowFile` and `Token.Refresh` got their first
+half of the guard that M6 needs, and M6's publish is now its second production
+caller after M3's probe. `AllowFile` and `Token.Refresh` got their first
 production callers here, which is the other half of what M2 was asked to settle.
 Nail confirmed both in the M2 review, 2026-09-07: `AllowCreateIn` stays, and a
 comment whose range the Docs read did not place is a warning on the envelope,
@@ -1280,7 +1443,7 @@ M5. `gdoc build --md note.md --out file.docx` turns a note into an Altery
 house-style docx, and it is the one command that reaches nothing at all. Five
 rooms: `house` parses the style, `cover` reads the author's front matter, `body`
 walks the markdown, `render` writes the parts, and `drift` measures the result
-against the master. Publishing what it wrote is M6's.
+against the master. `publish` uploads what it wrote, and that is M6's, above.
 
 **The style is a file, and the master is provenance.** Nail's decision of
 2026-08-29, in `docs/v2/DECISIONS.md`. `house.yaml` states the page geometry,
@@ -1391,14 +1554,30 @@ without either failing.
   `TestEveryKnownDifferenceStillDiffers` is the other direction over `Known`:
   an entry whose row has gone IDENTICAL exempts that row for ever, so it fails
   rather than sitting there.
-- **Live, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`.** Uploads both documents
-  with conversion, reads both through the Docs API and runs the same list. That
+- **Live, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`.** `TestLiveDrift`, in
+  `internal/live`, written at M6 once the guard could judge a multipart create
+  and `gapi` could send one. It builds `03-policy.md`, uploads it and the master
+  with conversion into the test folder, reads both through the Docs API, runs
+  the same 169-item list, prints the table, fails on any verdict that is not
+  IDENTICAL, CLOSE or a name in `drift.Known`, and trashes both documents. That
   is the measurement that means something, because Google's import is part of
-  the result. **It does not exist yet**, and the reason is not the token: it
-  needs the guard to read the first MIME part of a multipart create and `gapi`
-  to have a multipart write, both of which are M6's. The `FromDoc` half of every
-  item is written and tested against a fixture, so what is missing is the
-  upload rather than the comparison.
+  the result: a row that differs here and not offline is Drive's import, and a
+  row that differs in both is the generator. It also carries SPEC acceptance
+  item 3, asking the positioned logo, the contents field and the footer page
+  numbers **twice** each: the value says the built document really carries the
+  thing, so a generator that stopped emitting it fails rather than matching a
+  master that lost it too, and the verdict says the master agrees, so a value
+  that survived the import as something else fails as well.
+
+  **The live read is not `docs.URL`, and that is the one thing writing it
+  discovered.** `docs.URL` asks for `includeTabsContent=true`, which moves the
+  content into `tabs[]` and leaves the legacy `body`, `headers` and `footers`
+  empty. Those legacy fields are exactly what `drift.Doc` reads, and they carry
+  the first tab, which is the whole of a document converted from one docx. Read
+  through `docs.URL` the gate would answer nil for every body, header and footer
+  row and pass on a document it never looked inside. So `readForDrift` spells a
+  bare `documents.get` with no query at all, which the guard's `docsReadParams`
+  allowlist carries because an empty query names no parameter.
 
 **`drift.Known` holds twenty-five names, and DECISIONS.md counted two.**
 Neither number is wrong, and the difference is what the offline gate reads. It
@@ -1686,14 +1865,22 @@ nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
 
-`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the two write tests beside it, and
-each creates its own document in the Drive test folder. The first proposes into
-it, replies, withdraws and trashes it, asserting every read-back on the way. The
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the four write tests beside it, and
+each creates its own documents in the Drive test folder. The first proposes into
+one, replies, withdraws and trashes it, asserting every read-back on the way. The
 second is M4's: it starts a wait, posts a comment into the document while that
 wait is running, checks the comment came back before the deadline, then waits
 again on the cursor it was handed and checks that window is empty, up to 90
-seconds and then 15, and trashes the document. Both write only to documents they
-made. Two variables rather than one, because a live read is
+seconds and then 15, and trashes the document. The last two are M6's:
+`TestLivePublish` publishes a temp note into the folder and asserts the
+read-back, the title, the one tab and the block written into the note, and
+`TestLiveDrift` uploads the built document and the master and runs the item list
+over both. All four write only to documents they made.
+`TestTheLiveFixturesRenderWithNoNetwork` sits in the same file and asks for
+neither variable: both live tests render a note before they reach Drive, so a
+note that stopped rendering or a fixture path that moved would otherwise be
+found by Nail in the middle of a live run rather than by `make test`.
+Two variables rather than one, because a live read is
 somebody's document and a live write is a document that did not exist a second
 ago: the second is a different decision, and it is made on purpose each time.
 The unattended run sets neither.

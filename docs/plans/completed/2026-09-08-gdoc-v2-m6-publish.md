@@ -139,7 +139,7 @@ Three failure shapes, and each says something different:
 
 ### Task 1: the guard judges a multipart create the way Drive parses one
 
-- [ ] Write the attacks first, in `go/internal/guard/transport_test.go` and `params_test.go`, each a refusal naming what disagreed or what could not be read:
+- [x] Write the attacks first, in `go/internal/guard/transport_test.go` and `params_test.go`, each a refusal naming what disagreed or what could not be read:
   - **the three signals disagreeing**: `uploadType=multipart` with a JSON media type and a JSON body (this is `TestUploadCreateAlsoTeachesThePolicy` today, carried; it must become a refusal); a `multipart/related` body with no upload parameter; a `multipart/related` body on the plain `/drive/v3/files` path
   - a body whose boundary never appears inside the peek
   - a `Content-Type` with no `boundary` parameter, one whose boundary the body does not use, and one giving `boundary` twice
@@ -148,87 +148,229 @@ Three failure shapes, and each says something different:
   - a first part naming `parents` twice, one naming a folder other than the granted one, and one naming two folders
   - a boundary string that also appears inside the file bytes, proving the guard reads the first part only and does not scan
   - a multipart create with no `AllowCreateIn` grant at all
-- [ ] Then the carry, in both directions: a well-formed multipart create naming exactly the granted folder is carried and `learnFromCreate` puts the new id at `LevelFull`; a plain JSON create with no upload parameter still works exactly as it does today.
-- [ ] Invert `TestAMultipartCreateIsRefusedForNow` and rewrite its comment: the pin it left for M6 is now spent.
-- [ ] Implement: pick the parser from the three agreeing signals, take the boundary through `mime.ParseMediaType`, read the first part with `mime/multipart`, require its media type to be JSON, and hand its body to the existing duplicate-key and parents check.
-- [ ] Update `checkParent`'s and `uploadShapes`' doc comments, which both name M6 as the milestone that would open this.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the guard judges a multipart create the way Drive parses one"`
+- [x] Then the carry, in both directions: a well-formed multipart create naming exactly the granted folder is carried and `learnFromCreate` puts the new id at `LevelFull`; a plain JSON create with no upload parameter still works exactly as it does today.
+- [x] Invert `TestAMultipartCreateIsRefusedForNow` and rewrite its comment: the pin it left for M6 is now spent.
+- [x] Implement: pick the parser from the three agreeing signals, take the boundary through `mime.ParseMediaType`, read the first part with `mime/multipart`, require its media type to be JSON, and hand its body to the existing duplicate-key and parents check.
+- [x] Update `checkParent`'s and `uploadShapes`' doc comments, which both name M6 as the milestone that would open this.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the guard judges a multipart create the way Drive parses one"`
 
 ### Task 2: `gapi` gains a multipart write
 
-- [ ] Test first in `go/internal/gapi/session_test.go`: the request carries `multipart/related` with its boundary, the JSON metadata part first and the file part second, the bearer, and the caller's context; the 401 retry sends **the same bytes and the same boundary**; a 2xx answer that does not decode is marked `Sent()`, and a guard refusal is not.
-- [ ] Implement `Session.PostMultipart(ctx, rawURL string, meta any, part []byte, partType string, into any) error`. The whole body and its boundary are built once, before the closure, from `crypto/rand`; the closure only wraps those bytes in a request.
-- [ ] Give `bodyRequest` a content-type parameter rather than reusing it as it is, since it hardcodes `application/json` today. `PostJSON` and `PatchJSON` pass the same value they set now.
-- [ ] The metadata part is encoded with `encoding/json`, so nothing a note holds reaches the wire as text somebody formatted.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): a multipart write in gapi"`
+- [x] Test first in `go/internal/gapi/session_test.go`: the request carries `multipart/related` with its boundary, the JSON metadata part first and the file part second, the bearer, and the caller's context; the 401 retry sends **the same bytes and the same boundary**; a 2xx answer that does not decode is marked `Sent()`, and a guard refusal is not.
+- [x] Implement `Session.PostMultipart(ctx, rawURL string, meta any, part []byte, partType string, into any) error`. The whole body and its boundary are built once, before the closure, from `crypto/rand`; the closure only wraps those bytes in a request.
+- [x] Give `bodyRequest` a content-type parameter rather than reusing it as it is, since it hardcodes `application/json` today. `PostJSON` and `PatchJSON` pass the same value they set now.
+- [x] The metadata part is encoded with `encoding/json`, so nothing a note holds reaches the wire as text somebody formatted.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): a multipart write in gapi"`
 
 ### Task 3: the publish record's shape
 
-- [ ] Test first in `go/internal/frontmatter/`: a block whose `published` carries `at`, `title` and `house` round-trips byte-preservingly; a block carrying `revision_id` is refused by name under `yaml.Strict()`; `Validate` refuses a `published` missing `at` or `title`.
-- [ ] Change `Published` to `{At time.Time, Title string, House string}`.
-- [ ] Update the fixture `internal/frontmatter/testdata/full.md:9` and the assertion at `frontmatter_test.go:68`, which carry `revision_id` today. Without this the fixture stops parsing and takes the round-trip tests with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the publish record is when, what title and which house"`
+- [x] Test first in `go/internal/frontmatter/`: a block whose `published` carries `at`, `title` and `house` round-trips byte-preservingly; a block carrying `revision_id` is refused by name under `yaml.Strict()`; `Validate` refuses a `published` missing `at` or `title`.
+- [x] Change `Published` to `{At time.Time, Title string, House string}`.
+- [x] Update the fixture `internal/frontmatter/testdata/full.md:9` and the assertion at `frontmatter_test.go:68`, which carry `revision_id` today. Without this the fixture stops parsing and takes the round-trip tests with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the publish record is when, what title and which house"`
 
 ### Task 4: `internal/publish`
 
-- [ ] Test first in `go/internal/publish/publish_test.go`, over a fake `Session`: the happy path; an upload the guard refused; an upload Drive rejected; an upload whose answer could not be read (no id to name, so the folder is named); the read-back that failed; a document that came back with two tabs; an export that did not read as a docx; a rollback that succeeded; a rollback that failed; and the two re-read refusals from Task 4's caller side, exercised through the returned report.
-- [ ] Implement `publish.Run(ctx, s Session, o Options) (Report, error)`: upload, verify, and hand the report back. It reads and writes no file. The caller does the note I/O and calls `publish.Rollback` when the write failed.
-- [ ] Reuse `internal/docx`'s `ExportURL`, `Export` and `Parse` for the export check rather than a second export path, and `probe`'s trash-and-confirm shape for the rollback. Extract the trash helper if that is cleaner, and record the move in this plan.
-- [ ] `verified` is the three checks together. Fewer than three is `ok: true` with `verified: false` and the route named, exactly as `propose` reports: a document that exists is a document that exists.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): publish uploads with conversion and verifies the result"`
+- [x] Test first in `go/internal/publish/publish_test.go`, over a fake `Session`: the happy path; an upload the guard refused; an upload Drive rejected; an upload whose answer could not be read (no id to name, so the folder is named); the read-back that failed; a document that came back with two tabs; an export that did not read as a docx; a rollback that succeeded; a rollback that failed; and the two re-read refusals from Task 4's caller side, exercised through the returned report.
+- [x] Implement `publish.Run(ctx, s Session, o Options) (Report, error)`: upload, verify, and hand the report back. It reads and writes no file. The caller does the note I/O and calls `publish.Rollback` when the write failed.
+- [x] Reuse `internal/docx`'s `ExportURL`, `Export` and `Parse` for the export check rather than a second export path, and `probe`'s trash-and-confirm shape for the rollback. Extract the trash helper if that is cleaner, and record the move in this plan.
+- [x] `verified` is the three checks together. Fewer than three is `ok: true` with `verified: false` and the route named, exactly as `propose` reports: a document that exists is a document that exists.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): publish uploads with conversion and verifies the result"`
+
+**The trash helper was extracted, into `go/internal/drive`.** It holds
+`FileURL`, `TrashedURL` and `Trash`, which is the PATCH, the confirming read and
+the rule that the read is what is believed. `probe.trash` now calls it and keeps
+only what the document is and what a failure costs, and `publish.Rollback` does
+the same on the other side. The reason it is worth a package rather than a
+second copy: an unconfirmed trash counts as a failure in both callers, and two
+copies of that rule are two chances for one of them to start reporting a
+document as gone that is still there. `probe`'s three warning sentences are one
+sentence now, carrying `drive.Trash`'s own reason, so the three failures still
+read differently.
+
+`publish.Run` reports `title` as **what the read-back carried**, not what the
+upload asked for, and a disagreement between the two is a warning naming both.
+It is not a fourth check: Drive takes the name from the metadata part, so the
+usual answer is that they match and the warning says nothing.
+
+Coverage: `internal/publish` and `internal/drive` are both at 100% of
+statements, against the 80% the plan asks for.
 
 ### Task 5: the `publish` command, and the re-read rule that is publish's own
 
-- [ ] Test first in `go/cmd/gdoc/publish_test.go`: strict argument parsing in every shape; a note that already carries a `gdoc:` block, refused before anything leaves the machine; a note whose block **appeared** during the upload, rolled back; a note whose **body changed** under the render, rolled back; a note that could not be read again, rolled back; and the envelope on each.
-- [ ] Implement `cmdPublish` in `go/cmd/gdoc/publish.go`: render, open the policy with `AllowCreateIn` and nothing else, open the session, call `publish.Run`, re-read the note, write the block, and roll back on any failure of the last two.
-- [ ] Extract the render step `build` and `publish` share into one function returning one struct, carrying `title`, `house`, `bytes` and the body counts, so the two commands cannot print overlapping shapes that drift. Carry over `cmdBuild`'s `readHouse`, `pictures`, `notAnInput` and `absolute` helpers whole rather than re-deriving them.
-- [ ] `dispatch` gains `publish`, and the usage string with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc publish"`
+- [x] Test first in `go/cmd/gdoc/publish_test.go`: strict argument parsing in every shape; a note that already carries a `gdoc:` block, refused before anything leaves the machine; a note whose block **appeared** during the upload, rolled back; a note whose **body changed** under the render, rolled back; a note that could not be read again, rolled back; and the envelope on each.
+- [x] Implement `cmdPublish` in `go/cmd/gdoc/publish.go`: render, open the policy with `AllowCreateIn` and nothing else, open the session, call `publish.Run`, re-read the note, write the block, and roll back on any failure of the last two.
+- [x] Extract the render step `build` and `publish` share into one function returning one struct, carrying `title`, `house`, `bytes` and the body counts, so the two commands cannot print overlapping shapes that drift. Carry over `cmdBuild`'s `readHouse`, `pictures`, `notAnInput` and `absolute` helpers whole rather than re-deriving them.
+- [x] `dispatch` gains `publish`, and the usage string with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc publish"`
+
+**The shared render is `noteSource` and `renderNote`, both in `build.go`.**
+`renderNote` returns one `noteDocx`: the bytes, the cover title, the running
+head, the style's name, the walker's counts, the pictures the note names and the
+warnings. `cmdBuild` writes the bytes and `cmdPublish` uploads them, and
+`TestBuildAndPublishRenderTheSameBytes` compares the file `build` wrote against
+the part `publish` uploaded, so the two cannot drift. The four helpers were
+carried over whole: `readHouse` is called inside `renderNote`, and `pictures`,
+`notAnInput` and `absolute` stayed in `cmdBuild`, because publish has no `--out`
+and so has no file to alias.
+
+`noteSource` is separate from `renderNote` for publish's sake. Publish needs the
+note's bytes twice over: the `gdoc:` block it refuses to republish is read out
+of them before the render, and the same bytes are what `pair` compares the
+re-read against.
+
+**The re-read refuses four things, and each one is a rollback.** A note that
+could not be read again, one whose front matter no longer parses, one whose
+block has **appeared**, and one whose bytes changed at all. The third is the
+inverse of `freshNote`'s rule, which is what the plan called for. The fourth is
+written as the whole file rather than the body alone: the author's own front
+matter feeds the cover, so a title edited during the upload is as stale a render
+as an edited paragraph, and there is no honest way to call one of them a change
+and the other not.
+
+**`rolled_back` is a `*bool`, absent on a run that recorded the pairing.** With
+a plain bool and `omitempty` the failed-rollback case, which is the run where
+the live id matters most, would have printed nothing at all; without
+`omitempty` every clean publish would say `rolled_back: false` about a rollback
+nobody tried. A rollback that held clears `document_id` and `url`, because
+naming a document that has gone sends somebody to look for it.
+
+**`title` on the envelope is the read-back's and `published.title` in the note
+is the cover's.** They are two different facts: what Drive named the file, and
+what went on the cover. `publish.Run` already warns when they disagree, and a
+read-back that did not happen leaves the envelope's field out rather than
+filling it in with the title that was asked for.
+
+`session` in `cmd/gdoc` gained `PostMultipart`, so it satisfies
+`publish.Session`. Both test fakes gained it too: `fakeWire` records the
+metadata part as the call's body and keeps the file part beside it, and
+`fakeSession` refuses it by name, the way it already refuses a POST from a read
+command.
+
+Coverage: `cmd/gdoc` is at 87.7% of statements.
 
 ### Task 6: the v1 pairing decision, written down
 
-- [ ] Record Nail's decision of 2026-09-08 in `docs/v2/DECISIONS.md`: v2's reader keeps refusing v1's plain `gdoc: <id>` string, publish is the only writer of the block, and a note v1 published is rewritten by hand once or republished by v2.
-- [ ] Check the refusal `frontmatter.Read` gives on a v1 string names the shape and says what to do. Fix it if it does not, with a test.
-- [ ] Delete `docs/backlog/v1-frontmatter-migration.md`, which the decision settles.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: the v1 pairing decision, and publish is the only writer"`
+- [x] Record Nail's decision of 2026-09-08 in `docs/v2/DECISIONS.md`: v2's reader keeps refusing v1's plain `gdoc: <id>` string, publish is the only writer of the block, and a note v1 published is rewritten by hand once or republished by v2.
+- [x] Check the refusal `frontmatter.Read` gives on a v1 string names the shape and says what to do. Fix it if it does not, with a test.
+- [x] Delete `docs/backlog/v1-frontmatter-migration.md`, which the decision settles.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: the v1 pairing decision, and publish is the only writer"`
 
 ### Task 7: `drift.Doc` resolves a style, and the fixture says what it answers
 
-- [ ] Test first in `go/internal/drift/doc_test.go`: fixture cases where a run inherits rather than states its size, font and colour, and the resolved value comes back.
-- [ ] Give `Doc` the resolution chain in Google's own vocabulary: `textRun.textStyle`, then `paragraph.paragraphStyle.namedStyleType`, then `namedStyles[type].textStyle`, then `namedStyles["NORMAL_TEXT"]`. The Docs API has no `docDefaults`. Normalise an absent colour the way `Docx.Style` does.
-- [ ] Pin the set of items the fixture is expected to answer, the way `unstated` pins the docx half, so a row that starts reading nil fails rather than passing as IDENTICAL against another nil.
-- [ ] State in the test file that this touches the Docs half only: the offline gate reads two docx files, so its 169 rows do not move and nothing is re-baselined.
-- [ ] Delete `docs/backlog/drift-fromdoc-style-fallback.md`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "fix(v2): the drift Docs reader resolves the style behind a value"`
+- [x] Test first in `go/internal/drift/doc_test.go`: fixture cases where a run inherits rather than states its size, font and colour, and the resolved value comes back.
+- [x] Give `Doc` the resolution chain in Google's own vocabulary: `textRun.textStyle`, then `paragraph.paragraphStyle.namedStyleType`, then `namedStyles[type].textStyle`, then `namedStyles["NORMAL_TEXT"]`. The Docs API has no `docDefaults`. Normalise an absent colour the way `Docx.Style` does.
+- [x] Pin the set of items the fixture is expected to answer, the way `unstated` pins the docx half, so a row that starts reading nil fails rather than passing as IDENTICAL against another nil.
+- [x] State in the test file that this touches the Docs half only: the offline gate reads two docx files, so its 169 rows do not move and nothing is re-baselined.
+- [x] Delete `docs/backlog/drift-fromdoc-style-fallback.md`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "fix(v2): the drift Docs reader resolves the style behind a value"`
+
+**The chain is one function, `Doc.resolve`, and `Style` is its last two links.**
+A `layer` is one `{textStyle, paragraphStyle}` pair, and `fold` applies them
+outermost first, so the nearer one wins. A property is taken only when the
+message carries it: an absent `bold` on a run is that run inheriting, so writing
+false there would clear a weight the named style states. That presence rule is
+why `truth` is gone, and it is what the old reader could not express.
+
+**Paragraph properties inherit too, not just text.** Docs documents both, and
+the docx half already folds `pPr` down the `basedOn` chain, so a Doc half that
+resolved only the run would have `HEADING_1 lineSpacing` reading nil against a
+docx half reading 115.
+
+**A style the answer does not carry is still not found.** Inheriting NORMAL_TEXT
+under an absent style's name would invent a style Docs never sent, and the docx
+half answers `Style{}` for a style that is in no file.
+
+**`firstRunStyle` became a method,** because it now needs the document to reach
+`namedStyles`. `Segment` is its only caller.
+
+**The fixture's two body paragraphs now state nothing on their runs,** which is
+what a converted document looks like, so `TestFromDocReadsEveryItem` walks the
+chain rather than around it. `body text size` reads 11 rather than the 12 the
+run used to state, which is the house body size.
+
+**The pin is `docsSilent`, 71 names.** Four reasons, each a fact about the
+fixture: a value the style leaves to the reader's default, the six named styles
+the fixture does not carry, the two tables and two heading levels it does not
+carry, and the contents field instruction Docs never sends. It fails in both
+directions. Against the reader before this change it names exactly the three
+rows the backlog item named, `body text size`, `body font` and `body H1 run
+colour`, plus the two `HEADING_1` and two `TITLE` rows the named-style link
+fixes.
+
+Nothing was re-baselined: the offline gate reads two docx files, so its 169 rows
+did not move.
 
 ### Task 8: the two live tests
 
-- [ ] `TestLivePublish` in `go/internal/live`, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: publish a temp note into the test folder, assert the read-back, the title, the one tab and the note's written block, then trash the document.
-- [ ] `TestLiveDrift` beside it: build `03-policy.md`, upload it and the master with conversion, read both through the Docs API, run the 169-item list, print the table, fail on any verdict that is not IDENTICAL, CLOSE or a named known difference, and trash both documents.
-- [ ] Assert the three rows that answer SPEC acceptance item 3 by name: the positioned logo, the TOC field, and the footer page numbers.
-- [ ] Record what the live table actually says in this plan under Post-Completion, including any row that has to join `drift.Known` with its reason. A row joining `Known` is a decision Nail takes, not a test somebody loosens.
-- [ ] `cd go && go test -race ./...` passes, and the live pair runs clean on Nail's machine.
-- [ ] `git commit -m "test(v2): the live publish and the live drift gate"`
+- [x] `TestLivePublish` in `go/internal/live`, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: publish a temp note into the test folder, assert the read-back, the title, the one tab and the note's written block, then trash the document.
+- [x] `TestLiveDrift` beside it: build `03-policy.md`, upload it and the master with conversion, read both through the Docs API, run the 169-item list, print the table, fail on any verdict that is not IDENTICAL, CLOSE or a named known difference, and trash both documents.
+- [x] Assert the three rows that answer SPEC acceptance item 3 by name: the positioned logo, the TOC field, and the footer page numbers.
+- [x] Record what the live table actually says in this plan under Post-Completion, including any row that has to join `drift.Known` with its reason. A row joining `Known` is a decision Nail takes, not a test somebody loosens. **(not automatable here: the table only exists after a live run, which creates real documents in Nail's Drive and is Nail's decision each time. Post-Completion carries the empty row waiting for it.)**
+- [x] `cd go && go test -race ./...` passes, and the live pair runs clean on Nail's machine. **(the suite passes, and both new tests skip without the two variables. The live half is Nail's run: the unattended run sets neither variable.)**
+- [x] `git commit -m "test(v2): the live publish and the live drift gate"`
+
+**The live drift read is not `docs.URL`, and that is the one thing this task
+discovered.** `docs.URL` asks for `includeTabsContent=true`, which moves the
+content into `tabs[]` and leaves the legacy `body`, `headers` and `footers`
+empty. Those legacy fields are exactly what `drift.Doc` reads, and they carry
+the first tab, which is the whole of a document converted from one docx. Read
+through `docs.URL` the gate would answer nil for every body, header and footer
+row and pass on a document it never looked inside. So `readForDrift` spells a
+bare `documents.get` with no query at all, which the guard's `docsReadParams`
+allowlist carries because an empty query names no parameter.
+
+➕ `TestTheLiveFixturesRenderWithNoNetwork`, in the same file and in `make test`.
+Both live tests render a note before they reach Drive. A note that stopped
+rendering, or a fixture path that moved, would otherwise be found by Nail in
+the middle of a live run rather than by the suite, so this renders both notes,
+checks each makes a publishable upload, and opens the master. It asks for
+neither live variable, because there is nothing in it to protect.
 
 ### Task 9: documentation and the size delta
 
-- [ ] CLAUDE.md: `publish` under the write commands; the multipart create and the three-signal rule in the guard section; the changed publish record; the live drift gate moving from "does not exist yet" to what it measures.
-- [ ] README: publishing a note.
-- [ ] `docs/v2/PLAN.md`: the M6 "Landed" paragraph, the "What M6 leaves for M7" list, the binary-size table against `e77d9f3`, and acceptance items 2 and 3 marked with the test that answers each.
-- [ ] Note that `publish` has no skill caller: it is Nail-invoked, and wiring it into a skill is M9's with the install story.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `git commit -m "docs: M6 landed"`
+- [x] CLAUDE.md: `publish` under the write commands; the multipart create and the three-signal rule in the guard section; the changed publish record; the live drift gate moving from "does not exist yet" to what it measures.
+- [x] README: publishing a note.
+- [x] `docs/v2/PLAN.md`: the M6 "Landed" paragraph, the "What M6 leaves for M7" list, the binary-size table against `e77d9f3`, and acceptance items 2 and 3 marked with the test that answers each.
+- [x] Note that `publish` has no skill caller: it is Nail-invoked, and wiring it into a skill is M9's with the install story.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `git commit -m "docs: M6 landed"`
+
+**Two new CLAUDE.md sections rather than one.** "The multipart create is three
+signals that have to agree" sits in the guard's own run of sections, because it
+is a rule about the wire and belongs beside the two allowlists and the plain-path
+rule rather than inside publish's story. "`publish` is the fifth write, and it
+makes the document rather than changing one" sits after the four write commands,
+and its title says the one way it differs from them: there is no handed-in
+document, so the policy opens with a folder and no file at all.
+
+**The size delta is about 90 KB per platform, measured against `e77d9f3`** by
+building `make dist` in a worktree at that commit and again at HEAD. The module
+graph gained nothing: `go list -m all` is still the same three. M5 cost 1.4 MB
+for a markdown parser and an XML tree; M6 cost a fifteenth of that, because
+`mime/multipart` and `crypto/rand` were already reachable from the standard
+library the binary links.
+
+Three earlier lists were corrected in PLAN.md rather than left standing. "What
+M5 leaves for M6" named four things and all four are settled, "What M3 leaves
+for M6" named the multipart grammar as untested and it is tested now, and M5's
+open list carried `drift`'s missing style fallback, which Task 7 closed.
 
 ## Post-Completion
 
 - Nail publishes a real note and opens the document in Drive.
-- Nail reads the live drift table and decides on any row that has to join `drift.Known`.
+- Nail reads the live drift table and decides on any row that has to join `drift.Known`. The table is printed by `TestLiveDrift` under `-v`, with the summary line in front of it, and it goes here when the run has happened:
+
+  ```
+  (the live table, built vs master: recorded after the first live run)
+  ```
+
 - The binary-size delta per platform, recorded in PLAN.md.
 - Still outstanding from earlier milestones, and Nail's: M4's live session with a second account commenting, and M5's built docx opened in Word beside a v1-published copy.

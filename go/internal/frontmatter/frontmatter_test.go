@@ -64,8 +64,11 @@ func TestReadDecodesTheFullBlock(t *testing.T) {
 	if !b.Published.At.Equal(wantPublished) {
 		t.Errorf("published.at = %v, want %v", b.Published.At, wantPublished)
 	}
-	if b.Published.RevisionID != "ALm37BX" {
-		t.Errorf("published.revision_id = %q", b.Published.RevisionID)
+	if b.Published.Title != "Supplier register policy" {
+		t.Errorf("published.title = %q", b.Published.Title)
+	}
+	if b.Published.House != "embedded" {
+		t.Errorf("published.house = %q", b.Published.House)
 	}
 	if b.SuggestionsSeen == nil {
 		t.Fatal("suggestions_seen is absent")
@@ -124,6 +127,7 @@ func TestReadRefusesAndNamesWhatIsWrong(t *testing.T) {
 		{"no-document-id.md", "document_id"},
 		{"bad-kind.md", "kind"},
 		{"twice.md", "gdoc"},
+		{"published-revision-id.md", "revision_id"},
 	}
 	for _, c := range cases {
 		t.Run(c.file, func(t *testing.T) {
@@ -583,5 +587,98 @@ func TestWriteKeepsQuotedThroughARoundTrip(t *testing.T) {
 	}
 	if len(back.Proposals) != 1 || back.Proposals[0].Quoted != "reviewed annually" {
 		t.Errorf("proposals = %+v", back.Proposals)
+	}
+}
+
+// TestWriteKeepsThePublishRecordThroughARoundTrip is M6's record going in and
+// coming back out. The three facts are when the document was made, what title
+// went on its cover, and whether the style was the embedded one or a file under
+// review. revision_id is gone: recording it would need a Drive route the guard
+// does not carry, for a field nothing reads.
+func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
+	src := fixture(t, "minimal.md")
+	b, err := Read(src)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	b.Published = &Published{
+		At:    time.Date(2026, 9, 8, 14, 30, 0, 0, time.UTC),
+		Title: "Supplier register policy",
+		House: "docs/v2/spikes/config/house.yaml",
+	}
+	out, err := Write(src, b)
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	back, err := Read(out)
+	if err != nil {
+		t.Fatalf("Read after Write: %v", err)
+	}
+	if back.Published == nil {
+		t.Fatal("the publish record did not survive the write")
+	}
+	if !back.Published.At.Equal(b.Published.At) {
+		t.Errorf("published.at = %v, want %v", back.Published.At, b.Published.At)
+	}
+	if back.Published.Title != b.Published.Title {
+		t.Errorf("published.title = %q, want %q", back.Published.Title, b.Published.Title)
+	}
+	if back.Published.House != b.Published.House {
+		t.Errorf("published.house = %q, want %q", back.Published.House, b.Published.House)
+	}
+}
+
+// A note v1 published carries the pairing as a plain string, `gdoc: <id>`, and
+// v2 reads a block. Nail decided on 2026-09-08 that the reader keeps refusing
+// it: publish is the only command that creates the block, and the three that
+// write into one refuse a note that has none, so there is no schema-0 shape in
+// the reader. So the refusal is the whole migration story a person gets, and
+// it has to name the shape, name the id it found, and say what to do about it.
+// "string was used where mapping is expected" does none of the last two.
+func TestReadRefusesV1sPairingAndSaysWhatToDoAboutIt(t *testing.T) {
+	const id = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"
+	b, err := Read(fixture(t, "v1-string.md"))
+	if err == nil {
+		t.Fatalf("v1's pairing was accepted: %+v", b)
+	}
+	if b != nil {
+		t.Errorf("a refused read still returned a block: %+v", b)
+	}
+	for _, want := range []string{"gdoc:", id, "document_id", "schema", "publish"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name %q", err, want)
+		}
+	}
+}
+
+// The same refusal reaches Write, which reads the block it finds before
+// replacing it. Without that a note v1 published is one gdoc rewrites around,
+// and the message a person sees is the one above rather than a broken file.
+func TestWriteRefusesV1sPairingRatherThanReplacingIt(t *testing.T) {
+	src := fixture(t, "v1-string.md")
+	out, err := Write(src, validBlock())
+	if err == nil {
+		t.Fatal("v1's pairing was overwritten")
+	}
+	if out != nil {
+		t.Errorf("a refused write returned bytes: %q", out)
+	}
+	if !strings.Contains(err.Error(), "document_id") {
+		t.Errorf("error %q does not say what the block should look like", err)
+	}
+}
+
+// A gdoc: key holding some other scalar is refused too, and it is not v1's
+// pairing, so it does not get v1's sentence. The two must not be one message:
+// telling somebody to rewrite `gdoc: 3` as a v1 pairing sends them the wrong
+// way.
+func TestANonStringScalarUnderGdocIsNotV1sPairing(t *testing.T) {
+	src := []byte("---\ngdoc: 3\n---\n\n# Scope\n")
+	b, err := Read(src)
+	if err == nil {
+		t.Fatalf("a number under gdoc: was accepted: %+v", b)
+	}
+	if strings.Contains(err.Error(), "v1") {
+		t.Errorf("error %q calls a number v1's pairing", err)
 	}
 }

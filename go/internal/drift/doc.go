@@ -7,10 +7,12 @@
 // documents.get, and runs this side of the same item list.
 //
 // It is a port of compare.py, field for field, and the field names are Google's
-// rather than Word's. Where the docx half has to resolve a value through
-// docDefaults and a basedOn chain, this half reads it as Docs already resolved
-// it, which is why the two halves of one item can report different spellings of
-// the same fact and each gate stays self-consistent.
+// rather than Word's. Both halves resolve, and each resolves in its own
+// vocabulary: the docx half walks docDefaults and the basedOn chain, and this
+// half walks the run, the paragraph's named style and NORMAL_TEXT. Neither may
+// read only what the nearest message states, because the Docs API leaves an
+// inherited property out of the message altogether, so an unresolved read
+// reports nil for a run that is simply in the body style. See layer below.
 //
 // No client and no session: this takes the decoded answer, so the live test
 // hands it what came back and a unit test hands it a fixture.
@@ -83,33 +85,158 @@ func (d *Doc) HasReference(kind, which string) any {
 	return id != ""
 }
 
-// Style reads one named style as Docs resolved it.
+// Style reads one named style, resolved.
+//
+// A named style inherits from NORMAL_TEXT, so a style that states no font is a
+// style in the document's body font rather than a style with no font. That is
+// the last link of the chain the file comment above describes, and it is the
+// counterpart of the docx half following basedOn.
+//
+// A style the answer does not carry at all is not found, which is what the docx
+// half answers for a style that is in no file. Reporting the inherited values
+// under its name would have this package invent a style Docs never sent.
 func (d *Doc) Style(id string) Style {
-	for _, raw := range listOf(mapOf(d.answer["namedStyles"])["styles"]) {
-		s := mapOf(raw)
-		if s["namedStyleType"] != docsStyleName(id) {
-			continue
-		}
-		ts, ps := mapOf(s["textStyle"]), mapOf(s["paragraphStyle"])
-		return Style{
-			found:         true,
-			FontSize:      magnitude(ts["fontSize"]),
-			Font:          stringOf(mapOf(ts["weightedFontFamily"])["fontFamily"]),
-			Colour:        hexOf(ts["foregroundColor"]),
-			Bold:          truth(ts["bold"]),
-			Italic:        truth(ts["italic"]),
-			Underline:     truth(ts["underline"]),
-			SmallCaps:     truth(ts["smallCaps"]),
-			Strikethrough: truth(ts["strikethrough"]),
-			Alignment:     stringOf(ps["alignment"]),
-			LineSpacing:   plain(ps["lineSpacing"]),
-			SpaceAbove:    magnitude(ps["spaceAbove"]),
-			SpaceBelow:    magnitude(ps["spaceBelow"]),
-			IndentStart:   magnitude(ps["indentStart"]),
-			KeepWithNext:  truth(ps["keepWithNext"]),
+	typ := docsStyleName(id)
+	own, ok := d.namedLayer(typ)
+	if !ok {
+		return Style{}
+	}
+	layers := []layer{}
+	if typ != normalText {
+		if base, ok := d.namedLayer(normalText); ok {
+			layers = append(layers, base)
 		}
 	}
-	return Style{}
+	st := fold(append(layers, own))
+	st.found = true
+	if st.Colour == nil {
+		// The same normalisation Docx.Style makes, for the same reason: a
+		// reader sees black, and saying nil would report a MISSING against a
+		// document that spells the same black out.
+		st.Colour = "#000000"
+	}
+	return st
+}
+
+// normalText is the style every other named style inherits from, and the one a
+// paragraph carries when it names none.
+const normalText = "NORMAL_TEXT"
+
+// layer is one link of the resolution chain: the two style messages a single
+// level of it carries.
+//
+// The Docs API leaves an inherited property out of the message altogether, so
+// reading a value off the run alone reports nil for a run that simply says
+// nothing. TextStyle's own reference spells the chain out: text in a paragraph
+// inherits from the paragraph's named style type, and a named style inherits
+// from NORMAL_TEXT. There is no docDefaults under that, which is the one place
+// this half differs from the docx half's chain.
+type layer struct{ text, para map[string]any }
+
+// namedLayer is one entry of namedStyles, under the type Docs names it.
+func (d *Doc) namedLayer(typ string) (layer, bool) {
+	for _, raw := range listOf(mapOf(d.answer["namedStyles"])["styles"]) {
+		s := mapOf(raw)
+		if s["namedStyleType"] != typ {
+			continue
+		}
+		return layer{text: mapOf(s["textStyle"]), para: mapOf(s["paragraphStyle"])}, true
+	}
+	return layer{}, false
+}
+
+// fold applies the layers outermost first, so the nearest one wins.
+func fold(layers []layer) Style {
+	st := Style{}
+	for _, l := range layers {
+		applyDocsText(&st, l.text)
+		applyDocsPara(&st, l.para)
+	}
+	return st
+}
+
+// applyDocsText folds one textStyle in.
+//
+// A property is taken only when the message carries it. That is the whole rule
+// of the chain: an absent bold on the run is the run inheriting, so writing
+// false there would clear a bold the named style states.
+func applyDocsText(st *Style, ts map[string]any) {
+	if ts == nil {
+		return
+	}
+	if v := magnitude(ts["fontSize"]); v != nil {
+		st.FontSize = v
+	}
+	if v := stringOf(mapOf(ts["weightedFontFamily"])["fontFamily"]); v != nil {
+		st.Font = v
+	}
+	if v := hexOf(ts["foregroundColor"]); v != nil {
+		st.Colour = v
+	}
+	for _, f := range []struct {
+		key string
+		to  *bool
+	}{
+		{"bold", &st.Bold}, {"italic", &st.Italic}, {"underline", &st.Underline},
+		{"smallCaps", &st.SmallCaps}, {"strikethrough", &st.Strikethrough},
+	} {
+		if b, ok := ts[f.key].(bool); ok {
+			*f.to = b
+		}
+	}
+}
+
+// applyDocsPara folds one paragraphStyle in, under applyDocsText's rule.
+func applyDocsPara(st *Style, ps map[string]any) {
+	if ps == nil {
+		return
+	}
+	if v := stringOf(ps["alignment"]); v != nil {
+		st.Alignment = v
+	}
+	if v := plain(ps["lineSpacing"]); v != nil {
+		st.LineSpacing = v
+	}
+	if v := magnitude(ps["spaceAbove"]); v != nil {
+		st.SpaceAbove = v
+	}
+	if v := magnitude(ps["spaceBelow"]); v != nil {
+		st.SpaceBelow = v
+	}
+	if v := magnitude(ps["indentStart"]); v != nil {
+		st.IndentStart = v
+	}
+	if b, ok := ps["keepWithNext"].(bool); ok {
+		st.KeepWithNext = b
+	}
+}
+
+// resolve is what a reader sees on one run of one paragraph: NORMAL_TEXT, then
+// the paragraph's own named style, then the paragraph's overrides, then the
+// run's. The run's textStyle may be nil, which is a paragraph read for its own
+// properties alone.
+func (d *Doc) resolve(p map[string]any, ts map[string]any) Style {
+	ps := mapOf(p["paragraphStyle"])
+	typ, _ := ps["namedStyleType"].(string)
+	if typ == "" {
+		typ = normalText
+	}
+	layers, named := []layer{}, false
+	if base, ok := d.namedLayer(normalText); ok {
+		layers, named = append(layers, base), true
+	}
+	if typ != normalText {
+		if own, ok := d.namedLayer(typ); ok {
+			layers, named = append(layers, own), true
+		}
+	}
+	layers = append(layers, layer{para: ps}, layer{text: ts})
+	st := fold(layers)
+	st.found = true
+	if named && st.Colour == nil {
+		st.Colour = "#000000"
+	}
+	return st
 }
 
 // docsStyleName maps the docx style id onto the name Docs gives the same style,
@@ -157,7 +284,7 @@ func (d *Doc) Segment(kind, which string) Segment {
 		}
 	}
 	out.Text = b.String()
-	out.FirstRun = firstRunStyle(seg)
+	out.FirstRun = d.firstRunStyle(seg)
 	return out
 }
 
@@ -182,17 +309,18 @@ func docsElementText(e map[string]any) string {
 }
 
 // firstRunStyle is the style of the first run with words in it, which is what
-// the running head's colour and size are read from.
-func firstRunStyle(seg map[string]any) Style {
+// the running head's colour and size are read from. It is resolved, because a
+// running head that states no size is a running head in the body size.
+func (d *Doc) firstRunStyle(seg map[string]any) Style {
 	for _, raw := range listOf(seg["content"]) {
-		for _, e := range listOf(mapOf(mapOf(raw)["paragraph"])["elements"]) {
+		p := mapOf(mapOf(raw)["paragraph"])
+		for _, e := range listOf(p["elements"]) {
 			tr := mapOf(mapOf(e)["textRun"])
 			content, _ := tr["content"].(string)
 			if strings.TrimSpace(content) == "" {
 				continue
 			}
-			ts := mapOf(tr["textStyle"])
-			return Style{found: true, Colour: hexOf(ts["foregroundColor"]), FontSize: magnitude(ts["fontSize"])}
+			return d.resolve(p, mapOf(tr["textStyle"]))
 		}
 	}
 	return Style{}
@@ -334,17 +462,18 @@ func (d *Doc) FirstHeading(level int) Heading {
 			continue
 		}
 		var b strings.Builder
-		var colour any
+		var first map[string]any
 		for _, e := range listOf(p["elements"]) {
 			tr := mapOf(mapOf(e)["textRun"])
 			content, _ := tr["content"].(string)
 			b.WriteString(content)
-			if colour == nil && strings.TrimSpace(content) != "" {
-				colour = hexOf(mapOf(tr["textStyle"])["foregroundColor"])
+			if first == nil && strings.TrimSpace(content) != "" {
+				first = mapOf(tr["textStyle"])
 			}
 		}
+		st := d.resolve(p, first)
 		return Heading{Found: true, Text: strings.TrimSpace(b.String()),
-			IndentStart: magnitude(ps["indentStart"]), Colour: colour}
+			IndentStart: st.IndentStart, Colour: st.Colour}
 	}
 	return Heading{}
 }
@@ -378,10 +507,11 @@ func (d *Doc) BodyParagraph() BodyParagraph {
 		if len(strings.TrimSpace(b.String())) <= bodyProseMin {
 			continue
 		}
+		st := d.resolve(p, ts)
 		return BodyParagraph{Found: true,
-			FontSize:  magnitude(ts["fontSize"]),
-			Alignment: stringOf(ps["alignment"]),
-			Font:      stringOf(mapOf(ts["weightedFontFamily"])["fontFamily"]),
+			FontSize:  st.FontSize,
+			Alignment: st.Alignment,
+			Font:      st.Font,
 		}
 	}
 	return BodyParagraph{}
@@ -451,12 +581,6 @@ func stringOf(v any) any {
 func stringOrEmpty(v any) string {
 	s, _ := v.(string)
 	return s
-}
-
-// truth reads a Docs boolean, where absent means false.
-func truth(v any) bool {
-	b, _ := v.(bool)
-	return b
 }
 
 // boolOf reads a Docs boolean as a value, where absent is still false: the API

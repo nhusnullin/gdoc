@@ -31,8 +31,9 @@ import (
 	"gdoc/internal/view"
 )
 
-// session is what a read command needs of an authenticated reach: two GETs and
-// the warnings the run produced. *gapi.Session satisfies it.
+// session is what the commands need of an authenticated reach: the reads, the
+// writes, the upload a publish is, and the warnings the run produced.
+// *gapi.Session satisfies it.
 //
 // The interface is named here rather than the struct so that a command test can
 // stand in for the wire without naming net/http. A stub built on the concrete
@@ -43,6 +44,7 @@ type session interface {
 	GetBytes(ctx context.Context, rawURL string, limit int64) ([]byte, error)
 	PostJSON(ctx context.Context, rawURL string, body any, into any) error
 	PatchJSON(ctx context.Context, rawURL string, body any, into any) error
+	PostMultipart(ctx context.Context, rawURL string, meta any, part []byte, partType string, into any) error
 	Warnings() []string
 }
 

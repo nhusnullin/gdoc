@@ -6,7 +6,8 @@ gdoc:
   folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr
   published:
     at: 2026-09-06T10:12:00Z
-    revision_id: ALm37BX
+    title: Supplier register policy
+    house: embedded
   suggestions_seen:
     at: 2026-09-06T11:00:00Z
     items:
