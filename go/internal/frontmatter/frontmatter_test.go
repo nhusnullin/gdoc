@@ -627,3 +627,57 @@ func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
 		t.Errorf("published.house = %q, want %q", back.Published.House, b.Published.House)
 	}
 }
+
+// A note v1 published carries the pairing as a plain string, `gdoc: <id>`, and
+// v2 reads a block. Nail decided on 2026-09-08 that the reader keeps refusing
+// it: publish is the only writer of the block, and there is no schema-0 shape
+// in the reader. So the refusal is the whole migration story a person gets, and
+// it has to name the shape, name the id it found, and say what to do about it.
+// "string was used where mapping is expected" does none of the last two.
+func TestReadRefusesV1sPairingAndSaysWhatToDoAboutIt(t *testing.T) {
+	const id = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"
+	b, err := Read(fixture(t, "v1-string.md"))
+	if err == nil {
+		t.Fatalf("v1's pairing was accepted: %+v", b)
+	}
+	if b != nil {
+		t.Errorf("a refused read still returned a block: %+v", b)
+	}
+	for _, want := range []string{"gdoc:", id, "document_id", "schema", "publish"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not name %q", err, want)
+		}
+	}
+}
+
+// The same refusal reaches Write, which reads the block it finds before
+// replacing it. Without that a note v1 published is one gdoc rewrites around,
+// and the message a person sees is the one above rather than a broken file.
+func TestWriteRefusesV1sPairingRatherThanReplacingIt(t *testing.T) {
+	src := fixture(t, "v1-string.md")
+	out, err := Write(src, validBlock())
+	if err == nil {
+		t.Fatal("v1's pairing was overwritten")
+	}
+	if out != nil {
+		t.Errorf("a refused write returned bytes: %q", out)
+	}
+	if !strings.Contains(err.Error(), "document_id") {
+		t.Errorf("error %q does not say what the block should look like", err)
+	}
+}
+
+// A gdoc: key holding some other scalar is refused too, and it is not v1's
+// pairing, so it does not get v1's sentence. The two must not be one message:
+// telling somebody to rewrite `gdoc: 3` as a v1 pairing sends them the wrong
+// way.
+func TestANonStringScalarUnderGdocIsNotV1sPairing(t *testing.T) {
+	src := []byte("---\ngdoc: 3\n---\n\n# Scope\n")
+	b, err := Read(src)
+	if err == nil {
+		t.Fatalf("a number under gdoc: was accepted: %+v", b)
+	}
+	if strings.Contains(err.Error(), "v1") {
+		t.Errorf("error %q calls a number v1's pairing", err)
+	}
+}

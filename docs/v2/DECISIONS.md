@@ -1069,3 +1069,46 @@ again, because a run still suggested-deleted under the id counts as pending.
 The multi-tab refusal went with the range. The live write test passes end to
 end. The rule "gdoc never accepts, rejects or deletes anyone else's suggestion"
 is unchanged and is now guard-enforced rather than a family ban.
+
+## 2026-09-08. v1's `gdoc: <id>` stays refused. Publish is the only writer of the block.
+
+v1's `gdoc generate` writes the pairing as a plain string, `gdoc: 1AbC...`. v2's
+front matter is a block, `gdoc: {schema: 1, document_id, folder_id, ...}`, read
+under `yaml.Strict()`. So until M6 a note v1 published could not be handed to
+v2's `propose --md` or `withdraw`: the reader refused the shape, and the run had
+no provenance record, which is the permission to withdraw later. Reading,
+answering and proposing on the link alone always worked; only the note pairing
+was lost.
+
+Two ways out were on the table. The reader could accept the v1 string as a
+schema-0 shape and upgrade it on the first write, which keeps notes published
+that week usable with no hand edit. Or M6's publish becomes the only writer of
+the block and v1's `generate` is retired for v2 notes.
+
+**Decided: the second.** No schema-0 shape enters the reader. A note v1
+published gets its `gdoc:` line rewritten by hand once, or the line is taken out
+and the note is published again by v2.
+
+The reason is what the first option costs for what it buys. It buys one hand
+edit on the handful of notes published in one week. It costs a second shape in
+the one reader that decides whether gdoc is allowed to act on a note, for ever,
+plus an upgrade-on-write path that rewrites somebody's front matter from a shape
+gdoc only half understands. `frontmatter`'s whole rule is that a block gdoc half
+understands is a pairing it may act on wrongly, and a schema-0 branch is that
+rule with an exception in it. There is also no folder in a v1 string, so an
+upgraded block would carry a `document_id` and no `folder_id`, which is a
+pairing that reads and is not the one publish writes.
+
+What that puts on the refusal is the whole migration story, because there is no
+other one. So it is not the parser's own sentence. A `gdoc:` key holding a plain
+string comes back naming the shape it found, the id inside it, and the two ways
+out: write it as a block carrying `schema: 1` and that `document_id`, or take
+the line out and publish again. `v1Pairing` and `v1Refusal` in
+`internal/frontmatter/frontmatter.go` are where that lives, and they are asked
+only after the strict read has already refused, so a block that reads pays
+nothing. A key holding some other scalar, `gdoc: 3`, is not v1's pairing and
+does not get v1's sentence: sending somebody to rewrite a number as a document
+id is the wrong way.
+
+`docs/backlog/v1-frontmatter-migration.md` is deleted by this entry. It asked
+the question and said Nail decides in M6.

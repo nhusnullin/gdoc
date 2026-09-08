@@ -256,11 +256,11 @@ Coverage: `cmd/gdoc` is at 87.7% of statements.
 
 ### Task 6: the v1 pairing decision, written down
 
-- [ ] Record Nail's decision of 2026-09-08 in `docs/v2/DECISIONS.md`: v2's reader keeps refusing v1's plain `gdoc: <id>` string, publish is the only writer of the block, and a note v1 published is rewritten by hand once or republished by v2.
-- [ ] Check the refusal `frontmatter.Read` gives on a v1 string names the shape and says what to do. Fix it if it does not, with a test.
-- [ ] Delete `docs/backlog/v1-frontmatter-migration.md`, which the decision settles.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: the v1 pairing decision, and publish is the only writer"`
+- [x] Record Nail's decision of 2026-09-08 in `docs/v2/DECISIONS.md`: v2's reader keeps refusing v1's plain `gdoc: <id>` string, publish is the only writer of the block, and a note v1 published is rewritten by hand once or republished by v2.
+- [x] Check the refusal `frontmatter.Read` gives on a v1 string names the shape and says what to do. Fix it if it does not, with a test.
+- [x] Delete `docs/backlog/v1-frontmatter-migration.md`, which the decision settles.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: the v1 pairing decision, and publish is the only writer"`
 
 ### Task 7: `drift.Doc` resolves a style, and the fixture says what it answers
 

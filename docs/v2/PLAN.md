@@ -325,11 +325,13 @@ What M5 leaves for M6:
   tested against a fixture, so the comparison is there and the upload is not.
 - **The `gdoc:` block written by the publish.** `build` never touches the note.
   M6's publish writes the ids and the publish record to the M2 schema.
-- **The v1 front matter migration**, `docs/backlog/v1-frontmatter-migration.md`.
-  A note v1 published carries `gdoc: <id>` as a plain string and v2's strict
-  reader refuses it. `cover` is unaffected, because it skips the `gdoc:` key
-  whatever it holds, so a v1 note builds today; it is `propose --md` and
-  `withdraw` that cannot read the pairing. Nail decides the shape in M6.
+- **The v1 front matter migration.** A note v1 published carries `gdoc: <id>` as
+  a plain string and v2's strict reader refuses it. `cover` is unaffected,
+  because it skips the `gdoc:` key whatever it holds, so a v1 note builds today;
+  it is `propose --md` and `withdraw` that cannot read the pairing. Nail decides
+  the shape in M6. **Settled**, 2026-09-08: the reader keeps refusing it and
+  publish is the only writer of the block. The backlog item is deleted and the
+  entry is in `docs/v2/DECISIONS.md` under that date.
 
 What M5 leaves open elsewhere:
 
