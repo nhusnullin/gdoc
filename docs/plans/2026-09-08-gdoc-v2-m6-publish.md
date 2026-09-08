@@ -139,7 +139,7 @@ Three failure shapes, and each says something different:
 
 ### Task 1: the guard judges a multipart create the way Drive parses one
 
-- [ ] Write the attacks first, in `go/internal/guard/transport_test.go` and `params_test.go`, each a refusal naming what disagreed or what could not be read:
+- [x] Write the attacks first, in `go/internal/guard/transport_test.go` and `params_test.go`, each a refusal naming what disagreed or what could not be read:
   - **the three signals disagreeing**: `uploadType=multipart` with a JSON media type and a JSON body (this is `TestUploadCreateAlsoTeachesThePolicy` today, carried; it must become a refusal); a `multipart/related` body with no upload parameter; a `multipart/related` body on the plain `/drive/v3/files` path
   - a body whose boundary never appears inside the peek
   - a `Content-Type` with no `boundary` parameter, one whose boundary the body does not use, and one giving `boundary` twice
@@ -148,12 +148,12 @@ Three failure shapes, and each says something different:
   - a first part naming `parents` twice, one naming a folder other than the granted one, and one naming two folders
   - a boundary string that also appears inside the file bytes, proving the guard reads the first part only and does not scan
   - a multipart create with no `AllowCreateIn` grant at all
-- [ ] Then the carry, in both directions: a well-formed multipart create naming exactly the granted folder is carried and `learnFromCreate` puts the new id at `LevelFull`; a plain JSON create with no upload parameter still works exactly as it does today.
-- [ ] Invert `TestAMultipartCreateIsRefusedForNow` and rewrite its comment: the pin it left for M6 is now spent.
-- [ ] Implement: pick the parser from the three agreeing signals, take the boundary through `mime.ParseMediaType`, read the first part with `mime/multipart`, require its media type to be JSON, and hand its body to the existing duplicate-key and parents check.
-- [ ] Update `checkParent`'s and `uploadShapes`' doc comments, which both name M6 as the milestone that would open this.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the guard judges a multipart create the way Drive parses one"`
+- [x] Then the carry, in both directions: a well-formed multipart create naming exactly the granted folder is carried and `learnFromCreate` puts the new id at `LevelFull`; a plain JSON create with no upload parameter still works exactly as it does today.
+- [x] Invert `TestAMultipartCreateIsRefusedForNow` and rewrite its comment: the pin it left for M6 is now spent.
+- [x] Implement: pick the parser from the three agreeing signals, take the boundary through `mime.ParseMediaType`, read the first part with `mime/multipart`, require its media type to be JSON, and hand its body to the existing duplicate-key and parents check.
+- [x] Update `checkParent`'s and `uploadShapes`' doc comments, which both name M6 as the milestone that would open this.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the guard judges a multipart create the way Drive parses one"`
 
 ### Task 2: `gapi` gains a multipart write
 

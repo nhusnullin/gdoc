@@ -229,7 +229,29 @@ func checkExportMime(v string) error {
 // shape could never finish, and a half-permitted route reads as a working one
 // to whoever tries it next. The milestone that needs resumable uploads adds
 // both legs together or neither.
+//
+// M6 made `multipart` reachable rather than merely named. Until then the
+// transport's own parse refused every multipart body, so this entry permitted a
+// shape nothing could finish; transport.checkParent now reads the first MIME
+// part, and multipartCreate there requires this value, the /upload path and a
+// multipart/related media type to agree before it does.
 var uploadShapes = map[string]bool{"multipart": true}
+
+// uploadShape reports the create shape a query names, and "" when it names
+// none. checkQuery has already refused a query naming both spellings, or
+// naming a shape uploadShapes does not carry, so whichever value is here is one
+// the guard carries. It is the second of the three signals transport reads
+// before it picks a parser for a create body.
+func uploadShape(u *url.URL) string {
+	vals, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		return ""
+	}
+	if v := vals.Get("uploadType"); v != "" {
+		return v
+	}
+	return vals.Get("upload_protocol")
+}
 
 // checkUploadShape refuses a create whose body the parent check cannot read.
 // The two parameters are the same choice spelled two ways, so a request naming
