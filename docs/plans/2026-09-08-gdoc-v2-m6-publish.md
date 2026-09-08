@@ -166,11 +166,11 @@ Three failure shapes, and each says something different:
 
 ### Task 3: the publish record's shape
 
-- [ ] Test first in `go/internal/frontmatter/`: a block whose `published` carries `at`, `title` and `house` round-trips byte-preservingly; a block carrying `revision_id` is refused by name under `yaml.Strict()`; `Validate` refuses a `published` missing `at` or `title`.
-- [ ] Change `Published` to `{At time.Time, Title string, House string}`.
-- [ ] Update the fixture `internal/frontmatter/testdata/full.md:9` and the assertion at `frontmatter_test.go:68`, which carry `revision_id` today. Without this the fixture stops parsing and takes the round-trip tests with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the publish record is when, what title and which house"`
+- [x] Test first in `go/internal/frontmatter/`: a block whose `published` carries `at`, `title` and `house` round-trips byte-preservingly; a block carrying `revision_id` is refused by name under `yaml.Strict()`; `Validate` refuses a `published` missing `at` or `title`.
+- [x] Change `Published` to `{At time.Time, Title string, House string}`.
+- [x] Update the fixture `internal/frontmatter/testdata/full.md:9` and the assertion at `frontmatter_test.go:68`, which carry `revision_id` today. Without this the fixture stops parsing and takes the round-trip tests with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the publish record is when, what title and which house"`
 
 ### Task 4: `internal/publish`
 

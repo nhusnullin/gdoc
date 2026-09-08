@@ -64,8 +64,11 @@ func TestReadDecodesTheFullBlock(t *testing.T) {
 	if !b.Published.At.Equal(wantPublished) {
 		t.Errorf("published.at = %v, want %v", b.Published.At, wantPublished)
 	}
-	if b.Published.RevisionID != "ALm37BX" {
-		t.Errorf("published.revision_id = %q", b.Published.RevisionID)
+	if b.Published.Title != "Supplier register policy" {
+		t.Errorf("published.title = %q", b.Published.Title)
+	}
+	if b.Published.House != "embedded" {
+		t.Errorf("published.house = %q", b.Published.House)
 	}
 	if b.SuggestionsSeen == nil {
 		t.Fatal("suggestions_seen is absent")
@@ -124,6 +127,7 @@ func TestReadRefusesAndNamesWhatIsWrong(t *testing.T) {
 		{"no-document-id.md", "document_id"},
 		{"bad-kind.md", "kind"},
 		{"twice.md", "gdoc"},
+		{"published-revision-id.md", "revision_id"},
 	}
 	for _, c := range cases {
 		t.Run(c.file, func(t *testing.T) {
@@ -583,5 +587,43 @@ func TestWriteKeepsQuotedThroughARoundTrip(t *testing.T) {
 	}
 	if len(back.Proposals) != 1 || back.Proposals[0].Quoted != "reviewed annually" {
 		t.Errorf("proposals = %+v", back.Proposals)
+	}
+}
+
+// TestWriteKeepsThePublishRecordThroughARoundTrip is M6's record going in and
+// coming back out. The three facts are when the document was made, what title
+// went on its cover, and whether the style was the embedded one or a file under
+// review. revision_id is gone: recording it would need a Drive route the guard
+// does not carry, for a field nothing reads.
+func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
+	src := fixture(t, "minimal.md")
+	b, err := Read(src)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	b.Published = &Published{
+		At:    time.Date(2026, 9, 8, 14, 30, 0, 0, time.UTC),
+		Title: "Supplier register policy",
+		House: "docs/v2/spikes/config/house.yaml",
+	}
+	out, err := Write(src, b)
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	back, err := Read(out)
+	if err != nil {
+		t.Fatalf("Read after Write: %v", err)
+	}
+	if back.Published == nil {
+		t.Fatal("the publish record did not survive the write")
+	}
+	if !back.Published.At.Equal(b.Published.At) {
+		t.Errorf("published.at = %v, want %v", back.Published.At, b.Published.At)
+	}
+	if back.Published.Title != b.Published.Title {
+		t.Errorf("published.title = %q, want %q", back.Published.Title, b.Published.Title)
+	}
+	if back.Published.House != b.Published.House {
+		t.Errorf("published.house = %q, want %q", back.Published.House, b.Published.House)
 	}
 }

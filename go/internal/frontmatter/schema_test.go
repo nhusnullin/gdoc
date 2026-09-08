@@ -73,6 +73,18 @@ func TestValidateNamesTheKeyItRefused(t *testing.T) {
 			names: "suggestions_seen.items[0].id",
 		},
 		{
+			name: "a publish record with no time",
+			block: &Block{Schema: 1, DocumentID: testDocumentID,
+				Published: &Published{Title: "Supplier register policy", House: "embedded"}},
+			names: "published.at",
+		},
+		{
+			name: "a publish record with no title",
+			block: &Block{Schema: 1, DocumentID: testDocumentID,
+				Published: &Published{At: at, House: "embedded"}},
+			names: "published.title",
+		},
+		{
 			name: "a proposal with no id",
 			block: &Block{Schema: 1, DocumentID: testDocumentID,
 				Proposals: []Proposal{{CommentID: "AAAA", At: at}}},
@@ -120,5 +132,20 @@ func TestValidateAcceptsBothSuggestionKinds(t *testing.T) {
 		if err := b.Validate(); err != nil {
 			t.Fatalf("kind %q refused: %v", kind, err)
 		}
+	}
+}
+
+// TestValidateAcceptsAPublishRecord is the other direction: the three facts M6
+// records are enough, and house is optional in Validate because a block written
+// before it existed carries none.
+func TestValidateAcceptsAPublishRecord(t *testing.T) {
+	b := validBlock()
+	b.Published = &Published{
+		At:    time.Date(2026, 9, 8, 14, 30, 0, 0, time.UTC),
+		Title: "Supplier register policy",
+		House: "embedded",
+	}
+	if err := b.Validate(); err != nil {
+		t.Fatalf("a publish record was refused: %v", err)
 	}
 }
