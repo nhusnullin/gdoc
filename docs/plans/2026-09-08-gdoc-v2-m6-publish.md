@@ -264,13 +264,49 @@ Coverage: `cmd/gdoc` is at 87.7% of statements.
 
 ### Task 7: `drift.Doc` resolves a style, and the fixture says what it answers
 
-- [ ] Test first in `go/internal/drift/doc_test.go`: fixture cases where a run inherits rather than states its size, font and colour, and the resolved value comes back.
-- [ ] Give `Doc` the resolution chain in Google's own vocabulary: `textRun.textStyle`, then `paragraph.paragraphStyle.namedStyleType`, then `namedStyles[type].textStyle`, then `namedStyles["NORMAL_TEXT"]`. The Docs API has no `docDefaults`. Normalise an absent colour the way `Docx.Style` does.
-- [ ] Pin the set of items the fixture is expected to answer, the way `unstated` pins the docx half, so a row that starts reading nil fails rather than passing as IDENTICAL against another nil.
-- [ ] State in the test file that this touches the Docs half only: the offline gate reads two docx files, so its 169 rows do not move and nothing is re-baselined.
-- [ ] Delete `docs/backlog/drift-fromdoc-style-fallback.md`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "fix(v2): the drift Docs reader resolves the style behind a value"`
+- [x] Test first in `go/internal/drift/doc_test.go`: fixture cases where a run inherits rather than states its size, font and colour, and the resolved value comes back.
+- [x] Give `Doc` the resolution chain in Google's own vocabulary: `textRun.textStyle`, then `paragraph.paragraphStyle.namedStyleType`, then `namedStyles[type].textStyle`, then `namedStyles["NORMAL_TEXT"]`. The Docs API has no `docDefaults`. Normalise an absent colour the way `Docx.Style` does.
+- [x] Pin the set of items the fixture is expected to answer, the way `unstated` pins the docx half, so a row that starts reading nil fails rather than passing as IDENTICAL against another nil.
+- [x] State in the test file that this touches the Docs half only: the offline gate reads two docx files, so its 169 rows do not move and nothing is re-baselined.
+- [x] Delete `docs/backlog/drift-fromdoc-style-fallback.md`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "fix(v2): the drift Docs reader resolves the style behind a value"`
+
+**The chain is one function, `Doc.resolve`, and `Style` is its last two links.**
+A `layer` is one `{textStyle, paragraphStyle}` pair, and `fold` applies them
+outermost first, so the nearer one wins. A property is taken only when the
+message carries it: an absent `bold` on a run is that run inheriting, so writing
+false there would clear a weight the named style states. That presence rule is
+why `truth` is gone, and it is what the old reader could not express.
+
+**Paragraph properties inherit too, not just text.** Docs documents both, and
+the docx half already folds `pPr` down the `basedOn` chain, so a Doc half that
+resolved only the run would have `HEADING_1 lineSpacing` reading nil against a
+docx half reading 115.
+
+**A style the answer does not carry is still not found.** Inheriting NORMAL_TEXT
+under an absent style's name would invent a style Docs never sent, and the docx
+half answers `Style{}` for a style that is in no file.
+
+**`firstRunStyle` became a method,** because it now needs the document to reach
+`namedStyles`. `Segment` is its only caller.
+
+**The fixture's two body paragraphs now state nothing on their runs,** which is
+what a converted document looks like, so `TestFromDocReadsEveryItem` walks the
+chain rather than around it. `body text size` reads 11 rather than the 12 the
+run used to state, which is the house body size.
+
+**The pin is `docsSilent`, 71 names.** Four reasons, each a fact about the
+fixture: a value the style leaves to the reader's default, the six named styles
+the fixture does not carry, the two tables and two heading levels it does not
+carry, and the contents field instruction Docs never sends. It fails in both
+directions. Against the reader before this change it names exactly the three
+rows the backlog item named, `body text size`, `body font` and `body H1 run
+colour`, plus the two `HEADING_1` and two `TITLE` rows the named-style link
+fixes.
+
+Nothing was re-baselined: the offline gate reads two docx files, so its 169 rows
+did not move.
 
 ### Task 8: the two live tests
 
