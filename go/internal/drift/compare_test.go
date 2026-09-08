@@ -35,7 +35,7 @@ func TestVerdictIsCompareDotPysRule(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, _ := verdict(c.a, c.b, tolerance(c.tol))
+			got, _, _ := verdict(c.a, c.b, tolerance(c.tol))
 			if got != c.want {
 				t.Errorf("%v against %v under tolerance %v gave %s, and it is %s", c.a, c.b, c.tol, got, c.want)
 			}
@@ -148,5 +148,43 @@ func TestTableAndSummaryPrintEveryRow(t *testing.T) {
 	}
 	if got := Summary(rows); !strings.Contains(got, "2 items") || !strings.Contains(got, "DIFFERENT 1") {
 		t.Errorf("the summary reads %q", got)
+	}
+}
+
+// TestATypeMismatchIsABugRatherThanAnAnswer. The %v fallback compared a number
+// against its own decimal spelling and called them the same: verdict("1", 1.0)
+// read IDENTICAL. Two halves of one row that answer in different types is a bug
+// in this package, the way a name that does not line up is, and it has to be
+// reported as one rather than hidden behind a string comparison.
+func TestATypeMismatchIsABugRatherThanAnAnswer(t *testing.T) {
+	got, note, bug := verdict("1", 1.0, tolerance(0))
+	if got == Identical {
+		t.Errorf("a string against a number came back %s, and the two are not one answer", got)
+	}
+	if !strings.Contains(note, "bug in this package") {
+		t.Errorf("a string against a number carried note %q, and it names a bug here", note)
+	}
+	if !bug {
+		t.Error("a string against a number is not marked as a bug in this package, so Known can explain it away")
+	}
+}
+
+// TestABugRowIsNeverExplainedAway. Known explains a difference between the two
+// documents. A row saying the fault is in this package is not that, so landing
+// on a name in Known must not drop it: ten of the twenty-five names carry rows
+// that can go wrong this way, and the gate would pass in silence.
+func TestABugRowIsNeverExplainedAway(t *testing.T) {
+	rows := []Row{
+		{Item: "table count", Verdict: Different, Bug: true,
+			Note: "read under two names, which is a bug in this package"},
+		{Item: "table count", Verdict: Different,
+			Note: "the two documents hold different tables"},
+	}
+	got := Unexplained(rows)
+	if len(got) != 1 {
+		t.Fatalf("one row is a bug here and %d came back: %v", len(got), got)
+	}
+	if !got[0].Bug {
+		t.Errorf("the row that came back is %q, and it is the document difference Known explains", got[0].Note)
 	}
 }

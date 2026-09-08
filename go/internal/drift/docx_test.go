@@ -3,6 +3,7 @@ package drift
 import (
 	"archive/zip"
 	"bytes"
+	"math"
 	"strings"
 	"testing"
 )
@@ -120,5 +121,56 @@ func TestWordsBooleanIsTrueWhenTheElementIsThere(t *testing.T) {
 		if got := onOff(value); got != want {
 			t.Errorf("w:val=%q read as %v, and it is %v", value, got, want)
 		}
+	}
+}
+
+// TestARoundedNumberIsTheSameOnEveryArchitecture. round3 cast through int64,
+// and Go leaves a float to int64 conversion out of range implementation
+// dependent: NaN read as 0 on darwin/arm64 and as -9.2e15 on darwin/amd64.
+// `make dist` ships both, so one document measured two ways is one gate giving
+// two answers. NaN has to stay NaN, so the row goes DIFFERENT rather than
+// carrying a number nobody wrote.
+func TestARoundedNumberIsTheSameOnEveryArchitecture(t *testing.T) {
+	if got := round3(math.NaN()); !math.IsNaN(got) {
+		t.Errorf("NaN rounded to %v, and a value that is not a number stays one", got)
+	}
+	if got := round3(math.Inf(1)); !math.IsInf(got, 1) {
+		t.Errorf("+Inf rounded to %v", got)
+	}
+	if got := round3(24.3984375); got != 24.398 {
+		t.Errorf("24.3984375 rounded to %v, and three decimals is 24.398", got)
+	}
+	if got := round3(-24.3984375); got != -24.398 {
+		t.Errorf("-24.3984375 rounded to %v, and three decimals is -24.398", got)
+	}
+}
+
+// TestAStyleThatIsNotInTheFileCarriesNothing, which is what Style's own doc
+// comment promises. docDefaults were folded in before the chain was walked, so
+// an absent style came back 11pt Calibri at 115%: drop a named style from
+// house.yaml and six of its eleven rows read the defaults on both sides and
+// compare IDENTICAL. The gate would pass on a style that no longer exists.
+func TestAStyleThatIsNotInTheFileCarriesNothing(t *testing.T) {
+	got := openMaster(t).Style("ThisStyleIsNotInTheMaster")
+	for _, f := range []struct {
+		name string
+		v    any
+	}{
+		{"fontSize", got.FontSize}, {"font", got.Font}, {"colour", got.Colour},
+		{"lineSpacing", got.LineSpacing}, {"spaceAbove", got.SpaceAbove},
+		{"spaceBelow", got.SpaceBelow}, {"indentStart", got.IndentStart},
+		{"alignment", got.Alignment},
+	} {
+		if f.v != nil {
+			t.Errorf("a style the master does not carry read %s as %v, and the file says nothing about it", f.name, f.v)
+		}
+	}
+	if got.Bold || got.Italic || got.KeepWithNext {
+		t.Errorf("a style the master does not carry read bold %v, italic %v, keepWithNext %v", got.Bold, got.Italic, got.KeepWithNext)
+	}
+	// The defaults are still folded in for a style that is there, which is what
+	// Word does and what every other row rests on.
+	if openMaster(t).Style("Heading1").FontSize == nil {
+		t.Error("Heading 1 is in the master and read no font size")
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -313,6 +314,14 @@ func (d *Docx) styleElement(id string) *etree.Element {
 // A style that is not in the file at all comes back with nothing found, and
 // every field nil: the honest answer to "what does this document say about
 // Heading 4" when it says nothing.
+//
+// That early return is the whole of the promise above. The document defaults
+// used to be folded in before the chain was walked, and the chain is empty when
+// the style is absent, so an absent style came back stating the defaults: 11pt
+// Calibri at 115%, which is what the master states in its own docDefaults too.
+// Drop a named style from house.yaml and six of that style's eleven rows would
+// read the defaults on both sides and compare IDENTICAL, so the gate passed on
+// a style that no longer existed.
 func (d *Docx) Style(id string) Style {
 	chain := []*etree.Element{}
 	for seen, cur := map[string]bool{}, id; cur != ""; {
@@ -323,6 +332,9 @@ func (d *Docx) Style(id string) Style {
 		seen[cur] = true
 		chain = append([]*etree.Element{el}, chain...)
 		cur = d.styles.attr(el, "basedOn", "val")
+	}
+	if len(chain) == 0 {
+		return Style{}
 	}
 
 	st := Style{}
@@ -862,15 +874,16 @@ func numberOf(v string) any {
 
 // round3 keeps three decimals, which is what compare.py kept. Further than that
 // is the difference between two ways of writing one number.
+//
+// It goes through math.Round rather than a cast to int64. numberOf parses with
+// strconv.ParseFloat, which takes "NaN" and "Inf" without an error, and Go
+// leaves a float to int64 conversion out of that range implementation
+// dependent: NaN read as 0 on darwin/arm64 and as -9.2e15 on darwin/amd64, both
+// of which `make dist` ships. One document would then measure two ways
+// depending on which binary ran. math.Round gives NaN back, so the row goes
+// DIFFERENT instead of carrying a number nobody wrote.
 func round3(v float64) float64 {
-	return float64(int64(v*1000+copysign(0.5, v))) / 1000
-}
-
-func copysign(v, sign float64) float64 {
-	if sign < 0 {
-		return -v
-	}
-	return v
+	return math.Round(v*1000) / 1000
 }
 
 // hexColour turns Word's colour into the spelling the Docs answer is read

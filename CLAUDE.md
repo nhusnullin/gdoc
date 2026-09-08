@@ -1417,6 +1417,29 @@ DECISIONS.md counted is not in `Known` at all: it is inside the item's two-point
 tolerance, so it comes back CLOSE. Adding a name to `Known` is a decision
 somebody writes down with its reason, not a test somebody loosens.
 
+**`Known` explains a difference between the two documents, and never a fault in
+this package.** `Row.Bug` is that split. A reading that did not line up, by name
+or by length, and two halves of one row answering in different types are all
+faults here, so they set it, and `Unexplained` returns a row carrying it
+whatever `Known` says about that name. Ten of the twenty-five names carry rows
+that can go wrong that way, so filtering on the name alone dropped them and the
+gate passed in silence. The type check is the arm that found it: two halves of
+one row are one question asked two ways, so they answer in one type, and the
+`%v` fallback behind them read `"1"` against `1.0` as IDENTICAL.
+
+**Two readers had a hole each, and both are closed.** `Docx.Style` folded the
+document defaults in before it walked the style chain, and the chain is empty
+when the style is absent, so a style that is in no file at all came back stating
+11pt Calibri at 115% while its own doc comment promised nothing. The master
+states the same defaults, so dropping a named style from `house.yaml` put six of
+that style's eleven rows IDENTICAL on both sides and the gate passed on a style
+that no longer existed. `round3` is the other: it cast through `int64`, and Go
+leaves that conversion out of range implementation dependent, so `NaN` read as 0
+on darwin/arm64 and as -9.2e15 on darwin/amd64. `make dist` ships both, so one
+document measured two ways gave one gate two answers. It goes through
+`math.Round` now, which hands `NaN` back and puts the row DIFFERENT rather than
+inventing a number.
+
 **The three PDF items are dropped, on purpose.** `compare.py` read a PDF export
 for a page count, a page-1 size and a page-1 image count. SPEC's Never list says
 gdoc never exports a PDF, so neither gate does. The page count was one of the two

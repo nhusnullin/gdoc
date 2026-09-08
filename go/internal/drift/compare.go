@@ -25,6 +25,7 @@ package drift
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -75,6 +76,11 @@ type Row struct {
 	// Note carries the one thing a verdict cannot say, the worst difference in
 	// a list of numbers. It is empty on every other row.
 	Note string
+	// Bug says the fault is in this package rather than in either document: two
+	// readings that did not line up, or two halves of one row answering in
+	// different types. Known explains a difference between the two documents,
+	// so it must never explain one of these away.
+	Bug bool
 }
 
 // Known names the differences that have already been looked at, with the reason
@@ -155,21 +161,21 @@ func Compare(a, b []Value) []Row {
 	rows := make([]Row, 0, len(a))
 	for i, av := range a {
 		if i >= len(b) {
-			rows = append(rows, Row{Item: av.Name, A: av.V, Verdict: Missing,
+			rows = append(rows, Row{Item: av.Name, A: av.V, Verdict: Missing, Bug: true,
 				Note: "the two readings are different lengths, which is a bug in this package rather than a difference between the documents"})
 			continue
 		}
 		bv := b[i]
 		if av.Name != bv.Name {
-			rows = append(rows, Row{Item: av.Name, A: av.V, B: bv.V, Verdict: Different,
+			rows = append(rows, Row{Item: av.Name, A: av.V, B: bv.V, Verdict: Different, Bug: true,
 				Note: fmt.Sprintf("this row was read as %q on the other side, which is a bug in this package", bv.Name)})
 			continue
 		}
-		v, note := verdict(av.V, bv.V, tolerance(av.Tol))
-		rows = append(rows, Row{Item: av.Name, A: av.V, B: bv.V, Verdict: v, Note: note})
+		v, note, bug := verdict(av.V, bv.V, tolerance(av.Tol))
+		rows = append(rows, Row{Item: av.Name, A: av.V, B: bv.V, Verdict: v, Note: note, Bug: bug})
 	}
 	for _, bv := range b[min(len(a), len(b)):] {
-		rows = append(rows, Row{Item: bv.Name, B: bv.V, Verdict: Missing,
+		rows = append(rows, Row{Item: bv.Name, B: bv.V, Verdict: Missing, Bug: true,
 			Note: "the two readings are different lengths, which is a bug in this package rather than a difference between the documents"})
 	}
 	return rows
@@ -191,23 +197,29 @@ func tolerance(tol float64) float64 {
 // verdict is compare.py's rule, with one addition: a list of numbers is judged
 // on its worst member, which is what compare.py did by hand for the column
 // widths. The note is that worst difference, so a CLOSE row says how close.
-func verdict(a, b any, tol float64) (Verdict, string) {
+//
+// The third return says the fault is in this package. Two halves of one row are
+// one question asked two ways, so they answer in one type; when they do not,
+// the last arm used to compare their two spellings and call "1" and 1.0 the
+// same answer. That is the same kind of thing as a name that does not line up,
+// and it is reported the same way.
+func verdict(a, b any, tol float64) (Verdict, string, bool) {
 	if a == nil && b == nil {
-		return Identical, ""
+		return Identical, "", false
 	}
 	if a == nil || b == nil {
-		return Missing, ""
+		return Missing, "", false
 	}
 	an, aok := number(a)
 	bn, bok := number(b)
 	if aok && bok {
-		return numberVerdict(math.Abs(an-bn), tol), ""
+		return numberVerdict(math.Abs(an-bn), tol), "", false
 	}
 	al, aok := numbers(a)
 	bl, bok := numbers(b)
 	if aok && bok {
 		if len(al) != len(bl) {
-			return Different, fmt.Sprintf("%d values against %d", len(al), len(bl))
+			return Different, fmt.Sprintf("%d values against %d", len(al), len(bl)), false
 		}
 		worst := 0.0
 		for i := range al {
@@ -216,12 +228,15 @@ func verdict(a, b any, tol float64) (Verdict, string) {
 		// Three decimals, because the differences this catches are the ones two
 		// writers make out of the same number: 0.00pt reads as no difference at
 		// all on a row that is not identical.
-		return numberVerdict(worst, tol), fmt.Sprintf("worst difference %.3fpt", worst)
+		return numberVerdict(worst, tol), fmt.Sprintf("worst difference %.3fpt", worst), false
+	}
+	if ta, tb := reflect.TypeOf(a), reflect.TypeOf(b); ta != tb {
+		return Different, fmt.Sprintf("this row was read as %s on one side and %s on the other, which is a bug in this package", ta, tb), true
 	}
 	if fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b) {
-		return Identical, ""
+		return Identical, "", false
 	}
-	return Different, ""
+	return Different, "", false
 }
 
 // numberVerdict turns one distance into a verdict.
@@ -310,7 +325,11 @@ func Unexplained(rows []Row) []Row {
 		if r.Verdict != Different && r.Verdict != Missing {
 			continue
 		}
-		if _, ok := Known[r.Item]; ok {
+		// Known explains a difference between the two documents. A row whose
+		// fault is in this package is not one, and ten of the names in Known
+		// carry rows that can go wrong that way, so filtering on the name alone
+		// dropped them and the gate passed in silence.
+		if _, ok := Known[r.Item]; ok && !r.Bug {
 			continue
 		}
 		out = append(out, r)
