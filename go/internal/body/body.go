@@ -318,6 +318,21 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 			return err
 		}
 	}
+	// The marker is still armed, so nothing this item holds emitted a list
+	// paragraph and the item takes no number. Word numbers what is left, so
+	// every item after this one prints one lower and the author's "3." reads
+	// as "2.".
+	//
+	// A table is the case that reached here in silence: it renders, at body
+	// width rather than inside the item, so the document looks deliberate and
+	// only the numbering is wrong. A code block warns about itself and says
+	// nothing about the number it cost. Both are named here instead, on the
+	// walker's own rule that what did not reach the document in the shape the
+	// author wrote is named on the envelope.
+	if r.pendingMark {
+		r.warn("line %d: this list item has no text of its own, so it takes no number and the items after it are numbered one lower",
+			r.line(item))
+	}
 	return nil
 }
 

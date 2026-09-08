@@ -668,6 +668,36 @@ func TestANestedListTakesItsOwnMarkersAndLeavesTheOuterItemsAlone(t *testing.T) 
 	}
 }
 
+// TestAnOuterItemWhoseWordsFollowItsSubListStillTakesItsMarker is the case the
+// restore actually exists for, and the fixture above cannot reach it.
+//
+// There the outer item's paragraph runs first and spends the marker, so by the
+// time the sub-list is walked there is nothing left to put back: deleting the
+// defer keeps that test green. Here the sub-list comes first. Its two items arm
+// and spend their own markers, and without the restore the outer item's own
+// paragraph finds pendingMark false, takes no w:numPr, and Word then numbers
+// the author's item 2 as "1.".
+func TestAnOuterItemWhoseWordsFollowItsSubListStillTakesItsMarker(t *testing.T) {
+	out := walk(t, strings.Join([]string{
+		"1. - Financial standing.",
+		"   - Operational history.",
+		"",
+		"   The provider is assessed annually.",
+		"",
+		"2. The register is reviewed quarterly.",
+		"",
+	}, "\n"))
+	var marked int
+	for _, block := range out.Blocks {
+		if find(block, "w:numPr") != nil {
+			marked++
+		}
+	}
+	if marked != 4 {
+		t.Errorf("%d paragraphs carry a list marker, want the two outer items and the two nested ones", marked)
+	}
+}
+
 // TestAQuoteInsideAQuoteIsIndentedTwice. The depth used to be a parameter with
 // one call site and one value, so "> >" was indented exactly as far as ">".
 func TestAQuoteInsideAQuoteIsIndentedTwice(t *testing.T) {
@@ -794,5 +824,88 @@ func TestNothingHereReachesTheNetwork(t *testing.T) {
 				t.Errorf("%s imports %s, and a build reaches no network", name, banned)
 			}
 		}
+	}
+}
+
+// TestAnItemThatSpendsNoMarkerSaysSo. An item whose children never emit a list
+// paragraph takes no number, and Word then numbers every item after it one
+// lower: the author's "3." prints as "2.". A table is the case that reaches
+// this in silence, because the table itself renders and nothing else warns.
+//
+// The warning is the walker's own rule, the one a picture in a list item and a
+// code block already follow: what did not reach the document in the shape the
+// author wrote is named on the envelope, never left for somebody to find by
+// reading the published policy.
+func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
+	cases := []struct {
+		name     string
+		markdown []string
+		want     bool
+	}{
+		{
+			name: "an item that is only a table",
+			markdown: []string{
+				"1. Collect the provider's financial standing.",
+				"",
+				"2. | Control | Owner |",
+				"   | --- | --- |",
+				"   | Screening | MLRO |",
+				"",
+				"3. Record the outcome in the register.",
+			},
+			want: true,
+		},
+		{
+			name: "an item that is only a code block",
+			markdown: []string{
+				"1. The provider is assessed annually.",
+				"",
+				"2. ```",
+				"   assess(provider)",
+				"   ```",
+				"",
+				"3. The register is reviewed quarterly.",
+			},
+			want: true,
+		},
+		{
+			// The item spends its marker on its own words, so the table costs
+			// the list nothing and there is nothing to say about numbering.
+			name: "a table after the item's own words",
+			markdown: []string{
+				"1. Collect the provider's financial standing.",
+				"",
+				"   | Control | Owner |",
+				"   | --- | --- |",
+				"   | Screening | MLRO |",
+				"",
+				"2. Record the outcome in the register.",
+			},
+			want: false,
+		},
+		{
+			name: "an ordinary list, which says nothing",
+			markdown: []string{
+				"1. The provider is assessed annually.",
+				"",
+				"2. The register is reviewed quarterly.",
+			},
+			want: false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			out := walk(t, strings.Join(append(c.markdown, ""), "\n"))
+			var got bool
+			for _, warning := range out.Warnings {
+				if strings.Contains(warning, "takes no number") {
+					got = true
+				}
+			}
+			if got != c.want {
+				t.Errorf("a warning naming the lost number: got %v want %v, warnings %q",
+					got, c.want, out.Warnings)
+			}
+		})
 	}
 }

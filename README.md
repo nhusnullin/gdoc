@@ -771,8 +771,11 @@ which one was used, `embedded` or the path, so a document built from a draft
 says so.
 
 `--out` will not overwrite a file that is already there. Add `--force` when you
-mean to replace it. The write goes through a temporary file and a rename, so a
-failed build cannot truncate a document you already had.
+mean to replace it. `--force` is consent to replace a document, not a folder and
+not something the run reads: an `--out` naming a directory, the note, the
+`--house` file or one of the note's own pictures is refused whatever the flag
+says. The write goes through a temporary file and a rename, so a failed build
+cannot truncate a document you already had.
 
 The note needs a `title` in its front matter and nothing else. These are the
 keys it reads, and they are the same names the Python tool uses, so a note
