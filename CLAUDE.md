@@ -1316,6 +1316,25 @@ Python spike this was ported from, concatenated strings, and one `&` in a note's
 title breaks a part that way. A value from the note or from the config never
 reaches the XML as text somebody formatted.
 
+**A properties element is a sequence, and Word reads one out of order as a
+document to repair.** That holds for `w:pPr`, where `para` writes the children
+in schema order for that reason, and for `w:tblPr`, where the schema is
+`tblStyle, tblW, jc, tblCellSpacing, tblInd, tblBorders, shd, tblLayout,
+tblCellMar, tblLook`. Both table writers used to break it, `render/front.go`
+with `tblLayout` in front of `tblBorders` and `body/table.go` with
+`tblCellMar` in front of `tblLayout`, and neither the goldens nor the drift
+gate reads child order. So each writer has its own order test now, stating the
+sequence it writes as a literal list of tags:
+`TestTheFrontMatterTablesPropertiesAreInSchemaOrder` and
+`TestATablesPropertiesAreInSchemaOrder`, beside the `w:pPr` one that came
+first.
+
+**Every list level states `w:start`.** ECMA-376 17.9.26 reads an omitted start
+as zero, so the nested numbered levels, which carried none, opened a sub-list
+at "0." and printed every item under it one lower than the author wrote. The
+master states it on all sixty-three of its own levels. Nothing else would have
+caught it: `drift.Items` has no numbering row, so neither gate reads that part.
+
 **No network in the render path, and it is a property of the tree.** None of
 `house`, `render`, `body`, `cover` or `drift` imports `net/http` or
 `internal/gapi`, and none imports `guard` or `auth` either. `cmd/gdoc/build.go`
@@ -1389,13 +1408,35 @@ the instruction and the writer emits the field, so Word fills it in on a refresh
 and Docs imports it as a live contents list. That is why M6 uploads once and has
 no measuring pass, which is what v1 needs a second upload and a PDF export for.
 
-**One list item takes one marker, whatever it holds.** The marker goes on the
-first paragraph the item actually emits, and every paragraph after it takes the
-item's indent and no marker. A continuation paragraph and a block quote both
-used to number themselves as items, so an author's "2." printed as "3.". The
-hanging indent goes with the marker for the same reason: written on a paragraph
-with no number to fill it, it starts that paragraph's first line in the number's
-own column.
+**One list item takes at most one marker, whatever it holds.** The marker goes
+on the first paragraph the item actually emits, and every paragraph after it
+takes the item's indent and no marker. A continuation paragraph and a block
+quote both used to number themselves as items, so an author's "2." printed as
+"3.". The hanging indent goes with the marker for the same reason: written on a
+paragraph with no number to fill it, it starts that paragraph's first line in
+the number's own column.
+
+**At most, because an item can hold nothing that carries a marker, and then it
+takes none and says so.** An item that is only a table, only a code block, only
+a block of HTML or empty emits no list paragraph, so `pendingMark` is still
+armed when `itemBlocks` returns and the run warns. What it costs depends on the
+list, so the sentence does too: a number is a count Word carries on, so the
+items after it print one lower and the author's "3." reads as "2.", while a
+bullet is not a count, so a bulleted item loses only its own bullet and its
+indent and nothing after it moves. Telling an author to check numbering that is
+not wrong is the cry-wolf warning this tool avoids everywhere else. A table is
+the case that used to reach this in silence: it renders, at body width rather
+than inside the item, so the document looks deliberate and only the list is
+wrong.
+
+**The line that warning names comes from inside the item.** A goldmark
+`ListItem` carries no source position: its `Offset` is a column inside the
+line, and lines are appended to leaf blocks only. So `itemLine` reads the first
+descendant that has one, a fence being read one line above its own first line
+of code the way the code block's own warning reads it, and falls back to the
+nearest sibling item for an item holding nothing positioned at all. Asking the
+item resolved to line 1, which in a note is the front matter's own delimiter:
+the wrong end of the file to send somebody to.
 
 **The marker is pending on the renderer, and that is not a detail.** Nothing
 the walker can read off a child says which child emits the item's first
@@ -1409,7 +1450,8 @@ marker on a paragraph nobody sees. So `itemBlocks` arms `pendingMark`,
 way out so a nested list takes its own.
 
 **What the walker will not render is a warning naming the line, never a silent
-drop.** Fenced and indented code blocks, blocks of HTML and inline HTML. Nail
+drop.** Fenced and indented code blocks, blocks of HTML, inline HTML, and the
+list marker an item holding none of those can carry. Nail
 decided code blocks stay out of the house style, and a note carrying one has to
 say so on the envelope. A picture inside a list item, a block quote or a table
 cell is the same answer: the house style puts a figure on a centred line of its

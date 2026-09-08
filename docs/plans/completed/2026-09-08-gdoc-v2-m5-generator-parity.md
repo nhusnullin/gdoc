@@ -455,32 +455,47 @@ answers the whole list in the same order under the same names, so M6 adds the
 upload and the read and the gate is ten lines. Nothing about the item list has
 to change.
 
-**The offline gate, run 2026-09-08.** 169 rows: 149 IDENTICAL, 2 CLOSE,
-15 DIFFERENT, 3 MISSING. Every row that is not IDENTICAL, and nothing else:
+**The offline gate, run 2026-09-08.** 169 rows: 142 IDENTICAL, 2 CLOSE,
+22 DIFFERENT, 3 MISSING. Every row that is not IDENTICAL, and nothing else:
 
 ```
-item                               verdict     built vs master
-HEADING_1 colour                   DIFFERENT   "#22265F" vs "#06436E"
-HEADING_1 indentStart              DIFFERENT   0 vs 36
-HEADING_2 colour                   DIFFERENT   "#22265F" vs "#06436E"
-HEADING_2 indentStart              DIFFERENT   0 vs 72
-HEADING_3 indentStart              DIFFERENT   0 vs 108
-HEADING_4 indentStart              DIFFERENT   0 vs 144
-HEADING_5 indentStart              DIFFERENT   0 vs 180
-HEADING_6 indentStart              DIFFERENT   0 vs 216
-default header text                DIFFERENT   "Altery - Supplier Management Policy" vs "Altery - xxx Policy"
-logo topOffset (pt)                CLOSE       -5.15 vs -5.149
-table count                        DIFFERENT   6 vs 3
-table Version Control row heights  CLOSE       [28.5 24.4 ...] vs [28.5 24.398 ...]  (worst difference 0.002pt)
-body H1 text                       DIFFERENT   "1-Third Party and Outsourcing Policy" vs "1-Purpose"
-body H1 run colour                 DIFFERENT   "#22265F" vs "#222660"
-body H2 text                       DIFFERENT   "1.1-Purpose and scope" vs "Appendix 1 - Associated Documents"
-body H2 run colour                 DIFFERENT   "#22265F" vs "#222660"
-body H3 text                       MISSING     "1.1.1-What counts as outsourcing" vs <none>
-body H3 indentStart                MISSING     0 vs <none>
-body H3 run colour                 MISSING     "#549F99" vs <none>
-bulleted paragraphs                DIFFERENT   17 vs 27
+item                                      verdict     built vs master
+HEADING_1 colour                          DIFFERENT   "#22265F" vs "#06436E"
+HEADING_1 indentStart                     DIFFERENT   0 vs 36
+HEADING_2 colour                          DIFFERENT   "#22265F" vs "#06436E"
+HEADING_2 indentStart                     DIFFERENT   0 vs 72
+HEADING_3 indentStart                     DIFFERENT   0 vs 108
+HEADING_4 indentStart                     DIFFERENT   0 vs 144
+HEADING_5 indentStart                     DIFFERENT   0 vs 180
+HEADING_6 indentStart                     DIFFERENT   0 vs 216
+default header text                       DIFFERENT   "Altery - Supplier Management Policy" vs "Altery - xxx Policy"
+logo topOffset (pt)                       CLOSE       -5.15 vs -5.149
+table count                               DIFFERENT   6 vs 3
+table Version Control cell text           DIFFERENT   the note's owner and approval dates vs the master's blanks
+table Version Control row heights         CLOSE       [28.5 24.4 ...] vs [28.5 24.398 ...]  (worst difference 0.002pt)
+table Revision History size               DIFFERENT   "2x7" vs "3x7"
+table Revision History cell fills         DIFFERENT   2 rows of fills vs 3
+table Revision History cell text          DIFFERENT   the note's own revision vs the master's "xx" row
+table Revision History cell borders       DIFFERENT   2 rows of borders vs 3
+table Revision History row heights        DIFFERENT   [32.4 28.35] vs [32.4 28.35 28.35]
+table Document Classification cell fills  DIFFERENT   Confidential shaded vs Internal shaded
+body H1 text                              DIFFERENT   "1-Third Party and Outsourcing Policy" vs "1-Purpose"
+body H1 run colour                        DIFFERENT   "#22265F" vs "#222660"
+body H2 text                              DIFFERENT   "1.1-Purpose and scope" vs "Appendix 1 - Associated Documents"
+body H2 run colour                        DIFFERENT   "#22265F" vs "#222660"
+body H3 text                              MISSING     "1.1.1-What counts as outsourcing" vs <none>
+body H3 indentStart                       MISSING     0 vs <none>
+body H3 run colour                        MISSING     "#549F99" vs <none>
+bulleted paragraphs                       DIFFERENT   17 vs 27
 ```
+
+The seven front matter rows were added to `drift.Known` in review round 1, on
+2026-09-08, after this table was first written: the built document carries the
+note's own owner, revisions and class where the master leaves them blank, keeps
+its "xx" prototype row and was captured with Internal marked. They are the rows
+that would go IDENTICAL again if the generator stopped placing what the note
+declares, which is what M5 was fixing, so they belong in `Known` and not in the
+parity target. `docs/v2/PLAN.md` and CLAUDE.md carry the same figures.
 
 `logo topOffset` is one of the two real differences DECISIONS.md recorded on
 2026-08-29, and it is still 0.001pt. The other one was a page count from a
@@ -495,10 +510,13 @@ they fall into three groups:
   because the XML carries both statements; live it is not, because Docs reports
   what it resolved. Eight rows: two heading colours and six heading indents.
 - **The two documents hold different words.** The master is the template, with
-  "xxx" where a title goes and its own body text. Six rows: the running head,
-  the three body headings, the bullet count and the table count. The three
-  front matter tables are compared cell by cell and every one of those rows is
-  IDENTICAL, which is the measurement that matters.
+  "xxx" where a title goes and its own body text. Thirteen rows: the running
+  head, the three body headings, the bullet count, the table count, and the
+  seven front matter rows the note fills in. The three front matter tables are
+  compared cell by cell, and the rows that differ differ only because the note
+  states an owner, a revision and a class where the master leaves a blank, an
+  "xx" and Internal. Every other cell of those three tables is IDENTICAL,
+  which is the measurement that matters.
 - **One unit of blue.** Google's docx export writes the house navy as `#222660`
   where the Docs API reports the `#22265F` `house.yaml` states. Two rows. The
   live gate reads them as the same value.
@@ -541,10 +559,11 @@ footers then read as the same footer. The Docs half prints the same field as
 - [x] verify coverage: every exported function under `go/internal/` has a test, the five new packages at or above 80%
 - [x] commit any fixes this task made
 
-**The gate, 2026-09-08.** The offline gate is green: 169 items, 149 IDENTICAL,
-2 CLOSE, 15 DIFFERENT, 3 MISSING, and every row that is not IDENTICAL is in
+**The gate, 2026-09-08.** The offline gate is green: 169 items, 142 IDENTICAL,
+2 CLOSE, 22 DIFFERENT, 3 MISSING, and every row that is not IDENTICAL is in
 `drift.Known` with its reason. That is Task 7's table unchanged, so this run
-found no new difference. `TestTheGateReadsTheWholeList` states that the gate
+found no new difference. The figures are the ones after review round 1 added the
+seven front matter rows to `Known`; read the note under Task 7's table. `TestTheGateReadsTheWholeList` states that the gate
 reads every item rather than a subset, which is what makes "no new differences"
 mean something.
 

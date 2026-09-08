@@ -216,9 +216,12 @@ func (b *builder) table(spec house.Table) *etree.Element {
 	// than the cell edge lines up with the page margin. Google copies that on
 	// import, and the house tables sit on the margin, so cancel it.
 	sub(tblPr, "w:tblInd", "w:w", twips(padding(spec.Rows[0].Cells[0])[1]), "w:type", "dxa")
-	sub(tblPr, "w:tblLayout", "w:type", "fixed")
+	// CT_TblPrBase is a sequence, and Word reads a w:tblPr out of order the way
+	// it reads a w:pPr out of order: as a document to repair. So tblBorders
+	// comes before tblLayout, whatever order reads better here.
 	edges(sub(tblPr, "w:tblBorders"),
 		[]string{"top", "left", "bottom", "right", "insideH", "insideV"})
+	sub(tblPr, "w:tblLayout", "w:type", "fixed")
 
 	grid := sub(tbl, "w:tblGrid")
 	for _, w := range spec.ColumnsPt {

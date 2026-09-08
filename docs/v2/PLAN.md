@@ -334,7 +334,9 @@ What M5 leaves for M6:
 What M5 leaves open elsewhere:
 
 - Code blocks are not rendered, by decision. A note carrying one gets a warning
-  naming the line, and blocks of HTML and inline HTML are the same answer.
+  naming the line, and blocks of HTML and inline HTML are the same answer. A
+  list item holding only one of those, or nothing at all, takes no marker, and
+  that is a warning of its own naming the line and what it cost.
 - One template. Everything is measured against `altery-group-policy-v1.0`.
 - The acceptance run by hand, a built docx opened in Word and in Drive beside
   the same note published by v1, is Nail's.

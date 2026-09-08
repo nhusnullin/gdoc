@@ -3,6 +3,7 @@ package body
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -563,7 +564,7 @@ func TestALooseContinuationKeepsTheIndentAndNotTheHang(t *testing.T) {
 	}
 }
 
-// TestAnItemTakesExactlyOneMarkerWhateverItHolds. The marker goes on the first
+// TestAnItemTakesNoMoreThanOneMarkerWhateverItHolds. The marker goes on the first
 // paragraph the item emits, and every case here is a way of getting that wrong
 // in one direction or the other.
 //
@@ -574,7 +575,11 @@ func TestALooseContinuationKeepsTheIndentAndNotTheHang(t *testing.T) {
 // *ast.Paragraph child and takes no number at all. Marking the item's first
 // child instead breaks the third, an item opening with a fenced code block,
 // which renders nothing and would swallow the marker.
-func TestAnItemTakesExactlyOneMarkerWhateverItHolds(t *testing.T) {
+//
+// No more than one, rather than exactly one: an item holding nothing that can
+// carry a marker takes none, and says so on the envelope. That is
+// TestAnItemThatSpendsNoMarkerSaysSo.
+func TestAnItemTakesNoMoreThanOneMarkerWhateverItHolds(t *testing.T) {
 	cases := []struct {
 		name     string
 		markdown []string
@@ -749,6 +754,33 @@ func TestAQuotesPropertiesAreInSchemaOrder(t *testing.T) {
 	}
 }
 
+// TestATablesPropertiesAreInSchemaOrder is TestAQuotesPropertiesAreInSchemaOrder
+// for a table. CT_TblPrBase is a sequence too, and tblCellMar used to be
+// written before tblLayout, which is positions 14 then 13.
+func TestATablesPropertiesAreInSchemaOrder(t *testing.T) {
+	out := walk(t, "| Control | Owner |\n| --- | --- |\n| Screening | MLRO |\n")
+	var tblPr *etree.Element
+	for _, block := range out.Blocks {
+		if block.FullTag() == "w:tbl" {
+			tblPr = find(block, "w:tblPr")
+		}
+	}
+	if tblPr == nil {
+		t.Fatal("the note rendered no table")
+	}
+	var got []string
+	for _, e := range tblPr.ChildElements() {
+		got = append(got, e.FullTag())
+	}
+	want := []string{
+		"w:tblStyle", "w:tblW", "w:jc", "w:tblInd",
+		"w:tblBorders", "w:tblLayout", "w:tblCellMar", "w:tblLook",
+	}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("the table's properties run %v, want %v", got, want)
+	}
+}
+
 // TestAHeadingCarriesTheHouseStyleAndItsColour reads the house literals off a
 // rendered heading.
 func TestAHeadingCarriesTheHouseStyleAndItsColour(t *testing.T) {
@@ -828,19 +860,28 @@ func TestNothingHereReachesTheNetwork(t *testing.T) {
 }
 
 // TestAnItemThatSpendsNoMarkerSaysSo. An item whose children never emit a list
-// paragraph takes no number, and Word then numbers every item after it one
-// lower: the author's "3." prints as "2.". A table is the case that reaches
-// this in silence, because the table itself renders and nothing else warns.
+// paragraph takes no marker. In a numbered list Word numbers what is left, so
+// the author's "3." prints as "2."; in a bulleted list nothing counts, so the
+// item loses its own bullet and indent and nothing after it moves. A table is
+// the case that reaches this in silence, because the table itself renders and
+// nothing else warns.
 //
 // The warning is the walker's own rule, the one a picture in a list item and a
 // code block already follow: what did not reach the document in the shape the
 // author wrote is named on the envelope, never left for somebody to find by
 // reading the published policy.
+//
+// The line is asserted as well as the words. A ListItem carries no source
+// position, so an item holding only a code block resolved through nothing and
+// named line 1, which in a note is the front matter's own delimiter: an author
+// sent to the top of the file for a list further down is an author who cannot
+// act on the warning.
 func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 	cases := []struct {
 		name     string
 		markdown []string
-		want     bool
+		want     string
+		line     int
 	}{
 		{
 			name: "an item that is only a table",
@@ -853,7 +894,8 @@ func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 				"",
 				"3. Record the outcome in the register.",
 			},
-			want: true,
+			want: "takes no number",
+			line: 3,
 		},
 		{
 			name: "an item that is only a code block",
@@ -866,7 +908,24 @@ func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 				"",
 				"3. The register is reviewed quarterly.",
 			},
-			want: true,
+			want: "takes no number",
+			line: 3,
+		},
+		{
+			// A bullet is not a count, so nothing after this item moves and
+			// the sentence may not say the numbering slipped.
+			name: "a bulleted item that is only a table",
+			markdown: []string{
+				"- Collect the provider's financial standing.",
+				"",
+				"- | Control | Owner |",
+				"  | --- | --- |",
+				"  | Screening | MLRO |",
+				"",
+				"- Record the outcome in the register.",
+			},
+			want: "takes no bullet and no indent",
+			line: 3,
 		},
 		{
 			// The item spends its marker on its own words, so the table costs
@@ -881,7 +940,7 @@ func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 				"",
 				"2. Record the outcome in the register.",
 			},
-			want: false,
+			want: "",
 		},
 		{
 			name: "an ordinary list, which says nothing",
@@ -890,21 +949,30 @@ func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 				"",
 				"2. The register is reviewed quarterly.",
 			},
-			want: false,
+			want: "",
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			out := walk(t, strings.Join(append(c.markdown, ""), "\n"))
-			var got bool
+			var got string
 			for _, warning := range out.Warnings {
-				if strings.Contains(warning, "takes no number") {
-					got = true
+				if strings.Contains(warning, "has no text of its own") {
+					got = warning
 				}
 			}
-			if got != c.want {
-				t.Errorf("a warning naming the lost number: got %v want %v, warnings %q",
+			if c.want == "" {
+				if got != "" {
+					t.Fatalf("a list that costs nothing warned: %q", got)
+				}
+				return
+			}
+			if !strings.Contains(got, c.want) {
+				t.Fatalf("the warning is %q, want one containing %q, warnings %q",
 					got, c.want, out.Warnings)
+			}
+			if prefix := fmt.Sprintf("line %d:", c.line); !strings.HasPrefix(got, prefix) {
+				t.Errorf("the warning is %q, want it to open with %q", got, prefix)
 			}
 		})
 	}

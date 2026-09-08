@@ -214,10 +214,67 @@ func (r *renderer) line(node ast.Node) int {
 			offset = child.Segment.Start
 		}
 	}
+	return r.lineAt(offset)
+}
+
+// lineAt turns a source offset into the 1-based line holding it. An offset
+// nothing carried is line 1, which is the only answer left.
+func (r *renderer) lineAt(offset int) int {
 	if offset < 0 || offset > len(r.source) {
 		return 1
 	}
 	return 1 + bytes.Count(r.source[:offset], []byte("\n"))
+}
+
+// itemLine is the line a list item's own warning names. A ListItem carries no
+// source position: its Offset is a column inside the line, and goldmark
+// appends lines to leaf blocks only, so the item's line has to come from
+// something inside it. An item holding a table resolves through the text in
+// its cells, and one holding only a code block or a block of HTML resolves
+// through neither Lines nor a Text child, which named line 1: the note's own
+// front-matter delimiter, and the wrong end of the file to send an author to.
+//
+// An item holding nothing at all carries no position anywhere in it, so the
+// nearest sibling item's line is the closest true answer there is. A line or
+// two out still names the list.
+func (r *renderer) itemLine(item ast.Node) int {
+	if line, ok := r.descendantLine(item); ok {
+		return line
+	}
+	for sibling := item.PreviousSibling(); sibling != nil; sibling = sibling.PreviousSibling() {
+		if line, ok := r.descendantLine(sibling); ok {
+			return line
+		}
+	}
+	for sibling := item.NextSibling(); sibling != nil; sibling = sibling.NextSibling() {
+		if line, ok := r.descendantLine(sibling); ok {
+			return line
+		}
+	}
+	return 1
+}
+
+// descendantLine is the line the node starts on, or the line of the first
+// descendant that carries one. A fence is read the way the code block's own
+// warning reads it, one line above the block's first line of code, because
+// that is the line the author sees.
+func (r *renderer) descendantLine(node ast.Node) (int, bool) {
+	if lines := node.Lines(); lines != nil && lines.Len() > 0 {
+		line := r.lineAt(lines.At(0).Start)
+		if _, fenced := node.(*ast.FencedCodeBlock); fenced && line > 1 {
+			line--
+		}
+		return line, true
+	}
+	if text, ok := node.(*ast.Text); ok {
+		return r.lineAt(text.Segment.Start), true
+	}
+	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+		if line, ok := r.descendantLine(child); ok {
+			return line, true
+		}
+	}
+	return 0, false
 }
 
 // firstTextNode finds a node's first text leaf, which is the only thing on an
@@ -319,19 +376,29 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 		}
 	}
 	// The marker is still armed, so nothing this item holds emitted a list
-	// paragraph and the item takes no number. Word numbers what is left, so
-	// every item after this one prints one lower and the author's "3." reads
-	// as "2.".
+	// paragraph and the item takes no marker.
 	//
 	// A table is the case that reached here in silence: it renders, at body
 	// width rather than inside the item, so the document looks deliberate and
-	// only the numbering is wrong. A code block warns about itself and says
-	// nothing about the number it cost. Both are named here instead, on the
-	// walker's own rule that what did not reach the document in the shape the
-	// author wrote is named on the envelope.
+	// only the list is wrong. A code block warns about itself and says nothing
+	// about the marker it cost. Both are named here instead, on the walker's
+	// own rule that what did not reach the document in the shape the author
+	// wrote is named on the envelope.
+	//
+	// What it costs depends on which list this is, so the two are not one
+	// sentence. A number is a count Word carries on: the items after this one
+	// print one lower and the author's "3." reads as "2.". A bullet is not,
+	// so a bulleted list loses nothing but this item's own bullet and indent,
+	// and telling the author to check numbering that is not wrong is the
+	// cry-wolf warning this tool avoids everywhere else.
 	if r.pendingMark {
-		r.warn("line %d: this list item has no text of its own, so it takes no number and the items after it are numbered one lower",
-			r.line(item))
+		if numID == render.NumberNumID {
+			r.warn("line %d: this list item has no text of its own, so it takes no number and the items after it are numbered one lower",
+				r.itemLine(item))
+		} else {
+			r.warn("line %d: this list item has no text of its own, so it takes no bullet and no indent",
+				r.itemLine(item))
+		}
 	}
 	return nil
 }

@@ -99,4 +99,17 @@ func TestTheNumberedListStartsAtOneDecimalAtThirtySixPoints(t *testing.T) {
 	if got := levels[1].SelectElement("w:lvlText").SelectAttrValue("w:val", ""); got != "%2." {
 		t.Errorf("numbered level 1 lvlText = %q, want %%2.", got)
 	}
+	// Every level, not only the first. ECMA-376 17.9.26 reads an omitted start
+	// as zero, so a nested list whose level stated none opened at "0." and
+	// printed every item under it one lower than the author wrote.
+	for i, lvl := range levels {
+		start := lvl.SelectElement("w:start")
+		if start == nil {
+			t.Errorf("numbered level %d states no start, which Word reads as 0", i)
+			continue
+		}
+		if got := start.SelectAttrValue("w:val", ""); got != "1" {
+			t.Errorf("numbered level %d start = %q, want 1", i, got)
+		}
+	}
 }

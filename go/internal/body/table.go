@@ -62,6 +62,10 @@ func (r *renderer) makeTable(rows [][][]Run) *etree.Element {
 	sub(tblPr, "w:tblInd", "w:w", "0", "w:type", "dxa")
 	edges(sub(tblPr, "w:tblBorders"),
 		[]string{"top", "left", "bottom", "right", "insideH", "insideV"})
+	// CT_TblPrBase is a sequence: tblLayout comes before tblCellMar, which
+	// comes before tblLook. Word reads a w:tblPr out of order the way it reads
+	// a w:pPr out of order, as a document to repair.
+	sub(tblPr, "w:tblLayout", "w:type", "fixed")
 	margins := sub(tblPr, "w:tblCellMar")
 	for _, pair := range [][2]any{
 		{"top", cellMarginVPt}, {"left", cellMarginHPt},
@@ -69,7 +73,6 @@ func (r *renderer) makeTable(rows [][][]Run) *etree.Element {
 	} {
 		sub(margins, "w:"+pair[0].(string), "w:w", twips(pair[1].(float64)), "w:type", "dxa")
 	}
-	sub(tblPr, "w:tblLayout", "w:type", "fixed")
 	sub(tblPr, "w:tblLook", "w:val", "0400")
 
 	grid := sub(tbl, "w:tblGrid")

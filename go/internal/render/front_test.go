@@ -295,6 +295,29 @@ func TestTheThreeFrontMatterTablesAreBuiltFromTheConfig(t *testing.T) {
 	}
 }
 
+// TestTheFrontMatterTablesPropertiesAreInSchemaOrder. CT_TblPrBase is a
+// sequence, and Word reads a w:tblPr out of order the way it reads a w:pPr out
+// of order: as a document to repair. tblLayout used to be written before
+// tblBorders, which is positions 13 then 11.
+func TestTheFrontMatterTablesPropertiesAreInSchemaOrder(t *testing.T) {
+	pkg := build(t)
+	doc := parse(t, part(t, pkg, "word/document.xml"))
+	tables := doc.FindElements("//w:body/w:tbl")
+	if len(tables) != 3 {
+		t.Fatalf("word/document.xml carries %d tables, want 3", len(tables))
+	}
+	want := []string{"w:tblStyle", "w:tblW", "w:tblInd", "w:tblBorders", "w:tblLayout"}
+	for i, table := range tables {
+		var got []string
+		for _, e := range table.FindElement("w:tblPr").ChildElements() {
+			got = append(got, e.FullTag())
+		}
+		if strings.Join(got, " ") != strings.Join(want, " ") {
+			t.Errorf("table %d properties run %v, want %v", i, got, want)
+		}
+	}
+}
+
 func TestTheLegendIsFourLinesOfABoldWordAndASentence(t *testing.T) {
 	pkg := build(t)
 	doc := parse(t, part(t, pkg, "word/document.xml"))

@@ -72,6 +72,7 @@ func (b *builder) bulletLevels(parent *etree.Element) {
 	}
 	for i := len(bullet.Glyphs); i < listLevels; i++ {
 		lvl := sub(parent, "w:lvl", "w:ilvl", fmt.Sprint(i))
+		sub(lvl, "w:start", "w:val", "1")
 		sub(lvl, "w:numFmt", "w:val", "bullet")
 		sub(lvl, "w:lvlText", "w:val", fallback)
 		sub(lvl, "w:lvlJc", "w:val", "left")
@@ -81,6 +82,12 @@ func (b *builder) bulletLevels(parent *etree.Element) {
 // numberLevels writes the house's own level-1 format, then decimal levels
 // beneath it. Each level prints its own number alone, so a nested list reads
 // 1. then 1. rather than 1.1.
+//
+// Every level states w:start, the nested ones included. ECMA-376 17.9.26 reads
+// an omitted start as zero, so a nested list whose level carried none opened at
+// "0." and every item under it printed one lower than the author wrote. The
+// master states it on all sixty-three of its own levels, which is what Word and
+// Google write.
 func (b *builder) numberLevels(parent *etree.Element) {
 	numbered := b.cfg.Body.Numbered
 	first := sub(parent, "w:lvl", "w:ilvl", "0")
@@ -94,6 +101,7 @@ func (b *builder) numberLevels(parent *etree.Element) {
 
 	for i := 1; i < listLevels; i++ {
 		lvl := sub(parent, "w:lvl", "w:ilvl", fmt.Sprint(i))
+		sub(lvl, "w:start", "w:val", "1")
 		sub(lvl, "w:numFmt", "w:val", "decimal")
 		sub(lvl, "w:lvlText", "w:val", fmt.Sprintf("%%%d.", i+1))
 		sub(lvl, "w:lvlJc", "w:val", "left")

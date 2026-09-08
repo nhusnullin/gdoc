@@ -816,6 +816,11 @@ answer. So is a picture inside a list item, a block quote or a table cell: the
 house style puts a figure on a centred line of its own, which it cannot be
 there, and the warning names the line.
 
+A list item that holds one of those and nothing else, or nothing at all, has no
+words to put a marker on. It takes none, and the warning names the line and
+says what that costs: in a numbered list the items after it print one lower, and
+in a bulleted list the item loses only its own bullet and its indent.
+
 What you get back is one JSON object: the file it wrote and its size, the title
 and the running head it used, which house file it read, and what the walker
 counted.
