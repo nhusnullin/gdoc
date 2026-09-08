@@ -112,8 +112,9 @@ func v1Pairing(span string) (string, bool) {
 
 // v1Refusal is the whole migration story a person gets, because there is no
 // other one. Nail decided on 2026-09-08 that the reader keeps refusing v1's
-// shape: publish is the only writer of the block, and no schema-0 shape enters
-// the reader. So the refusal names the shape it found, the id inside it, and
+// shape: publish is the only command that creates the block, and the three that
+// write into one refuse a note that has none, so no schema-0 shape enters the
+// reader. So the refusal names the shape it found, the id inside it, and
 // the two ways out.
 func v1Refusal(id string) error {
 	return fmt.Errorf("gdoc front matter: the %s: key is the plain string %q, which is how v1 wrote the pairing, and this gdoc reads a block; write it as a %s: block carrying schema: %d and document_id: %s, or take the line out and pair the note again with gdoc publish",

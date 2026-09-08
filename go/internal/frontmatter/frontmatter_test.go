@@ -630,8 +630,9 @@ func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
 
 // A note v1 published carries the pairing as a plain string, `gdoc: <id>`, and
 // v2 reads a block. Nail decided on 2026-09-08 that the reader keeps refusing
-// it: publish is the only writer of the block, and there is no schema-0 shape
-// in the reader. So the refusal is the whole migration story a person gets, and
+// it: publish is the only command that creates the block, and the three that
+// write into one refuse a note that has none, so there is no schema-0 shape in
+// the reader. So the refusal is the whole migration story a person gets, and
 // it has to name the shape, name the id it found, and say what to do about it.
 // "string was used where mapping is expected" does none of the last two.
 func TestReadRefusesV1sPairingAndSaysWhatToDoAboutIt(t *testing.T) {

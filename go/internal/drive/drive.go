@@ -43,13 +43,18 @@ func TrashedURL(id string) string {
 // read-back that says otherwise is a failure here rather than a success the
 // caller has to notice.
 //
-// Each of the three failures reads differently on purpose. A refused PATCH left
-// the file where it was; an unread confirmation says nothing either way; and a
-// read-back reporting the file as not trashed is Drive contradicting the write.
-// A caller prefixes what the file is, because this package does not know.
+// Each of the three failures reads differently on purpose. A failed PATCH
+// claims nothing about where the file is, because it holds three things and only
+// two of them are Drive turning the request down: a guard refusal never left the
+// machine and a 4xx is a refusal, but a 5xx or a dropped connection is written
+// and may have been applied, which is the case gapi's own mark cannot resolve
+// either. An unread confirmation says nothing either way. A read-back reporting
+// the file as not trashed is Drive contradicting the write, and it is the one
+// failure here that knows where the file is. A caller prefixes what the file is,
+// because this package does not know.
 func Trash(ctx context.Context, s Trasher, id string) error {
 	if err := s.PatchJSON(ctx, FileURL(id), map[string]any{"trashed": true}, nil); err != nil {
-		return fmt.Errorf("Drive refused to trash it, so it is still where it was: %w", err)
+		return fmt.Errorf("the trash request failed: %w", err)
 	}
 	var answer struct {
 		Trashed bool `json:"trashed"`

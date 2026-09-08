@@ -375,12 +375,12 @@ func isCreate(u *url.URL, method string) bool {
 // same duplicate-key and parents check, which is the point of splitting the
 // parse out rather than writing the rule twice.
 func (t *transport) checkParent(req *http.Request, body []byte) error {
-	multipart, params, err := multipartCreate(req)
+	isMultipart, params, err := multipartCreate(req)
 	if err != nil {
 		return err
 	}
 	meta := body
-	if multipart {
+	if isMultipart {
 		if meta, err = metadataPart(params["boundary"], body); err != nil {
 			return err
 		}

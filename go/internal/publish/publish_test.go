@@ -540,37 +540,28 @@ func TestARollbackDriveRefusedIsNotACleanRollback(t *testing.T) {
 	}
 }
 
-// The two cases below are the caller's decision, not this package's: cmd/gdoc
-// re-reads the note after the upload and refuses a block that has appeared or a
-// body that has changed under the render. What is tested here is the half this
-// package owns, that the report carries the id a rollback is made from and that
-// the rollback then holds. The rule itself is stated in cmd/gdoc's own tests.
-func TestABlockThatAppearedDuringTheUploadIsRolledBackThroughTheReport(t *testing.T) {
+// Which note is worth rolling back for is the caller's decision, not this
+// package's: cmd/gdoc re-reads the note after the upload and refuses a block
+// that has appeared, bytes that have changed under the render, a note it could
+// not read again, and one whose front matter no longer parses. Those four
+// refusals are pinned by cmd/gdoc's own
+// TestPublishRollsBackWhenTheNoteCannotBePaired, and no test here can reach
+// them: this package never sees the note.
+//
+// What this package owns is the half below. A caller that has to roll back
+// needs an id off the report Run handed it, and the rollback made from that id
+// has to end on the read that confirms the trash rather than on the PATCH.
+func TestTheReportCarriesTheIDARollbackIsMadeFrom(t *testing.T) {
 	f := script(t, "published.json")
 
 	rep, err := Run(context.Background(), f, options())
 	if err != nil {
 		t.Fatal(err)
-	}
-	// The caller re-reads the note and finds a gdoc: block another run wrote.
-	rolled, warns := Rollback(context.Background(), f, rep.DocumentID)
-
-	if !rolled {
-		t.Errorf("the document this run made was not taken back: %v", warns)
 	}
 	if rep.DocumentID == "" {
-		t.Error("the report carried no id, so a caller that has to roll back has nothing to trash")
+		t.Fatal("the report carried no id, so a caller that has to roll back has nothing to trash")
 	}
-}
 
-func TestANoteWhoseBodyChangedUnderTheRenderIsRolledBackThroughTheReport(t *testing.T) {
-	f := script(t, "published.json")
-
-	rep, err := Run(context.Background(), f, options())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// The caller re-reads the note and finds bytes the upload is not a render of.
 	rolled, warns := Rollback(context.Background(), f, rep.DocumentID)
 
 	if !rolled {

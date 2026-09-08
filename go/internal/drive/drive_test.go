@@ -85,7 +85,10 @@ func TestTrashPatchesThenConfirms(t *testing.T) {
 	}
 }
 
-func TestARefusedPatchSaysTheFileIsStillWhereItWas(t *testing.T) {
+// A 500 is written and may have been applied, so the failed PATCH claims nothing
+// about where the file is. Saying it is still where it was would send somebody
+// looking for a document Drive has already trashed.
+func TestAFailedPatchClaimsNothingAboutWhereTheFileIs(t *testing.T) {
 	f := script()
 	f.failAt[0] = errors.New("files.update answered 500")
 
@@ -94,8 +97,11 @@ func TestARefusedPatchSaysTheFileIsStillWhereItWas(t *testing.T) {
 	if err == nil {
 		t.Fatal("a refused trash came back as success")
 	}
-	if !strings.Contains(err.Error(), "still where it was") {
-		t.Errorf("the error does not say the file was left in place: %v", err)
+	if !strings.Contains(err.Error(), "the trash request failed") {
+		t.Errorf("the error does not name the failed request: %v", err)
+	}
+	if strings.Contains(err.Error(), "still where it was") {
+		t.Errorf("the error claims the file was left in place, and a 500 cannot say that: %v", err)
 	}
 	if !strings.Contains(err.Error(), "answered 500") {
 		t.Errorf("the error lost what Drive said: %v", err)

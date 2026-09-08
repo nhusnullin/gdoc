@@ -971,7 +971,9 @@ your line endings and the trailing newline come back byte for byte, and the file
 is replaced through a temporary file and a rename, so a failed write cannot
 truncate your note.
 
-`gdoc publish` is the only thing that writes this block. A note the Python tool
+`gdoc publish` is the only thing that creates this block. `gdoc suggestions
+--md`, `gdoc propose --md` and `gdoc withdraw` update it, and each of them
+refuses a note that does not carry one already. A note the Python tool
 published carries `gdoc: <id>` as a plain string instead, and the Go binary
 refuses to read that: it names the shape and tells you to rewrite the line by
 hand once, or to publish the note again with `gdoc publish`. Building is

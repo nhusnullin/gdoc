@@ -323,12 +323,12 @@ below:
 - **The live drift gate.** `TestLiveDrift` is written and runs, on the guard's
   multipart create and `gapi.PostMultipart`.
 - **The `gdoc:` block written by the publish.** `publish` writes the ids and the
-  publish record, and it is the block's only writer.
+  publish record, and it is the only command that creates the block.
 - **The v1 front matter migration.** A note v1 published carries `gdoc: <id>` as
   a plain string and v2's strict reader refuses it. `cover` is unaffected,
   because it skips the `gdoc:` key whatever it holds, so a v1 note builds today;
   it is `propose --md` and `withdraw` that cannot read the pairing. The reader
-  keeps refusing it and publish is the only writer of the block. The backlog
+  keeps refusing it and publish is the only command that creates the block. The backlog
   item is deleted and the entry is in `docs/v2/DECISIONS.md` under that date.
 
 What M5 leaves open elsewhere:
@@ -364,7 +364,8 @@ recovery steps. Acceptance: spec items 2 and 3.
 **Landed 2026-09-08.** `gdoc publish --md note.md --folder-id FOLDER` renders
 the note the way `build` renders it, uploads the bytes with conversion into the
 one folder the run was given, reads the new document back three ways, and
-records the pairing in the note. It is the only writer of the `gdoc:` block.
+records the pairing in the note. It is the only command that creates the
+`gdoc:` block.
 The policy opens with `AllowCreateIn` and no file at all, so the run's only door
 is the folder and the new document's id is learned from the create the guard
 itself carried.

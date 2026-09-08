@@ -898,9 +898,11 @@ for a field nothing reads. `Validate` refuses a `published` missing `at` or
 **A v1 note is not readable here, and that is the decision rather than a gap.**
 v1 writes `gdoc: <id>` as a plain string, and v2's reader keeps refusing it. The
 refusal names the shape and says what to do: rewrite the line by hand once, or
-republish the note with `gdoc publish`. `publish` being the only writer of the
-block is what makes that true, and it means no schema-0 shape ever enters the
-reader. Nail's decision of 2026-09-08, in `docs/v2/DECISIONS.md`. `cover` is
+republish the note with `gdoc publish`. `publish` being the only command that
+**creates** the block is what makes that true, and it means no schema-0 shape
+ever enters the reader. `suggestions --md`, `propose --md` and `withdraw` write
+the block too, but each of them refuses a note that has none, so none of them
+can pair a note. Nail's decision of 2026-09-08, in `docs/v2/DECISIONS.md`. `cover` is
 unaffected either way, because it skips the `gdoc:` key whatever it holds, so a
 v1 note still builds.
 
@@ -1330,7 +1332,9 @@ judge" above.
 M6. `gdoc publish --md note.md --folder-id FOLDER` renders the note the way
 `build` renders it, uploads the bytes with conversion into the one folder the
 run was given, reads the new document back three ways, and records the pairing
-in the note. It is the only writer of the `gdoc:` block.
+in the note. It is the only command that creates the `gdoc:` block: the three
+that also write it, `suggestions --md`, `propose --md` and `withdraw`, each
+refuse a note that carries none.
 
 It is a write command with the other four's shape and one difference: there is
 no handed-in document. The policy opens with `AllowCreateIn` and **no file at

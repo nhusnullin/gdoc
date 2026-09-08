@@ -173,7 +173,16 @@ func create(ctx context.Context, s Session, o Options) (string, error) {
 		if sentAnyway(err) {
 			return "", fmt.Errorf("Drive accepted the upload and its answer could not be read, so a document may be in folder %q with no id for gdoc to name, verify or take back: %w", o.FolderID, err)
 		}
-		return "", fmt.Errorf("the document could not be created in folder %q: %w", o.FolderID, err)
+		// Everything else says the upload failed and stops there, because this
+		// arm holds three different things. A guard refusal never left the
+		// machine and a 4xx is Drive rejecting the upload whole, so no document
+		// was made; a 5xx or a dropped connection is the third, and gdoc cannot
+		// tell it apart from either of them. "The document could not be
+		// created" would claim otherwise on that third case, and sending
+		// somebody to search the folder on the first two would be the warning
+		// that cries wolf. The wrapped error carries the status, which is the
+		// only thing here that can say which of the three this was.
+		return "", fmt.Errorf("the upload into folder %q failed: %w", o.FolderID, err)
 	}
 	if answer.ID == "" {
 		// Without an id nothing further is reachable: the guard learns the new

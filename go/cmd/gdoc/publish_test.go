@@ -259,7 +259,7 @@ func TestPublishArgumentsAreStrict(t *testing.T) {
 	}
 }
 
-// The three re-read refusals. Each one is a document in Drive that the note
+// The four re-read refusals. Each one is a document in Drive that the note
 // cannot be paired to, so each one takes the document back.
 func TestPublishRollsBackWhenTheNoteCannotBePaired(t *testing.T) {
 	cases := []struct {
@@ -307,6 +307,19 @@ func TestPublishRollsBackWhenTheNoteCannotBePaired(t *testing.T) {
 				}
 			},
 			want: "could not be read again",
+		},
+		{
+			// The front matter broke while the upload was running. Its own
+			// sentence says the note no longer reads, rather than the one about
+			// a block that could not be written: a note gdoc cannot parse is
+			// one it never got as far as writing into.
+			name: "the note's front matter no longer parses",
+			spoil: func(t *testing.T, md string) {
+				if err := os.WriteFile(md, []byte("---\ntitle: \"unterminated\n---\n\nA body.\n"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: "no longer reads",
 		},
 	}
 	for _, c := range cases {

@@ -3,7 +3,9 @@
 // `gdoc publish --md note.md --folder-id FOLDER` renders the note the way
 // `build` renders it, uploads the bytes with conversion into the one folder the
 // run was given, reads the new document back three ways, and records the
-// pairing in the note. It is the only writer of the gdoc: block.
+// pairing in the note. It is the only command that creates the gdoc: block:
+// `suggestions --md`, `propose --md` and `withdraw` write into a block that is
+// already there, and each refuses a note that has none.
 //
 // Two rules shape everything below. The run's only door is the folder: no file
 // is in the reachable set when the policy is opened, and the new document's id
@@ -125,8 +127,9 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 	warns = append(warns, rep.Warnings...)
 	if err != nil {
 		// No id, so there is nothing to verify, to record or to take back. The
-		// error already names the folder for the one case where Drive made a
-		// document gdoc cannot name.
+		// error already names the folder, and says whether a document may be
+		// sitting in it: publish.create has three failure shapes and each one
+		// answers that differently.
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: sessionWarnings(s, warns)}
 	}
 
@@ -169,21 +172,27 @@ func unpaired(md string, source []byte) error {
 	return nil
 }
 
-// pair records the pairing in the note, and refuses three things rather than
-// writing them.
+// pair records the pairing in the note, and refuses four things rather than
+// writing them: a note that could not be read again, one whose front matter no
+// longer parses, one whose gdoc: block has appeared, and one whose bytes
+// changed at all.
 //
 // The note is read again first, because seconds to tens of seconds of network
 // sit between the read the render was made from and here, and these notes live
-// in a synced vault. What is refused is the inverse of freshNote's rule: that
-// one guards a paired note and refuses a block that has gone, and this one
-// starts from an unpaired note and refuses a block that has appeared. A block
-// that appeared is another run pairing this note while this one was uploading,
-// and overwriting it would leave that run's document with no record at all.
+// in a synced vault. The first two refusals are the read itself: a note gdoc
+// cannot read, or cannot parse, is one it cannot write into either, and writing
+// over it anyway would replace whatever landed there with this run's guess.
 //
-// The third refusal is the note's own bytes changing. The document in Drive is
+// The block refusal is the inverse of freshNote's rule: that one guards a
+// paired note and refuses a block that has gone, and this one starts from an
+// unpaired note and refuses a block that has appeared. A block that appeared is
+// another run pairing this note while this one was uploading, and overwriting
+// it would leave that run's document with no record at all.
+//
+// The fourth refusal is the note's own bytes changing. The document in Drive is
 // a render of the bytes this run read, so a note that has moved on is paired to
-// a document that is no longer what it builds to. Both of those are a rollback
-// rather than a warning: the caller's answer to either is to publish again from
+// a document that is no longer what it builds to. All four are a rollback
+// rather than a warning: the caller's answer to each is to publish again from
 // what the note says now.
 func pair(md string, source []byte, folder, docID string, doc *noteDocx) ([]string, error) {
 	fresh, err := os.ReadFile(md)

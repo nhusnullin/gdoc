@@ -4,7 +4,8 @@
 // no policy and no session, because there is no wire to judge: the house style
 // is embedded in the binary, the pictures come from the note's own directory,
 // and the file is written through internal/atomicfile. Publishing the result
-// into Drive is M6's, and it is a different command.
+// into Drive is `gdoc publish`, a different command, and it renders through the
+// same renderNote below rather than through a second path.
 //
 // Nothing here decides anything either. The cover words are the note's, the
 // sizes and colours are house.yaml's, and what the walker could not render is a

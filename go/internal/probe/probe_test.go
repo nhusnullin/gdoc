@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/drive"
 	"gdoc/internal/guard"
 )
 
@@ -213,6 +214,15 @@ func TestATrashThatDidNotHoldIsAWarningRatherThanSilence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the probe answered its own question, so a failed trash is not its error: %v", err)
 	}
+	if len(f.calls) < 5 || f.calls[4].url != drive.FileURL(testDocID) {
+		t.Fatalf("call 4 is %v, and this test is about the PATCH that trashes", f.calls)
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), "the trash request failed") {
+		t.Errorf("warnings = %v, want the failed-PATCH sentence carried through", rep.Warnings)
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), "may still be in the folder") {
+		t.Errorf("warnings = %v, and a 500 is a trash Drive may have applied, so the warning says may", rep.Warnings)
+	}
 	if !rep.Enrolled {
 		t.Error("Enrolled is false, and the read-back carried a suggested insertion")
 	}
@@ -221,6 +231,45 @@ func TestATrashThatDidNotHoldIsAWarningRatherThanSilence(t *testing.T) {
 	}
 	if len(rep.Warnings) == 0 || !strings.Contains(strings.Join(rep.Warnings, " "), testDocID) {
 		t.Errorf("warnings = %v, want one naming the document left behind", rep.Warnings)
+	}
+}
+
+// The confirming read is the one failure that knows nothing about where the
+// document is: Drive took the PATCH and then could not be asked. So the warning
+// may not say the document is in the folder. Saying so contradicts the sentence
+// behind it in the same line, and sends somebody to delete a document that is
+// almost certainly already trashed.
+func TestATrashDriveCouldNotConfirmDoesNotClaimTheDocumentIsInTheFolder(t *testing.T) {
+	f := script(t, "enrolled.json")
+	f.failAt[5] = errors.New("files.get answered 503")
+
+	rep, err := Run(context.Background(), f, testFolderID)
+
+	if err != nil {
+		t.Fatalf("the probe answered its own question, so a failed confirmation is not its error: %v", err)
+	}
+	// The index is asserted rather than assumed. One more request anywhere
+	// before the trash moves the confirming read off 5, and every assertion
+	// below is satisfied by the refused-PATCH case the test above already
+	// drives, so nothing else here would notice.
+	if len(f.calls) < 6 || f.calls[5].url != drive.TrashedURL(testDocID) {
+		t.Fatalf("call 5 is %v, and this test is about the read that confirms the trash", f.calls)
+	}
+	if rep.Trashed {
+		t.Error("Trashed is true, and the trash was never confirmed")
+	}
+	warns := strings.Join(rep.Warnings, " ")
+	if !strings.Contains(warns, "could not be asked to confirm it") {
+		t.Errorf("warnings = %v, want the unconfirmed-read sentence rather than one of the other two trash failures", rep.Warnings)
+	}
+	if !strings.Contains(warns, testDocID) {
+		t.Errorf("warnings = %v, want one naming the document", rep.Warnings)
+	}
+	if !strings.Contains(warns, "may still be in the folder") {
+		t.Errorf("warnings = %v, want one saying the document may still be there", rep.Warnings)
+	}
+	if strings.Contains(warns, "is still in the folder") {
+		t.Errorf("warnings = %v, and an unconfirmed trash knows nothing about where the document is", rep.Warnings)
 	}
 }
 
