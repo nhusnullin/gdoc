@@ -9,37 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"gdoc/internal/cover"
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
 )
-
-// Fields is what the note's own front matter gives the shell: the words that
-// replace the template's placeholders on the cover and in the running head.
-//
-// Task 5 of M5 gives this a home of its own in internal/cover, which reads and
-// validates a note's keys. Until then this is the shape render needs, and
-// nothing here reads a file.
-type Fields struct {
-	Title       string
-	AltTitle    string
-	RunningHead string
-	Version     string
-	Date        string
-	Revisions   []Revision
-}
-
-// Revision is one row of a note's revision history. The house file spells the
-// revision table out cell by cell today, so the shell carries a note's own
-// rows no further than this; placing them is the cover milestone's.
-type Revision struct {
-	Version      string
-	Date         string
-	Author       string
-	ApprovedBy   string
-	ApprovalDate string
-	Section      string
-	Change       string
-}
 
 // Media is one relationship the body needs: a picture, or the destination of
 // a link. RelID is the id the body's own drawing or w:hyperlink names.
@@ -125,10 +98,12 @@ var shellRels = []struct{ id, kind, target string }{
 // seven below it are the shell's own.
 const FirstMediaRelID = 8
 
-// Build renders one document: the house style, the note's fields, the body the
-// markdown walker produced, and the images it read. Nothing here reaches the
-// network, and nothing reads the Word master.
-func Build(cfg *house.Config, f Fields, body []*etree.Element, media []Media) (*Package, error) {
+// Build renders one document: the house style, the note's fields as
+// internal/cover read them, the body the markdown walker produced, and the
+// images it read. The note has one reader and this package only spends what it
+// returns, so the cover and the running head cannot disagree. Nothing here
+// reaches the network, and nothing reads the Word master.
+func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Media) (*Package, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("render: no house style")
 	}
@@ -355,11 +330,11 @@ func (b *builder) placeholder(name string) (string, bool) {
 	var value string
 	switch name {
 	case "title":
-		value = b.fields.Title
+		value = b.fields.CoverTitle()
 	case "alt_title":
-		value = b.fields.AltTitle
+		value = b.fields.CoverAltTitle()
 	case "running_head":
-		value = b.fields.RunningHead
+		value = b.fields.RunningHead()
 	case "version":
 		value = b.fields.Version
 	case "date":

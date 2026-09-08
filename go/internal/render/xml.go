@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gdoc/internal/cover"
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
 )
@@ -85,7 +86,7 @@ func hexColor(c string) string {
 // anything.
 type builder struct {
 	cfg    *house.Config
-	fields Fields
+	fields cover.Fields
 	err    error
 }
 

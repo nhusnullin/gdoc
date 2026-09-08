@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"gdoc/internal/cover"
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
 )
@@ -20,13 +21,14 @@ import (
 
 var update = flag.Bool("update", false, "rewrite the golden parts under testdata")
 
-// fields is a note the shell can be built from.
-func fields() Fields {
-	return Fields{
-		Title:       "Supplier Register Policy",
-		RunningHead: "Altery - Supplier Register Policy",
-		Version:     "1.0",
-		Date:        "8 September 2026",
+// fields is a note the shell can be built from. The running head is not stated
+// here because internal/cover computes it from the title, which is the point of
+// it being a method there.
+func fields() cover.Fields {
+	return cover.Fields{
+		Title:   "Supplier Register Policy",
+		Version: "1.0",
+		Date:    "8 September 2026",
 	}
 }
 

@@ -3,6 +3,7 @@ package render
 import (
 	"testing"
 
+	"gdoc/internal/cover"
 	"github.com/beevik/etree"
 )
 
@@ -67,7 +68,7 @@ func TestTheNotesTitleVersionAndDateReplaceThePlaceholders(t *testing.T) {
 }
 
 func TestANoteWithNoTitleKeepsTheTemplatesHighlightedPlaceholder(t *testing.T) {
-	pkg, err := Build(config(t), Fields{RunningHead: "Altery - xxx Policy"}, nil, nil)
+	pkg, err := Build(config(t), cover.Fields{}, nil, nil)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

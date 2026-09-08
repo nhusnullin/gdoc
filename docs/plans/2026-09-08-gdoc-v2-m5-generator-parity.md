@@ -315,11 +315,47 @@ commit. `06-long.xml` is 500 KB, which is the price of a golden over an
 **Interfaces:**
 - Produces: `cover.Fields{Title, AltTitle, DocType, Version, Date, Owner, Classification string; HeadingNumbering bool; Revisions []Revision}`, `cover.Read(src []byte) (Fields, body []byte, error)`, `cover.MissingTitle` error with `Candidate`, `cover.TitleCandidate(body, filename)`.
 
-- [ ] write the failing tests: a note with only `title` reads with `HeadingNumbering` true and no revisions; every optional key reads; a `classification` outside the fixed set is refused naming the value; a revision missing `version` is refused naming the field; a note with no title is `MissingTitle` carrying the candidate from the first heading, else from the file name with the date prefix stripped; the `gdoc:` key is ignored whatever its shape (v1's string and v2's block both); a note with no front matter reads as no title and the whole file as body; the date renders as `8 September 2026`
-- [ ] run the tests and watch them fail
-- [ ] implement, porting the spike's frontmatter package under the new name
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): cover reads the note's title, version, date and revisions the way v1 did`
+- [x] write the failing tests: a note with only `title` reads with `HeadingNumbering` true and no revisions; every optional key reads; a `classification` outside the fixed set is refused naming the value; a revision missing `version` is refused naming the field; a note with no title is `MissingTitle` carrying the candidate from the first heading, else from the file name with the date prefix stripped; the `gdoc:` key is ignored whatever its shape (v1's string and v2's block both); a note with no front matter reads as no title and the whole file as body; the date renders as `8 September 2026`
+- [x] run the tests and watch them fail
+- [x] implement, porting the spike's frontmatter package under the new name
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): cover reads the note's title, version, date and revisions the way v1 did`
+
+**Notes:**
+
+The three titles are methods, not fields. `CoverTitle()` joins the title to
+`doc_type` and leaves a title that already ends in its own type alone;
+`CoverAltTitle()` is the same for `alt_title`; `RunningHead()` is
+`"Altery - "` plus the alt title when there is one, else the title, and is
+empty when there is no title at all. A caller cannot hand the cover one title
+and the header another, which is what a stored `RunningHead` field allowed.
+
+`Read` returns the body markdown even when it refuses for a missing title. The
+plan's signature takes no file name, so the candidate `Read` reports can only
+come from the first heading; the caller, which has the path, asks
+`TitleCandidate(body, path)` for the file-name half. `TitleCandidate` answers
+`("", "")` when it has neither a heading nor a name, so nobody proposes
+"Untitled" over a note that was never on disk.
+
+`heading_numbering` reads v1's `auto` and `none` and also a boolean, because
+the field is a bool here and `true` is what a person guesses at. Anything else
+is refused naming what was written.
+
+A top-level key this package does not read is carried, never refused. The note
+is the author's file, v1 refuses nothing there either, and `gdoc:` is
+`internal/frontmatter`'s in both v1's string shape and v2's mapping. Two
+readers of one block are two rules that drift.
+
+Scalars are read off the YAML token rather than a decoded value, which is what
+keeps `version: 1.0` from publishing as "1". The one value rewritten is a date:
+an ISO date renders as `8 September 2026`, and a date the author wrote in words
+is left as written.
+
+➕ `render.Fields` and `render.Revision` are gone rather than aliased.
+`render.Build` takes `cover.Fields`, so the note has one reader and one name.
+The golden parts did not change: a cover title with no `doc_type` is the title.
+
+Coverage: 91.9% of statements.
 
 ---
 
