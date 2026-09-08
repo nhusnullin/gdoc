@@ -34,19 +34,19 @@ func TestAuthoredNumberNeedsASeparatorOrADot(t *testing.T) {
 func TestPrefixesRunOnePerLevel(t *testing.T) {
 	n := newHeadingNumberer(true, "-", 1)
 
-	if got := n.prefix(1, "Purpose"); got != "1-" {
+	if got, _ := n.prefix(1, "Purpose"); got != "1-" {
 		t.Errorf("first heading = %q, want %q", got, "1-")
 	}
-	if got := n.prefix(2, "Scope"); got != "1.1-" {
+	if got, _ := n.prefix(2, "Scope"); got != "1.1-" {
 		t.Errorf("second level = %q, want %q", got, "1.1-")
 	}
-	if got := n.prefix(2, "Exclusions"); got != "1.2-" {
+	if got, _ := n.prefix(2, "Exclusions"); got != "1.2-" {
 		t.Errorf("second level again = %q, want %q", got, "1.2-")
 	}
-	if got := n.prefix(1, "Governance"); got != "2-" {
+	if got, _ := n.prefix(1, "Governance"); got != "2-" {
 		t.Errorf("back to top = %q, want %q", got, "2-")
 	}
-	if got := n.prefix(2, "The register"); got != "2.1-" {
+	if got, _ := n.prefix(2, "The register"); got != "2.1-" {
 		t.Errorf("deeper counter must have restarted, got %q", got)
 	}
 }
@@ -55,10 +55,10 @@ func TestAnAuthoredNumberIsFollowedRatherThanDoubled(t *testing.T) {
 	n := newHeadingNumberer(true, "-", 1)
 	n.prefix(1, "Purpose") // 1-
 
-	if got := n.prefix(1, "7. A heading that numbers itself"); got != "" {
+	if got, _ := n.prefix(1, "7. A heading that numbers itself"); got != "" {
 		t.Errorf("a self-numbered heading must take no prefix, got %q", got)
 	}
-	if got := n.prefix(1, "The next one"); got != "8-" {
+	if got, _ := n.prefix(1, "The next one"); got != "8-" {
 		t.Errorf("the sequence must carry on from the author, got %q, want %q", got, "8-")
 	}
 }
@@ -70,7 +70,7 @@ func TestAnAuthoredNumberAtTheWrongDepthMovesNothing(t *testing.T) {
 	// Two parts at the top level is not this document's sequence.
 	n.prefix(1, "4.2 A self-numbered heading at an odd depth")
 
-	if got := n.prefix(1, "The last section"); got != "2-" {
+	if got, _ := n.prefix(1, "The last section"); got != "2-" {
 		t.Errorf("got %q, want %q: an ill-fitting number must move nothing", got, "2-")
 	}
 }
@@ -79,7 +79,7 @@ func TestHeadingsThatNameThemselvesTakeNoNumber(t *testing.T) {
 	n := newHeadingNumberer(true, "-", 1)
 	for _, heading := range []string{"Appendix A", "Appendices", "Annexe 1", "Glossary",
 		"Contents", "Schedule 2", "Addendum 1"} {
-		if got := n.prefix(1, heading); got != "" {
+		if got, _ := n.prefix(1, heading); got != "" {
 			t.Errorf("prefix(%q) = %q, want none", heading, got)
 		}
 	}
@@ -88,7 +88,7 @@ func TestHeadingsThatNameThemselvesTakeNoNumber(t *testing.T) {
 func TestNumberingOffMeansNoPrefixAtAll(t *testing.T) {
 	n := newHeadingNumberer(false, "-", 1)
 
-	if got := n.prefix(1, "Purpose"); got != "" {
+	if got, _ := n.prefix(1, "Purpose"); got != "" {
 		t.Errorf("got %q, want no prefix when numbering is off", got)
 	}
 }
@@ -103,7 +103,7 @@ func TestTheShallowestHeadingBecomesHeadingOne(t *testing.T) {
 	if got := n.styleLevel(3); got != 2 {
 		t.Errorf("styleLevel(3) = %d, want 2", got)
 	}
-	if got := n.prefix(2, "Purpose"); got != "1-" {
+	if got, _ := n.prefix(2, "Purpose"); got != "1-" {
 		t.Errorf("prefix = %q, want %q rather than %q", got, "1-", "0.1-")
 	}
 }

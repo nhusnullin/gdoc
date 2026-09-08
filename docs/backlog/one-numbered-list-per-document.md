@@ -13,6 +13,10 @@ markdown starts wherever the previous one stopped.
 Found while porting the body walker in M5 Task 4, 2026-09-08. Bulleted lists do not care, because a bullet
 carries no count.
 
+Since the review pass of 2026-09-08 the note is no longer silent about it: `warnListNumbers` in
+`internal/body/body.go` names the line of a second top-level numbered list, and the line of any numbered
+list whose first number is not 1. So what is left here is the numbering itself, not the report.
+
 The fix is a `numId` per list, which means the body has to tell the shell how many lists it found before
 `numbering.xml` is written: today `render.Build` writes that part from the config alone and never sees the
 body. Two shapes are possible, and choosing between them is a design decision rather than a patch:

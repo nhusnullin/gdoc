@@ -83,6 +83,11 @@ type renderer struct {
 	// that spends it can be a container or two down from the item.
 	pendingMark bool
 
+	// numberedLists counts the top-level ordered lists the walk has reached,
+	// because they all name one w:num and the second one carries on from the
+	// first. See warnListNumbers.
+	numberedLists int
+
 	relID      int
 	linkIDs    map[string]string
 	imageCount int
@@ -410,6 +415,38 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	return nil
 }
 
+// warnListNumbers names a numbered list whose numbers are not the author's.
+//
+// Two shapes, and neither is a construct the walker declined to render: the
+// list is there and its numbers are somebody else's. numbering.xml defines one
+// w:num per list kind, so every ordered list in the body names the same one
+// and a second top-level list carries on from the first: 1. and 2. print as
+// 3. and 4. Every level of that part states w:start 1, so an author's "5."
+// opens at 1 whatever depth it sits at.
+//
+// A nested list is not in the count. An absent w:lvlRestart restarts a level
+// whenever the level above it moves, so the sub-lists under two items of one
+// list each start again on their own, and warning about them would be the
+// cry-wolf warning this tool avoids everywhere else.
+//
+// The structural fix is docs/backlog/one-numbered-list-per-document.md. The
+// silence is not deferred with it: the prose around a numbered list
+// cross-references the numbers the author wrote, so a document that prints
+// others has to say so on the envelope.
+func (r *renderer) warnListNumbers(list *ast.List, level int) {
+	if level == 0 {
+		r.numberedLists++
+		if r.numberedLists > 1 {
+			r.warn("line %d: this numbered list carries on from the one above it rather than starting again at 1",
+				r.itemLine(list))
+		}
+	}
+	if list.Start != 1 {
+		r.warn("line %d: this numbered list starts at %d in the note and at 1 in the document",
+			r.itemLine(list), list.Start)
+	}
+}
+
 func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 	switch typed := node.(type) {
 	case *ast.Heading:
@@ -425,6 +462,7 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		id := render.BulletNumID
 		if typed.IsOrdered() {
 			id = render.NumberNumID
+			r.warnListNumbers(typed, level)
 		}
 		if level == 0 {
 			r.counts.Lists++
@@ -525,11 +563,20 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 		return nil
 	}
 
-	if prefix := r.numberer.prefix(heading.Level, plain); prefix != "" {
+	prefix, skipped := r.numberer.prefix(heading.Level, plain)
+	if prefix != "" {
 		// Merged, so the number and the first word of the heading are one run.
 		// Two runs carrying the same marks read the same on the page and make
 		// the contents entry two pieces of text to match.
 		runs = merge(append([]Run{{Text: prefix}}, runs...))
+	}
+	if skipped {
+		// The number carries a zero, because it is built from every counter
+		// down to this heading's own level and a level nothing reached is
+		// still 0. The number itself is v1's and stays as it is, so what the
+		// note gets is the line to look at.
+		r.warn("line %d: this heading skips a level, so its number reads %q",
+			r.line(heading), prefix)
 	}
 	// The break goes on the first heading whatever its level, so the body
 	// always starts on a clean page after the contents list. Keyed on level 1

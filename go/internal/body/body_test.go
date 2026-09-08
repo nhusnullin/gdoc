@@ -1037,3 +1037,134 @@ func TestAnEmptyFenceNamesARealLine(t *testing.T) {
 		t.Errorf("the warning names line 0, which is no line in any file: %s", out.Warnings[0])
 	}
 }
+
+// A numbered list prints numbers the author did not write, in two shapes, and
+// both are named on the envelope.
+//
+// numbering.xml defines one w:num per list kind, so every ordered list in the
+// body names the same one and a second top-level list carries on from the
+// first: 1. and 2. print as 3. and 4. Every level of that part states
+// w:start 1, so an author's "5." opens at 1 whatever depth it sits at. The
+// structural fix is docs/backlog/one-numbered-list-per-document.md; the
+// silence is not deferred, because the prose around a list cross-references
+// the numbers the author wrote.
+func TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo(t *testing.T) {
+	cases := []struct {
+		name     string
+		markdown []string
+		want     string
+		line     int
+	}{
+		{
+			name: "a second numbered list",
+			markdown: []string{
+				"1. one",
+				"2. two",
+				"",
+				"Prose between.",
+				"",
+				"1. alpha",
+				"2. beta",
+			},
+			want: "carries on from the one above it",
+			line: 6,
+		},
+		{
+			name: "a numbered list that starts at five",
+			markdown: []string{
+				"5. five",
+				"6. six",
+			},
+			want: "starts at 5 in the note and at 1 in the document",
+			line: 1,
+		},
+		{
+			name: "one numbered list, which says nothing",
+			markdown: []string{
+				"1. one",
+				"2. two",
+			},
+			want: "",
+		},
+		{
+			// A bullet is not a count, so two bulleted lists cost nothing.
+			name: "two bulleted lists",
+			markdown: []string{
+				"- one",
+				"",
+				"Prose between.",
+				"",
+				"- alpha",
+			},
+			want: "",
+		},
+		{
+			// An absent w:lvlRestart restarts a level whenever the level
+			// above it moves, so a nested list is not in the count.
+			name: "a nested numbered list under each of two items",
+			markdown: []string{
+				"1. one",
+				"   1. inner",
+				"2. two",
+				"   1. inner",
+			},
+			want: "",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			out := walk(t, strings.Join(append(c.markdown, ""), "\n"))
+			var got string
+			for _, warning := range out.Warnings {
+				if strings.Contains(warning, "numbered list") {
+					got = warning
+				}
+			}
+			if c.want == "" {
+				if got != "" {
+					t.Fatalf("a list whose numbers are the author's warned: %q", got)
+				}
+				return
+			}
+			if !strings.Contains(got, c.want) {
+				t.Fatalf("the warning is %q, want one containing %q, warnings %q",
+					got, c.want, out.Warnings)
+			}
+			if prefix := fmt.Sprintf("line %d:", c.line); !strings.HasPrefix(got, prefix) {
+				t.Errorf("the warning is %q, want it to open with %q", got, prefix)
+			}
+		})
+	}
+}
+
+// A heading that skips a level is numbered with a zero in it, and says so.
+//
+// The number is built from every counter down to the heading's own level, so a
+// "###" under a "#" reads "1.0.1-". The number itself is v1's, and what the
+// note gets here is the line to look at.
+func TestASkippedHeadingLevelSaysSo(t *testing.T) {
+	out := walk(t, "# Alpha\n\n### Gamma\n")
+
+	var got string
+	for _, warning := range out.Warnings {
+		if strings.Contains(warning, "skips a level") {
+			got = warning
+		}
+	}
+	if got == "" {
+		t.Fatalf("a heading numbered 1.0.1- said nothing, warnings %q", out.Warnings)
+	}
+	if !strings.HasPrefix(got, "line 3:") {
+		t.Errorf("the warning is %q, want it to name line 3", got)
+	}
+	if !strings.Contains(got, "1.0.1-") {
+		t.Errorf("the warning is %q, want it to carry the number it wrote", got)
+	}
+
+	quiet := walk(t, "# Alpha\n\n## Beta\n\n### Gamma\n")
+	for _, warning := range quiet.Warnings {
+		if strings.Contains(warning, "skips a level") {
+			t.Errorf("a document that skips nothing warned: %q", warning)
+		}
+	}
+}

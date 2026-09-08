@@ -1337,6 +1337,27 @@ at "0." and printed every item under it one lower than the author wrote. The
 master states it on all sixty-three of its own levels. Nothing else would have
 caught it: `drift.Items` has no numbering row, so neither gate reads that part.
 
+**A numbered list whose numbers are not the author's says so, and the number
+stays wrong.** Two shapes. `numbering.xml` defines one `w:num` per list kind,
+so every ordered list in the body names the same one and a second top-level
+list carries on from the first: the author's 1. and 2. print as 3. and 4.
+Every level of that part states `w:start` 1, so an author's "5." opens at 1
+whatever depth it sits at. `warnListNumbers` names the line for both. The
+structural fix is `docs/backlog/one-numbered-list-per-document.md`; the silence
+was not deferred with it, because the prose around a list cross-references the
+numbers the author wrote. A **nested** list is deliberately not in the count:
+an absent `w:lvlRestart` restarts a level whenever the level above it moves, so
+the sub-lists under two items of one list each start again on their own, and
+warning there would be the cry-wolf warning this tool avoids everywhere else.
+
+**A heading that skips a level is numbered with a zero in it, and says so.**
+`headingNumberer.prefix` builds the number from every counter down to the
+heading's own level, so a `###` under a `#` reads `1.0.1-`, and each heading
+under it inherits that zero. The number is v1's and is left as it is: changing
+it is a decision for Nail, so `prefix` reports the zero as its second return
+and the walker names the line. `01-kitchen-sink.md` carries all three of these
+cases on purpose, which is how they were found.
+
 **No network in the render path, and it is a property of the tree.** None of
 `house`, `render`, `body`, `cover` or `drift` imports `net/http` or
 `internal/gapi`, and none imports `guard` or `auth` either. `cmd/gdoc/build.go`

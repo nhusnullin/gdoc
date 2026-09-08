@@ -189,3 +189,36 @@ func TestARelativePathIsReadFromTheNotesDirectory(t *testing.T) {
 		t.Errorf("the picture was read from %q, want %q", path, want)
 	}
 }
+
+// A JPEG is measured on its first frame, and the walk stops where the segments
+// do.
+//
+// Past SOS the bytes are entropy-coded data rather than segments: a stuffed
+// FF 00 reads as a marker whose next two bytes read as a length, so the walk
+// jumps to an arbitrary offset and any FF C0..CF it lands on used to overwrite
+// the frame. An MPO out of a phone camera carries a whole second image behind
+// EOI in that same shape, and its size would win. The wrong answer is a
+// picture placed at the wrong size on the page, in silence.
+func TestAJPEGIsMeasuredOnItsFirstFrame(t *testing.T) {
+	data := []byte{
+		0xFF, 0xD8, // SOI
+		// SOF0, 100 wide and 50 high.
+		0xFF, 0xC0, 0x00, 0x11, 0x08, 0x00, 0x32, 0x00, 0x64, 0x03,
+		0x01, 0x11, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+		// SOS, and the entropy-coded data behind it.
+		0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00,
+		0xFF, 0x00, 0x00, 0x04, 0xAA, 0xBB,
+		// A frame header inside that data, stating 7 wide and 9 high.
+		0xFF, 0xC1, 0x00, 0x11, 0x08, 0x00, 0x09, 0x00, 0x07, 0x03,
+		0x01, 0x11, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+		0xFF, 0xD9, // EOI
+	}
+
+	info, err := identifyJPEG(data)
+	if err != nil {
+		t.Fatalf("the JPEG was refused: %v", err)
+	}
+	if info.pxWidth != 100 || info.pxHeight != 50 {
+		t.Errorf("the JPEG measures %dx%d, want 100x50", info.pxWidth, info.pxHeight)
+	}
+}

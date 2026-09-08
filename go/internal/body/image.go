@@ -129,6 +129,15 @@ func identifyJPEG(data []byte) (imageInfo, error) {
 			offset += 2
 			continue
 		}
+		if marker == 0xDA || marker == 0xD9 {
+			// SOS opens the entropy-coded data and EOI closes the image, and
+			// past either one these bytes are not segments. A stuffed FF 00
+			// reads as a marker whose next two bytes read as a length, so the
+			// walk jumps to an arbitrary offset and any FF C0..CF it lands on
+			// is read as a frame. An MPO out of a phone camera carries a whole
+			// second image behind EOI in that same shape.
+			break
+		}
 		length := int(binary.BigEndian.Uint16(data[offset+2:]))
 		payload := offset + 4
 		switch {
@@ -143,7 +152,12 @@ func identifyJPEG(data []byte) (imageInfo, error) {
 				info.horzDPI = int(math.Round(float64(horizontal) * 2.54))
 				info.vertDPI = int(math.Round(float64(vertical) * 2.54))
 			}
-		case marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC:
+		case marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 &&
+			marker != 0xCC && info.pxWidth == 0:
+			// The first frame wins. A valid image has one, in front of the
+			// SOS the walk now stops at, so this is the same answer twice:
+			// the size on the page is the one thing here a wrong answer is
+			// visible in, so it is worth being sure of from two directions.
 			if payload+5 > len(data) {
 				return info, fmt.Errorf("the JPEG frame header is truncated")
 			}

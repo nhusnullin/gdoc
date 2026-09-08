@@ -97,9 +97,15 @@ func (n *headingNumberer) styleLevel(level int) int {
 }
 
 // prefix is what goes in front of a heading's own words, or the empty string.
-func (n *headingNumberer) prefix(level int, headingText string) string {
+//
+// The second return says the number carries a zero, which is a heading that
+// skipped a level: the number is built from every counter down to this
+// heading's own, and a level nothing reached is still 0, so a "###" under a
+// "#" reads "1.0.1-". The caller names the line, because the number stays as
+// v1 wrote it and a document that prints one has to say so on the envelope.
+func (n *headingNumberer) prefix(level int, headingText string) (string, bool) {
 	if !n.enabled || unnumberedHeadingRE.MatchString(headingText) {
-		return ""
+		return "", false
 	}
 	index := level - n.topLevel
 	if index < 0 {
@@ -110,15 +116,19 @@ func (n *headingNumberer) prefix(level int, headingText string) string {
 	}
 	if authored := authoredNumber(headingText); authored != nil {
 		n.follow(index, authored)
-		return ""
+		return "", false
 	}
 	n.counters[index]++
 	n.clearBelow(index)
 	parts := make([]string, 0, index+1)
+	skipped := false
 	for _, counter := range n.counters[:index+1] {
+		if counter == 0 {
+			skipped = true
+		}
 		parts = append(parts, strconv.Itoa(counter))
 	}
-	return strings.Join(parts, ".") + n.separator
+	return strings.Join(parts, ".") + n.separator, skipped
 }
 
 // follow carries on from the author's number, so the next computed one follows
