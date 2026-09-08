@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/drive"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/suggestions"
 )
@@ -223,18 +224,14 @@ func insertionIDs(d *docs.Document) []string {
 // SUGGEST is honoured, and a document that is still in the folder does not
 // change that answer. It does need saying out loud, which is what the warning
 // is for.
+//
+// The three steps are internal/drive's, because publish takes its document back
+// the same way and a second copy of them is a second chance for the two to
+// disagree about whether an unconfirmed trash counts as a trash. What stays here
+// is what the document is and what a failure costs.
 func trash(ctx context.Context, s Session, id string) (bool, []string) {
-	if err := s.PatchJSON(ctx, fileURL(id), map[string]any{"trashed": true}, nil); err != nil {
-		return false, []string{fmt.Sprintf("the probe document %q could not be trashed and is still in the folder: %v", id, err)}
-	}
-	var answer struct {
-		Trashed bool `json:"trashed"`
-	}
-	if err := s.GetJSON(ctx, trashedURL(id), &answer); err != nil {
-		return false, []string{fmt.Sprintf("the probe document %q was trashed, but Drive could not be asked to confirm it: %v", id, err)}
-	}
-	if !answer.Trashed {
-		return false, []string{fmt.Sprintf("the probe document %q was trashed and Drive still reports it as not trashed", id)}
+	if err := drive.Trash(ctx, s, id); err != nil {
+		return false, []string{fmt.Sprintf("the probe document %q is still in the folder: %v", id, err)}
 	}
 	return true, nil
 }
@@ -249,16 +246,6 @@ func createURL() string {
 // batchURL is the one write path the Docs API has.
 func batchURL(id string) string {
 	return "https://docs.googleapis.com/v1/documents/" + id + ":batchUpdate"
-}
-
-// fileURL is files.update, which is how Drive spells trashing.
-func fileURL(id string) string {
-	return "https://www.googleapis.com/drive/v3/files/" + id + "?supportsAllDrives=true"
-}
-
-// trashedURL is files.get asking the one question the confirmation has.
-func trashedURL(id string) string {
-	return "https://www.googleapis.com/drive/v3/files/" + id + "?fields=trashed&supportsAllDrives=true"
 }
 
 // sentAnyway says whether the request reached Drive in spite of the error. The

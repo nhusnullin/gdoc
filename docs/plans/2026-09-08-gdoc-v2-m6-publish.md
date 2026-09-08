@@ -174,12 +174,31 @@ Three failure shapes, and each says something different:
 
 ### Task 4: `internal/publish`
 
-- [ ] Test first in `go/internal/publish/publish_test.go`, over a fake `Session`: the happy path; an upload the guard refused; an upload Drive rejected; an upload whose answer could not be read (no id to name, so the folder is named); the read-back that failed; a document that came back with two tabs; an export that did not read as a docx; a rollback that succeeded; a rollback that failed; and the two re-read refusals from Task 4's caller side, exercised through the returned report.
-- [ ] Implement `publish.Run(ctx, s Session, o Options) (Report, error)`: upload, verify, and hand the report back. It reads and writes no file. The caller does the note I/O and calls `publish.Rollback` when the write failed.
-- [ ] Reuse `internal/docx`'s `ExportURL`, `Export` and `Parse` for the export check rather than a second export path, and `probe`'s trash-and-confirm shape for the rollback. Extract the trash helper if that is cleaner, and record the move in this plan.
-- [ ] `verified` is the three checks together. Fewer than three is `ok: true` with `verified: false` and the route named, exactly as `propose` reports: a document that exists is a document that exists.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): publish uploads with conversion and verifies the result"`
+- [x] Test first in `go/internal/publish/publish_test.go`, over a fake `Session`: the happy path; an upload the guard refused; an upload Drive rejected; an upload whose answer could not be read (no id to name, so the folder is named); the read-back that failed; a document that came back with two tabs; an export that did not read as a docx; a rollback that succeeded; a rollback that failed; and the two re-read refusals from Task 4's caller side, exercised through the returned report.
+- [x] Implement `publish.Run(ctx, s Session, o Options) (Report, error)`: upload, verify, and hand the report back. It reads and writes no file. The caller does the note I/O and calls `publish.Rollback` when the write failed.
+- [x] Reuse `internal/docx`'s `ExportURL`, `Export` and `Parse` for the export check rather than a second export path, and `probe`'s trash-and-confirm shape for the rollback. Extract the trash helper if that is cleaner, and record the move in this plan.
+- [x] `verified` is the three checks together. Fewer than three is `ok: true` with `verified: false` and the route named, exactly as `propose` reports: a document that exists is a document that exists.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): publish uploads with conversion and verifies the result"`
+
+**The trash helper was extracted, into `go/internal/drive`.** It holds
+`FileURL`, `TrashedURL` and `Trash`, which is the PATCH, the confirming read and
+the rule that the read is what is believed. `probe.trash` now calls it and keeps
+only what the document is and what a failure costs, and `publish.Rollback` does
+the same on the other side. The reason it is worth a package rather than a
+second copy: an unconfirmed trash counts as a failure in both callers, and two
+copies of that rule are two chances for one of them to start reporting a
+document as gone that is still there. `probe`'s three warning sentences are one
+sentence now, carrying `drive.Trash`'s own reason, so the three failures still
+read differently.
+
+`publish.Run` reports `title` as **what the read-back carried**, not what the
+upload asked for, and a disagreement between the two is a warning naming both.
+It is not a fourth check: Drive takes the name from the metadata part, so the
+usual answer is that they match and the warning says nothing.
+
+Coverage: `internal/publish` and `internal/drive` are both at 100% of
+statements, against the 80% the plan asks for.
 
 ### Task 5: the `publish` command, and the re-read rule that is publish's own
 
