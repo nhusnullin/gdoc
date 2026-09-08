@@ -604,8 +604,10 @@ seconds inside the call, and comes back the moment something happened after the
 cursor, or at the deadline with an empty window. It needs `--since`, because a
 wait with no cursor answers with the whole document, which is the plain listing
 under another name. The value is a Go duration, `9m` or `90s`, and an hour is
-the most one call will look for. Nothing is written anywhere while it waits, and
-the cursor it prints is all that carries to the next call.
+the most one call will look for. A wait keeps nothing of its own: the cursor it
+prints is all that carries to the next call, and the only file it can touch is
+the saved OAuth token, which any command replaces when the access token has to
+be refreshed.
 
 With `--wait` the object carries one more field:
 

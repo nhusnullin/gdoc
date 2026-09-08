@@ -236,8 +236,11 @@ field in it decides anything. An interrupt is an answer, `ok: true` with no
 threads and the cursor handed in, so the output contract holds under the one
 signal a live session sends every time it ends; a failed poll is `ok: false`
 with the polls so far, so the skill can tell an unread window from an empty one.
-The binary still keeps no state: the wait writes nothing anywhere, and the
-cursor it prints is all that carries to the next call. The review skill gained a
+The binary still keeps no state of its own: the wait writes no file it learned
+anything from, and the cursor it prints is all that carries to the next call.
+The one file it can touch is the saved OAuth token, which a poll replaces
+through `gapi.Session.send` when the access token has to be refreshed, exactly
+as every other command does. The review skill gained a
 "Live mode" section, the loop over those calls, and the rule that a receipt on a
 colleague's marked comment names who asked. `internal/live` gained
 `TestLiveWaitSeesANewComment` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`. No

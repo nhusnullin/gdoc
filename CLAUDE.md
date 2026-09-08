@@ -56,7 +56,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the two opt-in end-to-end tests, one read and one write. Tests only, no production code |
+| `go/internal/live/` | the three opt-in end-to-end tests, one read and two writes. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
@@ -756,10 +756,13 @@ script.
   **The trap comes off the moment the wait returns, and the wait gets its own
   context rather than shadowing the caller's.** What runs after a wait is the
   `--witness` export, and a Ctrl-C there has to kill the run the way it kills
-  every other command. Swallowed, it cancels the export instead: the run then
-  prints `ok: true` with every thread `unmatched` and `interrupted: false`
-  beside it, which is the interrupt wearing the document's name, and the skill
-  reads that as a window and acts on it.
+  every other command. `stop()` is what puts the default kill back. Left
+  installed, the handler holds that kill off until the command returns, while
+  the export runs on the caller's context, which the signal never reaches: the
+  Ctrl-C then does nothing at all, and the run answers as though nobody had
+  pressed it. The wait's own context is the other half of the same rule. It is
+  derived from the caller's rather than shadowing it, so what runs after the
+  wait cannot be quietly cancelled by the signal that ended the wait.
 
   **It is not in `main`, and that is the decision.** `signal.Notify` takes the
   default kill away from the whole process for as long as it is installed, and
@@ -799,11 +802,15 @@ script.
   unread rather than empty, keeps the cursor it had and calls again.
 - **`waited` is absent without `--wait`.** Reporting `polls: 1` on a call that
   never waited says the binary polls when it does not. An empty window is not
-  witnessed either: the export would be one more request for no question, and on
-  the way out of an interrupted session it would fail on the cancelled context
-  and warn about a read nobody made.
-- **Nothing is kept.** The wait writes no file and touches no config dir, and
-  the cursor it prints is the only thing that carries to the next call. The loop
+  witnessed either: the export would be one more request for no question. An
+  interrupted wait is that same case rather than a second one, because it comes
+  back with no threads.
+- **Nothing is kept.** The wait writes no file of its own and keeps no session
+  state, and the cursor it prints is the only thing that carries to the next
+  call. The one thing it can write is the OAuth token file: a poll goes through
+  `gapi.Session.send`, which refreshes an expired or rejected token and saves
+  it, exactly as every other command does. That is the credential rather than
+  anything the wait learned. The loop
   belongs to `skills/gdoc-review/SKILL.md`, which asks for nine minutes because
   the tool that runs the command gives up at ten, and which sets that tool's own
   timeout to ten minutes: its default is two, and a wait cut short at two is
@@ -1320,10 +1327,14 @@ nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
 
-`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the write test beside it. It creates
-its own document in the Drive test folder, proposes into it, replies, withdraws
-and trashes it, asserting every read-back on the way, and it writes only to
-documents it made. Two variables rather than one, because a live read is
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the two write tests beside it, and
+each creates its own document in the Drive test folder. The first proposes into
+it, replies, withdraws and trashes it, asserting every read-back on the way. The
+second is M4's: it starts a wait, posts a comment into the document while that
+wait is running, checks the comment came back before the deadline, then waits
+again on the cursor it was handed and checks that window is empty, up to 90
+seconds and then 15, and trashes the document. Both write only to documents they
+made. Two variables rather than one, because a live read is
 somebody's document and a live write is a document that did not exist a second
 ago: the second is a different decision, and it is made on purpose each time.
 The unattended run sets neither.

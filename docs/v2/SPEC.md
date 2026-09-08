@@ -234,8 +234,9 @@ Lists threads with real character ranges (`commentsViewMode`, which requires
 `includeTabsContent=true`). Takes a `--since` cursor and reports only activity
 after it, so a live session's poll is one cheap call. `--wait` makes that call
 poll: it repeats the same listing every ten seconds and returns the first window
-with activity in it, or an empty one at the deadline. It needs `--since`, and it
-writes nothing. The cursor is an opaque
+with activity in it, or an empty one at the deadline. It needs `--since`, and it keeps no state of
+its own: the one file it can touch is the saved OAuth token, which any command
+replaces when the access token has to be refreshed. The cursor is an opaque
 value the binary emits and the caller hands back; the live skill holds it for
 the session and it dies with the session. Anything that must survive across
 sessions lives in the front matter, nowhere else. Reports the marker on

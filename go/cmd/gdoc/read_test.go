@@ -1019,7 +1019,16 @@ func TestAWitnessAppliesToTheWindowThatEndedTheWait(t *testing.T) {
 // wait, so a nine minute wait can answer at fourteen and be killed by the
 // harness that waits ten, which prints nothing at all.
 func TestTheWitnessAfterAWaitIsBoundedByWhatIsLeftOfTheDeadline(t *testing.T) {
-	shortPolls(t)
+	// Not shortPolls: the remainder has to be a slice this test can name. One
+	// interval is slept between the two scripted polls, so the wait provably
+	// spends at least that long, and the export's deadline has to be short of
+	// nine minutes by it. At a millisecond the two are indistinguishable and
+	// the assertion below could not fail.
+	const interval = 50 * time.Millisecond
+	old := waitInterval
+	waitInterval = interval
+	t.Cleanup(func() { waitInterval = old })
+
 	f := waitWire(t, emptyListing(), newsListing(t))
 	f.answers = append(f.answers, &answer{method: "GET", match: "/export?", bytes: witnessExport(t)})
 	stubWire(t, f)
@@ -1035,8 +1044,18 @@ func TestTheWitnessAfterAWaitIsBoundedByWhatIsLeftOfTheDeadline(t *testing.T) {
 	if !ok {
 		t.Fatal("the export after a wait carries no deadline, so the call is bounded only by the client timeout")
 	}
-	if left := time.Until(at); left > 9*time.Minute {
-		t.Errorf("the export has %v to run, which is more than the wait it followed", left)
+	// Measured from when the export was made, not from now: the deadline is an
+	// absolute instant, and everything after the export (the docx parse, the
+	// witness match, the emit and the decode) comes off the remainder a
+	// `time.Until` here would read. Measured that way, work slow enough to
+	// spend the slack would let the regression this test names pass.
+	//
+	// Half an interval of slack, because the clock the test reads and the one
+	// the wait measured with are the same one and the sleep is a floor, not an
+	// equality.
+	if got, want := at.Sub(f.bytesAt), 9*time.Minute-interval/2; got > want {
+		t.Errorf("the export had %v to run, want at most %v: the wait's own time is not coming off the deadline",
+			got, want)
 	}
 }
 
@@ -1072,9 +1091,10 @@ func TestTheBaselineCursorIsDatedFromBeforeTheReadsRatherThanAfterThem(t *testin
 	}
 }
 
-// An empty window has nothing to witness, and an export on the way out of an
-// interrupted session would be one more refused request and one more warning
-// about a read nobody asked a question of.
+// An empty window has nothing to witness: the export would be one more request
+// for no question, and one more warning about a read nobody asked anything of.
+// An interrupted wait is that same case rather than a second one, because it
+// comes back with no threads.
 func TestAnEmptyWindowIsNotWitnessed(t *testing.T) {
 	shortPolls(t)
 	f := waitWire(t, quietListing())

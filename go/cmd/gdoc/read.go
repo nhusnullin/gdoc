@@ -575,9 +575,11 @@ func cmdComments(ctx context.Context, raw []string) emit.Result {
 	})
 	// Off the moment the wait is over. What follows is a --witness export, and
 	// a Ctrl-C during that must kill the run the way it kills every other
-	// command: swallowed, it cancels the export instead, and the answer goes
-	// out ok with every thread reported unmatched and interrupted false beside
-	// it, which is the interrupt wearing the document's name.
+	// command. stop is what puts the default kill back. Left installed, the
+	// handler holds that kill off until this function returns, while the export
+	// below runs on the caller's context, which the signal never reaches: the
+	// Ctrl-C then does nothing at all, and the run answers as though nobody had
+	// pressed it.
 	stop()
 	waited := &waitedData{
 		Polls: w.Polls,
@@ -654,8 +656,9 @@ func commentsResult(ctx context.Context, r *reach, d *docs.Document, threads []c
 			"comment %s: the Docs read gave it no usable range, so the thread comes back with its quoted text and no position", id))
 	}
 	// An empty window has nothing to witness, and the export would be one more
-	// request for no question. On the way out of an interrupted session it would
-	// also fail on the cancelled context and warn about a read nobody made.
+	// request for no question. An interrupted wait is that same case rather than
+	// a second one: it comes back with no threads, so the export is skipped
+	// without the interrupt having to be read here.
 	if wantWitness && len(threads) > 0 {
 		threads, own = witness(ctx, r, threads, own)
 	}

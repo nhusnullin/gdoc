@@ -9,8 +9,11 @@
 //
 // Nothing here is a watcher. The call ends: on the first window with activity
 // in it, at its deadline, on a failed poll, or on the signal that ends the
-// session. It writes nothing anywhere, and the cursor it hands back is the only
-// thing that carries to the next call.
+// session. It keeps no session state and writes no file of its own, and the
+// cursor it hands back is the only thing that carries to the next call. The one
+// file a poll can replace is the saved OAuth token, which the session refreshes
+// as it does for every other command: that is the credential, not anything the
+// wait learned.
 //
 // And nothing here judges. A window is what Fetch narrowed and Threads joined,
 // gdoc's own replies included. Whether a thread is work, and whether a window

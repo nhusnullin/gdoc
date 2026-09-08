@@ -30,6 +30,10 @@ type script struct {
 	// onSleep runs before each sleep advances the clock, so a test can cancel
 	// the context in the middle of a wait.
 	onSleep func()
+	// onPoll runs at the start of each poll, before its answer is taken, so a
+	// test can cancel the context while a poll is in flight rather than before
+	// the wait ever reaches one.
+	onPoll func()
 }
 
 func newScript(t *testing.T, answers ...answer) *script {
@@ -54,6 +58,9 @@ func newScript(t *testing.T, answers ...answer) *script {
 // for.
 func (s *script) fetch(ctx context.Context) (*docs.Document, []RawComment, error) {
 	s.events = append(s.events, "poll")
+	if s.onPoll != nil {
+		s.onPoll()
+	}
 	if s.polls >= len(s.answers) {
 		s.t.Fatalf("the wait polled %d times, and the script holds %d answers", s.polls+1, len(s.answers))
 	}
@@ -250,9 +257,14 @@ func TestAPollThatFailedBecauseOfTheInterruptIsReportedAsTheInterrupt(t *testing
 	// A real Fetch takes the context, so the signal that ends the session ends
 	// the request in flight. Blaming Drive for the person's Ctrl-C would send
 	// somebody to look at a read that was fine.
+	//
+	// The cancel happens inside the poll, not before the wait. Cancelled first,
+	// the loop's own pre-poll check answers and this test becomes a second copy
+	// of TestAContextAlreadyCancelledPollsNothing, guarding a branch it never
+	// reaches. Polls is what says the poll really ran.
 	ctx, cancel := context.WithCancel(context.Background())
 	s := newScript(t, answer{err: context.Canceled})
-	cancel()
+	s.onPoll = cancel
 
 	got, err := Wait(ctx, nil, s.options(10*time.Second, time.Minute))
 
@@ -261,6 +273,9 @@ func TestAPollThatFailedBecauseOfTheInterruptIsReportedAsTheInterrupt(t *testing
 	}
 	if !got.Interrupted {
 		t.Error("Interrupted = false on a poll the interrupt cut short")
+	}
+	if got.Polls != 1 {
+		t.Errorf("Polls = %d, want 1: the poll the interrupt cut short must have run", got.Polls)
 	}
 }
 

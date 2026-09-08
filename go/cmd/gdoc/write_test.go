@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"gdoc/internal/guard"
 )
@@ -60,8 +61,12 @@ type fakeWire struct {
 	policy   *guard.Policy
 	// bytesCtx is the context the last GetBytes was made on. The docx export
 	// is the one read that happens after a wait, so it is the one a test asks
-	// what it was bounded by.
+	// what it was bounded by. bytesAt is when that call was made, because a
+	// deadline is an absolute instant: read after the run has finished, it has
+	// already spent the export, the docx parse, the emit and the decode, and a
+	// test measuring a remainder would be measuring those too.
 	bytesCtx context.Context
+	bytesAt  time.Time
 }
 
 func (f *fakeWire) find(method, rawURL string) (*answer, error) {
@@ -95,6 +100,7 @@ func (f *fakeWire) GetJSON(_ context.Context, rawURL string, into any) error {
 func (f *fakeWire) GetBytes(ctx context.Context, rawURL string, _ int64) ([]byte, error) {
 	f.calls = append(f.calls, wireCall{Method: "GET", URL: rawURL})
 	f.bytesCtx = ctx
+	f.bytesAt = time.Now()
 	a, err := f.find("GET", rawURL)
 	if err != nil {
 		return nil, err
