@@ -41,13 +41,22 @@ type Revision struct {
 	Change       string
 }
 
-// Media is one image the body carries. RelID is the relationship the body's
-// own drawing names, and Name is the file under word/media/.
+// Media is one relationship the body needs: a picture, or the destination of
+// a link. RelID is the id the body's own drawing or w:hyperlink names.
+//
+// A picture carries Name, the file under word/media/, and Data. A link carries
+// Target, the address, and nothing else. The two live in one list because the
+// body hands out one run of relationship ids across both, and two lists could
+// hand the same id to a picture and a link.
 type Media struct {
-	RelID string
-	Name  string
-	Data  []byte
+	RelID  string
+	Name   string
+	Data   []byte
+	Target string
 }
+
+// IsLink says whether this is a link's relationship rather than a picture's.
+func (m Media) IsLink() bool { return m.Target != "" }
 
 // Part is one entry in the package, held as bytes.
 type Part struct {
@@ -149,6 +158,9 @@ func Build(cfg *house.Config, f Fields, body []*etree.Element, media []Media) (*
 		{"word/media/logo.png", logo},
 	}}
 	for _, m := range media {
+		if m.IsLink() {
+			continue
+		}
 		pkg.Parts = append(pkg.Parts, Part{"word/media/" + m.Name, m.Data})
 	}
 	if b.err != nil {
@@ -163,11 +175,20 @@ func Build(cfg *house.Config, f Fields, body []*etree.Element, media []Media) (*
 func checkMedia(media []Media) error {
 	seen := map[string]bool{}
 	for _, m := range media {
-		if m.RelID == "" || m.Name == "" {
-			return fmt.Errorf("render: an image needs a relationship id and a file name")
+		if m.RelID == "" {
+			return fmt.Errorf("render: a relationship needs an id")
 		}
-		if strings.ContainsAny(m.Name, "/\\") {
-			return fmt.Errorf("render: image name %q is a path, and images are one file under word/media", m.Name)
+		if m.IsLink() {
+			if m.Name != "" || len(m.Data) > 0 {
+				return fmt.Errorf("render: relationship %s is a link and carries a file as well", m.RelID)
+			}
+		} else {
+			if m.Name == "" {
+				return fmt.Errorf("render: an image needs a relationship id and a file name")
+			}
+			if strings.ContainsAny(m.Name, "/\\") {
+				return fmt.Errorf("render: image name %q is a path, and images are one file under word/media", m.Name)
+			}
 		}
 		for _, rel := range shellRels {
 			if rel.id == m.RelID {
@@ -238,6 +259,9 @@ func (b *builder) contentTypes(media []Media) []byte {
 		"png":  "image/png",
 	}
 	for _, m := range media {
+		if m.IsLink() {
+			continue
+		}
 		ext := strings.ToLower(strings.TrimPrefix(path.Ext(m.Name), "."))
 		if ext == "" {
 			b.fail("image %s has no extension, so nothing can say what it is", m.Name)
@@ -300,6 +324,14 @@ func (b *builder) documentRels(media []Media) []byte {
 		sub(root, "Relationship", "Id", rel.id, "Type", relType+rel.kind, "Target", rel.target)
 	}
 	for _, m := range media {
+		if m.IsLink() {
+			// A link's target is somebody else's address, so the relationship
+			// says so: Word refuses to follow an external target held as an
+			// internal one.
+			sub(root, "Relationship", "Id", m.RelID, "Type", relType+"hyperlink",
+				"Target", m.Target, "TargetMode", "External")
+			continue
+		}
 		sub(root, "Relationship", "Id", m.RelID, "Type", relType+"image", "Target", "media/"+m.Name)
 	}
 	return b.serialise(doc, "word/_rels/document.xml.rels")

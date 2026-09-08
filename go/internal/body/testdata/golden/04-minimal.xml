@@ -1,0 +1,82 @@
+<w:body>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading1"/>
+      <w:pageBreakBefore w:val="1"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1-The Shortest Document That Publishes</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.1-One heading</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">One paragraph, and nothing else. The point of this document is the front matter it does not have: no doc_type, no version, no owner, no revisions, no classification. Every one of those has to fall back to a default, and the cover and the control tables have to look right anyway.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2-A second heading</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">So the contents list has two entries rather than one.</w:t>
+    </w:r>
+  </w:p>
+</w:body>

@@ -1,0 +1,2207 @@
+<w:body>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading1"/>
+      <w:pageBreakBefore w:val="1"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1-Rendering Conformance Note</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.1-Purpose</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">This note exists to be rendered. Every construct below is here because some renderer somewhere got it wrong. The prose is justified, sits at 1.15 line spacing, and runs long enough to wrap at least twice so that the line breaking itself can be compared between two builds of the same document.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A second paragraph, so the spacing between paragraphs is measurable. It carries </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:b w:val="1"/>
+        <w:bCs w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">bold text</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">italic text</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:b w:val="1"/>
+        <w:bCs w:val="1"/>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">both at once</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas" w:eastAsia="Consolas"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">inline code</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:highlight w:val="yellow"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a highlighted span that a human still has to fill in</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, and a </w:t>
+    </w:r>
+    <w:hyperlink r:id="rId8">
+      <w:r>
+        <w:rPr>
+          <w:color w:val="1155cc"/>
+          <w:sz w:val="24"/>
+          <w:szCs w:val="24"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t xml:space="preserve">link to the handbook</w:t>
+      </w:r>
+    </w:hyperlink>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> sitting inside the sentence rather than on a line of its own.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Punctuation matters too: “double quotes”, ‘single quotes’, an em dash — like this, an en dash – like that, and an ellipsis… all of which a smart-quotes pass rewrites.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2-Lists</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2.1-Bulleted, three deep</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A first bullet, long enough to wrap so that the hanging indent under it can be compared. The second line must line up under the first character of the text, not under the glyph.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A second bullet.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="1"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="1440" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A nested bullet, which should carry a hollow circle rather than a disc.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="1"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="1440" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Another nested bullet with </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas" w:eastAsia="Consolas"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">code</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> in it.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="2"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="2160" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A third level, which should carry a filled square.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A fourth top-level bullet.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2.2-Numbered, restarting</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The first numbered item.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The second numbered item, long enough to wrap and check the hanging indent the same way the bulleted list does.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="1"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="1440" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A nested number, which should be a lower-case letter.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="1"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="1440" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Another nested number.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The third numbered item.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A paragraph between the two lists, so the second list has to restart at one rather than carry on from three.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">This must be numbered one.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">And this two.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2.3-A list starting at seven</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Seven.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Eight.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3-Tables</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3.1-A narrow table with a date column</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2320"/>
+      <w:gridCol w:w="2904"/>
+      <w:gridCol w:w="2320"/>
+      <w:gridCol w:w="2320"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Version</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2904" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Date</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Owner</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Status</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">1.0</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2904" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">2026-06-02</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Platform</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Retired</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">2.0</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2904" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">2026-07-19</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Platform</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Retired</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">2.3</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2904" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">2026-08-29</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Platform</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2320" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Current</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="240" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The date column must not break inside a date. A column narrower than its longest unbreakable token makes Word hyphenate the token itself.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3.2-A table with one wide column</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="1160"/>
+      <w:gridCol w:w="8704"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1160" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Control</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="8704" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Description</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1160" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">AC-1</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="8704" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Access to the production environment is granted only through the identity provider, and every grant carries an expiry. A quarterly review removes anything that outlived its purpose.</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1160" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">AC-2</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="8704" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Shared accounts are prohibited. Where a system cannot support per-person credentials, the exception is recorded and reviewed at each renewal.</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1160" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">AC-3</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="8704" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Break-glass credentials are sealed, and opening one raises an alert to the on-call engineer within one minute.</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3.3-A table carrying marks and a link</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2630"/>
+      <w:gridCol w:w="3288"/>
+      <w:gridCol w:w="3946"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2630" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Field</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3288" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Example</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3946" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Reference</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2630" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Bold</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3288" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:i w:val="1"/>
+              <w:iCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">italic</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3946" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:hyperlink r:id="rId8">
+            <w:r>
+              <w:rPr>
+                <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+                <w:color w:val="1155cc"/>
+                <w:sz w:val="24"/>
+                <w:szCs w:val="24"/>
+                <w:u w:val="single"/>
+              </w:rPr>
+              <w:t xml:space="preserve">the handbook</w:t>
+            </w:r>
+          </w:hyperlink>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2630" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas" w:eastAsia="Consolas"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">code</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3288" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+              <w:highlight w:val="yellow"/>
+            </w:rPr>
+            <w:t xml:space="preserve">to fill in</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3946" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:hyperlink r:id="rId9">
+            <w:r>
+              <w:rPr>
+                <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+                <w:color w:val="1155cc"/>
+                <w:sz w:val="24"/>
+                <w:szCs w:val="24"/>
+                <w:u w:val="single"/>
+              </w:rPr>
+              <w:t xml:space="preserve">the register</w:t>
+            </w:r>
+          </w:hyperlink>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.4-Quoted and preformatted</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:ind w:left="720"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A block quote, which this renderer flattens into ordinary prose rather than indenting. That is a deliberate choice in the reference implementation, and it has to be reproduced rather than improved on.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pBdr>
+        <w:bottom w:val="single" w:sz="4" w:space="1" w:color="a0a0a0"/>
+      </w:pBdr>
+      <w:spacing w:before="0" w:after="0"/>
+    </w:pPr>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5-Deep headings</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading4"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="000000"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="000000"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5.0.1-A fourth-level heading</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Text under the fourth level, which must be the same size as this prose and lighter in weight than the heading above it.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading5"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="000000"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="000000"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5.0.1.1-A fifth-level heading</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Text under the fifth level.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading6"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="000000"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="000000"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5.0.1.1.1-A sixth-level heading</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Text under the sixth level.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">7. A heading that numbers itself</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The author’s number wins, and the next computed heading follows on from it.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.6-A heading after the authored one</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Which should be numbered eight.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Appendix A: things that are never numbered</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">An appendix names itself, so it takes no computed number.</w:t>
+    </w:r>
+  </w:p>
+</w:body>

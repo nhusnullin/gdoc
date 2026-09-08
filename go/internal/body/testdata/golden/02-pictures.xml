@@ -1,0 +1,996 @@
+<w:body>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading1"/>
+      <w:pageBreakBefore w:val="1"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1-Pictures and Links Report</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.1-A picture on its own line</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The paragraph that introduces the diagram. What follows is an image alone on its line, which the renderer treats as a figure: centred, captioned with its alt text, and never given a heading number.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+      <w:drawing>
+        <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
+          <wp:extent cx="6263386" cy="3523155"/>
+          <wp:docPr id="1" name="Picture 1" descr=""/>
+          <wp:cNvGraphicFramePr>
+            <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+          </wp:cNvGraphicFramePr>
+          <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:nvPicPr>
+                  <pic:cNvPr id="1" name="image1.png" descr=""/>
+                  <pic:cNvPicPr/>
+                </pic:nvPicPr>
+                <pic:blipFill>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId8"/>
+                  <a:stretch>
+                    <a:fillRect/>
+                  </a:stretch>
+                </pic:blipFill>
+                <pic:spPr>
+                  <a:xfrm>
+                    <a:off x="0" y="0"/>
+                    <a:ext cx="6263386" cy="3523155"/>
+                  </a:xfrm>
+                  <a:prstGeom prst="rect">
+                    <a:avLst/>
+                  </a:prstGeom>
+                </pic:spPr>
+              </pic:pic>
+            </a:graphicData>
+          </a:graphic>
+        </wp:inline>
+      </w:drawing>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The settlement flow, end to end</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2-A picture Drive exported as a heading</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Drive writes a picture that sits on its own line as a bold heading. The image is therefore inside a Strong node, and a renderer that looks only at the top level of the inline list finds nothing and drops it in silence.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+      <w:drawing>
+        <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
+          <wp:extent cx="3048000" cy="3048000"/>
+          <wp:docPr id="2" name="Picture 2" descr=""/>
+          <wp:cNvGraphicFramePr>
+            <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+          </wp:cNvGraphicFramePr>
+          <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:nvPicPr>
+                  <pic:cNvPr id="2" name="image2.png" descr=""/>
+                  <pic:cNvPicPr/>
+                </pic:nvPicPr>
+                <pic:blipFill>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId9"/>
+                  <a:stretch>
+                    <a:fillRect/>
+                  </a:stretch>
+                </pic:blipFill>
+                <pic:spPr>
+                  <a:xfrm>
+                    <a:off x="0" y="0"/>
+                    <a:ext cx="3048000" cy="3048000"/>
+                  </a:xfrm>
+                  <a:prstGeom prst="rect">
+                    <a:avLst/>
+                  </a:prstGeom>
+                </pic:spPr>
+              </pic:pic>
+            </a:graphicData>
+          </a:graphic>
+        </wp:inline>
+      </w:drawing>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">That heading holds nothing but a picture, so it must produce a figure and no contents entry.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3-A picture inside a paragraph</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A pulled Google Doc puts its diagrams at the end of the paragraph that introduces them, so a paragraph often holds a sentence and two drawings.  </w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+      <w:drawing>
+        <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
+          <wp:extent cx="3048000" cy="3048000"/>
+          <wp:docPr id="3" name="Picture 3" descr=""/>
+          <wp:cNvGraphicFramePr>
+            <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+          </wp:cNvGraphicFramePr>
+          <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:nvPicPr>
+                  <pic:cNvPr id="3" name="image3.png" descr=""/>
+                  <pic:cNvPicPr/>
+                </pic:nvPicPr>
+                <pic:blipFill>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId10"/>
+                  <a:stretch>
+                    <a:fillRect/>
+                  </a:stretch>
+                </pic:blipFill>
+                <pic:spPr>
+                  <a:xfrm>
+                    <a:off x="0" y="0"/>
+                    <a:ext cx="3048000" cy="3048000"/>
+                  </a:xfrm>
+                  <a:prstGeom prst="rect">
+                    <a:avLst/>
+                  </a:prstGeom>
+                </pic:spPr>
+              </pic:pic>
+            </a:graphicData>
+          </a:graphic>
+        </wp:inline>
+      </w:drawing>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+      <w:t xml:space="preserve">First drawing</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+      <w:drawing>
+        <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
+          <wp:extent cx="6263386" cy="3523155"/>
+          <wp:docPr id="4" name="Picture 4" descr=""/>
+          <wp:cNvGraphicFramePr>
+            <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+          </wp:cNvGraphicFramePr>
+          <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:nvPicPr>
+                  <pic:cNvPr id="4" name="image4.png" descr=""/>
+                  <pic:cNvPicPr/>
+                </pic:nvPicPr>
+                <pic:blipFill>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId11"/>
+                  <a:stretch>
+                    <a:fillRect/>
+                  </a:stretch>
+                </pic:blipFill>
+                <pic:spPr>
+                  <a:xfrm>
+                    <a:off x="0" y="0"/>
+                    <a:ext cx="6263386" cy="3523155"/>
+                  </a:xfrm>
+                  <a:prstGeom prst="rect">
+                    <a:avLst/>
+                  </a:prstGeom>
+                </pic:spPr>
+              </pic:pic>
+            </a:graphicData>
+          </a:graphic>
+        </wp:inline>
+      </w:drawing>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Second drawing</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The words come first, then each picture on its own line.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.4-A picture too wide for the column</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The banner below is 1600 pixels across, which is wider than the text column, so it must be scaled down to the column width and keep its aspect ratio.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+    </w:pPr>
+    <w:r>
+      <w:drawing>
+        <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
+          <wp:extent cx="6263386" cy="1957308"/>
+          <wp:docPr id="5" name="Picture 5" descr=""/>
+          <wp:cNvGraphicFramePr>
+            <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
+          </wp:cNvGraphicFramePr>
+          <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+            <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+              <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                <pic:nvPicPr>
+                  <pic:cNvPr id="5" name="image5.png" descr=""/>
+                  <pic:cNvPicPr/>
+                </pic:nvPicPr>
+                <pic:blipFill>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId12"/>
+                  <a:stretch>
+                    <a:fillRect/>
+                  </a:stretch>
+                </pic:blipFill>
+                <pic:spPr>
+                  <a:xfrm>
+                    <a:off x="0" y="0"/>
+                    <a:ext cx="6263386" cy="1957308"/>
+                  </a:xfrm>
+                  <a:prstGeom prst="rect">
+                    <a:avLst/>
+                  </a:prstGeom>
+                </pic:spPr>
+              </pic:pic>
+            </a:graphicData>
+          </a:graphic>
+        </wp:inline>
+      </w:drawing>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="center"/>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:color w:val="595959"/>
+        <w:sz w:val="20"/>
+        <w:szCs w:val="20"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A banner that must be scaled to the text column</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5-Links in running text</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The </w:t>
+    </w:r>
+    <w:hyperlink r:id="rId13">
+      <w:r>
+        <w:rPr>
+          <w:color w:val="1155cc"/>
+          <w:sz w:val="24"/>
+          <w:szCs w:val="24"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t xml:space="preserve">handbook</w:t>
+      </w:r>
+    </w:hyperlink>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> and the </w:t>
+    </w:r>
+    <w:hyperlink r:id="rId14">
+      <w:r>
+        <w:rPr>
+          <w:color w:val="1155cc"/>
+          <w:sz w:val="24"/>
+          <w:szCs w:val="24"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t xml:space="preserve">risk register</w:t>
+      </w:r>
+    </w:hyperlink>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> are both linked from this sentence. A bare URL, </w:t>
+    </w:r>
+    <w:hyperlink r:id="rId15">
+      <w:r>
+        <w:rPr>
+          <w:color w:val="1155cc"/>
+          <w:sz w:val="24"/>
+          <w:szCs w:val="24"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t xml:space="preserve">https://example.com/bare</w:t>
+      </w:r>
+    </w:hyperlink>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, is a link too. A link whose text carries </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:b w:val="1"/>
+        <w:bCs w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">bold</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> and </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:i w:val="1"/>
+        <w:iCs w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">italic</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> marks, like </w:t>
+    </w:r>
+    <w:hyperlink r:id="rId16">
+      <w:r>
+        <w:rPr>
+          <w:b w:val="1"/>
+          <w:bCs w:val="1"/>
+          <w:color w:val="1155cc"/>
+          <w:sz w:val="24"/>
+          <w:szCs w:val="24"/>
+          <w:u w:val="single"/>
+        </w:rPr>
+        <w:t xml:space="preserve">this bold link</w:t>
+      </w:r>
+    </w:hyperlink>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, has to keep both.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.6-A table of links</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2545"/>
+      <w:gridCol w:w="2545"/>
+      <w:gridCol w:w="4774"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2545" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">System</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2545" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Owner</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4774" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Runbook</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2545" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Ledger</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2545" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Platform</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4774" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:hyperlink r:id="rId17">
+            <w:r>
+              <w:rPr>
+                <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+                <w:color w:val="1155cc"/>
+                <w:sz w:val="24"/>
+                <w:szCs w:val="24"/>
+                <w:u w:val="single"/>
+              </w:rPr>
+              <w:t xml:space="preserve">ledger runbook</w:t>
+            </w:r>
+          </w:hyperlink>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2545" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Gateway</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2545" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Payments</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4774" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:hyperlink r:id="rId18">
+            <w:r>
+              <w:rPr>
+                <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+                <w:color w:val="1155cc"/>
+                <w:sz w:val="24"/>
+                <w:szCs w:val="24"/>
+                <w:u w:val="single"/>
+              </w:rPr>
+              <w:t xml:space="preserve">gateway runbook</w:t>
+            </w:r>
+          </w:hyperlink>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+</w:body>

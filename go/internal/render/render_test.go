@@ -275,6 +275,55 @@ func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 	}
 }
 
+// A link's relationship is external and carries no part, so nothing lands
+// under word/media/ and [Content_Types].xml gains no extension.
+func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
+	media := []Media{{RelID: "rId8", Target: "https://example.com/p?a=1&b=2"}}
+	pkg, err := Build(config(t), fields(), nil, media)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	for _, name := range pkg.Names() {
+		if strings.HasPrefix(name, "word/media/") && name != "word/media/logo.png" {
+			t.Errorf("a link put %s in the package", name)
+		}
+	}
+	rels := parse(t, part(t, pkg, "word/_rels/document.xml.rels"))
+	found := false
+	for _, e := range rels.FindElements("//Relationship") {
+		if e.SelectAttrValue("Id", "") != "rId8" {
+			continue
+		}
+		found = true
+		if got := e.SelectAttrValue("Target", ""); got != "https://example.com/p?a=1&b=2" {
+			t.Errorf("the link relationship targets %q", got)
+		}
+		if got := e.SelectAttrValue("TargetMode", ""); got != "External" {
+			t.Errorf("the link relationship is %q, want External", got)
+		}
+		if got := e.SelectAttrValue("Type", ""); !strings.HasSuffix(got, "/hyperlink") {
+			t.Errorf("the link relationship is typed %q", got)
+		}
+	}
+	if !found {
+		t.Error("word/_rels/document.xml.rels names no rId8")
+	}
+}
+
+// A relationship that is both a link and a file is refused: one of the two
+// would be written and the other silently lost.
+func TestARelationshipThatIsBothALinkAndAFileIsRefused(t *testing.T) {
+	media := []Media{{RelID: "rId8", Name: "image1.png", Data: []byte("x"),
+		Target: "https://example.com/"}}
+	_, err := Build(config(t), fields(), nil, media)
+	if err == nil {
+		t.Fatal("Build accepted a relationship that is a link and a file at once")
+	}
+	if !strings.Contains(err.Error(), "rId8") {
+		t.Errorf("the error does not name rId8: %v", err)
+	}
+}
+
 func TestAnImageIdThatCollidesWithTheShellIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId4", Name: "image1.png", Data: []byte("x")}}
 	_, err := Build(config(t), fields(), nil, media)

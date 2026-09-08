@@ -1,0 +1,2248 @@
+<w:body>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading1"/>
+      <w:pageBreakBefore w:val="1"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1-Third Party and Outsourcing Policy</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.1-Purpose and scope</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">This policy sets out how the firm selects, approves, monitors and exits third party arrangements. It applies to every arrangement under which a third party performs a process, service or activity that the firm would otherwise undertake itself, and to every arrangement that supports an important business service.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The policy is owned by the Chief Risk Officer and approved by the Board. It is reviewed annually, and out of cycle whenever a material change to the firm’s outsourcing footprint occurs.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.1.1-What counts as outsourcing</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">An arrangement is outsourcing where all three of the following hold:</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The activity is one the firm could perform itself.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The activity is performed on a recurring or continuous basis.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The activity supports a regulated activity or an important business service.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">An arrangement that fails any of the three is a supplier arrangement rather than an outsourcing arrangement, and is governed by the procurement standard instead.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.1.2-What is out of scope</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The purchase of goods that are not services.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Correspondent banking relationships, which are governed separately.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Intra-group arrangements, which follow the intra-group services framework.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2-Governance</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The Board retains accountability for every outsourced activity. Accountability cannot be delegated to a third party, and the firm remains responsible to its customers and its regulators for the outcome of anything it outsources.</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2128"/>
+      <w:gridCol w:w="6296"/>
+      <w:gridCol w:w="1440"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2128" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Body</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6296" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Responsibility</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1440" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Frequency</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2128" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Board</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6296" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Approves the policy and any critical arrangement</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1440" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Annually</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2128" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Risk Committee</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6296" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Reviews the register and the concentration analysis</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1440" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Quarterly</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2128" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Outsourcing Forum</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6296" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Approves non-critical arrangements</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1440" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Monthly</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2128" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Service Owner</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6296" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Runs the day-to-day relationship</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="1440" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Continuous</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.2.1-The register</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Every arrangement in scope is recorded in the outsourcing register. The register holds, for each arrangement, the provider, the service, the criticality assessment, the contract dates, the exit plan reference, and the name of the individual accountable for it.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3-Selection and due diligence</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Due diligence is proportionate to criticality. A critical arrangement requires the full assessment set out below; a non-critical arrangement requires the financial and information security assessments alone.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Financial standing, covering at least three years of accounts.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Information security, including a review of the provider’s certifications and the results of the most recent independent assessment.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Operational resilience, covering the provider’s own impact tolerances and its dependency on further sub-outsourcing.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Regulatory standing, including any enforcement history in the jurisdictions in which the provider operates.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="2"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Concentration, both the firm’s concentration on the provider and the provider’s concentration across the sector.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3.1-Sub-outsourcing</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A provider may not sub-outsource a material part of a critical service without the firm’s prior written consent. The contract must give the firm the right to object, and a reasonable period in which to exercise it.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.4-Contracting</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Every contract for a critical arrangement carries, as a minimum:</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A clear description of the service and the service levels attached to it.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Audit and access rights for the firm, its auditors and its regulators.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Data location and data processing terms.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Sub-outsourcing consent and notification terms.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Termination rights, including for a change of control.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:numPr>
+        <w:ilvl w:val="0"/>
+        <w:numId w:val="1"/>
+      </w:numPr>
+      <w:spacing w:before="0" w:after="60"/>
+      <w:ind w:left="720" w:hanging="360"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A transition-out obligation lasting at least the exit plan’s stated period.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5-Monitoring</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Service levels are reported monthly to the service owner and quarterly to the Risk Committee. A breach that persists for two consecutive reporting periods is escalated to the Outsourcing Forum, whatever its severity.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.5.1-Key indicators</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2439"/>
+      <w:gridCol w:w="3394"/>
+      <w:gridCol w:w="4031"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2439" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Indicator</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3394" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Threshold</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4031" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Escalation</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2439" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Availability</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3394" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Below 99.9% in a month</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4031" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Service owner, within one business day</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2439" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Incident response</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3394" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Above four hours to acknowledge</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4031" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Outsourcing Forum, at its next meeting</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2439" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Sub-outsourcing change</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3394" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Any unnotified change</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4031" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Risk Committee, immediately</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2439" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Financial deterioration</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="3394" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Two consecutive quarters of loss</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="4031" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Risk Committee, immediately</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.6-Exit</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Every critical arrangement carries a documented and tested exit plan. The plan names the trigger events, the target state, the sequence of steps, the resources required, and the period over which the exit would run.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">An exit plan that has never been tested is a document rather than a plan. Each critical exit plan is tested at least once every two years, and the test result is reported to the Risk Committee.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Appendix A: criticality assessment</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="0"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">An arrangement is critical where its failure would materially impair an important business service, breach a regulatory obligation, or cause material detriment to customers.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading2"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="22265f"/>
+      </w:rPr>
+      <w:t xml:space="preserve">Appendix B: definitions</w:t>
+    </w:r>
+  </w:p>
+  <w:tbl>
+    <w:tblPr>
+      <w:tblStyle w:val="TableNormal"/>
+      <w:tblW w:w="9864" w:type="dxa"/>
+      <w:jc w:val="left"/>
+      <w:tblInd w:w="0" w:type="dxa"/>
+      <w:tblBorders>
+        <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+      </w:tblBorders>
+      <w:tblCellMar>
+        <w:top w:w="60" w:type="dxa"/>
+        <w:left w:w="108" w:type="dxa"/>
+        <w:bottom w:w="60" w:type="dxa"/>
+        <w:right w:w="108" w:type="dxa"/>
+      </w:tblCellMar>
+      <w:tblLayout w:type="fixed"/>
+      <w:tblLook w:val="0400"/>
+    </w:tblPr>
+    <w:tblGrid>
+      <w:gridCol w:w="2982"/>
+      <w:gridCol w:w="6882"/>
+    </w:tblGrid>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="390" w:hRule="atLeast"/>
+        <w:tblHeader w:val="1"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2982" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Term</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6882" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="bdcdd2"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:jc w:val="center"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:b w:val="1"/>
+              <w:bCs w:val="1"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Meaning</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2982" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Important business service</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6882" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">A service delivered to an external end user, the disruption of which could cause intolerable harm</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2982" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Impact tolerance</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6882" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="f3f8f9"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">The maximum tolerable disruption to an important business service</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+    <w:tr>
+      <w:trPr>
+        <w:cantSplit w:val="1"/>
+        <w:trHeight w:val="300" w:hRule="atLeast"/>
+        <w:tblHeader w:val="0"/>
+      </w:trPr>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="2982" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">Sub-outsourcing</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr>
+          <w:tcW w:w="6882" w:type="dxa"/>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="c9c9c9"/>
+          </w:tcBorders>
+          <w:shd w:val="clear" w:color="auto" w:fill="ffffff"/>
+        </w:tcPr>
+        <w:p>
+          <w:pPr>
+            <w:keepNext w:val="1"/>
+            <w:keepLines w:val="1"/>
+            <w:spacing w:before="0" w:after="0"/>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+          </w:pPr>
+          <w:r>
+            <w:rPr>
+              <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
+              <w:sz w:val="24"/>
+              <w:szCs w:val="24"/>
+            </w:rPr>
+            <w:t xml:space="preserve">A provider’s own outsourcing of part of the service it supplies to the firm</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+</w:body>

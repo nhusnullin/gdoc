@@ -244,11 +244,65 @@ first page.
 - Consumes: `house.Config` for sizes, indents, colours and the level-1 format; the note's directory for image paths.
 - Produces: `body.Render(cfg, markdown, base, numbering) (Result, error)` with `Result{Blocks, Media, Warnings, Counts}`.
 
-- [ ] write the failing tests: each of the six documents renders to its golden body (generate the goldens from the spike's output where the spike agrees with v1, and read each once before committing it); a pipe table becomes a `w:tbl` with the v1 recipe as literals (fixed layout, borders `sz="4"`, header row shaded and `tblHeader`, alternate banding, `cantSplit`, column widths summing to the usable width); a heading `## 2. Scope` keeps its authored number and a heading without one gets `{n}-` at level 1; `heading_numbering=false` numbers nothing; nested bullets to three levels use `ilvl` 0, 1, 2; `==mark==` becomes a yellow highlight run; a link becomes `w:hyperlink` with a relationship id in `Media`; an image by relative path is read and sized to the usable width when wider; an `http` image is refused naming the line; a fenced code block yields a warning naming the line and no block; smart quotes are the characters, not entities
-- [ ] run the tests and watch them fail
-- [ ] implement, porting the spike's body package and adding `table.go`
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `feat(v2): body renders the hub markdown, tables included, through goldmark`
+- [x] write the failing tests: each of the six documents renders to its golden body (generate the goldens from the spike's output where the spike agrees with v1, and read each once before committing it); a pipe table becomes a `w:tbl` with the v1 recipe as literals (fixed layout, borders `sz="4"`, header row shaded and `tblHeader`, alternate banding, `cantSplit`, column widths summing to the usable width); a heading `## 2. Scope` keeps its authored number and a heading without one gets `{n}-` at level 1; `heading_numbering=false` numbers nothing; nested bullets to three levels use `ilvl` 0, 1, 2; `==mark==` becomes a yellow highlight run; a link becomes `w:hyperlink` with a relationship id in `Media`; an image by relative path is read and sized to the usable width when wider; an `http` image is refused naming the line; a fenced code block yields a warning naming the line and no block; smart quotes are the characters, not entities
+- [x] run the tests and watch them fail
+- [x] implement, porting the spike's body package and adding `table.go`
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `feat(v2): body renders the hub markdown, tables included, through goldmark`
+
+**Notes:**
+
+`body.Render(cfg, markdown, base, numbering) (Result, error)`, with
+`Result{Blocks []*etree.Element; Media []Media; Warnings []string; Counts}`.
+`body.Media` is an alias of `render.Media`, so the relationship ids the walker
+hands out are the ids `word/_rels/document.xml.rels` is written from and the
+two cannot drift.
+
+➕ `render.Media` gained a `Target` field, and that is a change to Task 3's
+package this task needed. A markdown link is a `w:hyperlink` naming a
+relationship, and a relationship is written by `render`, which knew only about
+pictures. A link carries `Target` and no file, a picture carries `Name` and
+`Data` and no target, and `checkMedia` refuses one that is both.
+`TestALinkIsAnExternalRelationshipWithNoPart` and
+`TestARelationshipThatIsBothALinkAndAFileIsRefused` state it in
+`internal/render`.
+
+➕ `w:u` moved to the end of `w:rPr`, in `body` and in `render` both. The run
+properties are a schema sequence and underline sits after highlight, not before
+colour. No house style states `underline`, so no golden part changed.
+
+⚠️ A second numbered list carries on from the first. `numbering.xml` defines
+two lists, bullets and numbers, and every numbered list in a note names the
+same `numId`, so the second one starts where the first stopped. Written up in
+`docs/backlog/one-numbered-list-per-document.md` with the two possible shapes,
+because the fix means the body telling the shell how many lists it found and
+that is a design decision.
+
+Warnings, not blocks: a fenced or indented code block, a block of HTML, and
+inline HTML, each naming the line. Inline HTML is the one the spike dropped in
+silence, and it matters because goldmark reads a sentence about
+`<ampersands>` as a tag: without the warning those words leave the document
+with nothing said.
+
+Errors, not warnings: a picture that cannot be read, one at an `http` address,
+and a data URI that is not a base64 image. A document published with a picture
+silently missing is the failure that only shows up once somebody reads it.
+
+The body table recipe is seven constants in `table.go` that `house.yaml` does
+not state: the grey grid `#c9c9c9`, the header band `#bdcdd2`, the alternate
+band `#f3f8f9`, the 0.5pt border, the 3pt vertical cell margin and the two row
+heights. The file spells out the three front-matter tables cell by cell, and a
+table the note itself writes is not one of those. Everything else, the usable
+width, the face and the size, is read from the config.
+
+Body paragraphs carry `before=0 after=0`, which is what `house.yaml`'s `body`
+section states and what gen.py wrote. It reads tight on the page, and it is a
+one-line change in the house file rather than a decision for this package.
+
+Coverage: 92.6% of statements. The six goldens under `testdata/golden/` were
+generated with `go test ./internal/body -update` and read once before this
+commit. `06-long.xml` is 500 KB, which is the price of a golden over an
+850-line document.
 
 ---
 

@@ -178,7 +178,8 @@ func (o runOpts) empty() bool {
 }
 
 // runProps builds a w:rPr, or nil when the run states nothing. The order is
-// the schema's: fonts, weight, slope, underline, colour, size, highlight.
+// the schema's: fonts, weight, slope, colour, size, highlight, then
+// underline.
 func runProps(o runOpts) *etree.Element {
 	if o.empty() {
 		return nil
@@ -198,9 +199,6 @@ func runProps(o runOpts) *etree.Element {
 		sub(rPr, "w:i", "w:val", "1")
 		sub(rPr, "w:iCs", "w:val", "1")
 	}
-	if o.Underline {
-		sub(rPr, "w:u", "w:val", "single")
-	}
 	if o.Color != "" {
 		sub(rPr, "w:color", "w:val", hexColor(o.Color))
 	}
@@ -210,6 +208,11 @@ func runProps(o runOpts) *etree.Element {
 	}
 	if o.Highlight != "" {
 		sub(rPr, "w:highlight", "w:val", o.Highlight)
+	}
+	// Underline is last because that is where the schema puts it: the run
+	// properties are a sequence, and Word reads one out of order as a repair.
+	if o.Underline {
+		sub(rPr, "w:u", "w:val", "single")
 	}
 	return rPr
 }
