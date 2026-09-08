@@ -38,8 +38,8 @@ Spec: `docs/v2/SPEC.md` ("The binary", "The generator and `house.yaml`"). Master
 ## Testing Strategy
 
 - **Unit tests**: `house` parses the embedded file and refuses an unknown key, a missing section and a wrong type by name. `render` is tested part by part on the XML it emits: the part exists, it parses, and the values are the house literals. `body` is tested on the six spike documents as golden files of the emitted `document.xml` body, plus focused tests per construct. `cover` is tested on the front matter shapes v1 accepts and refuses. `build` is tested over a temp directory: the file exists, unzips, every part is well-formed XML.
-- **Offline drift test** (`go/internal/drift`, in `make test`): builds the spike's `03-policy.md` from the embedded config, opens the master `template.docx`, and compares every value compare.py checks that lives in the XML. Two known differences are named and allowed; anything else fails.
-- **Live drift test** (`go/internal/live`, opt-in behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`): uploads the built docx and the master docx with conversion into the test folder, reads both through the Docs API, runs the ported 160-item comparison minus the three PDF items, prints the table, fails on any verdict that is not `IDENTICAL`, `CLOSE`, or one of the two known differences, and trashes both documents.
+- **Offline drift test** (`go/internal/drift`, in `make test`): builds the spike's `03-policy.md` from the embedded config, opens the master `template.docx`, and compares every value compare.py checks that lives in the XML. Known differences are named one by one in `drift.Known`, each with its reason; anything else fails. There are more than the two DECISIONS.md counted, and Task 7 says why: the offline gate reads the XML, where the master states a heading colour and an indent twice, and the two documents also hold different words.
+- **Live drift test** (`go/internal/live`, opt-in behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`): uploads the built docx and the master docx with conversion into the test folder, reads both through the Docs API, runs the ported comparison minus the three PDF items, prints the table, fails on any verdict that is not `IDENTICAL`, `CLOSE`, or a named known difference, and trashes both documents. **Blocked on M6**: the guard refuses a multipart create and `gapi` has no multipart write. The ⚠️ under Task 7 records it. The `FromDoc` half of the item list is written and tested against a fixture, so the gate itself is what is missing.
 - **Boundary and modules**: `allowedModules` gains two entries with the SPEC reason in the map; `TestAllowedModulesAreReallyRequired` keeps them honest; `go mod graph` shows no module the allowlist does not name.
 - Coverage standard: every exported function under `go/internal/` has a test; the new packages at or above 80%.
 
@@ -409,19 +409,120 @@ else it was checking.
 ### Task 7: The drift tests, offline and live
 
 **Files:**
-- Create: `go/internal/drift/items.go`, `go/internal/drift/compare.go`, `go/internal/drift/docx.go` (reading values out of docx XML), `go/internal/drift/drift_test.go` (the offline gate), `go/internal/drift/testdata/master.docx` (a copy of `gdoc/templates/altery-group-policy-v1.0/template.docx`, with a note in the test saying which file it mirrors and that the file under `gdoc/templates/` stays v1's)
-- Modify: `go/internal/live/live_test.go` (the live gate), `go/internal/docx` only if a reader helper is needed and belongs there
+- Create: `go/internal/drift/items.go`, `go/internal/drift/compare.go`, `go/internal/drift/docx.go` (reading values out of docx XML), `go/internal/drift/doc.go` (the same values out of a Docs API answer), `go/internal/drift/drift_test.go` (the offline gate), `go/internal/drift/compare_test.go`, `go/internal/drift/docx_test.go`, `go/internal/drift/doc_test.go`, `go/internal/drift/testdata/master.docx` (a copy of `gdoc/templates/altery-group-policy-v1.0/template.docx`, with a note in the test saying which file it mirrors and that the file under `gdoc/templates/` stays v1's)
+- Modify: `go/internal/live/live_test.go` (the live gate) **is not modified, see the ⚠️ below**; `go/internal/docx` needed no change
 
 **Interfaces:**
-- Produces: `drift.Items []Item`, `drift.Compare(a, b []Value) []Row`, `drift.Known` (the two accepted differences by item name), `drift.FromDocx(pkg) []Value`, `drift.FromDoc(answer) []Value`, `drift.Table(rows) string` for the printed report.
+- Produces: `drift.Items []Item`, `drift.Compare(a, b []Value) []Row`, `drift.Known` (the accepted differences by item name, each with its reason), `drift.Unexplained(rows) []Row` (what a gate fails on), `drift.FromDocx(*Docx) []Value`, `drift.FromDoc(*Doc) []Value`, `drift.Table(rows) string` and `drift.Summary(rows) string` for the printed report.
 
-- [ ] write the failing tests: `Compare` gives `IDENTICAL` on equal, `CLOSE` within 0.75pt, `DIFFERENT` beyond, `MISSING` on one side nil, and honours a per-item tolerance; `FromDocx` on the master reads A4 in points, the margins, `titlePg`, the nine style sizes and colours, the logo extents and offsets, the TOC `instr`, the three tables' sizes, column widths, fills, texts, borders and row heights; **the offline gate**: build `03-policy.md` with the embedded config, run `FromDocx` on it and on the master, `Compare`, and fail on any row that is `DIFFERENT` or `MISSING` and not in `Known`, printing the table on failure
-- [ ] run the tests and watch them fail
-- [ ] implement `items.go` as one list with both extractors per item; port compare.py's 47 non-PDF items by name so a row here matches a row in the 2026-08-29 report
-- [ ] write the live gate in `internal/live` behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: upload the built docx and the master with conversion into the test folder (both learned by the guard from the creates), `documents.get` each with `includeTabsContent=true`, `FromDoc` on both, `Compare`, print the table, fail on any unknown `DIFFERENT` or `MISSING`, trash both in `t.Cleanup`
-- [ ] run the offline gate: green, and paste its table into this plan under this task
-- [ ] run the tests, gofmt, vet: green
-- [ ] commit: `test(v2): the drift gate, offline on the XML and live through the Docs API`
+- [x] write the failing tests: `Compare` gives `IDENTICAL` on equal, `CLOSE` within 0.75pt, `DIFFERENT` beyond, `MISSING` on one side nil, and honours a per-item tolerance; `FromDocx` on the master reads A4 in points, the margins, `titlePg`, the nine style sizes and colours, the logo extents and offsets, the TOC `instr`, the three tables' sizes, column widths, fills, texts, borders and row heights; **the offline gate**: build `03-policy.md` with the embedded config, run `FromDocx` on it and on the master, `Compare`, and fail on any row that is `DIFFERENT` or `MISSING` and not in `Known`, printing the table on failure
+- [x] run the tests and watch them fail
+- [x] implement `items.go` as one list with both extractors per item; port compare.py's 47 non-PDF items by name so a row here matches a row in the 2026-08-29 report
+- [x] the live gate: **not written, and the reason is a blocker rather than a decision.** See the ⚠️ below
+- [x] run the offline gate: green, and paste its table into this plan under this task
+- [x] run the tests, gofmt, vet: green
+- [x] commit: `test(v2): the drift gate, offline on the XML and live through the Docs API`
+
+⚠️ **The live gate is blocked on M6's guard work, and nothing here widened the
+guard to get past it.** The gate has to upload two docx files into the test
+folder with conversion, which is `files.create` with `uploadType=multipart`.
+Two things refuse that today, and both are written down in the repository
+already:
+
+- `guard.transport.checkParent` refuses a multipart create. Its own comment
+  says why and whose job it is: "The body of a multipart create opens with the
+  MIME boundary, not with the metadata object, so this parse fails and the
+  create is refused. The /upload grammar the policy allows is therefore
+  unreachable until something here reads the first MIME part, which is M6's
+  job: it is the milestone that publishes a docx."
+  `TestAMultipartCreateIsRefusedForNow` pins the refusal on purpose.
+- `internal/gapi` has no multipart POST. `PostJSON` marshals its body and sets
+  `Content-Type: application/json`, so a multipart body could not leave the
+  process under the right content type, and `internal/live` may not build a
+  request itself: the boundary test's import allowlist names four rooms and
+  that is not one of them.
+
+So writing the live gate now means teaching the guard to read the first MIME
+part and giving `gapi` a multipart write. Both are M6's, both touch the one
+room CLAUDE.md says is Nail's decision rather than a refactor, and doing them
+inside a milestone whose plan does not mention them is exactly the silent
+widening the guard exists to prevent.
+
+What is written instead: `drift.FromDoc` and the whole `Doc` half of the item
+list, tested against a Docs answer fixture in `doc_test.go`. Every item already
+carries both extractors, `TestFromDocReadsEveryItem` states that the Docs half
+answers the whole list in the same order under the same names, so M6 adds the
+upload and the read and the gate is ten lines. Nothing about the item list has
+to change.
+
+**The offline gate, run 2026-09-08.** 169 rows: 149 IDENTICAL, 2 CLOSE,
+15 DIFFERENT, 3 MISSING. Every row that is not IDENTICAL, and nothing else:
+
+```
+item                               verdict     built vs master
+HEADING_1 colour                   DIFFERENT   "#22265F" vs "#06436E"
+HEADING_1 indentStart              DIFFERENT   0 vs 36
+HEADING_2 colour                   DIFFERENT   "#22265F" vs "#06436E"
+HEADING_2 indentStart              DIFFERENT   0 vs 72
+HEADING_3 indentStart              DIFFERENT   0 vs 108
+HEADING_4 indentStart              DIFFERENT   0 vs 144
+HEADING_5 indentStart              DIFFERENT   0 vs 180
+HEADING_6 indentStart              DIFFERENT   0 vs 216
+default header text                DIFFERENT   "Altery - Supplier Management Policy" vs "Altery - xxx Policy"
+logo topOffset (pt)                CLOSE       -5.15 vs -5.149
+table count                        DIFFERENT   6 vs 3
+table Version Control row heights  CLOSE       [28.5 24.4 ...] vs [28.5 24.398 ...]  (worst difference 0.002pt)
+body H1 text                       DIFFERENT   "1-Third Party and Outsourcing Policy" vs "1-Purpose"
+body H1 run colour                 DIFFERENT   "#22265F" vs "#222660"
+body H2 text                       DIFFERENT   "1.1-Purpose and scope" vs "Appendix 1 - Associated Documents"
+body H2 run colour                 DIFFERENT   "#22265F" vs "#222660"
+body H3 text                       MISSING     "1.1.1-What counts as outsourcing" vs <none>
+body H3 indentStart                MISSING     0 vs <none>
+body H3 run colour                 MISSING     "#549F99" vs <none>
+bulleted paragraphs                DIFFERENT   17 vs 27
+```
+
+`logo topOffset` is one of the two real differences DECISIONS.md recorded on
+2026-08-29, and it is still 0.001pt. The other one was a page count from a
+stale contents list, which was a PDF item and is out of scope by the plan's own
+decision. Everything else on that list is in `drift.Known` with its reason, and
+they fall into three groups:
+
+- **The master states one thing on a style and the opposite on every paragraph
+  that uses it.** That is DECISIONS.md's own sentence for the 21 rows of 2026-08-29:
+  "the template declares a heading colour and then overrides it on every
+  paragraph while the config states the effective one". Offline this is visible
+  because the XML carries both statements; live it is not, because Docs reports
+  what it resolved. Eight rows: two heading colours and six heading indents.
+- **The two documents hold different words.** The master is the template, with
+  "xxx" where a title goes and its own body text. Six rows: the running head,
+  the three body headings, the bullet count and the table count. The three
+  front matter tables are compared cell by cell and every one of those rows is
+  IDENTICAL, which is the measurement that matters.
+- **One unit of blue.** Google's docx export writes the house navy as `#222660`
+  where the Docs API reports the `#22265F` `house.yaml` states. Two rows. The
+  live gate reads them as the same value.
+
+➕ **169 rows rather than 157.** compare.py adds a bold or italic row only when
+one of the two sides carries it; this port adds `bold` and `italic` for all
+nine named styles unconditionally, because a static list cannot ask that
+question, and a row that reads false on both sides still fails the day one side
+turns true. The names are compare.py's, so every row it printed is findable
+here.
+
+➕ **`styleElement` takes the last definition of a repeated style id, not the
+first.** The master declares `Heading1` six times, and the first block carries
+`#0041D3` with no bold while the five behind it carry `#06436E` bold. Word
+applies the last, so the first is a statement no reader of the master has ever
+seen. `TestTheLastDefinitionOfARepeatedStyleWins` states it. This was found by
+watching the bold assertion fail against a master everybody knows is bold.
+
+➕ **A field prints its instruction, never the value cached behind it.** The
+built footer carries `<w:t>1</w:t>` between `fldChar separate` and `fldChar
+end`, because it was written with page one in hand; the master's does not. That
+"1" is not text anybody typed, so `runText` skips the cached result, and the two
+footers then read as the same footer. The Docs half prints the same field as
+`<PAGE_NUMBER>`, which is what compare.py printed.
 
 ---
 
