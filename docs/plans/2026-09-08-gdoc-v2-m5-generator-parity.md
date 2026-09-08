@@ -138,11 +138,36 @@ Key design decisions and why:
 **Files:**
 - Modify: `go/go.mod`, `go/go.sum`, `go/boundary/boundary_test.go`
 
-- [ ] `go get github.com/beevik/etree` and `go get github.com/yuin/goldmark`, pinned
-- [ ] add both paths to `allowedModules` with the SPEC.md reason beside each (etree: `encoding/xml` corrupts OOXML; goldmark: parses the hub markdown, images in headings included, mark in 55 lines)
-- [ ] run the boundary test: `TestNoThirdPartyDependencies` and `TestAllowedModulesAreReallyRequired` both pass, and `go mod graph` names no module outside the four
-- [ ] record `make dist` sizes for the three platforms before and after in this task's notes below
-- [ ] commit: `chore(v2): allow etree and goldmark, the two modules SPEC.md agreed`
+- [x] `go get github.com/beevik/etree` and `go get github.com/yuin/goldmark`, pinned
+- [x] add both paths to `allowedModules` with the SPEC.md reason beside each (etree: `encoding/xml` corrupts OOXML; goldmark: parses the hub markdown, images in headings included, mark in 55 lines)
+- [x] run the boundary test: `TestNoThirdPartyDependencies` and `TestAllowedModulesAreReallyRequired` both pass, and `go mod graph` names no module outside the four
+- [x] record `make dist` sizes for the three platforms before and after in this task's notes below
+- [x] commit: `chore(v2): allow etree and goldmark, the two modules SPEC.md agreed`
+
+**Notes:**
+
+Pinned versions: `github.com/beevik/etree v1.8.0`, `github.com/yuin/goldmark v1.8.6`.
+Both are required with `// indirect` for now, because no package imports them
+yet; Task 3 and Task 4 turn that into a direct require. `requiredModules` in the
+boundary test strips the comment, so both halves of the allowlist hold either
+way.
+
+`go mod graph` names four nodes and no fifth: `gdoc` requires `beevik/etree`,
+`goccy/go-yaml` and `yuin/goldmark`, and none of the three requires a module of
+its own. So neither new dependency brings anything transitive.
+
+`make dist` sizes in bytes, before this task (M4 plus Task 1's embedded
+`house.yaml`) and after:
+
+| Platform | Before | After | Delta |
+|---|---|---|---|
+| darwin/arm64 | 12,393,250 | 12,393,250 | 0 |
+| darwin/amd64 | 13,271,536 | 13,271,536 | 0 |
+| windows/amd64 | 13,134,336 | 13,134,336 | 0 |
+
+Zero on purpose: the Go linker keeps only what is reached, and nothing imports
+either module yet. The real cost lands when Task 3 imports etree and Task 4
+imports goldmark, and Task 8 records that delta against the numbers above.
 
 ---
 
