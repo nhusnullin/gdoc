@@ -368,11 +368,41 @@ Coverage: 91.9% of statements.
 - Consumes: `cover.Read`, `house.Load`/`LoadFile`, `body.Render`, `render.Build`, `atomicfile`.
 - Produces: `gdoc build --md <note> --out <file.docx> [--house <path>] [--force]` and the data shape in Technical Details.
 
-- [ ] write the failing tests: a note builds to a file that unzips into the expected parts, and `data` reports `bytes`, `title`, `running_head`, `house: "embedded"` and the body counts; a missing `--md` or `--out` is refused naming the flag; an existing `--out` is refused without `--force` and replaced with it; `--house` pointing at a copy of the embedded file reports the path; a note with no title fails naming the candidate; the warnings from `body` reach `warnings`; no request is made (the session factory is never called); `--help` still lists the ten commands
-- [ ] run the tests and watch them fail
-- [ ] implement
-- [ ] run the tests, gofmt, vet, `make build`: green; build the spike's `03-policy.md` by hand once and open the result in Word or upload it by hand to check it is a valid document
-- [ ] commit: `feat(v2): gdoc build writes a house-style docx from a note, offline`
+- [x] write the failing tests: a note builds to a file that unzips into the expected parts, and `data` reports `bytes`, `title`, `running_head`, `house: "embedded"` and the body counts; a missing `--md` or `--out` is refused naming the flag; an existing `--out` is refused without `--force` and replaced with it; `--house` pointing at a copy of the embedded file reports the path; a note with no title fails naming the candidate; the warnings from `body` reach `warnings`; no request is made (the session factory is never called); `--help` still lists the ten commands
+- [x] run the tests and watch them fail
+- [x] implement
+- [x] run the tests, gofmt, vet, `make build`: green; built the spike's `03-policy.md` and `02-pictures.md` by hand: both unzip, every XML part parses, the TOC field is there and the five pictures land as `word/media/imageN.png`. Opening one in Word is Nail's, in Post-Completion
+- [x] commit: `feat(v2): gdoc build writes a house-style docx from a note, offline`
+
+**Notes.**
+
+`--md` and `--out` are required and named when missing; `--house` replaces the
+embedded style for one run and `data.house` says which was used; `--force` is
+the only way an existing `--out` is replaced, and a directory there is refused
+whatever the flag says. The write goes through `internal/atomicfile`, and the
+package is zipped whole into memory first, so a package that cannot be
+serialised leaves no half a file under the name somebody asked for.
+
+`title` is the cover's own words, `cover.CoverTitle()`, because that is what was
+written into the document rather than the raw front-matter key.
+
+A note with no title is refused carrying a candidate drawn from the file name as
+well as from the first heading. `cover.Read` is handed bytes and not a path, so
+it can only offer the heading; `titleError` asks `cover.TitleCandidate` again
+with the path and reports through `cover.MissingTitle`'s own words, so the two
+readings of that failure cannot drift into two sentences.
+
+➕ `keepLines`: the front matter is handed to the walker as the blank lines it
+occupied rather than cut away. `body.Render` counts lines from the markdown it
+is given and the author counts them from the top of the file, so a warning about
+a code block named a line several above it, and the deeper the front matter the
+further off it pointed. Blank lines in front of the first block change nothing
+goldmark does with the rest. The warnings test states the rule: a fence on the
+note's line 7 warns about line 7.
+
+`TestBuildMakesNoRequest` is not a test of its own: every build test stubs
+`openSession` to fail the run, so any build that opened a session fails whatever
+else it was checking.
 
 ---
 

@@ -202,7 +202,8 @@ func TestTheUsageLineNamesEveryCommand(t *testing.T) {
 		t.Fatalf("there is no help command, so --help must fail: %v (exit %d)", got, code)
 	}
 	msg, _ := got["error"].(string)
-	for _, command := range []string{"auth status", "auth login", "read", "comments", "suggestions"} {
+	for _, command := range []string{"auth status", "auth login", "read", "comments",
+		"suggestions", "probe", "reply", "propose", "withdraw", "build"} {
 		if !strings.Contains(msg, command) {
 			t.Errorf("the usage line must name %q: %q", command, msg)
 		}
