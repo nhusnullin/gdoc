@@ -91,11 +91,16 @@ func identifyPNG(data []byte) (imageInfo, error) {
 			if length >= 9 && data[payload+8] == 1 {
 				horizontal := binary.BigEndian.Uint32(data[payload:])
 				vertical := binary.BigEndian.Uint32(data[payload+4:])
-				if horizontal > 0 {
-					info.horzDPI = int(math.Round(float64(horizontal) * 0.0254))
+				// The test is on the converted value, not on the declared one.
+				// A pHYs under about 20 pixels per metre is non-zero and still
+				// rounds to nought dpi, and widthEMU divides by it: the extent
+				// goes to infinity and lands in the XML as a negative integer
+				// Word offers to repair. Below one dpi the default stands.
+				if dpi := int(math.Round(float64(horizontal) * 0.0254)); dpi > 0 {
+					info.horzDPI = dpi
 				}
-				if vertical > 0 {
-					info.vertDPI = int(math.Round(float64(vertical) * 0.0254))
+				if dpi := int(math.Round(float64(vertical) * 0.0254)); dpi > 0 {
+					info.vertDPI = dpi
 				}
 			}
 		case "IEND":

@@ -244,10 +244,13 @@ cover:
   - text: or
     size_pt: 29
     bold: true
+    with: alt_title
     space_before_pt: 0
     space_after_pt: 0
   - size_pt: 29
     bold: true
+    placeholder: alt_title
+    with: alt_title
     space_before_pt: 0
     space_after_pt: 0
     runs:
@@ -257,11 +260,11 @@ cover:
     - text: Framework/Policy
       color: '#FF0000'
   - size_pt: 20
-    placeholder: version
     runs:
     - text: 'Version: '
     - text: '1.0'
       highlight: yellow
+      placeholder: version
   - text: May 2025
     size_pt: 20
     highlight: yellow
@@ -391,7 +394,10 @@ tables:
         - 5.0
         valign: top
         paragraphs:
-        - runs: []
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: owner
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
@@ -424,7 +430,10 @@ tables:
         - 5.0
         valign: top
         paragraphs:
-        - runs: []
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: last_approval
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
@@ -460,6 +469,7 @@ tables:
         - runs:
           - text: 'Annually '
             size_pt: 12.0
+            placeholder: review_frequency
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
@@ -492,7 +502,10 @@ tables:
         - 5.0
         valign: top
         paragraphs:
-        - runs: []
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: board_ratification
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
@@ -525,7 +538,10 @@ tables:
         - 5.0
         valign: top
         paragraphs:
-        - runs: []
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: distribution
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
@@ -678,6 +694,7 @@ tables:
           keep_lines_together: true
           keep_with_next: true
     - min_height_pt: 28.35
+      repeat: revisions
       cells:
       - fill: '#F3F8F9'
         pad_pt: 5
@@ -795,6 +812,7 @@ tables:
           keep_lines_together: true
           keep_with_next: true
     - min_height_pt: 28.35
+      without: revisions
       cells:
       - fill: '#F3F8F9'
         pad_pt: 5
@@ -959,7 +977,8 @@ tables:
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
-      - fill: null
+      - fill: '#F4CCCC'
+        classification: 'Confidential (C)'
         pad_pt: 5
         pad_tlbr_pt:
         - 0
@@ -994,7 +1013,8 @@ tables:
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
-      - fill: null
+      - fill: '#FCE5CD'
+        classification: 'Restricted (R)'
         pad_pt: 5
         pad_tlbr_pt:
         - 0
@@ -1030,6 +1050,7 @@ tables:
           space_before_pt: 0.0
           space_after_pt: 0.0
       - fill: '#FFF2CC'
+        classification: 'Internal (I)'
         pad_pt: 5
         pad_tlbr_pt:
         - 0
@@ -1064,7 +1085,8 @@ tables:
           line_spacing: 1.0
           space_before_pt: 0.0
           space_after_pt: 0.0
-      - fill: null
+      - fill: '#D9EAD3'
+        classification: 'Public (P)'
         pad_pt: 5
         pad_tlbr_pt:
         - 0
@@ -1085,7 +1107,6 @@ table_text:
 toc:
   live: true
   instr: ' TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3," '
-  tab_stop_pt: 600
   size_pt: 11
 heading_numbering:
   mechanism: literal

@@ -50,6 +50,12 @@ var alignments = map[string]string{
 	"justify": "both", "start": "left", "end": "right",
 }
 
+// valigns maps a house vertical alignment to Word's own name. Word spells the
+// middle "center", and the config says what a person would say.
+var valigns = map[string]string{
+	"top": "top", "center": "center", "middle": "center", "bottom": "bottom",
+}
+
 // twips is a point in twentieths, which is what OOXML measures a page, a
 // margin, an indent and a cell in.
 //
@@ -108,6 +114,21 @@ func (b *builder) align(a string) string {
 	v, ok := alignments[a]
 	if !ok {
 		b.fail("alignment %q is not one Word has", a)
+		return ""
+	}
+	return v
+}
+
+// valign maps a house cell alignment onto Word's, and refuses one Word does not
+// have rather than dropping it. A cell the config says is centred and the
+// document leaves at the top is the config describing an output nobody wrote.
+func (b *builder) valign(a string) string {
+	if a == "" {
+		return ""
+	}
+	v, ok := valigns[a]
+	if !ok {
+		b.fail("cell alignment %q is not one Word has", a)
 		return ""
 	}
 	return v

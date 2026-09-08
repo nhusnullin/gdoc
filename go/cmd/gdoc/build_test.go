@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,7 +110,7 @@ func TestBuildWritesADocxAndReportsWhatItWrote(t *testing.T) {
 		}
 	}
 
-	// The eleven XML parts, the logo, and nothing else: this note carries no
+	// The twelve XML parts, the logo, and nothing else: this note carries no
 	// picture of its own.
 	want := []string{
 		"[Content_Types].xml",
@@ -200,6 +201,54 @@ func TestBuildRefusesAnExistingOutUnlessForced(t *testing.T) {
 	}
 	if names := zipNames(t, out); len(names) != 13 {
 		t.Errorf("the file was replaced by the built document: %v", names)
+	}
+}
+
+// TestBuildRefusesAnOutThatNamesAnInput. --force is consent to replace the
+// document being written, never consent to replace what the run reads. Without
+// this, `--out note.md --force` read the note, rendered it and then put the
+// .docx where the note had been: the source was gone the moment the document
+// was built.
+func TestBuildRefusesAnOutThatNamesAnInput(t *testing.T) {
+	noSession(t)
+	dir, md := buildNote(t)
+	before, err := os.ReadFile(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "build", "--md", md, "--out", md, "--force")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("an --out that names the note must be refused: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "--md") {
+		t.Errorf("the error must name the flag it collides with: %q", msg)
+	}
+	after, err := os.ReadFile(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("the note was replaced by the document built from it")
+	}
+
+	// The same rule over the style file, and over a second spelling of one
+	// path: "./note.md" and "note.md" are one file.
+	style := filepath.Join(dir, "draft-house.yaml")
+	src, err := os.ReadFile(filepath.Join("..", "..", "internal", "house", "house.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(style, src, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, code = runJSON(t, "build", "--md", md, "--house", style,
+		"--out", filepath.Join(dir, ".", filepath.Base(style)), "--force")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("an --out that names the style file must be refused: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "--house") {
+		t.Errorf("the error must name the flag it collides with: %q", msg)
 	}
 }
 

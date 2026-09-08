@@ -324,16 +324,32 @@ func TestALogoThatIsNotAPNGIsRefused(t *testing.T) {
 	}
 }
 
+// TestNothingHereReachesTheNetwork is the render path's own rule, stated as a
+// test rather than left to review.
+//
+// Every production file in the package is read, not house.go alone. The
+// package is one file today, which is exactly what would hide a second one:
+// the boundary test bans net/http and os/exec across the whole tree, but an
+// internal/gapi import names neither, so this is the only place that would see
+// it. The banned strings are internal/body's, spelled the same way, so the two
+// canaries state one rule.
 func TestNothingHereReachesTheNetwork(t *testing.T) {
-	// The render path is offline by construction. This states it where a
-	// person adding an import would see it fail.
-	src, err := os.ReadFile("house.go")
+	names, err := filepath.Glob("*.go")
 	if err != nil {
-		t.Fatalf("read house.go: %v", err)
+		t.Fatalf("glob: %v", err)
 	}
-	for _, banned := range []string{"net/http", "gdoc/internal/gapi", "os/exec"} {
-		if bytes.Contains(src, []byte(banned)) {
-			t.Errorf("house.go imports %s, and the generator reaches no network", banned)
+	for _, name := range names {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		src, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		for _, banned := range []string{`"net/http"`, `"os/exec"`, "internal/gapi"} {
+			if bytes.Contains(src, []byte(banned)) {
+				t.Errorf("%s imports %s, and the generator reaches no network", name, banned)
+			}
 		}
 	}
 }

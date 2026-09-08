@@ -62,6 +62,16 @@ func (b *builder) cover() []*etree.Element {
 		}, blank.SizePt))
 	}
 	for _, line := range c.Lines {
+		// A line that depends on a cover field the note left out is not
+		// printed at all. The master offers the title twice either side of an
+		// "or", for a person filling the cover in by hand to pick one, and
+		// printing both published a cover reading the title, then "or", then
+		// the template's own highlighted placeholder.
+		if line.With != "" {
+			if _, filled := b.placeholder(line.With); !filled {
+				continue
+			}
+		}
 		value, filled := b.placeholder(line.Placeholder)
 		if !filled && len(line.Runs) == 0 && line.Text == "" {
 			out = append(out, b.blank(paraOpts{
@@ -82,10 +92,11 @@ func (b *builder) cover() []*etree.Element {
 			textRun(p, value, runOpts{SizePt: line.SizePt, Bold: line.Bold})
 		case len(line.Runs) > 0:
 			for _, r := range line.Runs {
-				textRun(p, r.Text, runOpts{
+				text, o := b.runText(r, runOpts{
 					SizePt: line.SizePt, Bold: line.Bold,
 					Color: r.Color, Highlight: r.Highlight,
 				})
+				textRun(p, text, o)
 			}
 		default:
 			textRun(p, line.Text, runOpts{
@@ -214,37 +225,134 @@ func (b *builder) table(spec house.Table) *etree.Element {
 		sub(grid, "w:gridCol", "w:w", twips(w))
 	}
 
+	classes, marked := 0, false
 	for ri, row := range spec.Rows {
-		tr := sub(tbl, "w:tr")
-		sub(sub(tr, "w:trPr"), "w:trHeight", "w:val", twips(row.MinHeightPt), "w:hRule", "atLeast")
-		for ci, cell := range row.Cells {
-			if ci >= len(spec.ColumnsPt) {
-				b.fail("tables: row %d has more cells than the table has columns", ri)
-				break
-			}
-			tc := sub(tr, "w:tc")
-			tcPr := sub(tc, "w:tcPr")
-			sub(tcPr, "w:tcW", "w:w", twips(spec.ColumnsPt[ci]), "w:type", "dxa")
-			edges(sub(tcPr, "w:tcBorders"), []string{"top", "left", "bottom", "right"})
-			if cell.Fill != "" {
-				sub(tcPr, "w:shd", "w:val", "clear", "w:color", "auto", "w:fill", hexColor(cell.Fill))
-			}
-			pad := padding(cell)
-			mar := sub(tcPr, "w:tcMar")
-			for i, side := range []string{"top", "left", "bottom", "right"} {
-				sub(mar, "w:"+side, "w:w", twips(pad[i]), "w:type", "dxa")
-			}
-			for _, cp := range cell.Paragraphs {
-				tc.AddChild(b.cellParagraph(cp, tt))
+		if b.rowIsLeftOut(row) {
+			continue
+		}
+		for _, values := range b.rowValues(row) {
+			tr := sub(tbl, "w:tr")
+			sub(sub(tr, "w:trPr"), "w:trHeight", "w:val", twips(row.MinHeightPt), "w:hRule", "atLeast")
+			for ci, cell := range row.Cells {
+				if ci >= len(spec.ColumnsPt) {
+					b.fail("tables: row %d has more cells than the table has columns", ri)
+					break
+				}
+				tc := sub(tr, "w:tc")
+				tcPr := sub(tc, "w:tcPr")
+				sub(tcPr, "w:tcW", "w:w", twips(spec.ColumnsPt[ci]), "w:type", "dxa")
+				edges(sub(tcPr, "w:tcBorders"), []string{"top", "left", "bottom", "right"})
+				if cell.Classification != "" {
+					classes++
+					if cell.Classification == b.fields.Classification {
+						marked = true
+					}
+				}
+				if fill := b.cellFill(cell); fill != "" {
+					sub(tcPr, "w:shd", "w:val", "clear", "w:color", "auto", "w:fill", hexColor(fill))
+				}
+				pad := padding(cell)
+				mar := sub(tcPr, "w:tcMar")
+				for i, side := range []string{"top", "left", "bottom", "right"} {
+					sub(mar, "w:"+side, "w:w", twips(pad[i]), "w:type", "dxa")
+				}
+				// w:vAlign comes after w:tcMar in the schema. Word's default
+				// is top and every cell in the house file says top, so writing
+				// it changes nothing today; not writing it meant a cell
+				// changed to centre in the config produced a document that did
+				// not move.
+				if v := b.valign(cell.Valign); v != "" {
+					sub(tcPr, "w:vAlign", "w:val", v)
+				}
+				for pi, cp := range cell.Paragraphs {
+					// A repeated row carries one value per column, and it goes
+					// in the cell's first paragraph. The rest of the cell is
+					// the prototype's own, so the row keeps the template's
+					// shape.
+					var value *string
+					if values != nil && pi == 0 && ci < len(values) {
+						value = &values[ci]
+					}
+					tc.AddChild(b.cellParagraph(cp, tt, value))
+				}
 			}
 		}
+	}
+	// A table that describes the classes and shades none of the one the note
+	// asked for publishes a document with no classification at all, which is
+	// the failure this whole mechanism exists to stop. It can only come from a
+	// config and a note that spell the class differently, so it is refused
+	// naming what was asked for. A note that states no class at all is not that
+	// case: cover.Read defaults it, and a Fields built by hand with none says
+	// there is nothing to mark.
+	if classes > 0 && b.fields.Classification != "" && !marked {
+		b.fail("tables: no cell describes the classification %q, and the document would carry no mark",
+			b.fields.Classification)
 	}
 	return tbl
 }
 
+// cellFill is the shading one cell carries.
+//
+// A cell that names a classification is the description beside one class, and
+// it is shaded only when the note declares that class. The master was captured
+// with Internal marked, so writing the config's fills verbatim marked every
+// document Internal whatever the note said, which is worse than leaving the
+// row blank. It is v1's mark_classification: clear every description cell,
+// then shade the chosen one.
+func (b *builder) cellFill(cell house.Cell) string {
+	if cell.Classification == "" {
+		return cell.Fill
+	}
+	if cell.Classification != b.fields.Classification {
+		return ""
+	}
+	return cell.Fill
+}
+
+// rowIsLeftOut says whether a row the config marks with a list is dropped
+// because the note declared that list itself. It is the blank revision row a
+// person would fill in by hand, which v1 removes for the same reason.
+func (b *builder) rowIsLeftOut(row house.Row) bool {
+	if row.Without == "" {
+		return false
+	}
+	return len(b.rowList(row.Without, "without")) > 0
+}
+
+// rowValues is the value sets one configured row renders as: one nil for an
+// ordinary row, which prints the config's own words, and one list of cell
+// values per item for a row the note fills in. A row marked for a list the
+// note left empty prints once, as the template's own row.
+func (b *builder) rowValues(row house.Row) [][]string {
+	if row.Repeat == "" {
+		return [][]string{nil}
+	}
+	values := b.rowList(row.Repeat, "repeat")
+	if len(values) == 0 {
+		return [][]string{nil}
+	}
+	return values
+}
+
+// rowList is the note's own rows for a named list. A name this package does
+// not know is refused rather than read as an empty list: a table silently left
+// as the template's is a document nobody would think to check.
+func (b *builder) rowList(name, key string) [][]string {
+	if name != "revisions" {
+		b.fail("tables: %s %q is not a list a note declares", key, name)
+		return nil
+	}
+	out := make([][]string, 0, len(b.fields.Revisions))
+	for _, rev := range b.fields.Revisions {
+		out = append(out, rev.Values())
+	}
+	return out
+}
+
 // cellParagraph is one paragraph inside a table cell. An empty one still
 // carries a run, because a cell with no run at all collapses to nothing.
-func (b *builder) cellParagraph(cp house.CellParagraph, tt house.TableText) *etree.Element {
+func (b *builder) cellParagraph(cp house.CellParagraph, tt house.TableText, value *string) *etree.Element {
 	opts := paraOpts{
 		Align:       cp.Align,
 		Before:      cp.SpaceBeforePt,
@@ -265,6 +373,21 @@ func (b *builder) cellParagraph(cp house.CellParagraph, tt house.TableText) *etr
 		opts.FirstLine = &first
 	}
 	p := b.para(opts)
+	if value != nil {
+		// The prototype's first run is the formatting, and the note's words
+		// are the content. The yellow and the red go with the "xx" they marked.
+		size := tt.DefaultSizePt
+		o := runOpts{SizePt: &size, Font: tt.Font}
+		if len(cp.Runs) > 0 {
+			proto := cp.Runs[0]
+			if proto.SizePt != nil {
+				size = *proto.SizePt
+			}
+			o.Bold, o.Italic = proto.Bold, proto.Italic
+		}
+		textRun(p, *value, o)
+		return p
+	}
 	if len(cp.Runs) == 0 {
 		size := tt.DefaultSizePt
 		r := sub(p, "w:r")
@@ -278,10 +401,11 @@ func (b *builder) cellParagraph(cp house.CellParagraph, tt house.TableText) *etr
 		if run.SizePt != nil {
 			size = *run.SizePt
 		}
-		textRun(p, run.Text, runOpts{
+		text, o := b.runText(run, runOpts{
 			SizePt: &size, Font: tt.Font, Bold: run.Bold, Italic: run.Italic,
 			Color: run.Color, Highlight: run.Highlight,
 		})
+		textRun(p, text, o)
 	}
 	return p
 }

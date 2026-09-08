@@ -55,6 +55,10 @@ func TestEveryOptionalKeyReads(t *testing.T) {
 		"version: 1.0",
 		"date: 2026-09-08",
 		"owner: Head of Risk",
+		"last_approval: 2026-08-14",
+		"review_frequency: Twice a year",
+		"board_ratification: 2026-08-20",
+		"distribution: All staff and the Board",
 		"classification: restricted",
 		"heading_numbering: none",
 		"revisions:",
@@ -78,6 +82,21 @@ func TestEveryOptionalKeyReads(t *testing.T) {
 	}
 	if f.Owner != "Head of Risk" {
 		t.Errorf("owner = %q, want Head of Risk", f.Owner)
+	}
+	// The other four cells of the version-control table. They are v1's keys and
+	// v1 writes all five, so a note written for the Python tool has to publish
+	// the same table here.
+	if f.LastApproval != "14 August 2026" {
+		t.Errorf("last_approval = %q, want 14 August 2026", f.LastApproval)
+	}
+	if f.ReviewFrequency != "Twice a year" {
+		t.Errorf("review_frequency = %q, want Twice a year", f.ReviewFrequency)
+	}
+	if f.BoardRatification != "20 August 2026" {
+		t.Errorf("board_ratification = %q, want 20 August 2026", f.BoardRatification)
+	}
+	if f.Distribution != "All staff and the Board" {
+		t.Errorf("distribution = %q, want All staff and the Board", f.Distribution)
 	}
 	if f.Classification != "Restricted (R)" {
 		t.Errorf("classification = %q, want Restricted (R)", f.Classification)

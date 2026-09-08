@@ -1,6 +1,7 @@
 package render
 
 import (
+	"strings"
 	"testing"
 
 	"gdoc/internal/cover"
@@ -61,10 +62,123 @@ func TestTheNotesTitleVersionAndDateReplaceThePlaceholders(t *testing.T) {
 			t.Errorf("the cover does not carry %q", want)
 		}
 	}
-	// The house file offers the title line twice, either side of an "or", so a
-	// person filling the cover in by hand picks one. Nothing in the config marks
-	// the second as an alternative, so the shell renders what it is given and the
-	// cover milestone decides how a filled title collapses the pair.
+}
+
+// coverLines is the text of every paragraph up to the "Version Control" label,
+// which is the block the front matter opens with, so what is left is the cover
+// page.
+func coverLines(t *testing.T, pkg *Package) []string {
+	t.Helper()
+	var out []string
+	for _, block := range bodyBlocks(t, pkg) {
+		if block.FullTag() == "w:tbl" {
+			break
+		}
+		if firstLabel(block) == "Version Control" {
+			break
+		}
+		text := ""
+		for _, e := range block.FindElements(".//w:t") {
+			text += e.Text()
+		}
+		if strings.TrimSpace(text) != "" {
+			out = append(out, text)
+		}
+	}
+	return out
+}
+
+// firstLabel is one block's own text, joined.
+func firstLabel(block *etree.Element) string {
+	text := ""
+	for _, e := range block.FindElements(".//w:t") {
+		text += e.Text()
+	}
+	return text
+}
+
+// buildWith is Build over one note's fields.
+func buildWith(t *testing.T, f cover.Fields) *Package {
+	t.Helper()
+	pkg, err := Build(config(t), f, nil, nil)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	return pkg
+}
+
+// TestOneTitleLeavesNoOrAndNoSecondTitle. The master offers the title twice,
+// either side of an "or", for a person filling the cover in by hand to pick
+// one. A note with one title published a cover reading the title, then "or",
+// then the template's own highlighted "(Name of) Framework/Policy", which is
+// page one of every document. v1 deletes both lines, and so does this.
+func TestOneTitleLeavesNoOrAndNoSecondTitle(t *testing.T) {
+	lines := coverLines(t, buildWith(t, cover.Fields{
+		Title: "Supplier Register", DocType: "Policy", Version: "1.0", Date: "8 September 2026",
+	}))
+	want := []string{"Altery Group ", "Supplier Register Policy", "Version: 1.0", "8 September 2026"}
+	if len(lines) != len(want) {
+		t.Fatalf("the cover reads %q, want %q", lines, want)
+	}
+	for i, w := range want {
+		if lines[i] != w {
+			t.Errorf("cover line %d reads %q, want %q", i, lines[i], w)
+		}
+	}
+}
+
+// TestAnAlternativeTitlePrintsBothLinesAndTheOr is the other direction: the
+// pair is the master's own way of showing a framework and the policy under it,
+// so a note that states one keeps it.
+func TestAnAlternativeTitlePrintsBothLinesAndTheOr(t *testing.T) {
+	lines := coverLines(t, buildWith(t, cover.Fields{
+		Title: "Supplier Register", AltTitle: "Third Party Management",
+		DocType: "Policy", Version: "1.0", Date: "8 September 2026",
+	}))
+	want := []string{"Altery Group ", "Supplier Register Policy", "or",
+		"Third Party Management Policy", "Version: 1.0", "8 September 2026"}
+	if len(lines) != len(want) {
+		t.Fatalf("the cover reads %q, want %q", lines, want)
+	}
+	for i, w := range want {
+		if lines[i] != w {
+			t.Errorf("cover line %d reads %q, want %q", i, lines[i], w)
+		}
+	}
+}
+
+// TestTheVersionLineKeepsItsLabel. The line is two runs, "Version: " and the
+// number, and only the number is the note's. Replacing the whole line with the
+// value took the word "Version:" off every cover gdoc built.
+func TestTheVersionLineKeepsItsLabel(t *testing.T) {
+	pkg := buildWith(t, cover.Fields{Title: "Supplier Register Policy", Version: "3.1",
+		Date: "8 September 2026"})
+	var version *etree.Element
+	for _, block := range bodyBlocks(t, pkg) {
+		text := ""
+		for _, e := range block.FindElements(".//w:t") {
+			text += e.Text()
+		}
+		if strings.HasPrefix(text, "Version: ") {
+			version = block
+			break
+		}
+	}
+	if version == nil {
+		t.Fatal("the cover carries no version line reading \"Version: \"")
+	}
+	runs := version.FindElements("w:r")
+	if len(runs) != 2 {
+		t.Fatalf("the version line has %d runs, want the label and the number", len(runs))
+	}
+	if got := runs[1].FindElement("w:t").Text(); got != "3.1" {
+		t.Errorf("the version reads %q, want 3.1", got)
+	}
+	// The yellow marks "a person fills this in". Once the note's own number is
+	// there the mark is misleading, which is v1's _clear_placeholder_marks.
+	if runs[1].FindElement("w:rPr/w:highlight") != nil {
+		t.Error("the note's own version is still highlighted yellow")
+	}
 }
 
 func TestANoteWithNoTitleKeepsTheTemplatesHighlightedPlaceholder(t *testing.T) {
@@ -261,5 +375,164 @@ func TestTheFrontMatterIsInTheOrderTheConfigLists(t *testing.T) {
 		if kinds[i] != want[i] {
 			t.Errorf("block %d is %s, want %s", i, kinds[i], want[i])
 		}
+	}
+}
+
+// tableCells is one front-matter table as rows of (text, fill) pairs.
+func tableCells(t *testing.T, pkg *Package, n int) [][][2]string {
+	t.Helper()
+	doc := parse(t, part(t, pkg, "word/document.xml"))
+	tables := doc.FindElements("//w:body/w:tbl")
+	if n >= len(tables) {
+		t.Fatalf("the document has %d tables, and the test wants number %d", len(tables), n)
+	}
+	var rows [][][2]string
+	for _, tr := range tables[n].FindElements("w:tr") {
+		var cells [][2]string
+		for _, tc := range tr.FindElements("w:tc") {
+			text := ""
+			for _, e := range tc.FindElements(".//w:t") {
+				text += e.Text()
+			}
+			fill := ""
+			if shd := tc.FindElement("w:tcPr/w:shd"); shd != nil {
+				fill = shd.SelectAttrValue("w:fill", "")
+			}
+			cells = append(cells, [2]string{text, fill})
+		}
+		rows = append(rows, cells)
+	}
+	return rows
+}
+
+// TestTheVersionControlTableCarriesTheNotesOwnWords. The five value cells are
+// v1's five keys. They were parsed, validated and then dropped, so a note that
+// named its owner published a table with the owner cell blank.
+func TestTheVersionControlTableCarriesTheNotesOwnWords(t *testing.T) {
+	rows := tableCells(t, buildWith(t, cover.Fields{
+		Title: "Supplier Register Policy", Version: "1.0",
+		Owner: "Chief Risk Officer", LastApproval: "14 August 2026",
+		ReviewFrequency: "Twice a year", BoardRatification: "20 August 2026",
+		Distribution: "All staff",
+	}), 0)
+	want := []string{"Chief Risk Officer", "14 August 2026", "Twice a year",
+		"20 August 2026", "All staff"}
+	if len(rows) != len(want) {
+		t.Fatalf("the version control table has %d rows, want %d", len(rows), len(want))
+	}
+	for i, w := range want {
+		if got := rows[i][1][0]; got != w {
+			t.Errorf("version control row %d reads %q, want %q", i, got, w)
+		}
+	}
+}
+
+// TestARevisionRowIsWrittenPerRevision. The prototype row and the blank row
+// behind it are the master's own, for a person filling the table in by hand.
+func TestARevisionRowIsWrittenPerRevision(t *testing.T) {
+	rows := tableCells(t, buildWith(t, cover.Fields{
+		Title: "Supplier Register Policy", Version: "1.0",
+		Revisions: []cover.Revision{
+			{Version: "1.0", Date: "1 May 2026", Author: "N K", ApprovedBy: "Board",
+				ApprovalDate: "2 May 2026", Section: "all", Change: "New document"},
+			{Version: "1.1", Date: "1 June 2026", Author: "N K", ApprovedBy: "Board",
+				ApprovalDate: "2 June 2026", Section: "4", Change: "Exit plan"},
+		},
+	}), 1)
+	if len(rows) != 3 {
+		t.Fatalf("the revision history has %d rows, want the header and two revisions", len(rows))
+	}
+	if got := rows[1][0][0]; got != "1.0" {
+		t.Errorf("the first revision reads %q in column one, want 1.0", got)
+	}
+	if got := rows[2][6][0]; got != "Exit plan" {
+		t.Errorf("the second revision reads %q in the last column, want \"Exit plan\"", got)
+	}
+	// The red "xx" marked a cell for a person to fill in, so it goes with the
+	// value that replaced it.
+	if run := rows[1]; run[0][0] == "xx" {
+		t.Error("the prototype's own words survived a revision the note declared")
+	}
+}
+
+// TestANoteWithNoRevisionsKeepsTheTemplatesRows is the other direction. v1
+// returns early with no revisions and leaves the master's own rows, because a
+// table with a header and nothing under it is worse than the prototype.
+func TestANoteWithNoRevisionsKeepsTheTemplatesRows(t *testing.T) {
+	rows := tableCells(t, buildWith(t, cover.Fields{
+		Title: "Supplier Register Policy", Version: "1.0",
+	}), 1)
+	if len(rows) != 3 {
+		t.Fatalf("the revision history has %d rows, want the master's three", len(rows))
+	}
+	if got := rows[1][0][0]; got != "xx" {
+		t.Errorf("the prototype row reads %q in column one, want the template's \"xx\"", got)
+	}
+}
+
+// TestOnlyTheDeclaredClassificationIsShaded. The master was captured with
+// Internal marked, so its Internal description cell carries a fill and the
+// other three do not. Writing the config's fills verbatim marked every
+// document gdoc built as Internal whatever the note said, which is a mismarked
+// document rather than a blank one.
+func TestOnlyTheDeclaredClassificationIsShaded(t *testing.T) {
+	rows := tableCells(t, buildWith(t, cover.Fields{
+		Title: "Supplier Register Policy", Version: "1.0",
+		Classification: "Restricted (R)",
+	}), 2)
+	if len(rows) != 5 {
+		t.Fatalf("the classification table has %d rows, want the header and four classes", len(rows))
+	}
+	want := map[string]string{
+		"Confidential (C)": "",
+		"Restricted (R)":   "fce5cd",
+		"Internal (I)":     "",
+		"Public (P)":       "",
+	}
+	for _, row := range rows[1:] {
+		fill, ok := want[row[0][0]]
+		if !ok {
+			t.Errorf("the classification table names a class %q nobody wrote down", row[0][0])
+			continue
+		}
+		if got := row[1][1]; got != fill {
+			t.Errorf("the %s description cell is filled %q, want %q", row[0][0], got, fill)
+		}
+	}
+}
+
+// TestEveryTableCellSaysWhereItsTextSits. house.yaml states valign on 41
+// cells, and a config value nothing writes is the config describing an output
+// nobody produced.
+func TestEveryTableCellSaysWhereItsTextSits(t *testing.T) {
+	doc := parse(t, part(t, build(t), "word/document.xml"))
+	cells := doc.FindElements("//w:body/w:tbl/w:tr/w:tc")
+	if len(cells) != 41 {
+		t.Fatalf("the front matter has %d cells, want 41", len(cells))
+	}
+	for i, tc := range cells {
+		v := tc.FindElement("w:tcPr/w:vAlign")
+		if v == nil {
+			t.Fatalf("cell %d states no vertical alignment", i)
+		}
+		if got := v.SelectAttrValue("w:val", ""); got != "top" {
+			t.Errorf("cell %d is aligned %q, want top", i, got)
+		}
+	}
+}
+
+// TestAClassNothingDescribesIsRefused. A config and a note that spell the class
+// differently would publish a document describing four classes and marking
+// none, which is the failure the shading exists to stop.
+func TestAClassNothingDescribesIsRefused(t *testing.T) {
+	_, err := Build(config(t), cover.Fields{
+		Title: "Supplier Register Policy", Version: "1.0",
+		Classification: "Secret (S)",
+	}, nil, nil)
+	if err == nil {
+		t.Fatal("a class no cell describes was accepted")
+	}
+	if !strings.Contains(err.Error(), "Secret (S)") {
+		t.Errorf("the refusal does not name the class: %v", err)
 	}
 }

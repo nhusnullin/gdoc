@@ -364,21 +364,31 @@ func (r *renderer) caption(runs []Run) *etree.Element {
 	return p
 }
 
-// quote is a block quote's paragraph: the body paragraph, indented.
+// quote is a block quote's paragraph: the body paragraph, indented one step
+// per level of quoting.
+//
+// The indent is built with the paragraph rather than patched into a finished
+// w:pPr. Patched in, its position was found by looking for w:jc, and a house
+// file that states no body alignment has none: the fallback appended the w:ind
+// after the paragraph mark's w:rPr, which is the last element the schema
+// allows, and Word reads a w:pPr out of order as a repair.
 func (r *renderer) quote(runs []Run, depth int) *etree.Element {
-	p := r.paragraph(runs)
-	indent := r.cfg.Body.Bullet.IndentStartPt * float64(depth)
-	if pPr := p.SelectElement("w:pPr"); pPr != nil {
-		ind := etree.NewElement("w:ind")
-		ind.CreateAttr("w:left", twips(indent))
-		// w:ind sits after w:spacing and before w:jc, which is where the
-		// schema wants it.
-		if jc := pPr.SelectElement("w:jc"); jc != nil {
-			pPr.InsertChildAt(jc.Index(), ind)
-		} else {
-			pPr.AddChild(ind)
-		}
+	before := r.cfg.Body.SpaceBeforePt
+	if r.afterTable {
+		before = afterTableSpacePt
 	}
+	after := r.cfg.Body.SpaceAfterPt
+	size := r.cfg.Body.SizePt
+	mark := runOpts{SizePt: &size}
+	indent := r.cfg.Body.Bullet.IndentStartPt * float64(depth)
+	p := r.para(paraOpts{
+		Align:    r.cfg.Body.Align,
+		BeforePt: &before,
+		AfterPt:  &after,
+		IndentPt: &indent,
+		Mark:     &mark,
+	})
+	r.addRuns(p, runs, r.bodyRun())
 	return p
 }
 

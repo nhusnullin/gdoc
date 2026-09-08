@@ -282,15 +282,17 @@ Five packages: `house` parses the style, embedded with `//go:embed` and replaced
 for one run by `--house`; `cover` reads the author's front matter under v1's own
 key names, so a note written for the Python tool builds here with no edits;
 `body` walks the markdown with goldmark, tables included; `render` writes the
-eleven parts with etree, so every `w:t` is escaped by the library rather than by
+twelve parts and the logo with etree, so every `w:t` is escaped by the library rather than by
 whoever formatted the string; `drift` holds the measured list. `--out` refuses a
 file that is already there without `--force`, and the write goes through
 `internal/atomicfile`.
 
 The gate runs both ways off one item list, with one reader per item and a
 `Source` interface giving that reader either a docx or a Docs answer. Offline it
-is in `make test`: 169 items, 149 IDENTICAL, 2 CLOSE, 15 DIFFERENT, 3 MISSING,
-and every row that is not IDENTICAL is in `drift.Known` with its reason.
+is in `make test`: 169 items, 142 IDENTICAL, 2 CLOSE, 22 DIFFERENT, 3 MISSING,
+and every DIFFERENT or MISSING row is in `drift.Known` with its reason. A CLOSE
+row is never in it: `Unexplained` asks for an entry on the two verdicts that
+fail the gate and on nothing else.
 `TestTheGateReadsTheWholeList` states that the gate reads the whole list rather
 than a subset. The three PDF items compare.py carried are dropped, because the
 Never list says gdoc never exports a PDF; 160 was its count including them, 157

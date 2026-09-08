@@ -225,6 +225,12 @@ type Blank struct {
 // CoverLine is one line of the cover. A line naming a placeholder is replaced
 // by the note's own value; without one it prints the template's words, which
 // are the highlighted placeholders a person fills in by hand.
+//
+// With names a cover field the line depends on, and the line is left out when
+// the note did not fill that field in. The master offers the title twice
+// either side of an "or", so a person filling the cover in by hand picks one:
+// without this, a note with one title published a cover reading the title,
+// then "or", then the template's own highlighted placeholder.
 type CoverLine struct {
 	Text          string   `yaml:"text"`
 	SizePt        *float64 `yaml:"size_pt"`
@@ -234,6 +240,7 @@ type CoverLine struct {
 	Highlight     string   `yaml:"highlight"`
 	Align         string   `yaml:"align"`
 	Placeholder   string   `yaml:"placeholder"`
+	With          string   `yaml:"with"`
 	SpaceBeforePt *float64 `yaml:"space_before_pt"`
 	SpaceAfterPt  *float64 `yaml:"space_after_pt"`
 	LineSpacing   *float64 `yaml:"line_spacing"`
@@ -290,19 +297,32 @@ type Border struct {
 	Color   string  `yaml:"color"`
 }
 
-// Row is one table row and the height it is at least.
+// Row is one table row and the height it is at least. Repeat names the note's
+// own list this row is a prototype for: "revisions" renders the row once per
+// revision the note declares, and a note with none leaves the template's row
+// where it is, which is v1's rule. Without is the other half: the blank row a
+// person would fill in by hand is left out once the note declares the rows
+// itself.
 type Row struct {
 	MinHeightPt float64 `yaml:"min_height_pt"`
+	Repeat      string  `yaml:"repeat"`
+	Without     string  `yaml:"without"`
 	Cells       []Cell  `yaml:"cells"`
 }
 
 // Cell is one table cell. PadTLBRPt, when it is there, wins over PadPt.
+//
+// Classification names the class this cell describes, and a cell that names
+// one is filled only when the note declares that class. The master was
+// captured with Internal marked, so writing its fills verbatim marked every
+// document Internal whatever the note said.
 type Cell struct {
-	Fill       string          `yaml:"fill"`
-	PadPt      *float64        `yaml:"pad_pt"`
-	PadTLBRPt  []float64       `yaml:"pad_tlbr_pt"`
-	Valign     string          `yaml:"valign"`
-	Paragraphs []CellParagraph `yaml:"paragraphs"`
+	Fill           string          `yaml:"fill"`
+	Classification string          `yaml:"classification"`
+	PadPt          *float64        `yaml:"pad_pt"`
+	PadTLBRPt      []float64       `yaml:"pad_tlbr_pt"`
+	Valign         string          `yaml:"valign"`
+	Paragraphs     []CellParagraph `yaml:"paragraphs"`
 }
 
 // CellParagraph is one paragraph inside a table cell.
@@ -327,10 +347,9 @@ type TableText struct {
 // TOC is the contents list. It is a Word field, so Google refreshes it live
 // rather than gdoc measuring the pages.
 type TOC struct {
-	Live      bool    `yaml:"live"`
-	Instr     string  `yaml:"instr"`
-	TabStopPt float64 `yaml:"tab_stop_pt"`
-	SizePt    float64 `yaml:"size_pt"`
+	Live   bool    `yaml:"live"`
+	Instr  string  `yaml:"instr"`
+	SizePt float64 `yaml:"size_pt"`
 }
 
 // HeadingNumbering is how a level-1 heading gets its number. The mechanism is

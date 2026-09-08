@@ -67,6 +67,11 @@ func cmdBuild(raw []string) emit.Result {
 	if err := freeToWrite(out, a.has("--force")); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
+	// --force is consent to replace the document being written, never consent
+	// to replace what the run was told to read.
+	if err := notAnInput(out, map[string]string{"--md": md, "--house": a.flags["--house"]}); err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
 
 	source, err := os.ReadFile(md)
 	if err != nil {
@@ -130,6 +135,36 @@ func freeToWrite(out string, force bool) error {
 	}
 	if !force {
 		return fmt.Errorf("%s is already there. Add --force to replace it", out)
+	}
+	return nil
+}
+
+// notAnInput refuses an --out that names a file this run reads.
+//
+// `--out note.md --force` read the note, rendered it, and then replaced it with
+// the .docx, so the source the document was built from was gone the moment it
+// was built. --force says a document may be replaced; nothing says the note or
+// the style file may be. Two paths spelled differently are compared by
+// os.SameFile rather than by their text, because "note.md" and "./note.md" are
+// one file and a symlink into another directory is too.
+func notAnInput(out string, inputs map[string]string) error {
+	written, err := os.Stat(out)
+	if err != nil {
+		// Nothing is there to alias. A path that cannot be looked at was
+		// already refused by freeToWrite.
+		return nil
+	}
+	for flag, path := range inputs {
+		if path == "" {
+			continue
+		}
+		read, err := os.Stat(path)
+		if err != nil {
+			continue
+		}
+		if os.SameFile(written, read) {
+			return fmt.Errorf("--out names the same file as %s (%s), and a build would replace what it reads", flag, path)
+		}
 	}
 	return nil
 }

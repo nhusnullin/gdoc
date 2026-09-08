@@ -193,6 +193,35 @@ func TestTheOfflineGate(t *testing.T) {
 	}
 }
 
+// TestEveryKnownDifferenceStillDiffers is the other direction on Known, the
+// one TestEveryKnownDifferenceNamesARealItem does not cover.
+//
+// That test says every entry names a row the list produces. This one says
+// every entry still names a row that really disagrees. An entry left behind
+// after its row went IDENTICAL exempts that row for ever, so the next real
+// regression on it passes the gate in silence. Eight of the entries are of the
+// "the two documents hold different words" kind, which is exactly the kind
+// that can converge by accident. It is the rule the boundary test's
+// TestAllowedModulesAreReallyRequired holds over the other allowlist here: an
+// allowlist naming something that is not there stops describing the tree.
+func TestEveryKnownDifferenceStillDiffers(t *testing.T) {
+	rows := Compare(FromDocx(buildNote(t)), FromDocx(openMaster(t)))
+	verdicts := map[string]Verdict{}
+	for _, r := range rows {
+		verdicts[r.Item] = r.Verdict
+	}
+	for name := range Known {
+		v, ok := verdicts[name]
+		if !ok {
+			// TestEveryKnownDifferenceNamesARealItem says this properly.
+			continue
+		}
+		if v != Different && v != Missing {
+			t.Errorf("known difference %q now reads %s, so the entry protects a row that no longer moves and has to come out of Known", name, v)
+		}
+	}
+}
+
 // unstated is every row neither document says anything about, written out.
 //
 // A row that is nil on both sides still compares: it goes MISSING the moment

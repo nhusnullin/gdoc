@@ -56,7 +56,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
-| `go/internal/render/` | the docx itself: the eleven parts, the cover, the tables, the header and footer, the contents field |
+| `go/internal/render/` | the docx itself: the twelve parts and the logo, the cover, the tables, the header and footer, the contents field |
 | `go/internal/body/` | the note's markdown walked with goldmark into the house style's own paragraphs |
 | `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
@@ -1333,10 +1333,15 @@ without either failing.
 
 - **Offline, in `make test`.** `TestTheOfflineGate` builds `03-policy.md` from
   the embedded config and reads the master docx beside it. 169 items on
-  2026-09-08: 149 IDENTICAL, 2 CLOSE, 15 DIFFERENT, 3 MISSING, and every row
-  that is not IDENTICAL is named in `drift.Known` with the reason it is there.
+  2026-09-08: 142 IDENTICAL, 2 CLOSE, 22 DIFFERENT, 3 MISSING, and every
+  DIFFERENT or MISSING row is named in `drift.Known` with the reason it is
+  there. A CLOSE row is never in `Known` and cannot be: `Unexplained` only ever
+  asks for an entry on the two verdicts that fail the gate.
   `TestTheGateReadsTheWholeList` states that the gate reads every item rather
-  than a subset, which is what makes "no new differences" mean anything.
+  than a subset, which is what makes "no new differences" mean anything, and
+  `TestEveryKnownDifferenceStillDiffers` is the other direction over `Known`:
+  an entry whose row has gone IDENTICAL exempts that row for ever, so it fails
+  rather than sitting there.
 - **Live, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`.** Uploads both documents
   with conversion, reads both through the Docs API and runs the same list. That
   is the measurement that means something, because Google's import is part of
@@ -1346,14 +1351,18 @@ without either failing.
   item is written and tested against a fixture, so what is missing is the
   upload rather than the comparison.
 
-**`drift.Known` holds eighteen names, and DECISIONS.md counted two.** Neither
-number is wrong, and the difference is what the offline gate reads. It reads
-XML, where the master states a heading colour and a heading indent on the style
-and then overrides both on every paragraph that uses them, while `house.yaml`
-states the effective one a reader sees; that is eight rows. The two documents
-also hold different words, the master being the template with "xxx" where a
-title goes, so every row that reads text rather than a measurement differs for
-that reason and only that reason. The live gate reads what Docs resolved, so
+**`drift.Known` holds twenty-five names, and DECISIONS.md counted two.**
+Neither number is wrong, and the difference is what the offline gate reads. It
+reads XML, where the master states a heading colour and a heading indent on the
+style and then overrides both on every paragraph that uses them, while
+`house.yaml` states the effective one a reader sees; that is eight rows. The two
+documents also hold different words, the master being the template with "xxx"
+where a title goes, so every row that reads text rather than a measurement
+differs for that reason and only that reason. Seven of the twenty-five are the
+front matter the note fills in: the master leaves the owner and the approval
+dates blank, keeps its "xx" revision row and a blank row behind it, and was
+captured with Internal marked, while the built document carries the note's own
+owner, its revisions and the class it declares. The live gate reads what Docs resolved, so
 most of those rows would answer IDENTICAL there. The 0.001pt logo rounding
 DECISIONS.md counted is not in `Known` at all: it is inside the item's two-point
 tolerance, so it comes back CLOSE. Adding a name to `Known` is a decision
@@ -1376,22 +1385,51 @@ no measuring pass, which is what v1 needs a second upload and a PDF export for.
 **What the walker will not render is a warning naming the line, never a silent
 drop.** Fenced and indented code blocks, blocks of HTML and inline HTML. Nail
 decided code blocks stay out of the house style, and a note carrying one has to
-say so on the envelope. A picture at an `http` address is a **refusal** rather
+say so on the envelope. A picture inside a list item, a block quote or a table
+cell is the same answer: the house style puts a figure on a centred line of its
+own, which it cannot be there. All three used to collect the picture and throw
+it away, so a bullet naming one published with no picture, no warning and an
+image count of nought, and inline HTML in a cell or a quote was dropped the same
+way. A picture at an `http` address is a **refusal** rather
 than a warning, v1's rule: a document built from a link is one that breaks when
 the link expires. A relative path is resolved against the note's own directory
 and a `data:` URI is decoded, because those bytes arrived with the markdown.
 
 **`cover` reads v1's keys, and refuses to invent a title.** `title` required;
-`alt_title`, `doc_type`, `version`, `date`, `owner`, `classification`,
-`heading_numbering` and `revisions` optional. The names are v1's so a note
-written for the Python tool builds here with no edits. A key this package does
-not read is carried, never refused, and the `gdoc:` block is
-`internal/frontmatter`'s and is skipped here whatever it holds: two readers of
+`alt_title`, `doc_type`, `version`, `date`, `owner`, `last_approval`,
+`review_frequency`, `board_ratification`, `distribution`, `classification`,
+`heading_numbering` and `revisions` optional. The five after `owner` are the
+five rows of the version-control table, which is v1's `VERSION_CONTROL_LABELS`.
+The names are v1's so a note written for the Python tool builds here with no
+edits. A key this package does not read is carried, never refused, and the
+`gdoc:` block is `internal/frontmatter`'s and is skipped here whatever it holds: two readers of
 one block are two rules that drift. A missing title is a refusal carrying a
 candidate drawn from the first heading or the file name, and the skill proposes
 it. Nothing in Go writes a title into somebody's note.
 `classification` is the one value still validated, because it shades a fixed row
 in the front matter, so an unknown value would silently shade nothing.
+
+**The note's own words reach the front matter, and one of them is a mark.**
+`render.placeholder` resolves the cover fields, and a run or a cell paragraph
+naming one prints the note's value with the template's yellow and red taken off
+it, which is v1's `_clear_placeholder_marks`. Three rules sit on top of that,
+and each closes a document the generator used to publish:
+
+- **A cover line naming `with:` is left out when that field is empty.** The
+  master offers the title twice, either side of an `or`, for a person filling
+  the cover in by hand to pick one. Printing both published page one reading the
+  title, then "or", then the template's own highlighted "(Name of)
+  Framework/Policy".
+- **The `Version: ` label is a run, and only the number beside it is the
+  note's.** A line-level placeholder replaces the whole paragraph, so the word
+  went with it.
+- **A cell naming a `classification:` is shaded only when the note declares that
+  class.** The master was captured with Internal marked, so writing its fills
+  verbatim marked every document Internal whatever the note said. A wrong mark
+  is worse than a blank cell. It is v1's `mark_classification`, and
+  `repeat: revisions` on a row is v1's `fill_revisions`: one row per revision
+  the note declares, with `without: revisions` taking the blank row out. A note
+  that declares none keeps the template's own rows, which is v1's early return.
 
 **The build reports facts.** `out`, `bytes`, `title`, `running_head`, `house`
 and a `body` object of counts. There is no field saying the document is good.

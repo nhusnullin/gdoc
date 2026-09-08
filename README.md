@@ -781,14 +781,18 @@ written for that publishes here with no edits:
 | Key | Does |
 |---|---|
 | `title` | required. The cover, and the running head in the page header |
-| `alt_title` | a shorter title for the running head |
+| `alt_title` | the second title line on the cover, under the word `or`, and the running head. A note that states none prints neither line |
 | `doc_type` | joined to the title on the cover, so `Third Party Risk` plus `Policy`. Free text, and a title that already ends in its own type is left alone |
-| `version` | the version-control table. `1.0` when the note states none |
+| `version` | the cover, behind the word `Version:`. `1.0` when the note states none |
 | `date` | rendered on the cover in UK long form |
-| `owner` | the version-control table |
-| `classification` | one of `confidential`, `restricted`, `internal`, `public`. `internal` when the note states none |
+| `owner` | the Document Owner row of the version-control table |
+| `last_approval` | the Date of Last Approval row |
+| `review_frequency` | the Review Frequency row |
+| `board_ratification` | the Board Ratification Date row |
+| `distribution` | the Policy Distribution row |
+| `classification` | one of `confidential`, `restricted`, `internal`, `public`. It shades that class's row in the classification table, and the rest are left clear. `internal` when the note states none |
 | `heading_numbering` | `false` turns off the `1-Scope` numbering on level-one headings |
-| `revisions` | rows of the revision-history table: `version`, `date`, `author`, `approved_by`, `approval_date`, `section`, `change` |
+| `revisions` | rows of the revision-history table: `version`, `date`, `author`, `approved_by`, `approval_date`, `section`, `change`. A note that declares none keeps the template's own row |
 
 A note with no `title` is refused, and the refusal proposes one: the first
 heading in the body, or the file name. The binary never invents a title and
@@ -805,7 +809,9 @@ a document built from a link is a document that breaks when the link expires.
 Code blocks are not rendered. The house style has nothing to render them in, so
 a note carrying one gets a warning naming the line and the block is left out
 rather than dropped in silence. Blocks of HTML and inline HTML are the same
-answer.
+answer. So is a picture inside a list item, a block quote or a table cell: the
+house style puts a figure on a centred line of its own, which it cannot be
+there, and the warning names the line.
 
 What you get back is one JSON object: the file it wrote and its size, the title
 and the running head it used, which house file it read, and what the walker

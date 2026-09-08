@@ -130,6 +130,19 @@ var Known = map[string]string{
 	"body H3 indentStart": "the master's body carries no level-three heading, so there is nothing on that side to read",
 	"body H3 run colour":  "the master's body carries no level-three heading, so there is nothing on that side to read",
 
+	// The front matter tables the note fills in. The master is the template,
+	// with its own blanks and its "xx" prototype row and Internal marked; the
+	// built document carries the note's own owner, revisions and class. These
+	// are the rows that would go IDENTICAL again if the generator stopped
+	// placing what the note declares, which is what M5 was fixing.
+	"table Version Control cell text":          "the master leaves the owner and the approval dates blank for a person to fill in; the built document carries the note's own",
+	"table Revision History size":              "the master keeps its \"xx\" prototype row and a blank row behind it; the built document carries one row per revision the note declares",
+	"table Revision History cell fills":        "the master keeps its \"xx\" prototype row and a blank row behind it, so it has one more row of fills than the note's revisions produce",
+	"table Revision History cell text":         "the master's rows read \"xx\"; the built document carries the note's own revisions",
+	"table Revision History cell borders":      "the master keeps its \"xx\" prototype row and a blank row behind it, so it has one more row of borders than the note's revisions produce",
+	"table Revision History row heights":       "the master keeps its \"xx\" prototype row and a blank row behind it, so it has one more row height than the note's revisions produce",
+	"table Document Classification cell fills": "the master was captured with Internal marked; the built document shades the class the note declares, which is Confidential",
+
 	// One unit of blue.
 	"body H1 run colour": "Google's docx export writes the house navy as #222660 where the Docs API reports the #22265F house.yaml states",
 	"body H2 run colour": "Google's docx export writes the house navy as #222660 where the Docs API reports the #22265F house.yaml states",

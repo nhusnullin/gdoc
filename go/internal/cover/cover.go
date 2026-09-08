@@ -100,15 +100,19 @@ func (r Revision) Values() []string {
 // The three titles the shell needs are methods rather than fields, so a caller
 // cannot hand the cover one title and the header another.
 type Fields struct {
-	Title            string
-	AltTitle         string
-	DocType          string
-	Version          string
-	Date             string
-	Owner            string
-	Classification   string
-	HeadingNumbering bool
-	Revisions        []Revision
+	Title             string
+	AltTitle          string
+	DocType           string
+	Version           string
+	Date              string
+	Owner             string
+	LastApproval      string
+	ReviewFrequency   string
+	BoardRatification string
+	Distribution      string
+	Classification    string
+	HeadingNumbering  bool
+	Revisions         []Revision
 }
 
 // CoverTitle joins the title to its type: "Third Party Risk" plus "Policy".
@@ -225,15 +229,19 @@ func Read(src []byte) (Fields, []byte, error) {
 	}
 
 	f := Fields{
-		Title:            title,
-		AltTitle:         strings.TrimSpace(text(fields["alt_title"])),
-		DocType:          strings.TrimSpace(text(fields["doc_type"])),
-		Version:          strings.TrimSpace(text(fields["version"])),
-		Date:             strings.TrimSpace(text(fields["date"])),
-		Owner:            strings.TrimSpace(text(fields["owner"])),
-		Classification:   classification,
-		HeadingNumbering: numbering,
-		Revisions:        revisions,
+		Title:             title,
+		AltTitle:          strings.TrimSpace(text(fields["alt_title"])),
+		DocType:           strings.TrimSpace(text(fields["doc_type"])),
+		Version:           strings.TrimSpace(text(fields["version"])),
+		Date:              strings.TrimSpace(text(fields["date"])),
+		Owner:             strings.TrimSpace(text(fields["owner"])),
+		LastApproval:      strings.TrimSpace(text(fields["last_approval"])),
+		ReviewFrequency:   strings.TrimSpace(text(fields["review_frequency"])),
+		BoardRatification: strings.TrimSpace(text(fields["board_ratification"])),
+		Distribution:      strings.TrimSpace(text(fields["distribution"])),
+		Classification:    classification,
+		HeadingNumbering:  numbering,
+		Revisions:         revisions,
 	}
 	if f.Version == "" {
 		f.Version = DefaultVersion

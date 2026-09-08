@@ -327,12 +327,12 @@ func (d *Docx) Style(id string) Style {
 
 	st := Style{}
 	if dd := d.styles.child(d.styles.root, "docDefaults"); dd != nil {
-		d.applyRun(&st, d.styles.path(dd, "rPrDefault", "rPr"))
+		applyRun(d.styles, &st, d.styles.path(dd, "rPrDefault", "rPr"))
 		d.applyPara(&st, d.styles.path(dd, "pPrDefault", "pPr"))
 	}
 	for _, el := range chain {
 		st.found = true
-		d.applyRun(&st, d.styles.child(el, "rPr"))
+		applyRun(d.styles, &st, d.styles.child(el, "rPr"))
 		d.applyPara(&st, d.styles.child(el, "pPr"))
 	}
 	if st.found && st.Colour == nil {
@@ -344,12 +344,17 @@ func (d *Docx) Style(id string) Style {
 	return st
 }
 
-// applyRun folds one run-properties element into the style being resolved.
-func (d *Docx) applyRun(st *Style, rPr *etree.Element) {
+// applyRun folds one run-properties element into the style being resolved. The
+// part it reads through is a parameter rather than the document's styles.xml,
+// because a header binds the WordprocessingML prefix in its own way and the
+// walkers carry their own part's. It used to be read off the receiver, with a
+// caller swapping the field and swapping it back, which made a *Docx unsafe to
+// read from two goroutines at once and contradicted the type's own promise
+// that no accessor changes it.
+func applyRun(p *part, st *Style, rPr *etree.Element) {
 	if rPr == nil {
 		return
 	}
-	p := d.styles
 	if v := p.attr(rPr, "sz", "val"); v != "" {
 		if n, ok := numberOf(v).(float64); ok {
 			st.FontSize = n / 2
@@ -438,22 +443,12 @@ func (d *Docx) Segment(kind, which string) Segment {
 				continue
 			}
 			st := Style{}
-			d.applyRunFrom(p, &st, p.child(r, "rPr"))
+			applyRun(p, &st, p.child(r, "rPr"))
 			seg.FirstRun = st
 			return seg
 		}
 	}
 	return seg
-}
-
-// applyRunFrom is applyRun over a part other than styles.xml. The two exist
-// because the walkers carry their own part's prefix, and a header may bind it
-// differently from styles.xml.
-func (d *Docx) applyRunFrom(p *part, st *Style, rPr *etree.Element) {
-	saved := d.styles
-	d.styles = p
-	d.applyRun(st, rPr)
-	d.styles = saved
 }
 
 // segmentText is the words a header or footer carries.

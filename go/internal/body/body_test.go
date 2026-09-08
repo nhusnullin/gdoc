@@ -451,6 +451,139 @@ func TestInlineHTMLWarnsAndIsLeftOut(t *testing.T) {
 	}
 }
 
+// TestInlineHTMLInATableCellOrAQuoteWarnsToo. warnRawHTML was called from the
+// heading and the paragraph only, so a cell reading "one<br>two" published as
+// "onetwo" with an empty warnings list. The same words matter more in a cell:
+// goldmark reads <ampersands> as HTML, so an author's word disappears and
+// nothing says so.
+func TestInlineHTMLInATableCellOrAQuoteWarnsToo(t *testing.T) {
+	cell := walk(t, "| Field | Value |\n| --- | --- |\n| A | one<br>two |\n")
+	if len(cell.Warnings) != 1 {
+		t.Fatalf("a table cell holding HTML carries %d warnings, want 1: %v",
+			len(cell.Warnings), cell.Warnings)
+	}
+	if !strings.Contains(cell.Warnings[0], "line 3") {
+		t.Errorf("the warning does not name line 3: %s", cell.Warnings[0])
+	}
+
+	quote := walk(t, "Words.\n\n> quoted <b>text</b>\n")
+	if len(quote.Warnings) != 1 {
+		t.Fatalf("a block quote holding HTML carries %d warnings, want 1: %v",
+			len(quote.Warnings), quote.Warnings)
+	}
+	if !strings.Contains(quote.Warnings[0], "line 3") {
+		t.Errorf("the warning does not name line 3: %s", quote.Warnings[0])
+	}
+}
+
+// TestAPictureTheHouseStyleCannotPlaceIsNamed. A figure is a centred line of
+// its own, which it cannot be inside a bullet, a quote or a table cell. The
+// walker collected the images on those three paths and threw them away, so
+// "- Text ![alt](one.png)" published as a bullet with no picture, no warning
+// and an image count of nought.
+func TestAPictureTheHouseStyleCannotPlaceIsNamed(t *testing.T) {
+	for _, c := range []struct {
+		what     string
+		markdown string
+	}{
+		{"a list item", "- Text ![alt](one.png)\n"},
+		{"a block quote", "> Text ![alt](one.png)\n"},
+		{"a table cell", "| A | B |\n| --- | --- |\n| x | ![alt](one.png) |\n"},
+	} {
+		out := walk(t, c.what+"\n\n"+c.markdown)
+		if len(out.Warnings) != 1 {
+			t.Errorf("%s holding a picture carries %d warnings, want 1: %v",
+				c.what, len(out.Warnings), out.Warnings)
+			continue
+		}
+		if !strings.Contains(out.Warnings[0], c.what) {
+			t.Errorf("the warning does not name %s: %s", c.what, out.Warnings[0])
+		}
+		if out.Counts.Images != 0 {
+			t.Errorf("%s reports %d images, and none was placed", c.what, out.Counts.Images)
+		}
+	}
+}
+
+// TestALooseListItemIsOneItem. goldmark gives a loose item one paragraph per
+// block, and every one of them used to take the list marker: a two-paragraph
+// item read as two items, so the author's "2." printed as "3.".
+func TestALooseListItemIsOneItem(t *testing.T) {
+	out := walk(t, strings.Join([]string{
+		"1. The provider is assessed annually.",
+		"",
+		"   The assessment covers financial standing.",
+		"",
+		"2. The register is reviewed quarterly.",
+		"",
+	}, "\n"))
+	var marked, plain int
+	for _, block := range out.Blocks {
+		if find(block, "w:numPr") != nil {
+			marked++
+			continue
+		}
+		plain++
+	}
+	if marked != 2 {
+		t.Errorf("%d paragraphs carry the list marker, want the two items the note wrote", marked)
+	}
+	if plain != 1 {
+		t.Errorf("%d paragraphs carry no marker, want the one continuation paragraph", plain)
+	}
+}
+
+// TestAQuoteInsideAQuoteIsIndentedTwice. The depth used to be a parameter with
+// one call site and one value, so "> >" was indented exactly as far as ">".
+func TestAQuoteInsideAQuoteIsIndentedTwice(t *testing.T) {
+	out := walk(t, "Words.\n\n> one\n\n> > two\n")
+	var indents []string
+	for _, block := range out.Blocks {
+		if ind := find(block, "w:ind"); ind != nil {
+			indents = append(indents, attr(t, ind, "w:left"))
+		}
+	}
+	if len(indents) != 2 {
+		t.Fatalf("%d quoted paragraphs carry an indent, want 2", len(indents))
+	}
+	if indents[0] != "720" {
+		t.Errorf("one step of quoting indents %s twips, want 720 (36pt)", indents[0])
+	}
+	if indents[1] != "1440" {
+		t.Errorf("two steps of quoting indent %s twips, want 1440 (72pt)", indents[1])
+	}
+}
+
+// TestAQuotesPropertiesAreInSchemaOrder. w:ind used to be patched into a
+// finished w:pPr by looking for w:jc, and a house file that states no body
+// alignment has none: the fallback appended it after the paragraph mark's
+// w:rPr, which is the last element the schema allows, and Word reads a w:pPr
+// out of order as a repair.
+func TestAQuotesPropertiesAreInSchemaOrder(t *testing.T) {
+	cfg := config(t)
+	cfg.Body.Align = ""
+	out, err := Render(cfg, []byte("Words.\n\n> quoted\n"), "testdata/docs", true)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	var pPr *etree.Element
+	for _, block := range out.Blocks {
+		if find(block, "w:ind") != nil {
+			pPr = find(block, "w:pPr")
+		}
+	}
+	if pPr == nil {
+		t.Fatal("no quoted paragraph carries an indent")
+	}
+	var tags []string
+	for _, e := range pPr.ChildElements() {
+		tags = append(tags, e.FullTag())
+	}
+	if len(tags) == 0 || tags[len(tags)-1] != "w:rPr" {
+		t.Errorf("the quote's properties run %v, and w:rPr is last in the schema", tags)
+	}
+}
+
 // TestAHeadingCarriesTheHouseStyleAndItsColour reads the house literals off a
 // rendered heading.
 func TestAHeadingCarriesTheHouseStyleAndItsColour(t *testing.T) {

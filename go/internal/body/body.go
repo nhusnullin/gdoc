@@ -76,6 +76,7 @@ type renderer struct {
 
 	firstHeading bool
 	afterTable   bool
+	quoteDepth   int
 	err          error
 }
 
@@ -108,7 +109,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	}
 	r.numberer = newHeadingNumberer(numbering, separator, shallowestHeadingLevel(root, source))
 
-	if err := r.walk(root, 0, ""); err != nil {
+	if err := r.walk(root, 0, listCtx{}); err != nil {
 		return Result{}, err
 	}
 	if r.err != nil {
@@ -250,24 +251,58 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 	return found
 }
 
+// listCtx is what a block inherits from the list it sits in: the list in
+// numbering.xml it belongs to, and whether it is the block that carries the
+// marker. A loose list item holds one paragraph per block, and only the first
+// of them is the item.
+type listCtx struct {
+	numID  string
+	marked bool
+}
+
 // walk renders a block subtree. level counts list nesting: 0 is the body, 1 is
-// inside a list, and so on. numID names the list a nested paragraph belongs to.
-func (r *renderer) walk(parent ast.Node, level int, numID string) error {
+// inside a list, and so on. list names the list a nested paragraph belongs to.
+func (r *renderer) walk(parent ast.Node, level int, list listCtx) error {
 	for node := parent.FirstChild(); node != nil; node = node.NextSibling() {
-		if err := r.block(node, level, numID); err != nil {
+		if err := r.block(node, level, list); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *renderer) block(node ast.Node, level int, numID string) error {
+// itemBlocks renders one list item, and only its first paragraph takes the
+// marker.
+//
+// goldmark gives a loose item one *ast.Paragraph per block, so numbering every
+// one of them turns a two-paragraph item into two items: the author's "2."
+// prints as "3.", and a bulleted list grows a bullet on every continuation
+// paragraph. A continuation keeps the item's indent and takes no marker.
+func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
+	marked := false
+	for node := item.FirstChild(); node != nil; node = node.NextSibling() {
+		list := listCtx{numID: numID, marked: true}
+		switch node.(type) {
+		case *ast.Paragraph, *ast.TextBlock:
+			if marked {
+				list.marked = false
+			}
+			marked = true
+		}
+		if err := r.block(node, level, list); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 	switch typed := node.(type) {
 	case *ast.Heading:
 		return r.headingBlock(typed)
 
 	case *ast.Paragraph, *ast.TextBlock:
-		return r.paragraphBlock(node, level, numID)
+		return r.paragraphBlock(node, level, list)
 
 	case *ast.List:
 		// The two lists numbering.xml defines are the two a body may name. A
@@ -281,7 +316,7 @@ func (r *renderer) block(node ast.Node, level int, numID string) error {
 			r.counts.Lists++
 		}
 		for item := typed.FirstChild(); item != nil; item = item.NextSibling() {
-			if err := r.walk(item, level+1, id); err != nil {
+			if err := r.itemBlocks(item, level+1, id); err != nil {
 				return err
 			}
 		}
@@ -295,7 +330,7 @@ func (r *renderer) block(node ast.Node, level int, numID string) error {
 		return nil
 
 	case *ast.Blockquote:
-		return r.quoteBlock(typed, level, numID)
+		return r.quoteBlock(typed, level, list)
 
 	case *ast.FencedCodeBlock:
 		// Nail's decision: code blocks stay out of the house style. The note
@@ -330,7 +365,7 @@ func (r *renderer) block(node ast.Node, level int, numID string) error {
 		// dropped: losing a block silently is the failure that only shows up
 		// once somebody reads the published document.
 		if node.HasChildren() {
-			return r.walk(node, level, numID)
+			return r.walk(node, level, list)
 		}
 		r.afterTable = false
 		return nil
@@ -384,16 +419,20 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 }
 
 // paragraphBlock is one paragraph, or one list item when it sits inside a list.
-func (r *renderer) paragraphBlock(node ast.Node, level int, numID string) error {
+func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error {
 	images := collectImages(node, r.source)
 	runs := inlineRuns(node, r.source)
 	line := r.line(node)
 	r.warnRawHTML(node, line)
+	if level > 0 {
+		// A figure inside a bullet would break the numbering it sits in, so
+		// the picture stays out. The note says so rather than losing it in
+		// silence, which is the rule every other unrendered block follows.
+		r.warnImages(images, line, "a list item")
+	}
 
 	if len(images) > 0 && level == 0 {
-		// The words first, then each picture on its own line. A picture in a
-		// list item stays on the inline path: a figure inside a bullet would
-		// break the numbering it sits in.
+		// The words first, then each picture on its own line.
 		if len(runs) > 0 {
 			r.emit(r.paragraph(runs))
 			r.counts.Paragraphs++
@@ -409,7 +448,15 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, numID string) error 
 		r.emit(r.paragraph(runs))
 		r.counts.Paragraphs++
 	} else {
-		r.emit(r.listItem(runs, numID, min(level-1, maxListLevel), numID == render.NumberNumID))
+		// A continuation paragraph of a loose item keeps the item's indent and
+		// takes no marker, so numID is empty and the ordered-list geometry is
+		// read off the list rather than off the marker being written.
+		numID := list.numID
+		if !list.marked {
+			numID = ""
+		}
+		r.emit(r.listItem(runs, numID, min(level-1, maxListLevel),
+			list.numID == render.NumberNumID))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
@@ -417,16 +464,24 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, numID string) error 
 }
 
 // quoteBlock indents what the quote holds, one step per level of quoting.
-func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, numID string) error {
+func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) error {
+	// A quote inside a quote re-enters here, so the depth is the renderer's
+	// rather than the caller's: "> > text" is two steps in, and reading it off
+	// one parameter indented it exactly as far as one step.
+	r.quoteDepth++
+	defer func() { r.quoteDepth-- }()
 	for node := quote.FirstChild(); node != nil; node = node.NextSibling() {
 		paragraph, ok := node.(*ast.Paragraph)
 		if !ok || level > 0 {
-			if err := r.block(node, level, numID); err != nil {
+			if err := r.block(node, level, list); err != nil {
 				return err
 			}
 			continue
 		}
-		r.emit(r.quote(inlineRuns(paragraph, r.source), 1))
+		line := r.line(paragraph)
+		r.warnRawHTML(paragraph, line)
+		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
+		r.emit(r.quote(inlineRuns(paragraph, r.source), r.quoteDepth))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
@@ -462,6 +517,21 @@ func (r *renderer) warnRawHTML(node ast.Node, line int) {
 	r.warn("line %d: inline HTML is not rendered in the house style and was left out", line)
 }
 
+// warnImages names a line whose picture the house style does not place here.
+//
+// The house style puts a figure on its own centred line, which it cannot be
+// inside a bullet, a quote or a table cell. Saying so is the same rule the
+// block form follows: what was left out is named, never dropped in silence,
+// and a picture that vanished is only found once somebody reads the published
+// document.
+func (r *renderer) warnImages(images []ImageRef, line int, where string) {
+	if len(images) == 0 {
+		return
+	}
+	r.warn("line %d: a picture inside %s is not rendered in the house style and was left out",
+		line, where)
+}
+
 // hasRawHTML says whether an inline subtree holds raw HTML, however deeply it
 // is nested.
 func hasRawHTML(node ast.Node) bool {
@@ -483,6 +553,9 @@ func (r *renderer) tableRows(table *east.Table) [][][]Run {
 	for row := table.FirstChild(); row != nil; row = row.NextSibling() {
 		var cells [][]Run
 		for cell := row.FirstChild(); cell != nil; cell = cell.NextSibling() {
+			line := r.line(cell)
+			r.warnRawHTML(cell, line)
+			r.warnImages(collectImages(cell, r.source), line, "a table cell")
 			cells = append(cells, inlineRuns(cell, r.source))
 		}
 		rows = append(rows, cells)

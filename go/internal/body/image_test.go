@@ -60,6 +60,28 @@ func TestAPNGDeclaringItsDensityIsReadAtThatDensity(t *testing.T) {
 	}
 }
 
+// TestAPNGDeclaringAlmostNoDensityKeepsTheDefault. A pHYs under about 20
+// pixels per metre is non-zero and still rounds to nought dpi, and the extent
+// is the pixels divided by it: +Inf, which lands in the XML as a negative
+// integer and makes Word offer to repair the document. The test is on the
+// converted value, so below one dpi the 72 stands.
+func TestAPNGDeclaringAlmostNoDensityKeepsTheDefault(t *testing.T) {
+	info, err := identify(insertPHYs(t, pngBytes(t, 640, 480), 3, 3))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.horzDPI != 72 || info.vertDPI != 72 {
+		t.Errorf("dpi = %dx%d, want the 72x72 default", info.horzDPI, info.vertDPI)
+	}
+	if got := info.widthEMU(); got != 8128000 {
+		t.Errorf("width = %d EMU, want 640px at 72dpi", got)
+	}
+	if info.widthEMU() <= 0 || info.heightEMU() <= 0 {
+		t.Errorf("the extent is %dx%d EMU, and Word repairs a document with a negative one",
+			info.widthEMU(), info.heightEMU())
+	}
+}
+
 func TestAJPEGSizeComesFromItsFrameHeader(t *testing.T) {
 	img := image.NewRGBA(image.Rect(0, 0, 900, 300))
 	var buffer bytes.Buffer

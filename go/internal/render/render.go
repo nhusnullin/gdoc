@@ -339,6 +339,16 @@ func (b *builder) placeholder(name string) (string, bool) {
 		value = b.fields.Version
 	case "date":
 		value = b.fields.Date
+	case "owner":
+		value = b.fields.Owner
+	case "last_approval":
+		value = b.fields.LastApproval
+	case "review_frequency":
+		value = b.fields.ReviewFrequency
+	case "board_ratification":
+		value = b.fields.BoardRatification
+	case "distribution":
+		value = b.fields.Distribution
 	default:
 		b.fail("placeholder %q is not a cover field", name)
 		return "", false
@@ -353,6 +363,23 @@ func (b *builder) text(configured, placeholder string) string {
 		return value
 	}
 	return configured
+}
+
+// runText is one configured run's words and the marks it carries, with the
+// note's own value where it filled the run's placeholder in.
+//
+// The yellow highlight means "a person fills this in" and the red means "this
+// is guidance, not content". Once the note's own words are in the run both
+// marks are misleading, so a filled run loses them. That is v1's
+// _clear_placeholder_marks, and it is why "Version: " survives while the "1.0"
+// beside it does not: the label is a run of its own with no placeholder on it.
+func (b *builder) runText(r house.Run, o runOpts) (string, runOpts) {
+	value, filled := b.placeholder(r.Placeholder)
+	if !filled {
+		return r.Text, o
+	}
+	o.Color, o.Highlight = "", ""
+	return value, o
 }
 
 // trimFloat writes a number the way the config states it, with no trailing
