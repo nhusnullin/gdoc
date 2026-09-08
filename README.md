@@ -751,6 +751,98 @@ ones still need an answer, and writes the reply and proposal files the binary
 sends. The binary reports facts either way: there is no `handled` field, and no
 rule in Go that says a comment is answered.
 
+### Building the document
+
+`gdoc build` turns a note into an Altery house-style `.docx` on your own
+machine. It reaches nothing: no Drive, no Docs, no network at all, and it runs
+no other program. Uploading the result into Drive is the next milestone.
+
+```bash
+gdoc build --md note.md --out note.docx [--house house.yaml] [--force]
+```
+
+The house style is a file, `house.yaml`, and it is embedded in the binary, so
+there is still nothing to install beside it. It states the page geometry, the
+nine named styles, the cover, the header and footer with the logo, the three
+front-matter tables cell by cell, the legend, the contents field and the heading
+numbering. `--house` points at another copy of that file for one run, which is
+how a change to the style is looked at before it is committed; the output names
+which one was used, `embedded` or the path, so a document built from a draft
+says so.
+
+`--out` will not overwrite a file that is already there. Add `--force` when you
+mean to replace it. The write goes through a temporary file and a rename, so a
+failed build cannot truncate a document you already had.
+
+The note needs a `title` in its front matter and nothing else. These are the
+keys it reads, and they are the same names the Python tool uses, so a note
+written for that publishes here with no edits:
+
+| Key | Does |
+|---|---|
+| `title` | required. The cover, and the running head in the page header |
+| `alt_title` | a shorter title for the running head |
+| `doc_type` | joined to the title on the cover, so `Third Party Risk` plus `Policy`. Free text, and a title that already ends in its own type is left alone |
+| `version` | the version-control table. `1.0` when the note states none |
+| `date` | rendered on the cover in UK long form |
+| `owner` | the version-control table |
+| `classification` | one of `confidential`, `restricted`, `internal`, `public`. `internal` when the note states none |
+| `heading_numbering` | `false` turns off the `1-Scope` numbering on level-one headings |
+| `revisions` | rows of the revision-history table: `version`, `date`, `author`, `approved_by`, `approval_date`, `section`, `change` |
+
+A note with no `title` is refused, and the refusal proposes one: the first
+heading in the body, or the file name. The binary never invents a title and
+never writes one into your note. Any other key in the front matter is carried
+untouched, the `gdoc:` block included.
+
+The body is your markdown: headings to six levels, bulleted and numbered lists
+three deep, bold, italic, strikeout, `==marked==` text as a highlight, links,
+pictures, tables, horizontal rules and block quotes. A picture is read from the
+note's own directory, or decoded when the markdown carries it as a `data:` URI;
+PNG and JPEG. A picture at an `http` address is refused naming the line, because
+a document built from a link is a document that breaks when the link expires.
+
+Code blocks are not rendered. The house style has nothing to render them in, so
+a note carrying one gets a warning naming the line and the block is left out
+rather than dropped in silence. Blocks of HTML and inline HTML are the same
+answer.
+
+What you get back is one JSON object: the file it wrote and its size, the title
+and the running head it used, which house file it read, and what the walker
+counted.
+
+```json
+{
+  "ok": true,
+  "data": {
+    "out": "/Users/you/notes/supplier-register-policy.docx",
+    "bytes": 48213,
+    "title": "Supplier Register Policy",
+    "running_head": "Altery - Supplier Register Policy",
+    "house": "embedded",
+    "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1}
+  },
+  "warnings": ["line 88: a code block is not rendered in the house style and was left out"]
+}
+```
+
+Those counts are facts and nothing more. Whether the document is right is
+answered by opening it, in Word or in Drive, and not by the binary.
+
+The contents list is a Word field, which is what the master template carries
+too. Word fills it in when the document is opened and refreshed, and Google Docs
+turns it into a live contents list on import. Until then it shows the one line
+Word writes into an unrefreshed field.
+
+There is one test that keeps this honest on every commit. It builds a document
+from the embedded style, opens the Word master the style was extracted from, and
+compares 169 measured values across the two: page geometry, all nine styles, the
+header, the footer, the logo's position, the contents field, the three tables
+and the body. Every row that is not identical is named in a list with the reason
+it is there, most of them because the master states a value twice and because
+the two documents hold different words. Any other difference fails the test
+suite, so the style cannot drift away from the master quietly.
+
 ### The `gdoc:` block
 
 A markdown note paired with a Go-published document carries one key in its front
@@ -792,6 +884,11 @@ you type it. v1's `read` lists the comments. v2's `read` prints the document
 text, and v2's `comments` lists the comments.
 
 ## What is planned
+
+**Publishing from the Go binary.** `gdoc build` writes the docx today and stops
+there. Uploading it into Drive with conversion, verifying the result and writing
+the ids back into the note is the next milestone. Until then the Python tool
+publishes.
 
 **A live session over the whole folder.** Live works today on one document, the
 link you give it. Starting it once and having it watch every note you have

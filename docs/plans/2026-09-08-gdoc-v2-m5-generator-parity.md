@@ -640,13 +640,13 @@ all 25 packages. `make vet` (vet plus the gofmt check), `make build` and
 **Files:**
 - Modify: `README.md`, `CLAUDE.md`, `docs/v2/PLAN.md`, `docs/v2/SPEC.md`, `docs/v2/spikes/README.md`
 
-- [ ] update `README.md`: `gdoc build`, the cover fields a note needs, what renders and what does not (code blocks), `--house`, and that publishing is M6
-- [ ] update `CLAUDE.md` under "v2 lives at `go/`": the five new rooms in the table; a section "The generator reads `house.yaml` and nothing else" with the embed, the override, the escaping rule, the no-network rule, the literal-value test rule, the two drift gates and the two known differences, the PDF items dropped and why; `allowedModules` now names three
-- [ ] update `docs/v2/SPEC.md` "The generator and `house.yaml`": the gate runs both ways, and the PDF items are out
-- [ ] update `docs/v2/PLAN.md`: mark M5 done with the date, the binary-size delta, and what it leaves for M6 (the upload, the `gdoc:` block written by publish, the v1 front matter migration from `docs/backlog/v1-frontmatter-migration.md`)
-- [ ] update `docs/v2/spikes/README.md`: `config/house.yaml` is superseded by `go/internal/house/house.yaml`, `gen.py` and `compare.py` are ported
-- [ ] run the full test suite one more time
-- [ ] commit: `docs: M5 lands, the generator written down`
+- [x] update `README.md`: `gdoc build`, the cover fields a note needs, what renders and what does not (code blocks), `--house`, and that publishing is M6
+- [x] update `CLAUDE.md` under "v2 lives at `go/`": the five new rooms in the table; a section "The generator reads `house.yaml` and nothing else" with the embed, the override, the escaping rule, the no-network rule, the literal-value test rule, the two drift gates and the two known differences, the PDF items dropped and why; `allowedModules` now names three
+- [x] update `docs/v2/SPEC.md` "The generator and `house.yaml`": the gate runs both ways, and the PDF items are out
+- [x] update `docs/v2/PLAN.md`: mark M5 done with the date, the binary-size delta, and what it leaves for M6 (the upload, the `gdoc:` block written by publish, the v1 front matter migration from `docs/backlog/v1-frontmatter-migration.md`)
+- [x] update `docs/v2/spikes/README.md`: `config/house.yaml` is superseded by `go/internal/house/house.yaml`, `gen.py` and `compare.py` are ported
+- [x] run the full test suite one more time
+- [x] commit: `docs: M5 lands, the generator written down`
 - The harness moves this plan to `docs/plans/completed/` when the run finishes.
 
 ## Post-Completion

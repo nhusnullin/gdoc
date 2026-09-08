@@ -37,7 +37,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 
 | Path | Holds |
 |---|---|
-| `go/cmd/gdoc/` | `main.go`, `read.go` and `write.go`. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | `main.go`, `read.go`, `write.go` and `build.go`. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -55,18 +55,24 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
+| `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
+| `go/internal/render/` | the docx itself: the eleven parts, the cover, the tables, the header and footer, the contents field |
+| `go/internal/body/` | the note's markdown walked with goldmark into the house style's own paragraphs |
+| `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
+| `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/live/` | the three opt-in end-to-end tests, one read and two writes. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 4 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 5 are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
-`probe`, `reply`, `propose` and `withdraw`, and waits for the next comment with
-`comments --wait`. The review skill is rewritten over those and can stay live on
-one document, and `gdoc` on PATH is v2 from M3 on.
+`probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
+`comments --wait`, and builds a house-style docx from a note with `build`. The
+review skill is rewritten over those and can stay live on one document, and
+`gdoc` on PATH is v2 from M3 on. Uploading what `build` wrote is M6's.
 
 ### The auth commands, and what reaches stdout
 
@@ -117,7 +123,7 @@ The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
 `gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
-than an oversight. There is no help command: `dispatch` matches the nine
+than an oversight. There is no help command: `dispatch` matches the ten
 commands and nothing else, so `--help` comes back as an unknown command with the
 one-line `usage` string in the error. A caller reads the same JSON
 object it reads for every other run, and the exit code still means what it means
@@ -1267,6 +1273,145 @@ M3 settled the `AllowCreateIn` half. It has a production caller now, the
 capability probe, which creates the throwaway document it asks its question on.
 So the door M2 kept on the strength of M6 needing it was wanted well before M6,
 and keeping it was right for a reason nobody had yet.
+
+### The generator reads `house.yaml` and nothing else
+
+M5. `gdoc build --md note.md --out file.docx` turns a note into an Altery
+house-style docx, and it is the one command that reaches nothing at all. Five
+rooms: `house` parses the style, `cover` reads the author's front matter, `body`
+walks the markdown, `render` writes the parts, and `drift` measures the result
+against the master. Publishing what it wrote is M6's.
+
+**The style is a file, and the master is provenance.** Nail's decision of
+2026-08-29, in `docs/v2/DECISIONS.md`. `house.yaml` states the page geometry,
+the nine named styles, the cover, the header and footer with the positioned
+logo, the three front-matter tables cell by cell, the legend, the live contents
+field, the heading numbering and the logo as base64. Nothing reads
+`gdoc/templates/altery-group-policy-v1.0/template.docx` at runtime, and nothing
+copies a master and edits it: the docx is written from the config, part by part.
+That is the failure v1 had, where the surgery file became the real template and
+the master stopped describing the output.
+
+**It is embedded, and `--house` replaces it for one run.** `//go:embed
+house.yaml` in `internal/house`, so installing gdoc is still one file.
+`house.LoadFile(path)` parses a named copy under the same strict rules, which is
+how a change to the style is reviewed before it is committed, and `data.house`
+names `"embedded"` or the path so a document built from a draft says which. The
+spike copy at `docs/v2/spikes/config/house.yaml` is superseded and says so.
+
+**Points stay points.** `house` stores every measurement in points, and twips,
+half-points and EMU are computed at the writer. One value in the file has one
+meaning, and a unit conversion lives in one room.
+
+**Nothing is concatenated into XML.** `render` and `body` build elements with
+etree and serialise them, so every `w:t` is escaped by the library. gen.py, the
+Python spike this was ported from, concatenated strings, and one `&` in a note's
+title breaks a part that way. A value from the note or from the config never
+reaches the XML as text somebody formatted.
+
+**No network in the render path, and it is a property of the tree.** None of
+`house`, `render`, `body`, `cover` or `drift` imports `net/http` or
+`internal/gapi`, and none imports `guard` or `auth` either. `cmd/gdoc/build.go`
+opens no policy and no session, because there is no wire to judge. Two of the
+packages carry the rule as their own test, which also bans `os/exec`. The
+boundary test's import and builder allowlists did not change at M5, and a
+generator that needed a line in either of them would be a generator doing
+something it was never meant to do.
+
+**A house-style test states its value as a literal.** v1's rule, ported: `if got
+!= 595.28`, never `if got != cfg.Page.WidthPt`. A test that reads the constant it
+checks is a mirror, and it follows the constant wherever somebody moves it. Every
+`cfg.` inside these tests is the printed actual in a `t.Errorf`, with the want
+written out beside it as a number.
+
+**The gate runs both ways, and the item list is written once.** `drift.Items` is
+the list, ported from `compare.py`: each item has a name, a tolerance and one
+reader, and `Source` gives that reader both a docx and a Docs answer to read
+from. Two extractors written out by hand would be two chances for one row to
+mean one thing offline and another live, and the two gates would then disagree
+without either failing.
+
+- **Offline, in `make test`.** `TestTheOfflineGate` builds `03-policy.md` from
+  the embedded config and reads the master docx beside it. 169 items on
+  2026-09-08: 149 IDENTICAL, 2 CLOSE, 15 DIFFERENT, 3 MISSING, and every row
+  that is not IDENTICAL is named in `drift.Known` with the reason it is there.
+  `TestTheGateReadsTheWholeList` states that the gate reads every item rather
+  than a subset, which is what makes "no new differences" mean anything.
+- **Live, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`.** Uploads both documents
+  with conversion, reads both through the Docs API and runs the same list. That
+  is the measurement that means something, because Google's import is part of
+  the result. **It does not exist yet**, and the reason is not the token: it
+  needs the guard to read the first MIME part of a multipart create and `gapi`
+  to have a multipart write, both of which are M6's. The `FromDoc` half of every
+  item is written and tested against a fixture, so what is missing is the
+  upload rather than the comparison.
+
+**`drift.Known` holds eighteen names, and DECISIONS.md counted two.** Neither
+number is wrong, and the difference is what the offline gate reads. It reads
+XML, where the master states a heading colour and a heading indent on the style
+and then overrides both on every paragraph that uses them, while `house.yaml`
+states the effective one a reader sees; that is eight rows. The two documents
+also hold different words, the master being the template with "xxx" where a
+title goes, so every row that reads text rather than a measurement differs for
+that reason and only that reason. The live gate reads what Docs resolved, so
+most of those rows would answer IDENTICAL there. The 0.001pt logo rounding
+DECISIONS.md counted is not in `Known` at all: it is inside the item's two-point
+tolerance, so it comes back CLOSE. Adding a name to `Known` is a decision
+somebody writes down with its reason, not a test somebody loosens.
+
+**The three PDF items are dropped, on purpose.** `compare.py` read a PDF export
+for a page count, a page-1 size and a page-1 image count. SPEC's Never list says
+gdoc never exports a PDF, so neither gate does. The page count was one of the two
+real differences DECISIONS.md counted, and it came from a stale contents list in
+the master rather than from the style. 160 was compare.py's count including
+those three; 157 without them, plus `bold` and `italic` for all nine named
+styles, is 169. Every item compare.py printed is findable here under
+compare.py's own name.
+
+**The contents list is a Word field, not a measured list.** `house.yaml` states
+the instruction and the writer emits the field, so Word fills it in on a refresh
+and Docs imports it as a live contents list. That is why M6 uploads once and has
+no measuring pass, which is what v1 needs a second upload and a PDF export for.
+
+**What the walker will not render is a warning naming the line, never a silent
+drop.** Fenced and indented code blocks, blocks of HTML and inline HTML. Nail
+decided code blocks stay out of the house style, and a note carrying one has to
+say so on the envelope. A picture at an `http` address is a **refusal** rather
+than a warning, v1's rule: a document built from a link is one that breaks when
+the link expires. A relative path is resolved against the note's own directory
+and a `data:` URI is decoded, because those bytes arrived with the markdown.
+
+**`cover` reads v1's keys, and refuses to invent a title.** `title` required;
+`alt_title`, `doc_type`, `version`, `date`, `owner`, `classification`,
+`heading_numbering` and `revisions` optional. The names are v1's so a note
+written for the Python tool builds here with no edits. A key this package does
+not read is carried, never refused, and the `gdoc:` block is
+`internal/frontmatter`'s and is skipped here whatever it holds: two readers of
+one block are two rules that drift. A missing title is a refusal carrying a
+candidate drawn from the first heading or the file name, and the skill proposes
+it. Nothing in Go writes a title into somebody's note.
+`classification` is the one value still validated, because it shades a fixed row
+in the front matter, so an unknown value would silently shade nothing.
+
+**The build reports facts.** `out`, `bytes`, `title`, `running_head`, `house`
+and a `body` object of counts. There is no field saying the document is good.
+That is answered by opening it in Word or in Drive, which is M5's half of "the
+binary prints facts, and the skills judge".
+
+**`--out` never overwrites without `--force`,** and the write goes through
+`internal/atomicfile`. Not knowing must never resolve to overwrite, which is
+v1's `write_baseline` rule in a second place. A directory at `--out` is refused
+whatever the flag says: `--force` is somebody agreeing to replace a document,
+not a folder.
+
+**`allowedModules` names three now, which is all SPEC.md agreed.** M5 added
+`beevik/etree`, because `encoding/xml` rewrites namespace prefixes and drops the
+attribute order Word reads, and `yuin/goldmark`, for the markdown. Neither
+brings a transitive module: `go list -m all` is those two plus `goccy/go-yaml`
+and nothing else. About 1.4 MB per platform binary for the pair, which is the
+price the plan agreed for a markdown parser and an XML tree that does not
+corrupt OOXML. A fourth module needs its reason in SPEC.md before its line in
+the map, and the open candidate is still `sergi/go-diff` at M8.
 
 ### Running a milestone
 

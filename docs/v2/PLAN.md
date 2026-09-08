@@ -22,12 +22,13 @@ Strains: none.
   `goccy/go-yaml v1.19.2` (front matter and `house.yaml`; reason written in
   SPEC.md; zero transitive modules). A fourth needs its reason written into
   SPEC.md first; the open candidate is `sergi/go-diff` at milestone 8.
-- `goccy/go-yaml` is in `go.mod` as of M2, and it is the only one.
-  `allowedModules` in `TestNoThirdPartyDependencies` names it with its reason,
+- `goccy/go-yaml` went into `go.mod` at M2, and `beevik/etree` and
+  `yuin/goldmark` at M5, which is all three SPEC.md agreed and all there are.
+  `allowedModules` in `TestNoThirdPartyDependencies` names each with its reason,
   and refuses every other require line and every other `go.sum` entry. The
   milestone that first needs another adds its path to that map, and nothing
   else: it does not delete the test and it does not widen it to accept whatever
-  `go.mod` says. M5 is the likely next, for goldmark.
+  `go.mod` says.
 - No `golang.org/x/oauth2`: the token refresh is a single POST to Google's
   token endpoint and is hand-rolled on the standard library.
 - v1 is retired as of 2026-08-29, Nail's call. The Python code stays in the
@@ -265,7 +266,7 @@ What M4 leaves open elsewhere:
   colleague `ai!` path is exercised by the skill's rule and its wording; the
   first real proof is a session with a colleague in the margin.
 
-### M5. Generator parity
+### M5. Generator parity (done 2026-09-08)
 
 `house.yaml` to a complete docx on etree plus `archive/zip`, ported from
 `spikes/config/gen.py`; `compare.py` ported as the Go drift test with the
@@ -273,6 +274,68 @@ master docx as fixture. Gate: the 160 items with no new differences.
 `house.yaml` is parsed with the M2 YAML dependency under the same strict
 rules, and the milestone records the cross-platform binary-size delta and
 confirms the module graph gained nothing transitive.
+
+**Landed 2026-09-08.** `gdoc build --md note.md --out file.docx` writes an
+Altery house-style docx and reaches nothing: no Drive, no Docs, no network at
+all, and it opens no policy and no session because there is no wire to judge.
+Five packages: `house` parses the style, embedded with `//go:embed` and replaced
+for one run by `--house`; `cover` reads the author's front matter under v1's own
+key names, so a note written for the Python tool builds here with no edits;
+`body` walks the markdown with goldmark, tables included; `render` writes the
+eleven parts with etree, so every `w:t` is escaped by the library rather than by
+whoever formatted the string; `drift` holds the measured list. `--out` refuses a
+file that is already there without `--force`, and the write goes through
+`internal/atomicfile`.
+
+The gate runs both ways off one item list, with one reader per item and a
+`Source` interface giving that reader either a docx or a Docs answer. Offline it
+is in `make test`: 169 items, 149 IDENTICAL, 2 CLOSE, 15 DIFFERENT, 3 MISSING,
+and every row that is not IDENTICAL is in `drift.Known` with its reason.
+`TestTheGateReadsTheWholeList` states that the gate reads the whole list rather
+than a subset. The three PDF items compare.py carried are dropped, because the
+Never list says gdoc never exports a PDF; 160 was its count including them, 157
+without, and `bold` and `italic` for all nine named styles make 169. The 0.001pt
+logo rounding DECISIONS.md counted is inside that item's two-point tolerance and
+reads as CLOSE.
+
+`allowedModules` gained `beevik/etree` and `yuin/goldmark`, which is all three
+SPEC.md agreed. The module graph gained nothing transitive: `go list -m all` is
+those two plus `goccy/go-yaml`. The binary-size delta against `c876576`, the
+last M4 commit, is about 1.4 MB per platform:
+
+| Platform | M4 (c876576) | M5 | Delta |
+|---|---|---|---|
+| darwin/arm64 | 12,393,250 | 13,786,466 | +1,393,216 (+11.2%) |
+| darwin/amd64 | 13,271,536 | 14,728,192 | +1,456,656 (+11.0%) |
+| windows/amd64 | 13,133,312 | 14,564,864 | +1,431,552 (+10.9%) |
+
+Documented in CLAUDE.md under "The generator reads `house.yaml` and nothing
+else" and in the README under "Building the document".
+
+What M5 leaves for M6:
+
+- **The upload.** `build` writes a file and stops. Uploading it with conversion,
+  verifying by export and trashing on a failed front-matter write is M6's.
+- **The live drift gate.** `TestLiveDrift` is not written. It needs the guard to
+  read the first MIME part of a multipart create and `gapi` to have a multipart
+  write, both of which are M6's, and both of which touch the room CLAUDE.md
+  names as Nail's decision. The `FromDoc` half of every item is written and
+  tested against a fixture, so the comparison is there and the upload is not.
+- **The `gdoc:` block written by the publish.** `build` never touches the note.
+  M6's publish writes the ids and the publish record to the M2 schema.
+- **The v1 front matter migration**, `docs/backlog/v1-frontmatter-migration.md`.
+  A note v1 published carries `gdoc: <id>` as a plain string and v2's strict
+  reader refuses it. `cover` is unaffected, because it skips the `gdoc:` key
+  whatever it holds, so a v1 note builds today; it is `propose --md` and
+  `withdraw` that cannot read the pairing. Nail decides the shape in M6.
+
+What M5 leaves open elsewhere:
+
+- Code blocks are not rendered, by decision. A note carrying one gets a warning
+  naming the line, and blocks of HTML and inline HTML are the same answer.
+- One template. Everything is measured against `altery-group-policy-v1.0`.
+- The acceptance run by hand, a built docx opened in Word and in Drive beside
+  the same note published by v1, is Nail's.
 
 ### M6. Publish
 
