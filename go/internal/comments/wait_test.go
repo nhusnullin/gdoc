@@ -486,3 +486,60 @@ func TestTheWaitDoesNotPollOnTheDeadlineItHasAlreadyRunOutOf(t *testing.T) {
 		t.Errorf("Waited = %v, want the whole deadline: the last gap is slept out, not cut short", got.Waited)
 	}
 }
+
+func TestAPollThatFailedOfItsOwnAccordPastTheDeadlineIsStillAFailure(t *testing.T) {
+	// The deadline landing while a poll is in flight is not evidence that the
+	// poll was cut short by it. Drive answering 503 at the tail of the window,
+	// or a body that did not decode, arrives with the context already done, and
+	// gating the quiet ending on the context alone reported that as a quiet
+	// document. A degraded Drive answering slower than the interval makes it the
+	// last poll of every wait, so the skill counts no failure and reads an
+	// outage as a document nobody is writing in.
+	//
+	// A real clock, for the reason the deadline test uses one: the fake one the
+	// other tests drive cannot put a poll's answer after the deadline.
+	since := &Cursor{At: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
+	drive := errors.New("drive answered 503")
+	polls := 0
+	late := func(ctx context.Context) (*docs.Document, []RawComment, error) {
+		polls++
+		// Past the deadline, and then a failure that is Drive's own rather than
+		// the context's.
+		time.Sleep(80 * time.Millisecond)
+		return nil, nil, drive
+	}
+
+	type outcome struct {
+		w   Waited
+		err error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		w, err := Wait(context.Background(), since, WaitOptions{
+			Interval: 10 * time.Second,
+			Deadline: 20 * time.Millisecond,
+			Fetch:    late,
+		})
+		done <- outcome{w, err}
+	}()
+
+	var got outcome
+	select {
+	case got = <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the wait had not answered five seconds into a 20ms deadline")
+	}
+
+	if !errors.Is(got.err, drive) {
+		t.Fatalf("err = %v, want the failure Drive gave: a failed poll reported as a quiet window is the one silence this call forbids", got.err)
+	}
+	if polls != 1 {
+		t.Errorf("polls = %d, want 1", polls)
+	}
+	if got.w.Polls != 1 {
+		t.Errorf("Waited.Polls = %d, want 1: the poll that failed still went out", got.w.Polls)
+	}
+	if got.w.Interrupted {
+		t.Error("interrupted is true, and nothing sent a signal")
+	}
+}

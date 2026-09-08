@@ -137,10 +137,21 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 				// look at a read that was fine.
 				return interrupted(out, start), nil
 			}
-			if poll.Err() != nil {
+			if poll.Err() != nil && errors.Is(err, context.DeadlineExceeded) {
 				// The deadline cut the poll short. That is the quiet ending
 				// this call already has a shape for: no threads, the cursor
 				// handed in, and the next call asks the same question.
+				//
+				// The gate is the error's own identity and not just the
+				// context's state, because the two answer different questions.
+				// A poll that is still in flight when the deadline lands can
+				// return a Drive failure of its own a moment later: a 503 read
+				// at the tail of the window, or a body that did not decode. The
+				// context is done by then either way, so reading only that
+				// reported a failed poll as a quiet document, which is the one
+				// thing this call's doc comment promises it never does. A
+				// degraded Drive answering slower than the interval makes that
+				// the last poll of every wait rather than a knife-edge race.
 				out.Waited = now().Sub(start)
 				return out, nil
 			}
