@@ -1622,6 +1622,16 @@ finishes; if the run is cut short (the M2 run stopped on the Claude session
 limit in round 6), the fixes revmux produced sit uncommitted in the working
 tree and the plan move is done by hand.
 
+**The run board.** Nail follows a run on one HTML page published as a Claude
+Code artifact and republished on every task iteration and review round, not
+on status lines in chat (he asked for that after M2). The kit is
+`.ralphex/board/`: `board.html` is the page template, `refresh_board.py`
+rebuilds its snapshot from the ralphex logs, the plan's checkboxes and
+`git log main..<branch>`, and `README.md` is the whole recipe, including the
+`env -u CLAUDECODE ...` launch that lets ralphex start from inside a Claude Code
+session, the Monitor filters, and how a run that died on the Claude session
+limit is resumed. Read it before running a milestone.
+
 ### Building
 
 | Command | Does |

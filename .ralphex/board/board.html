@@ -1,0 +1,351 @@
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#EEF1F5; --line:#D8DDE4; --line-strong:#B9C1CB;
+  --ink:#1B1F24; --ink-2:#4A535E; --ink-3:#7A838E;
+  --accent:#2F5D8A; --accent-soft:#DCE8F3;
+  --done:#2E7D4F; --done-soft:#DDF0E4; --active:#B26A00; --active-soft:#FBEBD0; --pending:#8A919B; --pending-soft:#E9ECF0; --alert:#B3261E; --alert-soft:#F8DEDB;
+  --meter-track:#E3E7EC;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171B; --surface:#1C2126; --surface-2:#232930; --line:#2E353D; --line-strong:#454E58;
+    --ink:#E6E9ED; --ink-2:#AEB6BF; --ink-3:#7D8791;
+    --accent:#7FB0DE; --accent-soft:#1F3347;
+    --done:#5FBF87; --done-soft:#1C3A2A; --active:#E0A24A; --active-soft:#3D2E14; --pending:#7D8791; --pending-soft:#262C33; --alert:#EF8A82; --alert-soft:#45201E;
+    --meter-track:#2A3138;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171B; --surface:#1C2126; --surface-2:#232930; --line:#2E353D; --line-strong:#454E58;
+  --ink:#E6E9ED; --ink-2:#AEB6BF; --ink-3:#7D8791;
+  --accent:#7FB0DE; --accent-soft:#1F3347;
+  --done:#5FBF87; --done-soft:#1C3A2A; --active:#E0A24A; --active-soft:#3D2E14; --pending:#7D8791; --pending-soft:#262C33; --alert:#EF8A82; --alert-soft:#45201E;
+  --meter-track:#2A3138;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 48px;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 4px}
+h1{font-size:24px;font-weight:600;margin:0;text-wrap:balance}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--ink-2);font-size:13px}
+.meta b{color:var(--ink);font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.done{background:var(--done-soft);color:var(--done)}
+.pill.active{background:var(--active-soft);color:var(--active)}
+.pill.pending{background:var(--pending-soft);color:var(--pending)}
+.pill.alert{background:var(--alert-soft);color:var(--alert)}
+.pill.active::before{animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.pill.active::before{animation:none}}
+section h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin:0 0 10px}
+/* phases */
+.phases{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.phase{background:var(--surface);padding:14px 16px;display:grid;gap:6px;border-top:3px solid var(--pending)}
+.phase.done{border-top-color:var(--done)} .phase.active{border-top-color:var(--active)}
+.phase .n{font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.phase .t{font-weight:600}
+.phase .d{color:var(--ink-2);font-size:13px}
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:4px}
+.tile .v{font-size:28px;font-weight:600;line-height:1.1}
+.tile .v small{font-size:14px;color:var(--ink-3);font-weight:500}
+.tile .l{color:var(--ink-2);font-size:13px}
+.meter{height:6px;background:var(--meter-track);border-radius:3px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:3px}
+/* table */
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:820px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);text-align:left;font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr.active td{background:var(--active-soft)}
+td.num{color:var(--ink-3);width:2.5em}
+td .name{font-weight:500}
+td .what{color:var(--ink-2);font-size:13px;margin-top:2px}
+td .pkg{color:var(--ink-3);font-size:12px}
+.steps{display:flex;align-items:center;gap:8px;min-width:150px}
+.steps .meter{flex:1;margin:0}
+.steps .meter i.d{background:var(--done)}
+.steps span{color:var(--ink-2);font-size:12px;min-width:3.5em;text-align:right}
+td.commit{white-space:nowrap;color:var(--ink-2);font-size:12px}
+/* two col */
+.cols{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.rows{display:grid;gap:10px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:start;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0;padding-bottom:0}
+.row .t{font-weight:500}
+.row .d{color:var(--ink-2);font-size:13px;margin-top:2px}
+.warn{display:grid;gap:10px}
+.warn div{display:grid;grid-template-columns:auto 1fr;gap:10px;font-size:13px;color:var(--ink-2)}
+.warn b{color:var(--ink);font-weight:500}
+.warn .m{color:var(--alert);font-weight:600}
+footer{color:var(--ink-3);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;padding-top:8px;border-top:1px solid var(--line)}
+@media (max-width:760px){.phases,.tiles{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}}
+@media (max-width:640px){
+  .wrap{padding:16px 12px 32px;gap:16px}
+  h1{font-size:20px}
+  header{align-items:flex-start;flex-direction:column}
+  .meta{gap:4px 14px;font-size:12px}
+  .phases{grid-template-columns:1fr}
+  .tile .v{font-size:24px}
+  /* the task table becomes a list of stacked cards */
+  .tablewrap{overflow:visible;background:transparent;border:0}
+  table{min-width:0;display:block}
+  thead{display:none}
+  tbody{display:grid;gap:10px}
+  tr{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto auto;gap:6px 10px;align-items:center;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+  tr.active{border-color:var(--active)}
+  td{display:block;padding:0;border:0;background:transparent!important}
+  td.num{grid-column:1;grid-row:1;width:auto;font-size:13px}
+  td:nth-child(2){grid-column:2;grid-row:1}
+  td:nth-child(3){grid-column:1 / -1;grid-row:2}
+  td:nth-child(4){grid-column:1;grid-row:3}
+  td.commit{grid-column:2;grid-row:3;text-align:right}
+  .steps{min-width:0}
+  .row{grid-template-columns:1fr}
+  .row .pill{justify-self:start}
+  footer{flex-direction:column}
+}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <p class="eyebrow">gdoc v2 · ralphex run · plan {{PLAN}}</p>
+    <h1>{{HEADING}}</h1>
+  </div>
+  <div class="meta">
+    <span id="run-pill" class="pill active">Running · task phase</span>
+    <span>branch <b class="mono">{{BRANCH}}</b></span>
+    <span>started <b class="mono" id="started">13:22</b></span>
+    <span>snapshot <b class="mono" id="refreshed">13:26</b></span>
+  </div>
+</header>
+
+<section>
+  <h2>Phases, in ralphex's order</h2>
+  <div class="phases" id="phases"></div>
+</section>
+
+<section>
+  <h2>Totals</h2>
+  <div class="tiles" id="tiles"></div>
+</section>
+
+<section>
+  <h2>Tasks · one commit each, tests first</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>#</th><th>Task</th><th>Steps ticked</th><th>State</th><th>Commit</th></tr></thead>
+    <tbody id="tasks"></tbody>
+  </table>
+  </div>
+</section>
+
+<div class="cols">
+  <section>
+    <h2>Review, after the tasks</h2>
+    <div class="card rows" id="reviews"></div>
+  </section>
+  <section>
+    <h2>Watch-outs</h2>
+    <div class="card warn" id="warns"></div>
+  </section>
+</div>
+
+<footer>
+  <span>Snapshot built by Claude from the ralphex log, the plan's checkboxes and <span class="mono">git log main..{{BRANCH}}</span>. Ask Claude to refresh it.</span>
+  <span>Opus 5 writes and reviews · revmux: 3× Opus lenses + Codex</span>
+</footer>
+</div>
+
+<script>
+// ---- snapshot data: edit this block on refresh ----
+const snapshot = {
+  "refreshed": "11:31",
+  "started": "09:53",
+  "state": "Running · external review (revmux)",
+  "iterations": {
+    "used": 9,
+    "max": 50
+  },
+  "reached": 2,
+  "phases": [
+    {
+      "n": "Command 1",
+      "t": "Tasks",
+      "d": "ralphex --tasks-only: 9 tasks, one iteration and one commit each. Tests written first.",
+      "s": "done"
+    },
+    {
+      "n": "Command 2",
+      "t": "External review",
+      "d": "ralphex --external-only: revmux rounds until clean or the cap of ten, then critical/major checks.",
+      "s": "active"
+    },
+    {
+      "n": "Then",
+      "t": "Finish",
+      "d": "Plan moved to docs/plans/completed/. Branch pushed, PR opened, live tests run.",
+      "s": "pending"
+    }
+  ],
+  "tasks": [
+    {
+      "n": 1,
+      "name": "Read the house style",
+      "what": "house.yaml embedded in the binary and parsed strictly. Tests state the house values as literals.",
+      "pkg": "internal/house",
+      "done": 5,
+      "total": 5,
+      "s": "done",
+      "commit": "31bfb99 · 11:14"
+    },
+    {
+      "n": 2,
+      "name": "The two libraries",
+      "what": "etree and goldmark allowlisted with their SPEC reasons; binary sizes recorded; nothing transitive.",
+      "pkg": "go.mod · boundary",
+      "done": 5,
+      "total": 5,
+      "s": "done",
+      "commit": "085ceb8 · 11:08"
+    },
+    {
+      "n": 3,
+      "name": "The shell",
+      "what": "Page setup, nine styles, cover, three tables, legend, contents field, header with the positioned logo, footer. All from the config.",
+      "pkg": "internal/render",
+      "done": 5,
+      "total": 5,
+      "s": "done",
+      "commit": "5e9c312 · 11:02"
+    },
+    {
+      "n": 4,
+      "name": "The body",
+      "what": "goldmark walker: numbered headings, lists to three levels, bold, italic, highlight, links, pictures, tables with the v1 look. Code blocks warned, not rendered.",
+      "pkg": "internal/body",
+      "done": 5,
+      "total": 5,
+      "s": "done",
+      "commit": "3947acc · 10:41"
+    },
+    {
+      "n": 5,
+      "name": "The cover fields",
+      "what": "title, alt_title, version, date, owner, classification, revisions with v1's names. No title is a refusal with a candidate.",
+      "pkg": "internal/cover",
+      "done": 5,
+      "total": 5,
+      "s": "done",
+      "commit": "c728e8f · 10:35"
+    },
+    {
+      "n": 6,
+      "name": "gdoc build",
+      "what": "--md note.md --out file.docx, offline. --house for a draft style, --force to overwrite. Reports what it rendered and warned.",
+      "pkg": "cmd/gdoc",
+      "done": 5,
+      "total": 5,
+      "s": "done",
+      "commit": "744534f · 10:29"
+    },
+    {
+      "n": 7,
+      "name": "The drift gate, both ways",
+      "what": "One item list. Offline: built docx vs the master's XML, in make test. Live: both uploaded, compared through the Docs API, trashed.",
+      "pkg": "internal/drift · live",
+      "done": 7,
+      "total": 7,
+      "s": "done",
+      "commit": "631ba42 · 10:14"
+    },
+    {
+      "n": 8,
+      "name": "Prove it",
+      "what": "Live gate run once, no extra modules, no network in render, literal house tests, race, vet, dist, coverage.",
+      "pkg": "all",
+      "done": 9,
+      "total": 9,
+      "s": "done",
+      "commit": "e00ca34 · 10:01"
+    },
+    {
+      "n": 9,
+      "name": "Write it down",
+      "what": "README, CLAUDE.md, SPEC, PLAN marked done, spike README pointing at the real files.",
+      "pkg": "docs",
+      "done": 7,
+      "total": 7,
+      "s": "done",
+      "commit": "db635d2 · 09:59"
+    }
+  ],
+  "reviews": [
+    {
+      "t": "In-house Opus rounds",
+      "d": "Not run in the task phase: review is revmux only, Nail's decision after M2.",
+      "s": "pending",
+      "v": "skipped"
+    },
+    {
+      "t": "revmux · rounds",
+      "d": "bugs+impl, arch+quality, docs+tests (Opus) and adversarial (Codex), then synthesis and verification.",
+      "s": "active",
+      "v": "1 rounds"
+    },
+    {
+      "t": "Post-external check",
+      "d": "Critical/major Claude review after the revmux loop, repeated until clean.",
+      "s": "pending",
+      "v": "waiting"
+    },
+    {
+      "t": "Fix commits after reviews",
+      "d": "Commits on the branch beyond the task commits.",
+      "s": "done",
+      "v": "1"
+    }
+  ],
+  "warns": [
+  ],
+};
+// ---- render ----
+const $ = (id) => document.getElementById(id);
+$("refreshed").textContent = snapshot.refreshed;
+$("started").textContent = snapshot.started;
+$("run-pill").textContent = snapshot.state;
+$("phases").innerHTML = snapshot.phases.map(p => `
+  <div class="phase ${p.s}"><div class="n">${p.n}</div><div class="t">${p.t}</div><div class="d">${p.d}</div></div>`).join("");
+const t = snapshot.tasks;
+const committed = t.filter(x => x.s === "done").length;
+const ticked = t.reduce((a,x)=>a+x.done,0), steps = t.reduce((a,x)=>a+x.total,0);
+const tiles = [
+  {v:`${committed}<small> / ${t.length}</small>`, l:"tasks committed", pct: committed/t.length},
+  {v:`${ticked}<small> / ${steps}</small>`, l:"plan steps ticked", pct: ticked/steps},
+  {v:`${snapshot.iterations.used}<small> / ${snapshot.iterations.max}</small>`, l:"task iterations used", pct: snapshot.iterations.used/snapshot.iterations.max},
+  {v:`${snapshot.reached ?? 1}<small> / 3</small>`, l:"phases reached", pct: (snapshot.reached ?? 1)/3},
+];
+$("tiles").innerHTML = tiles.map(x => `
+  <div class="tile"><div class="v mono">${x.v}</div><div class="l">${x.l}</div><div class="meter"><i style="width:${Math.round(x.pct*100)}%"></i></div></div>`).join("");
+const label = {done:"Done", active:"In progress", pending:"Waiting"};
+$("tasks").innerHTML = t.map(x => `
+  <tr class="${x.s}">
+    <td class="num mono">${x.n}</td>
+    <td><div class="name">${x.name}</div><div class="what">${x.what}</div><div class="pkg mono">${x.pkg}</div></td>
+    <td><div class="steps"><div class="meter"><i class="${x.s==="done"?"d":""}" style="width:${Math.round(x.done/x.total*100)}%"></i></div><span class="mono">${x.done}/${x.total}</span></div></td>
+    <td><span class="pill ${x.s}">${label[x.s]}</span></td>
+    <td class="commit mono">${x.commit || "·"}</td>
+  </tr>`).join("");
+$("reviews").innerHTML = snapshot.reviews.map(r => `
+  <div class="row"><div><div class="t">${r.t}</div><div class="d">${r.d}</div></div><span class="pill ${r.s}">${r.v}</span></div>`).join("");
+$("warns").innerHTML = snapshot.warns.map(w => `<div><span class="m">${w.m}</span><span><b>${w.b}</b> · ${w.d}</span></div>`).join("");
+</script>

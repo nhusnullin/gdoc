@@ -179,7 +179,11 @@ custom_review_script = .ralphex/scripts/revmux-review.sh
 # 0 = auto (derived from max_iterations as max(3, max_iterations/5))
 # set to a positive value to use a fixed iteration count
 # default: 0
-# max_external_iterations = 0
+# Nail, 2026-09-08: capped at 3. Across M2 to M5, 24 revmux rounds produced
+# 126 findings, 16 major and 0 critical, and every major came from round 1
+# to 3. Rounds 4 and later only reworded documentation, at 12 to 17 minutes
+# of revmux plus 3 to 6 of Opus each. Auto was 10.
+max_external_iterations = 3
 
 # review_patience: terminate external review after N consecutive unchanged rounds
 # when the external review tool and Claude can't agree on findings, the loop
