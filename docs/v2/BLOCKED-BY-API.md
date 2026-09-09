@@ -20,7 +20,7 @@ delete a decision in the other file.
 | **A positioned (floating) image.** | `Unknown name "createPositionedObject" at 'requests[0]': Cannot find field.` Only `deletePositionedObject` exists. | Inline images. Apps Script's `Paragraph.addPositionedImage()` can do it, which is the single thing Apps Script offers that REST does not, and not worth a second execution surface. |
 | **Minting a comment anchor.** | No refusal: Drive returns **HTTP 200 to every anchor string** and attaches it to nothing. 37 forms tried, including named range ids, heading ids, footnote ids, tab ids, both documented JSON shapes, and fabricated `kix.cmt` numbers. Google documents the behaviour: *"the anchor is saved and returned when retrieving the comment, however Google Workspace editor apps treat these comments as un-anchored comments."* | **None.** Anchor banking was proven to work and **rejected 2026-08-29**: seeding a marker on every sentence of every document is too much permanent machinery for a capability that only ever covers text gdoc wrote. gdoc does not attach comments to specific text, and says so. |
 | **Emoji reactions.** | `"reaction"` appears **zero** times in both the Docs and Drive discovery documents. UI-only feature, no API surface. | None. Not needed. |
-| **Deleting a comment that arrived by import.** | `403 insufficientFilePermissions`, to everyone including the file owner, permanently. An imported comment's author is a bare name string owned by nobody. Matching the display name does not help; nor does `w15:userId` with the right address. | `files.copy` drops all comments while keeping all anchors. That is how placeholders are shed. Never try to delete them. |
+| **Deleting a comment that arrived by import.** | `403 insufficientFilePermissions`, to everyone including the file owner, permanently. An imported comment's author is a bare name string owned by nobody. Matching the display name does not help; nor does `w15:userId` with the right address. | `files.copy` **without** `copyComments=true` drops all comments while keeping all anchors. That is how placeholders are shed. Never try to delete them. See the correction below: the copy itself is no longer commentless by necessity. |
 | **Updating a comment that arrived by import.** | `comments.update` returns **HTTP 200 and silently does nothing**. Only `replies.create(action="resolve")` works on them. | Do not update imported comments. |
 | **Pinning a revision of a native Doc.** | `keepForever` returns 200 and never persists. Documented as *"only applicable to files with binary content in Drive"*, and a Doc has none. Five authored states merged to two within minutes. | The section fingerprints in the front matter. This is not a workaround for a gap: it is the only correct design. |
 
@@ -62,3 +62,45 @@ the terms bar access for users outside the domain.
 | **Apps Script** | A subset of the REST API, not a superset. No comment API, no table of contents, no page numbers, no suggestions. Solves one of these entries, positioned images. |
 | **Drive revision history as a diff base** | Revisions merge within minutes, cannot be pinned, and the list silently omits older ones. |
 | **A partial-body update by any protocol route** | None exists. Multipart means metadata plus one media representation. Resumable `Content-Range` chunks the same whole replacement. Conversion on `files.update` explicitly replaces the full contents. |
+
+
+## Corrected 2026-09-09: `files.copy` can carry comments now
+
+The line above said `files.copy` drops all comments. That was measured on
+2026-08-29 and it was true then. Google documented a `copyComments` query
+parameter on 2026-09-04, and `tools/copyprobe` measured it on 2026-09-09
+against a document built for the purpose: a sentence, a comment anchored to two
+words inside it through the Docs API's `insertComment`, and a pending suggestion
+written in SUGGEST mode.
+
+| Copy | Comments | Still anchored | Pending suggestion |
+|---|---|---|---|
+| `files.copy?copyComments=true` | yes | **yes** | yes |
+| `files.copy`, no parameter | no | no | no |
+
+The control matters as much as the result: without the parameter the copy
+behaved exactly as recorded in August, so the old measurement was right about
+the default and the parameter is genuinely new rather than something that was
+missed.
+
+**The anchor was witnessed in the docx export, not in `comments.list`.** That is
+the trap this whole area turns on. Drive keeps returning a comment's original
+`anchor` and `quotedFileContent` after the anchor has been destroyed, so the
+listing reports a broken anchor as healthy. `commentRangeStart` in
+`word/document.xml` only exists where text is genuinely enclosed.
+
+The pending suggestion surviving is worth naming separately, because it was not
+expected. Google's guide mentions comments and suggestions together, and a
+second opinion consulted the same day flagged the suggestion half as doubtful.
+It survives.
+
+**What this changes.** The in-place restyle's ten-feature acceptance run needs a
+copy of a document holding a real anchored comment. That copy was going to have
+to be made by hand in a browser. It can be made through the API, which means the
+acceptance test can be unattended. The route needs a guard shape, because
+`files.copy` is refused today: `driveShape` has no `/copy` grammar.
+
+**Documented limits, from Google's guide, not measured here:** only open and
+unresolved comments are copied; a copy made without permission to read the
+source's comments can succeed while silently omitting them; and the original
+comment authors do not automatically get access to the copy.
