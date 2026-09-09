@@ -1117,8 +1117,10 @@ to keep it anyway.
 **What buys it is the measurement it makes possible.** The acceptance for an
 in-place restyle needs a document holding all ten features, an anchored comment,
 a pending suggestion, a smart chip, an image and a Google Drawing among them.
-`tools/copyprobe` showed on the same day that the first several can be built
-from scratch through the API, and that the image and the Drawing cannot. Without
+A throwaway probe showed on the same day that the first several can be built
+from scratch through the API, and that the image and the Drawing cannot. It was
+`tools/copyprobe`, deleted at M7b once it had answered, and what it measured is
+in BLOCKED-BY-API.md. Without
 a copy route the ideal document is made by hand in a browser before every run,
 which is a test nobody runs, which is an acceptance that does not exist.
 `files.copy?copyComments=true` carries the threads still anchored and the

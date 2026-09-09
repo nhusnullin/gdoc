@@ -609,7 +609,10 @@ What M7 leaves for M7b:
   carries today.
 - **The write loop is read-recompute-send**, not a pure function computed once.
   Every batch that inserts or deletes shifts the indexes later batches were
-  computed from, and the measured run was 22 batches.
+  computed from, and the measured run was 22 batches. (Corrected at M7b: the
+  reason went with the bullets. None of the four kinds the level carries changes
+  a character, so no index moves, and the loop re-reads for the revision id
+  alone.)
 - **`writeControl.requiredRevisionId`** rather than read-then-compare. It is in
   the public discovery document, unlike `writeMode`, and it closes the window
   between the survey's recheck and the first write. `revision_id` is on the
@@ -619,7 +622,9 @@ What M7 leaves for M7b:
   everything else it writes does.
 - **The live ten-feature run, and how the copy is made.** `files.copy` is
   refused by the guard today and drops every comment anyway, so an API copy
-  cannot carry the anchored comment the acceptance asserts.
+  cannot carry the anchored comment the acceptance asserts. (Corrected at M7b,
+  measured 2026-09-09: `copyComments=true` carries them, so the copy is made
+  through the API under a per-run `AllowCopy` grant.)
 - **The amendments**: PRINCIPLES.md's principle 3, CLAUDE.md's Never list, and
   SPEC.md's Never list **and acceptance item 1**, which says a direct edit on a
   handed-in id is refused. All three are untouched by M7 and stay true through
@@ -645,12 +650,11 @@ What M7 leaves open elsewhere:
 
 ### M7b. The in-place restyle
 
-The write half. In-place styling under the per-run write grant, the finishing
-checklist page under a named range, the nothing-to-protect offer that offers
-rather than takes, and the amendments to the three Never lists that a direct
-edit on a handed-in id needs. The survey M7 emits is what the apply invocation
-hands back, rechecking the revision id and the tab count before it writes.
-Acceptance: spec item 5, the ten-feature preservation run.
+The write half. `gdoc restyle <url> --from survey.json` gives a handed-in
+document the Altery house style where it stands, under a grant that lasts one
+run. The survey M7 emits is what the apply invocation hands back, and the
+recheck it makes against it is what makes the write safe. Acceptance: spec item
+5, the ten-feature preservation run.
 
 **Why the split.** M7 was one milestone until 2026-09-09. The review that read
 the draft plan found the survey resting on a decoder that was throwing chips
@@ -660,13 +664,101 @@ ten-feature run, none of which the survey needs. The two halves have no shared
 risk, and the first is the one the review skill benefits from immediately. The
 split is recorded in DECISIONS.md under that date.
 
-**The guard's third level travels with its caller.** `LevelInPlace` is not added
-in M7. M2's rule is that a guard door with no production caller is deleted
-rather than carried, which is why `GrantInPlace` went, and adding a level a
-milestone before the command that uses it would repeat exactly that. It arrives
-in M7b beside the write, with the request-kind allowlist Nail chose: only the
-styling kinds carry, and `deleteHeader`, `deleteContentRange`, `replaceAllText`
-and `deletePositionedObject` are refused.
+**Landed 2026-09-09.** `LevelInPlace` arrived beside the line that calls it,
+which is `cmdRestyle` opening `GrantInPlace` on one id after four refusals have
+already passed: a survey of another document, a survey reporting more than one
+tab, a `revisionId` that moved since the survey, and a fresh read finding more
+than one tab. The level carries four request kinds and nothing else,
+`updateDocumentStyle`, `updateParagraphStyle`, `updateTextStyle` and
+`updateTableCellStyle`, none of which can change a character.
+`TestNothingAtLevelInPlaceCanChangeACharacter` is the pin, and a fifth kind
+answers that test rather than the list: `createParagraphBullets` is refused
+because it removes the leading tabs that set a bullet's nesting level, which the
+2026-08-29 fidelity entry recorded as landing and did not record as deleting
+text.
+
+The allowlist gates every `batchUpdate` on a granted id whatever `writeMode`
+says, because `judgeDocs` reads `lvl == LevelFull || isSuggestMode`, and an
+allowlist hung off the direct-edit branch alone would let a granted document
+take an `insertText` under SUGGEST. The `fields` mask is bounded too, and that
+is where the real danger is: an `updateTextStyle` carrying `fields: "*"` resets
+bold, italic, links and colours over its range with every character intact, so
+`checkInPlaceMask` refuses a star, an empty mask, and a mask naming
+`useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`. The level is not a
+ladder rung: every comparison is `==`, so it does not inherit the file `PATCH`
+`LevelFull` carries, and a restyle cannot trash or rename the document it is
+styling.
+
+What it sends is typography and nothing else: the page geometry, a paragraph's
+spacing and indent, a run's face, size and colour, and a table cell's padding
+and borders, applied per paragraph because `updateNamedStyle` does not exist.
+The house style is written where it states a value and nowhere else, so `bold`,
+`italic` and the two keep flags are never written: absent and false are one word
+in `house.yaml`, and writing them would clear an author's own emphasis on the
+strength of a value the file may never have stated. A cell's fill is left alone
+for the mirror reason. A paragraph's `namedStyleType` is read and never decided,
+and a named style the house has no look for is reported in `Plan.Unstyled` and
+left as it is.
+
+Every batch carries `writeControl.requiredRevisionId`, and an empty one is
+refused at the call site: the recheck happens once and the run then spans a
+dozen batches, and unlike `writeMode` this field is in the public discovery
+document, so it is a rule the server holds. A refusal is never retried, because
+a stale revision means somebody is editing the document. There is no rollback: a
+run that stops at batch twelve leaves a half-styled document, the recovery is
+version history by hand, and the sentence that says so, "no text was touched, so
+nothing the author wrote is lost, but their own run formatting inside the
+paragraphs that were restyled is", is in `leftBehind` and reaches the envelope's
+warnings on every path that stops early.
+
+There is **no capability probe**, and that is deliberate rather than an
+omission. A proposal is probed because what makes it a suggestion is
+`writeMode`, a field gdoc supplies and Google has ignored once. `LevelInPlace`
+makes no claim of that kind to the server, so there is nothing for a probe to
+test, and the read-back stands alone in its place. It is two halves: `Preserve`
+compares the survey with a fresh survey, threads with their witness, pending
+suggestion ids and chips, and `Landed` reads the styling back out of the Docs
+answer and asks whether the requests that were sent are really there, because
+the fidelity probe's whole point was the accepted-but-not-landed row.
+`ManualSteps` names what gdoc could not do with the menu path for each: the
+first-page header carrying the logo, the contents list, the footer page numbers,
+plus any list, any table's column widths and any unstyled named style. SPEC has
+gdoc write that list into the document as a finishing checklist; Nail's decision
+of 2026-09-09 is that it reports them and the skill reads them out.
+
+`Policy.AllowCopy(sourceID)` arrived with the acceptance and is a decision
+rather than a rule satisfied: M2's rule wants a production caller and this
+door's only caller is a live test. It is per-run, one source, dying with the
+process, and the transport half keys the parent check and `learnFromCreate` on
+`filesCollection(u.Path)` so `{id}/copy` cannot be carried with no parent check
+and no id learned. `allowedModules` did not change and the module graph gained
+nothing.
+
+| Platform | M7 (53146d4) | M7b | Delta |
+|---|---|---|---|
+| darwin/arm64 | 14,020,578 | 14,141,346 | +120,768 (+0.9%) |
+| darwin/amd64 | 14,976,848 | 15,129,504 | +152,656 (+1.0%) |
+| windows/amd64 | 14,816,768 | 14,964,224 | +147,456 (+1.0%) |
+
+Acceptance: **spec item 5** is `TestLiveRestylePreservesTenFeatures` in
+`internal/live`, behind the two live variables and a third id,
+`GDOC_LIVE_IDEAL_DOC_ID`. It copies that document with `copyComments=true`,
+checks the copy holds all ten features before a single request is built, asserts
+that the first request is refused **before** `GrantInPlace` is called, restyles
+the copy at `LevelInPlace`, asserts all ten again, and re-reads the original on
+every path including failure to prove its `revisionId` never moved. Written and
+not yet run: it needs the real token, the network and an id naming the ideal
+document, so it is Nail's.
+
+**Four promises stopped being true and were amended rather than left standing**:
+PRINCIPLES.md's principle 3, CLAUDE.md's Never list, SPEC.md's Never list and
+SPEC's acceptance item 1 all said a handed-in document is never directly edited.
+Each carries the date and whose decision it was.
+
+Documented in CLAUDE.md under "A third write level, and the four kinds it
+carries", "The apply loop, and what a failed restyle leaves behind" and
+"`restyle --from` styles a document gdoc did not create", and in the README
+under "Restyling a document in place".
 
 **`--new` stays deferred**, decided 2026-09-09. It needs a markdown export,
 media extraction and a markdown writer, none of which exist in Go. Its state
@@ -674,6 +766,22 @@ transition is deferred with it: when the new document replaces the paired one,
 the front matter gets the new id and a fresh publish record in the same change,
 and a document left unpaired is refused by alignment until it is paired on
 purpose, which is M8's constraint.
+
+What M7b leaves for M8 and later:
+
+- **The restyle skill.** `skills/` holds v1's restyle instructions and there is
+  no v2 one. The sentence about durability, and the report's list of what gdoc
+  could not do, need a skill to say them. M9 with the install story, unless Nail
+  wants it sooner.
+- **List styling**, dropped because `createParagraphBullets` removes leading
+  tabs, and **table column widths and row heights**, which need two request
+  kinds nobody has measured and which change layout rather than look.
+- **The finishing checklist**, reported instead of written. Writing it into the
+  document is its own plan and needs `insertText` back.
+- **Heading numbering**, dropped because it writes into the author's prose.
+- **A style that stays.** The Docs API cannot redefine a document's named
+  styles, so the next heading the author types is not house style. Nothing in
+  the binary can fix that.
 
 ### M8. The diff, alignment, and the align skill
 

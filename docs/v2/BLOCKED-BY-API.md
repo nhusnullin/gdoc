@@ -68,8 +68,9 @@ the terms bar access for users outside the domain.
 
 The line above said `files.copy` drops all comments. That was measured on
 2026-08-29 and it was true then. Google documented a `copyComments` query
-parameter on 2026-09-04, and `tools/copyprobe` measured it on 2026-09-09
-against a document built for the purpose: a sentence, a comment anchored to two
+parameter on 2026-09-04, and a throwaway probe measured it on 2026-09-09
+against a document built for the purpose (`tools/copyprobe`, deleted at M7b
+once it had answered; the table below is what it printed): a sentence, a comment anchored to two
 words inside it through the Docs API's `insertComment`, and a pending suggestion
 written in SUGGEST mode.
 

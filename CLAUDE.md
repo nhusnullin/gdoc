@@ -64,21 +64,21 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the opt-in end-to-end tests, one read and four writes, plus the one render check that asks for no network. Tests only, no production code |
+| `go/internal/live/` | the opt-in end-to-end tests, one read and six writes, plus the one render check that asks for no network. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 7 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 7b are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
 `probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
 `comments --wait`, builds a house-style docx from a note with `build`, puts
-that docx into Drive as a Google Doc with `publish`, and surveys what a
-document holds with `restyle --dry-run`. The review skill is
+that docx into Drive as a Google Doc with `publish`, surveys what a
+document holds with `restyle --dry-run`, and gives that document the house style
+where it stands with `restyle --from`. The review skill is
 rewritten over those and can stay live on one document, and `gdoc` on PATH is v2
-from M3 on. Restyling a document in place is M7b's, and M7 writes to no
-document at all.
+from M3 on.
 
 ### The auth commands, and what reaches stdout
 
@@ -1047,6 +1047,98 @@ text was touched, so nothing the author wrote is lost, but their own run
 formatting inside the paragraphs that were restyled is.** That sentence is in
 `leftBehind`, so it reaches the envelope's warnings on every path that stops
 early, and the skill reads it to Nail.
+
+### `restyle --from` styles a document gdoc did not create
+
+M7b, and it is the sixth write. `gdoc restyle <url> --from survey.json` gives a
+handed-in document the house style where it stands: the page geometry, each
+paragraph's spacing and indent, each run's face, size and colour, and each table
+cell's padding and borders. Everything above about the guard's third level, the
+apply loop and what a failed run leaves behind is how it is held in. This
+section is the command.
+
+**The survey and the apply are two runs, and a run naming both flags is
+refused.** The survey is what makes the write safe, so it has to be a thing a
+person read before the write was asked for, rather than something the same run
+produced a moment earlier and never showed anybody. `readSurvey` reads that file
+the way `frontmatter` reads a note, with `DisallowUnknownFields` and a refusal
+for a second JSON object behind the first: it is the only record of what the
+document held before the run and the only thing standing between a direct-edit
+grant and a document nobody looked at. A survey that did not succeed is refused
+by name, because its zero fields are not facts.
+
+**Four refusals happen before `GrantInPlace` is called**, and the order in
+`applyRestyle` is the milestone's: a survey of another document, a survey
+reporting more than one tab, a `revisionId` that has moved, and a document that
+has more than one tab when read fresh. The tab rule is asked twice because the
+survey's count and the read's count are two different moments, and a style
+request names a range, which means nothing without saying which tab it is in.
+The document is handed to the policy at `LevelSuggest` like every other
+handed-in id, and the grant is a separate line further down.
+
+**A restyle is a moment, not a setting, and that sentence belongs in the
+report.** `updateNamedStyle` does not exist, so the look is applied paragraph by
+paragraph. The document looks right afterwards and the next heading the author
+types is Google's Heading 1 again. Nothing in the binary can fix that, and the
+skill says it out loud rather than letting somebody discover it a week later.
+
+**What a restyle overwrites is formatting inside the paragraphs it styles**, and
+what it does not touch is written down in the same breath. The face, the size
+and the colour of every run go to the house value, so an author's own emphasis
+by size or colour is gone. Bold, italic, `keep_with_next` and
+`keep_lines_together` are never written, because absent and false are one word in
+`house.yaml` and writing them would clear an author's emphasis on the strength of
+a value the file may never have stated. A table cell's own fill is left alone for
+the mirror reason: which row of somebody's table is a header is not something
+gdoc can read. Not a character of the author's text moves, and the threads, the
+pending suggestions, the chips and the named ranges are what the read-back
+counts.
+
+**The read-back is two halves, and it runs on a failed run too.** `Preserve`
+compares the survey with a fresh survey: thread counts and per-thread witness,
+pending suggestion ids, chips. `Landed` reads the styling back out of the Docs
+answer and asks whether the requests that were sent are really there. A run that
+wrote nothing reads nothing back, because the document is as it was; a run that
+stopped at batch twelve does, because that is the run the preservation facts are
+most needed for; and a read the run could not make is a warning and no read-back
+at all, since a preservation half built from a listing that never arrived names
+every thread in the survey as gone.
+
+Three rules inside those halves are decisions rather than details.
+
+- **A witness that reads `unmatched` now is `unwitnessed`, never a lost
+  anchor.** Unmatched is the export giving no answer, and calling absence of
+  evidence damage is the cry-wolf warning this tool avoids everywhere else. It
+  keeps `verified` false all the same, because nothing then says the anchor
+  survived.
+- **The survey carries suggestion ids and not only counts.** Two counts that did
+  not move cannot tell one suggestion destroyed and another created from nothing
+  having happened, so `SuggestionCounts` carries the ids the read could see,
+  from the listing's walk and from the elements both.
+- **The landing check is made against the requests that were sent, never against
+  `house.yaml`.** A check written from the house style asks the question the
+  builder already answers, and the two drift the first time a builder stops
+  setting a field. It reads the first request of each kind and names where it
+  looked, because a restyle sends one request per paragraph and hundreds of
+  lookups answer one question. A field the read does not carry at all is the
+  document's own default, so a zero holds where the read is silent: Docs leaves
+  a property equal to its default out of the answer, and reading that silence as
+  a failure would report every zero the house style states as not landed.
+
+**`manual` is what gdoc could not do, each with its menu path.** Three the API
+cannot do at all, the first-page header carrying the logo, the contents list and
+the footer page numbers, and two this milestone chose not to, the lists and the
+table column widths. A named style the house has no look for is the fourth
+entry, conditional like the other two. SPEC has gdoc write that list into the
+document as a finishing checklist; Nail's decision of 2026-09-09 is that it
+reports them and the skill reads them out, which is "the binary prints facts,
+and the skills judge" at the last place in this milestone that could have grown
+a verdict.
+
+**`verified: false` is not a failure**, as it is not for `propose` and
+`publish`. It is every landing check holding, the preservation half intact and
+no thread whose witness stopped answering. What was applied is in the document
+either way, and a caller told the run failed is a caller that runs it again.
 
 ### The cursor is opaque, and it dies with the session
 
@@ -2223,17 +2315,27 @@ nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
 
-`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the four write tests beside it, and
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the six write tests beside it, and
 each creates its own documents in the Drive test folder. The first proposes into
 one, replies, withdraws and trashes it, asserting every read-back on the way. The
 second is M4's: it starts a wait, posts a comment into the document while that
 wait is running, checks the comment came back before the deadline, then waits
 again on the cursor it was handed and checks that window is empty, up to 90
-seconds and then 15, and trashes the document. The last two are M6's:
+seconds and then 15, and trashes the document. Two are M6's:
 `TestLivePublish` publishes a temp note into the folder and asserts the
 read-back, the title, the one tab and the block written into the note, and
 `TestLiveDrift` uploads the built document and the master and runs the item list
-over both. All four write only to documents they made.
+over both. `TestLiveStyleFidelity` is the measurement M7b was scoped from: it
+sends each candidate styling request kind in a batch of its own and logs what
+landed, asserting almost nothing, because a measurement that fails the build
+when Google answers differently has already decided the answer.
+`TestLiveRestylePreservesTenFeatures` is M7b's acceptance and is the one that
+needs a second id, `GDOC_LIVE_IDEAL_DOC_ID`: it copies that document with
+`copyComments=true` under `AllowCopy`, checks the copy holds all ten features
+before a single request is built, restyles the copy at `LevelInPlace`, asserts
+all ten again, and re-reads the **original** on every path to prove its
+`revisionId` never moved. Five of the six write only to documents they made,
+and the sixth reads one it was named and never writes to it.
 `TestTheLiveFixturesRenderWithNoNetwork` sits in the same file and asks for
 neither variable: both live tests render a note before they reach Drive, so a
 note that stopped rendering or a fixture path that moved would otherwise be
@@ -2471,9 +2573,10 @@ document.
 
 **This is v1's `restyle`, and v2's is a different command wearing the same
 word.** v1 publishes a copy; v2's `restyle --dry-run` surveys one document and
-writes nothing. Read "`restyle --dry-run` is the survey" above for that one.
-Restyling in place is M7b's, and it is neither of these: it changes the
-document that was handed in.
+writes nothing. Read "`restyle --dry-run` is the survey" above for that one, and
+"`restyle --from` styles a document gdoc did not create" for the third, which
+landed at M7b and is neither of the other two: it changes the document that was
+handed in.
 
 `gdoc restyle` publishes a house-styled copy of a document with no queue, no
 paired markdown and no baseline. `gdoc/restyle.py` composes the pull, the

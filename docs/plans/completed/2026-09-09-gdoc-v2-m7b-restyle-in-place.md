@@ -248,17 +248,20 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 11: documentation and the size delta
 
-- [ ] CLAUDE.md and the README: restyling a document gdoc did not create, the durability sentence, what a restyle overwrites, and what a failed run leaves behind.
-- [ ] `docs/v2/PLAN.md`: the M7b landed paragraph, and **rewrite the M7b section itself**, which still lists the finishing checklist and the nothing-to-protect offer as this milestone's content.
-- [ ] Delete `tools/copyprobe`, whose question is answered. `tools/tlsdiag` stays.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `git commit -m "docs: M7b landed"`
+- [x] CLAUDE.md and the README: restyling a document gdoc did not create, the durability sentence, what a restyle overwrites, and what a failed run leaves behind.
+- [x] `docs/v2/PLAN.md`: the M7b landed paragraph, and **rewrite the M7b section itself**, which still lists the finishing checklist and the nothing-to-protect offer as this milestone's content.
+- [x] Delete `tools/copyprobe`, whose question is answered. `tools/tlsdiag` stays.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `git commit -m "docs: M7b landed"`
 
 ## Post-Completion
 
 - Nail restyles a real document he cares about and reads the result.
 - The ten-feature run read by a person, with any feature that did not survive recorded as a decision. **Written and not yet run**, 2026-09-09: it needs the real token, the network and `GDOC_LIVE_IDEAL_DOC_ID` naming the ideal document, so it is Nail's to run with `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`. It logs the ten before and after, the manual steps, and every read-back warning, which is what a person reads.
-- The binary-size delta per platform.
+- The binary-size delta per platform. Measured 2026-09-09, both columns in one
+  measurement with one toolchain: darwin/arm64 14,020,578 to 14,141,346
+  (+120,768, +0.9%), darwin/amd64 14,976,848 to 15,129,504 (+152,656, +1.0%),
+  windows/amd64 14,816,768 to 14,964,224 (+147,456, +1.0%).
 - Still outstanding, and Nail's: M4's live session with a second account, M5's docx opened in Word, M6's live publish and live drift table, and M7's live check that a real document agrees with `elements.json`.
 
 ## What M7b leaves for M8 and later

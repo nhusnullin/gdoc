@@ -155,8 +155,10 @@ func (p *Policy) GrantInPlace(id string) {
 // is why GrantInPlace went and came back with its own caller. This one is kept
 // on the strength of the measurement it makes possible: the ten-feature
 // preservation run needs a document holding an anchored comment, a pending
-// suggestion, an image and a Drawing, and tools/copyprobe showed the first two
-// can be built from scratch through the API while the last two cannot. Copying
+// suggestion, an image and a Drawing, and a throwaway probe showed the first
+// two can be built from scratch through the API while the last two cannot. The
+// probe was tools/copyprobe, deleted at M7b once it had answered; the
+// measurement it made is in docs/v2/BLOCKED-BY-API.md. Copying
 // an ideal document is how the run stops being a thing somebody does by hand in
 // a browser.
 //

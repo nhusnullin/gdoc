@@ -493,8 +493,9 @@ code, because the cover and the tables are found by their placeholder text.
 A second implementation lives at `go/`: one static binary, no Python, no pandoc,
 nothing to install beside it. It is being built a milestone at a time
 (`docs/v2/PLAN.md`). It holds the credential, it reads, it writes suggestions,
-since M6 it builds a house-style document and publishes it, and since M7 it
-surveys what a document holds before anything is done to it.
+since M6 it builds a house-style document and publishes it, since M7 it surveys
+what a document holds before anything is done to it, and since M7b it can give
+that document the house style where it stands.
 
 ```bash
 make build   # bin/gdoc, for this machine
@@ -680,8 +681,10 @@ no document and to no file:
 }
 ```
 
-`--dry-run` is required today, and the refusal says why: the restyle itself is
-not written yet. This half surveys and nothing more.
+A run gives `--dry-run` or `--from`, never both. The survey is what makes the
+restyle safe, so it has to be something you read before you asked for the write,
+rather than something the same run produced a moment earlier and never showed
+you.
 
 The witness is per thread as well as counted, because it is a before picture:
 restyling a document can detach a comment, and a thread that was already
@@ -713,20 +716,78 @@ reference. Counting nothing for them would answer "nothing to protect" over a
 change somebody is waiting on. A run with one is still printed by `read`, inside
 its markers, with its id.
 
-`revision_id` is there for the restyle that does not exist yet: it will hand the
-survey back and refuse a document that moved in between. Nothing reads it today.
+`revision_id` is what the restyle rechecks. Hand this file back with `--from`
+and the run refuses the document if it has moved since, and every batch it sends
+carries that revision so Docs refuses it too.
 
 An export that could not be read is a warning, not a failure: you still get the
 threads, with every witness reported `unmatched`. A Docs read that failed is a
 failure, because the chips, the suggestions, the ranges, the tab count and the
 revision id are all in that one read.
 
+### Restyling a document in place
+
+```bash
+gdoc restyle <url> --dry-run > survey.json
+gdoc restyle <url> --from survey.json
+```
+
+Two runs. The first surveys, the second gives that document the Altery house
+style where it stands: the page size and margins, each paragraph's spacing and
+indent, each run's face, size and colour, and each table cell's padding and
+borders.
+
+**This is the one thing gdoc does to a document you handed it.** Everywhere
+else, every change is a suggestion you accept or throw away. Here the change is
+made. What holds it in is narrow: the run styles the one document you named and
+the survey agrees with, only if the document has not moved since the survey, and
+the four request kinds it may send cannot change a character of what you wrote.
+The grant lasts one run and is not written anywhere.
+
+**A restyle is a moment, not a setting.** The Docs API cannot redefine a
+document's named styles, so gdoc applies the look paragraph by paragraph. The
+document looks right afterwards, and the next heading you type is Google's
+Heading 1 again, not the house one.
+
+**What it overwrites is formatting inside the paragraphs it styles.** The face,
+the size and the colour of every run go to the house value. Bold and italic are
+left alone, and so is a table cell's own fill: the house style does not say
+whether they should be off, and clearing them would be gdoc guessing. Your
+words, your comments, your pending suggestions, your smart chips and your named
+ranges are not touched.
+
+**A failed run leaves a half-styled document.** There is no rollback, and the
+recovery is the document's own version history, by hand. No text was touched, so
+nothing you wrote is lost, but your own run formatting inside the paragraphs
+that were restyled is. The run says so in its warnings.
+
+Afterwards it reads the document back three ways and reports two things. What
+survived: your threads with a witness for each, your pending suggestion ids and
+your chips, before against after, with anything that moved named and never
+explained. And whether the style is really there: it reads a margin, a
+paragraph's spacing, a run's font and a cell's appearance back out of the
+document and says which ones landed. `verified: false` is not a failure. What
+was applied is in the document either way, and the field says the read-back
+could not confirm all of it.
+
+`manual` is what gdoc could not do, each with the menu path: the first-page
+header with the logo, the contents list, the footer page numbers, plus any list
+it left alone, because the request that sets a bullet also deletes the tabs that
+set its nesting level, and any table's column widths, and any paragraph whose
+named style the house has no look for.
+
+A document with more than one tab is refused before anything is sent. A style
+request names a range, and a range means nothing without saying which tab it is
+in.
+
 ### Writing into a document
 
-Four commands write, and every change they make inside a Google Doc is a
-suggestion. Nothing edits a document directly, and the guard refuses the attempt
+Four commands write into a document you handed in, and every change they make
+there is a suggestion. None of them edits it, and the guard refuses the attempt
 inside the process: a `batchUpdate` on a document you handed in is carried only
-when the body says `writeMode: SUGGEST`.
+when the body says `writeMode: SUGGEST`. The one exception is the restyle above,
+which is granted a direct edit on one document for one run, for four request
+kinds that cannot change a character.
 
 ```bash
 gdoc probe --folder <folder url or id>
@@ -1083,10 +1144,14 @@ reads one document and writes nothing.
 
 ## What is planned
 
-**Restyling a document in place.** `gdoc publish` makes a new document from a
-note, and `gdoc restyle --dry-run` now says what a document holds before
-anything is done to it. Taking that document and giving it the house style,
-keeping its comments and suggestions, is the next milestone.
+**A restyled document that stays restyled.** `gdoc restyle --from` gives a
+document the house style today, paragraph by paragraph, because the Docs API
+cannot redefine a document's named styles. Making the style stick, so the next
+heading you type is the house one, needs something Google does not offer yet.
+
+**Lists and table layout in a restyle.** Bullets are left alone, because the
+request that sets one also deletes the tabs that set its nesting level, and
+column widths and row heights need two request kinds nobody has measured.
 
 **A live session over the whole folder.** Live works today on one document, the
 link you give it. Starting it once and having it watch every note you have
