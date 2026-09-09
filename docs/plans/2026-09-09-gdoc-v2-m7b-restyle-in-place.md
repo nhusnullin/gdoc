@@ -228,13 +228,13 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 9: the promises that stop being true, and two records that are wrong
 
-- [ ] `PRINCIPLES.md` principle 3, `CLAUDE.md`'s Never list, `docs/v2/SPEC.md`'s Never list, **and SPEC's acceptance item 1**.
-- [ ] **Three more places**: CLAUDE.md's guard section, its "`GrantInPlace` is gone until M7b" section, and `policy.go`'s comment about the grant returning at M7b.
-- [ ] **Correct DECISIONS.md's 2026-09-09 entry**, which still says three request kinds went untested when commit `a5fc6e0` measured all three.
-- [ ] **Record the `createParagraphBullets` correction.** The fidelity entry lists it as landing, which is true and incomplete: it lands and it removes leading tabs. The probe missed it because its content had none.
-- [ ] Record the scope decisions, the field-mask rule and why it exists, that SPEC's finishing checklist is deliberately not built, and that restyle has **no capability probe** because `LevelInPlace` has no client-supplied bar, so the read-back stands alone.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: the direct-edit door, and the promises it amends"`
+- [x] `PRINCIPLES.md` principle 3, `CLAUDE.md`'s Never list, `docs/v2/SPEC.md`'s Never list, **and SPEC's acceptance item 1**.
+- [x] **Three more places**: CLAUDE.md's guard section, its "`GrantInPlace` is gone until M7b" section, and `policy.go`'s comment about the grant returning at M7b.
+- [x] **Correct DECISIONS.md's 2026-09-09 entry**, which still says three request kinds went untested when commit `a5fc6e0` measured all three.
+- [x] **Record the `createParagraphBullets` correction.** The fidelity entry lists it as landing, which is true and incomplete: it lands and it removes leading tabs. The probe missed it because its content had none.
+- [x] Record the scope decisions, the field-mask rule and why it exists, that SPEC's finishing checklist is deliberately not built, and that restyle has **no capability probe** because `LevelInPlace` has no client-supplied bar, so the read-back stands alone.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: the direct-edit door, and the promises it amends"`
 
 ### Task 10: the ten-feature preservation run
 

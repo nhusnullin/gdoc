@@ -395,7 +395,7 @@ var commentWrites = map[string]map[string]bool{
 // a proposal withdrawn leaves its own comment in place and replies to it, which
 // is a POST. So the surface stays as narrow as its callers, and a milestone
 // that needs either method adds it back here beside the caller that needs it,
-// the way GrantInPlace returns at M7b.
+// the way GrantInPlace came back at M7b beside cmdRestyle's grant.
 var commentItemWrites = map[string]bool{"PATCH": true, "DELETE": true}
 
 // driveReadParamsFor is the query allowlist for one read shape. Each Drive

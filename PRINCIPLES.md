@@ -85,12 +85,38 @@ So:
 *Amended 2026-08-29, for v2.* The text stands word for word. It is the one
 principle v2 needed more of. The examples above are v1's: `baseline.md` and
 `pending.md` do not exist in v2, so they retire with it. The v2 instances: the
-guard's write levels, under which a handed-in document can never be
-direct-edited; the capability probe and the read-back after every proposal,
+guard's write levels, under which a handed-in document is read and suggest
+only (amended below); the capability probe and the read-back after every proposal,
 because four 200s lied in one day; the marker is the trigger, so an unmarked
 comment is reported and never executed; and a write target with more than one
 tab stops the command rather than guessing. A comment the tool cannot
 confidently classify is still reported, not acted on.
+
+*Amended 2026-09-09, for M7b. Nail's decision.* One clause above stops being
+true. A handed-in document can now be edited directly, for one run, when the
+caller grants it: `gdoc restyle <url> --from survey.json` raises exactly one id
+to `LevelInPlace` and puts that document into the house style where it stands.
+The principle is why the door is shaped the way it is, not a reason it stayed
+shut.
+
+- The grant names one id, is opened by one line in one command, and dies with
+  the process. Nothing writes it down, and no flag turns it on for every
+  document.
+- The level carries four request kinds and no others: `updateDocumentStyle`,
+  `updateParagraphStyle`, `updateTextStyle` and `updateTableCellStyle`. None of
+  them can change a character of what the author wrote. A kind nobody has heard
+  of is refused, which inverts the rule every other level holds, because
+  `writeMode` is no longer there to bound it.
+- The `fields` mask is bounded too. A mask resets what it names and leaves
+  unset, so `*` is refused, an empty mask is refused, and so is a mask naming
+  either header toggle.
+- The level is a name, not a rung. It does not carry the file `PATCH` that
+  `LevelFull` carries, so a restyle cannot trash or rename the document it is
+  styling.
+- There is no rollback, so a run that stops half way leaves a half-styled
+  document and says so. A batch Docs refused on a moved revision is never
+  retried: retrying would be gdoc styling a document somebody is editing, which
+  is uncertainty resolving toward the destructive answer.
 
 ## 4. Every word costs a reader's attention
 

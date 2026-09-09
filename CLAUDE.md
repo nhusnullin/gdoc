@@ -184,14 +184,21 @@ from a `*Policy`. So the first request in the program's history has already been
 judged. v1 fitted a guard around a client that already existed, which is why v1
 needs a test proving `build()` is called in one module only.
 
-Write levels live in the policy, never at the call site. `LevelSuggest` is what
-a handed-in id gets: read, comment, suggest, and never a direct edit.
-`LevelFull` is what a create returned, and `Learn` is the only door to it. M7b
-adds a per-run in-place grant back beside its caller; read "`GrantInPlace` is
-gone until M7b" below before looking for one now. A call site cannot widen its own reach by phrasing a
-request differently, because the policy reads the method, the URL and the body:
-a `batchUpdate` on a handed-in document is refused inside the process unless the
-body says `SUGGEST`.
+Write levels live in the policy, never at the call site, and there are three of
+them. `LevelSuggest` is what a handed-in id gets: read, comment, suggest, and
+never a direct edit. `LevelFull` is what a create returned, and `Learn` is the
+only door to it. `LevelInPlace` is M7b's, and `GrantInPlace` is the only door to
+it: it raises one id already in the set, for one run, so a restyle can style
+that document where it stands. Read "A third write level, and the four kinds it
+carries" below before widening anything about it. A call site cannot widen its
+own reach by phrasing a request differently, because the policy reads the
+method, the URL and the body: a `batchUpdate` on a handed-in document is refused
+inside the process unless the body says `SUGGEST`, or the document is the one id
+this run was granted.
+
+**The levels are names, not a ladder.** Every comparison is `==`, which is why
+`LevelInPlace` does not inherit the file `PATCH` that `LevelFull` carries: a
+restyle cannot trash or rename the document it is styling.
 
 `commentWrites` carries `POST` and nothing else: no `PATCH` and no `DELETE`, on
 a comment or on a reply. Nothing in a comment id says who wrote it, so the guard
@@ -231,7 +238,9 @@ Enrolled today is not a guarantee for tomorrow, and the earlier measurement is
 what says so. The field is still a statement of intent rather than a guarantee,
 and what makes a write trustworthy is the capability probe before it and the
 read-back after it, neither of which lives in the guard. Widening or narrowing
-what `isSuggestMode` permits is a decision for Nail, not a refactor.
+what `isSuggestMode` permits is a decision for Nail, not a refactor. That bar
+is the one `LevelInPlace` removes for a single id, which is why an allowlist of
+request kinds stands in its place there.
 
 `isSuggestMode` reads both keys **exactly**, and refuses a body where two keys
 fold to either name. Google's proto-JSON is case-sensitive, so `WRITEMODE` is
@@ -296,6 +305,59 @@ given to this command" on the next request, which names the wrong problem.
 `Policy` is mutex-guarded. `NewClient` hands out an `*http.Client`, which Go
 documents as safe for concurrent use, and `Learn` writes the set from inside
 `RoundTrip` while `Judge` reads it. `make test` runs `-race`; keep it there.
+
+### A third write level, and the four kinds it carries
+
+M7b. `LevelInPlace` permits a `batchUpdate` without SUGGEST on one document, and
+`GrantInPlace(id)` is the only door to it. Nail's decision of 2026-09-09. It is
+the widest thing gdoc can be asked to do, so every part of it is narrow.
+
+- **The grant is one id and one run.** `GrantInPlace` upgrades an id already in
+  `files` and admits nothing new, so it is not a third door into the set.
+  Nothing writes it down, nothing reads it from a file, and no flag turns it on
+  for every document: it dies with the process, in the shape `AllowReject` and
+  `AllowCreateIn` already have. `AllowFile` refuses to hand the level out at
+  all, because taking any level there was the side door around that invariant.
+- **`inPlaceKinds` is four request kinds, and it is the bound `writeMode` used
+  to be.** `updateDocumentStyle`, `updateParagraphStyle`, `updateTextStyle` and
+  `updateTableCellStyle`. `judgeRequests` carries a request kind nobody has
+  heard of at every other level, and its own comment justifies that on
+  `writeMode`: an unknown kind was still a suggestion somebody could reject.
+  Nothing bounds it here, so the rule is inverted and a kind that is not on the
+  list is refused whatever it is called. `deleteHeader` goes that way, and
+  DECISIONS.md says why it matters: it is a one-way door, and `createHeader`
+  cannot put a first-page header back.
+- **None of the four can change a character.**
+  `TestNothingAtLevelInPlaceCanChangeACharacter` is the pin, and a fifth kind
+  answers that test rather than the list. `createParagraphBullets` is the case
+  that shows the difference: it was measured landing on a real document and is
+  refused all the same, because the reference says the leading tabs that set a
+  bullet's nesting level "are removed by this request".
+- **The allowlist gates every `batchUpdate` on a granted id, whatever
+  `writeMode` says.** `judgeDocs` reads `lvl == LevelFull || isSuggestMode`, so
+  an allowlist hung off the direct-edit branch alone would let a granted
+  document take an `insertText` under SUGGEST, and the property above would be
+  false on exactly the id it protects. It is scoped to this level alone for the
+  mirror reason: applied everywhere it refuses `probe`'s direct `insertText` at
+  `LevelFull` and every `propose` batch at `LevelSuggest`.
+- **The `fields` mask is bounded too, and that is where the real danger is.**
+  The reference: "To reset a property to its default value, include its field
+  name in the field mask but leave the field itself unset." So an
+  `updateTextStyle` carrying `fields: "*"` resets bold, italic, links, colours
+  and highlights over its range, permanently, with every character intact. What
+  this level can destroy is everything except the text. `checkInPlaceMask`
+  reads the mask the way `isSuggestMode` reads `writeMode`, and refuses a star,
+  an empty mask, which Google reads as every field, and a mask naming
+  `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`, because switching
+  either off hides the first-page header that carries the logo, the one thing
+  this milestone reports as unreachable.
+- **There is no capability probe here, and the read-back stands alone.** A
+  proposal is probed because what makes it a suggestion is `writeMode`, a field
+  gdoc supplies and Google has ignored once. `LevelInPlace` makes no claim of
+  that kind to the server, so there is nothing for a probe to test. What
+  replaces the second bar is reading the document back, both halves: the
+  threads with their docx witness, the pending suggestion ids and the chips
+  before and after, and the styling itself read back to see whether it landed.
 
 ### Two allowlists over one request, the query and the headers
 
@@ -1534,7 +1596,8 @@ The 🤖 comment a withdrawn proposal made stays where it is. `commentWrites`
 carries `POST` and nothing else, so deleting or editing a comment is a write the
 guard does not carry, and no command here needs one. The skill replies to the
 comment saying the proposal was withdrawn. A milestone that needs `PATCH` or
-`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7b.
+`DELETE` adds it back beside its caller, the way `GrantInPlace` came back at
+M7b beside `cmdRestyle`'s grant.
 
 **The 🤖 prefix is the only record of authorship there is.** The Docs API cannot
 set an author, so everything gdoc writes is signed by whoever is logged in.
@@ -1696,19 +1759,22 @@ reporting a document as gone that is still there.
 **`publish` has no skill caller.** It is Nail-invoked. Wiring it into a skill is
 M9's, with the install story.
 
-### `GrantInPlace` is gone until M7b, and `AllowCreateIn` stayed
+### `GrantInPlace` came back at M7b, and `AllowCreateIn` never left
 
 PLAN.md M2 asked that a guard door with no production caller be deleted rather
-than carried. `GrantInPlace` had none, so it went, with its tests. M7b's
-in-place restyle adds it back beside its caller, and the level it raises to is a
-decision for Nail then, not something to restore from git because a test wants
-it.
+than carried. `GrantInPlace` had none, so it went, with its tests. M7 did not
+add it back either: the survey writes to no document, so a level for a write
+that did not exist yet would have been the same door a milestone early. That was
+Nail's decision of 2026-09-09, with the split.
 
-**M7 did not add it back, and that is the same rule again.** The survey writes
-to no document, so a level for a write that does not exist yet would be a door
-with no production caller a milestone early: exactly what M2 deleted. Nail's
-decision of 2026-09-09, with the split. `LevelInPlace` arrives in M7b beside the
-write, with the request-kind allowlist he chose there.
+**M7b added it back beside the line that calls it**, which is `cmdRestyle`
+opening the grant, and the level it raises to is `LevelInPlace` with the
+request-kind allowlist Nail chose there. The deleted
+`TestGrantInPlaceNeverAdmitsAnUnknownID` returned with it, and
+`TestAHandedInDocumentIsNeverDirectlyEdited` was narrowed rather than deleted:
+it still holds for every id the grant did not name. Read "A third write level,
+and the four kinds it carries" above for what the level carries. Widening it is
+Nail's decision, not a refactor.
 
 `AllowCreateIn` stayed even though M2 calls it nowhere. The transport's whole
 create path is built on it: the parent check, the upload-shape check and the
@@ -2540,14 +2606,20 @@ instead, as with the 40-twip cell margin.
 
 ## Never
 
-- Never edit a reviewed Google Doc. Under `service_account` the credential
-  cannot. Under `oauth` it could: `gdoc/guard.py` bounds which files are
-  reachable, not what may be done inside one. Nothing in gdoc edits a document,
-  and nothing may start. v2 writes into a document and this rule is unchanged:
-  every write is a suggestion, `go/internal/guard` refuses a `batchUpdate`
-  without `writeMode: SUGGEST`, and the read-back through
+- Never edit a reviewed Google Doc, **except the one document a restyle was
+  granted, for the one run it was granted in**. Under `service_account` the
+  credential cannot edit at all. Under `oauth` it could: `gdoc/guard.py` bounds
+  which files are reachable, not what may be done inside one, so v1 holds this
+  by discipline and nothing in v1 may start. v2 holds it in the guard: every
+  write is a suggestion, `go/internal/guard` refuses a `batchUpdate` without
+  `writeMode: SUGGEST`, and the read-back through
   `PREVIEW_WITHOUT_SUGGESTIONS` is there because Google has broken that promise
-  once.
+  once. **M7b opened one door in that wall**, Nail's decision of 2026-09-09:
+  `Policy.GrantInPlace(id)` raises one handed-in id to `LevelInPlace` for one
+  run, where four styling request kinds carry and nothing else does, and none of
+  the four can change a character of what the author wrote. Read "A third write
+  level, and the four kinds it carries" above. Widening it, by a fifth request
+  kind or by a second call site, is Nail's decision and not a refactor.
 - Never commit anything from `~/.config/gdoc-agent/`.
 - Never post markdown into a comment thread. The CLI refuses it for a reason.
 

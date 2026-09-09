@@ -216,6 +216,19 @@ checkbox bullets, the exact menu path per item, marked with a named range so it
 is removable in one call. Requires the explicit per-run write grant from the
 guard.
 
+*Amended 2026-09-09, M7b. Nail's decision.* **The checklist is not built.** gdoc
+reports those three instead, with the menu path for each, and the skill tells
+Nail. It is the M2 line held, the binary prints facts and the skill judges, and
+writing a page into somebody's document needs `insertText` and
+`createParagraphBullets` back on the level's allowlist, which is the whole of
+what keeps a restyle unable to change a character. "Approximate" is a measured
+list now rather than a shrug: typography only, page geometry, paragraph and text
+styling and table cell appearance, with no cover, no front-matter tables, no
+legend, no contents list, no list styling and no heading numbering. The limit is
+durability rather than fidelity, because `updateNamedStyle` does not exist: the
+document ends up looking right and the next heading the author types will not.
+Read DECISIONS.md's entries of that date.
+
 **As a new document (`--new`).** Renders the content to a docx and uploads it as
 new. Exact house style, new URL, and it loses the comments, the suggestions and
 the chips. The report says so before anything is created.
@@ -451,7 +464,12 @@ up at ten.
 The hard list. Each is transport-enforced where the guard can reach it, and a
 skill rule where it cannot.
 
-- Never direct-edit a document gdoc did not create. Guard-enforced.
+- Never direct-edit a document gdoc did not create, **except the one document a
+  restyle was granted, for the one run it was granted in**. Amended 2026-09-09,
+  Nail's decision, M7b. Guard-enforced both ways: `LevelSuggest` refuses a
+  direct edit, and `GrantInPlace` raises exactly one id to `LevelInPlace`, where
+  four styling request kinds carry, a kind that is not on that list is refused
+  whatever it is called, and none of the four can change a character.
 - Never replace the body of a document that exists. Guard-enforced.
 - Never accept, reject or delete anyone else's suggestion. Guard-enforced: the
   only `rejectSuggestion` that carries names the id `withdraw` granted from the
@@ -472,7 +490,10 @@ Each is a test or a checkable run, not a claim.
 
 1. The guard test: HTTP construction outside the guard package fails the build;
    a request for an id outside the set is refused; a direct edit on a handed-in
-   id is refused.
+   id is refused, unless the run granted that one id `LevelInPlace`, and there
+   every request kind but the four styling ones is refused, as is a `fields`
+   mask of `*`, an empty mask or one naming either header toggle. Amended
+   2026-09-09, M7b.
 2. The drift test: config-rendered and master-rendered documents compare across
    the 160 items with no new differences.
 3. A publish produces a document with the positioned logo, a live contents list
