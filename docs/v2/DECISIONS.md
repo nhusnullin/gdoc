@@ -1017,6 +1017,63 @@ handed-in document the agent can only suggest and reply, so the worst a
 colleague's instruction can produce is a suggestion Nail rejects. A colleague
 who can already edit the whole document was always trusted with more than this.
 
+## 2026-09-09. What an in-place styling request actually reaches
+
+The 2026-08-29 run measured **survival**: what an in-place `batchUpdate` does
+not destroy. It never measured **fidelity**, and SPEC's sentence "the house
+style is approximate" has stood in for a list nobody had written. Nail's
+decision the same day was that M7b's scope comes from a measurement rather than
+from reading `house.yaml`. This is the measurement.
+
+`go/internal/live/fidelity_test.go`, run against a document it created in the
+test folder and trashed afterwards. Each request kind was sent in its own batch,
+so one refusal could not hide the rest, and the document was read back once at
+the end. Nine of ten landed:
+
+| Request kind | Accepted | Landed |
+|---|---|---|
+| `updateDocumentStyle` (margins) | yes | yes |
+| `updateParagraphStyle` (`namedStyleType`) | yes | yes |
+| `updateParagraphStyle` (spacing, indent) | yes | yes |
+| `updateTextStyle` (font family, size) | yes | yes |
+| `updateTextStyle` (`foregroundColor`) | yes | yes |
+| `updateTextStyle` (`backgroundColor`) | yes | yes |
+| `createParagraphBullets` | yes | yes |
+| `createNamedRange` | yes | yes |
+| `updateParagraphStyle` (`borderBottom`) | yes | yes |
+| `updateNamedStyle` | **no** | no such request kind |
+
+**The limit is durability, not fidelity, and that is the sentence to tell
+somebody before a restyle.** `updateNamedStyle` does not exist, so the nine
+named styles cannot be redefined. But assigning a paragraph to `HEADING_1`
+lands, and overriding its visual properties per paragraph lands, which is
+exactly what the master template does: it states a heading colour on the style
+and overrides it on every paragraph, which is why eight rows sit in
+`drift.Known`. So an in-place restyle reaches the look. What it cannot do is
+make the **next** heading the author types inherit it.
+
+**Two things the M7 plan review listed as unreachable are reachable**, and the
+plan passed them on without checking:
+
+- The `highlight` house.yaml states as an OOXML name lands through
+  `backgroundColor` with an RGB value. It needs a name-to-hex mapping, not a
+  deferral.
+- Bullets land through `createParagraphBullets`. The `BULLET_DISC_CIRCLE_SQUARE`
+  preset is disc, circle, square, which is the `●○■` house.yaml asks for.
+
+**Three things this run did not test**, named so M7b does not assume them:
+`updateTableCellStyle`, tab stops, and anything touching the first-page header
+or the logo. The probe's content carried no table, which was an oversight in the
+fixture rather than a decision.
+
+**The run was blocked for an hour by something unrelated**, recorded here
+because the symptom is so misleading. On the office wifi every Go TLS 1.3
+handshake times out, to every host, while `openssl s_client -tls1_3` succeeds on
+the same network to the same address and Go capped at TLS 1.2 works in 0.1s.
+gdoc reports it as `TLS handshake timeout` on the token refresh, which reads
+like an expired token. A mobile hotspot fixes it. Never work around it by
+letting gdoc fall back to TLS 1.2.
+
 ## 2026-09-07. A replace proposal cannot be fully withdrawn by a delete. Decided: reject gdoc's own.
 
 Found by the first live write test, on throwaway documents in the test folder,
