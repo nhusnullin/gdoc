@@ -6,6 +6,8 @@ This is the milestone that opens the direct-edit door. Every write gdoc has made
 
 `gdoc restyle <url> --from survey.json` takes the survey M7 emits, rechecks that the document has not moved, and applies the house style in place. The comments keep their authors and their anchors, the pending suggestions stay pending, the smart chips keep their data, and the URL does not change. The three things no Docs request can create are reported, not written into the document.
 
+**Corrected 2026-09-09, after the second review.** An earlier draft of this plan claimed the allowed request kinds could not change a single character, and included `createParagraphBullets`. That was false: the reference says leading tabs determine a bullet's nesting level and "these leading tabs are removed by this request", so it deletes text the author typed, and it merges a bulleted range into an adjacent list with a matching preset, renumbering their items. The fidelity probe missed it because its content had no leading tabs. Bullets are dropped, and the property below is now true rather than nearly true.
+
 **Two measurements taken on 2026-09-09 settle what this milestone can promise**, and both are in the repo rather than in somebody's memory.
 
 **What in-place styling reaches** (`go/internal/live/fidelity_test.go`, 13 request kinds against a real document):
@@ -31,20 +33,24 @@ Decisions Nail took on 2026-09-09:
 
 - **`LevelInPlace` gets a request-kind allowlist.** Only the styling kinds carry. `deleteHeader`, `deleteContentRange`, `replaceAllText` and `deletePositionedObject` are refused by name.
 - **The scope came from the measurement**, not from reading `house.yaml`.
-- **The finishing checklist carries the 🤖 mark**, like everything else gdoc writes.
 - **The acceptance copy is made through the API**, not in a browser.
 - **The restyle keeps the structure and changes the look.** A paragraph already marked `HEADING_1` stays `HEADING_1` and gets the house look; body stays body. gdoc never infers structure from text and never restructures somebody's document. `build` maps markdown headings to styles and a restyle has nothing to map from, so this is the answer to what would otherwise be an unasked question.
 - **Typography only. gdoc changes no text at all.** Page geometry, paragraph and text styling, tables and lists. No cover, no front-matter tables, no legend, no contents list, and **no heading numbering**: numbering means writing into the author's prose, and Nail's decision is that a restyle does not do that.
 - **No finishing checklist is written into the document.** SPEC has gdoc write a page listing the three things the API cannot create. It reports them instead, and the skill tells Nail. This is Nail's decision of 2026-09-09 and it is also the M2 line held: the binary prints facts, the skill judges.
 
-**Those two decisions together give this milestone its defining property, and it is worth stating as the headline rather than as a detail.** The allowlist at `LevelInPlace` is five request kinds:
+**Those decisions together give this milestone its defining property.** The allowlist at `LevelInPlace` is four request kinds:
 
 ```
-updateDocumentStyle  updateParagraphStyle  updateTextStyle
-updateTableCellStyle  createParagraphBullets
+updateDocumentStyle  updateParagraphStyle  updateTextStyle  updateTableCellStyle
 ```
 
-**None of them can change a single character.** Every one was measured landing on 2026-09-09. `insertText` and `createNamedRange` were on this list in the previous draft, for the checklist and the heading numbers, and both are gone with them. So the rule the guard enforces is not "these are the styling kinds we thought of": it is that a granted document's **text is unreachable**, and a test states exactly that.
+**None of them can change a single character**, and unlike the previous draft that is now literally true. `insertText` and `createNamedRange` went with the checklist and the heading numbers. `createParagraphBullets` went because it removes leading tabs.
+
+**The allowlist bounds the kind. It does not bound the `fields` mask, and that is where this milestone's real danger lives.** The reference: "To reset a property to its default value, include its field name in the field mask but leave the field itself unset." So an `updateTextStyle` carrying `fields: "*"` over a range resets every property it does not set: bold, italic, links, colours, highlights, permanently, **with every character intact**.
+
+An earlier draft filed that as a note to write down. It is a rule the guard enforces, and Task 1 owns it. Saying "the text is unreachable" while leaving the mask unbounded would be reassuring about the wrong thing: what this milestone can destroy is everything except the text.
+
+**What a restyle overwrites, stated rather than discovered.** Applying the house look to a paragraph replaces the run styling the author chose there. That is what a restyle is for, and it is still worth a person knowing before they run one: a hand-bolded phrase inside a body paragraph does not survive a body-text pass. The report says which paragraphs were restyled, and the skill says this sentence.
 
 Spec: `docs/v2/SPEC.md` ("`restyle`", acceptance item 5). Master plan: `docs/v2/PLAN.md`, section M7b. Predecessor: `docs/plans/completed/2026-09-09-gdoc-v2-m7-survey.md`, whose closing section is this milestone's handover list.
 
@@ -83,7 +89,6 @@ Spec: `docs/v2/SPEC.md` ("`restyle`", acceptance item 5). Master plan: `docs/v2/
 - **Unit, `internal/guard`** again for the copy shape: the parameters allowed, the folder check, and the id learned from the answer.
 - **Unit, `internal/docs`**: the enrichment, against fixtures.
 - **Unit, `internal/restyle`**: the request builder as a pure function of one document and the house style, and the loop's recompute behaviour against a scripted session.
-- **Unit, `internal/checklist`**: the block's requests, the 🤖 mark, and the named range captured by id.
 - **Unit, `cmd/gdoc`**: strict argument parsing, the survey recheck refusals, and the envelope on each failure path.
 - **Live, opt-in behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`**: the ten-feature preservation run, which copies with `copyComments=true`, verifies the copy holds all ten before restyling, restyles, asserts all ten again, asserts the original's `revisionId` is unchanged, and trashes the copy.
 - **Boundary**: `allowedModules` does not change. M7b adds no dependency.
@@ -110,16 +115,14 @@ Spec: `docs/v2/SPEC.md` ("`restyle`", acceptance item 5). Master plan: `docs/v2/
 2. Read the document fresh. Refuse if the `revisionId` has moved, if there is more than one tab, or if the counts have changed in a way the survey did not describe.
 3. Open a policy granting `LevelInPlace` on that one id, and nothing else.
 4. Send the styling batches, each after its own fresh read, each carrying `writeControl.requiredRevisionId` from the last answer.
-5. Write the finishing checklist under a named range, if anything is on it.
-6. Read the document back, and export it, and compare against the survey's before-witness.
-7. Report what was sent, what held, and what did not.
+5. Read the document back, and export it, and compare against the survey's before-witness.
+6. Report what was sent, what held, what did not, and the three things it could not do at all.
 
 Key design decisions and why:
 
 - **A third level, narrower than the one that was deleted.** `LevelInPlace` permits a `batchUpdate` without SUGGEST on the granted id, and only for the request kinds on the allowlist. It does not permit a file `PATCH`, so restyle cannot trash or rename the document it is styling, which `LevelFull` would have allowed.
 - **The allowlist replaces `isSuggestMode` as the bound.** `judgeRequests` carries unknown kinds because SUGGEST bounded them. At `LevelInPlace` nothing bounds them, so the allowlist is what stands in its place, and `deleteHeader` is refused by name because it is a one-way door.
 - **`requiredRevisionId`, not read-then-compare.** A recheck followed by a write leaves a window, and across 22 batches that window is the whole run. Docs will refuse the batch itself if the document moved.
-- **The checklist carries 🤖.** It is the first text gdoc writes into a document body, and every other thing gdoc writes is marked. A reader finding that page in six months should be able to tell what put it there.
 - **The copy is made with `copyComments=true`**, measured the same day. The acceptance verifies the copy holds all ten features **before** restyling, so a setup failure cannot be read as a restyle failure.
 - **The original is never written to.** The 2026-08-29 rule. The acceptance re-reads it at the end, on every path including failure, and asserts the `revisionId` is unchanged.
 
@@ -138,118 +141,113 @@ Key design decisions and why:
 
 ---
 
-### Task 1: the third level, and an allowlist that cannot touch text
+### Task 1: the third level, the allowlist, and the mask rule
 
-- [ ] **Write the allowlist as a literal.** Five kinds, every one measured landing on 2026-09-09, and nothing else carries at `LevelInPlace`:
-  `updateDocumentStyle`, `updateParagraphStyle`, `updateTextStyle`, `updateTableCellStyle`, `createParagraphBullets`.
-- [ ] **Pin the property, not just the list.** A test named for it asserts that every kind able to insert, delete or replace content is refused at this level: `insertText`, `deleteContentRange`, `replaceAllText`, `replaceNamedRangeContent`, `insertTable`, `insertPageBreak`, `insertInlineImage`, `replaceImage`, `deleteTableRow`, `mergeTableCells`. A future reader adding a kind has to answer that test, not just the list.
+- [ ] **Write the allowlist as a literal.** Four kinds, each measured landing on 2026-09-09, and nothing else carries at `LevelInPlace`:
+  `updateDocumentStyle`, `updateParagraphStyle`, `updateTextStyle`, `updateTableCellStyle`.
+- [ ] **Pin the property, not the list.** A test named for it asserts every kind able to insert, delete or replace content is refused: `insertText`, `deleteContentRange`, `replaceAllText`, `replaceNamedRangeContent`, `insertTable`, `insertTableRow`, `insertTableColumn`, `insertPageBreak`, `insertInlineImage`, `replaceImage`, `createFootnote` (it inserts a reference character), `deleteTableRow`, `mergeTableCells`, and **`createParagraphBullets`**, which removes leading tabs. A future reader adding a kind answers that test, not just the list.
+- [ ] **The allowlist gates every `batchUpdate` on a granted id, whatever `writeMode` says.** `judgeDocs` reads `lvl == LevelFull || isSuggestMode(body)`, so an allowlist hung off the direct-edit branch alone would still let a granted document take an `insertText` under SUGGEST, and the property above would be false on exactly the id it is meant to protect. Pin it with an attack test that sends a SUGGEST `insertText` to a granted id and expects a refusal.
 - [ ] **The allowlist is scoped to `LevelInPlace` alone.** Applied globally it breaks `probe`'s direct `insertText` at `LevelFull` and `propose`'s SUGGEST batches. Pin it at all three levels.
-- [ ] Also refused at this level, each for its own reason:
-  - `deleteHeader` and `deleteFooter`, one-way doors DECISIONS.md records: `createHeader` then answers "Default header already exists" and `firstPageHeaderId` is gone for good
-  - `replaceNamedRangeContent`, which deletes and replaces the content of *every* range wearing a name
-  - `mergeTableCells`, which destroys cell structure `unmergeTableCells` cannot reliably restore
-  - `replaceImage`, the one kind that would silently falsify the acceptance's byte-identical image
-  - `deletePositionedObject`, `deleteNamedRange`, `deleteParagraphBullets`
-  - every kind carrying "suggestion", `rejectSuggestion` included unless separately granted
-  - a request kind nobody has heard of, which is the inversion of `judgeRequests`' unknown-kinds rule and the whole point of an allowlist here
-- [ ] **Note what an allowlist by kind cannot see: the `fields` mask.** `updateDocumentStyle` reaches `defaultHeaderId`, `firstPageHeaderId` and `useFirstPageHeaderFooter`, not only margins. Whether that needs bounding is a decision to write down rather than discover.
+- [ ] **The `fields` mask is a rule here, not a note.** The guard reads it the way `isSuggestMode` reads `writeMode`, exactly and case-sensitively: refuse `*`, refuse an empty mask, which Google reads as every field, and refuse a mask naming `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`, because switching one off hides the first-page header carrying the logo, the one thing this milestone reports as unreachable. `defaultHeaderId` and `firstPageHeaderId` are read-only in the reference, so they need no rule.
+- [ ] Also refused: `deleteHeader` and `deleteFooter`, one-way doors DECISIONS.md records; `deletePositionedObject`; `deleteNamedRange`; every kind carrying "suggestion", `rejectSuggestion` included unless separately granted; and a request kind nobody has heard of, which is the inversion of `judgeRequests`' unknown-kinds rule and the whole point of an allowlist here.
 - [ ] `GrantInPlace(id)` upgrades only an id already in `files`, and the deleted `TestGrantInPlaceNeverAdmitsAnUnknownID` returns.
 - [ ] **`AllowFile(id, LevelInPlace)` must be impossible**, not merely untested: it takes any level today and is the side door around the grant's own invariant.
-- [ ] **Five call sites change.** `policy.go`'s level check on `batchUpdate`; its refusal text saying "only SUGGEST is allowed"; `Level.String()`, which would otherwise print `unknown(N)` into a user-facing refusal; `AllowFile`; and **`judgeDrive`'s final refusal**, which says "only a file gdoc created may be changed in place" and becomes false.
-- [ ] Comment that the levels are **names, not a ladder**: every comparison is `==`, which is why the file `PATCH` stays refused, and a later `>=` would widen everything silently.
+- [ ] **Five call sites change.** `policy.go`'s level check on `batchUpdate`; its refusal text saying "only SUGGEST is allowed"; `Level.String()`, which would otherwise print `unknown(N)` into a user-facing refusal; `AllowFile`; and `judgeDrive`'s final refusal, which says "only a file gdoc created may be changed in place" and becomes false.
+- [ ] Comment that the levels are **names, not a ladder**: every comparison is `==`, which is why the file `PATCH` stays refused.
 - [ ] Narrow `TestAHandedInDocumentIsNeverDirectlyEdited` rather than deleting it.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): a third write level whose allowlist cannot touch text"`
+- [ ] `git commit -m "feat(v2): a third write level, its allowlist, and its field-mask rule"`
 
-### Task 2: `files.copy` as a per-run grant, not a capability
+### Task 2: `files.copy` as a per-run grant
 
-The first draft made copying a capability of any policy holding a create folder. `cmdPropose` is exactly that shape: `AllowFile(docID, LevelSuggest)` beside `AllowCreateIn(probeFolder)`. So every `propose` run on a document Nail handed in could have copied it and learned the copy at `LevelFull`, which is direct edit with no allowlist and `PATCH`. Wider reach than this milestone's own door, from a document somebody only wanted read.
+The first draft made copying a capability of any policy holding a create folder. `cmdPropose` is exactly that shape, so every `propose` run on a document Nail handed in could have copied it and learned the copy at `LevelFull`: direct edit, no allowlist, `PATCH`.
 
-- [ ] `Policy.AllowCopy(sourceID)` in the shape of `AllowReject` and `AllowCreateIn`: per-run, one source, dying with the process. A copy of any other id is refused, and a policy without the grant carries no copy at all.
-- [ ] **The transport half, which `driveShape` alone does not cover.** `isCreate` keys the parent check and `learnFromCreate` on `filesCollection(u.Path)`, and `{id}/copy` is not the files collection, so a copy would otherwise be carried with no parent check and no id learned.
-- [ ] A copy omitting `parents` lands in the **source's** parent, a folder gdoc was never given, so the existing `len(parents) != 1` rule must be reached rather than skipped.
+- [ ] `Policy.AllowCopy(sourceID)` in the shape of `AllowReject` and `AllowCreateIn`: per-run, one source, dying with the process.
+- [ ] **The transport half.** `isCreate` keys the parent check and `learnFromCreate` on `filesCollection(u.Path)`, and `{id}/copy` is not the files collection, so a copy would otherwise be carried with no parent check and no id learned.
+- [ ] A copy omitting `parents` lands in the **source's** parent, a folder gdoc was never given, so the `len(parents) != 1` rule must be reached rather than skipped.
 - [ ] Parameters: `copyComments`, `supportsAllDrives`, `fields`, nothing else.
-- [ ] Record that this door exists for the acceptance run, and that M2's rule about doors without production callers is met because Task 10 is that caller.
+- [ ] **Write this down as Nail's decision, not as a rule satisfied.** M2's rule is that a guard door needs a *production* caller, and this one's only caller is a live test. A copy also takes a full duplicate of a handed-in document into gdoc's folder at `LevelFull`, which is the widest reach any handed-in id has produced. `tools/copyprobe` shows a document with an anchored comment and a pending suggestion can be built from scratch; what it cannot build is the image and the Drawing, which is why the door is probably right. It is still a decision.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "feat(v2): a per-run grant to copy one document, comments included"`
 
-### Task 3: `docs` learns only what a named caller reads
+### Task 3: `docs` learns the one thing a caller reads
 
-- [ ] Test first, against fixtures: a table's start index, and the text style already on a run. **Both have named callers**, Task 5 and Task 4.
-- [ ] **Section breaks and document style are not decoded unless a task reads them.** M2's rule, the one this plan's Task 2 is written under.
-- [ ] **State the effect on `read`'s golden files.** `internal/view` walks these blocks to produce a projection the project treats as a specification, so moved bytes are the change and the goldens say so.
+- [ ] Test first, against fixtures: a table's start index. Task 5 reads it.
+- [ ] **Nothing else is decoded.** Section breaks, document style and existing run styles each had no reader once the scope narrowed: Task 4 applies the look with a narrow mask and does not need to know what is there. M2's rule, the one Task 2 is written under.
+- [ ] **State the effect on `read`'s golden files** if the enrichment moves them.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): docs carries the index and the style a write needs"`
+- [ ] `git commit -m "feat(v2): docs carries the table index a write needs"`
 
-### Task 4: the request builder, document and paragraphs
+### Task 4: the document style, and the page
 
-- [ ] Test first: given one `docs.Document` and the house style, the page geometry, and per paragraph its spacing, indent, border and run styling. Every expected value is a **literal**, never read from `house.yaml`: the project's standing rule for a house-style test.
+- [ ] Test first: page size and margins from the house style, with every expected value a **literal**, never read from `house.yaml`.
+- [ ] **Narrow `fields` masks throughout**, naming exactly what is set. Task 1's guard rule refuses `*`, and the builder must never rely on being refused.
+- [ ] **A document carrying section breaks has its margins governed by `sectionStyle`**, and `updateSectionStyle` is not on the allowlist. So `updateDocumentStyle` can be accepted and invisible. Report it rather than claiming the page was restyled: Task 8 is where that check lives.
+- [ ] `cd go && go test -race ./...` passes.
+- [ ] `git commit -m "feat(v2): the page geometry, in place"`
+
+### Task 5: paragraphs, runs, and table cells
+
+- [ ] Test first: per paragraph its spacing, indent and border; per run the house font, size and colour; per table cell the shading, padding and borders house.yaml states. Literals throughout.
 - [ ] **A paragraph's `namedStyleType` is read, never decided.** Keep the structure, change the look. Nothing infers structure from text.
-- [ ] Apply the look **per paragraph**, because `updateNamedStyle` does not exist. Measured, not assumed, and the reason the master states a heading colour on the style and overrides it on every paragraph.
-- [ ] **The `highlight` name-to-hex mapping.** `house.Validate` accepts the seventeen OOXML names and Docs needs an `RgbColor`, so the mapping is real work with a named owner here.
-- [ ] Record in the package comment what cannot be reached: tab stops, the first-page header, redefining a named style.
+- [ ] Apply the look **per paragraph**, because `updateNamedStyle` does not exist.
+- [ ] **Tables are cell appearance only.** Column widths need `updateTableColumnProperties` and row heights need `updateTableRowStyle`; neither is on the allowlist, neither was measured, and both change a table's layout rather than its look, which the scope decision puts out of bounds. Report them as not applied.
+- [ ] **No list styling.** `createParagraphBullets` removes leading tabs, so lists keep whatever bullets they have and Task 8 reports them alongside the other things gdoc could not do.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the house style as document and paragraph requests"`
+- [ ] `git commit -m "feat(v2): paragraphs, runs and table cells"`
 
-### Task 5: tables and lists
+### Task 6: the apply loop
 
-- [ ] Test first: table cells shaded and padded as house.yaml states, addressed by the table's own start index; bullets applied with the preset whose glyphs match the house style's.
-- [ ] `createParagraphBullets` takes a preset, not glyphs, so name the preset chosen and the glyphs it produces.
-- [ ] **A list gdoc cannot reach with a preset is reported, never rebuilt.** Rebuilding would need `deleteParagraphBullets` and `insertText`, and neither is on the allowlist.
+- [ ] Test first, over a scripted session: each batch carrying `writeControl.requiredRevisionId` from the last answer, and a batch Docs refuses on a stale revision reported as what it is and never retried.
+- [ ] **Refuse an empty `requiredRevisionId` at the call site.** If a read did not carry one the body ships `""` and the only protection this milestone has disappears silently.
+- [ ] **Indexes no longer move**, now that nothing on the allowlist changes text, so the loop re-reads for the revision id rather than to recompute positions. Say so: an earlier draft justified the loop by shifting indexes and that reason has gone with the bullets.
+- [ ] **Say how batches are sized.** `maxPeek` is 1 MB and `judgeRequests` refuses a `batchUpdate` it cannot read whole.
+- [ ] **Write down what a failed run leaves behind.** No rollback, so a run failing at batch twelve leaves a half-styled document and the recovery is version history by hand. **No text was touched, so nothing the author wrote is lost, but their own run formatting inside restyled paragraphs is.** That sentence goes in the report and in CLAUDE.md.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): tables and lists, in place"`
-
-### Task 6: the apply loop, read-recompute-send
-
-- [ ] Test first, over a scripted session: each batch computed from a fresh read and carrying `writeControl.requiredRevisionId` from the last answer; a batch Docs refuses on a stale revision reported as what it is and never retried.
-- [ ] **Refuse an empty `requiredRevisionId` at the call site.** If a read did not carry one the body ships `""`, and the only protection this milestone has disappears silently.
-- [ ] **Say how batches are sized.** `maxPeek` is 1 MB and `judgeRequests` refuses a `batchUpdate` it cannot read whole, so a per-paragraph pass on a long document can approach it and the refusal would name the ceiling rather than the document.
-- [ ] **Write down what a failed run leaves behind.** There is no rollback, by design, because nothing on the allowlist can undo a style. A run failing at batch twelve of twenty-two leaves a half-styled document, and the recovery is Docs version history by hand. **The one comfort, and it is the reason the scope narrowed: no text was touched, so nothing the author wrote can be lost.** That sentence goes in the report and in CLAUDE.md.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the apply loop, recomputed between batches"`
+- [ ] `git commit -m "feat(v2): the apply loop, revision-checked between batches"`
 
 ### Task 7: the command, and the line that opens the grant
 
 - [ ] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing; the survey read strictly and refused for an unknown key, another document, a moved `revisionId` or a second tab, **each before the grant is opened**; and the envelope on each failure path.
-- [ ] Implement the apply half of `cmdRestyle`, including the `GrantInPlace` call site, which is the most security-relevant line in the milestone and belonged to no task in the first draft.
-- [ ] Replace the hard refusal `cmd/gdoc/restyle.go` currently gives without `--dry-run`, which names M7b as future work.
+- [ ] Implement the apply half of `cmdRestyle`, including the `GrantInPlace` call site, the most security-relevant line in the milestone.
+- [ ] Replace the hard refusal `cmd/gdoc/restyle.go` gives without `--dry-run`, which names M7b as future work.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "feat(v2): gdoc restyle --from, and the grant it opens"`
 
-### Task 8: the read-back, and the three things gdoc could not do
+### Task 8: the read-back, both halves
 
-- [ ] Test first: thread counts and per-thread witness before and after, pending suggestion ids before and after, chips before and after. A count that moved is reported, never explained.
-- [ ] **Nothing asks Drive whether an anchor survived.** The witness is the docx export, and the before-witness comes from M7's survey rather than being recomputed.
-- [ ] **Report the three things no Docs request can create**, with the exact menu path for each: the first-page header with its logo, the contents list, and the footer page numbers. SPEC has these written into the document; Nail's decision of 2026-09-09 is that they are reported and the skill tells him. Nothing is written into the document body.
-- [ ] `verified` is the checks together, and fewer than all of them is `ok: true` with `verified: false` and the route named, exactly as `propose` and `publish` report.
+- [ ] **The preservation half.** Thread counts and per-thread witness before and after, pending suggestion ids before and after, chips before and after. A count that moved is reported, never explained. **Nothing asks Drive whether an anchor survived**: the witness is the docx export, and the before-witness comes from M7's survey.
+- [ ] **The landed half, which the previous draft had no check for at all.** Read back a margin, a paragraph's spacing, a run's font and a cell's shading, and report whether the style is actually there. The fidelity probe's whole point was the accepted-but-not-landed row, and a `verified: true` printed over an invisible change would be exactly that failure.
+- [ ] **Report the things gdoc could not do**, with the exact menu path for each: the first-page header with its logo, the contents list, the footer page numbers, plus any list left unstyled and any table whose widths were not touched.
+- [ ] `verified` is the checks together, and fewer than all is `ok: true` with `verified: false` and the route named.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the read-back, and the manual steps reported not written"`
+- [ ] `git commit -m "feat(v2): the read-back, preservation and landing both"`
 
-### Task 9: the promises that stop being true, and one record that is already wrong
+### Task 9: the promises that stop being true, and two records that are wrong
 
-- [ ] `PRINCIPLES.md` principle 3, `CLAUDE.md`'s Never list, `docs/v2/SPEC.md`'s Never list, **and SPEC's acceptance item 1**, which says a direct edit on a handed-in id is refused.
-- [ ] **Three more places**: CLAUDE.md's guard section saying `LevelSuggest` is what a handed-in id gets, its "`GrantInPlace` is gone until M7b" section, and `policy.go`'s comment about the grant returning at M7b.
-- [ ] **Correct DECISIONS.md's 2026-09-09 entry.** It still says "Three things this run did not test": `updateTableCellStyle`, tab stops and the first-page header. Commit `a5fc6e0` measured all three and only its message says so, so the repo's own record contradicts this plan's Overview table.
-- [ ] **Record the scope decisions and what they bought**: typography only, no text touched, no checklist written, and the resulting property that the allowlist cannot change a character.
-- [ ] **Record that SPEC's finishing checklist is not built**, with the reason, so a later reader does not treat it as an oversight.
-- [ ] Record that restyle has **no capability probe**: SPEC requires one before a write whose bar is a client-supplied field, and `LevelInPlace` has no such field, so the read-back stands alone. A decision, not an omission.
+- [ ] `PRINCIPLES.md` principle 3, `CLAUDE.md`'s Never list, `docs/v2/SPEC.md`'s Never list, **and SPEC's acceptance item 1**.
+- [ ] **Three more places**: CLAUDE.md's guard section, its "`GrantInPlace` is gone until M7b" section, and `policy.go`'s comment about the grant returning at M7b.
+- [ ] **Correct DECISIONS.md's 2026-09-09 entry**, which still says three request kinds went untested when commit `a5fc6e0` measured all three.
+- [ ] **Record the `createParagraphBullets` correction.** The fidelity entry lists it as landing, which is true and incomplete: it lands and it removes leading tabs. The probe missed it because its content had none.
+- [ ] Record the scope decisions, the field-mask rule and why it exists, that SPEC's finishing checklist is deliberately not built, and that restyle has **no capability probe** because `LevelInPlace` has no client-supplied bar, so the read-back stands alone.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "docs: the direct-edit door, and the promises it amends"`
 
 ### Task 10: the ten-feature preservation run
 
-- [ ] `TestLiveRestylePreservesTenFeatures` in `go/internal/live`, behind `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` and needing `GDOC_LIVE_IDEAL_DOC_ID`.
-- [ ] Copy with `copyComments=true` under `AllowCopy`. **Verify the copy holds all ten before restyling**, and fail the setup rather than the restyle if it does not.
-- [ ] **Restyle the copy at `LevelInPlace`, not at the `LevelFull` the copy is learned at.** Open a fresh policy, hand the copy id in at `LevelSuggest`, then `GrantInPlace` it. Otherwise the acceptance exercises a path nobody runs and would pass with `LevelInPlace` completely broken.
-- [ ] Assert all ten. Re-read the **original** and assert its `revisionId` is unchanged, on every path including failure. Trash the copy.
-- [ ] Record the result under Post-Completion. A feature that does not survive is a decision written down with the difference, not a test loosened.
+- [ ] `TestLiveRestylePreservesTenFeatures` in `go/internal/live`, behind the two live variables and needing `GDOC_LIVE_IDEAL_DOC_ID`.
+- [ ] Copy with `copyComments=true` under `AllowCopy`. **Verify the copy holds all ten before restyling**, failing the setup rather than the restyle if it does not.
+- [ ] **Restyle the copy at `LevelInPlace`**: a fresh policy, the copy id handed in at `LevelSuggest`, then `GrantInPlace`. Otherwise the acceptance runs at the `LevelFull` the copy was learned at, exercises no allowlist, and passes with the whole milestone broken.
+- [ ] **The trash runs on the first policy, not the second.** `judgeDrive` carries `PATCH` only at `LevelFull`, which the restyle policy deliberately does not have. The obvious fix for that refusal is to add `PATCH` to `LevelInPlace` or restyle at `LevelFull`, and both undo the point of this task.
+- [ ] Assert all ten. Re-read the **original** and assert its `revisionId` is unchanged on every path including failure.
+- [ ] Record the result under Post-Completion.
 - [ ] `git commit -m "test(v2): the ten-feature preservation run"`
 
 ### Task 11: documentation and the size delta
 
-- [ ] CLAUDE.md and the README: restyling a document gdoc did not create, the durability sentence the fidelity measurement earned, and what a failed run leaves behind.
-- [ ] `docs/v2/PLAN.md`: the M7b landed paragraph, the "What M7b leaves for M8" list, and the binary-size table.
-- [ ] Delete `tools/copyprobe`, whose question is answered and whose own doc comment says so. `tools/tlsdiag` stays: its question recurs.
+- [ ] CLAUDE.md and the README: restyling a document gdoc did not create, the durability sentence, what a restyle overwrites, and what a failed run leaves behind.
+- [ ] `docs/v2/PLAN.md`: the M7b landed paragraph, and **rewrite the M7b section itself**, which still lists the finishing checklist and the nothing-to-protect offer as this milestone's content.
+- [ ] Delete `tools/copyprobe`, whose question is answered. `tools/tlsdiag` stays.
 - [ ] Move this plan to `docs/plans/completed/`.
 - [ ] `git commit -m "docs: M7b landed"`
 
@@ -262,8 +260,10 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ## What M7b leaves for M8 and later
 
-- **The finishing checklist**, SPEC's design, not built. The three items are reported instead. If a terminal report turns out to be too easy to lose, writing them into the document is a decision with a plan of its own, and it would need `insertText` back on the allowlist.
-- **Heading numbering**, dropped for the same reason: it writes into the author's prose.
-- **`--new`**, still deferred, and with it the front-matter state transition.
-- **The nothing-to-protect offer.** `NothingToProtect` is a fact M7 emits, and SPEC has gdoc offer `--new` as the better route. With `--new` deferred there is nothing to offer, so the offer is deferred rather than half-built.
-- **The suggestions walker**, still Nail's: whether element-only suggestions reach `pending`, `gone_since_last_look` and the snapshot.
+- **The restyle skill.** `skills/` holds v1's restyle instructions and there is no v2 one. The sentence about durability, and the report's list of what gdoc could not do, need a skill to say them. M9 with the install story, unless Nail wants it sooner.
+- **List styling**, dropped because `createParagraphBullets` removes leading tabs.
+- **Table column widths and row heights**, which need two request kinds nobody has measured and which change layout rather than look.
+- **The finishing checklist**, SPEC's design, reported instead of written. If a terminal report proves too easy to lose, writing it into the document is its own plan and needs `insertText` back.
+- **Heading numbering**, dropped because it writes into the author's prose.
+- **`--new`**, still deferred, and the nothing-to-protect offer with it: `NothingToProtect` is a fact M7 emits, and with `--new` deferred there is nothing to offer.
+- **The suggestions walker**, still Nail's.
