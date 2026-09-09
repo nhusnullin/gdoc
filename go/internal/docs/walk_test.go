@@ -1,6 +1,7 @@
 package docs
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -321,4 +322,103 @@ func TestACommentWithNoIDIsReportedByPosition(t *testing.T) {
 	if len(d.Unplaced) != 1 || d.Unplaced[0] != "comments[0] (no id)" {
 		t.Errorf("Unplaced = %v", d.Unplaced)
 	}
+}
+
+// TestTheDroppedElementsFixtureNamesAllSeven states what elements.json is for.
+// ParagraphElement is a union of eleven and run() reads four, so seven members
+// are dropped at decode today. The fixture holds one of each, with its own two
+// suggestion id lists, and it is what the decoder is taught against.
+func TestTheDroppedElementsFixtureNamesAllSeven(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "elements.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// It parses the way a body off the wire parses, whatever the decoder does
+	// with the members afterwards.
+	if _, err := Parse(raw); err != nil {
+		t.Fatalf("Parse(elements.json): %v", err)
+	}
+
+	found := map[string]map[string]bool{}
+	for _, el := range fixtureParaElements(t, raw) {
+		for key, val := range el {
+			if key == "startIndex" || key == "endIndex" {
+				continue
+			}
+			var member map[string]json.RawMessage
+			if err := json.Unmarshal(val, &member); err != nil {
+				t.Fatalf("member %q is not an object: %v", key, err)
+			}
+			keys := map[string]bool{}
+			for k := range member {
+				keys[k] = true
+			}
+			found[key] = keys
+		}
+	}
+
+	for _, member := range []string{
+		"person", "richLink", "dateElement",
+		"autoText", "pageBreak", "columnBreak", "horizontalRule",
+	} {
+		keys, ok := found[member]
+		if !ok {
+			t.Errorf("elements.json holds no %s", member)
+			continue
+		}
+		for _, ids := range []string{"suggestedInsertionIds", "suggestedDeletionIds"} {
+			if !keys[ids] {
+				t.Errorf("%s carries no %s", member, ids)
+			}
+		}
+	}
+
+	// The fields the reference names for the two chips that carry data, and
+	// the field that says which auto text this is. A fixture missing one of
+	// them cannot teach the decoder to read it.
+	for member, field := range map[string]string{
+		"person":         "personProperties",
+		"richLink":       "richLinkProperties",
+		"dateElement":    "dateElementProperties",
+		"autoText":       "type",
+		"horizontalRule": "textStyle",
+	} {
+		if !found[member][field] {
+			t.Errorf("%s carries no %s", member, field)
+		}
+	}
+}
+
+// fixtureParaElements is every paragraph element in a fixture, raw, so a test
+// can ask what the JSON names rather than what the decoder kept.
+func fixtureParaElements(t *testing.T, raw []byte) []map[string]json.RawMessage {
+	t.Helper()
+	var doc struct {
+		Tabs []struct {
+			DocumentTab struct {
+				Body struct {
+					Content []struct {
+						Paragraph *struct {
+							Elements []map[string]json.RawMessage `json:"elements"`
+						} `json:"paragraph"`
+					} `json:"content"`
+				} `json:"body"`
+			} `json:"documentTab"`
+		} `json:"tabs"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	var out []map[string]json.RawMessage
+	for _, tab := range doc.Tabs {
+		for _, el := range tab.DocumentTab.Body.Content {
+			if el.Paragraph != nil {
+				out = append(out, el.Paragraph.Elements...)
+			}
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("the fixture holds no paragraph elements")
+	}
+	return out
 }

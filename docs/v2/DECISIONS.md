@@ -1112,3 +1112,51 @@ id is the wrong way.
 
 `docs/backlog/v1-frontmatter-migration.md` is deleted by this entry. It asked
 the question and said Nail decides in M6.
+
+## 2026-09-09. Seven paragraph elements were dropped at decode. The fixture is built from the reference, and the live check is outstanding.
+
+Serves principle 3, at one remove: a reader that drops what it does not
+recognise makes every decision downstream on a document that is not the one on
+screen.
+
+`ParagraphElement` is a union of eleven members. `run()` in
+`go/internal/docs/walk.go` reads four of them, and its `default` arm returns
+`(Run{}, false)`, so the other seven vanish at decode:
+
+| Member | Carries |
+|---|---|
+| `person` | `personId`, `personProperties.name`, `.email` |
+| `richLink` | `richLinkId`, `richLinkProperties.title`, `.uri`, `.mimeType` |
+| `dateElement` | `dateId`, `dateElementProperties` with `timestamp`, `timeZoneId`, `locale`, `dateFormat`, `timeFormat` and the output-only `displayText` |
+| `autoText` | `type`, which is `PAGE_NUMBER` or `PAGE_COUNT` |
+| `pageBreak` | a page break |
+| `columnBreak` | a column break |
+| `horizontalRule` | a rule |
+
+Every one of them also carries `suggestedInsertionIds` and
+`suggestedDeletionIds`, like every other element in a paragraph.
+
+Vanishing is worse than being unreadable. An inline object gdoc cannot classify
+still prints `[object]` with a warning, so a reader is told there is something
+there. These seven reach neither `view`'s placeholders nor its warnings: a
+person chip, a date chip and a calendar link are simply absent from what `read`
+prints, and a page break and a rule with them. Every review session since M2 has
+been reading documents with holes in them and being told nothing.
+
+**The fixture is built, not measured.** The reference documents every field of
+all seven, so `go/internal/docs/testdata/elements.json` is written from it, with
+placeholder text throughout: nobody's document is in it. That is a departure
+from how `anchors.json` was made, and the reason is that the `commentAnchors`
+shape is undocumented while this one is published.
+
+**So the fixture is a hypothesis until a real document agrees with it, and that
+check is outstanding.** A reference and a server can differ, and the field this
+is least certain about is `dateElement`, which is the newest of the seven. The
+check is Post-Completion work in the M7 plan: a real document holding a person
+chip, a date chip and a calendar link, read through `documents.get`, compared
+against `elements.json`. If it disagrees, the difference is recorded here as its
+own entry and the fixture is corrected. It is not a test loosened.
+
+The decoder is Task 2's, and the wider fix travels with it: the `default` arm
+reports rather than vanishes, so the eighth member Google adds shows up as a
+placeholder with a warning instead of silently absent.

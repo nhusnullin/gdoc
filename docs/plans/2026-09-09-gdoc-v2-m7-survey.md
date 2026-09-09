@@ -117,10 +117,10 @@ The Docs API reference **does** document these elements, so this is not a measur
 
 Every one also carries `suggestedInsertionIds` and `suggestedDeletionIds`, like every other element, so each needs the same id handling.
 
-- [ ] Build `go/internal/docs/testdata/elements.json` from the documented shape, covering all seven, each with its own suggestion id lists. Placeholder text throughout, so nothing in it is anybody's document.
-- [ ] Write into `docs/v2/DECISIONS.md` under today's date: the seven were dropped, the reference documents all of them, and the fixture is built from the reference rather than measured. Say plainly that the live verification is outstanding, because a fixture built from a reference is a hypothesis until a real document agrees with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "test(v2): a fixture for the seven paragraph elements gdoc drops"`
+- [x] Build `go/internal/docs/testdata/elements.json` from the documented shape, covering all seven, each with its own suggestion id lists. Placeholder text throughout, so nothing in it is anybody's document.
+- [x] Write into `docs/v2/DECISIONS.md` under today's date: the seven were dropped, the reference documents all of them, and the fixture is built from the reference rather than measured. Say plainly that the live verification is outstanding, because a fixture built from a reference is a hypothesis until a real document agrees with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "test(v2): a fixture for the seven paragraph elements gdoc drops"`
 
 ### Task 2: the decoder stops dropping what it cannot name
 

@@ -1,0 +1,99 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789efgh",
+  "title": "The seven elements gdoc drops",
+  "revisionId": "ALm37BXelements",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 33, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 1, "endIndex": 8, "textRun": {"content": "Owner: ", "textStyle": {}}},
+              {"startIndex": 8, "endIndex": 9, "person": {
+                "personId": "kix.person1",
+                "suggestedInsertionIds": ["suggest.person1"],
+                "suggestedDeletionIds": [],
+                "textStyle": {},
+                "personProperties": {"name": "A Placeholder", "email": "placeholder@example.com"}
+              }},
+              {"startIndex": 9, "endIndex": 24, "textRun": {"content": " reviews it by ", "textStyle": {}}},
+              {"startIndex": 24, "endIndex": 25, "dateElement": {
+                "dateId": "kix.date1",
+                "suggestedInsertionIds": [],
+                "suggestedDeletionIds": ["suggest.date1"],
+                "textStyle": {},
+                "dateElementProperties": {
+                  "timestamp": "2026-09-09T00:00:00Z",
+                  "timeZoneId": "Etc/GMT",
+                  "locale": "en",
+                  "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+                  "timeFormat": "TIME_FORMAT_DISABLED",
+                  "displayText": "Sep 9, 2026"
+                }
+              }},
+              {"startIndex": 25, "endIndex": 30, "textRun": {"content": " see ", "textStyle": {}}},
+              {"startIndex": 30, "endIndex": 31, "richLink": {
+                "richLinkId": "kix.link1",
+                "suggestedInsertionIds": ["suggest.link1"],
+                "suggestedDeletionIds": ["suggest.link2"],
+                "textStyle": {},
+                "richLinkProperties": {
+                  "title": "A placeholder calendar entry",
+                  "uri": "https://calendar.example.com/event/placeholder",
+                  "mimeType": "application/vnd.google-apps.calendar-event"
+                }
+              }},
+              {"startIndex": 31, "endIndex": 33, "textRun": {"content": ".\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 33, "endIndex": 35, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 33, "endIndex": 34, "horizontalRule": {
+                "suggestedInsertionIds": ["suggest.rule1"],
+                "suggestedDeletionIds": ["suggest.rule2"],
+                "textStyle": {}
+              }},
+              {"startIndex": 34, "endIndex": 35, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 35, "endIndex": 42, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 35, "endIndex": 40, "textRun": {"content": "Page ", "textStyle": {}}},
+              {"startIndex": 40, "endIndex": 41, "autoText": {
+                "type": "PAGE_NUMBER",
+                "suggestedInsertionIds": ["suggest.auto1"],
+                "suggestedDeletionIds": [],
+                "textStyle": {}
+              }},
+              {"startIndex": 41, "endIndex": 42, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 42, "endIndex": 44, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 42, "endIndex": 43, "pageBreak": {
+                "suggestedInsertionIds": [],
+                "suggestedDeletionIds": ["suggest.break1"],
+                "textStyle": {}
+              }},
+              {"startIndex": 43, "endIndex": 44, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 44, "endIndex": 69, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 44, "endIndex": 45, "columnBreak": {
+                "suggestedInsertionIds": ["suggest.break2"],
+                "suggestedDeletionIds": [],
+                "textStyle": {}
+              }},
+              {"startIndex": 45, "endIndex": 69, "textRun": {"content": "After the column break.\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "footnotes": {},
+        "inlineObjects": {}
+      }
+    }
+  ]
+}
