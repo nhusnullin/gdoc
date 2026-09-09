@@ -199,6 +199,11 @@ type rawParaElement struct {
 	// unnamed is every member of this element that is not in the list above,
 	// sorted. It is what the warning names when Google adds a twelfth.
 	unnamed []string
+	// unnamedSuggested is what those members said about being suggested. Every
+	// one of the eleven carries the two id lists, so the twelfth will too, and
+	// a run that kept the member name and dropped the ids is a pending change
+	// read prints with no markers and the survey counts in neither number.
+	unnamedSuggested rawSuggested
 }
 
 // namedMembers is the union as this decoder knows it, plus the two indexes
@@ -234,12 +239,28 @@ func (e *rawParaElement) UnmarshalJSON(b []byte) error {
 		}
 	}
 	// Sorted, because a map is walked in no order and a warning that reads
-	// differently on two runs of one document is a warning nobody trusts.
+	// differently on two runs of one document is a warning nobody trusts. The
+	// ids are read in that same order for the same reason.
 	sort.Strings(e.unnamed)
+	for _, name := range e.unnamed {
+		var s rawSuggested
+		// A member that is not an object, or one whose id lists are shaped
+		// some other way, says nothing about being suggested. It is still an
+		// element at a position with a name, so the decode carries on rather
+		// than failing the whole document over a member gdoc has never seen.
+		if err := json.Unmarshal(keys[name], &s); err != nil {
+			continue
+		}
+		e.unnamedSuggested.SuggestedInsertionIDs = append(
+			e.unnamedSuggested.SuggestedInsertionIDs, s.SuggestedInsertionIDs...)
+		e.unnamedSuggested.SuggestedDeletionIDs = append(
+			e.unnamedSuggested.SuggestedDeletionIDs, s.SuggestedDeletionIDs...)
+	}
 	return nil
 }
 
-// rawPerson is a person chip: a live reference to somebody, shown as their name.
+// rawPerson is a person chip: a live reference to somebody, shown as their name
+// or, when there is no name to show, as their address.
 type rawPerson struct {
 	PersonID         string `json:"personId"`
 	PersonProperties struct {
@@ -247,6 +268,19 @@ type rawPerson struct {
 		Email string `json:"email"`
 	} `json:"personProperties"`
 	rawSuggested
+}
+
+// label is what the chip shows. The reference documents name as the name shown
+// "instead of the person's email address", and email as always present, so a
+// chip displaying the address carries no name at all. Falling back to the
+// address is what keeps read carrying who the chip names: a bare [person] tells
+// a reader somebody is there and not who, which for a policy naming its owner
+// is the fact that mattered.
+func (p rawPerson) label() string {
+	if p.PersonProperties.Name != "" {
+		return p.PersonProperties.Name
+	}
+	return p.PersonProperties.Email
 }
 
 // rawRichLink is a smart chip pointing at a Drive file, a calendar entry or a
@@ -374,7 +408,7 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 		r.Kind = KindPerson
 		r.Detail = &Detail{
 			ID:    e.Person.PersonID,
-			Label: e.Person.PersonProperties.Name,
+			Label: e.Person.label(),
 			Email: e.Person.PersonProperties.Email,
 		}
 		r.InsertionIDs, r.DeletionIDs = e.Person.ids()
@@ -415,6 +449,11 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 		if len(e.unnamed) > 0 {
 			r.Detail = &Detail{Member: strings.Join(e.unnamed, ", ")}
 		}
+		// The ids come off the member itself, like every arm above. What the
+		// element is called is one fact; whether somebody is waiting on it is
+		// the other, and dropping the second makes every reader downstream
+		// confidently wrong about a document with a pending change in it.
+		r.InsertionIDs, r.DeletionIDs = e.unnamedSuggested.ids()
 	}
 	return r
 }

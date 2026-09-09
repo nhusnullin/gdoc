@@ -4,12 +4,13 @@
 // the revision the reads were made against.
 //
 // It takes no session and touches no wire, like every other reader package
-// here. The caller makes the four reads and hands the decoded answers over, so
+// here. The caller makes the three reads and hands the decoded answers over, so
 // every case in this file is testable on a value a test wrote out.
 //
-// Nothing here judges anything. NothingToProtect is a fact about three counts
-// being zero, never a recommendation to restyle: whether a document is worth
-// restyling is Nail's, reading the counts. The witness has the two limits it
+// Nothing here judges anything. NothingToProtect is a fact about four counts
+// being zero, never a recommendation to restyle: the threads, what is pending,
+// the chips, and the paragraph elements the read could not name. Whether a
+// document is worth restyling is Nail's, reading the counts. The witness has the two limits it
 // has everywhere else, and they are worth stating rather than discovering: it
 // names a destroyed anchor and not a moved one, and two exported comments that
 // share words and disagree give no answer for either.
@@ -25,8 +26,10 @@ import (
 	"gdoc/internal/suggestions"
 )
 
-// Input is the four reads, already decoded. Export is the docx the witness is
-// read from, and ExportErr is why there is none: an export that failed is a
+// Input is the three reads, already decoded: the comment listing, the Docs read
+// and the docx export. The named ranges come out of the Docs read, which carries
+// them already, so there is no fourth. Export is the docx the witness is read
+// from, and ExportErr is why there is none: an export that failed is a
 // warning on a survey that still carries its threads, exactly as
 // `comments --witness` behaves, rather than a failed survey.
 type Input struct {
@@ -75,13 +78,29 @@ type ThreadWitness struct {
 	Resolved bool   `json:"resolved"`
 }
 
-// SuggestionCounts is what is pending. The count is suggestions.All's and not
+// SuggestionCounts is what is pending. Pending is suggestions.All's and not
 // List's: List drops a suggestion whose text is only whitespace, and a
 // whitespace-only suggestion is still something a replacement would destroy, so
 // counting from List reports nothing to protect on a document that has
 // something to protect.
+//
+// OnElements is the other half, and it is here because the pending walk cannot
+// see it. suggestions.All reads text runs alone, on purpose: a footnote's
+// number reported as suggested text would be a lie, and a suggested picture has
+// no text to report at all. So a suggestion carried only by a run that walk
+// skips is in no listing this binary prints, and counting nothing there would
+// answer nothing to protect on a document with a pending change in it.
+//
+// The rule is what the listing can report, not whether the run holds text. A
+// footnote reference carries its number and is counted here all the same,
+// beside the chips, the breaks, the rule, the auto text and the picture, and
+// for the same reason: the pending walk skips it, so nothing else speaks for
+// it. It counts ids rather than the insert-and-delete pairs Pending counts, so
+// one replacement is 2 there and 1 here, and an id the pending walk already saw
+// on a text run is not counted twice.
 type SuggestionCounts struct {
-	Pending int `json:"pending"`
+	Pending    int `json:"pending"`
+	OnElements int `json:"on_elements"`
 }
 
 // ChipCounts is the smart chips by kind. A chip is a live reference, so a
@@ -112,7 +131,10 @@ func Survey(in Input) (Report, []string) {
 	}
 	threads = docx.Match(threads, in.Export)
 
-	r := Report{Threads: threadCounts(threads)}
+	// The list is never null. encoding/json writes a nil slice as null, and a
+	// skill reading named_ranges must not get two shapes for the one fact that
+	// a document has none. Witnessed is built with make for the same reason.
+	r := Report{Threads: threadCounts(threads), NamedRanges: []docs.NamedRange{}}
 	if in.Document == nil {
 		// Not an error, and not nothing to protect either. A survey with no
 		// document read knows nothing about chips, suggestions or ranges, and
@@ -125,17 +147,29 @@ func Survey(in Input) (Report, []string) {
 	r.RevisionID = in.Document.RevisionID
 	r.Title = in.Document.Title
 	r.Tabs = len(in.Document.Tabs)
-	r.Suggestions = SuggestionCounts{Pending: len(suggestions.All(in.Document))}
-	r.NamedRanges = in.Document.NamedRanges()
+	r.NamedRanges = append(r.NamedRanges, in.Document.NamedRanges()...)
 
-	chips, unnamed := walkTabs(in.Document)
+	chips, unnamed, onElements := walkTabs(in.Document)
 	r.Chips = chips
+	// An id the pending walk saw is already in Pending, so what is left is the
+	// suggestions no listing this binary prints can report.
+	for _, id := range suggestions.IDs(in.Document) {
+		delete(onElements, id)
+	}
+	r.Suggestions = SuggestionCounts{
+		Pending:    len(suggestions.All(in.Document)),
+		OnElements: len(onElements),
+	}
 	for _, member := range unnamed {
 		warnings = append(warnings, fmt.Sprintf(
 			"the document holds a paragraph element this read cannot name (%s), so the survey counts it as nothing", member))
 	}
+	if n := r.Suggestions.OnElements; n > 0 {
+		warnings = append(warnings, fmt.Sprintf(
+			"%d pending suggestion(s) sit only on elements the suggestions listing cannot report, so they are counted and not listed", n))
+	}
 	r.NothingToProtect = len(threads) == 0 && r.Suggestions.Pending == 0 &&
-		chips.Total() == 0 && len(unnamed) == 0
+		r.Suggestions.OnElements == 0 && chips.Total() == 0 && len(unnamed) == 0
 	return r, warnings
 }
 
@@ -162,38 +196,50 @@ func threadCounts(threads []comments.Thread) ThreadCounts {
 	return c
 }
 
-// walkTabs counts the chips in every tab, and names the paragraph elements the
-// read could not name. The second return is why the decoder reports an unknown
-// element instead of dropping it: an element gdoc has never seen is the one
-// thing a count of chips cannot speak for.
-func walkTabs(d *docs.Document) (ChipCounts, []string) {
-	var chips ChipCounts
-	seen := map[string]bool{}
-	for _, t := range d.Tabs {
-		countBlocks(t.Body, &chips, seen)
+// tally is what one walk of the tabs collects: the chips by kind, the members
+// of the paragraph elements the read could not name, and the suggestion ids
+// carried by runs the pending listing skips. One walk, because three walks over
+// one document are three chances for the counts to disagree about it.
+type tally struct {
+	chips      ChipCounts
+	unnamed    map[string]bool
+	onElements map[string]bool
+}
+
+// walkTabs counts the chips in every tab, names the paragraph elements the read
+// could not name, and collects the suggestion ids the pending walk cannot see.
+// The second return is why the decoder reports an unknown element instead of
+// dropping it: an element gdoc has never seen is the one thing a count of chips
+// cannot speak for. The third is the same argument for a suggestion: an id on a
+// run the pending walk skips reaches no listing, so the survey has to count it
+// here or answer nothing to protect over it.
+func walkTabs(d *docs.Document) (ChipCounts, []string, map[string]bool) {
+	t := tally{unnamed: map[string]bool{}, onElements: map[string]bool{}}
+	for _, tab := range d.Tabs {
+		countBlocks(tab.Body, &t)
 	}
-	unnamed := make([]string, 0, len(seen))
-	for member := range seen {
+	unnamed := make([]string, 0, len(t.unnamed))
+	for member := range t.unnamed {
 		unnamed = append(unnamed, member)
 	}
 	// Sorted, because a map is walked in no order and one document must survey
 	// the same way twice.
 	sort.Strings(unnamed)
-	return chips, unnamed
+	return t.chips, unnamed, t.onElements
 }
 
 // countBlocks walks paragraphs and table cells, because a chip in a cell is a
 // chip in the document.
-func countBlocks(bs []docs.Block, chips *ChipCounts, seen map[string]bool) {
+func countBlocks(bs []docs.Block, t *tally) {
 	for _, b := range bs {
 		if b.Paragraph != nil {
 			for _, r := range b.Paragraph.Runs {
-				count(r, chips, seen)
+				count(r, t)
 			}
 		}
 		for _, row := range b.Table {
 			for _, cell := range row {
-				countBlocks(cell.Blocks, chips, seen)
+				countBlocks(cell.Blocks, t)
 			}
 		}
 	}
@@ -203,19 +249,30 @@ func countBlocks(bs []docs.Block, chips *ChipCounts, seen map[string]bool) {
 // inside one is in no tab's blocks and is not counted here: that is the same
 // hole suggestions inside footnotes already fall into, and it is written down
 // in docs/backlog rather than guessed at.
-func count(r docs.Run, chips *ChipCounts, seen map[string]bool) {
+func count(r docs.Run, t *tally) {
+	if r.Kind != docs.KindText {
+		// Every kind of run carries its own suggestion id lists, and
+		// suggestions.All reads the text ones alone. Whichever of these the
+		// pending walk also saw is deleted by the caller.
+		for _, id := range r.InsertionIDs {
+			t.onElements[id] = true
+		}
+		for _, id := range r.DeletionIDs {
+			t.onElements[id] = true
+		}
+	}
 	switch r.Kind {
 	case docs.KindPerson:
-		chips.Person++
+		t.chips.Person++
 	case docs.KindDate:
-		chips.Date++
+		t.chips.Date++
 	case docs.KindRichLink:
-		chips.RichLink++
+		t.chips.RichLink++
 	case docs.KindUnknown:
 		member := "no member at all"
 		if r.Detail != nil && r.Detail.Member != "" {
 			member = r.Detail.Member
 		}
-		seen[member] = true
+		t.unnamed[member] = true
 	}
 }

@@ -128,7 +128,7 @@ func TestURLIsACallTheGuardCarries(t *testing.T) {
 	}
 }
 
-// Places is the one rule read marks from and comments reports from, so the four
+// Places is the one rule read marks from and comments reports from, so the five
 // shapes it refuses are named here rather than left to the two callers.
 func TestPlacesRefusesEveryRangeThatNamesNoPosition(t *testing.T) {
 	d := &Document{Tabs: []Tab{
@@ -157,6 +157,11 @@ func TestPlacesRefusesEveryRangeThatNamesNoPosition(t *testing.T) {
 		{"a tab the document does not have", Range{Tab: "t.9", Start: 3, End: 9}, false},
 		{"no tab named at all", Range{Start: 3, End: 9}, false},
 		{"a range in one tab named against another", Range{Tab: "t.1", Start: 3, End: 9}, false},
+		// A header, a footer and a footnote each carry their own indexes, and
+		// the text Places measures against is the tab's body. Answering yes
+		// here would name a position in text the span was never measured in.
+		{"a span in a header, whose indexes happen to fall in the body",
+			Range{Tab: "t.0", Start: 3, End: 9, Segment: "h.headerone"}, false},
 	} {
 		if got := d.Places(c.r); got != c.want {
 			t.Errorf("Places(%+v) = %v, want %v: %s", c.r, got, c.want, c.why)

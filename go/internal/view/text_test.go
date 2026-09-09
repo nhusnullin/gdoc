@@ -559,8 +559,9 @@ func TestARealMarkerAfterTextEndingInABackslashIsNotEscaped(t *testing.T) {
 //
 // The mark of a chip carries the chip's own label, because the document shows
 // that label on screen and a reader given "[person]" cannot tell which person.
-// The label goes through the same escaping the document's own text does, so a
-// title holding "[[" cannot open a comment marker gdoc never wrote.
+// The label is escaped by escapeLabel, which is the document's own escaping with
+// the two differences that function names, so a title holding "[[" cannot open a
+// comment marker gdoc never wrote.
 func TestEveryDroppedElementNowPrintsAndWarns(t *testing.T) {
 	text, warnings := Text(fixture(t, "elements.json"))
 	for _, mark := range []string{
@@ -632,9 +633,13 @@ func TestAnUnnamedElementPrintsItsMemberAndWarns(t *testing.T) {
 	}
 }
 
-// A chip label holding one of gdoc's own markers is escaped, exactly as the
-// document's own text is. Without it a calendar entry somebody titled "[[c:X]]"
-// reads back as a comment anchor, and there is no way for the AI to tell.
+// A chip label holding one of gdoc's own markers is escaped. escapeLabel is the
+// document's own escaping with two differences, which the two tests below carry
+// by name: the label is read in a window holding the placeholder's own closing
+// bracket, so its last rune is escaped where a run's last rune is written bare,
+// and a newline inside it becomes a space rather than nothing. Without any of it
+// a calendar entry somebody titled "[[c:X]]" reads back as a comment anchor, and
+// there is no way for the AI to tell.
 func TestAChipLabelIsEscapedLikeAnyOtherText(t *testing.T) {
 	raw := `{"documentId":"D","body":{"content":[
 		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
@@ -650,8 +655,57 @@ func TestAChipLabelIsEscapedLikeAnyOtherText(t *testing.T) {
 	// The escape goes in front of the first character of the pair and the walk
 	// then advances by one rune, not two, because two literals can share a
 	// character. So "{+" reads back as "\{+" and not as "\{\+".
-	want := `[link: \{+not a suggestion\+} \[[c:X\]]]`
+	//
+	// The label's own last "]" is escaped as well, because the label is read in
+	// a window that carries the placeholder's own closing bracket behind it.
+	want := `[link: \{+not a suggestion\+} \[[c:X\]\]]`
 	if !strings.Contains(text, want) {
 		t.Errorf("text = %q, want it to carry %q", text, want)
+	}
+}
+
+// A label's last character is escaped against the bracket the placeholder puts
+// behind it. Without the window a title ending in "]", which is nothing more
+// exotic than a file somebody named "Q3 plan [draft]", merges with that bracket
+// and puts a "]]" in the text that gdoc never wrote.
+func TestALabelEndingInABracketDoesNotMergeWithThePlaceholders(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":2,"richLink":{"richLinkId":"kix.l1",
+		     "richLinkProperties":{"title":"Q3 plan [draft]","uri":"https://example.com"}}},
+		   {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := Text(d)
+	want := `[link: Q3 plan [draft\]]`
+	if !strings.Contains(text, want) {
+		t.Errorf("text = %q, want it to carry %q", text, want)
+	}
+	if strings.Contains(text, `draft]]`) {
+		t.Errorf("text = %q, want no unescaped closing marker in it", text)
+	}
+}
+
+// A newline inside a label becomes a space. The document's own text is written
+// in chunks and the chunking carries the paragraph break, so escapeAt drops the
+// newline; a label has no chunking, so dropping it there glues the words either
+// side of it together and the label says something the document does not.
+func TestANewlineInALabelBecomesASpace(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":2,"richLink":{"richLinkId":"kix.l1",
+		     "richLinkProperties":{"title":"Q3\nplan","uri":"https://example.com"}}},
+		   {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := Text(d)
+	if !strings.Contains(text, `[link: Q3 plan]`) {
+		t.Errorf("text = %q, want the newline written as a space", text)
 	}
 }

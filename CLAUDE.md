@@ -197,7 +197,7 @@ body says `SUGGEST`.
 a comment or on a reply. Nothing in a comment id says who wrote it, so the guard
 cannot tell gdoc's own comment from somebody else's, and no command needs
 either method. The milestone that needs one adds it back beside its caller, the
-way `GrantInPlace` returns at M7. `uploadShapes` is `multipart` alone for a
+way `GrantInPlace` returns at M7b. `uploadShapes` is `multipart` alone for a
 related reason: a resumable create is two legs, the guard carries neither the
 `PUT` nor `upload_id`, so the shape could never finish and a half-permitted
 route reads as a working one. M6 opened the multipart half of that list, and
@@ -620,10 +620,15 @@ Rules that hold across all four:
   on 2026-09-06, and `supportsAllDrives` is on `files.get` instead. Sending a
   parameter the method does not define is one the server may reject, and it
   would take every `--witness` run with it.
-- Pictures, drawings, equations and objects print as `[image]`, `[drawing]`,
-  `[equation]` and `[object]` placeholders, each with a warning. `[object]` is
-  the embedded object the read could not classify: calling it an image would be
-  a guess. Reading any of them is
+- **Every placeholder run warns, chips and breaks included.** Pictures,
+  drawings, equations and objects print as `[image]`, `[drawing]`, `[equation]`
+  and `[object]`, and the seven members M7 stopped dropping print as their own
+  marks; each one appends a warning naming what the read did not take from it.
+  That was four kinds before M7 and is twelve now, so a policy with eight person
+  chips and three page breaks answers with eleven warnings. A skill that reads a
+  non-empty `warnings` list as a degraded read has to read the messages instead
+  of counting them. `[object]` is the embedded object the read could not
+  classify: calling it an image would be a guess. Reading any of them is
   `docs/backlog/read-pictures-and-drawings.md`.
 - **A paragraph element the decoder cannot name is a run, never a hole.** Read
   the section below: until M7 seven of the eleven members of `ParagraphElement`
@@ -675,6 +680,24 @@ owner is the fact that mattered. The escaping is not tidiness either: a
 calendar entry titled `[[c:X]]` would otherwise read back as a comment anchor
 gdoc never wrote, and nothing downstream could tell. The rest of a chip's
 detail, an email address or a link's target, reaches `--structure` instead.
+
+Two things about that escaping and that label are the M7 review's, and both are
+the same argument as the paragraph above.
+
+- **A person chip shown as an address is labelled with the address.** The Docs
+  reference documents `name` as what is shown "instead of the person's email
+  address", so a chip displaying the address carries no name at all, and reading
+  `name` alone printed a bare `[person]` on exactly the chip whose identity was
+  on screen. `rawPerson.label` falls back to `email`.
+- **The label is escaped in a window that carries the placeholder's own closing
+  bracket.** `escapeAt` looks one rune ahead, so a string's last rune is always
+  written bare, and a file somebody named `Q3 plan [draft]` printed as
+  `[link: Q3 plan [draft]]`, with a `]]` in the text gdoc never wrote. A newline
+  inside a label becomes a space rather than nothing: the document's own text is
+  written in chunks that carry the paragraph break, and a label has no chunking,
+  so dropping it glues the words either side together. Escaping a single `[` or
+  `]` inside a placeholder is the wider convention question, and it stays where
+  it already is, in `docs/backlog/escaping-across-run-boundaries.md`.
 
 **A horizontal rule prints `[rule]` and not `---`.** The footnote separator is
 already `---`, and one line meaning two things is a line neither of them can be
@@ -750,20 +773,41 @@ Four things about the fix are decisions rather than details.
 - **The `default` arm reports rather than returns false, and that is the wider
   fix.** An element gdoc cannot name is still a run, carrying `KindUnknown` and
   the member name in `Detail.Member`, so it prints `[unknown: member]` with a
-  warning. Seven kinds went missing because the default arm vanished; the eighth
+  warning. It carries the member's own `suggestedInsertionIds` and
+  `suggestedDeletionIds` too, read off whatever the element did name, because
+  all eleven documented members carry those two lists and the twelfth will. A
+  run that kept the name and dropped the ids would be a pending change `read`
+  prints with no markers and the survey counts in neither number, which is the
+  same defect one field in. A member whose value is not an object says nothing
+  about being suggested and does not fail the read. Seven kinds went missing because the default arm vanished; the eighth
   member Google adds must not. A decoder that drops what it does not recognise
   makes every reader downstream confidently wrong, and that is the class of
   defect, not the seven names.
 - **Every one of the seven carries its own suggestion id lists**, exactly as a
   text run does, so a chip inside a pending insertion prints inside the
-  insertion's markers and its id reaches `pending` like any other.
-- **The index arithmetic changed, and `propose` has a test for it.** A chip used
-  to be a hole the walk skipped while the document still numbered it, so words
-  either side of one read as one string in the walk and were two spans in the
-  document. `matches` refuses a span longer than the words in it, which held by
-  luck across a chip and holds by construction now that a chip is a non-text
-  run. A quote crossing any of the seven is refused naming what it crossed, and
-  that is a behaviour change in a shipped write command with its own test.
+  insertion's markers with the insertion's own id. **It does not reach
+  `pending`.** `suggestions.walker.paragraph` reads text runs alone, which is
+  deliberate for the two cases it was written for, a footnote's number and a
+  picture, and M7 widened what falls into it: a suggestion carried only by a
+  chip, a break, a rule or an auto text is printed by `read` and listed by
+  nothing. `restyle --dry-run` counts those ids itself, as
+  `suggestions.on_elements`, so the survey cannot answer "nothing to protect"
+  over one. The listing half is
+  `docs/backlog/suggestions-on-elements-are-not-listed.md`, and closing it is a
+  decision about what `pending` reports as the suggested words.
+- **A chip is a run now, and `propose`'s walk still skips it, so the refusal it
+  used to make by luck it now makes by construction.** A chip used to vanish at
+  decode while the document still numbered it, so words either side of one read
+  as one string in the walk and were two spans in the document. It is a run this
+  walk skips instead, because `index` reads text runs alone, and the numbering
+  jumps the same way: `matches` computes the same over-long span and refuses it.
+  So the observable behaviour did not change, and the guarantee stopped resting
+  on the decoder dropping something. A quote crossing any of the seven is
+  refused, and the message names the crossing rather than saying the words were
+  not found; it does not name which of the seven it crossed, because `FindSpan`
+  prints a fixed example list. `TestAQuoteCrossingAChipIsRefused` in
+  `internal/propose` is the pin, and it says in its own words that the rule has
+  to hold for the reason rather than by luck.
 - **The fixture is built from the reference, not measured.** The Docs API
   reference documents every field of all seven, so
   `go/internal/docs/testdata/elements.json` is written from it with placeholder
@@ -793,11 +837,21 @@ tab, the way `Places` is one rule with two ways in.
   document with a top-level `body` and no tabs, and its ranges sit beside that
   body. Reading the body from one place and the ranges from another would report
   none on exactly the documents whose ranges are at the top level.
-- **`Range` gained `Segment`.** A named range span names the header, footer or
-  footnote it sits in, and a header span read as a body span names a position
-  the body does not have, so `Places` would answer about the wrong text. It is
-  empty on every comment anchor, because the measured `commentAnchors` shape
-  carries no segment id, so no output shape moved.
+- **`Range` gained `Segment`, and `Places` refuses a span that names one.** A
+  named range span names the header, footer or footnote it sits in, and the text
+  `Places` measures against is the tab's body: `covers` walks `t.Body` alone. So
+  a header span answered against the body names a position in text it was never
+  measured in, and the branch's own fixture produced exactly that, a
+  `{4, 9, h.headerone}` span that fell inside tab `t.0`'s body run and came back
+  placed. Carrying the field without reading it was the M7 review's finding: the
+  refusal is one condition, and it is behaviour-neutral for both callers today.
+  `Segment` is empty on every comment anchor, because `rawCommentAnchor` does
+  not read the field, so no output shape moved. That is the decoder and not
+  Google: the `commentAnchors` shape was measured on comments anchored in the
+  body, which carry no segment id whatever Docs sends for a comment anchored in
+  a header, a footer or a footnote. Whether Docs anchors one there at all is
+  unmeasured, and it is
+  `docs/backlog/comment-anchors-in-headers-and-footnotes.md`.
 - **`docs.NamedRangesURL` is the narrowed read, and no command calls it yet.**
   The whole document answers with the ranges already, so the survey takes them
   out of the read it has rather than making a fourth request. The narrowed read
@@ -824,7 +878,9 @@ with the document at `LevelSuggest` and no grant, like every read.
 
 - **Three reads, not four.** The comment listing, the Docs read, and the docx
   export for the witness. The named ranges come out of the Docs read, which
-  carries them already.
+  carries them already. `internal/restyle`'s own package doc said four, and the
+  M7 review corrected it: a count in a doc comment that the code below it
+  contradicts is read before the code is.
 - **The listing goes out before the Docs read**, which is the order every poll
   in this binary holds, and
   `TestRestyleListsTheCommentsBeforeItReadsTheDocument` is what stops a later
@@ -857,7 +913,15 @@ with the document at `LevelSuggest` and no grant, like every read.
 
 **`nothing_to_protect` is a fact about four things being zero, never a
 recommendation.** No threads, no pending suggestions, no chips, and no paragraph
-element the decoder could not name. The fourth is the one worth writing down: a
+element the decoder could not name. Pending is two counts rather than one:
+`pending` is `suggestions.All`'s, and `on_elements` is the ids on the runs that
+walk skips, which is every run that is not text. Counting only the first
+answered "nothing to protect" over a suggested page break. The rule is what the
+listing can report and not whether the run holds text: a footnote reference
+carries its number and is counted here all the same, because the pending walk
+skips it too. The two are in different units, which the field names cannot say:
+`pending` counts the insert-and-delete entries a replacement makes two of, and
+`on_elements` counts ids, so adding them is comparing two things. The fourth is the one worth writing down: a
 document holding an element gdoc has never seen holds something no count here
 speaks for, so the survey warns naming the member and refuses to say there is
 nothing to protect. Whether a document is worth restyling is Nail's, reading the
@@ -1417,7 +1481,7 @@ The 🤖 comment a withdrawn proposal made stays where it is. `commentWrites`
 carries `POST` and nothing else, so deleting or editing a comment is a write the
 guard does not carry, and no command here needs one. The skill replies to the
 comment saying the proposal was withdrawn. A milestone that needs `PATCH` or
-`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7.
+`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7b.
 
 **The 🤖 prefix is the only record of authorship there is.** The Docs API cannot
 set an author, so everything gdoc writes is signed by whoever is logged in.

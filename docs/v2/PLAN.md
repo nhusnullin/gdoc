@@ -541,8 +541,11 @@ the seven is refused naming what it crossed.
 already had a branch for a document with a body and no tabs, and reading the
 body from one place and the ranges from another would report none on exactly the
 documents whose ranges are at the top level. `Range` gained `Segment`, because a
-header span read as a body span names a position the body does not have. It is
-empty on every comment anchor, so no output shape moved.
+header span read as a body span names a position the body does not have.
+`Places` refuses a span that names one, which the M7 review added: the field was
+carried and never read, so a header span whose indexes happened to fall in the
+body came back placed. It is empty on every comment anchor, so no output shape
+moved.
 
 `nothing_to_protect` reads four things and not three. No threads, no pending
 suggestions, no chips, and no paragraph element the decoder could not name: a
@@ -550,7 +553,12 @@ document holding one holds something no count here speaks for, so the survey
 warns naming the member and refuses to say there is nothing to protect. The
 pending count is `suggestions.All`'s and not `List`'s, because `List` drops a
 whitespace-only suggestion and that is still something a replacement would
-destroy. The witness is carried twice, as counts and as one line per thread,
+destroy, and it is two numbers since the M7 review: `on_elements` is the ids
+carried only by the runs that listing skips, which is every run that is not
+text, so the survey cannot answer nothing to protect over a suggested page
+break. The two are in different units, `pending` counting the insert-and-delete
+entries and `on_elements` counting ids. The witness
+is carried twice, as counts and as one line per thread,
 because M7b compares before with after per thread and totals cannot answer that.
 
 `allowedModules` did not change and the module graph gained nothing: `go list -m

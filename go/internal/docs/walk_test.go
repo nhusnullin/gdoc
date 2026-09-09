@@ -471,6 +471,27 @@ func TestTheSevenElementsDecodeIntoRuns(t *testing.T) {
 		t.Errorf("person deletion ids = %v", person.DeletionIDs)
 	}
 
+	// A chip that shows the address carries no name at all: the reference
+	// documents name as what is shown "instead of the person's email address",
+	// and email as always present. A bare [person] tells a reader somebody is
+	// there and not who, which for a policy naming its owner is the fact that
+	// mattered, so the label falls back to the address.
+	t.Run("a person chip shown as an address is labelled with it", func(t *testing.T) {
+		raw := `{"documentId":"D","body":{"content":[
+			{"startIndex":1,"endIndex":3,"paragraph":{"elements":[
+			  {"startIndex":1,"endIndex":2,"person":{"personId":"kix.person2",
+			    "personProperties":{"email":"placeholder@example.com"}}},
+			  {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+		d, err := Parse([]byte(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := d.Tabs[0].Body[0].Paragraph.Runs[0]
+		if got.Detail == nil || got.Detail.Label != "placeholder@example.com" {
+			t.Errorf("person detail = %+v, want the address as the label", got.Detail)
+		}
+	})
+
 	date := byKind[KindDate]
 	if date.Detail == nil || date.Detail.ID != "kix.date1" || date.Detail.Label != "Sep 9, 2026" {
 		t.Errorf("date detail = %+v", date.Detail)
@@ -571,5 +592,53 @@ func TestAnElementWithNoMemberIsStillARun(t *testing.T) {
 	}
 	if runs[0].Detail != nil && runs[0].Detail.Member != "" {
 		t.Errorf("detail = %+v, want no member named", *runs[0].Detail)
+	}
+}
+
+// TestAnElementTheWalkCannotNameStillCarriesItsSuggestionIDs is the same rule
+// one field in. Every named member carries suggestedInsertionIds and
+// suggestedDeletionIds, so the twelfth Google adds will carry them too. Reading
+// the member name and dropping the ids leaves a pending change that read prints
+// with no markers and that restyle --dry-run counts in neither number, which is
+// the confidently-wrong reader the default arm exists to prevent.
+func TestAnElementTheWalkCannotNameStillCarriesItsSuggestionIDs(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":5,"textRun":{"content":"See "}},
+		   {"startIndex":5,"endIndex":6,"tomorrowsElement":{"suggestedInsertionIds":["suggest.x1"],
+		    "suggestedDeletionIds":["suggest.x2"]}},
+		   {"startIndex":6,"endIndex":9,"textRun":{"content":".\n"}}]}}]}}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := paragraphs(d.Tabs[0].Body)[0].Runs[1]
+	if got := strings.Join(r.InsertionIDs, ","); got != "suggest.x1" {
+		t.Errorf("insertion ids = %q, want %q", got, "suggest.x1")
+	}
+	if got := strings.Join(r.DeletionIDs, ","); got != "suggest.x2" {
+		t.Errorf("deletion ids = %q, want %q", got, "suggest.x2")
+	}
+}
+
+// A member whose value is not an object carries no ids, and it must not end the
+// decode either: the element's position and its name are still facts, and a
+// read that failed over a member gdoc has never seen would take the whole
+// document with it.
+func TestAnUnnamedMemberThatIsNotAnObjectStillDecodes(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":2,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":2,"tomorrowsFlag":true}]}}]}}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := paragraphs(d.Tabs[0].Body)[0].Runs[0]
+	if r.Detail == nil || r.Detail.Member != "tomorrowsFlag" {
+		t.Fatalf("detail = %+v, want the member name", r.Detail)
+	}
+	if len(r.InsertionIDs) != 0 || len(r.DeletionIDs) != 0 {
+		t.Errorf("ids = %v/%v, want none", r.InsertionIDs, r.DeletionIDs)
 	}
 }

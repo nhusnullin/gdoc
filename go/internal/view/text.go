@@ -45,7 +45,8 @@ var escapePairs = []string{openInsertion, openDeletion, shutInsertion, shutDelet
 // A chip's mark carries the chip's label as well, because the document shows
 // that label on screen: "[person]" tells a reader there is somebody there and
 // not who, which for a policy naming its owner is the fact that mattered. The
-// label goes through the document's own escaping on the way in.
+// label goes through escapeLabel on the way in, which is the document's own
+// escaping with the two differences that function names.
 //
 // A horizontal rule prints as [rule] rather than as "---", which is what the
 // footnote separator already is. Two meanings for one line is a line neither of
@@ -66,17 +67,17 @@ var placeholders = map[string]struct{ label, noun, why string }{
 }
 
 // mark is what one placeholder run prints as, with the label the document shows
-// after a colon when there is one. The label is escaped exactly as the
-// document's own text is: a calendar entry titled "[[c:X]]" would otherwise
-// read back as a comment anchor gdoc never wrote, and nothing downstream could
-// tell.
+// after a colon when there is one. The label goes through escapeLabel, which is
+// the document's own escaping with the two differences escapeLabel names: a
+// calendar entry titled "[[c:X]]" would otherwise read back as a comment anchor
+// gdoc never wrote, and nothing downstream could tell.
 func mark(r docs.Run) string {
 	p, ok := placeholders[r.Kind]
 	if !ok {
 		p = placeholders[docs.KindObject]
 	}
 	if label := detailLabel(r); label != "" {
-		return "[" + p.label + ": " + escapeMarkup(label) + "]"
+		return "[" + p.label + ": " + escapeLabel(label) + string(labelShut)
 	}
 	return "[" + p.label + "]"
 }
@@ -576,17 +577,36 @@ func escapeAt(rs []rune, i int) string {
 	return string(rs[i])
 }
 
-// escapeMarkup is escapeAt over a whole string, for text that carries no
-// document index of its own: a chip's label, which sits inside a placeholder
-// rather than in the run of text around it.
-func escapeMarkup(s string) string {
-	rs := []rune(s)
+// escapeLabel is escapeAt over a chip's label, which carries no document index
+// of its own: it sits inside a placeholder rather than in the run of text
+// around it.
+//
+// Two things about it are not escapeAt over the string as written.
+//
+// The window carries the placeholder's own closing bracket. escapeAt looks one
+// rune ahead, so a string's last rune is always written bare, and a title
+// ending in "]" then merges with the bracket mark puts behind it: the text
+// carries a "]]" that gdoc never wrote, on a document whose author only named a
+// file "Q3 plan [draft]". Reading the label in a window that ends with that
+// bracket is what makes the last rune half a pair like any other.
+//
+// A newline becomes a space rather than nothing. escapeAt drops one because the
+// document's own text is written in chunks and the chunking carries the
+// paragraph break; a label has no chunking, so dropping it glues the words
+// either side of it together.
+func escapeLabel(s string) string {
+	rs := []rune(strings.ReplaceAll(s, "\n", " ") + string(labelShut))
 	var b strings.Builder
-	for i := range rs {
+	for i := 0; i < len(rs)-1; i++ {
 		b.WriteString(escapeAt(rs, i))
 	}
 	return b.String()
 }
+
+// labelShut is the bracket mark writes behind a label, and escapeLabel reads
+// the label with it on the end. One constant, because the two have to be the
+// same character for the window to mean anything.
+const labelShut = ']'
 
 func isEscapePair(a, b rune) bool {
 	pair := string([]rune{a, b})

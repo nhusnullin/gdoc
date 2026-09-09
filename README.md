@@ -565,10 +565,16 @@ pending marked in it:
 | `{-text-}[s:ID]` | a pending suggested deletion, and its id |
 | `[[c:ID]]text[[/c]]` | the text a comment is attached to, and the comment id |
 | `<!-- tab t.0: Title -->` | the tab that follows, on a document with more than one |
-| `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet, with a warning |
+| `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet |
 | `[person: Ada Lovelace]`, `[date: Sep 9, 2026]`, `[link: Q3 planning]` | a smart chip, with the label it shows |
 | `[auto text: PAGE_NUMBER]`, `[page break]`, `[column break]`, `[rule]` | the rest of what a paragraph can hold |
 | `[unknown: member]` | something in the document this version of gdoc has never seen |
+
+Every placeholder row in that table comes back with a warning naming what the
+read did not take from it, the chips and the breaks included. A policy with
+eight person chips and three page breaks in it answers with eleven warnings, so
+a non-empty `warnings` list does not on its own mean the read went wrong: read
+the messages rather than counting them.
 
 If the document's own text contains one of those markers, it comes back with a
 backslash in front of it, and a backslash the author typed comes back doubled.
@@ -667,7 +673,7 @@ no document and to no file:
   "threads": { "open": 3, "resolved": 7,
                "witness": { "anchored": 9, "detached": 1, "unmatched": 0 },
                "witnessed": [ { "id": "AAABc...", "witness": "anchored", "resolved": false } ] },
-  "suggestions": { "pending": 2 },
+  "suggestions": { "pending": 2, "on_elements": 0 },
   "chips": { "person": 4, "date": 1, "rich_link": 2 },
   "named_ranges": [ { "id": "kix.abc123", "name": "gdoc-checklist" } ],
   "nothing_to_protect": false
@@ -690,6 +696,20 @@ four, not advice: whether a document is worth restyling is yours to decide from
 the counts. The pending count includes a suggestion whose text is only
 whitespace, which the `suggestions` listing leaves out, because it is still
 something a rewrite would destroy.
+
+Pending is two numbers, and they are counted in different units, so do not add
+them together. `pending` counts the entries the pending walk finds, one per
+suggested insertion and one per suggested deletion, so a replacement counts as
+2 there. It is not the length of the `suggestions` listing: that listing leaves
+out the whitespace-only ones this count keeps, as the paragraph above says.
+`on_elements` is counted as ids, so the same replacement counts as 1.
+
+`on_elements` is the suggestions that listing cannot report. It reads text runs
+alone, so a suggestion carried only by a run it skips reaches it in no form: a
+chip, a page break, a horizontal rule, an auto text, a picture, a footnote
+reference. Counting nothing for them would answer "nothing to protect" over a
+change somebody is waiting on. A run with one is still printed by `read`, inside
+its markers, with its id.
 
 `revision_id` is there for the restyle that does not exist yet: it will hand the
 survey back and refuse a document that moved in between. Nothing reads it today.

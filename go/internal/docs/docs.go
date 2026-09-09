@@ -168,8 +168,11 @@ type Detail struct {
 // for the body, which is where every span gdoc computes lives. It is carried
 // rather than dropped because a header span read as a body span names a
 // position the body does not have, and Places would then answer about the
-// wrong text. Nothing sets it on a comment anchor: the measured shape carries
-// no segment id.
+// wrong text. Nothing sets it on a comment anchor: rawCommentAnchor reads
+// startIndex and endIndex and no segment id, and the shape was measured on
+// comments anchored in the body, which would carry none whatever Docs sends for
+// one anchored in a header or a footnote. So the refusal below cannot fire on
+// that path today, and docs/backlog holds the unmeasured question.
 type Range struct {
 	Tab     string `json:"tab"`
 	Start   int    `json:"start"`
@@ -209,8 +212,15 @@ func (d *Document) NamedRanges() []NamedRange {
 func (d *Document) MultiTab() bool { return len(d.Tabs) > 1 }
 
 // Places says whether r names a position in this document: it ends after it
-// starts, it names a tab the document has, and both its endpoints fall inside
-// that tab's text.
+// starts, it names a tab the document has, it names no segment, and both its
+// endpoints fall inside that tab's text.
+//
+// The segment is refused rather than ignored. A header, a footer and a footnote
+// each carry their own indexes, and the text those indexes are read against
+// here is the tab's body, so a header span answered against the body names a
+// position in text it was never measured in. Every span gdoc computes today is
+// a body span, so nothing changes for the two callers; what changes is the
+// answer a segmented span gets, which is now no rather than a coincidence.
 //
 // One rule, because two commands answer from it. read marks a comment's range
 // in the text and comments prints it as a position, and a range one of them
@@ -239,7 +249,7 @@ func (d *Document) Places(r Range) bool {
 // would open a marker its own text never closes. That is the half a pair the
 // escaping exists to make impossible, so each tab answers for itself.
 func (t Tab) Places(r Range) bool {
-	return r.Start < r.End && r.Tab == t.ID && t.covers(r.Start, r.End)
+	return r.Start < r.End && r.Tab == t.ID && r.Segment == "" && t.covers(r.Start, r.End)
 }
 
 // covers says whether both indexes fall inside this tab's text runs. An index
