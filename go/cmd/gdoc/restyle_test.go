@@ -1,6 +1,8 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -287,13 +289,16 @@ func surveyOf(t *testing.T, docID, revisionID string, tabs int) string {
 		docID, revisionID, tabs)
 }
 
-// applyWire is the fresh read the apply makes and the batch it sends.
+// applyWire is the fresh read the apply makes, the batch it sends, and the
+// three reads the read-back makes once that batch has landed.
 func applyWire(t *testing.T) *fakeWire {
 	t.Helper()
 	return &fakeWire{answers: []*answer{
 		{method: "GET", match: "docs.googleapis.com", json: readFixture(t, "single-tab.json")},
 		{method: "POST", match: ":batchUpdate",
 			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheBatch"}}`},
+		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
+		{method: "GET", match: "/export?", bytes: witnessExport(t)},
 	}}
 }
 
@@ -558,5 +563,279 @@ func TestRestyleRefusesNeitherFlag(t *testing.T) {
 	err, _ := got["error"].(string)
 	if !strings.Contains(err, "--dry-run") || !strings.Contains(err, "--from") {
 		t.Errorf("error = %q, want it to name both halves", err)
+	}
+}
+
+// The read-back, both halves. Under LevelSuggest a write had two bars, the
+// guard's refusal and writeMode; once direct edit is open for one document that
+// document has no second bar, and reading it back is what stands in its place.
+
+// plainDocument is one NORMAL_TEXT paragraph and nothing else, so the plan over
+// it is the page, one paragraph and one run: three requests, and three checks
+// the read-back can make.
+const plainDocument = `{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "A plain policy",
+  "revisionId": "ALm37BXplain",
+  "tabs": [{"tabProperties": {"tabId": "t.0"}, "documentTab": {"body": {"content": [
+    {"startIndex": 1, "endIndex": 14, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [{"startIndex": 1, "endIndex": 14,
+                    "textRun": {"content": "The supplier\n"}}]}}]}}}]
+}`
+
+// styledDocument is that document as it reads once the house style landed on
+// it. Every value here is written out as a literal, because a test that reads
+// house.yaml to say what the house style is would follow it anywhere.
+const styledDocument = `{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "A plain policy",
+  "revisionId": "ALm37BXafterTheBatch",
+  "tabs": [{"tabProperties": {"tabId": "t.0"}, "documentTab": {
+    "documentStyle": {
+      "pageSize": {"width": {"magnitude": 595.28, "unit": "PT"},
+                   "height": {"magnitude": 841.89, "unit": "PT"}},
+      "marginTop": {"magnitude": 62.35, "unit": "PT"},
+      "marginBottom": {"magnitude": 51, "unit": "PT"},
+      "marginLeft": {"magnitude": 51.05, "unit": "PT"},
+      "marginRight": {"magnitude": 51.05, "unit": "PT"}},
+    "body": {"content": [
+    {"startIndex": 1, "endIndex": 14, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT", "alignment": "JUSTIFIED",
+                         "lineSpacing": 115},
+      "elements": [{"startIndex": 1, "endIndex": 14, "textRun": {"content": "The supplier\n",
+        "textStyle": {"weightedFontFamily": {"fontFamily": "Calibri", "weight": 400},
+                      "fontSize": {"magnitude": 12, "unit": "PT"},
+                      "foregroundColor": {"color": {"rgbColor": {}}}}}}]}}]}}}]
+}`
+
+// landedWire is a run whose style really landed: the plain document before, the
+// styled one after, and no comment to lose either way.
+func landedWire(t *testing.T) *fakeWire {
+	t.Helper()
+	return &fakeWire{answers: []*answer{
+		{method: "GET", match: "docs.googleapis.com", json: plainDocument, once: true},
+		{method: "POST", match: ":batchUpdate",
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheBatch"}}`},
+		{method: "GET", match: "/comments?", json: `{"comments": []}`},
+		{method: "GET", match: "docs.googleapis.com", json: styledDocument},
+		{method: "GET", match: "/export?", bytes: witnessExport(t)},
+	}}
+}
+
+func TestRestyleReadsTheStyleBackOutOfTheDocument(t *testing.T) {
+	// Arrange
+	stubWire(t, landedWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXplain", 1))
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	if data["verified"] != true {
+		t.Errorf("verified = %v, warnings %v, read_back %v",
+			data["verified"], warningsOf(t, got), data["read_back"])
+	}
+	rb, _ := data["read_back"].(map[string]any)
+	if rb == nil {
+		t.Fatalf("no read_back on a run that wrote a batch: %v", data)
+	}
+	landing, _ := rb["landing"].(map[string]any)
+	checks, _ := landing["checks"].([]any)
+	if len(checks) != 3 {
+		t.Fatalf("checks = %v, want one for the page, one for the paragraph and one for the run", checks)
+	}
+	for _, c := range checks {
+		one, _ := c.(map[string]any)
+		if one["held"] != true {
+			t.Errorf("check %v did not hold", one)
+		}
+	}
+	preservation, _ := rb["preservation"].(map[string]any)
+	if preservation == nil || preservation["intact"] != true {
+		t.Errorf("preservation = %v, want intact on a document with nothing in it to lose", preservation)
+	}
+}
+
+// A batch Docs accepted is not a change a reader can see. A document carrying
+// section breaks has its margins governed by its sectionStyle, and
+// updateSectionStyle is not on the in-place allowlist, so the page request can
+// be accepted and land nothing.
+func TestRestyleSaysWhenTheStyleDidNotLand(t *testing.T) {
+	w := landedWire(t)
+	w.answers[3].json = plainDocument // the read back carries no styling at all
+	stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXplain", 1))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from: %v (exit %d), want the write reported rather than failed", got, code)
+	}
+	if dataOf(t, got)["verified"] != false {
+		t.Error("verified = true over a document that carries none of the style that was sent")
+	}
+	if !hasWarning(warningsOf(t, got), "updateDocumentStyle") {
+		t.Errorf("warnings = %v, want the route that did not hold named", warningsOf(t, got))
+	}
+}
+
+// The measurement this milestone rests on: replacing a document's body
+// destroyed every comment anchor. The before-witness comes from the survey, so
+// a thread that was already detached is not read as damage this run did.
+func TestRestyleReportsAThreadThatLostItsAnchor(t *testing.T) {
+	w := landedWire(t)
+	w.answers[2].json = `{"comments": [{"id": "c1", "content": "ai? this one",
+	  "author": {"displayName": "Nail"}, "quotedFileContent": {"value": "The supplier"},
+	  "modifiedTime": "2026-09-09T10:00:00.000Z"}]}`
+	// The export answers for that thread and says it is no longer attached.
+	w.answers[4].bytes = detachedExport(t)
+	stubWire(t, w)
+	// The survey says it was anchored before the run.
+	from := tempFile(t, "survey.json", fmt.Sprintf(
+		`{"ok":true,"data":{"document_id":%q,"revision_id":"ALm37BXplain","tabs":1,
+		  "threads":{"open":1,"witnessed":[{"id":"c1","witness":"anchored"}]}}}`, fixtureDocID))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	if data["verified"] != false {
+		t.Error("verified = true on a run that detached a comment")
+	}
+	if !hasWarning(warningsOf(t, got), "detached") {
+		t.Errorf("warnings = %v, want the thread that lost its anchor named", warningsOf(t, got))
+	}
+	rb, _ := data["read_back"].(map[string]any)
+	preservation, _ := rb["preservation"].(map[string]any)
+	threads, _ := preservation["threads"].(map[string]any)
+	lost, _ := threads["lost_anchor"].([]any)
+	if len(lost) != 1 || lost[0] != "c1" {
+		t.Errorf("lost_anchor = %v, want c1", threads["lost_anchor"])
+	}
+}
+
+// detachedExport is the docx a run that broke an anchor exports as: the comment
+// is still in the file and no longer attached to any text. The export is the
+// only witness there is, because comments.list keeps reporting a destroyed
+// anchor as healthy.
+func detachedExport(t *testing.T) []byte {
+	t.Helper()
+	parts := map[string]string{
+		"word/document.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body><w:p><w:r><w:t>The supplier</w:t></w:r></w:p></w:body>
+</w:document>`,
+		"word/comments.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:comment w:id="1" w:author="Nail" w:date="2026-09-09T10:00:00Z">
+    <w:p><w:r><w:t>ai? this one</w:t></w:r></w:p>
+  </w:comment>
+</w:comments>`,
+	}
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	for name, body := range parts {
+		w, err := z.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+// The three things no Docs request can create, and the two this milestone chose
+// not to do. SPEC has gdoc write them into the document as a finishing
+// checklist; Nail's decision of 2026-09-09 is that it reports them instead.
+func TestRestyleNamesWhatItCouldNotDoAtAll(t *testing.T) {
+	stubWire(t, applyWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+	if code != 0 {
+		t.Fatalf("restyle failed: %v (exit %d)", got, code)
+	}
+	rb, _ := dataOf(t, got)["read_back"].(map[string]any)
+	steps, _ := rb["manual"].([]any)
+	if len(steps) < 3 {
+		t.Fatalf("manual = %v, want at least the three the API cannot create", rb["manual"])
+	}
+	var what, where string
+	for _, s := range steps {
+		one, _ := s.(map[string]any)
+		what += fmt.Sprint(one["what"]) + "\n"
+		where += fmt.Sprint(one["where"]) + "\n"
+	}
+	for _, want := range []string{"header", "contents", "page numbers", "bulleted", "column widths"} {
+		if !strings.Contains(what, want) {
+			t.Errorf("no manual step names %q: %v", want, what)
+		}
+	}
+	if !strings.Contains(where, "Insert > Table of contents") {
+		t.Errorf("the contents list has no menu path: %v", where)
+	}
+}
+
+// A run that wrote nothing has nothing to read back, and three reads there
+// would be answering a question nobody asked.
+func TestRestyleReadsNothingBackWhenNoBatchLanded(t *testing.T) {
+	w := landedWire(t)
+	w.answers[1] = &answer{method: "POST", match: ":batchUpdate",
+		err: errors.New("HTTP 403: the caller does not have permission")}
+	f := stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXplain", 1))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("restyle with a refused batch: %v (exit %d), want a failure", got, code)
+	}
+	if _, there := dataOf(t, got)["read_back"]; there {
+		t.Error("a run that wrote nothing must read nothing back: the document is as it was")
+	}
+	for _, c := range f.calls {
+		if strings.Contains(c.URL, "/export?") {
+			t.Error("the export ran on a document nothing was written to")
+		}
+	}
+}
+
+// A read-back the run could not make is a warning and no read-back at all.
+// Reporting a preservation half built from a listing that never arrived would
+// name every thread in the survey as gone, which is the one warning that must
+// never cry wolf.
+func TestRestyleSaysWhenItCouldNotReadTheDocumentBack(t *testing.T) {
+	w := landedWire(t)
+	w.answers[2] = &answer{method: "GET", match: "/comments?",
+		err: errors.New("HTTP 500: the backend is having a moment")}
+	stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXplain", 1))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from: %v (exit %d), want the write reported rather than failed", got, code)
+	}
+	data := dataOf(t, got)
+	if data["verified"] != false {
+		t.Error("verified = true on a run whose read-back never happened")
+	}
+	if _, there := data["read_back"]; there {
+		t.Error("a read-back that could not be made must not be printed as one")
+	}
+	if !hasWarning(warningsOf(t, got), "could not be read back") {
+		t.Errorf("warnings = %v, want one naming the read that failed", warningsOf(t, got))
 	}
 }

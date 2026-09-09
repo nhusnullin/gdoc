@@ -107,6 +107,13 @@ type ThreadWitness struct {
 type SuggestionCounts struct {
 	Pending    int `json:"pending"`
 	OnElements int `json:"on_elements"`
+	// IDs is every pending suggestion id the read could see, both the ones the
+	// listing reports and the ones only an element carries, sorted and once
+	// each. It is here for M7b's read-back, which compares what was pending
+	// before a restyle with what is pending after: two counts that do not move
+	// cannot tell one suggestion destroyed and another created from nothing
+	// having happened at all, and an id can.
+	IDs []string `json:"ids"`
 }
 
 // ChipCounts is the smart chips by kind. A chip is a live reference, so a
@@ -146,7 +153,11 @@ func Survey(in Input) (Report, []string) {
 	// The list is never null. encoding/json writes a nil slice as null, and a
 	// skill reading named_ranges must not get two shapes for the one fact that
 	// a document has none. Witnessed is built with make for the same reason.
-	r := Report{Threads: threadCounts(threads), NamedRanges: []docs.NamedRange{}}
+	r := Report{
+		Threads:     threadCounts(threads),
+		NamedRanges: []docs.NamedRange{},
+		Suggestions: SuggestionCounts{IDs: []string{}},
+	}
 	if in.Document == nil {
 		// Not an error, and not nothing to protect either. A survey with no
 		// document read knows nothing about chips, suggestions or ranges, and
@@ -163,14 +174,23 @@ func Survey(in Input) (Report, []string) {
 
 	chips, unnamed, onElements := walkTabs(in.Document)
 	r.Chips = chips
+	// Every id, from both sides, before the two are told apart. The listing's
+	// ids and the elements' ids are one set to the read-back, which asks what
+	// is still pending rather than which walk saw it.
+	pendingIDs := map[string]bool{}
+	for id := range onElements {
+		pendingIDs[id] = true
+	}
 	// An id the pending walk saw is already in Pending, so what is left is the
 	// suggestions no listing this binary prints can report.
 	for _, id := range suggestions.IDs(in.Document) {
+		pendingIDs[id] = true
 		delete(onElements, id)
 	}
 	r.Suggestions = SuggestionCounts{
 		Pending:    len(suggestions.All(in.Document)),
 		OnElements: len(onElements),
+		IDs:        sortedSet(pendingIDs),
 	}
 	for _, member := range unnamed {
 		warnings = append(warnings, fmt.Sprintf(
@@ -295,4 +315,16 @@ func count(r docs.Run, t *tally) {
 		}
 		t.unnamed[member] = true
 	}
+}
+
+// sortedSet is a set of ids as a list, in one order and never null. A map is
+// walked in no order, and a skill reading ids must not get two shapes for the
+// one fact that a document has none pending.
+func sortedSet(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for id := range m {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
 }

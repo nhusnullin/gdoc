@@ -116,6 +116,15 @@ type restyleData struct {
 	Tabs             int             `json:"tabs"`
 	Planned          plannedCounts   `json:"planned"`
 	Applied          restyle.Applied `json:"applied"`
+	// ReadBack is the document read again once the batches landed: what
+	// survived, and whether the style is really there. It is absent when no
+	// batch was applied, because a document nothing was written to has nothing
+	// to read back.
+	ReadBack *restyle.ReadBack `json:"read_back,omitempty"`
+	// Verified is the read-back's checks together. False is never a failure:
+	// the batches Docs took are in the document either way, and a caller told
+	// the run failed is a caller that runs it again.
+	Verified bool `json:"verified"`
 }
 
 // plannedCounts is the plan as counts. The requests themselves are not printed:
@@ -233,10 +242,70 @@ func applyRestyle(a *args) emit.Result {
 	applied.Warnings = nil
 	data.Applied = applied
 	data.RevisionID = applied.RevisionID
+
+	// The read-back, and it runs on a failed run too. A run that stopped at
+	// batch twelve is exactly the run somebody needs the preservation facts
+	// for, and the half-styled document is still a document whose comments
+	// either survived or did not. What is skipped is a run that wrote nothing:
+	// there the document is as it was, and three reads would answer a question
+	// nobody asked.
+	if applied.Batches > 0 {
+		rb, notes := readBack(ctx, r, *saved, requests, plan)
+		data.ReadBack = rb
+		if rb != nil {
+			data.Verified = rb.Verified
+		}
+		warns = append(warns, notes...)
+	}
 	if applyErr != nil {
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: applyErr.Error()}
 	}
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
+}
+
+// readBack is the document read again once the styling landed, and the two
+// halves of the verification made from it.
+//
+// The three reads are the survey's three, in the survey's order: the comment
+// listing, the Docs read, the docx export. The listing goes first for the
+// reason every poll in this binary puts it first, and the export is last
+// because it is the witness on top of the threads rather than a read the
+// answer needs.
+//
+// The Docs read is made here rather than through docs.Fetch because both halves
+// want it: the preservation half wants the decoded tree, and the landing half
+// wants the bytes, which carry the styling internal/docs deliberately does not
+// decode. One read, two readers, so the two halves cannot be looking at
+// different documents.
+//
+// A read that failed is a warning and no read-back at all. Reporting a
+// preservation half made from a listing that never arrived would name every
+// thread in the survey as gone, which is the one warning that must never cry
+// wolf.
+func readBack(ctx context.Context, r *reach, before restyle.Report, sent []map[string]any, plan restyle.Plan) (*restyle.ReadBack, []string) {
+	raws, err := comments.Fetch(ctx, r.session, r.id, nil)
+	if err != nil {
+		return nil, []string{fmt.Sprintf(
+			"the comment listing could not be read back, so nothing here says what survived the restyle: %v", err)}
+	}
+	var raw json.RawMessage
+	if err := r.session.GetJSON(ctx, docs.URL(r.id), &raw); err != nil {
+		return nil, []string{fmt.Sprintf(
+			"the document could not be read back, so nothing here says what survived the restyle or whether the style landed: %v", err)}
+	}
+	d, err := docs.Parse(raw)
+	if err != nil {
+		return nil, []string{fmt.Sprintf(
+			"the document was read back and did not decode, so nothing here says what survived the restyle: %v", err)}
+	}
+	f, exportErr := exportFile(ctx, r)
+	rb, notes := restyle.Verify(before, restyle.Input{
+		Document:  d,
+		Comments:  raws,
+		Export:    f,
+		ExportErr: exportErr,
+	}, raw, sent, plan)
+	return &rb, notes
 }
 
 // savedSurvey is the envelope the survey run printed, read back. Data is the
