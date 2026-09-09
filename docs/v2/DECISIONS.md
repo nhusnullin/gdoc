@@ -1074,6 +1074,58 @@ gdoc reports it as `TLS handshake timeout` on the token refresh, which reads
 like an expired token. A mobile hotspot fixes it. Never work around it by
 letting gdoc fall back to TLS 1.2.
 
+## 2026-09-09. The guard carries `files.copy`, for one source, and it is a decision rather than a rule satisfied.
+
+Serves principle 3, and stretches it further than anything before it. Nail's
+decision, recorded here because M2's rule does not cover it.
+
+M2's rule is that a guard door with no **production** caller is deleted rather
+than carried. That is why `GrantInPlace` went, and why it came back at M7b
+beside the line that calls it. `Policy.AllowCopy` has no production caller and
+is not going to get one: its only caller is `TestLiveRestylePreservesTenFeatures`,
+the ten-feature preservation run. So the rule says delete it, and the decision is
+to keep it anyway.
+
+**What buys it is the measurement it makes possible.** The acceptance for an
+in-place restyle needs a document holding all ten features, an anchored comment,
+a pending suggestion, a smart chip, an image and a Google Drawing among them.
+`tools/copyprobe` showed on the same day that the first several can be built
+from scratch through the API, and that the image and the Drawing cannot. Without
+a copy route the ideal document is made by hand in a browser before every run,
+which is a test nobody runs, which is an acceptance that does not exist.
+`files.copy?copyComments=true` carries the threads still anchored and the
+pending suggestions with them, measured, so the run is unattended.
+
+**What it costs is worth naming rather than discovering.** A copy is the widest
+reach a handed-in id has ever produced. Every other route out of `LevelSuggest`
+reads: the export hands back the bytes, and that is all. A copy takes a full
+duplicate of somebody's document, comments and pending suggestions included,
+into gdoc's own folder, where `learnFromCreate` puts it at `LevelFull`, which is
+trash-and-rename. Nothing about the source changes and nothing about the source
+becomes more reachable, so principle 3's claim still holds as written. It is
+still the largest thing a handed-in id has ever produced, and a reader should
+meet that as a decision somebody took rather than as a door somebody opened.
+
+Four rules hold it down, and each is pinned by a test in
+`go/internal/guard/copy_test.go`:
+
+- **The grant is one source and one run.** `AllowCopy(id)` in the shape
+  `AllowReject` and `AllowCreateIn` already have. A second call replaces the
+  first, nothing writes it to disk, and no flag turns it on for every document.
+- **It admits no id.** A copy of a file nobody handed in is refused by the
+  file check, before the grant is read. Two doors, still.
+- **The copy lands in the one folder the run named.** A `files.copy` that omits
+  `parents` lands in the **source's** own parent, a folder gdoc was never given.
+  So the copy is a create in the transport's grammar too: `filesCopy` is
+  `filesCollection`'s rule for the second create shape, `isCreate` reads it, and
+  the same one-parent check and the same id learning run on it. A path only one
+  of the two called a create would carry an unparented duplicate and learn
+  nothing from the answer.
+- **Three parameters.** `copyComments`, `supportsAllDrives` and `fields`.
+  `ocr`, `keepRevisionForever`, `ignoreDefaultVisibility`, `enforceSingleParent`
+  and `includePermissionsForView` are refused with everything else the allowlist
+  does not name.
+
 ## 2026-09-07. A replace proposal cannot be fully withdrawn by a delete. Decided: reject gdoc's own.
 
 Found by the first live write test, on throwaway documents in the test folder,

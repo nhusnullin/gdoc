@@ -162,13 +162,13 @@ Key design decisions and why:
 
 The first draft made copying a capability of any policy holding a create folder. `cmdPropose` is exactly that shape, so every `propose` run on a document Nail handed in could have copied it and learned the copy at `LevelFull`: direct edit, no allowlist, `PATCH`.
 
-- [ ] `Policy.AllowCopy(sourceID)` in the shape of `AllowReject` and `AllowCreateIn`: per-run, one source, dying with the process.
-- [ ] **The transport half.** `isCreate` keys the parent check and `learnFromCreate` on `filesCollection(u.Path)`, and `{id}/copy` is not the files collection, so a copy would otherwise be carried with no parent check and no id learned.
-- [ ] A copy omitting `parents` lands in the **source's** parent, a folder gdoc was never given, so the `len(parents) != 1` rule must be reached rather than skipped.
-- [ ] Parameters: `copyComments`, `supportsAllDrives`, `fields`, nothing else.
-- [ ] **Write this down as Nail's decision, not as a rule satisfied.** M2's rule is that a guard door needs a *production* caller, and this one's only caller is a live test. A copy also takes a full duplicate of a handed-in document into gdoc's folder at `LevelFull`, which is the widest reach any handed-in id has produced. `tools/copyprobe` shows a document with an anchored comment and a pending suggestion can be built from scratch; what it cannot build is the image and the Drawing, which is why the door is probably right. It is still a decision.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): a per-run grant to copy one document, comments included"`
+- [x] `Policy.AllowCopy(sourceID)` in the shape of `AllowReject` and `AllowCreateIn`: per-run, one source, dying with the process.
+- [x] **The transport half.** `isCreate` keys the parent check and `learnFromCreate` on `filesCollection(u.Path)`, and `{id}/copy` is not the files collection, so a copy would otherwise be carried with no parent check and no id learned.
+- [x] A copy omitting `parents` lands in the **source's** parent, a folder gdoc was never given, so the `len(parents) != 1` rule must be reached rather than skipped.
+- [x] Parameters: `copyComments`, `supportsAllDrives`, `fields`, nothing else.
+- [x] **Write this down as Nail's decision, not as a rule satisfied.** M2's rule is that a guard door needs a *production* caller, and this one's only caller is a live test. A copy also takes a full duplicate of a handed-in document into gdoc's folder at `LevelFull`, which is the widest reach any handed-in id has produced. `tools/copyprobe` shows a document with an anchored comment and a pending suggestion can be built from scratch; what it cannot build is the image and the Drawing, which is why the door is probably right. It is still a decision.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): a per-run grant to copy one document, comments included"`
 
 ### Task 3: `docs` learns the one thing a caller reads
 

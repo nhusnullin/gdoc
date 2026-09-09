@@ -129,6 +129,28 @@ var driveCreateParams = map[string]bool{
 	"upload_protocol":   true,
 }
 
+// driveCopyParams are the parameters files.copy may carry, and they are three.
+// copyComments is the one the 2026-09-09 measurement turned on, and it is what
+// carries the source's threads and its pending suggestions into the duplicate;
+// supportsAllDrives is what a folder on a shared drive needs, without which
+// Drive answers a flat 404; and `fields` narrows the answer the new id is read
+// out of, checkFields narrowing it further.
+//
+// What is left out is left out on purpose. `alt` has no place here, because a
+// copy answers with metadata and `alt=media` would ask for bytes the guard then
+// searches for an id in. The two upload parameters are not files.copy's: it
+// uploads nothing, so a shape naming one is a request the guard would be
+// reading one way and Drive another. `ocr` runs somebody's document through
+// text recognition, `keepRevisionForever` pins a revision in the owner's
+// storage quota, `ignoreDefaultVisibility` and `enforceSingleParent` change who
+// reaches the duplicate, and `includePermissionsForView` is the permission
+// surface /permissions and checkFields already refuse.
+var driveCopyParams = map[string]bool{
+	"copyComments":      true,
+	"supportsAllDrives": true,
+	"fields":            true, // narrowed further by checkFields
+}
+
 // checkQuery refuses a query carrying anything the allowlist does not name, and
 // then checks the values of the parameters that decide what comes back.
 //

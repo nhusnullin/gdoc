@@ -56,6 +56,7 @@ type Policy struct {
 	mu       sync.RWMutex
 	files    map[string]Level
 	createIn string          // folder id a create may target; empty means no creates
+	copyFrom string          // the one file files.copy may duplicate; empty means no copies
 	rejects  map[string]bool // suggestion ids a rejectSuggestion may name; empty means none
 	warnings []string        // things the guard could not do quietly, for the command to report
 }
@@ -136,6 +137,46 @@ func (p *Policy) GrantInPlace(id string) {
 	if _, known := p.files[id]; known {
 		p.files[id] = LevelInPlace
 	}
+}
+
+// AllowCopy names the one file files.copy may duplicate, into the folder
+// AllowCreateIn named. It is per-run and one source, in the shape AllowReject
+// and AllowCreateIn already have: nothing writes it down, nothing reads it from
+// a file, and it dies with the process. A second call replaces the first,
+// because the grant is one source and a caller naming two has made a mistake
+// the guard must not turn into two reachable duplicates.
+//
+// Nail's decision, 2026-09-09, and it is recorded as a decision rather than as
+// M2's production-caller rule satisfied. Two things about it are worth reading
+// before it is widened.
+//
+// Its only caller is the live acceptance test, not a command. M2's rule is that
+// a guard door with no production caller is deleted rather than carried, which
+// is why GrantInPlace went and came back with its own caller. This one is kept
+// on the strength of the measurement it makes possible: the ten-feature
+// preservation run needs a document holding an anchored comment, a pending
+// suggestion, an image and a Drawing, and tools/copyprobe showed the first two
+// can be built from scratch through the API while the last two cannot. Copying
+// an ideal document is how the run stops being a thing somebody does by hand in
+// a browser.
+//
+// And a copy is the widest reach a handed-in id has ever produced. It takes a
+// full duplicate of somebody's document into gdoc's own folder, comments and
+// pending suggestions included, where learnFromCreate puts it at LevelFull.
+// Nothing about the source changes, and the guard's whole claim is about what
+// is reachable, so this is a decision to record rather than a detail.
+func (p *Policy) AllowCopy(sourceID string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.copyFrom = sourceID
+}
+
+// mayCopy reports whether files.copy may duplicate this file. An empty id is
+// never granted, so a policy nobody called AllowCopy on carries no copy.
+func (p *Policy) mayCopy(id string) bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return id != "" && p.copyFrom == id
 }
 
 // AllowCreateIn names the one folder a create may target. The folder id is not
@@ -322,6 +363,8 @@ func driveShape(parts []string) string {
 		return "file"
 	case len(parts) == 2 && parts[1] == "export":
 		return "export"
+	case len(parts) == 2 && parts[1] == "copy":
+		return "copy" // files.copy, and only under the grant AllowCopy opens
 	case len(parts) == 2 && parts[1] == "comments":
 		return "comments" // comments.list
 	case len(parts) == 3 && parts[1] == "comments":
@@ -386,6 +429,31 @@ func filesCollection(path string) bool {
 	return p == "/drive/v3/files" || p == "/drive/v3/files/"
 }
 
+// filesCopy names the file a Drive path asks to duplicate, and reports whether
+// the path is files.copy at all. It is filesCollection's rule for the second
+// create shape, and it exists for the same reason: judgeDrive reads it through
+// driveShape to decide a POST is a copy, and isCreate reads it to decide the
+// parent check and the id learning run. A path only one of them called a create
+// would reach Drive with a parent nobody checked and come back with an id
+// nobody learned, so the duplicate would be unreachable and the run could not
+// even trash it.
+//
+// The /upload prefix is stripped here because judgeDrive strips it too. A
+// reader that stripped it in one place only is exactly the disagreement this
+// function exists to prevent.
+func filesCopy(path string) (string, bool) {
+	p := strings.TrimPrefix(path, "/upload")
+	rest, ok := strings.CutPrefix(p, "/drive/v3/files/")
+	if !ok {
+		return "", false
+	}
+	id, tail, found := strings.Cut(rest, "/")
+	if !found || id == "" || tail != "copy" {
+		return "", false
+	}
+	return id, true
+}
+
 func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 	path := strings.TrimPrefix(u.Path, "/upload")
 	rest, ok := strings.CutPrefix(path, "/drive/v3/files")
@@ -432,6 +500,20 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 		return checkQuery(u, driveWriteParams)
 	case commentItemWrites[method] && (shape == "comment" || shape == "reply"):
 		return refuse("%s on one %s is not carried: nothing in the path says whose comment this is, so the guard carries no comment or reply PATCH or DELETE at all. A later milestone adds it back beside the caller that needs it", method, shape)
+	case method == "POST" && shape == "copy":
+		// files.copy, under the two grants it needs and not otherwise. The
+		// source is the one AllowCopy named, and the duplicate lands in the one
+		// folder AllowCreateIn named, which the transport's parent check
+		// enforces on the body. Neither grant is a door into the set: the id
+		// above was already known, and the copy's own id is learned from the
+		// answer the way every other create's is.
+		if !p.mayCopy(id) {
+			return refuse("copying %q is not something this command was granted. A handed-in file is read, commented on and suggested on; duplicating one takes its comments and its pending suggestions into gdoc's own folder, so it needs the per-run grant naming exactly that source", id)
+		}
+		if p.createFolder() == "" {
+			return refuse("copying %q was granted but no folder was named for the copy to land in, and a copy with nowhere to go lands beside the original, in a folder this command was never given", id)
+		}
+		return checkQuery(u, driveCopyParams)
 	case method == "PATCH" && shape == "file" && lvl == LevelFull:
 		// e.g. trashing a document gdoc created
 		return checkQuery(u, driveWriteParams)

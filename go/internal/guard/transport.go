@@ -357,11 +357,25 @@ func peekBody(req *http.Request) ([]byte, *http.Request, error) {
 	return head, send, nil
 }
 
-// isCreate reports whether this request is the create the parent check must
-// run on. The path grammar is filesCollection's, so the policy and the parent
-// check cannot read the same path two ways.
+// isCreate reports whether this request is a create the parent check must run
+// on and whose answer teaches the policy an id. There are two of them, and the
+// path grammar of each is the policy's own, so the policy and the parent check
+// cannot read the same path two ways.
+//
+// The second is files.copy, added at M7b. It is a create wearing a file's path:
+// {id}/copy is not the files collection, so a check reading filesCollection
+// alone carries a copy with no parent check and learns no id from it. The
+// duplicate would then land in the source's own folder, which is a folder gdoc
+// was never given, and be unreachable to the run that made it.
 func isCreate(u *url.URL, method string) bool {
-	return method == "POST" && u.Host == "www.googleapis.com" && filesCollection(u.Path)
+	if method != "POST" || u.Host != "www.googleapis.com" {
+		return false
+	}
+	if filesCollection(u.Path) {
+		return true
+	}
+	_, isCopy := filesCopy(u.Path)
+	return isCopy
 }
 
 // checkParent refuses a create that does not name exactly the folder this
