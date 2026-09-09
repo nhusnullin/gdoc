@@ -37,7 +37,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 
 | Path | Holds |
 |---|---|
-| `go/cmd/gdoc/` | `main.go`, `read.go`, `write.go`, `build.go` and `publish.go`. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | `main.go`, `read.go`, `write.go`, `build.go`, `publish.go` and `restyle.go`. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -54,6 +54,7 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/propose/` | a change as a suggestion, its 🤖 comment, and the three read-backs |
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
+| `go/internal/restyle/` | the survey: what a document holds before anything is done to it |
 | `go/internal/drive/` | the trash, its confirming read, and nothing else Drive does |
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
@@ -68,14 +69,16 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 6 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 7 are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
 `probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
-`comments --wait`, builds a house-style docx from a note with `build`, and puts
-that docx into Drive as a Google Doc with `publish`. The review skill is
+`comments --wait`, builds a house-style docx from a note with `build`, puts
+that docx into Drive as a Google Doc with `publish`, and surveys what a
+document holds with `restyle --dry-run`. The review skill is
 rewritten over those and can stay live on one document, and `gdoc` on PATH is v2
-from M3 on. Restyling a document in place is M7's.
+from M3 on. Restyling a document in place is M7b's, and M7 writes to no
+document at all.
 
 ### The auth commands, and what reaches stdout
 
@@ -126,7 +129,7 @@ The binary never prompts and never reads stdin. A command missing something
 fails and says what is missing. It does not ask.
 
 `gdoc --help` is therefore `ok: false` and exit 1, and that is deliberate rather
-than an oversight. There is no help command: `dispatch` matches the eleven
+than an oversight. There is no help command: `dispatch` matches the twelve
 commands and nothing else, so `--help` comes back as an unknown command with the
 one-line `usage` string in the error. A caller reads the same JSON
 object it reads for every other run, and the exit code still means what it means
@@ -183,9 +186,9 @@ needs a test proving `build()` is called in one module only.
 
 Write levels live in the policy, never at the call site. `LevelSuggest` is what
 a handed-in id gets: read, comment, suggest, and never a direct edit.
-`LevelFull` is what a create returned, and `Learn` is the only door to it. M7
+`LevelFull` is what a create returned, and `Learn` is the only door to it. M7b
 adds a per-run in-place grant back beside its caller; read "`GrantInPlace` is
-gone until M7" below before looking for one now. A call site cannot widen its own reach by phrasing a
+gone until M7b" below before looking for one now. A call site cannot widen its own reach by phrasing a
 request differently, because the policy reads the method, the URL and the body:
 a `batchUpdate` on a handed-in document is refused inside the process unless the
 body says `SUGGEST`.
@@ -194,7 +197,7 @@ body says `SUGGEST`.
 a comment or on a reply. Nothing in a comment id says who wrote it, so the guard
 cannot tell gdoc's own comment from somebody else's, and no command needs
 either method. The milestone that needs one adds it back beside its caller, the
-way `GrantInPlace` returns at M7. `uploadShapes` is `multipart` alone for a
+way `GrantInPlace` returns at M7b. `uploadShapes` is `multipart` alone for a
 related reason: a resumable create is two legs, the guard carries neither the
 `PUT` nor `upload_id`, so the shape could never finish and a half-permitted
 route reads as a working one. M6 opened the multipart half of that list, and
@@ -526,9 +529,10 @@ Two tests state the rule rather than leaving it to review:
 `handled`, `accepted`, `rejected`, `matters` or `drift` appearing under
 `go/internal/` is either a fact wearing the wrong name or a defect.
 
-### The three read commands
+### The four read commands
 
-`read`, `comments` and `suggestions`. Each one takes the document URL Nail
+`read`, `comments`, `suggestions` and `restyle --dry-run`. Each one takes the
+document URL Nail
 pastes, or a bare id, and each does the same four things in the same order:
 turn the argument into an id, open a `guard.Policy` holding exactly that id at
 `LevelSuggest`, open a `gapi.Session` on the guard's client, and hand what came
@@ -542,8 +546,10 @@ are the specification of what Google actually returns.
   first window of activity after the cursor.
 - `suggestions <url> [--md PATH]`: what is pending, and with a paired file what
   stopped being pending.
+- `restyle <url> --dry-run`: the survey. What the document holds before anything
+  is done to it, read below under its own heading.
 
-Rules that hold across all three:
+Rules that hold across all four:
 
 - **A poll reads the listing first and the document second.** Both reads are
   needed either way, so the order is free, and what it decides is which comments
@@ -614,11 +620,20 @@ Rules that hold across all three:
   on 2026-09-06, and `supportsAllDrives` is on `files.get` instead. Sending a
   parameter the method does not define is one the server may reject, and it
   would take every `--witness` run with it.
-- Pictures, drawings, equations and objects print as `[image]`, `[drawing]`,
-  `[equation]` and `[object]` placeholders, each with a warning. `[object]` is
-  the embedded object the read could not classify: calling it an image would be
-  a guess. Reading any of them is
+- **Every placeholder run warns, chips and breaks included.** Pictures,
+  drawings, equations and objects print as `[image]`, `[drawing]`, `[equation]`
+  and `[object]`, and the seven members M7 stopped dropping print as their own
+  marks; each one appends a warning naming what the read did not take from it.
+  That was four kinds before M7 and is twelve now, so a policy with eight person
+  chips and three page breaks answers with eleven warnings. A skill that reads a
+  non-empty `warnings` list as a degraded read has to read the messages instead
+  of counting them. `[object]` is the embedded object the read could not
+  classify: calling it an image would be a guess. Reading any of them is
   `docs/backlog/read-pictures-and-drawings.md`.
+- **A paragraph element the decoder cannot name is a run, never a hole.** Read
+  the section below: until M7 seven of the eleven members of `ParagraphElement`
+  vanished at decode, so `read` was printing documents with holes in them and
+  warning about nothing.
 - A footnote's text is flattened, so a suggestion inside one is in neither
   `read`'s markers nor `pending`, and nothing warns. That is
   `docs/backlog/suggestions-inside-footnotes.md`.
@@ -654,6 +669,39 @@ snapshot. Six markers, and the meaning of each:
 | `<!-- tab t.0: Title -->` | the tab that follows, printed only when there is more than one |
 | `# ` to `###### ` | a `HEADING_n` paragraph. `TITLE` and `SUBTITLE` are plain paragraphs |
 | `[image]`, `[drawing]`, `[equation]`, `[object]` | content this milestone does not read |
+| `[person: Name]`, `[date: Sep 9, 2026]`, `[link: Title]` | a smart chip, with the label the document shows |
+| `[auto text: PAGE_NUMBER]`, `[page break]`, `[column break]`, `[rule]` | the other four members M7 stopped dropping |
+| `[unknown: member]` | a paragraph element gdoc has never seen, named by its member |
+
+**A chip's placeholder carries the label the document shows, and the label goes
+through the same escaping the document's own text does.** `[person]` alone
+tells a reader somebody is there and not who, which for a policy naming its
+owner is the fact that mattered. The escaping is not tidiness either: a
+calendar entry titled `[[c:X]]` would otherwise read back as a comment anchor
+gdoc never wrote, and nothing downstream could tell. The rest of a chip's
+detail, an email address or a link's target, reaches `--structure` instead.
+
+Two things about that escaping and that label are the M7 review's, and both are
+the same argument as the paragraph above.
+
+- **A person chip shown as an address is labelled with the address.** The Docs
+  reference documents `name` as what is shown "instead of the person's email
+  address", so a chip displaying the address carries no name at all, and reading
+  `name` alone printed a bare `[person]` on exactly the chip whose identity was
+  on screen. `rawPerson.label` falls back to `email`.
+- **The label is escaped in a window that carries the placeholder's own closing
+  bracket.** `escapeAt` looks one rune ahead, so a string's last rune is always
+  written bare, and a file somebody named `Q3 plan [draft]` printed as
+  `[link: Q3 plan [draft]]`, with a `]]` in the text gdoc never wrote. A newline
+  inside a label becomes a space rather than nothing: the document's own text is
+  written in chunks that carry the paragraph break, and a label has no chunking,
+  so dropping it glues the words either side together. Escaping a single `[` or
+  `]` inside a placeholder is the wider convention question, and it stays where
+  it already is, in `docs/backlog/escaping-across-run-boundaries.md`.
+
+**A horizontal rule prints `[rule]` and not `---`.** The footnote separator is
+already `---`, and one line meaning two things is a line neither of them can be
+read from.
 
 **A comment range that does not end after it starts is a warning, not a
 marker.** Armed, it puts its own close before its own open, and at the end of
@@ -704,6 +752,189 @@ leaves the run that computed it. Read "A proposal names text, never an index"
 below. The view is kept because neither view is the other's summary, and because
 an index view is what a later milestone would need if one ever places a change
 without quoting it.
+
+### A paragraph element is a run, and the `default` arm reports
+
+M7. `ParagraphElement` is a union of eleven members and `run()` in
+`internal/docs` decoded four of them: a text run, an inline object, a footnote
+reference and an equation. Everything else returned `(Run{}, false)` and
+vanished at decode. Seven members went that way: `person`, `richLink` and
+`dateElement`, which are the three smart chips, plus `autoText`, `pageBreak`,
+`columnBreak` and `horizontalRule`.
+
+**That was a live defect in `read`, not a gap in the survey.** An element that
+vanishes reaches neither `view`'s placeholders nor its warnings, unlike an
+inline object gdoc cannot classify, which at least prints `[object]`. So every
+review session since M2 read documents with holes in them and was told nothing:
+a policy naming its owner through a person chip read as a policy naming nobody.
+
+Four things about the fix are decisions rather than details.
+
+- **The `default` arm reports rather than returns false, and that is the wider
+  fix.** An element gdoc cannot name is still a run, carrying `KindUnknown` and
+  the member name in `Detail.Member`, so it prints `[unknown: member]` with a
+  warning. It carries the member's own `suggestedInsertionIds` and
+  `suggestedDeletionIds` too, read off whatever the element did name, because
+  all eleven documented members carry those two lists and the twelfth will. A
+  run that kept the name and dropped the ids would be a pending change `read`
+  prints with no markers and the survey counts in neither number, which is the
+  same defect one field in. A member whose value is not an object says nothing
+  about being suggested and does not fail the read. Seven kinds went missing because the default arm vanished; the eighth
+  member Google adds must not. A decoder that drops what it does not recognise
+  makes every reader downstream confidently wrong, and that is the class of
+  defect, not the seven names.
+- **Every one of the seven carries its own suggestion id lists**, exactly as a
+  text run does, so a chip inside a pending insertion prints inside the
+  insertion's markers with the insertion's own id. **It does not reach
+  `pending`.** `suggestions.walker.paragraph` reads text runs alone, which is
+  deliberate for the two cases it was written for, a footnote's number and a
+  picture, and M7 widened what falls into it: a suggestion carried only by a
+  chip, a break, a rule or an auto text is printed by `read` and listed by
+  nothing. `restyle --dry-run` counts those ids itself, as
+  `suggestions.on_elements`, so the survey cannot answer "nothing to protect"
+  over one. The listing half is
+  `docs/backlog/suggestions-on-elements-are-not-listed.md`, and closing it is a
+  decision about what `pending` reports as the suggested words.
+- **A chip is a run now, and `propose`'s walk still skips it, so the refusal it
+  used to make by luck it now makes by construction.** A chip used to vanish at
+  decode while the document still numbered it, so words either side of one read
+  as one string in the walk and were two spans in the document. It is a run this
+  walk skips instead, because `index` reads text runs alone, and the numbering
+  jumps the same way: `matches` computes the same over-long span and refuses it.
+  So the observable behaviour did not change, and the guarantee stopped resting
+  on the decoder dropping something. A quote crossing any of the seven is
+  refused, and the message names the crossing rather than saying the words were
+  not found; it does not name which of the seven it crossed, because `FindSpan`
+  prints a fixed example list. `TestAQuoteCrossingAChipIsRefused` in
+  `internal/propose` is the pin, and it says in its own words that the rule has
+  to hold for the reason rather than by luck.
+- **The fixture is built from the reference, not measured.** The Docs API
+  reference documents every field of all seven, so
+  `go/internal/docs/testdata/elements.json` is written from it with placeholder
+  text throughout. A fixture built from a reference is a hypothesis until a real
+  document agrees with it, and that live check is outstanding: it is in
+  DECISIONS.md under 2026-09-09 as Nail's, and a disagreement is a decision
+  recorded with the difference, never a test loosened.
+
+A footnote's text is flattened by the decoder, so a chip inside a footnote is in
+no tab's blocks and is counted nowhere. That is the hole
+`docs/backlog/suggestions-inside-footnotes.md` already holds, and it is written
+down rather than guessed at.
+
+### Named ranges are keyed by id, and they live in the tab
+
+`docs.NamedRange` is `{id, name, tab, ranges}`, and `Document.NamedRanges()` is
+every one of them in tab order, with `Tab.NamedRanges` the same list for one
+tab, the way `Places` is one rule with two ways in.
+
+- **The id is the identifier and the name is a label.** Two named ranges may
+  carry one name, Docs puts both under that one key, and deleting by name
+  deletes every range wearing it. So nothing here is keyed by name, and a caller
+  that wants one range names its id.
+- **They are read from `tabs[].documentTab.namedRanges`,** because every read
+  gdoc makes carries `includeTabsContent=true`, which leaves the top-level field
+  empty. The pre-tabs location is read too: `Parse` already has a branch for a
+  document with a top-level `body` and no tabs, and its ranges sit beside that
+  body. Reading the body from one place and the ranges from another would report
+  none on exactly the documents whose ranges are at the top level.
+- **`Range` gained `Segment`, and `Places` refuses a span that names one.** A
+  named range span names the header, footer or footnote it sits in, and the text
+  `Places` measures against is the tab's body: `covers` walks `t.Body` alone. So
+  a header span answered against the body names a position in text it was never
+  measured in, and the branch's own fixture produced exactly that, a
+  `{4, 9, h.headerone}` span that fell inside tab `t.0`'s body run and came back
+  placed. Carrying the field without reading it was the M7 review's finding: the
+  refusal is one condition, and it is behaviour-neutral for both callers today.
+  `Segment` is empty on every comment anchor, because `rawCommentAnchor` does
+  not read the field, so no output shape moved. That is the decoder and not
+  Google: the `commentAnchors` shape was measured on comments anchored in the
+  body, which carry no segment id whatever Docs sends for a comment anchored in
+  a header, a footer or a footnote. Whether Docs anchors one there at all is
+  unmeasured, and it is
+  `docs/backlog/comment-anchors-in-headers-and-footnotes.md`.
+- **`docs.NamedRangesURL` is the narrowed read, and no command calls it yet.**
+  The whole document answers with the ranges already, so the survey takes them
+  out of the read it has rather than making a fourth request. The narrowed read
+  exists for the caller that wants only the ranges, which is M7b rechecking the
+  ranges rather than the prose: the measured saving was 982 bytes against 12,907
+  for the document itself. Its mask selects each tab's id and its named ranges
+  and `childTabs` **whole**, because a mask does not recurse into a nesting of
+  unknown depth and selecting a child tab's fields one level at a time would
+  leave a deeper tab's ranges silently absent. `docsReadParams` already permits
+  `fields`, so the guard carries it unchanged.
+
+### `restyle --dry-run` is the survey, and it writes nothing
+
+M7. `gdoc restyle <url> --dry-run` reports what a document holds before anything
+is done to it: its threads with a witness for each, what is pending, its chips,
+its tabs, its named ranges and the revision the reads were made against. It
+writes to no document and to no file. The one file any run of it can touch is
+the OAuth token, which every command replaces on refresh.
+
+`--dry-run` is required, and the refusal names M7b rather than the flag alone: a
+caller told only that a flag is missing learns the command is broken, when what
+is true is that the half it wants has not been written yet. The policy opens
+with the document at `LevelSuggest` and no grant, like every read.
+
+- **Three reads, not four.** The comment listing, the Docs read, and the docx
+  export for the witness. The named ranges come out of the Docs read, which
+  carries them already. `internal/restyle`'s own package doc said four, and the
+  M7 review corrected it: a count in a doc comment that the code below it
+  contradicts is read before the code is.
+- **The listing goes out before the Docs read**, which is the order every poll
+  in this binary holds, and
+  `TestRestyleListsTheCommentsBeforeItReadsTheDocument` is what stops a later
+  edit from swapping them. Read first, a comment written in the gap is a comment
+  in the listing with no anchor in a document read a moment before it existed,
+  so the survey would report a thread placed nowhere.
+- **A failed Docs read is a failed survey; a failed export is a warning.** The
+  chips, the pending suggestions, the named ranges, the tab count and the
+  revision id are all in that one read, so it has no honest partial answer. The
+  export has one: every thread `unmatched` with a warning, on an envelope that
+  still carries the threads, exactly as `comments --witness` behaves. `exportFile`
+  in `read.go` is the one export path both callers use, because two would be two
+  chances for one of them to ask Drive for a different document or to read the
+  answer to a different ceiling.
+- **The pending count is `suggestions.All`'s, never `List`'s.** `List` drops a
+  suggestion whose text is only whitespace, and a whitespace-only suggestion is
+  still something a replacement would destroy, so counting from `List` reports
+  nothing to protect on a document that has something to protect.
+- **The witness is carried twice, as counts and as one line per thread.** M7b
+  compares before with after per thread, which totals cannot answer, and the
+  survey is the only place the before-witness is read: a thread detached before
+  the work reads as damage the work did when only the totals are kept. Its two
+  limits are the ones it has everywhere else, and they are worth stating rather
+  than discovering: it names a destroyed anchor and not a moved one, and two
+  exported comments that share words and disagree give no answer for either.
+- **The revision id is why the survey is machine-readable.** M7b hands it back
+  and refuses a document that moved, which is principle 3 at the one moment gdoc
+  will have the power to overwrite. Nothing reads the field yet, and it exists
+  here for that reason.
+
+**`nothing_to_protect` is a fact about five things being zero, never a
+recommendation.** No threads, no pending suggestions, no chips, no paragraph
+element the decoder could not name, and no named range. Pending is two counts rather than one:
+`pending` is `suggestions.All`'s, and `on_elements` is the ids on the runs that
+walk skips, which is every run that is not text. Counting only the first
+answered "nothing to protect" over a suggested page break. The rule is what the
+listing can report and not whether the run holds text: a footnote reference
+carries its number and is counted here all the same, because the pending walk
+skips it too. The two are in different units, which the field names cannot say:
+`pending` counts the insert-and-delete entries a replacement makes two of, and
+`on_elements` counts ids, so adding them is comparing two things. The last two are the ones worth writing down. A
+document holding an element gdoc has never seen holds something no count here
+speaks for, so the survey warns naming the member and refuses to say there is
+nothing to protect. A named range is the other, and it is the reason the survey
+lists them at all: it is a label Docs keeps in step with its own edits, so a
+replacement of the words it covers takes it with them, and M7b reads this field
+before it writes. Whether a document is worth restyling is Nail's, reading the
+counts. That is "the binary prints facts, and the skills judge" at the one field
+most likely to grow into a verdict.
+
+**A survey with no document read is not nothing to protect either.** It reports
+the threads it has and warns that the chips, the pending suggestions and the
+named ranges are unknown. Answering `nothing_to_protect: true` there would be
+the one false fact in the field a later run reads before it writes.
 
 ### The cursor is opaque, and it dies with the session
 
@@ -1253,7 +1484,7 @@ The 🤖 comment a withdrawn proposal made stays where it is. `commentWrites`
 carries `POST` and nothing else, so deleting or editing a comment is a write the
 guard does not carry, and no command here needs one. The skill replies to the
 comment saying the proposal was withdrawn. A milestone that needs `PATCH` or
-`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7.
+`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7b.
 
 **The 🤖 prefix is the only record of authorship there is.** The Docs API cannot
 set an author, so everything gdoc writes is signed by whoever is logged in.
@@ -1415,12 +1646,19 @@ reporting a document as gone that is still there.
 **`publish` has no skill caller.** It is Nail-invoked. Wiring it into a skill is
 M9's, with the install story.
 
-### `GrantInPlace` is gone until M7, and `AllowCreateIn` stayed
+### `GrantInPlace` is gone until M7b, and `AllowCreateIn` stayed
 
 PLAN.md M2 asked that a guard door with no production caller be deleted rather
-than carried. `GrantInPlace` had none, so it went, with its tests. M7's in-place
-restyle adds it back beside its caller, and the level it raises to is a decision
-for Nail then, not something to restore from git because a test wants it.
+than carried. `GrantInPlace` had none, so it went, with its tests. M7b's
+in-place restyle adds it back beside its caller, and the level it raises to is a
+decision for Nail then, not something to restore from git because a test wants
+it.
+
+**M7 did not add it back, and that is the same rule again.** The survey writes
+to no document, so a level for a write that does not exist yet would be a door
+with no production caller a milestone early: exactly what M2 deleted. Nail's
+decision of 2026-09-09, with the split. `LevelInPlace` arrives in M7b beside the
+write, with the request-kind allowlist he chose there.
 
 `AllowCreateIn` stayed even though M2 calls it nowhere. The transport's whole
 create path is built on it: the parent check, the upload-shape check and the
@@ -1853,10 +2091,14 @@ as the permanent arrangement is superseded by this paragraph.
 v1 is untouched by that. Both v1 skills call the venv binary by its full path,
 `$HOME/.config/gdoc-agent/venv/bin/gdoc`, never `gdoc` on PATH, so repointing
 the link breaks neither of them. What it does change is what a person typing
-`gdoc` gets, and the two tools share one word with two meanings: v1 `read`
-lists comments, v2 `read` prints the document text and v2 `comments` lists
-comments. The install story proper, one file copied to a machine with nothing
-else on it, is still M9.
+`gdoc` gets, and the two tools share more than one word with two meanings: v1
+`read` lists comments, v2 `read` prints the document text and v2 `comments`
+lists comments. `restyle` is the second such word since M7. v1 `restyle`
+publishes a house-styled copy of a document into another folder and is
+described below under "Restyling a document gdoc knows nothing about"; v2
+`restyle --dry-run` reads one document and writes nothing at all. The install
+story proper, one file copied to a machine with nothing else on it, is still
+M9.
 
 `GDOC_LIVE_TEST=1` runs the opt-in end-to-end read test, in `go/internal/live`.
 It then needs `GDOC_LIVE_DOC_ID=<document id>`, and there is no default: the
@@ -2110,6 +2352,12 @@ expires. A `data:` URI is decoded instead, because those bytes arrived with the
 document.
 
 ## Restyling a document gdoc knows nothing about
+
+**This is v1's `restyle`, and v2's is a different command wearing the same
+word.** v1 publishes a copy; v2's `restyle --dry-run` surveys one document and
+writes nothing. Read "`restyle --dry-run` is the survey" above for that one.
+Restyling in place is M7b's, and it is neither of these: it changes the
+document that was handed in.
 
 `gdoc restyle` publishes a house-styled copy of a document with no queue, no
 paired markdown and no baseline. `gdoc/restyle.py` composes the pull, the

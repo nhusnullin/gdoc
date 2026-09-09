@@ -1112,3 +1112,127 @@ id is the wrong way.
 
 `docs/backlog/v1-frontmatter-migration.md` is deleted by this entry. It asked
 the question and said Nail decides in M6.
+
+## 2026-09-09. Seven paragraph elements were dropped at decode. The fixture is built from the reference, and the live check is outstanding.
+
+Serves principle 3, at one remove: a reader that drops what it does not
+recognise makes every decision downstream on a document that is not the one on
+screen.
+
+`ParagraphElement` is a union of eleven members. `run()` in
+`go/internal/docs/walk.go` reads four of them, and its `default` arm returns
+`(Run{}, false)`, so the other seven vanish at decode:
+
+| Member | Carries |
+|---|---|
+| `person` | `personId`, `personProperties.name`, `.email` |
+| `richLink` | `richLinkId`, `richLinkProperties.title`, `.uri`, `.mimeType` |
+| `dateElement` | `dateId`, `dateElementProperties` with `timestamp`, `timeZoneId`, `locale`, `dateFormat`, `timeFormat` and the output-only `displayText` |
+| `autoText` | `type`, which is `PAGE_NUMBER` or `PAGE_COUNT` |
+| `pageBreak` | a page break |
+| `columnBreak` | a column break |
+| `horizontalRule` | a rule |
+
+Every one of them also carries `suggestedInsertionIds` and
+`suggestedDeletionIds`, like every other element in a paragraph.
+
+Vanishing is worse than being unreadable. An inline object gdoc cannot classify
+still prints `[object]` with a warning, so a reader is told there is something
+there. These seven reach neither `view`'s placeholders nor its warnings: a
+person chip, a date chip and a calendar link are simply absent from what `read`
+prints, and a page break and a rule with them. Every review session since M2 has
+been reading documents with holes in them and being told nothing.
+
+**The fixture is built, not measured.** The reference documents every field of
+all seven, so `go/internal/docs/testdata/elements.json` is written from it, with
+placeholder text throughout: nobody's document is in it. That is a departure
+from how `anchors.json` was made, and the reason is that the `commentAnchors`
+shape is undocumented while this one is published.
+
+**So the fixture is a hypothesis until a real document agrees with it, and that
+check is outstanding.** A reference and a server can differ, and the field this
+is least certain about is `dateElement`, which is the newest of the seven. The
+check is Post-Completion work in the M7 plan: a real document holding a person
+chip, a date chip and a calendar link, read through `documents.get`, compared
+against `elements.json`. If it disagrees, the difference is recorded here as its
+own entry and the fixture is corrected. It is not a test loosened.
+
+The decoder is Task 2's, and the wider fix travels with it: the `default` arm
+reports rather than vanishes, so the eighth member Google adds shows up as a
+placeholder with a warning instead of silently absent.
+
+## 2026-09-09. M7 splits. The survey ships without the write, and the guard's third level travels with the write.
+
+Serves principle 3, and M2's rule about doors with no callers.
+
+M7 was one milestone in PLAN.md: the survey, the in-place styling, the guard's
+third write level, the finishing checklist, the nothing-to-protect offer and
+`--new`. The review of the draft plan found two things, and either one on its
+own would have been enough.
+
+**The survey rested on a decoder that was throwing chips away.** `run()` in
+`internal/docs` dropped seven of the eleven `ParagraphElement` members, the
+three chips among them, so a survey counting chips would have reported a number
+nobody could have trusted, and `read` had been printing documents with holes in
+them since M2. That is a live defect in a shipped command, and it does not wait
+behind a styling engine.
+
+**The write half shares no risk with the survey.** It carries a new guard level,
+a styling engine, a fidelity measurement against a throwaway document, a
+read-recompute-send write loop and a live ten-feature run. None of that is
+needed to read a document and print what is in it, and the survey is the half
+the review skill benefits from immediately.
+
+So the survey, the decoder fix and the named-range read are M7, and the write is
+M7b. Nothing in M7 writes to a Google Doc.
+
+### The guard's third level is not added early
+
+`LevelInPlace` is M7b's, beside the command that sends the first request under
+it. M2's rule is that a guard door with no production caller is deleted rather
+than carried, which is why `GrantInPlace` was deleted with its tests; adding a
+level a milestone before its caller would repeat exactly that, and a level with
+no caller is a level no test can exercise honestly.
+
+**The allowlist Nail chose for it.** At that level a `batchUpdate` carries the
+styling request kinds and nothing else, and `deleteHeader`,
+`deleteContentRange`, `replaceAllText` and `deletePositionedObject` are refused
+by name. `deleteHeader` on a first-page header is a one-way door this file
+already records. This is the one place in the guard where an allowlist over
+request kinds is right rather than wrong: `judgeRequests`' own comment says an
+allowlist would be empty and would refuse the SUGGEST write the guard exists to
+allow, and that argument expires the moment SUGGEST stops bounding what an
+unknown kind can do. Under `LevelInPlace` there is no SUGGEST to bound it, so
+the list has to name what carries.
+
+The call sites are `policy.go`'s level check and its refusal text,
+`Level.String()`, and `AllowFile`, which takes any level and is therefore the
+side door around the grant's own invariant.
+
+### The styling is scoped from a measurement, not from `house.yaml`
+
+What in-place styling attempts is decided by a probe that applies each candidate
+request kind to a throwaway document and records what actually lands. It is not
+derived from reading `house.yaml` and assuming the API can express it. The
+2026-08-29 run measured **survival**, which is what the original document keeps,
+and that is a different question from **fidelity**, which is what the styled
+document achieves. Nothing has measured the second one.
+
+That matters because the honest answer is already known to be a short list. The
+nine named styles cannot be redefined at all, so styling means applying
+paragraph and text style over every paragraph one at a time, and the next
+heading the author types is not house style. `highlight` is an OOXML name with
+no Docs equivalent, bullet glyphs and number formats are a fixed enum, tab stops
+are read-only, and the Docs API accepts no image bytes, so an inline logo is
+closed too. M7b writes that list down rather than shipping the word
+"approximate".
+
+### What this entry does not do
+
+It does not touch the Never lists. PRINCIPLES.md, CLAUDE.md and SPEC.md all say
+a handed-in document is never direct-edited, and that is true for every line of
+M7. M7b amends all three, and SPEC.md's acceptance item 1 with them, which says
+a direct edit on a handed-in id is refused.
+
+`--new` stays deferred, decided earlier the same day: it needs a markdown
+export, media extraction and a markdown writer, none of which exist in Go.

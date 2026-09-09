@@ -131,8 +131,8 @@ func Carries(d *docs.Document, tabID, want string) bool {
 // the number of places it occurs across something the walk does not index.
 //
 // The second number is why this is not a plain search. index skips a run it has
-// no text for, a footnote mark, a picture, an equation, and drops a page break
-// altogether, but the document numbers them all, so the text either side of one
+// no text for, a footnote mark, a picture, an equation, a chip and a page break
+// among them, but the document numbers them all, so the text either side of one
 // is contiguous here and is not contiguous in the document. A match spanning
 // that hole gives a range longer than the words in it, and the
 // deleteContentRange built from it marks the skipped content for deletion too.

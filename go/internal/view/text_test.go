@@ -42,7 +42,7 @@ func golden(t *testing.T, name string) string {
 // comment anchor, the escaped literal markers, the tab lines, the placeholders
 // and the footnote.
 func TestGolden(t *testing.T) {
-	for _, name := range []string{"single-tab", "two-tabs", "pre-tabs", "objects"} {
+	for _, name := range []string{"single-tab", "two-tabs", "pre-tabs", "objects", "elements"} {
 		t.Run(name, func(t *testing.T) {
 			got, _ := Text(fixture(t, name+".json"))
 			if want := golden(t, name+".golden"); got != want {
@@ -549,5 +549,163 @@ func TestARealMarkerAfterTextEndingInABackslashIsNotEscaped(t *testing.T) {
 	text, _ := Text(parse(t, raw))
 	if !strings.Contains(text, `foo\\[[c:C1]]bar[[/c]]`) {
 		t.Errorf("Text() = %q, want the author's backslash escaped and the anchor left readable", text)
+	}
+}
+
+// TestEveryDroppedElementNowPrintsAndWarns is the reader's half of the decoder
+// fix. The seven members reached neither the placeholder list nor the warnings
+// before, because they never became runs at all, so a document holding a person
+// chip read as a sentence with a word missing and nothing said so.
+//
+// The mark of a chip carries the chip's own label, because the document shows
+// that label on screen and a reader given "[person]" cannot tell which person.
+// The label is escaped by escapeLabel, which is the document's own escaping with
+// the two differences that function names, so a title holding "[[" cannot open a
+// comment marker gdoc never wrote.
+func TestEveryDroppedElementNowPrintsAndWarns(t *testing.T) {
+	text, warnings := Text(fixture(t, "elements.json"))
+	for _, mark := range []string{
+		"[person: A Placeholder]",
+		"[date: Sep 9, 2026]",
+		"[link: A placeholder calendar entry]",
+		"[auto text: PAGE_NUMBER]",
+		"[page break]",
+		"[column break]",
+		"[rule]",
+	} {
+		if !strings.Contains(text, mark) {
+			t.Errorf("the text carries no %s:\n%s", mark, text)
+		}
+		found := false
+		for _, w := range warnings {
+			if strings.Contains(w, mark) {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("no warning names %s: %v", mark, warnings)
+		}
+	}
+}
+
+// A chip inside a pending suggestion carries the suggestion's marker like any
+// other run. It is a replacement when it carries both id lists, and the reader
+// has to be able to see which suggestion is holding it.
+func TestAChipInsideASuggestionCarriesItsMarker(t *testing.T) {
+	text, _ := Text(fixture(t, "elements.json"))
+	if !strings.Contains(text, "{+[person: A Placeholder]+}[s:suggest.person1]") {
+		t.Errorf("the person chip carries no insertion marker:\n%s", text)
+	}
+	if !strings.Contains(text, "{-[date: Sep 9, 2026]-}[s:suggest.date1]") {
+		t.Errorf("the date chip carries no deletion marker:\n%s", text)
+	}
+	// A chip carrying both id lists is a replacement, and Docs shows it as the
+	// deletion followed by the insertion of the same content. Both copies print
+	// the placeholder: the second one used to print nothing, which read as an
+	// insertion of nothing being pending.
+	want := "{-[link: A placeholder calendar entry]-}[s:suggest.link2]" +
+		"{+[link: A placeholder calendar entry]+}[s:suggest.link1]"
+	if !strings.Contains(text, want) {
+		t.Errorf("the replaced link chip reads as\n%s\nand should carry\n%s", text, want)
+	}
+}
+
+// TestAnUnnamedElementPrintsItsMemberAndWarns is the wider fix read out. The
+// eighth kind Google adds shows up as a placeholder naming the member, instead
+// of being absent from a document the AI is told it has read in full.
+func TestAnUnnamedElementPrintsItsMemberAndWarns(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":5,"textRun":{"content":"See "}},
+		   {"startIndex":5,"endIndex":6,"tomorrowsElement":{}},
+		   {"startIndex":6,"endIndex":9,"textRun":{"content":".\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, warnings := Text(d)
+	if !strings.Contains(text, "[unknown: tomorrowsElement]") {
+		t.Errorf("text = %q, want the member named in the placeholder", text)
+	}
+	if len(warnings) != 1 || !strings.Contains(warnings[0], "tomorrowsElement") {
+		t.Errorf("warnings = %v, want one naming the member", warnings)
+	}
+}
+
+// A chip label holding one of gdoc's own markers is escaped. escapeLabel is the
+// document's own escaping with two differences, which the two tests below carry
+// by name: the label is read in a window holding the placeholder's own closing
+// bracket, so its last rune is escaped where a run's last rune is written bare,
+// and a newline inside it becomes a space rather than nothing. Without any of it
+// a calendar entry somebody titled "[[c:X]]" reads back as a comment anchor, and
+// there is no way for the AI to tell.
+func TestAChipLabelIsEscapedLikeAnyOtherText(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":2,"richLink":{"richLinkId":"kix.l1",
+		     "richLinkProperties":{"title":"{+not a suggestion+} [[c:X]]","uri":"https://example.com"}}},
+		   {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := Text(d)
+	// The escape goes in front of the first character of the pair and the walk
+	// then advances by one rune, not two, because two literals can share a
+	// character. So "{+" reads back as "\{+" and not as "\{\+".
+	//
+	// The label's own last "]" is escaped as well, because the label is read in
+	// a window that carries the placeholder's own closing bracket behind it.
+	want := `[link: \{+not a suggestion\+} \[[c:X\]\]]`
+	if !strings.Contains(text, want) {
+		t.Errorf("text = %q, want it to carry %q", text, want)
+	}
+}
+
+// A label's last character is escaped against the bracket the placeholder puts
+// behind it. Without the window a title ending in "]", which is nothing more
+// exotic than a file somebody named "Q3 plan [draft]", merges with that bracket
+// and puts a "]]" in the text that gdoc never wrote.
+func TestALabelEndingInABracketDoesNotMergeWithThePlaceholders(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":2,"richLink":{"richLinkId":"kix.l1",
+		     "richLinkProperties":{"title":"Q3 plan [draft]","uri":"https://example.com"}}},
+		   {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := Text(d)
+	want := `[link: Q3 plan [draft\]]`
+	if !strings.Contains(text, want) {
+		t.Errorf("text = %q, want it to carry %q", text, want)
+	}
+	if strings.Contains(text, `draft]]`) {
+		t.Errorf("text = %q, want no unescaped closing marker in it", text)
+	}
+}
+
+// A newline inside a label becomes a space. The document's own text is written
+// in chunks and the chunking carries the paragraph break, so escapeAt drops the
+// newline; a label has no chunking, so dropping it there glues the words either
+// side of it together and the label says something the document does not.
+func TestANewlineInALabelBecomesASpace(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":3,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":2,"richLink":{"richLinkId":"kix.l1",
+		     "richLinkProperties":{"title":"Q3\nplan","uri":"https://example.com"}}},
+		   {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, _ := Text(d)
+	if !strings.Contains(text, `[link: Q3 plan]`) {
+		t.Errorf("text = %q, want the newline written as a space", text)
 	}
 }

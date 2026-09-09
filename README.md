@@ -493,7 +493,8 @@ code, because the cover and the tables are found by their placeholder text.
 A second implementation lives at `go/`: one static binary, no Python, no pandoc,
 nothing to install beside it. It is being built a milestone at a time
 (`docs/v2/PLAN.md`). It holds the credential, it reads, it writes suggestions,
-and since M6 it builds a house-style document and publishes it.
+since M6 it builds a house-style document and publishes it, and since M7 it
+surveys what a document holds before anything is done to it.
 
 ```bash
 make build   # bin/gdoc, for this machine
@@ -539,13 +540,14 @@ suite uses so tests never touch your real config.
 
 ### Reading a document
 
-Three commands read, and none of them writes to Drive. Each one takes the URL
+Four commands read, and none of them writes to Drive. Each one takes the URL
 you paste from the browser, or a bare document id.
 
 ```bash
 bin/gdoc read <url> [--structure]
 bin/gdoc comments <url> [--since CURSOR] [--wait DURATION] [--witness]
 bin/gdoc suggestions <url> [--md PATH]
+bin/gdoc restyle <url> --dry-run
 ```
 
 They print facts and nothing else. Whether a comment is answered, whether a
@@ -563,7 +565,16 @@ pending marked in it:
 | `{-text-}[s:ID]` | a pending suggested deletion, and its id |
 | `[[c:ID]]text[[/c]]` | the text a comment is attached to, and the comment id |
 | `<!-- tab t.0: Title -->` | the tab that follows, on a document with more than one |
-| `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet, with a warning |
+| `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet |
+| `[person: Ada Lovelace]`, `[date: Sep 9, 2026]`, `[link: Q3 planning]` | a smart chip, with the label it shows |
+| `[auto text: PAGE_NUMBER]`, `[page break]`, `[column break]`, `[rule]` | the rest of what a paragraph can hold |
+| `[unknown: member]` | something in the document this version of gdoc has never seen |
+
+Every placeholder row in that table comes back with a warning naming what the
+read did not take from it, the chips and the breaks included. A policy with
+eight person chips and three page breaks in it answers with eleven warnings, so
+a non-empty `warnings` list does not on its own mean the read went wrong: read
+the messages rather than counting them.
 
 If the document's own text contains one of those markers, it comes back with a
 backslash in front of it, and a backslash the author typed comes back doubled.
@@ -575,7 +586,18 @@ character sitting against one of gdoc's own markers, can still reach the text
 unescaped. That gap is written up in
 `docs/backlog/escaping-across-run-boundaries.md`. `[object]`
 is an embedded object the read could not classify: calling it an image would be
-a guess. Tables become pipe tables, with a literal `|` in a cell escaped as
+a guess.
+
+Smart chips are read since M7, and before M7 they were not read at all: a person
+chip, a date chip and a calendar link were dropped without a placeholder and
+without a warning, so a policy naming its owner through a chip came back naming
+nobody and nothing said so. Six other things went the same way, including page
+breaks and horizontal rules. They all print a placeholder now. A chip's
+placeholder carries the label the document shows, so `[person: Ada Lovelace]`
+tells you who is there; the email address and a link's target are in
+`--structure`. `[unknown: member]` is the wider half of the same fix: something
+in the document this version of gdoc has never seen, named by what Google calls
+it, rather than silently absent. Tables become pipe tables, with a literal `|` in a cell escaped as
 `\|` so the row keeps its shape, and footnotes are appended after a `---` line.
 Lists come back as `- ` items, two spaces of indent per level, so a numbered
 list reads back as a bulleted one: telling the two apart needs the document's
@@ -633,6 +655,71 @@ sits under and its text. With `--md` it also reports what stopped being pending
 since the last look, by comparing against the snapshot in that file's front
 matter, then writes the new snapshot. That write happens only after a read that
 fully succeeded, and only into a file already paired with the document you read.
+
+### Surveying a document before you restyle it
+
+```bash
+bin/gdoc restyle <url> --dry-run
+```
+
+This says what a document holds before anything is done to it, and it writes to
+no document and to no file:
+
+```jsonc
+{
+  "document_id": "1AbC...", "revision_id": "ALm37BX...",
+  "title": "Supplier Register Policy",
+  "tabs": 1,
+  "threads": { "open": 3, "resolved": 7,
+               "witness": { "anchored": 9, "detached": 1, "unmatched": 0 },
+               "witnessed": [ { "id": "AAABc...", "witness": "anchored", "resolved": false } ] },
+  "suggestions": { "pending": 2, "on_elements": 0 },
+  "chips": { "person": 4, "date": 1, "rich_link": 2 },
+  "named_ranges": [ { "id": "kix.abc123", "name": "gdoc-checklist" } ],
+  "nothing_to_protect": false
+}
+```
+
+`--dry-run` is required today, and the refusal says why: the restyle itself is
+not written yet. This half surveys and nothing more.
+
+The witness is per thread as well as counted, because it is a before picture:
+restyling a document can detach a comment, and a thread that was already
+detached beforehand would otherwise look like damage the restyle did. It has the
+same two limits it has under `comments --witness`: it finds a destroyed anchor
+and not a moved one, and two comments with the same words that disagree give no
+answer for either.
+
+`nothing_to_protect` is true only when there are no threads, nothing pending, no
+chips, no named ranges, and nothing in the document gdoc could not name. It is a
+fact about those five, not advice: whether a document is worth restyling is
+yours to decide from the counts. A named range is in that list because it is a
+label Docs keeps in step with its own edits, so a replacement of the words it
+covers takes it with them. The pending count includes a suggestion whose text is only
+whitespace, which the `suggestions` listing leaves out, because it is still
+something a rewrite would destroy.
+
+Pending is two numbers, and they are counted in different units, so do not add
+them together. `pending` counts the entries the pending walk finds, one per
+suggested insertion and one per suggested deletion, so a replacement counts as
+2 there. It is not the length of the `suggestions` listing: that listing leaves
+out the whitespace-only ones this count keeps, as the paragraph above says.
+`on_elements` is counted as ids, so the same replacement counts as 1.
+
+`on_elements` is the suggestions that listing cannot report. It reads text runs
+alone, so a suggestion carried only by a run it skips reaches it in no form: a
+chip, a page break, a horizontal rule, an auto text, a picture, a footnote
+reference. Counting nothing for them would answer "nothing to protect" over a
+change somebody is waiting on. A run with one is still printed by `read`, inside
+its markers, with its id.
+
+`revision_id` is there for the restyle that does not exist yet: it will hand the
+survey back and refuse a document that moved in between. Nothing reads it today.
+
+An export that could not be read is a warning, not a failure: you still get the
+threads, with every witness reported `unmatched`. A Docs read that failed is a
+failure, because the chips, the suggestions, the ranges, the tab count and the
+revision id are all in that one read.
 
 ### Writing into a document
 
@@ -889,7 +976,9 @@ The folder is the only thing the run can reach. No document is in reach when it
 starts, and the new document's id comes back from the create the tool itself
 made. There is no `--folder-id` default and no fallback to the folder in your
 note: a note that already names a document is refused before anything leaves
-your machine. Publishing a second version of a note is M7's `restyle --new`.
+your machine. Publishing a second version of a note is `restyle --new`, which is
+still deferred: it needs a markdown export and a markdown writer that the Go
+tool does not have.
 
 Three things are checked after the upload, and each answers something the other
 two cannot: the document reads back through the Docs API, it has exactly one
@@ -986,14 +1075,17 @@ removed. The Python tool is still there and still does the publishing: it is
 so nothing about them changed. Every `gdoc ...` example outside this section is
 the Python tool, and needs that path now.
 
-One word means two things across the two tools, and it is worth knowing before
-you type it. v1's `read` lists the comments. v2's `read` prints the document
-text, and v2's `comments` lists the comments.
+Two words mean two things across the two tools, and both are worth knowing
+before you type them. v1's `read` lists the comments; v2's `read` prints the
+document text, and v2's `comments` lists the comments. v1's `restyle` publishes
+a house-styled copy of a document into another folder; v2's `restyle --dry-run`
+reads one document and writes nothing.
 
 ## What is planned
 
 **Restyling a document in place.** `gdoc publish` makes a new document from a
-note. Taking a document that already exists and giving it the house style,
+note, and `gdoc restyle --dry-run` now says what a document holds before
+anything is done to it. Taking that document and giving it the house style,
 keeping its comments and suggestions, is the next milestone.
 
 **A live session over the whole folder.** Live works today on one document, the

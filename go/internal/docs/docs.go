@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 // The run kinds. A run is a piece of a paragraph, and the kind says what the
@@ -29,6 +30,22 @@ const (
 	// and not a drawing by the fields it carries. Calling it an image would be
 	// a guess, and this package reports rather than guesses.
 	KindObject = "object"
+	// The three smart chips. Each is a live reference the document shows as a
+	// label, and each is one character in the document's own numbering.
+	KindPerson   = "person"
+	KindDate     = "date"
+	KindRichLink = "rich_link"
+	// The four positions that carry no text: a page number or date field, and
+	// the three breaks and rules.
+	KindAutoText       = "auto_text"
+	KindPageBreak      = "page_break"
+	KindColumnBreak    = "column_break"
+	KindHorizontalRule = "horizontal_rule"
+	// KindUnknown is a paragraph element this read does not name. It is the
+	// whole point of the walk having no silent default: seven kinds went
+	// missing for a milestone because an element it could not name vanished
+	// rather than reporting itself, and the next kind Google adds must not.
+	KindUnknown = "unknown"
 )
 
 // defaultTabID is what the one tab of a pre-tabs document is called. Documents
@@ -55,6 +72,10 @@ type Tab struct {
 	ID    string  `json:"id"`
 	Title string  `json:"title"`
 	Body  []Block `json:"blocks"`
+	// NamedRanges are this tab's named ranges, sorted by name and then by id so
+	// one document reads the same way twice. Docs keys them by name in a map,
+	// and a map is walked in no order.
+	NamedRanges []NamedRange `json:"named_ranges,omitempty"`
 	// anchors is the tab's commentAnchors, by anchorId, each already carrying
 	// this tab's id. Unexported: it feeds CommentRanges and is not part of the
 	// structure a caller reads.
@@ -106,13 +127,83 @@ type Run struct {
 	InsertionIDs []string `json:"insertion_ids,omitempty"`
 	DeletionIDs  []string `json:"deletion_ids,omitempty"`
 	FootnoteID   string   `json:"footnote_id,omitempty"`
+	Detail       *Detail  `json:"detail,omitempty"`
 }
 
-// Range is where a comment is anchored, in the character indexes of one tab.
+// Detail is what a run that is not text carries besides its position: the
+// fields the reference names for a chip, the kind of an auto text, and the
+// member name of an element this read does not name.
+//
+// One struct rather than a field per kind. Every one of these is optional, they
+// are read by the same two callers, and a Run with eight more empty strings on
+// it is a Run whose common case is harder to read than the rare one.
+//
+// Text is deliberately not one of them. Text is what the document's own text
+// runs hold, and it is what a footnote's text is joined from, so a chip's label
+// living there would put a person's name inside a footnote that only mentions
+// them.
+type Detail struct {
+	// ID is the chip's own id: personId, dateId or richLinkId.
+	ID string `json:"id,omitempty"`
+	// Label is what the document shows on screen: the person's name, the date
+	// as it is displayed, the link's title.
+	Label string `json:"label,omitempty"`
+	// Email is the person chip's address, and URI and MimeType are the rich
+	// link's target and what kind of thing it is.
+	Email    string `json:"email,omitempty"`
+	URI      string `json:"uri,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	// Type is an auto text's own type: PAGE_NUMBER, PAGE_COUNT and the rest.
+	Type string `json:"type,omitempty"`
+	// Member is the JSON member of a paragraph element this read does not name.
+	// It is the one fact a person can act on when a document holds something
+	// gdoc has never seen, so it reaches the warning by name.
+	Member string `json:"member,omitempty"`
+}
+
+// Range is a span of one tab, in that tab's character indexes. It is where a
+// comment is anchored, and it is where a named range sits.
+//
+// Segment names the header, footer or footnote the span is in, and it is empty
+// for the body, which is where every span gdoc computes lives. It is carried
+// rather than dropped because a header span read as a body span names a
+// position the body does not have, and Places would then answer about the
+// wrong text. Nothing sets it on a comment anchor: rawCommentAnchor reads
+// startIndex and endIndex and no segment id, and the shape was measured on
+// comments anchored in the body, which would carry none whatever Docs sends for
+// one anchored in a header or a footnote. So the refusal below cannot fire on
+// that path today, and docs/backlog holds the unmeasured question.
 type Range struct {
-	Tab   string `json:"tab"`
-	Start int    `json:"start"`
-	End   int    `json:"end"`
+	Tab     string `json:"tab"`
+	Start   int    `json:"start"`
+	End     int    `json:"end"`
+	Segment string `json:"segment,omitempty"`
+}
+
+// NamedRange is one named range: a label the document keeps in step with its
+// own edits, tracking the text as it moves and shrinking rather than sliding
+// onto foreign text when the text around it is replaced.
+//
+// The id is the identifier and the name is a label. Two named ranges may carry
+// one name, Docs puts both under that one key, and deleting by name deletes
+// every range wearing it. So nothing here is keyed by name, and a caller that
+// wants one range names its id.
+type NamedRange struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Tab    string  `json:"tab"`
+	Ranges []Range `json:"ranges,omitempty"`
+}
+
+// NamedRanges is every named range in the document, in tab order and then in
+// each tab's own order. Tab.NamedRanges is the same list for one tab, the way
+// Places is one rule with two ways in.
+func (d *Document) NamedRanges() []NamedRange {
+	var out []NamedRange
+	for _, t := range d.Tabs {
+		out = append(out, t.NamedRanges...)
+	}
+	return out
 }
 
 // MultiTab says whether the document has more than one tab. Every document gdoc
@@ -121,8 +212,15 @@ type Range struct {
 func (d *Document) MultiTab() bool { return len(d.Tabs) > 1 }
 
 // Places says whether r names a position in this document: it ends after it
-// starts, it names a tab the document has, and both its endpoints fall inside
-// that tab's text.
+// starts, it names a tab the document has, it names no segment, and both its
+// endpoints fall inside that tab's text.
+//
+// The segment is refused rather than ignored. A header, a footer and a footnote
+// each carry their own indexes, and the text those indexes are read against
+// here is the tab's body, so a header span answered against the body names a
+// position in text it was never measured in. Every span gdoc computes today is
+// a body span, so nothing changes for the two callers; what changes is the
+// answer a segmented span gets, which is now no rather than a coincidence.
 //
 // One rule, because two commands answer from it. read marks a comment's range
 // in the text and comments prints it as a position, and a range one of them
@@ -151,7 +249,7 @@ func (d *Document) Places(r Range) bool {
 // would open a marker its own text never closes. That is the half a pair the
 // escaping exists to make impossible, so each tab answers for itself.
 func (t Tab) Places(r Range) bool {
-	return r.Start < r.End && r.Tab == t.ID && t.covers(r.Start, r.End)
+	return r.Start < r.End && r.Tab == t.ID && r.Segment == "" && t.covers(r.Start, r.End)
 }
 
 // covers says whether both indexes fall inside this tab's text runs. An index
@@ -211,6 +309,28 @@ func URL(id string) string {
 		"&commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED"
 }
 
+// NamedRangesURL is the same read narrowed to the named ranges. The whole
+// document answers with them too, so this exists for the caller that wants
+// only them: the measured saving was 982 bytes against 12,907 for the document
+// itself, and M7b rechecks the ranges rather than the prose.
+//
+// includeTabsContent stays true, because that is where the ranges are. The
+// mask selects each tab's id and its named ranges, and childTabs whole: a mask
+// does not recurse into a nesting of unknown depth, so selecting the child
+// tabs' fields one level at a time would leave a deeper tab's ranges silently
+// absent, which is the defect this milestone exists to stop. Asking for a
+// child tab in full costs bytes on the documents that have one and loses
+// nothing on any of them.
+//
+// docsReadParams already permits fields, so the guard carries this unchanged,
+// and checkFields refuses only an empty mask, a star and the permission
+// surface, none of which is here.
+func NamedRangesURL(id string) string {
+	return "https://docs.googleapis.com/v1/documents/" + id +
+		"?includeTabsContent=true" +
+		"&fields=" + url.QueryEscape("documentId,revisionId,tabs(tabProperties/tabId,documentTab/namedRanges,childTabs)")
+}
+
 // Reader is the one thing this package needs of a session: a JSON GET. A
 // *gapi.Session satisfies it, and so does a fake in a test. Naming the
 // interface here rather than the struct keeps net/http out of this room and out
@@ -250,8 +370,15 @@ func Parse(raw []byte) (*Document, error) {
 			d.appendTab(t)
 		}
 	} else {
-		// The pre-tabs shape: one body, and Docs calls that tab t.0.
-		d.Tabs = append(d.Tabs, Tab{ID: defaultTabID, Body: blocks(r.Body.content(), r.InlineObjects)})
+		// The pre-tabs shape: one body, and Docs calls that tab t.0. The named
+		// ranges sit beside that body, at the top level, and are read from
+		// there for the same reason the body is: on this shape there is no tab
+		// to read either of them from.
+		d.Tabs = append(d.Tabs, Tab{
+			ID:          defaultTabID,
+			Body:        blocks(r.Body.content(), r.InlineObjects),
+			NamedRanges: namedRanges(r.NamedRanges, defaultTabID),
+		})
 		d.addFootnotes(r.Footnotes, r.InlineObjects)
 	}
 	d.CommentRanges, d.Unplaced = commentRanges(r.Comments, d.Tabs)
@@ -271,6 +398,7 @@ func (d *Document) appendTab(t rawTab) {
 	}
 	if t.DocumentTab != nil {
 		tab.Body = blocks(t.DocumentTab.Body.content(), t.DocumentTab.InlineObjects)
+		tab.NamedRanges = namedRanges(t.DocumentTab.NamedRanges, tab.ID)
 		d.addFootnotes(t.DocumentTab.Footnotes, t.DocumentTab.InlineObjects)
 		for anchorID, a := range t.DocumentTab.CommentAnchors {
 			if len(a.Ranges) == 0 {

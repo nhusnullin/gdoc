@@ -118,8 +118,9 @@ func TestJudge(t *testing.T) {
 
 // A handed-in document is read and suggest only, and there is no longer a
 // method that lifts that inside a process. GrantInPlace left with M2: PLAN.md
-// says an unused door is deleted rather than kept warm, and M7's in-place
-// restyle adds it back beside its caller.
+// says an unused door is deleted rather than kept warm, and M7b's in-place
+// restyle adds it back beside its caller. M7 is the survey and writes to no
+// document at all, so it added no level.
 func TestAHandedInDocumentIsNeverDirectlyEdited(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)

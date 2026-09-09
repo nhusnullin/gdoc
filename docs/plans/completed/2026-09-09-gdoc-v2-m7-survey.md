@@ -117,62 +117,109 @@ The Docs API reference **does** document these elements, so this is not a measur
 
 Every one also carries `suggestedInsertionIds` and `suggestedDeletionIds`, like every other element, so each needs the same id handling.
 
-- [ ] Build `go/internal/docs/testdata/elements.json` from the documented shape, covering all seven, each with its own suggestion id lists. Placeholder text throughout, so nothing in it is anybody's document.
-- [ ] Write into `docs/v2/DECISIONS.md` under today's date: the seven were dropped, the reference documents all of them, and the fixture is built from the reference rather than measured. Say plainly that the live verification is outstanding, because a fixture built from a reference is a hypothesis until a real document agrees with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "test(v2): a fixture for the seven paragraph elements gdoc drops"`
+- [x] Build `go/internal/docs/testdata/elements.json` from the documented shape, covering all seven, each with its own suggestion id lists. Placeholder text throughout, so nothing in it is anybody's document.
+- [x] Write into `docs/v2/DECISIONS.md` under today's date: the seven were dropped, the reference documents all of them, and the fixture is built from the reference rather than measured. Say plainly that the live verification is outstanding, because a fixture built from a reference is a hypothesis until a real document agrees with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "test(v2): a fixture for the seven paragraph elements gdoc drops"`
 
 ### Task 2: the decoder stops dropping what it cannot name
 
-- [ ] Test first in `go/internal/docs/walk_test.go` against the fixture: each of the seven decodes into a run with its own `Kind`, carrying the fields the reference names and its two suggestion id lists.
-- [ ] Test that an element the walk still cannot name becomes a placeholder run with a warning naming the field, rather than returning false. **This is the wider fix and it is the point of the task.** Seven kinds went missing because the `default` arm vanished rather than reported; the eighth must not.
-- [ ] Test in `go/internal/view/text_test.go`: each new kind prints a placeholder and raises a warning, the way `[image]` and `[drawing]` do. A `horizontalRule` may deserve `---` rather than a placeholder, and a `pageBreak` a blank line; whichever is chosen, the golden file states it and the changed bytes are the specification.
-- [ ] Test in `go/internal/propose`: a quote crossing any of the seven is refused. They were holes the walk skipped and are now runs, so the contiguity check has to hold across the change rather than by luck. This is a behaviour change in a shipped write command and it gets its own test.
-- [ ] Implement: the fields on `rawParaElement`, the cases in `run()`, the reporting `default`, the kinds and placeholders in `view`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "fix(v2): seven paragraph elements stop vanishing"`
+- [x] Test first in `go/internal/docs/walk_test.go` against the fixture: each of the seven decodes into a run with its own `Kind`, carrying the fields the reference names and its two suggestion id lists.
+- [x] Test that an element the walk still cannot name becomes a placeholder run with a warning naming the field, rather than returning false. **This is the wider fix and it is the point of the task.** Seven kinds went missing because the `default` arm vanished rather than reported; the eighth must not.
+- [x] Test in `go/internal/view/text_test.go`: each new kind prints a placeholder and raises a warning, the way `[image]` and `[drawing]` do. A `horizontalRule` may deserve `---` rather than a placeholder, and a `pageBreak` a blank line; whichever is chosen, the golden file states it and the changed bytes are the specification.
+- [x] Test in `go/internal/propose`: a quote crossing any of the seven is refused. They were holes the walk skipped and are now runs, so the contiguity check has to hold across the change rather than by luck. This is a behaviour change in a shipped write command and it gets its own test.
+- [x] Implement: the fields on `rawParaElement`, the cases in `run()`, the reporting `default`, the kinds and placeholders in `view`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "fix(v2): seven paragraph elements stop vanishing"`
 
 ### Task 3: named ranges, keyed by id
 
-- [ ] Test first: named ranges decode from `tabs[].documentTab.namedRanges`, not from the top level, because every read carries `includeTabsContent=true`. Duplicate names both decode and keep their own ids.
-- [ ] Implement `docs.NamedRange` and its decoding. The id is the identifier; the name is a label.
-- [ ] Test that the read asking only for named ranges passes the guard, which `docsReadParams` already permits.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): named ranges, read and keyed by id"`
+- [x] Test first: named ranges decode from `tabs[].documentTab.namedRanges`, not from the top level, because every read carries `includeTabsContent=true`. Duplicate names both decode and keep their own ids.
+- [x] Implement `docs.NamedRange` and its decoding. The id is the identifier; the name is a label.
+- [x] Test that the read asking only for named ranges passes the guard, which `docsReadParams` already permits.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): named ranges, read and keyed by id"`
+
+➕ The pre-tabs location is read too. `Parse` already has a branch for a document with a top-level `body` and no tabs, and its named ranges sit beside that body. Reading the body from one place and the ranges from another would report none on exactly the documents whose ranges are at the top level.
+
+➕ `Range` gained `Segment`. A named range span names the header, footer or footnote it sits in, and a header span read as a body span names a position the body does not have. It is empty on every comment anchor, so no output shape moved.
 
 ### Task 4: `internal/restyle`, the survey
 
-- [ ] Test first in `go/internal/restyle/survey_test.go` over fixtures: the counts, the revision id, the tab count, the per-thread witness, and `nothing_to_protect` true only when threads, suggestions and chips are all zero.
-- [ ] Test that the pending count comes from `suggestions.All` and not `List`: a whitespace-only suggestion is still something a replacement would destroy, so counting from `List` reports nothing-to-protect on a document that has something to protect.
-- [ ] Test that a thread the Docs read placed no range for is surveyed with a warning rather than failing the listing, and that an export that could not be read leaves every thread `unmatched` with a warning, exactly as `comments --witness` behaves.
-- [ ] Implement `restyle.Survey`, taking the decoded reads and returning the report. It takes no session and touches no wire, like every other reader package. Use `suggestions.Pending`, which is the type's real name.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the restyle survey"`
+- [x] Test first in `go/internal/restyle/survey_test.go` over fixtures: the counts, the revision id, the tab count, the per-thread witness, and `nothing_to_protect` true only when threads, suggestions and chips are all zero.
+- [x] Test that the pending count comes from `suggestions.All` and not `List`: a whitespace-only suggestion is still something a replacement would destroy, so counting from `List` reports nothing-to-protect on a document that has something to protect.
+- [x] Test that a thread the Docs read placed no range for is surveyed with a warning rather than failing the listing, and that an export that could not be read leaves every thread `unmatched` with a warning, exactly as `comments --witness` behaves.
+- [x] Implement `restyle.Survey`, taking the decoded reads and returning the report. It takes no session and touches no wire, like every other reader package. Use `suggestions.Pending`, which is the type's real name.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the restyle survey"`
+
+➕ `nothing_to_protect` reads a fourth thing: an element the decoder could not name. Task 2 made an unknown paragraph element report itself instead of vanishing, and a document holding one holds something no count here speaks for. The survey warns naming the member and refuses to say there is nothing to protect.
+
+➕ The witness is carried twice, as counts and as one line per thread. M7b compares before with after per thread, which totals cannot answer, and the survey is the only place the before-witness is read.
 
 ### Task 5: `restyle --dry-run`
 
-- [ ] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing in every shape, `--dry-run` required for now with a refusal naming M7b for the apply, the envelope on each failure path, and the policy opened at `LevelSuggest` with no grant.
-- [ ] Implement `cmdRestyle` in `go/cmd/gdoc/restyle.go`, composing the four reads. Reuse the export path `comments --witness` already builds rather than a second one.
-- [ ] Bound the export the way `--wait --witness` does: an export that failed is a warning on an envelope that still carries the survey.
-- [ ] `dispatch` gains `restyle`, and the usage string with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc restyle --dry-run"`
+- [x] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing in every shape, `--dry-run` required for now with a refusal naming M7b for the apply, the envelope on each failure path, and the policy opened at `LevelSuggest` with no grant.
+- [x] Implement `cmdRestyle` in `go/cmd/gdoc/restyle.go`, composing the reads. Reuse the export path `comments --witness` already builds rather than a second one.
+- [x] Bound the export the way `--wait --witness` does: an export that failed is a warning on an envelope that still carries the survey.
+- [x] `dispatch` gains `restyle`, and the usage string with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc restyle --dry-run"`
+
+➕ The survey makes three reads, not four. The named ranges come out of the
+document read, which carries them already, so a fourth request would ask Google
+for facts this run has in hand. `docs.NamedRangesURL` stays where Task 3 put it,
+for the caller that wants only the ranges: that is M7b rechecking the ranges
+rather than the prose.
+
+➕ The export path is now one function. `exportFile` in `read.go` reads and
+parses the docx, and `comments --witness` and the survey both call it. Two
+export paths would be two chances for one of them to ask Drive for a different
+document, or to read the answer to a different ceiling.
+
+➕ The read order is stated in a test rather than left to the code. The comment
+listing goes out before the Docs read, which is the rule every poll in this
+binary already holds, and `TestRestyleListsTheCommentsBeforeItReadsTheDocument`
+is what stops a later edit from swapping them.
 
 ### Task 6: the documents that go stale, corrected now rather than at M7b
 
-- [ ] `docs/v2/PLAN.md`: split M7 into M7 and M7b, with what each carries and why the split happened. Record that the guard's third level travels with its caller, per M2's rule.
-- [ ] `docs/v2/DECISIONS.md`: the split, the request-kind allowlist Nail chose for M7b's level, and the decision to scope the in-place styling from a measurement rather than from `house.yaml`'s contents.
-- [ ] **Do not amend the Never lists yet.** PRINCIPLES.md, CLAUDE.md and SPEC.md all say a handed-in document is never direct-edited, and that stays true for the whole of this milestone. M7b amends all three, SPEC's acceptance item 1 included, which the earlier draft missed.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: M7 splits, and why the write half moves"`
+- [x] `docs/v2/PLAN.md`: split M7 into M7 and M7b, with what each carries and why the split happened. Record that the guard's third level travels with its caller, per M2's rule.
+- [x] `docs/v2/DECISIONS.md`: the split, the request-kind allowlist Nail chose for M7b's level, and the decision to scope the in-place styling from a measurement rather than from `house.yaml`'s contents.
+- [x] **Do not amend the Never lists yet.** PRINCIPLES.md, CLAUDE.md and SPEC.md all say a handed-in document is never direct-edited, and that stays true for the whole of this milestone. M7b amends all three, SPEC's acceptance item 1 included, which the earlier draft missed.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: M7 splits, and why the write half moves"`
+
+➕ Three stale M7 references in PLAN.md moved to M7b with them: M2's landed
+record of `GrantInPlace`, M3's note on the comment method, and M6's own list of
+what it leaves. A plan that splits a milestone and leaves the back-references
+pointing at the wrong half is a plan that has to be read twice.
+
+➕ The header's milestone count says ten now, and says which half is which.
 
 ### Task 7: documentation and the size delta
 
-- [ ] CLAUDE.md: the chip decoding and the reporting `default` under the read commands, named ranges, and the survey.
-- [ ] README: surveying a document before restyling it.
-- [ ] `docs/v2/PLAN.md`: the M7 landed paragraph, the "What M7 leaves for M7b" list, and the binary-size table against the last M6 commit.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `git commit -m "docs: M7 landed"`
+- [x] CLAUDE.md: the chip decoding and the reporting `default` under the read commands, named ranges, and the survey.
+- [x] README: surveying a document before restyling it.
+- [x] `docs/v2/PLAN.md`: the M7 landed paragraph, the "What M7 leaves for M7b" list, and the binary-size table against the last M6 commit.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `git commit -m "docs: M7 landed"`
+
+➕ Two stale M7 references were corrected with the rest. CLAUDE.md's guard
+section and `internal/guard/policy_test.go`'s own comment both said M7 adds the
+in-place grant back; it is M7b's, and a comment naming the wrong half is what
+sends somebody looking for a door that is not there.
+
+➕ `restyle` is the second word the two tools spell the same and mean
+differently, after `read`. v1's publishes a house-styled copy into another
+folder and v2's surveys one document. CLAUDE.md and the README both say so
+where they already said it about `read`.
+
+➕ The size table's two columns were built in one measurement, at `d50daf0` and
+at HEAD, with one toolchain. darwin/arm64 reproduces the M6 table's recorded
+13,952,082 exactly; the other two differ by a few kilobytes from the numbers
+recorded then, which is the toolchain having moved since, and the note under the
+table says so rather than leaving two tables that quietly disagree.
 
 ## Post-Completion
 

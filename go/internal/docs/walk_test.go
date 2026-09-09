@@ -1,8 +1,10 @@
 package docs
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -320,5 +322,323 @@ func TestACommentWithNoIDIsReportedByPosition(t *testing.T) {
 	}
 	if len(d.Unplaced) != 1 || d.Unplaced[0] != "comments[0] (no id)" {
 		t.Errorf("Unplaced = %v", d.Unplaced)
+	}
+}
+
+// TestTheDroppedElementsFixtureNamesAllSeven states what elements.json is for.
+// ParagraphElement is a union of eleven and run() reads four, so seven members
+// are dropped at decode today. The fixture holds one of each, with its own two
+// suggestion id lists, and it is what the decoder is taught against.
+func TestTheDroppedElementsFixtureNamesAllSeven(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "elements.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// It parses the way a body off the wire parses, whatever the decoder does
+	// with the members afterwards.
+	if _, err := Parse(raw); err != nil {
+		t.Fatalf("Parse(elements.json): %v", err)
+	}
+
+	found := map[string]map[string]bool{}
+	for _, el := range fixtureParaElements(t, raw) {
+		for key, val := range el {
+			if key == "startIndex" || key == "endIndex" {
+				continue
+			}
+			var member map[string]json.RawMessage
+			if err := json.Unmarshal(val, &member); err != nil {
+				t.Fatalf("member %q is not an object: %v", key, err)
+			}
+			keys := map[string]bool{}
+			for k := range member {
+				keys[k] = true
+			}
+			found[key] = keys
+		}
+	}
+
+	for _, member := range []string{
+		"person", "richLink", "dateElement",
+		"autoText", "pageBreak", "columnBreak", "horizontalRule",
+	} {
+		keys, ok := found[member]
+		if !ok {
+			t.Errorf("elements.json holds no %s", member)
+			continue
+		}
+		for _, ids := range []string{"suggestedInsertionIds", "suggestedDeletionIds"} {
+			if !keys[ids] {
+				t.Errorf("%s carries no %s", member, ids)
+			}
+		}
+	}
+
+	// The fields the reference names for the two chips that carry data, and
+	// the field that says which auto text this is. A fixture missing one of
+	// them cannot teach the decoder to read it.
+	for member, field := range map[string]string{
+		"person":         "personProperties",
+		"richLink":       "richLinkProperties",
+		"dateElement":    "dateElementProperties",
+		"autoText":       "type",
+		"horizontalRule": "textStyle",
+	} {
+		if !found[member][field] {
+			t.Errorf("%s carries no %s", member, field)
+		}
+	}
+}
+
+// fixtureParaElements is every paragraph element in a fixture, raw, so a test
+// can ask what the JSON names rather than what the decoder kept.
+func fixtureParaElements(t *testing.T, raw []byte) []map[string]json.RawMessage {
+	t.Helper()
+	var doc struct {
+		Tabs []struct {
+			DocumentTab struct {
+				Body struct {
+					Content []struct {
+						Paragraph *struct {
+							Elements []map[string]json.RawMessage `json:"elements"`
+						} `json:"paragraph"`
+					} `json:"content"`
+				} `json:"body"`
+			} `json:"documentTab"`
+		} `json:"tabs"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	var out []map[string]json.RawMessage
+	for _, tab := range doc.Tabs {
+		for _, el := range tab.DocumentTab.Body.Content {
+			if el.Paragraph != nil {
+				out = append(out, el.Paragraph.Elements...)
+			}
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("the fixture holds no paragraph elements")
+	}
+	return out
+}
+
+// TestTheSevenElementsDecodeIntoRuns is the fix Task 1's fixture was built for.
+// ParagraphElement is a union of eleven and run() read four, so a person chip,
+// a date chip, a calendar link, an auto text, a page break, a column break and
+// a horizontal rule each vanished at decode: no run, no placeholder, no
+// warning. Every review since M2 read those documents with holes in them.
+func TestTheSevenElementsDecodeIntoRuns(t *testing.T) {
+	d := fixture(t, "elements.json")
+	var runs []Run
+	for _, p := range paragraphs(d.Tabs[0].Body) {
+		runs = append(runs, p.Runs...)
+	}
+	want := []string{
+		KindText, KindPerson, KindText, KindDate, KindText, KindRichLink, KindText,
+		KindHorizontalRule, KindText,
+		KindText, KindAutoText, KindText,
+		KindPageBreak, KindText,
+		KindColumnBreak, KindText,
+	}
+	if len(runs) != len(want) {
+		t.Fatalf("len(runs) = %d, want %d: %+v", len(runs), len(want), runs)
+	}
+	for i, k := range want {
+		if runs[i].Kind != k {
+			t.Errorf("run %d kind = %q, want %q", i, runs[i].Kind, k)
+		}
+	}
+
+	// The fields the reference names for each member, and the two id lists
+	// every element in a paragraph carries.
+	byKind := map[string]Run{}
+	for _, r := range runs {
+		byKind[r.Kind] = r
+	}
+	person := byKind[KindPerson]
+	if person.Detail == nil {
+		t.Fatal("the person chip carries no detail")
+	}
+	if person.Detail.ID != "kix.person1" || person.Detail.Label != "A Placeholder" || person.Detail.Email != "placeholder@example.com" {
+		t.Errorf("person detail = %+v", *person.Detail)
+	}
+	if got := person.InsertionIDs; len(got) != 1 || got[0] != "suggest.person1" {
+		t.Errorf("person insertion ids = %v", got)
+	}
+	if len(person.DeletionIDs) != 0 {
+		t.Errorf("person deletion ids = %v", person.DeletionIDs)
+	}
+
+	// A chip that shows the address carries no name at all: the reference
+	// documents name as what is shown "instead of the person's email address",
+	// and email as always present. A bare [person] tells a reader somebody is
+	// there and not who, which for a policy naming its owner is the fact that
+	// mattered, so the label falls back to the address.
+	t.Run("a person chip shown as an address is labelled with it", func(t *testing.T) {
+		raw := `{"documentId":"D","body":{"content":[
+			{"startIndex":1,"endIndex":3,"paragraph":{"elements":[
+			  {"startIndex":1,"endIndex":2,"person":{"personId":"kix.person2",
+			    "personProperties":{"email":"placeholder@example.com"}}},
+			  {"startIndex":2,"endIndex":3,"textRun":{"content":"\n"}}]}}]}}`
+		d, err := Parse([]byte(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := d.Tabs[0].Body[0].Paragraph.Runs[0]
+		if got.Detail == nil || got.Detail.Label != "placeholder@example.com" {
+			t.Errorf("person detail = %+v, want the address as the label", got.Detail)
+		}
+	})
+
+	date := byKind[KindDate]
+	if date.Detail == nil || date.Detail.ID != "kix.date1" || date.Detail.Label != "Sep 9, 2026" {
+		t.Errorf("date detail = %+v", date.Detail)
+	}
+	if got := date.DeletionIDs; len(got) != 1 || got[0] != "suggest.date1" {
+		t.Errorf("date deletion ids = %v", got)
+	}
+
+	link := byKind[KindRichLink]
+	if link.Detail == nil {
+		t.Fatal("the rich link carries no detail")
+	}
+	if link.Detail.ID != "kix.link1" || link.Detail.Label != "A placeholder calendar entry" ||
+		link.Detail.URI != "https://calendar.example.com/event/placeholder" ||
+		link.Detail.MimeType != "application/vnd.google-apps.calendar-event" {
+		t.Errorf("rich link detail = %+v", *link.Detail)
+	}
+	// One element carrying both lists is one that was suggested and then
+	// suggested away, and it is a replacement whatever kind of element it is.
+	if got := link.InsertionIDs; len(got) != 1 || got[0] != "suggest.link1" {
+		t.Errorf("rich link insertion ids = %v", got)
+	}
+	if got := link.DeletionIDs; len(got) != 1 || got[0] != "suggest.link2" {
+		t.Errorf("rich link deletion ids = %v", got)
+	}
+
+	auto := byKind[KindAutoText]
+	if auto.Detail == nil || auto.Detail.Type != "PAGE_NUMBER" {
+		t.Errorf("auto text detail = %+v", auto.Detail)
+	}
+	if got := auto.InsertionIDs; len(got) != 1 || got[0] != "suggest.auto1" {
+		t.Errorf("auto text insertion ids = %v", got)
+	}
+
+	// The three that carry nothing but their position still carry their ids.
+	for kind, ids := range map[string][]string{
+		KindHorizontalRule: {"suggest.rule1", "suggest.rule2"},
+		KindPageBreak:      {"", "suggest.break1"},
+		KindColumnBreak:    {"suggest.break2", ""},
+	} {
+		r := byKind[kind]
+		if got := strings.Join(r.InsertionIDs, ","); got != ids[0] {
+			t.Errorf("%s insertion ids = %q, want %q", kind, got, ids[0])
+		}
+		if got := strings.Join(r.DeletionIDs, ","); got != ids[1] {
+			t.Errorf("%s deletion ids = %q, want %q", kind, got, ids[1])
+		}
+	}
+}
+
+// TestAnElementTheWalkCannotNameIsReportedRatherThanDropped is the wider fix,
+// and it is the point of the task. Seven kinds went missing because the default
+// arm vanished rather than reported; the eighth must not. A decoder that drops
+// what it does not recognise makes every reader downstream confidently wrong.
+func TestAnElementTheWalkCannotNameIsReportedRatherThanDropped(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":5,"textRun":{"content":"See "}},
+		   {"startIndex":5,"endIndex":6,"tomorrowsElement":{"suggestedInsertionIds":["suggest.x1"]}},
+		   {"startIndex":6,"endIndex":9,"textRun":{"content":".\n"}}]}}]}}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs := paragraphs(d.Tabs[0].Body)[0].Runs
+	if len(runs) != 3 {
+		t.Fatalf("len(runs) = %d, want 3: the unnamed element was dropped", len(runs))
+	}
+	if runs[1].Kind != KindUnknown {
+		t.Errorf("run 1 kind = %q, want %q", runs[1].Kind, KindUnknown)
+	}
+	// The member name is what the warning downstream names, so the run has to
+	// carry it: "an element gdoc does not read" says nothing a person can act
+	// on, and "tomorrowsElement" says exactly what Google added.
+	if runs[1].Detail == nil || runs[1].Detail.Member != "tomorrowsElement" {
+		t.Errorf("run 1 detail = %+v, want the member name", runs[1].Detail)
+	}
+	if runs[1].StartIndex != 5 || runs[1].EndIndex != 6 {
+		t.Errorf("run 1 indexes = %d..%d, want 5..6", runs[1].StartIndex, runs[1].EndIndex)
+	}
+}
+
+// An element naming no member at all is still a position in the document, so it
+// is still a run. There is nothing to name in the warning, and saying so is the
+// honest answer.
+func TestAnElementWithNoMemberIsStillARun(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":2,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":2}]}}]}}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs := paragraphs(d.Tabs[0].Body)[0].Runs
+	if len(runs) != 1 || runs[0].Kind != KindUnknown {
+		t.Fatalf("runs = %+v, want one unknown run", runs)
+	}
+	if runs[0].Detail != nil && runs[0].Detail.Member != "" {
+		t.Errorf("detail = %+v, want no member named", *runs[0].Detail)
+	}
+}
+
+// TestAnElementTheWalkCannotNameStillCarriesItsSuggestionIDs is the same rule
+// one field in. Every named member carries suggestedInsertionIds and
+// suggestedDeletionIds, so the twelfth Google adds will carry them too. Reading
+// the member name and dropping the ids leaves a pending change that read prints
+// with no markers and that restyle --dry-run counts in neither number, which is
+// the confidently-wrong reader the default arm exists to prevent.
+func TestAnElementTheWalkCannotNameStillCarriesItsSuggestionIDs(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":9,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":5,"textRun":{"content":"See "}},
+		   {"startIndex":5,"endIndex":6,"tomorrowsElement":{"suggestedInsertionIds":["suggest.x1"],
+		    "suggestedDeletionIds":["suggest.x2"]}},
+		   {"startIndex":6,"endIndex":9,"textRun":{"content":".\n"}}]}}]}}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := paragraphs(d.Tabs[0].Body)[0].Runs[1]
+	if got := strings.Join(r.InsertionIDs, ","); got != "suggest.x1" {
+		t.Errorf("insertion ids = %q, want %q", got, "suggest.x1")
+	}
+	if got := strings.Join(r.DeletionIDs, ","); got != "suggest.x2" {
+		t.Errorf("deletion ids = %q, want %q", got, "suggest.x2")
+	}
+}
+
+// A member whose value is not an object carries no ids, and it must not end the
+// decode either: the element's position and its name are still facts, and a
+// read that failed over a member gdoc has never seen would take the whole
+// document with it.
+func TestAnUnnamedMemberThatIsNotAnObjectStillDecodes(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":2,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":2,"tomorrowsFlag":true}]}}]}}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := paragraphs(d.Tabs[0].Body)[0].Runs[0]
+	if r.Detail == nil || r.Detail.Member != "tomorrowsFlag" {
+		t.Fatalf("detail = %+v, want the member name", r.Detail)
+	}
+	if len(r.InsertionIDs) != 0 || len(r.DeletionIDs) != 0 {
+		t.Errorf("ids = %v/%v, want none", r.InsertionIDs, r.DeletionIDs)
 	}
 }

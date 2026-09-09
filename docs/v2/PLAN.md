@@ -1,10 +1,11 @@
 # gdoc v2 master plan
 
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
-producing working, testable software. Detailed task-by-task plans live in
-`docs/plans/` and are written when a milestone starts, so each one
-is written against the code that actually exists by then. Milestones 1 to 4
-are written, and all four are done.
+producing working, testable software. M7 split into two on 2026-09-09, so there
+are ten: the survey is M7 and the in-place write is M7b. Detailed task-by-task
+plans live in `docs/plans/` and are written when a milestone starts, so each one
+is written against the code that actually exists by then. Milestones 1 to 7 are
+written, and all seven are done.
 
 ## Principles
 
@@ -117,7 +118,8 @@ drawings is in `docs/backlog/`.
 each opening the guard with exactly the one document it was given.
 `Policy.AllowFile`, `Token.Refresh` and `Policy.Warnings()` have production
 callers now. `GrantInPlace` had none and was deleted with its tests, as this
-milestone asked; M7 adds it back beside its caller. `AllowCreateIn` stayed,
+milestone asked; the milestone that writes in place adds it back beside its
+caller, which is M7b since the 2026-09-09 split. `AllowCreateIn` stayed,
 because the transport's whole create path reads it and M6 needs that path.
 `internal/gapi` is the fourth room in the import allowlist and builds no client
 of its own. `goccy/go-yaml` is the first third-party module, named in
@@ -212,7 +214,7 @@ What M3 leaves for M6:
 What M3 leaves open elsewhere:
 
 - Deleting or editing a comment gdoc wrote is not carried by the guard. A
-  withdrawn proposal's 🤖 comment stays, with a reply saying so. M7 or M8 adds
+  withdrawn proposal's 🤖 comment stays, with a reply saying so. M7b or M8 adds
   the method back beside a caller.
 - The Docs read's `comments` key is still decoded loosely, as M2 left it. The
   live write run records the fixture to tighten it against.
@@ -462,8 +464,9 @@ What M6 leaves for M7:
   document. Replacing the paired document, and the state transition that gives
   the note the new id and a fresh publish record in the same change, is
   `restyle --new`'s.
-- **`GrantInPlace`.** Still deleted, still M7's, and the level it raises to is
-  still Nail's decision then.
+- **`GrantInPlace`.** Still deleted. It is M7b's since the 2026-09-09 split,
+  because the level travels with the write that uses it, and the level it
+  raises to is still Nail's decision then.
 - **Editing or deleting a comment.** `commentWrites` is still `POST` alone, so
   the 🤖 comment a withdrawn proposal made stays where it is.
 
@@ -482,19 +485,195 @@ What M6 leaves open elsewhere:
   which `docs/backlog/drift-known-pins-no-value.md` holds.
 - One template. Everything is still measured against `altery-group-policy-v1.0`.
 
-### M7. Restyle
+### M7. The survey, and the elements gdoc drops
 
-Two-phase by design: `restyle --dry-run` emits a machine-readable survey
-(threads, suggestions, chips, tabs, revision id) and the apply invocation
-hands the survey back, rechecking revision and tabs before writing. In-place
-styling under the per-run write grant, the finishing checklist page under a
-named range, `--new` through the generator including the document-content
-extraction it needs, and the nothing-to-protect detection that offers rather
-than takes. `--new` also defines its state transition: when the new document
-replaces the paired one, the front matter gets the new id and a fresh publish
-record in the same change; a document left unpaired is refused by alignment
-until it is paired on purpose. Acceptance: spec item 5, the ten-feature
-preservation run.
+`restyle <url> --dry-run` emits a machine-readable survey of what a document
+holds: its threads with a witness for each, its pending suggestions, its smart
+chips, its tabs, its named ranges and its revision id. It writes to no document
+at all.
+
+Getting there fixes something older. `run()` in `internal/docs` returned
+`(Run{}, false)` for any paragraph element that was not a text run, an inline
+object, a footnote reference or an equation, so seven of the eleven members of
+`ParagraphElement` vanished at decode: the three chips, `autoText`, `pageBreak`,
+`columnBreak` and `horizontalRule`. A chip reached neither `view`'s placeholders
+nor its warnings, so every review session since M2 read documents with holes in
+them and was told nothing. The wider fix travels with it: the `default` arm
+reports rather than vanishes, so the eighth member Google adds shows up as a
+placeholder with a warning. Named ranges are decoded here too, keyed by
+`namedRangeId` rather than by name, because duplicate names coexist.
+
+**Landed 2026-09-09.** `gdoc restyle <url> --dry-run` makes three reads, the
+comment listing, the Docs read and the docx export, and reports the counts, the
+revision id, the tab count, the named ranges and a witness per thread. It writes
+to no document and to no file. `--dry-run` is required and the refusal names
+M7b: a caller told only that a flag is missing learns the command is broken,
+when what is true is that the half it wants has not been written yet. The policy
+opens with the document at `LevelSuggest` and no grant, like every read.
+
+Three reads and not four, because the named ranges come out of the Docs read,
+which carries them already. `docs.NamedRangesURL` exists for the caller that
+wants only the ranges, which is M7b rechecking the ranges rather than the prose,
+and it has no caller today. `exportFile` in `read.go` is the one export path,
+called by `comments --witness` and by the survey both: two would be two chances
+for one of them to ask Drive for a different document or to read the answer to a
+different ceiling. The listing goes out before the Docs read, which is the order
+every poll in this binary already holds, and
+`TestRestyleListsTheCommentsBeforeItReadsTheDocument` is what stops a later edit
+from swapping them.
+
+The decoder fix is the wider half of the milestone and it changes what `read`
+prints. `run()` handles all eleven members of `ParagraphElement` now, and its
+`default` arm reports rather than vanishes: an element gdoc cannot name is a run
+carrying `KindUnknown` and the member name, printing `[unknown: member]` with a
+warning. Each of the seven carries its own suggestion id lists like every other
+element. `view` gained a placeholder and a warning for each, the three chips
+carrying the label the document shows, escaped exactly as the document's own
+text is; a horizontal rule prints `[rule]` and not `---`, because the footnote
+separator is already `---`. The golden files moved and the moved bytes are the
+specification. `internal/propose` gained a test for it: a chip was a hole the
+walk skipped while the document still numbered it, so the contiguity check held
+across one by luck and holds by construction now, and a quote crossing any of
+the seven is refused naming what it crossed.
+
+`docs.NamedRange` is `{id, name, tab, ranges}`, read from
+`tabs[].documentTab.namedRanges` and from the pre-tabs top level too: `Parse`
+already had a branch for a document with a body and no tabs, and reading the
+body from one place and the ranges from another would report none on exactly the
+documents whose ranges are at the top level. `Range` gained `Segment`, because a
+header span read as a body span names a position the body does not have.
+`Places` refuses a span that names one, which the M7 review added: the field was
+carried and never read, so a header span whose indexes happened to fall in the
+body came back placed. It is empty on every comment anchor, so no output shape
+moved.
+
+`nothing_to_protect` reads five things and not three. No threads, no pending
+suggestions, no chips, no paragraph element the decoder could not name, and no
+named range. A document holding an element gdoc has never seen holds something
+no count here speaks for, so the survey warns naming the member and refuses to
+say there is nothing to protect. A named range is the fifth, added by the second
+M7 review round: the survey lists them because M7b has to check them, and a
+replacement of the words one covers takes it with them, so the field M7b reads
+before it writes cannot answer true over one. The
+pending count is `suggestions.All`'s and not `List`'s, because `List` drops a
+whitespace-only suggestion and that is still something a replacement would
+destroy, and it is two numbers since the M7 review: `on_elements` is the ids
+carried only by the runs that listing skips, which is every run that is not
+text, so the survey cannot answer nothing to protect over a suggested page
+break. The two are in different units, `pending` counting the insert-and-delete
+entries and `on_elements` counting ids. The witness
+is carried twice, as counts and as one line per thread,
+because M7b compares before with after per thread and totals cannot answer that.
+
+`allowedModules` did not change and the module graph gained nothing: `go list -m
+all` is still `beevik/etree`, `goccy/go-yaml` and `yuin/goldmark`. The
+binary-size delta against `d50daf0`, the last M6 commit, is about 50 KB per
+platform. Both columns were built in one measurement with one toolchain, which
+is why the darwin/amd64 and windows numbers differ slightly from the M6 table
+above:
+
+| Platform | M6 (d50daf0) | M7 | Delta |
+|---|---|---|---|
+| darwin/arm64 | 13,952,082 | 14,020,578 | +68,496 (+0.5%) |
+| darwin/amd64 | 14,929,376 | 14,976,848 | +47,472 (+0.3%) |
+| windows/amd64 | 14,767,616 | 14,818,304 | +50,688 (+0.3%) |
+
+Acceptance: M7 carries no spec acceptance item. Spec item 5, the ten-feature
+preservation run, is M7b's, because it is a test of what a write preserved.
+
+Documented in CLAUDE.md under "A paragraph element is a run, and the `default`
+arm reports", "Named ranges are keyed by id, and they live in the tab" and
+"`restyle --dry-run` is the survey, and it writes nothing", and in the README
+under "Surveying a document before you restyle it".
+
+What M7 leaves for M7b:
+
+- **The guard's third level**, `LevelInPlace`, with the request-kind allowlist
+  Nail chose: only the styling kinds carry, and `deleteHeader`,
+  `deleteContentRange`, `replaceAllText` and `deletePositionedObject` are
+  refused. The call sites are `policy.go`'s level check and its refusal text,
+  `Level.String()`, and `AllowFile`, which takes any level and is the side door
+  around the grant's own invariant.
+- **The fidelity measurement.** What the in-place styling attempts is scoped
+  from a probe that applies each candidate request kind to a throwaway document
+  and records what lands, not from reading `house.yaml`. The 2026-08-29 run
+  measured survival, not fidelity.
+- **What in-place cannot reach**, written down as a list rather than the word
+  "approximate": the nine named styles cannot be redefined, so styling means
+  applying paragraph and text style over every paragraph one at a time, and the
+  next heading the author types is not house style. `highlight` is an OOXML name
+  with no Docs equivalent, bullet glyphs and number formats are a fixed enum, tab
+  stops are read-only, and the Docs API accepts no image bytes.
+- **The `docs` enrichment the styling needs**: table start indexes, section
+  breaks, document style and existing run styles, none of which the package
+  carries today.
+- **The write loop is read-recompute-send**, not a pure function computed once.
+  Every batch that inserts or deletes shifts the indexes later batches were
+  computed from, and the measured run was 22 batches.
+- **`writeControl.requiredRevisionId`** rather than read-then-compare. It is in
+  the public discovery document, unlike `writeMode`, and it closes the window
+  between the survey's recheck and the first write. `revision_id` is on the
+  survey today for that caller.
+- **The checklist**, its named range captured by id, and the decision about
+  whether text gdoc writes into a document body carries the 🤖 mark the way
+  everything else it writes does.
+- **The live ten-feature run, and how the copy is made.** `files.copy` is
+  refused by the guard today and drops every comment anyway, so an API copy
+  cannot carry the anchored comment the acceptance asserts.
+- **The amendments**: PRINCIPLES.md's principle 3, CLAUDE.md's Never list, and
+  SPEC.md's Never list **and acceptance item 1**, which says a direct edit on a
+  handed-in id is refused. All three are untouched by M7 and stay true through
+  it.
+
+What M7 leaves open elsewhere:
+
+- **The live check on the fixture.** `elements.json` is built from the Docs API
+  reference, which documents every field of all seven members, and a fixture
+  built from a reference is a hypothesis until a real document agrees with it.
+  Nail reads a document holding a person chip, a date chip and a calendar link
+  against it. A disagreement is a decision recorded with the difference, never a
+  test loosened.
+- A chip inside a footnote is counted nowhere, because the decoder flattens a
+  footnote's text. That is the hole
+  `docs/backlog/suggestions-inside-footnotes.md` already holds.
+- The witness still names a destroyed anchor and not a moved one, and two
+  exported comments that share words and disagree still give no answer for
+  either. Both are `internal/docx`'s limits, unchanged, and the survey states
+  them rather than working around them.
+- `restyle` has no skill caller. It is Nail-invoked, like `publish`, and wiring
+  either into a skill is M9's with the install story.
+
+### M7b. The in-place restyle
+
+The write half. In-place styling under the per-run write grant, the finishing
+checklist page under a named range, the nothing-to-protect offer that offers
+rather than takes, and the amendments to the three Never lists that a direct
+edit on a handed-in id needs. The survey M7 emits is what the apply invocation
+hands back, rechecking the revision id and the tab count before it writes.
+Acceptance: spec item 5, the ten-feature preservation run.
+
+**Why the split.** M7 was one milestone until 2026-09-09. The review that read
+the draft plan found the survey resting on a decoder that was throwing chips
+away, so the survey could not honestly count them; and it found the write half
+carrying a guard level, a styling engine, a fidelity measurement and a live
+ten-feature run, none of which the survey needs. The two halves have no shared
+risk, and the first is the one the review skill benefits from immediately. The
+split is recorded in DECISIONS.md under that date.
+
+**The guard's third level travels with its caller.** `LevelInPlace` is not added
+in M7. M2's rule is that a guard door with no production caller is deleted
+rather than carried, which is why `GrantInPlace` went, and adding a level a
+milestone before the command that uses it would repeat exactly that. It arrives
+in M7b beside the write, with the request-kind allowlist Nail chose: only the
+styling kinds carry, and `deleteHeader`, `deleteContentRange`, `replaceAllText`
+and `deletePositionedObject` are refused.
+
+**`--new` stays deferred**, decided 2026-09-09. It needs a markdown export,
+media extraction and a markdown writer, none of which exist in Go. Its state
+transition is deferred with it: when the new document replaces the paired one,
+the front matter gets the new id and a fresh publish record in the same change,
+and a document left unpaired is refused by alignment until it is paired on
+purpose, which is M8's constraint.
 
 ### M8. The diff, alignment, and the align skill
 

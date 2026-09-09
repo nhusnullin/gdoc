@@ -1,0 +1,71 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd",
+  "title": "Named ranges",
+  "revisionId": "ALm37BXnamedRanges",
+  "namedRanges": {
+    "top-level-decoy": {
+      "name": "top-level-decoy",
+      "namedRanges": [
+        {"namedRangeId": "kix.toplevel", "name": "top-level-decoy",
+         "ranges": [{"startIndex": 1, "endIndex": 5}]}
+      ]
+    }
+  },
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "Overview", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 11, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "HEADING_1"},
+            "elements": [{"startIndex": 1, "endIndex": 11, "textRun": {"content": "Overview\n", "textStyle": {}}}]}},
+          {"startIndex": 11, "endIndex": 40, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [{"startIndex": 11, "endIndex": 40, "textRun": {"content": "The owner reviews this.\n", "textStyle": {}}}]}}
+        ]},
+        "namedRanges": {
+          "gdoc-checklist": {
+            "name": "gdoc-checklist",
+            "namedRanges": [
+              {"namedRangeId": "kix.abc123", "name": "gdoc-checklist",
+               "ranges": [{"startIndex": 12, "endIndex": 24, "segmentId": "", "tabId": "t.0"}]},
+              {"namedRangeId": "kix.def456", "name": "gdoc-checklist",
+               "ranges": [{"startIndex": 26, "endIndex": 33, "segmentId": "", "tabId": "t.0"}]}
+            ]
+          },
+          "owner-block": {
+            "name": "owner-block",
+            "namedRanges": [
+              {"namedRangeId": "kix.ghi789", "name": "owner-block",
+               "ranges": [{"startIndex": 1, "endIndex": 11, "tabId": "t.0"},
+                          {"startIndex": 4, "endIndex": 9, "segmentId": "h.headerone"}]}
+            ]
+          }
+        }
+      },
+      "childTabs": [
+        {
+          "tabProperties": {"tabId": "t.1", "title": "Detail", "index": 0},
+          "documentTab": {
+            "body": {"content": [
+              {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+              {"startIndex": 1, "endIndex": 8, "paragraph": {
+                "paragraphStyle": {"namedStyleType": "HEADING_1"},
+                "elements": [{"startIndex": 1, "endIndex": 8, "textRun": {"content": "Detail\n", "textStyle": {}}}]}}
+            ]},
+            "namedRanges": {
+              "gdoc-checklist": {
+                "name": "gdoc-checklist",
+                "namedRanges": [
+                  {"namedRangeId": "kix.jkl012", "name": "gdoc-checklist",
+                   "ranges": [{"startIndex": 1, "endIndex": 7, "tabId": "t.1"}]}
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

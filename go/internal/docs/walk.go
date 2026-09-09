@@ -10,6 +10,7 @@ package docs
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -21,6 +22,11 @@ type rawDocument struct {
 	Footnotes     map[string]rawFootnote     `json:"footnotes"`
 	InlineObjects map[string]rawInlineObject `json:"inlineObjects"`
 	Tabs          []rawTab                   `json:"tabs"`
+	// NamedRanges is the pre-tabs location. Every read gdoc makes carries
+	// includeTabsContent=true, which leaves this empty and puts the ranges in
+	// the tab, so this field answers on a document written before tabs existed
+	// and on nothing else.
+	NamedRanges map[string]rawNamedRanges `json:"namedRanges"`
 	// Comments stays raw. Its shape is measured, not documented, so each entry
 	// is read field by field rather than decoded into a struct that a surprise
 	// would break the whole read on.
@@ -45,6 +51,77 @@ type rawDocumentTab struct {
 	// `comments[]` entry names its anchorId. The reference for documents.get
 	// still does not describe it.
 	CommentAnchors map[string]rawCommentAnchor `json:"commentAnchors"`
+	// NamedRanges is where the ranges are on every read gdoc makes, keyed by
+	// name. The key is not an identifier: duplicate names coexist, and each
+	// entry below it holds every range wearing that name.
+	NamedRanges map[string]rawNamedRanges `json:"namedRanges"`
+}
+
+// rawNamedRanges is one name's worth of ranges. Docs keys the map by name and
+// then repeats the name inside, because the name identifies nothing on its own.
+type rawNamedRanges struct {
+	Name        string          `json:"name"`
+	NamedRanges []rawNamedRange `json:"namedRanges"`
+}
+
+// rawNamedRange is one named range: an id, the name it wears, and the spans it
+// covers. A span names the tab and the segment it is in, and a segment id names
+// a header, a footer or a footnote rather than the body.
+type rawNamedRange struct {
+	NamedRangeID string `json:"namedRangeId"`
+	Name         string `json:"name"`
+	Ranges       []struct {
+		StartIndex int    `json:"startIndex"`
+		EndIndex   int    `json:"endIndex"`
+		SegmentID  string `json:"segmentId"`
+		TabID      string `json:"tabId"`
+	} `json:"ranges"`
+}
+
+// namedRanges flattens one tab's named ranges, keyed by name in the answer and
+// by nothing here: the list is the shape, and the id is the identifier.
+//
+// tabID is the tab the map was read from, and it is what a span with no tabId
+// of its own takes. A pre-tabs document names no tab anywhere, and the ranges
+// there belong to the implicit first tab, which is the same tab its body went
+// into.
+//
+// The result is sorted by name and then by id. The answer is a map, a map is
+// walked in no order, and a survey that lists a document's named ranges in a
+// different order on each run is a survey nobody can diff.
+func namedRanges(raw map[string]rawNamedRanges, tabID string) []NamedRange {
+	var out []NamedRange
+	for key, group := range raw {
+		for _, nr := range group.NamedRanges {
+			name := nr.Name
+			if name == "" {
+				// The map key is the name, and the entries under it repeat it.
+				// A range that did not repeat it still wears it.
+				name = group.Name
+			}
+			if name == "" {
+				name = key
+			}
+			one := NamedRange{ID: nr.NamedRangeID, Name: name, Tab: tabID}
+			for _, r := range nr.Ranges {
+				tab := r.TabID
+				if tab == "" {
+					tab = tabID
+				}
+				one.Ranges = append(one.Ranges, Range{
+					Tab: tab, Start: r.StartIndex, End: r.EndIndex, Segment: r.SegmentID,
+				})
+			}
+			out = append(out, one)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Name != out[j].Name {
+			return out[i].Name < out[j].Name
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out
 }
 
 // rawCommentAnchor is one anchor's ranges. A comment on one span has one; the
@@ -101,6 +178,10 @@ type rawParagraph struct {
 	} `json:"bullet"`
 }
 
+// rawParaElement is one member of the ParagraphElement union, which the
+// reference documents as eleven members. All eleven are named here, and an
+// element naming none of them is still decoded: unnamed carries whatever it did
+// name, so the walk can report it instead of dropping it.
 type rawParaElement struct {
 	StartIndex          int                     `json:"startIndex"`
 	EndIndex            int                     `json:"endIndex"`
@@ -108,6 +189,128 @@ type rawParaElement struct {
 	InlineObjectElement *rawInlineObjectElement `json:"inlineObjectElement"`
 	FootnoteReference   *rawFootnoteReference   `json:"footnoteReference"`
 	Equation            *rawSuggested           `json:"equation"`
+	Person              *rawPerson              `json:"person"`
+	RichLink            *rawRichLink            `json:"richLink"`
+	DateElement         *rawDateElement         `json:"dateElement"`
+	AutoText            *rawAutoText            `json:"autoText"`
+	PageBreak           *rawSuggested           `json:"pageBreak"`
+	ColumnBreak         *rawSuggested           `json:"columnBreak"`
+	HorizontalRule      *rawSuggested           `json:"horizontalRule"`
+	// unnamed is every member of this element that is not in the list above,
+	// sorted. It is what the warning names when Google adds a twelfth.
+	unnamed []string
+	// unnamedSuggested is what those members said about being suggested. Every
+	// one of the eleven carries the two id lists, so the twelfth will too, and
+	// a run that kept the member name and dropped the ids is a pending change
+	// read prints with no markers and the survey counts in neither number.
+	unnamedSuggested rawSuggested
+}
+
+// namedMembers is the union as this decoder knows it, plus the two indexes
+// every element carries. A key outside this set is a member gdoc has never
+// seen, and it is reported rather than ignored.
+var namedMembers = map[string]bool{
+	"startIndex": true, "endIndex": true,
+	"textRun": true, "inlineObjectElement": true, "footnoteReference": true,
+	"equation": true, "person": true, "richLink": true, "dateElement": true,
+	"autoText": true, "pageBreak": true, "columnBreak": true, "horizontalRule": true,
+}
+
+// UnmarshalJSON decodes the element twice: once into the fields above, and once
+// into a bare map, to learn which members it carried. The second pass is the
+// only way encoding/json can answer "what else was in here", and the answer is
+// what stops the next element kind from vanishing the way seven of them did.
+func (e *rawParaElement) UnmarshalJSON(b []byte) error {
+	// The alias drops the method, so this is the ordinary decode rather than a
+	// recursive call into itself.
+	type alias rawParaElement
+	var a alias
+	if err := json.Unmarshal(b, &a); err != nil {
+		return err
+	}
+	*e = rawParaElement(a)
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(b, &keys); err != nil {
+		return err
+	}
+	for k := range keys {
+		if !namedMembers[k] {
+			e.unnamed = append(e.unnamed, k)
+		}
+	}
+	// Sorted, because a map is walked in no order and a warning that reads
+	// differently on two runs of one document is a warning nobody trusts. The
+	// ids are read in that same order for the same reason.
+	sort.Strings(e.unnamed)
+	for _, name := range e.unnamed {
+		var s rawSuggested
+		// A member that is not an object, or one whose id lists are shaped
+		// some other way, says nothing about being suggested. It is still an
+		// element at a position with a name, so the decode carries on rather
+		// than failing the whole document over a member gdoc has never seen.
+		if err := json.Unmarshal(keys[name], &s); err != nil {
+			continue
+		}
+		e.unnamedSuggested.SuggestedInsertionIDs = append(
+			e.unnamedSuggested.SuggestedInsertionIDs, s.SuggestedInsertionIDs...)
+		e.unnamedSuggested.SuggestedDeletionIDs = append(
+			e.unnamedSuggested.SuggestedDeletionIDs, s.SuggestedDeletionIDs...)
+	}
+	return nil
+}
+
+// rawPerson is a person chip: a live reference to somebody, shown as their name
+// or, when there is no name to show, as their address.
+type rawPerson struct {
+	PersonID         string `json:"personId"`
+	PersonProperties struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	} `json:"personProperties"`
+	rawSuggested
+}
+
+// label is what the chip shows. The reference documents name as the name shown
+// "instead of the person's email address", and email as always present, so a
+// chip displaying the address carries no name at all. Falling back to the
+// address is what keeps read carrying who the chip names: a bare [person] tells
+// a reader somebody is there and not who, which for a policy naming its owner
+// is the fact that mattered.
+func (p rawPerson) label() string {
+	if p.PersonProperties.Name != "" {
+		return p.PersonProperties.Name
+	}
+	return p.PersonProperties.Email
+}
+
+// rawRichLink is a smart chip pointing at a Drive file, a calendar entry or a
+// web page. mimeType is what kind of thing it points at.
+type rawRichLink struct {
+	RichLinkID         string `json:"richLinkId"`
+	RichLinkProperties struct {
+		Title    string `json:"title"`
+		URI      string `json:"uri"`
+		MimeType string `json:"mimeType"`
+	} `json:"richLinkProperties"`
+	rawSuggested
+}
+
+// rawDateElement is a date chip. displayText is the date as the document shows
+// it, which is what a reader sees and the only part of it gdoc prints.
+type rawDateElement struct {
+	DateID                string `json:"dateId"`
+	DateElementProperties struct {
+		DisplayText string `json:"displayText"`
+	} `json:"dateElementProperties"`
+	rawSuggested
+}
+
+// rawAutoText is a field Docs fills in, a page number or a date. Its type is
+// the only fact about it: the value is computed at layout, and gdoc lays
+// nothing out.
+type rawAutoText struct {
+	Type string `json:"type"`
+	rawSuggested
 }
 
 // rawSuggested is the pair of id lists every element in a paragraph can carry.
@@ -167,17 +370,23 @@ func paragraph(el rawElement, objs map[string]rawInlineObject) *Paragraph {
 		p.Bullet = &Bullet{NestingLevel: el.Paragraph.Bullet.NestingLevel}
 	}
 	for _, e := range el.Paragraph.Elements {
-		if r, ok := run(e, objs); ok {
-			p.Runs = append(p.Runs, r)
-		}
+		p.Runs = append(p.Runs, run(e, objs))
 	}
 	return p
 }
 
-// run reads one paragraph element. The second value is false for an element
-// gdoc has no run for: a page break, a column break, a horizontal rule. They
-// hold nothing to print and nothing to suggest against.
-func run(e rawParaElement, objs map[string]rawInlineObject) (Run, bool) {
+// run reads one paragraph element. Every element becomes a run, including one
+// this decoder cannot name.
+//
+// It used to answer false for anything outside four cases, and seven of the
+// union's eleven members fell through it: the three chips, an auto text, a page
+// break, a column break and a horizontal rule. They reached neither the text
+// nor the warnings, so every review since M2 read documents with holes in them
+// and was told nothing. The default arm reports now, which is the wider half of
+// that fix: a decoder that drops what it does not recognise makes every reader
+// downstream confidently wrong, and the twelfth member arrives as a placeholder
+// naming itself instead of as an absence.
+func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 	r := Run{StartIndex: e.StartIndex, EndIndex: e.EndIndex}
 	switch {
 	case e.TextRun != nil:
@@ -195,10 +404,58 @@ func run(e rawParaElement, objs map[string]rawInlineObject) (Run, bool) {
 	case e.Equation != nil:
 		r.Kind = KindEquation
 		r.InsertionIDs, r.DeletionIDs = e.Equation.ids()
+	case e.Person != nil:
+		r.Kind = KindPerson
+		r.Detail = &Detail{
+			ID:    e.Person.PersonID,
+			Label: e.Person.label(),
+			Email: e.Person.PersonProperties.Email,
+		}
+		r.InsertionIDs, r.DeletionIDs = e.Person.ids()
+	case e.RichLink != nil:
+		r.Kind = KindRichLink
+		r.Detail = &Detail{
+			ID:       e.RichLink.RichLinkID,
+			Label:    e.RichLink.RichLinkProperties.Title,
+			URI:      e.RichLink.RichLinkProperties.URI,
+			MimeType: e.RichLink.RichLinkProperties.MimeType,
+		}
+		r.InsertionIDs, r.DeletionIDs = e.RichLink.ids()
+	case e.DateElement != nil:
+		r.Kind = KindDate
+		r.Detail = &Detail{
+			ID:    e.DateElement.DateID,
+			Label: e.DateElement.DateElementProperties.DisplayText,
+		}
+		r.InsertionIDs, r.DeletionIDs = e.DateElement.ids()
+	case e.AutoText != nil:
+		r.Kind = KindAutoText
+		r.Detail = &Detail{Type: e.AutoText.Type}
+		r.InsertionIDs, r.DeletionIDs = e.AutoText.ids()
+	case e.PageBreak != nil:
+		r.Kind = KindPageBreak
+		r.InsertionIDs, r.DeletionIDs = e.PageBreak.ids()
+	case e.ColumnBreak != nil:
+		r.Kind = KindColumnBreak
+		r.InsertionIDs, r.DeletionIDs = e.ColumnBreak.ids()
+	case e.HorizontalRule != nil:
+		r.Kind = KindHorizontalRule
+		r.InsertionIDs, r.DeletionIDs = e.HorizontalRule.ids()
 	default:
-		return Run{}, false
+		// The element still holds a position, so it is still a run. What it is
+		// called is the one fact a person can act on, and an element naming
+		// nothing at all says so by naming nothing.
+		r.Kind = KindUnknown
+		if len(e.unnamed) > 0 {
+			r.Detail = &Detail{Member: strings.Join(e.unnamed, ", ")}
+		}
+		// The ids come off the member itself, like every arm above. What the
+		// element is called is one fact; whether somebody is waiting on it is
+		// the other, and dropping the second makes every reader downstream
+		// confidently wrong about a document with a pending change in it.
+		r.InsertionIDs, r.DeletionIDs = e.unnamedSuggested.ids()
 	}
-	return r, true
+	return r
 }
 
 // ids returns the two id lists, copied. The lists reach the envelope and the
