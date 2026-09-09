@@ -93,7 +93,7 @@ func TestTheSurveyCountsWhatTheDocumentHolds(t *testing.T) {
 	}
 }
 
-func TestNothingToProtectIsTrueOnlyWhenAllFourCountsAreZero(t *testing.T) {
+func TestNothingToProtectIsTrueOnlyWhenAllFiveCountsAreZero(t *testing.T) {
 	// Arrange
 	empty := doc(para(1, text(1, "Nothing here.\n")))
 	chip := doc(para(1, docs.Run{Kind: docs.KindPerson, StartIndex: 1, EndIndex: 2,
@@ -110,6 +110,13 @@ func TestNothingToProtectIsTrueOnlyWhenAllFourCountsAreZero(t *testing.T) {
 	// field a later run reads before it writes.
 	onElement := doc(para(1, docs.Run{Kind: docs.KindPageBreak, StartIndex: 1, EndIndex: 2,
 		InsertionIDs: []string{"suggest.break"}}))
+	// A named range is a label Docs keeps in step with its own edits, so a
+	// replacement of the words it covers takes it with them. The survey lists
+	// them because M7b has to check them, and this is the field M7b reads
+	// before it writes.
+	named := doc(para(1, text(1, "Hello.\n")))
+	named.Tabs[0].NamedRanges = []docs.NamedRange{{ID: "kix.nr1", Name: "owner", Tab: "t.0",
+		Ranges: []docs.Range{{Tab: "t.0", Start: 1, End: 6}}}}
 
 	cases := []struct {
 		name string
@@ -123,6 +130,7 @@ func TestNothingToProtectIsTrueOnlyWhenAllFourCountsAreZero(t *testing.T) {
 			Comments: []comments.RawComment{{ID: "c1", Content: "hi"}}}, false},
 		{"an element the read cannot name", Input{Document: unnamed}, false},
 		{"a suggestion on an element that holds no text", Input{Document: onElement}, false},
+		{"a named range", Input{Document: named}, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -355,6 +363,28 @@ func TestAnElementTheReadCannotNameIsWarnedAbout(t *testing.T) {
 	}
 	if got.NothingToProtect {
 		t.Error("nothing_to_protect: got true on a document holding an element gdoc cannot name, want false")
+	}
+}
+
+// A survey with no document read knows nothing about where a comment sits, and
+// saying the Docs read placed no range for it names a read that was never made.
+// The one warning about the missing document is the whole of what is true.
+func TestASurveyWithNoDocumentBlamesNoDocsRead(t *testing.T) {
+	// Act
+	got, warnings := Survey(Input{Comments: []comments.RawComment{
+		{ID: "c1", Content: "ai? what about this"},
+		{ID: "c2", Content: "settled"},
+	}})
+
+	// Assert
+	if got.Threads.Open != 2 {
+		t.Errorf("threads.open: got %d, want 2, the survey still carries its threads", got.Threads.Open)
+	}
+	if warned(warnings, "placed no range") {
+		t.Errorf("warnings: got %v, want none blaming a Docs read that never happened", warnings)
+	}
+	if !warned(warnings, "no document") {
+		t.Errorf("warnings: got %v, want one saying no document was read", warnings)
 	}
 }
 

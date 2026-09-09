@@ -119,7 +119,7 @@ func contains(list []string, want string) bool {
 	return false
 }
 
-// Nothing to protect is four counts at zero, and it is a fact rather than a
+// Nothing to protect is five counts at zero, and it is a fact rather than a
 // recommendation. Whether the document is worth restyling is Nail's.
 func TestRestyleSaysNothingToProtectOnAnEmptyDocument(t *testing.T) {
 	stubSession(t, &fakeSession{

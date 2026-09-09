@@ -7,9 +7,10 @@
 // here. The caller makes the three reads and hands the decoded answers over, so
 // every case in this file is testable on a value a test wrote out.
 //
-// Nothing here judges anything. NothingToProtect is a fact about four counts
+// Nothing here judges anything. NothingToProtect is a fact about five counts
 // being zero, never a recommendation to restyle: the threads, what is pending,
-// the chips, and the paragraph elements the read could not name. Whether a
+// the chips, the paragraph elements the read could not name, and the named
+// ranges. Whether a
 // document is worth restyling is Nail's, reading the counts. The witness has the two limits it
 // has everywhere else, and they are worth stating rather than discovering: it
 // names a destroyed anchor and not a moved one, and two exported comments that
@@ -121,9 +122,15 @@ func (c ChipCounts) Total() int { return c.Person + c.Date + c.RichLink }
 func Survey(in Input) (Report, []string) {
 	var warnings []string
 	threads, unplaced := comments.Threads(in.Comments, in.Document)
-	for _, id := range unplaced {
-		warnings = append(warnings, fmt.Sprintf(
-			"comment %s: the Docs read placed no range for it, so the survey carries the thread with no position", id))
+	// Only when there was a document to place them in. comments.Threads reports
+	// every comment unplaced on a nil document, so warning per comment there
+	// blames a Docs read nobody made, and the one warning below is the whole of
+	// what is true.
+	if in.Document != nil {
+		for _, id := range unplaced {
+			warnings = append(warnings, fmt.Sprintf(
+				"comment %s: the Docs read placed no range for it, so the survey carries the thread with no position", id))
+		}
 	}
 	if in.ExportErr != nil {
 		warnings = append(warnings, fmt.Sprintf(
@@ -168,8 +175,13 @@ func Survey(in Input) (Report, []string) {
 		warnings = append(warnings, fmt.Sprintf(
 			"%d pending suggestion(s) sit only on elements the suggestions listing cannot report, so they are counted and not listed", n))
 	}
+	// A named range is the fifth, and it is the one this field is read for. It
+	// is a label Docs keeps in step with its own edits, so a replacement of the
+	// words it covers takes it with them, and M7b reads this field before it
+	// writes. The survey already lists them for that reason.
 	r.NothingToProtect = len(threads) == 0 && r.Suggestions.Pending == 0 &&
-		r.Suggestions.OnElements == 0 && chips.Total() == 0 && len(unnamed) == 0
+		r.Suggestions.OnElements == 0 && chips.Total() == 0 && len(unnamed) == 0 &&
+		len(r.NamedRanges) == 0
 	return r, warnings
 }
 

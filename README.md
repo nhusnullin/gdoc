@@ -691,9 +691,11 @@ and not a moved one, and two comments with the same words that disagree give no
 answer for either.
 
 `nothing_to_protect` is true only when there are no threads, nothing pending, no
-chips, and nothing in the document gdoc could not name. It is a fact about those
-four, not advice: whether a document is worth restyling is yours to decide from
-the counts. The pending count includes a suggestion whose text is only
+chips, no named ranges, and nothing in the document gdoc could not name. It is a
+fact about those five, not advice: whether a document is worth restyling is
+yours to decide from the counts. A named range is in that list because it is a
+label Docs keeps in step with its own edits, so a replacement of the words it
+covers takes it with them. The pending count includes a suggestion whose text is only
 whitespace, which the `suggestions` listing leaves out, because it is still
 something a rewrite would destroy.
 

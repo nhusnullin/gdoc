@@ -911,9 +911,9 @@ with the document at `LevelSuggest` and no grant, like every read.
   will have the power to overwrite. Nothing reads the field yet, and it exists
   here for that reason.
 
-**`nothing_to_protect` is a fact about four things being zero, never a
-recommendation.** No threads, no pending suggestions, no chips, and no paragraph
-element the decoder could not name. Pending is two counts rather than one:
+**`nothing_to_protect` is a fact about five things being zero, never a
+recommendation.** No threads, no pending suggestions, no chips, no paragraph
+element the decoder could not name, and no named range. Pending is two counts rather than one:
 `pending` is `suggestions.All`'s, and `on_elements` is the ids on the runs that
 walk skips, which is every run that is not text. Counting only the first
 answered "nothing to protect" over a suggested page break. The rule is what the
@@ -921,10 +921,13 @@ listing can report and not whether the run holds text: a footnote reference
 carries its number and is counted here all the same, because the pending walk
 skips it too. The two are in different units, which the field names cannot say:
 `pending` counts the insert-and-delete entries a replacement makes two of, and
-`on_elements` counts ids, so adding them is comparing two things. The fourth is the one worth writing down: a
+`on_elements` counts ids, so adding them is comparing two things. The last two are the ones worth writing down. A
 document holding an element gdoc has never seen holds something no count here
 speaks for, so the survey warns naming the member and refuses to say there is
-nothing to protect. Whether a document is worth restyling is Nail's, reading the
+nothing to protect. A named range is the other, and it is the reason the survey
+lists them at all: it is a label Docs keeps in step with its own edits, so a
+replacement of the words it covers takes it with them, and M7b reads this field
+before it writes. Whether a document is worth restyling is Nail's, reading the
 counts. That is "the binary prints facts, and the skills judge" at the one field
 most likely to grow into a verdict.
 

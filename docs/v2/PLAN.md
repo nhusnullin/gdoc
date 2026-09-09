@@ -547,10 +547,14 @@ carried and never read, so a header span whose indexes happened to fall in the
 body came back placed. It is empty on every comment anchor, so no output shape
 moved.
 
-`nothing_to_protect` reads four things and not three. No threads, no pending
-suggestions, no chips, and no paragraph element the decoder could not name: a
-document holding one holds something no count here speaks for, so the survey
-warns naming the member and refuses to say there is nothing to protect. The
+`nothing_to_protect` reads five things and not three. No threads, no pending
+suggestions, no chips, no paragraph element the decoder could not name, and no
+named range. A document holding an element gdoc has never seen holds something
+no count here speaks for, so the survey warns naming the member and refuses to
+say there is nothing to protect. A named range is the fifth, added by the second
+M7 review round: the survey lists them because M7b has to check them, and a
+replacement of the words one covers takes it with them, so the field M7b reads
+before it writes cannot answer true over one. The
 pending count is `suggestions.All`'s and not `List`'s, because `List` drops a
 whitespace-only suggestion and that is still something a replacement would
 destroy, and it is two numbers since the M7 review: `on_elements` is the ids
