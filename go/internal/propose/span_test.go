@@ -169,3 +169,55 @@ func TestFindSpanStillPlacesAQuoteBesideAFootnoteMark(t *testing.T) {
 		t.Errorf("range = %+v, want %+v", r, want)
 	}
 }
+
+// TestAQuoteCrossingAChipIsRefused is the contiguity rule across a change that
+// moved the ground under it. A person chip, a date chip, a calendar link, an
+// auto text, a page break, a column break and a horizontal rule used to vanish
+// at decode, so they were holes this walk skipped without ever seeing them.
+// They are runs now, and index still skips them because they carry no text, so
+// the rule has to hold for the reason rather than by luck: the document numbers
+// the chip, the text either side of it is contiguous in the walk and is two
+// spans in the document, and a deleteContentRange over one span would take the
+// chip with it.
+func TestAQuoteCrossingAChipIsRefused(t *testing.T) {
+	// "Owner: A reviews it" reads as one string in the walk. In the document
+	// the chip sits at 8..9 between the two halves.
+	d := chipDocument(t)
+	_, err := FindSpan(d, "Owner:  reviews")
+	if err == nil {
+		t.Fatal("a quote spanning a person chip was accepted, and the delete would take the chip with it")
+	}
+	if !strings.Contains(err.Error(), "does not index") {
+		t.Errorf("error = %q, and it should say the quote crosses content the read does not index", err)
+	}
+}
+
+// The other side of the same rule: a quote that stops where the chip begins
+// crosses nothing, so it is placed, and its span is the words alone.
+func TestAQuoteEndingWhereAChipBeginsIsPlaced(t *testing.T) {
+	r, err := FindSpan(chipDocument(t), "Owner: ")
+	if err != nil {
+		t.Fatalf("a quote ending where the chip begins was refused: %v", err)
+	}
+	if want := (docs.Range{Tab: "t.0", Start: 1, End: 8}); r != want {
+		t.Errorf("range = %+v, want %+v", r, want)
+	}
+}
+
+// chipDocument is one paragraph with a person chip in the middle of it, at the
+// indexes the document numbers it with.
+func chipDocument(t *testing.T) *docs.Document {
+	t.Helper()
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":18,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[
+		   {"startIndex":1,"endIndex":8,"textRun":{"content":"Owner: "}},
+		   {"startIndex":8,"endIndex":9,"person":{"personId":"kix.p1",
+		     "personProperties":{"name":"A Placeholder","email":"placeholder@example.com"}}},
+		   {"startIndex":9,"endIndex":18,"textRun":{"content":" reviews\n"}}]}}]}}`
+	d, err := docs.Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
+}

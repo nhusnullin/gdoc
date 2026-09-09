@@ -36,14 +36,66 @@ const (
 // has to stay in step with it.
 var escapePairs = []string{openInsertion, openDeletion, shutInsertion, shutDeletion, openComment, shutComment}
 
-// placeholders is what a run with no text prints as. Reading the picture itself
-// is docs/backlog/read-pictures-and-drawings.md; printing a placeholder and
+// placeholders is what a run with no text of its own prints as. label is what
+// goes inside the brackets, noun is what the warning calls it, and why is what
+// the warning says gdoc did not read. Reading the picture itself is
+// docs/backlog/read-pictures-and-drawings.md; printing a placeholder and
 // warning is the honest thing to do until then.
-var placeholders = map[string]struct{ mark, noun string }{
-	docs.KindImage:    {"[image]", "an image"},
-	docs.KindDrawing:  {"[drawing]", "a drawing"},
-	docs.KindEquation: {"[equation]", "an equation"},
-	docs.KindObject:   {"[object]", "an embedded object"},
+//
+// A chip's mark carries the chip's label as well, because the document shows
+// that label on screen: "[person]" tells a reader there is somebody there and
+// not who, which for a policy naming its owner is the fact that mattered. The
+// label goes through the document's own escaping on the way in.
+//
+// A horizontal rule prints as [rule] rather than as "---", which is what the
+// footnote separator already is. Two meanings for one line is a line neither of
+// them can be read from.
+var placeholders = map[string]struct{ label, noun, why string }{
+	docs.KindImage:          {"image", "an image", "its content is not read"},
+	docs.KindDrawing:        {"drawing", "a drawing", "its content is not read"},
+	docs.KindEquation:       {"equation", "an equation", "its content is not read"},
+	docs.KindObject:         {"object", "an embedded object", "its content is not read"},
+	docs.KindPerson:         {"person", "a person chip", "only the name it shows is read"},
+	docs.KindDate:           {"date", "a date chip", "only the date it shows is read"},
+	docs.KindRichLink:       {"link", "a link chip", "only the title it shows is read"},
+	docs.KindAutoText:       {"auto text", "an automatic field", "its value is filled in when the document is laid out"},
+	docs.KindPageBreak:      {"page break", "a page break", "it holds no text"},
+	docs.KindColumnBreak:    {"column break", "a column break", "it holds no text"},
+	docs.KindHorizontalRule: {"rule", "a horizontal rule", "it holds no text"},
+	docs.KindUnknown:        {"unknown", "an element this read does not name", "gdoc has never seen it"},
+}
+
+// mark is what one placeholder run prints as, with the label the document shows
+// after a colon when there is one. The label is escaped exactly as the
+// document's own text is: a calendar entry titled "[[c:X]]" would otherwise
+// read back as a comment anchor gdoc never wrote, and nothing downstream could
+// tell.
+func mark(r docs.Run) string {
+	p, ok := placeholders[r.Kind]
+	if !ok {
+		p = placeholders[docs.KindObject]
+	}
+	if label := detailLabel(r); label != "" {
+		return "[" + p.label + ": " + escapeMarkup(label) + "]"
+	}
+	return "[" + p.label + "]"
+}
+
+// detailLabel is the one word of a run's detail that belongs in the text: what
+// the document shows for a chip, which auto text this is, and the member name
+// of an element gdoc cannot name. The rest of the detail reaches the structure
+// view, which is where a caller reads an email address or a link's target.
+func detailLabel(r docs.Run) string {
+	if r.Detail == nil {
+		return ""
+	}
+	switch {
+	case r.Detail.Label != "":
+		return r.Detail.Label
+	case r.Detail.Type != "":
+		return r.Detail.Type
+	}
+	return r.Detail.Member
 }
 
 // Text projects the document into the one string the AI reads, and returns the
@@ -399,21 +451,37 @@ func (e *emitter) body(rs []docs.Run) {
 			if !ok {
 				p = placeholders[docs.KindObject]
 			}
-			e.out.WriteString(p.mark)
+			m := mark(r)
+			e.out.WriteString(m)
 			e.warnings = append(e.warnings,
-				fmt.Sprintf("%s at index %d is printed as %s: its content is not read", p.noun, r.StartIndex, p.mark))
+				fmt.Sprintf("%s at index %d is printed as %s: %s", p.noun, r.StartIndex, m, p.why))
 			e.drain(r.EndIndex, true)
 		}
 	}
 }
 
-// plain writes the text of runs with nothing tracked: no comment markers, no
-// index. It is the second copy of a run that was both inserted and deleted.
+// plain writes runs with nothing tracked: no comment markers, no index, and no
+// warning. It is the second copy of a run that was both inserted and deleted,
+// which Docs shows as a deletion followed by an insertion of the same content.
+//
+// A run that is not text prints its placeholder here too. Skipping it wrote an
+// empty "{++}" beside the deleted copy, which says an insertion of nothing is
+// pending; what is pending is the chip, and the reader has to see which one.
+// The warning is not repeated, because it was raised on the first copy and the
+// content is one thing in the document.
 func (e *emitter) plain(rs []docs.Run) {
 	for _, r := range rs {
 		if r.Kind == docs.KindText {
 			e.writeText(r.Text, -1)
+			continue
 		}
+		if r.Kind == docs.KindFootnoteRef {
+			// footnote returns the number the first copy already recorded, so
+			// the note is listed once and both copies name it.
+			e.out.WriteString("[^" + e.footnote(r) + "]")
+			continue
+		}
+		e.out.WriteString(mark(r))
 	}
 }
 
@@ -469,37 +537,55 @@ func (e *emitter) writeText(s string, start int) {
 		if track {
 			e.drain(idx, false)
 		}
-		if rs[i] == '\\' {
-			// The escape character is escaped too, or the encoding cannot be
-			// read back: the author's own backslash in front of a marker reads
-			// as gdoc's, and gdoc's in front of a literal reads as the
-			// author's. Either way a marker changes hands, which is what the
-			// escaping exists to prevent. An even run of backslashes is the
-			// author's text, an odd one ends in the escape.
-			e.out.WriteString("\\\\")
-			idx += utf16Len(rs[i])
-			continue
-		}
-		if i+1 < len(rs) && isEscapePair(rs[i], rs[i+1]) {
-			// The backslash goes in and the loop moves on by one rune, not two.
-			// Two literals can share a character: "{-}" is "{-" and then "-}",
-			// and consuming both halves of the first pair walks straight past
-			// the second, leaving "-}" in the text as a closing marker the
-			// document never had.
-			e.out.WriteString("\\")
-			e.out.WriteRune(rs[i])
-			idx += utf16Len(rs[i])
-			continue
-		}
-		if rs[i] != '\n' {
-			// The newline is where a paragraph ends, and the chunks carry that.
-			e.out.WriteRune(rs[i])
-		}
+		e.out.WriteString(escapeAt(rs, i))
 		idx += utf16Len(rs[i])
 	}
 	if track {
 		e.drain(idx, true)
 	}
+}
+
+// escapeAt is what rune i of rs is written as. It is the whole escaping rule,
+// and it is one function because two callers need it: the document's own text,
+// which is written a rune at a time with the comment markers drained between
+// them, and a chip's label, which is written as a string. Two copies of this
+// would be two rules, and the one that drifted would hand a marker to the wrong
+// side without anybody noticing.
+func escapeAt(rs []rune, i int) string {
+	if rs[i] == '\\' {
+		// The escape character is escaped too, or the encoding cannot be read
+		// back: the author's own backslash in front of a marker reads as
+		// gdoc's, and gdoc's in front of a literal reads as the author's.
+		// Either way a marker changes hands, which is what the escaping exists
+		// to prevent. An even run of backslashes is the author's text, an odd
+		// one ends in the escape.
+		return "\\\\"
+	}
+	if i+1 < len(rs) && isEscapePair(rs[i], rs[i+1]) {
+		// The backslash goes in and the caller moves on by one rune, not two.
+		// Two literals can share a character: "{-}" is "{-" and then "-}", and
+		// consuming both halves of the first pair walks straight past the
+		// second, leaving "-}" in the text as a closing marker the document
+		// never had.
+		return "\\" + string(rs[i])
+	}
+	if rs[i] == '\n' {
+		// The newline is where a paragraph ends, and the chunks carry that.
+		return ""
+	}
+	return string(rs[i])
+}
+
+// escapeMarkup is escapeAt over a whole string, for text that carries no
+// document index of its own: a chip's label, which sits inside a placeholder
+// rather than in the run of text around it.
+func escapeMarkup(s string) string {
+	rs := []rune(s)
+	var b strings.Builder
+	for i := range rs {
+		b.WriteString(escapeAt(rs, i))
+	}
+	return b.String()
 }
 
 func isEscapePair(a, b rune) bool {

@@ -124,13 +124,13 @@ Every one also carries `suggestedInsertionIds` and `suggestedDeletionIds`, like 
 
 ### Task 2: the decoder stops dropping what it cannot name
 
-- [ ] Test first in `go/internal/docs/walk_test.go` against the fixture: each of the seven decodes into a run with its own `Kind`, carrying the fields the reference names and its two suggestion id lists.
-- [ ] Test that an element the walk still cannot name becomes a placeholder run with a warning naming the field, rather than returning false. **This is the wider fix and it is the point of the task.** Seven kinds went missing because the `default` arm vanished rather than reported; the eighth must not.
-- [ ] Test in `go/internal/view/text_test.go`: each new kind prints a placeholder and raises a warning, the way `[image]` and `[drawing]` do. A `horizontalRule` may deserve `---` rather than a placeholder, and a `pageBreak` a blank line; whichever is chosen, the golden file states it and the changed bytes are the specification.
-- [ ] Test in `go/internal/propose`: a quote crossing any of the seven is refused. They were holes the walk skipped and are now runs, so the contiguity check has to hold across the change rather than by luck. This is a behaviour change in a shipped write command and it gets its own test.
-- [ ] Implement: the fields on `rawParaElement`, the cases in `run()`, the reporting `default`, the kinds and placeholders in `view`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "fix(v2): seven paragraph elements stop vanishing"`
+- [x] Test first in `go/internal/docs/walk_test.go` against the fixture: each of the seven decodes into a run with its own `Kind`, carrying the fields the reference names and its two suggestion id lists.
+- [x] Test that an element the walk still cannot name becomes a placeholder run with a warning naming the field, rather than returning false. **This is the wider fix and it is the point of the task.** Seven kinds went missing because the `default` arm vanished rather than reported; the eighth must not.
+- [x] Test in `go/internal/view/text_test.go`: each new kind prints a placeholder and raises a warning, the way `[image]` and `[drawing]` do. A `horizontalRule` may deserve `---` rather than a placeholder, and a `pageBreak` a blank line; whichever is chosen, the golden file states it and the changed bytes are the specification.
+- [x] Test in `go/internal/propose`: a quote crossing any of the seven is refused. They were holes the walk skipped and are now runs, so the contiguity check has to hold across the change rather than by luck. This is a behaviour change in a shipped write command and it gets its own test.
+- [x] Implement: the fields on `rawParaElement`, the cases in `run()`, the reporting `default`, the kinds and placeholders in `view`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "fix(v2): seven paragraph elements stop vanishing"`
 
 ### Task 3: named ranges, keyed by id
 

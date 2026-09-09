@@ -10,6 +10,7 @@ package docs
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -101,6 +102,10 @@ type rawParagraph struct {
 	} `json:"bullet"`
 }
 
+// rawParaElement is one member of the ParagraphElement union, which the
+// reference documents as eleven members. All eleven are named here, and an
+// element naming none of them is still decoded: unnamed carries whatever it did
+// name, so the walk can report it instead of dropping it.
 type rawParaElement struct {
 	StartIndex          int                     `json:"startIndex"`
 	EndIndex            int                     `json:"endIndex"`
@@ -108,6 +113,94 @@ type rawParaElement struct {
 	InlineObjectElement *rawInlineObjectElement `json:"inlineObjectElement"`
 	FootnoteReference   *rawFootnoteReference   `json:"footnoteReference"`
 	Equation            *rawSuggested           `json:"equation"`
+	Person              *rawPerson              `json:"person"`
+	RichLink            *rawRichLink            `json:"richLink"`
+	DateElement         *rawDateElement         `json:"dateElement"`
+	AutoText            *rawAutoText            `json:"autoText"`
+	PageBreak           *rawSuggested           `json:"pageBreak"`
+	ColumnBreak         *rawSuggested           `json:"columnBreak"`
+	HorizontalRule      *rawSuggested           `json:"horizontalRule"`
+	// unnamed is every member of this element that is not in the list above,
+	// sorted. It is what the warning names when Google adds a twelfth.
+	unnamed []string
+}
+
+// namedMembers is the union as this decoder knows it, plus the two indexes
+// every element carries. A key outside this set is a member gdoc has never
+// seen, and it is reported rather than ignored.
+var namedMembers = map[string]bool{
+	"startIndex": true, "endIndex": true,
+	"textRun": true, "inlineObjectElement": true, "footnoteReference": true,
+	"equation": true, "person": true, "richLink": true, "dateElement": true,
+	"autoText": true, "pageBreak": true, "columnBreak": true, "horizontalRule": true,
+}
+
+// UnmarshalJSON decodes the element twice: once into the fields above, and once
+// into a bare map, to learn which members it carried. The second pass is the
+// only way encoding/json can answer "what else was in here", and the answer is
+// what stops the next element kind from vanishing the way seven of them did.
+func (e *rawParaElement) UnmarshalJSON(b []byte) error {
+	// The alias drops the method, so this is the ordinary decode rather than a
+	// recursive call into itself.
+	type alias rawParaElement
+	var a alias
+	if err := json.Unmarshal(b, &a); err != nil {
+		return err
+	}
+	*e = rawParaElement(a)
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(b, &keys); err != nil {
+		return err
+	}
+	for k := range keys {
+		if !namedMembers[k] {
+			e.unnamed = append(e.unnamed, k)
+		}
+	}
+	// Sorted, because a map is walked in no order and a warning that reads
+	// differently on two runs of one document is a warning nobody trusts.
+	sort.Strings(e.unnamed)
+	return nil
+}
+
+// rawPerson is a person chip: a live reference to somebody, shown as their name.
+type rawPerson struct {
+	PersonID         string `json:"personId"`
+	PersonProperties struct {
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	} `json:"personProperties"`
+	rawSuggested
+}
+
+// rawRichLink is a smart chip pointing at a Drive file, a calendar entry or a
+// web page. mimeType is what kind of thing it points at.
+type rawRichLink struct {
+	RichLinkID         string `json:"richLinkId"`
+	RichLinkProperties struct {
+		Title    string `json:"title"`
+		URI      string `json:"uri"`
+		MimeType string `json:"mimeType"`
+	} `json:"richLinkProperties"`
+	rawSuggested
+}
+
+// rawDateElement is a date chip. displayText is the date as the document shows
+// it, which is what a reader sees and the only part of it gdoc prints.
+type rawDateElement struct {
+	DateID                string `json:"dateId"`
+	DateElementProperties struct {
+		DisplayText string `json:"displayText"`
+	} `json:"dateElementProperties"`
+	rawSuggested
+}
+
+// rawAutoText is a field Docs fills in, a page number or a date. Its type is
+// the only fact about it: the value is computed at layout, and gdoc lays
+// nothing out.
+type rawAutoText struct {
+	Type string `json:"type"`
+	rawSuggested
 }
 
 // rawSuggested is the pair of id lists every element in a paragraph can carry.
@@ -167,17 +260,23 @@ func paragraph(el rawElement, objs map[string]rawInlineObject) *Paragraph {
 		p.Bullet = &Bullet{NestingLevel: el.Paragraph.Bullet.NestingLevel}
 	}
 	for _, e := range el.Paragraph.Elements {
-		if r, ok := run(e, objs); ok {
-			p.Runs = append(p.Runs, r)
-		}
+		p.Runs = append(p.Runs, run(e, objs))
 	}
 	return p
 }
 
-// run reads one paragraph element. The second value is false for an element
-// gdoc has no run for: a page break, a column break, a horizontal rule. They
-// hold nothing to print and nothing to suggest against.
-func run(e rawParaElement, objs map[string]rawInlineObject) (Run, bool) {
+// run reads one paragraph element. Every element becomes a run, including one
+// this decoder cannot name.
+//
+// It used to answer false for anything outside four cases, and seven of the
+// union's eleven members fell through it: the three chips, an auto text, a page
+// break, a column break and a horizontal rule. They reached neither the text
+// nor the warnings, so every review since M2 read documents with holes in them
+// and was told nothing. The default arm reports now, which is the wider half of
+// that fix: a decoder that drops what it does not recognise makes every reader
+// downstream confidently wrong, and the twelfth member arrives as a placeholder
+// naming itself instead of as an absence.
+func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 	r := Run{StartIndex: e.StartIndex, EndIndex: e.EndIndex}
 	switch {
 	case e.TextRun != nil:
@@ -195,10 +294,53 @@ func run(e rawParaElement, objs map[string]rawInlineObject) (Run, bool) {
 	case e.Equation != nil:
 		r.Kind = KindEquation
 		r.InsertionIDs, r.DeletionIDs = e.Equation.ids()
+	case e.Person != nil:
+		r.Kind = KindPerson
+		r.Detail = &Detail{
+			ID:    e.Person.PersonID,
+			Label: e.Person.PersonProperties.Name,
+			Email: e.Person.PersonProperties.Email,
+		}
+		r.InsertionIDs, r.DeletionIDs = e.Person.ids()
+	case e.RichLink != nil:
+		r.Kind = KindRichLink
+		r.Detail = &Detail{
+			ID:       e.RichLink.RichLinkID,
+			Label:    e.RichLink.RichLinkProperties.Title,
+			URI:      e.RichLink.RichLinkProperties.URI,
+			MimeType: e.RichLink.RichLinkProperties.MimeType,
+		}
+		r.InsertionIDs, r.DeletionIDs = e.RichLink.ids()
+	case e.DateElement != nil:
+		r.Kind = KindDate
+		r.Detail = &Detail{
+			ID:    e.DateElement.DateID,
+			Label: e.DateElement.DateElementProperties.DisplayText,
+		}
+		r.InsertionIDs, r.DeletionIDs = e.DateElement.ids()
+	case e.AutoText != nil:
+		r.Kind = KindAutoText
+		r.Detail = &Detail{Type: e.AutoText.Type}
+		r.InsertionIDs, r.DeletionIDs = e.AutoText.ids()
+	case e.PageBreak != nil:
+		r.Kind = KindPageBreak
+		r.InsertionIDs, r.DeletionIDs = e.PageBreak.ids()
+	case e.ColumnBreak != nil:
+		r.Kind = KindColumnBreak
+		r.InsertionIDs, r.DeletionIDs = e.ColumnBreak.ids()
+	case e.HorizontalRule != nil:
+		r.Kind = KindHorizontalRule
+		r.InsertionIDs, r.DeletionIDs = e.HorizontalRule.ids()
 	default:
-		return Run{}, false
+		// The element still holds a position, so it is still a run. What it is
+		// called is the one fact a person can act on, and an element naming
+		// nothing at all says so by naming nothing.
+		r.Kind = KindUnknown
+		if len(e.unnamed) > 0 {
+			r.Detail = &Detail{Member: strings.Join(e.unnamed, ", ")}
+		}
 	}
-	return r, true
+	return r
 }
 
 // ids returns the two id lists, copied. The lists reach the envelope and the

@@ -29,6 +29,22 @@ const (
 	// and not a drawing by the fields it carries. Calling it an image would be
 	// a guess, and this package reports rather than guesses.
 	KindObject = "object"
+	// The three smart chips. Each is a live reference the document shows as a
+	// label, and each is one character in the document's own numbering.
+	KindPerson   = "person"
+	KindDate     = "date"
+	KindRichLink = "rich_link"
+	// The four positions that carry no text: a page number or date field, and
+	// the three breaks and rules.
+	KindAutoText       = "auto_text"
+	KindPageBreak      = "page_break"
+	KindColumnBreak    = "column_break"
+	KindHorizontalRule = "horizontal_rule"
+	// KindUnknown is a paragraph element this read does not name. It is the
+	// whole point of the walk having no silent default: seven kinds went
+	// missing for a milestone because an element it could not name vanished
+	// rather than reporting itself, and the next kind Google adds must not.
+	KindUnknown = "unknown"
 )
 
 // defaultTabID is what the one tab of a pre-tabs document is called. Documents
@@ -106,6 +122,38 @@ type Run struct {
 	InsertionIDs []string `json:"insertion_ids,omitempty"`
 	DeletionIDs  []string `json:"deletion_ids,omitempty"`
 	FootnoteID   string   `json:"footnote_id,omitempty"`
+	Detail       *Detail  `json:"detail,omitempty"`
+}
+
+// Detail is what a run that is not text carries besides its position: the
+// fields the reference names for a chip, the kind of an auto text, and the
+// member name of an element this read does not name.
+//
+// One struct rather than a field per kind. Every one of these is optional, they
+// are read by the same two callers, and a Run with eight more empty strings on
+// it is a Run whose common case is harder to read than the rare one.
+//
+// Text is deliberately not one of them. Text is what the document's own text
+// runs hold, and it is what a footnote's text is joined from, so a chip's label
+// living there would put a person's name inside a footnote that only mentions
+// them.
+type Detail struct {
+	// ID is the chip's own id: personId, dateId or richLinkId.
+	ID string `json:"id,omitempty"`
+	// Label is what the document shows on screen: the person's name, the date
+	// as it is displayed, the link's title.
+	Label string `json:"label,omitempty"`
+	// Email is the person chip's address, and URI and MimeType are the rich
+	// link's target and what kind of thing it is.
+	Email    string `json:"email,omitempty"`
+	URI      string `json:"uri,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	// Type is an auto text's own type: PAGE_NUMBER, PAGE_COUNT and the rest.
+	Type string `json:"type,omitempty"`
+	// Member is the JSON member of a paragraph element this read does not name.
+	// It is the one fact a person can act on when a document holds something
+	// gdoc has never seen, so it reaches the warning by name.
+	Member string `json:"member,omitempty"`
 }
 
 // Range is where a comment is anchored, in the character indexes of one tab.
