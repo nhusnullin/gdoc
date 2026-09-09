@@ -184,11 +184,18 @@ is what stops a later edit from swapping them.
 
 ### Task 6: the documents that go stale, corrected now rather than at M7b
 
-- [ ] `docs/v2/PLAN.md`: split M7 into M7 and M7b, with what each carries and why the split happened. Record that the guard's third level travels with its caller, per M2's rule.
-- [ ] `docs/v2/DECISIONS.md`: the split, the request-kind allowlist Nail chose for M7b's level, and the decision to scope the in-place styling from a measurement rather than from `house.yaml`'s contents.
-- [ ] **Do not amend the Never lists yet.** PRINCIPLES.md, CLAUDE.md and SPEC.md all say a handed-in document is never direct-edited, and that stays true for the whole of this milestone. M7b amends all three, SPEC's acceptance item 1 included, which the earlier draft missed.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: M7 splits, and why the write half moves"`
+- [x] `docs/v2/PLAN.md`: split M7 into M7 and M7b, with what each carries and why the split happened. Record that the guard's third level travels with its caller, per M2's rule.
+- [x] `docs/v2/DECISIONS.md`: the split, the request-kind allowlist Nail chose for M7b's level, and the decision to scope the in-place styling from a measurement rather than from `house.yaml`'s contents.
+- [x] **Do not amend the Never lists yet.** PRINCIPLES.md, CLAUDE.md and SPEC.md all say a handed-in document is never direct-edited, and that stays true for the whole of this milestone. M7b amends all three, SPEC's acceptance item 1 included, which the earlier draft missed.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: M7 splits, and why the write half moves"`
+
+➕ Three stale M7 references in PLAN.md moved to M7b with them: M2's landed
+record of `GrantInPlace`, M3's note on the comment method, and M6's own list of
+what it leaves. A plan that splits a milestone and leaves the back-references
+pointing at the wrong half is a plan that has to be read twice.
+
+➕ The header's milestone count says ten now, and says which half is which.
 
 ### Task 7: documentation and the size delta
 

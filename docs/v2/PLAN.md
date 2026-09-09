@@ -1,10 +1,11 @@
 # gdoc v2 master plan
 
 2026-08-29. The build order for [SPEC.md](SPEC.md). Nine milestones, each one
-producing working, testable software. Detailed task-by-task plans live in
-`docs/plans/` and are written when a milestone starts, so each one
-is written against the code that actually exists by then. Milestones 1 to 4
-are written, and all four are done.
+producing working, testable software. M7 split into two on 2026-09-09, so there
+are ten: the survey is M7 and the in-place write is M7b. Detailed task-by-task
+plans live in `docs/plans/` and are written when a milestone starts, so each one
+is written against the code that actually exists by then. Milestones 1 to 7 are
+written, and all seven are done.
 
 ## Principles
 
@@ -117,7 +118,8 @@ drawings is in `docs/backlog/`.
 each opening the guard with exactly the one document it was given.
 `Policy.AllowFile`, `Token.Refresh` and `Policy.Warnings()` have production
 callers now. `GrantInPlace` had none and was deleted with its tests, as this
-milestone asked; M7 adds it back beside its caller. `AllowCreateIn` stayed,
+milestone asked; the milestone that writes in place adds it back beside its
+caller, which is M7b since the 2026-09-09 split. `AllowCreateIn` stayed,
 because the transport's whole create path reads it and M6 needs that path.
 `internal/gapi` is the fourth room in the import allowlist and builds no client
 of its own. `goccy/go-yaml` is the first third-party module, named in
@@ -212,7 +214,7 @@ What M3 leaves for M6:
 What M3 leaves open elsewhere:
 
 - Deleting or editing a comment gdoc wrote is not carried by the guard. A
-  withdrawn proposal's 🤖 comment stays, with a reply saying so. M7 or M8 adds
+  withdrawn proposal's 🤖 comment stays, with a reply saying so. M7b or M8 adds
   the method back beside a caller.
 - The Docs read's `comments` key is still decoded loosely, as M2 left it. The
   live write run records the fixture to tighten it against.
@@ -462,8 +464,9 @@ What M6 leaves for M7:
   document. Replacing the paired document, and the state transition that gives
   the note the new id and a fresh publish record in the same change, is
   `restyle --new`'s.
-- **`GrantInPlace`.** Still deleted, still M7's, and the level it raises to is
-  still Nail's decision then.
+- **`GrantInPlace`.** Still deleted. It is M7b's since the 2026-09-09 split,
+  because the level travels with the write that uses it, and the level it
+  raises to is still Nail's decision then.
 - **Editing or deleting a comment.** `commentWrites` is still `POST` alone, so
   the 🤖 comment a withdrawn proposal made stays where it is.
 
@@ -482,19 +485,55 @@ What M6 leaves open elsewhere:
   which `docs/backlog/drift-known-pins-no-value.md` holds.
 - One template. Everything is still measured against `altery-group-policy-v1.0`.
 
-### M7. Restyle
+### M7. The survey, and the elements gdoc drops
 
-Two-phase by design: `restyle --dry-run` emits a machine-readable survey
-(threads, suggestions, chips, tabs, revision id) and the apply invocation
-hands the survey back, rechecking revision and tabs before writing. In-place
-styling under the per-run write grant, the finishing checklist page under a
-named range, `--new` through the generator including the document-content
-extraction it needs, and the nothing-to-protect detection that offers rather
-than takes. `--new` also defines its state transition: when the new document
-replaces the paired one, the front matter gets the new id and a fresh publish
-record in the same change; a document left unpaired is refused by alignment
-until it is paired on purpose. Acceptance: spec item 5, the ten-feature
-preservation run.
+`restyle <url> --dry-run` emits a machine-readable survey of what a document
+holds: its threads with a witness for each, its pending suggestions, its smart
+chips, its tabs, its named ranges and its revision id. It writes to no document
+at all.
+
+Getting there fixes something older. `run()` in `internal/docs` returned
+`(Run{}, false)` for any paragraph element that was not a text run, an inline
+object, a footnote reference or an equation, so seven of the eleven members of
+`ParagraphElement` vanished at decode: the three chips, `autoText`, `pageBreak`,
+`columnBreak` and `horizontalRule`. A chip reached neither `view`'s placeholders
+nor its warnings, so every review session since M2 read documents with holes in
+them and was told nothing. The wider fix travels with it: the `default` arm
+reports rather than vanishes, so the eighth member Google adds shows up as a
+placeholder with a warning. Named ranges are decoded here too, keyed by
+`namedRangeId` rather than by name, because duplicate names coexist.
+
+### M7b. The in-place restyle
+
+The write half. In-place styling under the per-run write grant, the finishing
+checklist page under a named range, the nothing-to-protect offer that offers
+rather than takes, and the amendments to the three Never lists that a direct
+edit on a handed-in id needs. The survey M7 emits is what the apply invocation
+hands back, rechecking the revision id and the tab count before it writes.
+Acceptance: spec item 5, the ten-feature preservation run.
+
+**Why the split.** M7 was one milestone until 2026-09-09. The review that read
+the draft plan found the survey resting on a decoder that was throwing chips
+away, so the survey could not honestly count them; and it found the write half
+carrying a guard level, a styling engine, a fidelity measurement and a live
+ten-feature run, none of which the survey needs. The two halves have no shared
+risk, and the first is the one the review skill benefits from immediately. The
+split is recorded in DECISIONS.md under that date.
+
+**The guard's third level travels with its caller.** `LevelInPlace` is not added
+in M7. M2's rule is that a guard door with no production caller is deleted
+rather than carried, which is why `GrantInPlace` went, and adding a level a
+milestone before the command that uses it would repeat exactly that. It arrives
+in M7b beside the write, with the request-kind allowlist Nail chose: only the
+styling kinds carry, and `deleteHeader`, `deleteContentRange`, `replaceAllText`
+and `deletePositionedObject` are refused.
+
+**`--new` stays deferred**, decided 2026-09-09. It needs a markdown export,
+media extraction and a markdown writer, none of which exist in Go. Its state
+transition is deferred with it: when the new document replaces the paired one,
+the front matter gets the new id and a fresh publish record in the same change,
+and a document left unpaired is refused by alignment until it is paired on
+purpose, which is M8's constraint.
 
 ### M8. The diff, alignment, and the align skill
 
