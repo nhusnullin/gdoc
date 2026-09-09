@@ -101,9 +101,21 @@ func TestLiveStyleFidelity(t *testing.T) {
 	}
 	var results []result
 
+	// The table's index is read before the cases run, because one of them
+	// addresses the table by it.
+	start := 0
+	if pre, err := readRaw(ctx, s, id); err == nil {
+		if ts, ok := tableStart(pre); ok {
+			start = ts
+			t.Logf("table starts at index %d", start)
+		} else {
+			t.Log("no table in the document, so updateTableCellStyle cannot be measured")
+		}
+	}
+
 	for _, c := range fidelityCases() {
 		r := result{name: c.name, want: c.want}
-		err := batch(ctx, s, id, c.req(0, 0))
+		err := batch(ctx, s, id, c.req(0, start))
 		if err != nil {
 			r.reason = oneLine(err.Error())
 		} else {
@@ -318,6 +330,87 @@ func fidelityCases() []styleCase {
 			},
 		},
 		{
+			name: "updateTableCellStyle",
+			req: func(_ int, tableStart int) map[string]any {
+				return req("updateTableCellStyle", map[string]any{
+					"tableRange": map[string]any{
+						"tableCellLocation": map[string]any{
+							"tableStartLocation": map[string]any{"index": tableStart},
+							"rowIndex":           0,
+							"columnIndex":        0,
+						},
+						"rowSpan":    1,
+						"columnSpan": 2,
+					},
+					"tableCellStyle": map[string]any{
+						"backgroundColor": rgb(0.85, 0.89, 0.94),
+						"paddingTop":      dim(3),
+						"paddingBottom":   dim(3),
+					},
+					"fields": "backgroundColor,paddingTop,paddingBottom",
+				})
+			},
+			want: "the header row house.yaml shades and pads",
+			read: func(d map[string]any) (string, bool) {
+				for _, e := range content(d) {
+					m, ok := e.(map[string]any)
+					if !ok || m["table"] == nil {
+						continue
+					}
+					rows, _ := dig(m, "table", "tableRows").([]any)
+					if len(rows) == 0 {
+						continue
+					}
+					cells, _ := dig(rows[0], "tableCells").([]any)
+					if len(cells) == 0 {
+						continue
+					}
+					v := dig(cells[0], "tableCellStyle", "backgroundColor", "color", "rgbColor")
+					return fmt.Sprint(v != nil), v != nil
+				}
+				return "no table found", false
+			},
+		},
+		{
+			name: "updateParagraphStyle tab stops",
+			req: func(int, int) map[string]any {
+				// house.yaml lays the header and footer out with tab stops. The
+				// reference marks ParagraphStyle.tabStops read-only, so this is
+				// expected to be accepted and not land, which is the row this
+				// whole probe exists to find.
+				return req("updateParagraphStyle", map[string]any{
+					"range": rng(1, 16),
+					"paragraphStyle": map[string]any{
+						"tabStops": []any{
+							map[string]any{"offset": dim(240), "alignment": "CENTER"},
+							map[string]any{"offset": dim(480), "alignment": "END"},
+						},
+					},
+					"fields": "tabStops",
+				})
+			},
+			want: "the tab stops house.yaml lays the running head out with",
+			read: func(d map[string]any) (string, bool) {
+				v, _ := dig(firstParagraph(d), "paragraphStyle", "tabStops").([]any)
+				return fmt.Sprintf("%d stops", len(v)), len(v) > 0
+			},
+		},
+		{
+			name: "createHeader FIRST_PAGE",
+			req: func(int, int) map[string]any {
+				// DECISIONS.md records that HeaderFooterType is exactly
+				// UNSPECIFIED and DEFAULT, so a first-page header cannot be
+				// created. It is measured rather than trusted, because the
+				// whole finishing checklist exists because of it.
+				return req("createHeader", map[string]any{"type": "FIRST_PAGE_HEADER"})
+			},
+			want: "a first-page header, where the logo lives",
+			read: func(d map[string]any) (string, bool) {
+				v := dig(d, "documentStyle", "firstPageHeaderId")
+				return fmt.Sprint(v), v != nil
+			},
+		},
+		{
 			name: "updateNamedStyle (expected absent)",
 			req: func(int, int) map[string]any {
 				// There is no such request kind. Sending it is the measurement:
@@ -450,11 +543,41 @@ func createDoc(ctx context.Context, s *gapi.Session, folder, name string) (strin
 	return created.ID, nil
 }
 
+// writeBody lays the content down in two batches. The text first, then a table
+// at the end of it, because a table has to exist before updateTableCellStyle
+// has anything to act on. The first run of this probe had no table at all,
+// which is why three request kinds went unmeasured and had to be assumed.
 func writeBody(ctx context.Context, s *gapi.Session, id string) error {
-	return batch(ctx, s, id, req("insertText", map[string]any{
+	if err := batch(ctx, s, id, req("insertText", map[string]any{
 		"location": map[string]any{"index": 1},
 		"text":     fidelityBody,
+	})); err != nil {
+		return err
+	}
+	// The table goes at the end of the body. Docs numbers a table's own
+	// content, so everything after this index moves; nothing below addresses
+	// text after it, which is why the table is written last.
+	return batch(ctx, s, id, req("insertTable", map[string]any{
+		"location": map[string]any{"index": len([]rune(fidelityBody))},
+		"rows":     2,
+		"columns":  2,
 	}))
+}
+
+// tableStart finds the table's own start index in a read-back document. A table
+// cell style request names the table by that index, and the index is whatever
+// the insert above happened to produce, so it is read rather than computed.
+func tableStart(d map[string]any) (int, bool) {
+	for _, e := range content(d) {
+		m, ok := e.(map[string]any)
+		if !ok || m["table"] == nil {
+			continue
+		}
+		if f, ok := m["startIndex"].(float64); ok {
+			return int(f), true
+		}
+	}
+	return 0, false
 }
 
 func batch(ctx context.Context, s *gapi.Session, id string, requests ...map[string]any) error {
