@@ -192,7 +192,10 @@ func paragraphs(bs []docs.Block) []indexed {
 			out = append(out, index(b.Paragraph.Runs))
 			continue
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, c := range row {
 				out = append(out, paragraphs(c.Blocks)...)
 			}

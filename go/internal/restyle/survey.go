@@ -249,7 +249,10 @@ func countBlocks(bs []docs.Block, t *tally) {
 				count(r, t)
 			}
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, cell := range row {
 				countBlocks(cell.Blocks, t)
 			}

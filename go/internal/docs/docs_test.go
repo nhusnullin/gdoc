@@ -136,10 +136,10 @@ func TestPlacesRefusesEveryRangeThatNamesNoPosition(t *testing.T) {
 			StartIndex: 1, EndIndex: 20,
 			Runs: []Run{{Kind: KindText, StartIndex: 1, EndIndex: 20}},
 		}}}},
-		{ID: "t.1", Body: []Block{{Table: Table{{{Blocks: []Block{{Paragraph: &Paragraph{
+		{ID: "t.1", Body: []Block{{Table: &Table{StartIndex: 3, Rows: [][]Cell{{{Blocks: []Block{{Paragraph: &Paragraph{
 			StartIndex: 4, EndIndex: 10,
 			Runs: []Run{{Kind: KindText, StartIndex: 4, EndIndex: 10}},
-		}}}}}}}}},
+		}}}}}}}}}},
 	}}
 
 	for _, c := range []struct {

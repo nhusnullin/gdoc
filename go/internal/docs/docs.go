@@ -87,7 +87,7 @@ type Tab struct {
 // of contents) carries no text gdoc reads, so the walk drops it.
 type Block struct {
 	Paragraph *Paragraph `json:"paragraph,omitempty"`
-	Table     Table      `json:"table,omitempty"`
+	Table     *Table     `json:"table,omitempty"`
 }
 
 // Paragraph is a run of text with one named style. Style is the document's own
@@ -108,8 +108,18 @@ type Bullet struct {
 	NestingLevel int `json:"nesting_level"`
 }
 
-// Table is rows of cells, in reading order.
-type Table [][]Cell
+// Table is one table: where it starts, and its rows of cells in reading order.
+//
+// StartIndex is the field no projection reads, and it is here because a write
+// needs it. Docs names a table by tableStartLocation, so a caller holding the
+// rows alone cannot address the table it has just walked, and M7b's restyle
+// styles cells. Everything else a write would like to know about a table, its
+// column widths and its row heights, needs a request kind LevelInPlace does not
+// carry, so nothing decodes it: a field with no reader is a field that drifts.
+type Table struct {
+	StartIndex int      `json:"start_index"`
+	Rows       [][]Cell `json:"rows"`
+}
 
 // Cell holds blocks, because a cell holds paragraphs and can hold a table.
 type Cell struct {
@@ -283,7 +293,10 @@ func coveringRuns(bs []Block, start, end int) (hasStart, hasEnd bool) {
 			}
 			continue
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, c := range row {
 				s, e := coveringRuns(c.Blocks, start, end)
 				hasStart = hasStart || s

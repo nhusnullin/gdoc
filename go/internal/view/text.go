@@ -278,7 +278,7 @@ func (e *emitter) blocks(bs []docs.Block) {
 		switch {
 		case b.Paragraph != nil:
 			e.paragraph(b.Paragraph)
-		case len(b.Table) > 0:
+		case b.Table != nil:
 			e.table(b.Table)
 		}
 	}
@@ -331,10 +331,10 @@ func headingLevel(style string) int {
 // under a two-column separator, so an ordinary cell value changes the table's
 // shape. The escaping is done here rather than in cell, so a nested table
 // flattened into a cell is escaped once by the outer row.
-func (e *emitter) table(t docs.Table) {
-	rows := make([]string, 0, len(t))
+func (e *emitter) table(t *docs.Table) {
+	rows := make([]string, 0, len(t.Rows))
 	width := 0
-	for _, row := range t {
+	for _, row := range t.Rows {
 		cells := make([]string, 0, len(row))
 		for _, c := range row {
 			cells = append(cells, escapePipes(e.cell(c)))
@@ -367,7 +367,10 @@ func (e *emitter) cell(c docs.Cell) string {
 			}
 			continue
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, inner := range row {
 				if s := e.cell(inner); s != "" {
 					parts = append(parts, s)

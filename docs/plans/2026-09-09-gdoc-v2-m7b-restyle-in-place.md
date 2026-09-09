@@ -172,11 +172,11 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 3: `docs` learns the one thing a caller reads
 
-- [ ] Test first, against fixtures: a table's start index. Task 5 reads it.
-- [ ] **Nothing else is decoded.** Section breaks, document style and existing run styles each had no reader once the scope narrowed: Task 4 applies the look with a narrow mask and does not need to know what is there. M2's rule, the one Task 2 is written under.
-- [ ] **State the effect on `read`'s golden files** if the enrichment moves them.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): docs carries the table index a write needs"`
+- [x] Test first, against fixtures: a table's start index. Task 5 reads it. `docs.Table` is a struct now, `{StartIndex, Rows}`, rather than the bare `[][]Cell` it was: a table and where it starts are one fact, and a sibling field on `Block` would let a paragraph block carry a table's index. `TestATableCarriesTheIndexAWriteNeeds` reads the 184 in `single-tab.json`, and `TestANestedTableCarriesItsOwnIndex` pins the recursion, because a table inside a cell is an element of that cell's content and must carry its own index rather than the outer table's.
+- [x] **Nothing else is decoded.** Section breaks, document style and existing run styles each had no reader once the scope narrowed: Task 4 applies the look with a narrow mask and does not need to know what is there. M2's rule, the one Task 2 is written under. Column widths and row heights are the same answer for a second reason: both need a request kind `LevelInPlace` does not carry.
+- [x] **State the effect on `read`'s golden files** if the enrichment moves them. **They did not move.** The text projection prints no index, so every `.golden` under `internal/view/testdata/` is byte-identical. What did move is `read --structure`, where a table block was the rows alone and is now `{"start_index": N, "rows": [[...]]}`. Nothing pinned that shape before, so `TestStructureCarriesATablesStartIndex` states it now.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): docs carries the table index a write needs"`
 
 ### Task 4: the document style, and the page
 
