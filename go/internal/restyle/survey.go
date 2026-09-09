@@ -1,11 +1,16 @@
-// Package restyle is the survey of a document, and nothing else yet. It reports
-// what a document holds before anything is done to it: its threads with a
-// witness for each, what is pending, its chips, its tabs, its named ranges and
-// the revision the reads were made against.
+// Package restyle is the survey of a document, and the requests that restyle
+// one. The survey reports what a document holds before anything is done to it:
+// its threads with a witness for each, what is pending, its chips, its tabs,
+// its named ranges and the revision the reads were made against. The builders
+// beside it, page.go first, turn the house style into the styling requests a
+// batch carries.
 //
 // It takes no session and touches no wire, like every other reader package
 // here. The caller makes the three reads and hands the decoded answers over, so
-// every case in this file is testable on a value a test wrote out.
+// every case in this file is testable on a value a test wrote out. A builder is
+// the same rule from the other side: it is a pure function of the house style
+// and the document, returning the request a caller sends, so nothing here
+// decides when to send one.
 //
 // Nothing here judges anything. NothingToProtect is a fact about five counts
 // being zero, never a recommendation to restyle: the threads, what is pending,

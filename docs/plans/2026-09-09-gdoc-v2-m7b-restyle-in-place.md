@@ -180,11 +180,11 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 4: the document style, and the page
 
-- [ ] Test first: page size and margins from the house style, with every expected value a **literal**, never read from `house.yaml`.
-- [ ] **Narrow `fields` masks throughout**, naming exactly what is set. Task 1's guard rule refuses `*`, and the builder must never rely on being refused.
-- [ ] **A document carrying section breaks has its margins governed by `sectionStyle`**, and `updateSectionStyle` is not on the allowlist. So `updateDocumentStyle` can be accepted and invisible. Report it rather than claiming the page was restyled: Task 8 is where that check lives.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the page geometry, in place"`
+- [x] Test first: page size and margins from the house style, with every expected value a **literal**, never read from `house.yaml`. `internal/restyle/page_test.go` writes out 595.28, 841.89, 62.35, 51, 51.05 and 51.05, and prints the house value beside the want on a failure.
+- [x] **Narrow `fields` masks throughout**, naming exactly what is set. Task 1's guard rule refuses `*`, and the builder must never rely on being refused. The mask is the constant `pageMask`, and `TestThePageMaskNamesExactlyWhatItSets` checks both directions: no path in the mask the request leaves unset, and no field set outside the mask. `TestTheGuardCarriesThePageRequest` judges the built request through a policy at `LevelInPlace`, so the builder and the guard cannot drift apart in silence.
+- [x] **A document carrying section breaks has its margins governed by `sectionStyle`**, and `updateSectionStyle` is not on the allowlist. So `updateDocumentStyle` can be accepted and invisible. Report it rather than claiming the page was restyled: Task 8 is where that check lives. Written into `PageRequest`'s own doc comment, with the header and footer margins deliberately left unset beside it: gdoc writes no header here, so it does not move the margin one reserves.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the page geometry, in place"`
 
 ### Task 5: paragraphs, runs, and table cells
 
