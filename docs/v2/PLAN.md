@@ -503,6 +503,134 @@ reports rather than vanishes, so the eighth member Google adds shows up as a
 placeholder with a warning. Named ranges are decoded here too, keyed by
 `namedRangeId` rather than by name, because duplicate names coexist.
 
+**Landed 2026-09-09.** `gdoc restyle <url> --dry-run` makes three reads, the
+comment listing, the Docs read and the docx export, and reports the counts, the
+revision id, the tab count, the named ranges and a witness per thread. It writes
+to no document and to no file. `--dry-run` is required and the refusal names
+M7b: a caller told only that a flag is missing learns the command is broken,
+when what is true is that the half it wants has not been written yet. The policy
+opens with the document at `LevelSuggest` and no grant, like every read.
+
+Three reads and not four, because the named ranges come out of the Docs read,
+which carries them already. `docs.NamedRangesURL` exists for the caller that
+wants only the ranges, which is M7b rechecking the ranges rather than the prose,
+and it has no caller today. `exportFile` in `read.go` is the one export path,
+called by `comments --witness` and by the survey both: two would be two chances
+for one of them to ask Drive for a different document or to read the answer to a
+different ceiling. The listing goes out before the Docs read, which is the order
+every poll in this binary already holds, and
+`TestRestyleListsTheCommentsBeforeItReadsTheDocument` is what stops a later edit
+from swapping them.
+
+The decoder fix is the wider half of the milestone and it changes what `read`
+prints. `run()` handles all eleven members of `ParagraphElement` now, and its
+`default` arm reports rather than vanishes: an element gdoc cannot name is a run
+carrying `KindUnknown` and the member name, printing `[unknown: member]` with a
+warning. Each of the seven carries its own suggestion id lists like every other
+element. `view` gained a placeholder and a warning for each, the three chips
+carrying the label the document shows, escaped exactly as the document's own
+text is; a horizontal rule prints `[rule]` and not `---`, because the footnote
+separator is already `---`. The golden files moved and the moved bytes are the
+specification. `internal/propose` gained a test for it: a chip was a hole the
+walk skipped while the document still numbered it, so the contiguity check held
+across one by luck and holds by construction now, and a quote crossing any of
+the seven is refused naming what it crossed.
+
+`docs.NamedRange` is `{id, name, tab, ranges}`, read from
+`tabs[].documentTab.namedRanges` and from the pre-tabs top level too: `Parse`
+already had a branch for a document with a body and no tabs, and reading the
+body from one place and the ranges from another would report none on exactly the
+documents whose ranges are at the top level. `Range` gained `Segment`, because a
+header span read as a body span names a position the body does not have. It is
+empty on every comment anchor, so no output shape moved.
+
+`nothing_to_protect` reads four things and not three. No threads, no pending
+suggestions, no chips, and no paragraph element the decoder could not name: a
+document holding one holds something no count here speaks for, so the survey
+warns naming the member and refuses to say there is nothing to protect. The
+pending count is `suggestions.All`'s and not `List`'s, because `List` drops a
+whitespace-only suggestion and that is still something a replacement would
+destroy. The witness is carried twice, as counts and as one line per thread,
+because M7b compares before with after per thread and totals cannot answer that.
+
+`allowedModules` did not change and the module graph gained nothing: `go list -m
+all` is still `beevik/etree`, `goccy/go-yaml` and `yuin/goldmark`. The
+binary-size delta against `d50daf0`, the last M6 commit, is about 50 KB per
+platform. Both columns were built in one measurement with one toolchain, which
+is why the darwin/amd64 and windows numbers differ slightly from the M6 table
+above:
+
+| Platform | M6 (d50daf0) | M7 | Delta |
+|---|---|---|---|
+| darwin/arm64 | 13,952,082 | 14,020,578 | +68,496 (+0.5%) |
+| darwin/amd64 | 14,929,376 | 14,976,848 | +47,472 (+0.3%) |
+| windows/amd64 | 14,767,616 | 14,818,304 | +50,688 (+0.3%) |
+
+Acceptance: M7 carries no spec acceptance item. Spec item 5, the ten-feature
+preservation run, is M7b's, because it is a test of what a write preserved.
+
+Documented in CLAUDE.md under "A paragraph element is a run, and the `default`
+arm reports", "Named ranges are keyed by id, and they live in the tab" and
+"`restyle --dry-run` is the survey, and it writes nothing", and in the README
+under "Surveying a document before you restyle it".
+
+What M7 leaves for M7b:
+
+- **The guard's third level**, `LevelInPlace`, with the request-kind allowlist
+  Nail chose: only the styling kinds carry, and `deleteHeader`,
+  `deleteContentRange`, `replaceAllText` and `deletePositionedObject` are
+  refused. The call sites are `policy.go`'s level check and its refusal text,
+  `Level.String()`, and `AllowFile`, which takes any level and is the side door
+  around the grant's own invariant.
+- **The fidelity measurement.** What the in-place styling attempts is scoped
+  from a probe that applies each candidate request kind to a throwaway document
+  and records what lands, not from reading `house.yaml`. The 2026-08-29 run
+  measured survival, not fidelity.
+- **What in-place cannot reach**, written down as a list rather than the word
+  "approximate": the nine named styles cannot be redefined, so styling means
+  applying paragraph and text style over every paragraph one at a time, and the
+  next heading the author types is not house style. `highlight` is an OOXML name
+  with no Docs equivalent, bullet glyphs and number formats are a fixed enum, tab
+  stops are read-only, and the Docs API accepts no image bytes.
+- **The `docs` enrichment the styling needs**: table start indexes, section
+  breaks, document style and existing run styles, none of which the package
+  carries today.
+- **The write loop is read-recompute-send**, not a pure function computed once.
+  Every batch that inserts or deletes shifts the indexes later batches were
+  computed from, and the measured run was 22 batches.
+- **`writeControl.requiredRevisionId`** rather than read-then-compare. It is in
+  the public discovery document, unlike `writeMode`, and it closes the window
+  between the survey's recheck and the first write. `revision_id` is on the
+  survey today for that caller.
+- **The checklist**, its named range captured by id, and the decision about
+  whether text gdoc writes into a document body carries the 🤖 mark the way
+  everything else it writes does.
+- **The live ten-feature run, and how the copy is made.** `files.copy` is
+  refused by the guard today and drops every comment anyway, so an API copy
+  cannot carry the anchored comment the acceptance asserts.
+- **The amendments**: PRINCIPLES.md's principle 3, CLAUDE.md's Never list, and
+  SPEC.md's Never list **and acceptance item 1**, which says a direct edit on a
+  handed-in id is refused. All three are untouched by M7 and stay true through
+  it.
+
+What M7 leaves open elsewhere:
+
+- **The live check on the fixture.** `elements.json` is built from the Docs API
+  reference, which documents every field of all seven members, and a fixture
+  built from a reference is a hypothesis until a real document agrees with it.
+  Nail reads a document holding a person chip, a date chip and a calendar link
+  against it. A disagreement is a decision recorded with the difference, never a
+  test loosened.
+- A chip inside a footnote is counted nowhere, because the decoder flattens a
+  footnote's text. That is the hole
+  `docs/backlog/suggestions-inside-footnotes.md` already holds.
+- The witness still names a destroyed anchor and not a moved one, and two
+  exported comments that share words and disagree still give no answer for
+  either. Both are `internal/docx`'s limits, unchanged, and the survey states
+  them rather than working around them.
+- `restyle` has no skill caller. It is Nail-invoked, like `publish`, and wiring
+  either into a skill is M9's with the install story.
+
 ### M7b. The in-place restyle
 
 The write half. In-place styling under the per-run write grant, the finishing

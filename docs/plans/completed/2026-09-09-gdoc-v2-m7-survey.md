@@ -199,11 +199,27 @@ pointing at the wrong half is a plan that has to be read twice.
 
 ### Task 7: documentation and the size delta
 
-- [ ] CLAUDE.md: the chip decoding and the reporting `default` under the read commands, named ranges, and the survey.
-- [ ] README: surveying a document before restyling it.
-- [ ] `docs/v2/PLAN.md`: the M7 landed paragraph, the "What M7 leaves for M7b" list, and the binary-size table against the last M6 commit.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `git commit -m "docs: M7 landed"`
+- [x] CLAUDE.md: the chip decoding and the reporting `default` under the read commands, named ranges, and the survey.
+- [x] README: surveying a document before restyling it.
+- [x] `docs/v2/PLAN.md`: the M7 landed paragraph, the "What M7 leaves for M7b" list, and the binary-size table against the last M6 commit.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `git commit -m "docs: M7 landed"`
+
+➕ Two stale M7 references were corrected with the rest. CLAUDE.md's guard
+section and `internal/guard/policy_test.go`'s own comment both said M7 adds the
+in-place grant back; it is M7b's, and a comment naming the wrong half is what
+sends somebody looking for a door that is not there.
+
+➕ `restyle` is the second word the two tools spell the same and mean
+differently, after `read`. v1's publishes a house-styled copy into another
+folder and v2's surveys one document. CLAUDE.md and the README both say so
+where they already said it about `read`.
+
+➕ The size table's two columns were built in one measurement, at `d50daf0` and
+at HEAD, with one toolchain. darwin/arm64 reproduces the M6 table's recorded
+13,952,082 exactly; the other two differ by a few kilobytes from the numbers
+recorded then, which is the toolchain having moved since, and the note under the
+table says so rather than leaving two tables that quietly disagree.
 
 ## Post-Completion
 
