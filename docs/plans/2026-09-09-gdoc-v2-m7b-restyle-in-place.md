@@ -238,13 +238,13 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 10: the ten-feature preservation run
 
-- [ ] `TestLiveRestylePreservesTenFeatures` in `go/internal/live`, behind the two live variables and needing `GDOC_LIVE_IDEAL_DOC_ID`.
-- [ ] Copy with `copyComments=true` under `AllowCopy`. **Verify the copy holds all ten before restyling**, failing the setup rather than the restyle if it does not.
-- [ ] **Restyle the copy at `LevelInPlace`**: a fresh policy, the copy id handed in at `LevelSuggest`, then `GrantInPlace`. Otherwise the acceptance runs at the `LevelFull` the copy was learned at, exercises no allowlist, and passes with the whole milestone broken.
-- [ ] **The trash runs on the first policy, not the second.** `judgeDrive` carries `PATCH` only at `LevelFull`, which the restyle policy deliberately does not have. The obvious fix for that refusal is to add `PATCH` to `LevelInPlace` or restyle at `LevelFull`, and both undo the point of this task.
-- [ ] Assert all ten. Re-read the **original** and assert its `revisionId` is unchanged on every path including failure.
-- [ ] Record the result under Post-Completion.
-- [ ] `git commit -m "test(v2): the ten-feature preservation run"`
+- [x] `TestLiveRestylePreservesTenFeatures` in `go/internal/live`, behind the two live variables and needing `GDOC_LIVE_IDEAL_DOC_ID`. It is `go/internal/live/restyle_test.go`, and the id has no default, for the reason `GDOC_LIVE_DOC_ID` has none: the copy grant names exactly one source, and it is a document somebody already owns.
+- [x] Copy with `copyComments=true` under `AllowCopy`. **Verify the copy holds all ten before restyling**, failing the setup rather than the restyle if it does not. `tenFeatures.missing()` names the ones that are not there, in SPEC item 5's own words, and a copy short of any of them is a `t.Fatalf` before a single request is built.
+- [x] **Restyle the copy at `LevelInPlace`**: a fresh policy, the copy id handed in at `LevelSuggest`, then `GrantInPlace`. Otherwise the acceptance runs at the `LevelFull` the copy was learned at, exercises no allowlist, and passes with the whole milestone broken. ➕ **The refusal before the grant is asserted, not assumed.** The first request is sent through `restyle.Apply` before `GrantInPlace` and has to come back a guard refusal: a policy that had quietly kept the copy at `LevelFull` would otherwise run the whole acceptance through the door this milestone is about closing, with every assertion below it still passing.
+- [x] **The trash runs on the first policy, not the second.** `judgeDrive` carries `PATCH` only at `LevelFull`, which the restyle policy deliberately does not have. The obvious fix for that refusal is to add `PATCH` to `LevelInPlace` or restyle at `LevelFull`, and both undo the point of this task.
+- [x] Assert all ten. Re-read the **original** and assert its `revisionId` is unchanged on every path including failure. The re-read is a `t.Cleanup` registered before anything is created, so a failed setup reports it too. ➕ **Three of the ten are asked in a shape worth writing down.** A chip is compared as the JSON Docs sends for it with `textStyle` and `suggestedTextStyleChanges` taken off, because the restyle changes the look on purpose and what has to survive is the date chip's timestamp, locale and format; the inline image is compared as the bytes of every `word/media/` part of the docx export, because a Docs read's `contentUri` is regenerated on every read and says nothing; and the comment is compared both by its docx witness and by the words its anchor encloses, sliced per run in UTF-16, because a witness alone cannot see an anchor that moved and a paragraph-wide read would cry wolf over runs the restyle merged.
+- [x] Record the result under Post-Completion.
+- [x] `git commit -m "test(v2): the ten-feature preservation run"`
 
 ### Task 11: documentation and the size delta
 
@@ -257,7 +257,7 @@ The first draft made copying a capability of any policy holding a create folder.
 ## Post-Completion
 
 - Nail restyles a real document he cares about and reads the result.
-- The ten-feature run read by a person, with any feature that did not survive recorded as a decision.
+- The ten-feature run read by a person, with any feature that did not survive recorded as a decision. **Written and not yet run**, 2026-09-09: it needs the real token, the network and `GDOC_LIVE_IDEAL_DOC_ID` naming the ideal document, so it is Nail's to run with `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`. It logs the ten before and after, the manual steps, and every read-back warning, which is what a person reads.
 - The binary-size delta per platform.
 - Still outstanding, and Nail's: M4's live session with a second account, M5's docx opened in Word, M6's live publish and live drift table, and M7's live check that a real document agrees with `elements.json`.
 
