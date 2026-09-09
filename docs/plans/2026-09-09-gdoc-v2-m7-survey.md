@@ -146,12 +146,16 @@ Every one also carries `suggestedInsertionIds` and `suggestedDeletionIds`, like 
 
 ### Task 4: `internal/restyle`, the survey
 
-- [ ] Test first in `go/internal/restyle/survey_test.go` over fixtures: the counts, the revision id, the tab count, the per-thread witness, and `nothing_to_protect` true only when threads, suggestions and chips are all zero.
-- [ ] Test that the pending count comes from `suggestions.All` and not `List`: a whitespace-only suggestion is still something a replacement would destroy, so counting from `List` reports nothing-to-protect on a document that has something to protect.
-- [ ] Test that a thread the Docs read placed no range for is surveyed with a warning rather than failing the listing, and that an export that could not be read leaves every thread `unmatched` with a warning, exactly as `comments --witness` behaves.
-- [ ] Implement `restyle.Survey`, taking the decoded reads and returning the report. It takes no session and touches no wire, like every other reader package. Use `suggestions.Pending`, which is the type's real name.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the restyle survey"`
+- [x] Test first in `go/internal/restyle/survey_test.go` over fixtures: the counts, the revision id, the tab count, the per-thread witness, and `nothing_to_protect` true only when threads, suggestions and chips are all zero.
+- [x] Test that the pending count comes from `suggestions.All` and not `List`: a whitespace-only suggestion is still something a replacement would destroy, so counting from `List` reports nothing-to-protect on a document that has something to protect.
+- [x] Test that a thread the Docs read placed no range for is surveyed with a warning rather than failing the listing, and that an export that could not be read leaves every thread `unmatched` with a warning, exactly as `comments --witness` behaves.
+- [x] Implement `restyle.Survey`, taking the decoded reads and returning the report. It takes no session and touches no wire, like every other reader package. Use `suggestions.Pending`, which is the type's real name.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the restyle survey"`
+
+➕ `nothing_to_protect` reads a fourth thing: an element the decoder could not name. Task 2 made an unknown paragraph element report itself instead of vanishing, and a document holding one holds something no count here speaks for. The survey warns naming the member and refuses to say there is nothing to protect.
+
+➕ The witness is carried twice, as counts and as one line per thread. M7b compares before with after per thread, which totals cannot answer, and the survey is the only place the before-witness is read.
 
 ### Task 5: `restyle --dry-run`
 
