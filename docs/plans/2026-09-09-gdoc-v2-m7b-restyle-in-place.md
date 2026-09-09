@@ -188,13 +188,16 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 5: paragraphs, runs, and table cells
 
-- [ ] Test first: per paragraph its spacing, indent and border; per run the house font, size and colour; per table cell the shading, padding and borders house.yaml states. Literals throughout.
-- [ ] **A paragraph's `namedStyleType` is read, never decided.** Keep the structure, change the look. Nothing infers structure from text.
-- [ ] Apply the look **per paragraph**, because `updateNamedStyle` does not exist.
-- [ ] **Tables are cell appearance only.** Column widths need `updateTableColumnProperties` and row heights need `updateTableRowStyle`; neither is on the allowlist, neither was measured, and both change a table's layout rather than its look, which the scope decision puts out of bounds. Report them as not applied.
-- [ ] **No list styling.** `createParagraphBullets` removes leading tabs, so lists keep whatever bullets they have and Task 8 reports them alongside the other things gdoc could not do.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): paragraphs, runs and table cells"`
+- [x] Test first: per paragraph its spacing, indent and border; per run the house font, size and colour; per table cell the shading, padding and borders house.yaml states. Literals throughout. **Three of those turned out to be values house.yaml does not state, and each is written down rather than invented.** The house style draws **no paragraph border**, so no paragraph request names one: naming `borderBottom` in a mask without setting it is how a restyle would erase a rule the author drew. It states **no cell shading** for a table an author wrote, and which row of somebody's table is a header is not something gdoc can read, so a cell's own fill is left alone and `backgroundColor` is never in a mask. The cell padding and the grey grid are `internal/body/table.go`'s own measured values, which house.yaml does not state either, carried here so a restyled table looks like a table gdoc builds from a note.
+- [x] **A paragraph's `namedStyleType` is read, never decided.** Keep the structure, change the look. Nothing infers structure from text. `TestNoRequestWritesANamedStyleType` pins it, and a named style the house has no look for is reported in `Plan.Unstyled` and left untouched rather than mapped to the nearest one.
+- [x] Apply the look **per paragraph**, because `updateNamedStyle` does not exist. One `updateParagraphStyle` and one `updateTextStyle` over each paragraph's own range.
+- [x] **The house style is written where it states a value, and nowhere else.** Stated means a value the file can tell apart from silence: an optional number that is there, or a non-empty string. **A plain flag is never written**, so `bold`, `italic`, `keep_with_next` and `keep_lines_together` are absent: absent and false are one word in house.yaml, and writing them would clear the emphasis an author put inside a paragraph on the strength of a value the file may never have stated. Alignment is written where a style states one, which is the same rule. **Body prose reads `body:` rather than `styles.normal`**, because `build` writes an ordinary paragraph at the body size and alignment over a Normal style stating 11pt, and a restyle reading the style alone would not match a document gdoc built.
+- [x] **A paragraph inside a table cell takes `table_text` and nothing else.** The body's justified alignment is not the look inside a narrow cell, and house.yaml states no spacing for a cell of a table the author wrote, so writing one would be gdoc inventing a value rather than applying the style.
+- [x] **Tables are cell appearance only.** Column widths need `updateTableColumnProperties` and row heights need `updateTableRowStyle`; neither is on the allowlist, neither was measured, and both change a table's layout rather than its look, which the scope decision puts out of bounds. Report them as not applied: `Plan.Tables` counts them and Task 8 says so.
+- [x] **No list styling.** `createParagraphBullets` removes leading tabs, so lists keep whatever bullets they have. `Plan.Bulleted` counts them and Task 8 reports them alongside the other things gdoc could not do.
+- [x] **The mask rule is tested over every request, not per builder.** `TestEveryMaskNamesExactlyWhatItSets` walks the whole plan, so a builder added later answers it too, and `TestTheGuardCarriesEveryRestyleRequest` judges the page request and the whole tab through a policy at `LevelInPlace`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): paragraphs, runs and table cells"`
 
 ### Task 6: the apply loop
 
