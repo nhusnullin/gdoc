@@ -201,13 +201,13 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 6: the apply loop
 
-- [ ] Test first, over a scripted session: each batch carrying `writeControl.requiredRevisionId` from the last answer, and a batch Docs refuses on a stale revision reported as what it is and never retried.
-- [ ] **Refuse an empty `requiredRevisionId` at the call site.** If a read did not carry one the body ships `""` and the only protection this milestone has disappears silently.
-- [ ] **Indexes no longer move**, now that nothing on the allowlist changes text, so the loop re-reads for the revision id rather than to recompute positions. Say so: an earlier draft justified the loop by shifting indexes and that reason has gone with the bullets.
-- [ ] **Say how batches are sized.** `maxPeek` is 1 MB and `judgeRequests` refuses a `batchUpdate` it cannot read whole.
-- [ ] **Write down what a failed run leaves behind.** No rollback, so a run failing at batch twelve leaves a half-styled document and the recovery is version history by hand. **No text was touched, so nothing the author wrote is lost, but their own run formatting inside restyled paragraphs is.** That sentence goes in the report and in CLAUDE.md.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the apply loop, revision-checked between batches"`
+- [x] Test first, over a scripted session: each batch carrying `writeControl.requiredRevisionId` from the last answer, and a batch Docs refuses on a stale revision reported as what it is and never retried.
+- [x] **Refuse an empty `requiredRevisionId` at the call site.** If a read did not carry one the body ships `""` and the only protection this milestone has disappears silently.
+- [x] **Indexes no longer move**, now that nothing on the allowlist changes text, so the loop re-reads for the revision id rather than to recompute positions. Say so: an earlier draft justified the loop by shifting indexes and that reason has gone with the bullets.
+- [x] **Say how batches are sized.** `maxPeek` is 1 MB and `judgeRequests` refuses a `batchUpdate` it cannot read whole.
+- [x] **Write down what a failed run leaves behind.** No rollback, so a run failing at batch twelve leaves a half-styled document and the recovery is version history by hand. **No text was touched, so nothing the author wrote is lost, but their own run formatting inside restyled paragraphs is.** That sentence goes in the report and in CLAUDE.md.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the apply loop, revision-checked between batches"`
 
 ### Task 7: the command, and the line that opens the grant
 

@@ -936,6 +936,56 @@ the threads it has and warns that the chips, the pending suggestions and the
 named ranges are unknown. Answering `nothing_to_protect: true` there would be
 the one false fact in the field a later run reads before it writes.
 
+### The apply loop, and what a failed restyle leaves behind
+
+M7b. `internal/restyle`'s `Apply` is the only room in that package that sends
+anything: `PageRequest` and `TabRequests` are pure functions of the house style
+and the document, and the loop decides nothing about what to send.
+
+**Every batch carries `writeControl.requiredRevisionId`, and an empty one is
+refused at the call site.** The survey rechecks the document before the run
+opens the grant, and a recheck followed by a write leaves a window that is the
+whole run across a dozen batches. `requiredRevisionId` closes it inside Docs: a
+document that moved refuses the batch itself, and unlike `writeMode` the field
+is in the public discovery document, so it is a rule the server holds rather
+than a statement of intent. A read that carried no revision id would ship `""`,
+Docs would take the batch, and the only protection this milestone has would be
+gone with nothing said.
+
+**The loop reads between batches for the revision id, and for nothing else.** An
+earlier draft justified it with shifting indexes: a batch that inserts or
+deletes moves the positions later batches were computed from. That reason went
+with `createParagraphBullets`. None of the four kinds `LevelInPlace` carries can
+change a character, so no index built before the first batch can have moved by
+the last. The answer usually names the next revision; `revisionOf` is what
+stands in when it does not, and it is `docs.NamedRangesURL`, the narrowed read,
+because the revision is all the loop wants.
+
+**A refusal is never retried, and a stale revision is reported as itself.** Docs
+refusing a batch on a moved revision means somebody edited the document after
+the survey, and retrying against a fresh revision would be gdoc styling a
+document being edited, which is the exact case the field exists to refuse. A
+batch Docs accepted whose answer could not be read is the third case, as it is
+for every other writer here: it may be in the document, so it is never sent
+again, and the run stops because the revision the next batch needs was in the
+answer it could not read.
+
+**Batches are sized in bytes, under the guard's own peek.** `maxPeek` is a
+megabyte and `judgeRequests` refuses a `batchUpdate` it cannot read whole, so
+`maxBatchBytes` is half of that and `batchEnvelope` is a generous over-estimate
+of everything in a body that is not a request. Bytes rather than a count of
+requests, because two `updateParagraphStyle` requests are nothing like the same
+size. One request too large to send at all is refused naming its kind, because
+splitting one is not something this loop can do.
+
+**A failed run has no rollback, and what it leaves behind is written down rather
+than discovered.** A run that stops at batch twelve leaves a half-styled
+document, and the recovery is the document's own version history, by hand. **No
+text was touched, so nothing the author wrote is lost, but their own run
+formatting inside the paragraphs that were restyled is.** That sentence is in
+`leftBehind`, so it reaches the envelope's warnings on every path that stops
+early, and the skill reads it to Nail.
+
 ### The cursor is opaque, and it dies with the session
 
 `base64url(JSON{"v":1,"t":"<RFC3339 UTC>","i":["<comment id>"]})`, holding the
