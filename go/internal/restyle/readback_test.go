@@ -220,7 +220,7 @@ func TestVerifiedIsBothHalvesTogether(t *testing.T) {
 	           "body": {"content": []}}}]}`
 
 	// Act
-	got, warnings := Verify(was, in, []byte(read), sent, Plan{})
+	got, warnings := Verify(was, in, []byte(read), Sent{Confirmed: sent}, Plan{})
 
 	// Assert
 	if !got.Verified {
@@ -244,7 +244,7 @@ func TestVerifiedIsFalseWhenTheStyleIsNotThere(t *testing.T) {
 	read := `{"tabs": [{"documentTab": {"documentStyle": {"marginTop": {"magnitude": 72, "unit": "PT"}},
 	           "body": {"content": []}}}]}`
 
-	got, warnings := Verify(Report{Suggestions: SuggestionCounts{IDs: []string{}}}, in, []byte(read), sent, Plan{})
+	got, warnings := Verify(Report{Suggestions: SuggestionCounts{IDs: []string{}}}, in, []byte(read), Sent{Confirmed: sent}, Plan{})
 
 	if got.Verified {
 		t.Error("verified = true over a margin the document does not carry")
@@ -272,7 +272,7 @@ func TestVerifiedIsFalseWhenAThreadLostItsAnchor(t *testing.T) {
 	read := `{"tabs": [{"documentTab": {"documentStyle": {"marginTop": {"magnitude": 62.35, "unit": "PT"}},
 	           "body": {"content": []}}}]}`
 
-	got, warnings := Verify(was, in, []byte(read), sent, Plan{})
+	got, warnings := Verify(was, in, []byte(read), Sent{Confirmed: sent}, Plan{})
 
 	if got.Verified {
 		t.Error("verified = true on a run that detached a comment")
@@ -282,13 +282,46 @@ func TestVerifiedIsFalseWhenAThreadLostItsAnchor(t *testing.T) {
 	}
 }
 
+// A batch Docs accepted whose answer could not be read is read back and never
+// verified. The landing half reads the first request of each kind, so a batch of
+// hundreds can hold one request that landed and the rest that did not, and the
+// run has no answer for the ones it never read.
+func TestAnUnconfirmedBatchIsCheckedAndNeverVerified(t *testing.T) {
+	// Arrange: everything the run sent is in the document, and nothing was
+	// preserved wrongly. The only thing wrong is that Docs never said so.
+	in := Input{Document: doc(para(1, text(1, "The supplier\n")))}
+	sent := []map[string]any{
+		{"updateDocumentStyle": map[string]any{
+			"documentStyle": map[string]any{"marginTop": dim(62.35)}, "fields": "marginTop"}},
+	}
+	read := `{"tabs": [{"documentTab": {"documentStyle": {"marginTop": {"magnitude": 62.35, "unit": "PT"}},
+	           "body": {"content": []}}}]}`
+	was := Report{Suggestions: SuggestionCounts{IDs: []string{}}}
+
+	// Act
+	got, _ := Verify(was, in, []byte(read), Sent{Unconfirmed: sent}, Plan{})
+
+	// Assert
+	if len(got.Landing.Checks) == 0 {
+		t.Error("no check over a batch Docs accepted: reading it back is the only way to know whether it landed")
+	}
+	if got.Verified {
+		t.Error("verified = true over a batch whose answer could not be read")
+	}
+	// And the same requests confirmed do verify, so the flag is what decides
+	// and not the checks.
+	if again, _ := Verify(was, in, []byte(read), Sent{Confirmed: sent}, Plan{}); !again.Verified {
+		t.Errorf("verified = false on the confirmed half of the same run: landing %+v", again.Landing)
+	}
+}
+
 // A run that sent nothing verifies nothing. Reporting verified over no checks
 // at all would be the same false fact as reporting it over a check that could
 // not be made.
 func TestVerifiedIsFalseWhenNothingWasChecked(t *testing.T) {
 	in := Input{Document: doc(para(1, text(1, "The supplier\n")))}
 
-	got, _ := Verify(Report{Suggestions: SuggestionCounts{IDs: []string{}}}, in, []byte(`{}`), nil, Plan{})
+	got, _ := Verify(Report{Suggestions: SuggestionCounts{IDs: []string{}}}, in, []byte(`{}`), Sent{}, Plan{})
 
 	if got.Verified {
 		t.Error("verified = true on a run with no check in it")

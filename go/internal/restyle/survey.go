@@ -45,8 +45,23 @@ type Input struct {
 	ExportErr error
 }
 
+// Schema is the shape of a Report, and it is the version `restyle --from`
+// insists on before it opens a direct-edit grant on the strength of one.
+//
+// It is here for the reason internal/frontmatter's schema is there. The apply
+// half reads this file as the record of what the document held before the run,
+// and a field added later is a field an older survey simply does not carry: the
+// suggestion ids arrived at M7b, and an M7 survey read without them reported
+// every pending suggestion as still pending, because nothing was there to
+// compare. A strict decoder refuses a key it does not know and says nothing at
+// all about a key that is absent, so the version is what closes that half.
+// Bumping it is a decision, not a refactor.
+const Schema = 1
+
 // Report is the survey. Every field is a count, an id or a list.
 type Report struct {
+	// Schema is Schema above, on every report this binary prints.
+	Schema           int               `json:"schema"`
 	DocumentID       string            `json:"document_id"`
 	RevisionID       string            `json:"revision_id"`
 	Title            string            `json:"title"`
@@ -154,6 +169,7 @@ func Survey(in Input) (Report, []string) {
 	// skill reading named_ranges must not get two shapes for the one fact that
 	// a document has none. Witnessed is built with make for the same reason.
 	r := Report{
+		Schema:      Schema,
 		Threads:     threadCounts(threads),
 		NamedRanges: []docs.NamedRange{},
 		Suggestions: SuggestionCounts{IDs: []string{}},

@@ -37,16 +37,9 @@ func sentRequests() []map[string]any {
 			"fields":    "weightedFontFamily,fontSize",
 		}},
 		{"updateTableCellStyle": map[string]any{
-			"tableRange": map[string]any{
-				"tableCellLocation": map[string]any{
-					"tableStartLocation": map[string]any{"index": 20},
-					"rowIndex":           0,
-					"columnIndex":        0,
-				},
-				"rowSpan": 1, "columnSpan": 2,
-			},
-			"tableCellStyle": map[string]any{"paddingTop": dim(3)},
-			"fields":         "paddingTop",
+			"tableStartLocation": map[string]any{"index": 20},
+			"tableCellStyle":     map[string]any{"paddingTop": dim(3)},
+			"fields":             "paddingTop",
 		}},
 	}
 }
@@ -100,10 +93,12 @@ func TestTheReadBackFindsTheStyleItSent(t *testing.T) {
 	}
 }
 
-// The accepted-but-not-landed row is the whole reason this half exists: a
-// document carrying section breaks has its margins governed by its sectionStyle,
-// and updateSectionStyle is not on the in-place allowlist, so the page request
-// can be accepted and change nothing a reader sees.
+// A document that came back without the value that was sent is a style that did
+// not land, and the check names the field rather than the request. This is the
+// plain shape of that: no section break anywhere, and a documentStyle carrying a
+// margin the run never asked for. The section-override shape, where the value
+// does read back and a section's own governs the page, is its own case and its
+// own test: TestAPageMarginASectionOverridesIsNotReportedAsLanded.
 func TestAStyleThatWasAcceptedAndDidNotLandIsNamed(t *testing.T) {
 	read := strings.Replace(styledRead, `"marginTop": {"magnitude": 62.35, "unit": "PT"}`,
 		`"marginTop": {"magnitude": 72, "unit": "PT"}`, 1)
@@ -219,10 +214,9 @@ func TestACellOfANestedTableIsFound(t *testing.T) {
 	      {"tableCellStyle": {"paddingTop": {"magnitude": 3, "unit": "PT"}}, "content": []}]}]}}]}]}]}}]}}}]}`
 	sent := []map[string]any{
 		{"updateTableCellStyle": map[string]any{
-			"tableRange": map[string]any{"tableCellLocation": map[string]any{
-				"tableStartLocation": map[string]any{"index": 25}, "rowIndex": 0, "columnIndex": 0}},
-			"tableCellStyle": map[string]any{"paddingTop": dim(3)},
-			"fields":         "paddingTop",
+			"tableStartLocation": map[string]any{"index": 25},
+			"tableCellStyle":     map[string]any{"paddingTop": dim(3)},
+			"fields":             "paddingTop",
 		}},
 	}
 
@@ -290,5 +284,172 @@ func TestAColourReadBackWithinToleranceHolds(t *testing.T) {
 
 	if !got.Checks[0].Held {
 		t.Errorf("held = false, missing %v: a colour is compared within a tolerance", got.Checks[0].Missing)
+	}
+}
+
+// The accepted-but-invisible page is the case this half was written for, and
+// reading documentStyle alone cannot see it: updateDocumentStyle writes that
+// object, so the request reads back exactly as it was sent while the section's
+// own margin is what the reader sees. The check is no answer there, never held.
+func TestAPageMarginASectionOverridesIsNotReportedAsLanded(t *testing.T) {
+	// Arrange: the styled read, with a section break that sets its own top
+	// margin, so the value in documentStyle is the one that was sent and the
+	// value on the page is the section's.
+	read := strings.Replace(styledRead, `"content": [`,
+		`"content": [{"startIndex": 0, "sectionBreak": {"sectionStyle": {"sectionType": "CONTINUOUS",`+
+			`"marginTop": {"magnitude": 90, "unit": "PT"}}}},`, 1)
+
+	// Act
+	got, _ := Landed([]byte(read), sentRequests())
+
+	// Assert
+	page := got.Checks[0]
+	if page.Held {
+		t.Errorf("held = true over a margin a section break overrides: %+v", page)
+	}
+	if !strings.Contains(page.Note, "marginTop") || !strings.Contains(page.Note, "section") {
+		t.Errorf("note = %q, want it to name the field and say a section sets it", page.Note)
+	}
+}
+
+// A section that flips the page orientation shows the pageSize that was sent
+// transposed, and it is the accepted-and-invisible shape one field along: the
+// request reads back exactly as it was sent while a reader turns landscape
+// pages. No request this level carries can set flipPageOrientation, so the page
+// check would never match it by name.
+func TestASectionThatFlipsTheOrientationIsNotReportedAsLanded(t *testing.T) {
+	// Arrange: the document is asked for A4 portrait and answers with it, and a
+	// section break flips its own pages.
+	read := strings.Replace(pageSizeRead(), `"content": [`,
+		`"content": [{"startIndex": 0, "sectionBreak": {"sectionStyle": {"sectionType": "NEXT_PAGE",`+
+			`"flipPageOrientation": true}}},`, 1)
+
+	// Act
+	got, _ := Landed([]byte(read), pageSizeRequests())
+
+	// Assert
+	page := got.Checks[0]
+	if page.Held {
+		t.Errorf("held = true over a page a section turns on its side: %+v", page)
+	}
+	if !strings.Contains(page.Note, "flipPageOrientation") {
+		t.Errorf("note = %q, want it to name the field the section states", page.Note)
+	}
+}
+
+// A document already flipped throughout was flipped before this run, and a
+// section agreeing with it overrides nothing anybody could see. Naming it would
+// be the warning that fires on the working case.
+func TestASectionAgreeingWithTheDocumentsOwnOrientationStillAnswers(t *testing.T) {
+	read := strings.Replace(pageSizeRead(), `"documentStyle": {`,
+		`"documentStyle": {"flipPageOrientation": true,`, 1)
+	read = strings.Replace(read, `"content": [`,
+		`"content": [{"startIndex": 0, "sectionBreak": {"sectionStyle": {"sectionType": "NEXT_PAGE",`+
+			`"flipPageOrientation": true}}},`, 1)
+
+	got, _ := Landed([]byte(read), pageSizeRequests())
+
+	page := got.Checks[0]
+	if !page.Held {
+		t.Errorf("held = false on a document whose section flips nothing the rest does not: %+v", page)
+	}
+}
+
+// pageSizeRead is styledRead answering with the page size beside its margins,
+// which is what a document restyled by PageRequest comes back with.
+func pageSizeRead() string {
+	return strings.Replace(styledRead, `"documentStyle": {`,
+		`"documentStyle": {"pageSize": {"width": {"magnitude": 595.28, "unit": "PT"},`+
+			`"height": {"magnitude": 841.89, "unit": "PT"}},`, 1)
+}
+
+// pageSizeRequests is sentRequests with the page request naming a pageSize, the
+// way PageRequest builds it. The orientation is only an override of a size that
+// was asked for.
+func pageSizeRequests() []map[string]any {
+	out := sentRequests()
+	out[0] = map[string]any{"updateDocumentStyle": map[string]any{
+		"documentStyle": map[string]any{
+			"pageSize":  map[string]any{"width": dim(595.28), "height": dim(841.89)},
+			"marginTop": dim(62.35), "marginLeft": dim(51.05)},
+		"fields": "pageSize,marginTop,marginLeft",
+	}}
+	return out
+}
+
+// A section break that overrides nothing the request set is no reason to
+// withhold the answer. The default first section of every document carries a
+// sectionStyle, and warning over one would be the cry-wolf warning this tool
+// avoids everywhere else.
+func TestASectionBreakSettingNoneOfTheFieldsSentStillAnswers(t *testing.T) {
+	read := strings.Replace(styledRead, `"content": [`,
+		`"content": [{"startIndex": 0, "sectionBreak": {"sectionStyle": {"sectionType": "CONTINUOUS",`+
+			`"columnSeparatorStyle": "NONE"}}},`, 1)
+
+	got, _ := Landed([]byte(read), sentRequests())
+
+	page := got.Checks[0]
+	if !page.Held {
+		t.Errorf("held = false on a document whose section overrides nothing the page request set: %+v", page)
+	}
+}
+
+// A section restating the margin the request sent overrides nothing a reader
+// could see, so the check answers. A warning that fires on the working case is
+// the defect MissingScopes was fixed for, and the case is a real one: a document
+// gdoc built and published already carries the house geometry, and the ten-
+// feature acceptance restyles a copy of one.
+func TestASectionRestatingTheMarginThatWasSentStillAnswers(t *testing.T) {
+	// Arrange: the section states 62.35pt top, which is exactly what
+	// sentRequests asks for.
+	read := strings.Replace(styledRead, `"content": [`,
+		`"content": [{"startIndex": 0, "sectionBreak": {"sectionStyle": {"sectionType": "CONTINUOUS",`+
+			`"marginTop": {"magnitude": 62.35, "unit": "PT"}}}},`, 1)
+
+	// Act
+	got, _ := Landed([]byte(read), sentRequests())
+
+	// Assert
+	page := got.Checks[0]
+	if !page.Held {
+		t.Errorf("held = false over a section restating the value that was sent: %+v", page)
+	}
+}
+
+// And one field of two answering is not the whole answer: a section that
+// restates the top margin and moves the left one still withholds it, naming the
+// field it really overrode and not the one it agreed with.
+func TestASectionNamesOnlyTheFieldItReallyOverrides(t *testing.T) {
+	read := strings.Replace(styledRead, `"content": [`,
+		`"content": [{"startIndex": 0, "sectionBreak": {"sectionStyle": {"sectionType": "CONTINUOUS",`+
+			`"marginTop": {"magnitude": 62.35, "unit": "PT"},`+
+			`"marginLeft": {"magnitude": 72, "unit": "PT"}}}},`, 1)
+
+	got, _ := Landed([]byte(read), sentRequests())
+
+	page := got.Checks[0]
+	if page.Held {
+		t.Errorf("held = true over a margin a section really overrides: %+v", page)
+	}
+	if !strings.Contains(page.Note, "marginLeft") {
+		t.Errorf("note = %q, want it to name marginLeft", page.Note)
+	}
+	if strings.Contains(page.Note, "marginTop") {
+		t.Errorf("note = %q, want it to leave out the field the section agrees with", page.Note)
+	}
+}
+
+// The cell request names the table rather than a row, so the read-back reads a
+// cell of that table. A row's cell count is not its width once cells are
+// merged, which is why the request has no row in it to read.
+func TestTheCellCheckReadsTheTableTheRequestNamed(t *testing.T) {
+	got, _ := Landed([]byte(styledRead), sentRequests())
+
+	cell := got.Checks[3]
+	if !cell.Held {
+		t.Errorf("held = false: %+v", cell)
+	}
+	if !strings.Contains(cell.Where, "the table at 20") {
+		t.Errorf("where = %q, want the table the request named", cell.Where)
 	}
 }

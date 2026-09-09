@@ -776,7 +776,7 @@ func markValueRead(f *frame) {
 // so neither the path nor the write level can see them, and the body is the
 // only thing that can.
 //
-// The rule holds at both levels. A document gdoc created can still hold
+// The rule holds at every level. A document gdoc created can still hold
 // somebody else's suggestion, and the Never list names no level.
 //
 // Unknown kinds are carried, and that is the one rule in this guard that is not

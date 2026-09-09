@@ -72,9 +72,7 @@ func at(body map[string]any) int {
 			return v
 		}
 	}
-	if r, ok := body["tableRange"].(map[string]any); ok {
-		loc, _ := r["tableCellLocation"].(map[string]any)
-		start, _ := loc["tableStartLocation"].(map[string]any)
+	if start, ok := body["tableStartLocation"].(map[string]any); ok {
 		if v, ok := start["index"].(int); ok {
 			return v
 		}
@@ -297,63 +295,57 @@ func TestNothingWritesAFlagOrABorderTheHouseStyleDoesNotState(t *testing.T) {
 	}
 }
 
-// A table's cells take the padding and the borders, one request per row, and no
-// shading at all: which row of somebody's table is a header is not something
-// gdoc can read, and a background named in a mask replaces the fill the author
-// chose.
+// A table's cells take the padding and the borders, in one request naming the
+// table itself, and no shading at all: which row of somebody's table is a
+// header is not something gdoc can read, and a background named in a mask
+// replaces the fill the author chose.
+//
+// One request for the table rather than one per row, and the shape is the
+// point. A row's cell count is not its width once two cells are merged, so a
+// range built from it left the row's last column with the look it had.
 func TestATablesCellsTakeThePaddingAndTheBorders(t *testing.T) {
 	plan := TabRequests(fixtureTab(t), embeddedHouse(t))
-	var rows []map[string]any
+	var tables []map[string]any
 	for _, req := range plan.Requests {
 		if body, ok := req["updateTableCellStyle"].(map[string]any); ok {
-			rows = append(rows, body)
+			tables = append(tables, body)
 		}
 	}
-	if len(rows) != 2 {
-		t.Fatalf("the fixture's table has two rows and built %d cell requests", len(rows))
+	if len(tables) != 1 {
+		t.Fatalf("the fixture has one table and built %d cell requests", len(tables))
 	}
-	for i, body := range rows {
-		tr, _ := body["tableRange"].(map[string]any)
-		loc, _ := tr["tableCellLocation"].(map[string]any)
-		start, _ := loc["tableStartLocation"].(map[string]any)
+	for i, body := range tables {
+		if _, ranged := body["tableRange"]; ranged {
+			t.Errorf("table %d names a tableRange: a range built from a row's cell count "+
+				"leaves the columns behind a merged cell unstyled, so the request names the table", i)
+		}
+		start, _ := body["tableStartLocation"].(map[string]any)
 		if got, _ := start["index"].(int); got != 184 {
-			t.Errorf("row %d names table start %v, want 184", i, start["index"])
-		}
-		if got, _ := loc["rowIndex"].(int); got != i {
-			t.Errorf("row %d names rowIndex %v", i, loc["rowIndex"])
-		}
-		if got, _ := loc["columnIndex"].(int); got != 0 {
-			t.Errorf("row %d names columnIndex %v, want 0", i, loc["columnIndex"])
-		}
-		if got, _ := tr["rowSpan"].(int); got != 1 {
-			t.Errorf("row %d names rowSpan %v, want 1", i, tr["rowSpan"])
-		}
-		if got, _ := tr["columnSpan"].(int); got != 2 {
-			t.Errorf("row %d names columnSpan %v, want 2", i, tr["columnSpan"])
+			t.Errorf("table %d names table start %v, want 184", i, start["index"])
 		}
 		cs := styleOf(t, body, "tableCellStyle")
 		if _, ok := cs["backgroundColor"]; ok {
-			t.Errorf("row %d shades the cells, and a restyle leaves a cell's own fill alone", i)
+			t.Errorf("table %d shades the cells, and a restyle leaves a cell's own fill alone", i)
 		}
 		if got := magnitude(t, cs, "paddingTop"); got != 3 {
-			t.Errorf("row %d pads the top by %v, want 3", i, got)
+			t.Errorf("table %d pads the top by %v, want 3", i, got)
 		}
 		if got := magnitude(t, cs, "paddingLeft"); got != 5.4 {
-			t.Errorf("row %d pads the left by %v, want 5.4", i, got)
+			t.Errorf("table %d pads the left by %v, want 5.4", i, got)
 		}
 		border, ok := cs["borderTop"].(map[string]any)
 		if !ok {
-			t.Fatalf("row %d draws no top border: %v", i, cs)
+			t.Fatalf("table %d draws no top border: %v", i, cs)
 		}
 		if got := magnitude(t, border, "width"); got != 0.5 {
-			t.Errorf("row %d draws a %vpt border, want 0.5", i, got)
+			t.Errorf("table %d draws a %vpt border, want 0.5", i, got)
 		}
 		if got, _ := border["dashStyle"].(string); got != "SOLID" {
-			t.Errorf("row %d draws a %q border, want SOLID", i, got)
+			t.Errorf("table %d draws a %q border, want SOLID", i, got)
 		}
 		r, g, b := colour(t, border, "color")
 		if r != 201.0/255.0 || g != 201.0/255.0 || b != 201.0/255.0 {
-			t.Errorf("row %d draws a border coloured %v %v %v, want #C9C9C9", i, r, g, b)
+			t.Errorf("table %d draws a border coloured %v %v %v, want #C9C9C9", i, r, g, b)
 		}
 	}
 }

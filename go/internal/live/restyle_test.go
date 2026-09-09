@@ -131,7 +131,7 @@ func TestLiveRestylePreservesTenFeatures(t *testing.T) {
 	// reports is what the skill reads out to Nail. It asks two more questions
 	// the feature list does not: whether the style actually landed, and whether
 	// a witness that answered before has stopped answering.
-	rb, notes := restyle.Verify(before.report, after.input, after.raw, requests, plan)
+	rb, notes := restyle.Verify(before.report, after.input, after.raw, restyle.Sent{Confirmed: requests}, plan)
 	for _, n := range notes {
 		t.Logf("read-back warning: %s", n)
 	}

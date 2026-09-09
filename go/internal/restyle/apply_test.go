@@ -222,7 +222,7 @@ func TestAStaleRevisionIsReportedAndNeverRetried(t *testing.T) {
 	}
 }
 
-// An ordinary refusal stops the run too, and it is reported as itself rather
+// An ordinary failure stops the run too, and it is reported as itself rather
 // than as a document that moved.
 func TestABatchRefusedForAnotherReasonStopsTheRun(t *testing.T) {
 	oneRequestPerBatch(t, threeRequests())
@@ -243,7 +243,56 @@ func TestABatchRefusedForAnotherReasonStopsTheRun(t *testing.T) {
 		t.Errorf("no batch held, and Applied reports %d", got.Batches)
 	}
 	if !strings.Contains(strings.Join(got.Warnings, " "), "no batch") {
-		t.Errorf("a run that stopped before anything landed must say the document is unchanged: %v", got.Warnings)
+		t.Errorf("a run that stopped before anything was confirmed must say so: %v", got.Warnings)
+	}
+}
+
+// A batch that failed on the request itself is three things this package cannot
+// tell apart: a guard refusal, where nothing left the machine, a 4xx, where Docs
+// rejected the batch whole, and a 5xx or a dropped connection, where the request
+// was written and may have been applied. internal/gapi marks only the failures
+// raised after a 2xx, so the definite sentence would be a claim gdoc cannot
+// make, on the one grant in this binary that permits a direct edit.
+func TestAFailedRequestNeverSaysTheDocumentIsAsItWas(t *testing.T) {
+	oneRequestPerBatch(t, threeRequests())
+	s := &scripted{answers: []scriptedAnswer{{err: fmt.Errorf("https://docs.googleapis.com/v1/documents/DOC1:batchUpdate answered 503: backend error")}}}
+
+	got, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1")
+
+	if err == nil {
+		t.Fatalf("a batch that did not land must fail the run, got %+v", got)
+	}
+	joined := strings.Join(got.Warnings, " ")
+	if strings.Contains(joined, "the document is as it was") {
+		t.Errorf("a 5xx may have been applied, and this says it was not: %v", got.Warnings)
+	}
+	if !strings.Contains(joined, "may have reached Docs") {
+		t.Errorf("the warnings must say the batch may have reached Docs: %v", got.Warnings)
+	}
+	if !strings.Contains(joined, "version history") {
+		t.Errorf("a document that may be part styled has no rollback, and the warnings must say so: %v", got.Warnings)
+	}
+	if got.MaybeApplied {
+		t.Error("maybe_applied is what Docs accepted, and nothing here said it did")
+	}
+}
+
+// A document that moved is the one refusal that keeps the definite sentence.
+// Docs refuses the batch whole on requiredRevisionId, so nothing in it reached
+// the document, and a run that had confirmed nothing before it leaves the
+// document exactly as it was.
+func TestAStaleFirstBatchStillSaysTheDocumentIsAsItWas(t *testing.T) {
+	oneRequestPerBatch(t, threeRequests())
+	stale := fmt.Errorf("https://docs.googleapis.com/v1/documents/DOC1:batchUpdate answered 400: Invalid requiredRevisionId. The revision ID is not the latest revision of the document.")
+	s := &scripted{answers: []scriptedAnswer{{err: stale}}}
+
+	got, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1")
+
+	if err == nil {
+		t.Fatalf("a stale revision must fail the run, got %+v", got)
+	}
+	if !strings.Contains(strings.Join(got.Warnings, " "), "the document is as it was") {
+		t.Errorf("a batch Docs refused whole left nothing behind, and the warnings must say so: %v", got.Warnings)
 	}
 }
 
@@ -266,6 +315,40 @@ func TestAnAnswerThatCouldNotBeReadStopsTheRun(t *testing.T) {
 	joined := strings.Join(got.Warnings, " ")
 	if !strings.Contains(joined, "accepted") {
 		t.Errorf("the warning must say Docs accepted the batch: %v", got.Warnings)
+	}
+	if !got.MaybeApplied {
+		t.Error("maybe_applied = false on a batch Docs accepted: the caller reads it to decide whether there is anything to read back")
+	}
+	if got.Batches != 1 {
+		t.Errorf("batches = %d, want 1: the confirmed count never folds in the batch that may have landed", got.Batches)
+	}
+	if !strings.Contains(joined, "one more may be in the document") {
+		t.Errorf("the sentence about what is left behind must count the batch that may be there: %v", got.Warnings)
+	}
+}
+
+// The first batch taking that path is the case the count alone cannot report. A
+// run with no confirmed batch and one that may be in the document must never say
+// the document is as it was: it may have been directly edited, and that is the
+// run the preservation facts are needed for most.
+func TestAFirstBatchThatMayHaveLandedNeverSaysTheDocumentIsAsItWas(t *testing.T) {
+	oneRequestPerBatch(t, threeRequests())
+	s := &scripted{answers: []scriptedAnswer{{err: sentAnswer{errors.New("the answer was not JSON")}}}}
+
+	got, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1")
+
+	if err == nil {
+		t.Fatalf("an unreadable answer must fail the run, got %+v", got)
+	}
+	if got.Batches != 0 || !got.MaybeApplied {
+		t.Errorf("batches = %d and maybe_applied = %v, want 0 and true", got.Batches, got.MaybeApplied)
+	}
+	joined := strings.Join(got.Warnings, " ")
+	if strings.Contains(joined, "the document is as it was") {
+		t.Errorf("a batch Docs accepted may be in the document, and this says it is not: %v", got.Warnings)
+	}
+	if !strings.Contains(joined, "may be in the document") {
+		t.Errorf("the warnings must say the batch may be there: %v", got.Warnings)
 	}
 }
 

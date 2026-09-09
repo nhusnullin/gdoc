@@ -668,13 +668,14 @@ no document and to no file:
 
 ```jsonc
 {
+  "schema": 1,
   "document_id": "1AbC...", "revision_id": "ALm37BX...",
   "title": "Supplier Register Policy",
   "tabs": 1,
   "threads": { "open": 3, "resolved": 7,
                "witness": { "anchored": 9, "detached": 1, "unmatched": 0 },
                "witnessed": [ { "id": "AAABc...", "witness": "anchored", "resolved": false } ] },
-  "suggestions": { "pending": 2, "on_elements": 0 },
+  "suggestions": { "pending": 2, "on_elements": 0, "ids": [ "suggest.abc", "suggest.def" ] },
   "chips": { "person": 4, "date": 1, "rich_link": 2 },
   "named_ranges": [ { "id": "kix.abc123", "name": "gdoc-checklist" } ],
   "nothing_to_protect": false
@@ -719,6 +720,13 @@ its markers, with its id.
 `revision_id` is what the restyle rechecks. Hand this file back with `--from`
 and the run refuses the document if it has moved since, and every batch it sends
 carries that revision so Docs refuses it too.
+
+`schema` says which shape this survey is, and `--from` refuses one that states
+another version or none at all: take the survey again with the gdoc you are
+applying with. That is not tidiness. The apply reads this file as the record of
+what the document held, so a field a newer gdoc compares against and an older
+survey never wrote would read as nothing having been lost. `ids` is that field:
+without it a suggestion the run destroyed reads as one that was never pending.
 
 An export that could not be read is a warning, not a failure: you still get the
 threads, with every witness reported `unmatched`. A Docs read that failed is a
@@ -769,6 +777,24 @@ paragraph's spacing, a run's font and a cell's appearance back out of the
 document and says which ones landed. `verified: false` is not a failure. What
 was applied is in the document either way, and the field says the read-back
 could not confirm all of it.
+
+The page is the one check that reads more than the value it sent. If your
+document has section breaks that set their own margins, or turn their own pages
+on their side, those are what a reader sees, and gdoc cannot change them:
+`updateSectionStyle` is not one of the four kinds it may send. So the check says
+the page geometry is unconfirmed and names the fields your sections set
+differently, rather than reporting a page as restyled because the value came
+back. A section restating the margin gdoc asked for is not one of them, and
+neither is one turned the same way as the rest of the document: they override
+nothing you would see.
+
+A run that stopped because Docs took a batch and the answer could not be read
+still reads the document back, and says the batch may be in it. It is the run
+those facts are needed for most: what may have landed there is a direct edit.
+Every request that reached Docs is read back, that batch's included, and the
+checks read the first request of each kind, so on a run that stopped after
+several batches they usually answer for the earlier ones. `verified` stays
+false either way, because the last batch was never confirmed.
 
 `manual` is what gdoc could not do, each with the menu path: the first-page
 header with the logo, the contents list, the footer page numbers, plus any list

@@ -164,6 +164,31 @@ func ManualSteps(p Plan) []ManualStep {
 	return out
 }
 
+// Sent is what left the machine, and it is two lists because they answer
+// differently.
+//
+// Confirmed is the requests inside the batches Docs answered for. Unconfirmed is
+// the requests of the one batch Docs accepted whose answer could not be read:
+// they may be in the document, so the landing half is asked about them too,
+// which on that path is the only way anybody finds out. What they cannot do is
+// make a run verified, because a check that holds there does not say the run
+// knows what it wrote.
+type Sent struct {
+	Confirmed   []map[string]any
+	Unconfirmed []map[string]any
+}
+
+// All is every request that reached Docs, in the order it was sent. It builds a
+// new slice rather than appending to Confirmed, which is the caller's.
+func (s Sent) All() []map[string]any {
+	if len(s.Unconfirmed) == 0 {
+		return s.Confirmed
+	}
+	out := make([]map[string]any, 0, len(s.Confirmed)+len(s.Unconfirmed))
+	out = append(out, s.Confirmed...)
+	return append(out, s.Unconfirmed...)
+}
+
 // Verify is the read-back, both halves. before is the survey the run was made
 // against, after is the three reads taken once the batches landed, and raw is
 // the bytes of that Docs read, which the landing half reads the styling out of.
@@ -171,11 +196,11 @@ func ManualSteps(p Plan) []ManualStep {
 // It never fails. A read the caller could not make is a warning, exactly as the
 // survey handles one, because a read-back that refuses to answer tells nobody
 // what is in the document.
-func Verify(before Report, after Input, raw []byte, sent []map[string]any, plan Plan) (ReadBack, []string) {
+func Verify(before Report, after Input, raw []byte, sent Sent, plan Plan) (ReadBack, []string) {
 	rep, warnings := Survey(after)
 	out := ReadBack{After: rep, Manual: ManualSteps(plan)}
 	out.Preservation = Preserve(before, rep)
-	landing, notes := Landed(raw, sent)
+	landing, notes := Landed(raw, sent.All())
 	out.Landing = landing
 	warnings = append(warnings, notes...)
 	warnings = append(warnings, out.Preservation.warnings()...)
@@ -188,7 +213,14 @@ func Verify(before Report, after Input, raw []byte, sent []map[string]any, plan 
 		held = false
 		warnings = append(warnings, landingWarning(c))
 	}
-	out.Verified = held && out.Preservation.Intact && len(out.Preservation.Threads.Unwitnessed) == 0
+	// A batch Docs accepted whose answer could not be read is never verified,
+	// whatever the checks say. The landing half reads the first request of each
+	// kind, so a batch of hundreds can hold one request that landed and the rest
+	// that did not, and the run has no answer for the ones it did not read. This
+	// is the same rule propose and publish hold: what cannot be confirmed is
+	// reported, never claimed.
+	out.Verified = held && len(sent.Unconfirmed) == 0 &&
+		out.Preservation.Intact && len(out.Preservation.Threads.Unwitnessed) == 0
 	return out, warnings
 }
 

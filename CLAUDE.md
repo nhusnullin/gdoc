@@ -226,6 +226,18 @@ the note's `proposals[]`, which is the only record of what gdoc itself wrote.
 Nail's decision, 2026-09-07; read "A withdrawal is a `rejectSuggestion` on
 gdoc's own id" below for why a delete could not do the job.
 
+`AllowCopy(id)` is the fourth grant of that shape, and it is the one with **no
+production caller**. It names one file `files.copy` may duplicate into the folder
+`AllowCreateIn` named, and its only caller is
+`TestLiveRestylePreservesTenFeatures`, which copies a document before it restyles
+the copy. So the rule stated further down, that a guard door with no production
+caller is deleted rather than carried, does not apply to it: it is Task 2 of
+`docs/plans/completed/2026-09-09-gdoc-v2-m7b-restyle-in-place.md`, agreed so that
+the ten-feature acceptance can run unattended, and that test is what proves the
+ten features survive a restyle.
+`driveCopyParams` is its query allowlist. Deleting either is that decision
+reopened, not a cleanup.
+
 **Read this before trusting the level-1 write bar.** What keeps a handed-in
 document read-and-suggest only is `writeControl.writeMode == "SUGGEST"` in the
 request body, which is a field the client itself supplies.
@@ -374,8 +386,8 @@ wrong in the direction of a refusal the next milestone widens on purpose.
 - **The query.** `params.go` holds one allowlist per call shape, not one across
   all of them: `driveGetParams`, `driveExportParams`, `driveCommentListParams`,
   `driveReplyListParams`, `driveCommentGetParams`, `driveWriteParams`,
-  `driveCreateParams`, `docsReadParams`, and `noParams` for a call that carries
-  no query at all. One list for everything was wrong in both directions: it put
+  `driveCreateParams`, `driveCopyParams`, `docsReadParams`, and `noParams` for a
+  call that carries no query at all. One list for everything was wrong in both directions: it put
   paging on a metadata read and an export format on a comment listing, neither
   of which is a call Drive has, and it put `alt` on the bare `files.get`, where
   `alt=media` stops being a metadata read and hands back the file's bytes.
@@ -972,6 +984,16 @@ with the document at `LevelSuggest` and no grant, like every read.
   and refuses a document that moved, which is principle 3 at the one moment gdoc
   will have the power to overwrite. Nothing reads the field yet, and it exists
   here for that reason.
+- **`schema` is 1, and the apply refuses a survey that states anything else.**
+  `restyle.Schema` is the constant, and it is there for the reason
+  `internal/frontmatter`'s schema is: the apply reads this file as the record of
+  what the document held, and a field added later is a field an older survey
+  simply does not carry. `ids` is the field that made the point. It arrived at
+  M7b, and a survey printed before it read here as a survey where nothing was
+  pending, so a suggestion the run destroyed was reported as one that had never
+  been there. A strict decoder refuses a key it does not know and says nothing at
+  all about a key that is absent, so the version is what closes that half.
+  Bumping it is a decision, not a refactor.
 
 **`nothing_to_protect` is a fact about five things being zero, never a
 recommendation.** No threads, no pending suggestions, no chips, no paragraph
@@ -1032,6 +1054,19 @@ for every other writer here: it may be in the document, so it is never sent
 again, and the run stops because the revision the next batch needs was in the
 answer it could not read.
 
+**That third case is `maybe_applied`, and it is a field rather than a batch
+counted in `batches`.** `batches` is what Docs confirmed, so folding the two
+together would lose which it was, and leaving the case out of the report
+altogether was worse: the run said "no batch was applied, so the document is as
+it was" one warning after saying the batch may be in the document, and the
+caller skipped the read-back on a document that may have just been directly
+edited. `leftBehind` reads the flag, and `cmdRestyle` reads it beside the count
+to decide whether there is anything to read back. `maybe_requests` beside it is
+how many requests that batch held, which is what `reached` needs to say which of
+them left the machine. It is `propose.Apply`'s rule
+in the one writer that had missed it: a write whose answer could not be read is
+not a write that never happened.
+
 **Batches are sized in bytes, under the guard's own peek.** `maxPeek` is a
 megabyte and `judgeRequests` refuses a `batchUpdate` it cannot read whole, so
 `maxBatchBytes` is half of that and `batchEnvelope` is a generous over-estimate
@@ -1046,7 +1081,20 @@ document, and the recovery is the document's own version history, by hand. **No
 text was touched, so nothing the author wrote is lost, but their own run
 formatting inside the paragraphs that were restyled is.** That sentence is in
 `leftBehind`, so it reaches the envelope's warnings on every path that stops
-early, and the skill reads it to Nail.
+early, and the skill reads it to Nail. `noRollback` holds it once for that
+reason, because every path that stops early says it and two copies would be two
+sentences that drift.
+
+**"The document is as it was" is a claim, so it is kept for the two paths that
+can make it.** A batch that could not be built never left the machine, and one
+Docs refused on a moved revision it refused whole. A batch that failed on the
+request itself is four things `internal/gapi` cannot tell apart, and its own doc
+comment names them: a guard refusal, a 4xx, a 5xx and a dropped connection,
+where the request was written and may have been applied. So `leftBehind` takes
+that path as `maybeReached` and says the document is either as it was or part
+styled. The read-back gate does not widen to match, and `cmdRestyle` says why:
+three reads on every refusal would be paid on the common case to answer the rare
+one, and the sentence sends the caller to the document instead.
 
 ### `restyle --from` styles a document gdoc did not create
 
@@ -1082,6 +1130,19 @@ paragraph. The document looks right afterwards and the next heading the author
 types is Google's Heading 1 again. Nothing in the binary can fix that, and the
 skill says it out loud rather than letting somebody discover it a week later.
 
+**A table's cells are one request naming the table, not one per row.**
+`updateTableCellStyle` takes either a `tableRange` or a `tableStartLocation`, and
+the reference documents the second as applying "to all the cells in the table".
+The row form was built from the row's own cell count, and that count is not the
+row's width: `Table.columns` says "It is possible for a table to be
+non-rectangular, so some rows may have a different number of cells", so a row
+whose first two columns are merged carries one cell object for the pair and the
+span covered the merged cell alone, leaving the row's last column with the look
+it had. `internal/docs` decodes no `columnSpan` and no column count, so the real
+width is not something the builder could compute, and a request that names the
+table needs neither. `cellAt` in `landing.go` reads that one shape, and a
+`tableRange` is no answer rather than a second reading nothing sends.
+
 **What a restyle overwrites is formatting inside the paragraphs it styles**, and
 what it does not touch is written down in the same breath. The face, the size
 and the colour of every run go to the house value, so an author's own emphasis
@@ -1104,7 +1165,7 @@ most needed for; and a read the run could not make is a warning and no read-back
 at all, since a preservation half built from a listing that never arrived names
 every thread in the survey as gone.
 
-Three rules inside those halves are decisions rather than details.
+Six rules inside those halves are decisions rather than details.
 
 - **A witness that reads `unmatched` now is `unwitnessed`, never a lost
   anchor.** Unmatched is the export giving no answer, and calling absence of
@@ -1124,6 +1185,41 @@ Three rules inside those halves are decisions rather than details.
   document's own default, so a zero holds where the read is silent: Docs leaves
   a property equal to its default out of the answer, and reading that silence as
   a failure would report every zero the house style states as not landed.
+- **Sent means sent, so a run that stopped is given the prefix and not the
+  plan.** `reached` hands `readBack` the requests that left the machine, which on
+  a run that stopped at batch three is not the table request sitting in batch
+  nine. Given the whole plan the check looked for a request that never left the
+  machine and named the style as one that did not land, on a run whose warnings
+  somebody is already reading to work out what state the document is in.
+- **Left the machine is two lists, and a batch Docs accepted is in the second
+  one.** `restyle.Sent` is `Confirmed` and `Unconfirmed`: the requests inside the
+  batches Docs answered for, and the requests of the one batch Docs accepted
+  whose answer could not be read, which `Applied.MaybeRequests` counts. Both are
+  read back, because on that path reading the document is the only way anybody
+  finds out whether the styling is there, and the run has already paid for the
+  read. What an unconfirmed batch may never do is make the run verified, whatever
+  its checks say: `Verify` forces `verified` false over a non-empty
+  `Unconfirmed`, since the landing half reads the first request of each kind and
+  a batch of hundreds can hold one that landed and hundreds that did not.
+- **The page check reads the sections too, and it is the one case of a request
+  accepted and invisible that this half was written for.** `updateDocumentStyle` writes
+  `documentStyle`, so on a document whose section break carries its own margins
+  the request reads back exactly as it was sent while the page a reader sees
+  never moved: comparing the two alone answered held on the only document the
+  check exists for. `sectionOverrides` names the fields a section states for
+  itself, and a field on that list makes the check no answer with the reason in
+  it. `flipPageOrientation` is on that list and is matched by no name, because
+  no request this level carries can set it: a section stating it differently
+  from the document's own shows the page size that was sent transposed, which is
+  the same accepted-and-invisible shape one field along. Two sections say nothing. One that sets none of the fields the request set
+  overrides nothing, because an unset section margin is the document's own, so
+  the ordinary first section break of every document is not a warning; and one
+  restating the value that was sent overrides nothing a reader could see, so the
+  check answers. The second is the `MissingScopes` rule again: a warning that
+  fires on the working case is one people learn to ignore, and a document gdoc
+  built and published already carries the house geometry, which is what the
+  ten-feature acceptance restyles a copy of. The comparison is `missingFields`,
+  the rule the checks themselves are made of, so one tolerance decides both.
 
 **`manual` is what gdoc could not do, each with its menu path.** Three the API
 cannot do at all, the first-page header carrying the logo, the contents list and

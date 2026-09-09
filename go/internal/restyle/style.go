@@ -61,7 +61,7 @@ type Plan struct {
 	Requests []map[string]any
 	// Paragraphs, Text and Cells are how many requests of each kind were
 	// built. Cells is the cells covered, which is not the number of
-	// updateTableCellStyle requests: one request styles a whole row.
+	// updateTableCellStyle requests: one request styles a whole table.
 	Paragraphs int
 	Text       int
 	Cells      int
@@ -170,32 +170,37 @@ func (p *Plan) paragraph(par *docs.Paragraph, cfg *house.Config, unknown map[str
 	p.Text++
 }
 
-// table is one table: its cells' appearance, one request per row, and then the
+// table is one table: its cells' appearance in one request, and then the
 // paragraphs inside those cells. A table inside a cell carries its own start
 // index, so the recursion addresses it rather than the outer table.
+//
+// The request names tableStartLocation rather than a tableRange, which the Docs
+// reference documents as applying the update "to all the cells in the table".
+// One request for the table rather than one per row, and the reason is merges
+// rather than economy. TableCellLocation.columnIndex is a zero-based grid
+// column, and Table.columns says "It is possible for a table to be
+// non-rectangular, so some rows may have a different number of cells": a row
+// whose first two columns are merged carries one cell object for the pair, so a
+// span of len(cells) covered the merged cell and left the row's last column
+// with the look it had. internal/docs decodes no columnSpan and no column
+// count, so the row's real width is not something this builder could compute,
+// and a range that covers every cell needs neither.
 func (p *Plan) table(t *docs.Table, cfg *house.Config, unknown map[string]bool) {
 	p.Tables++
-	for row, cells := range t.Rows {
-		if len(cells) == 0 {
-			continue
-		}
-		look := cellLook()
+	look := cellLook()
+	cells := 0
+	for _, row := range t.Rows {
+		cells += len(row)
+	}
+	if cells > 0 {
 		p.Requests = append(p.Requests, map[string]any{
 			"updateTableCellStyle": map[string]any{
-				"tableRange": map[string]any{
-					"tableCellLocation": map[string]any{
-						"tableStartLocation": map[string]any{"index": t.StartIndex},
-						"rowIndex":           row,
-						"columnIndex":        0,
-					},
-					"rowSpan":    1,
-					"columnSpan": len(cells),
-				},
-				"tableCellStyle": look.set,
-				"fields":         look.mask(),
+				"tableStartLocation": map[string]any{"index": t.StartIndex},
+				"tableCellStyle":     look.set,
+				"fields":             look.mask(),
 			},
 		})
-		p.Cells += len(cells)
+		p.Cells += cells
 	}
 	for _, cells := range t.Rows {
 		for _, c := range cells {

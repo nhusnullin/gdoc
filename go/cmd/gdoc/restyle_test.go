@@ -3,12 +3,17 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gdoc/internal/restyle"
 )
 
 // emptyDocument is a document with nothing in it worth protecting: no comment,
@@ -280,13 +285,18 @@ const twoTabDocument = `{
   ]
 }`
 
-// surveyOf is the envelope the survey run printed, cut down to the three facts
-// the apply rechecks. It decodes into the same struct the survey printed, which
-// is what makes the strict read possible at all.
+// surveyOf is the envelope the survey run printed, cut down to the facts the
+// apply rechecks. It decodes into the same struct the survey printed, which is
+// what makes the strict read possible at all.
+//
+// The schema is one of those facts. A survey that states none was printed by a
+// gdoc older than this one, and what is missing from it is the evidence the
+// read-back compares against, so the apply refuses it by name rather than
+// reading its absent fields as nothing lost.
 func surveyOf(t *testing.T, docID, revisionID string, tabs int) string {
 	t.Helper()
-	return fmt.Sprintf(`{"ok":true,"data":{"document_id":%q,"revision_id":%q,"tabs":%d}}`,
-		docID, revisionID, tabs)
+	return fmt.Sprintf(`{"ok":true,"data":{"schema":%d,"document_id":%q,"revision_id":%q,"tabs":%d}}`,
+		restyle.Schema, docID, revisionID, tabs)
 }
 
 // applyWire is the fresh read the apply makes, the batch it sends, and the
@@ -472,14 +482,23 @@ func TestRestyleReadsTheSurveyStrictly(t *testing.T) {
 		survey string
 		want   string
 	}{
-		{"an unknown key", `{"ok":true,"data":{"document_id":"` + fixtureDocID +
+		{"an unknown key", `{"ok":true,"data":{"schema":1,"document_id":"` + fixtureDocID +
 			`","revision_id":"ALm37BXsingleTab","tabs":1,"restyled":true}}`, "restyled"},
 		{"an unknown key in the envelope", `{"ok":true,"exit":0,"data":{"document_id":"` + fixtureDocID + `"}}`, "exit"},
 		{"a survey that failed", `{"ok":false,"error":"the document could not be read"}`, "did not succeed"},
-		{"two objects", `{"ok":true,"data":{"document_id":"` + fixtureDocID +
+		{"two objects", `{"ok":true,"data":{"schema":1,"document_id":"` + fixtureDocID +
 			`","revision_id":"ALm37BXsingleTab","tabs":1}}{"ok":true}`, "more than one"},
-		{"no document named", `{"ok":true,"data":{"revision_id":"ALm37BXsingleTab","tabs":1}}`, "names no document"},
-		{"no revision", `{"ok":true,"data":{"document_id":"` + fixtureDocID + `","tabs":1}}`, "no revision id"},
+		// The two version cases. A survey with no schema is one an older gdoc
+		// printed, and the fields this recheck rests on may not be in it: the
+		// suggestion ids arrived at M7b, and a survey read without them reports
+		// every suggestion a run destroyed as one that was never pending. A
+		// survey stating another version is refused for the mirror reason.
+		{"no schema", `{"ok":true,"data":{"document_id":"` + fixtureDocID +
+			`","revision_id":"ALm37BXsingleTab","tabs":1}}`, "no survey schema"},
+		{"another schema", `{"ok":true,"data":{"schema":2,"document_id":"` + fixtureDocID +
+			`","revision_id":"ALm37BXsingleTab","tabs":1}}`, "survey schema 2"},
+		{"no document named", `{"ok":true,"data":{"schema":1,"revision_id":"ALm37BXsingleTab","tabs":1}}`, "names no document"},
+		{"no revision", `{"ok":true,"data":{"schema":1,"document_id":"` + fixtureDocID + `","tabs":1}}`, "no revision id"},
 		{"not JSON", `this is not a survey`, "is not a survey"},
 	}
 	for _, c := range cases {
@@ -661,10 +680,12 @@ func TestRestyleReadsTheStyleBackOutOfTheDocument(t *testing.T) {
 	}
 }
 
-// A batch Docs accepted is not a change a reader can see. A document carrying
-// section breaks has its margins governed by its sectionStyle, and
-// updateSectionStyle is not on the in-place allowlist, so the page request can
-// be accepted and land nothing.
+// A batch Docs accepted is not a change a reader can see. Here the document
+// comes back carrying none of the styling that was sent, so every check names
+// what is missing and the run reports verified: false over a write Docs took.
+// The section-override shape, where the value does read back and a section's own
+// governs the page, is internal/restyle's:
+// TestAPageMarginASectionOverridesIsNotReportedAsLanded.
 func TestRestyleSaysWhenTheStyleDidNotLand(t *testing.T) {
 	w := landedWire(t)
 	w.answers[3].json = plainDocument // the read back carries no styling at all
@@ -697,8 +718,9 @@ func TestRestyleReportsAThreadThatLostItsAnchor(t *testing.T) {
 	stubWire(t, w)
 	// The survey says it was anchored before the run.
 	from := tempFile(t, "survey.json", fmt.Sprintf(
-		`{"ok":true,"data":{"document_id":%q,"revision_id":"ALm37BXplain","tabs":1,
-		  "threads":{"open":1,"witnessed":[{"id":"c1","witness":"anchored"}]}}}`, fixtureDocID))
+		`{"ok":true,"data":{"schema":%d,"document_id":%q,"revision_id":"ALm37BXplain","tabs":1,
+		  "threads":{"open":1,"witnessed":[{"id":"c1","witness":"anchored"}]}}}`,
+		restyle.Schema, fixtureDocID))
 
 	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
 
@@ -837,5 +859,95 @@ func TestRestyleSaysWhenItCouldNotReadTheDocumentBack(t *testing.T) {
 	}
 	if !hasWarning(warningsOf(t, got), "could not be read back") {
 		t.Errorf("warnings = %v, want one naming the read that failed", warningsOf(t, got))
+	}
+}
+
+// The two halves are joined by a file, so that file has to round-trip. The
+// survey prints its envelope through internal/emit and the apply reads it back
+// through a second struct with DisallowUnknownFields set, which refuses a key it
+// does not know at every level of the object.
+//
+// Every other test here writes its survey by hand, and a hand-written one cannot
+// answer this: a field added to what the survey prints and not to what the apply
+// reads would refuse every survey gdoc itself printed, the documented workflow
+// would stop working, and the suite would still pass. So this one runs the
+// survey, keeps the bytes it printed, and hands exactly those to the apply.
+func TestASurveyThisBinaryPrintedIsOneItCanApply(t *testing.T) {
+	// Arrange: the survey run, and its stdout saved the way the caller saves it.
+	stubSession(t, restyleSession(t))
+	var printed bytes.Buffer
+	if code := run(context.Background(),
+		[]string{"restyle", fixtureDocID, "--dry-run"}, &printed, io.Discard); code != 0 {
+		t.Fatalf("restyle --dry-run failed: exit %d, %s", code, printed.String())
+	}
+	from := filepath.Join(t.TempDir(), "survey.json")
+	if err := os.WriteFile(from, printed.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Act: the apply, reading exactly those bytes.
+	stubWire(t, applyWire(t))
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the survey this binary printed was refused by its own apply: %v (exit %d)\nsurvey was %s",
+			got, code, printed.String())
+	}
+	if applied, _ := dataOf(t, got)["applied"].(map[string]any); applied == nil || applied["batches"] != float64(1) {
+		t.Errorf("applied = %v, want the batch sent", dataOf(t, got)["applied"])
+	}
+}
+
+// sentAnywayErr marks an error the way internal/gapi marks a write whose answer
+// could not be read: the request reached Docs, and the run cannot say what it
+// did. Asked by behaviour rather than by importing the sentinel, which is how
+// every writer package asks it.
+type sentAnywayErr struct{ error }
+
+func (sentAnywayErr) Sent() bool { return true }
+
+// A batch Docs accepted whose answer could not be read is not a batch that never
+// happened. It may be in the document, which under this grant means the document
+// may have been directly edited, so the run reads back what survived rather than
+// reporting a document that is as it was.
+func TestRestyleReadsBackWhenABatchMayHaveLanded(t *testing.T) {
+	w := landedWire(t)
+	w.answers[1] = &answer{method: "POST", match: ":batchUpdate",
+		err: sentAnywayErr{errors.New("the answer was not JSON")}}
+	stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXplain", 1))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("an unreadable answer must fail the run: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	if _, there := data["read_back"]; !there {
+		t.Error("a batch that may be in the document must be read back: it is the run the preservation facts are needed for most")
+	}
+	warns := strings.Join(warningsOf(t, got), " ")
+	if strings.Contains(warns, "the document is as it was") {
+		t.Errorf("the warnings say the document is unchanged over a batch Docs accepted: %v", warningsOf(t, got))
+	}
+	if !strings.Contains(warns, "may be in the document") {
+		t.Errorf("the warnings must say the batch may be there: %v", warningsOf(t, got))
+	}
+	if data["verified"] != false {
+		t.Error("verified = true on a run that cannot say what it wrote")
+	}
+	// The landing half is asked about the batch all the same. Docs accepted it,
+	// so those requests left the machine, and reading them back is the only way
+	// anybody finds out whether the styling is in the document. What they may
+	// never do is make the run verified, which the check above states.
+	rb, _ := data["read_back"].(map[string]any)
+	landing, _ := rb["landing"].(map[string]any)
+	checks, _ := landing["checks"].([]any)
+	if len(checks) == 0 {
+		t.Error("no landing check on the one run where the read-back is the only way to know what landed")
+	}
+	if rb["verified"] != false {
+		t.Errorf("read_back.verified = %v, want false: the checks holding does not make an unreadable answer readable", rb["verified"])
 	}
 }

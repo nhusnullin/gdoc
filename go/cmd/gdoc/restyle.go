@@ -117,9 +117,10 @@ type restyleData struct {
 	Planned          plannedCounts   `json:"planned"`
 	Applied          restyle.Applied `json:"applied"`
 	// ReadBack is the document read again once the batches landed: what
-	// survived, and whether the style is really there. It is absent when no
-	// batch was applied, because a document nothing was written to has nothing
-	// to read back.
+	// survived, and whether the style is really there. It is absent when
+	// nothing reached the document, because a document nothing was written to
+	// has nothing to read back. A batch Docs accepted whose answer could not be
+	// read is not that case: it may be in the document, so it is read back.
 	ReadBack *restyle.ReadBack `json:"read_back,omitempty"`
 	// Verified is the read-back's checks together. False is never a failure:
 	// the batches Docs took are in the document either way, and a caller told
@@ -249,8 +250,27 @@ func applyRestyle(a *args) emit.Result {
 	// either survived or did not. What is skipped is a run that wrote nothing:
 	// there the document is as it was, and three reads would answer a question
 	// nobody asked.
-	if applied.Batches > 0 {
-		rb, notes := readBack(ctx, r, *saved, requests, plan)
+	//
+	// MaybeApplied is read beside the count for that reason. A batch Docs
+	// accepted whose answer could not be read is not a batch that never
+	// happened: it may be in the document, which under this grant means the
+	// document may have been directly edited, and that is the run the
+	// preservation facts are needed for most.
+	//
+	// A batch that failed on the request itself is not in the gate, and that is
+	// a decision rather than an oversight. A guard refusal, a 4xx, a 5xx and a
+	// dropped connection arrive here as one thing, so opening the gate to them
+	// would pay three reads on every refusal to answer the one case in four
+	// where the batch may have landed. Apply's own warning says so instead, and
+	// the caller reads the document.
+	//
+	// The landing half is given the requests that reached Docs rather than the
+	// whole plan. landing.go asks whether the first request of each kind is in
+	// the document, and a request from a batch that never left the machine would
+	// be reported as a style that did not land on a run that never tried to
+	// write it.
+	if applied.Batches > 0 || applied.MaybeApplied {
+		rb, notes := readBack(ctx, r, *saved, reached(requests, applied), plan)
 		data.ReadBack = rb
 		if rb != nil {
 			data.Verified = rb.Verified
@@ -261,6 +281,21 @@ func applyRestyle(a *args) emit.Result {
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: applyErr.Error()}
 	}
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
+}
+
+// reached is the plan split by what Docs answered for, which is what the
+// read-back is asked about.
+//
+// Apply sends the batches in order and counts the requests inside the ones it
+// confirmed, so those are the first Requests entries of the plan, and the
+// requests of a batch Docs accepted whose answer could not be read are the
+// MaybeRequests standing right behind them. Both left the machine. What is
+// behind them never did, and asking about those would name a style as not landed
+// on a run that never tried to write it.
+func reached(requests []map[string]any, applied restyle.Applied) restyle.Sent {
+	end := min(applied.Requests, len(requests))
+	stop := min(end+applied.MaybeRequests, len(requests))
+	return restyle.Sent{Confirmed: requests[:end], Unconfirmed: requests[end:stop]}
 }
 
 // readBack is the document read again once the styling landed, and the two
@@ -282,7 +317,7 @@ func applyRestyle(a *args) emit.Result {
 // preservation half made from a listing that never arrived would name every
 // thread in the survey as gone, which is the one warning that must never cry
 // wolf.
-func readBack(ctx context.Context, r *reach, before restyle.Report, sent []map[string]any, plan restyle.Plan) (*restyle.ReadBack, []string) {
+func readBack(ctx context.Context, r *reach, before restyle.Report, sent restyle.Sent, plan restyle.Plan) (*restyle.ReadBack, []string) {
 	raws, err := comments.Fetch(ctx, r.session, r.id, nil)
 	if err != nil {
 		return nil, []string{fmt.Sprintf(
@@ -351,6 +386,24 @@ func readSurvey(path string) (*restyle.Report, error) {
 	if !saved.OK {
 		return nil, fmt.Errorf("%s is a survey that did not succeed, so there is nothing to recheck the document against: %s",
 			path, saved.Error)
+	}
+	// The version, and it is checked before any of the facts are read. A strict decoder
+	// refuses a key it does not know and says nothing about a key that is
+	// absent, so a survey printed by an older gdoc reads here as a survey whose
+	// missing evidence is evidence of nothing lost: the suggestion ids arrived
+	// at M7b, and without them the read-back reports every suggestion that was
+	// destroyed as one that was never pending. That is the one false fact in the
+	// file this command trusts most, and a version is what refuses it by name.
+	switch saved.Data.Schema {
+	case restyle.Schema:
+	case 0:
+		return nil, fmt.Errorf(
+			"%s carries no survey schema, so it was printed by a gdoc older than this one and the evidence this recheck rests on may not be in it: "+
+				"take the survey again with `gdoc restyle <url> --dry-run`", path)
+	default:
+		return nil, fmt.Errorf(
+			"%s states survey schema %d and this gdoc reads %d, so what its fields mean is not decided here: "+
+				"take the survey again with `gdoc restyle <url> --dry-run`", path, saved.Data.Schema, restyle.Schema)
 	}
 	if saved.Data.DocumentID == "" {
 		return nil, fmt.Errorf("%s names no document, so it cannot be a survey of the one being restyled", path)

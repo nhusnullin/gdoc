@@ -34,7 +34,10 @@ package restyle
 // text was touched, so nothing the author wrote is lost, but their own run
 // formatting inside the paragraphs that were restyled is. The warnings say that
 // sentence on every path that stops early, because the caller prints them and
-// the skill reads them to Nail.
+// the skill reads them to Nail. What the count alone cannot say is the batch
+// Docs accepted whose answer could not be read: it may be in the document, so it
+// is reported as MaybeApplied rather than as a batch that landed or one that
+// never happened.
 
 import (
 	"context"
@@ -89,6 +92,24 @@ type Applied struct {
 	// Stale says Docs refused a batch because the document had moved under the
 	// run. It is the one refusal that means somebody else was editing.
 	Stale bool `json:"stale"`
+	// MaybeApplied says one more batch than Batches counts may be in the
+	// document: Docs accepted it and its answer could not be read, so the run
+	// cannot say whether it landed. It is a separate field rather than a
+	// batch counted in Batches, because Batches is what Docs confirmed and a
+	// count that folded the two together could not say which it was. The
+	// caller reads it beside Batches to decide whether there is anything to
+	// read back, since a batch that may be in the document is a document that
+	// may have been directly edited.
+	// It is printed on every run, beside Stale, because a flag that vanishes
+	// when it is false cannot be read the same way twice.
+	MaybeApplied bool `json:"maybe_applied"`
+	// MaybeRequests is how many styling requests were inside that batch. The
+	// flag says a batch may be in the document and this says which requests
+	// they were, because the batches are sent in order, so they are the ones
+	// standing right behind Requests in the plan. The read-back needs that:
+	// asked about them it says whether the styling is really there, which on
+	// this one path is the only way to find out.
+	MaybeRequests int `json:"maybe_requests"`
 	// Warnings carry what a caller has to know about a run that stopped early,
 	// and never a verdict.
 	Warnings []string `json:"warnings,omitempty"`
@@ -135,12 +156,12 @@ func Apply(ctx context.Context, s Session, docID string, requests []map[string]a
 	for i, b := range batches {
 		body, err := batchBody(b, out.RevisionID)
 		if err != nil {
-			out.Warnings = append(out.Warnings, leftBehind(out.Batches, len(batches)))
+			out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
 			return out, fmt.Errorf("batch %d of %d could not be built: %w", i+1, len(batches), err)
 		}
 		var answer batchAnswer
 		if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(body), &answer); err != nil {
-			return out, out.stopped(i, len(batches), err)
+			return out, out.stopped(i, len(batches), len(b), err)
 		}
 		out.Batches++
 		out.Requests += len(b)
@@ -158,7 +179,7 @@ func Apply(ctx context.Context, s Session, docID string, requests []map[string]a
 			}
 			read, err := revisionOf(ctx, s, docID)
 			if err != nil {
-				out.Warnings = append(out.Warnings, leftBehind(out.Batches, len(batches)))
+				out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
 				return out, fmt.Errorf(
 					"batch %d of %d was accepted and its answer named no revision id, and the document could not be read for one, so the run stopped rather than sending the next batch without: %w",
 					i+1, len(batches), err)
@@ -171,23 +192,29 @@ func Apply(ctx context.Context, s Session, docID string, requests []map[string]a
 }
 
 // stopped is the one place a failed batch becomes a report: the flag, the
-// warnings and the error a caller prints.
-func (out *Applied) stopped(i, total int, err error) error {
+// warnings and the error a caller prints. n is how many requests were in the
+// batch that did not land, which only the accepted-and-unreadable case records.
+func (out *Applied) stopped(i, total, n int, err error) error {
 	switch {
 	case isStale(err):
 		out.Stale = true
-		out.Warnings = append(out.Warnings, leftBehind(out.Batches, total))
+		out.Warnings = append(out.Warnings, out.leftBehind(total, false))
 		return fmt.Errorf(
 			"batch %d of %d was refused because the document moved under this run, so somebody edited it after the survey was taken, and the run stopped rather than styling a document being edited: %w",
 			i+1, total, err)
 	case sentAnyway(err):
+		// The flag goes on before the sentence below is built, because that
+		// sentence says what is in the document and this is the one path where
+		// a batch nothing counted may be in it.
+		out.MaybeApplied = true
+		out.MaybeRequests = n
 		out.Warnings = append(out.Warnings,
 			fmt.Sprintf("batch %d of %d was accepted by Docs and its answer could not be read, so that batch may be in the document and it is never sent again", i+1, total),
-			leftBehind(out.Batches, total))
+			out.leftBehind(total, false))
 		return fmt.Errorf("batch %d of %d was accepted by Docs and its answer could not be read: %w", i+1, total, err)
 	default:
-		out.Warnings = append(out.Warnings, leftBehind(out.Batches, total))
-		return fmt.Errorf("batch %d of %d was refused: %w", i+1, total, err)
+		out.Warnings = append(out.Warnings, out.leftBehind(total, true))
+		return fmt.Errorf("batch %d of %d did not land: %w", i+1, total, err)
 	}
 }
 
@@ -195,14 +222,57 @@ func (out *Applied) stopped(i, total int, err error) error {
 // sentence, whichever way it stopped. There is no rollback: a restyle is many
 // batches and undoing the ones that landed would be a second run of writes on a
 // document already in a state nobody chose.
-func leftBehind(applied, total int) string {
-	if applied == 0 {
+//
+// It reads MaybeApplied rather than the count alone, because "the document is
+// as it was" is false on the one path where Docs accepted a batch and the run
+// could not read the answer. Two sentences contradicting each other in one
+// warnings list is worse than either of them, and the skill reads that list to
+// Nail.
+//
+// maybeReached is the other half of that, and it is the wider one. A batch that
+// failed on a request the transport made is one of three things gdoc cannot
+// tell apart: a guard refusal, where nothing left the machine; a 4xx, where Docs
+// rejected the batch whole; and a 5xx or a dropped connection, where the request
+// was written and may have been applied. internal/gapi marks only the failures
+// raised after a 2xx, and its own doc comment names the third case, so on that
+// path the definite sentence is a claim this package cannot make. The definite
+// one is kept for the paths where nothing was sent: a batch that could not be
+// built, and one Docs refused on a revision that had moved, which it refuses
+// whole.
+//
+// The read-back is not opened up to match. That gate is Batches or MaybeApplied,
+// so a run that stopped this way still makes no reads, and the reason is the
+// same uncertainty read the other way: three reads after every guard refusal
+// would be paid on the common case to answer the rare one. The sentence says to
+// look at the document instead.
+func (out *Applied) leftBehind(total int, maybeReached bool) string {
+	switch {
+	case out.Batches == 0 && !out.MaybeApplied && maybeReached:
+		return fmt.Sprintf(
+			"no batch of the %d was confirmed applied and the batch that failed may have reached Docs, so the document is either as it was or part styled. %s",
+			total, noRollback)
+	case out.Batches == 0 && !out.MaybeApplied:
 		return "no batch was applied, so the document is as it was"
+	case out.Batches == 0:
+		return fmt.Sprintf(
+			"no batch of the %d was confirmed applied and one may be in the document, so the document is either as it was or part styled. %s",
+			total, noRollback)
+	case out.MaybeApplied:
+		return fmt.Sprintf(
+			"%d of %d batches were applied, one more may be in the document, and the run stopped, so the document is part styled. %s",
+			out.Batches, total, noRollback)
+	default:
+		return fmt.Sprintf(
+			"%d of %d batches were applied and the run stopped, so the document is half styled. %s",
+			out.Batches, total, noRollback)
 	}
-	return fmt.Sprintf(
-		"%d of %d batches were applied and the run stopped, so the document is half styled. There is no rollback, and the recovery is the document's own version history, by hand. No text was touched, so nothing the author wrote is lost, but their own run formatting inside the paragraphs that were restyled is",
-		applied, total)
 }
+
+// noRollback is the recovery, and it is one sentence in one place because every
+// path that stops early says it and two copies would be two sentences that
+// drift.
+const noRollback = "There is no rollback, and the recovery is the document's own version history, by hand. " +
+	"No text was touched, so nothing the author wrote is lost, but their own run formatting inside the paragraphs that were restyled is"
 
 // Batches splits the requests into bodies the guard can read whole, keeping
 // them in document order.
