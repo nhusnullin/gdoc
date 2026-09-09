@@ -22,6 +22,11 @@ type rawDocument struct {
 	Footnotes     map[string]rawFootnote     `json:"footnotes"`
 	InlineObjects map[string]rawInlineObject `json:"inlineObjects"`
 	Tabs          []rawTab                   `json:"tabs"`
+	// NamedRanges is the pre-tabs location. Every read gdoc makes carries
+	// includeTabsContent=true, which leaves this empty and puts the ranges in
+	// the tab, so this field answers on a document written before tabs existed
+	// and on nothing else.
+	NamedRanges map[string]rawNamedRanges `json:"namedRanges"`
 	// Comments stays raw. Its shape is measured, not documented, so each entry
 	// is read field by field rather than decoded into a struct that a surprise
 	// would break the whole read on.
@@ -46,6 +51,77 @@ type rawDocumentTab struct {
 	// `comments[]` entry names its anchorId. The reference for documents.get
 	// still does not describe it.
 	CommentAnchors map[string]rawCommentAnchor `json:"commentAnchors"`
+	// NamedRanges is where the ranges are on every read gdoc makes, keyed by
+	// name. The key is not an identifier: duplicate names coexist, and each
+	// entry below it holds every range wearing that name.
+	NamedRanges map[string]rawNamedRanges `json:"namedRanges"`
+}
+
+// rawNamedRanges is one name's worth of ranges. Docs keys the map by name and
+// then repeats the name inside, because the name identifies nothing on its own.
+type rawNamedRanges struct {
+	Name        string          `json:"name"`
+	NamedRanges []rawNamedRange `json:"namedRanges"`
+}
+
+// rawNamedRange is one named range: an id, the name it wears, and the spans it
+// covers. A span names the tab and the segment it is in, and a segment id names
+// a header, a footer or a footnote rather than the body.
+type rawNamedRange struct {
+	NamedRangeID string `json:"namedRangeId"`
+	Name         string `json:"name"`
+	Ranges       []struct {
+		StartIndex int    `json:"startIndex"`
+		EndIndex   int    `json:"endIndex"`
+		SegmentID  string `json:"segmentId"`
+		TabID      string `json:"tabId"`
+	} `json:"ranges"`
+}
+
+// namedRanges flattens one tab's named ranges, keyed by name in the answer and
+// by nothing here: the list is the shape, and the id is the identifier.
+//
+// tabID is the tab the map was read from, and it is what a span with no tabId
+// of its own takes. A pre-tabs document names no tab anywhere, and the ranges
+// there belong to the implicit first tab, which is the same tab its body went
+// into.
+//
+// The result is sorted by name and then by id. The answer is a map, a map is
+// walked in no order, and a survey that lists a document's named ranges in a
+// different order on each run is a survey nobody can diff.
+func namedRanges(raw map[string]rawNamedRanges, tabID string) []NamedRange {
+	var out []NamedRange
+	for key, group := range raw {
+		for _, nr := range group.NamedRanges {
+			name := nr.Name
+			if name == "" {
+				// The map key is the name, and the entries under it repeat it.
+				// A range that did not repeat it still wears it.
+				name = group.Name
+			}
+			if name == "" {
+				name = key
+			}
+			one := NamedRange{ID: nr.NamedRangeID, Name: name, Tab: tabID}
+			for _, r := range nr.Ranges {
+				tab := r.TabID
+				if tab == "" {
+					tab = tabID
+				}
+				one.Ranges = append(one.Ranges, Range{
+					Tab: tab, Start: r.StartIndex, End: r.EndIndex, Segment: r.SegmentID,
+				})
+			}
+			out = append(out, one)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Name != out[j].Name {
+			return out[i].Name < out[j].Name
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out
 }
 
 // rawCommentAnchor is one anchor's ranges. A comment on one span has one; the

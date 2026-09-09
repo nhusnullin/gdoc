@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 )
 
 // The run kinds. A run is a piece of a paragraph, and the kind says what the
@@ -71,6 +72,10 @@ type Tab struct {
 	ID    string  `json:"id"`
 	Title string  `json:"title"`
 	Body  []Block `json:"blocks"`
+	// NamedRanges are this tab's named ranges, sorted by name and then by id so
+	// one document reads the same way twice. Docs keys them by name in a map,
+	// and a map is walked in no order.
+	NamedRanges []NamedRange `json:"named_ranges,omitempty"`
 	// anchors is the tab's commentAnchors, by anchorId, each already carrying
 	// this tab's id. Unexported: it feeds CommentRanges and is not part of the
 	// structure a caller reads.
@@ -156,11 +161,46 @@ type Detail struct {
 	Member string `json:"member,omitempty"`
 }
 
-// Range is where a comment is anchored, in the character indexes of one tab.
+// Range is a span of one tab, in that tab's character indexes. It is where a
+// comment is anchored, and it is where a named range sits.
+//
+// Segment names the header, footer or footnote the span is in, and it is empty
+// for the body, which is where every span gdoc computes lives. It is carried
+// rather than dropped because a header span read as a body span names a
+// position the body does not have, and Places would then answer about the
+// wrong text. Nothing sets it on a comment anchor: the measured shape carries
+// no segment id.
 type Range struct {
-	Tab   string `json:"tab"`
-	Start int    `json:"start"`
-	End   int    `json:"end"`
+	Tab     string `json:"tab"`
+	Start   int    `json:"start"`
+	End     int    `json:"end"`
+	Segment string `json:"segment,omitempty"`
+}
+
+// NamedRange is one named range: a label the document keeps in step with its
+// own edits, tracking the text as it moves and shrinking rather than sliding
+// onto foreign text when the text around it is replaced.
+//
+// The id is the identifier and the name is a label. Two named ranges may carry
+// one name, Docs puts both under that one key, and deleting by name deletes
+// every range wearing it. So nothing here is keyed by name, and a caller that
+// wants one range names its id.
+type NamedRange struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Tab    string  `json:"tab"`
+	Ranges []Range `json:"ranges,omitempty"`
+}
+
+// NamedRanges is every named range in the document, in tab order and then in
+// each tab's own order. Tab.NamedRanges is the same list for one tab, the way
+// Places is one rule with two ways in.
+func (d *Document) NamedRanges() []NamedRange {
+	var out []NamedRange
+	for _, t := range d.Tabs {
+		out = append(out, t.NamedRanges...)
+	}
+	return out
 }
 
 // MultiTab says whether the document has more than one tab. Every document gdoc
@@ -259,6 +299,28 @@ func URL(id string) string {
 		"&commentsViewMode=COMMENTS_VIEW_MODE_INCLUDED"
 }
 
+// NamedRangesURL is the same read narrowed to the named ranges. The whole
+// document answers with them too, so this exists for the caller that wants
+// only them: the measured saving was 982 bytes against 12,907 for the document
+// itself, and M7b rechecks the ranges rather than the prose.
+//
+// includeTabsContent stays true, because that is where the ranges are. The
+// mask selects each tab's id and its named ranges, and childTabs whole: a mask
+// does not recurse into a nesting of unknown depth, so selecting the child
+// tabs' fields one level at a time would leave a deeper tab's ranges silently
+// absent, which is the defect this milestone exists to stop. Asking for a
+// child tab in full costs bytes on the documents that have one and loses
+// nothing on any of them.
+//
+// docsReadParams already permits fields, so the guard carries this unchanged,
+// and checkFields refuses only an empty mask, a star and the permission
+// surface, none of which is here.
+func NamedRangesURL(id string) string {
+	return "https://docs.googleapis.com/v1/documents/" + id +
+		"?includeTabsContent=true" +
+		"&fields=" + url.QueryEscape("documentId,revisionId,tabs(tabProperties/tabId,documentTab/namedRanges,childTabs)")
+}
+
 // Reader is the one thing this package needs of a session: a JSON GET. A
 // *gapi.Session satisfies it, and so does a fake in a test. Naming the
 // interface here rather than the struct keeps net/http out of this room and out
@@ -298,8 +360,15 @@ func Parse(raw []byte) (*Document, error) {
 			d.appendTab(t)
 		}
 	} else {
-		// The pre-tabs shape: one body, and Docs calls that tab t.0.
-		d.Tabs = append(d.Tabs, Tab{ID: defaultTabID, Body: blocks(r.Body.content(), r.InlineObjects)})
+		// The pre-tabs shape: one body, and Docs calls that tab t.0. The named
+		// ranges sit beside that body, at the top level, and are read from
+		// there for the same reason the body is: on this shape there is no tab
+		// to read either of them from.
+		d.Tabs = append(d.Tabs, Tab{
+			ID:          defaultTabID,
+			Body:        blocks(r.Body.content(), r.InlineObjects),
+			NamedRanges: namedRanges(r.NamedRanges, defaultTabID),
+		})
 		d.addFootnotes(r.Footnotes, r.InlineObjects)
 	}
 	d.CommentRanges, d.Unplaced = commentRanges(r.Comments, d.Tabs)
@@ -319,6 +388,7 @@ func (d *Document) appendTab(t rawTab) {
 	}
 	if t.DocumentTab != nil {
 		tab.Body = blocks(t.DocumentTab.Body.content(), t.DocumentTab.InlineObjects)
+		tab.NamedRanges = namedRanges(t.DocumentTab.NamedRanges, tab.ID)
 		d.addFootnotes(t.DocumentTab.Footnotes, t.DocumentTab.InlineObjects)
 		for anchorID, a := range t.DocumentTab.CommentAnchors {
 			if len(a.Ranges) == 0 {

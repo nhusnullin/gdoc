@@ -134,11 +134,15 @@ Every one also carries `suggestedInsertionIds` and `suggestedDeletionIds`, like 
 
 ### Task 3: named ranges, keyed by id
 
-- [ ] Test first: named ranges decode from `tabs[].documentTab.namedRanges`, not from the top level, because every read carries `includeTabsContent=true`. Duplicate names both decode and keep their own ids.
-- [ ] Implement `docs.NamedRange` and its decoding. The id is the identifier; the name is a label.
-- [ ] Test that the read asking only for named ranges passes the guard, which `docsReadParams` already permits.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): named ranges, read and keyed by id"`
+- [x] Test first: named ranges decode from `tabs[].documentTab.namedRanges`, not from the top level, because every read carries `includeTabsContent=true`. Duplicate names both decode and keep their own ids.
+- [x] Implement `docs.NamedRange` and its decoding. The id is the identifier; the name is a label.
+- [x] Test that the read asking only for named ranges passes the guard, which `docsReadParams` already permits.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): named ranges, read and keyed by id"`
+
+➕ The pre-tabs location is read too. `Parse` already has a branch for a document with a top-level `body` and no tabs, and its named ranges sit beside that body. Reading the body from one place and the ranges from another would report none on exactly the documents whose ranges are at the top level.
+
+➕ `Range` gained `Segment`. A named range span names the header, footer or footnote it sits in, and a header span read as a body span names a position the body does not have. It is empty on every comment anchor, so no output shape moved.
 
 ### Task 4: `internal/restyle`, the survey
 
