@@ -10,7 +10,7 @@ This is the milestone that opens the direct-edit door. Every write gdoc has made
 
 **Two measurements taken on 2026-09-09 settle what this milestone can promise**, and both are in the repo rather than in somebody's memory.
 
-**What in-place styling reaches** (`go/internal/live/fidelity_test.go`, 13 request kinds against a real document):
+**What in-place styling reaches** (`go/internal/live/fidelity_test.go`, 13 request kinds against a real document). This is the measurement, not the allowlist: `createParagraphBullets` and `createNamedRange` land and are still refused, for the reasons above.
 
 | Lands | Refused |
 |---|---|
@@ -35,7 +35,7 @@ Decisions Nail took on 2026-09-09:
 - **The scope came from the measurement**, not from reading `house.yaml`.
 - **The acceptance copy is made through the API**, not in a browser.
 - **The restyle keeps the structure and changes the look.** A paragraph already marked `HEADING_1` stays `HEADING_1` and gets the house look; body stays body. gdoc never infers structure from text and never restructures somebody's document. `build` maps markdown headings to styles and a restyle has nothing to map from, so this is the answer to what would otherwise be an unasked question.
-- **Typography only. gdoc changes no text at all.** Page geometry, paragraph and text styling, tables and lists. No cover, no front-matter tables, no legend, no contents list, and **no heading numbering**: numbering means writing into the author's prose, and Nail's decision is that a restyle does not do that.
+- **Typography only. gdoc changes no text at all.** Page geometry, paragraph and text styling, and table cell appearance. **No list styling**, no cover, no front-matter tables, no legend, no contents list, and **no heading numbering**: numbering means writing into the author's prose, and Nail's decision is that a restyle does not do that.
 - **No finishing checklist is written into the document.** SPEC has gdoc write a page listing the three things the API cannot create. It reports them instead, and the skill tells Nail. This is Nail's decision of 2026-09-09 and it is also the M2 line held: the binary prints facts, the skill judges.
 
 **Those decisions together give this milestone its defining property.** The allowlist at `LevelInPlace` is four request kinds:
