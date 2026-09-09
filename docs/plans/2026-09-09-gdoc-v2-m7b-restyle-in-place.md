@@ -143,20 +143,20 @@ Key design decisions and why:
 
 ### Task 1: the third level, the allowlist, and the mask rule
 
-- [ ] **Write the allowlist as a literal.** Four kinds, each measured landing on 2026-09-09, and nothing else carries at `LevelInPlace`:
+- [x] **Write the allowlist as a literal.** Four kinds, each measured landing on 2026-09-09, and nothing else carries at `LevelInPlace`:
   `updateDocumentStyle`, `updateParagraphStyle`, `updateTextStyle`, `updateTableCellStyle`.
-- [ ] **Pin the property, not the list.** A test named for it asserts every kind able to insert, delete or replace content is refused: `insertText`, `deleteContentRange`, `replaceAllText`, `replaceNamedRangeContent`, `insertTable`, `insertTableRow`, `insertTableColumn`, `insertPageBreak`, `insertInlineImage`, `replaceImage`, `createFootnote` (it inserts a reference character), `deleteTableRow`, `mergeTableCells`, and **`createParagraphBullets`**, which removes leading tabs. A future reader adding a kind answers that test, not just the list.
-- [ ] **The allowlist gates every `batchUpdate` on a granted id, whatever `writeMode` says.** `judgeDocs` reads `lvl == LevelFull || isSuggestMode(body)`, so an allowlist hung off the direct-edit branch alone would still let a granted document take an `insertText` under SUGGEST, and the property above would be false on exactly the id it is meant to protect. Pin it with an attack test that sends a SUGGEST `insertText` to a granted id and expects a refusal.
-- [ ] **The allowlist is scoped to `LevelInPlace` alone.** Applied globally it breaks `probe`'s direct `insertText` at `LevelFull` and `propose`'s SUGGEST batches. Pin it at all three levels.
-- [ ] **The `fields` mask is a rule here, not a note.** The guard reads it the way `isSuggestMode` reads `writeMode`, exactly and case-sensitively: refuse `*`, refuse an empty mask, which Google reads as every field, and refuse a mask naming `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`, because switching one off hides the first-page header carrying the logo, the one thing this milestone reports as unreachable. `defaultHeaderId` and `firstPageHeaderId` are read-only in the reference, so they need no rule.
-- [ ] Also refused: `deleteHeader` and `deleteFooter`, one-way doors DECISIONS.md records; `deletePositionedObject`; `deleteNamedRange`; every kind carrying "suggestion", `rejectSuggestion` included unless separately granted; and a request kind nobody has heard of, which is the inversion of `judgeRequests`' unknown-kinds rule and the whole point of an allowlist here.
-- [ ] `GrantInPlace(id)` upgrades only an id already in `files`, and the deleted `TestGrantInPlaceNeverAdmitsAnUnknownID` returns.
-- [ ] **`AllowFile(id, LevelInPlace)` must be impossible**, not merely untested: it takes any level today and is the side door around the grant's own invariant.
-- [ ] **Five call sites change.** `policy.go`'s level check on `batchUpdate`; its refusal text saying "only SUGGEST is allowed"; `Level.String()`, which would otherwise print `unknown(N)` into a user-facing refusal; `AllowFile`; and `judgeDrive`'s final refusal, which says "only a file gdoc created may be changed in place" and becomes false.
-- [ ] Comment that the levels are **names, not a ladder**: every comparison is `==`, which is why the file `PATCH` stays refused.
-- [ ] Narrow `TestAHandedInDocumentIsNeverDirectlyEdited` rather than deleting it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): a third write level, its allowlist, and its field-mask rule"`
+- [x] **Pin the property, not the list.** A test named for it asserts every kind able to insert, delete or replace content is refused: `insertText`, `deleteContentRange`, `replaceAllText`, `replaceNamedRangeContent`, `insertTable`, `insertTableRow`, `insertTableColumn`, `insertPageBreak`, `insertInlineImage`, `replaceImage`, `createFootnote` (it inserts a reference character), `deleteTableRow`, `mergeTableCells`, and **`createParagraphBullets`**, which removes leading tabs. A future reader adding a kind answers that test, not just the list.
+- [x] **The allowlist gates every `batchUpdate` on a granted id, whatever `writeMode` says.** `judgeDocs` reads `lvl == LevelFull || isSuggestMode(body)`, so an allowlist hung off the direct-edit branch alone would still let a granted document take an `insertText` under SUGGEST, and the property above would be false on exactly the id it is meant to protect. Pin it with an attack test that sends a SUGGEST `insertText` to a granted id and expects a refusal.
+- [x] **The allowlist is scoped to `LevelInPlace` alone.** Applied globally it breaks `probe`'s direct `insertText` at `LevelFull` and `propose`'s SUGGEST batches. Pin it at all three levels.
+- [x] **The `fields` mask is a rule here, not a note.** The guard reads it the way `isSuggestMode` reads `writeMode`, exactly and case-sensitively: refuse `*`, refuse an empty mask, which Google reads as every field, and refuse a mask naming `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`, because switching one off hides the first-page header carrying the logo, the one thing this milestone reports as unreachable. `defaultHeaderId` and `firstPageHeaderId` are read-only in the reference, so they need no rule.
+- [x] Also refused: `deleteHeader` and `deleteFooter`, one-way doors DECISIONS.md records; `deletePositionedObject`; `deleteNamedRange`; every kind carrying "suggestion", `rejectSuggestion` included unless separately granted; and a request kind nobody has heard of, which is the inversion of `judgeRequests`' unknown-kinds rule and the whole point of an allowlist here.
+- [x] `GrantInPlace(id)` upgrades only an id already in `files`, and the deleted `TestGrantInPlaceNeverAdmitsAnUnknownID` returns.
+- [x] **`AllowFile(id, LevelInPlace)` must be impossible**, not merely untested: it takes any level today and is the side door around the grant's own invariant.
+- [x] **Five call sites change.** `policy.go`'s level check on `batchUpdate`; its refusal text saying "only SUGGEST is allowed"; `Level.String()`, which would otherwise print `unknown(N)` into a user-facing refusal; `AllowFile`; and `judgeDrive`'s final refusal, which says "only a file gdoc created may be changed in place" and becomes false.
+- [x] Comment that the levels are **names, not a ladder**: every comparison is `==`, which is why the file `PATCH` stays refused.
+- [x] Narrow `TestAHandedInDocumentIsNeverDirectlyEdited` rather than deleting it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): a third write level, its allowlist, and its field-mask rule"`
 
 ### Task 2: `files.copy` as a per-run grant
 

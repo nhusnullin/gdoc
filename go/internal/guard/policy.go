@@ -18,9 +18,16 @@ import (
 // must not read as permission to do anything.
 type Level int
 
+// The levels are names, not a ladder. Every comparison in this file is ==,
+// never >=, so a level carries exactly what its own rules say and nothing it
+// happens to sort above. That is why LevelInPlace, which is the newest and the
+// one a restyle opens, still gets no Drive file PATCH: LevelFull has that rule
+// and LevelInPlace is not a bigger LevelFull. Renumbering these constants must
+// not change what any of them may do.
 const (
 	LevelSuggest Level = 1 // handed in: read, comment, suggest. Never direct-edit.
 	LevelFull    Level = 2 // created by gdoc. The only door to it is Learn.
+	LevelInPlace Level = 3 // handed in and granted for one run: direct edit, styling kinds only. The only door to it is GrantInPlace.
 )
 
 // String names a level for a refusal message. A reader who has to translate a
@@ -31,6 +38,8 @@ func (l Level) String() string {
 		return "suggest"
 	case LevelFull:
 		return "full"
+	case LevelInPlace:
+		return "in place"
 	}
 	return fmt.Sprintf("unknown(%d)", int(l))
 }
@@ -81,11 +90,52 @@ func (p *Policy) mayReject(suggestionID string) bool {
 	return p.rejects[suggestionID]
 }
 
-// AllowFile puts a handed-in id in the set at the level it was handed in at.
+// AllowFile puts a handed-in id in the set at the level it was handed in at,
+// and it cannot put one in at LevelInPlace.
+//
+// That refusal is the point rather than a tidiness. GrantInPlace is where the
+// decision to direct-edit somebody's document is made, and it holds an
+// invariant: it upgrades an id that is already in the set and admits none. A
+// function taking any Level is a second way to write the in-place level into
+// the set, reaching it without that invariant and without the one line a
+// reviewer reads. So the level is refused here.
+//
+// It fails closed rather than loudly: the id is admitted at no level at all, so
+// every request naming it is refused, and the refusal is recorded for the
+// command to put on the envelope. A panic was the other option and would have
+// been the wrong direction to be wrong in, because cmd/gdoc recovers a panic
+// into the same JSON object; failing closed with a warning says which line to
+// call instead, and it says it before any request is judged.
 func (p *Policy) AllowFile(id string, lvl Level) {
+	if lvl == LevelInPlace {
+		p.note("a file may not be handed in at the in-place level; nothing was added to the reachable set for %q. Direct edit is opened by GrantInPlace on an id already in the set, and that is the one line that opens it", id)
+		return
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.files[id] = lvl
+}
+
+// GrantInPlace upgrades an id already in the set to LevelInPlace, which permits
+// a batchUpdate without SUGGEST on that one document, and only for the request
+// kinds inPlaceKinds names. It is not a third door: an id nobody handed in is
+// not admitted by asking to style it.
+//
+// The grant is one id and one run. Nothing writes it down, nothing reads it
+// from a file, and no flag turns it on for every document: it dies with the
+// process, in the shape AllowReject and AllowCreateIn already have. Nail's
+// decision of 2026-09-09, M7b. It is also the widest thing gdoc can be asked to
+// do, so the caller is the most security-relevant line in the milestone.
+//
+// What it does not raise is the Drive file. judgeDrive carries a PATCH at
+// LevelFull and compares levels by name, so a restyle cannot trash or rename
+// the document it is styling.
+func (p *Policy) GrantInPlace(id string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, known := p.files[id]; known {
+		p.files[id] = LevelInPlace
+	}
 }
 
 // AllowCreateIn names the one folder a create may target. The folder id is not
@@ -238,13 +288,13 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 	case method == "GET" && verb == "":
 		return checkQuery(u, docsReadParams)
 	case method == "POST" && verb == "batchUpdate":
-		if err := p.judgeRequests(body); err != nil {
+		if err := p.judgeRequests(body, lvl); err != nil {
 			return err
 		}
-		if lvl == LevelFull || isSuggestMode(body) {
+		if lvl == LevelFull || lvl == LevelInPlace || isSuggestMode(body) {
 			return checkQuery(u, noParams)
 		}
-		return refuse("direct edit of %q, which was handed in; only SUGGEST is allowed", id)
+		return refuse("direct edit of %q, which was handed in at the suggest level; only SUGGEST is allowed there, and a direct edit needs the in-place grant this run did not open", id)
 	}
 	return refuse("%s %s is not a call gdoc makes on a document. It reads with GET and writes with POST {id}:batchUpdate, and those are the two", method, u.Path)
 }
@@ -386,7 +436,7 @@ func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
 		// e.g. trashing a document gdoc created
 		return checkQuery(u, driveWriteParams)
 	}
-	return refuse("%s %s is not allowed at the %s level. A file handed in may be read, commented on and suggested on, and only a file gdoc created may be changed in place", method, u.Path, lvl)
+	return refuse("%s %s is not allowed at the %s level. A file handed in may be read, commented on and suggested on; the in-place grant reaches the styling inside one document and never its Drive file, so only a file gdoc created may be patched here", method, u.Path, lvl)
 }
 
 // checkCommentWrite refuses a write that closes or reopens somebody's thread.
@@ -669,11 +719,20 @@ func markValueRead(f *frame) {
 // here has read what it does. Everything else in the family, the two other
 // verbs included, is refused whatever id it names.
 //
-// A body this cannot read is refused, at both levels. That covers a body past
+// A body this cannot read is refused, at every level. That covers a body past
 // the transport's peek, which arrives here truncated: a batchUpdate longer than
 // maxPeek is refused rather than carried unread, and a milestone that needs a
 // bigger one raises the cap on purpose.
-func (p *Policy) judgeRequests(body []byte) error {
+//
+// At LevelInPlace the unknown-kinds rule is inverted, and that inversion is
+// M7b's whole point. The argument above rests on writeMode: a kind nobody has
+// read about was still a suggestion, so carrying it cost a suggestion somebody
+// could reject. LevelInPlace removes that bound, so inPlaceKinds stands in its
+// place and a kind that is not on it is refused whatever it is called. The
+// allowlist is scoped to that level alone: applied everywhere it would refuse
+// the probe's direct insertText at LevelFull and every propose batch at
+// LevelSuggest.
+func (p *Policy) judgeRequests(body []byte, lvl Level) error {
 	if err := hasDuplicateKeys(body); err != nil {
 		return err
 	}
@@ -712,6 +771,10 @@ func (p *Policy) judgeRequests(body []byte) error {
 		}
 		for kind, raw := range req {
 			if kind == "rejectSuggestion" {
+				// The one door through the allowlist below, and it is the door
+				// AllowReject already opened: one id the note records as
+				// gdoc's own. No command opens both grants, so this is written
+				// down rather than relied on.
 				if err := p.checkGrantedReject(raw); err != nil {
 					return err
 				}
@@ -719,6 +782,15 @@ func (p *Policy) judgeRequests(body []byte) error {
 			}
 			if strings.Contains(strings.ToLower(kind), "suggestion") {
 				return refuse("%q acts on a suggestion, and gdoc never accepts, rejects or deletes anyone else's", kind)
+			}
+			if lvl != LevelInPlace {
+				continue
+			}
+			if !inPlaceKinds[kind] {
+				return refuse("%q is not one of the four styling requests a restyle may send. At the in-place level the allowlist is the bound, so a request kind that is not on it is refused whatever it does: %s", kind, inPlaceKindList)
+			}
+			if err := checkInPlaceMask(kind, raw); err != nil {
+				return err
 			}
 		}
 	}
@@ -746,6 +818,112 @@ func (p *Policy) checkGrantedReject(raw json.RawMessage) error {
 	}
 	if !p.mayReject(id) {
 		return refuse("rejectSuggestion names %q, which is not one of gdoc's own proposals in this run, and gdoc never accepts, rejects or deletes anyone else's", id)
+	}
+	return nil
+}
+
+// inPlaceKinds is the whole of what a restyle may send. Four request kinds,
+// each measured landing on a real document on 2026-09-09 by
+// internal/live/fidelity_test.go, and none of them able to change a single
+// character of what the author wrote.
+//
+// The measurement is not the allowlist, and two kinds show why.
+// createParagraphBullets lands, and the reference says the leading tabs that
+// set a bullet's nesting level "are removed by this request", so it deletes
+// text; the probe missed that because its content had no leading tabs.
+// createNamedRange lands too and is left out because M7b writes no checklist
+// and needs no range. Both are refused here.
+//
+// Adding a fifth kind is a decision for Nail, and it answers
+// TestNothingAtLevelInPlaceCanChangeACharacter rather than this list.
+var inPlaceKinds = map[string]bool{
+	"updateDocumentStyle":  true,
+	"updateParagraphStyle": true,
+	"updateTextStyle":      true,
+	"updateTableCellStyle": true,
+}
+
+// inPlaceKindList is the same four in a refusal, so a reader is told what was
+// available rather than only what was refused. It is written out rather than
+// built from the map, because a map has no order and a refusal that reads
+// differently on each run is a refusal nobody can search for.
+const inPlaceKindList = "updateDocumentStyle, updateParagraphStyle, updateTextStyle, updateTableCellStyle"
+
+// refusedMaskFields are the two document-style fields a restyle may never name,
+// even in a mask that sets them. Switching either off hides the first-page
+// header, which carries the logo, and that header is the one thing this
+// milestone reports as unreachable rather than writing. defaultHeaderId and
+// firstPageHeaderId are read-only in the reference, so they need no rule.
+var refusedMaskFields = map[string]bool{
+	"useFirstPageHeaderFooter": true,
+	"useEvenPageHeaderFooter":  true,
+}
+
+// checkInPlaceMask reads the fields mask of one styling request, and it is the
+// rule the allowlist above cannot carry on its own.
+//
+// The allowlist bounds the kind. It does not bound the mask, and that is where
+// the danger of this level lives: the Docs reference says "To reset a property
+// to its default value, include its field name in the field mask but leave the
+// field itself unset." So an updateTextStyle carrying `fields: "*"` over a
+// range resets everything it does not set, bold, italic, links, colours and
+// highlights, permanently, with every character intact. Saying the text is
+// unreachable while leaving the mask unbounded would be reassuring about the
+// wrong thing.
+//
+// Three refusals, and one of them is an absence. A star, by itself or inside a
+// path. A mask that names nothing, because Google reads an empty mask as every
+// field, which is checkFields' rule on a query read one layer out. And a mask
+// naming either header toggle.
+//
+// The key is read exactly, the way isSuggestMode reads writeMode. Google's
+// proto-JSON is case-sensitive while encoding/json is not, so a request whose
+// mask sits under "Fields" is a request whose mask the server never reads: the
+// guard must not judge a field the server is not acting on. Two spellings at
+// once are refused because which one the server takes is not decided here;
+// hasDuplicateKeys already refuses that body a layer out, and the rule is held
+// here as well so this function reads honestly on its own.
+func checkInPlaceMask(kind string, raw json.RawMessage) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return refuse("the %q in this batchUpdate cannot be read, so its fields mask cannot be judged: %v", kind, err)
+	}
+	maskRaw, ok := fields["fields"]
+	if !ok {
+		for name := range fields {
+			if strings.EqualFold(name, "fields") {
+				return refuse("%q names its fields mask %q, and the server reads only \"fields\" spelled exactly, so the guard would be judging a mask nothing acts on", kind, name)
+			}
+		}
+		return refuse("%q carries no fields mask, and a styling request the guard cannot read the mask of may be resetting every property it does not set", kind)
+	}
+	for name := range fields {
+		if name != "fields" && strings.EqualFold(name, "fields") {
+			return refuse("%q names its fields mask twice, as %q and \"fields\", and which one the server reads is not decided here", kind, name)
+		}
+	}
+	var mask string
+	if err := json.Unmarshal(maskRaw, &mask); err != nil {
+		return refuse("the fields mask of %q is one string, and this one is not: %v", kind, err)
+	}
+	named := 0
+	for _, path := range strings.Split(mask, ",") {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+		named++
+		for _, seg := range strings.Split(path, ".") {
+			if strings.Contains(seg, "*") {
+				return refuse("the fields mask of %q names %q, and a mask carrying * resets every property this request does not set", kind, path)
+			}
+			if refusedMaskFields[seg] {
+				return refuse("the fields mask of %q names %q, which switches off the first-page header carrying the logo. A restyle reports that header as something it cannot write, and never hides it", kind, seg)
+			}
+		}
+	}
+	if named == 0 {
+		return refuse("the fields mask of %q is empty, and Google reads an empty mask as every field", kind)
 	}
 	return nil
 }
