@@ -159,12 +159,28 @@ Every one also carries `suggestedInsertionIds` and `suggestedDeletionIds`, like 
 
 ### Task 5: `restyle --dry-run`
 
-- [ ] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing in every shape, `--dry-run` required for now with a refusal naming M7b for the apply, the envelope on each failure path, and the policy opened at `LevelSuggest` with no grant.
-- [ ] Implement `cmdRestyle` in `go/cmd/gdoc/restyle.go`, composing the four reads. Reuse the export path `comments --witness` already builds rather than a second one.
-- [ ] Bound the export the way `--wait --witness` does: an export that failed is a warning on an envelope that still carries the survey.
-- [ ] `dispatch` gains `restyle`, and the usage string with it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc restyle --dry-run"`
+- [x] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing in every shape, `--dry-run` required for now with a refusal naming M7b for the apply, the envelope on each failure path, and the policy opened at `LevelSuggest` with no grant.
+- [x] Implement `cmdRestyle` in `go/cmd/gdoc/restyle.go`, composing the reads. Reuse the export path `comments --witness` already builds rather than a second one.
+- [x] Bound the export the way `--wait --witness` does: an export that failed is a warning on an envelope that still carries the survey.
+- [x] `dispatch` gains `restyle`, and the usage string with it.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc restyle --dry-run"`
+
+➕ The survey makes three reads, not four. The named ranges come out of the
+document read, which carries them already, so a fourth request would ask Google
+for facts this run has in hand. `docs.NamedRangesURL` stays where Task 3 put it,
+for the caller that wants only the ranges: that is M7b rechecking the ranges
+rather than the prose.
+
+➕ The export path is now one function. `exportFile` in `read.go` reads and
+parses the docx, and `comments --witness` and the survey both call it. Two
+export paths would be two chances for one of them to ask Drive for a different
+document, or to read the answer to a different ceiling.
+
+➕ The read order is stated in a test rather than left to the code. The comment
+listing goes out before the Docs read, which is the rule every poll in this
+binary already holds, and `TestRestyleListsTheCommentsBeforeItReadsTheDocument`
+is what stops a later edit from swapping them.
 
 ### Task 6: the documents that go stale, corrected now rather than at M7b
 

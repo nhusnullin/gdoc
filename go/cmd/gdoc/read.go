@@ -675,16 +675,25 @@ func commentsResult(ctx context.Context, r *reach, d *docs.Document, threads []c
 // listing: the threads are the answer, and the witness is a second read on top
 // of them.
 func witness(ctx context.Context, r *reach, threads []comments.Thread, own []string) ([]comments.Thread, []string) {
-	var f *docx.File
-	b, err := docx.Export(ctx, r.session, r.id)
-	if err == nil {
-		f, err = docx.Parse(b)
-	}
+	f, err := exportFile(ctx, r)
 	if err != nil {
 		return docx.Match(threads, nil), append(own, fmt.Sprintf(
 			"the docx export could not be read, so every thread is reported unmatched: %v", err))
 	}
 	return docx.Match(threads, f), own
+}
+
+// exportFile is the export read and parsed, and it is the one export path in
+// this binary. Both callers that want a witness go through it: `comments
+// --witness` above, and the survey. Two export paths would be two chances for
+// one of them to ask Drive for a different document, or to read the answer to a
+// different ceiling.
+func exportFile(ctx context.Context, r *reach) (*docx.File, error) {
+	b, err := docx.Export(ctx, r.session, r.id)
+	if err != nil {
+		return nil, err
+	}
+	return docx.Parse(b)
 }
 
 // suggestionsData is what `gdoc suggestions` prints. Gone is a pointer so that
