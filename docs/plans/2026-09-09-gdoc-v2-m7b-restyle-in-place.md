@@ -211,11 +211,11 @@ The first draft made copying a capability of any policy holding a create folder.
 
 ### Task 7: the command, and the line that opens the grant
 
-- [ ] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing; the survey read strictly and refused for an unknown key, another document, a moved `revisionId` or a second tab, **each before the grant is opened**; and the envelope on each failure path.
-- [ ] Implement the apply half of `cmdRestyle`, including the `GrantInPlace` call site, the most security-relevant line in the milestone.
-- [ ] Replace the hard refusal `cmd/gdoc/restyle.go` gives without `--dry-run`, which names M7b as future work.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc restyle --from, and the grant it opens"`
+- [x] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing; the survey read strictly and refused for an unknown key, another document, a moved `revisionId` or a second tab, **each before the grant is opened**; and the envelope on each failure path.
+- [x] Implement the apply half of `cmdRestyle`, including the `GrantInPlace` call site, the most security-relevant line in the milestone.
+- [x] Replace the hard refusal `cmd/gdoc/restyle.go` gives without `--dry-run`, which names M7b as future work.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc restyle --from, and the grant it opens"`
 
 ### Task 8: the read-back, both halves
 
