@@ -409,18 +409,50 @@ two ways out.
 
 ### Task 5: the front-matter tables and the legend
 
-- [ ] Test first: the three tables cell by cell, the repeat and without rules
+- [x] Test first: the three tables cell by cell, the repeat and without rules
       for `revisions`, and the legend's bullets. Literals throughout.
-- [ ] `insertTable` then fill: a table is inserted and its cells are written,
+- [x] `insertTable` then fill: a table is inserted and its cells are written,
       which is more requests than the docx writer needs and is the shape Docs
       has. Say so in the package doc.
-- [ ] **The bullets are `createParagraphBullets`**, which M7b refuses at
+- [x] **The bullets are `createParagraphBullets`**, which M7b refuses at
       `LevelInPlace` because it removes leading tabs. Here it is a suggestion on
       text gdoc itself just proposed, so there are no author tabs to remove.
       That difference is the reason it is allowed here and refused there, and it
       goes in the package doc rather than being left for somebody to rediscover.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the front-matter tables and the legend"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the front-matter tables and the legend"`
+
+⚠️ **The house legend carries no bullets, so nothing sends
+`createParagraphBullets`.** The plan expected some. `house.yaml`'s `legend`
+block is four lines of a bold word and a sentence, and the master's own markup
+under "New information has been added" has no `w:numPr` on it, so bullets there
+would be a layout this writer invented, which is exactly what "one layout, two
+writers" forbids. The reasoning the checkbox asked for is written into the
+package doc anyway, beside the statement that nothing sends the request, so the
+next person to need a bullet here has the answer rather than the question.
+
+**What this task settled, and it is the number the whole table rests on.**
+insertTable's index accounting is computed here, never read back, so it had to
+be pinned: an empty table is one unit for the newline insertTable writes in
+front of it, one for the table, one per row, and one per cell plus one for that
+cell's own paragraph mark. A 2x2 is twelve, which is exactly the twelve marks
+Docs recorded for one 2x2 in the 2026-09-10 suggested-insert probe.
+`TestATablesIndexesFollowTheDocsAccounting` states it as literals, and Task 10's
+live run is what confirms it against a real document.
+
+**Two things the house file states and no request here sends:** every column
+width and every row height. `updateTableColumnProperties` and
+`updateTableRowStyle` were not among the nine kinds the probe measured as
+suggestible, and a request Docs refuses takes the whole batch with it. They are
+reported in `Manual` with the menu path, beside the contents list the API cannot
+make at all.
+
+**One request per cell rather than one per table**, which is the opposite of
+`internal/restyle`'s rule and for the opposite reason. A restyle gives every
+cell of somebody's table one look and cannot read that table's real width, so it
+names the table. Here the fills differ cell by cell, because a classification
+row is shaded only when the fields declare that class, and this writer built the
+grid itself so it knows exactly how wide it is.
 
 ### Task 6: the marker, and what a second run does
 

@@ -30,6 +30,22 @@
 // house.yaml never stated would clear emphasis somebody meant, while these are
 // gdoc's own lines and nobody else's emphasis can be in them.
 //
+// A table is inserted and then filled, which is more requests than the docx
+// writer needs and is the shape the Docs API has: insertTable makes a grid of
+// empty cells, so every word in it is an insertText afterwards and every fill,
+// padding and border is an updateTableCellStyle. table.go holds the index
+// accounting that goes with it, measured rather than assumed.
+//
+// Nothing here sends createParagraphBullets, because the house legend carries
+// no bullets: its lines are a bold word, a tab and a sentence, and the master's
+// own markup has no numbering on them. If a later block needs one, the reason
+// it may be sent here and is refused at LevelInPlace is the same either way.
+// createParagraphBullets removes the leading tabs that set a bullet's nesting
+// level, so at LevelInPlace it deletes text an author typed, while here it
+// would land on text gdoc itself proposed a moment earlier, where there are no
+// author tabs to remove. The 2026-09-10 probe measured it accepted as a
+// suggestion.
+//
 // A list marker is the one look an inserted paragraph can inherit and this
 // package cannot state away: removing one needs deleteParagraphBullets, which
 // nothing here sends. A prelude proposed at the top of a document whose first
@@ -61,9 +77,24 @@ type Result struct {
 	// range.
 	Start int
 	End   int
-	// Paragraphs is how many paragraphs the prelude writes. It is a count, not
-	// a verdict: whether the cover is right is read in the document.
+	// Paragraphs is how many paragraphs the prelude writes, Tables how many
+	// tables it inserts and Cells how many of their cells it writes. They are
+	// counts, not verdicts: whether the front matter is right is read in the
+	// document.
 	Paragraphs int
+	Tables     int
+	Cells      int
+	// Manual is what the prelude could not propose at all, each with the menu
+	// path a person takes instead. It is the same shape internal/restyle
+	// reports its own steps in, kept separately because the two lists are
+	// built from different things and the caller prints them as one.
+	Manual []ManualStep
+}
+
+// ManualStep is one thing gdoc could not do, and where a person does it.
+type ManualStep struct {
+	What  string `json:"what"`
+	Where string `json:"where"`
 }
 
 // builder walks the house style once, inserting as it goes.
@@ -81,7 +112,17 @@ type builder struct {
 	// the last, because the ones behind it are usually its consequences.
 	requests []map[string]any
 	count    int
+	tables   int
+	cells    int
+	manual   []ManualStep
 	err      error
+}
+
+// manualStep records one thing this writer could not propose. The list is a
+// fact rather than a verdict: it says what is left to do, never whether the
+// document is finished.
+func (b *builder) manualStep(what, where string) {
+	b.manual = append(b.manual, ManualStep{What: what, Where: where})
 }
 
 func (b *builder) fail(format string, args ...any) {
@@ -94,8 +135,15 @@ func (b *builder) fail(format string, args ...any) {
 type mark struct {
 	sizePt    *float64
 	bold      bool
+	italic    bool
+	underline bool
 	color     string
 	highlight string
+	// font is the face this run is written in, for the one place the house
+	// style states a face of its own: a table cell. Empty is the file's own
+	// default face rather than the document's, because a run that states no
+	// face takes the face of the text it was inserted beside.
+	font string
 }
 
 // run is one stretch of gdoc's own words and the look it carries.
@@ -182,14 +230,45 @@ func span(start, end int) map[string]any {
 // is whatever the paragraph the prelude was inserted into carried, and a cover
 // justified because the author's first paragraph was is a cover nobody chose.
 func (b *builder) paragraphLook(align string, before, after, line *float64) *docsreq.Fields {
+	return b.look(paraSpec{align: align, before: before, after: after, line: line})
+}
+
+// paraSpec is one of gdoc's own paragraphs as the house style states it. It is
+// internal/render's paraOpts in this writer's units, and the two are separate
+// because one writes twips into OOXML and the other points into a request.
+type paraSpec struct {
+	align             string
+	before            *float64
+	after             *float64
+	line              *float64
+	indentStartPt     *float64
+	indentFirstLinePt *float64
+	keepWithNext      bool
+	keepLinesTogether bool
+}
+
+// look is one paragraph spec as a style object and the mask that names it.
+//
+// The two keeps are stated on every paragraph, false where the file says
+// nothing. That is the opposite of internal/restyle's rule, and the reason is
+// the one this package holds everywhere: a paragraph inserted beside somebody's
+// kept-with-next heading inherits the flag, and these are gdoc's own lines,
+// where no author's instruction can be cleared by stating one.
+//
+// A first-line indent is written as the house file states it, because Docs
+// measures one from the margin. internal/render subtracts the paragraph indent
+// from it, because OOXML measures it from there.
+func (b *builder) look(s paraSpec) *docsreq.Fields {
 	f := docsreq.NewFields()
 	f.Put("namedStyleType", "NORMAL_TEXT")
-	f.Put("alignment", b.alignment(align))
-	f.Put("spaceAbove", docsreq.Points(value(before, b.cfg.Defaults.SpaceBeforePt)))
-	f.Put("spaceBelow", docsreq.Points(value(after, b.cfg.Defaults.SpaceAfterPt)))
-	f.Put("lineSpacing", docsreq.Percent(value(line, b.cfg.Defaults.LineSpacing)))
-	f.Put("indentStart", docsreq.Points(0))
-	f.Put("indentFirstLine", docsreq.Points(0))
+	f.Put("alignment", b.alignment(s.align))
+	f.Put("spaceAbove", docsreq.Points(value(s.before, b.cfg.Defaults.SpaceBeforePt)))
+	f.Put("spaceBelow", docsreq.Points(value(s.after, b.cfg.Defaults.SpaceAfterPt)))
+	f.Put("lineSpacing", docsreq.Percent(value(s.line, b.cfg.Defaults.LineSpacing)))
+	f.Put("indentStart", docsreq.Points(value(s.indentStartPt, 0)))
+	f.Put("indentFirstLine", docsreq.Points(value(s.indentFirstLinePt, 0)))
+	f.Put("keepWithNext", s.keepWithNext)
+	f.Put("keepLinesTogether", s.keepLinesTogether)
 	return f
 }
 
@@ -216,13 +295,17 @@ func (b *builder) alignment(align string) string {
 // even when it was inserted beside somebody's highlighted sentence.
 func (b *builder) textLook(m mark) *docsreq.Fields {
 	f := docsreq.NewFields()
-	if font := b.cfg.Defaults.Font; font != "" {
+	font := m.font
+	if font == "" {
+		font = b.cfg.Defaults.Font
+	}
+	if font != "" {
 		f.Put("weightedFontFamily", map[string]any{"fontFamily": font})
 	}
 	f.Put("fontSize", docsreq.Points(value(m.sizePt, b.cfg.Defaults.SizePt)))
 	f.Put("bold", m.bold)
-	f.Put("italic", false)
-	f.Put("underline", false)
+	f.Put("italic", m.italic)
+	f.Put("underline", m.underline)
 	if c, ok := docsreq.Color(b.foreground(m.color)); ok {
 		f.Put("foregroundColor", c)
 	}
