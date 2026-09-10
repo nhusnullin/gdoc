@@ -487,3 +487,84 @@ func TestTheCellCheckReadsTheTableTheRequestNamed(t *testing.T) {
 		t.Errorf("where = %q, want the table the request named", cell.Where)
 	}
 }
+
+// twoRunRead is styledRead whose one paragraph is split into two text runs, the
+// first of them a private-use glyph carrying no style at all.
+//
+// This is Nail's own "Eagle MENA" document, measured live on 2026-09-10. Its
+// title paragraph opens with U+E907, an icon-font glyph, and after a restyle
+// that run was the one run of fifty-three that took no style: Docs applied the
+// request to every other run and left that one as it was. Changing its font
+// would stop the glyph rendering, so this is Docs protecting the document
+// rather than a write that failed.
+func twoRunRead() string {
+	return strings.Replace(styledRead,
+		`"elements": [{"startIndex": 1, "endIndex": 20, "textRun": {"content": "The supplier\n",
+          "textStyle": {"weightedFontFamily": {"fontFamily": "Aptos", "weight": 400},
+                        "fontSize": {"magnitude": 10.5, "unit": "PT"}}}}]`,
+		`"elements": [
+          {"startIndex": 1, "endIndex": 2, "textRun": {"content": "", "textStyle": {}}},
+          {"startIndex": 2, "endIndex": 20, "textRun": {"content": "The supplier\n",
+          "textStyle": {"weightedFontFamily": {"fontFamily": "Aptos", "weight": 400},
+                        "fontSize": {"magnitude": 10.5, "unit": "PT"}}}}]`, 1)
+}
+
+// TestOneUnstyledRunDoesNotSinkAParagraphThatTookTheStyle holds the rule this
+// check was getting wrong.
+//
+// It used to read the first text run and answer for the paragraph. A paragraph
+// whose first run is a glyph Docs will not restyle then reported every field as
+// missing while the prose beside it carried the house style perfectly, so
+// `verified` came back false on a document that was styled correctly. That is
+// the cry-wolf shape this tool avoids everywhere else: a flag that is false on
+// the working case is a flag the skill reading it learns to ignore.
+func TestOneUnstyledRunDoesNotSinkAParagraphThatTookTheStyle(t *testing.T) {
+	// Act
+	got, warnings := Landed([]byte(twoRunRead()), sentRequests())
+
+	// Assert
+	text := checkOfKind(t, got, "updateTextStyle")
+	if !text.Held {
+		t.Errorf("held = false although a run of the paragraph carries every field sent: %+v", text)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "updateTextStyle") {
+			t.Errorf("warned about a paragraph that took the style: %s", w)
+		}
+	}
+	// The run that took nothing is still a fact, and the check says so rather
+	// than staying silent about it: the binary prints facts and the skill judges.
+	if text.Note == "" {
+		t.Error("the run that took no style is not reported at all, and it is a fact a reader wants")
+	}
+}
+
+// The other direction, which is what makes the rule above safe to widen: a
+// paragraph where no run took the style is still a failure, and it must not be
+// hidden by looking for any run that happens to match.
+func TestAParagraphWhereNoRunTookTheStyleStillFails(t *testing.T) {
+	read := strings.Replace(twoRunRead(), `"fontFamily": "Aptos"`, `"fontFamily": "Comic Sans MS"`, 1)
+
+	got, _ := Landed([]byte(read), sentRequests())
+
+	text := checkOfKind(t, got, "updateTextStyle")
+	if text.Held {
+		t.Errorf("held = true although no run carries what was sent: %+v", text)
+	}
+	if len(text.Missing) == 0 {
+		t.Error("a failed text check names no missing field")
+	}
+}
+
+// checkOfKind is the one check of a kind, and it fails rather than returning a
+// zero Check, so a test that finds none says so in its own words.
+func checkOfKind(t *testing.T, l Landing, kind string) Check {
+	t.Helper()
+	for _, c := range l.Checks {
+		if c.Kind == kind {
+			return c
+		}
+	}
+	t.Fatalf("no %s check in %+v", kind, l.Checks)
+	return Check{}
+}

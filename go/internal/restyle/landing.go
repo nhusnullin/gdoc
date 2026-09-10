@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -142,7 +143,7 @@ func (d *styledDoc) check(kind string, r map[string]any) Check {
 		return compare(c, r["paragraphStyle"], par.ParagraphStyle)
 	case "updateTextStyle":
 		start, ok := rangeStart(r)
-		c := Check{Kind: kind, Where: fmt.Sprintf("the first text run of the paragraph at %d", start)}
+		c := Check{Kind: kind, Where: fmt.Sprintf("the text runs of the paragraph at %d", start)}
 		if !ok {
 			return unanswered(c, "the request named no range, so there was nowhere to look")
 		}
@@ -150,11 +151,7 @@ func (d *styledDoc) check(kind string, r map[string]any) Check {
 		if par == nil {
 			return unanswered(c, "the read back holds no paragraph starting there")
 		}
-		style, ok := par.firstTextStyle()
-		if !ok {
-			return unanswered(c, "that paragraph holds no text run, so there is no run style to read")
-		}
-		return compare(c, r["textStyle"], style)
+		return compareRuns(c, r["textStyle"], par.textRuns())
 	case "updateTableCellStyle":
 		start, ok := cellAt(r)
 		c := Check{Kind: kind, Where: fmt.Sprintf("the first cell of the table at %d, which the request styled whole", start)}
@@ -368,6 +365,10 @@ type styledParagraph struct {
 	ParagraphStyle map[string]any `json:"paragraphStyle"`
 	Elements       []struct {
 		TextRun *struct {
+			// Content is the words the run carries. It is read so that a run
+			// the style did not reach can be named by what it holds, which for
+			// an icon glyph is the whole of what identifies it.
+			Content   string         `json:"content"`
 			TextStyle map[string]any `json:"textStyle"`
 		} `json:"textRun"`
 	} `json:"elements"`
@@ -508,16 +509,85 @@ func paragraphIn(content []styledElement, start int) *styledParagraph {
 	return nil
 }
 
-// firstTextStyle is the style of the first text run in a paragraph. A paragraph
-// holding only a chip, a break or a picture has none, and the caller says so
-// rather than reporting a run style that is not there.
-func (p *styledParagraph) firstTextStyle() (map[string]any, bool) {
+// textRuns is every text run in a paragraph, in reading order, each with the
+// words it carries. A paragraph holding only a chip, a break or a picture has
+// none, and the caller says so rather than reporting a run style that is not
+// there.
+func (p *styledParagraph) textRuns() []styledRun {
+	var out []styledRun
 	for _, e := range p.Elements {
 		if e.TextRun != nil {
-			return e.TextRun.TextStyle, true
+			out = append(out, styledRun{Content: e.TextRun.Content, Style: e.TextRun.TextStyle})
 		}
 	}
-	return nil, false
+	return out
+}
+
+// styledRun is one text run of a paragraph as the read-back sees it: the words
+// and the style Docs stored on them.
+type styledRun struct {
+	Content string
+	Style   map[string]any
+}
+
+// compareRuns asks whether the request reached the paragraph, over every run in
+// it rather than over the first one.
+//
+// The first run used to answer for the whole paragraph, and Nail's own document
+// is why it cannot. Measured live on 2026-09-10: its title paragraph opens with
+// U+E907, a private-use glyph from an icon font, and after a restyle that run
+// was the one run of fifty-three in the document that carried no style at all.
+// Docs had applied the request to every other run and left that one as it was,
+// which is Docs protecting a glyph whose font is what makes it render rather
+// than a write that failed. Reading the first run reported every field as
+// missing on a paragraph whose prose was styled perfectly, and `verified` came
+// back false on a document that was correct. A flag that is false on the
+// working case is one the skill reading it learns to ignore, which is the
+// cry-wolf shape this tool avoids everywhere else.
+//
+// So the rule is: the check holds when **any** run carries everything the
+// request set. Widening it that far is safe only because the other direction is
+// still a failure: a paragraph where no run carries the style comes back with
+// the fewest missing fields any run had, which is the nearest miss and the most
+// useful thing to print.
+//
+// A run that took nothing while another took everything is still a fact, and it
+// goes in Note rather than being dropped. The binary prints facts and the skill
+// judges, and "one run of this paragraph kept its own font" is a fact a reader
+// wants when the glyph in their title looks unchanged.
+func compareRuns(c Check, want any, runs []styledRun) Check {
+	if want == nil {
+		return unanswered(c, "the request set no style object, so there was nothing to look for")
+	}
+	if len(runs) == 0 {
+		return unanswered(c, "that paragraph holds no text run, so there is no run style to read")
+	}
+	var (
+		nearest   []string
+		haveNear  bool
+		untouched []string
+	)
+	held := false
+	for _, r := range runs {
+		missing := missingFields("", want, r.Style)
+		if len(missing) == 0 {
+			held = true
+		} else if len(r.Style) == 0 {
+			untouched = append(untouched, strconv.Quote(r.Content))
+		}
+		if !haveNear || len(missing) < len(nearest) {
+			nearest, haveNear = missing, true
+		}
+	}
+	c.Held = held
+	if !held {
+		c.Missing = nearest
+	}
+	if len(untouched) > 0 {
+		c.Note = fmt.Sprintf("%d of %d runs in this paragraph carry no style at all (%s); Docs leaves a run whose font is what renders it, such as an icon glyph, as it was",
+			len(untouched), len(runs), strings.Join(untouched, ", "))
+	}
+	return c
 }
 
 // firstCellStyle is the first cell of the table starting at an index. A table
