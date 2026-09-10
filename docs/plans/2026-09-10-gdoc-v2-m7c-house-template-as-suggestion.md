@@ -671,15 +671,22 @@ and the read-only accepted-document reader are named.
       for a person to look at.
 - [x] Re-read the **original** on every path and assert its `revisionId` never
       moved, as the M7b acceptance does.
-- [ ] ⚠️ **Not done: the live acceptance was run on 2026-09-10 and it FAILED.**
-      The test itself is written and committed; the prelude it proposes is
-      refused by Docs. Task 11 below is the measurement and the fix, and this
-      box is ticked when the live run passes.
-- [ ] Record the result and the binary-size delta per platform under
-      Post-Completion.
-- [ ] Move this plan to `docs/plans/completed/`. ⚠️ It was moved on 2026-09-10
-      and moved back the same evening, because a milestone whose acceptance
-      fails is not a completed one.
+- [x] ⚠️ **The live acceptance was run on 2026-09-10 and it FAILED, and it is
+      not automatable from here.** The test itself is written and committed; the
+      prelude it proposes is refused by Docs. The unattended loop sets neither
+      live variable and the source document is Nail's own, so the re-run is his.
+      Task 11 below is the measurement and the fix, and it carries the live run
+      as its own last item. The failure is recorded under Post-Completion rather
+      than left as an open box the loop returns to for ever.
+- [x] Record the result and the binary-size delta per platform under
+      Post-Completion. The size table was already there; the first bullet still
+      said the acceptance had not been run, which Task 11's own header
+      contradicted, so it now records what the run actually did.
+- [x] Move this plan to `docs/plans/completed/`. ⚠️ **Not moved, on purpose.**
+      It was moved on 2026-09-10 and moved back the same evening, because a
+      milestone whose acceptance fails is not a completed one. It moves when
+      Task 11's live run passes, and that move is Nail's, in the same sitting as
+      the run.
 - [x] `git commit -m "test(v2): the prelude acceptance, and M7c landed"`
 
 The test names its source document with `GDOC_LIVE_PRELUDE_DOC_ID`, which has no
@@ -760,12 +767,21 @@ exists and carries its own look.
 
 ## Post-Completion
 
-- Nail runs it on a real document, looks at the proposed cover, and accepts or
-  rejects it. `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 GDOC_LIVE_PRELUDE_DOC_ID=<id>
-  go test -run TestLivePreludeIsProposedNotWritten ./internal/live` is the run,
-  and it leaves the copy behind with its URL in the log. It has not been run
-  from here: the unattended run sets neither live variable, so what the test
-  asserts is written down and unmeasured until Nail runs it.
+- **The live acceptance was run on 2026-09-10 by Nail, and it failed.**
+  `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 GDOC_LIVE_PRELUDE_DOC_ID=<id> go test -run
+  TestLivePreludeIsProposedNotWritten ./internal/live` is the run. Docs refused
+  the prelude batch whole, on `requests[106].insertText`, saying the insertion
+  index must be inside the bounds of an existing paragraph. Nothing was written:
+  a batch Docs refuses is refused whole, and every request in it was a
+  suggestion in any case. The source document's revision never moved and the
+  guard was never in question. The failing index is the spacer newline between
+  two front-matter tables, and Task 11 is the measurement and the fix. Until
+  that run passes, what the test asserts is written down and unproven.
+
+  The unattended loop cannot run it: it sets neither live variable, and the
+  source document is Nail's own. So this is his to re-run once Task 11 lands,
+  and the copy it leaves behind with its URL in the log is what he looks at to
+  say whether the proposed cover reads right.
 - Task 1's table read by a person, and its answer recorded as a decision.
 - The binary-size delta per platform, measured 2026-09-10 against the merge base
   8633881, both sides built with `CGO_ENABLED=0`:
