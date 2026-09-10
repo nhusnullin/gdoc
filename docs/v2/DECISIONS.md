@@ -1521,3 +1521,87 @@ pending suggestion, which is any document somebody has reviewed, and it answers
 the question the milestone actually rests on. Both stay. An acceptance nobody
 can run is not an acceptance, and the ten-feature run is still the fuller
 answer for the day somebody rebuilds the document.
+
+## 2026-09-10. The house template reaches a document as a suggestion, not as a direct edit.
+
+Serves principle 3, and it is Nail's idea rather than a compromise found while
+implementing one. It removes the milestone's whole danger instead of bounding
+it.
+
+**The problem it answers.** `restyle --from` gives a document the house look and
+cannot give it the house *template*: no cover, no front-matter tables, no
+legend. All of those need gdoc to write text, and being unable to write text is
+what M7b's security argument rests on. The design that was on the table before
+this widened `LevelInPlace` from four request kinds to eight, added two new
+per-run grants to bound where an insert could land, and replaced the property
+"none of the four kinds can change a character" with a longer sentence about
+adding material before the body. It was buildable and it was worse.
+
+**Nail's question, and the measurement that answered it.** "Table of content,
+versioning table or other content might be added in suggested mode, isn't it?"
+`TestLiveSuggestedInsertProbe` in `internal/live` asked Google, one request kind
+per case, each on a document nobody had suggested anything in:
+
+| Request kind | Asked in SUGGEST mode | What Docs recorded |
+|---|---|---|
+| `insertText` | accepted | `suggestedInsertionIds` |
+| `insertPageBreak` | accepted | `suggestedInsertionIds` |
+| `insertTable` | accepted | `suggestedInsertionIds`, 12 marks for one 2x2 table |
+| `insertInlineImage` | accepted | `suggestedInsertionIds` |
+| `updateParagraphStyle` | accepted | `suggestedParagraphStyleChanges` |
+| `updateTextStyle` | accepted | `suggestedTextStyleChanges` |
+| `createParagraphBullets` | accepted | `suggestedBulletChanges` |
+| `deleteContentRange` | accepted | `suggestedDeletionIds` |
+| `updateTableCellStyle` | accepted | `suggestedTableCellStyleChanges` |
+| `createNamedRange` | **refused** | `Request does not support application as suggestion.` |
+
+Nine of ten. So the entire template can be proposed rather than written, Nail
+accepts it in the browser the way he accepts any suggestion, and gdoc keeps its
+inability to change a character on its own authority. A suggested
+`deleteContentRange` is the same answer for removing an empty page: a proposal
+that can be rejected.
+
+**The probe's own three wrong answers are why it is shaped the way it is**, and
+they are recorded because the next person to measure something here will be
+tempted by the same shortcuts. Its first run walked only `suggestedInsertionIds`
+and `suggestedDeletionIds`, so nine style-change marks were invisible and six
+accepted requests read as silent direct edits. Its second run reused one
+document, so by the fifth case every index named content the earlier cases had
+already suggested: two kinds were refused for a stale index and read as Docs
+limits, and two more folded into the suggestion already there and read as direct
+edits again. Its third run flattened the tab for `tableStart` and then counted
+every mark twice. Only a clean document per case, a walk over every `suggested*`
+field, and a count taken from the tab alone tell the truth. A probe that
+measures its own leftovers answers about itself.
+
+**Decisions this settles**, all Nail's, 2026-09-10:
+
+- **The comments, the pending suggestions, the chips and the URL must survive**,
+  so the template goes into the live document rather than into a new one.
+  SPEC's `--new` remains the other mode and remains deferred.
+- **Heading numbering is out**, and it gets its own milestone. It is the one
+  item that writes inside the author's own paragraphs, so it is the one item a
+  suggested insert before the body does not cover.
+- **The contents list stays a manual step**, and that is not a choice:
+  `BLOCKED-BY-API.md` already records that `insertTableOfContents` and four
+  other spellings answer `Cannot find field`. The `Request` message has no
+  member that makes one.
+- **The cover's values come from a file the skill proposes and Nail confirms**,
+  in `--from survey.json`'s shape, read strictly. A restyle has no note to read
+  front matter from, and `internal/cover` already refuses to invent a title and
+  hands back a candidate instead: this is that pattern one step further out.
+- **A named range marks gdoc's own prelude**, so a second run replaces it rather
+  than adding a second cover, **and it is the one thing written directly.**
+  `createNamedRange` cannot be a suggestion, and it adds and removes no text, so
+  the narrow permission it needs cannot touch a character either. Guessing which
+  cover is gdoc's own was the alternative, and guessing is what this project
+  refuses everywhere else.
+
+**What this leaves open, and it is the next thing to settle.** The guard gates
+every `batchUpdate` on an id granted `LevelInPlace` by the four-kind allowlist,
+**whatever `writeMode` says**, and CLAUDE.md gives the reason: an allowlist hung
+off the direct-edit branch alone would let a granted document take an
+`insertText` under SUGGEST. That rule was written when suggested inserts were
+something to prevent. They are now the design. So either a run styles and
+proposes through two policies, or that rule changes on purpose. It is a decision
+rather than a detail, and it is not made here.
