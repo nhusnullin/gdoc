@@ -130,14 +130,30 @@ func (p *Policy) AllowMarker(name string, start, end int) {
 	switch {
 	case name == "":
 		p.note("a marker grant carries the name of the named range, and this one named none; nothing may be created")
+		p.revokeMarker()
 		return
 	case start < 0 || end <= start:
 		p.note("the marker grant for %q names the range [%d,%d), which does not end after it starts; nothing may be created", name, start, end)
+		p.revokeMarker()
 		return
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.marker = &marker{name: name, start: start, end: end}
+}
+
+// revokeMarker takes the grant back, and it is what a refused call leaves
+// behind rather than the grant standing before it.
+//
+// The two rules above are one rule read together: a second call replaces the
+// first, and a grant the guard cannot read opens nothing. A refusal that
+// returned without touching the field kept both halves of that promise only
+// while the first call was the only call, and left the earlier range live on
+// exactly the run whose caller has just shown it cannot compute one.
+func (p *Policy) revokeMarker() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.marker = nil
 }
 
 // grantedMarker is the range a createNamedRange may make, nil when none was

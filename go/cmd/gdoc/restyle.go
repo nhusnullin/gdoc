@@ -439,6 +439,19 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 		// A failed phase 1 does not run phase 2. What the document carries is
 		// whatever of the prelude Docs took, and every character of that is a
 		// suggestion, so rejecting it puts the document back.
+		//
+		// A run that stopped part way through the prelude left words in the
+		// document with no marker over them, which is the same hazard the
+		// marker failure below names and the same sentence answers it: the
+		// next run finds no marker, proposes at index 1, and puts a second
+		// cover in front of the first. MaybeApplied is read beside the count
+		// because the live prelude goes out in one batch, so the path where
+		// Docs accepted it and the answer could not be read is the path where
+		// the whole unmarked prelude may be there.
+		if proposed.Batches > 0 || proposed.MaybeApplied {
+			warns = append(warns, "the prelude was proposed in part and nothing marks it, so gdoc has no record of having written it: "+
+				"accept or reject what is in the document before running this again, or the next run proposes a second prelude in front of it")
+		}
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: fmt.Sprintf(
 			"the prelude phase stopped, so the body was not styled: %v", proposeErr)}
 	}
@@ -480,11 +493,41 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	p2.GrantInPlace(r.id)
 	p2.AllowMarker(prelude.MarkerName, res.Start, res.End)
 
+	// The revision the marker batch is sent against, and it is phase 1's own
+	// answer rather than the read a moment ago.
+	//
+	// This is the one place the run stops chaining a revision through, and
+	// unchained it opens the window requiredRevisionId exists to close.
+	// Somebody editing between phase 1's last answer and the fresh read above
+	// is carried by every batch that follows: the marker requires the revision
+	// their edit made, so it lands, the styling chains off it, and phase 2
+	// then rewrites their paragraph by direct edit at LevelInPlace. M7b has no
+	// such window, because every batch requires the revision the one before it
+	// ended on, and the phase boundary must not be the gap in that chain.
+	//
+	// The refusal is left inside Docs rather than made here as a comparison of
+	// two strings. That a batch answer's revision is one a later write accepts
+	// is measured, in every multi-batch run M7b has made; that it is spelled
+	// the way documents.get spells it is not, so a run refused on a comparison
+	// gdoc made itself could cry wolf on every document. Sent this revision,
+	// Docs takes the marker when the document has not moved and refuses it as
+	// stale when it has, which is the failure that already reports itself.
+	//
+	// RevisionUnconfirmed is the path this cannot cover: phase 1's last batch
+	// named no revision, so what Applied carries is the one that batch was
+	// sent against and gdoc's own prelude has moved the document past it.
+	// There the fresh read is the only revision in hand, and a third party's
+	// edit inside that window is indistinguishable from gdoc's own.
+	markerRevision := fresh.RevisionID
+	if !proposed.RevisionUnconfirmed {
+		markerRevision = proposed.RevisionID
+	}
+
 	// Its own batch, ahead of the styling. A styling batch that does not land
 	// still leaves a prelude Nail can accept, and a marked one is a prelude the
 	// next run can find; folded into the styling it would be lost with it.
 	marked, markErr := restyle.Apply(ctx, r2.session, r.id,
-		[]map[string]any{prelude.MarkerRequest(res.Start, res.End)}, fresh.RevisionID)
+		[]map[string]any{prelude.MarkerRequest(res.Start, res.End)}, markerRevision)
 	warns = append(warns, marked.Warnings...)
 	pre.MarkerCreated = marked.Batches > 0
 	// MaybeApplied is read beside the count, and it is the rule every other

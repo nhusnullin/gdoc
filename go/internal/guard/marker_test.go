@@ -231,3 +231,34 @@ func TestTheMarkerGrantWidensNothingElse(t *testing.T) {
 		})
 	}
 }
+
+// A refused second call takes the first grant back, and that is the two rules
+// above read together rather than a third one.
+//
+// A second call replaces the first, and a grant the guard cannot read opens
+// nothing. A refusal that returned without touching the field kept both
+// promises only while the first call was the only call: after one that named a
+// range it could not compute, the earlier range stayed live, which is the wrong
+// direction for a per-run grant to be wrong in.
+func TestARefusedSecondMarkerGrantTakesTheFirstBack(t *testing.T) {
+	cases := []struct {
+		name       string
+		mark       string
+		start, end int
+	}{
+		{"a second call naming no name", "", 1, 99},
+		{"a second call naming an empty range", markerName, 5, 5},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := granted(t)
+			p.AllowMarker(markerName, markerStart, markerEnd)
+			p.AllowMarker(c.mark, c.start, c.end)
+
+			first := []byte(`{"requests":[{"createNamedRange":` + markerRequest(markerName, markerStart, markerEnd) + `}]}`)
+			if p.Judge("POST", mustURL(t, inPlaceURL), first) == nil {
+				t.Fatal("the grant standing before a refused call must stop carrying")
+			}
+		})
+	}
+}

@@ -1326,7 +1326,11 @@ for exactly the range that was granted, spelled exactly, with nothing beside
 `name` and `range`, and a second call replaces the first because a caller naming
 two ranges has made a mistake the guard must not turn into two markers. A grant
 it cannot read opens nothing and says so on the envelope, which is `AllowFile`'s
-rule. `TestNothingAtLevelInPlaceCanChangeACharacter` stays green and untouched:
+rule, **and it takes back the grant standing before it rather than leaving that
+one live**: the two rules are one rule read together, and a refusal that touched
+nothing kept both promises only while the first call was the only call, leaving
+the earlier range open on exactly the run whose caller has just shown it cannot
+compute one. `TestNothingAtLevelInPlaceCanChangeACharacter` stays green and untouched:
 a named range adds and removes no character.
 
 **Why the marker is written rather than suggested.** `createNamedRange` is the
@@ -1430,6 +1434,32 @@ document carries, is true when `Apply` says it and the read is what makes it
 false, so `cmdRestyle` drops it by value through `restyle.RevisionUnconfirmedWarning`.
 Left on the envelope it stands beside a revision Docs named, and two sentences
 contradicting each other in one warnings list is worse than either of them.
+
+**The marker batch is sent against phase 1's own answer, and that is what keeps
+the revision chained across the phase boundary.** Every batch requires the
+revision the one before it ended on, which is what leaves M7b no window at all,
+and the fresh read between the phases is the one place that chain could be
+broken. Sent the revision that read named, an edit somebody made in the window
+between phase 1's last answer and it is carried rather than refused: the marker
+lands on their revision, the styling chains off the marker, and phase 2 rewrites
+their paragraph by direct edit at `LevelInPlace`. So `markerRevision` is
+`Applied.RevisionID` whenever `RevisionUnconfirmed` is false, and Docs makes the
+refusal. It is left there rather than made here as a comparison of two strings:
+that a batch answer's revision is one a later write accepts is measured, in every
+multi-batch run M7b has made, while whether it is spelled the way
+`documents.get` spells it is not, and a run refused on a comparison gdoc made
+itself could cry wolf on every document. `RevisionUnconfirmed` is the path this
+cannot cover, because there the only revision in hand is the fresh read's and
+gdoc's own prelude is what moved the document.
+
+**A prelude phase that stopped says to accept or reject before running again**,
+the same sentence the marker failure says, because it is the same hazard by
+another route: what landed is unmarked, so the next run finds no marker,
+proposes at index 1 and puts a second cover in front of the first. It is read
+from `Batches` **and** `MaybeApplied`, since the live prelude goes out in one
+batch, so the path where Docs accepted it and the answer could not be read is
+the path where a whole unmarked prelude may be in the document while the run
+counts no batch at all.
 
 **Phase 2 walks past the span phase 1 wrote, and without that the milestone
 defeats itself.** Every paragraph `internal/prelude` proposes is a `NORMAL_TEXT`

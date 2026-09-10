@@ -1760,3 +1760,74 @@ func TestTheStylingIsSentAgainstARevisionTheMarkerBatchDidNotName(t *testing.T) 
 		t.Errorf("warnings = %s, want the sentence gone: the run went and read, and the revision it reports is one Docs named", warnings)
 	}
 }
+
+// The window between phase 1's last answer and the fresh read is the one place
+// the run stops chaining a revision through, and it must not be a gap.
+//
+// Somebody editing there is carried by every batch that follows if the marker
+// requires the revision the fresh read named: the marker lands, the styling
+// chains off it, and phase 2 rewrites their paragraph by direct edit at the
+// in-place level. So the marker is sent against phase 1's own answer, and Docs
+// is what refuses it. The test is the revisions on the wire rather than the
+// refusal, because the refusal is Docs' and a fake cannot make it honestly.
+func TestTheMarkerIsSentAgainstTheRevisionThePreludePhaseEndedOn(t *testing.T) {
+	// Arrange: the fresh read names a revision phase 1 never wrote, which is
+	// somebody else's edit inside that window.
+	w := preludeWire(t)
+	w.answers[2] = &answer{method: "GET", match: "docs.googleapis.com", once: true,
+		json: strings.Replace(readFixture(t, "single-tab.json"),
+			"ALm37BXsingleTab", "ALm37BXsomebodyElseEdited", 1)}
+	f := stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, _ := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	batches := batchesSent(t, f)
+	if len(batches) < 2 {
+		t.Fatalf("the run sent %d batches, want the prelude and the marker: %v", len(batches), got)
+	}
+	if batches[1].WriteControl.RequiredRevisionID != "ALm37BXafterThePrelude" {
+		t.Errorf("the marker batch named revision %q, want the one phase 1's own answer named: "+
+			"sent the fresh read's, an edit made in that window is carried rather than refused, "+
+			"and phase 2 styles it by direct edit",
+			batches[1].WriteControl.RequiredRevisionID)
+	}
+}
+
+// A prelude phase that stopped left words in the document with nothing marking
+// them, and the run has to say so.
+//
+// It is the hazard the marker failure names one block further down, arriving by
+// a different route: the next run finds no marker, proposes at index 1, and
+// puts a second cover in front of the first. Rejecting what landed is the
+// recovery, and somebody who is not told to do it before running again gets two
+// stacked covers of which only the first can be rejected.
+//
+// The batch Docs accepted whose answer could not be read is the shape this is
+// worst in. The live prelude goes out in one batch, so on that path the whole
+// unmarked prelude may be in the document while the run counts no batch at all.
+func TestAPreludePhaseThatStoppedSaysToRejectBeforeRunningAgain(t *testing.T) {
+	// Arrange
+	w := preludeWire(t)
+	w.answers[1] = &answer{method: "POST", match: ":batchUpdate",
+		err: sentAnywayErr{errors.New("the answer was not JSON")}}
+	stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a prelude phase that stopped: %v (exit %d), want a refusal", got, code)
+	}
+	warnings := strings.Join(warningsOf(t, got), " | ")
+	if !strings.Contains(warnings, "before running this again") {
+		t.Errorf("warnings = %s, want the sentence that says to accept or reject what landed "+
+			"before running again: unsaid, the next run proposes a second prelude in front of it", warnings)
+	}
+}
