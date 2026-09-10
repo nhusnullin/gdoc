@@ -76,9 +76,22 @@ a plan a reviewer reads should not need a second file open.
 - **The comments, the pending suggestions, the chips and the URL must survive**,
   so the template goes into the live document. SPEC's `--new` is the other mode
   and stays deferred.
-- **Heading numbering is out.** It is the one item that writes inside the
-  author's own paragraphs, which a prelude proposed before the body does not
-  cover. Its own milestone, with its own decision about writing into prose.
+- **Heading numbering is out of M7c, and it is out for two reasons that are not
+  the obvious one.** It can be a suggestion, and when it lands it lands as one:
+  `mechanism: literal` in `house.yaml` means the number is `insertText` in front
+  of the heading's own words, and `insertText` is row one of the probe. Nail's
+  recommendation, 2026-09-10: a number per heading shown as a pending insertion
+  is the clearest a change of that kind can be, so its own milestone starts from
+  suggested mode rather than reopening the question. What keeps it out of this
+  one is idempotence and placement. There is no marker for a heading number, and
+  `numberedHeadingRE` in `internal/body/numbering.go` does not recognise the
+  house's own format, because the separator is `-` and the pattern wants `.`,
+  `)` or a space: "1-Introduction" is not read as an authored number, so a
+  second run makes it "1-1-Introduction". A named range per heading is the other
+  answer, and it multiplies Task 1's unknown by the heading count. Placement is
+  the second: the prelude is one insertion at index 1, while a number names a
+  position inside the author's prose, which is what `propose`'s "names text,
+  never an index" rule exists to refuse.
 - **The contents list stays manual**, and that is not a choice. `BLOCKED-BY-API.md`
   records that `insertTableOfContents` and four other spellings answer
   `Cannot find field`.
@@ -406,8 +419,11 @@ character. Task 9 checks that claim rather than assuming it.
 
 ## What M7c leaves for later
 
-- **Heading numbering.** The one item that writes inside the author's own
-  paragraphs. Its own milestone and its own decision.
+- **Heading numbering.** Not blocked, and not blocked by the guard either: it is
+  `insertText`, so it can be proposed. Its own milestone, and it starts from
+  suggested mode. What that milestone has to settle is a second run, since
+  nothing marks a number gdoc wrote, and where each insert goes, since a number
+  names a position in the author's prose rather than text to match.
 - **The contents list.** Not deferred, blocked: the Docs API has no request that
   makes one. `BLOCKED-BY-API.md` records the measurement.
 - **The first-page header with the logo, and the footer page numbers.** Blocked

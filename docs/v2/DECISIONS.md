@@ -1579,9 +1579,24 @@ measures its own leftovers answers about itself.
 - **The comments, the pending suggestions, the chips and the URL must survive**,
   so the template goes into the live document rather than into a new one.
   SPEC's `--new` remains the other mode and remains deferred.
-- **Heading numbering is out**, and it gets its own milestone. It is the one
-  item that writes inside the author's own paragraphs, so it is the one item a
-  suggested insert before the body does not cover.
+- **Heading numbering is out of M7c, and its own milestone starts from
+  suggested mode.** Nail asked on 2026-09-10 whether it could be suggested too,
+  and it can: `house.yaml` says `mechanism: literal`, so the number is
+  `insertText` in front of the heading's own words, and that is the row the
+  probe measured first. His recommendation is that it stays that way when it is
+  built, because a number shown as a pending insertion is the clearest that
+  change can be made. So the reason it waits is not that it writes into prose. A
+  suggestion is not a write, and saying otherwise here would leave a reason on
+  record that the probe has already answered. It waits because it has no second
+  run and no placement rule. Nothing marks a number gdoc wrote, and
+  `numberedHeadingRE` does not recognise the house's own format, since the
+  separator is `-` and the pattern wants `.`, `)` or a space, so
+  "1-Introduction" reads as unnumbered and a second run makes it
+  "1-1-Introduction". A named range per heading is the alternative, and it asks
+  the named-range-over-a-suggestion question once per heading rather than once.
+  Placement is the other half: the prelude is a single insertion at index 1,
+  while every number names a position inside the author's own paragraph, which
+  is the thing `propose`'s "a proposal names text, never an index" rule refuses.
 - **The contents list stays a manual step**, and that is not a choice:
   `BLOCKED-BY-API.md` already records that `insertTableOfContents` and four
   other spellings answer `Cannot find field`. The `Request` message has no
