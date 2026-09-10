@@ -322,22 +322,22 @@ it: nothing here holds a `--trash` command, and the answer is written down.
 
 ### Task 2: the one new guard door, and proof the prelude needs none
 
-- [ ] Test first, as an attack: a direct `createNamedRange` on a handed-in
+- [x] Test first, as an attack: a direct `createNamedRange` on a handed-in
       document is refused; the same on a granted document with no marker grant
       is refused; with the grant it carries; and a second one naming a different
       range is refused.
-- [ ] `Policy.AllowMarker(...)` in `AllowReject`'s shape: per-run, one object,
+- [x] `Policy.AllowMarker(...)` in `AllowReject`'s shape: per-run, one object,
       dying with the process. Nothing persists it and no flag turns it on.
-- [ ] **The other direction, and it is the more important test.** A SUGGEST
+- [x] **The other direction, and it is the more important test.** A SUGGEST
       `batchUpdate` carrying `insertText`, `insertTable`, `insertPageBreak`,
       `createParagraphBullets` and `deleteContentRange` on a handed-in document
       with **no grant of any kind** must carry today, unchanged. That is the
       whole prelude phase, and the test states that this milestone added no
       permission for it.
-- [ ] `TestNothingAtLevelInPlaceCanChangeACharacter` stays green and untouched.
+- [x] `TestNothingAtLevelInPlaceCanChangeACharacter` stays green and untouched.
       A task that needs to edit it has collapsed the two phases.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): one grant for the marker, and none for the prelude"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): one grant for the marker, and none for the prelude"`
 
 ### Task 3: the fields file
 
