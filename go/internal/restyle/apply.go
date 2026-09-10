@@ -113,6 +113,12 @@ type Applied struct {
 	// Warnings carry what a caller has to know about a run that stopped early,
 	// and never a verdict.
 	Warnings []string `json:"warnings,omitempty"`
+	// suggest says the batches went out in SUGGEST mode, so what a run that
+	// stopped early left behind is a proposal rather than an edit. It is
+	// unexported because it is the caller's own instruction read back, not a
+	// fact about the document, and printing it would put a field in the report
+	// that says what gdoc asked for rather than what happened.
+	suggest bool
 }
 
 // BatchURL is the Docs write path, spelled once for the whole binary. It is
@@ -133,7 +139,36 @@ func BatchURL(docID string) string { return propose.BatchURL(docID) }
 // because the revision the next batch needs was in the answer it could not
 // read.
 func Apply(ctx context.Context, s Session, docID string, requests []map[string]any, revisionID string) (Applied, error) {
-	out := Applied{RevisionID: revisionID}
+	return apply(ctx, s, docID, requests, revisionID, "")
+}
+
+// Suggest is Apply with every batch marked writeMode SUGGEST, which is what the
+// house prelude goes out as.
+//
+// It is the same loop because it wants the same three things: batches the guard
+// can read whole, a revision id on every one of them, and a batch Docs accepted
+// whose answer could not be read reported as itself rather than as a batch that
+// never happened. What changes is one field in writeControl, and what that field
+// changes is who the document belongs to afterwards: a suggested insert is text
+// Nail accepts or rejects in the browser, so the recovery sentence a run that
+// stopped early prints is a rejection rather than the version history.
+//
+// The guard is what holds the mode rather than this function. A batchUpdate on
+// a handed-in document is refused inside the process unless the body says
+// SUGGEST, so a caller sending the prelude through Apply by mistake is refused
+// before anything leaves the machine, and internal/propose has sent exactly this
+// shape every day since M3. What is not measured is the two fields together:
+// requiredRevisionId and writeMode are both inside writeControl, and no probe
+// has sent a batch carrying both. Docs refusing the pair would fail the prelude
+// phase whole, which is the direction to be wrong in, and the live acceptance is
+// what confirms it.
+func Suggest(ctx context.Context, s Session, docID string, requests []map[string]any, revisionID string) (Applied, error) {
+	return apply(ctx, s, docID, requests, revisionID, "SUGGEST")
+}
+
+// apply is the loop both of them run. mode is empty for a direct edit.
+func apply(ctx context.Context, s Session, docID string, requests []map[string]any, revisionID, mode string) (Applied, error) {
+	out := Applied{RevisionID: revisionID, suggest: mode == "SUGGEST"}
 	if docID == "" {
 		return out, fmt.Errorf("no document was named to restyle")
 	}
@@ -154,7 +189,7 @@ func Apply(ctx context.Context, s Session, docID string, requests []map[string]a
 	}
 
 	for i, b := range batches {
-		body, err := batchBody(b, out.RevisionID)
+		body, err := batchBody(b, out.RevisionID, mode)
 		if err != nil {
 			out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
 			return out, fmt.Errorf("batch %d of %d could not be built: %w", i+1, len(batches), err)
@@ -263,6 +298,7 @@ func (out *Applied) stopped(i, total, n int, err error) error {
 // would be paid on the common case to answer the rare one. The sentence says to
 // look at the document instead.
 func (out *Applied) leftBehind(total int, maybeReached bool) string {
+	noRollback := out.recovery()
 	switch {
 	case out.Batches == 0 && !out.MaybeApplied && maybeReached:
 		return fmt.Sprintf(
@@ -285,11 +321,25 @@ func (out *Applied) leftBehind(total int, maybeReached bool) string {
 	}
 }
 
-// noRollback is the recovery, and it is one sentence in one place because every
-// path that stops early says it and two copies would be two sentences that
-// drift.
-const noRollback = "There is no rollback, and the recovery is the document's own version history, by hand. " +
-	"No text was touched, so nothing the author wrote is lost, but their own run formatting inside the paragraphs that were restyled is"
+// recovery is what a person does about a run that stopped early, and it is one
+// sentence in one place because every path that stops early says it and two
+// copies would be two sentences that drift.
+//
+// It is two sentences rather than one because there are two kinds of run. A
+// direct edit has no rollback: what landed is in the document and the recovery
+// is its own version history, by hand. A suggested batch has one, and it is the
+// one Nail already uses: everything that landed is a proposal, so rejecting it
+// puts the document back. Printing the direct-edit sentence over a prelude would
+// send somebody to the version history to undo a suggestion they could reject in
+// a click.
+func (out *Applied) recovery() string {
+	if out.suggest {
+		return "Everything that landed is a suggestion, so rejecting it in the browser puts the document back as it was, " +
+			"and nothing the author wrote was touched"
+	}
+	return "There is no rollback, and the recovery is the document's own version history, by hand. " +
+		"No text was touched, so nothing the author wrote is lost, but their own run formatting inside the paragraphs that were restyled is"
+}
 
 // Batches splits the requests into bodies the guard can read whole, keeping
 // them in document order.
@@ -334,10 +384,14 @@ func Batches(requests []map[string]any) ([][]map[string]any, error) {
 // It returns bytes rather than a map, so what the guard judged is what the
 // session sends and no caller in between can change it. That is withdraw.Batch's
 // rule, and it is the same rule.
-func batchBody(requests []map[string]any, revisionID string) ([]byte, error) {
+func batchBody(requests []map[string]any, revisionID, mode string) ([]byte, error) {
+	control := map[string]any{"requiredRevisionId": revisionID}
+	if mode != "" {
+		control["writeMode"] = mode
+	}
 	return json.Marshal(map[string]any{
 		"requests":     requests,
-		"writeControl": map[string]any{"requiredRevisionId": revisionID},
+		"writeControl": control,
 	})
 }
 

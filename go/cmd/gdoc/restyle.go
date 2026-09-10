@@ -17,6 +17,33 @@
 // survey is what makes the write safe, so it has to be a thing a person read
 // before the write was asked for, rather than something the same run produced
 // a moment earlier and never showed anybody.
+//
+// `gdoc restyle <url> --from survey.json --fields fields.json` adds the house
+// template to that, and it adds it as a proposal. M7c, and the whole of its
+// design is that the run has two permissions rather than one:
+//
+//   - Phase 1 proposes the prelude, which is the cover, the three front-matter
+//     tables and the legend. It goes out on a policy that granted nothing at
+//     all, in writeMode SUGGEST, which is exactly what `propose` sends every
+//     day. Nail accepts it in the browser, or rejects it and the document is as
+//     it was.
+//   - Phase 2 is M7b's styling, unchanged: a second policy, GrantInPlace, and
+//     the four request kinds none of which can change a character.
+//
+// They are two policies because the guard's rule is right and stays: at
+// LevelInPlace the allowlist gates every batchUpdate whatever writeMode says,
+// so a granted document cannot take an insertText and a document with no grant
+// cannot take a direct edit. Neither phase can do the other's job, and that is
+// the point rather than an inconvenience. The one permission this milestone
+// added is AllowMarker, for the named range over what phase 1 proposed, because
+// createNamedRange is the one request Docs refuses to apply as a suggestion.
+//
+// Phase 1 goes first and phase 2 reads the document again before it builds
+// anything. The prelude is text, so every index a styling request names moved
+// when it landed, and the styling then walks past the prelude's own span: those
+// paragraphs are gdoc's own, stating the cover's sizes and colours in full, and
+// giving them the house body look would leave Nail accepting a cover that had
+// already been turned into prose.
 package main
 
 import (
@@ -27,15 +54,17 @@ import (
 	"os"
 
 	"gdoc/internal/comments"
+	"gdoc/internal/cover"
 	"gdoc/internal/docs"
 	"gdoc/internal/emit"
 	"gdoc/internal/guard"
 	"gdoc/internal/house"
+	"gdoc/internal/prelude"
 	"gdoc/internal/restyle"
 )
 
 func cmdRestyle(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--dry-run": false, "--from": true})
+	a, err := parseArgs(raw, flagSet{"--dry-run": false, "--from": true, "--fields": true})
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -43,6 +72,12 @@ func cmdRestyle(raw []string) emit.Result {
 	case a.has("--dry-run") && a.has("--from"):
 		return emit.Result{OK: false, Error: "restyle takes --dry-run or --from, and this run gave both: " +
 			"the survey and the restyle are two runs, and the survey is what a person reads before the restyle is asked for"}
+	case a.has("--dry-run") && a.has("--fields"):
+		return emit.Result{OK: false, Error: "restyle takes --dry-run or --fields, and this run gave both: " +
+			"--dry-run surveys a document and writes nothing to it, while --fields proposes the house template into one"}
+	case a.has("--fields") && !a.has("--from"):
+		return emit.Result{OK: false, Error: "--fields proposes the house template into a document, and that needs --from <survey.json>: " +
+			"the survey is what says the document has not moved since a person read what it held"}
 	case a.has("--dry-run"):
 		return surveyRestyle(a)
 	case a.has("--from"):
@@ -111,11 +146,17 @@ type restyleData struct {
 	// SurveyRevisionID is the revision the survey was taken at, and RevisionID
 	// the one the run ended on. Two fields rather than one, because the whole
 	// safety of this command is that they started out equal.
-	SurveyRevisionID string          `json:"survey_revision_id"`
-	RevisionID       string          `json:"revision_id"`
-	Tabs             int             `json:"tabs"`
-	Planned          plannedCounts   `json:"planned"`
-	Applied          restyle.Applied `json:"applied"`
+	SurveyRevisionID string `json:"survey_revision_id"`
+	RevisionID       string `json:"revision_id"`
+	Tabs             int    `json:"tabs"`
+	// Prelude is phase 1: the house template proposed into the document, and
+	// the marker written over what was proposed. It is absent on a run that
+	// named no --fields, which is M7b's styling-only restyle, because a field
+	// reporting nothing proposed on a run that proposed nothing says the
+	// command has a phase it does not.
+	Prelude *preludeData    `json:"prelude,omitempty"`
+	Planned plannedCounts   `json:"planned"`
+	Applied restyle.Applied `json:"applied"`
 	// ReadBack is the document read again once the batches landed: what
 	// survived, and whether the style is really there. It is absent when
 	// nothing reached the document, because a document nothing was written to
@@ -141,10 +182,67 @@ type plannedCounts struct {
 	// Both need a request kind the in-place level does not carry.
 	Bulleted int `json:"bulleted"`
 	Tables   int `json:"tables"`
+	// Skipped is the paragraphs and tables phase 2 walked past because phase 1
+	// had just proposed them. They are gdoc's own words, stating the cover's
+	// own sizes, and the house body look is not what they are meant to wear.
+	Skipped int `json:"skipped"`
 	// Unstyled names the named styles the house has no look for. Those
 	// paragraphs keep the look they had: gdoc maps none of them to the nearest
 	// style it does know, because that would be inferring structure.
 	Unstyled []string `json:"unstyled,omitempty"`
+}
+
+// preludeData is phase 1 as facts: what the house template came to, where it
+// landed, what Docs took, and whether the marker over it was written.
+//
+// Nothing here says whether the cover is right. That is read in the document,
+// by the person who is being asked to accept it, and past that it is Nail's.
+type preludeData struct {
+	// Requests is how many requests the prelude came to, Paragraphs how many
+	// paragraphs it writes, Tables how many tables it inserts and Cells how
+	// many of their cells it fills.
+	Requests   int `json:"requests"`
+	Paragraphs int `json:"paragraphs"`
+	Tables     int `json:"tables"`
+	Cells      int `json:"cells"`
+	// Start and End are the span the prelude was proposed into, which is the
+	// range the marker covers and the range phase 2 walks past.
+	Start int `json:"start"`
+	End   int `json:"end"`
+	// Applied is what Docs took of the prelude batches.
+	Applied restyle.Applied `json:"applied"`
+	// MarkerCreated says the named range over the prelude was written. It is
+	// gdoc's whole memory of having been here, so a run that proposed a prelude
+	// and could not mark it stops rather than styling: a second run over an
+	// unmarked prelude would propose a second cover on top of the first.
+	MarkerCreated bool `json:"marker_created"`
+	// Replaced is the marker of a prelude a run before this one left, which
+	// this run proposed deleting. It is absent on a document carrying none,
+	// which is either a document gdoc has never touched or one whose prelude
+	// was rejected.
+	Replaced *prelude.Marker `json:"replaced,omitempty"`
+	// Manual is what the prelude could not propose at all, each with the menu
+	// path a person takes instead.
+	Manual []prelude.ManualStep `json:"manual,omitempty"`
+}
+
+// readFields reads the cover's values out of the file --fields names.
+//
+// A restyle has no note behind it, so there is no front matter to read the
+// cover from. The read is internal/cover's, strict the way readSurvey and
+// readProposals read theirs, and it happens here rather than after a session is
+// opened: a file gdoc half understands must never reach a document, and a
+// misspelled key is a cover line that would silently never print.
+func readFields(path string) (cover.Fields, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return cover.Fields{}, fmt.Errorf("the fields file could not be read: %w", err)
+	}
+	f, err := cover.ReadFields(raw)
+	if err != nil {
+		return cover.Fields{}, fmt.Errorf("%s: %w", path, err)
+	}
+	return f, nil
 }
 
 // applyRestyle is the write half. The order below is the milestone's, and every
@@ -174,10 +272,24 @@ func applyRestyle(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
+	// The cover's values, and they are read before a session is opened. A run
+	// that named --fields is a run that will propose words into somebody's
+	// document, so the file those words come out of is checked while nothing
+	// has left the machine.
+	var fields *cover.Fields
+	if path := a.flags["--fields"]; path != "" {
+		read, err := readFields(path)
+		if err != nil {
+			return emit.Result{OK: false, Error: err.Error()}
+		}
+		fields = &read
+	}
 
 	// The document is handed in at the level every handed-in document gets:
 	// read, comment and suggest, and no direct edit. The grant comes later, and
-	// only if the recheck below holds.
+	// only if the recheck below holds. On a run that proposes a prelude the
+	// grant never comes at all on this policy: phase 1 sends its suggestions
+	// here, and phase 2 opens a second policy of its own.
 	p := guard.NewPolicy()
 	p.AllowFile(docID, guard.LevelSuggest)
 	s, err := openSession(p)
@@ -213,6 +325,10 @@ func applyRestyle(a *args) emit.Result {
 			len(d.Tabs))}
 	}
 
+	if fields != nil {
+		return proposeThenStyle(ctx, r, p, *saved, cfg, *fields, d, data)
+	}
+
 	// This is the line. It upgrades one document, for this run, from suggest to
 	// direct edit, and it is the widest thing gdoc can be asked to do. Three
 	// things hold it in: the id is the one the caller named and the survey
@@ -220,8 +336,118 @@ func applyRestyle(a *args) emit.Result {
 	// the guard carries only the four styling request kinds at that level, none
 	// of which can change a character. The grant dies with the process.
 	p.GrantInPlace(docID)
+	return styleDocument(ctx, r, *saved, cfg, d.Tabs[0], d.RevisionID, nil, data)
+}
 
-	plan := restyle.TabRequests(d.Tabs[0], cfg)
+// proposeThenStyle is the two-phase run: the prelude proposed, the marker
+// written, and then M7b's styling on a second policy.
+//
+// The order is the milestone's and so is the split. Phase 1 sends on the policy
+// it is handed, which granted nothing and never will: a SUGGEST batchUpdate on
+// a handed-in document is what internal/propose has sent every day since M3, so
+// the prelude needs no permission this milestone added. Phase 2 opens a policy
+// of its own, and that second policy is the only one in the run that ever holds
+// a grant. A caller that collapsed the two into one policy would have undone
+// the whole shape of this milestone, and the guard would refuse it in both
+// directions: at LevelInPlace an insertText is not on the allowlist, and with no
+// grant a direct styling batch is not a suggestion.
+func proposeThenStyle(ctx context.Context, r *reach, p *guard.Policy, saved restyle.Report,
+	cfg *house.Config, fields cover.Fields, d *docs.Document, data restyleData) emit.Result {
+	// What to propose, and what a run before this one left. Decide refuses a
+	// document whose prelude is still pending: replacing it would propose
+	// deleting text that has never been written, and the answer to that is the
+	// suggestion already in front of Nail.
+	res, err := prelude.Propose(cfg, fields, d)
+	if err != nil {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(), Error: err.Error()}
+	}
+	pre := &preludeData{
+		Requests:   len(res.Requests),
+		Paragraphs: res.Paragraphs,
+		Tables:     res.Tables,
+		Cells:      res.Cells,
+		Start:      res.Start,
+		End:        res.End,
+		Replaced:   res.Replaces,
+		Manual:     res.Manual,
+	}
+	data.Prelude = pre
+
+	proposed, proposeErr := restyle.Suggest(ctx, r.session, r.id, res.Requests, d.RevisionID)
+	warns := proposed.Warnings
+	proposed.Warnings = nil
+	pre.Applied = proposed
+	data.RevisionID = proposed.RevisionID
+	if proposeErr != nil {
+		// A failed phase 1 does not run phase 2. What the document carries is
+		// whatever of the prelude Docs took, and every character of that is a
+		// suggestion, so rejecting it puts the document back.
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: fmt.Sprintf(
+			"the prelude phase stopped, so the body was not styled: %v", proposeErr)}
+	}
+
+	// Phase 2's policy, and it is a second one rather than a grant added to the
+	// first. Two sessions go with it, because a session is built from a policy
+	// and the first request in its history is already judged against it.
+	p2 := guard.NewPolicy()
+	p2.AllowFile(r.id, guard.LevelSuggest)
+	s2, err := openSession(p2)
+	if err != nil {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
+	}
+	r2 := &reach{id: r.id, session: s2}
+
+	// The fresh read. The prelude is text, so every index a styling request
+	// names moved when it landed, and a plan built from the read phase 1 was
+	// computed from would name ranges that are now somebody else's words.
+	fresh, err := docs.Fetch(ctx, r2.session, r2.id)
+	if err != nil {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
+			"the prelude was proposed and the document could not be read again, so nothing was styled: %v", err)}
+	}
+	data.RevisionID = fresh.RevisionID
+	if fresh.MultiTab() {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
+			"the document has %d tabs when read again, and a restyle styles a document with one", len(fresh.Tabs))}
+	}
+
+	// The grant, and the one permission this milestone added beside it. The
+	// marker is a named range over exactly what phase 1 proposed, and it is
+	// written directly because Docs refuses to apply a createNamedRange as a
+	// suggestion. It adds and removes no character.
+	p2.GrantInPlace(r.id)
+	p2.AllowMarker(prelude.MarkerName, res.Start, res.End)
+
+	// Its own batch, ahead of the styling. A styling batch that does not land
+	// still leaves a prelude Nail can accept, and a marked one is a prelude the
+	// next run can find; folded into the styling it would be lost with it.
+	marked, markErr := restyle.Apply(ctx, r2.session, r.id,
+		[]map[string]any{prelude.MarkerRequest(res.Start, res.End)}, fresh.RevisionID)
+	warns = append(warns, marked.Warnings...)
+	pre.MarkerCreated = marked.Batches > 0
+	data.RevisionID = marked.RevisionID
+	if markErr != nil {
+		// The prelude is in the document and nothing records that gdoc put it
+		// there, so the run stops rather than styling on top of it. A second
+		// run over an unmarked prelude proposes a second cover in front of the
+		// first, and saying so here is what stops somebody discovering it then.
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns,
+			"the prelude was proposed and could not be marked, so gdoc has no record of having written it: "+
+				"accept or reject the prelude in the browser before running this again, or the next run proposes a second one in front of it")...),
+			Error: fmt.Sprintf("the prelude was proposed and the marker over it did not land, so nothing was styled: %v", markErr)}
+	}
+
+	return styleDocument(ctx, r2, saved, cfg, fresh.Tabs[0], marked.RevisionID,
+		&restyle.Span{Start: res.Start, End: res.End}, data, warns...)
+}
+
+// styleDocument is phase 2, and on a run with no --fields it is the whole
+// command: the plan, the batches, and the read-back over what landed.
+//
+// skip is the span the prelude occupies, nil on a run that proposed none.
+func styleDocument(ctx context.Context, r *reach, saved restyle.Report, cfg *house.Config,
+	tab docs.Tab, revisionID string, skip *restyle.Span, data restyleData, warns ...string) emit.Result {
+	plan := restyle.TabRequestsExcept(tab, cfg, skip)
 	// The page first, because it names no range and a reader comparing a batch
 	// against a log should find the document's own geometry at the top of it.
 	requests := append([]map[string]any{restyle.PageRequest(cfg)}, plan.Requests...)
@@ -232,11 +458,12 @@ func applyRestyle(a *args) emit.Result {
 		Cells:      plan.Cells,
 		Bulleted:   plan.Bulleted,
 		Tables:     plan.Tables,
+		Skipped:    plan.Skipped,
 		Unstyled:   plan.Unstyled,
 	}
 
-	applied, applyErr := restyle.Apply(ctx, r.session, docID, requests, d.RevisionID)
-	warns := applied.Warnings
+	applied, applyErr := restyle.Apply(ctx, r.session, r.id, requests, revisionID)
+	warns = append(warns, applied.Warnings...)
 	// The warnings go on the envelope and nowhere else. A caller reading them
 	// in two places has two chances to read a different list, and the envelope
 	// is where every other command puts them.
@@ -270,7 +497,7 @@ func applyRestyle(a *args) emit.Result {
 	// be reported as a style that did not land on a run that never tried to
 	// write it.
 	if applied.Batches > 0 || applied.MaybeApplied {
-		rb, notes := readBack(ctx, r, *saved, reached(requests, applied), plan)
+		rb, notes := readBack(ctx, r, saved, reached(requests, applied), plan)
 		data.ReadBack = rb
 		if rb != nil {
 			data.Verified = rb.Verified

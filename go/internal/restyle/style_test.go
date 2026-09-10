@@ -479,3 +479,54 @@ func TestTheGuardCarriesEveryRestyleRequest(t *testing.T) {
 		t.Fatalf("the guard refused the batch this milestone builds: %v", err)
 	}
 }
+
+// The prelude is gdoc's own paragraphs, and phase 2 leaves them alone.
+//
+// Every paragraph internal/prelude proposes is a NORMAL_TEXT wearing the
+// cover's own sizes and colours, stated in full because inserted text inherits
+// the look it lands beside. A restyle that walked over it would give every one
+// of them the house body look, so the cover title Nail is being asked to accept
+// would be 11pt prose by the time he read it.
+func TestTheStylingSkipsTheSpanThePreludeOccupies(t *testing.T) {
+	// Arrange
+	tab := fixtureTab(t)
+	cfg := embeddedHouse(t)
+	whole := TabRequests(tab, cfg)
+
+	// Act: the fixture's first paragraph stands in for the prelude.
+	skipped := TabRequestsExcept(tab, cfg, &Span{Start: 1, End: 40})
+
+	// Assert
+	if skipped.Skipped == 0 {
+		t.Fatal("nothing was reported as left alone, so the span was not read")
+	}
+	if len(skipped.Requests) >= len(whole.Requests) {
+		t.Errorf("the skipped plan carries %d requests and the whole one %d, want fewer",
+			len(skipped.Requests), len(whole.Requests))
+	}
+	for _, req := range skipped.Requests {
+		for kind, body := range req {
+			b, ok := body.(map[string]any)
+			if !ok {
+				continue
+			}
+			if start := at(b); start >= 1 && start < 40 {
+				t.Errorf("a %s names index %d, which is inside the prelude gdoc just proposed", kind, start)
+			}
+		}
+	}
+}
+
+// No span is the M7b run, and it must be exactly what it was: a styling-only
+// restyle skips nothing and says so.
+func TestNoSpanSkipsNothing(t *testing.T) {
+	tab := fixtureTab(t)
+	cfg := embeddedHouse(t)
+	plan := TabRequests(tab, cfg)
+	if plan.Skipped != 0 {
+		t.Errorf("skipped = %d, want nothing left alone on a run with no prelude", plan.Skipped)
+	}
+	if len(plan.Requests) != len(TabRequestsExcept(tab, cfg, nil).Requests) {
+		t.Error("TabRequests and TabRequestsExcept with no span must build the same plan")
+	}
+}

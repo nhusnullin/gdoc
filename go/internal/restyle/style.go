@@ -77,6 +77,40 @@ type Plan struct {
 	// each and sorted, with "(none)" for a paragraph that carries no named
 	// style at all. Those paragraphs are left untouched.
 	Unstyled []string
+	// Skipped is how many paragraphs and tables were left alone because they
+	// are inside the span the caller named: gdoc's own house prelude. It is
+	// zero on a run that named none, which is every M7b restyle.
+	Skipped int
+	// skip is that span, held for the walk. It is not printed: what a caller
+	// reports is how much was left alone, and the range itself is the marker's,
+	// which internal/prelude already names.
+	skip *Span
+}
+
+// Span is a half-open range of one tab's text, [Start, End).
+//
+// The one caller today is the house prelude: a run that proposed a cover, three
+// front-matter tables and a legend a moment earlier hands the span it wrote them
+// into, so the styling phase walks past its own words.
+type Span struct {
+	Start int
+	End   int
+}
+
+// covers reports whether a block lying in [start, end) is inside this span.
+//
+// It is an overlap rather than containment, and the direction is deliberate. A
+// block that is half gdoc's own words and half the author's is one no request
+// here can name without writing over one of them, and leaving it as it is costs
+// a paragraph its house look, while styling it would overwrite the cover line
+// Nail is being asked to accept. Nothing gdoc proposes can produce one: the
+// prelude ends in a page break of its own, so its last paragraph never merges
+// with the author's first.
+func (s *Span) covers(start, end int) bool {
+	if s == nil {
+		return false
+	}
+	return start < s.End && end > s.Start
 }
 
 // houseStyleKey maps a Docs named style to the key house.yaml states it under.
@@ -111,7 +145,23 @@ var houseStyleKey = map[string]string{
 // restyled and whose running head is not comes back saying nothing about it.
 // docs/backlog/restyle-skips-footnotes-headers-and-footers.md is the way out.
 func TabRequests(t docs.Tab, cfg *house.Config) Plan {
-	p := &Plan{}
+	return TabRequestsExcept(t, cfg, nil)
+}
+
+// TabRequestsExcept is TabRequests over everything but one span.
+//
+// The span is gdoc's own house prelude, proposed into the document by the phase
+// that ran before this one. Every paragraph internal/prelude writes states its
+// look in full, because inserted text takes the look of the text it lands
+// beside, and a restyle walking over those paragraphs would give each of them
+// the house body look: the cover title would be 11pt prose by the time anybody
+// read it. So the styling phase walks past the words the proposing phase wrote,
+// and reports how many blocks it left alone.
+//
+// A nil span is TabRequests, unchanged, which is every restyle that proposed no
+// prelude.
+func TabRequestsExcept(t docs.Tab, cfg *house.Config, skip *Span) Plan {
+	p := &Plan{skip: skip}
 	unknown := map[string]bool{}
 	p.walk(t.Body, cfg, unknown, false)
 	for name := range unknown {
@@ -128,8 +178,23 @@ func (p *Plan) walk(blocks []docs.Block, cfg *house.Config, unknown map[string]b
 	for _, b := range blocks {
 		switch {
 		case b.Paragraph != nil:
+			// A paragraph the prelude wrote is left exactly as the prelude
+			// stated it, and the walk does not go on to its runs either.
+			if p.skip.covers(b.Paragraph.StartIndex, b.Paragraph.EndIndex) {
+				p.Skipped++
+				continue
+			}
 			p.paragraph(b.Paragraph, cfg, unknown, inCell)
 		case b.Table != nil:
+			// A table is skipped on its start alone, because internal/docs
+			// decodes no end index for one. The front matter's three tables
+			// are wholly inside the prelude or wholly outside it: a table
+			// starting inside the span was inserted by the same batch that
+			// opened it.
+			if p.skip.covers(b.Table.StartIndex, b.Table.StartIndex+1) {
+				p.Skipped++
+				continue
+			}
 			p.table(b.Table, cfg, unknown)
 		}
 	}

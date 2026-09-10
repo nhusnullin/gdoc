@@ -244,6 +244,10 @@ func TestRestyleArgumentsAreStrict(t *testing.T) {
 		{"--from given an empty value", []string{"restyle", fixtureDocID, "--from="}, "empty value"},
 		{"--from given another flag", []string{"restyle", fixtureDocID, "--from", "--dry-run"}, "another flag"},
 		{"--from twice", []string{"restyle", fixtureDocID, "--from", "a.json", "--from", "b.json"}, "given twice"},
+		{"--fields with no value", []string{"restyle", fixtureDocID, "--from", "a.json", "--fields"}, "needs a value"},
+		{"--fields given an empty value", []string{"restyle", fixtureDocID, "--from", "a.json", "--fields="}, "empty value"},
+		{"--fields given another flag", []string{"restyle", fixtureDocID, "--from", "a.json", "--fields", "--dry-run"}, "another flag"},
+		{"--fields twice", []string{"restyle", fixtureDocID, "--from", "a.json", "--fields", "a.json", "--fields", "b.json"}, "given twice"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -949,5 +953,391 @@ func TestRestyleReadsBackWhenABatchMayHaveLanded(t *testing.T) {
 	}
 	if rb["verified"] != false {
 		t.Errorf("read_back.verified = %v, want false: the checks holding does not make an unreadable answer readable", rb["verified"])
+	}
+}
+
+// The prelude, and the two phases it needs. Everything below is M7c: a run
+// naming --fields proposes the house template into the document as suggestions
+// and then styles the body directly, and those are two permissions rather than
+// one, so they are two policies and two sessions inside one command.
+
+// fieldsFile is the cover's thirteen values as `gdoc restyle --fields` reads
+// them. It is written out here rather than kept as a fixture because what a
+// test asks of it is the values it names.
+const fieldsFile = `{
+  "title": "Supplier register policy",
+  "doc_type": "Policy",
+  "version": "2.1",
+  "date": "2026-09-10",
+  "owner": "Head of Operations",
+  "classification": "Internal",
+  "revisions": [{"version": "2.1", "date": "2026-09-10", "author": "Nail",
+                 "change": "First issue"}]
+}`
+
+// afterThePrelude is the fixture as the fresh read between the phases sees it:
+// the same document on the revision the prelude batch left it on.
+func afterThePrelude(t *testing.T) string {
+	t.Helper()
+	return strings.Replace(readFixture(t, "single-tab.json"),
+		"ALm37BXsingleTab", "ALm37BXafterThePrelude", 1)
+}
+
+// preludeWire is a whole two-phase run: the read, the prelude batch, the fresh
+// read, the marker batch, the styling batch, and the three reads the read-back
+// makes. Every write answer is once, because the order of the three batches is
+// the thing most of these tests are about.
+func preludeWire(t *testing.T) *fakeWire {
+	t.Helper()
+	return &fakeWire{answers: []*answer{
+		{method: "GET", match: "docs.googleapis.com", json: readFixture(t, "single-tab.json"), once: true},
+		{method: "POST", match: ":batchUpdate", once: true,
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterThePrelude"}}`},
+		{method: "GET", match: "docs.googleapis.com", json: afterThePrelude(t), once: true},
+		{method: "POST", match: ":batchUpdate", once: true,
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheMarker"}}`},
+		{method: "POST", match: ":batchUpdate",
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheBatch"}}`},
+		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
+		{method: "GET", match: "/export?", bytes: witnessExport(t)},
+	}}
+}
+
+// batchOf is one write the fake saw, decoded far enough to say what kind of
+// requests it carried and what write mode it went out in.
+type batchOf struct {
+	Requests     []map[string]json.RawMessage `json:"requests"`
+	WriteControl struct {
+		WriteMode          string `json:"writeMode"`
+		RequiredRevisionID string `json:"requiredRevisionId"`
+	} `json:"writeControl"`
+}
+
+func batchesSent(t *testing.T, f *fakeWire) []batchOf {
+	t.Helper()
+	var out []batchOf
+	for _, w := range f.writes() {
+		var b batchOf
+		if err := json.Unmarshal(w.Body, &b); err != nil {
+			t.Fatalf("a write is not a batchUpdate body: %v", err)
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+// kinds is the request kinds one batch carried, once each and in the order they
+// were first seen.
+func (b batchOf) kinds() []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, r := range b.Requests {
+		for k := range r {
+			if !seen[k] {
+				seen[k] = true
+				out = append(out, k)
+			}
+		}
+	}
+	return out
+}
+
+func (b batchOf) carries(kind string) bool { return contains(b.kinds(), kind) }
+
+// The whole run: the prelude proposed, the marker written, the body styled, in
+// that order and in one command.
+func TestRestyleProposesThePreludeAndThenStyles(t *testing.T) {
+	// Arrange
+	f := stubWire(t, preludeWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --fields: %v (exit %d)", got, code)
+	}
+	batches := batchesSent(t, f)
+	if len(batches) != 3 {
+		t.Fatalf("the run sent %d batches, want the prelude, the marker and the styling", len(batches))
+	}
+	if batches[0].WriteControl.WriteMode != "SUGGEST" {
+		t.Errorf("the prelude batch went out in write mode %q, want SUGGEST: every character of the prelude is a proposal",
+			batches[0].WriteControl.WriteMode)
+	}
+	if !batches[0].carries("insertText") {
+		t.Errorf("the prelude batch carried %v, want the cover's own words", batches[0].kinds())
+	}
+	if batches[0].WriteControl.RequiredRevisionID != "ALm37BXsingleTab" {
+		t.Errorf("the prelude batch named revision %q, want the one the fresh read carried",
+			batches[0].WriteControl.RequiredRevisionID)
+	}
+	if !batches[1].carries("createNamedRange") || len(batches[1].Requests) != 1 {
+		t.Errorf("the second batch carried %v, want the marker on its own: a styling batch that fails must still leave the prelude marked",
+			batches[1].kinds())
+	}
+	if batches[1].WriteControl.WriteMode != "" {
+		t.Errorf("the marker batch went out in write mode %q, and createNamedRange cannot be a suggestion",
+			batches[1].WriteControl.WriteMode)
+	}
+	if batches[1].WriteControl.RequiredRevisionID != "ALm37BXafterThePrelude" {
+		t.Errorf("the marker batch named revision %q, want the one the prelude batch answered with",
+			batches[1].WriteControl.RequiredRevisionID)
+	}
+	if !batches[2].carries("updateDocumentStyle") {
+		t.Errorf("the third batch carried %v, want M7b's styling", batches[2].kinds())
+	}
+	if batches[2].WriteControl.WriteMode != "" {
+		t.Errorf("the styling batch went out in write mode %q, and M7b's styling is a direct edit",
+			batches[2].WriteControl.WriteMode)
+	}
+
+	data := dataOf(t, got)
+	pre, _ := data["prelude"].(map[string]any)
+	if pre == nil {
+		t.Fatalf("data carries no prelude object: %v", data)
+	}
+	if pre["paragraphs"] == float64(0) || pre["tables"] == float64(0) {
+		t.Errorf("prelude = %v, want the cover's paragraphs and the front matter's tables counted", pre)
+	}
+	if pre["marker_created"] != true {
+		t.Errorf("prelude.marker_created = %v, want the marker reported as written", pre["marker_created"])
+	}
+	if pre["replaced"] != nil {
+		t.Errorf("prelude.replaced = %v, want nothing replaced on a document carrying no marker", pre["replaced"])
+	}
+}
+
+// The one mistake that would undo this milestone's whole shape: the prelude
+// sent on the policy that opened direct edit. The two phases are two policies,
+// and the first of them grants nothing at all.
+func TestThePreludePhaseIsSentOnAPolicyThatGrantsNothing(t *testing.T) {
+	f := stubWire(t, preludeWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	if _, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields); code != 0 {
+		t.Fatalf("restyle failed: exit %d", code)
+	}
+	if len(f.policies) != 2 {
+		t.Fatalf("the run opened %d policies, want one per phase", len(f.policies))
+	}
+	edit := mustParse(t, "https://docs.googleapis.com/v1/documents/"+fixtureDocID+":batchUpdate")
+	style := []byte(`{"requests":[{"updateParagraphStyle":{"range":{"startIndex":1,"endIndex":7},` +
+		`"paragraphStyle":{"spaceAbove":{"magnitude":18,"unit":"PT"}},"fields":"spaceAbove"}}],` +
+		`"writeControl":{"requiredRevisionId":"ALm37BXsingleTab"}}`)
+	suggest := []byte(`{"requests":[{"insertText":{"text":"x","location":{"index":1}}}],` +
+		`"writeControl":{"writeMode":"SUGGEST","requiredRevisionId":"ALm37BXsingleTab"}}`)
+	marker := []byte(`{"requests":[{"createNamedRange":{"name":"gdoc:house-prelude",` +
+		`"range":{"startIndex":1,"endIndex":2}}}],"writeControl":{"requiredRevisionId":"x"}}`)
+
+	first, second := f.policies[0], f.policies[1]
+	if err := first.Judge("POST", edit, style); err == nil {
+		t.Error("the prelude phase's policy opened direct edit, which is the two phases collapsed into one")
+	}
+	if err := first.Judge("POST", edit, marker); err == nil {
+		t.Error("the prelude phase's policy carried a createNamedRange, and the marker is phase 2's")
+	}
+	if err := first.Judge("POST", edit, suggest); err != nil {
+		t.Errorf("the prelude phase must carry a SUGGEST batch with no grant at all: %v", err)
+	}
+	if err := second.Judge("POST", edit, style); err != nil {
+		t.Errorf("the styling phase's policy must carry a styling batch: %v", err)
+	}
+	if err := second.Judge("POST", edit, suggest); err == nil {
+		t.Error("the styling phase's policy carried an insertText, and nothing at that level may change a character")
+	}
+
+	// The bytes the run really sent, judged by the policy they really went out
+	// on. The three checks above are shapes written by hand, and this is the
+	// run itself: the prelude batch through a policy that granted nothing, and
+	// the marker and the styling through the one that granted.
+	writes := f.writes()
+	if len(writes) != 3 {
+		t.Fatalf("the run sent %d writes, want three", len(writes))
+	}
+	if err := first.Judge("POST", edit, writes[0].Body); err != nil {
+		t.Errorf("the guard refused the prelude batch on a policy with no grant, which is the whole claim of this milestone: %v", err)
+	}
+	for i, w := range writes[1:] {
+		if err := second.Judge("POST", edit, w.Body); err != nil {
+			t.Errorf("the guard refused write %d of phase 2: %v", i+2, err)
+		}
+	}
+	if err := second.Judge("POST", edit, writes[0].Body); err == nil {
+		t.Error("the granted policy carried the prelude batch, so the allowlist at that level is not the bound it is documented as")
+	}
+	if err := first.Judge("POST", edit, writes[2].Body); err == nil {
+		t.Error("the ungranted policy carried the styling batch, so a direct edit needs no grant")
+	}
+}
+
+// A failed phase 1 leaves the body alone. The document then carries whatever
+// the prelude batch left and nothing else, which is a document Nail can still
+// read, and the report says which phase stopped.
+func TestAFailedPreludePhaseDoesNotStyle(t *testing.T) {
+	f := stubWire(t, &fakeWire{answers: []*answer{
+		{method: "GET", match: "docs.googleapis.com", json: readFixture(t, "single-tab.json")},
+		{method: "POST", match: ":batchUpdate", err: errors.New("400: the prelude was refused")},
+	}})
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a failed prelude: %v (exit %d), want a refusal", got, code)
+	}
+	if err, _ := got["error"].(string); !strings.Contains(err, "prelude") {
+		t.Errorf("error = %q, want it to name the phase that stopped", err)
+	}
+	if n := len(f.writes()); n != 1 {
+		t.Errorf("the run sent %d writes, want the one prelude batch and nothing after it", n)
+	}
+	for _, p := range f.policies {
+		edit := mustParse(t, "https://docs.googleapis.com/v1/documents/"+fixtureDocID+":batchUpdate")
+		style := []byte(`{"requests":[{"updateParagraphStyle":{"range":{"startIndex":1,"endIndex":7},` +
+			`"paragraphStyle":{"spaceAbove":{"magnitude":18,"unit":"PT"}},"fields":"spaceAbove"}}]}`)
+		if err := p.Judge("POST", edit, style); err == nil {
+			t.Error("direct edit was opened on a run whose prelude phase never landed")
+		}
+	}
+}
+
+// --fields is the prelude, and the prelude is proposed into a document the
+// survey described. A run naming it without --from has asked for a write with
+// nothing to recheck the document against.
+func TestRestyleRefusesFieldsWithoutASurvey(t *testing.T) {
+	stubWire(t, applyWire(t))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--fields", fields)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("--fields alone: %v (exit %d), want a refusal", got, code)
+	}
+	err, _ := got["error"].(string)
+	if !strings.Contains(err, "--fields") || !strings.Contains(err, "--from") {
+		t.Errorf("error = %q, want it to name both flags", err)
+	}
+}
+
+// The survey writes nothing to a document, so a survey run naming the cover's
+// values has asked for two different things at once.
+func TestRestyleRefusesTheSurveyAndTheFieldsTogether(t *testing.T) {
+	stubWire(t, applyWire(t))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--dry-run", "--fields", fields)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("--dry-run --fields: %v (exit %d), want a refusal", got, code)
+	}
+	err, _ := got["error"].(string)
+	if !strings.Contains(err, "--fields") || !strings.Contains(err, "--dry-run") {
+		t.Errorf("error = %q, want it to name both flags", err)
+	}
+}
+
+// The fields file is read before a session is opened, so a file gdoc half
+// understands never reaches a document at all.
+func TestRestyleReadsTheFieldsFileStrictly(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"an unknown key", `{"title":"A policy","tile":"A policy"}`, "tile"},
+		{"a second object behind the first", `{"title":"A policy"}{"title":"Another"}`, "more than one JSON object"},
+		{"no title at all", `{"doc_type":"Policy"}`, "no title in the fields file"},
+		{"a revision with no version", `{"title":"A policy","revisions":[{"date":"2026-09-10"}]}`, "version"},
+		{"not JSON", `title: A policy`, "fields file"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := stubWire(t, applyWire(t))
+			from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+			fields := tempFile(t, "fields.json", c.body)
+
+			got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+			if code == 0 || got["ok"] != false {
+				t.Fatalf("%s: %v (exit %d), want a refusal", c.name, got, code)
+			}
+			if err, _ := got["error"].(string); !strings.Contains(err, c.want) {
+				t.Errorf("error = %q, want it to name %q", err, c.want)
+			}
+			assertNothingWasGranted(t, f)
+		})
+	}
+}
+
+// A fields file that is not there is the same refusal, and it names the path so
+// somebody can see which one gdoc looked for.
+func TestRestyleRefusesAFieldsFileItCannotRead(t *testing.T) {
+	f := stubWire(t, applyWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	missing := filepath.Join(t.TempDir(), "nowhere.json")
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", missing)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a missing fields file: %v (exit %d), want a refusal", got, code)
+	}
+	if err, _ := got["error"].(string); !strings.Contains(err, missing) {
+		t.Errorf("error = %q, want it to name the file", err)
+	}
+	assertNothingWasGranted(t, f)
+}
+
+// The M7b run, unchanged. A restyle with --from alone styles the body and
+// proposes nothing, opens one policy, and says nothing about a prelude.
+func TestRestyleWithoutFieldsIsStillTheStylingRun(t *testing.T) {
+	f := stubWire(t, applyWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from: %v (exit %d)", got, code)
+	}
+	batches := batchesSent(t, f)
+	if len(batches) != 1 {
+		t.Fatalf("the run sent %d batches, want M7b's one", len(batches))
+	}
+	if batches[0].WriteControl.WriteMode != "" {
+		t.Errorf("the styling batch went out in write mode %q, want none", batches[0].WriteControl.WriteMode)
+	}
+	for _, kind := range batches[0].kinds() {
+		if kind == "insertText" || kind == "createNamedRange" {
+			t.Errorf("the styling run sent a %s, and a run naming no --fields proposes nothing", kind)
+		}
+	}
+	if data := dataOf(t, got); data["prelude"] != nil {
+		t.Errorf("prelude = %v, want the field absent on a run that proposed none", data["prelude"])
+	}
+	if len(f.policies) != 1 {
+		t.Errorf("the run opened %d policies, want M7b's one", len(f.policies))
+	}
+}
+
+// The prelude phase is the one that goes first, and the styling is computed
+// from a read taken after it: the prelude moved every index the styling
+// requests name.
+func TestTheStylingIsComputedFromAReadTakenAfterThePrelude(t *testing.T) {
+	f := stubWire(t, preludeWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	if _, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields); code != 0 {
+		t.Fatalf("restyle failed: exit %d", code)
+	}
+	var order []string
+	for _, c := range f.calls {
+		switch {
+		case c.Method != "GET" && strings.Contains(c.URL, ":batchUpdate"):
+			order = append(order, "write")
+		case strings.Contains(c.URL, "docs.googleapis.com"):
+			order = append(order, "read")
+		}
+	}
+	if len(order) < 4 || order[0] != "read" || order[1] != "write" || order[2] != "read" {
+		t.Errorf("order = %v, want a read, the prelude, then a fresh read before anything else", order)
 	}
 }

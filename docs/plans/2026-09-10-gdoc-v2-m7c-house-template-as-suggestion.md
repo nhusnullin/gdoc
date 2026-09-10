@@ -512,21 +512,60 @@ a range the run did not grant is refused.
 
 ### Task 7: the command, and the two phases
 
-- [ ] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing;
+- [x] Test first in `go/cmd/gdoc/restyle_test.go`: strict argument parsing;
       `--fields` refused without `--from`; a run with `--from` alone still doing
       M7b's styling and nothing else; the survey and fields checks **before**
       either phase; and the envelope on each failure path.
-- [ ] **Two policies, two sessions, in one command.** Phase 1's policy grants
+- [x] **Two policies, two sessions, in one command.** Phase 1's policy grants
       nothing. Phase 2's grants `GrantInPlace`. A test asserts that the phase 1
       session has no in-place grant, because collapsing them is the one mistake
       that would undo this milestone's whole shape.
-- [ ] Phase 1 first, then a fresh read, then phase 2. The styling requests name
+      ➕ The test judges **the bytes the run really sent**, not a shape written
+      by hand beside it. `TestThePreludePhaseIsSentOnAPolicyThatGrantsNothing`
+      hands each recorded batch body to the policy it went out on, and asks the
+      two refusals as well as the two carries: the granted policy refuses the
+      prelude batch, and the ungranted one refuses the styling batch.
+- [x] Phase 1 first, then a fresh read, then phase 2. The styling requests name
       ranges and the prelude moved them.
-- [ ] **A failed phase 1 does not run phase 2**, and the report says which phase
+- [x] **A failed phase 1 does not run phase 2**, and the report says which phase
       stopped. A failed phase 2 after a successful phase 1 leaves a proposed
       prelude and an unstyled body, which is a document Nail can still act on.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc restyle --fields, in two phases"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc restyle --fields, in two phases"`
+
+**Three decisions this task took, and none of them is in the plan above.**
+
+⚠️ **Phase 2 walks past the span phase 1 wrote, and without that the milestone
+defeats itself.** Every paragraph `internal/prelude` proposes is a `NORMAL_TEXT`
+stating the cover's own sizes and colours in full, because inserted text takes
+the look of the text it lands beside. A styling phase reading the document after
+phase 1 finds those paragraphs and gives each of them the house body look, so
+the 26pt cover title Nail is being asked to accept is 11pt prose by the time he
+reads it. `restyle.TabRequestsExcept` takes the span and reports what it left
+alone as `planned.skipped`; `TabRequests` is that function with no span, so the
+M7b run is unchanged. The overlap is read rather than containment, and the
+reason is in `Span.covers`: a block half gdoc's words and half the author's is
+one no request can name without writing over one of them.
+
+⚠️ **The marker is phase 2's, it goes out in a batch of its own, and a marker
+that does not land stops the run.** `createNamedRange` is refused at every level
+but `LevelInPlace`, so the request cannot be sent on phase 1's policy at all.
+Its own batch ahead of the styling, because a styling batch that does not land
+still leaves a prelude Nail can accept, and a marked one is a prelude the next
+run can find: folded into the styling it would be lost with it. A failed marker
+is a proposed prelude gdoc has no record of writing, and the next run over one
+proposes a second cover in front of the first, so the run stops and the warning
+says to accept or reject before running again.
+
+**`restyle.Suggest` is `Apply` with one field, and one sentence.** The loop is
+the same because it wants the same three things: batches the guard can read
+whole, a revision id on every one of them, and a batch Docs accepted whose
+answer could not be read reported as itself. What changes is
+`writeControl.writeMode`, and what that changes is the recovery a run that
+stopped early prints: a suggested batch is rejected in the browser, not undone
+through the version history. `requiredRevisionId` and `writeMode` together are
+**unmeasured**, and Task 10's live run is what confirms them: Docs refusing the
+pair fails the prelude phase whole, which is the direction to be wrong in.
 
 ### Task 8: the read-back, and one report for two phases
 
