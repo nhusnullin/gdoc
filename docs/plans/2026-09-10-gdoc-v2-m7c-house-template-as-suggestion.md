@@ -289,34 +289,36 @@ character. Task 9 checks that claim rather than assuming it.
 | created directly over a pending insertion? | **yes**, id `kix.wi79lhqfq91l` |
 | what it covers while the insertion is pending | `gdoc:house-prelude [1,23)`, exactly the proposed line |
 | after the suggestion is **rejected** | **the marker is GONE**: no named range at all |
-| after the suggestion is **accepted** | ⚠️ **open, and it is Nail's**: gdoc cannot accept |
+| after the suggestion is **accepted** | **it survives**: same id, same `[1,23)`, now over the accepted text |
 | can gdoc accept its own suggestion? | **no**, and by design: the guard refuses `acceptSuggestion` at every level |
 
-Three of the four are good answers for M7c:
+**All four are good answers, and the accept row was read on 2026-09-10** after
+Nail accepted the probe's suggestion in the browser, through the read-only
+`TestLiveNamedRangeAfterAcceptedByHand`. It printed
+`gdoc:house-prelude [1,23) "SUGGESTED COVER TITLE "`. So:
 
 - The marker can be created over text that exists only as a proposal, so the
   first run can mark what it proposed.
 - It covers exactly the proposed line while that line is pending, so a second
   run reading the marker reads gdoc's own prelude and nothing of the author's.
-- A rejected prelude takes its marker with it. That is the best of the three
-  possible answers: the document goes back to having no prelude and no mark of
-  one, so the run after a rejection proposes cleanly with nothing to detect and
-  nothing to clean up.
+- **It survives the accept**, keeping its id and its range and now covering the
+  text the accept made real. So a second run finds gdoc's own prelude and knows
+  where it ends.
+- A rejected prelude takes its marker with it. The document goes back to having
+  no prelude and no mark of one, so the run after a rejection proposes cleanly
+  with nothing to detect and nothing to clean up.
 
-**The accept row is outstanding and Task 6 waits on it.** The document is
-`1D0ErMFgR3Gz3W_1pZ4IRWZDzfTGmVBFBP_wnNvfkSW0`, left in the test folder with the
-suggestion pending and the marker `kix.hio1q8ew49ro` over `[1,23)`. Nail accepts
-it in the browser, then:
+**Task 6 is therefore the replace-in-place design, not the fallback**, and
+Task 2's `AllowMarker` has a production caller. The two shapes a second run
+meets are a marker that is there, which it replaces, and no marker at all, which
+is either a document gdoc has never touched or one whose prelude was rejected,
+and both of those are proposed into cleanly. The third shape is a marker over a
+prelude still **pending**, which is neither: the plan's refusal stands there, and
+Task 6 tells Nail to accept or reject the one already in front of him.
 
-```
-GDOC_LIVE_TEST=1 GDOC_LIVE_ACCEPTED_DOC_ID=1D0ErMFgR3Gz3W_1pZ4IRWZDzfTGmVBFBP_wnNvfkSW0 \
-  go test ./internal/live -run TestLiveNamedRangeAfterAcceptedByHand -v
-```
-
-and the document is trashed by hand once the answer is written down. If the
-marker survives the accept, Task 6 is the replace-in-place design. If it does
-not, Task 6 is the fallback in the overview: no marker, and a second run refuses
-while a gdoc prelude is pending or already accepted, telling Nail which.
+The probe document `1D0ErMFgR3Gz3W_1pZ4IRWZDzfTGmVBFBP_wnNvfkSW0` is left in the
+test folder with the accepted line in it, for Nail to bin. gdoc does not trash
+it: nothing here holds a `--trash` command, and the answer is written down.
 
 ### Task 2: the one new guard door, and proof the prelude needs none
 

@@ -1620,3 +1620,49 @@ off the direct-edit branch alone would let a granted document take an
 something to prevent. They are now the design. So either a run styles and
 proposes through two policies, or that rule changes on purpose. It is a decision
 rather than a detail, and it is not made here.
+
+## 2026-09-10. A named range over a suggested insertion survives the accept, and vanishes with the reject.
+
+Serves principle 3. It is a measurement rather than a decision, and it is here
+because M7c's marker rests on it and nobody had asked.
+
+M7c proposes the house prelude rather than writing it, so the named range that
+marks gdoc's own prelude is created over text that exists only as a pending
+insertion. `TestLiveNamedRangeOverSuggestionProbe` asked Docs, one fresh
+document per case, for the reason the suggested-insert probe learned the hard
+way: a probe that measures its own leftovers answers about itself.
+
+| Question | Answer |
+|---|---|
+| created directly over a pending insertion? | yes, id `kix.wi79lhqfq91l` |
+| what it covers while the insertion is pending | exactly the proposed line, `[1,23)` |
+| after the suggestion is **rejected** | the marker is gone, no named range at all |
+| after the suggestion is **accepted** | it survives: same id, same range, now over the accepted text |
+
+The accept row was read separately, on 2026-09-10, and the reason it had to be
+is the part worth keeping. **gdoc cannot accept its own suggestion, and that is
+the guard working rather than a gap.** `judgeRequests` refuses every request kind
+whose name carries "suggestion" before it looks at the level, so a document the
+probe created a second ago is refused like anybody else's. `rejectSuggestion`
+has exactly one door, `AllowReject`, which `withdraw` already opens from the
+note's own record, so the reject case ran through it with the probe's own id.
+`acceptSuggestion` has no door. Opening one so that a probe could measure itself
+would be widening the guard for the tail rather than the dog, so the probe left
+its document in the test folder, printed the URL, and Nail accepted it in the
+browser the way he will accept a real prelude. The read-back is
+`TestLiveNamedRangeAfterAcceptedByHand`, which reads and writes nothing.
+
+**What it settles.** M7c's Task 6 is the replace-in-place design rather than the
+fallback, and `AllowMarker` has a production caller. A second run meets three
+shapes and each has an answer: a marker, which it replaces; no marker, which is
+a document gdoc never touched or one whose prelude was rejected, and both are
+proposed into cleanly; and a marker over a prelude still pending, which is
+refused, because accepting or rejecting the one already in front of him is
+Nail's and not gdoc's.
+
+**What it does not settle.** Whether the marker survives an accept the author
+makes one paragraph at a time, rather than the whole prelude at once. The probe
+accepted a single insertion. A prelude is many, and Docs numbers a partial
+accept differently. The milestone that meets a half-accepted prelude measures
+that; until then a marker whose range no longer covers a whole prelude is a
+shape nothing here has seen.
