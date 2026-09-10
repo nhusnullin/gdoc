@@ -2729,6 +2729,16 @@ cheap half of that acceptance, asking whether an in-place restyle keeps one
 comment attached to its words and one suggestion pending, which is a question any
 reviewed document can answer.
 
+`TestLivePreludeIsProposedNotWritten` is M7c's acceptance, and it needs
+`GDOC_LIVE_PRELUDE_DOC_ID`. It copies that document the same way, proposes the
+house prelude into the copy on a policy that granted nothing, sends the marker
+once **before** the grant to assert the guard refuses it, then grants and sends
+it again, and reads the whole thing back through `prelude.Verify`: every piece
+carrying a suggestion id, the marker over the span that was proposed, and the
+author's own text character for character what it was. It leaves the copy behind
+with its URL in the log, because whether the cover reads right is Nail's, in the
+document.
+
 Two more are M7c's, and both are probes that log rather than assert.
 `TestLiveSuggestedInsertProbe` sends one candidate request kind per case and
 records which of them Docs accepts as a suggestion: nine of ten, and the tenth is
@@ -2741,9 +2751,9 @@ suggestion, so the probe leaves that document in the folder and prints the URL,
 and `TestLiveNamedRangeAfterAcceptedByHand` reads it back once Nail has accepted
 it in the browser. That one is read-only and needs `GDOC_LIVE_ACCEPTED_DOC_ID`.
 
-Every write test but two writes only to documents it made: the ten-feature
-acceptance and the anchors one each copy a document they were named and never
-write to the original.
+Every write test but three writes only to documents it made: the ten-feature
+acceptance, the anchors one and the prelude acceptance each copy a document they
+were named and never write to the original.
 `TestTheLiveFixturesRenderWithNoNetwork` sits in the same file and asks for
 neither variable: both live tests render a note before they reach Drive, so a
 note that stopped rendering or a fixture path that moved would otherwise be

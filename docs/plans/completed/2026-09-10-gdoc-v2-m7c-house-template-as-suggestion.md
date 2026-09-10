@@ -664,24 +664,56 @@ and the read-only accepted-document reader are named.
 
 ### Task 10: the live acceptance, and the size delta
 
-- [ ] `TestLivePreludeIsProposedNotWritten` in `go/internal/live`, behind the two
+- [x] `TestLivePreludeIsProposedNotWritten` in `go/internal/live`, behind the two
       live variables: copy a document with `copyComments=true`, propose the
       prelude onto the copy, assert every piece came back carrying a suggestion
       id, assert the author's body text is byte-identical, and leave the copy
       for a person to look at.
-- [ ] Re-read the **original** on every path and assert its `revisionId` never
+- [x] Re-read the **original** on every path and assert its `revisionId` never
       moved, as the M7b acceptance does.
-- [ ] Record the result and the binary-size delta per platform under
+- [x] Record the result and the binary-size delta per platform under
       Post-Completion.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `git commit -m "test(v2): the prelude acceptance, and M7c landed"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `git commit -m "test(v2): the prelude acceptance, and M7c landed"`
+
+The test names its source document with `GDOC_LIVE_PRELUDE_DOC_ID`, which has no
+default for the reason `GDOC_LIVE_IDEAL_DOC_ID` has none: the run copies the
+whole of somebody's document, comments included, into gdoc's folder.
+
+Three things in it are the milestone stated as a live fact rather than plumbing.
+The prelude phase sends on a policy that granted nothing at all, which is what
+says the prelude needed no permission M7c added. The `createNamedRange` is sent
+once **before** `GrantInPlace` and `AllowMarker` and the refusal is asserted, so
+a policy that had quietly kept the copy at `LevelFull` fails the test rather
+than passing the whole acceptance through the door this milestone keeps shut.
+The read-back is `prelude.Verify`, the production one, because a second reader
+written for a test is a second rule that drifts from the one the skill reads.
+
+`copyDocument` was split into `copyDocumentNamed`, so the copy carries the
+milestone's own name in Drive and the parent rule stays in one room. Nothing
+else in `internal/live` changed.
 
 ## Post-Completion
 
 - Nail runs it on a real document, looks at the proposed cover, and accepts or
-  rejects it.
+  rejects it. `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 GDOC_LIVE_PRELUDE_DOC_ID=<id>
+  go test -run TestLivePreludeIsProposedNotWritten ./internal/live` is the run,
+  and it leaves the copy behind with its URL in the log. It has not been run
+  from here: the unattended run sets neither live variable, so what the test
+  asserts is written down and unmeasured until Nail runs it.
 - Task 1's table read by a person, and its answer recorded as a decision.
-- The binary-size delta per platform.
+- The binary-size delta per platform, measured 2026-09-10 against the merge base
+  8633881, both sides built with `CGO_ENABLED=0`:
+
+  | Platform | M7b | M7c | Delta |
+  |---|---|---|---|
+  | darwin/arm64 | 14.16 MB | 14.31 MB | +151 KB, +1.09% |
+  | darwin/amd64 | 15.14 MB | 15.30 MB | +158 KB, +1.07% |
+  | windows/amd64 | 14.98 MB | 15.14 MB | +156 KB, +1.06% |
+
+  About 150 KB per platform for the whole milestone, and no new module: the
+  three in `allowedModules` are what M5 left, and M7c added none. The cost is
+  `internal/prelude` and `internal/docsreq`'s own code.
 - Still outstanding from earlier milestones, and Nail's: M4's live session with a
   second account, M5's docx opened in Word, M6's live publish and live drift
   table, M7's live check that a real document agrees with `elements.json`, and
