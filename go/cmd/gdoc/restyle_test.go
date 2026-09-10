@@ -1831,3 +1831,49 @@ func TestAPreludePhaseThatStoppedSaysToRejectBeforeRunningAgain(t *testing.T) {
 			"before running again: unsaid, the next run proposes a second prelude in front of it", warnings)
 	}
 }
+
+// Every return between the prelude landing and the marker landing leaves the
+// whole prelude in the document with nothing marking it, which is the state the
+// next run puts a second cover in front of. Each of those returns names its own
+// failure, and none of those sentences says a word about the prelude.
+func TestAnUnmarkedPreludeSaysSoOnEveryPathThatLeavesOne(t *testing.T) {
+	cases := []struct {
+		name   string
+		break_ func(w *fakeWire)
+	}{
+		{"the fresh read failed", func(w *fakeWire) {
+			w.answers[2] = &answer{method: "GET", match: "docs.googleapis.com",
+				err: errors.New("the document could not be read"), once: true}
+		}},
+		{"the document grew a second tab", func(w *fakeWire) {
+			w.answers[2] = &answer{method: "GET", match: "docs.googleapis.com",
+				json: twoTabDocument, once: true}
+		}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			w := preludeWire(t)
+			c.break_(w)
+			stubWire(t, w)
+			from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+			fields := tempFile(t, "fields.json", fieldsFile)
+
+			// Act
+			got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+			// Assert
+			if code == 0 || got["ok"] != false {
+				t.Fatalf("a run that stopped after the prelude: %v (exit %d), want a refusal", got, code)
+			}
+			warnings := strings.Join(warningsOf(t, got), " | ")
+			if !strings.Contains(warnings, "nothing marks it") {
+				t.Errorf("warnings = %s, want the sentence saying the prelude landed unmarked: "+
+					"unsaid, the next run proposes a second prelude in front of it", warnings)
+			}
+			if !strings.Contains(warnings, "before running this again") {
+				t.Errorf("warnings = %s, want the recovery beside it", warnings)
+			}
+		})
+	}
+}

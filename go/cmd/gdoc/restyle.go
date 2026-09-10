@@ -430,6 +430,14 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	}
 	data.Prelude = pre
 
+	// Phase 1, and it goes out unprobed. What makes this a suggestion is
+	// writeMode, the field propose runs internal/probe about before every
+	// proposal, and the reason there is no probe here is that probe needs a
+	// folder to create its throwaway document in and restyle takes none.
+	// Giving it one is a second create door on a command that writes to the one
+	// document it was handed, which is Nail's decision rather than a refactor.
+	// What stands in its place is prelude.Verify's Written count, read back
+	// below: it names an unenrolled morning after the fact and never before it.
 	proposed, proposeErr := restyle.Suggest(ctx, r.session, r.id, res.Requests, d.RevisionID)
 	warns := proposed.Warnings
 	proposed.Warnings = nil
@@ -450,7 +458,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 		// the whole unmarked prelude may be there.
 		if proposed.Batches > 0 || proposed.MaybeApplied {
 			warns = append(warns, "the prelude was proposed in part and nothing marks it, so gdoc has no record of having written it: "+
-				"accept or reject what is in the document before running this again, or the next run proposes a second prelude in front of it")
+				acceptOrRejectFirst)
 		}
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: fmt.Sprintf(
 			"the prelude phase stopped, so the body was not styled: %v", proposeErr)}
@@ -463,7 +471,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	p2.AllowFile(r.id, guard.LevelSuggest)
 	s2, err := openSession(p2)
 	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(unmarkedPrelude(warns)...), Error: err.Error()}
 	}
 	r2 := &reach{id: r.id, session: s2}
 
@@ -472,7 +480,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	// computed from would name ranges that are now somebody else's words.
 	fresh, err := docs.Fetch(ctx, r2.session, r2.id)
 	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(unmarkedPrelude(append(warns, r2.warnings()...))...), Error: fmt.Sprintf(
 			"the prelude was proposed and the document could not be read again, so nothing was styled: %v", err)}
 	}
 	// The prelude phase's own last-batch warning, if it made one, said the
@@ -482,7 +490,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	warns = dropWarning(warns, restyle.RevisionUnconfirmedWarning)
 	data.RevisionID = fresh.RevisionID
 	if fresh.MultiTab() {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(unmarkedPrelude(append(warns, r2.warnings()...))...), Error: fmt.Sprintf(
 			"the document has %d tabs when read again, and a restyle styles a document with one", len(fresh.Tabs))}
 	}
 
@@ -559,7 +567,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 		}
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(append(warns, r2.warnings()...),
 			"the prelude was proposed and could not be marked, so gdoc may have no record of having written it: "+
-				"accept or reject the prelude in the browser before running this again, or the next run proposes a second one in front of it")...),
+				acceptOrRejectFirst)...),
 			Error: fmt.Sprintf("the prelude was proposed and %s, so nothing was styled: %v", what, markErr)}
 	}
 
@@ -608,6 +616,32 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 			before: prelude.AuthorText(d),
 			data:   pre,
 		}, data, append(r.warnings(), warns...)...)
+}
+
+// acceptOrRejectFirst is the recovery every path between phase 1 landing and
+// the marker landing has to print, and it is held once because two copies are
+// two sentences that drift. noRollback in internal/restyle is here for the same
+// reason.
+//
+// What it answers is one hazard with several routes into it. The prelude is in
+// the document and nothing records that gdoc put it there, so prelude.Decide on
+// the next run finds no marker, proposes at index 1, and puts a second cover in
+// front of the first. Saying it on the run that made the state is what stops
+// somebody discovering it on the run after.
+const acceptOrRejectFirst = "accept or reject the prelude in the browser before running this again, " +
+	"or the next run proposes a second prelude in front of it"
+
+// unmarkedPrelude is that sentence with what the run knows in front of it.
+//
+// It is called on every return between Suggest answering without error and the
+// marker batch answering. On all of them the whole prelude is in the document,
+// because Suggest sends it in one batch, and nothing marks it yet: the grant
+// and the marker request come later. Those returns each name their own failure,
+// a session that would not open, a read that failed, a second tab, and none of
+// those sentences says a word about the prelude standing unmarked behind them.
+func unmarkedPrelude(warns []string) []string {
+	return append(warns, "the prelude was proposed and nothing marks it yet, so gdoc has no record of having written it: "+
+		acceptOrRejectFirst)
 }
 
 // dropWarning is one sentence taken back out of a list, by value.

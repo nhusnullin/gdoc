@@ -403,6 +403,10 @@ is proposed, and the marker is the one thing written" for what it is for.
   replaces the second bar is reading the document back, both halves: the
   threads with their docx witness, the pending suggestion ids and the chips
   before and after, and the styling itself read back to see whether it landed.
+  **That sentence is about this level and not about the run.** M7c put a phase
+  in front of it that does make the `writeMode` claim, and that phase is
+  unprobed too: read "The prelude phase is unprobed, and the read-back is the
+  only bar" below before repeating this paragraph about a `--fields` run.
 
 ### Two allowlists over one request, the query and the headers
 
@@ -1318,6 +1322,24 @@ than a comment.** A SUGGEST `batchUpdate` carrying `insertText`, `insertTable`,
 `insertPageBreak`, `createParagraphBullets` and `deleteContentRange` on a
 handed-in document with no grant of any kind carries today, unchanged, because
 that is the shape `internal/propose` has sent every day since M3.
+
+**The prelude phase is unprobed, and the read-back is the only bar.** `propose`
+runs `internal/probe` before every proposal, because `writeMode` is a field gdoc
+supplies, it is absent from the public discovery document, and one morning the
+same call returned 200 and made a direct edit. Phase 1 makes that same claim, on
+a whole cover rather than one word, and it asks the question of no throwaway
+document first. So the M7b paragraph above, that there is nothing for a probe to
+test, is true of `LevelInPlace` and is not true of this phase.
+
+The reason is that the probe needs a folder to create its document in, through
+`AllowCreateIn`, and `restyle` takes no folder: giving it one is a flag, a
+second create door on a command whose whole shape is that it writes to the one
+document it was handed, and that is Nail's decision rather than a refactor. What
+stands in its place is `prelude.Verify`'s first field. Every piece of the
+prelude is read back and asked whether it carries a suggestion id, and a piece
+that does not is counted as `written`, which the section below calls the failure
+rather than a difference. So an unenrolled morning is caught after the fact and
+never before it, and the recovery is the document's own version history.
 
 **`AllowMarker` is the milestone's one new door, and it is `AllowReject`'s
 shape.** Per-run, one object, dying with the process, nothing writing it down
