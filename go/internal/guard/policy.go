@@ -58,7 +58,17 @@ type Policy struct {
 	createIn string          // folder id a create may target; empty means no creates
 	copyFrom string          // the one file files.copy may duplicate; empty means no copies
 	rejects  map[string]bool // suggestion ids a rejectSuggestion may name; empty means none
+	marker   *marker         // the one named range a createNamedRange may make; nil means none
 	warnings []string        // things the guard could not do quietly, for the command to report
+}
+
+// marker is the one named range this run may create, named exactly. It is a
+// value rather than a name alone because the range is where the danger is: a
+// named range is a label Docs keeps in step with its own edits, so one over the
+// author's prose would follow their words about for ever under gdoc's name.
+type marker struct {
+	name       string
+	start, end int
 }
 
 // NewPolicy returns a policy that refuses everything. A command opens it one id
@@ -89,6 +99,69 @@ func (p *Policy) mayReject(suggestionID string) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.rejects[suggestionID]
+}
+
+// AllowMarker names the one named range a createNamedRange request may make.
+//
+// M7c, and it is the milestone's only new permission. The house prelude is
+// proposed, so every character of it is a suggestion Nail accepts or rejects in
+// the browser. What cannot be a suggestion is the marker over it:
+// createNamedRange answered "Request does not support application as
+// suggestion" on 2026-09-10, measured by internal/live's suggest probe. So the
+// marker is written directly, and it is safe on its own terms because a named
+// range adds and removes no character.
+//
+// The grant is in AllowReject's shape: per-run, one object, dying with the
+// process. Nothing writes it down, nothing reads it from a file, and no flag
+// turns it on for every document. A second call replaces the first, because the
+// grant is one range and a caller naming two has made a mistake the guard must
+// not turn into two markers on somebody's document.
+//
+// It is not a door into the reachable set and it is not a level. The document
+// still has to be handed in and still has to be granted direct edit by
+// GrantInPlace, which is the one line that opens phase 2, and this opens one
+// request kind through that level's own allowlist.
+//
+// A grant the guard cannot read opens nothing, and says so on the envelope.
+// That is AllowFile's rule: an empty name or a range that does not end after it
+// starts is a caller that computed the marker wrongly, and resolving it to a
+// wider reach is the wrong direction to be wrong in.
+func (p *Policy) AllowMarker(name string, start, end int) {
+	switch {
+	case name == "":
+		p.note("a marker grant carries the name of the named range, and this one named none; nothing may be created")
+		p.revokeMarker()
+		return
+	case start < 0 || end <= start:
+		p.note("the marker grant for %q names the range [%d,%d), which does not end after it starts; nothing may be created", name, start, end)
+		p.revokeMarker()
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.marker = &marker{name: name, start: start, end: end}
+}
+
+// revokeMarker takes the grant back, and it is what a refused call leaves
+// behind rather than the grant standing before it.
+//
+// The two rules above are one rule read together: a second call replaces the
+// first, and a grant the guard cannot read opens nothing. A refusal that
+// returned without touching the field kept both halves of that promise only
+// while the first call was the only call, and left the earlier range live on
+// exactly the run whose caller has just shown it cannot compute one.
+func (p *Policy) revokeMarker() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.marker = nil
+}
+
+// grantedMarker is the range a createNamedRange may make, nil when none was
+// granted.
+func (p *Policy) grantedMarker() *marker {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.marker
 }
 
 // AllowFile puts a handed-in id in the set at the level it was handed in at,
@@ -870,6 +943,18 @@ func (p *Policy) judgeRequests(body []byte, lvl Level) error {
 			if lvl != LevelInPlace {
 				continue
 			}
+			if kind == "createNamedRange" {
+				// The second door through the allowlist, and it is
+				// AllowMarker's: one named range, spelled exactly, over the
+				// range this run was granted. It is here rather than on
+				// inPlaceKinds because the list is the four styling kinds and
+				// this is not one of them: it sets no property and it is
+				// bounded by a grant rather than by a field mask.
+				if err := p.checkGrantedMarker(raw); err != nil {
+					return err
+				}
+				continue
+			}
 			if !inPlaceKinds[kind] {
 				return refuse("%q is not one of the four styling requests a restyle may send. At the in-place level the allowlist is the bound, so a request kind that is not on it is refused whatever it does: %s", kind, inPlaceKindList)
 			}
@@ -906,19 +991,103 @@ func (p *Policy) checkGrantedReject(raw json.RawMessage) error {
 	return nil
 }
 
+// checkGrantedMarker judges the body of one createNamedRange against the run's
+// grant. The shape is exact: two fields, name and range, and a range of exactly
+// two indexes, all spelled the way Google's proto-JSON spells them. Read
+// judgeRequests for why exact, and checkGrantedReject for the same rule on the
+// other door.
+//
+// A field beside those is refused rather than carried, tabId and segmentId
+// included. Neither is a field this milestone writes: a restyle refuses a
+// document with more than one tab before either phase, and a prelude is
+// proposed into the body. A milestone that needs one adds it here on purpose,
+// having read what it does, which is the rule the whole guard is made of.
+func (p *Policy) checkGrantedMarker(raw json.RawMessage) error {
+	granted := p.grantedMarker()
+	if granted == nil {
+		return refuse("createNamedRange writes directly into the document, and this run granted no marker. The prelude itself is proposed, so a run that finds itself wanting this without the grant is one that has collapsed the two phases")
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return refuse("the createNamedRange in this batchUpdate cannot be read: %v", err)
+	}
+	if len(fields) != 2 {
+		return refuse("a createNamedRange carries exactly two fields, name and range, and this one carries %d", len(fields))
+	}
+	nameRaw, ok := fields["name"]
+	if !ok {
+		return refuse("a createNamedRange names the range in name, spelled exactly, and this one does not")
+	}
+	var name string
+	if err := json.Unmarshal(nameRaw, &name); err != nil || name != granted.name {
+		return refuse("createNamedRange names a range this run did not grant; the one marker it was granted is name %q", granted.name)
+	}
+	rangeRaw, ok := fields["range"]
+	if !ok {
+		return refuse("a createNamedRange names its span in range, spelled exactly, and this one does not")
+	}
+	var span map[string]json.RawMessage
+	if err := json.Unmarshal(rangeRaw, &span); err != nil {
+		return refuse("the range of this createNamedRange cannot be read as an object: %v", err)
+	}
+	if len(span) != 2 {
+		return refuse("the range of a createNamedRange carries exactly startIndex and endIndex, and this one carries %d fields", len(span))
+	}
+	start, ok := exactIndex(span["startIndex"])
+	if !ok {
+		return refuse("the startIndex of a createNamedRange is one whole number")
+	}
+	end, ok := exactIndex(span["endIndex"])
+	if !ok {
+		return refuse("the endIndex of a createNamedRange is one whole number")
+	}
+	if start != granted.start || end != granted.end {
+		return refuse("createNamedRange names the range [%d,%d), and the one marker this run granted is [%d,%d)", start, end, granted.start, granted.end)
+	}
+	return nil
+}
+
+// exactIndex reads one Docs index. Two rules, and both are the guard's own
+// rule that it must never be broader than the server. It reads through
+// json.Number rather than float64 so that a literal too big to be an index is
+// refused here rather than rounded into the granted one. And it refuses a
+// quoted number, which encoding/json reads into a json.Number happily while
+// Docs reads an index as a number: a "1" the guard measured against the grant
+// is a field the server may take another way.
+func exactIndex(raw json.RawMessage) (int, bool) {
+	if len(raw) == 0 || raw[0] == '"' {
+		return 0, false
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	var num json.Number
+	if err := dec.Decode(&num); err != nil {
+		return 0, false
+	}
+	n, err := num.Int64()
+	if err != nil || n < 0 || int64(int(n)) != n {
+		return 0, false
+	}
+	return int(n), true
+}
+
 // inPlaceKinds is the whole of what a restyle may send. Four request kinds,
 // each measured landing on a real document on 2026-09-09 by
 // internal/live/fidelity_test.go, and none of them able to change a single
 // character of what the author wrote.
 //
-// The measurement is not the allowlist, and two kinds show why.
-// createParagraphBullets lands, and the reference says the leading tabs that
-// set a bullet's nesting level "are removed by this request", so it deletes
-// text; the probe missed that because its content had no leading tabs.
-// createNamedRange lands too and is left out because M7b writes no checklist
-// and needs no range. Both are refused here.
+// The measurement is not the allowlist, and createParagraphBullets shows why.
+// It lands, and the reference says the leading tabs that set a bullet's nesting
+// level "are removed by this request", so it deletes text; the probe missed
+// that because its content had no leading tabs. It is refused here.
 //
-// Adding a fifth kind is a decision for Nail, and it answers
+// createNamedRange is not on this list either, and since M7c that is not the
+// same as being refused: it carries at this level when AllowMarker named the
+// one range it may make, judged by checkGrantedMarker in judgeRequests above.
+// It is off the list because the list is the four styling kinds, each bounded
+// by a field mask, and a named range sets no property to bound.
+//
+// Adding a kind is a decision for Nail, and it answers
 // TestNothingAtLevelInPlaceCanChangeACharacter rather than this list.
 var inPlaceKinds = map[string]bool{
 	"updateDocumentStyle":  true,

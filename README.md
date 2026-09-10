@@ -806,6 +806,78 @@ A document with more than one tab is refused before anything is sent. A style
 request names a range, and a range means nothing without saying which tab it is
 in.
 
+### Adding the house template as a suggestion
+
+```bash
+gdoc restyle <url> --dry-run > survey.json
+gdoc restyle <url> --from survey.json --fields fields.json
+```
+
+The same two runs, with one flag more. `--fields` adds the house cover, the
+three front-matter tables and the legend to the styling above, and **it adds
+them as a suggestion**. You accept them in the browser the way you accept any
+suggestion, or you reject them and the document is exactly as it was.
+
+That is the whole design rather than a caveat on it. The run has two
+permissions, not one. The template goes out in suggesting mode on a connection
+that was granted nothing at all, which is the same thing `propose` does every
+day. The styling goes out on a second one holding the direct-edit grant, for the
+four request kinds that cannot change a character. Neither half can do the
+other's job.
+
+`fields.json` is the cover's own values, and it is the same thirteen a note's
+front matter carries:
+
+```json
+{
+  "title": "Payment Services Policy",
+  "doc_type": "Policy",
+  "version": "1.2",
+  "date": "September 2026",
+  "owner": "Head of Compliance",
+  "classification": "Internal",
+  "revisions": [
+    {"version": "1.2", "date": "2026-09-01", "author": "N. Khusnullin", "change": "annual review"}
+  ]
+}
+```
+
+A restyle has no note behind it, so somebody has to write this file. `title` is
+required and gdoc will not invent one: a file without it is refused, and the
+skill asks you. A key it does not know is refused by name rather than ignored,
+because a misspelled key is a cover line that would silently never print.
+
+**Run it twice and you get one cover, not two.** gdoc puts a named range called
+`gdoc:house-prelude` over what it proposed, and that marker is its whole memory
+of having been here. A second run finds the marker and proposes replacing what
+it covers. If you rejected the first prelude the marker went with it, so the
+second run proposes cleanly. If the first prelude is still sitting there
+unaccepted, the run refuses and tells you to accept or reject it first: it will
+not propose deleting text that has never been written.
+
+The marker is the one thing written directly rather than suggested, and only
+because Docs refuses to apply it as a suggestion. It adds and removes no
+character.
+
+Afterwards gdoc reads the prelude back and asks three things: whether every
+piece of it carries a suggestion id, whether the marker covers what was
+proposed, and whether your own text is character for character what it was.
+`verified` is all three together. `verified: false` is not a failure, the same
+as everywhere else.
+
+The template's own `manual` list is reported beside the styling one, under
+`prelude`, and it names two things: the contents list, which no Docs request can
+create, and the column widths and row heights of the front-matter tables, which
+need two request kinds nobody has measured as suggestible, where a request Docs
+refuses takes the whole batch with it. The contents list is in both lists,
+because the styling half names it on every run. Heading numbering is not
+in this yet, and it is not blocked either: it needs its own answer to what a
+second run should do about a number gdoc already wrote.
+
+If the template phase fails, the styling phase does not run, and the report says
+which phase stopped. Whatever of the template reached the document is a
+suggestion, so rejecting it puts the document back.
+
 ### Writing into a document
 
 Four commands write into a document you handed in, and every change they make
@@ -813,7 +885,8 @@ there is a suggestion. None of them edits it, and the guard refuses the attempt
 inside the process: a `batchUpdate` on a document you handed in is carried only
 when the body says `writeMode: SUGGEST`. The one exception is the restyle above,
 which is granted a direct edit on one document for one run, for four request
-kinds that cannot change a character.
+kinds that cannot change a character, plus the one named range it marks its own
+proposed template with.
 
 ```bash
 gdoc probe --folder <folder url or id>
@@ -1177,7 +1250,14 @@ heading you type is the house one, needs something Google does not offer yet.
 
 **Lists and table layout in a restyle.** Bullets are left alone, because the
 request that sets one also deletes the tabs that set its nesting level, and
-column widths and row heights need two request kinds nobody has measured.
+column widths and row heights need two request kinds nobody has measured as
+suggestible, and a request Docs refuses takes the whole batch with it.
+
+**Heading numbering in a restyle.** The cover, the front-matter tables and the
+legend are proposed today. Numbering every heading can be proposed too, and what
+it still needs is an answer to what a second run does about a number gdoc
+already wrote, and to where each number goes, since a number sits inside your own
+sentence rather than beside it.
 
 **A live session over the whole folder.** Live works today on one document, the
 link you give it. Starting it once and having it watch every note you have

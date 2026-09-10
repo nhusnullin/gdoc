@@ -63,6 +63,30 @@ if [[ "$finding_count" -eq 0 ]]; then
     exit 0
 fi
 
+# Nail's rule, 2026-09-10: a round that finds nothing critical or major ends the
+# loop. M7c's external review went 11 findings (3 major), then 5 minor, then 5
+# minor, and the last two rounds cost about 45 minutes to move nothing that
+# would have blocked a merge. review_patience below it counts rounds that change
+# nothing, which is a different and slower test: Opus fixes something every
+# round, so the plateau is only recognised after it has been paid for twice.
+#
+# The minors are not thrown away. They are written beside the run for a person
+# to read, and the ones worth doing become backlog items rather than another
+# round of the loop.
+major_count=$(echo "$report_json" |
+    jq '[.findings[] | select(.severity == "critical" or .severity == "major")] | length')
+if [[ "$major_count" -eq 0 ]]; then
+    minors_file=".ralphex/progress/minors-${task}-${run}.txt"
+    echo "$report_json" | jq -r '
+      .findings[]
+      | "\(.file):\(.line) - \(.title): \(.body) (fix: \(.fix)) [\(.severity), \(.verdict)]"
+    ' > "$minors_file"
+    echo "NO ISSUES FOUND"
+    echo "note: $finding_count finding(s), none critical or major, so the loop ends here." >&2
+    echo "note: they are in $minors_file for a person to read." >&2
+    exit 0
+fi
+
 echo "$report_json" | jq -r '
   .findings[]
   | "\(.file):\(.line) - \(.title): \(.body) (fix: \(.fix)) [\(.severity), \(.verdict)]"

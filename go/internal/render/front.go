@@ -295,22 +295,11 @@ func (b *builder) table(spec house.Table) *etree.Element {
 	return tbl
 }
 
-// cellFill is the shading one cell carries.
-//
-// A cell that names a classification is the description beside one class, and
-// it is shaded only when the note declares that class. The master was captured
-// with Internal marked, so writing the config's fills verbatim marked every
-// document Internal whatever the note said, which is worse than leaving the
-// row blank. It is v1's mark_classification: clear every description cell,
-// then shade the chosen one.
+// cellFill is the shading one cell carries in the document being built. The
+// rule is house.Cell's, because internal/prelude shades the same cells when it
+// proposes the same table into a Google Doc.
 func (b *builder) cellFill(cell house.Cell) string {
-	if cell.Classification == "" {
-		return cell.Fill
-	}
-	if cell.Classification != b.fields.Classification {
-		return ""
-	}
-	return cell.Fill
+	return cell.FillFor(b.fields.Classification)
 }
 
 // rowIsLeftOut says whether a row the config marks with a list is dropped

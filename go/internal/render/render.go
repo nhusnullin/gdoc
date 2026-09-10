@@ -320,40 +320,17 @@ func (b *builder) headerRels() []byte {
 }
 
 // placeholder returns the note's own value for a named cover field, and
-// whether the note filled it in. A name the config uses and this package does
-// not know is refused: a placeholder silently left as the template's words
-// would publish a document reading "(Name of) Framework/Policy".
+// whether the note filled it in. The names and what each one reads are
+// internal/cover's, because internal/prelude writes the same cover as Docs
+// requests and a placeholder the two writers read differently is a cover that
+// reads two ways.
 func (b *builder) placeholder(name string) (string, bool) {
-	if name == "" {
+	value, filled, err := b.fields.Placeholder(name)
+	if err != nil {
+		b.fail("%s", err)
 		return "", false
 	}
-	var value string
-	switch name {
-	case "title":
-		value = b.fields.CoverTitle()
-	case "alt_title":
-		value = b.fields.CoverAltTitle()
-	case "running_head":
-		value = b.fields.RunningHead()
-	case "version":
-		value = b.fields.Version
-	case "date":
-		value = b.fields.Date
-	case "owner":
-		value = b.fields.Owner
-	case "last_approval":
-		value = b.fields.LastApproval
-	case "review_frequency":
-		value = b.fields.ReviewFrequency
-	case "board_ratification":
-		value = b.fields.BoardRatification
-	case "distribution":
-		value = b.fields.Distribution
-	default:
-		b.fail("placeholder %q is not a cover field", name)
-		return "", false
-	}
-	return value, value != ""
+	return value, filled
 }
 
 // text is one run's words: the note's own where it filled a placeholder in,

@@ -161,14 +161,23 @@ func join(title, docType string) string {
 type MissingTitle struct {
 	Candidate string
 	Source    string // "h1", "filename", or "" when there was nothing to draw on
+	// Where names the file the title was looked for in. Empty is a note's front
+	// matter, which is where every reading of this failure looked until the
+	// fields file arrived, so a caller building this error by hand keeps the
+	// sentence it already printed.
+	Where string
 }
 
 func (e *MissingTitle) Error() string {
-	if e.Candidate == "" {
-		return "no title in front matter, so the cover and the running head would be blank"
+	where := e.Where
+	if where == "" {
+		where = "front matter"
 	}
-	return fmt.Sprintf("no title in front matter, so the cover and the running head "+
-		"would be blank. The %s suggests %q", e.Source, e.Candidate)
+	if e.Candidate == "" {
+		return fmt.Sprintf("no title in %s, so the cover and the running head would be blank", where)
+	}
+	return fmt.Sprintf("no title in %s, so the cover and the running head "+
+		"would be blank. The %s suggests %q", where, e.Source, e.Candidate)
 }
 
 // TitleCandidate returns a title to propose and where it came from, "h1" or
@@ -266,7 +275,15 @@ func Read(src []byte) (Fields, []byte, error) {
 // matter shades. "Restricted (R)" written out in full is accepted, because that
 // is what the table itself says and somebody will copy it.
 func readClassification(fields map[string]ast.Node) (string, error) {
-	written := strings.TrimSpace(text(fields["classification"]))
+	return classificationLabel(text(fields["classification"]))
+}
+
+// classificationLabel turns what somebody wrote into the label the front matter
+// shades, and it is the one rule both readers of the cover's values ask.
+// "Restricted (R)" written out in full is accepted, because that is what the
+// table itself says and somebody will copy it.
+func classificationLabel(written string) (string, error) {
+	written = strings.TrimSpace(written)
 	key := written
 	if key == "" {
 		key = DefaultClassification
@@ -295,14 +312,19 @@ func names() []string {
 // is the shape a person guesses at, so both are read and anything else is
 // refused naming what was written.
 func readNumbering(fields map[string]ast.Node) (bool, error) {
-	written := strings.TrimSpace(text(fields["heading_numbering"]))
-	switch strings.ToLower(written) {
+	return numbering(text(fields["heading_numbering"]))
+}
+
+// numbering reads one written heading_numbering value, and it is the one rule
+// both readers of the cover's values ask. An unstated value is on.
+func numbering(written string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(written)) {
 	case "", "auto", "true", "yes", "on":
 		return true, nil
 	case "none", "false", "no", "off":
 		return false, nil
 	}
-	return false, fmt.Errorf("heading_numbering %q is not one of [auto none true false]", written)
+	return false, fmt.Errorf("heading_numbering %q is not one of %v", written, numberingWords)
 }
 
 // readRevisions reads the revision-history rows. A row needs its version, which
@@ -467,4 +489,42 @@ func longDate(value string) string {
 		}
 	}
 	return value
+}
+
+// placeholderFields is what a cover line or a run may name, and what each one
+// reads. It is here rather than in a writer because the house style is written
+// twice: internal/render puts it in a docx and internal/prelude proposes it
+// into a Google Doc, and a placeholder one writer knows and the other does not
+// is a cover that reads two ways.
+var placeholderFields = map[string]func(Fields) string{
+	"title":              func(f Fields) string { return f.CoverTitle() },
+	"alt_title":          func(f Fields) string { return f.CoverAltTitle() },
+	"running_head":       func(f Fields) string { return f.RunningHead() },
+	"version":            func(f Fields) string { return f.Version },
+	"date":               func(f Fields) string { return f.Date },
+	"owner":              func(f Fields) string { return f.Owner },
+	"last_approval":      func(f Fields) string { return f.LastApproval },
+	"review_frequency":   func(f Fields) string { return f.ReviewFrequency },
+	"board_ratification": func(f Fields) string { return f.BoardRatification },
+	"distribution":       func(f Fields) string { return f.Distribution },
+}
+
+// Placeholder is the author's own value for a named cover field, and whether
+// they filled it in. An empty name is not a placeholder: a line that names none
+// prints the template's own words.
+//
+// A name this package does not hold is an error rather than an empty value. A
+// placeholder silently left as the template's words publishes a document
+// reading "(Name of) Framework/Policy", which is the failure the whole
+// mechanism exists to stop.
+func (f Fields) Placeholder(name string) (string, bool, error) {
+	if name == "" {
+		return "", false, nil
+	}
+	read, ok := placeholderFields[name]
+	if !ok {
+		return "", false, fmt.Errorf("placeholder %q is not a cover field", name)
+	}
+	value := read(f)
+	return value, value != "", nil
 }

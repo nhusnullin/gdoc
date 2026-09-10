@@ -377,6 +377,12 @@ func TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone(t *testing.T) {
 	if got.Batches != 3 {
 		t.Errorf("Batches = %d, want 3", got.Batches)
 	}
+	// A revision the loop read for is a revision Docs named, so the flag that
+	// sends the caller to read for one stays off. A caller that reads it as set
+	// here makes a fourth request for a revision it already has.
+	if got.RevisionUnconfirmed {
+		t.Error("RevisionUnconfirmed is set on a run whose every batch answered with a revision the loop went on to use")
+	}
 }
 
 // The read that stands in for a missing revision can fail, and then the run has
@@ -421,6 +427,14 @@ func TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(got.Warnings, " "), "revision") {
 		t.Errorf("the last answer named no revision, and the warnings must say so: %v", got.Warnings)
+	}
+	// The flag, and it is what the caller acts on rather than the sentence. A
+	// marker batch is the last batch of its own run, and the styling phase that
+	// follows it is sent against RevisionID: read as confirmed, that batch is
+	// refused as stale and isStale names a third party for a revision gdoc
+	// itself moved.
+	if !got.RevisionUnconfirmed {
+		t.Error("RevisionUnconfirmed = false on a run whose last answer named no revision id: a caller reading only the warning cannot go and read for one")
 	}
 }
 
@@ -469,7 +483,7 @@ func TestBatchesAreSizedUnderTheGuardsPeek(t *testing.T) {
 			t.Errorf("batch %d is empty, and a batch with no requests is a request made for no reason", i+1)
 		}
 		total += len(b)
-		body, err := batchBody(b, "rev1")
+		body, err := batchBody(b, "rev1", "")
 		if err != nil {
 			t.Fatalf("a batch must marshal: %v", err)
 		}
@@ -501,7 +515,7 @@ func TestOneRequestOverTheCeilingIsRefusedByName(t *testing.T) {
 // judging it there is what keeps the two from drifting apart in silence: a
 // batch carrying writeControl is a shape no test judged before this one.
 func TestTheGuardCarriesTheBatchTheLoopBuilds(t *testing.T) {
-	body, err := batchBody(threeRequests(), "rev1")
+	body, err := batchBody(threeRequests(), "rev1", "")
 	if err != nil {
 		t.Fatalf("the batch must marshal: %v", err)
 	}
@@ -583,5 +597,112 @@ func TestALostAnswerNamingTheRevisionFieldIsNotAStaleRevision(t *testing.T) {
 	}
 	if strings.Contains(joined, "the document is as it was") {
 		t.Errorf("a batch that may be in the document must never be reported as a document nothing reached: %v", got.Warnings)
+	}
+}
+
+// Suggest is the same loop with one field added, and these are the three things
+// that field changes: what goes out, what the guard makes of it, and what a run
+// that stopped early tells somebody to do about it.
+
+// insertRequests are the prelude's shape rather than a restyle's: they change
+// characters, which is exactly why they may only ever go out as suggestions.
+func insertRequests() []map[string]any {
+	return []map[string]any{
+		{"insertText": map[string]any{"text": "A policy\n", "location": map[string]any{"index": 1}}},
+		{"updateParagraphStyle": map[string]any{"range": map[string]any{"startIndex": 1, "endIndex": 10}, "paragraphStyle": map[string]any{"alignment": "CENTER"}, "fields": "alignment"}},
+	}
+}
+
+func TestASuggestedBatchCarriesTheModeAndTheRevision(t *testing.T) {
+	// Arrange
+	s := &scripted{answers: []scriptedAnswer{{revision: "rev2"}}}
+
+	// Act
+	out, err := Suggest(context.Background(), s, "DOC1", insertRequests(), "rev1")
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Suggest: %v", err)
+	}
+	if out.Batches != 1 || out.Requests != 2 {
+		t.Errorf("applied = %+v, want one batch of two requests", out)
+	}
+	if len(s.posts) != 1 {
+		t.Fatalf("the loop sent %d batches, want one", len(s.posts))
+	}
+	var control struct {
+		WriteMode          string `json:"writeMode"`
+		RequiredRevisionID string `json:"requiredRevisionId"`
+	}
+	if err := json.Unmarshal(s.posts[0]["writeControl"], &control); err != nil {
+		t.Fatalf("the batch carried no readable writeControl: %v", err)
+	}
+	if control.WriteMode != "SUGGEST" {
+		t.Errorf("writeMode = %q, want SUGGEST", control.WriteMode)
+	}
+	if control.RequiredRevisionID != "rev1" {
+		t.Errorf("requiredRevisionId = %q, want rev1: a suggested batch is still refused on a document that moved",
+			control.RequiredRevisionID)
+	}
+}
+
+// A direct batch says nothing about a write mode, and that is what makes the
+// two functions two: a caller cannot get the prelude out through Apply.
+func TestADirectBatchNamesNoWriteMode(t *testing.T) {
+	s := &scripted{answers: []scriptedAnswer{{revision: "rev2"}}}
+	if _, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1"); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if _, named := s.posts[0]["writeControl"]; !named {
+		t.Fatal("the batch carried no writeControl at all")
+	}
+	if strings.Contains(string(s.posts[0]["writeControl"]), "writeMode") {
+		t.Errorf("writeControl = %s, want no write mode on a direct edit", s.posts[0]["writeControl"])
+	}
+}
+
+// The guard is what holds the mode, not this package. A document handed in with
+// no grant of any kind carries the prelude's own batch, and refuses the same
+// requests sent directly.
+func TestTheGuardCarriesASuggestedBatchWithNoGrantAndRefusesADirectOne(t *testing.T) {
+	suggested, err := batchBody(insertRequests(), "rev1", "SUGGEST")
+	if err != nil {
+		t.Fatalf("the batch must marshal: %v", err)
+	}
+	direct, err := batchBody(insertRequests(), "rev1", "")
+	if err != nil {
+		t.Fatalf("the batch must marshal: %v", err)
+	}
+	p := guard.NewPolicy()
+	p.AllowFile("DOC1", guard.LevelSuggest)
+	u, err := url.Parse(BatchURL("DOC1"))
+	if err != nil {
+		t.Fatalf("the URL must parse: %v", err)
+	}
+	if err := p.Judge("POST", u, suggested); err != nil {
+		t.Errorf("the prelude needs no permission this milestone added: %v", err)
+	}
+	if err := p.Judge("POST", u, direct); err == nil {
+		t.Error("the same requests sent directly must be refused: nothing may write a character on gdoc's own authority")
+	}
+}
+
+// What a run that stopped early leaves behind is a proposal, so the sentence it
+// prints is a rejection rather than the version history. Sending somebody to
+// undo a suggestion by hand is the wrong recovery for the right problem.
+func TestASuggestedRunThatStoppedSaysToRejectRatherThanToUndo(t *testing.T) {
+	oneRequestPerBatch(t, insertRequests())
+	s := &scripted{answers: []scriptedAnswer{{revision: "rev2"}, {err: errors.New("500: nothing came back")}}}
+
+	out, err := Suggest(context.Background(), s, "DOC1", insertRequests(), "rev1")
+	if err == nil {
+		t.Fatal("a batch that did not land must be an error")
+	}
+	said := strings.Join(out.Warnings, " | ")
+	if !strings.Contains(said, "rejecting it in the browser") {
+		t.Errorf("warnings = %q, want the recovery a proposal has", said)
+	}
+	if strings.Contains(said, "version history") {
+		t.Errorf("warnings = %q, want no version history: nothing here was written directly", said)
 	}
 }

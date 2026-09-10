@@ -204,12 +204,21 @@ func restyleCopy(t *testing.T, ctx context.Context, copyID string) ([]map[string
 // the guard's parent check refuses it.
 func copyDocument(t *testing.T, ctx context.Context, s *gapi.Session, src, folder string) string {
 	t.Helper()
+	return copyDocumentNamed(t, ctx, s, src, folder, "gdoc M7b acceptance copy")
+}
+
+// copyDocumentNamed is copyDocument with the name the copy carries in Drive.
+// One copier rather than two, because the parent rule and the id check are the
+// same rule for every caller and two copies of them are two chances for one to
+// start naming a folder gdoc was never given.
+func copyDocumentNamed(t *testing.T, ctx context.Context, s *gapi.Session, src, folder, label string) string {
+	t.Helper()
 	var made struct {
 		ID string `json:"id"`
 	}
 	url := "https://www.googleapis.com/drive/v3/files/" + src + "/copy?copyComments=true&fields=id&supportsAllDrives=true"
 	body := map[string]any{
-		"name":    "gdoc M7b acceptance copy " + time.Now().UTC().Format(time.RFC3339),
+		"name":    label + " " + time.Now().UTC().Format(time.RFC3339),
 		"parents": []string{folder},
 	}
 	if err := s.PostJSON(ctx, url, body, &made); err != nil {

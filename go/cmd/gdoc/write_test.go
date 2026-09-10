@@ -64,6 +64,11 @@ type fakeWire struct {
 	calls    []wireCall
 	warnings []string
 	policy   *guard.Policy
+	// policies is every policy the run opened, in order. A command that runs
+	// in two phases opens one per phase, and which grant each of them carries
+	// is the whole shape of that command: policy alone is the last one, which
+	// cannot say what the first was allowed to do.
+	policies []*guard.Policy
 	// bytesCtx is the context the last GetBytes was made on. The docx export
 	// is the one read that happens after a wait, so it is the one a test asks
 	// what it was bounded by. bytesAt is when that call was made, because a
@@ -175,6 +180,7 @@ func stubWire(t *testing.T, f *fakeWire) *fakeWire {
 	old := openSession
 	openSession = func(p *guard.Policy) (session, error) {
 		f.policy = p
+		f.policies = append(f.policies, p)
 		return f, nil
 	}
 	t.Cleanup(func() { openSession = old })

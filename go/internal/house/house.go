@@ -325,6 +325,30 @@ type Cell struct {
 	Paragraphs     []CellParagraph `yaml:"paragraphs"`
 }
 
+// FillFor is the shading this cell carries in a document declaring the named
+// classification.
+//
+// A cell that names a classification is the description beside one class, and
+// it is shaded only when the document declares that class. The master was
+// captured with Internal marked, so writing the file's fills verbatim marked
+// every document Internal whatever the note said, which is worse than leaving
+// the row blank. It is v1's mark_classification: clear every description cell,
+// then shade the chosen one.
+//
+// The rule is here rather than in a writer because the house style is written
+// twice, once as a docx by internal/render and once as Docs requests by
+// internal/prelude, and a document that is marked Internal in one and unmarked
+// in the other is the failure the mechanism exists to stop.
+func (c Cell) FillFor(classification string) string {
+	if c.Classification == "" {
+		return c.Fill
+	}
+	if c.Classification != classification {
+		return ""
+	}
+	return c.Fill
+}
+
 // CellParagraph is one paragraph inside a table cell.
 type CellParagraph struct {
 	Runs              []Run    `yaml:"runs"`
