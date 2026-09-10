@@ -354,9 +354,9 @@ func TestAnImageIsReadAndSizedToTheColumn(t *testing.T) {
 		t.Errorf("the image part is %q with %d bytes", out.Media[0].Name, len(out.Media[0].Data))
 	}
 	got := serialise(t, out.Blocks)
-	// 493.18pt of usable width is 6263386 EMU: a picture wider than the column
+	// 493.18pt of usable width is 6263330 EMU: a picture wider than the column
 	// is scaled to exactly that.
-	if !strings.Contains(got, `cx="6263386"`) {
+	if !strings.Contains(got, `cx="6263330"`) {
 		t.Errorf("the picture was not sized to the text column:\n%s", got)
 	}
 }
@@ -365,7 +365,7 @@ func TestAnImageIsReadAndSizedToTheColumn(t *testing.T) {
 func TestASmallImageKeepsItsOwnSize(t *testing.T) {
 	out := walk(t, "![A badge](badge.png)\n")
 	got := serialise(t, out.Blocks)
-	if strings.Contains(got, `cx="6263386"`) {
+	if strings.Contains(got, `cx="6263330"`) {
 		t.Errorf("a small picture was stretched to the column:\n%s", got)
 	}
 }

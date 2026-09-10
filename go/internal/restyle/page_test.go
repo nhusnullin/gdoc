@@ -78,15 +78,15 @@ func TestThePageSizeIsTheHouseGeometry(t *testing.T) {
 		t.Fatalf("the documentStyle carries no pageSize: %v", ds)
 	}
 	w, unit := dimension(t, size, "width")
-	if w != 595.28 {
-		t.Errorf("page width is %v, want 595.28 (house says %v)", w, cfg.Page.WidthPt)
+	if w != 595.2755905511811 {
+		t.Errorf("page width is %v, want A4's 595.2755905511811 (house says %v)", w, cfg.Page.WidthPt)
 	}
 	if unit != "PT" {
 		t.Errorf("page width is in %q, want PT", unit)
 	}
 	h, unit := dimension(t, size, "height")
-	if h != 841.89 {
-		t.Errorf("page height is %v, want 841.89 (house says %v)", h, cfg.Page.HeightPt)
+	if h != 841.8897637795275 {
+		t.Errorf("page height is %v, want A4's 841.8897637795275 (house says %v)", h, cfg.Page.HeightPt)
 	}
 	if unit != "PT" {
 		t.Errorf("page height is in %q, want PT", unit)

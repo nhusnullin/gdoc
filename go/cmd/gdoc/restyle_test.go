@@ -612,8 +612,8 @@ const styledDocument = `{
   "revisionId": "ALm37BXafterTheBatch",
   "tabs": [{"tabProperties": {"tabId": "t.0"}, "documentTab": {
     "documentStyle": {
-      "pageSize": {"width": {"magnitude": 595.28, "unit": "PT"},
-                   "height": {"magnitude": 841.89, "unit": "PT"}},
+      "pageSize": {"width": {"magnitude": 595.2755905511812, "unit": "PT"},
+                   "height": {"magnitude": 841.8897637795277, "unit": "PT"}},
       "marginTop": {"magnitude": 62.35, "unit": "PT"},
       "marginBottom": {"magnitude": 51, "unit": "PT"},
       "marginLeft": {"magnitude": 51.05, "unit": "PT"},

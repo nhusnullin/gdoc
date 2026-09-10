@@ -5,8 +5,8 @@ meta:
     in Drive.
 page:
   size: A4
-  width_pt: 595.28
-  height_pt: 841.89
+  width_pt: 595.2755905511811
+  height_pt: 841.8897637795275
   margin_top_pt: 62.35
   margin_bottom_pt: 51
   margin_left_pt: 51.05
