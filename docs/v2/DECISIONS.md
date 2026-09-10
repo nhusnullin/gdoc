@@ -1480,3 +1480,44 @@ the envelope's warnings on every path that stops early. A batch Docs refused on
 a moved revision is never retried: retrying against a fresh revision would be
 gdoc styling a document somebody is editing, which is the exact case
 `writeControl.requiredRevisionId` exists to refuse.
+
+## 2026-09-10. In-place styling preserves anchors and pending suggestions, measured on a real document.
+
+Serves principle 3. This is the measurement M7b rests on, made against Google
+rather than reasoned about, and it is the first time this code has asked.
+
+**The run.** A copy of a real one-tab policy document, carrying one comment
+anchored to its words and one pending suggestion, restyled in place with 181
+styling requests in one batch: 49 paragraphs, 125 runs, 75 cells across 6
+tables. Before and after, read through the docx export because `comments.list`
+reports a destroyed anchor as healthy:
+
+| | threads | anchored | pending |
+|---|---|---|---|
+| before | 1 | 1 | `suggest.r1tnorocsz3h` |
+| after | 1 | 1 | `suggest.r1tnorocsz3h` |
+
+Nothing moved. That is the 2026-08-29 measurement holding from the other side:
+replacing a document's body destroyed 100% of comment anchors, 355 of 355
+characters across three anchors, and recreated every suggestion id. In-place
+styling destroyed none, and the suggestion kept its own id rather than being
+recreated under a new one.
+
+**The guard refused before the grant, in the same run.** `restyleCopy` sends one
+styling request before `GrantInPlace` and requires a `guard refused` error back.
+It got one. So the direct-edit door shut since M1 is really shut until one line
+in one command opens it for one id, and that is measured rather than asserted.
+
+**The source never moved.** Same revision id before and after, asserted on every
+path out including the failing ones. The 2026-08-29 rule, held.
+
+**The cheap acceptance is the one that gets run, and that is the decision here.**
+`TestLiveRestylePreservesTenFeatures` needs a document holding all ten of SPEC
+item 5's features, which is a document somebody builds by hand and keeps intact,
+and on 2026-09-10 the document it was pointed at held none of them and carried
+two tabs, which a restyle refuses outright. So it has never run.
+`TestLiveRestyleKeepsAnchorsAndSuggestions` needs one anchored comment and one
+pending suggestion, which is any document somebody has reviewed, and it answers
+the question the milestone actually rests on. Both stay. An acceptance nobody
+can run is not an acceptance, and the ten-feature run is still the fuller
+answer for the day somebody rebuilds the document.
