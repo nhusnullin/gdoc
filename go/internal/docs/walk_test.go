@@ -43,6 +43,19 @@ func runText(p *Paragraph) string {
 	return s
 }
 
+// firstTable is the first table of a body, which every table test here reads
+// one of.
+func firstTable(t *testing.T, bs []Block) *Table {
+	t.Helper()
+	for _, b := range bs {
+		if b.Table != nil {
+			return b.Table
+		}
+	}
+	t.Fatal("no table in this body")
+	return nil
+}
+
 func TestDocumentHeaderFields(t *testing.T) {
 	d := fixture(t, "single-tab.json")
 	if d.ID != "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd" {
@@ -126,17 +139,12 @@ func TestHeadingsAndBulletsCarryTheirStyle(t *testing.T) {
 }
 
 func TestTableTextLandsInCellsInReadingOrder(t *testing.T) {
-	var tbl Table
-	for _, b := range fixture(t, "single-tab.json").Tabs[0].Body {
-		if b.Table != nil {
-			tbl = b.Table
-		}
-	}
-	if len(tbl) != 2 {
-		t.Fatalf("len(rows) = %d, want 2", len(tbl))
+	tbl := firstTable(t, fixture(t, "single-tab.json").Tabs[0].Body)
+	if len(tbl.Rows) != 2 {
+		t.Fatalf("len(rows) = %d, want 2", len(tbl.Rows))
 	}
 	want := [][]string{{"Control\n", "Owner\n"}, {"Register review\n", "Operations\n"}}
-	for r, row := range tbl {
+	for r, row := range tbl.Rows {
 		if len(row) != 2 {
 			t.Fatalf("row %d has %d cells, want 2", r, len(row))
 		}
@@ -149,6 +157,41 @@ func TestTableTextLandsInCellsInReadingOrder(t *testing.T) {
 				t.Errorf("cell %d,%d = %q, want %q", r, c, got, want[r][c])
 			}
 		}
+	}
+}
+
+// TestATableCarriesTheIndexAWriteNeeds pins the one field of a table no
+// projection reads. A write names a table by tableStartLocation, so a caller
+// holding only the rows cannot address the table it has just walked: M7b's
+// restyle styles cells, and the rows alone say nothing about where they are.
+func TestATableCarriesTheIndexAWriteNeeds(t *testing.T) {
+	tbl := firstTable(t, fixture(t, "single-tab.json").Tabs[0].Body)
+	if tbl.StartIndex != 184 {
+		t.Errorf("table start index = %d, want 184", tbl.StartIndex)
+	}
+}
+
+// TestANestedTableCarriesItsOwnIndex is the same rule one level in. A cell
+// holds blocks, so a table inside one is walked by the same function, and its
+// index has to be the cell's element rather than the outer table's: a request
+// naming the outer table's index would style the wrong table.
+func TestANestedTableCarriesItsOwnIndex(t *testing.T) {
+	const raw = `{"documentId":"D1","tabs":[{"tabProperties":{"tabId":"t.0"},"documentTab":{"body":{"content":[
+		{"startIndex":1,"endIndex":40,"table":{"tableRows":[{"tableCells":[{"content":[
+			{"startIndex":5,"endIndex":30,"table":{"tableRows":[{"tableCells":[{"content":[
+				{"startIndex":7,"endIndex":13,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},"elements":[
+					{"startIndex":7,"endIndex":13,"textRun":{"content":"Inner\n","textStyle":{}}}]}}]}]}]}}]}]}]}}]}}}]}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	outer := firstTable(t, d.Tabs[0].Body)
+	if outer.StartIndex != 1 {
+		t.Errorf("outer table start index = %d, want 1", outer.StartIndex)
+	}
+	inner := firstTable(t, outer.Rows[0][0].Blocks)
+	if inner.StartIndex != 5 {
+		t.Errorf("inner table start index = %d, want 5", inner.StartIndex)
 	}
 }
 

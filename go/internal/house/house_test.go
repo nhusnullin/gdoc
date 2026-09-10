@@ -31,11 +31,11 @@ func TestLoadReadsTheEmbeddedFile(t *testing.T) {
 
 func TestPageIsA4InPoints(t *testing.T) {
 	cfg := load(t)
-	if cfg.Page.WidthPt != 595.28 {
-		t.Errorf("page.width_pt = %v, want 595.28", cfg.Page.WidthPt)
+	if cfg.Page.WidthPt != 595.2755905511811 {
+		t.Errorf("page.width_pt = %v, want A4's 595.2755905511811", cfg.Page.WidthPt)
 	}
-	if cfg.Page.HeightPt != 841.89 {
-		t.Errorf("page.height_pt = %v, want 841.89", cfg.Page.HeightPt)
+	if cfg.Page.HeightPt != 841.8897637795275 {
+		t.Errorf("page.height_pt = %v, want A4's 841.8897637795275", cfg.Page.HeightPt)
 	}
 	if cfg.Page.MarginTopPt != 62.35 {
 		t.Errorf("page.margin_top_pt = %v, want 62.35", cfg.Page.MarginTopPt)
@@ -218,8 +218,8 @@ func TestLoadFileReadsACopyOfTheEmbeddedFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFile: %v", err)
 	}
-	if cfg.Page.WidthPt != 595.28 {
-		t.Errorf("page.width_pt = %v, want 595.28", cfg.Page.WidthPt)
+	if cfg.Page.WidthPt != 595.2755905511811 {
+		t.Errorf("page.width_pt = %v, want A4's 595.2755905511811", cfg.Page.WidthPt)
 	}
 	if len(cfg.FrontMatter) != 13 {
 		t.Errorf("front_matter has %d blocks, want 13", len(cfg.FrontMatter))

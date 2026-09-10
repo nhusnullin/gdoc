@@ -55,7 +55,7 @@
     <w:r>
       <w:drawing>
         <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
-          <wp:extent cx="6263386" cy="3523155"/>
+          <wp:extent cx="6263330" cy="3523123"/>
           <wp:docPr id="1" name="Picture 1" descr=""/>
           <wp:cNvGraphicFramePr>
             <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
@@ -76,7 +76,7 @@
                 <pic:spPr>
                   <a:xfrm>
                     <a:off x="0" y="0"/>
-                    <a:ext cx="6263386" cy="3523155"/>
+                    <a:ext cx="6263330" cy="3523123"/>
                   </a:xfrm>
                   <a:prstGeom prst="rect">
                     <a:avLst/>
@@ -308,7 +308,7 @@
     <w:r>
       <w:drawing>
         <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
-          <wp:extent cx="6263386" cy="3523155"/>
+          <wp:extent cx="6263330" cy="3523123"/>
           <wp:docPr id="4" name="Picture 4" descr=""/>
           <wp:cNvGraphicFramePr>
             <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
@@ -329,7 +329,7 @@
                 <pic:spPr>
                   <a:xfrm>
                     <a:off x="0" y="0"/>
-                    <a:ext cx="6263386" cy="3523155"/>
+                    <a:ext cx="6263330" cy="3523123"/>
                   </a:xfrm>
                   <a:prstGeom prst="rect">
                     <a:avLst/>
@@ -422,7 +422,7 @@
     <w:r>
       <w:drawing>
         <wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0">
-          <wp:extent cx="6263386" cy="1957308"/>
+          <wp:extent cx="6263330" cy="1957291"/>
           <wp:docPr id="5" name="Picture 5" descr=""/>
           <wp:cNvGraphicFramePr>
             <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
@@ -443,7 +443,7 @@
                 <pic:spPr>
                   <a:xfrm>
                     <a:off x="0" y="0"/>
-                    <a:ext cx="6263386" cy="1957308"/>
+                    <a:ext cx="6263330" cy="1957291"/>
                   </a:xfrm>
                   <a:prstGeom prst="rect">
                     <a:avLst/>

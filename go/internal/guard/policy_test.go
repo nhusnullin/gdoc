@@ -74,6 +74,9 @@ func TestALevelNamesItselfInWords(t *testing.T) {
 	if got := LevelFull.String(); got != "full" {
 		t.Errorf("LevelFull prints %q", got)
 	}
+	if got := LevelInPlace.String(); got != "in place" {
+		t.Errorf("LevelInPlace prints %q, and judgeDrive's refusal prints the level, so an unnamed one reads as unknown(3)", got)
+	}
 }
 
 func TestJudge(t *testing.T) {
@@ -116,18 +119,22 @@ func TestJudge(t *testing.T) {
 	}
 }
 
-// A handed-in document is read and suggest only, and there is no longer a
-// method that lifts that inside a process. GrantInPlace left with M2: PLAN.md
-// says an unused door is deleted rather than kept warm, and M7b's in-place
-// restyle adds it back beside its caller. M7 is the survey and writes to no
-// document at all, so it added no level.
-func TestAHandedInDocumentIsNeverDirectlyEdited(t *testing.T) {
+// A handed-in document is read and suggest only until a run says otherwise
+// about one id, and this test is narrowed to that rather than deleted. M7b
+// brought GrantInPlace back beside its caller, so the sentence that used to be
+// true of every handed-in document is now true of every one the run did not
+// grant, which is every document gdoc reads, replies in and proposes into.
+//
+// The grant's own rules are inplace_test.go's, and they are the attacks.
+func TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
+	p.AllowFile("DOC2", LevelSuggest)
+	p.GrantInPlace("DOC2") // another document in the same run, granted
 	edit := []byte(`{"requests":[]}`)
 	u := mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1:batchUpdate")
 	if p.Judge("POST", u, edit) == nil {
-		t.Fatal("a direct edit of a handed-in document must be refused")
+		t.Fatal("a direct edit of a handed-in document the run did not grant must be refused")
 	}
 	suggest := []byte(`{"requests":[],"writeControl":{"writeMode":"SUGGEST"}}`)
 	if err := p.Judge("POST", u, suggest); err != nil {

@@ -354,7 +354,7 @@ func blocks(content []rawElement, objs map[string]rawInlineObject) []Block {
 		case el.Paragraph != nil:
 			out = append(out, Block{Paragraph: paragraph(el, objs)})
 		case el.Table != nil:
-			out = append(out, Block{Table: table(el.Table, objs)})
+			out = append(out, Block{Table: table(el, objs)})
 		}
 	}
 	return out
@@ -479,14 +479,18 @@ func objectKind(o rawInlineObject) string {
 	return KindObject
 }
 
-func table(t *rawTable, objs map[string]rawInlineObject) Table {
-	out := make(Table, 0, len(t.TableRows))
-	for _, row := range t.TableRows {
+// table walks one table element. The index comes from the element itself rather
+// than from anything inside it, which is what makes a table inside a cell carry
+// its own: a nested table is an element of that cell's content, walked by the
+// same two functions.
+func table(el rawElement, objs map[string]rawInlineObject) *Table {
+	out := &Table{StartIndex: el.StartIndex, Rows: make([][]Cell, 0, len(el.Table.TableRows))}
+	for _, row := range el.Table.TableRows {
 		cells := make([]Cell, 0, len(row.TableCells))
 		for _, c := range row.TableCells {
 			cells = append(cells, Cell{Blocks: blocks(c.Content, objs)})
 		}
-		out = append(out, cells)
+		out.Rows = append(out.Rows, cells)
 	}
 	return out
 }

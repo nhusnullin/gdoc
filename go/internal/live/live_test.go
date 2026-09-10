@@ -2,13 +2,15 @@
 // guard, and real Google Docs. Everything here is skipped unless
 // GDOC_LIVE_TEST=1, so `go test ./...` on any machine runs nothing.
 //
-// There are three tests, and they reach Drive in different ways.
+// The tests reach Drive in different ways, and this file holds the first three
+// of them. The others are M5 and M6's, in publish_test.go, and M7b's, in
+// fidelity_test.go and restyle_test.go.
 //
 // The read test is pointed at a document by GDOC_LIVE_DOC_ID, with no default,
 // and it writes nothing. The guard is opened with exactly the id the run was
 // given, and a run that names none has nothing to read.
 //
-// The two write tests need GDOC_LIVE_WRITE=1 as well, and each touches only
+// Every write test needs GDOC_LIVE_WRITE=1 as well, and each touches only
 // documents it created itself, in the test folder. M2 could not have them: a
 // create and a comment are POST requests, this package would have to build
 // them, and building a request means naming net/http, which the boundary test
@@ -17,6 +19,10 @@
 // withdraw and still builds no request of its own. M4 adds the second, which
 // waits while a comment is written into a document it made and asserts the wait
 // saw it.
+//
+// M7b's acceptance is the one that does not create its document from nothing:
+// it copies the ideal document it was given into the same folder and writes to
+// the copy alone, asserting on the way out that the original never moved.
 package live
 
 import (

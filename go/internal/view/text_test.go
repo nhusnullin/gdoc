@@ -182,6 +182,12 @@ type structure struct {
 					EndIndex   int    `json:"end_index"`
 				} `json:"runs"`
 			} `json:"paragraph"`
+			Table *struct {
+				StartIndex int `json:"start_index"`
+				Rows       [][]struct {
+					Blocks []json.RawMessage `json:"blocks"`
+				} `json:"rows"`
+			} `json:"table"`
 		} `json:"blocks"`
 	} `json:"tabs"`
 }
@@ -211,6 +217,41 @@ func TestStructureRoundTripsWithItsIndexes(t *testing.T) {
 	r := p.Runs[0]
 	if r.Kind != docs.KindText || r.Text != "Scope\n" || r.StartIndex != 1 || r.EndIndex != 7 {
 		t.Errorf("first run = %+v", r)
+	}
+}
+
+// TestStructureCarriesATablesStartIndex states the shape the structure field
+// gives a table, which M7b moved: it was the rows alone and is now the rows
+// under a key beside the index. The text projection is unchanged, because it
+// prints no index, so the golden files did not move with it.
+func TestStructureCarriesATablesStartIndex(t *testing.T) {
+	raw, err := json.Marshal(Structure(fixture(t, "single-tab.json")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got structure
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	var tbl *struct {
+		StartIndex int `json:"start_index"`
+		Rows       [][]struct {
+			Blocks []json.RawMessage `json:"blocks"`
+		} `json:"rows"`
+	}
+	for _, b := range got.Tabs[0].Blocks {
+		if b.Table != nil {
+			tbl = b.Table
+		}
+	}
+	if tbl == nil {
+		t.Fatal("the structure carries no table")
+	}
+	if tbl.StartIndex != 184 {
+		t.Errorf("table start index = %d, want the fixture's 184", tbl.StartIndex)
+	}
+	if len(tbl.Rows) != 2 || len(tbl.Rows[0]) != 2 {
+		t.Errorf("rows = %d, first row cells = %d, want 2 and 2", len(tbl.Rows), len(tbl.Rows[0]))
 	}
 }
 

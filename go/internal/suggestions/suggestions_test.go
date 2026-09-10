@@ -108,7 +108,7 @@ func TestTheWalkGoesIntoATableAndCarriesTheHeading(t *testing.T) {
 	}}
 	d := doc(
 		para("HEADING_2", text("Fees\n", nil, nil)),
-		docs.Block{Table: docs.Table{{docs.Cell{Blocks: []docs.Block{para("NORMAL_TEXT", text("Rate\n", nil, nil))}}, cell}}},
+		docs.Block{Table: &docs.Table{Rows: [][]docs.Cell{{docs.Cell{Blocks: []docs.Block{para("NORMAL_TEXT", text("Rate\n", nil, nil))}}, cell}}}},
 	)
 	assertPending(t, List(d), []Pending{
 		{ID: "suggest.fee", Kind: frontmatter.KindInsertion, Section: "Fees", Text: "2.5%"},
@@ -124,7 +124,7 @@ func TestAHeadingInsideACellBecomesTheSection(t *testing.T) {
 	}}
 	d := doc(
 		para("HEADING_1", text("Outer\n", nil, nil)),
-		docs.Block{Table: docs.Table{{cell}}},
+		docs.Block{Table: &docs.Table{Rows: [][]docs.Cell{{cell}}}},
 		para("NORMAL_TEXT", text("after", []string{"suggest.after"}, nil)),
 	)
 	assertPending(t, List(d), []Pending{

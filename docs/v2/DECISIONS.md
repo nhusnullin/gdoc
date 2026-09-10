@@ -1028,7 +1028,9 @@ from reading `house.yaml`. This is the measurement.
 `go/internal/live/fidelity_test.go`, run against a document it created in the
 test folder and trashed afterwards. Each request kind was sent in its own batch,
 so one refusal could not hide the rest, and the document was read back once at
-the end. Nine of ten landed:
+the end. Nine of the first ten landed, and the three kinds the first run skipped
+were measured the same day in commit `a5fc6e0`, so the table below is thirteen
+rows and ten of them land:
 
 | Request kind | Accepted | Landed |
 |---|---|---|
@@ -1041,7 +1043,10 @@ the end. Nine of ten landed:
 | `createParagraphBullets` | yes | yes |
 | `createNamedRange` | yes | yes |
 | `updateParagraphStyle` (`borderBottom`) | yes | yes |
+| `updateTableCellStyle` (shading, padding) | yes | yes |
 | `updateNamedStyle` | **no** | no such request kind |
+| `updateParagraphStyle` (`tabStops`) | **no** | read-only in the reference |
+| `createHeader` (`FIRST_PAGE_HEADER`) | **no** | `HeaderFooterType` is `UNSPECIFIED` and `DEFAULT` only |
 
 **The limit is durability, not fidelity, and that is the sentence to tell
 somebody before a restyle.** `updateNamedStyle` does not exist, so the nine
@@ -1061,10 +1066,33 @@ plan passed them on without checking:
 - Bullets land through `createParagraphBullets`. The `BULLET_DISC_CIRCLE_SQUARE`
   preset is disc, circle, square, which is the `●○■` house.yaml asks for.
 
-**Three things this run did not test**, named so M7b does not assume them:
-`updateTableCellStyle`, tab stops, and anything touching the first-page header
-or the logo. The probe's content carried no table, which was an oversight in the
-fixture rather than a decision.
+**Corrected 2026-09-09, and the correction changed M7b's scope.**
+`createParagraphBullets` lands, which is true and incomplete. The reference says
+the leading tabs that set a bullet's nesting level "are removed by this
+request", so it deletes text the author typed, and it merges a bulleted range
+into an adjacent list with a matching preset, renumbering their items. The probe
+missed both because the content it wrote had no leading tabs and no neighbouring
+list. So bullets are out of `inPlaceKinds`, a restyle leaves every list with
+whatever bullets it has, and the milestone's defining property, that nothing it
+sends can change a character, is literally true rather than nearly true.
+
+**Corrected 2026-09-09.** This entry used to end by naming three things the run
+did not test, so M7b would not assume them: `updateTableCellStyle`, tab stops,
+and anything touching the first-page header. Commit `a5fc6e0` measured all
+three the same day, once `writeBody` learned to lay a table down in a second
+batch so a cell had something to be styled in, with the table's start index read
+back rather than computed. They are in the table above, and this is what they
+said:
+
+- `updateTableCellStyle` **lands**. The shaded, padded header row `house.yaml`
+  states for its three front-matter tables is reachable in place, which is
+  better than expected and is why the kind is on `inPlaceKinds`.
+- `ParagraphStyle.tabStops` is **read-only**, so the running head's tab-stop
+  layout cannot be applied in place at all.
+- `createHeader` with `FIRST_PAGE_HEADER` is **refused**, confirming the
+  2026-08-29 measurement that `HeaderFooterType` is exactly `UNSPECIFIED` and
+  `DEFAULT`. That is the reason the finishing checklist was invented, measured
+  here rather than trusted from a note.
 
 **The run was blocked for an hour by something unrelated**, recorded here
 because the symptom is so misleading. On the office wifi every Go TLS 1.3
@@ -1073,6 +1101,60 @@ the same network to the same address and Go capped at TLS 1.2 works in 0.1s.
 gdoc reports it as `TLS handshake timeout` on the token refresh, which reads
 like an expired token. A mobile hotspot fixes it. Never work around it by
 letting gdoc fall back to TLS 1.2.
+
+## 2026-09-09. The guard carries `files.copy`, for one source, and it is a decision rather than a rule satisfied.
+
+Serves principle 3, and stretches it further than anything before it. Nail's
+decision, recorded here because M2's rule does not cover it.
+
+M2's rule is that a guard door with no **production** caller is deleted rather
+than carried. That is why `GrantInPlace` went, and why it came back at M7b
+beside the line that calls it. `Policy.AllowCopy` has no production caller and
+is not going to get one: its only caller is `TestLiveRestylePreservesTenFeatures`,
+the ten-feature preservation run. So the rule says delete it, and the decision is
+to keep it anyway.
+
+**What buys it is the measurement it makes possible.** The acceptance for an
+in-place restyle needs a document holding all ten features, an anchored comment,
+a pending suggestion, a smart chip, an image and a Google Drawing among them.
+A throwaway probe showed on the same day that the first several can be built
+from scratch through the API, and that the image and the Drawing cannot. It was
+`tools/copyprobe`, deleted at M7b once it had answered, and what it measured is
+in BLOCKED-BY-API.md. Without
+a copy route the ideal document is made by hand in a browser before every run,
+which is a test nobody runs, which is an acceptance that does not exist.
+`files.copy?copyComments=true` carries the threads still anchored and the
+pending suggestions with them, measured, so the run is unattended.
+
+**What it costs is worth naming rather than discovering.** A copy is the widest
+reach a handed-in id has ever produced. Every other route out of `LevelSuggest`
+reads: the export hands back the bytes, and that is all. A copy takes a full
+duplicate of somebody's document, comments and pending suggestions included,
+into gdoc's own folder, where `learnFromCreate` puts it at `LevelFull`, which is
+trash-and-rename. Nothing about the source changes and nothing about the source
+becomes more reachable, so principle 3's claim still holds as written. It is
+still the largest thing a handed-in id has ever produced, and a reader should
+meet that as a decision somebody took rather than as a door somebody opened.
+
+Four rules hold it down, and each is pinned by a test in
+`go/internal/guard/copy_test.go`:
+
+- **The grant is one source and one run.** `AllowCopy(id)` in the shape
+  `AllowReject` and `AllowCreateIn` already have. A second call replaces the
+  first, nothing writes it to disk, and no flag turns it on for every document.
+- **It admits no id.** A copy of a file nobody handed in is refused by the
+  file check, before the grant is read. Two doors, still.
+- **The copy lands in the one folder the run named.** A `files.copy` that omits
+  `parents` lands in the **source's** own parent, a folder gdoc was never given.
+  So the copy is a create in the transport's grammar too: `filesCopy` is
+  `filesCollection`'s rule for the second create shape, `isCreate` reads it, and
+  the same one-parent check and the same id learning run on it. A path only one
+  of the two called a create would carry an unparented duplicate and learn
+  nothing from the answer.
+- **Three parameters.** `copyComments`, `supportsAllDrives` and `fields`.
+  `ocr`, `keepRevisionForever`, `ignoreDefaultVisibility`, `enforceSingleParent`
+  and `includePermissionsForView` are refused with everything else the allowlist
+  does not name.
 
 ## 2026-09-07. A replace proposal cannot be fully withdrawn by a delete. Decided: reject gdoc's own.
 
@@ -1293,3 +1375,149 @@ a direct edit on a handed-in id is refused.
 
 `--new` stays deferred, decided earlier the same day: it needs a markdown
 export, media extraction and a markdown writer, none of which exist in Go.
+
+## 2026-09-09. What an in-place restyle changes, what bounds it, and what it deliberately does not write.
+
+Serves principle 3, and stretches it further than any decision before it. Nail's
+decisions, taken with the fidelity measurement above in hand and recorded
+together because each one narrows the same door. M7b is where they ship, and
+this is the entry the amended Never lists point at.
+
+**The scope came from the measurement, not from reading `house.yaml`.** What a
+restyle applies is what a request kind was measured landing on a real document.
+The measurement is not the allowlist either: two kinds landed and are refused
+anyway, `createParagraphBullets` because it removes leading tabs and
+`createNamedRange` because nothing here writes a checklist to mark.
+
+**Typography only. gdoc changes no text at all.** Page geometry, paragraph and
+text styling, and table cell appearance. No cover, no front-matter tables, no
+legend, no contents list, no list styling, and no heading numbering. Numbering
+means writing into the author's prose, and a restyle does not do that.
+
+**The restyle keeps the structure and changes the look.** A paragraph already
+marked `HEADING_1` stays `HEADING_1` and gets the house look; body stays body.
+gdoc never infers structure from text and never restructures somebody's
+document. `build` maps markdown headings to styles and a restyle has nothing to
+map from, so this is the answer to what would otherwise be an unasked question.
+A named style the house has no look for is reported and left alone rather than
+mapped to the nearest one.
+
+**The limit is durability, not fidelity**, and that is the sentence the skill
+tells Nail before a restyle. `updateNamedStyle` does not exist, so the nine
+named styles cannot be redefined. A paragraph can still be assigned to
+`HEADING_1` and have its look overridden per paragraph, which is exactly what
+the master template does and why eight rows sit in `drift.Known`. So the
+document ends up looking right. The next heading the author types will not.
+
+**What a restyle overwrites, stated rather than discovered.** Applying the house
+look to a paragraph replaces the run styling the author chose there. That is
+what a restyle is for, and it is still worth a person knowing before they run
+one: a hand-bolded phrase inside a body paragraph does not survive a body-text
+pass. The report says which paragraphs were restyled.
+
+**The `fields` mask is a rule the guard holds, not a note somebody wrote down.**
+The allowlist bounds the request kind and cannot bound the mask, and the mask is
+where this level's danger lives. The reference: "To reset a property to its
+default value, include its field name in the field mask but leave the field
+itself unset." So an `updateTextStyle` carrying `fields: "*"` over a range
+resets every property it does not set, bold, italic, links, colours and
+highlights, permanently, **with every character intact**. Saying the text is
+unreachable while leaving the mask unbounded would be reassuring about the wrong
+thing: what this level can destroy is everything except the text.
+`checkInPlaceMask` refuses a star, by itself or inside a path, refuses a mask
+that names nothing, because Google reads an empty mask as every field, and
+refuses a mask naming `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`,
+because switching either off hides the first-page header carrying the logo. The
+builder never relies on being refused: every request names exactly what it sets,
+and a test walks the whole plan in both directions. The guard holds that same
+rule since the M7b review: `checkMaskIsSet` walks every path in the mask into
+the request's own style object and refuses one the request leaves unset, because
+`fields: "*"` and the fields enumerated one at a time destroy exactly the same
+properties, and refusing only the star bounds a spelling rather than the
+behaviour.
+
+**SPEC's finishing checklist is deliberately not built.** SPEC has gdoc write a
+page after the cover listing the three things the API cannot create, with
+checkbox bullets and a named range so it is removable in one call. gdoc reports
+those three instead, with the exact menu path for each, and the skill tells
+Nail. Two reasons, and the second is the stronger. It is the M2 line held: the
+binary prints facts and the skill judges. And writing the page needs `insertText`
+and `createParagraphBullets` back on the allowlist, which is the whole of what
+keeps a restyle unable to change a character. If a terminal report proves too
+easy to lose, writing the page is its own plan and it reopens that question on
+purpose.
+
+**A restyle has no capability probe, and the read-back stands alone.** A
+proposal is probed because what makes it a suggestion is `writeMode`, a field
+gdoc supplies, absent from the public discovery document, and Google returned
+200 on it once while making a direct edit. `LevelInPlace` asks for nothing of
+that kind: it makes no claim to the server that a probe could test, so a probe
+here would be a throwaway document created to answer no question. What replaces
+the second bar is reading the document back, and it is both halves.
+
+- **The preservation half.** Thread counts and per-thread witness, pending
+  suggestion ids, and chips, before and after. The before comes from M7's
+  survey. The witness is the docx export and never Drive: `comments.list`
+  reports a destroyed anchor as healthy, returning the original `anchor` and
+  `quotedFileContent`, because both are stored strings rather than live
+  pointers. A witness that reads `unmatched` is reported as unwitnessed and
+  never as a lost anchor, and it keeps `verified` false all the same.
+- **The landed half.** A margin, a paragraph's spacing, a run's font and a
+  cell's padding, read back to see whether the style is actually there. The
+  fidelity run's whole point was the accepted-but-not-landed row, and a
+  `verified: true` printed over an invisible change would be that failure
+  exactly. The check is made against the requests that were sent rather than
+  against `house.yaml`, because a check written from the house style asks the
+  question the builder already answers and the two drift the first time a
+  builder stops setting a field.
+
+**There is no rollback, and what a failed run leaves behind is written down
+rather than discovered.** A run that stops at batch twelve leaves a half-styled
+document, and the recovery is the document's own version history, by hand. No
+text was touched, so nothing the author wrote is lost, but their own run
+formatting inside the paragraphs that were restyled is. That sentence reaches
+the envelope's warnings on every path that stops early. A batch Docs refused on
+a moved revision is never retried: retrying against a fresh revision would be
+gdoc styling a document somebody is editing, which is the exact case
+`writeControl.requiredRevisionId` exists to refuse.
+
+## 2026-09-10. In-place styling preserves anchors and pending suggestions, measured on a real document.
+
+Serves principle 3. This is the measurement M7b rests on, made against Google
+rather than reasoned about, and it is the first time this code has asked.
+
+**The run.** A copy of a real one-tab policy document, carrying one comment
+anchored to its words and one pending suggestion, restyled in place with 181
+styling requests in one batch: 49 paragraphs, 125 runs, 75 cells across 6
+tables. Before and after, read through the docx export because `comments.list`
+reports a destroyed anchor as healthy:
+
+| | threads | anchored | pending |
+|---|---|---|---|
+| before | 1 | 1 | `suggest.r1tnorocsz3h` |
+| after | 1 | 1 | `suggest.r1tnorocsz3h` |
+
+Nothing moved. That is the 2026-08-29 measurement holding from the other side:
+replacing a document's body destroyed 100% of comment anchors, 355 of 355
+characters across three anchors, and recreated every suggestion id. In-place
+styling destroyed none, and the suggestion kept its own id rather than being
+recreated under a new one.
+
+**The guard refused before the grant, in the same run.** `restyleCopy` sends one
+styling request before `GrantInPlace` and requires a `guard refused` error back.
+It got one. So the direct-edit door shut since M1 is really shut until one line
+in one command opens it for one id, and that is measured rather than asserted.
+
+**The source never moved.** Same revision id before and after, asserted on every
+path out including the failing ones. The 2026-08-29 rule, held.
+
+**The cheap acceptance is the one that gets run, and that is the decision here.**
+`TestLiveRestylePreservesTenFeatures` needs a document holding all ten of SPEC
+item 5's features, which is a document somebody builds by hand and keeps intact,
+and on 2026-09-10 the document it was pointed at held none of them and carried
+two tabs, which a restyle refuses outright. So it has never run.
+`TestLiveRestyleKeepsAnchorsAndSuggestions` needs one anchored comment and one
+pending suggestion, which is any document somebody has reviewed, and it answers
+the question the milestone actually rests on. Both stay. An acceptance nobody
+can run is not an acceptance, and the ten-feature run is still the fuller
+answer for the day somebody rebuilds the document.

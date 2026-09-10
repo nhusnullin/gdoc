@@ -330,7 +330,10 @@ func runs(bs []docs.Block) []docs.Run {
 			}
 			continue
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, c := range row {
 				out = append(out, runs(c.Blocks)...)
 			}

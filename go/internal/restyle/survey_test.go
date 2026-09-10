@@ -252,10 +252,10 @@ func TestTheChipsAreCountedByKindAcrossTablesToo(t *testing.T) {
 	d := doc(
 		para(1, docs.Run{Kind: docs.KindPerson, StartIndex: 1, EndIndex: 2},
 			docs.Run{Kind: docs.KindDate, StartIndex: 2, EndIndex: 3}),
-		docs.Block{Table: docs.Table{{{Blocks: []docs.Block{
+		docs.Block{Table: &docs.Table{StartIndex: 3, Rows: [][]docs.Cell{{{Blocks: []docs.Block{
 			para(4, docs.Run{Kind: docs.KindRichLink, StartIndex: 4, EndIndex: 5},
 				docs.Run{Kind: docs.KindPerson, StartIndex: 5, EndIndex: 6}),
-		}}}}},
+		}}}}}},
 	)
 
 	// Act

@@ -1,11 +1,16 @@
-// Package restyle is the survey of a document, and nothing else yet. It reports
-// what a document holds before anything is done to it: its threads with a
-// witness for each, what is pending, its chips, its tabs, its named ranges and
-// the revision the reads were made against.
+// Package restyle is the survey of a document, and the requests that restyle
+// one. The survey reports what a document holds before anything is done to it:
+// its threads with a witness for each, what is pending, its chips, its tabs,
+// its named ranges and the revision the reads were made against. The builders
+// beside it, page.go first, turn the house style into the styling requests a
+// batch carries.
 //
 // It takes no session and touches no wire, like every other reader package
 // here. The caller makes the three reads and hands the decoded answers over, so
-// every case in this file is testable on a value a test wrote out.
+// every case in this file is testable on a value a test wrote out. A builder is
+// the same rule from the other side: it is a pure function of the house style
+// and the document, returning the request a caller sends, so nothing here
+// decides when to send one.
 //
 // Nothing here judges anything. NothingToProtect is a fact about five counts
 // being zero, never a recommendation to restyle: the threads, what is pending,
@@ -40,8 +45,23 @@ type Input struct {
 	ExportErr error
 }
 
+// Schema is the shape of a Report, and it is the version `restyle --from`
+// insists on before it opens a direct-edit grant on the strength of one.
+//
+// It is here for the reason internal/frontmatter's schema is there. The apply
+// half reads this file as the record of what the document held before the run,
+// and a field added later is a field an older survey simply does not carry: the
+// suggestion ids arrived at M7b, and an M7 survey read without them reported
+// every pending suggestion as still pending, because nothing was there to
+// compare. A strict decoder refuses a key it does not know and says nothing at
+// all about a key that is absent, so the version is what closes that half.
+// Bumping it is a decision, not a refactor.
+const Schema = 1
+
 // Report is the survey. Every field is a count, an id or a list.
 type Report struct {
+	// Schema is Schema above, on every report this binary prints.
+	Schema           int               `json:"schema"`
 	DocumentID       string            `json:"document_id"`
 	RevisionID       string            `json:"revision_id"`
 	Title            string            `json:"title"`
@@ -102,6 +122,13 @@ type ThreadWitness struct {
 type SuggestionCounts struct {
 	Pending    int `json:"pending"`
 	OnElements int `json:"on_elements"`
+	// IDs is every pending suggestion id the read could see, both the ones the
+	// listing reports and the ones only an element carries, sorted and once
+	// each. It is here for M7b's read-back, which compares what was pending
+	// before a restyle with what is pending after: two counts that do not move
+	// cannot tell one suggestion destroyed and another created from nothing
+	// having happened at all, and an id can.
+	IDs []string `json:"ids"`
 }
 
 // ChipCounts is the smart chips by kind. A chip is a live reference, so a
@@ -141,7 +168,12 @@ func Survey(in Input) (Report, []string) {
 	// The list is never null. encoding/json writes a nil slice as null, and a
 	// skill reading named_ranges must not get two shapes for the one fact that
 	// a document has none. Witnessed is built with make for the same reason.
-	r := Report{Threads: threadCounts(threads), NamedRanges: []docs.NamedRange{}}
+	r := Report{
+		Schema:      Schema,
+		Threads:     threadCounts(threads),
+		NamedRanges: []docs.NamedRange{},
+		Suggestions: SuggestionCounts{IDs: []string{}},
+	}
 	if in.Document == nil {
 		// Not an error, and not nothing to protect either. A survey with no
 		// document read knows nothing about chips, suggestions or ranges, and
@@ -158,14 +190,23 @@ func Survey(in Input) (Report, []string) {
 
 	chips, unnamed, onElements := walkTabs(in.Document)
 	r.Chips = chips
+	// Every id, from both sides, before the two are told apart. The listing's
+	// ids and the elements' ids are one set to the read-back, which asks what
+	// is still pending rather than which walk saw it.
+	pendingIDs := map[string]bool{}
+	for id := range onElements {
+		pendingIDs[id] = true
+	}
 	// An id the pending walk saw is already in Pending, so what is left is the
 	// suggestions no listing this binary prints can report.
 	for _, id := range suggestions.IDs(in.Document) {
+		pendingIDs[id] = true
 		delete(onElements, id)
 	}
 	r.Suggestions = SuggestionCounts{
 		Pending:    len(suggestions.All(in.Document)),
 		OnElements: len(onElements),
+		IDs:        sortedSet(pendingIDs),
 	}
 	for _, member := range unnamed {
 		warnings = append(warnings, fmt.Sprintf(
@@ -249,7 +290,10 @@ func countBlocks(bs []docs.Block, t *tally) {
 				count(r, t)
 			}
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, cell := range row {
 				countBlocks(cell.Blocks, t)
 			}
@@ -287,4 +331,16 @@ func count(r docs.Run, t *tally) {
 		}
 		t.unnamed[member] = true
 	}
+}
+
+// sortedSet is a set of ids as a list, in one order and never null. A map is
+// walked in no order, and a skill reading ids must not get two shapes for the
+// one fact that a document has none pending.
+func sortedSet(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for id := range m {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
 }

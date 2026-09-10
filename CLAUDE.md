@@ -64,21 +64,21 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the opt-in end-to-end tests, one read and four writes, plus the one render check that asks for no network. Tests only, no production code |
+| `go/internal/live/` | the opt-in end-to-end tests, one read and six writes, plus the one render check that asks for no network. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 7 are done: the binary exists, prints the envelope,
+order. Milestones 1 to 7b are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
 `probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
 `comments --wait`, builds a house-style docx from a note with `build`, puts
-that docx into Drive as a Google Doc with `publish`, and surveys what a
-document holds with `restyle --dry-run`. The review skill is
+that docx into Drive as a Google Doc with `publish`, surveys what a
+document holds with `restyle --dry-run`, and gives that document the house style
+where it stands with `restyle --from`. The review skill is
 rewritten over those and can stay live on one document, and `gdoc` on PATH is v2
-from M3 on. Restyling a document in place is M7b's, and M7 writes to no
-document at all.
+from M3 on.
 
 ### The auth commands, and what reaches stdout
 
@@ -184,14 +184,21 @@ from a `*Policy`. So the first request in the program's history has already been
 judged. v1 fitted a guard around a client that already existed, which is why v1
 needs a test proving `build()` is called in one module only.
 
-Write levels live in the policy, never at the call site. `LevelSuggest` is what
-a handed-in id gets: read, comment, suggest, and never a direct edit.
-`LevelFull` is what a create returned, and `Learn` is the only door to it. M7b
-adds a per-run in-place grant back beside its caller; read "`GrantInPlace` is
-gone until M7b" below before looking for one now. A call site cannot widen its own reach by phrasing a
-request differently, because the policy reads the method, the URL and the body:
-a `batchUpdate` on a handed-in document is refused inside the process unless the
-body says `SUGGEST`.
+Write levels live in the policy, never at the call site, and there are three of
+them. `LevelSuggest` is what a handed-in id gets: read, comment, suggest, and
+never a direct edit. `LevelFull` is what a create returned, and `Learn` is the
+only door to it. `LevelInPlace` is M7b's, and `GrantInPlace` is the only door to
+it: it raises one id already in the set, for one run, so a restyle can style
+that document where it stands. Read "A third write level, and the four kinds it
+carries" below before widening anything about it. A call site cannot widen its
+own reach by phrasing a request differently, because the policy reads the
+method, the URL and the body: a `batchUpdate` on a handed-in document is refused
+inside the process unless the body says `SUGGEST`, or the document is the one id
+this run was granted.
+
+**The levels are names, not a ladder.** Every comparison is `==`, which is why
+`LevelInPlace` does not inherit the file `PATCH` that `LevelFull` carries: a
+restyle cannot trash or rename the document it is styling.
 
 `commentWrites` carries `POST` and nothing else: no `PATCH` and no `DELETE`, on
 a comment or on a reply. Nothing in a comment id says who wrote it, so the guard
@@ -219,6 +226,18 @@ the note's `proposals[]`, which is the only record of what gdoc itself wrote.
 Nail's decision, 2026-09-07; read "A withdrawal is a `rejectSuggestion` on
 gdoc's own id" below for why a delete could not do the job.
 
+`AllowCopy(id)` is the fourth grant of that shape, and it is the one with **no
+production caller**. It names one file `files.copy` may duplicate into the folder
+`AllowCreateIn` named, and its only caller is
+`TestLiveRestylePreservesTenFeatures`, which copies a document before it restyles
+the copy. So the rule stated further down, that a guard door with no production
+caller is deleted rather than carried, does not apply to it: it is Task 2 of
+`docs/plans/completed/2026-09-09-gdoc-v2-m7b-restyle-in-place.md`, agreed so that
+the ten-feature acceptance can run unattended, and that test is what proves the
+ten features survive a restyle.
+`driveCopyParams` is its query allowlist. Deleting either is that decision
+reopened, not a cleanup.
+
 **Read this before trusting the level-1 write bar.** What keeps a handed-in
 document read-and-suggest only is `writeControl.writeMode == "SUGGEST"` in the
 request body, which is a field the client itself supplies.
@@ -231,7 +250,9 @@ Enrolled today is not a guarantee for tomorrow, and the earlier measurement is
 what says so. The field is still a statement of intent rather than a guarantee,
 and what makes a write trustworthy is the capability probe before it and the
 read-back after it, neither of which lives in the guard. Widening or narrowing
-what `isSuggestMode` permits is a decision for Nail, not a refactor.
+what `isSuggestMode` permits is a decision for Nail, not a refactor. That bar
+is the one `LevelInPlace` removes for a single id, which is why an allowlist of
+request kinds stands in its place there.
 
 `isSuggestMode` reads both keys **exactly**, and refuses a body where two keys
 fold to either name. Google's proto-JSON is case-sensitive, so `WRITEMODE` is
@@ -297,6 +318,81 @@ given to this command" on the next request, which names the wrong problem.
 documents as safe for concurrent use, and `Learn` writes the set from inside
 `RoundTrip` while `Judge` reads it. `make test` runs `-race`; keep it there.
 
+### A third write level, and the four kinds it carries
+
+M7b. `LevelInPlace` permits a `batchUpdate` without SUGGEST on one document, and
+`GrantInPlace(id)` is the only door to it. Nail's decision of 2026-09-09. It is
+the widest thing gdoc can be asked to do, so every part of it is narrow.
+
+- **The grant is one id and one run.** `GrantInPlace` upgrades an id already in
+  `files` and admits nothing new, so it is not a third door into the set.
+  Nothing writes it down, nothing reads it from a file, and no flag turns it on
+  for every document: it dies with the process, in the shape `AllowReject` and
+  `AllowCreateIn` already have. `AllowFile` refuses to hand the level out at
+  all, because taking any level there was the side door around that invariant.
+- **`inPlaceKinds` is four request kinds, and it is the bound `writeMode` used
+  to be.** `updateDocumentStyle`, `updateParagraphStyle`, `updateTextStyle` and
+  `updateTableCellStyle`. `judgeRequests` carries a request kind nobody has
+  heard of at every other level, and its own comment justifies that on
+  `writeMode`: an unknown kind was still a suggestion somebody could reject.
+  Nothing bounds it here, so the rule is inverted and a kind that is not on the
+  list is refused whatever it is called. `deleteHeader` goes that way, and
+  DECISIONS.md says why it matters: it is a one-way door, and `createHeader`
+  cannot put a first-page header back.
+- **None of the four can change a character.**
+  `TestNothingAtLevelInPlaceCanChangeACharacter` is the pin, and a fifth kind
+  answers that test rather than the list. `createParagraphBullets` is the case
+  that shows the difference: it was measured landing on a real document and is
+  refused all the same, because the reference says the leading tabs that set a
+  bullet's nesting level "are removed by this request".
+- **The allowlist gates every `batchUpdate` on a granted id, whatever
+  `writeMode` says.** `judgeDocs` reads `lvl == LevelFull || isSuggestMode`, so
+  an allowlist hung off the direct-edit branch alone would let a granted
+  document take an `insertText` under SUGGEST, and the property above would be
+  false on exactly the id it protects. It is scoped to this level alone for the
+  mirror reason: applied everywhere it refuses `probe`'s direct `insertText` at
+  `LevelFull` and every `propose` batch at `LevelSuggest`.
+- **The `fields` mask is bounded too, and that is where the real danger is.**
+  The reference: "To reset a property to its default value, include its field
+  name in the field mask but leave the field itself unset." So an
+  `updateTextStyle` carrying `fields: "*"` resets bold, italic, links, colours
+  and highlights over its range, permanently, with every character intact. What
+  this level can destroy is everything except the text. `checkInPlaceMask`
+  reads the mask the way `isSuggestMode` reads `writeMode`, and refuses a star,
+  an empty mask, which Google reads as every field, and a mask naming
+  `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`, because switching
+  either off hides the first-page header that carries the logo, the one thing
+  this milestone reports as unreachable. **The key is read exactly and the two
+  names are not**, and that split is the point. The key decides whether the
+  server acts on the mask at all, so reading it loosely would judge a field
+  nothing acts on. The names are a denylist, so `maskKey` trims each segment,
+  folds case and drops the underscores before the lookup: a path is trimmed as
+  a whole, which left the space in `documentStyle. useFirstPageHeaderFooter`,
+  and a field mask is defined in proto, where that camelCase names
+  `use_first_page_header_footer`. That is `checkFields`' rule one layer out,
+  and its refusal already says it: refused however it is asked for.
+- **A mask may name only what the request sets, and that is the same rule the
+  star refusal is.** A star and the fields written out one at a time destroy
+  the same properties, so a guard that refuses one and carries the other bounds
+  a spelling rather than the behaviour. `checkMaskIsSet` walks every path into
+  the request's own style object, to the leaf, and refuses a path the request
+  leaves unset, a style object that is absent, one spelled under another case,
+  and one the walk cannot look inside. That is `TestEveryMaskNamesExactlyWhatItSets`
+  held at the wire rather than in the builders alone, and it is the other half
+  of "the builder never relies on being refused": a field named in a mask and
+  forgotten in the style object clears that property on every paragraph, run or
+  cell the request addressed. The segments are read exactly, so the underscore
+  spelling of a path whose camelCase is set is refused here and would have been
+  carried by Google. That direction is deliberate: no builder writes it, and the
+  refusal is a run that failed loudly against a loss that is permanent.
+- **There is no capability probe here, and the read-back stands alone.** A
+  proposal is probed because what makes it a suggestion is `writeMode`, a field
+  gdoc supplies and Google has ignored once. `LevelInPlace` makes no claim of
+  that kind to the server, so there is nothing for a probe to test. What
+  replaces the second bar is reading the document back, both halves: the
+  threads with their docx witness, the pending suggestion ids and the chips
+  before and after, and the styling itself read back to see whether it landed.
+
 ### Two allowlists over one request, the query and the headers
 
 This is the guard's broadest rule, and it is easy to read past because neither
@@ -312,8 +408,8 @@ wrong in the direction of a refusal the next milestone widens on purpose.
 - **The query.** `params.go` holds one allowlist per call shape, not one across
   all of them: `driveGetParams`, `driveExportParams`, `driveCommentListParams`,
   `driveReplyListParams`, `driveCommentGetParams`, `driveWriteParams`,
-  `driveCreateParams`, `docsReadParams`, and `noParams` for a call that carries
-  no query at all. One list for everything was wrong in both directions: it put
+  `driveCreateParams`, `driveCopyParams`, `docsReadParams`, and `noParams` for a
+  call that carries no query at all. One list for everything was wrong in both directions: it put
   paging on a metadata read and an export format on a comment listing, neither
   of which is a call Drive has, and it put `alt` on the bare `files.get`, where
   `alt=media` stops being a metadata read and hands back the file's bytes.
@@ -852,11 +948,12 @@ tab, the way `Places` is one rule with two ways in.
   a header, a footer or a footnote. Whether Docs anchors one there at all is
   unmeasured, and it is
   `docs/backlog/comment-anchors-in-headers-and-footnotes.md`.
-- **`docs.NamedRangesURL` is the narrowed read, and no command calls it yet.**
-  The whole document answers with the ranges already, so the survey takes them
-  out of the read it has rather than making a fourth request. The narrowed read
-  exists for the caller that wants only the ranges, which is M7b rechecking the
-  ranges rather than the prose: the measured saving was 982 bytes against 12,907
+- **`docs.NamedRangesURL` is the narrowed read, and the apply loop is its one
+  caller.** The whole document answers with the ranges already, so the survey
+  takes them out of the read it has rather than making a fourth request. The
+  narrowed read is for the caller that wants a fact out of that one answer, and
+  at M7b that caller is `restyle`'s `revisionOf`, which reads it between batches
+  for the revision id alone: the measured saving was 982 bytes against 12,907
   for the document itself. Its mask selects each tab's id and its named ranges
   and `childTabs` **whole**, because a mask does not recurse into a nesting of
   unknown depth and selecting a child tab's fields one level at a time would
@@ -871,10 +968,12 @@ its tabs, its named ranges and the revision the reads were made against. It
 writes to no document and to no file. The one file any run of it can touch is
 the OAuth token, which every command replaces on refresh.
 
-`--dry-run` is required, and the refusal names M7b rather than the flag alone: a
-caller told only that a flag is missing learns the command is broken, when what
-is true is that the half it wants has not been written yet. The policy opens
-with the document at `LevelSuggest` and no grant, like every read.
+`restyle` takes `--dry-run` or `--from`, and a run naming neither is refused
+naming both halves: the survey is `--dry-run` and the apply is
+`--from <survey.json>`. A run naming both is refused too, because the survey and
+the apply are two runs on purpose. Read "`restyle --from` styles a document gdoc
+did not create" below for that rule. The survey's policy opens with the document
+at `LevelSuggest` and no grant, like every read.
 
 - **Three reads, not four.** The comment listing, the Docs read, and the docx
   export for the witness. The named ranges come out of the Docs read, which
@@ -910,6 +1009,16 @@ with the document at `LevelSuggest` and no grant, like every read.
   and refuses a document that moved, which is principle 3 at the one moment gdoc
   will have the power to overwrite. Nothing reads the field yet, and it exists
   here for that reason.
+- **`schema` is 1, and the apply refuses a survey that states anything else.**
+  `restyle.Schema` is the constant, and it is there for the reason
+  `internal/frontmatter`'s schema is: the apply reads this file as the record of
+  what the document held, and a field added later is a field an older survey
+  simply does not carry. `ids` is the field that made the point. It arrived at
+  M7b, and a survey printed before it read here as a survey where nothing was
+  pending, so a suggestion the run destroyed was reported as one that had never
+  been there. A strict decoder refuses a key it does not know and says nothing at
+  all about a key that is absent, so the version is what closes that half.
+  Bumping it is a decision, not a refactor.
 
 **`nothing_to_protect` is a fact about five things being zero, never a
 recommendation.** No threads, no pending suggestions, no chips, no paragraph
@@ -926,8 +1035,10 @@ document holding an element gdoc has never seen holds something no count here
 speaks for, so the survey warns naming the member and refuses to say there is
 nothing to protect. A named range is the other, and it is the reason the survey
 lists them at all: it is a label Docs keeps in step with its own edits, so a
-replacement of the words it covers takes it with them, and M7b reads this field
-before it writes. Whether a document is worth restyling is Nail's, reading the
+replacement of the words it covers takes it with them. Nothing compares this
+field before and after yet, and it does not need to at M7b: none of the four
+request kinds `LevelInPlace` carries can change a character, so no named range
+can move. A milestone that writes text compares it. Whether a document is worth restyling is Nail's, reading the
 counts. That is "the binary prints facts, and the skills judge" at the one field
 most likely to grow into a verdict.
 
@@ -935,6 +1046,233 @@ most likely to grow into a verdict.
 the threads it has and warns that the chips, the pending suggestions and the
 named ranges are unknown. Answering `nothing_to_protect: true` there would be
 the one false fact in the field a later run reads before it writes.
+
+### The apply loop, and what a failed restyle leaves behind
+
+M7b. `internal/restyle`'s `Apply` is the only room in that package that sends
+anything: `PageRequest` and `TabRequests` are pure functions of the house style
+and the document, and the loop decides nothing about what to send.
+
+**Every batch carries `writeControl.requiredRevisionId`, and an empty one is
+refused at the call site.** The survey rechecks the document before the run
+opens the grant, and a recheck followed by a write leaves a window that is the
+whole run across a dozen batches. `requiredRevisionId` closes it inside Docs: a
+document that moved refuses the batch itself, and unlike `writeMode` the field
+is in the public discovery document, so it is a rule the server holds rather
+than a statement of intent. A read that carried no revision id would ship `""`,
+Docs would take the batch, and the only protection this milestone has would be
+gone with nothing said.
+
+**The loop reads between batches for the revision id, and for nothing else.** An
+earlier draft justified it with shifting indexes: a batch that inserts or
+deletes moves the positions later batches were computed from. That reason went
+with `createParagraphBullets`. None of the four kinds `LevelInPlace` carries can
+change a character, so no index built before the first batch can have moved by
+the last. The answer usually names the next revision; `revisionOf` is what
+stands in when it does not, and it is `docs.NamedRangesURL`, the narrowed read,
+because the revision is all the loop wants.
+
+**A refusal is never retried, and a stale revision is reported as itself.** Docs
+refusing a batch on a moved revision means somebody edited the document after
+the survey, and retrying against a fresh revision would be gdoc styling a
+document being edited, which is the exact case the field exists to refuse. A
+batch Docs accepted whose answer could not be read is the third case, as it is
+for every other writer here: it may be in the document, so it is never sent
+again, and the run stops because the revision the next batch needs was in the
+answer it could not read.
+
+**That third case is `maybe_applied`, and it is a field rather than a batch
+counted in `batches`.** `batches` is what Docs confirmed, so folding the two
+together would lose which it was, and leaving the case out of the report
+altogether was worse: the run said "no batch was applied, so the document is as
+it was" one warning after saying the batch may be in the document, and the
+caller skipped the read-back on a document that may have just been directly
+edited. `leftBehind` reads the flag, and `cmdRestyle` reads it beside the count
+to decide whether there is anything to read back. `maybe_requests` beside it is
+how many requests that batch held, which is what `reached` needs to say which of
+them left the machine. It is `propose.Apply`'s rule
+in the one writer that had missed it: a write whose answer could not be read is
+not a write that never happened.
+
+**Batches are sized in bytes, under the guard's own peek.** `maxPeek` is a
+megabyte and `judgeRequests` refuses a `batchUpdate` it cannot read whole, so
+`maxBatchBytes` is half of that and `batchEnvelope` is a generous over-estimate
+of everything in a body that is not a request. Bytes rather than a count of
+requests, because two `updateParagraphStyle` requests are nothing like the same
+size. One request too large to send at all is refused naming its kind, because
+splitting one is not something this loop can do.
+
+**A failed run has no rollback, and what it leaves behind is written down rather
+than discovered.** A run that stops at batch twelve leaves a half-styled
+document, and the recovery is the document's own version history, by hand. **No
+text was touched, so nothing the author wrote is lost, but their own run
+formatting inside the paragraphs that were restyled is.** That sentence is in
+`leftBehind`, so it reaches the envelope's warnings on every path that stops
+early, and the skill reads it to Nail. `noRollback` holds it once for that
+reason, because every path that stops early says it and two copies would be two
+sentences that drift.
+
+**"The document is as it was" is a claim, so it is kept for the two paths that
+can make it.** A batch that could not be built never left the machine, and one
+Docs refused on a moved revision it refused whole. A batch that failed on the
+request itself is four things `internal/gapi` cannot tell apart, and its own doc
+comment names them: a guard refusal, a 4xx, a 5xx and a dropped connection,
+where the request was written and may have been applied. So `leftBehind` takes
+that path as `maybeReached` and says the document is either as it was or part
+styled. The read-back gate does not widen to match, and `cmdRestyle` says why:
+three reads on every refusal would be paid on the common case to answer the rare
+one, and the sentence sends the caller to the document instead.
+
+### `restyle --from` styles a document gdoc did not create
+
+M7b, and it is the sixth write. `gdoc restyle <url> --from survey.json` gives a
+handed-in document the house style where it stands: the page geometry, each
+paragraph's spacing and indent, each run's face, size and colour, and each table
+cell's padding and borders. Everything above about the guard's third level, the
+apply loop and what a failed run leaves behind is how it is held in. This
+section is the command.
+
+**The survey and the apply are two runs, and a run naming both flags is
+refused.** The survey is what makes the write safe, so it has to be a thing a
+person read before the write was asked for, rather than something the same run
+produced a moment earlier and never showed anybody. `readSurvey` reads that file
+the way `frontmatter` reads a note, with `DisallowUnknownFields` and a refusal
+for a second JSON object behind the first: it is the only record of what the
+document held before the run and the only thing standing between a direct-edit
+grant and a document nobody looked at. A survey that did not succeed is refused
+by name, because its zero fields are not facts.
+
+**Four refusals happen before `GrantInPlace` is called**, and the order in
+`applyRestyle` is the milestone's: a survey of another document, a survey
+reporting more than one tab, a `revisionId` that has moved, and a document that
+has more than one tab when read fresh. The tab rule is asked twice because the
+survey's count and the read's count are two different moments, and a style
+request names a range, which means nothing without saying which tab it is in.
+The document is handed to the policy at `LevelSuggest` like every other
+handed-in id, and the grant is a separate line further down.
+
+**A restyle is a moment, not a setting, and that sentence belongs in the
+report.** `updateNamedStyle` does not exist, so the look is applied paragraph by
+paragraph. The document looks right afterwards and the next heading the author
+types is Google's Heading 1 again. Nothing in the binary can fix that, and the
+skill says it out loud rather than letting somebody discover it a week later.
+
+**A table's cells are one request naming the table, not one per row.**
+`updateTableCellStyle` takes either a `tableRange` or a `tableStartLocation`, and
+the reference documents the second as applying "to all the cells in the table".
+The row form was built from the row's own cell count, and that count is not the
+row's width: `Table.columns` says "It is possible for a table to be
+non-rectangular, so some rows may have a different number of cells", so a row
+whose first two columns are merged carries one cell object for the pair and the
+span covered the merged cell alone, leaving the row's last column with the look
+it had. `internal/docs` decodes no `columnSpan` and no column count, so the real
+width is not something the builder could compute, and a request that names the
+table needs neither. `cellAt` in `landing.go` reads that one shape, and a
+`tableRange` is no answer rather than a second reading nothing sends.
+
+**What a restyle overwrites is formatting inside the paragraphs it styles**, and
+what it does not touch is written down in the same breath. The face, the size
+and the colour of every run go to the house value, so an author's own emphasis
+by size or colour is gone. Bold, italic, `keep_with_next` and
+`keep_lines_together` are never written, because absent and false are one word in
+`house.yaml` and writing them would clear an author's emphasis on the strength of
+a value the file may never have stated. A table cell's own fill is left alone for
+the mirror reason: which row of somebody's table is a header is not something
+gdoc can read. Not a character of the author's text moves, and the threads, the
+pending suggestions, the chips and the named ranges are what the read-back
+counts.
+
+**The read-back is two halves, and it runs on a failed run too.** `Preserve`
+compares the survey with a fresh survey: thread counts and per-thread witness,
+pending suggestion ids, chips. `Landed` reads the styling back out of the Docs
+answer and asks whether the requests that were sent are really there. A run that
+wrote nothing reads nothing back, because the document is as it was; a run that
+stopped at batch twelve does, because that is the run the preservation facts are
+most needed for; and a read the run could not make is a warning and no read-back
+at all, since a preservation half built from a listing that never arrived names
+every thread in the survey as gone.
+
+Seven rules inside those halves are decisions rather than details.
+
+- **A witness that reads `unmatched` now is `unwitnessed`, never a lost
+  anchor.** Unmatched is the export giving no answer, and calling absence of
+  evidence damage is the cry-wolf warning this tool avoids everywhere else. It
+  keeps `verified` false all the same, because nothing then says the anchor
+  survived.
+- **A witness that reads `detached` now, on a thread the survey could not
+  witness, is `now_detached`, and it is neither of the two lists either side of
+  it.** Detached is the export answering, and its answer is that the text a
+  comment was attached to has gone, so it is not the absence of evidence
+  `unwitnessed` holds. What is missing is any answer about whether it was
+  already detached before the run, so it is not `lost_anchor` either, whose
+  warning says in its own words that the thread was anchored before. `verified`
+  is false over it. The case is not a corner: a survey whose own export failed
+  reports every thread `unmatched`, which is exactly the before-picture this
+  arrives from, and with no list of its own it left `verified: true` on a run
+  that destroyed an anchor.
+- **The survey carries suggestion ids and not only counts.** Two counts that did
+  not move cannot tell one suggestion destroyed and another created from nothing
+  having happened, so `SuggestionCounts` carries the ids the read could see,
+  from the listing's walk and from the elements both.
+- **The landing check is made against the requests that were sent, never against
+  `house.yaml`.** A check written from the house style asks the question the
+  builder already answers, and the two drift the first time a builder stops
+  setting a field. It reads the first request of each kind and names where it
+  looked, because a restyle sends one request per paragraph and hundreds of
+  lookups answer one question. A field the read does not carry at all is the
+  document's own default, so a zero holds where the read is silent: Docs leaves
+  a property equal to its default out of the answer, and reading that silence as
+  a failure would report every zero the house style states as not landed.
+- **Sent means sent, so a run that stopped is given the prefix and not the
+  plan.** `reached` hands `readBack` the requests that left the machine, which on
+  a run that stopped at batch three is not the table request sitting in batch
+  nine. Given the whole plan the check looked for a request that never left the
+  machine and named the style as one that did not land, on a run whose warnings
+  somebody is already reading to work out what state the document is in.
+- **Left the machine is two lists, and a batch Docs accepted is in the second
+  one.** `restyle.Sent` is `Confirmed` and `Unconfirmed`: the requests inside the
+  batches Docs answered for, and the requests of the one batch Docs accepted
+  whose answer could not be read, which `Applied.MaybeRequests` counts. Both are
+  read back, because on that path reading the document is the only way anybody
+  finds out whether the styling is there, and the run has already paid for the
+  read. What an unconfirmed batch may never do is make the run verified, whatever
+  its checks say: `Verify` forces `verified` false over a non-empty
+  `Unconfirmed`, since the landing half reads the first request of each kind and
+  a batch of hundreds can hold one that landed and hundreds that did not.
+- **The page check reads the sections too, and it is the one case of a request
+  accepted and invisible that this half was written for.** `updateDocumentStyle` writes
+  `documentStyle`, so on a document whose section break carries its own margins
+  the request reads back exactly as it was sent while the page a reader sees
+  never moved: comparing the two alone answered held on the only document the
+  check exists for. `sectionOverrides` names the fields a section states for
+  itself, and a field on that list makes the check no answer with the reason in
+  it. `flipPageOrientation` is on that list and is matched by no name, because
+  no request this level carries can set it: a section stating it differently
+  from the document's own shows the page size that was sent transposed, which is
+  the same accepted-and-invisible shape one field along. Two sections say nothing. One that sets none of the fields the request set
+  overrides nothing, because an unset section margin is the document's own, so
+  the ordinary first section break of every document is not a warning; and one
+  restating the value that was sent overrides nothing a reader could see, so the
+  check answers. The second is the `MissingScopes` rule again: a warning that
+  fires on the working case is one people learn to ignore, and a document gdoc
+  built and published already carries the house geometry, which is what the
+  ten-feature acceptance restyles a copy of. The comparison is `missingFields`,
+  the rule the checks themselves are made of, so one tolerance decides both.
+
+**`manual` is what gdoc could not do, each with its menu path.** Three the API
+cannot do at all, the first-page header carrying the logo, the contents list and
+the footer page numbers, and two this milestone chose not to, the lists and the
+table column widths. A named style the house has no look for is the fourth
+entry, conditional like the other two. SPEC has gdoc write that list into the
+document as a finishing checklist; Nail's decision of 2026-09-09 is that it
+reports them and the skill reads them out, which is "the binary prints facts,
+and the skills judge" at the last place in this milestone that could have grown
+a verdict.
+
+**`verified: false` is not a failure**, as it is not for `propose` and
+`publish`. It is every landing check holding, the preservation half intact and
+no thread whose witness stopped answering. What was applied is in the document
+either way, and a caller told the run failed is a caller that runs it again.
 
 ### The cursor is opaque, and it dies with the session
 
@@ -1484,7 +1822,8 @@ The 🤖 comment a withdrawn proposal made stays where it is. `commentWrites`
 carries `POST` and nothing else, so deleting or editing a comment is a write the
 guard does not carry, and no command here needs one. The skill replies to the
 comment saying the proposal was withdrawn. A milestone that needs `PATCH` or
-`DELETE` adds it back beside its caller, the way `GrantInPlace` returns at M7b.
+`DELETE` adds it back beside its caller, the way `GrantInPlace` came back at
+M7b beside `cmdRestyle`'s grant.
 
 **The 🤖 prefix is the only record of authorship there is.** The Docs API cannot
 set an author, so everything gdoc writes is signed by whoever is logged in.
@@ -1646,19 +1985,22 @@ reporting a document as gone that is still there.
 **`publish` has no skill caller.** It is Nail-invoked. Wiring it into a skill is
 M9's, with the install story.
 
-### `GrantInPlace` is gone until M7b, and `AllowCreateIn` stayed
+### `GrantInPlace` came back at M7b, and `AllowCreateIn` never left
 
 PLAN.md M2 asked that a guard door with no production caller be deleted rather
-than carried. `GrantInPlace` had none, so it went, with its tests. M7b's
-in-place restyle adds it back beside its caller, and the level it raises to is a
-decision for Nail then, not something to restore from git because a test wants
-it.
+than carried. `GrantInPlace` had none, so it went, with its tests. M7 did not
+add it back either: the survey writes to no document, so a level for a write
+that did not exist yet would have been the same door a milestone early. That was
+Nail's decision of 2026-09-09, with the split.
 
-**M7 did not add it back, and that is the same rule again.** The survey writes
-to no document, so a level for a write that does not exist yet would be a door
-with no production caller a milestone early: exactly what M2 deleted. Nail's
-decision of 2026-09-09, with the split. `LevelInPlace` arrives in M7b beside the
-write, with the request-kind allowlist he chose there.
+**M7b added it back beside the line that calls it**, which is `cmdRestyle`
+opening the grant, and the level it raises to is `LevelInPlace` with the
+request-kind allowlist Nail chose there. The deleted
+`TestGrantInPlaceNeverAdmitsAnUnknownID` returned with it, and
+`TestAHandedInDocumentIsNeverDirectlyEdited` was narrowed rather than deleted:
+it still holds for every id the grant did not name. Read "A third write level,
+and the four kinds it carries" above for what the level carries. Widening it is
+Nail's decision, not a refactor.
 
 `AllowCreateIn` stayed even though M2 calls it nowhere. The transport's whole
 create path is built on it: the parent check, the upload-shape check and the
@@ -2107,17 +2449,27 @@ nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
 
-`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the four write tests beside it, and
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the six write tests beside it, and
 each creates its own documents in the Drive test folder. The first proposes into
 one, replies, withdraws and trashes it, asserting every read-back on the way. The
 second is M4's: it starts a wait, posts a comment into the document while that
 wait is running, checks the comment came back before the deadline, then waits
 again on the cursor it was handed and checks that window is empty, up to 90
-seconds and then 15, and trashes the document. The last two are M6's:
+seconds and then 15, and trashes the document. Two are M6's:
 `TestLivePublish` publishes a temp note into the folder and asserts the
 read-back, the title, the one tab and the block written into the note, and
 `TestLiveDrift` uploads the built document and the master and runs the item list
-over both. All four write only to documents they made.
+over both. `TestLiveStyleFidelity` is the measurement M7b was scoped from: it
+sends each candidate styling request kind in a batch of its own and logs what
+landed, asserting almost nothing, because a measurement that fails the build
+when Google answers differently has already decided the answer.
+`TestLiveRestylePreservesTenFeatures` is M7b's acceptance and is the one that
+needs a second id, `GDOC_LIVE_IDEAL_DOC_ID`: it copies that document with
+`copyComments=true` under `AllowCopy`, checks the copy holds all ten features
+before a single request is built, restyles the copy at `LevelInPlace`, asserts
+all ten again, and re-reads the **original** on every path to prove its
+`revisionId` never moved. Five of the six write only to documents they made,
+and the sixth reads one it was named and never writes to it.
 `TestTheLiveFixturesRenderWithNoNetwork` sits in the same file and asks for
 neither variable: both live tests render a note before they reach Drive, so a
 note that stopped rendering or a fixture path that moved would otherwise be
@@ -2355,9 +2707,10 @@ document.
 
 **This is v1's `restyle`, and v2's is a different command wearing the same
 word.** v1 publishes a copy; v2's `restyle --dry-run` surveys one document and
-writes nothing. Read "`restyle --dry-run` is the survey" above for that one.
-Restyling in place is M7b's, and it is neither of these: it changes the
-document that was handed in.
+writes nothing. Read "`restyle --dry-run` is the survey" above for that one, and
+"`restyle --from` styles a document gdoc did not create" for the third, which
+landed at M7b and is neither of the other two: it changes the document that was
+handed in.
 
 `gdoc restyle` publishes a house-styled copy of a document with no queue, no
 paired markdown and no baseline. `gdoc/restyle.py` composes the pull, the
@@ -2490,14 +2843,20 @@ instead, as with the 40-twip cell margin.
 
 ## Never
 
-- Never edit a reviewed Google Doc. Under `service_account` the credential
-  cannot. Under `oauth` it could: `gdoc/guard.py` bounds which files are
-  reachable, not what may be done inside one. Nothing in gdoc edits a document,
-  and nothing may start. v2 writes into a document and this rule is unchanged:
-  every write is a suggestion, `go/internal/guard` refuses a `batchUpdate`
-  without `writeMode: SUGGEST`, and the read-back through
+- Never edit a reviewed Google Doc, **except the one document a restyle was
+  granted, for the one run it was granted in**. Under `service_account` the
+  credential cannot edit at all. Under `oauth` it could: `gdoc/guard.py` bounds
+  which files are reachable, not what may be done inside one, so v1 holds this
+  by discipline and nothing in v1 may start. v2 holds it in the guard: every
+  write is a suggestion, `go/internal/guard` refuses a `batchUpdate` without
+  `writeMode: SUGGEST`, and the read-back through
   `PREVIEW_WITHOUT_SUGGESTIONS` is there because Google has broken that promise
-  once.
+  once. **M7b opened one door in that wall**, Nail's decision of 2026-09-09:
+  `Policy.GrantInPlace(id)` raises one handed-in id to `LevelInPlace` for one
+  run, where four styling request kinds carry and nothing else does, and none of
+  the four can change a character of what the author wrote. Read "A third write
+  level, and the four kinds it carries" above. Widening it, by a fifth request
+  kind or by a second call site, is Nail's decision and not a refactor.
 - Never commit anything from `~/.config/gdoc-agent/`.
 - Never post markdown into a comment thread. The CLI refuses it for a reason.
 

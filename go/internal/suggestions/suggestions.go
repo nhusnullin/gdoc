@@ -152,7 +152,10 @@ func (w *walker) blocks(bs []docs.Block) {
 			w.paragraph(b.Paragraph)
 			continue
 		}
-		for _, row := range b.Table {
+		if b.Table == nil {
+			continue
+		}
+		for _, row := range b.Table.Rows {
 			for _, cell := range row {
 				w.blocks(cell.Blocks)
 			}
