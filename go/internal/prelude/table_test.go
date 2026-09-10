@@ -705,3 +705,49 @@ func TestTheIndexBehindATableIsTheTablesOwnEnd(t *testing.T) {
 		t.Errorf("End = %d, want 28: twelve units per empty table, one for the newline in front of each, and one for the spacer paragraph", got.End)
 	}
 }
+
+func TestEveryBareParagraphMarkGdocProposesStatesItsOwnLook(t *testing.T) {
+	// Arrange: the fields declare no revisions, so the front matter keeps the
+	// template's prototype row and the blank row behind it, and both are full
+	// of cells whose only content is their own paragraph mark.
+	cfg := testConfig(t)
+
+	// Act
+	got, err := FrontMatter(cfg, testFields(), 1)
+	if err != nil {
+		t.Fatalf("FrontMatter() = %v", err)
+	}
+
+	// Assert: an empty paragraph is its mark alone, and the mark's own size is
+	// what carries a blank line's height. Inserted text takes the look of the
+	// text it lands beside, so a mark that states nothing is a blank cell
+	// wearing the author's face at the author's size. Every one-unit paragraph
+	// range therefore carries a text style over the same range.
+	texts := map[[2]int]bool{}
+	for _, r := range got.Requests {
+		body, ok := r["updateTextStyle"].(map[string]any)
+		if !ok {
+			continue
+		}
+		texts[styleRange(body)] = true
+	}
+	for _, r := range got.Requests {
+		body, ok := r["updateParagraphStyle"].(map[string]any)
+		if !ok {
+			continue
+		}
+		at := styleRange(body)
+		if at[1]-at[0] != 1 {
+			continue // it holds words, and every run of them is styled
+		}
+		if !texts[at] {
+			t.Errorf("the bare paragraph mark at %v states no look of its own", at)
+		}
+	}
+}
+
+// styleRange is the range one styling request names.
+func styleRange(body map[string]any) [2]int {
+	at := body["range"].(map[string]any)
+	return [2]int{at["startIndex"].(int), at["endIndex"].(int)}
+}

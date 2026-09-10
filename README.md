@@ -867,9 +867,10 @@ as everywhere else.
 
 The template's own `manual` list is reported beside the styling one, under
 `prelude`, and it names two things: the contents list, which no Docs request can
-create, and the column widths and row heights of the front-matter tables, whose
-requests Google will not accept as suggestions. The contents list is in both
-lists, because the styling half names it on every run. Heading numbering is not
+create, and the column widths and row heights of the front-matter tables, which
+need two request kinds nobody has measured as suggestible, where a request Docs
+refuses takes the whole batch with it. The contents list is in both lists,
+because the styling half names it on every run. Heading numbering is not
 in this yet, and it is not blocked either: it needs its own answer to what a
 second run should do about a number gdoc already wrote.
 
@@ -1249,8 +1250,8 @@ heading you type is the house one, needs something Google does not offer yet.
 
 **Lists and table layout in a restyle.** Bullets are left alone, because the
 request that sets one also deletes the tabs that set its nesting level, and
-column widths and row heights need two request kinds Google will not accept as
-suggestions.
+column widths and row heights need two request kinds nobody has measured as
+suggestible, and a request Docs refuses takes the whole batch with it.
 
 **Heading numbering in a restyle.** The cover, the front-matter tables and the
 legend are proposed today. Numbering every heading can be proposed too, and what

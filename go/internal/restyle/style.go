@@ -107,9 +107,9 @@ type Span struct {
 // block that is half gdoc's own words and half the author's is one no request
 // here can name without writing over one of them, and leaving it as it is costs
 // a paragraph its house look, while styling it would overwrite the cover line
-// Nail is being asked to accept. Nothing gdoc proposes can produce one: the
-// prelude ends in a page break of its own, so its last paragraph never merges
-// with the author's first.
+// Nail is being asked to accept. Nothing gdoc proposes can produce one: every
+// paragraph the prelude inserts ends in a newline of its own, so the prelude's
+// last paragraph closes where the author's first begins.
 func (s *Span) covers(start, end int) bool {
 	if s == nil {
 		return false

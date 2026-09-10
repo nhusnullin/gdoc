@@ -211,6 +211,15 @@ func (b *builder) cellPlan(cell house.Cell, border house.Border, value *string) 
 				m.sizePt, m.bold, m.italic = proto.SizePt, proto.Bold, proto.Italic
 			}
 			plan.runs = []run{{text: *value, look: b.textLook(b.cellSize(m))}}
+		case len(cp.Runs) == 0:
+			// A cell the house file states no runs for is a blank cell, and a
+			// blank cell is its paragraph mark alone. The mark still carries a
+			// look, and inserted text takes the look of the text it lands
+			// beside, so a mark that states nothing arrives at the author's
+			// face and the author's size, and an empty paragraph's height is
+			// its mark's size. That is the run internal/render writes for the
+			// same cell, in the same place, for the same reason.
+			plan.runs = []run{{look: b.textLook(b.cellSize(mark{font: tt.Font}))}}
 		default:
 			for _, r := range cp.Runs {
 				text, m := b.runText(r, mark{
