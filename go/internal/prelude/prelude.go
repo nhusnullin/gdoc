@@ -96,10 +96,48 @@ type Result struct {
 	// rejected insertion takes its marker with it.
 	Replaces *Marker
 	// Manual is what the prelude could not propose at all, each with the menu
-	// path a person takes instead. It is the same shape internal/restyle
-	// reports its own steps in, kept separately because the two lists are
-	// built from different things and the caller prints them as one.
+	// path a person takes instead.
+	//
+	// It is the same shape internal/restyle reports its own steps in, and it
+	// stays a separate list because the two are built from different things:
+	// this one from the blocks house.yaml states, and restyle's from what the
+	// in-place level cannot do to a document. The caller prints them in two
+	// places, prelude.manual and read_back.manual, rather than merging them,
+	// so a two-phase run names the contents list twice: house.yaml carries a
+	// toc block and restyle's own list carries the same entry unconditionally.
+	// Merging them is a decision about which object each step belongs to, not
+	// a cleanup, so it is written down here rather than done quietly.
 	Manual []ManualStep
+}
+
+// Occupies is the span of one tab's body gdoc's own words fill once this run's
+// requests have landed, which is not always the span the marker covers.
+//
+// On a first run the two are the same: [Start, End) is the prelude and there is
+// nothing else of gdoc's in the document. On a replace run they are not. The
+// deletion goes out in SUGGEST mode, which marks text rather than removing it,
+// so the prelude a run before this one left is still real text: the insert at
+// Start pushes it along by exactly the length of the new prelude, and it comes
+// to rest at [End, End + its own length), immediately behind the words that
+// replace it.
+//
+// The caller that wants this is phase 2. A styling phase given [Start, End)
+// alone walks past the new prelude and then gives the old one the house body
+// look by direct edit, at LevelInPlace, which flattens a cover Nail may yet
+// reject the deletion of and makes "rejecting it puts the document back as it
+// was" false. Read is what it is styled from, and internal/restyle reads no
+// suggestion id, so nothing further down could have noticed.
+//
+// It is not what the marker covers and not what the read-back asks about. The
+// marker is this run's record of the prelude it proposed, and Verify counts
+// whether every piece of that carries a suggestion id: the old prelude carries
+// a deletion id rather than an insertion one, so asked about this wider span
+// Verify would report gdoc's own replaced words as text somebody wrote.
+func (r Result) Occupies() (start, end int) {
+	if r.Replaces == nil {
+		return r.Start, r.End
+	}
+	return r.Start, r.End + (r.Replaces.End - r.Replaces.Start)
 }
 
 // ManualStep is one thing gdoc could not do, and where a person does it.

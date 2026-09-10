@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -87,6 +88,10 @@ func ReadFields(raw []byte) (Fields, error) {
 	if dec.More() {
 		return Fields{}, fmt.Errorf(
 			"the fields file carries more than one JSON object, and which cover counts is not decided here")
+	}
+
+	if err := checkStrippable(file); err != nil {
+		return Fields{}, err
 	}
 
 	title := strings.TrimSpace(file.Title)
@@ -178,4 +183,103 @@ func fieldsRevisions(rows []revisionRow) ([]Revision, error) {
 		})
 	}
 	return out, nil
+}
+
+// checkStrippable refuses a value carrying a character the Docs API removes
+// from an insert, naming the key it is in.
+//
+// InsertTextRequest says which ones in its own words: "Some control characters
+// (U+0000-U+0008, U+000C-U+001F) and characters from the Unicode Basic
+// Multilingual Plane Private Use Area (U+E000-U+F8FF) will be stripped out of
+// the inserted text." U+0009, the tab, is not among them, which is why the
+// house legend can write one.
+//
+// It is refused here rather than left to the writer because of what a stripped
+// character costs. internal/prelude computes every index it names itself, from
+// the length of the string it is about to send, so a unit Docs drops puts every
+// later insert one place out. The loud outcome is Docs refusing the whole batch
+// for an index that is inside no paragraph, which is what a missing table unit
+// did on 2026-09-10. The quiet one is worse: where the wrong index is still
+// valid the prelude ends one short, the marker is written one character into
+// the author's own text, and the next run proposes deleting a character they
+// wrote.
+//
+// The live route is an escape rather than a raw byte. A raw control character
+// is invalid JSON and the decoder above refuses it, while "\u001f" is what
+// json.Marshal writes for text pasted out of a word processor.
+//
+// This is the fields file's rule and not the note reader's. A note builds a
+// docx, where nothing computes a Docs index, and a note is the author's file
+// where gdoc carries what it does not read.
+func checkStrippable(file fieldsFile) error {
+	v := reflect.ValueOf(file)
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		key := strings.Split(t.Field(i).Tag.Get("json"), ",")[0]
+		switch value := v.Field(i).Interface().(type) {
+		case string:
+			if err := strippable(key, value); err != nil {
+				return err
+			}
+		case []revisionRow:
+			for n, row := range value {
+				if err := checkStrippableRow(fmt.Sprintf("%s[%d]", key, n+1), row); err != nil {
+					return err
+				}
+			}
+		case json.RawMessage:
+			// heading_numbering, and it is read to a boolean that reaches no
+			// insert. There is no text in it to strip.
+		default:
+			return unreadableField(key, t.Field(i).Type.String())
+		}
+	}
+	return nil
+}
+
+// unreadableField is what both walks say about a field they cannot read.
+//
+// The reflection is here so the check covers every value without an edit, and a
+// reader takes it that way. A field of a kind neither walk knows is one they
+// have stopped covering, so it fails rather than passing in silence: that is
+// the default arm internal/docs' own decoder learned to report from, and the
+// cost of the silence here is the quiet one the doc comment above names, a
+// prelude one character short and a marker written into the author's own text.
+func unreadableField(key, kind string) error {
+	return fmt.Errorf(
+		"%s is a %s, and the fields file's check for the characters the Docs API strips cannot read one: "+
+			"give internal/cover a case for it before this key reaches an inserted text", key, kind)
+}
+
+// checkStrippableRow is the same question of one revision row's own columns.
+//
+// Every column is a string today, and the kind is asked rather than assumed:
+// reflect.Value.String() does not panic on another kind, it hands back a
+// placeholder such as "<int Value>", so a column added later would be checked
+// against something that is not its value and would pass.
+func checkStrippableRow(where string, row revisionRow) error {
+	v := reflect.ValueOf(row)
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		key := where + "." + strings.Split(t.Field(i).Tag.Get("json"), ",")[0]
+		if v.Field(i).Kind() != reflect.String {
+			return unreadableField(key, t.Field(i).Type.String())
+		}
+		if err := strippable(key, v.Field(i).String()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// strippable is one value, and the refusal names the key and the code point.
+func strippable(key, written string) error {
+	for _, r := range written {
+		if (r <= 0x08) || (r >= 0x0C && r <= 0x1F) || (r >= 0xE000 && r <= 0xF8FF) {
+			return fmt.Errorf(
+				"%s carries U+%04X, which the Docs API strips out of an inserted text: "+
+					"gdoc counts the characters it sends to place everything after them, so take it out and run this again", key, r)
+		}
+	}
+	return nil
 }

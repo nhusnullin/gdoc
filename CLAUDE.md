@@ -1373,6 +1373,19 @@ each has its own answer.
   ids and saying to accept or reject in the browser first. Replacing it would
   propose deleting text that has never been written.
 
+**The pending question is asked before the count, and that is the third shape's
+own rule rather than a detail of it.** Two markers is exactly what a replace run
+leaves while its suggestions are unsettled: the new one over the prelude that
+was proposed, the old one over the prelude proposed for deletion, because
+nothing deletes a named range. Asked the other way round a third run over that
+ordinary state fell into the ambiguity refusal below and told somebody to remove
+a named range by hand, which the Docs UI gives no way to do and
+`deleteNamedRange` is on no allowlist for. So a marker carrying a pending
+suggestion is the pending refusal however many markers there are, and the
+ambiguity refusal is kept for two markers **over settled text**, which is a
+document gdoc cannot guess between. `internal/prelude/readback.go` says the same
+thing from the other side, that more than one marker is not itself a fault.
+
 Nothing deletes a named range and nothing needs to. `deleteNamedRange` is on no
 allowlist. The marker tracks its text, so the old one goes when the deletion
 under it is accepted and comes back when that deletion is rejected, and either
@@ -1395,6 +1408,29 @@ find; folded into the styling it would be lost with it. An unmarked prelude is
 one the next run proposes a second cover in front of, so the run stops and the
 warning says to accept or reject before running again.
 
+**A marker batch Docs accepted whose answer could not be read is
+`marker_maybe_created`, not a marker that did not land.** That is the rule every
+other writer here holds, said at the one field that had missed it: reported from
+`Batches` alone the run said the marker did not land one line under a warning
+saying that batch may be in the document, which is the contradiction
+`leftBehind`'s own comment exists to avoid.
+
+**Being its own batch is also what made it the last batch, and the revision has
+to be read for.** `restyle.Apply` warns and stops chaining when the final batch
+answers with no revision id, leaving `RevisionID` at the revision that batch was
+sent against, which under M7b was safe because nothing followed the last batch.
+Here the styling phase follows it. Sent that revision, the first styling batch is
+refused as stale and `isStale` reports it as somebody having edited the document
+after the survey: a third party named for a revision gdoc itself moved. So
+`Applied.RevisionUnconfirmed` says which of the two `RevisionID` is, and
+`cmdRestyle` reads it and makes the narrowed `restyle.RevisionOf` read on that
+one rare path. **The warning that came with the flag goes when that read
+answers.** `Apply`'s sentence, that the revision reported is not the one the
+document carries, is true when `Apply` says it and the read is what makes it
+false, so `cmdRestyle` drops it by value through `restyle.RevisionUnconfirmedWarning`.
+Left on the envelope it stands beside a revision Docs named, and two sentences
+contradicting each other in one warnings list is worse than either of them.
+
 **Phase 2 walks past the span phase 1 wrote, and without that the milestone
 defeats itself.** Every paragraph `internal/prelude` proposes is a `NORMAL_TEXT`
 stating the cover's own sizes and colours in full, because inserted text takes
@@ -1406,6 +1442,24 @@ alone as `planned.skipped`; `TabRequests` is that function with no span, so an
 M7b run is unchanged. The overlap is read rather than containment, and
 `Span.covers` says why: a block half gdoc's words and half the author's is one
 no request can name without writing over one of them.
+
+**On a replace run that span is two preludes, not one, and the marker's is still
+one.** `prelude.Result.Occupies` is the arithmetic and the reason for it. The
+deletion goes out in SUGGEST mode, which marks text rather than removing it, so
+the prelude the run before this one left is still real text: the insert at
+`Start` pushes it along by the length of the new prelude and it comes to rest at
+`[End, End + its own length)`, immediately behind the words that replace it.
+Given `[Start, End)` alone, phase 2 walked past the new prelude and then gave the
+old one the house body look **by direct edit at `LevelInPlace`**, which flattens
+a cover Nail may yet reject the deletion of and makes the suggested run's own
+recovery sentence, that rejecting it puts the document back as it was, false.
+Nothing downstream could have named it: `internal/restyle` reads no suggestion
+id, and `prelude.Verify`'s body check compares characters. So `phaseOne` carries
+two spans on purpose. `span` is what was proposed, which is the marker's range
+and the range the read-back counts suggestion ids inside; `skip` is what phase 2
+walks past. They must not be folded: the replaced prelude carries a deletion id
+rather than an insertion one, so asked about `skip` the read-back would report
+gdoc's own replaced words as text somebody wrote.
 
 **gdoc's own paragraphs state their look in full, which is the opposite of
 `internal/restyle`'s rule and for the opposite reason.** A restyle writes onto
@@ -1429,6 +1483,20 @@ length in the units the API counts, and a style object built with the mask that
 names it. `internal/restyle` was moved onto `docsreq` in the same commit, so the
 line-spacing rounding and the colour conversion have one copy between the two
 request builders.
+
+**The cover's page break is one request and two index units.**
+`insertPageBreak` "inserts a page break followed by a newline", in the
+reference's own words, so the break takes one unit and the newline it brings
+takes another. An `insertText` writing that newline as well is what used to
+stand beside it, and it put three units in the document where the builder
+counted two: the third was a stray empty paragraph that every later insert
+pushed along until it sat one past `End`, outside the marker, outside the span
+phase 2 walks past, left behind by a second run's `deleteContentRange` and
+joined by another on the third. Nothing in the suite could see it, because every
+check there is the builder's arithmetic asked about itself and the live
+acceptance reads only inside `[Start, End)`. It is the same class as the table's
+own end unit, one request along, and unlike that one it is read out of the
+reference rather than measured: the live acceptance is what confirms it.
 
 **A table is inserted and then filled**, which is more requests than the docx
 writer needs and is the shape the Docs API has: `insertTable` makes a grid of
@@ -1473,6 +1541,22 @@ file stating no version publishes as 1.0 and one stating no date as this month,
 exactly as a note does.
 `TestTheFieldsFileNamesTheSameThirteenValuesTheNoteDoes` states that one note
 and one fields file naming the same values read to the same `Fields`.
+
+**A value carrying a character Docs strips out of an insert is refused, naming
+the key.** `InsertTextRequest` names the set: U+0000-U+0008, U+000C-U+001F and
+the Private Use Area U+E000-U+F8FF, with the tab deliberately outside it, which
+is why the house legend can write one. It is refused at the door because
+`internal/prelude` computes every index it names from the length of the string
+it is about to send, so a unit Docs drops puts every later insert one place out.
+The loud outcome is Docs refusing the whole batch for an index inside no
+paragraph, which is what the missing table unit did. The quiet one is worse: where
+the wrong index is still valid the prelude ends one short, the marker is written
+one character into the author's own text, and the next run proposes deleting a
+character they wrote. The live route is an escape rather than a raw byte, since
+a raw control character is invalid JSON and the strict decode refuses it, while
+`\u001f` is what `json.Marshal` writes for text pasted out of a word processor.
+This is the fields file's rule and not the note reader's: a note builds a docx,
+where nothing computes a Docs index.
 
 **Nothing infers a title.** A missing one is `cover.MissingTitle`, the same
 error type a note's reader raises, so the skill reads one shape. It carries an

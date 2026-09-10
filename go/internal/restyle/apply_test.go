@@ -377,6 +377,12 @@ func TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone(t *testing.T) {
 	if got.Batches != 3 {
 		t.Errorf("Batches = %d, want 3", got.Batches)
 	}
+	// A revision the loop read for is a revision Docs named, so the flag that
+	// sends the caller to read for one stays off. A caller that reads it as set
+	// here makes a fourth request for a revision it already has.
+	if got.RevisionUnconfirmed {
+		t.Error("RevisionUnconfirmed is set on a run whose every batch answered with a revision the loop went on to use")
+	}
 }
 
 // The read that stands in for a missing revision can fail, and then the run has
@@ -421,6 +427,14 @@ func TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(got.Warnings, " "), "revision") {
 		t.Errorf("the last answer named no revision, and the warnings must say so: %v", got.Warnings)
+	}
+	// The flag, and it is what the caller acts on rather than the sentence. A
+	// marker batch is the last batch of its own run, and the styling phase that
+	// follows it is sent against RevisionID: read as confirmed, that batch is
+	// refused as stale and isStale names a third party for a revision gdoc
+	// itself moved.
+	if !got.RevisionUnconfirmed {
+		t.Error("RevisionUnconfirmed = false on a run whose last answer named no revision id: a caller reading only the warning cannot go and read for one")
 	}
 }
 

@@ -80,9 +80,9 @@ func TestTheCoverIsTheHouseCoverLineByLine(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Act
-	got, err := Cover(cfg, testFields(), 1)
+	got, err := coverBlock(cfg, testFields(), 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert
@@ -94,13 +94,15 @@ func TestTheCoverIsTheHouseCoverLineByLine(t *testing.T) {
 		"Version: 1.0",
 		"May 2026",
 		"", "", "", "", "", "", "", "", // the eight trailing blanks
-		"", // the page break's own paragraph
 	}
 	if got := texts(got.Requests); !equal(got, want) {
 		t.Errorf("the cover reads\n%q\nwant\n%q", got, want)
 	}
-	if got.Paragraphs != len(want) {
-		t.Errorf("Paragraphs = %d, want %d", got.Paragraphs, len(want))
+	// One paragraph more than there are texts, and it is the page break's own.
+	// insertPageBreak writes the break and the newline behind it, so that
+	// paragraph reaches the document with no insertText of its own.
+	if want := len(want) + 1; got.Paragraphs != want {
+		t.Errorf("Paragraphs = %d, want %d", got.Paragraphs, want)
 	}
 }
 
@@ -109,9 +111,9 @@ func TestTheCoverLinesAreCentredAtTheHouseSizes(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Act
-	got, err := Cover(cfg, testFields(), 1)
+	got, err := coverBlock(cfg, testFields(), 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert: the title line, which is the ninth paragraph the cover writes.
@@ -171,9 +173,9 @@ func TestTheAlternativeTitleLinesArriveOnlyWithAnAlternativeTitle(t *testing.T) 
 	f.AltTitle = "Supplier Risk"
 
 	// Act
-	got, err := Cover(cfg, f, 1)
+	got, err := coverBlock(cfg, f, 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert
@@ -184,9 +186,9 @@ func TestTheAlternativeTitleLinesArriveOnlyWithAnAlternativeTitle(t *testing.T) 
 	// And without one, neither line is written: the master offers the title
 	// twice for a person to pick one, and printing both published a cover
 	// reading the title, then "or", then the template's own placeholder.
-	got, err = Cover(cfg, testFields(), 1)
+	got, err = coverBlock(cfg, testFields(), 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 	if contains(texts(got.Requests), "or") {
 		t.Errorf("a cover with one title carries the master's \"or\": %q", texts(got.Requests))
@@ -200,9 +202,9 @@ func TestTheVersionLabelIsARunAndOnlyTheNumberIsTheFields(t *testing.T) {
 	f.Version = "2.3"
 
 	// Act
-	got, err := Cover(cfg, f, 1)
+	got, err := coverBlock(cfg, f, 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert
@@ -227,9 +229,9 @@ func TestAnUnfilledPlaceholderKeepsTheTemplatesMarks(t *testing.T) {
 	cfg := markedConfig()
 
 	// Act
-	got, err := Cover(cfg, cover.Fields{Title: "A Policy"}, 1)
+	got, err := coverBlock(cfg, cover.Fields{Title: "A Policy"}, 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert
@@ -261,9 +263,9 @@ func TestAFilledPlaceholderLosesTheTemplatesMarks(t *testing.T) {
 	f := cover.Fields{Title: "A Policy", Distribution: "All staff"}
 
 	// Act
-	got, err := Cover(cfg, f, 1)
+	got, err := coverBlock(cfg, f, 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert
@@ -308,9 +310,9 @@ func TestTheCoverEndsWithAPageBreak(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Act
-	got, err := Cover(cfg, testFields(), 1)
+	got, err := coverBlock(cfg, testFields(), 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert: the break is inside gdoc's own last paragraph, so what follows
@@ -334,6 +336,22 @@ func TestTheCoverEndsWithAPageBreak(t *testing.T) {
 	if got.End != last[1] {
 		t.Errorf("End = %d, want %d, one past the last character the prelude inserts", got.End, last[1])
 	}
+
+	// Assert: one request writes that paragraph, and nothing writes a newline
+	// beside it. InsertPageBreakRequest inserts "a page break followed by a
+	// newline", so an insertText at the break's own index would put a third
+	// unit in the document that End does not count: a stray empty paragraph
+	// every later insert pushes along until it sits one past the marker.
+	for _, r := range got.Requests {
+		body, ok := r["insertText"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if body["location"].(map[string]any)["index"].(int) == at {
+			t.Errorf("an insertText writes %q at %d, where the page break already writes its own newline",
+				body["text"], at)
+		}
+	}
 }
 
 func TestTheRequestsInsertOneAfterAnotherFromWhereTheyWereTold(t *testing.T) {
@@ -343,9 +361,9 @@ func TestTheRequestsInsertOneAfterAnotherFromWhereTheyWereTold(t *testing.T) {
 	// Act: a prelude that starts at 1, which is where a document's body
 	// begins, and one that starts further in.
 	for _, start := range []int{1, 42} {
-		got, err := Cover(cfg, testFields(), start)
+		got, err := coverBlock(cfg, testFields(), start)
 		if err != nil {
-			t.Fatalf("Cover(start=%d) = %v", start, err)
+			t.Fatalf("coverBlock(start=%d) = %v", start, err)
 		}
 
 		// Assert
@@ -373,9 +391,9 @@ func TestEveryMaskNamesExactlyWhatTheRequestSets(t *testing.T) {
 	cfg := testConfig(t)
 
 	// Act
-	got, err := Cover(cfg, testFields(), 1)
+	got, err := coverBlock(cfg, testFields(), 1)
 	if err != nil {
-		t.Fatalf("Cover() = %v", err)
+		t.Fatalf("coverBlock() = %v", err)
 	}
 
 	// Assert: the Docs reference says a field named in a mask and left unset
@@ -420,7 +438,7 @@ func TestAPlaceholderThatIsNotACoverFieldStopsTheCover(t *testing.T) {
 	cfg.Cover.Lines[0].Placeholder = "approver"
 
 	// Act
-	_, err := Cover(cfg, testFields(), 1)
+	_, err := coverBlock(cfg, testFields(), 1)
 
 	// Assert
 	if err == nil {
@@ -437,7 +455,7 @@ func TestAnAlignmentTheDocsAPIDoesNotHaveStopsTheCover(t *testing.T) {
 	cfg.Cover.Align = "middle"
 
 	// Act
-	_, err := Cover(cfg, testFields(), 1)
+	_, err := coverBlock(cfg, testFields(), 1)
 
 	// Assert
 	if err == nil {

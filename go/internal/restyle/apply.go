@@ -89,6 +89,20 @@ type Applied struct {
 	// last accepted answer named, or, when no answer named one, the revision
 	// the last batch was sent against.
 	RevisionID string `json:"revision_id"`
+	// RevisionUnconfirmed says RevisionID is that second thing: the last batch
+	// was accepted, its answer named no revision id, and nothing followed it to
+	// read one for. The document has moved past it, and a caller that sends
+	// another batch against it has that batch refused as stale.
+	//
+	// It is a field rather than a warning because a caller acts on it. The
+	// prelude run is the one that does: it sends the marker in a batch of its
+	// own and then hands this revision to the styling phase, so read as a
+	// confirmed revision it makes the first styling batch fail, and isStale
+	// reports that failure as somebody having edited the document after the
+	// survey, which names a third party for a revision gdoc itself moved.
+	// It is printed on every run, beside Stale and MaybeApplied, because a flag
+	// that vanishes when it is false cannot be read the same way twice.
+	RevisionUnconfirmed bool `json:"revision_unconfirmed"`
 	// Stale says Docs refused a batch because the document had moved under the
 	// run. It is the one refusal that means somebody else was editing.
 	Stale bool `json:"stale"`
@@ -166,6 +180,16 @@ func Suggest(ctx context.Context, s Session, docID string, requests []map[string
 	return apply(ctx, s, docID, requests, revisionID, "SUGGEST")
 }
 
+// RevisionUnconfirmedWarning is what a run says when its last batch was
+// accepted and the answer named no revision id. It is true when apply says it,
+// and a caller that then reads the document for a revision has made it false:
+// two sentences contradicting each other in one warnings list is worse than
+// either of them, and the skill reads that list to Nail. So it is a constant
+// rather than a literal, and cmd/gdoc drops it by value on the one path that
+// goes and reads.
+const RevisionUnconfirmedWarning = "the last batch was accepted and its answer named no revision id, " +
+	"so the revision reported here is the one that batch was sent against, not the one the document now carries"
+
 // apply is the loop both of them run. mode is empty for a direct edit.
 func apply(ctx context.Context, s Session, docID string, requests []map[string]any, revisionID, mode string) (Applied, error) {
 	out := Applied{RevisionID: revisionID, suggest: mode == "SUGGEST"}
@@ -215,11 +239,11 @@ func apply(ctx context.Context, s Session, docID string, requests []map[string]a
 				// What the run cannot say is where the document ended up, and
 				// it says that rather than reporting a revision the last batch
 				// has already moved past.
-				out.Warnings = append(out.Warnings,
-					"the last batch was accepted and its answer named no revision id, so the revision reported here is the one that batch was sent against, not the one the document now carries")
+				out.Warnings = append(out.Warnings, RevisionUnconfirmedWarning)
+				out.RevisionUnconfirmed = true
 				break
 			}
-			read, err := revisionOf(ctx, s, docID)
+			read, err := RevisionOf(ctx, s, docID)
 			if err != nil {
 				out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
 				return out, fmt.Errorf(
@@ -418,7 +442,7 @@ type batchAnswer struct {
 	} `json:"writeControl"`
 }
 
-// revisionOf reads the document for its revision id alone.
+// RevisionOf reads the document for its revision id alone.
 //
 // It is the narrowed read rather than the whole document, because the revision
 // is the only thing the loop wants: the requests were built before the first
@@ -440,7 +464,12 @@ type batchAnswer struct {
 // rare wrong landing for a half-styled document on every run whose answer went
 // quiet, and choosing between the two is Nail's.
 // docs/backlog/restyle-revision-fallback-breaks-the-chain.md holds it.
-func revisionOf(ctx context.Context, s Session, docID string) (string, error) {
+//
+// It is exported for the second caller, which is the prelude run: the marker
+// goes out in a batch of its own and the styling phase is sent against whatever
+// revision that batch produced, so a marker batch that came back
+// RevisionUnconfirmed needs this read before the styling can be sent at all.
+func RevisionOf(ctx context.Context, s Session, docID string) (string, error) {
 	var raw json.RawMessage
 	if err := s.GetJSON(ctx, docs.NamedRangesURL(docID), &raw); err != nil {
 		return "", err

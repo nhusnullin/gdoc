@@ -13,6 +13,9 @@ import (
 	"strings"
 	"testing"
 
+	"gdoc/internal/cover"
+	"gdoc/internal/house"
+	"gdoc/internal/prelude"
 	"gdoc/internal/restyle"
 )
 
@@ -1456,5 +1459,304 @@ func TestAStylingRunReadsNoPreludeBack(t *testing.T) {
 	if data["verified"] != true {
 		t.Errorf("verified = %v, warnings %v: M7b's run must not be made unverified by a phase it never had",
 			data["verified"], warningsOf(t, got))
+	}
+}
+
+// markedDocument is a document a run before this one left a prelude in, and
+// settled: the marker covers [1,7), and the six characters under it carry no
+// suggestion id, so this run replaces them rather than refusing.
+func markedDocument(revisionID string) string {
+	return `{
+  "documentId": "` + fixtureDocID + `",
+  "title": "Supplier register policy",
+  "revisionId": "` + revisionID + `",
+  "tabs": [{"tabProperties": {"tabId": "t.0"},
+            "documentTab": {
+              "namedRanges": {"gdoc:house-prelude": {"name": "gdoc:house-prelude", "namedRanges": [
+                {"namedRangeId": "kix.marker1", "name": "gdoc:house-prelude",
+                 "ranges": [{"startIndex": 1, "endIndex": 7}]}]}},
+              "body": {"content": [
+                {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+                {"startIndex": 1, "endIndex": 7,
+                 "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                   "elements": [{"startIndex": 1, "endIndex": 7,
+                     "textRun": {"content": "Cover\n", "textStyle": {}}}]}},
+                {"startIndex": 7, "endIndex": 25,
+                 "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                   "elements": [{"startIndex": 7, "endIndex": 25,
+                     "textRun": {"content": "The author's own.\n", "textStyle": {}}}]}}
+              ]}}}]
+}`
+}
+
+// afterTheReplace is that document as the fresh read between the phases sees
+// it: the new prelude proposed at index 1, the old one pushed along to
+// [end, end+6) and marked for deletion rather than removed, and the author's
+// own paragraph behind both of them.
+//
+// end is where the prelude this run proposes stops, which the test asks
+// internal/prelude for, because that is what the command computes it from.
+func afterTheReplace(end int) string {
+	return fmt.Sprintf(`{
+  "documentId": %q,
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXafterThePrelude",
+  "tabs": [{"tabProperties": {"tabId": "t.0"},
+            "documentTab": {
+              "namedRanges": {"gdoc:house-prelude": {"name": "gdoc:house-prelude", "namedRanges": [
+                {"namedRangeId": "kix.marker1", "name": "gdoc:house-prelude",
+                 "ranges": [{"startIndex": %d, "endIndex": %d}]}]}},
+              "body": {"content": [
+                {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+                {"startIndex": 1, "endIndex": %d,
+                 "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                   "elements": [{"startIndex": 1, "endIndex": %d,
+                     "textRun": {"content": "A Policy\n", "textStyle": {},
+                                 "suggestedInsertionIds": ["suggest.new1"]}}]}},
+                {"startIndex": %d, "endIndex": %d,
+                 "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                   "elements": [{"startIndex": %d, "endIndex": %d,
+                     "textRun": {"content": "Cover\n", "textStyle": {},
+                                 "suggestedDeletionIds": ["suggest.old1"]}}]}},
+                {"startIndex": %d, "endIndex": %d,
+                 "paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                   "elements": [{"startIndex": %d, "endIndex": %d,
+                     "textRun": {"content": "The author's own.\n", "textStyle": {}}}]}}
+              ]}}}]
+}`, fixtureDocID, end, end+6, end, end, end, end+6, end, end+6, end+6, end+24, end+6, end+24)
+}
+
+// preludeEnd is where the prelude these fields come to stops, proposed at the
+// top of a body. The test asks internal/prelude rather than writing a number
+// down, because the number is the house style's and moves with it.
+func preludeEnd(t *testing.T) int {
+	t.Helper()
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("the embedded house style did not parse: %v", err)
+	}
+	f, err := cover.ReadFields([]byte(fieldsFile))
+	if err != nil {
+		t.Fatalf("the fields file did not read: %v", err)
+	}
+	res, err := prelude.FrontMatter(cfg, f, 1)
+	if err != nil {
+		t.Fatalf("the prelude did not build: %v", err)
+	}
+	return res.End
+}
+
+// styledRanges is every range the styling batch named. A request that names no
+// range, the page and a table cell among them, is not in the list.
+func styledRanges(t *testing.T, b batchOf) [][2]int {
+	t.Helper()
+	var out [][2]int
+	for _, r := range b.Requests {
+		for _, raw := range r {
+			var one struct {
+				Range struct {
+					StartIndex int `json:"startIndex"`
+					EndIndex   int `json:"endIndex"`
+				} `json:"range"`
+			}
+			if err := json.Unmarshal(raw, &one); err != nil || one.Range.EndIndex == 0 {
+				continue
+			}
+			out = append(out, [2]int{one.Range.StartIndex, one.Range.EndIndex})
+		}
+	}
+	return out
+}
+
+// replaceWire is a second run over a document gdoc has already put a prelude
+// into: the marked read, the prelude batch, the fresh read that carries both
+// preludes, the marker batch, the styling batch and the read-back's three
+// reads.
+func replaceWire(t *testing.T, end int) *fakeWire {
+	t.Helper()
+	return &fakeWire{answers: []*answer{
+		{method: "GET", match: "docs.googleapis.com", json: markedDocument("ALm37BXmarked"), once: true},
+		{method: "POST", match: ":batchUpdate", once: true,
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterThePrelude"}}`},
+		{method: "GET", match: "docs.googleapis.com", json: afterTheReplace(end), once: true},
+		{method: "POST", match: ":batchUpdate", once: true,
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheMarker"}}`},
+		{method: "POST", match: ":batchUpdate",
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheBatch"}}`},
+		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
+		{method: "GET", match: "docs.googleapis.com", json: afterTheReplace(end)},
+		{method: "GET", match: "/export?", bytes: witnessExport(t)},
+	}}
+}
+
+// A replace run hands phase 2 the span both preludes occupy, and that is the
+// whole reason phaseOne carries two spans.
+//
+// The deletion goes out in SUGGEST mode, which marks text rather than removing
+// it, so the prelude the run before this one left is still real text sitting
+// behind the words that replace it. Given the marker's range alone, phase 2
+// walks past the new prelude and then gives the old one the house body look by
+// direct edit at LevelInPlace, which flattens a cover Nail may yet reject the
+// deletion of. Nothing downstream could name it: internal/restyle reads no
+// suggestion id, and the read-back compares characters.
+func TestAReplaceRunStylesNeitherPrelude(t *testing.T) {
+	// Arrange
+	end := preludeEnd(t)
+	f := stubWire(t, replaceWire(t, end))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXmarked", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --fields over a marked document: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	pre, _ := data["prelude"].(map[string]any)
+	if pre == nil || pre["replaced"] == nil {
+		t.Fatalf("prelude = %v, want the marker this run replaced named", pre)
+	}
+	batches := batchesSent(t, f)
+	if len(batches) != 3 {
+		t.Fatalf("the run sent %d batches, want the prelude, the marker and the styling", len(batches))
+	}
+	for _, r := range styledRanges(t, batches[2]) {
+		if r[0] < end+6 && r[1] > end {
+			t.Errorf("the styling named [%d,%d), which is inside the replaced prelude at [%d,%d): "+
+				"that is a direct edit over a cover Nail may yet reject the deletion of", r[0], r[1], end, end+6)
+		}
+	}
+	// And the author's own paragraph behind both preludes is styled, so the
+	// assertion above is not holding because the run styled nothing at all.
+	var reached bool
+	for _, r := range styledRanges(t, batches[2]) {
+		if r[0] >= end+6 {
+			reached = true
+		}
+	}
+	if !reached {
+		t.Errorf("the styling named nothing behind the two preludes: ranges %v", styledRanges(t, batches[2]))
+	}
+	planned, _ := data["planned"].(map[string]any)
+	if planned["skipped"] != float64(2) {
+		t.Errorf("planned.skipped = %v, want 2: the prelude this run proposed and the one it proposed deleting",
+			planned["skipped"])
+	}
+}
+
+// The marker batch is Docs accepting a write whose answer could not be read.
+// The run stops either way, and what it says about the marker is the one thing
+// it can honestly say: the marker may be there.
+func TestAMarkerBatchThatMayHaveLandedSaysSo(t *testing.T) {
+	// Arrange
+	w := preludeWire(t)
+	w.answers[3] = &answer{method: "POST", match: ":batchUpdate", once: true,
+		err: sentAnywayErr{errors.New("the answer was not JSON")}}
+	stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a marker that could not be confirmed must stop the run: %v (exit %d)", got, code)
+	}
+	pre, _ := dataOf(t, got)["prelude"].(map[string]any)
+	if pre == nil {
+		t.Fatalf("data carries no prelude object: %v", dataOf(t, got))
+	}
+	if pre["marker_maybe_created"] != true {
+		t.Errorf("prelude.marker_maybe_created = %v, want true: Docs took the batch and the answer was lost",
+			pre["marker_maybe_created"])
+	}
+	if pre["marker_created"] != false {
+		t.Errorf("prelude.marker_created = %v, want false: nothing confirmed it", pre["marker_created"])
+	}
+	err, _ := got["error"].(string)
+	if !strings.Contains(err, "may or may not be there") {
+		t.Errorf("error = %q, want it to say the marker may be there rather than that it did not land", err)
+	}
+}
+
+// The prelude batch is the other one that can answer naming no revision, and
+// the fresh read that follows it is what answers the question. So the sentence
+// saying the reported revision is not the document's goes there too, and the
+// styling phase is sent against what that read named rather than against the
+// revision the prelude was sent on, which Docs would refuse as stale.
+func TestThePreludeBatchNamingNoRevisionIsAnsweredByTheFreshRead(t *testing.T) {
+	// Arrange
+	w := preludeWire(t)
+	w.answers[1] = &answer{method: "POST", match: ":batchUpdate", once: true,
+		json: `{"documentId":"` + fixtureDocID + `"}`}
+	f := stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --fields: %v (exit %d)", got, code)
+	}
+	batches := batchesSent(t, f)
+	if len(batches) != 3 {
+		t.Fatalf("the run sent %d batches, want the prelude, the marker and the styling", len(batches))
+	}
+	if batches[1].WriteControl.RequiredRevisionID != "ALm37BXafterThePrelude" {
+		t.Errorf("the marker batch named revision %q, want the one the fresh read named",
+			batches[1].WriteControl.RequiredRevisionID)
+	}
+	warnings := strings.Join(warningsOf(t, got), " | ")
+	if strings.Contains(warnings, "not the one the document now carries") {
+		t.Errorf("warnings = %s, want the sentence gone: the fresh read answered it, "+
+			"and the revision the envelope reports is one Docs named", warnings)
+	}
+}
+
+// The marker batch is the last batch of its own run, so an answer naming no
+// revision leaves Apply reporting the revision that batch was sent against,
+// which the marker has already moved the document past. The run reads for one
+// rather than sending the styling phase against a revision it knows is stale.
+//
+// And the warning that said the reported revision is not the document's goes
+// with it. It was true when Apply said it and the read is what made it false.
+func TestTheStylingIsSentAgainstARevisionTheMarkerBatchDidNotName(t *testing.T) {
+	// Arrange
+	w := preludeWire(t)
+	w.answers[3] = &answer{method: "POST", match: ":batchUpdate", once: true,
+		json: `{"documentId":"` + fixtureDocID + `"}`}
+	// The read that stands in for it, and it is the narrowed one.
+	w.answers = append(w.answers[:4], append([]*answer{
+		{method: "GET", match: "docs.googleapis.com", once: true,
+			json: `{"documentId":"` + fixtureDocID + `","revisionId":"ALm37BXreadForIt","tabs":[]}`},
+	}, w.answers[4:]...)...)
+	f := stubWire(t, w)
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --fields: %v (exit %d)", got, code)
+	}
+	batches := batchesSent(t, f)
+	if len(batches) != 3 {
+		t.Fatalf("the run sent %d batches, want the prelude, the marker and the styling", len(batches))
+	}
+	if batches[2].WriteControl.RequiredRevisionID != "ALm37BXreadForIt" {
+		t.Errorf("the styling batch named revision %q, want the one the run read for: "+
+			"sent the marker batch's own, Docs refuses it as stale and the run blames somebody else's edit",
+			batches[2].WriteControl.RequiredRevisionID)
+	}
+	warnings := strings.Join(warningsOf(t, got), " | ")
+	if strings.Contains(warnings, "not the one the document now carries") {
+		t.Errorf("warnings = %s, want the sentence gone: the run went and read, and the revision it reports is one Docs named", warnings)
 	}
 }

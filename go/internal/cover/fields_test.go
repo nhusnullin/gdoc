@@ -2,6 +2,7 @@ package cover
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -309,5 +310,138 @@ func TestTheFieldsFileNamesTheSameThirteenValuesTheNoteDoes(t *testing.T) {
 		if fromFile.Revisions[i] != want {
 			t.Errorf("revision %d = %+v from the file, want %+v", i+1, fromFile.Revisions[i], want)
 		}
+	}
+}
+
+// The Docs API strips some control characters and the Private Use Area out of
+// an inserted text. internal/prelude counts the characters it sends to place
+// everything after them, so a value carrying one puts every later index out by
+// a unit: usually a batch Docs refuses whole, and where the wrong index is
+// still valid a marker written one character into the author's own text.
+func TestAValueCarryingACharacterDocsStripsIsRefusedByKey(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		raw  string
+		key  string
+	}{
+		{
+			"a control character in a cover field",
+			`{"title":"A Policy","owner":"Head of\u001fCompliance"}`,
+			"owner",
+		},
+		{
+			"a private use area character in the title",
+			`{"title":"A \ue000Policy"}`,
+			"title",
+		},
+		{
+			"a control character in a revision row",
+			`{"title":"A Policy","revisions":[{"version":"1.0","change":"first\u0001draft"}]}`,
+			"revisions[1].change",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Act
+			_, err := ReadFields([]byte(tc.raw))
+
+			// Assert
+			if err == nil {
+				t.Fatal("a value the Docs API would strip a character out of was read as it was written")
+			}
+			if !strings.Contains(err.Error(), tc.key) {
+				t.Errorf("the refusal is %q, and it does not name %q", err, tc.key)
+			}
+		})
+	}
+}
+
+// Every value in the file is asked, and this states that rather than leaving it
+// to the three cases above.
+//
+// The check walks the shape by reflection so it covers a value nobody has
+// written a case for, and a reader takes it that way. A walk that quietly
+// stopped covering one field would leave exactly that field able to put every
+// index after it out by a unit, with nothing failing, so the coverage is a test
+// rather than a property of how the walk happens to be written today.
+//
+// heading_numbering is not in the sweep: it is read to a boolean and no text
+// from it reaches an inserted text. TestHeadingNumberingIsReadAsABooleanOrAWord
+// is what covers it.
+func TestEveryValueInTheFileIsAskedForStrippedCharacters(t *testing.T) {
+	t.Run("the cover fields", func(t *testing.T) {
+		for _, key := range jsonKeys(t, reflect.TypeOf(fieldsFile{}), reflect.String) {
+			// Arrange: the title is required, so it carries the character
+			// itself rather than standing beside the field that does.
+			raw := `{"title":"A Policy","` + key + `":"one\u0001two"}`
+			if key == "title" {
+				raw = `{"title":"A \u0001Policy"}`
+			}
+
+			// Act
+			_, err := ReadFields([]byte(raw))
+
+			// Assert
+			if err == nil {
+				t.Errorf("%s carried U+0001 and was read as it was written", key)
+				continue
+			}
+			if !strings.Contains(err.Error(), key) {
+				t.Errorf("the refusal for %s is %q, and it does not name the key", key, err)
+			}
+		}
+	})
+
+	t.Run("the revision columns", func(t *testing.T) {
+		for _, key := range jsonKeys(t, reflect.TypeOf(revisionRow{}), reflect.String) {
+			// Arrange: a row needs its version, which is the row's own name.
+			raw := `{"title":"A Policy","revisions":[{"version":"1.0","` + key + `":"one\u0001two"}]}`
+			if key == "version" {
+				raw = `{"title":"A Policy","revisions":[{"version":"1.\u00010"}]}`
+			}
+
+			// Act
+			_, err := ReadFields([]byte(raw))
+
+			// Assert
+			if err == nil {
+				t.Errorf("revisions[1].%s carried U+0001 and was read as it was written", key)
+				continue
+			}
+			if !strings.Contains(err.Error(), "revisions[1]."+key) {
+				t.Errorf("the refusal for revisions[1].%s is %q, and it does not name the column", key, err)
+			}
+		}
+	})
+}
+
+// jsonKeys is the json names of one shape's fields of a given kind, which is
+// how the sweep above asks about a field nobody has written a case for.
+func jsonKeys(t *testing.T, shape reflect.Type, kind reflect.Kind) []string {
+	t.Helper()
+	var out []string
+	for i := 0; i < shape.NumField(); i++ {
+		if shape.Field(i).Type.Kind() != kind {
+			continue
+		}
+		out = append(out, strings.Split(shape.Field(i).Tag.Get("json"), ",")[0])
+	}
+	if len(out) == 0 {
+		t.Fatalf("%s has no %s fields, so the sweep asks nothing", shape, kind)
+	}
+	return out
+}
+
+// The tab is not one of them, and the house legend writes one, so a fields file
+// carrying one is read as it was written.
+func TestATabInAValueIsCarried(t *testing.T) {
+	// Act
+	got, err := ReadFields([]byte(`{"title":"A Policy","owner":"Head of\tCompliance"}`))
+
+	// Assert
+	if err != nil {
+		t.Fatalf("ReadFields() = %v", err)
+	}
+	if got.Owner != "Head of\tCompliance" {
+		t.Errorf("Owner = %q, want the tab the file carried", got.Owner)
 	}
 }

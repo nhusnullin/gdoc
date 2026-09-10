@@ -242,8 +242,62 @@ func TestAPendingSuggestionInsideAPreludeTableIsFound(t *testing.T) {
 	}
 }
 
+// The state every replace run leaves while its suggestions are unsettled: the
+// new prelude marked and pending as an insertion, the old one marked and
+// pending as a deletion, because nothing deletes a named range. That is two
+// markers and it is not an ambiguity, so the refusal is the one that says to
+// settle the suggestions in the browser rather than the one that says to remove
+// a named range by hand, which nothing in the Docs UI can do.
+func TestAReplaceRunsTwoPendingMarkersAskForTheBrowserRatherThanAHandEdit(t *testing.T) {
+	// Arrange
+	d := &docs.Document{
+		ID: "DOC1",
+		Tabs: []docs.Tab{{
+			ID: "t.0",
+			Body: []docs.Block{
+				{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 1, EndIndex: 900, Runs: []docs.Run{
+					{Kind: docs.KindText, Text: "The fresh prelude", StartIndex: 1, EndIndex: 900,
+						InsertionIDs: []string{"suggest.newone"}},
+				}}},
+				{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 900, EndIndex: 1000, Runs: []docs.Run{
+					{Kind: docs.KindText, Text: "The prelude before it", StartIndex: 900, EndIndex: 1000,
+						DeletionIDs: []string{"suggest.oldone"}},
+				}}},
+			},
+			NamedRanges: []docs.NamedRange{
+				{ID: "kix.fresh", Name: MarkerName, Tab: "t.0",
+					Ranges: []docs.Range{{Tab: "t.0", Start: 1, End: 900}}},
+				{ID: "kix.older", Name: MarkerName, Tab: "t.0",
+					Ranges: []docs.Range{{Tab: "t.0", Start: 900, End: 1000}}},
+			},
+		}},
+	}
+
+	// Act
+	_, err := Decide(d)
+
+	// Assert
+	if err == nil {
+		t.Fatal("a replace run's own two markers were read as a document this run may replace")
+	}
+	if !strings.Contains(err.Error(), "still pending") {
+		t.Errorf("the refusal is %q, and it does not say the prelude is still pending", err)
+	}
+	if strings.Contains(err.Error(), "by hand") {
+		t.Errorf("the refusal is %q, and it asks for a hand edit the Docs UI cannot make", err)
+	}
+	for _, want := range []string{"suggest.newone", "suggest.oldone"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal is %q, and it does not name the suggestion %q to settle", err, want)
+		}
+	}
+}
+
 // The marker is read by id, and two ranges may wear one name. Docs puts both
 // under that one key, so a run that acted by name would act on both.
+//
+// Two markers over settled text is the ambiguity this cannot guess between, and
+// it stays a refusal naming both ids.
 func TestTwoRangesWearingTheMarkerNameAreRefusedByID(t *testing.T) {
 	// Arrange
 	d := markedDocument(1, 964, false)
@@ -403,5 +457,61 @@ func TestAMarkerOverAnotherRangeIsRefused(t *testing.T) {
 	// Act, Assert
 	if p.Judge("POST", at, body) == nil {
 		t.Fatal("a marker over a range this run did not grant must be refused")
+	}
+}
+
+// A first run's own words are the prelude and nothing else, so what phase 2
+// walks past is exactly what the marker covers.
+func TestAFirstRunOccupiesTheSpanItProposed(t *testing.T) {
+	// Arrange
+	cfg := testConfig(t)
+	d := &docs.Document{ID: "DOC1", Tabs: []docs.Tab{{ID: "t.0"}}}
+
+	// Act
+	got, err := Propose(cfg, cover.Fields{Title: "A Policy"}, d)
+	if err != nil {
+		t.Fatalf("Propose() = %v", err)
+	}
+	start, end := got.Occupies()
+
+	// Assert
+	if start != got.Start || end != got.End {
+		t.Errorf("Occupies() = %d..%d, want the proposed span %d..%d", start, end, got.Start, got.End)
+	}
+}
+
+// A replace run's own words are two preludes, not one. The deletion goes out in
+// SUGGEST mode, which marks text rather than removing it, so the prelude the run
+// before this one left is still real text sitting immediately behind the words
+// that replace it. Phase 2 has to walk past both: styled, the old cover is
+// flattened to body prose by direct edit, and rejecting the suggestion puts the
+// text back and not its look.
+func TestAReplaceRunOccupiesTheOldPreludeToo(t *testing.T) {
+	// Arrange
+	cfg := testConfig(t)
+	const oldStart, oldEnd = 1, 964
+	d := markedDocument(oldStart, oldEnd, false)
+
+	// Act
+	got, err := Propose(cfg, cover.Fields{Title: "A Policy"}, d)
+	if err != nil {
+		t.Fatalf("Propose() = %v", err)
+	}
+	start, end := got.Occupies()
+
+	// Assert
+	if got.Replaces == nil {
+		t.Fatal("Replaces is nil on a document carrying gdoc's own marker")
+	}
+	if start != got.Start {
+		t.Errorf("Occupies() starts at %d, want the prelude's own start %d", start, got.Start)
+	}
+	want := got.End + (oldEnd - oldStart)
+	if end != want {
+		t.Errorf("Occupies() ends at %d, want %d: the old prelude is %d units long and the insert at %d pushed it to [%d,%d)",
+			end, want, oldEnd-oldStart, got.Start, got.End, want)
+	}
+	if end <= got.End {
+		t.Errorf("Occupies() = %d..%d, which leaves the replaced prelude for phase 2 to style", start, end)
 	}
 }

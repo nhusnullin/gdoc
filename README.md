@@ -837,7 +837,7 @@ front matter carries:
   "owner": "Head of Compliance",
   "classification": "Internal",
   "revisions": [
-    {"version": "1.2", "date": "2026-09-01", "author": "N. Khusnullin", "summary": "annual review"}
+    {"version": "1.2", "date": "2026-09-01", "author": "N. Khusnullin", "change": "annual review"}
   ]
 }
 ```
@@ -865,11 +865,13 @@ proposed, and whether your own text is character for character what it was.
 `verified` is all three together. `verified: false` is not a failure, the same
 as everywhere else.
 
-`manual` gains two entries here: the contents list, which no Docs request can
+The template's own `manual` list is reported beside the styling one, under
+`prelude`, and it names two things: the contents list, which no Docs request can
 create, and the column widths and row heights of the front-matter tables, whose
-requests Google will not accept as suggestions. Heading numbering is not in this
-yet, and it is not blocked either: it needs its own answer to what a second run
-should do about a number gdoc already wrote.
+requests Google will not accept as suggestions. The contents list is in both
+lists, because the styling half names it on every run. Heading numbering is not
+in this yet, and it is not blocked either: it needs its own answer to what a
+second run should do about a number gdoc already wrote.
 
 If the template phase fails, the styling phase does not run, and the report says
 which phase stopped. Whatever of the template reached the document is a

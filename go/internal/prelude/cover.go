@@ -7,7 +7,7 @@ import (
 	"gdoc/internal/house"
 )
 
-// Cover is the house cover as requests, starting at the index it is given.
+// coverBlock is the house cover as requests, starting at the index it is given.
 //
 // It is the same cover internal/render writes into a docx, read out of the
 // same house.Cover: the leading blanks, the lines, the trailing blanks, and
@@ -21,9 +21,17 @@ import (
 // constant because the front matter that follows in the same phase begins
 // where this ends.
 //
+// It is unexported, and that is this project's rule rather than a preference: a
+// door with no production caller is deleted rather than carried, which is why
+// GrantInPlace went at M2 and came back at M7b beside the line that calls it.
+// Every run goes through FrontMatter, which walks house.yaml's own front_matter
+// list and reaches this same pair of calls through block("cover"). What is left
+// here is the cover asked for on its own, which is a question only this
+// package's tests ask.
+//
 // Nothing is sent here. What comes back is a list of requests for the caller
 // to send in writeMode SUGGEST, and a range for the marker.
-func Cover(cfg *house.Config, f cover.Fields, start int) (Result, error) {
+func coverBlock(cfg *house.Config, f cover.Fields, start int) (Result, error) {
 	if cfg == nil {
 		return Result{}, fmt.Errorf("prelude: no house style")
 	}
@@ -144,17 +152,25 @@ func (b *builder) placeholder(name string) (string, bool) {
 // living in the author's paragraph would sit outside that range, so a rejected
 // prelude would leave it behind.
 //
-// The break takes one index unit and the paragraph mark takes another, so the
-// paragraph spans two. That is the reference's own accounting for a PageBreak
-// element, and the live acceptance is what confirms it against a real document.
+// One request writes both units, and there is no insertText beside it.
+// InsertPageBreakRequest says what it does in its own words: "Inserts a page
+// break followed by a newline at the specified location." So the break takes
+// one index unit, the newline it brings with it takes another, and the
+// paragraph spans two.
+//
+// An insertText writing that newline as well is what used to stand here, and it
+// put three units in the document where this counted two. The third was a stray
+// empty paragraph, and every later insert pushed it along in front of them
+// until it sat one past End: outside the marker, outside the span phase 2 walks
+// past, left behind by a second run's deleteContentRange and joined by another
+// on the third. Nothing in the suite could see it, because every check here is
+// this arithmetic asked about itself and the live acceptance reads only inside
+// [Start, End). That is the same class as the table's own end unit measured on
+// 2026-09-10, one request along, and this one is read out of the reference
+// rather than measured: the live acceptance is what confirms it against a real
+// document.
 func (b *builder) pageBreak() {
 	start := b.at
-	b.request("insertText", map[string]any{
-		"text":     "\n",
-		"location": map[string]any{"index": start},
-	})
-	// The break goes in before the mark that was just written, which is what
-	// inserting at the paragraph's own start index means.
 	b.request("insertPageBreak", map[string]any{
 		"location": map[string]any{"index": start},
 	})

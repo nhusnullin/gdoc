@@ -183,8 +183,10 @@ type plannedCounts struct {
 	Bulleted int `json:"bulleted"`
 	Tables   int `json:"tables"`
 	// Skipped is the paragraphs and tables phase 2 walked past because phase 1
-	// had just proposed them. They are gdoc's own words, stating the cover's
-	// own sizes, and the house body look is not what they are meant to wear.
+	// proposed them, or proposed deleting them: on a replace run the prelude
+	// an earlier run left is still real text, behind the words replacing it.
+	// Either way they are gdoc's own words, stating the cover's own sizes, and
+	// the house body look is not what they are meant to wear.
 	Skipped int `json:"skipped"`
 	// Unstyled names the named styles the house has no look for. Those
 	// paragraphs keep the look they had: gdoc maps none of them to the nearest
@@ -206,7 +208,10 @@ type preludeData struct {
 	Tables     int `json:"tables"`
 	Cells      int `json:"cells"`
 	// Start and End are the span the prelude was proposed into, which is the
-	// range the marker covers and the range phase 2 walks past.
+	// range the marker covers and the range the read-back counts suggestion
+	// ids inside. It is not the range phase 2 walks past: on a replace run
+	// that one is wider, and prelude.Result.Occupies is where the arithmetic
+	// and the reason for it live.
 	Start int `json:"start"`
 	End   int `json:"end"`
 	// Applied is what Docs took of the prelude batches.
@@ -216,6 +221,15 @@ type preludeData struct {
 	// and could not mark it stops rather than styling: a second run over an
 	// unmarked prelude would propose a second cover on top of the first.
 	MarkerCreated bool `json:"marker_created"`
+	// MarkerMaybeCreated says Docs accepted the marker batch and its answer
+	// could not be read, so the marker may be in the document and nothing here
+	// can say. It is a second flag rather than a truer MarkerCreated for the
+	// reason restyle.Applied keeps MaybeApplied beside Batches: what Docs
+	// confirmed and what may have happened are two facts, and a field that
+	// folded them could not say which it was. Both are printed on every run,
+	// because a flag that vanishes when it is false cannot be read the same way
+	// twice.
+	MarkerMaybeCreated bool `json:"marker_maybe_created"`
 	// Replaced is the marker of a prelude a run before this one left, which
 	// this run proposed deleting. It is absent on a document carrying none,
 	// which is either a document gdoc has never touched or one whose prelude
@@ -234,14 +248,33 @@ type preludeData struct {
 }
 
 // phaseOne is what phase 2 and the read-back need to know about phase 1: the
-// span the prelude occupies, the author's own text as it stood before a word of
-// it was proposed, and where the answer goes.
+// span the prelude was proposed into, the wider span phase 2 walks past, the
+// author's own text as it stood before a word of it was proposed, and where the
+// answer goes.
+//
+// The two spans are two fields on purpose. They are the same on a first run and
+// they are not on a replace run, and the comments on each of them say what each
+// one answers.
 //
 // It is nil on a run that named no --fields, which is M7b's styling-only
 // restyle, and every use of it below reads that nil as "there was no phase 1"
 // rather than as "phase 1 found nothing".
 type phaseOne struct {
-	span   restyle.Span
+	// span is what phase 1 proposed: the marker's range, and the range the
+	// read-back counts suggestion ids inside.
+	span restyle.Span
+	// skip is what phase 2 walks past, which is span and, on a replace run, the
+	// prelude behind it that phase 1 proposed deleting. A suggested delete
+	// marks text rather than removing it, so those words are still in the
+	// document and still gdoc's own, and styled they would flatten a cover Nail
+	// may yet reject the deletion of. It is prelude.Result.Occupies', which is
+	// where the arithmetic and the reason for it live.
+	//
+	// It is not span, and the read-back is the reason the two are separate: the
+	// replaced prelude carries a deletion id rather than an insertion one, so
+	// asked about skip the read-back would report gdoc's own replaced words as
+	// text somebody wrote.
+	skip   restyle.Span
 	before string
 	data   *preludeData
 }
@@ -346,7 +379,7 @@ func applyRestyle(a *args) emit.Result {
 	}
 
 	if fields != nil {
-		return proposeThenStyle(ctx, r, p, *saved, cfg, *fields, d, data)
+		return proposeThenStyle(ctx, r, *saved, cfg, *fields, d, data)
 	}
 
 	// This is the line. It upgrades one document, for this run, from suggest to
@@ -371,7 +404,11 @@ func applyRestyle(a *args) emit.Result {
 // the whole shape of this milestone, and the guard would refuse it in both
 // directions: at LevelInPlace an insertText is not on the allowlist, and with no
 // grant a direct styling batch is not a suggestion.
-func proposeThenStyle(ctx context.Context, r *reach, p *guard.Policy, saved restyle.Report,
+//
+// It takes no policy. Phase 1 sends on r's own, which granted nothing and never
+// will, and phase 2 builds its own below: a parameter naming the caller's
+// policy would read as though this function still had a hand on it.
+func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	cfg *house.Config, fields cover.Fields, d *docs.Document, data restyleData) emit.Result {
 	// What to propose, and what a run before this one left. Decide refuses a
 	// document whose prelude is still pending: replacing it would propose
@@ -425,6 +462,11 @@ func proposeThenStyle(ctx context.Context, r *reach, p *guard.Policy, saved rest
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
 			"the prelude was proposed and the document could not be read again, so nothing was styled: %v", err)}
 	}
+	// The prelude phase's own last-batch warning, if it made one, said the
+	// revision reported is not the one the document carries. This read has just
+	// answered that, so the sentence goes rather than standing beside a
+	// revision Docs named.
+	warns = dropWarning(warns, restyle.RevisionUnconfirmedWarning)
 	data.RevisionID = fresh.RevisionID
 	if fresh.MultiTab() {
 		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
@@ -445,16 +487,62 @@ func proposeThenStyle(ctx context.Context, r *reach, p *guard.Policy, saved rest
 		[]map[string]any{prelude.MarkerRequest(res.Start, res.End)}, fresh.RevisionID)
 	warns = append(warns, marked.Warnings...)
 	pre.MarkerCreated = marked.Batches > 0
+	// MaybeApplied is read beside the count, and it is the rule every other
+	// writer here holds: a write whose answer could not be read is not a write
+	// that never happened. Reported from the count alone the run said the
+	// marker did not land one line under a warning saying the batch may be in
+	// the document, which is the contradiction restyle's own leftBehind exists
+	// to avoid.
+	pre.MarkerMaybeCreated = marked.MaybeApplied
 	data.RevisionID = marked.RevisionID
 	if markErr != nil {
 		// The prelude is in the document and nothing records that gdoc put it
 		// there, so the run stops rather than styling on top of it. A second
 		// run over an unmarked prelude proposes a second cover in front of the
 		// first, and saying so here is what stops somebody discovering it then.
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns,
-			"the prelude was proposed and could not be marked, so gdoc has no record of having written it: "+
+		//
+		// r2's warnings go on the envelope like they do on the two returns
+		// above: this is phase 2's session, and dropping what its policy and
+		// its own two requests had to say would be the one path in this
+		// function that reports half the run.
+		//
+		// What the error says about the marker is what the run can honestly
+		// say. Docs accepted a batch whose answer could not be read means the
+		// marker may be there, and calling that a marker that did not land
+		// would contradict the warning standing beside it.
+		what := "the marker over it did not land"
+		if marked.MaybeApplied {
+			what = "the marker over it was accepted by Docs and its answer could not be read, so it may or may not be there"
+		}
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(append(warns, r2.warnings()...),
+			"the prelude was proposed and could not be marked, so gdoc may have no record of having written it: "+
 				"accept or reject the prelude in the browser before running this again, or the next run proposes a second one in front of it")...),
-			Error: fmt.Sprintf("the prelude was proposed and the marker over it did not land, so nothing was styled: %v", markErr)}
+			Error: fmt.Sprintf("the prelude was proposed and %s, so nothing was styled: %v", what, markErr)}
+	}
+
+	// The revision the styling phase is sent against, and it has to be one Docs
+	// named. A marker batch is the last batch of its own run, so an answer that
+	// carried no revision id leaves Apply reporting the revision that batch was
+	// sent against, which the marker has already moved the document past. Sent
+	// on, the first styling batch is refused as stale and isStale reports that
+	// as somebody having edited the document after the survey: a third party
+	// named for a revision gdoc itself moved. So the read is made here instead,
+	// on the rare path that needs it.
+	revision := marked.RevisionID
+	if marked.RevisionUnconfirmed {
+		read, err := restyle.RevisionOf(ctx, r2.session, r.id)
+		if err != nil {
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(append(warns, r2.warnings()...)...), Error: fmt.Sprintf(
+				"the prelude was proposed and marked, its answer named no revision id, and the document could not be read for one, so nothing was styled: %v", err)}
+		}
+		revision = read
+		data.RevisionID = read
+		// And the warning that said the revision reported is not the one the
+		// document carries goes with it. It was true when Apply said it and
+		// this read is what made it false, so leaving it on the envelope beside
+		// a revision Docs named is the contradiction leftBehind's own comment
+		// exists to avoid.
+		warns = dropWarning(warns, restyle.RevisionUnconfirmedWarning)
 	}
 
 	// The author's own text as it stood before a word of the prelude was
@@ -462,12 +550,37 @@ func proposeThenStyle(ctx context.Context, r *reach, p *guard.Policy, saved rest
 	// before side of the one check this milestone's own claim rests on, and it
 	// is taken here because this is the last moment it can be: every read after
 	// this one carries the prelude.
-	return styleDocument(ctx, r2, saved, cfg, fresh.Tabs[0], marked.RevisionID,
+	skipStart, skipEnd := res.Occupies()
+	// Phase 1's own session warnings go with them, and this is the only place
+	// they can. styleDocument builds the envelope from the reach it is handed,
+	// which is phase 2's, so anything phase 1's session had to say reaches
+	// nobody unless it is carried in here: today that is gapi's receipt for a
+	// token refreshed and saved, and phase 2 opens after it and warns about
+	// nothing. Every failing return above carries both sessions, and the run
+	// that worked must not be the one path that reports half of it.
+	return styleDocument(ctx, r2, saved, cfg, fresh.Tabs[0], revision,
 		&phaseOne{
 			span:   restyle.Span{Start: res.Start, End: res.End},
+			skip:   restyle.Span{Start: skipStart, End: skipEnd},
 			before: prelude.AuthorText(d),
 			data:   pre,
-		}, data, warns...)
+		}, data, append(r.warnings(), warns...)...)
+}
+
+// dropWarning is one sentence taken back out of a list, by value.
+//
+// It is here rather than in internal/restyle because the package that says a
+// thing is not the one that can know it stopped being true: Apply is right to
+// warn that the revision it reports is not the one the document carries, and
+// only the caller that goes and reads knows the sentence no longer holds.
+func dropWarning(warns []string, drop string) []string {
+	out := warns[:0:0]
+	for _, w := range warns {
+		if w != drop {
+			out = append(out, w)
+		}
+	}
+	return out
 }
 
 // styleDocument is phase 2, and on a run with no --fields it is the whole
@@ -478,7 +591,7 @@ func styleDocument(ctx context.Context, r *reach, saved restyle.Report, cfg *hou
 	tab docs.Tab, revisionID string, one *phaseOne, data restyleData, warns ...string) emit.Result {
 	var skip *restyle.Span
 	if one != nil {
-		skip = &one.span
+		skip = &one.skip
 	}
 	plan := restyle.TabRequestsExcept(tab, cfg, skip)
 	// The page first, because it names no range and a reader comparing a batch

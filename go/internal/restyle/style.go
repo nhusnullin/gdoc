@@ -78,8 +78,10 @@ type Plan struct {
 	// style at all. Those paragraphs are left untouched.
 	Unstyled []string
 	// Skipped is how many paragraphs and tables were left alone because they
-	// are inside the span the caller named: gdoc's own house prelude. It is
-	// zero on a run that named none, which is every M7b restyle.
+	// are inside the span the caller named: gdoc's own words, which on a
+	// replace run is the prelude this run proposed and the one behind it that
+	// this run proposed deleting. It is zero on a run that named no span,
+	// which is every M7b restyle.
 	Skipped int
 	// skip is that span, held for the walk. It is not printed: what a caller
 	// reports is how much was left alone, and the range itself is the marker's,
@@ -90,8 +92,10 @@ type Plan struct {
 // Span is a half-open range of one tab's text, [Start, End).
 //
 // The one caller today is the house prelude: a run that proposed a cover, three
-// front-matter tables and a legend a moment earlier hands the span it wrote them
-// into, so the styling phase walks past its own words.
+// front-matter tables and a legend a moment earlier hands the span those words
+// now occupy, so the styling phase walks past them. That is not always the span
+// they were written into. On a replace run it is two preludes, and
+// prelude.Result.Occupies is the arithmetic and the reason for it.
 type Span struct {
 	Start int
 	End   int
@@ -150,13 +154,21 @@ func TabRequests(t docs.Tab, cfg *house.Config) Plan {
 
 // TabRequestsExcept is TabRequests over everything but one span.
 //
-// The span is gdoc's own house prelude, proposed into the document by the phase
-// that ran before this one. Every paragraph internal/prelude writes states its
-// look in full, because inserted text takes the look of the text it lands
-// beside, and a restyle walking over those paragraphs would give each of them
-// the house body look: the cover title would be 11pt prose by the time anybody
-// read it. So the styling phase walks past the words the proposing phase wrote,
-// and reports how many blocks it left alone.
+// The span is gdoc's own words, and on a replace run it is two preludes rather
+// than one: the one the phase before this one proposed, and the one an earlier
+// run left, which that phase proposed deleting. A suggested delete marks text
+// rather than removing it, so those words are still in the document. It is
+// prelude.Result.Occupies, which is where the arithmetic and the reason for it
+// live, and it is wider than the range the marker covers.
+//
+// Every paragraph internal/prelude writes states its look in full, because
+// inserted text takes the look of the text it lands beside, and a restyle
+// walking over those paragraphs would give each of them the house body look:
+// the cover title would be 11pt prose by the time anybody read it. Over the
+// replaced prelude it is worse, because that one is styled by direct edit at
+// LevelInPlace, which flattens a cover Nail may yet reject the deletion of. So
+// the styling phase walks past all of it, and reports how many blocks it left
+// alone.
 //
 // A nil span is TabRequests, unchanged, which is every restyle that proposed no
 // prelude.
@@ -187,10 +199,11 @@ func (p *Plan) walk(blocks []docs.Block, cfg *house.Config, unknown map[string]b
 			p.paragraph(b.Paragraph, cfg, unknown, inCell)
 		case b.Table != nil:
 			// A table is skipped on its start alone, because internal/docs
-			// decodes no end index for one. The front matter's three tables
-			// are wholly inside the prelude or wholly outside it: a table
-			// starting inside the span was inserted by the same batch that
-			// opened it.
+			// decodes no end index for one. The span holds whole preludes and
+			// nothing else, gdoc's own words on both halves of a replace run,
+			// because prelude.Result.Occupies ends exactly where the prelude
+			// behind the fresh one ends. So a front-matter table that starts
+			// inside the span also ends inside it.
 			if p.skip.covers(b.Table.StartIndex, b.Table.StartIndex+1) {
 				p.Skipped++
 				continue

@@ -52,10 +52,22 @@ type Decision struct {
 //
 // Three shapes, and the third is the refusal. No marker is a first run, which
 // proposes at index 1. One marker over settled text is a second run, which
-// proposes deleting that text and proposes a fresh prelude in its place. One
+// proposes deleting that text and proposes a fresh prelude in its place. A
 // marker over text that is still pending is neither, and the answer is the
 // prelude already in front of Nail: he accepts it or rejects it, and the run
 // after that has one of the first two shapes.
+//
+// The pending question is asked before the count, and the order is the rule
+// rather than a preference. Two markers is what every replace run leaves while
+// its suggestions are unsettled: the new one covers the prelude that was
+// proposed, and the old one still covers the prelude proposed for deletion,
+// because nothing deletes a named range. Asked the other way round, a run over
+// that ordinary state fell into the ambiguity refusal below and told somebody
+// to remove a named range by hand, which the Docs UI gives no way to do and
+// deleteNamedRange is on no allowlist for. What it should hear is the refusal
+// it hears for one pending marker: settle the suggestion in the browser.
+// internal/prelude/readback.go says the same thing from the other side, that
+// more than one marker is not itself a fault.
 //
 // Nothing here deletes a named range, and nothing needs to. The marker tracks
 // the text it covers: measured on 2026-09-10, a rejected insertion took its
@@ -63,29 +75,49 @@ type Decision struct {
 // the accept made real. So a replaced prelude's marker goes when the deletion
 // it is proposed under is accepted, and comes back when that deletion is
 // rejected. Either way one marker is left, which is the shape this function
-// requires. That last step is the inference the measurement makes, not a fifth
-// measured row, and Task 10's live run is what confirms it.
+// requires of a document whose suggestions are settled. That last step is the
+// inference the measurement makes, not a fifth measured row, and Task 10's live
+// run is what confirms it.
 func Decide(d *docs.Document) (Decision, error) {
 	found, err := Markers(d)
 	if err != nil {
 		return Decision{}, err
 	}
-	switch len(found) {
-	case 0:
+	if len(found) == 0 {
 		return Decision{Start: 1}, nil
-	case 1:
-	default:
+	}
+	if waiting := pendingIn(found); len(waiting) > 0 {
 		return Decision{}, fmt.Errorf(
-			"prelude: this document carries %d named ranges called %q and gdoc makes one, %s. gdoc reads its marker by id and will not guess which of them is its own prelude, so remove the ones that are not by hand and run this again",
+			"prelude: the house prelude marked by %s is still pending, as %s. Accept or reject it in the browser, then run this again: a run that replaced it would propose deleting text that has not been written",
+			strings.Join(ids(found), ", "), strings.Join(waiting, ", "))
+	}
+	if len(found) > 1 {
+		return Decision{}, fmt.Errorf(
+			"prelude: this document carries %d named ranges called %q over settled text and gdoc makes one, %s. gdoc reads its marker by id and will not guess which of them is its own prelude, so remove the ones that are not by hand and run this again",
 			len(found), MarkerName, strings.Join(ids(found), ", "))
 	}
 	m := found[0]
-	if m.Pending() {
-		return Decision{}, fmt.Errorf(
-			"prelude: the house prelude marked by %s is still pending, as %s. Accept or reject it in the browser, then run this again: a run that replaced it would propose deleting text that has not been written",
-			m.ID, strings.Join(m.PendingIDs, ", "))
-	}
 	return Decision{Replaces: &m, Start: m.Start}, nil
+}
+
+// pendingIn is every suggestion id these markers are waiting on, sorted and
+// without repeats. It is empty when every one of them covers settled text.
+func pendingIn(found []Marker) []string {
+	seen := map[string]bool{}
+	for _, m := range found {
+		for _, id := range m.PendingIDs {
+			seen[id] = true
+		}
+	}
+	if len(seen) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(seen))
+	for id := range seen {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Markers is every named range wearing MarkerName, in the order the document
