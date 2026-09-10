@@ -671,9 +671,15 @@ and the read-only accepted-document reader are named.
       for a person to look at.
 - [x] Re-read the **original** on every path and assert its `revisionId` never
       moved, as the M7b acceptance does.
-- [x] Record the result and the binary-size delta per platform under
+- [ ] ⚠️ **Not done: the live acceptance was run on 2026-09-10 and it FAILED.**
+      The test itself is written and committed; the prelude it proposes is
+      refused by Docs. Task 11 below is the measurement and the fix, and this
+      box is ticked when the live run passes.
+- [ ] Record the result and the binary-size delta per platform under
       Post-Completion.
-- [x] Move this plan to `docs/plans/completed/`.
+- [ ] Move this plan to `docs/plans/completed/`. ⚠️ It was moved on 2026-09-10
+      and moved back the same evening, because a milestone whose acceptance
+      fails is not a completed one.
 - [x] `git commit -m "test(v2): the prelude acceptance, and M7c landed"`
 
 The test names its source document with `GDOC_LIVE_PRELUDE_DOC_ID`, which has no
@@ -692,6 +698,65 @@ written for a test is a second rule that drifts from the one the skill reads.
 `copyDocument` was split into `copyDocumentNamed`, so the copy carries the
 milestone's own name in Drive and the parent rule stays in one room. Nothing
 else in `internal/live` changed.
+
+### ➕ Task 11: the index after a table, measured, and the prelude's arithmetic fixed
+
+⚠️ **Found by Task 10's live acceptance, 2026-09-10, and it blocks the
+milestone.** Every task is committed and `make test` is green, and the prelude
+still does not land on a real document. Docs refused the batch whole:
+
+```
+Invalid requests[106].insertText: The insertion index must be inside the bounds
+of an existing paragraph. You can still create new paragraphs by inserting
+newlines.
+```
+
+Nothing was written, because Docs refuses a batch whole and everything in it was
+a suggestion in any case. The source document's revision never moved, and the
+guard was never in question.
+
+**What is already known, so nobody measures it twice.** The per-cell arithmetic
+in `internal/prelude/table.go` is right. The first cell's content lands at the
+`insertTable` index plus four, and every cell after it tracks: a 2x7 table
+inserted at 279 puts "Version No" at 283, and a cell holding ten characters puts
+the next cell's content at 295. The failing request is the **spacer newline
+between two front-matter tables**, an `insertText` of "\n" at 278, which is the
+index the builder computes as one past the first table's last paragraph mark.
+
+**The measurement, and it is the first half of this task.** A live probe, one
+throwaway document, in the shape Task 1 has: insert a paragraph, insert a table
+into it, read the document back with its full structure, and log every index
+Docs actually reports. The questions:
+
+- What are the real `startIndex` and `endIndex` of the table, of each row, of
+  each cell and of each cell's paragraph, against the index `insertTable` was
+  given?
+- Is the table's `endIndex` the start of the paragraph that follows it, or is
+  there no paragraph there at all?
+- Does an `insertText` at that exact index succeed, and if it fails, which index
+  is the first one that does?
+- Does the answer change when what follows the table is another table rather
+  than a paragraph, which is the case the prelude actually builds?
+
+It asserts almost nothing and logs a table, for `TestLiveStyleFidelity`'s
+reason. **Do not fix the builder against a guess about what it will say.**
+
+**Then the fix, TDD.** A unit test in `internal/prelude` stating the measured
+index map as literals, failing against today's arithmetic, then the correction.
+The house style puts a paragraph between the front-matter tables, so whatever
+the measurement says, the prelude has to reach a state where that paragraph
+exists and carries its own look.
+
+- [ ] The live probe, its table logged, and the answer recorded in
+      `docs/v2/DECISIONS.md` under 2026-09-10 whatever it says.
+- [ ] The failing unit test first, with the measured indexes written out as
+      numbers rather than read from the builder.
+- [ ] The fix in `internal/prelude/table.go`, and nowhere else unless the
+      measurement says otherwise.
+- [ ] `cd go && go test -race ./...` passes.
+- [ ] `TestLivePreludeIsProposedNotWritten` run live and **passing**, with the
+      copy left for Nail to look at and its URL in the task notes.
+- [ ] `git commit -m "fix(v2): the index after a table, measured"`
 
 ## Post-Completion
 
