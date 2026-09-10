@@ -368,19 +368,44 @@ it: nothing here holds a `--trash` command, and the answer is written down.
 
 ### Task 4: the cover as Docs requests
 
-- [ ] Test first, literals throughout: the cover's lines, their order, their
+- [x] Test first, literals throughout: the cover's lines, their order, their
       alignment, their sizes and colours, and the page break under it. Every
       expected value written as a number, never read from `cfg`.
-- [ ] Built from `house.Config`'s own cover spec, the same fields
+- [x] Built from `house.Config`'s own cover spec, the same fields
       `render.builder.cover()` reads. **State in the package doc that these are
       two writers of one layout**, and that a value added to `house.yaml` has to
       reach both.
-- [ ] The placeholder rules `render` already holds carry over and are tested
+      ➕ Three rules the two writers share now live once rather than twice, each
+      where its value lives: `cover.Fields.Placeholder` is what a placeholder
+      name means, `house.Cell.FillFor` is the classification shading, and the
+      new `internal/docsreq` holds a measurement, a colour, an alignment, a
+      length in the units the API counts, and a style object built with the mask
+      that names it. `internal/restyle` was moved onto `docsreq` in the same
+      commit, so the line-spacing rounding and the colour conversion have one
+      copy between the two request builders.
+- [x] The placeholder rules `render` already holds carry over and are tested
       here too: a line naming `with:` is left out when the field is empty, the
       `Version: ` label is a run and only the number is the note's, and a
       classification cell is shaded only when the fields declare that class.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the house cover, as Docs requests"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the house cover, as Docs requests"`
+
+**Two decisions this task took, and neither is in the plan above.**
+
+gdoc's own paragraphs state their look in full: the named style, the alignment,
+the spacing, the indents, and on every run the face, the size, the weight, the
+slope, the underline and both colours. Text inserted into a document takes the
+look of the text it lands beside, so a cover line proposed in front of somebody's
+indented, justified Heading 1 would arrive wearing all of it, in the contents
+list with it. That is the opposite of `internal/restyle`'s rule, which never
+writes a flag `house.yaml` did not state, and the difference is whose words are
+being styled: a restyle writes onto the author's text, and these are gdoc's own
+lines that nobody else's emphasis can be in.
+
+The one look an inserted paragraph inherits and this package cannot state away
+is a list marker: taking one off needs `deleteParagraphBullets`, which nothing
+here sends. `docs/backlog/prelude-inherits-a-list-marker.md` holds it, with the
+two ways out.
 
 ### Task 5: the front-matter tables and the legend
 

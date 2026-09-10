@@ -490,3 +490,41 @@ func longDate(value string) string {
 	}
 	return value
 }
+
+// placeholderFields is what a cover line or a run may name, and what each one
+// reads. It is here rather than in a writer because the house style is written
+// twice: internal/render puts it in a docx and internal/prelude proposes it
+// into a Google Doc, and a placeholder one writer knows and the other does not
+// is a cover that reads two ways.
+var placeholderFields = map[string]func(Fields) string{
+	"title":              func(f Fields) string { return f.CoverTitle() },
+	"alt_title":          func(f Fields) string { return f.CoverAltTitle() },
+	"running_head":       func(f Fields) string { return f.RunningHead() },
+	"version":            func(f Fields) string { return f.Version },
+	"date":               func(f Fields) string { return f.Date },
+	"owner":              func(f Fields) string { return f.Owner },
+	"last_approval":      func(f Fields) string { return f.LastApproval },
+	"review_frequency":   func(f Fields) string { return f.ReviewFrequency },
+	"board_ratification": func(f Fields) string { return f.BoardRatification },
+	"distribution":       func(f Fields) string { return f.Distribution },
+}
+
+// Placeholder is the author's own value for a named cover field, and whether
+// they filled it in. An empty name is not a placeholder: a line that names none
+// prints the template's own words.
+//
+// A name this package does not hold is an error rather than an empty value. A
+// placeholder silently left as the template's words publishes a document
+// reading "(Name of) Framework/Policy", which is the failure the whole
+// mechanism exists to stop.
+func (f Fields) Placeholder(name string) (string, bool, error) {
+	if name == "" {
+		return "", false, nil
+	}
+	read, ok := placeholderFields[name]
+	if !ok {
+		return "", false, fmt.Errorf("placeholder %q is not a cover field", name)
+	}
+	value := read(f)
+	return value, value != "", nil
+}

@@ -27,12 +27,10 @@ package restyle
 // package must not test the edge of.
 
 import (
-	"math"
 	"sort"
-	"strconv"
-	"strings"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/docsreq"
 	"gdoc/internal/house"
 )
 
@@ -94,13 +92,6 @@ var houseStyleKey = map[string]string{
 	"HEADING_6":   "heading_6",
 	"TITLE":       "title",
 	"SUBTITLE":    "subtitle",
-}
-
-// alignments maps the house style's own word to the Docs alignment. A word
-// outside this map is not written, the way every other unstated value is not.
-var alignments = map[string]string{
-	"left": "START", "center": "CENTER", "centre": "CENTER",
-	"right": "END", "justify": "JUSTIFIED",
 }
 
 // TabRequests is the styling one tab takes, and what it keeps. It is a pure
@@ -204,8 +195,8 @@ func (p *Plan) table(t *docs.Table, cfg *house.Config, unknown map[string]bool) 
 		p.Requests = append(p.Requests, map[string]any{
 			"updateTableCellStyle": map[string]any{
 				"tableStartLocation": map[string]any{"index": t.StartIndex},
-				"tableCellStyle":     look.set,
-				"fields":             look.mask(),
+				"tableCellStyle":     look.Set,
+				"fields":             look.Mask(),
 			},
 		})
 		p.Cells += cells
@@ -219,14 +210,14 @@ func (p *Plan) table(t *docs.Table, cfg *house.Config, unknown map[string]bool) 
 
 // add appends one request over one range, with the mask the fields carry.
 func (p *Plan) add(kind, key string, span map[string]any, f *fields) {
-	if len(f.names) == 0 {
+	if f.Empty() {
 		return // a request setting nothing is a request that resets nothing
 	}
 	p.Requests = append(p.Requests, map[string]any{
 		kind: map[string]any{
 			"range":  span,
-			key:      f.set,
-			"fields": f.mask(),
+			key:      f.Set,
+			"fields": f.Mask(),
 		},
 	})
 }
@@ -255,14 +246,14 @@ func paragraphLook(s house.Style, key string, cfg *house.Config) *fields {
 		body := cfg.Body
 		before, after = &body.SpaceBeforePt, &body.SpaceAfterPt
 	}
-	if a, ok := alignments[strings.ToLower(align)]; ok {
-		f.put("alignment", a)
+	if a, ok := docsreq.Alignment(align); ok {
+		f.Put("alignment", a)
 	}
-	f.put("spaceAbove", points(value(before, cfg.Defaults.SpaceBeforePt)))
-	f.put("spaceBelow", points(value(after, cfg.Defaults.SpaceAfterPt)))
-	f.put("lineSpacing", percent(value(s.LineSpacing, cfg.Defaults.LineSpacing)))
+	f.Put("spaceAbove", points(value(before, cfg.Defaults.SpaceBeforePt)))
+	f.Put("spaceBelow", points(value(after, cfg.Defaults.SpaceAfterPt)))
+	f.Put("lineSpacing", percent(value(s.LineSpacing, cfg.Defaults.LineSpacing)))
 	if s.IndentStartPt != nil {
-		f.put("indentStart", points(*s.IndentStartPt))
+		f.Put("indentStart", points(*s.IndentStartPt))
 	}
 	return f
 }
@@ -280,11 +271,11 @@ func textLook(s house.Style, key string, cfg *house.Config) *fields {
 		size = cfg.Body.SizePt
 	}
 	if font != "" {
-		f.put("weightedFontFamily", map[string]any{"fontFamily": font})
+		f.Put("weightedFontFamily", map[string]any{"fontFamily": font})
 	}
-	f.put("fontSize", points(size))
+	f.Put("fontSize", points(size))
 	if c, ok := optionalColor(s.Color); ok {
-		f.put("foregroundColor", c)
+		f.Put("foregroundColor", c)
 	}
 	return f
 }
@@ -298,9 +289,9 @@ func cellText(cfg *house.Config) *fields {
 		font = cfg.Defaults.Font
 	}
 	if font != "" {
-		f.put("weightedFontFamily", map[string]any{"fontFamily": font})
+		f.Put("weightedFontFamily", map[string]any{"fontFamily": font})
 	}
-	f.put("fontSize", points(cfg.TableText.DefaultSizePt))
+	f.Put("fontSize", points(cfg.TableText.DefaultSizePt))
 	return f
 }
 
@@ -318,7 +309,7 @@ func cellLook() *fields {
 		if side == "Left" || side == "Right" {
 			pad = cellPadHPt
 		}
-		f.put("padding"+side, points(pad))
+		f.Put("padding"+side, points(pad))
 	}
 	border := map[string]any{
 		"width":     points(cellBorderPt),
@@ -328,18 +319,15 @@ func cellLook() *fields {
 		border["color"] = c
 	}
 	for _, side := range []string{"Top", "Bottom", "Left", "Right"} {
-		f.put("border"+side, border)
+		f.Put("border"+side, border)
 	}
 	return f
 }
 
-// percent is a house line spacing as the Docs API takes it: the file states a
-// multiplier and the API a percentage of normal. It is rounded to three places
-// because 1.15 times 100 is 114.99999999999999 in binary floating point, and a
-// request nobody can match to the value in the file is one nobody can check.
-func percent(multiplier float64) float64 {
-	return math.Round(multiplier*100*1000) / 1000
-}
+// percent is a house line spacing as the Docs API takes it. The rule is
+// docsreq's, because internal/prelude states the same spacings on the
+// paragraphs it proposes.
+func percent(multiplier float64) float64 { return docsreq.Percent(multiplier) }
 
 // value is an optional house number, or the default the file states for
 // everything when the style says nothing.
@@ -350,45 +338,15 @@ func value(v *float64, fallback float64) float64 {
 	return *v
 }
 
-// optionalColor is one house colour as the Docs API takes it. A value that is
-// not a six-digit hex colour is not written: house.yaml states every colour
-// that way, and writing a field the guard would carry but Docs would reject
-// costs the whole batch.
-func optionalColor(hex string) (map[string]any, bool) {
-	h := strings.TrimPrefix(hex, "#")
-	if len(h) != 6 {
-		return nil, false
-	}
-	channels := make([]float64, 3)
-	for i := range channels {
-		v, err := strconv.ParseUint(h[i*2:i*2+2], 16, 8)
-		if err != nil {
-			return nil, false
-		}
-		channels[i] = float64(v) / 255.0
-	}
-	return map[string]any{"color": map[string]any{"rgbColor": map[string]any{
-		"red": channels[0], "green": channels[1], "blue": channels[2],
-	}}}, true
-}
+// optionalColor is one house colour as the Docs API takes it, which is
+// docsreq's rule: a value that is not a six-digit hex colour is not written,
+// because writing a field the guard would carry but Docs would reject costs
+// the whole batch.
+func optionalColor(hex string) (map[string]any, bool) { return docsreq.Color(hex) }
 
-// fields is a style object and the mask that names it, built together.
-//
-// Together, because the two are one statement. A mask assembled from the map
-// afterwards has no order, so a request would read differently on each run and
-// nobody could compare one against a log; and a mask written out by hand beside
-// the map is the drift the mask rule is most likely to grow, where a field
-// added to one is forgotten in the other and the property it names is reset.
-type fields struct {
-	set   map[string]any
-	names []string
-}
+// fields is a style object and the mask that names it, built together. The
+// type is docsreq's, so this package and internal/prelude cannot grow two
+// rules about how a mask is written.
+type fields = docsreq.Fields
 
-func newFields() *fields { return &fields{set: map[string]any{}} }
-
-func (f *fields) put(name string, v any) {
-	f.set[name] = v
-	f.names = append(f.names, name)
-}
-
-func (f *fields) mask() string { return strings.Join(f.names, ",") }
+func newFields() *fields { return docsreq.NewFields() }

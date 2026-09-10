@@ -1,6 +1,9 @@
 package restyle
 
-import "gdoc/internal/house"
+import (
+	"gdoc/internal/docsreq"
+	"gdoc/internal/house"
+)
 
 // PageRequest is the page: one updateDocumentStyle carrying the house style's
 // A4 geometry and its four margins. It is the only styling request a restyle
@@ -62,7 +65,6 @@ const pageMask = "pageSize,marginTop,marginBottom,marginLeft,marginRight"
 // points is one Docs Dimension. The house style stores every measurement in
 // points and the Docs API's only unit is PT, so this milestone converts
 // nothing: the twips, half-points and EMU the docx writer computes live in
-// internal/render and stay there.
-func points(v float64) map[string]any {
-	return map[string]any{"magnitude": v, "unit": "PT"}
-}
+// internal/render and stay there. The shape is docsreq's, because
+// internal/prelude states the same measurements on what it proposes.
+func points(v float64) map[string]any { return docsreq.Points(v) }

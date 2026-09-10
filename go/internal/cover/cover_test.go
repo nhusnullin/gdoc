@@ -350,3 +350,57 @@ func TestAByteOrderMarkAndTrailingSpacesStillOpenFrontMatter(t *testing.T) {
 		t.Errorf("body = %q, want Body", body)
 	}
 }
+
+func TestPlaceholderReadsTheThirteenValuesTheCoverStates(t *testing.T) {
+	// Arrange
+	f := Fields{
+		Title: "Third Party Risk", DocType: "Policy", AltTitle: "Supplier Risk",
+		Version: "2.3", Date: "May 2026", Owner: "The Board",
+		LastApproval: "1 May 2026", ReviewFrequency: "Annually",
+		BoardRatification: "Yes", Distribution: "All staff",
+	}
+
+	// Act and assert
+	for name, want := range map[string]string{
+		"title":              "Third Party Risk Policy",
+		"alt_title":          "Supplier Risk Policy",
+		"running_head":       "Altery - Supplier Risk Policy",
+		"version":            "2.3",
+		"date":               "May 2026",
+		"owner":              "The Board",
+		"last_approval":      "1 May 2026",
+		"review_frequency":   "Annually",
+		"board_ratification": "Yes",
+		"distribution":       "All staff",
+	} {
+		value, filled, err := f.Placeholder(name)
+		if err != nil {
+			t.Errorf("Placeholder(%q) = error %v", name, err)
+			continue
+		}
+		if !filled || value != want {
+			t.Errorf("Placeholder(%q) = %q %v, want %q true", name, value, filled, want)
+		}
+	}
+}
+
+func TestAnUnfilledPlaceholderIsNotFilledAndAnEmptyNameIsNotOne(t *testing.T) {
+	value, filled, err := Fields{Title: "A Policy"}.Placeholder("owner")
+	if err != nil || filled || value != "" {
+		t.Errorf("Placeholder(owner) on a note stating none = %q %v %v, want \"\" false nil", value, filled, err)
+	}
+	value, filled, err = Fields{}.Placeholder("")
+	if err != nil || filled || value != "" {
+		t.Errorf("Placeholder(empty) = %q %v %v, want \"\" false nil", value, filled, err)
+	}
+}
+
+func TestAPlaceholderThatIsNotACoverFieldIsRefusedByName(t *testing.T) {
+	_, _, err := Fields{Title: "A Policy"}.Placeholder("approver")
+	if err == nil {
+		t.Fatalf("Placeholder(approver) was read, and the cover would keep the template's own words")
+	}
+	if !strings.Contains(err.Error(), "approver") {
+		t.Errorf("the refusal does not name the placeholder: %v", err)
+	}
+}
