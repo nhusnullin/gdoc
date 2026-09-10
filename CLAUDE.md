@@ -926,11 +926,12 @@ tab, the way `Places` is one rule with two ways in.
   a header, a footer or a footnote. Whether Docs anchors one there at all is
   unmeasured, and it is
   `docs/backlog/comment-anchors-in-headers-and-footnotes.md`.
-- **`docs.NamedRangesURL` is the narrowed read, and no command calls it yet.**
-  The whole document answers with the ranges already, so the survey takes them
-  out of the read it has rather than making a fourth request. The narrowed read
-  exists for the caller that wants only the ranges, which is M7b rechecking the
-  ranges rather than the prose: the measured saving was 982 bytes against 12,907
+- **`docs.NamedRangesURL` is the narrowed read, and the apply loop is its one
+  caller.** The whole document answers with the ranges already, so the survey
+  takes them out of the read it has rather than making a fourth request. The
+  narrowed read is for the caller that wants a fact out of that one answer, and
+  at M7b that caller is `restyle`'s `revisionOf`, which reads it between batches
+  for the revision id alone: the measured saving was 982 bytes against 12,907
   for the document itself. Its mask selects each tab's id and its named ranges
   and `childTabs` **whole**, because a mask does not recurse into a nesting of
   unknown depth and selecting a child tab's fields one level at a time would
@@ -1010,8 +1011,10 @@ document holding an element gdoc has never seen holds something no count here
 speaks for, so the survey warns naming the member and refuses to say there is
 nothing to protect. A named range is the other, and it is the reason the survey
 lists them at all: it is a label Docs keeps in step with its own edits, so a
-replacement of the words it covers takes it with them, and M7b reads this field
-before it writes. Whether a document is worth restyling is Nail's, reading the
+replacement of the words it covers takes it with them. Nothing compares this
+field before and after yet, and it does not need to at M7b: none of the four
+request kinds `LevelInPlace` carries can change a character, so no named range
+can move. A milestone that writes text compares it. Whether a document is worth restyling is Nail's, reading the
 counts. That is "the binary prints facts, and the skills judge" at the one field
 most likely to grow into a verdict.
 

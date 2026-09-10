@@ -540,3 +540,48 @@ func oneRequestPerBatch(t *testing.T, reqs []map[string]any) {
 	// second request of any size at all puts the batch over.
 	maxBatchBytes = batchEnvelope + largest + 1
 }
+
+// A lost answer is a lost answer whatever words it carries, and the words it
+// carries name this loop's own field. encoding/json builds a type error out of
+// the struct it was decoding into, so a batchUpdate that answered 200 with a
+// writeControl of the wrong shape fails with "cannot unmarshal string into Go
+// struct field batchAnswer.writeControl ... requiredRevisionId", which holds the
+// word isStale matches on. Read as a stale revision that batch would be reported
+// as a document that moved, MaybeApplied would stay false, the run would say the
+// document is as it was, and cmdRestyle would skip the read-back on the one path
+// where a direct edit may be in the document. The two cases cannot collide the
+// other way: Docs refuses a moved revision with a 4xx, which gapi never marks as
+// sent.
+func TestALostAnswerNamingTheRevisionFieldIsNotAStaleRevision(t *testing.T) {
+	oneRequestPerBatch(t, threeRequests())
+	var answer batchAnswer
+	decode := json.Unmarshal([]byte(`{"writeControl":"not an object"}`), &answer)
+	if decode == nil || !strings.Contains(strings.ToLower(decode.Error()), "revision") {
+		t.Fatalf("this test is worth nothing unless the decode error names the revision field, and it says %v", decode)
+	}
+	lost := sentAnswer{fmt.Errorf(
+		"https://docs.googleapis.com/v1/documents/DOC1:batchUpdate answered 200 with a body that is not JSON: %w", decode)}
+	s := &scripted{answers: []scriptedAnswer{{err: lost}}}
+
+	got, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1")
+
+	if err == nil {
+		t.Fatalf("a lost answer must fail the run, got %+v", got)
+	}
+	if got.Stale {
+		t.Error("Stale = true on a batch Docs accepted: nothing said the document had moved")
+	}
+	if !got.MaybeApplied {
+		t.Error("maybe_applied = false on a batch Docs accepted: cmdRestyle reads it to decide whether to read the document back")
+	}
+	if got.MaybeRequests != 1 {
+		t.Errorf("maybe_requests = %d, want 1: the read-back is asked about the requests that left the machine", got.MaybeRequests)
+	}
+	joined := strings.Join(got.Warnings, " ")
+	if !strings.Contains(joined, "accepted") {
+		t.Errorf("the warning must say Docs accepted the batch: %v", got.Warnings)
+	}
+	if strings.Contains(joined, "the document is as it was") {
+		t.Errorf("a batch that may be in the document must never be reported as a document nothing reached: %v", got.Warnings)
+	}
+}

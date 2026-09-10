@@ -203,12 +203,16 @@ func Apply(ctx context.Context, s Session, docID string, requests []map[string]a
 // batch that did not land, which only the accepted-and-unreadable case records.
 func (out *Applied) stopped(i, total, n int, err error) error {
 	switch {
-	case isStale(err):
-		out.Stale = true
-		out.Warnings = append(out.Warnings, out.leftBehind(total, false))
-		return fmt.Errorf(
-			"batch %d of %d was refused because the document moved under this run, so somebody edited it after the survey was taken, and the run stopped rather than styling a document being edited: %w",
-			i+1, total, err)
+	// sentAnyway is asked first, and the order is the rule rather than a
+	// preference. isStale reads the message for a word, and the message of a
+	// lost answer is encoding/json's, built out of the struct it was decoding
+	// into: a writeControl of the wrong shape fails naming
+	// batchAnswer.writeControl and requiredRevisionId, which carries that word.
+	// Read as a moved document, a batch Docs accepted would leave MaybeApplied
+	// false, say the document is as it was, and take the read-back with it, on
+	// the one path where a direct edit may be in the document. The two cannot
+	// collide the other way: Docs refuses a moved revision with a 4xx, and gapi
+	// marks only the failures raised after a 2xx.
 	case sentAnyway(err):
 		// The flag goes on before the sentence below is built, because that
 		// sentence says what is in the document and this is the one path where
@@ -219,6 +223,12 @@ func (out *Applied) stopped(i, total, n int, err error) error {
 			fmt.Sprintf("batch %d of %d was accepted by Docs and its answer could not be read, so that batch may be in the document and it is never sent again", i+1, total),
 			out.leftBehind(total, false))
 		return fmt.Errorf("batch %d of %d was accepted by Docs and its answer could not be read: %w", i+1, total, err)
+	case isStale(err):
+		out.Stale = true
+		out.Warnings = append(out.Warnings, out.leftBehind(total, false))
+		return fmt.Errorf(
+			"batch %d of %d was refused because the document moved under this run, so somebody edited it after the survey was taken, and the run stopped rather than styling a document being edited: %w",
+			i+1, total, err)
 	default:
 		out.Warnings = append(out.Warnings, out.leftBehind(total, true))
 		return fmt.Errorf("batch %d of %d did not land: %w", i+1, total, err)
@@ -387,6 +397,11 @@ func revisionOf(ctx context.Context, s Session, docID string) (string, error) {
 // is reported as an ordinary refusal rather than guessed at: calling a
 // permission error a document that moved would send somebody to look at the
 // wrong thing, and the run stops either way.
+//
+// A word is all there is to read, so this is asked after sentAnyway rather than
+// before it: a lost answer carries encoding/json's own message, which names the
+// field this loop decodes into and so carries the word. stopped holds that
+// order, and swapping the two arms back is the defect rather than a tidy-up.
 func isStale(err error) bool {
 	if err == nil {
 		return false
