@@ -46,6 +46,12 @@
 // author tabs to remove. The 2026-09-10 probe measured it accepted as a
 // suggestion.
 //
+// A run marks what it proposed, with a named range called MarkerName, and that
+// marker is gdoc's whole memory of having been here: a restyle writes no file
+// beside the document and has no note to pair. marker.go holds the three shapes
+// a run can meet and what it does about each, and it is the one thing in this
+// package that reads the document rather than the house style.
+//
 // A list marker is the one look an inserted paragraph can inherit and this
 // package cannot state away: removing one needs deleteParagraphBullets, which
 // nothing here sends. A prelude proposed at the top of a document whose first
@@ -84,6 +90,11 @@ type Result struct {
 	Paragraphs int
 	Tables     int
 	Cells      int
+	// Replaces is the marker of the prelude a run before this one left, and
+	// the span the requests propose deleting. It is nil on a first run, and on
+	// a document whose prelude was rejected, which is the same shape: a
+	// rejected insertion takes its marker with it.
+	Replaces *Marker
 	// Manual is what the prelude could not propose at all, each with the menu
 	// path a person takes instead. It is the same shape internal/restyle
 	// reports its own steps in, kept separately because the two lists are

@@ -456,17 +456,59 @@ grid itself so it knows exactly how wide it is.
 
 ### Task 6: the marker, and what a second run does
 
-- [ ] **Built to Task 1's measured answer**, not to this plan's guess. If the
+- [x] **Built to Task 1's measured answer**, not to this plan's guess. If the
       answer was bad, this task is the fallback instead: refuse a second run and
       name what to do.
-- [ ] Test first: a first run marks; a second run on a document carrying the
+- [x] Test first: a first run marks; a second run on a document carrying the
       marker replaces rather than adds; a second run on a document carrying a
       **pending** gdoc proposal refuses and says to accept or reject it first.
-- [ ] The marker's name is a constant, and it is read by id rather than by name:
+- [x] The marker's name is a constant, and it is read by id rather than by name:
       `docs.NamedRange` is keyed by id because two ranges may share a name, and
       deleting by name deletes both.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the prelude marker, and the second run"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the prelude marker, and the second run"`
+
+**The replace design, because all four measured rows were good.** `Decide` in
+`internal/prelude/marker.go` reads the document and answers one of three shapes.
+No marker is a first run, which proposes at index 1. One marker over settled
+text is a second run, which proposes a `deleteContentRange` over the marked span
+and then the fresh prelude at that span's own start, which is the order and the
+shape `internal/propose` sends a replacement in: a delete in SUGGEST mode marks
+text rather than removing it, so nothing behind it moves and every index the
+front matter computed is still the index it named. One marker over text that is
+still pending is neither, and the refusal names the suggestion ids and says to
+accept or reject in the browser first.
+
+**Nothing deletes a named range, and nothing needs to.** `deleteNamedRange` is
+not on any allowlist and no request here sends one. The marker tracks its text:
+measured, a rejected insertion took its marker with it and an accepted one kept
+its id and its range. So the old marker goes when the deletion it now sits under
+is accepted, and comes back when that deletion is rejected. Either way one
+marker is left, which is the shape `Decide` requires. **That last step is the
+inference the measurement makes rather than a fifth measured row**, and Task 10's
+live run is what confirms it. It is written down in `Decide`'s own doc comment as
+an inference and not as a measurement.
+
+**Pending is read over the marked span, in both lists and inside the tables.** A
+run overlapping the span carrying an insertion id says the prelude has not been
+accepted; a deletion id says a run before this one already proposed replacing
+it. Neither is text this run may propose deleting. The walk goes into table
+cells, because the front matter is three tables and a walk reading paragraphs
+alone would call a wholly proposed prelude settled.
+
+**Two refusals the plan did not ask for, and both are the same rule.** What a
+caller does with a marker is delete the text under it, so a marker this package
+cannot read as one contiguous span of one tab's body is refused rather than
+reported: a span in a header, a footer or a footnote, and two spans with the
+author's own words between them. Two spans that *touch* are one span, because
+Docs may cut a range at a boundary of its own and the text is still gdoc's.
+
+➕ **The pin that the builder and the guard spell one shape.** The guard reads
+`createNamedRange` exactly, and `internal/guard/marker_test.go` writes those
+bytes out by hand, so two files spelled one shape.
+`TestTheMarkerRequestIsWhatTheGuardGrants` in `internal/prelude` hands the real
+policy the real bytes `MarkerRequest` builds, and its twin asserts a marker over
+a range the run did not grant is refused.
 
 ### Task 7: the command, and the two phases
 
