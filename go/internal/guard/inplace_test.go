@@ -38,9 +38,19 @@ func suggestBatch(kind, inner string) []byte {
 	return []byte(`{"requests":[{"` + kind + `":` + inner + `}],"writeControl":{"writeMode":"SUGGEST"}}`)
 }
 
-// narrow is a mask naming one property, which is what every builder in this
-// milestone writes.
-const narrow = `{"fields":"namedStyleType","range":{"startIndex":1,"endIndex":2}}`
+// narrowFor is a request naming one property and setting it, which is what
+// every builder in this milestone writes. It is kind-aware because the mask
+// rule is: a mask may name only what the request's own style object sets, so
+// one body cannot stand in for all four kinds.
+func narrowFor(kind string) string {
+	style := map[string]string{
+		"updateDocumentStyle":  `"documentStyle":{"marginTop":{"magnitude":72,"unit":"PT"}},"fields":"marginTop"`,
+		"updateParagraphStyle": `"paragraphStyle":{"namedStyleType":"HEADING_1"},"fields":"namedStyleType"`,
+		"updateTextStyle":      `"textStyle":{"fontSize":{"magnitude":11,"unit":"PT"}},"fields":"fontSize"`,
+		"updateTableCellStyle": `"tableCellStyle":{"paddingTop":{"magnitude":4,"unit":"PT"}},"fields":"paddingTop"`,
+	}[kind]
+	return `{` + style + `,"range":{"startIndex":1,"endIndex":2}}`
+}
 
 // The four kinds, each measured landing on a real document on 2026-09-09, and
 // each carried here at LevelInPlace and nowhere else.
@@ -54,7 +64,7 @@ func TestTheFourStylingKindsCarryAtLevelInPlace(t *testing.T) {
 	}
 	for _, kind := range kinds {
 		t.Run(kind, func(t *testing.T) {
-			if err := p.Judge("POST", mustURL(t, inPlaceURL), batch(kind, narrow)); err != nil {
+			if err := p.Judge("POST", mustURL(t, inPlaceURL), batch(kind, narrowFor(kind))); err != nil {
 				t.Fatalf("%s must carry at the in-place level: %v", kind, err)
 			}
 		})
@@ -192,7 +202,9 @@ func TestAnInPlaceFieldMaskIsBounded(t *testing.T) {
 // commas are the field mask's own JSON encoding.
 func TestAnOrdinaryMaskCarries(t *testing.T) {
 	p := granted(t)
-	body := batch("updateDocumentStyle", `{"fields":"marginTop, marginBottom,marginLeft"}`)
+	body := batch("updateDocumentStyle", `{"documentStyle":{"marginTop":{"magnitude":72,"unit":"PT"},`+
+		`"marginBottom":{"magnitude":72,"unit":"PT"},"marginLeft":{"magnitude":56.7,"unit":"PT"}},`+
+		`"fields":"marginTop, marginBottom,marginLeft"}`)
 	if err := p.Judge("POST", mustURL(t, inPlaceURL), body); err != nil {
 		t.Fatalf("a mask naming what it sets is the whole point: %v", err)
 	}
@@ -305,5 +317,129 @@ func TestAGrantedDocumentIsStillReadAndCommentedOn(t *testing.T) {
 	u := mustURL(t, "https://www.googleapis.com/drive/v3/files/DOC1/comments?fields=x")
 	if err := p.Judge("POST", u, []byte(`{"content":"x"}`)); err != nil {
 		t.Fatalf("the comment surface must still carry: %v", err)
+	}
+}
+
+// A mask may name only what the request actually sets, and that is the same
+// rule the star refusal is: the reference says a field named in the mask and
+// left unset is reset to its default. So "*" and the fields written out one by
+// one destroy the same properties, and a guard that refuses one spelling and
+// carries the other bounds a spelling rather than the behaviour.
+//
+// Every case below was measured carrying before this rule existed. The empty
+// style object is the whole wipe: an updateTextStyle naming bold, italic, link
+// and the colours, setting none of them, clears an author's emphasis over its
+// range for ever with every character intact.
+func TestAMaskMayNameOnlyWhatTheRequestSets(t *testing.T) {
+	cases := []struct {
+		name, kind, inner, want string
+	}{
+		{
+			"the text wipe written out field by field",
+			"updateTextStyle",
+			`{"textStyle":{},"fields":"bold,italic,link,foregroundColor"}`,
+			"bold",
+		},
+		{
+			"a paragraph wipe with no style object at all",
+			"updateParagraphStyle",
+			`{"fields":"alignment,lineSpacing,spaceAbove"}`,
+			"paragraphStyle",
+		},
+		{
+			"a document wipe with no style object at all",
+			"updateDocumentStyle",
+			`{"fields":"background,pageSize,marginTop"}`,
+			"documentStyle",
+		},
+		{
+			"a cell wipe with an empty style object",
+			"updateTableCellStyle",
+			`{"tableCellStyle":{},"fields":"backgroundColor,borderTop"}`,
+			"backgroundColor",
+		},
+		{
+			"one field set and a second one named",
+			"updateTextStyle",
+			`{"textStyle":{"fontSize":{"magnitude":11,"unit":"PT"}},"fields":"fontSize,foregroundColor"}`,
+			"foregroundColor",
+		},
+		{
+			"a sub-path whose parent is set and whose leaf is not",
+			"updateDocumentStyle",
+			`{"documentStyle":{"pageSize":{"width":{"magnitude":595,"unit":"PT"}}},"fields":"pageSize.height"}`,
+			"height",
+		},
+		{
+			"the style object under another spelling",
+			"updateTextStyle",
+			`{"TextStyle":{"bold":true},"fields":"bold"}`,
+			"textStyle",
+		},
+		{
+			"the style object is not an object",
+			"updateTextStyle",
+			`{"textStyle":"bold","fields":"bold"}`,
+			"textStyle",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := granted(t)
+			err := p.Judge("POST", mustURL(t, inPlaceURL), batch(c.kind, c.inner))
+			if err == nil {
+				t.Fatalf("%s must be refused: a named field this request leaves unset is that property destroyed", c.name)
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("the refusal must name %q; got %v", c.want, err)
+			}
+		})
+	}
+}
+
+// The other direction. A request that sets everything its mask names is
+// ordinary work at this level, and it is what every builder in internal/restyle
+// writes: TestEveryMaskNamesExactlyWhatItSets is the same property asked of the
+// builders rather than of the wire.
+func TestAMaskNamingExactlyWhatItSetsCarries(t *testing.T) {
+	cases := []struct{ name, kind, inner string }{
+		{
+			"the page geometry PageRequest sends",
+			"updateDocumentStyle",
+			`{"documentStyle":{"pageSize":{"width":{"magnitude":595.28,"unit":"PT"},` +
+				`"height":{"magnitude":841.89,"unit":"PT"}},"marginTop":{"magnitude":72,"unit":"PT"}},` +
+				`"fields":"pageSize,marginTop"}`,
+		},
+		{
+			"a named style on one paragraph",
+			"updateParagraphStyle",
+			`{"paragraphStyle":{"namedStyleType":"HEADING_1"},"fields":"namedStyleType",` +
+				`"range":{"startIndex":1,"endIndex":2}}`,
+		},
+		{
+			"a face and a size on one run",
+			"updateTextStyle",
+			`{"textStyle":{"weightedFontFamily":{"fontFamily":"Aptos"},"fontSize":{"magnitude":11,"unit":"PT"}},` +
+				`"fields":"weightedFontFamily,fontSize","range":{"startIndex":1,"endIndex":2}}`,
+		},
+		{
+			"the padding of every cell in one table",
+			"updateTableCellStyle",
+			`{"tableCellStyle":{"paddingTop":{"magnitude":4,"unit":"PT"}},"fields":"paddingTop",` +
+				`"tableStartLocation":{"index":10}}`,
+		},
+		{
+			"a sub-path the request sets to the leaf",
+			"updateDocumentStyle",
+			`{"documentStyle":{"pageSize":{"height":{"magnitude":841.89,"unit":"PT"}}},"fields":"pageSize.height"}`,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := granted(t)
+			if err := p.Judge("POST", mustURL(t, inPlaceURL), batch(c.kind, c.inner)); err != nil {
+				t.Fatalf("a request that sets what its mask names is the whole point: %v", err)
+			}
+		})
 	}
 }

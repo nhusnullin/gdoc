@@ -1429,7 +1429,12 @@ that names nothing, because Google reads an empty mask as every field, and
 refuses a mask naming `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`,
 because switching either off hides the first-page header carrying the logo. The
 builder never relies on being refused: every request names exactly what it sets,
-and a test walks the whole plan in both directions.
+and a test walks the whole plan in both directions. The guard holds that same
+rule since the M7b review: `checkMaskIsSet` walks every path in the mask into
+the request's own style object and refuses one the request leaves unset, because
+`fields: "*"` and the fields enumerated one at a time destroy exactly the same
+properties, and refusing only the star bounds a spelling rather than the
+behaviour.
 
 **SPEC's finishing checklist is deliberately not built.** SPEC has gdoc write a
 page after the cover listing the three things the API cannot create, with

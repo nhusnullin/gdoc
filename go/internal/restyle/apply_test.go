@@ -131,9 +131,9 @@ func keysOf(m map[string]json.RawMessage) []string {
 // every body in this file is one the guard would judge.
 func threeRequests() []map[string]any {
 	return []map[string]any{
-		{"updateParagraphStyle": map[string]any{"range": map[string]any{"startIndex": 1, "endIndex": 5}, "paragraphStyle": map[string]any{}, "fields": "spaceAbove"}},
-		{"updateTextStyle": map[string]any{"range": map[string]any{"startIndex": 1, "endIndex": 5}, "textStyle": map[string]any{}, "fields": "fontSize"}},
-		{"updateTableCellStyle": map[string]any{"tableRange": map[string]any{}, "tableCellStyle": map[string]any{}, "fields": "paddingTop"}},
+		{"updateParagraphStyle": map[string]any{"range": map[string]any{"startIndex": 1, "endIndex": 5}, "paragraphStyle": map[string]any{"spaceAbove": points(18)}, "fields": "spaceAbove"}},
+		{"updateTextStyle": map[string]any{"range": map[string]any{"startIndex": 1, "endIndex": 5}, "textStyle": map[string]any{"fontSize": points(11)}, "fields": "fontSize"}},
+		{"updateTableCellStyle": map[string]any{"tableStartLocation": map[string]any{"index": 10}, "tableCellStyle": map[string]any{"paddingTop": points(4)}, "fields": "paddingTop"}},
 	}
 }
 

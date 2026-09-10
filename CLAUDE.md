@@ -371,6 +371,20 @@ the widest thing gdoc can be asked to do, so every part of it is narrow.
   and a field mask is defined in proto, where that camelCase names
   `use_first_page_header_footer`. That is `checkFields`' rule one layer out,
   and its refusal already says it: refused however it is asked for.
+- **A mask may name only what the request sets, and that is the same rule the
+  star refusal is.** A star and the fields written out one at a time destroy
+  the same properties, so a guard that refuses one and carries the other bounds
+  a spelling rather than the behaviour. `checkMaskIsSet` walks every path into
+  the request's own style object, to the leaf, and refuses a path the request
+  leaves unset, a style object that is absent, one spelled under another case,
+  and one the walk cannot look inside. That is `TestEveryMaskNamesExactlyWhatItSets`
+  held at the wire rather than in the builders alone, and it is the other half
+  of "the builder never relies on being refused": a field named in a mask and
+  forgotten in the style object clears that property on every paragraph, run or
+  cell the request addressed. The segments are read exactly, so the underscore
+  spelling of a path whose camelCase is set is refused here and would have been
+  carried by Google. That direction is deliberate: no builder writes it, and the
+  refusal is a run that failed loudly against a loss that is permanent.
 - **There is no capability probe here, and the read-back stands alone.** A
   proposal is probed because what makes it a suggestion is `writeMode`, a field
   gdoc supplies and Google has ignored once. `LevelInPlace` makes no claim of

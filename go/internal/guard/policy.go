@@ -1013,13 +1013,13 @@ func checkInPlaceMask(kind string, raw json.RawMessage) error {
 	if err := json.Unmarshal(maskRaw, &mask); err != nil {
 		return refuse("the fields mask of %q is one string, and this one is not: %v", kind, err)
 	}
-	named := 0
+	var named []string
 	for _, path := range strings.Split(mask, ",") {
 		path = strings.TrimSpace(path)
 		if path == "" {
 			continue
 		}
-		named++
+		named = append(named, path)
 		for _, seg := range strings.Split(path, ".") {
 			if strings.Contains(seg, "*") {
 				return refuse("the fields mask of %q names %q, and a mask carrying * resets every property this request does not set", kind, path)
@@ -1029,8 +1029,100 @@ func checkInPlaceMask(kind string, raw json.RawMessage) error {
 			}
 		}
 	}
-	if named == 0 {
+	if len(named) == 0 {
 		return refuse("the fields mask of %q is empty, and Google reads an empty mask as every field", kind)
+	}
+	return checkMaskIsSet(kind, fields, named)
+}
+
+// inPlaceStyleKeys names the object each of the four styling kinds carries the
+// values it is setting in. It is written out rather than derived from the kind,
+// because a rule that guesses the key from the name would guess wrongly the
+// first time Google names one differently, and the guess would be a mask judged
+// against an object that is not there.
+var inPlaceStyleKeys = map[string]string{
+	"updateDocumentStyle":  "documentStyle",
+	"updateParagraphStyle": "paragraphStyle",
+	"updateTextStyle":      "textStyle",
+	"updateTableCellStyle": "tableCellStyle",
+}
+
+// checkMaskIsSet is the second half of the mask rule, and it is the same rule
+// the star refusal is rather than a new one.
+//
+// The reference: "To reset a property to its default value, include its field
+// name in the field mask but leave the field itself unset." So `fields: "*"`
+// and the fields written out one at a time destroy exactly the same
+// properties, and a rule that refuses the star alone bounds one spelling of
+// the behaviour. Measured on this guard before this function existed: an
+// updateTextStyle carrying an empty textStyle and a mask naming bold, italic,
+// link and the colours was carried, and it clears an author's emphasis over
+// its range for ever with every character intact.
+//
+// So every path a mask names has to be set, walked to its leaf. The style
+// object is read exactly, the way isSuggestMode reads writeMode and
+// checkInPlaceMask reads the mask itself: proto-JSON is case-sensitive, so a
+// value sitting under "TextStyle" is a value the server never reads, and the
+// mask beside it is then a reset wearing an ordinary shape.
+//
+// The segments are read exactly too, and there the guard is narrower than the
+// server: Google's proto-JSON accepts a mask path in the underscore spelling
+// as well, so `page_size` against a `pageSize` that is set is refused here and
+// would have been carried there. That costs a refusal on a spelling no builder
+// in internal/restyle writes, and the direction is the one to be wrong in: the
+// mistake this closes is permanent, and the mistake it makes is a run that
+// failed loudly.
+func checkMaskIsSet(kind string, fields map[string]json.RawMessage, named []string) error {
+	styleKey, ok := inPlaceStyleKeys[kind]
+	if !ok {
+		return refuse("%q has no style object the guard knows the name of, so its mask cannot be judged against what it sets", kind)
+	}
+	styleRaw, ok := fields[styleKey]
+	if !ok {
+		for name := range fields {
+			if strings.EqualFold(name, styleKey) {
+				return refuse("%q sets its values in %q, and the server reads only %q spelled exactly, so every path in its mask names a property this request leaves unset", kind, name, styleKey)
+			}
+		}
+		return refuse("%q carries no %q, so every path in its fields mask names a property this request leaves unset, and a named field left unset is that property reset to its default", kind, styleKey)
+	}
+	for name := range fields {
+		if name != styleKey && strings.EqualFold(name, styleKey) {
+			return refuse("%q names its style object twice, as %q and %q, and which one the server reads is not decided here", kind, name, styleKey)
+		}
+	}
+	for _, path := range named {
+		if err := walkMaskPath(kind, styleKey, styleRaw, path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// walkMaskPath follows one mask path into the style object, segment by
+// segment. A path whose leaf is not there is a property this request resets,
+// and a path that runs past a value which is not an object is one the guard
+// cannot follow, which must not resolve to sending it.
+func walkMaskPath(kind, styleKey string, styleRaw json.RawMessage, path string) error {
+	at := styleKey
+	raw := styleRaw
+	for _, seg := range strings.Split(path, ".") {
+		seg = strings.TrimSpace(seg)
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return refuse("the fields mask of %q names %q, and %q is not an object this guard can look inside, so it cannot say the property is set rather than reset: %v", kind, path, at, err)
+		}
+		next, ok := obj[seg]
+		if !ok {
+			for name := range obj {
+				if strings.EqualFold(name, seg) {
+					return refuse("the fields mask of %q names %q, and %q sets %q, which the server reads as a different field: proto-JSON is case-sensitive, so the named property is left unset and reset to its default", kind, path, at, name)
+				}
+			}
+			return refuse("the fields mask of %q names %q, and %q does not set %q. A field named in the mask and left unset is that property reset to its default, permanently, with every character intact", kind, path, at, seg)
+		}
+		at = seg
+		raw = next
 	}
 	return nil
 }
