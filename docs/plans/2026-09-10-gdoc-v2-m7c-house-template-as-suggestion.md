@@ -252,22 +252,71 @@ character. Task 9 checks that claim rather than assuming it.
 
 ### Task 1: measure what a named range does over suggested text
 
-- [ ] `TestLiveNamedRangeOverSuggestionProbe` in `go/internal/live`, behind the
+- [x] `TestLiveNamedRangeOverSuggestionProbe` in `go/internal/live`, behind the
       two live variables, one fresh document per case, each binned after.
-- [ ] Four questions, each its own case, each logged rather than asserted:
+- [x] Four questions, each its own case, each logged rather than asserted:
       can a named range be created directly over a range that is a pending
       insertion; does it survive the suggestion being **accepted**; does it
       survive the suggestion being **rejected**; and what does it cover
       afterwards in each case.
-- [ ] Accepting and rejecting are themselves `batchUpdate` requests
+- [x] Accepting and rejecting are themselves `batchUpdate` requests
       (`acceptSuggestion`, `rejectSuggestion`) on a document the probe created,
       so they run at `LevelFull` and need no grant. **The guard's suggestion
       rules are not touched**: this is the probe's own document.
-- [ ] It asserts almost nothing and fails only when it cannot create or cannot
+      ⚠️ **Half of that was wrong, and the guard is right.** `judgeRequests`
+      refuses every request kind whose name carries "suggestion" **at every
+      level**, because SPEC's Never list names no level: a document the probe
+      created a second ago is refused like anybody else's. `rejectSuggestion`
+      has one door, `AllowReject`, which withdraw already uses, so the probe
+      seeds it with its own suggestion id and the reject case runs.
+      `acceptSuggestion` has no door, and opening one to measure a probe would
+      be widening the guard for the tail rather than the dog. So the accept case
+      leaves its document in the folder, prints the URL, and Nail accepts it in
+      the browser the way he will accept a real prelude.
+      `TestLiveNamedRangeAfterAcceptedByHand`, read-only and behind
+      `GDOC_LIVE_ACCEPTED_DOC_ID`, then finishes the table. The guard was not
+      touched.
+- [x] It asserts almost nothing and fails only when it cannot create or cannot
       trash, for `TestLiveStyleFidelity`'s reason.
-- [ ] **Stop here and report the table to Nail.** Task 6's design depends on the
+- [x] **Stop here and report the table to Nail.** Task 6's design depends on the
       answer, and the fallback in the overview is what happens if it is bad.
-- [ ] `git commit -m "test(v2): measure a named range over suggested text"`
+- [x] `git commit -m "test(v2): measure a named range over suggested text"`
+
+#### Measured, 2026-09-10, run against the Drive test folder
+
+| Question | Answer |
+|---|---|
+| created directly over a pending insertion? | **yes**, id `kix.wi79lhqfq91l` |
+| what it covers while the insertion is pending | `gdoc:house-prelude [1,23)`, exactly the proposed line |
+| after the suggestion is **rejected** | **the marker is GONE**: no named range at all |
+| after the suggestion is **accepted** | ⚠️ **open, and it is Nail's**: gdoc cannot accept |
+| can gdoc accept its own suggestion? | **no**, and by design: the guard refuses `acceptSuggestion` at every level |
+
+Three of the four are good answers for M7c:
+
+- The marker can be created over text that exists only as a proposal, so the
+  first run can mark what it proposed.
+- It covers exactly the proposed line while that line is pending, so a second
+  run reading the marker reads gdoc's own prelude and nothing of the author's.
+- A rejected prelude takes its marker with it. That is the best of the three
+  possible answers: the document goes back to having no prelude and no mark of
+  one, so the run after a rejection proposes cleanly with nothing to detect and
+  nothing to clean up.
+
+**The accept row is outstanding and Task 6 waits on it.** The document is
+`1D0ErMFgR3Gz3W_1pZ4IRWZDzfTGmVBFBP_wnNvfkSW0`, left in the test folder with the
+suggestion pending and the marker `kix.hio1q8ew49ro` over `[1,23)`. Nail accepts
+it in the browser, then:
+
+```
+GDOC_LIVE_TEST=1 GDOC_LIVE_ACCEPTED_DOC_ID=1D0ErMFgR3Gz3W_1pZ4IRWZDzfTGmVBFBP_wnNvfkSW0 \
+  go test ./internal/live -run TestLiveNamedRangeAfterAcceptedByHand -v
+```
+
+and the document is trashed by hand once the answer is written down. If the
+marker survives the accept, Task 6 is the replace-in-place design. If it does
+not, Task 6 is the fallback in the overview: no marker, and a second run refuses
+while a gdoc prelude is pending or already accepted, telling Nail which.
 
 ### Task 2: the one new guard door, and proof the prelude needs none
 
