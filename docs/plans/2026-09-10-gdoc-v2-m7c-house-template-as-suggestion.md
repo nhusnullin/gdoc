@@ -341,15 +341,30 @@ it: nothing here holds a `--trash` command, and the answer is written down.
 
 ### Task 3: the fields file
 
-- [ ] Test first: read strictly, refuse an unknown key by name, refuse a second
+- [x] Test first: read strictly, refuse an unknown key by name, refuse a second
       object behind the first, refuse a missing title carrying `cover`'s own
       candidate, and accept a file naming every one of the thirteen fields.
-- [ ] It is `cover.Fields` decoded from JSON. **No second shape**, and no
+      ⚠️ **A fields file carries no candidate, and that is the honest answer.**
+      `MissingTitle` draws its candidate from a note's first heading or its file
+      name, and this file has neither. So the refusal is the same error type,
+      which is what the skill reads, with an empty `Candidate`.
+      `MissingTitle` gained a `Where` field for it: empty is "front matter",
+      which is what `cmd/gdoc`'s `titleError` still builds, and the fields
+      reader sets "the fields file". One sentence, two files, and neither names
+      the other's.
+- [x] It is `cover.Fields` decoded from JSON. **No second shape**, and no
       translation layer: a field this file names is a field `internal/render`
-      already reads.
-- [ ] `Revisions` is a list, which is why this is a file rather than flags.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the cover fields file, read strictly"`
+      already reads. `TestTheFieldsFileNamesTheSameThirteenValuesTheNoteDoes`
+      states that as a test: one note and one fields file stating the same
+      values read to the same `Fields`, revisions included.
+      The keys are the note's own keys, and the two normalisations are shared
+      rather than copied: `classificationLabel` and `numbering` are now one
+      rule each, asked by both readers. The defaults are shared too, so a file
+      stating no version publishes as 1.0 and one stating no date as this month,
+      exactly as a note does.
+- [x] `Revisions` is a list, which is why this is a file rather than flags.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the cover fields file, read strictly"`
 
 ### Task 4: the cover as Docs requests
 
