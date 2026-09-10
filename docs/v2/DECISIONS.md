@@ -1666,3 +1666,89 @@ accepted a single insertion. A prelude is many, and Docs numbers a partial
 accept differently. The milestone that meets a half-accepted prelude measures
 that; until then a marker whose range no longer covers a whole prelude is a
 shape nothing here has seen.
+
+## 2026-09-10. A table takes one index of its own at the end, and the prelude was one short.
+
+**Found by a failed live run, not by review.**
+`TestLivePreludeIsProposedNotWritten` sent the whole house prelude at the
+document Nail named, and Docs refused the batch whole:
+
+```
+Invalid requests[106].insertText: The insertion index must be inside the bounds
+of an existing paragraph. You can still create new paragraphs by inserting
+newlines.
+```
+
+Nothing was written. A batch Docs refuses is refused whole, everything in it was
+a suggestion in any case, and the source document's revision never moved. The
+guard was never in question: the requests it carried are the ones
+`internal/propose` sends every day.
+
+Request 106 is the spacer newline between two front-matter tables, at the index
+`internal/prelude` computed as one past the first table's last cell.
+
+**The measurement.** `TestLiveTableIndexProbe` in `internal/live`, one throwaway
+document per case, everything in SUGGEST mode, which is the mode the prelude
+sends in. A 2x2 table of empty cells asked for at index 1 reads back as:
+
+| Element | Range |
+|---|---|
+| paragraph, the newline `insertTable` writes in front | [1,2) |
+| **table** | **[2,14)** |
+| row 0 | [3,8) |
+| cell 0.0, and its paragraph | [4,6), [5,6) |
+| cell 0.1, and its paragraph | [6,8), [7,8) |
+| row 1 | [8,13) |
+| cell 1.0, and its paragraph | [9,11), [10,11) |
+| cell 1.1, and its paragraph | [11,13), [12,13) |
+| paragraph, what follows the table | [14,15) |
+
+The last cell ends at 13 and the table ends at 14. So a table takes one index of
+its own at the end that no row, no cell and no paragraph mark accounts for, and
+the paragraph behind a table begins at the table's own `endIndex`. An empty
+table is twelve units for a 2x2, which is one for the table, one per row, one
+per cell plus one for that cell's paragraph mark, **and one for the table's own
+end**, with a thirteenth unit for the newline in front of it.
+
+**Accepted is not the answer, and that is the trap.** The sweep asked six
+indexes, each on its own document, each in one batch with the table:
+
+| Index | Accepted | Where it went |
+|---|---|---|
+| 11 | no | inside no paragraph |
+| 12 | **yes** | **inside the last cell**: the table then spans [2,15) |
+| 13 | no | the table's own end, inside no paragraph |
+| 14 | yes | behind the table, which still spans [2,14) |
+| 15, 16 | no | past the end of the body |
+
+12 is the answer that reads like success and is not one. The probe's first run
+reported the first accepted index and stopped there, so it said 12, and a second
+table asked for at 13 was nested inside that cell rather than put behind the
+first. Every accepted candidate is read back now, and the verdict is where the
+insert really landed. A probe that stops at the status code answers a different
+question from the one it was asked.
+
+Two tables with one paragraph between them, spaced at 14, land as two top-level
+tables at [2,14) and [16,28), which is the shape the house front matter has.
+
+**The fix is one line and one comment**, `b.at = at + 1` at the end of
+`prelude.builder.table`, with `TestTheIndexBehindATableIsTheTablesOwnEnd`
+stating the measured map as numbers. Nothing else moved: the per-cell
+arithmetic was already right, and the two facts measured on 2026-09-10 still
+hold, that a 2x7 table inserted at 279 puts the first cell's content at 283 and
+that a cell holding ten characters puts the next cell's content at 295.
+
+**"Twelve marks for one 2x2" was not a measurement of indexes, and reading it as
+one is what put the bug there.** The suggested-insert probe counted the elements
+Docs recorded a `suggestedInsertionIds` on, and that count agrees with the
+arithmetic by coincidence: twelve marks, and twelve index units for the table
+plus one for its newline. A count of marks says nothing about where a table
+ends. The rule this leaves is the project's own: a number that reaches the code
+is measured against the question the code asks, or it is a guess wearing a
+measurement's clothes.
+
+**The live acceptance passes.** Re-run the same evening with the fix in:
+250 requests in one batch, 70 paragraphs, 3 tables and 34 cells all carrying
+suggestion ids, nothing written, the marker over [1,1243), the author's own text
+character for character what it was, and the source document still on the
+revision it started on.

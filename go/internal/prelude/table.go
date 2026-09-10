@@ -16,9 +16,17 @@ import (
 // The index accounting is the part to be careful with, because nothing in the
 // document is read: this writer computes where each cell lands. An empty table
 // is one index unit for the newline insertTable writes in front of it, one for
-// the table, one for each row, and one for each cell plus one for that cell's
-// own paragraph mark. A 2x2 is therefore twelve, which is what Docs recorded on
-// 2026-09-10 when the probe suggested one: twelve marks for one 2x2 table.
+// the table, one for each row, one for each cell plus one for that cell's own
+// paragraph mark, and one for the table's own end. A 2x2 is therefore thirteen
+// units from the index the request names, and the paragraph behind the table
+// begins at the table's own endIndex.
+//
+// Every one of those numbers is measured. TestLiveTableIndexProbe read the map
+// off a real document on 2026-09-10, after the table's own end unit was missing
+// here and Docs refused the whole live prelude batch on the spacer newline
+// between two front-matter tables. The count of twelve suggestion marks the
+// earlier probe recorded is a count of marks, and it was read here as a count
+// of indexes: the two agreeing was a coincidence.
 //
 // Everything is written in reading order and the cursor only moves forward, so
 // an insert into one cell shifts the cells behind it and never the ranges
@@ -86,7 +94,15 @@ func (b *builder) table(name string) {
 			b.cells++
 		}
 	}
-	b.at = at
+	// The table takes one more index of its own at the end, and everything
+	// this package writes behind a table goes one past it. Measured by
+	// TestLiveTableIndexProbe on 2026-09-10: a 2x2 of empty cells asked for at
+	// index 1 has its last cell ending at 13 and the table itself ending at 14,
+	// and 14 is where the paragraph behind it begins. 13 is inside no
+	// paragraph, so Docs refuses an insertText there, which is what took the
+	// whole live prelude batch with it. 12 is worse than a refusal: it is
+	// accepted and lands inside the last cell.
+	b.at = at + 1
 	b.tables++
 }
 

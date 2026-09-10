@@ -303,10 +303,12 @@ func TestATablesIndexesFollowTheDocsAccounting(t *testing.T) {
 		t.Fatalf("FrontMatter() = %v", err)
 	}
 
-	// Assert: an empty 2x2 table is twelve index units, which is the newline
-	// insertTable writes in front of it, the table itself, one for each row,
-	// and one for each cell and its own paragraph mark. Measured on
-	// 2026-09-10: Docs recorded twelve suggestion marks for one 2x2.
+	// Assert: an empty 2x2 table is twelve index units, which is the table
+	// itself, one for each row, one for each cell and its own paragraph mark,
+	// and one for the table's own end. A thirteenth unit goes on the newline
+	// insertTable writes in front of it. Measured by TestLiveTableIndexProbe
+	// on 2026-09-10, against a table asked for at index 1: the table spans
+	// [2,14) and the paragraph behind it begins at 14.
 	if starts := tableStarts(got.Requests); len(starts) != 1 || starts[0] != 2 {
 		t.Fatalf("the table starts at %v, want 2, one past the newline in front of it", starts)
 	}
@@ -325,8 +327,8 @@ func TestATablesIndexesFollowTheDocsAccounting(t *testing.T) {
 			t.Errorf("cell %d is written at %d, want %d", i, at[i], want[i])
 		}
 	}
-	if got.End != 17 {
-		t.Errorf("End = %d, want 17: twelve units for the empty table and four characters", got.End)
+	if got.End != 18 {
+		t.Errorf("End = %d, want 18: thirteen units for the empty table and the newline in front of it, and four characters", got.End)
 	}
 	if got.Tables != 1 || got.Cells != 4 {
 		t.Errorf("Tables = %d and Cells = %d, want 1 and 4", got.Tables, got.Cells)
@@ -602,5 +604,104 @@ func cellOf(text string) house.Cell {
 	return house.Cell{
 		Valign:     "top",
 		Paragraphs: []house.CellParagraph{{Runs: []house.Run{{Text: text}}}},
+	}
+}
+
+// emptyTablesConfig is two 2x2 tables of empty cells with one blank paragraph
+// between them, which is the shape the house front matter has and the shape the
+// live probe measured.
+func emptyTablesConfig() *house.Config {
+	empty := house.Cell{Valign: "top"}
+	table := house.Table{
+		ColumnsPt: []float64{100, 100},
+		Border:    house.Border{WidthPt: 1, Color: "#000000"},
+		Rows: []house.Row{
+			{Cells: []house.Cell{empty, empty}},
+			{Cells: []house.Cell{empty, empty}},
+		},
+	}
+	return &house.Config{
+		Defaults:  house.Defaults{Font: "Calibri", SizePt: 11, LineSpacing: 1.15},
+		Styles:    map[string]house.Style{"normal": {Color: "#000000"}},
+		TableText: house.TableText{Font: "Calibri", DefaultSizePt: 12},
+		FrontMatter: []house.Block{
+			{Block: "table", Ref: "t"},
+			{Block: "blank"},
+			{Block: "table", Ref: "t"},
+		},
+		Tables: map[string]house.Table{"t": table},
+	}
+}
+
+// insertsAt is the index every insertText and insertTable names, in the order
+// the requests are sent, with the kind beside it.
+func insertsAt(requests []map[string]any) [][2]any {
+	var out [][2]any
+	for _, r := range requests {
+		for _, kind := range []string{"insertText", "insertTable"} {
+			body, ok := r[kind].(map[string]any)
+			if !ok {
+				continue
+			}
+			out = append(out, [2]any{kind, body["location"].(map[string]any)["index"].(int)})
+		}
+	}
+	return out
+}
+
+// TestTheIndexBehindATableIsTheTablesOwnEnd states what Docs really does with a
+// table's indexes, measured by TestLiveTableIndexProbe on 2026-09-10 and
+// written out here as numbers.
+//
+// A 2x2 table of empty cells, asked for at index 1:
+//
+//	paragraph   [1,2)    the newline insertTable writes in front of the table
+//	table       [2,14)
+//	  row 0     [3,8)      cell 0.0 [4,6), its paragraph [5,6)
+//	                       cell 0.1 [6,8), its paragraph [7,8)
+//	  row 1     [8,13)     cell 1.0 [9,11), its paragraph [10,11)
+//	                       cell 1.1 [11,13), its paragraph [12,13)
+//	paragraph   [14,15)  what follows the table
+//
+// The last cell ends at 13 and the table ends at 14, so the table takes one
+// index of its own at the end that no row, no cell and no paragraph mark
+// accounts for. 13 is that index, and Docs refuses an insertText there: it is
+// inside no paragraph. 12 is accepted and lands inside the last cell, which is
+// the answer that reads like success and is not one.
+//
+// This is what the live prelude was refused on, on 2026-09-10:
+// requests[106].insertText, the spacer newline between two front-matter tables,
+// at the index this builder computed as one past the last cell.
+func TestTheIndexBehindATableIsTheTablesOwnEnd(t *testing.T) {
+	// Arrange: two empty 2x2 tables with a blank paragraph between them.
+	cfg := emptyTablesConfig()
+
+	// Act
+	got, err := FrontMatter(cfg, cover.Fields{Title: "A Policy"}, 1)
+	if err != nil {
+		t.Fatalf("FrontMatter() = %v", err)
+	}
+
+	// Assert: the first table at 1, the spacer newline at 14, which is the
+	// first table's own end and the start of the paragraph behind it, and the
+	// second table at 15, one past the newline the spacer wrote.
+	want := [][2]any{
+		{"insertTable", 1},
+		{"insertText", 14},
+		{"insertTable", 15},
+	}
+	sent := insertsAt(got.Requests)
+	if len(sent) != len(want) {
+		t.Fatalf("the front matter sends %d inserts, want %d: %v", len(sent), len(want), sent)
+	}
+	for i := range want {
+		if sent[i] != want[i] {
+			t.Errorf("insert %d is %v at %v, want %v at %v", i, sent[i][0], sent[i][1], want[i][0], want[i][1])
+		}
+	}
+	// And the whole thing ends at 28: the second table's own end, which is the
+	// start of the paragraph behind it.
+	if got.End != 28 {
+		t.Errorf("End = %d, want 28: twelve units per empty table, one for the newline in front of each, and one for the spacer paragraph", got.End)
 	}
 }

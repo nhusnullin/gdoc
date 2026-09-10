@@ -1434,11 +1434,26 @@ request builders.
 writer needs and is the shape the Docs API has: `insertTable` makes a grid of
 empty cells, so every word in it is an `insertText` afterwards and every fill,
 padding and border an `updateTableCellStyle`. **The index accounting is computed
-here and never read back, so it is pinned as literals.** An empty table is one
-unit for the newline `insertTable` writes in front of it, one for the table, one
-per row, and one per cell plus one for that cell's own paragraph mark. A 2x2 is
-twelve, which is exactly the twelve marks Docs recorded for one 2x2 in the
-suggested-insert probe. `TestATablesIndexesFollowTheDocsAccounting` states it.
+here and never read back, so it is pinned as literals, and it is measured rather
+than reasoned about.** An empty table is one unit for the newline `insertTable`
+writes in front of it, one for the table, one per row, one per cell plus one for
+that cell's own paragraph mark, **and one for the table's own end**. A 2x2 is
+therefore thirteen units from the index the request names, the table itself
+spanning twelve of them, and the paragraph behind a table begins at the table's
+own `endIndex`. `TestATablesIndexesFollowTheDocsAccounting` and
+`TestTheIndexBehindATableIsTheTablesOwnEnd` state it.
+
+**The table's own end unit was missing until 2026-09-10, and it took the whole
+live prelude with it.** Docs refused the batch on the spacer newline between two
+front-matter tables, saying the insertion index must be inside an existing
+paragraph, and `TestLiveTableIndexProbe` then measured the map: for a 2x2 at
+index 1 the last cell ends at 13, the table ends at 14, and 14 is where the
+paragraph behind it begins. 13 is inside no paragraph and is refused. **12 is
+accepted and lands inside the last cell**, which is why the probe reads every
+accepted candidate back rather than believing the status code: its own first run
+took 12 for the answer and nested the second table in that cell. The count of
+twelve suggestion marks the earlier probe recorded is a count of marks and never
+was a count of indexes; the two agreeing was a coincidence.
 
 **One request per cell rather than one per table**, which is the opposite of
 `internal/restyle`'s rule and for the opposite reason again. A restyle gives
@@ -2739,7 +2754,7 @@ author's own text character for character what it was. It leaves the copy behind
 with its URL in the log, because whether the cover reads right is Nail's, in the
 document.
 
-Two more are M7c's, and both are probes that log rather than assert.
+Three more are M7c's, and all three are probes that log rather than assert.
 `TestLiveSuggestedInsertProbe` sends one candidate request kind per case and
 records which of them Docs accepts as a suggestion: nine of ten, and the tenth is
 `createNamedRange`, refused in Docs' own words.
@@ -2750,6 +2765,11 @@ here at all, and that is the guard working: gdoc cannot accept its own
 suggestion, so the probe leaves that document in the folder and prints the URL,
 and `TestLiveNamedRangeAfterAcceptedByHand` reads it back once Nail has accepted
 it in the browser. That one is read-only and needs `GDOC_LIVE_ACCEPTED_DOC_ID`.
+`TestLiveTableIndexProbe` is the third, and it is the one the prelude's
+arithmetic was corrected from: it reads the index map of an inserted table off a
+real document, then sweeps the indexes behind that table one document at a time
+and **reads each accepted one back** to say where the insert really landed. It
+needs no document of its own, only the folder.
 
 Every write test but three writes only to documents it made: the ten-feature
 acceptance, the anchors one and the prelude acceptance each copy a document they

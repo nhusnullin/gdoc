@@ -754,20 +754,60 @@ The house style puts a paragraph between the front-matter tables, so whatever
 the measurement says, the prelude has to reach a state where that paragraph
 exists and carries its own look.
 
-- [ ] The live probe, its table logged, and the answer recorded in
+- [x] The live probe, its table logged, and the answer recorded in
       `docs/v2/DECISIONS.md` under 2026-09-10 whatever it says.
-- [ ] The failing unit test first, with the measured indexes written out as
+      `TestLiveTableIndexProbe` in `internal/live`, one throwaway document per
+      case, everything in SUGGEST mode.
+- [x] The failing unit test first, with the measured indexes written out as
       numbers rather than read from the builder.
-- [ ] The fix in `internal/prelude/table.go`, and nowhere else unless the
-      measurement says otherwise.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `TestLivePreludeIsProposedNotWritten` run live and **passing**, with the
+      `TestTheIndexBehindATableIsTheTablesOwnEnd` in `internal/prelude`, seen
+      failing at 13 and 14 where the measurement says 14 and 15.
+- [x] The fix in `internal/prelude/table.go`, and nowhere else unless the
+      measurement says otherwise. One line, `b.at = at + 1`, plus the older
+      accounting test's `End` corrected from 17 to 18 and three doc comments
+      that stated the old count.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `TestLivePreludeIsProposedNotWritten` run live and **passing**, with the
       copy left for Nail to look at and its URL in the task notes.
-- [ ] `git commit -m "fix(v2): the index after a table, measured"`
+- [x] `git commit -m "fix(v2): the index after a table, measured"`
+
+**What the probe measured, 2026-09-10.** A 2x2 of empty cells asked for at index
+1: the newline in front at [1,2), the table at [2,14), row 0 at [3,8) and row 1
+at [8,13), and the paragraph behind the table at [14,15). The last cell ends at
+13 and the table ends at 14, so **a table takes one index of its own at the
+end** that no row, no cell and no paragraph mark accounts for, and the paragraph
+behind a table begins at the table's own `endIndex`.
+
+The sweep is the half worth keeping. 13 is refused, which is the index the
+builder used. **12 is accepted and lands inside the last cell**, and the probe's
+own first run reported it as the answer, then nested a second table in that
+cell. So every accepted candidate is read back now and the verdict is where the
+insert really went. Two tables spaced at 14 land as two top-level tables, which
+is the shape the front matter has.
+
+**The live acceptance passes.** 250 requests in one batch, 70 paragraphs, 3
+tables and 34 cells all carrying suggestion ids, nothing written, the marker
+over [1,1243), the author's own text character for character what it was, and
+the source document still on the revision it started on. The copy is at
+https://docs.google.com/document/d/1oVw9jlFReFI-yUOZapNlNW_kBB8yDwIJBhcV9xZ67qQ/edit
+and whether the cover reads right is Nail's, in the document.
 
 ## Post-Completion
 
-- **The live acceptance was run on 2026-09-10 by Nail, and it failed.**
+- **The live acceptance passed on 2026-09-10, on the second run, with Task 11's
+  fix in.** 250 requests in one batch: 70 paragraphs, 3 tables and 34 cells all
+  came back carrying suggestion ids, nothing was written, the marker sits over
+  [1,1243), the author's own text is character for character what it was, and
+  the source document never left the revision it started on. The copy is at
+  https://docs.google.com/document/d/1oVw9jlFReFI-yUOZapNlNW_kBB8yDwIJBhcV9xZ67qQ/edit,
+  left in the test folder on purpose: whether the proposed cover reads right is
+  Nail's to say, in the document, and accepting or rejecting it is his too.
+
+  **This plan is still not moved to `docs/plans/completed/`.** Task 10's own
+  words are that the move is Nail's, in the same sitting as the run, and the
+  unattended loop is reading this file by path while it works. The move is the
+  one thing left, and nothing blocks it.
+- **The first run of that acceptance, earlier the same evening, failed.**
   `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 GDOC_LIVE_PRELUDE_DOC_ID=<id> go test -run
   TestLivePreludeIsProposedNotWritten ./internal/live` is the run. Docs refused
   the prelude batch whole, on `requests[106].insertText`, saying the insertion
@@ -778,10 +818,9 @@ exists and carries its own look.
   two front-matter tables, and Task 11 is the measurement and the fix. Until
   that run passes, what the test asserts is written down and unproven.
 
-  The unattended loop cannot run it: it sets neither live variable, and the
-  source document is Nail's own. So this is his to re-run once Task 11 lands,
-  and the copy it leaves behind with its URL in the log is what he looks at to
-  say whether the proposed cover reads right.
+  It was re-run once the fix landed, in a session that already had the two live
+  variables and the source id in its environment, and it passed. The bullet
+  above is that run.
 - Task 1's table read by a person, and its answer recorded as a decision.
 - The binary-size delta per platform, measured 2026-09-10 against the merge base
   8633881, both sides built with `CGO_ENABLED=0`:
