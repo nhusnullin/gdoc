@@ -783,6 +783,170 @@ What M7b leaves for M8 and later:
   styles, so the next heading the author types is not house style. Nothing in
   the binary can fix that.
 
+### M7c. The house template, proposed rather than written
+
+The rest of the house style. `gdoc restyle <url> --from survey.json --fields
+fields.json` adds the cover, the three front-matter tables and the legend to
+what M7b already styles, and it adds them as a **proposal**. Nail accepts the
+prelude in the browser the way he accepts any suggestion, or rejects it and the
+document is as it was.
+
+**Nail's idea, 2026-09-10, and it replaced a worse design.** The plan before it
+widened `LevelInPlace` from four request kinds to eight, added two grants to
+bound where an insert could land, and rewrote M7b's "none of the four kinds can
+change a character" in five places. All of that is gone. The run has two
+permissions rather than one:
+
+| Phase | What it sends | What the document is to the guard |
+|---|---|---|
+| 1. propose the prelude | the cover, the front-matter tables, the legend, in `writeMode: SUGGEST` | handed in, no grant, exactly what `propose` gets |
+| 2. style the body | M7b's four styling kinds, direct | handed in **and** granted `LevelInPlace` |
+
+Two policies rather than one, because the guard's rule is right and stays: at
+`LevelInPlace` the allowlist gates every `batchUpdate` whatever `writeMode`
+says, so a granted document cannot take an `insertText` and an ungranted one
+cannot take a direct edit. Neither phase can do the other's job. The prelude
+phase therefore needed **no new guard permission at all**, and a test states
+that: a SUGGEST batch carrying `insertText`, `insertTable`, `insertPageBreak`,
+`createParagraphBullets` and `deleteContentRange` on a handed-in document with
+no grant carries today, unchanged.
+
+**Two measurements it rests on, both 2026-09-10, both in DECISIONS.md.**
+`TestLiveSuggestedInsertProbe` sent one request kind per case: nine of ten are
+accepted and recorded as suggestions, including a whole table, and the tenth is
+refused in Docs' own words, `createNamedRange: Request does not support
+application as suggestion`. `TestLiveNamedRangeOverSuggestionProbe` then asked
+what a named range does over suggested text: it can be created over a pending
+insertion, it covers exactly the proposed line, it **survives the accept** with
+its id and range, and it **vanishes with the reject**. The accept row was read
+by hand, because gdoc cannot accept its own suggestion and that is the guard
+working rather than a gap.
+
+**The one new door is `Policy.AllowMarker(name, start, end)`**, in `AllowReject`'s
+shape: per-run, one object, dying with the process. It opens `createNamedRange`
+at `LevelInPlace` alone, for exactly the range that was granted, spelled
+exactly, carrying nothing beside `name` and `range`. A named range adds and
+removes no character, so `TestNothingAtLevelInPlaceCanChangeACharacter` stays
+green and untouched. The marker is called `gdoc:house-prelude` and it is gdoc's
+whole memory of having been here: a restyle writes no file beside the document
+and has no note to pair.
+
+Because the marker tracks its text, a second run meets three shapes and each has
+an answer. A marker over settled text is replaced, with a `deleteContentRange`
+in SUGGEST mode over the marked span and the fresh prelude at that span's start.
+No marker at all is a document gdoc never touched or one whose prelude was
+rejected, and both are proposed into cleanly. A marker over a prelude still
+**pending** is refused, and the run says to accept or reject the one already in
+front of him.
+
+**The fields file is `cover.Fields` in JSON**, read with `DisallowUnknownFields`
+and a refusal for a second object behind the first, the way `readSurvey` and
+`readProposals` read theirs. A restyle has no note, so the thirteen values come
+from a file the skill proposes and Nail confirms. Nothing infers a title:
+`MissingTitle` is the same refusal a note gets, with an empty candidate and a
+`Where` naming the fields file. The two readers share the classification and
+numbering rules and the version and date defaults rather than copying them, and
+a test states that one note and one fields file stating the same values read to
+the same `Fields`.
+
+**Two writers, one layout.** `internal/render` writes this template into a
+docx and `internal/prelude` writes it as Docs requests. Both read `house.Config`
+and neither holds a layout of its own. What they share lives where its value
+lives: `cover.Fields.Placeholder` for what a placeholder name means,
+`house.Cell.FillFor` for the classification shading, and the new
+`internal/docsreq` for a measurement, a colour, an alignment, a length in the
+units the API counts, and a style object built with the mask that names it.
+`internal/restyle` moved onto `docsreq` in the same commit, so the line-spacing
+rounding and the colour conversion have one copy between the two request
+builders.
+
+Four things the build of it settled, none of them in the plan beforehand:
+
+- **gdoc's own paragraphs state their look in full.** Inserted text takes the
+  look of the text it lands beside, so a cover line proposed in front of
+  somebody's indented, justified Heading 1 would arrive wearing all of it. That
+  is the opposite of `internal/restyle`'s rule, and the difference is whose
+  words are being styled. The one look it cannot state away is a list marker,
+  which needs `deleteParagraphBullets`:
+  `docs/backlog/prelude-inherits-a-list-marker.md`.
+- **Phase 2 walks past the span phase 1 wrote.** Without it the styling phase
+  gives gdoc's own cover the house body look, and the 26pt title Nail is being
+  asked to accept is 11pt prose by the time he reads it.
+  `restyle.TabRequestsExcept` takes the span and reports what it left alone as
+  `planned.skipped`; `TabRequests` is that function with no span, so an M7b run
+  is unchanged.
+- **`insertTable`'s index accounting is computed, never read back**, so it is
+  pinned: an empty table is one unit for the newline in front of it, one for the
+  table, one per row, and one per cell plus one for that cell's own paragraph
+  mark. A 2x2 is twelve, which is exactly the twelve marks Docs recorded for one
+  2x2 in the suggested-insert probe.
+- **The marker goes out in a batch of its own, ahead of the styling, and a
+  marker that does not land stops the run.** A styling batch that does not land
+  still leaves a prelude Nail can accept; an unmarked prelude is one the next
+  run proposes a second cover in front of.
+
+**The read-back asks three questions, and none can see the other two's
+failure.** Whether every piece of the prelude carries a suggestion id, whether
+the marker is over the span that was proposed, and whether the author's own text
+is character for character what it was. A prelude wholly written rather than
+proposed would pass the second; one wholly proposed and unmarked would pass the
+first; a run that took a paragraph of somebody's prose with it would pass both.
+`verified` is the three together, and false is not a failure, as it is not for
+`propose` and `publish`. `AuthorText` is one rule read on both sides: it drops
+every run carrying a suggested insertion id and keeps every run carrying a
+suggested deletion id, because an insertion is nobody's text yet and a suggested
+deletion has removed nothing.
+
+`Manual` gained two entries beside M7b's: the contents list, which the API
+cannot make at all, and the front-matter tables' column widths and row heights,
+because `updateTableColumnProperties` and `updateTableRowStyle` were not among
+the nine kinds measured as suggestible and a request Docs refuses takes the
+whole batch with it.
+
+**Heading numbering is out, and not because of the guard.** It is `insertText`,
+which the probe measured as suggestible, so it can be proposed and its own
+milestone will start from suggested mode. What keeps it out of this one is
+idempotence and placement: nothing marks a number gdoc wrote,
+`numberedHeadingRE` does not recognise the house's own `1-` separator, so a
+second run makes "1-1-Introduction", and a number names a position in the
+author's prose rather than text to match, which is what `propose`'s "names text,
+never an index" rule exists to refuse.
+
+`allowedModules` did not change and the module graph gained nothing. The
+per-platform size delta is in the plan's Post-Completion.
+
+Acceptance: `TestLivePreludeIsProposedNotWritten` in `internal/live`, behind the
+two live variables. It copies a document with `copyComments=true`, proposes the
+prelude onto the copy, asserts every piece came back carrying a suggestion id
+and the author's body text is byte-identical, and re-reads the original on every
+path to prove its `revisionId` never moved.
+
+**No promise was amended, and that was checked rather than assumed.**
+PRINCIPLES.md's principle 3, CLAUDE.md's Never list, SPEC's Never list and
+SPEC's acceptance item 1 all say a handed-in document is never directly edited
+except under the one grant. The prelude is a proposal, so it does not touch
+that. What each of the four gained is one sentence naming the fifth kind the
+level carries, `createNamedRange` under its own grant, which adds no character.
+
+Documented in CLAUDE.md under "The prelude is proposed, and the marker is the
+one thing written", and in the README under "Adding the house template as a
+suggestion".
+
+What M7c leaves for later:
+
+- **Heading numbering**, for the reasons above, and its own milestone.
+- **The contents list.** Not deferred, blocked: `insertTableOfContents` and four
+  other spellings answer `Cannot find field`. `BLOCKED-BY-API.md` records it.
+- **The first-page header with the logo, and the footer page numbers.** Blocked
+  the same way, and reported with their menu paths.
+- **The footer's own text and colour.** Reachable with no new permission and
+  unbuilt, because `internal/docs` decodes no headers and no footers.
+- **A restyle skill.** Somebody has to write the fields file and read the
+  report, and there is no v2 restyle skill. M9, unless Nail wants it sooner.
+- **A half-accepted prelude.** The probe accepted one insertion at a time and a
+  prelude is many, so a marker whose range no longer covers a whole prelude is a
+  shape nothing here has seen.
+
 ### M8. The diff, alignment, and the align skill
 
 The align skill over `read`'s output and the hub markdown it reads itself:

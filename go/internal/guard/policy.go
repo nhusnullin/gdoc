@@ -1060,14 +1060,18 @@ func exactIndex(raw json.RawMessage) (int, bool) {
 // internal/live/fidelity_test.go, and none of them able to change a single
 // character of what the author wrote.
 //
-// The measurement is not the allowlist, and two kinds show why.
-// createParagraphBullets lands, and the reference says the leading tabs that
-// set a bullet's nesting level "are removed by this request", so it deletes
-// text; the probe missed that because its content had no leading tabs.
-// createNamedRange lands too and is left out because M7b writes no checklist
-// and needs no range. Both are refused here.
+// The measurement is not the allowlist, and createParagraphBullets shows why.
+// It lands, and the reference says the leading tabs that set a bullet's nesting
+// level "are removed by this request", so it deletes text; the probe missed
+// that because its content had no leading tabs. It is refused here.
 //
-// Adding a fifth kind is a decision for Nail, and it answers
+// createNamedRange is not on this list either, and since M7c that is not the
+// same as being refused: it carries at this level when AllowMarker named the
+// one range it may make, judged by checkGrantedMarker in judgeRequests above.
+// It is off the list because the list is the four styling kinds, each bounded
+// by a field mask, and a named range sets no property to bound.
+//
+// Adding a kind is a decision for Nail, and it answers
 // TestNothingAtLevelInPlaceCanChangeACharacter rather than this list.
 var inPlaceKinds = map[string]bool{
 	"updateDocumentStyle":  true,

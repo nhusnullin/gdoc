@@ -229,6 +229,33 @@ durability rather than fidelity, because `updateNamedStyle` does not exist: the
 document ends up looking right and the next heading the author types will not.
 Read DECISIONS.md's entries of that date.
 
+*Amended 2026-09-10, M7c. Nail's idea.* **The rest of the template arrives as a
+proposal.** `gdoc restyle <url> --from survey.json --fields fields.json` runs two
+phases against one document with two permissions. Phase 1 proposes the cover, the
+three front-matter tables and the legend in `writeMode: SUGGEST`, on a policy
+that granted nothing, which is exactly what `propose` sends every day. Phase 2 is
+the styling above, unchanged, on a second policy holding the grant. Nail accepts
+the prelude in the browser or rejects it, and rejecting it leaves the document as
+it was. The cover's thirteen values come from a fields file the skill proposes and
+Nail confirms, because a restyle has no note to read front matter from.
+
+The one thing written directly is the marker: a named range called
+`gdoc:house-prelude` over what phase 1 proposed, which is how a second run finds
+gdoc's own prelude and replaces it rather than adding a second cover. It is
+written rather than suggested because `createNamedRange` is the one request Docs
+refuses to apply as a suggestion, measured 2026-09-10, and it is safe on its own
+terms because a named range adds and removes no character. `Policy.AllowMarker`
+is its door, per-run and one range.
+
+**The contents list is still manual, and that is blocked rather than deferred.**
+No Docs request creates one: `insertTableOfContents` and four other spellings
+answer `Cannot find field`, recorded in `BLOCKED-BY-API.md`. It is reported with
+its menu path, beside the first-page header with the logo, the footer page
+numbers, and the front-matter tables' column widths and row heights, whose two
+request kinds were not among the nine measured as suggestible. Heading numbering
+is out of M7c too, and not because of the guard: it is `insertText`, which can be
+proposed, and what keeps it out is idempotence and placement. Its own milestone.
+
 **As a new document (`--new`).** Renders the content to a docx and uploads it as
 new. Exact house style, new URL, and it loses the comments, the suggestions and
 the chips. The report says so before anything is created.
@@ -469,7 +496,11 @@ skill rule where it cannot.
   Nail's decision, M7b. Guard-enforced both ways: `LevelSuggest` refuses a
   direct edit, and `GrantInPlace` raises exactly one id to `LevelInPlace`, where
   four styling request kinds carry, a kind that is not on that list is refused
-  whatever it is called, and none of the four can change a character.
+  whatever it is called, and none of the four can change a character. Amended
+  again 2026-09-10, M7c: a fifth kind carries there, `createNamedRange`, and
+  only over the one range `AllowMarker` granted for that run. It writes the
+  marker over gdoc's own prelude and it adds and removes no character, so the
+  sentence about the four still holds.
 - Never replace the body of a document that exists. Guard-enforced.
 - Never accept, reject or delete anyone else's suggestion. Guard-enforced: the
   only `rejectSuggestion` that carries names the id `withdraw` granted from the
@@ -493,7 +524,11 @@ Each is a test or a checkable run, not a claim.
    id is refused, unless the run granted that one id `LevelInPlace`, and there
    every request kind but the four styling ones is refused, as is a `fields`
    mask of `*`, an empty mask or one naming either header toggle. Amended
-   2026-09-09, M7b.
+   2026-09-09, M7b. Amended again 2026-09-10, M7c: `createNamedRange` carries
+   there too, and only when `AllowMarker` granted that exact range, spelled
+   exactly and carrying nothing beside `name` and `range`. The house prelude
+   itself is a suggestion on a policy that granted nothing, so a SUGGEST
+   `batchUpdate` on a handed-in document carries as it always has.
 2. The drift test: config-rendered and master-rendered documents compare across
    the 160 items with no new differences.
 3. A publish produces a document with the positioned logo, a live contents list

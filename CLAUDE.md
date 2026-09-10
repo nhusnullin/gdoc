@@ -54,29 +54,32 @@ each other, and nothing in the Go work has changed a line under `gdoc/`.
 | `go/internal/propose/` | a change as a suggestion, its 🤖 comment, and the three read-backs |
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
-| `go/internal/restyle/` | the survey: what a document holds before anything is done to it |
+| `go/internal/restyle/` | the survey: what a document holds before anything is done to it, and the house look applied where it stands |
+| `go/internal/prelude/` | the house template as Docs requests: the cover, the front-matter tables and the legend, proposed rather than written, and the named range that marks them |
+| `go/internal/docsreq/` | the shapes a Docs request is made of: a measurement, a colour, an alignment, a length in the units the API counts, and a style object with the mask that names it |
 | `go/internal/drive/` | the trash, its confirming read, and nothing else Drive does |
 | `go/internal/plaintext/` | the one rule about what gdoc may write into a comment thread: the 🤖 prefix, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
 | `go/internal/render/` | the docx itself: the twelve parts and the logo, the cover, the tables, the header and footer, the contents field |
 | `go/internal/body/` | the note's markdown walked with goldmark into the house style's own paragraphs |
-| `go/internal/cover/` | the author's own front matter: the words that reach the cover and the running head |
+| `go/internal/cover/` | the cover's own values: the words that reach the cover and the running head, out of a note's front matter or out of a restyle's fields file |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/live/` | the opt-in end-to-end tests, one read and six writes, plus the one render check that asks for no network. Tests only, no production code |
+| `go/internal/live/` | the opt-in end-to-end tests, the reads and the writes, plus the one render check that asks for no network. Tests only, no production code |
 | `go/boundary/` | the two allowlist tests that keep the wire in one room |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 `docs/v2/SPEC.md` is the agreed design and `docs/v2/PLAN.md` the milestone
-order. Milestones 1 to 7b are done: the binary exists, prints the envelope,
+order. Milestones 1 to 7c are done: the binary exists, prints the envelope,
 owns the network, can log in and report its OAuth state, reads a document three
 ways with `read`, `comments` and `suggestions`, writes four ways with
 `probe`, `reply`, `propose` and `withdraw`, waits for the next comment with
 `comments --wait`, builds a house-style docx from a note with `build`, puts
 that docx into Drive as a Google Doc with `publish`, surveys what a
-document holds with `restyle --dry-run`, and gives that document the house style
-where it stands with `restyle --from`. The review skill is
+document holds with `restyle --dry-run`, gives that document the house style
+where it stands with `restyle --from`, and proposes the house template into it
+with `restyle --fields`. The review skill is
 rewritten over those and can stay live on one document, and `gdoc` on PATH is v2
 from M3 on.
 
@@ -323,6 +326,14 @@ documents as safe for concurrent use, and `Learn` writes the set from inside
 M7b. `LevelInPlace` permits a `batchUpdate` without SUGGEST on one document, and
 `GrantInPlace(id)` is the only door to it. Nail's decision of 2026-09-09. It is
 the widest thing gdoc can be asked to do, so every part of it is narrow.
+
+**M7c added a fifth kind, and it is bounded by a grant rather than by this
+list.** `createNamedRange` carries here when `AllowMarker` named that exact
+range, and it is not on `inPlaceKinds` because the list is the four styling
+kinds and this is not one of them: it sets no property, so no field mask bounds
+it. It writes the marker over gdoc's own proposed prelude, it adds and removes
+no character, and everything below still holds word for word. Read "The prelude
+is proposed, and the marker is the one thing written" for what it is for.
 
 - **The grant is one id and one run.** `GrantInPlace` upgrades an id already in
   `files` and admits nothing new, so it is not a third door into the set.
@@ -1273,6 +1284,251 @@ a verdict.
 `publish`. It is every landing check holding, the preservation half intact and
 no thread whose witness stopped answering. What was applied is in the document
 either way, and a caller told the run failed is a caller that runs it again.
+
+### The prelude is proposed, and the marker is the one thing written
+
+M7c, and it is the seventh thing gdoc writes with. `gdoc restyle <url> --from
+survey.json --fields fields.json` adds the house template to the run above: the cover, the
+three front-matter tables and the legend. Every character of it is a
+**suggestion**. Nail accepts it in the browser the way he accepts any
+suggestion, or rejects it and the document is as it was. Nail's idea,
+2026-09-10, and it replaced a design that widened `LevelInPlace` to eight
+request kinds and rewrote M7b's "none of the four can change a character" in
+five places.
+
+**Two phases, two permissions, and neither can do the other's job.**
+
+| Phase | What it sends | What the document is to the guard |
+|---|---|---|
+| 1. propose the prelude | the cover, the tables, the legend, in `writeMode: SUGGEST` | handed in, no grant, exactly what `propose` gets |
+| 2. style the body | M7b's four styling kinds, direct | handed in **and** granted `LevelInPlace` |
+
+They are two policies rather than one policy that does both, and the reason is
+that the guard's own rule is right and stays: at `LevelInPlace` the allowlist
+gates every `batchUpdate` whatever `writeMode` says, so a granted document
+cannot take an `insertText` and an ungranted one cannot take a direct edit.
+`proposeThenStyle` builds the second policy and the second session itself,
+because a session is built from a policy and the first request in its history is
+already judged against it. `TestThePreludePhaseIsSentOnAPolicyThatGrantsNothing`
+hands each recorded batch body to the policy it really went out on and asks the
+two refusals as well as the two carries.
+
+**The prelude phase needed no new guard permission, and a test says so rather
+than a comment.** A SUGGEST `batchUpdate` carrying `insertText`, `insertTable`,
+`insertPageBreak`, `createParagraphBullets` and `deleteContentRange` on a
+handed-in document with no grant of any kind carries today, unchanged, because
+that is the shape `internal/propose` has sent every day since M3.
+
+**`AllowMarker` is the milestone's one new door, and it is `AllowReject`'s
+shape.** Per-run, one object, dying with the process, nothing writing it down
+and no flag turning it on. It opens `createNamedRange` at `LevelInPlace` alone,
+for exactly the range that was granted, spelled exactly, with nothing beside
+`name` and `range`, and a second call replaces the first because a caller naming
+two ranges has made a mistake the guard must not turn into two markers. A grant
+it cannot read opens nothing and says so on the envelope, which is `AllowFile`'s
+rule. `TestNothingAtLevelInPlaceCanChangeACharacter` stays green and untouched:
+a named range adds and removes no character.
+
+**Why the marker is written rather than suggested.** `createNamedRange` is the
+one request Docs refuses to apply as a suggestion, and it says so in its own
+words: `Request does not support application as suggestion`, measured 2026-09-10
+by `TestLiveSuggestedInsertProbe`, which sent one request kind per case and had
+nine of ten accepted and recorded as suggestions.
+
+**`createParagraphBullets` is the difference between the two levels, and it is
+one rule read twice.** At `LevelInPlace` it is refused, because the reference
+says the leading tabs that set a bullet's nesting level "are removed by this
+request", so on somebody's own paragraph it deletes text they typed. In
+`internal/prelude` it may be sent, because it would land on text gdoc itself
+proposed a moment earlier, where there are no author tabs to remove, and the
+probe measured it accepted as a suggestion. Nothing sends it today: the house
+legend carries no bullets, its lines are a bold word, a tab and a sentence, and
+the master's own markup has no numbering on them. The reasoning is in the
+package doc anyway, beside the statement that nothing sends it, so the next
+person to need one has the answer rather than the question.
+
+**The marker is `gdoc:house-prelude`, and it is gdoc's whole memory of having
+been here.** A restyle writes no file beside the document and has no note to
+pair, so the document is the record. It is read by id, never by name, because
+`docs.NamedRange` is keyed by id and two ranges may wear one name: a run acting
+by name would act on both, so two ranges wearing this name are refused rather
+than guessed between.
+
+**What a second run does was measured, not assumed.** 2026-09-10, in
+DECISIONS.md: a named range can be created over a pending insertion, it covers
+exactly the proposed line, it survives the accept with its id and range intact,
+and it vanishes with the reject. So `prelude.Decide` answers three shapes and
+each has its own answer.
+
+- **No marker** is a first run, which proposes at index 1. It is also a document
+  whose prelude was rejected, and that is the same shape rather than a second
+  one: the rejection took the marker with it.
+- **A marker over settled text** is replaced, with a `deleteContentRange` in
+  SUGGEST mode over the marked span and then the fresh prelude at that span's
+  own start. That is the order and the shape `internal/propose` sends a
+  replacement in: a suggested delete marks text rather than removing it, so
+  nothing behind it moves and every index the front matter computed is still the
+  index it named.
+- **A marker over text that is still pending** is refused, naming the suggestion
+  ids and saying to accept or reject in the browser first. Replacing it would
+  propose deleting text that has never been written.
+
+Nothing deletes a named range and nothing needs to. `deleteNamedRange` is on no
+allowlist. The marker tracks its text, so the old one goes when the deletion
+under it is accepted and comes back when that deletion is rejected, and either
+way one marker is left. **That last step is an inference from the measurement
+rather than a fifth measured row**, and `Decide`'s doc comment says so in those
+words.
+
+Pending is read over the marked span, in both suggestion lists and inside the
+table cells, because the front matter is three tables and a walk reading
+paragraphs alone would call a wholly proposed prelude settled. A marker this
+package cannot read as one contiguous span of one tab's body is refused rather
+than reported: a span in a header, a footer or a footnote, and two spans with
+the author's own words between them. Two spans that touch are one span, because
+Docs may cut a range at a boundary of its own and the text is still gdoc's.
+
+**The marker goes out in a batch of its own, ahead of the styling, and a marker
+that does not land stops the run.** A styling batch that does not land still
+leaves a prelude Nail can accept, and a marked prelude is one the next run can
+find; folded into the styling it would be lost with it. An unmarked prelude is
+one the next run proposes a second cover in front of, so the run stops and the
+warning says to accept or reject before running again.
+
+**Phase 2 walks past the span phase 1 wrote, and without that the milestone
+defeats itself.** Every paragraph `internal/prelude` proposes is a `NORMAL_TEXT`
+stating the cover's own sizes and colours in full, because inserted text takes
+the look of the text it lands beside. A styling phase reading the document after
+phase 1 finds those paragraphs and gives each of them the house body look, so
+the 26pt cover title Nail is being asked to accept is 11pt prose by the time he
+reads it. `restyle.TabRequestsExcept` takes the span and reports what it left
+alone as `planned.skipped`; `TabRequests` is that function with no span, so an
+M7b run is unchanged. The overlap is read rather than containment, and
+`Span.covers` says why: a block half gdoc's words and half the author's is one
+no request can name without writing over one of them.
+
+**gdoc's own paragraphs state their look in full, which is the opposite of
+`internal/restyle`'s rule and for the opposite reason.** A restyle writes onto
+the author's text, where a flag `house.yaml` never stated would clear emphasis
+somebody meant. These are gdoc's own lines, and nobody else's emphasis can be in
+them, so every paragraph states its named style, its alignment, its spacing and
+its indents, and every run states its face, its size, its weight, its slope, its
+underline and both colours. The one look an inserted paragraph inherits and this
+package cannot state away is a list marker: taking one off needs
+`deleteParagraphBullets`, which nothing here sends, so a prelude proposed at the
+top of a document whose first paragraph is a list item arrives bulleted. That is
+`docs/backlog/prelude-inherits-a-list-marker.md`.
+
+**One layout, two writers.** `internal/render` writes this template into a docx
+and `internal/prelude` writes it as requests, both from `house.Config`, and
+neither holds a layout of its own. A value added to `house.yaml` has to reach
+both. What they share lives where its value lives: `cover.Fields.Placeholder`
+for what a placeholder name means, `house.Cell.FillFor` for the classification
+shading, and `internal/docsreq` for a measurement, a colour, an alignment, a
+length in the units the API counts, and a style object built with the mask that
+names it. `internal/restyle` was moved onto `docsreq` in the same commit, so the
+line-spacing rounding and the colour conversion have one copy between the two
+request builders.
+
+**A table is inserted and then filled**, which is more requests than the docx
+writer needs and is the shape the Docs API has: `insertTable` makes a grid of
+empty cells, so every word in it is an `insertText` afterwards and every fill,
+padding and border an `updateTableCellStyle`. **The index accounting is computed
+here and never read back, so it is pinned as literals.** An empty table is one
+unit for the newline `insertTable` writes in front of it, one for the table, one
+per row, and one per cell plus one for that cell's own paragraph mark. A 2x2 is
+twelve, which is exactly the twelve marks Docs recorded for one 2x2 in the
+suggested-insert probe. `TestATablesIndexesFollowTheDocsAccounting` states it.
+
+**One request per cell rather than one per table**, which is the opposite of
+`internal/restyle`'s rule and for the opposite reason again. A restyle gives
+every cell of somebody's table one look and cannot read that table's real width,
+so it names the table. Here the fills differ cell by cell, because a
+classification row is shaded only when the fields declare that class, and this
+writer built the grid itself so it knows exactly how wide it is.
+
+**The fields file is `cover.Fields` in JSON, and it is not a second shape.** A
+restyle has no note, so the thirteen values come from a file the skill proposes
+and Nail confirms. It is read with `DisallowUnknownFields` and a refusal for a
+second object behind the first, the way `readSurvey` and `readProposals` read
+theirs, and it is read before a session is opened, because a file gdoc half
+understands must never reach a document. The keys are the note's own keys, and
+the two normalisations and the two defaults are shared rather than copied, so a
+file stating no version publishes as 1.0 and one stating no date as this month,
+exactly as a note does.
+`TestTheFieldsFileNamesTheSameThirteenValuesTheNoteDoes` states that one note
+and one fields file naming the same values read to the same `Fields`.
+
+**Nothing infers a title.** A missing one is `cover.MissingTitle`, the same
+error type a note's reader raises, so the skill reads one shape. It carries an
+empty `Candidate` here and that is honest rather than a gap: `MissingTitle`
+draws its candidate from a note's first heading or its file name, and a fields
+file has neither. `Where` is the field that separates them, empty meaning front
+matter and "the fields file" meaning this one, so one sentence serves two
+readers and neither names the other's.
+
+**The read-back asks three questions, and none of them can see the other two's
+failure.** `prelude.Verify` asks whether every piece of the prelude carries a
+suggestion id, whether the marker is over the span that was proposed, and
+whether the author's own text is character for character what it was. A prelude
+wholly written rather than proposed would pass the second; one wholly proposed
+and unmarked would pass the first; a run that took a paragraph of somebody's
+prose with it would pass both. So they are three fields and `verified` is all of
+them together, with the read having found the prelude at all. `verified: false`
+is not a failure, as it is not for `propose` and `publish`.
+
+- **The classification unit is the run, and the counts are paragraphs, tables
+  and cells.** `Pieces` counts what `Result` counts, so what was sent and what
+  came back sit beside each other with nothing to convert. A paragraph, a table
+  or a cell is `proposed` when every run of it inside the span carries an
+  insertion id and `written` when one of them does not. **`written` is the
+  failure rather than a difference**: those are characters in somebody's
+  document on gdoc's own authority.
+- **`proposed` is a count of suggestions, never a verdict.** It is not compared
+  with what was sent either, because Docs numbers an empty paragraph differently
+  from the request that made it and a mismatch there would name the wrong
+  problem. A field named `looks_right`, `complete` or `ready` here is the defect
+  "the binary prints facts, and the skills judge" names.
+- **Both sides of the body check are read by one rule.** `AuthorText` drops
+  every text run carrying a suggested insertion id and keeps every run carrying
+  a suggested deletion id: an insertion is nobody's text yet, whoever proposed
+  it, and a suggested deletion has removed nothing. The before side is taken off
+  the document phase 1 was computed from, which is the last moment it can be
+  taken, because every read after that one carries the prelude.
+- **A run that proposed a prelude reads back whatever phase 2 did.** M7b's gate
+  was the styling batches alone, and on a two-phase run that answered "nothing
+  was written, so the document is as it was" about a document phase 1 had just
+  put a cover into.
+
+**A failed phase 1 does not run phase 2, and the report says which phase
+stopped.** What the document carries is whatever of the prelude Docs took, and
+every character of that is a suggestion, so rejecting it puts the document back.
+A failed phase 2 after a successful phase 1 leaves a proposed prelude and an
+unstyled body, which is a document Nail can still act on. `restyle.Suggest` is
+`Apply` with one field, `writeControl.writeMode`, and what that field changes is
+the recovery a run that stopped early prints: a suggested batch is rejected in
+the browser, not undone through the version history. **`requiredRevisionId` and
+`writeMode` together are unmeasured**, and the live acceptance is what confirms
+them; Docs refusing the pair fails the prelude phase whole, which is the
+direction to be wrong in.
+
+**Two more things the house file states and no request here sends**, both in
+`Manual` with a menu path: every column width and every row height of the
+front-matter tables. `updateTableColumnProperties` and `updateTableRowStyle`
+were not among the nine kinds the probe measured as suggestible, and a request
+Docs refuses takes the whole batch with it. The contents list is there too, and
+it is blocked rather than deferred: no Docs request makes one.
+
+**Heading numbering is out of M7c, and not because of the guard.** It is
+`insertText`, which the probe measured as suggestible, so it can be proposed and
+its own milestone starts from suggested mode. What keeps it out of this one is
+idempotence and placement. Nothing marks a number gdoc wrote, and
+`numberedHeadingRE` in `internal/body/numbering.go` does not recognise the
+house's own format, because the separator is `-` and the pattern wants `.`, `)`
+or a space, so a second run makes "1-1-Introduction". Placement is the second:
+the prelude is one insertion at index 1, while a number names a position inside
+the author's prose, which is what `propose`'s "names text, never an index" rule
+exists to refuse.
 
 ### The cursor is opaque, and it dies with the session
 
@@ -2449,8 +2705,8 @@ nothing on Drive. `GDOC_LIVE_RECORD=1` additionally saves the Docs read and the
 docx export into `testdata/`, which is a real document's content, so a person
 redacts those before they are committed.
 
-`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the six write tests beside it, and
-each creates its own documents in the Drive test folder. The first proposes into
+`GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` adds the write tests beside it, and each
+creates its own documents in the Drive test folder. The first proposes into
 one, replies, withdraws and trashes it, asserting every read-back on the way. The
 second is M4's: it starts a wait, posts a comment into the document while that
 wait is running, checks the comment came back before the deadline, then waits
@@ -2468,8 +2724,26 @@ needs a second id, `GDOC_LIVE_IDEAL_DOC_ID`: it copies that document with
 `copyComments=true` under `AllowCopy`, checks the copy holds all ten features
 before a single request is built, restyles the copy at `LevelInPlace`, asserts
 all ten again, and re-reads the **original** on every path to prove its
-`revisionId` never moved. Five of the six write only to documents they made,
-and the sixth reads one it was named and never writes to it.
+`revisionId` never moved. `TestLiveRestyleKeepsAnchorsAndSuggestions` is the
+cheap half of that acceptance, asking whether an in-place restyle keeps one
+comment attached to its words and one suggestion pending, which is a question any
+reviewed document can answer.
+
+Two more are M7c's, and both are probes that log rather than assert.
+`TestLiveSuggestedInsertProbe` sends one candidate request kind per case and
+records which of them Docs accepts as a suggestion: nine of ten, and the tenth is
+`createNamedRange`, refused in Docs' own words.
+`TestLiveNamedRangeOverSuggestionProbe` asks what a named range does over
+suggested text, one fresh document per case, because a probe that measures its
+own leftovers answers about itself. Its accept row could not be measured from
+here at all, and that is the guard working: gdoc cannot accept its own
+suggestion, so the probe leaves that document in the folder and prints the URL,
+and `TestLiveNamedRangeAfterAcceptedByHand` reads it back once Nail has accepted
+it in the browser. That one is read-only and needs `GDOC_LIVE_ACCEPTED_DOC_ID`.
+
+Every write test but two writes only to documents it made: the ten-feature
+acceptance and the anchors one each copy a document they were named and never
+write to the original.
 `TestTheLiveFixturesRenderWithNoNetwork` sits in the same file and asks for
 neither variable: both live tests render a note before they reach Drive, so a
 note that stopped rendering or a fixture path that moved would otherwise be
@@ -2853,10 +3127,16 @@ instead, as with the 40-twip cell margin.
   `PREVIEW_WITHOUT_SUGGESTIONS` is there because Google has broken that promise
   once. **M7b opened one door in that wall**, Nail's decision of 2026-09-09:
   `Policy.GrantInPlace(id)` raises one handed-in id to `LevelInPlace` for one
-  run, where four styling request kinds carry and nothing else does, and none of
+  run, where four styling request kinds carry and nothing else did, and none of
   the four can change a character of what the author wrote. Read "A third write
-  level, and the four kinds it carries" above. Widening it, by a fifth request
+  level, and the four kinds it carries" above. Widening it, by another request
   kind or by a second call site, is Nail's decision and not a refactor.
+  **M7c opened no door in the wall either**, Nail's idea of 2026-09-10, and
+  that is the point of its shape: `gdoc restyle --fields` proposes the house cover, the
+  front-matter tables and the legend as suggestions, on a policy that granted
+  nothing. The one request it added to `LevelInPlace` is `createNamedRange`,
+  under its own per-run grant naming one range, and a named range adds and
+  removes no character.
 - Never commit anything from `~/.config/gdoc-agent/`.
 - Never post markdown into a comment thread. The CLI refuses it for a reason.
 

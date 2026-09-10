@@ -619,17 +619,48 @@ warning naming which read failed.
 
 ### Task 9: the documentation, and the promise that does not change
 
-- [ ] `docs/v2/PLAN.md` gains an M7c section; SPEC's `restyle` section gains the
+- [x] `docs/v2/PLAN.md` gains an M7c section; SPEC's `restyle` section gains the
       prelude and says the contents list is still manual and why.
-- [ ] CLAUDE.md gains a section for the two phases, the one new grant, and the
+- [x] CLAUDE.md gains a section for the two phases, the one new grant, and the
       `createParagraphBullets` difference between the two levels.
-- [ ] **Check, rather than assume, that principle 3's wording still holds.**
+- [x] **Check, rather than assume, that principle 3's wording still holds.**
       M7b amended four places. This milestone should amend none: the prelude is
       a proposal and the marker adds no character. If any of the four is now
       inaccurate, say so and fix it rather than leaving it.
-- [ ] Record Task 1's measurement in DECISIONS.md whatever it said.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: the house template, proposed rather than written"`
+      ⚠️ **Three of the four were inaccurate by one word, and each gained a
+      sentence rather than losing one.** PRINCIPLES.md's principle 3, CLAUDE.md's
+      Never list and SPEC's Never list and acceptance item 1 all said the
+      granted level carries four request kinds and refuses every other kind
+      whatever it is called. `createNamedRange` now carries there under
+      `AllowMarker`. The claim each of them was really making, that nothing the
+      grant carries can change a character, is still true, so every amendment
+      names the fifth kind and says it adds and removes no character. The
+      prelude itself needed no amendment anywhere: it is a suggestion on a
+      policy that granted nothing.
+      ➕ `inPlaceKinds`' own doc comment said `createNamedRange` "is left out
+      because M7b writes no checklist and needs no range. Both are refused
+      here", which stopped being true in this milestone's own guard commit. It
+      now says where the kind is judged instead.
+- [x] Record Task 1's measurement in DECISIONS.md whatever it said.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: the house template, proposed rather than written"`
+
+**Three documents were written beyond the checkboxes, and each is this
+milestone's own documentation rather than scope.** The README gained "Adding the
+house template as a suggestion", because `--fields` is a flag a person types and
+a fields file is a file a person writes. Its "What is planned" list gained
+heading numbering and lost the sentence saying the two table-layout kinds were
+unmeasured, which the 2026-09-10 probe measured. And
+`docs/backlog/restyle-applies-the-whole-house-template.md`, the item Nail wrote
+on 2026-09-10 asking for exactly this, is narrowed to what is left: the contents
+list, the column widths, heading numbering and the footer. It said "this is the
+first thing after M7b merges", which stopped being true when Task 4 landed.
+
+CLAUDE.md's live-test paragraph was corrected while M7c's two probes were being
+added to it: it said six write tests and named six, and there were eight before
+this milestone, because `TestLiveRestyleKeepsAnchorsAndSuggestions` was never
+written into it. The counts are gone rather than raised, and the two M7c probes
+and the read-only accepted-document reader are named.
 
 ### Task 10: the live acceptance, and the size delta
 

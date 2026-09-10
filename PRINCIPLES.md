@@ -118,6 +118,28 @@ shut.
   retried: retrying would be gdoc styling a document somebody is editing, which
   is uncertainty resolving toward the destructive answer.
 
+*Amended 2026-09-10, for M7c. Nail's idea.* The clause above stands as it is,
+and this milestone deliberately did not widen it. `gdoc restyle --fields` adds
+the house cover, the front-matter tables and the legend to that same run, and
+every character of them is a **suggestion**, sent on a policy that granted
+nothing at all, while the styling goes out on a second one that holds the
+grant. Nail accepts them in the browser or rejects them, and a
+rejection leaves the document as it was. Not knowing whether the template is
+wanted therefore resolves to asking rather than to writing.
+
+- Two phases with two permissions, never one permission that does both. A
+  granted document still cannot take an `insertText`, and an ungranted one still
+  cannot take a direct edit.
+- One request kind was added to the level, and it is `createNamedRange`, bounded
+  by a second per-run grant naming the one range it may make. It marks gdoc's
+  own prelude so that a second run replaces it rather than adding a second
+  cover, and it adds and removes no character, so the sentence above about the
+  four still holds.
+- The marker is the answer to a second run, and it was measured rather than
+  assumed: a named range over a suggested insertion survives the accept and
+  vanishes with the reject. A prelude still pending is refused instead, because
+  replacing it would propose deleting text that has never been written.
+
 ## 4. Every word costs a reader's attention
 
 Added 2026-08-29, Nail's principle, wording settled with a second opinion.
