@@ -172,6 +172,23 @@ func TestAParagraphTheReadBackCannotFindIsNotHeld(t *testing.T) {
 	}
 }
 
+// unanswered says in its own words that it is never held, and compare's own
+// arithmetic can contradict it: missingFields walks the fields the request set,
+// so a request that set none is missing none and Held is already true by the
+// time the note is written on. A check with nothing behind it feeding verified
+// a true it never measured is the one thing this half exists to refuse, so the
+// invariant is written on the way out rather than left to the caller.
+func TestACheckWithNothingToCompareIsNeverHeld(t *testing.T) {
+	got := compare(Check{Kind: "updateDocumentStyle"}, nil, nil)
+
+	if got.Held {
+		t.Errorf("check = %+v, want not held: there was nothing to look for", got)
+	}
+	if got.Note == "" {
+		t.Errorf("check = %+v, want a note saying the request set no style object", got)
+	}
+}
+
 // A kind the run never sent is not checked. A document with no table sends no
 // updateTableCellStyle, and reporting a check that could not hold would make
 // every document without a table unverifiable.

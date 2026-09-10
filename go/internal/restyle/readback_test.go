@@ -106,6 +106,69 @@ func TestAWitnessThatStoppedAnsweringIsNotAnchorDamage(t *testing.T) {
 	}
 }
 
+// Detached is positive evidence: the export says the text a comment was
+// attached to has gone. So a thread the survey's export gave no answer for and
+// that reads detached now is neither of the two lists either side of it. It is
+// not LostAnchor, because nothing says it was anchored before the run, and it
+// is not Unwitnessed, because the export answered. A survey whose own export
+// failed reports every thread unmatched, which is exactly the before-picture
+// this case arrives from, and it used to land in no list at all and leave
+// verified true over a destroyed anchor.
+func TestAThreadDetachedWithNoWitnessBeforeIsNeverCalledIntactlyWitnessed(t *testing.T) {
+	// Arrange: the survey could not witness c1, and the read back reads it detached.
+	was := before()
+	was.Threads.Witnessed[0].Witness = docx.WitnessUnmatched
+
+	// Act
+	got := Preserve(was, after(func(r *Report) {
+		r.Threads.Witnessed[0].Witness = docx.WitnessDetached
+	}))
+
+	// Assert
+	if len(got.Threads.NowDetached) != 1 || got.Threads.NowDetached[0] != "c1" {
+		t.Errorf("now_detached = %v, want c1", got.Threads.NowDetached)
+	}
+	if len(got.Threads.LostAnchor) != 0 {
+		t.Errorf("lost_anchor = %v, want nothing: nothing says c1 was anchored before the run", got.Threads.LostAnchor)
+	}
+	if len(got.Threads.Unwitnessed) != 0 {
+		t.Errorf("unwitnessed = %v, want nothing: the export answered, and its answer was detached", got.Threads.Unwitnessed)
+	}
+	if !anyWarning(got.warnings(), "reads detached now") {
+		t.Errorf("warnings = %v, want the detached thread named", got.warnings())
+	}
+}
+
+// The gate, not just the list: verified is what the skill reads.
+func TestVerifiedIsFalseWhenAThreadReadsDetachedWithNothingBefore(t *testing.T) {
+	in := Input{
+		Document: doc(para(1, text(1, "The supplier\n"))),
+		Comments: []comments.RawComment{{ID: "c1", Content: "ai? this",
+			Author:            comments.Author{DisplayName: "Nail"},
+			QuotedFileContent: &comments.Quoted{Value: "The supplier"}}},
+		Export: &docx.File{Comments: []docx.Comment{{Author: "Nail", Text: "ai? this", Anchored: false}}},
+	}
+	in.Document.CommentRanges = map[string]docs.Range{"c1": {Tab: "t.0", Start: 1, End: 5}}
+	// The survey's own export failed, so its one thread is unmatched.
+	was := Report{Threads: ThreadCounts{Open: 1, Witnessed: []ThreadWitness{
+		{ID: "c1", Witness: docx.WitnessUnmatched}}}, Suggestions: SuggestionCounts{IDs: []string{}}}
+	sent := []map[string]any{
+		{"updateDocumentStyle": map[string]any{
+			"documentStyle": map[string]any{"marginTop": dim(62.35)}, "fields": "marginTop"}},
+	}
+	read := `{"tabs": [{"documentTab": {"documentStyle": {"marginTop": {"magnitude": 62.35, "unit": "PT"}},
+	           "body": {"content": []}}}]}`
+
+	got, warnings := Verify(was, in, []byte(read), Sent{Confirmed: sent}, Plan{})
+
+	if got.Verified {
+		t.Error("verified = true on a run whose one comment reads detached and had no witness before it")
+	}
+	if !anyWarning(warnings, "reads detached now") {
+		t.Errorf("warnings = %v, want the detached thread named", warnings)
+	}
+}
+
 func TestAThreadThatIsGoneIsNamedAndOneThatArrivedIsToo(t *testing.T) {
 	got := Preserve(before(), after(func(r *Report) {
 		r.Threads.Witnessed = []ThreadWitness{

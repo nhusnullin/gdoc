@@ -1165,13 +1165,24 @@ most needed for; and a read the run could not make is a warning and no read-back
 at all, since a preservation half built from a listing that never arrived names
 every thread in the survey as gone.
 
-Six rules inside those halves are decisions rather than details.
+Seven rules inside those halves are decisions rather than details.
 
 - **A witness that reads `unmatched` now is `unwitnessed`, never a lost
   anchor.** Unmatched is the export giving no answer, and calling absence of
   evidence damage is the cry-wolf warning this tool avoids everywhere else. It
   keeps `verified` false all the same, because nothing then says the anchor
   survived.
+- **A witness that reads `detached` now, on a thread the survey could not
+  witness, is `now_detached`, and it is neither of the two lists either side of
+  it.** Detached is the export answering, and its answer is that the text a
+  comment was attached to has gone, so it is not the absence of evidence
+  `unwitnessed` holds. What is missing is any answer about whether it was
+  already detached before the run, so it is not `lost_anchor` either, whose
+  warning says in its own words that the thread was anchored before. `verified`
+  is false over it. The case is not a corner: a survey whose own export failed
+  reports every thread `unmatched`, which is exactly the before-picture this
+  arrives from, and with no list of its own it left `verified: true` on a run
+  that destroyed an anchor.
 - **The survey carries suggestion ids and not only counts.** Two counts that did
   not move cannot tell one suggestion destroyed and another created from nothing
   having happened, so `SuggestionCounts` carries the ids the read could see,

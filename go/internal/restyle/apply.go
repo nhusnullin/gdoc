@@ -161,7 +161,14 @@ func Apply(ctx context.Context, s Session, docID string, requests []map[string]a
 		}
 		var answer batchAnswer
 		if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(body), &answer); err != nil {
-			return out, out.stopped(i, len(batches), len(b), err)
+			// stopped writes the flags and the warnings this report is made of,
+			// so it runs before out is copied into the return value. A return
+			// statement's operands and its calls are not ordered against each
+			// other, so `return out, out.stopped(...)` is the compiler's choice
+			// of whether MaybeApplied reaches the caller, and the read-back gate
+			// is hung off exactly that flag.
+			stop := out.stopped(i, len(batches), len(b), err)
+			return out, stop
 		}
 		out.Batches++
 		out.Requests += len(b)

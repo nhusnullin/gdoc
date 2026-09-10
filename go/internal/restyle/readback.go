@@ -78,6 +78,12 @@ type ThreadChange struct {
 	// answer for now. It is not damage and it is not health: it is the witness
 	// losing its answer, which is why verified is false over it.
 	Unwitnessed []string `json:"unwitnessed"`
+	// NowDetached is the threads the export reads detached now and gave no
+	// answer for before. Detached is positive evidence the text a comment was
+	// attached to has gone, so this is not the absence of evidence Unwitnessed
+	// holds; what is missing is any answer about whether it was already detached
+	// before the run, so it is not LostAnchor either. Verified is false over it.
+	NowDetached []string `json:"now_detached"`
 }
 
 // WitnessChange is one thread's witness, before and after.
@@ -220,7 +226,8 @@ func Verify(before Report, after Input, raw []byte, sent Sent, plan Plan) (ReadB
 	// is the same rule propose and publish hold: what cannot be confirmed is
 	// reported, never claimed.
 	out.Verified = held && len(sent.Unconfirmed) == 0 &&
-		out.Preservation.Intact && len(out.Preservation.Threads.Unwitnessed) == 0
+		out.Preservation.Intact && len(out.Preservation.Threads.Unwitnessed) == 0 &&
+		len(out.Preservation.Threads.NowDetached) == 0
 	return out, warnings
 }
 
@@ -263,6 +270,7 @@ func threadChange(before, after ThreadCounts) ThreadChange {
 		WitnessChanged: []WitnessChange{},
 		LostAnchor:     []string{},
 		Unwitnessed:    []string{},
+		NowDetached:    []string{},
 	}
 	for _, id := range sortedKeys(was) {
 		now, there := is[id]
@@ -280,6 +288,12 @@ func threadChange(before, after ThreadCounts) ThreadChange {
 			c.LostAnchor = append(c.LostAnchor, id)
 		case now == docx.WitnessUnmatched:
 			c.Unwitnessed = append(c.Unwitnessed, id)
+		case now == docx.WitnessDetached:
+			// then is unmatched, because anchored is the case above and
+			// detached would have read the same as now. The anchor is gone and
+			// nothing says the run took it, so it is neither of the two lists
+			// above and it is never a verified run.
+			c.NowDetached = append(c.NowDetached, id)
 		}
 	}
 	for _, id := range sortedKeys(is) {
@@ -347,6 +361,10 @@ func (p Preservation) warnings() []string {
 	for _, id := range p.Threads.Unwitnessed {
 		out = append(out, fmt.Sprintf(
 			"comment thread %s had a witness before the run and has none now, so nothing here says whether its anchor survived", id))
+	}
+	for _, id := range p.Threads.NowDetached {
+		out = append(out, fmt.Sprintf(
+			"comment thread %s reads detached now and the survey's export gave no answer for it, so the text it was attached to has gone and nothing here says whether this run took it", id))
 	}
 	for _, id := range p.Suggestions.Gone {
 		out = append(out, fmt.Sprintf(

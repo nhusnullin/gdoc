@@ -175,6 +175,7 @@ func (d *styledDoc) check(kind string, r map[string]any) Check {
 // answer and the one that keeps verified false.
 func unanswered(c Check, note string) Check {
 	c.Note = note
+	c.Held = false
 	return c
 }
 
