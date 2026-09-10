@@ -569,17 +569,53 @@ pair fails the prelude phase whole, which is the direction to be wrong in.
 
 ### Task 8: the read-back, and one report for two phases
 
-- [ ] Test first: the prelude read back as suggestions, counted by kind, and
+- [x] Test first: the prelude read back as suggestions, counted by kind, and
       **a check that the author's own body text is unchanged**. That check is
       the milestone's own claim, so it is a test rather than a hope.
-- [ ] The report carries both phases: what was proposed, what was styled, what
+- [x] The report carries both phases: what was proposed, what was styled, what
       is pending for Nail to accept, and M7b's `manual` list unchanged.
-- [ ] **`proposed` is a count of suggestions, never a verdict.** A field named
+- [x] **`proposed` is a count of suggestions, never a verdict.** A field named
       `looks_right`, `complete` or `ready` here is the defect CLAUDE.md names.
-- [ ] `verified` is the checks together, and fewer than all is `ok: true` with
+- [x] `verified` is the checks together, and fewer than all is `ok: true` with
       `verified: false` and the route named.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the read-back over both phases"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the read-back over both phases"`
+
+**Three questions, and none of them can see the other two's failure.**
+`prelude.Verify` in `internal/prelude/readback.go` asks whether every piece of
+the prelude carries a suggestion id, whether the marker is over the span that
+was proposed, and whether the author's own text is character for character what
+it was. A prelude wholly written rather than proposed would pass the marker
+check; a prelude wholly proposed and unmarked would pass the first; and a run
+that took a paragraph of somebody's prose with it would pass both. So the three
+are separate fields and `verified` is all of them together, with the read having
+found the prelude at all.
+
+**The classification unit is the run, and the counts are paragraphs, tables and
+cells.** `Pieces` counts what `Result` counts, so what was sent and what came
+back sit beside each other in one report with nothing to convert. A paragraph, a
+table or a cell is `proposed` when every run of it inside the span carries an
+insertion id and `written` when one of them does not, and `written` is the
+failure rather than a difference: those are characters in somebody's document on
+gdoc's own authority. The walk goes into table cells, because the front matter
+is three tables and a walk reading paragraphs alone would call a wholly proposed
+table settled.
+
+**The two sides of the body check are read by one rule, which is what makes the
+answer mean something.** `AuthorText` drops every text run carrying a suggested
+insertion id and keeps every run carrying a suggested deletion id: an insertion
+is nobody's text yet, whoever proposed it, and a deletion in SUGGEST mode marks
+characters rather than removing them, so they are still the author's until
+somebody accepts it. The before side is taken in `proposeThenStyle` off the
+document phase 1 was computed from, which is the last moment it can be taken:
+every read after that one carries the prelude.
+
+➕ **A run that proposed a prelude reads back whatever phase 2 did.** M7b's gate
+was the styling batches alone, and on a two-phase run that answered "nothing was
+written, so the document is as it was" about a document phase 1 had just written
+a cover into. The gate is `applied.Batches > 0 || applied.MaybeApplied ||
+one != nil`, and a read the run could not make leaves both halves absent with the
+warning naming which read failed.
 
 ### Task 9: the documentation, and the promise that does not change
 

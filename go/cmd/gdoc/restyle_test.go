@@ -987,6 +987,13 @@ func afterThePrelude(t *testing.T) string {
 // read, the marker batch, the styling batch, and the three reads the read-back
 // makes. Every write answer is once, because the order of the three batches is
 // the thing most of these tests are about.
+//
+// The last Docs answer is the read-back's, and it is the fixture again: a
+// document carrying no prelude and no marker at all. That is the failure path
+// on purpose, and it is the one this wire can state honestly, because a fake
+// replays bytes rather than applying the requests it was sent. What a prelude
+// that really landed reads back as is internal/prelude's, where a document is
+// written out run by run.
 func preludeWire(t *testing.T) *fakeWire {
 	t.Helper()
 	return &fakeWire{answers: []*answer{
@@ -999,6 +1006,7 @@ func preludeWire(t *testing.T) *fakeWire {
 		{method: "POST", match: ":batchUpdate",
 			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheBatch"}}`},
 		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
+		{method: "GET", match: "docs.googleapis.com", json: afterThePrelude(t)},
 		{method: "GET", match: "/export?", bytes: witnessExport(t)},
 	}}
 }
@@ -1339,5 +1347,114 @@ func TestTheStylingIsComputedFromAReadTakenAfterThePrelude(t *testing.T) {
 	}
 	if len(order) < 4 || order[0] != "read" || order[1] != "write" || order[2] != "read" {
 		t.Errorf("order = %v, want a read, the prelude, then a fresh read before anything else", order)
+	}
+}
+
+// One run, two phases, one report. What was proposed, what was styled, what is
+// pending for Nail to accept and the manual list M7b already printed are all in
+// the one object, because a caller reading two of them in two places has two
+// chances to read a different answer.
+func TestTheReportCarriesBothPhases(t *testing.T) {
+	// Arrange
+	stubWire(t, preludeWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --fields: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	pre, _ := data["prelude"].(map[string]any)
+	rb, _ := data["read_back"].(map[string]any)
+	if pre == nil || rb == nil {
+		t.Fatalf("data carries prelude %v and read_back %v, want both phases in one report", pre, rb)
+	}
+	check, _ := pre["read_back"].(map[string]any)
+	if check == nil {
+		t.Fatalf("prelude carries no read_back: %v", pre)
+	}
+	for _, field := range []string{"proposed", "written", "marked", "body_unchanged", "verified"} {
+		if _, there := check[field]; !there {
+			t.Errorf("prelude.read_back carries no %s: %v", field, check)
+		}
+	}
+	if check["start"] != pre["start"] || check["end"] != pre["end"] {
+		t.Errorf("the read-back looked in [%v,%v) and the prelude was proposed into [%v,%v)",
+			check["start"], check["end"], pre["start"], pre["end"])
+	}
+	// M7b's list, unchanged. The prelude keeps its own beside it, because the
+	// two are built from different things.
+	manual, _ := rb["manual"].([]any)
+	if len(manual) == 0 {
+		t.Errorf("read_back.manual = %v, want M7b's list of what gdoc could not do at all", rb["manual"])
+	}
+	if data["applied"] == nil {
+		t.Errorf("data carries no applied, so nothing says what phase 2 sent: %v", data)
+	}
+}
+
+// The prelude was proposed and the document read back holds neither it nor the
+// marker over it. Every one of those is a route that did not hold, so the run
+// is ok: true with verified: false and each route named. The batches Docs took
+// are in the document either way, and a caller told the run failed is a caller
+// that runs it again.
+func TestThePreludeReadBackNamesTheRouteThatDidNotHold(t *testing.T) {
+	// Arrange
+	stubWire(t, preludeWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXsingleTab", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --fields: %v (exit %d), want a write that happened reported as one", got, code)
+	}
+	data := dataOf(t, got)
+	if data["verified"] != false {
+		t.Errorf("verified = %v, want false: nothing in the document read back says the prelude is there",
+			data["verified"])
+	}
+	pre, _ := data["prelude"].(map[string]any)
+	check, _ := pre["read_back"].(map[string]any)
+	if check["verified"] != false || check["marked"] != false {
+		t.Errorf("prelude.read_back = %v, want verified and marked both false", check)
+	}
+	if check["body_unchanged"] != true {
+		t.Errorf("body_unchanged = %v, want true: not a character of the author's own text moved",
+			check["body_unchanged"])
+	}
+	warnings := strings.Join(warningsOf(t, got), " | ")
+	if !strings.Contains(warnings, "gdoc:house-prelude") {
+		t.Errorf("warnings = %s, want the marker named as the route that did not hold", warnings)
+	}
+}
+
+// A styling run proposes nothing, so there is no phase 1 to read back and no
+// field saying there was one.
+func TestAStylingRunReadsNoPreludeBack(t *testing.T) {
+	// Arrange
+	stubWire(t, landedWire(t))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXplain", 1))
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from: %v (exit %d)", got, code)
+	}
+	data := dataOf(t, got)
+	if data["prelude"] != nil {
+		t.Errorf("prelude = %v, want the field absent on a run that proposed none", data["prelude"])
+	}
+	if data["verified"] != true {
+		t.Errorf("verified = %v, warnings %v: M7b's run must not be made unverified by a phase it never had",
+			data["verified"], warningsOf(t, got))
 	}
 }

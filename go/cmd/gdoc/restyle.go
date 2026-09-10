@@ -224,6 +224,26 @@ type preludeData struct {
 	// Manual is what the prelude could not propose at all, each with the menu
 	// path a person takes instead.
 	Manual []prelude.ManualStep `json:"manual,omitempty"`
+	// ReadBack is phase 1 read out of the document once both phases had run:
+	// whether every piece of the prelude carries a suggestion id, whether the
+	// marker is over the span it was proposed into, and whether the author's
+	// own text is character for character what it was. It is absent when the
+	// run could not read the document back at all, which is a warning rather
+	// than a claim that nothing is there.
+	ReadBack *prelude.Check `json:"read_back,omitempty"`
+}
+
+// phaseOne is what phase 2 and the read-back need to know about phase 1: the
+// span the prelude occupies, the author's own text as it stood before a word of
+// it was proposed, and where the answer goes.
+//
+// It is nil on a run that named no --fields, which is M7b's styling-only
+// restyle, and every use of it below reads that nil as "there was no phase 1"
+// rather than as "phase 1 found nothing".
+type phaseOne struct {
+	span   restyle.Span
+	before string
+	data   *preludeData
 }
 
 // readFields reads the cover's values out of the file --fields names.
@@ -437,16 +457,29 @@ func proposeThenStyle(ctx context.Context, r *reach, p *guard.Policy, saved rest
 			Error: fmt.Sprintf("the prelude was proposed and the marker over it did not land, so nothing was styled: %v", markErr)}
 	}
 
+	// The author's own text as it stood before a word of the prelude was
+	// proposed, read off the document phase 1 was computed from. It is the
+	// before side of the one check this milestone's own claim rests on, and it
+	// is taken here because this is the last moment it can be: every read after
+	// this one carries the prelude.
 	return styleDocument(ctx, r2, saved, cfg, fresh.Tabs[0], marked.RevisionID,
-		&restyle.Span{Start: res.Start, End: res.End}, data, warns...)
+		&phaseOne{
+			span:   restyle.Span{Start: res.Start, End: res.End},
+			before: prelude.AuthorText(d),
+			data:   pre,
+		}, data, warns...)
 }
 
 // styleDocument is phase 2, and on a run with no --fields it is the whole
-// command: the plan, the batches, and the read-back over what landed.
+// command: the plan, the batches, and the read-back over both phases.
 //
-// skip is the span the prelude occupies, nil on a run that proposed none.
+// one is phase 1, nil on a run that proposed no prelude.
 func styleDocument(ctx context.Context, r *reach, saved restyle.Report, cfg *house.Config,
-	tab docs.Tab, revisionID string, skip *restyle.Span, data restyleData, warns ...string) emit.Result {
+	tab docs.Tab, revisionID string, one *phaseOne, data restyleData, warns ...string) emit.Result {
+	var skip *restyle.Span
+	if one != nil {
+		skip = &one.span
+	}
 	plan := restyle.TabRequestsExcept(tab, cfg, skip)
 	// The page first, because it names no range and a reader comparing a batch
 	// against a log should find the document's own geometry at the top of it.
@@ -496,12 +529,22 @@ func styleDocument(ctx context.Context, r *reach, saved restyle.Report, cfg *hou
 	// the document, and a request from a batch that never left the machine would
 	// be reported as a style that did not land on a run that never tried to
 	// write it.
-	if applied.Batches > 0 || applied.MaybeApplied {
-		rb, notes := readBack(ctx, r, saved, reached(requests, applied), plan)
+	//
+	// A run that proposed a prelude always reads back, whatever phase 2 did.
+	// Phase 1 wrote, so there is something in the document to ask about: every
+	// piece of the prelude either carries a suggestion id or does not, and that
+	// is the one question this milestone exists to answer.
+	if applied.Batches > 0 || applied.MaybeApplied || one != nil {
+		rb, pre, notes := readBack(ctx, r, saved, reached(requests, applied), plan, one)
 		data.ReadBack = rb
-		if rb != nil {
-			data.Verified = rb.Verified
+		if one != nil {
+			one.data.ReadBack = pre
 		}
+		// Both phases, and fewer than all of the checks is verified: false with
+		// the route named in the warnings. A read the run could not make leaves
+		// both halves nil, which is not verified either: nothing then says what
+		// is in the document.
+		data.Verified = rb != nil && rb.Verified && (one == nil || (pre != nil && pre.Verified))
 		warns = append(warns, notes...)
 	}
 	if applyErr != nil {
@@ -540,24 +583,32 @@ func reached(requests []map[string]any, applied restyle.Applied) restyle.Sent {
 // decode. One read, two readers, so the two halves cannot be looking at
 // different documents.
 //
-// A read that failed is a warning and no read-back at all. Reporting a
-// preservation half made from a listing that never arrived would name every
-// thread in the survey as gone, which is the one warning that must never cry
-// wolf.
-func readBack(ctx context.Context, r *reach, before restyle.Report, sent restyle.Sent, plan restyle.Plan) (*restyle.ReadBack, []string) {
+// A read that failed is a warning and no read-back at all, and that is both
+// halves of it. Reporting a preservation half made from a listing that never
+// arrived would name every thread in the survey as gone, which is the one
+// warning that must never cry wolf, and the prelude half is read out of the
+// same Docs answer the landing half is.
+//
+// The prelude half is phase 1's, and it is asked here because this is the one
+// read that carries the finished document: whether every piece of what was
+// proposed is a suggestion, whether the marker is over it, and whether the
+// author's own text is what it was before any of it. one is nil on a run that
+// proposed no prelude, and so is the answer.
+func readBack(ctx context.Context, r *reach, before restyle.Report, sent restyle.Sent,
+	plan restyle.Plan, one *phaseOne) (*restyle.ReadBack, *prelude.Check, []string) {
 	raws, err := comments.Fetch(ctx, r.session, r.id, nil)
 	if err != nil {
-		return nil, []string{fmt.Sprintf(
+		return nil, nil, []string{fmt.Sprintf(
 			"the comment listing could not be read back, so nothing here says what survived the restyle: %v", err)}
 	}
 	var raw json.RawMessage
 	if err := r.session.GetJSON(ctx, docs.URL(r.id), &raw); err != nil {
-		return nil, []string{fmt.Sprintf(
+		return nil, nil, []string{fmt.Sprintf(
 			"the document could not be read back, so nothing here says what survived the restyle or whether the style landed: %v", err)}
 	}
 	d, err := docs.Parse(raw)
 	if err != nil {
-		return nil, []string{fmt.Sprintf(
+		return nil, nil, []string{fmt.Sprintf(
 			"the document was read back and did not decode, so nothing here says what survived the restyle: %v", err)}
 	}
 	f, exportErr := exportFile(ctx, r)
@@ -567,7 +618,11 @@ func readBack(ctx context.Context, r *reach, before restyle.Report, sent restyle
 		Export:    f,
 		ExportErr: exportErr,
 	}, raw, sent, plan)
-	return &rb, notes
+	if one == nil {
+		return &rb, nil, notes
+	}
+	check, preNotes := prelude.Verify(one.before, d, one.span.Start, one.span.End)
+	return &rb, &check, append(notes, preNotes...)
 }
 
 // savedSurvey is the envelope the survey run printed, read back. Data is the
