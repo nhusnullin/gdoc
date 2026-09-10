@@ -362,7 +362,15 @@ the widest thing gdoc can be asked to do, so every part of it is narrow.
   an empty mask, which Google reads as every field, and a mask naming
   `useFirstPageHeaderFooter` or `useEvenPageHeaderFooter`, because switching
   either off hides the first-page header that carries the logo, the one thing
-  this milestone reports as unreachable.
+  this milestone reports as unreachable. **The key is read exactly and the two
+  names are not**, and that split is the point. The key decides whether the
+  server acts on the mask at all, so reading it loosely would judge a field
+  nothing acts on. The names are a denylist, so `maskKey` trims each segment,
+  folds case and drops the underscores before the lookup: a path is trimmed as
+  a whole, which left the space in `documentStyle. useFirstPageHeaderFooter`,
+  and a field mask is defined in proto, where that camelCase names
+  `use_first_page_header_footer`. That is `checkFields`' rule one layer out,
+  and its refusal already says it: refused however it is asked for.
 - **There is no capability probe here, and the read-back stands alone.** A
   proposal is probed because what makes it a suggestion is `writeMode`, a field
   gdoc supplies and Google has ignored once. `LevelInPlace` makes no claim of

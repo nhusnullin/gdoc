@@ -163,6 +163,16 @@ func TestAnInPlaceFieldMaskIsBounded(t *testing.T) {
 		{"the first-page header toggle", `{"fields":"useFirstPageHeaderFooter"}`, "useFirstPageHeaderFooter"},
 		{"the even-page header toggle", `{"fields":"marginTop,useEvenPageHeaderFooter"}`, "useEvenPageHeaderFooter"},
 		{"the toggle inside a path", `{"fields":"documentStyle.useFirstPageHeaderFooter"}`, "useFirstPageHeaderFooter"},
+		// A denylist that matches one spelling is the shape checkFields refuses
+		// to be, and its own refusal says so: who else can reach a document is
+		// refused "however it is asked for". These three are the same field
+		// asked for differently. The path is trimmed and the segments behind a
+		// dot were not, so a space bought the toggle through; proto-JSON names
+		// a mask path in camelCase and the underscore form is the same path in
+		// the language the field mask is defined in.
+		{"the toggle behind a space in a path", `{"fields":"documentStyle. useFirstPageHeaderFooter"}`, "useFirstPageHeaderFooter"},
+		{"the toggle in the underscore spelling", `{"fields":"use_first_page_header_footer"}`, "use_first_page_header_footer"},
+		{"the toggle under another case", `{"fields":"UseEvenPageHeaderFooter"}`, "UseEvenPageHeaderFooter"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

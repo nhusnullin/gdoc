@@ -182,12 +182,17 @@ func unanswered(c Check, note string) Check {
 // compare is the whole comparison rule: the document holds every field the
 // request set, and nothing is said about the fields it did not.
 func compare(c Check, want, got any) Check {
-	missing := missingFields("", want, got)
-	c.Missing = missing
-	c.Held = len(missing) == 0
+	// The nothing-to-compare case is answered first, and not measured and then
+	// annotated. missingFields walks want, so a nil want against the style the
+	// document really carries reads the style object itself as absent, and the
+	// check then named a missing field in the same breath as saying there was
+	// nothing to look for.
 	if want == nil {
 		return unanswered(c, "the request set no style object, so there was nothing to look for")
 	}
+	missing := missingFields("", want, got)
+	c.Missing = missing
+	c.Held = len(missing) == 0
 	return c
 }
 

@@ -938,9 +938,32 @@ const inPlaceKindList = "updateDocumentStyle, updateParagraphStyle, updateTextSt
 // header, which carries the logo, and that header is the one thing this
 // milestone reports as unreachable rather than writing. defaultHeaderId and
 // firstPageHeaderId are read-only in the reference, so they need no rule.
+//
+// The keys are held in maskKey's normal form, because this is a denylist and a
+// denylist that matches one spelling is a hole with a patch behind every
+// spelling somebody finds later. That is checkFields' rule one layer out, and
+// its refusal says it in its own words: refused however it is asked for.
 var refusedMaskFields = map[string]bool{
-	"useFirstPageHeaderFooter": true,
-	"useEvenPageHeaderFooter":  true,
+	"usefirstpageheaderfooter": true,
+	"useevenpageheaderfooter":  true,
+}
+
+// maskKey is one mask segment in the form the denylist is keyed in: trimmed,
+// case folded, and with the underscores taken out.
+//
+// Three spellings of one path, and the guard has to be at least as wide as
+// whichever the server reads. strings.Split leaves the space in
+// "documentStyle. useFirstPageHeaderFooter", because only the whole path was
+// trimmed. A field mask is defined in proto, where the path this camelCase
+// names is use_first_page_header_footer, and Google's own front ends take
+// both. And nothing says the case a caller writes is the case the denylist
+// happens to hold.
+//
+// Being wider than the server costs a refusal on a mask the server would have
+// rejected anyway, which no builder here writes. Being narrower costs the
+// first-page header, permanently.
+func maskKey(seg string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(seg), "_", ""))
 }
 
 // checkInPlaceMask reads the fields mask of one styling request, and it is the
@@ -1001,8 +1024,8 @@ func checkInPlaceMask(kind string, raw json.RawMessage) error {
 			if strings.Contains(seg, "*") {
 				return refuse("the fields mask of %q names %q, and a mask carrying * resets every property this request does not set", kind, path)
 			}
-			if refusedMaskFields[seg] {
-				return refuse("the fields mask of %q names %q, which switches off the first-page header carrying the logo. A restyle reports that header as something it cannot write, and never hides it", kind, seg)
+			if refusedMaskFields[maskKey(seg)] {
+				return refuse("the fields mask of %q names %q, which switches off the first-page header carrying the logo. A restyle reports that header as something it cannot write, and never hides it", kind, strings.TrimSpace(seg))
 			}
 		}
 	}

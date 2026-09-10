@@ -189,6 +189,23 @@ func TestACheckWithNothingToCompareIsNeverHeld(t *testing.T) {
 	}
 }
 
+// The same check names no missing field either. missingFields walks want, and
+// a nil want against the style the document really carries measures the style
+// object itself as absent, so the check said in one breath that there was
+// nothing to look for and that a field was not there. A caller reading the
+// warnings of a run that stopped is reading this list to work out what state
+// the document is in, and a field named there is a field somebody looks for.
+func TestACheckWithNothingToCompareNamesNoMissingField(t *testing.T) {
+	got := compare(Check{Kind: "updateDocumentStyle"}, nil, map[string]any{"marginTop": map[string]any{"magnitude": 72.0}})
+
+	if len(got.Missing) != 0 {
+		t.Errorf("check = %+v, want no missing field: there was nothing to look for", got)
+	}
+	if got.Held {
+		t.Errorf("check = %+v, want not held", got)
+	}
+}
+
 // A kind the run never sent is not checked. A document with no table sends no
 // updateTableCellStyle, and reporting a check that could not hold would make
 // every document without a table unverifiable.
