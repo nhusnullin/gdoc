@@ -946,10 +946,12 @@ its tabs, its named ranges and the revision the reads were made against. It
 writes to no document and to no file. The one file any run of it can touch is
 the OAuth token, which every command replaces on refresh.
 
-`--dry-run` is required, and the refusal names M7b rather than the flag alone: a
-caller told only that a flag is missing learns the command is broken, when what
-is true is that the half it wants has not been written yet. The policy opens
-with the document at `LevelSuggest` and no grant, like every read.
+`restyle` takes `--dry-run` or `--from`, and a run naming neither is refused
+naming both halves: the survey is `--dry-run` and the apply is
+`--from <survey.json>`. A run naming both is refused too, because the survey and
+the apply are two runs on purpose. Read "`restyle --from` styles a document gdoc
+did not create" below for that rule. The survey's policy opens with the document
+at `LevelSuggest` and no grant, like every read.
 
 - **Three reads, not four.** The comment listing, the Docs read, and the docx
   export for the witness. The named ranges come out of the Docs read, which

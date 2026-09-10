@@ -138,7 +138,7 @@ var apiCannot = []ManualStep{
 	},
 }
 
-// ManualSteps is everything the run could not do, the three the API cannot
+// ManualSteps is the list of things gdoc could not do, the three the API cannot
 // create and the two this milestone chose not to.
 //
 // The two are the lists and the tables. createParagraphBullets removes the
@@ -146,6 +146,17 @@ var apiCannot = []ManualStep{
 // typed and is not one of the four kinds the in-place level carries. A table's
 // column widths and row heights need two request kinds nobody measured, and
 // both change a table's layout rather than its look.
+//
+// One gap is not on this list, and it is written down here rather than left to
+// be discovered. TabRequests walks the tab's body alone, so a paragraph inside a
+// footnote, a header or a footer keeps the look it had, and nothing below names
+// it. An unconditional entry would fire on every document, including the ones
+// holding none of the three, which is the warning people learn to ignore; a
+// conditional one needs a count this function is not given, and for a header or
+// a footer needs a decoder internal/docs does not have. Which of the three to
+// report, and on what condition, is Nail's, in the shape the 2026-09-09 decision
+// settled this list in.
+// docs/backlog/restyle-skips-footnotes-headers-and-footers.md holds it.
 func ManualSteps(p Plan) []ManualStep {
 	out := append([]ManualStep{}, apiCannot...)
 	if p.Bulleted > 0 {

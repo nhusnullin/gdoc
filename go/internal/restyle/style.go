@@ -111,6 +111,14 @@ var alignments = map[string]string{
 // One tab rather than a document, because a style request names a range and a
 // range means nothing without saying which tab it is in. The command refuses a
 // document with more than one tab before it opens the grant.
+//
+// It walks the tab's body and nothing else, so a paragraph inside a footnote, a
+// header or a footer keeps the look it had. internal/docs flattens a footnote
+// to its text and decodes no header and no footer at all, so this walk could
+// not name one of their ranges even if the level carried a request for it.
+// ManualSteps does not name that gap either, so a document whose body is
+// restyled and whose running head is not comes back saying nothing about it.
+// docs/backlog/restyle-skips-footnotes-headers-and-footers.md is the way out.
 func TabRequests(t docs.Tab, cfg *house.Config) Plan {
 	p := &Plan{}
 	unknown := map[string]bool{}

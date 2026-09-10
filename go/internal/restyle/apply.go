@@ -372,6 +372,20 @@ type batchAnswer struct {
 // re-reading the prose would be paying for an answer nothing reads. That read's
 // mask names documentId, revisionId and the named ranges, and it was measured
 // at 982 bytes against 12,907 for the document itself.
+//
+// It breaks the chain, and that is the cost of this fallback rather than a
+// property of it. Every other batch is sent against the revision the batch
+// before it produced, so an edit somebody else made in between refuses the next
+// batch at Docs. A revision read here is the document as it is now, foreign edit
+// included, so that edit is adopted as this run's own and the batches behind it
+// are accepted against it. Two things bound the cost. The answer was measured
+// carrying the field (docs/v2/DECISIONS.md, 2026-09-09), so this is the rare
+// path, and none of the four kinds the level carries can change a character, so
+// the loss is a paragraph's own run formatting rather than a word of anybody's
+// text. Stopping the run instead, which is what a refused batch gets, trades a
+// rare wrong landing for a half-styled document on every run whose answer went
+// quiet, and choosing between the two is Nail's.
+// docs/backlog/restyle-revision-fallback-breaks-the-chain.md holds it.
 func revisionOf(ctx context.Context, s Session, docID string) (string, error) {
 	var raw json.RawMessage
 	if err := s.GetJSON(ctx, docs.NamedRangesURL(docID), &raw); err != nil {
