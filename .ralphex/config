@@ -195,6 +195,12 @@ max_external_iterations = 3
 # and ran until the session limit stopped it. Two unchanged rounds is enough.
 review_patience = 2
 
+# Nail, 2026-09-10: review_patience is now the backstop rather than the brake.
+# .ralphex/scripts/revmux-review.sh ends the loop on the first round that finds
+# nothing critical or major, and writes that round's minor findings beside the
+# run instead. M7c went 11 findings (3 major), 5 minor, 5 minor: the rule stops
+# it one round earlier and keeps every finding that would block a merge.
+
 # session_timeout: maximum duration for a single executor session
 # kills hanging sessions (e.g., agent started a blocking operation)
 # applies to claude in default executor mode; under --codex applies to every executor call;
