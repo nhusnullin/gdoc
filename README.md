@@ -1136,9 +1136,9 @@ The folder is the only thing the run can reach. No document is in reach when it
 starts, and the new document's id comes back from the create the tool itself
 made. There is no `--folder-id` default and no fallback to the folder in your
 note: a note that already names a document is refused before anything leaves
-your machine. Publishing a second version of a note is `restyle --new`, which is
-still deferred: it needs a markdown export and a markdown writer that the Go
-tool does not have.
+your machine. There is no second-version command, and `restyle --new` is not
+being built. To publish a note again, take the `gdoc:` block out of it by hand
+and run `publish` once more; the refusal message says the same.
 
 Three things are checked after the upload, and each answers something the other
 two cannot: the document reads back through the Docs API, it has exactly one

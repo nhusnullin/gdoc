@@ -705,6 +705,8 @@ All three verified. There is no reason to build a new document any other way.
 
 ### `restyle` has two modes and they are a genuine trade
 
+*Superseded 2026-09-11: the `--new` column is not built. See that entry.*
+
 | | **in place** (default) | **as a new document** (`--new`) |
 |---|---|---|
 | how | `batchUpdate` on the original | render its content to a .docx, upload as new |
@@ -1752,3 +1754,49 @@ measurement's clothes.
 suggestion ids, nothing written, the marker over [1,1243), the author's own text
 character for character what it was, and the source document still on the
 revision it started on.
+
+## 2026-09-11. `restyle --new` is not built. Decided, not deferred.
+
+Nail's decision. SPEC's second restyle mode, the one that renders an existing
+document to a docx and uploads it as new, is dropped. It had been deferred since
+2026-09-09 for what it needs, a markdown export with media extraction and a
+markdown writer, and the question this entry answers is whether it is worth
+building at all. It is not.
+
+**What it was for, and what covers each case without it.**
+
+- A document with nothing to protect, wanting the exact house style: `read`
+  the document, put the text in a note with front matter, `publish --md`. Two
+  steps, with the skill as the markdown writer. What the two steps lose is
+  pictures, because `read` prints `[image]`, and that is the one thing `--new`
+  would have added. A markdown exporter that carries pictures is not worth
+  building for that.
+- A document whose review has run its course: the note is the source of truth
+  in v2, so the note is published again. `publish` refuses a paired note, and
+  its own refusal already says what to do: take the `gdoc:` block out by hand
+  if it names a document that has gone. Anything more than that sentence is
+  M8's, with alignment.
+- A document that lives only in Google Docs: the same two steps as the first
+  case.
+
+**Why the value went.** On 2026-08-29 the gap between in place and new was the
+whole house template. Since M7c the in-place restyle proposes the cover, the
+front-matter tables and the legend as suggestions, so the gap is the `manual`
+list: the first-page header with the logo, the contents list, the footer page
+numbers, tab stops, durable named styles, lists and column widths. For a
+document with comments on it that list is cheaper than losing the comments, the
+suggestions and the chips. For a document without, `read` plus `publish` is the
+same result.
+
+**What changes.**
+
+- SPEC's `restyle` section has one mode. The "detected exception" stays as a
+  fact: `restyle --dry-run` still reports `nothing_to_protect`, and the skill
+  reads it. What the skill offers over it is the two-step route, not a flag.
+- PLAN.md M6's "a second version of a note" and M8's unpairing constraint no
+  longer wait on `--new`. The refusal sentence in `publish` is the answer until
+  M8 says more.
+- `NothingToProtect` in `internal/restyle` is unchanged. It was always a fact
+  about five counts, and nothing in the binary offered anything over it.
+
+Nothing in `go/` moves. No flag existed, so no flag is removed.

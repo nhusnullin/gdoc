@@ -463,7 +463,9 @@ What M6 leaves for M7:
 - **A second version of a note.** `publish` refuses a note that already names a
   document. Replacing the paired document, and the state transition that gives
   the note the new id and a fresh publish record in the same change, is
-  `restyle --new`'s.
+  `restyle --new`'s. *(2026-09-11: `--new` is not built. The refusal's own
+  sentence, take the `gdoc:` block out by hand, is the answer until M8 says
+  more. DECISIONS.md of that date.)*
 - **`GrantInPlace`.** Still deleted. It is M7b's since the 2026-09-09 split,
   because the level travels with the write that uses it, and the level it
   raises to is still Nail's decision then.
@@ -760,6 +762,9 @@ carries", "The apply loop, and what a failed restyle leaves behind" and
 "`restyle --from` styles a document gdoc did not create", and in the README
 under "Restyling a document in place".
 
+**`--new` is not built**, decided 2026-09-11, superseding the deferral below.
+DECISIONS.md of that date says why. The paragraph is kept as written.
+
 **`--new` stays deferred**, decided 2026-09-09. It needs a markdown export,
 media extraction and a markdown writer, none of which exist in Go. Its state
 transition is deferred with it: when the new document replaces the paired one,
@@ -980,6 +985,8 @@ The front-matter schema is designed in M2 even though publish arrives in M6,
 because publish is one-shot and the record it writes (ids, publish record,
 schema version) has to be right from its first version. Generator parity is its own milestone because it is the
 largest single risk and deserves its own gate. Restyle after publish, because
-`--new` and the checklist depend on the generator. Alignment last among the
+`--new` and the checklist depend on the generator (both since dropped, and the
+order stood anyway: the prelude M7c proposes is built from the same
+`house.Config`). Alignment last among the
 features, because it consumes everything: the readers, `read`'s output, the
 proposals. Platform work is continuous from M1; only packaging waits.

@@ -202,10 +202,21 @@ the publish record. It then reports every file it changed on disk.
 changes travel as suggestions; a document whose review has run its course gets
 `restyle --new` and a new URL, chosen by a person.
 
+*Amended 2026-09-11. Nail's decision.* **`restyle --new` is not built.** A
+document whose review has run its course is published again from its note: the
+note is the source of truth, and `publish`'s own refusal says what to do with a
+`gdoc:` block naming a document that has gone. Read DECISIONS.md's entry of that
+date.
+
 ### `restyle`
 
 Puts a document gdoc did not create into the house style. Two modes, and the
 careful one is the default.
+
+*Amended 2026-09-11. Nail's decision.* **One mode.** `--new` below is dropped,
+not deferred. What it would have given is covered by `read`, a note, and
+`publish --md`, at the cost of pictures, and that cost does not buy a markdown
+exporter. DECISIONS.md, 2026-09-11.
 
 **In place (default).** `batchUpdate` on the original. Keeps every comment
 thread with real authors and anchors, every pending suggestion, every smart chip
@@ -263,6 +274,11 @@ the chips. The report says so before anything is created.
 **The detected exception.** A document with no comments, no suggestions and no
 chips has nothing to protect. gdoc says so and offers `--new` as the better
 route. It never takes it silently: a new URL is a person's choice.
+
+*Amended 2026-09-11.* The fact stays and the flag does not. `restyle --dry-run`
+reports `nothing_to_protect`, and what the skill offers over it is the two-step
+route: `read` the document, put the text in a note, `publish --md`. Still a
+person's choice, still a new URL.
 
 **Survey first.** A dry-run mode reports what the document holds (threads,
 suggestions, chips, tabs) so the skill can confirm with the facts on screen
