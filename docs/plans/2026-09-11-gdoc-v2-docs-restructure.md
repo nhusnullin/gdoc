@@ -657,14 +657,14 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Modify: `docs/v2/PLAN.md`, `docs/backlog/*.md` (new items where an open leftover belongs there)
 
-- [ ] "Standing facts" trimmed of anything CLAUDE.md's invariants will hold
-- [ ] M1 to M7c become one table: milestone, one line of what it delivered, date, plan file under `docs/plans/completed/`; the "milestones 1 to 7c are done" sentence from CLAUDE.md 32–85 is the source for the one-line summaries
-- [ ] walk every "what Mx leaves for My" list in the deleted bodies; each item is done (say where), moved to M8 or M9, or written as a `docs/backlog/` item; the full list with its disposition goes in the commit body
-- [ ] M8 and M9 stay in full; M9 loses "the v1 retirement note in the README"
-- [ ] the ordering rationale goes
-- [ ] under 200 lines
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): PLAN.md holds the open work"`
+- [x] "Standing facts" trimmed of anything CLAUDE.md's invariants will hold
+- [x] M1 to M7c become one table: milestone, one line of what it delivered, date, plan file under `docs/plans/completed/`; the "milestones 1 to 7c are done" sentence from CLAUDE.md 32–85 is the source for the one-line summaries
+- [x] walk every "what Mx leaves for My" list in the deleted bodies; each item is done (say where), moved to M8 or M9, or written as a `docs/backlog/` item; the full list with its disposition goes in the commit body
+- [x] M8 and M9 stay in full; M9 loses "the v1 retirement note in the README"
+- [x] the ordering rationale goes
+- [x] under 200 lines
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): PLAN.md holds the open work"`
 
 ### Task 24: CLAUDE.md, rewritten whole
 

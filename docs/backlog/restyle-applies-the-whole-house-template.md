@@ -14,8 +14,8 @@ contents list, the heading numbering, and the footer's own text and colour.
 ## Most of it landed at M7c, and this file is what is left
 
 `gdoc restyle <url> --from survey.json --fields fields.json` proposes the cover, the three
-front-matter tables and the legend. Read `docs/v2/PLAN.md` under M7c and CLAUDE.md under "The
-prelude is proposed, and the marker is the one thing written".
+front-matter tables and the legend. Read `go/internal/prelude/doc.go`, and
+`docs/plans/completed/2026-09-10-gdoc-v2-m7c-house-template-as-suggestion.md` for how it was built.
 
 The scope question this file said had to be answered first was answered, and the answer was better
 than the question. Nothing was added to `LevelInPlace` except `createNamedRange` under its own
