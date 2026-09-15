@@ -591,12 +591,13 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Create: `go/internal/drift/doc.go`
 - Modify: `go/internal/drift/compare.go` (demote)
+- ⚠️ Rename: `go/internal/drift/doc.go` → `docsapi.go`, and `doc_test.go` → `docsapi_test.go`. The plan's discovery missed that this package already had a `doc.go`, and it is not a package comment: it is the Docs half of the reader, 607 lines of code beside `docx.go`. The name had to be freed before the package comment could take it, which every other package in the tree already holds. A pure rename, no behaviour and no code changed.
 
-- [ ] from 2427–2785: the item list written once, both gates and what each measures, `Known` explains a difference and never a fault, `Bug`, the PDF items dropped, the two closed reader holes, the live read is not `docs.URL`
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): drift's package comment"`
+- [x] from 2427–2785: the item list written once, both gates and what each measures, `Known` explains a difference and never a fault, `Bug`, the PDF items dropped, the two closed reader holes, the live read is not `docs.URL`
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): drift's package comment"`
 
 ### Task 19: `internal/live/doc.go`, and the small packages
 

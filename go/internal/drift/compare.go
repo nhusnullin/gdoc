@@ -1,25 +1,8 @@
-// Package drift is the measurement that makes the 2026-08-29 decision safe
-// rather than brave.
-//
-// The house style became a config file, and the master .docx became provenance.
-// What answers the risk in that trade is one comparison: read the same list of
-// values out of a document built from house.yaml and out of the master, and
-// fail when a value moves. DECISIONS.md says it plainly: "the 160-item
-// comparison stays as a test. It renders from the config, renders from the
-// master, and fails when any value drifts."
-//
-// The list is written once, in items.go, and it is read two ways. FromDocx
-// reads a value out of the docx XML, which is what the offline gate in
-// `make test` compares. FromDoc reads the same value out of a Docs API answer,
-// which is the live gate: Google's import is part of the result, so the
-// measurement that means something happens after an upload. The names are the
-// same in both, so a row that fails in one is findable in the other, and both
-// match compare.py's names in the 2026-08-29 report.
-//
-// Nothing here judges. A Row carries what each side said and a verdict about
-// the two numbers; whether a difference matters is Nail's, in Word or in Drive.
-// Known is the list of differences already explained, and each entry carries
-// the explanation rather than the word "expected".
+// This file is the comparison itself: the four verdicts, the tolerances, the
+// Known list of differences already looked at, and the report a gate prints.
+// items.go holds the list every row comes from, docx.go reads a value out of
+// the docx XML, docsapi.go reads the same value out of a Docs answer, and
+// doc.go holds the package comment.
 package drift
 
 import (
