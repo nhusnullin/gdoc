@@ -1,13 +1,6 @@
-// Package auth holds the OAuth token and the bundled client. The secret is
-// deliberately in version control; see CLAUDE.md and RFC 8252 section 8.5. A
-// secret shipped to many users is not confidential and identifies the client,
-// nothing more. What protects an account is the per-user token, which never
-// leaves the machine.
-//
-// The token endpoint is two form POSTs, the refresh and the code exchange,
-// which is why x/oauth2 is not a dependency. This
-// package never builds an HTTP client: it is handed one, and the only place
-// that builds one is internal/guard.
+// This file is the token itself: the file it lives in, the two form POSTs to
+// the token endpoint, the crash-safe save, and the report auth status prints.
+// The rules this file holds are in the package comment in doc.go.
 package auth
 
 import (
@@ -29,18 +22,16 @@ import (
 )
 
 const (
-	// BundledClientID and BundledClientSecret are v1's constants, copied
-	// verbatim from gdoc/oauth.py. The client must stay User type Internal:
-	// that exempts gdoc from OAuth verification, from the unverified-app
-	// screen and from the 100-user cap, which matters because the Drive scope
-	// it needs is a restricted scope.
+	// BundledClientID and BundledClientSecret are shipped on purpose, and the
+	// client must stay User type Internal. The package comment in doc.go holds
+	// both rules and what would change them.
 	BundledClientID     = "4326046141-n9fho1g348nflsue7jdrj10dkst3a0a9.apps.googleusercontent.com"
 	BundledClientSecret = "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"
 
 	TokenURI = "https://oauth2.googleapis.com/token"
 
-	// clientFileName is v1's per-user client override. v2 does not read it
-	// yet: every v2 login uses the bundled client, and Status says so rather
+	// clientFileName is the per-user client override, and nothing here reads
+	// it yet: every login uses the bundled client, and Status says so rather
 	// than claiming an override that is not wired up.
 	clientFileName = "oauth-client.json"
 

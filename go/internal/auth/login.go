@@ -1,7 +1,7 @@
 // This file is the browser trip. It builds the authorization URL, prints it,
 // waits on the loopback listener and exchanges the code. No browser is opened
-// and no external program runs: v2 runs none at all, which is why the URL goes
-// to stderr for a person to open.
+// and no external program runs: gdoc runs none at all, which is why the URL
+// goes to stderr for a person to open.
 package auth
 
 import (
@@ -26,14 +26,17 @@ const authEndpoint = "https://accounts.google.com/o/oauth2/auth"
 // loginTimeout is how long the listener waits for the browser to come back.
 const loginTimeout = 3 * time.Minute
 
-// loginScopes is what one browser trip asks for: Drive, and Docs read/write.
+// loginScopes is what one browser trip asks for: the full Drive scope, and the
+// read/write Docs scope.
 //
-// This is NOT v1's LOGIN_SCOPES. v1 asks for drive plus documents.readonly
-// (gdoc/auth.py), and v2 asks for the read/write documents scope because v2
-// writes suggestions through the Docs API. The consequence runs one way: v1's
-// token satisfies v2, but after a v2 login the scope v1 asks for is not in the
-// file, so v1's `gdoc edits` asks for a fresh v1 login. Written down in
-// README.md and CLAUDE.md.
+// The Docs scope here is documents and not documents.readonly, because gdoc
+// writes suggestions through the Docs API and the read-only scope cannot carry
+// a batchUpdate. The two sets are not equal, and the difference runs one way. A
+// token granting Drive plus documents.readonly is missing nothing gdoc needs,
+// because Drive covers the Docs calls; see coveredBy below. A token this login
+// writes records documents and not documents.readonly, so a reader that asks
+// for the read-only scope by name asks for its own sign-in. Do not fold the two
+// sets into one by calling them equal.
 var loginScopes = []string{
 	"https://www.googleapis.com/auth/drive",
 	"https://www.googleapis.com/auth/documents",
@@ -121,8 +124,8 @@ func grantedScopes(scope string) []string {
 // coveredBy names the scopes that stand in for another one. The Docs API
 // accepts the full Drive scope on documents.get and documents.batchUpdate, so a
 // token holding drive can do everything the documents scope allows. Without
-// this, every v1 token reports a scope missing that it does not need, which is
-// a warning on the working case, and a warning on the working case is one
+// this, a token that works reports a scope missing that it does not need, which
+// is a warning on the working case, and a warning on the working case is one
 // people learn to ignore. drive.file is deliberately not here: it reaches only
 // files the app itself created.
 var coveredBy = map[string][]string{

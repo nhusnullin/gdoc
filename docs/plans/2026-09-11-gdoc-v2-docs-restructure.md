@@ -403,13 +403,13 @@ opening "Command " or "Package <name>". Left as it is.
 - Create: `go/internal/auth/doc.go`
 - Modify: `go/internal/auth/auth.go` (demote), `go/internal/auth/login.go` (the scope comment)
 
-- [ ] move CLAUDE.md 142–182: the token file is google-auth's "authorized user" shape, the scope widening, `MissingScopes` and `coveredBy`, `Save` carrying the three fields it does not use, `Load` refusing an unrefreshable file, `token_uri` filled in
-- [ ] move 3079–3120: the client is shipped, the secret belongs in git (RFC 8252 8.5, the `gh` and `gcloud` precedent), the client stays Internal, and the one thing that changes it, making the repo public; point at the DECISIONS entry Task 2 added
-- [ ] rewrite `login.go`'s scope comment to state the difference between the two scope sets without naming v1
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): auth's package comment, and the OAuth client rule"`
+- [x] move CLAUDE.md 142–182: the token file is google-auth's "authorized user" shape, the scope widening, `MissingScopes` and `coveredBy`, `Save` carrying the three fields it does not use, `Load` refusing an unrefreshable file, `token_uri` filled in
+- [x] move 3079–3120: the client is shipped, the secret belongs in git (RFC 8252 8.5, the `gh` and `gcloud` precedent), the client stays Internal, and the one thing that changes it, making the repo public; point at the DECISIONS entry Task 2 added
+- [x] rewrite `login.go`'s scope comment to state the difference between the two scope sets without naming v1
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): auth's package comment, and the OAuth client rule"`
 
 ### Task 6: `boundary/doc.go`
 
