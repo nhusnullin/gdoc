@@ -641,16 +641,16 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Modify: `docs/v2/SPEC.md`
 
-- [ ] new header: what the file is (what v2 is today), the rule (a change here is a DECISIONS entry first, the same day), no status line, no date
-- [ ] fold every block `grep -nE '\*(Amended|Corrected)' docs/v2/SPEC.md` finds into the sentence it amended and delete the old sentence; each of the ten is listed in the commit body with what it became
-- [ ] `restyle` has one mode: survey, `--from`, `--fields`; the "detected exception" reports a fact and the skill offers the two-step route
-- [ ] `publish` runs once; a second version is the note published again after the block is taken out by hand; pointer to DECISIONS 2026-09-11
-- [ ] "The diff" is two paragraphs: the binary reads the document, the skill composes
-- [ ] the Developer Preview risk paragraph stays as the one accepted external risk
-- [ ] dates appear only in pointers of the form "changed YYYY-MM-DD, DECISIONS.md"; `grep -c "2026-" docs/v2/SPEC.md` is reported in the commit body
-- [ ] under 400 lines
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): SPEC.md says what v2 is today"`
+- [x] new header: what the file is (what v2 is today), the rule (a change here is a DECISIONS entry first, the same day), no status line, no date
+- [x] fold every block `grep -nE '\*(Amended|Corrected)' docs/v2/SPEC.md` finds into the sentence it amended and delete the old sentence; each of the ten is listed in the commit body with what it became
+- [x] `restyle` has one mode: survey, `--from`, `--fields`; the "detected exception" reports a fact and the skill offers the two-step route
+- [x] `publish` runs once; a second version is the note published again after the block is taken out by hand; pointer to DECISIONS 2026-09-11
+- [x] "The diff" is two paragraphs: the binary reads the document, the skill composes
+- [x] the Developer Preview risk paragraph stays as the one accepted external risk
+- [x] dates appear only in pointers of the form "changed YYYY-MM-DD, DECISIONS.md"; `grep -c "2026-" docs/v2/SPEC.md` is reported in the commit body
+- [x] under 400 lines
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): SPEC.md says what v2 is today"`
 
 ### Task 23: PLAN.md as open work
 
