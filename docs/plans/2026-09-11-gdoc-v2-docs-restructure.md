@@ -523,12 +523,12 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/propose/doc.go`
 - Modify: `go/internal/propose/propose.go` (demote)
 
-- [ ] from 1941–2306, `propose`'s own rules: names text never an index, contiguous, the span's end from the last rune, a crossing occurrence still counts, replaces words with words, line breaks refused on both sides, every proposal checked first, one batch of three, the three read-backs and the fourth condition, the preview asks by words and the replacement-contains-quote case, `docx_anchored`'s no-answer, provenance recorded and `missingID`
-- [ ] the "sent" rule and the re-read rule are pointed at, not restated (`gapi`, `cmd/gdoc`)
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): propose's package comment"`
+- [x] from 1941–2306, `propose`'s own rules: names text never an index, contiguous, the span's end from the last rune, a crossing occurrence still counts, replaces words with words, line breaks refused on both sides, every proposal checked first, one batch of three, the three read-backs and the fourth condition, the preview asks by words and the replacement-contains-quote case, `docx_anchored`'s no-answer, provenance recorded and `missingID`
+- [x] the "sent" rule and the re-read rule are pointed at, not restated (`gapi`, `cmd/gdoc`)
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): propose's package comment"`
 
 ### Task 14: `probe`, `reply`, `withdraw`, `plaintext`
 
