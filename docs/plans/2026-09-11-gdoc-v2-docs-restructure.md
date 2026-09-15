@@ -708,15 +708,15 @@ package clause is one decision for Task 27, not a choice per package.
 
 ### Task 27: verify acceptance criteria
 
-- [ ] `wc -l CLAUDE.md docs/v2/SPEC.md docs/v2/PLAN.md` under 300, 400, 200
-- [ ] `cd go && go test ./boundary/ -run 'TestCLAUDEmd|TestEveryPackage|TestTheTaskMap' -v` shows all three run and pass, none skipped, `known` empty
-- [ ] `cd go && go doc ./internal/guard | head -40` renders the essay with headings
-- [ ] every `MEASURED.md "..."` and `DECISIONS.md YYYY-MM-DD` pointer in `go/` resolves: extract each and grep for the heading or the date
-- [ ] every `Test[A-Za-z]+` name cited in a `doc.go` exists: extract, `grep -rn "func <name>("`, zero misses
-- [ ] every row of the coverage table is claimed: for each range, the task named holds a tick list in its commit body that accounts for it
-- [ ] the grep from Task 20 over all of `go/` and the gate from Task 26 both hold
-- [ ] the register has one row per `## ` entry in DECISIONS.md: counts match
-- [ ] `make test`, `make vet`, `make dist` green; CI green on the branch
+- [x] `wc -l CLAUDE.md docs/v2/SPEC.md docs/v2/PLAN.md` under 300, 400, 200. Measured 220, 398, 99
+- [x] `cd go && go test ./boundary/ -run 'TestCLAUDEmd|TestEveryPackage|TestTheTaskMap' -v` shows all three run and pass, none skipped, `known` empty
+- [x] `cd go && go doc ./internal/guard | head -40` renders the essay with headings
+- [x] every `MEASURED.md "..."` and `DECISIONS.md YYYY-MM-DD` pointer in `go/` resolves: extract each and grep for the heading or the date. Zero misses over both forms, wrapped comment lines joined first
+- [x] every `Test[A-Za-z]+` name cited in a `doc.go` exists: extract, `grep -rn "func <name>("`, zero misses. 544 names cited, all defined; CLAUDE.md's 29 and PLAN.md's 1 checked too
+- [x] every row of the coverage table is claimed: for each range, the task named holds a tick list in its commit body that accounts for it. 38 rows, 30 claimed by the named task's commit, 8 marked "goes (v1)" and dropped with the retirement
+- [x] the grep from Task 20 over all of `go/` and the gate from Task 26 both hold
+- [x] the register has one row per `## ` entry in DECISIONS.md: counts match. 42 dated entries against 42 non-MEASURED rows, in date order; one row renamed to the MEASURED.md heading it points at
+- [x] `make test`, `make vet`, `make dist` green; CI green on the branch. CI's four steps are gofmt, vet, the raced suite and `make dist`, all green here; CI itself runs when the branch is pushed, which is Nail's to do
 
 ### Task 28: close the milestone
 

@@ -50,7 +50,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-29 | Live review is a session, not a service | holds |
 | 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds |
 | 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | holds |
-| 2026-09-09 | What an in-place styling request actually reaches | MEASURED.md |
+| 2026-09-09 | Which styling requests land in place | MEASURED.md |
 | 2026-09-09 | The guard carries `files.copy`, for one source | holds |
 | 2026-09-09 | Seven paragraph elements were dropped at decode | holds |
 | 2026-09-09 | M7 splits. The survey ships without the write | holds |
