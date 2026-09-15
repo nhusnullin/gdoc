@@ -84,10 +84,12 @@
 //   - TestLiveSuggestedInsertProbe, M7c's. One candidate request kind per
 //     case, recording which of them Docs accepts as a suggestion. Nine of ten,
 //     and the tenth is createNamedRange, refused in Docs' own words. Measured
-//     2026-09-10, MEASURED.md "A named range over a suggested insertion".
+//     2026-09-10, and the ten-row table is in DECISIONS.md, "The house template
+//     reaches a document as a suggestion, not as a direct edit".
 //   - TestLiveNamedRangeOverSuggestionProbe, M7c's. One fresh document per
 //     case, because a probe that measures its own leftovers answers about
-//     itself.
+//     itself. Measured 2026-09-10, MEASURED.md "A named range over a suggested
+//     insertion".
 //   - TestLiveTableIndexProbe, M7c's, and the one the prelude's arithmetic was
 //     corrected from. It reads the index map of an inserted table off a real
 //     document, then sweeps the indexes behind that table one document at a

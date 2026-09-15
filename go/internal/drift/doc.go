@@ -133,7 +133,11 @@
 // does, and nothing here opens one. The page count was one of the two real
 // differences the 2026-08-29 report counted, and it came from a stale contents
 // list in the master rather than from the style. 160 was compare.py's count
-// with those three in it; 157 without them, plus bold and italic for all nine
-// named styles, is the 169 here. Every item compare.py printed is findable
-// under compare.py's own name.
+// with those three in it, and 157 without them. The 169 here is not 157 plus a
+// fixed number: compare.py emitted a bold or italic row only when one of the
+// two sides carried it, so its 157 already held some of them, and this port
+// emits bold and italic for all nine named styles unconditionally, because a
+// static list cannot ask that question and a row reading false on both sides
+// still fails the day one side turns true. Every item compare.py printed is
+// findable under compare.py's own name.
 package drift

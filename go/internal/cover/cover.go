@@ -4,8 +4,9 @@
 // Only title is required. Anything can go in the house template: a policy, a
 // brief, a report, a set of notes. alt_title, doc_type, version, date, owner,
 // last_approval, review_frequency, board_ratification, distribution,
-// classification, heading_numbering and revisions are optional, and the five
-// from last_approval on are the five rows of the version-control table. The key
+// classification, heading_numbering and revisions are optional, and owner,
+// last_approval, review_frequency, board_ratification and distribution are the
+// five rows of the version-control table. The key
 // names are not chosen here. They are the names the notes already carry, so a
 // note written before this package existed builds with no edits.
 // TestEveryOptionalKeyReads and TestANoteWithOnlyATitleReadsWithNumberingOnAndNoRevisions
