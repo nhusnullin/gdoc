@@ -55,6 +55,11 @@
 // the document id and the URL, because naming a document that has gone sends
 // somebody to look for it.
 //
+// All three shapes are pinned in cmd/gdoc: absent in
+// TestPublishUploadsTheNoteAndPairsIt, true in
+// TestPublishRollsBackWhenTheNoteCannotBePaired, false in
+// TestPublishReportsTheLiveIDWhenTheRollbackFailed.
+//
 // # verified is three read-backs, and false is not a failure
 //
 // The Docs read says the document is there and readable, the tab count says it

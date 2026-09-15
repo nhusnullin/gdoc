@@ -130,7 +130,8 @@
 // commentWrites carries POST and nothing else, so editing or deleting a comment
 // is a write it does not carry, and no command here needs one: the skill
 // replies into the thread saying the proposal was withdrawn. A milestone that
-// needs PATCH or DELETE adds it beside its caller.
+// needs PATCH or DELETE adds it beside its caller. The rule is held where the
+// refusal is: guard's TestNoCommentPatchOrDelete is the pin.
 //
 // # Two rules this package rests on and does not hold
 //

@@ -116,12 +116,22 @@ fi
 
 # The apply skill was removed with the Python tool it called. An old install
 # left a link to it here, and a link to a folder that no longer exists is a
-# skill Claude Code fails to load. Only a link into this repo is removed: a
-# folder somebody wrote themselves is theirs.
+# skill Claude Code fails to load. The symlink is decided on first, as the two
+# links above are, because -e follows the link and a dangling one is the whole
+# point: after the repo moved, the target reads as the old path. Any link whose
+# target is a checkout's skills/gdoc-apply is an old install of this repo and is
+# removed. A folder somebody wrote themselves is theirs.
 stale="$SKILLS_DIR/gdoc-apply"
-if [ -L "$stale" ] && [ "$(readlink "$stale")" = "$REPO/skills/gdoc-apply" ]; then
-    rm "$stale"
-    printf 'install: removed %s. That skill was retired with the Python tool.\n' "$stale"
+if [ -L "$stale" ]; then
+    case "$(readlink "$stale")" in
+        */skills/gdoc-apply)
+            rm "$stale"
+            printf 'install: removed %s. That skill was retired with the Python tool.\n' "$stale"
+            ;;
+        *)
+            warn "$stale is not a link into this repo. Left alone."
+            ;;
+    esac
 elif [ -e "$stale" ]; then
     warn "$stale is not a link into this repo. Left alone."
 fi
@@ -140,7 +150,10 @@ state=""
 printf '\ngdoc installed\n\n'
 printf '  source   %s\n' "$REPO"
 printf '  version  %s on %s%s\n' "$commit" "$branch" "$state"
-printf '  gdoc     %s -> %s\n' "$link" "$GO_BIN"
+# The measured target, not the intended one: when the branch above left
+# somebody else's gdoc alone, the summary has to say so rather than claim a link
+# it did not make.
+printf '  gdoc     %s -> %s\n' "$link" "$(readlink "$link" 2>/dev/null || echo 'left alone, not this install')"
 printf '\n  skill (linked, so edits are live with no reinstall)\n'
 printf '    %-12s -> %s\n' "$SKILL" "$(readlink "$dst")"
 printf '\n  next     gdoc auth status, and gdoc auth login if it says signed out\n\n'

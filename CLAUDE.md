@@ -3,10 +3,11 @@
 Read [PRINCIPLES.md](PRINCIPLES.md) before proposing any design. It is four
 constraints and the decisions that implement them, and it is short.
 
-Then read the `doc.go` of the package the task touches. It holds that package's
-rules, the reason for each, and the test that pins it. This file holds only what
-is true across the whole tree: where things live, the invariants, what to read
-for a task, how to build, and what never to do.
+Then read the package comment of the package the task touches, in its `doc.go`
+where there is one and in an ordinary source file otherwise. It holds that
+package's rules, the reason for each, and the test that pins it. This file holds
+only what is true across the whole tree: where things live, the invariants,
+what to read for a task, how to build, and what never to do.
 
 Two rules about the documents themselves:
 
@@ -129,7 +130,9 @@ decision somebody writes into `docs/v2/DECISIONS.md`, not a refactor.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
-- **Each package carries exactly one package comment**, in a file `go doc` reads:
+- **Each package carries exactly one comment opening `Package <name>`**, or
+  `Command` for a main package, in a file `go doc` reads. A file may still open
+  with a paragraph saying what that file is for:
   `TestEveryPackageHasExactlyOnePackageComment`.
 - **This file stays under 300 lines and its task map names files that exist**,
   because every session pays for it unasked: `TestCLAUDEmdIsUnderTheCeiling` and

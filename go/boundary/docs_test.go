@@ -75,10 +75,11 @@ var docRoots = []string{"cmd/gdoc", "internal", "boundary"}
 //
 // The docs restructure plan named four here, adding cmd/gdoc and internal/render
 // on the belief that cmd/gdoc carried no package comment and internal/render
-// carried two. Measured on 2026-09-15, neither is so: cmd/gdoc carries one, on
-// main.go, opening "Command gdoc", and internal/render carries one, on xml.go.
-// Both already held the rule, so listing them would have failed this test on
-// its own second assertion.
+// carried two. Measured on 2026-09-15, neither was so: each already carried
+// exactly one, so listing them would have failed this test on its own second
+// assertion. Both comments have since moved into that package's doc.go, which
+// is where a reader should look rather than at the files this note used to
+// name.
 var known = map[string]string{}
 
 // pkgComment reports whether a parsed file carries the package's own comment.
@@ -87,20 +88,66 @@ var known = map[string]string{}
 // go/parser, and most files here carry one: a paragraph saying what that file
 // is for. Those are not package comments and must not be counted, or the rule
 // would read as "one commented file per package" and refuse the repo's own
-// convention. The package comment is the one written in Go's documented shape,
-// opening with the package's name, and for a main package with the command's,
-// which is what `go doc` prints and what the convention in the plan asks each
-// package to hold exactly one of.
+// convention. The package comment is the one written in Go's documented shape:
+// the word "Package" and the package's own name, or the bare word "Command" for
+// a main package, as CLAUDE.md states the invariant. That is what `go doc`
+// prints and what the convention asks each package to hold exactly one of.
 func pkgComment(f *ast.File) bool {
 	if f.Doc == nil {
 		return false
 	}
 	text := f.Doc.Text()
-	opening := "Package " + f.Name.Name + " "
+	opening := "Package " + f.Name.Name
 	if f.Name.Name == "main" {
-		opening = "Command "
+		opening = "Command"
 	}
-	return strings.HasPrefix(text, opening)
+	rest, ok := strings.CutPrefix(text, opening)
+	if !ok {
+		return false
+	}
+	// What follows the name has to end the word, or "Package emitter" would
+	// count as package emit's comment. A period ends it, because
+	// "// Package emit." is the shortest comment Go documents and go doc prints
+	// it. TestPkgCommentReadsTheShortestPackageComment is the pin.
+	return strings.HasPrefix(rest, " ") ||
+		strings.HasPrefix(rest, ".") ||
+		strings.HasPrefix(rest, "\n")
+}
+
+// TestPkgCommentReadsTheShortestPackageComment pins the helper the guard rests
+// on. A one-line comment, "// Package emit.", is the shape Go's own
+// documentation gives as the minimum, and `go doc` prints it. A helper that
+// missed it would tell the next person their package carries no package comment
+// while the comment is right there, which sends them looking in the wrong file.
+func TestPkgCommentReadsTheShortestPackageComment(t *testing.T) {
+	for _, src := range []string{
+		"// Package emit.\npackage emit\n",
+		"// Package emit is the envelope.\npackage emit\n",
+		"// Command gdoc.\npackage main\n",
+	} {
+		f, err := parser.ParseFile(token.NewFileSet(), "x.go", src, parser.ParseComments)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !pkgComment(f) {
+			t.Errorf("go doc prints this as the package comment, so the guard must read it too: %q", src)
+		}
+	}
+
+	// The other direction: a file paragraph is not a package comment, and a
+	// package whose name only starts the same way is not one either.
+	for _, src := range []string{
+		"// This file holds the writer's own vocabulary.\npackage render\n",
+		"// Package emitter is another package.\npackage emit\n",
+	} {
+		f, err := parser.ParseFile(token.NewFileSet(), "x.go", src, parser.ParseComments)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if pkgComment(f) {
+			t.Errorf("this is not the package's own comment: %q", src)
+		}
+	}
 }
 
 // packageComments walks a tree and reports, per package directory, which files

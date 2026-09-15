@@ -35,20 +35,23 @@
 //     stopped being pending. internal/suggestions, internal/frontmatter.
 //   - restyle <url> --dry-run | --from [--fields]: the survey, the house style
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
-//   - probe --folder-id: whether Docs honours SUGGEST today. internal/probe.
-//   - reply <url> --comment-id --body-file: one robot reply. internal/reply.
-//   - propose <url> --from [--md] --folder-id: a change as a suggestion.
+//   - probe --folder: whether Docs honours SUGGEST today. internal/probe.
+//   - reply <url> <comment id> --body-file: one robot reply. internal/reply.
+//   - propose <url> --from --folder [--md]: a change as a suggestion.
 //     internal/propose.
-//   - withdraw <url> --suggestion-id --md: gdoc taking back its own proposal.
+//   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
 //     internal/withdraw.
-//   - build --md --out: the house-style docx, no network at all.
-//     internal/house, internal/cover, internal/body, internal/render.
-//   - publish --md --folder-id: that docx into Drive as a Google Doc.
-//     internal/publish.
+//   - build --md --out [--house] [--force]: the house-style docx, no network
+//     at all. internal/house, internal/cover, internal/body, internal/render.
+//   - publish --md --folder-id [--house]: that docx into Drive as a Google
+//     Doc. internal/publish.
 //
-// TestTheUsageLineNamesEveryCommand and TestTheUsageLineNamesTheNineCommands
-// are the pins: the usage line is the whole of the help, so it has to name
-// every command that exists.
+// The usage line is the whole of the help, so it has to name every command
+// that exists. Two tests hold that together.
+// TestTheUsageLineNamesEveryCommand spells the twelve out word for word, as a
+// reader sees them. TestEveryCommandDispatchReachesIsInTheUsageLine reads the
+// case labels out of dispatch, so a thirteenth command cannot answer a caller
+// while the help stays silent about it.
 //
 // # auth status is a report, and being signed out is an answer
 //

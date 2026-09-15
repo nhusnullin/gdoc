@@ -915,20 +915,3 @@ func TestWithdrawWritesTheNoteTheVaultHasNow(t *testing.T) {
 		t.Errorf("the author's edit was thrown away:\n%s", after)
 	}
 }
-
-// The usage line is the whole of the help, so it has to name every command that
-// exists: there is no help command to read instead.
-func TestTheUsageLineNamesTheNineCommands(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-
-	got, _ := runJSON(t, "--help")
-	msg, _ := got["error"].(string)
-	for _, command := range []string{
-		"auth status", "auth login", "read", "comments", "suggestions",
-		"probe", "reply", "propose", "withdraw",
-	} {
-		if !strings.Contains(msg, command) {
-			t.Errorf("the usage line must name %q: %q", command, msg)
-		}
-	}
-}

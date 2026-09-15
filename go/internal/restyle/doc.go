@@ -384,4 +384,7 @@
 // holding, the preservation half intact, and no thread whose witness stopped
 // answering. What was applied is in the document either way, and a caller told
 // the run failed is a caller that runs it again.
+// TestRestyleSaysWhenTheStyleDidNotLand is the pin on the envelope, and the
+// TestVerifiedIsFalseWhen... family in readback_test.go on each way it goes
+// false.
 package restyle
