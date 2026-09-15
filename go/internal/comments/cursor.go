@@ -1,15 +1,6 @@
-// The cursor is the whole of --since, and it is deliberately small.
-//
-// It encodes one instant: the newest activity the last run saw. The binary
-// emits it, the caller hands it back on the next poll, and nothing writes it
-// anywhere. A live session holds it in memory and it dies with the session;
-// anything that has to survive a session lives in the front matter, and this
-// does not.
-//
-// It is opaque on purpose. A caller that reads the instant out and does
-// arithmetic on it has made the encoding a contract, and the encoding is not
-// one. base64url of a small JSON object is enough to carry a version, so a
-// later shape can be refused by name rather than misread.
+// This file is the cursor: what it encodes, how it is read back, how the next
+// one is computed, and the narrowing that keeps a thread from being news twice.
+// doc.go holds why it is shaped this way.
 package comments
 
 import (

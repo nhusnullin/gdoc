@@ -1,19 +1,7 @@
-// Package comments is the threads on a document, as facts.
-//
-// Two sources, because neither one carries the whole answer. Drive's
-// comments.list is documented and stable and carries the replies, the authors,
-// resolved and modifiedTime, but its anchor is an opaque string. The Docs read
-// carries the character range each thread sits on, keyed by the same comment
-// id, and carries nothing about the replies. So this package joins them, and
-// reports the id of a thread the Docs read did not place rather than failing
-// the whole listing over one anchor.
-//
-// Nothing here decides whether a thread is answered. SPEC.md was corrected on
-// 2026-09-06 for exactly this: "a 🤖 reply newer than the comment" is a
-// heuristic, and a wrong one when the reply was an acknowledgment or the
-// follow-up changed the question. So a Thread carries every reply, its author,
-// its time and whether it opens with 🤖, and the skill reading the JSON decides
-// what still needs an answer. There is no Handled field, and there must not be.
+// This file is the listing itself: the Drive call and its paging, the cursor
+// narrowing on the way back, the marker and by_gdoc facts, and the join that
+// puts the Docs range on a thread. cursor.go is the --since cursor, wait.go is
+// the --wait poll, and doc.go holds the package comment.
 package comments
 
 import (

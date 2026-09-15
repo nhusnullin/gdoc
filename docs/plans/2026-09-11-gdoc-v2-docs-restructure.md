@@ -457,12 +457,20 @@ opening "Command " or "Package <name>". Left as it is.
 - Create: `go/internal/comments/doc.go`
 - Modify: `go/internal/comments/comments.go` (demote)
 
-- [ ] move 613–642 (facts, never verdicts, with the named fields and `TestThreadsCarriesEveryFactAndJudgesNone`), 1684–1757 (the cursor's shape, milliseconds, `narrow`, the ids, the empty cursor and the five-minute floor, opaque), and 1758–1854 minus the `os/signal` rule (`Wait`: `--since` required, the interval, first non-empty window, the deadline bounds the call, the refresh carries the context, nothing kept)
-- [ ] the poll-order rule (listing first, document second) from 643–768, stated once here; `restyle` points at it
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): comments' package comment"`
+- [x] move 613–642 (facts, never verdicts, with the named fields and `TestThreadsCarriesEveryFactAndJudgesNone`), 1684–1757 (the cursor's shape, milliseconds, `narrow`, the ids, the empty cursor and the five-minute floor, opaque), and 1758–1854 minus the `os/signal` rule (`Wait`: `--since` required, the interval, first non-empty window, the deadline bounds the call, the refresh carries the context, nothing kept)
+- [x] the poll-order rule (listing first, document second) from 643–768, stated once here; `restyle` points at it
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): comments' package comment"`
+
+➕ `go doc` joins every package-clause comment in file order, so a file
+comment alphabetically ahead of `doc.go` leads the rendered package doc.
+`internal/comments` and `internal/auth` both read that way today (`comments.go`,
+`cursor.go`, `auth.go`). Each of those file comments points at `doc.go`, which
+is the repo's convention from Task 5 on, so this task matched it rather than
+diverging. Whether every such header loses its blank-line adjacency to the
+package clause is one decision for Task 27, not a choice per package.
 
 ### Task 10: `internal/restyle/doc.go`
 

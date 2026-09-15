@@ -1,24 +1,6 @@
-// The wait is one call that looks more than once.
-//
-// A live review session is the skill calling `comments --since <cursor> --wait
-// <duration>` in a loop. The waiting happens here rather than in the skill for
-// one measured reason: a Claude Code session cannot wake more often than once a
-// minute, and every idle tick would spend a model turn. So a quiet document
-// costs nothing, and a comment is seen within one interval of being written.
-// Nail's decision, 2026-09-07.
-//
-// Nothing here is a watcher. The call ends: on the first window with activity
-// in it, at its deadline, on a failed poll, or on the signal that ends the
-// session. It keeps no session state and writes no file of its own, and the
-// cursor it hands back is the only thing that carries to the next call. The one
-// file a poll can replace is the saved OAuth token, which the session refreshes
-// as it does for every other command: that is the credential, not anything the
-// wait learned.
-//
-// And nothing here judges. A window is what Fetch narrowed and Threads joined,
-// gdoc's own replies included. Whether a thread is work, and whether a window
-// that is only receipts is worth a word, is the skill's, reading the same facts
-// the one-shot listing prints.
+// This file is the wait: the poll closure, the options one wait needs, the
+// facts it comes back with, and the loop itself. doc.go holds why the loop
+// lives here rather than in the skill, and what each of its four endings means.
 package comments
 
 import (
