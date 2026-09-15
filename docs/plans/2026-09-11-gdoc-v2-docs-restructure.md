@@ -551,14 +551,14 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/publish/doc.go`
 - Modify: `go/internal/publish/publish.go` (demote), `go/internal/drive/drive.go`, `go/internal/house/house.go`, `go/internal/cover/cover.go` (extend in place)
 
-- [ ] `publish`, from 2307–2394: the create-only policy, not knowing never resolves to keeping the document, the three failure shapes, `rolled_back` as `*bool`, three read-backs, `title` twice, the re-read rule is publish's own, one render function for `build` and `publish`
-- [ ] `drive`: the trash is believed only on its confirming read, and its two callers
-- [ ] `house`, from 2427–2785: the style is a file and embedded, `--house`, points stay points, a highlight is a name, the master is provenance; "a house-style test states its value as a literal" points at CLAUDE.md's invariant
-- [ ] `cover`: the keys, no inferred title and `MissingTitle`'s candidate, the two defaults, classification validated, the `gdoc:` key skipped
-- [ ] name the pinning tests
-- [ ] tick list in the commit body, per package
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): the package comments of publish, drive, house and cover"`
+- [x] `publish`, from 2307–2394: the create-only policy, not knowing never resolves to keeping the document, the three failure shapes, `rolled_back` as `*bool`, three read-backs, `title` twice, the re-read rule is publish's own, one render function for `build` and `publish`
+- [x] `drive`: the trash is believed only on its confirming read, and its two callers
+- [x] `house`, from 2427–2785: the style is a file and embedded, `--house`, points stay points, a highlight is a name, the master is provenance; "a house-style test states its value as a literal" points at CLAUDE.md's invariant
+- [x] `cover`: the keys, no inferred title and `MissingTitle`'s candidate, the two defaults, classification validated, the `gdoc:` key skipped
+- [x] name the pinning tests
+- [x] tick list in the commit body, per package
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): the package comments of publish, drive, house and cover"`
 
 ### Task 16: `internal/render/doc.go`
 
