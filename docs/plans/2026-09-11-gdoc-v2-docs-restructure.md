@@ -117,10 +117,12 @@ its destination in the tick list of the task that carries it.
 
 ### Facts about the tree
 
-- Package comments today: `cmd/gdoc` has none. `boundary` and `internal/live`
+- Package comments today: ⚠️ two of the four claims below were measured wrong
+  and Task 1 corrected them. `cmd/gdoc` carries one, on `main.go`, opening
+  "Command gdoc". `internal/render` carries one, on `xml.go`, not two.
+  `boundary` and `internal/live`
   carry theirs on a **test file** (`boundary_test.go`, `live_test.go`), and
-  neither has a non-test file. `internal/render` has two, on `render.go` and
-  one other file. Every other package has exactly one, on its main file
+  neither has a non-test file. Every other package has exactly one, on its main file
   (`policy.go`, `survey.go`, `schema.go`, `text.go`, `compare.go`,
   `session.go`, and so on). `internal/auth/loopback` is a package under a
   package. The convention this plan sets: the package comment lives in
@@ -320,12 +322,28 @@ when".
 **Files:**
 - Create: `go/boundary/docs_test.go`
 
-- [ ] write `TestCLAUDEmdIsUnderTheCeiling` with `claudeCeiling = 3311` and the comment that Task 24 lowers it to 300
-- [ ] write `TestEveryPackageHasExactlyOnePackageComment` with `WalkDir`, `go/parser` over every `.go` file including tests, `known = []string{"cmd/gdoc", "boundary", "internal/live", "internal/render"}`, failing on a package off the list with other than one comment and on a listed package that already has exactly one
-- [ ] write `TestTheTaskMapNamesFilesThatExist` parsing the table under `## If you touch`; a missing heading fails; `t.Skip` naming Task 24
-- [ ] watch guard 2 fail with `known` emptied, then restore the list; note the four failure messages in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "test(v2): three guards over the docs' shape"`
+- [x] write `TestCLAUDEmdIsUnderTheCeiling` with `claudeCeiling = 3311` and the comment that Task 24 lowers it to 300
+- [x] write `TestEveryPackageHasExactlyOnePackageComment` with `WalkDir`, `go/parser` over every `.go` file including tests, `known` naming the packages that fail today, failing on a package off the list with other than one comment and on a listed package that already holds the rule
+- [x] write `TestTheTaskMapNamesFilesThatExist` parsing the table under `## If you touch`; a missing heading fails; `t.Skip` naming Task 24
+- [x] watch guard 2 fail with `known` emptied, then restore the list; note the failure messages in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "test(v2): three guards over the docs' shape"`
+
+⚠️ `known` holds two names, not four. The plan's discovery facts are wrong on
+two packages, measured 2026-09-15: `cmd/gdoc` carries one package comment, on
+`main.go`, opening "Command gdoc", and `internal/render` carries one, on
+`xml.go`, not two. Both already hold the rule, so listing either would fail the
+test on its own second assertion. `known` is `boundary` and `internal/live`,
+the two packages whose only files are tests, so their package comment sits
+where `go doc` does not read it. Tasks 6 and 19 clear them.
+
+⚠️ The rule the guard asks is "exactly one package comment, in a file that is
+not a test". A package comment is a Doc comment on the package clause that
+opens `Package <name>` or, for `main`, `Command `. Counting every file whose
+`Doc` is set, which is what the plan's Technical Details says, would refuse the
+repo's own convention: most files here carry a paragraph above the package
+clause saying what that file is for, so nine packages off `known` would fail
+from the first commit.
 
 ### Task 2: MEASURED.md, and the DECISIONS register
 
@@ -361,13 +379,13 @@ when".
 
 **Files:**
 - Create: `go/cmd/gdoc/doc.go`
-- Modify: `go/boundary/docs_test.go` (delete `cmd/gdoc` from `known`)
+- Modify: `go/cmd/gdoc/main.go` (demote its package comment)
 
 - [ ] move CLAUDE.md 86–141: the envelope, `auth status` fields, `auth login` to stderr, no prompts and no stdin, `--help` is `ok: false`, panic recovery, `GDOC_CONFIG_DIR`
 - [ ] move the strict argument parsing rule from 643–768, the `os/signal` rule from 1758–1854, and the "note is read again just before it is written" rule (`freshNote`, `notePath`) from 1941–2306
 - [ ] a table of the twelve commands, one line each, pointing at the package that does the work
 - [ ] name the pinning tests: `TestOnlyTheWaitTrapsTheSignal`, the `--help`, panic and argument tests
-- [ ] delete `cmd/gdoc` from guard 2's `known`
+- [ ] `cmd/gdoc` is not on guard 2's `known` (it already holds the rule, see Task 1); confirm it still passes after the demotion
 - [ ] tick list in the commit body
 - [ ] `make test`, `make vet` green
 - [ ] `git commit -m "docs(v2): cmd/gdoc's package comment"`
@@ -531,10 +549,10 @@ when".
 
 **Files:**
 - Create: `go/internal/render/doc.go`
-- Modify: `go/internal/render/render.go` and the second file carrying a package comment (demote both), `go/boundary/docs_test.go` (delete `internal/render` from `known`)
+- Modify: `go/internal/render/xml.go` (demote; it is the one file carrying the package comment, not `render.go`)
 
 - [ ] from 2427–2785: nothing concatenated into XML, properties in schema order with the three order tests, every list level states `w:start`, paragraph marks carry their size, `placeholder` and the three cover rules, the contents list is a Word field, no network
-- [ ] the package has exactly one package comment; delete `internal/render` from `known`
+- [ ] the package has exactly one package comment; `internal/render` is not on guard 2's `known` (it already holds the rule, see Task 1)
 - [ ] name the pinning tests
 - [ ] tick list in the commit body
 - [ ] `make test`, `make vet` green
