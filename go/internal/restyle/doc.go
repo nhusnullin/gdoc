@@ -238,7 +238,8 @@
 // header is not something gdoc can read.
 // TestNothingWritesAFlagOrABorderTheHouseStyleDoesNotState is the pin. Not a
 // character of the author's text moves, and the threads, the pending
-// suggestions, the chips and the named ranges are what the read-back counts.
+// suggestions and the chips are what the read-back counts. Named ranges are
+// surveyed and not compared, for the reason the survey section above gives.
 // That the four request kinds preserve all of it was measured rather than
 // reasoned about: MEASURED.md "In-place styling preserves anchors and pending
 // suggestions", and which kinds land at all is MEASURED.md "Which styling

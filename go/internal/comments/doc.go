@@ -51,9 +51,9 @@
 //
 // The order is the same everywhere a poll is built: cmdComments' closure,
 // internal/restyle's survey, and internal/live's poller.
-// TestRestyleListsTheCommentsBeforeItReadsTheDocument in cmd/gdoc is what stops
-// a later edit swapping them there. TODO(test): no test pins the order in
-// cmdComments' own closure.
+// TestThePollReadsTheListingBeforeTheDocument pins cmdComments' own closure and
+// TestRestyleListsTheCommentsBeforeItReadsTheDocument pins the survey, both in
+// cmd/gdoc, so a later edit cannot swap them in either.
 //
 // # The cursor is opaque, and it dies with the session
 //

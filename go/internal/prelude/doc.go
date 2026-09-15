@@ -22,12 +22,14 @@
 //
 // # Two phases, two permissions, and neither can do the other's job
 //
-// Phase 1 proposes the prelude: insertText, insertTable, insertPageBreak and
-// deleteContentRange, in writeMode SUGGEST, on a document that was handed in and
-// granted nothing. That is exactly the shape internal/propose has sent every day
-// since it existed, so the phase needed no new guard permission for any of it,
-// and TestThePreludeNeedsNoGrantAtAll in internal/guard says that rather than a
-// comment.
+// Phase 1 proposes the prelude: insertText, insertTable, insertPageBreak,
+// deleteContentRange, updateParagraphStyle, updateTextStyle and
+// updateTableCellStyle, in writeMode SUGGEST, on a document that was handed in
+// and granted nothing. The four that touch text are exactly the shape
+// internal/propose has sent every day since it existed, and the three styling
+// kinds ride the same SUGGEST batch, so the phase needed no new guard
+// permission for any of it, and TestThePreludeNeedsNoGrantAtAll in
+// internal/guard says that rather than a comment.
 //
 // Phase 2 styles the body: the four styling kinds internal/restyle builds,
 // direct, on the same document granted LevelInPlace.
@@ -84,12 +86,13 @@
 // carries.
 //
 // The marker is written rather than suggested because createNamedRange is the
-// one request Docs refuses to apply as a suggestion, in its own words: MEASURED.md
-// "A named range over a suggested insertion" and the probe named there, which
-// sent one request kind per case and had nine of ten recorded as suggestions.
-// The same section is what says a named range over a pending insertion covers
-// exactly the proposed line, survives the accept with its id and range intact,
-// and vanishes with the reject.
+// one request Docs refuses to apply as a suggestion, in its own words. The probe
+// sent one request kind per case and had nine of ten recorded as suggestions,
+// and its ten-row table is in DECISIONS.md, "The house template reaches a
+// document as a suggestion, not as a direct edit". MEASURED.md "A named range
+// over a suggested insertion" is what says a named range over a pending
+// insertion covers exactly the proposed line, survives the accept with its id
+// and range intact, and vanishes with the reject.
 //
 // createParagraphBullets is the difference between the two levels, and it is one
 // rule read twice. At LevelInPlace it is refused, because the reference says the
@@ -245,9 +248,9 @@
 // caller carries two spans on purpose, and they must not be folded: the replaced
 // prelude carries a deletion id rather than an insertion one, so asked about the
 // wider span the read-back would report gdoc's own replaced words as text
-// somebody wrote. TestAFirstRunOccupiesTheSpanItProposed,
-// TestAReplaceRunOccupiesTheOldPreludeToo and TestAReplaceRunStylesNeitherPrelude
-// in cmd/gdoc are the pins.
+// somebody wrote. TestAFirstRunOccupiesTheSpanItProposed and
+// TestAReplaceRunOccupiesTheOldPreludeToo here, with
+// TestAReplaceRunStylesNeitherPrelude in cmd/gdoc, are the pins.
 //
 // # gdoc's own words state their look in full
 //
@@ -415,9 +418,9 @@
 // Manual is what the house file states and no request here sends, each with a
 // menu path: every column width and every row height of the front-matter tables.
 // updateTableColumnProperties and updateTableRowStyle were not among the kinds
-// MEASURED.md "A named range over a suggested insertion" records the probe
-// accepting as suggestions, and a request Docs refuses takes the whole batch
-// with it. The contents list is there too, and it is blocked rather than
+// DECISIONS.md, "The house template reaches a document as a suggestion, not as
+// a direct edit", records the probe accepting as suggestions, and a request
+// Docs refuses takes the whole batch with it. The contents list is there too, and it is blocked rather than
 // deferred: no Docs request makes one, which is BLOCKED-BY-API.md's.
 // TestTheContentsListIsAManualStep is the pin. The list is a fact and not a
 // verdict: it says what is left to do, never whether the document is finished.

@@ -45,9 +45,10 @@
 // skipped content for deletion along with them, and all three read-backs would
 // still pass over it: the inline check reads text runs, so the footnote it just
 // proposed deleting is invisible to it. Such a quote comes back as a refusal
-// naming what it crossed, not as "not found". withdraw.Span refuses two spans
-// with somebody else's words between them, which is this rule on the other
-// side. TestFindSpanRefusesAQuoteThatRunsAcrossAFootnoteMark and
+// naming what it crossed, not as "not found". prelude's Decide refuses a marker
+// broken into two spans with the document's own words between them, which is
+// this rule on the other side:
+// TestAMarkerBrokenAcrossTheAuthorsTextIsRefused. TestFindSpanRefusesAQuoteThatRunsAcrossAFootnoteMark and
 // TestAQuoteCrossingAChipIsRefused are the pins, and the second says in its own
 // words that the rule has to hold for the reason rather than by luck.
 //

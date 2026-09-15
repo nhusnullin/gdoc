@@ -136,8 +136,8 @@ func Carries(d *docs.Document, tabID, want string) bool {
 // is contiguous here and is not contiguous in the document. A match spanning
 // that hole gives a range longer than the words in it, and the
 // deleteContentRange built from it marks the skipped content for deletion too.
-// withdraw.Span refuses two spans with somebody else's words between them for
-// the same reason; this is that rule on this side.
+// prelude's Decide refuses a marker broken into two spans with the document's
+// own words between them for the same reason; this is that rule on this side.
 func (p indexed) matches(tabID, quoted string) (out []docs.Range, crossed int) {
 	if quoted == "" {
 		return nil, 0

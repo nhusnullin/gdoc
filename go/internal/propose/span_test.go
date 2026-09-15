@@ -109,8 +109,9 @@ func TestCarriesReadsThePreviewByWordsRatherThanByIndex(t *testing.T) {
 // what it skipped, so "reviewed annually" either side of a footnote mark reads
 // as one string here and is two spans in the document. A range built across it
 // is longer than the words in it, and the deleteContentRange marks the footnote
-// mark for deletion along with them. withdraw.Span refuses two spans with
-// somebody else's content between them for the same reason.
+// mark for deletion along with them. prelude's Decide refuses a marker broken
+// into two spans with the document's own content between them for the same
+// reason.
 func TestFindSpanRefusesAQuoteThatRunsAcrossAFootnoteMark(t *testing.T) {
 	_, err := FindSpan(document(t, "footnote.json"), "reviewed annually")
 	if err == nil {
