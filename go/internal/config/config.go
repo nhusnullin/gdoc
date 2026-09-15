@@ -1,7 +1,7 @@
-// Package config decides where gdoc's per-user files live. v1's macOS path
-// (~/.config/gdoc-agent) is preserved on purpose; %AppData%\gdoc-agent on
-// Windows. GDOC_CONFIG_DIR overrides both, which is also what the test suite
-// uses so tests never touch the real config.
+// Package config decides where gdoc's per-user files live:
+// ~/.config/gdoc-agent on macOS, %AppData%\gdoc-agent on Windows.
+// GDOC_CONFIG_DIR overrides both, which is also what the test suite uses so
+// tests never touch the real config.
 package config
 
 import (
@@ -17,9 +17,8 @@ const dirName = "gdoc-agent"
 // three values the environment supplies.
 //
 // It exists so dirFor can be a pure function of the case it is handed, which
-// is how the Windows branch is checked on a Mac. v1 does the same with
-// resolve_auth_mode, for the same reason: a branch no test can reach is a
-// branch nobody has checked, and this one decides where the OAuth token is
+// is how the Windows branch is checked on a Mac. A branch no test can reach is
+// a branch nobody has checked, and this one decides where the OAuth token is
 // written.
 type outside struct {
 	goos      string
@@ -61,8 +60,9 @@ func Dir() (string, error) {
 	})
 }
 
-// TokenPath is where the OAuth token file sits. The name is v1's, so a login
-// through either tool signs the other one in.
+// TokenPath is where the OAuth token file sits. The file is oauth-token.json
+// in the config dir, in the google-auth "authorized user" shape internal/auth
+// reads and writes.
 func TokenPath() (string, error) {
 	d, err := Dir()
 	if err != nil {

@@ -24,8 +24,9 @@ var numberingWords = []string{"auto", "none", "true", "false"}
 // matter from, so somebody writing this file writes it beside a note they have
 // already written, and one value must not have two names.
 //
-// heading_numbering is a raw message because JSON has a boolean and v1's notes
-// have words. Both are read, and anything else is refused naming the key.
+// heading_numbering is a raw message because JSON has a boolean and a note's
+// front matter carries the words "auto" and "none". Both are read, and
+// anything else is refused naming the key.
 type fieldsFile struct {
 	Title             string          `json:"title"`
 	AltTitle          string          `json:"alt_title"`
@@ -145,8 +146,9 @@ func value(written string) string {
 	return longDate(strings.TrimSpace(written))
 }
 
-// fieldsNumbering reads heading_numbering as a boolean or as one of v1's words.
-// An absent key is the note reader's answer to an absent key, which is on.
+// fieldsNumbering reads heading_numbering as a boolean or as one of the words
+// a note's front matter carries. An absent key is the note reader's answer to
+// an absent key, which is on.
 func fieldsNumbering(raw json.RawMessage) (bool, error) {
 	if len(raw) == 0 || string(bytes.TrimSpace(raw)) == "null" {
 		return numbering("")

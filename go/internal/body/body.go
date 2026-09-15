@@ -563,8 +563,8 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 	if skipped {
 		// The number carries a zero, because it is built from every counter
 		// down to this heading's own level and a level nothing reached is
-		// still 0. The number itself is v1's and stays as it is, so what the
-		// note gets is the line to look at.
+		// still 0. Changing that number is Nail's decision, so the number
+		// stays as it is and what the note gets is the line to look at.
 		r.warn("line %d: this heading skips a level, so its number reads %q",
 			r.line(heading), prefix)
 	}

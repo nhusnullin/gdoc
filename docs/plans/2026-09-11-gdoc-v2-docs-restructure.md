@@ -620,10 +620,10 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Modify: every non-test file under `go/` that `grep -rnE '\bv1\b|gdoc/[a-z_]+\.py|tests/test_|docs/superpowers|spike/render' go --include='*.go' --exclude='*_test.go'` names
 
-- [ ] list every hit; each is rewritten to say the thing it means (the token shape, the marker, the ported rule, the measured value) or deleted where it was only history
-- [ ] the grep above returns nothing except an API path such as `drive/v3`; the exceptions are listed in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): production comments name things, not v1"`
+- [x] list every hit; each is rewritten to say the thing it means (the token shape, the marker, the ported rule, the measured value) or deleted where it was only history
+- [x] the grep above returns nothing except an API path such as `drive/v3`; the exceptions are listed in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): production comments name things, not v1"`
 
 ### Task 21: "v1" leaves the test files, and the doc.go citations follow
 

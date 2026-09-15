@@ -1,6 +1,6 @@
 package body
 
-// A pipe table, built with v1's recipe.
+// A pipe table, and why every line of it is direct formatting.
 //
 // The house table styles are functionally empty: they carry no borders and no
 // fill, and every visible line and shade in the master is direct formatting in

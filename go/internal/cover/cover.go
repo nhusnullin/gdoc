@@ -109,8 +109,8 @@ var Classifications = map[string]string{
 // DefaultVersion is what a note that states no version publishes as.
 const DefaultVersion = "1.0"
 
-// defaultDateLayout is the month a note that states no date publishes as,
-// which is v1's "%B %Y".
+// defaultDateLayout is the month a note that states no date publishes as: the
+// month's name and the year.
 const defaultDateLayout = "January 2006"
 
 // now is a variable so a test can freeze the month.
@@ -326,9 +326,9 @@ func Read(src []byte) (Fields, []byte, error) {
 		f.Version = DefaultVersion
 	}
 	if f.Date == "" {
-		// v1's rule. Left empty, the cover line keeps the template's own
-		// highlighted "May 2025", so a note that states no date published a
-		// page one dated to whenever the master was captured.
+		// Left empty, the cover line keeps the template's own highlighted
+		// "May 2025", so a note that states no date publishes a page one dated
+		// to whenever the master was captured.
 		f.Date = now().Format(defaultDateLayout)
 	}
 	return f, []byte(body), nil
@@ -371,9 +371,9 @@ func names() []string {
 	return out
 }
 
-// readNumbering reads heading_numbering. v1 wrote "auto" and "none"; a boolean
-// is the shape a person guesses at, so both are read and anything else is
-// refused naming what was written.
+// readNumbering reads heading_numbering. The written words are "auto" and
+// "none", and a boolean is the shape a person guesses at, so both are read and
+// anything else is refused naming what was written.
 func readNumbering(fields map[string]ast.Node) (bool, error) {
 	return numbering(text(fields["heading_numbering"]))
 }

@@ -352,9 +352,8 @@ type Border struct {
 // Row is one table row and the height it is at least. Repeat names the note's
 // own list this row is a prototype for: "revisions" renders the row once per
 // revision the note declares, and a note with none leaves the template's row
-// where it is, which is v1's rule. Without is the other half: the blank row a
-// person would fill in by hand is left out once the note declares the rows
-// itself.
+// where it is. Without is the other half: the blank row a person would fill in
+// by hand is left out once the note declares the rows itself.
 type Row struct {
 	MinHeightPt float64 `yaml:"min_height_pt"`
 	Repeat      string  `yaml:"repeat"`
@@ -384,8 +383,8 @@ type Cell struct {
 // it is shaded only when the document declares that class. The master was
 // captured with Internal marked, so writing the file's fills verbatim marked
 // every document Internal whatever the note said, which is worse than leaving
-// the row blank. It is v1's mark_classification: clear every description cell,
-// then shade the chosen one.
+// the row blank. So the rule is: clear every description cell, then shade the
+// chosen one.
 //
 // The rule is here rather than in a writer because the house style is written
 // twice, once as a docx by internal/render and once as Docs requests by
