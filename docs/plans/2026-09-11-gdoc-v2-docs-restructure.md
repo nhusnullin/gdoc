@@ -536,14 +536,14 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/probe/doc.go`, `go/internal/withdraw/doc.go`
 - Modify: `go/internal/probe/probe.go`, `go/internal/withdraw/withdraw.go` (demote), `go/internal/reply/reply.go`, `go/internal/plaintext/plaintext.go` (extend in place; both are short)
 
-- [ ] `probe`: runs every time and nothing caches, its own document and never the reviewed one, every failure path trashes and names the document, the first production caller of `AllowCreateIn`
-- [ ] `withdraw`: a `rejectSuggestion` on gdoc's own id (DECISIONS 2026-09-07), provenance is the permission and `AllowReject` holds it, gone only when both facts hold, "usually" and the decoded-field gate, the 🤖 comment stays
-- [ ] `reply`: the mark required, asked behind the mark, the thread read back on a surviving id
-- [ ] `plaintext`: the 🤖 prefix as the only record of authorship, no markdown, the two writers own the mark differently; and from 3235–3245, identity is never a gate: the marker decides, never the account
-- [ ] name the pinning tests
-- [ ] tick list in the commit body, per package
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): the package comments of probe, reply, withdraw and plaintext"`
+- [x] `probe`: runs every time and nothing caches, its own document and never the reviewed one, every failure path trashes and names the document, the first production caller of `AllowCreateIn`
+- [x] `withdraw`: a `rejectSuggestion` on gdoc's own id (DECISIONS 2026-09-07), provenance is the permission and `AllowReject` holds it, gone only when both facts hold, "usually" and the decoded-field gate, the 🤖 comment stays
+- [x] `reply`: the mark required, asked behind the mark, the thread read back on a surviving id
+- [x] `plaintext`: the 🤖 prefix as the only record of authorship, no markdown, the two writers own the mark differently; and from 3235–3245, identity is never a gate: the marker decides, never the account
+- [x] name the pinning tests
+- [x] tick list in the commit body, per package
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): the package comments of probe, reply, withdraw and plaintext"`
 
 ### Task 15: `internal/publish/doc.go`, `drive`, `house`, `cover`
 

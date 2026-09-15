@@ -1,17 +1,80 @@
 // Package reply posts one reply into one comment thread, and reads the thread
 // back to see whether it is there.
 //
-// Two rules live here, and both are about what Docs does with text rather than
-// about what gdoc means by it. A thread renders what it is given literally, so
-// a reply carrying markdown arrives as asterisks and backticks somebody has to
-// strip by hand: v1 refused that in gdoc/reply.py and v2 refuses it here. And
-// every reply gdoc writes opens with the robot, which is how a later run tells
-// gdoc's own words from Nail's without asking who the credential belongs to.
-//
 // Nothing here decides whether a thread needs a reply, or what to say in it.
-// The body arrives written, is checked for shape alone, and is sent verbatim:
-// v1 appended its own marker, and v2 does not, because the mark is the prefix
-// the skill already wrote.
+// The body arrives written, in a file the skill wrote, is checked for shape
+// alone, and is sent verbatim. Nothing is appended to it either: the mark is
+// the prefix the skill has already written.
+//
+// This comment holds why the package refuses what it refuses. What it reports
+// is in the code beside it.
+//
+// # The mark is required, and this writer does not add it
+//
+// Check refuses a body that does not open with exactly the robot and one space.
+// That is the opposite of the rule Proposal.Check holds, which refuses a reason
+// that already carries the mark, because propose writes the comment as the
+// prefix plus the reason. A caller has to know which writer it is talking to:
+// an agent following this sentence when it writes proposals.json has its run
+// refused before anything leaves the machine. internal/plaintext holds the mark
+// itself and what it is for. TestCheckAcceptsAPlainRobotReply and
+// TestCheckRefusesEachBadShapeByName are the pins, with
+// TestReplyRefusesABodyWithoutTheRobot in cmd/gdoc.
+//
+// An empty body is said to be empty rather than said to be missing the prefix,
+// because that is the sentence somebody can act on, and a body that is empty
+// behind the prefix is refused too: a bare signature is a reply that says
+// nothing and every read-back would hold over it.
+//
+// # The markdown rule is asked behind the mark, never in front of it
+//
+// A Docs thread renders markdown literally, so asterisks and backticks arrive
+// as typed and somebody strips them by hand. The heading arm of that rule is
+// anchored to a line start, so a robot sitting in front of a "# " moves the
+// hash off offset zero and the arm cannot fire: asked of the whole body, a
+// heading on the first line passes while the same words on the second line are
+// refused, which is one rule firing or not depending on where the author put
+// them. So the prefix is trimmed first, which is exact because the line above
+// has already required the body to open with exactly it, and the prefix carries
+// no markdown of its own, so the trim can only bring a line start into reach.
+// Nothing that was refused before starts being accepted, and a heading on the
+// first line, which used to pass, is now refused. Proposal.Check asks the same
+// rule of the reason alone, for the same reason.
+// TestPostRefusesMarkdownBeforeAnythingIsSent is the pin, with
+// TestReplyRefusesMarkdownBeforeAnyRequest in cmd/gdoc.
+//
+// # The check runs before the write, and nothing after the write can fail
+//
+// A body Docs would mangle never reaches the document. After the write
+// everything that goes wrong is a fact about a reply that already exists, so it
+// is reported rather than raised: a caller told the run failed is a caller that
+// posts the reply a second time. Warnings carry the reason Verified is false.
+// TestPostSendsTheBodyVerbatimToTheRepliesURL,
+// TestPostCarriesAGuardRefusalToTheCaller,
+// TestAReadBackThatFailedIsAWarningRatherThanAnError and
+// TestTheGuardRefusesAReplyOnADocumentNobodyNamed are the pins.
+//
+// # The thread is read back on an id that survived
+//
+// Verified is the listing carrying the reply under the id Drive gave, with the
+// words that were sent. The text is compared as well as the id, because an id
+// Drive echoed back is Drive agreeing with itself and the words are what Nail
+// will read. TestPostReportsTheReplyAndVerifiesItFromTheThread,
+// TestPostReportsTheReplyIDWhenTheThreadDoesNotShowIt and
+// TestPostDoesNotVerifyAReplyWhoseTextCameBackDifferent are the pins.
+//
+// A write whose answer could not be read is not a write that never happened, so
+// whatever did decode is kept and the read-back is made on it. encoding/json
+// saves the first type error and keeps decoding, so a 200 whose createdTime came
+// back as a number still names the reply, and throwing that id away would report
+// a reply Drive named in full as one that could not be looked for. With no id at
+// all the run says to check the thread before posting again, which is the most
+// it can honestly say. TestPostKeepsWhatAFailedAnswerStillCarried,
+// TestPostSaysSoWhenTheAnswerCouldNotBeRead and
+// TestPostSaysSoWhenDriveAnswersWithNoReplyID are the pins. The rule itself is
+// internal/gapi's, asked here by behaviour rather than by importing that
+// package: naming a Session interface is what keeps net/http out of this room,
+// and an imported sentinel would bring it back through the side door.
 package reply
 
 import (

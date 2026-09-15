@@ -1,40 +1,7 @@
-// Package withdraw retracts one of gdoc's own pending suggestions, and proves
-// it is gone before saying so.
-//
-// The permission is provenance, and nothing else. Nothing in a suggestion id
-// says who wrote it, and the Docs API will happily reject anybody's, so the
-// only record gdoc has of its own work is the proposals[] list propose wrote
-// into the note's front matter. A suggestion missing from that list is somebody
-// else's, and this package refuses it before it reads the document.
-//
-// The write is a rejectSuggestion naming the id, in SUGGEST mode like every
-// other write in this milestone. Nail's decision, 2026-09-07, and it was
-// measured before it was taken (DECISIONS.md, same date): a propose is a
-// replace, one suggestion id over a suggested deletion and a suggested
-// insertion, and a deleteContentRange over the insertion retracts only that
-// half. The quoted words stay suggested-deleted under the same id, Docs answers
-// updatedSummarySuggestionIds rather than deletedSuggestionIds, and nothing
-// else in the ordinary request kinds takes the other half back. rejectSuggestion
-// does, in one request: the document reads as it did before the proposal, the
-// answer names the id in suggestionResponses[].rejectedSuggestionIds, and the 🤖
-// comment survives, still anchored by id.
-//
-// The guard carries a rejectSuggestion only for an id the command granted with
-// AllowReject, seeded from the same note Mine reads. This package never touches
-// the policy: it asks the session to send, and the guard says whether that id
-// is one of gdoc's own in this run. Rejecting gdoc's own unaccepted proposal is
-// not resolving Nail's decision, because there was no decision yet; the rule
-// that gdoc never accepts, rejects or deletes anyone else's suggestion holds,
-// and the guard is what holds it.
-//
-// Two facts have to hold before the retraction is Verified: the answer names
-// the suggestion in rejectedSuggestionIds, and a fresh read carries no run under
-// that id on either side. The first is Docs agreeing with itself, and the second
-// is the only route that can say the suggestion has actually left the document.
-//
-// Nothing here decides whether a proposal should be withdrawn. The id arrives
-// chosen, and this package checks that it is gdoc's, rejects it, and reports
-// what it saw.
+// This file is the withdrawal itself: Mine, the read that asks whether the
+// suggestion is still pending, the one reject Batch builds, the read-back, and
+// Forget, which takes the entry out of the note. doc.go holds the package
+// comment.
 package withdraw
 
 import (
