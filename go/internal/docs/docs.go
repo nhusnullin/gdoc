@@ -1,13 +1,7 @@
-// Package docs is the Docs read and the tree it comes back as. One request
-// carries three views: the document's content with every tab in it, the pending
-// suggestions with their ids, and the character ranges the comment threads are
-// anchored to. read, suggestions and the range half of comments all stand on
-// that one tree, so there is one read per command and one shape to test.
-//
-// Everything here is read-only, and Parse takes bytes, so the fixtures under
-// testdata/ run the same decoder the wire feeds. Nothing in this package
-// decides anything: it reports what Google answered and leaves every judgement
-// to the skill reading the JSON.
+// This file is the tree itself: the shapes a Docs read comes back as, the one
+// rule that says whether a range names a position, and the two URLs that ask
+// for it. walk.go decodes the raw answer into these shapes, and doc.go holds
+// the package comment.
 package docs
 
 import (

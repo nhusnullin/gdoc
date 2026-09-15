@@ -431,12 +431,12 @@ opening "Command " or "Package <name>". Left as it is.
 - Create: `go/internal/docs/doc.go`
 - Modify: `go/internal/docs/docs.go` (demote)
 
-- [ ] move from 643–768 the decoder's rules: one Docs read with three views, Drive is the source of threads and Docs of ranges, the measured `commentAnchors` shape, `Places` as the one rule with its two forms, the read ceiling, footnotes flattened
-- [ ] move 867–977: the `default` arm reports, every member carries its suggestion ids, the fixture built from the reference with the live check outstanding (MEASURED.md "recheck when"), named ranges keyed by id, `Range.Segment`, `NamedRangesURL`
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): docs' package comment"`
+- [x] move from 643–768 the decoder's rules: one Docs read with three views, Drive is the source of threads and Docs of ranges, the measured `commentAnchors` shape, `Places` as the one rule with its two forms, the read ceiling, footnotes flattened
+- [x] move 867–977: the `default` arm reports, every member carries its suggestion ids, the fixture built from the reference with the live check outstanding (MEASURED.md "recheck when"), named ranges keyed by id, `Range.Segment`, `NamedRangesURL`
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): docs' package comment"`
 
 ### Task 8: `internal/view/doc.go`
 
