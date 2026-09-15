@@ -1,19 +1,9 @@
-// Package body renders a note's markdown into the house style's own idioms.
-//
-// goldmark is used only as a markdown parser, never as a docx writer, and the
-// OOXML is written here. That distinction is the one v1 draws about pandoc,
-// and for the same reason: a general-purpose docx writer emits its own styles,
-// which the house style does not define, and a reader that meets a dangling
-// w:pStyle discards the whole w:pPr around it. Every bullet and every number
-// then silently disappears.
-//
-// Every size, colour, indent and alignment comes from house.Config. What is a
-// constant in this package is a value the house file does not state, and each
-// one carries the reason it is what it is.
-//
-// Nothing here reaches the network and nothing here runs a program. A picture
-// is read from the note's own directory or decoded out of the markdown, and an
-// http address is refused naming the line.
+// This file is the walk itself: the renderer's state, the block dispatch, the
+// warnings each block raises, and the Result the caller reads. build.go holds
+// the paragraph, heading, list item and caption builders, inline.go turns a
+// paragraph's children into runs, table.go writes a pipe table, image.go embeds
+// a picture, numbering.go builds a heading's number, mark.go is the
+// ==highlight== extension, and doc.go holds the package comment.
 package body
 
 import (
@@ -138,9 +128,9 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 		Counts: r.counts, Sources: r.sources}, nil
 }
 
-// parse is goldmark, configured to the extension set v1 asks pandoc for: pipe
-// tables, ==mark==, strikeout and task lists, plus the smart punctuation
-// pandoc's markdown format enables by default.
+// parse is goldmark, configured to the extension set the previous generator
+// asked pandoc for: pipe tables, ==mark==, strikeout and task lists, plus the
+// smart punctuation pandoc's markdown format enables by default.
 func parse() goldmark.Markdown {
 	return goldmark.New(
 		goldmark.WithExtensions(

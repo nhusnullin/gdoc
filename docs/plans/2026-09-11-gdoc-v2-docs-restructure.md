@@ -579,12 +579,12 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/body/doc.go`
 - Modify: `go/internal/body/body.go` (demote)
 
-- [ ] from 2427–2785: one marker per item and the pending marker, what the walker refuses with a line, a picture at `http` refused, footnotes on so they can be refused, the email autolink, the numbering warnings and the heading zero, `Sources`
-- [ ] the pandoc mentions in this package's comments stay where they explain goldmark's extension set; each is reworded to say "the previous parser" only if it names a tool the reader cannot see
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): body's package comment"`
+- [x] from 2427–2785: one marker per item and the pending marker, what the walker refuses with a line, a picture at `http` refused, footnotes on so they can be refused, the email autolink, the numbering warnings and the heading zero, `Sources`
+- [x] the pandoc mentions in this package's comments stay where they explain goldmark's extension set; each is reworded to say "the previous parser" only if it names a tool the reader cannot see
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): body's package comment"`
 
 ### Task 18: `internal/drift/doc.go`
 
