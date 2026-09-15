@@ -4,6 +4,10 @@ Things gdoc cannot do because Google offers no way to do them. Kept separately
 from [DECISIONS.md](DECISIONS.md) on purpose: a decision is a choice, and none of
 these are chosen. They are the shape of the wall.
 
+[MEASURED.md](MEASURED.md) is this file's sibling, and the two split one
+question. This file holds what Google refuses. That one holds what Google
+allows, and what shape the answer comes back in. Neither holds a choice.
+
 Every entry carries the verbatim refusal, so a future reader can retest rather
 than re-argue. All measured 2026-08-29 against the live APIs.
 

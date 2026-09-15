@@ -351,14 +351,14 @@ from the first commit.
 - Create: `docs/v2/MEASURED.md`
 - Modify: `docs/v2/DECISIONS.md`, `docs/v2/BLOCKED-BY-API.md`
 
-- [ ] create MEASURED.md with the head paragraph and the four sections named in Technical Details, moving entries 29, 36, 38, 39 with their text intact; entry 33's live check becomes one "recheck when" line
-- [ ] reorder DECISIONS.md so every entry is in date order
-- [ ] add the OAuth client decision from CLAUDE.md 3079–3120 as an entry dated 2026-08-18 (the secret stays in git, the client stays Internal, making the repo public means a fresh client first)
-- [ ] write the register table at the top with every status stated: 3 superseded 2026-08-29 (entry 20); 8 rejected; 9 holds; 16 superseded 2026-09-09 (entry 35, the checklist is not built); 17 superseded 2026-09-11 (entry 40); 20 holds, with its "no named ranges" bullet noted as superseded 2026-09-10 (entry 37); 26 holds, widened 2026-09-09 (entry 34); 29, 36, 38, 39 MEASURED.md; every remaining entry `holds`, each listed by number in the commit body
-- [ ] add the rule under the register: an entry is never edited after this except its status line; a new decision is a new entry and a new row
-- [ ] BLOCKED-BY-API.md's head names MEASURED.md as its sibling
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): MEASURED.md, and a register over DECISIONS.md"`
+- [x] create MEASURED.md with the head paragraph and the four sections named in Technical Details, moving entries 29, 36, 38, 39 with their text intact; entry 33's live check becomes one "recheck when" line
+- [x] reorder DECISIONS.md so every entry is in date order
+- [x] add the OAuth client decision from CLAUDE.md 3079–3120 as an entry dated 2026-08-18 (the secret stays in git, the client stays Internal, making the repo public means a fresh client first)
+- [x] write the register table at the top with every status stated: 3 superseded 2026-08-29 (entry 20); 8 rejected; 9 holds; 16 superseded 2026-09-09 (entry 35, the checklist is not built); 17 superseded 2026-09-11 (entry 40); 20 holds, with its "no named ranges" bullet noted as superseded 2026-09-10 (entry 37); 26 holds, widened 2026-09-09 (entry 34); 29, 36, 38, 39 MEASURED.md; every remaining entry `holds`, each listed by number in the commit body
+- [x] add the rule under the register: an entry is never edited after this except its status line; a new decision is a new entry and a new row
+- [x] BLOCKED-BY-API.md's head names MEASURED.md as its sibling
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): MEASURED.md, and a register over DECISIONS.md"`
 
 ### Task 3: `internal/guard/doc.go`
 
