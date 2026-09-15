@@ -56,26 +56,31 @@ func TestCLAUDEmdIsUnderTheCeiling(t *testing.T) {
 // made of is under one of the three.
 var docRoots = []string{"cmd/gdoc", "internal", "boundary"}
 
-// known lists the package directories expected to fail the one-comment rule
-// today, with the reason. It works in both directions, the way drift.Known and
+// known lists the package directories expected to fail the one-comment rule,
+// with the reason. It works in both directions, the way drift.Known and
 // TestEveryKnownDifferenceStillDiffers do: a package off this list that breaks
 // the rule fails, and a package on it that already holds the rule fails too, so
-// the task that fixes a package has to delete its row rather than leave a name
+// a task that fixes a package has to delete its row rather than leave a name
 // here that stopped meaning anything.
 //
-// The one entry left is a package whose only files are tests, so its package
-// comment sits where `go doc` does not look. Task 6 gave boundary a doc.go and
-// deleted its row; Task 19 gives internal/live one and deletes the last.
+// It is empty. Every package under the three roots carries exactly one package
+// comment, in a file that is not a test, so the second assertion has nothing to
+// check today. The map stays rather than the check being written as a plain
+// "every package holds the rule", because what it holds is a way to defer one
+// package with its reason written down, and the second assertion is what stops
+// a deferral outliving the work it was waiting for.
+//
+// The two packages that were listed were the ones whose only files are tests,
+// so their package comment sat where `go doc` does not look: boundary, which
+// Task 6 gave a doc.go, and internal/live, which Task 19 gave one.
 //
 // The docs restructure plan named four here, adding cmd/gdoc and internal/render
 // on the belief that cmd/gdoc carried no package comment and internal/render
 // carried two. Measured on 2026-09-15, neither is so: cmd/gdoc carries one, on
 // main.go, opening "Command gdoc", and internal/render carries one, on xml.go.
-// Both already hold the rule, so listing them would fail this test on its own
-// second assertion.
-var known = map[string]string{
-	"internal/live": "its package comment is on live_test.go, and go doc does not read test files",
-}
+// Both already held the rule, so listing them would have failed this test on
+// its own second assertion.
+var known = map[string]string{}
 
 // pkgComment reports whether a parsed file carries the package's own comment.
 //

@@ -605,15 +605,15 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/live/doc.go`
 - Modify: `go/internal/live/live_test.go` (demote), `go/boundary/docs_test.go` (delete `internal/live` from `known`), `go/internal/suggestions/suggestions.go`, `go/internal/gapi/session.go`, `go/internal/docx/docx.go` (extend in place)
 
-- [ ] `live`, from 2852–2933: the two variables and why two, what each test does, which copy and which create, `GDOC_LIVE_RECORD`, `TestTheLiveFixturesRenderWithNoNetwork`
-- [ ] demote `live_test.go`'s package comment; delete `internal/live` from `known`; `known` is now empty and the test's second assertion has nothing to check
-- [ ] `suggestions`: the `List`/`All`/`IDs` rule from 1855–1940
-- [ ] `gapi`: the "sent" rule from 1941–2306, the one place, with the three unmarked cases
-- [ ] `docx`: the witness's two limits and the no-answer on disagreement, from 643–768
-- [ ] name the pinning tests
-- [ ] tick list in the commit body, per package
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): live's package comment, and the small packages"`
+- [x] `live`, from 2852–2933: the two variables and why two, what each test does, which copy and which create, `GDOC_LIVE_RECORD`, `TestTheLiveFixturesRenderWithNoNetwork`
+- [x] demote `live_test.go`'s package comment; delete `internal/live` from `known`; `known` is now empty and the test's second assertion has nothing to check
+- [x] `suggestions`: the `List`/`All`/`IDs` rule from 1855–1940
+- [x] `gapi`: the "sent" rule from 1941–2306, the one place, with the three unmarked cases
+- [x] `docx`: the witness's two limits and the no-answer on disagreement, from 643–768
+- [x] name the pinning tests
+- [x] tick list in the commit body, per package
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): live's package comment, and the small packages"`
 
 ### Task 20: "v1" and the Python paths leave the production comments
 

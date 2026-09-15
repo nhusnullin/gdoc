@@ -11,6 +11,48 @@
 //
 // Read-only, on encoding/xml. SPEC.md's reason for etree is that encoding/xml
 // corrupts OOXML on the way back out, and nothing here writes OOXML.
+//
+// This comment holds why the package refuses what it refuses. What it reports
+// is in the code beside it.
+//
+// # The witness is a second read, not a field
+//
+// Asking whether a comment is still attached costs an export, which is why
+// --witness is a flag and not something every listing pays for. The three
+// answers are anchored, detached and unmatched, and every one of them is a fact
+// about the export rather than a judgement about the thread: what a detached
+// comment means, and whether it still needs an answer, is the skill's.
+// TestMatchGivesAnchoredDetachedAndUnmatched is the pin.
+//
+// An export that could not be read at all is every thread unmatched, on a
+// listing that still carries the threads, rather than a failed listing. The
+// caller warns and says so. TestMatchWithoutAnExportLeavesEveryThreadUnmatched
+// is the pin.
+//
+// # The witness has two limits, and both are worth stating
+//
+// It names a destroyed anchor and not a moved one. detached means
+// word/document.xml carries no commentRangeStart for the comment, so the text
+// it was written about has gone; text that was cut and pasted elsewhere is
+// still anchored and reads as untouched.
+//
+// And two exported comments that match one thread and disagree about being
+// anchored give no answer. The thread comes back unmatched rather than taking
+// the first. The join is on the comment's own words and its author's name,
+// because the docx carries no Drive comment id, and nothing orders the two
+// sides against each other: Drive's comments.list defines no ordering and
+// word/comments.xml is numbered by the export, so first-fit would hand one
+// thread id the other's witness. --since reaches it with one thread in view,
+// because the listing is narrowed to the cursor window and the export is not.
+// TestOneThreadWithTwoDisagreeingCandidatesIsUnmatched and
+// TestAnAmbiguousWitnessIsUnmatchedRatherThanGuessed are the pins, and
+// TestTwoThreadsWithTheSameWordsTakeTwoExportedComments is the case that still
+// answers: two comments that agree, or two threads with one exported comment
+// each, are joined rather than refused.
+//
+// Refusing to guess is the same answer this tool gives everywhere else it
+// cannot stand behind a fact. A witness pinned on the wrong id points the skill
+// at the wrong sentence.
 package docx
 
 import (
