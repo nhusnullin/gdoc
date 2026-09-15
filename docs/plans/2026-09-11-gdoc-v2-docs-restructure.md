@@ -566,12 +566,12 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/render/doc.go`
 - Modify: `go/internal/render/xml.go` (demote; it is the one file carrying the package comment, not `render.go`)
 
-- [ ] from 2427–2785: nothing concatenated into XML, properties in schema order with the three order tests, every list level states `w:start`, paragraph marks carry their size, `placeholder` and the three cover rules, the contents list is a Word field, no network
-- [ ] the package has exactly one package comment; `internal/render` is not on guard 2's `known` (it already holds the rule, see Task 1)
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): render's package comment"`
+- [x] from 2427–2785: nothing concatenated into XML, properties in schema order with the three order tests, every list level states `w:start`, paragraph marks carry their size, `placeholder` and the three cover rules, the contents list is a Word field, no network
+- [x] the package has exactly one package comment; `internal/render` is not on guard 2's `known` (it already holds the rule, see Task 1)
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): render's package comment"`
 
 ### Task 17: `internal/body/doc.go`
 
