@@ -1,67 +1,11 @@
-// Package prelude is the house template as Docs API requests: the cover, the
-// three front-matter tables and the legend, proposed into a document that
-// already exists.
-//
-// Two writers, one layout. internal/render writes this same template into a
-// docx, and this package writes it as requests. Both read house.Config and
-// neither holds a layout of its own, because a second copy of the layout is
-// two documents that drift, which is the failure v1 had once its surgery file
-// became the real template. A value added to house.yaml has to reach both
-// writers, and the shared rules live where the value does: a placeholder's
-// meaning is cover.Fields.Placeholder's, a classification cell's shading is
-// house.Cell.FillFor's, and a measurement, a colour and a field mask are
-// internal/docsreq's.
-//
-// Everything here is proposed, never written. The requests go out in
-// writeMode SUGGEST on a document that was handed in and granted nothing,
-// which is exactly what internal/propose sends every day, so this milestone
-// needs no new guard permission for any of it. Nail accepts the prelude in the
-// browser the way he accepts any suggestion, and rejecting it leaves the
-// document as it was.
-//
-// gdoc's own words state their look in full. Text inserted into a document
-// takes the look of the text it lands beside, so a cover line inserted in
-// front of somebody's indented, justified, bold first paragraph would arrive
-// wearing all of it. Every paragraph therefore states its named style, its
-// alignment, its spacing and its indents, and every run states its face, its
-// size, its weight and both of its colours. That is not the rule
-// internal/restyle follows, and the difference is whose words are being
-// styled: a restyle writes onto the author's own text, where a flag that
-// house.yaml never stated would clear emphasis somebody meant, while these are
-// gdoc's own lines and nobody else's emphasis can be in them.
-//
-// A table is inserted and then filled, which is more requests than the docx
-// writer needs and is the shape the Docs API has: insertTable makes a grid of
-// empty cells, so every word in it is an insertText afterwards and every fill,
-// padding and border is an updateTableCellStyle. table.go holds the index
-// accounting that goes with it, measured rather than assumed.
-//
-// Nothing here sends createParagraphBullets, because the house legend carries
-// no bullets: its lines are a bold word, a tab and a sentence, and the master's
-// own markup has no numbering on them. If a later block needs one, the reason
-// it may be sent here and is refused at LevelInPlace is the same either way.
-// createParagraphBullets removes the leading tabs that set a bullet's nesting
-// level, so at LevelInPlace it deletes text an author typed, while here it
-// would land on text gdoc itself proposed a moment earlier, where there are no
-// author tabs to remove. The 2026-09-10 probe measured it accepted as a
-// suggestion.
-//
-// A run marks what it proposed, with a named range called MarkerName, and that
-// marker is gdoc's whole memory of having been here: a restyle writes no file
-// beside the document and has no note to pair. marker.go holds the three shapes
-// a run can meet and what it does about each, and it is the one thing in this
-// package that reads the document rather than the house style.
-//
-// A list marker is the one look an inserted paragraph can inherit and this
-// package cannot state away: removing one needs deleteParagraphBullets, which
-// nothing here sends. A prelude proposed at the top of a document whose first
-// paragraph is a list item arrives bulleted.
-// docs/backlog/prelude-inherits-a-list-marker.md is the way out.
-//
-// Nothing here reaches the network, reads a file or decides anything. It is a
-// pure function of the house style and the cover's values, and what the
-// requests did is read back by the caller.
 package prelude
+
+// This file is the cover and the builder every block is written through: the
+// cursor that only moves forward, the look of one of gdoc's own runs, and
+// Result, what one prelude will send and where it will land. frontmatter.go and
+// table.go build the three tables and the legend, marker.go reads the marker a
+// run before this one left, readback.go reads the whole thing back out of the
+// document, and doc.go holds the package comment.
 
 import (
 	"fmt"

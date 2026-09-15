@@ -5,10 +5,10 @@ package prelude
 // Phase 1 proposes the house template and phase 2 styles the body, and this is
 // the question the first of those leaves behind: is what is in the document a
 // proposal, or is it text? Every character the prelude writes goes out in
-// writeMode SUGGEST, and CLAUDE.md records that Google has honoured that field
-// and once has not. So the claim is read back rather than assumed, exactly as
-// `propose` reads its own writes back through a route the write did not go out
-// on.
+// writeMode SUGGEST, and docs/v2/BLOCKED-BY-API.md records that Google has
+// honoured that field and once has not. So the claim is read back rather than
+// assumed, exactly as `propose` reads its own writes back through a route the
+// write did not go out on.
 //
 // Three things are asked, and none of them can see the other two's failure:
 //

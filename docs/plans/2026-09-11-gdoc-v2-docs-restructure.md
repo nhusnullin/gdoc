@@ -493,16 +493,16 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/prelude/doc.go`
 - Modify: `go/internal/prelude/prelude.go` (demote)
 
-- [ ] the two phases and two policies, unprobed and why, from 1292–1360
-- [ ] `AllowMarker`, why the marker is written, `createParagraphBullets` at the two levels, the marker's name and id, from 1360–1420
-- [ ] `Decide`'s three shapes, pending asked before the count, nothing deletes a named range, the marker batch on its own, `marker_maybe_created`, the revision chained across the phase boundary, from 1420–1530
-- [ ] phase 2 walks past the span, `Occupies` on a replace run, full-look paragraphs, the page break's two units, the table's index accounting as literals, one request per cell, from 1530–1610
-- [ ] the fields file, the control-character refusal, no inferred title, `Verify`'s three questions, a failed phase 1, `Manual`, heading numbering out, from 1610–1683
-- [ ] every measurement cites MEASURED.md by heading rather than restating numbers
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): prelude's package comment"`
+- [x] the two phases and two policies, unprobed and why, from 1292–1360
+- [x] `AllowMarker`, why the marker is written, `createParagraphBullets` at the two levels, the marker's name and id, from 1360–1420
+- [x] `Decide`'s three shapes, pending asked before the count, nothing deletes a named range, the marker batch on its own, `marker_maybe_created`, the revision chained across the phase boundary, from 1420–1530
+- [x] phase 2 walks past the span, `Occupies` on a replace run, full-look paragraphs, the page break's two units, the table's index accounting as literals, one request per cell, from 1530–1610
+- [x] the fields file, the control-character refusal, no inferred title, `Verify`'s three questions, a failed phase 1, `Manual`, heading numbering out, from 1610–1683
+- [x] every measurement cites MEASURED.md by heading rather than restating numbers
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): prelude's package comment"`
 
 ### Task 12: `internal/frontmatter/doc.go`
 
