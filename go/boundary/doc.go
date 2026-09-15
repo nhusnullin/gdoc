@@ -112,7 +112,7 @@
 // TestRequiredModulesReadsBothSpellings asks the same of the go.mod parser,
 // which has to read a single require line and a require block alike.
 //
-// # Three guards over the docs' shape
+// # Four guards over the docs' shape
 //
 // docs_test.go asks the same kind of question about the documentation, and it
 // is here for the same reason the wire checks are: a prose rule nobody measures
@@ -123,16 +123,26 @@
 // The number is claudeCeiling, and raising it is a decision somebody explains
 // in the commit message, not a number somebody nudges to make a test green.
 //
-// TestEveryPackageHasExactlyOnePackageComment is the guard behind the doc.go
-// convention: one package comment per package, in a file that is not a test.
-// A package comment on a test file is one go doc never prints, so the reader
-// who went looking for the reasons finds nothing and writes them down a third
-// time. Two comments are the quieter failure, since go/doc joins them and
-// neither author sees the pair. The known map lists the packages expected to
-// fail today, and it works in both directions the way drift.Known does: a
-// listed package that already holds the rule fails too, so the task that fixes
-// a package deletes its row rather than leaving a name that stopped meaning
-// anything.
+// TestEveryPackageHasExactlyOnePackageComment counts them: one package comment
+// per package, in a file that is not a test. A package comment on a test file
+// is one go doc never prints, so the reader who went looking for the reasons
+// finds nothing and writes them down a third time. Two comments are the quieter
+// failure, since go/doc joins them and neither author sees the pair. The known
+// map is empty today, and it works in both directions the way drift.Known does:
+// a listed package that already holds the rule fails too, so the task that
+// fixes a package deletes its row rather than leaving a name that stopped
+// meaning anything.
+//
+// TestOnlyThePackageCommentReachesGoDoc is the other half of that rule, and it
+// is the half a reader notices first. A comment block sitting directly above
+// the package clause is that file's Doc to go/parser, and go/doc concatenates
+// every file's Doc into the package's documentation, in filename order, so a
+// paragraph saying what one file is for does not stay in that file. The rule is
+// not that a file may carry no paragraph: it is that a blank line separates the
+// paragraph from the package clause, which leaves it an ordinary comment in the
+// file and leaves go doc printing the package comment alone. The counting guard
+// cannot catch this, because pkgComment deliberately does not count a file
+// paragraph, and counting them there would refuse the convention outright.
 //
 // TestTheTaskMapNamesFilesThatExist reads the task map in CLAUDE.md and stats
 // every path in it. A missing heading is a failure rather than an empty pass: a

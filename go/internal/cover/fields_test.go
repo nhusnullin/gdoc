@@ -366,8 +366,8 @@ func TestAValueCarryingACharacterDocsStripsIsRefusedByKey(t *testing.T) {
 // rather than a property of how the walk happens to be written today.
 //
 // heading_numbering is not in the sweep: it is read to a boolean and no text
-// from it reaches an inserted text. TestHeadingNumberingIsReadAsABooleanOrAWord
-// is what covers it.
+// from it reaches an inserted text.
+// TestHeadingNumberingReadsABooleanAndTheWordsANoteCarries is what covers it.
 func TestEveryValueInTheFileIsAskedForStrippedCharacters(t *testing.T) {
 	t.Run("the cover fields", func(t *testing.T) {
 		for _, key := range jsonKeys(t, reflect.TypeOf(fieldsFile{}), reflect.String) {

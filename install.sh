@@ -70,9 +70,18 @@ fi
 # gdoc2 was the temporary name the binary was tested under, beside the old
 # Python tool. `gdoc` is the binary now, so the second name is removed rather
 # than left to mean the same thing twice.
+# Only a link into a checkout of this repo is removed, the way the retired
+# skill below is decided on: somebody else's gdoc2 is theirs.
 if [ -L "$BIN_DIR/gdoc2" ]; then
-    rm "$BIN_DIR/gdoc2"
-    printf 'install: removed %s/gdoc2. gdoc is the binary now.\n' "$BIN_DIR"
+    case "$(readlink "$BIN_DIR/gdoc2")" in
+        */bin/gdoc)
+            rm "$BIN_DIR/gdoc2"
+            printf 'install: removed %s/gdoc2. gdoc is the binary now.\n' "$BIN_DIR"
+            ;;
+        *)
+            warn "$BIN_DIR/gdoc2 is not a link to this install. Left alone."
+            ;;
+    esac
 elif [ -e "$BIN_DIR/gdoc2" ]; then
     warn "$BIN_DIR/gdoc2 exists and is not a link to this install. Left alone."
 fi

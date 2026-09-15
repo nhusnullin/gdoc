@@ -201,7 +201,11 @@
 //
 // TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes and
 // TestWithdrawWritesTheNoteTheVaultHasNow are the pins, with
-// TestProposeRefusesANoteThatNamesAnotherDocument over the fourth refusal.
+// TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun over the fourth
+// refusal. That last one is a different rule from
+// TestProposeRefusesANoteThatNamesAnotherDocument, which is the pairing check at
+// the door: that one fails the run before anything is sent, and this one is
+// reached with the proposals already in the document, so it warns instead.
 //
 // publish reads the note again for the opposite reason, and that rule is
 // pair's, in publish.go beside this file: there the block appearing during the

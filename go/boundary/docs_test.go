@@ -1,7 +1,7 @@
 // The four guards over the docs' shape.
 //
 // The wire checks in boundary_test.go keep one promise about the code. These
-// keep three about the documentation, and they are here for the same reason:
+// keep four about the documentation, and they are here for the same reason:
 // the rule is only true if something asks it on every commit. A prose rule
 // nobody measures is a rule that decays quietly, which is how CLAUDE.md grew
 // to 3,311 lines of per-package essay that no reader asked for and every
@@ -16,7 +16,6 @@
 package boundary
 
 import (
-	"bufio"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -187,7 +186,11 @@ func packageComments(root string) (prod, tests, joined map[string][]string, err 
 		}
 		base := filepath.Base(path)
 		if !pkgComment(f) {
-			if f.Doc != nil {
+			// go doc builds a package's documentation from its non-test files
+			// alone, so a paragraph touching the package clause in a test file
+			// is never joined into anything a reader sees. Reporting one would
+			// fail the guard for a reason that is not true.
+			if f.Doc != nil && !strings.HasSuffix(base, "_test.go") {
 				joined[pkg] = append(joined[pkg], base)
 			}
 			return nil
@@ -330,11 +333,12 @@ func TestTheTaskMapNamesFilesThatExist(t *testing.T) {
 // taskMapPaths returns every path the task map names, and whether the heading
 // was there at all. The section ends at the next heading of any level.
 func taskMapPaths(doc string) (paths []string, found bool) {
-	sc := bufio.NewScanner(strings.NewReader(doc))
-	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	// The file is already in memory and under a line ceiling, so it is split
+	// rather than scanned: a bufio.Scanner ends quietly on a line over its
+	// buffer, and a guard that checked half the map and passed is the decay
+	// this file exists to catch.
 	in := false
-	for sc.Scan() {
-		line := sc.Text()
+	for _, line := range strings.Split(doc, "\n") {
 		if strings.HasPrefix(line, taskMapHeading) {
 			in, found = true, true
 			continue

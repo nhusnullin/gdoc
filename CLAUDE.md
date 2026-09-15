@@ -62,8 +62,10 @@ Secrets live in `~/.config/gdoc-agent/`, never in this repo.
 
 ## The invariants
 
-Each is one sentence and names the test that holds it. Breaking one is a
-decision somebody writes into `docs/v2/DECISIONS.md`, not a refactor.
+Each is one sentence and names the test that holds it, except the two the
+binary cannot measure: identity, which is a rule about what no field means, and
+the skill links, which live in `install.sh`. Breaking one is a decision somebody
+writes into `docs/v2/DECISIONS.md`, not a refactor.
 
 - **The guard owns the wire.** `guard.NewClient` is the only place an
   `*http.Client` is made, so the first request in the program's history has

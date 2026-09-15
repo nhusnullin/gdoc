@@ -25,8 +25,9 @@
 // Phase 1 proposes the prelude: insertText, insertTable, insertPageBreak,
 // deleteContentRange, updateParagraphStyle, updateTextStyle and
 // updateTableCellStyle, in writeMode SUGGEST, on a document that was handed in
-// and granted nothing. The four that touch text are exactly the shape
-// internal/propose has sent every day since it existed, and the three styling
+// and granted nothing. Two of the four that touch text, insertText and
+// deleteContentRange, are exactly the shape internal/propose has sent every day
+// since it existed, and insertTable, insertPageBreak and the three styling
 // kinds ride the same SUGGEST batch, so the phase needed no new guard
 // permission for any of it, and TestThePreludeNeedsNoGrantAtAll in
 // internal/guard says that rather than a comment.
@@ -52,7 +53,7 @@
 // one morning the same call came back 200 having made a direct edit:
 // BLOCKED-BY-API.md holds both measurements. Phase 1 makes that same claim, on a
 // whole cover rather than one word, and asks the question of no throwaway
-// document first. internal/restyle's paragraph about there being nothing for a
+// document first. internal/guard's paragraph about there being nothing for a
 // probe to test is true of LevelInPlace and is not true of this phase.
 //
 // The reason is that a probe needs a folder to create its document in, through
@@ -260,7 +261,9 @@
 // else's emphasis can be in them, so every paragraph states its named style, its
 // alignment, its spacing and its indents, and every run states its face, its
 // size, its weight, its slope, its underline and both colours.
-// TestEveryBareParagraphMarkGdocProposesStatesItsOwnLook is the pin.
+// TestEveryBareParagraphMarkGdocProposesStatesItsOwnLook holds that no
+// paragraph mark goes out without a text style over it, and
+// TestTheCoverLinesAreCentredAtTheHouseSizes reads the stated fields themselves.
 //
 // The one look an inserted paragraph inherits and this package cannot state away
 // is a list marker: taking one off needs deleteParagraphBullets, which nothing

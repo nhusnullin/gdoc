@@ -192,8 +192,9 @@
 // "The document is as it was" is a claim, so it is kept for the two paths that
 // can make it. A batch that could not be built never left the machine, and one
 // Docs refused on a moved revision it refused whole. A batch that failed on the
-// request itself is four things internal/gapi cannot tell apart, and its own
-// doc comment names them: a guard refusal, a 4xx, a 5xx and a dropped
+// request itself is one of three things internal/gapi cannot tell apart, and
+// its own doc comment names them: a guard refusal, where nothing left the
+// machine; a 4xx, where Docs rejected the batch whole; and a 5xx or a dropped
 // connection, where the request was written and may have been applied. So
 // leftBehind takes that path as maybeReached and says the document is either as
 // it was or part styled. TestAFailedRequestNeverSaysTheDocumentIsAsItWas and
@@ -373,7 +374,7 @@
 // Three the API cannot do at all, the first-page header carrying the logo, the
 // contents list and the footer page numbers, and two this package chose not to,
 // the lists and the table column widths. A named style the house has no look
-// for is the fourth entry, conditional like the other two.
+// for is the sixth entry, conditional like the other two.
 // TestTheManualStepsNameTheMenuPathForEach and
 // TestTheManualStepsAlsoNameWhatTheRunLeftAlone are the pins. gdoc reports the
 // list and the skill reads it out, rather than writing it into the document as

@@ -128,7 +128,9 @@
 //     address", so a chip displaying the address carries no name at all, and
 //     reading name alone printed a bare [person] on exactly the chip whose
 //     identity was on screen. The decoder falls back to email, and
-//     TestEveryDroppedElementNowPrintsAndWarns reads the label through.
+//     TestTheSevenElementsDecodeIntoRuns in internal/docs is the pin: the
+//     fixture every other element test reads carries a name, so the fallback
+//     has a chip of its own.
 //   - The label is escaped in a window that carries the placeholder's own
 //     closing bracket. escapeAt looks one rune ahead, so a string's last rune is
 //     always written bare, and a file somebody named "Q3 plan [draft]" printed as
