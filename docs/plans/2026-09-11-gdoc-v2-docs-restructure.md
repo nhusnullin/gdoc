@@ -510,12 +510,12 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/frontmatter/doc.go`
 - Modify: `go/internal/frontmatter/schema.go` (demote)
 
-- [ ] move 1855–1940 minus the `List`/`All`/`IDs` rule: the block's fields, the publish record, the strict read, `schema` 1, byte-preserving write, the write checked against its own parse, snapshot after a successful read
-- [ ] the refused string form is described as "a bare string where a block is expected", with the refusal's own message, not as another tool's shape
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): frontmatter's package comment"`
+- [x] move 1855–1940 minus the `List`/`All`/`IDs` rule: the block's fields, the publish record, the strict read, `schema` 1, byte-preserving write, the write checked against its own parse, snapshot after a successful read
+- [x] the refused string form is described as "a bare string where a block is expected", with the refusal's own message, not as another tool's shape
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): frontmatter's package comment"`
 
 ### Task 13: `internal/propose/doc.go`
 
