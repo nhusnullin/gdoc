@@ -1,6 +1,8 @@
-// Command gdoc is gdoc v2. Facts in, JSON out, exit. The skill does the
-// talking. Exactly one JSON object reaches stdout, and the exit code is 0 if
-// and only if that object says ok.
+// The entry point, the dispatch table and the auth commands.
+//
+// The package comment is in doc.go. This file holds the one rule the three
+// pieces here share: whatever happens, the caller reads one JSON object on
+// stdout and an exit code that agrees with it.
 package main
 
 import (

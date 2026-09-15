@@ -381,14 +381,21 @@ from the first commit.
 - Create: `go/cmd/gdoc/doc.go`
 - Modify: `go/cmd/gdoc/main.go` (demote its package comment)
 
-- [ ] move CLAUDE.md 86–141: the envelope, `auth status` fields, `auth login` to stderr, no prompts and no stdin, `--help` is `ok: false`, panic recovery, `GDOC_CONFIG_DIR`
-- [ ] move the strict argument parsing rule from 643–768, the `os/signal` rule from 1758–1854, and the "note is read again just before it is written" rule (`freshNote`, `notePath`) from 1941–2306
-- [ ] a table of the twelve commands, one line each, pointing at the package that does the work
-- [ ] name the pinning tests: `TestOnlyTheWaitTrapsTheSignal`, the `--help`, panic and argument tests
-- [ ] `cmd/gdoc` is not on guard 2's `known` (it already holds the rule, see Task 1); confirm it still passes after the demotion
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): cmd/gdoc's package comment"`
+- [x] move CLAUDE.md 86–141: the envelope, `auth status` fields, `auth login` to stderr, no prompts and no stdin, `--help` is `ok: false`, panic recovery, `GDOC_CONFIG_DIR`
+- [x] move the strict argument parsing rule from 643–768, the `os/signal` rule from 1758–1854, and the "note is read again just before it is written" rule (`freshNote`, `notePath`) from 1941–2306
+- [x] a table of the twelve commands, one line each, pointing at the package that does the work
+- [x] name the pinning tests: `TestOnlyTheWaitTrapsTheSignal`, the `--help`, panic and argument tests
+- [x] `cmd/gdoc` is not on guard 2's `known` (it already holds the rule, see Task 1); confirm it still passes after the demotion
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): cmd/gdoc's package comment"`
+
+⚠️ `go doc ./cmd/gdoc` leads with `build.go`'s file paragraph, because go/doc
+joins every comment above a package clause in file order and `build.go` sorts
+before `doc.go`. That is the repo's own convention meeting alphabetical order,
+not a rule this task broke: `internal/guard` reads well only because `doc.go`
+sorts first there. Guard 2 passes either way, since it counts only a comment
+opening "Command " or "Package <name>". Left as it is.
 
 ### Task 5: `internal/auth/doc.go`
 
