@@ -142,7 +142,7 @@
 // The loop reads between batches for the revision id, and for nothing else.
 // None of the four request kinds the in-place level carries can change a
 // character, so no index built before the first batch can have moved by the
-// last. The answer usually names the next revision, and revisionOf is what
+// last. The answer usually names the next revision, and RevisionOf is what
 // stands in when it does not: it is docs.NamedRangesURL, the narrowed read,
 // because the revision is all the loop wants.
 // TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone and

@@ -4,6 +4,7 @@
 // paragraph's children into runs, table.go writes a pipe table, image.go embeds
 // a picture, numbering.go builds a heading's number, mark.go is the
 // ==highlight== extension, and doc.go holds the package comment.
+
 package body
 
 import (

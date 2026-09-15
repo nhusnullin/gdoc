@@ -2,6 +2,7 @@
 // narrowing on the way back, the marker and by_gdoc facts, and the join that
 // puts the Docs range on a thread. cursor.go is the --since cursor, wait.go is
 // the --wait poll, and doc.go holds the package comment.
+
 package comments
 
 import (

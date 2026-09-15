@@ -65,9 +65,11 @@
 //     TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes.
 //   - AllowCopy names the one file files.copy may duplicate into the folder
 //     AllowCreateIn named. It is the grant with no production caller, and that
-//     is agreed rather than overlooked: its only caller is
-//     TestLiveRestylePreservesTenFeatures, which copies a document before it
-//     restyles the copy, so the ten-feature acceptance can run unattended.
+//     is agreed rather than overlooked: its callers are the live tests that
+//     copy a document before they touch the copy, so an acceptance can run
+//     unattended. TestLiveRestylePreservesTenFeatures,
+//     TestLiveRestyleKeepsAnchorsAndSuggestions and
+//     TestLivePreludeIsProposedNotWritten are the three.
 //     Nail's decision, 2026-09-09, DECISIONS.md. driveCopyParams is its query
 //     allowlist. Deleting either reopens that decision. The pins are in
 //     copy_test.go, TestTheCopyGrantIsOneSource among them.
@@ -282,12 +284,13 @@
 // MEASURED.md "Which styling requests land in place".
 //
 // The allowlist gates every batchUpdate on a granted id, whatever writeMode
-// says. judgeDocs reads lvl == LevelFull || isSuggestMode, so an allowlist hung
-// off the direct-edit branch alone would let a granted document take an
-// insertText under SUGGEST, and the property above would be false on exactly the
-// id it protects. It is scoped to this level alone for the mirror reason:
-// applied everywhere it refuses the probe's direct insertText at LevelFull and
-// every propose batch at LevelSuggest.
+// says. judgeDocs reads lvl == LevelFull || lvl == LevelInPlace ||
+// isSuggestMode(body), so an allowlist hung off the direct-edit branch alone
+// would let a granted document take an insertText under SUGGEST, and the
+// property above would be false on exactly the id it protects. It is scoped to
+// this level alone for the mirror reason: applied everywhere it refuses the
+// probe's direct insertText at LevelFull and every propose batch at
+// LevelSuggest.
 // TestASuggestBatchOnAGrantedIDMeetsTheAllowlistToo and
 // TestTheAllowlistIsScopedToTheInPlaceLevel are the pins.
 //

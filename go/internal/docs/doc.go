@@ -166,7 +166,7 @@
 // The whole document answers with the ranges already, so a survey takes them
 // out of the read it has rather than making a fourth request. The narrowed read
 // is for the caller that wants one fact out of that answer, and its one caller
-// is restyle's revisionOf, which reads it between batches for the revision id
+// is restyle.RevisionOf, which reads it between batches for the revision id
 // alone: the measured saving was 982 bytes against 12,907 for the document
 // itself.
 //

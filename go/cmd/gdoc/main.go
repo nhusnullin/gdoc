@@ -3,6 +3,7 @@
 // The package comment is in doc.go. This file holds the one rule the three
 // pieces here share: whatever happens, the caller reads one JSON object on
 // stdout and an exit code that agrees with it.
+
 package main
 
 import (

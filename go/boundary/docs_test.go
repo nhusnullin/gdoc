@@ -1,4 +1,4 @@
-// The three guards over the docs' shape.
+// The four guards over the docs' shape.
 //
 // The wire checks in boundary_test.go keep one promise about the code. These
 // keep three about the documentation, and they are here for the same reason:
@@ -9,8 +9,9 @@
 //
 // The first guard is a ceiling on the file every session loads. The second
 // says each package carries exactly one package comment, in a file `go doc`
-// reads. The third says the task map in CLAUDE.md names files that are really
-// there.
+// reads. The third says nothing but that comment reaches `go doc`, since a file
+// paragraph touching the package clause is joined into it. The fourth says the
+// task map in CLAUDE.md names files that are really there.
 
 package boundary
 
@@ -151,13 +152,26 @@ func TestPkgCommentReadsTheShortestPackageComment(t *testing.T) {
 }
 
 // packageComments walks a tree and reports, per package directory, which files
-// carry the package comment. Test files are counted separately because where
-// the comment sits is half the rule.
-func packageComments(root string) (prod, tests map[string][]string, err error) {
-	prod, tests = map[string][]string{}, map[string][]string{}
+// carry the package comment, and which files carry a paragraph that go/doc
+// joins into it anyway. Test files are counted separately because where the
+// comment sits is half the rule.
+func packageComments(root string) (prod, tests, joined map[string][]string, err error) {
+	prod, tests, joined = map[string][]string{}, map[string][]string{}, map[string][]string{}
 	err = filepath.WalkDir(filepath.Join(repoRoot, "go", root), func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
+		if walkErr != nil {
 			return walkErr
+		}
+		// testdata is not Go the toolchain reads, so a fixture in it may be
+		// malformed or carry no package clause at all. Parsing one would fail
+		// this guard for a reason that has nothing to do with documentation.
+		if d.IsDir() {
+			if d.Name() == "testdata" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, ".go") {
+			return nil
 		}
 		f, perr := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
 		if perr != nil {
@@ -171,10 +185,13 @@ func packageComments(root string) (prod, tests map[string][]string, err error) {
 		if _, seen := prod[pkg]; !seen {
 			prod[pkg] = nil
 		}
+		base := filepath.Base(path)
 		if !pkgComment(f) {
+			if f.Doc != nil {
+				joined[pkg] = append(joined[pkg], base)
+			}
 			return nil
 		}
-		base := filepath.Base(path)
 		if strings.HasSuffix(base, "_test.go") {
 			tests[pkg] = append(tests[pkg], base)
 			return nil
@@ -182,7 +199,7 @@ func packageComments(root string) (prod, tests map[string][]string, err error) {
 		prod[pkg] = append(prod[pkg], base)
 		return nil
 	})
-	return prod, tests, err
+	return prod, tests, joined, err
 }
 
 // TestEveryPackageHasExactlyOnePackageComment is the guard behind the doc.go
@@ -193,7 +210,7 @@ func packageComments(root string) (prod, tests map[string][]string, err error) {
 // joins them and neither author sees the pair.
 func TestEveryPackageHasExactlyOnePackageComment(t *testing.T) {
 	for _, root := range docRoots {
-		prod, tests, err := packageComments(root)
+		prod, tests, _, err := packageComments(root)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -206,6 +223,36 @@ func TestEveryPackageHasExactlyOnePackageComment(t *testing.T) {
 			case problem != "" && !listed:
 				t.Errorf("%s %s; a package carries exactly one package comment, in a file that is not a test", pkg, problem)
 			}
+		}
+	}
+}
+
+// TestOnlyThePackageCommentReachesGoDoc is the other half of the one-comment
+// rule, and it is the half a reader notices first. A comment block sitting
+// directly above the package clause is that file's Doc to go/parser, and go/doc
+// concatenates every file's Doc into the package's documentation, in filename
+// order. So a paragraph saying what one file is for does not stay in that file:
+// it is printed as part of the package comment, and if its filename sorts
+// before doc.go it is printed first.
+//
+// That is the failure TestEveryPackageHasExactlyOnePackageComment was written
+// to catch and cannot, because pkgComment deliberately does not count a file
+// paragraph. Counting them there would refuse the convention outright. The rule
+// is not that a file may carry no paragraph; it is that the paragraph must be
+// detached from the package clause by a blank line, which leaves it as an
+// ordinary comment in the file and leaves `go doc` printing the package comment
+// alone.
+func TestOnlyThePackageCommentReachesGoDoc(t *testing.T) {
+	for _, root := range docRoots {
+		_, _, joined, err := packageComments(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, pkg := range sorted(joined) {
+			if len(joined[pkg]) == 0 {
+				continue
+			}
+			t.Errorf("in %s, %s open with a paragraph touching the package clause, so go doc joins each one into the package comment; put a blank line between the paragraph and the package clause", pkg, strings.Join(joined[pkg], ", "))
 		}
 	}
 }

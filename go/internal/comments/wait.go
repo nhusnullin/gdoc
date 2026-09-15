@@ -1,6 +1,7 @@
 // This file is the wait: the poll closure, the options one wait needs, the
 // facts it comes back with, and the loop itself. doc.go holds why the loop
 // lives here rather than in the skill, and what each of its four endings means.
+
 package comments
 
 import (

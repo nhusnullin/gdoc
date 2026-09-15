@@ -10,6 +10,7 @@
 // reason for etree is that encoding/xml corrupts OOXML on the way back out;
 // nothing here writes any, and what etree gives instead is a tree that a value
 // can be walked out of in one line.
+
 package drift
 
 import (

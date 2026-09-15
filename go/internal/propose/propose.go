@@ -3,6 +3,7 @@
 // writes what landed into the note. span.go finds the words in the document,
 // verify.go reads the document back three ways, and doc.go holds the package
 // comment.
+
 package propose
 
 import (

@@ -1,6 +1,7 @@
 // This file is the projection itself: the markup it adds, the escaping that
 // keeps a marker gdoc's own, the walk over a tab's blocks, and the tree
 // --structure prints. doc.go holds the package comment.
+
 package view
 
 import (

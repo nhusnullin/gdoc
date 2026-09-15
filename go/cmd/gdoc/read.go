@@ -5,6 +5,7 @@
 // session on the guard's client, and hand what came back to a pure reader
 // package. The readers decide nothing, and neither does anything here: the
 // commands print facts and the skill reading the JSON judges.
+
 package main
 
 import (

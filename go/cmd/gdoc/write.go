@@ -9,6 +9,7 @@
 //
 // Nothing here decides what to write. The body of a reply, the words of a
 // proposal and the reason for it arrive written, in a file the skill wrote.
+
 package main
 
 import (

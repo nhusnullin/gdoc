@@ -76,8 +76,9 @@
 //   - missing_scopes names what gdoc asks for that the token does not carry. A
 //     partial grant is reported, never refused: the login worked, and this is
 //     the one place that can say why the Docs calls will 403 before they do.
-//     What counts as missing is auth.MissingScopes, and its own doc comment
-//     says why a scope that covers another is not reported.
+//     What counts as missing is auth.MissingScopes, and the doc comment on the
+//     coveredBy it rests on says why a scope that covers another is not
+//     reported.
 //     TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry is the pin.
 //
 // A token file that exists and cannot be read is a failure, not
@@ -203,6 +204,7 @@
 // TestProposeRefusesANoteThatNamesAnotherDocument over the fourth refusal.
 //
 // publish reads the note again for the opposite reason, and that rule is
-// internal/publish's: there the block appearing during the upload is what is
-// refused, and the refusal is a rollback.
+// pair's, in publish.go beside this file: there the block appearing during the
+// upload is what is refused, and the refusal is a rollback that internal/publish
+// only carries out.
 package main

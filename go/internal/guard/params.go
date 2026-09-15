@@ -22,6 +22,7 @@
 // credential on a request gdoc authenticates itself, `callback` turns the
 // answer into JSONP, and `prettyPrint`, `quotaUser` and `$.xgafv` change
 // nothing gdoc reads. None of them appears in a call gdoc builds.
+
 package guard
 
 import (

@@ -3,6 +3,7 @@
 // items.go holds the list every row comes from, docx.go reads a value out of
 // the docx XML, docsapi.go reads the same value out of a Docs answer, and
 // doc.go holds the package comment.
+
 package drift
 
 import (

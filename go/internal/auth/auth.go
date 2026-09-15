@@ -1,6 +1,7 @@
 // This file is the token itself: the file it lives in, the two form POSTs to
 // the token endpoint, the crash-safe save, and the report auth status prints.
 // The rules this file holds are in the package comment in doc.go.
+
 package auth
 
 import (

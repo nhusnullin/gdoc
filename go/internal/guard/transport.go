@@ -1,6 +1,7 @@
 // This file is the only wire in the binary. Every outbound request passes
 // Policy.Judge before it reaches the underlying RoundTripper, and a refusal
 // returns an error instead of falling through to the network.
+
 package guard
 
 import (

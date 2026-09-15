@@ -2,6 +2,7 @@
 // suggestion is still pending, the one reject Batch builds, the read-back, and
 // Forget, which takes the entry out of the note. doc.go holds the package
 // comment.
+
 package withdraw
 
 import (

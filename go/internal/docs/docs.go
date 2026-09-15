@@ -2,6 +2,7 @@
 // rule that says whether a range names a position, and the two URLs that ask
 // for it. walk.go decodes the raw answer into these shapes, and doc.go holds
 // the package comment.
+
 package docs
 
 import (
@@ -319,8 +320,8 @@ func URL(id string) string {
 // NamedRangesURL is the same read narrowed to the named ranges. The whole
 // document answers with them too, so this exists for the caller that wants one
 // fact out of that answer rather than the prose: the measured saving was 982
-// bytes against 12,907 for the document itself. Its caller is restyle's
-// revisionOf, which reads it between batches for the revision id alone.
+// bytes against 12,907 for the document itself. Its caller is
+// restyle.RevisionOf, which reads it between batches for the revision id alone.
 //
 // includeTabsContent stays true, because that is where the ranges are. The
 // mask selects each tab's id and its named ranges, and childTabs whole: a mask

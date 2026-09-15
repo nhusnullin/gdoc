@@ -1,6 +1,7 @@
 // This file is the judgment itself: a pure function of the method, the URL and
 // the body, with no wire under it. transport.go carries requests through it,
 // and doc.go holds the package comment.
+
 package guard
 
 import (

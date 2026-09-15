@@ -2,6 +2,7 @@
 // Drive id looks like, and Validate, which names the first key a block breaks.
 // frontmatter.go is the read and the byte-preserving write, and doc.go holds
 // the package comment.
+
 package frontmatter
 
 import (

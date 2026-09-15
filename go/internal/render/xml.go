@@ -4,6 +4,7 @@
 // and the front matter, headfoot.go the headers and footers, styles.go the
 // named styles and the settings, numbering.go the two lists, and doc.go holds
 // the package comment.
+
 package render
 
 import (

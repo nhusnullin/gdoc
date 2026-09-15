@@ -2,6 +2,7 @@
 // waits on the loopback listener and exchanges the code. No browser is opened
 // and no external program runs: gdoc runs none at all, which is why the URL
 // goes to stderr for a person to open.
+
 package auth
 
 import (

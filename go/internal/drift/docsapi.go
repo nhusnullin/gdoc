@@ -16,6 +16,7 @@
 //
 // No client and no session: this takes the decoded answer, so the live test
 // hands it what came back and a unit test hands it a fixture.
+
 package drift
 
 import (

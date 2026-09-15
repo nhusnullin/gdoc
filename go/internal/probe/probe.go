@@ -1,6 +1,7 @@
 // This file is the probe itself: the sentence and the word it writes, the
 // create, the two batches, the read-back that counts suggestion ids, and the
 // trash. doc.go holds the package comment.
+
 package probe
 
 import (

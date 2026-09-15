@@ -1,6 +1,7 @@
 // This file is the cursor: what it encodes, how it is read back, how the next
 // one is computed, and the narrowing that keeps a thread from being news twice.
 // doc.go holds why it is shaped this way.
+
 package comments
 
 import (

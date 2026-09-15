@@ -1,6 +1,7 @@
 // The wire checks, the external-program ban, and the dependency list. Each one
 // fails in both directions, on spread and on silent disappearance. The reasons
 // are in doc.go.
+
 package boundary
 
 import (

@@ -132,8 +132,10 @@ decision somebody writes into `docs/v2/DECISIONS.md`, not a refactor.
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
 - **Each package carries exactly one comment opening `Package <name>`**, or
   `Command` for a main package, in a file `go doc` reads. A file may still open
-  with a paragraph saying what that file is for:
-  `TestEveryPackageHasExactlyOnePackageComment`.
+  with a paragraph saying what that file is for, but a blank line separates it
+  from the `package` clause, or `go doc` joins it into the package comment:
+  `TestEveryPackageHasExactlyOnePackageComment` and
+  `TestOnlyThePackageCommentReachesGoDoc`.
 - **This file stays under 300 lines and its task map names files that exist**,
   because every session pays for it unasked: `TestCLAUDEmdIsUnderTheCeiling` and
   `TestTheTaskMapNamesFilesThatExist`.

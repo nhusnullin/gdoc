@@ -10,6 +10,7 @@
 // Nothing here decides anything either. The cover words are the note's, the
 // sizes and colours are house.yaml's, and what the walker could not render is a
 // warning naming the line rather than a judgement about the note.
+
 package main
 
 import (
