@@ -366,14 +366,14 @@ from the first commit.
 - Create: `go/internal/guard/doc.go`
 - Modify: `go/internal/guard/policy.go` (demote its package comment)
 
-- [ ] move CLAUDE.md 183–527 under the convention: the levels as names, the six doors (`Learn`, `GrantInPlace`, `AllowReject`, `AllowCopy`, `AllowCreateIn`, `AllowMarker`), `isSuggestMode` and `hasDuplicateKeys`, the query and header allowlists, `checkAuthorization`'s limit, the multipart agreement rule, plain paths only, `inPlaceKinds`, `checkInPlaceMask`, `checkMaskIsSet`, the nil proxy, the mutex
-- [ ] drop 2395–2426 as history with one sentence pointing at DECISIONS.md 2026-09-09
-- [ ] drop "before M6 the guard picked from nothing" and the inverted-test story; cite MEASURED.md and BLOCKED-BY-API.md for the `writeMode` measurements
-- [ ] name the pinning test in every rule's paragraph; `TODO(test)` where none exists
-- [ ] rewrite every "v1" in this package's production comments to say the thing itself
-- [ ] tick list in the commit body against 183–527 and 2395–2426
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): the guard's package comment"`
+- [x] move CLAUDE.md 183–527 under the convention: the levels as names, the six doors (`Learn`, `GrantInPlace`, `AllowReject`, `AllowCopy`, `AllowCreateIn`, `AllowMarker`), `isSuggestMode` and `hasDuplicateKeys`, the query and header allowlists, `checkAuthorization`'s limit, the multipart agreement rule, plain paths only, `inPlaceKinds`, `checkInPlaceMask`, `checkMaskIsSet`, the nil proxy, the mutex
+- [x] drop 2395–2426 as history with one sentence pointing at DECISIONS.md 2026-09-09
+- [x] drop "before M6 the guard picked from nothing" and the inverted-test story; cite MEASURED.md and BLOCKED-BY-API.md for the `writeMode` measurements
+- [x] name the pinning test in every rule's paragraph; `TODO(test)` where none exists
+- [x] rewrite every "v1" in this package's production comments to say the thing itself
+- [x] tick list in the commit body against 183–527 and 2395–2426
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): the guard's package comment"`
 
 ### Task 4: `cmd/gdoc/doc.go`
 
