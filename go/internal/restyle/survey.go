@@ -1,26 +1,10 @@
-// Package restyle is the survey of a document, and the requests that restyle
-// one. The survey reports what a document holds before anything is done to it:
-// its threads with a witness for each, what is pending, its chips, its tabs,
-// its named ranges and the revision the reads were made against. The builders
-// beside it, page.go first, turn the house style into the styling requests a
-// batch carries.
-//
-// It takes no session and touches no wire, like every other reader package
-// here. The caller makes the three reads and hands the decoded answers over, so
-// every case in this file is testable on a value a test wrote out. A builder is
-// the same rule from the other side: it is a pure function of the house style
-// and the document, returning the request a caller sends, so nothing here
-// decides when to send one.
-//
-// Nothing here judges anything. NothingToProtect is a fact about five counts
-// being zero, never a recommendation to restyle: the threads, what is pending,
-// the chips, the paragraph elements the read could not name, and the named
-// ranges. Whether a
-// document is worth restyling is Nail's, reading the counts. The witness has the two limits it
-// has everywhere else, and they are worth stating rather than discovering: it
-// names a destroyed anchor and not a moved one, and two exported comments that
-// share words and disagree give no answer for either.
 package restyle
+
+// This file is the survey itself: the three decoded reads in, one Report out,
+// and Schema, the version the apply refuses to read anything else of.
+// page.go and style.go build the styling requests, apply.go sends them,
+// readback.go and landing.go read the document back, and doc.go holds the
+// package comment.
 
 import (
 	"fmt"

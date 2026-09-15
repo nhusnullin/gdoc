@@ -478,14 +478,14 @@ package clause is one decision for Task 27, not a choice per package.
 - Create: `go/internal/restyle/doc.go`
 - Modify: `go/internal/restyle/survey.go` (demote)
 
-- [ ] the survey, from 978–1064: three reads, listing first, a failed Docs read vs a failed export, pending is `All`'s, the witness twice, the revision id, `schema` 1, `nothing_to_protect` is five zeros and never a recommendation; the route the skill offers over it is `read`, a note, `publish`, pointer to DECISIONS 2026-09-11
-- [ ] the apply loop, from 1065–1140: `requiredRevisionId`, read between batches for the revision only, never retried, `maybe_applied`, batches in bytes, no rollback and `leftBehind`
-- [ ] `--from`, from 1141–1291: survey and apply are two runs, four refusals before the grant, a restyle is a moment, one request per table, what it overwrites, the read-back's two halves and its seven rules, `manual`, `verified: false` is not a failure
-- [ ] cite MEASURED.md "Which styling requests land in place" and "In-place styling preserves anchors and pending suggestions"
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): restyle's package comment"`
+- [x] the survey, from 978–1064: three reads, listing first, a failed Docs read vs a failed export, pending is `All`'s, the witness twice, the revision id, `schema` 1, `nothing_to_protect` is five zeros and never a recommendation; the route the skill offers over it is `read`, a note, `publish`, pointer to DECISIONS 2026-09-11
+- [x] the apply loop, from 1065–1140: `requiredRevisionId`, read between batches for the revision only, never retried, `maybe_applied`, batches in bytes, no rollback and `leftBehind`
+- [x] `--from`, from 1141–1291: survey and apply are two runs, four refusals before the grant, a restyle is a moment, one request per table, what it overwrites, the read-back's two halves and its seven rules, `manual`, `verified: false` is not a failure
+- [x] cite MEASURED.md "Which styling requests land in place" and "In-place styling preserves anchors and pending suggestions"
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): restyle's package comment"`
 
 ### Task 11: `internal/prelude/doc.go`
 
