@@ -14,7 +14,7 @@ import (
 	"gdoc/internal/config"
 )
 
-func TestLoadReadsV1Format(t *testing.T) {
+func TestLoadReadsTheAuthorizedUserShape(t *testing.T) {
 	writeFixture(t)
 	tok, err := Load()
 	if err != nil {
@@ -228,7 +228,7 @@ func TestSaveKeepsFieldsV2DoesNotUse(t *testing.T) {
 		t.Fatalf("a save dropped what google-auth wrote: %+v", again)
 	}
 	// rapt_token is the reauth proof token. google-auth writes it whenever the
-	// account has one, and a v1 refresh needs it back.
+	// account has one, and a google-auth refresh needs it back.
 	if again.RaptToken != "RAPT" {
 		t.Fatalf("a save dropped rapt_token: %+v", again)
 	}

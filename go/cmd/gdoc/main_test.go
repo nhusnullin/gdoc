@@ -212,8 +212,8 @@ func TestTheUsageLineNamesEveryCommand(t *testing.T) {
 
 // A token granted less than gdoc asked for still reports ok, and says which
 // scope is missing. This is the granular consent screen: somebody ticked Docs
-// and left Drive unticked. A v1 token is NOT this case, because the full Drive
-// scope it carries covers the Docs calls too.
+// and left Drive unticked. A token carrying the full Drive scope is NOT this
+// case, because that scope covers the Docs calls too.
 func TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
@@ -237,10 +237,10 @@ func TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry(t *testing.T) {
 	}
 }
 
-// The repository owner's own token is a v1 token: drive plus
-// documents.readonly. The Docs API accepts the full Drive scope, so nothing is
-// missing and status must say nothing.
-func TestAuthStatusIsQuietForAV1Token(t *testing.T) {
+// The repository owner's own token carries drive plus documents.readonly. The
+// Docs API accepts the full Drive scope, so nothing is missing and status must
+// say nothing.
+func TestAuthStatusIsQuietForATokenCarryingTheFullDriveScope(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
 	token := `{"token":"A","refresh_token":"R","token_uri":"https://oauth2.googleapis.com/token",` +
@@ -252,10 +252,10 @@ func TestAuthStatusIsQuietForAV1Token(t *testing.T) {
 
 	got, code := runJSON(t, "auth", "status")
 	if code != 0 || got["ok"] != true {
-		t.Fatalf("a v1 token is a working token: %v (exit %d)", got, code)
+		t.Fatalf("this is a working token: %v (exit %d)", got, code)
 	}
 	if w, _ := got["warnings"].([]any); len(w) != 0 {
-		t.Fatalf("a v1 token is missing nothing v2 needs: %v", got["warnings"])
+		t.Fatalf("this token is missing nothing gdoc needs: %v", got["warnings"])
 	}
 }
 

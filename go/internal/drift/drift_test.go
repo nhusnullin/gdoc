@@ -15,12 +15,11 @@ import (
 
 // masterPath is the fixture the gate measures against.
 //
-// It is a copy of gdoc/templates/altery-group-policy-v1.0/template.docx, which
-// is v1's own template and stays v1's: nothing in go/ reads that path at
-// runtime, and this copy exists so a test has a fixture rather than a
-// dependency on the Python package's tree. The master is provenance, which is
-// what DECISIONS.md left it as on 2026-08-29, and this is the one thing that
-// still reads it.
+// It is a copy of the Altery group policy template, and it is a copy on
+// purpose: nothing under go/ reads a template at runtime, so this fixture
+// carries the master into the test rather than a path outside the module. The
+// master is provenance, which is what DECISIONS.md left it as on 2026-08-29,
+// and this is the one thing that still reads it.
 const masterPath = "testdata/master.docx"
 
 // notePath is the note the gate builds. It is the body package's copy rather

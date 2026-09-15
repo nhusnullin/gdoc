@@ -15,7 +15,7 @@
 // Load reads oauth-token.json from the config dir in google-auth's "authorized
 // user" shape, field names included. The shape is read rather than invented, so
 // a token written by the Python tool this binary replaces needs no migration
-// and no second browser trip. TestLoadReadsV1Format is the pin.
+// and no second browser trip. TestLoadReadsTheAuthorizedUserShape is the pin.
 //
 // # The login asks for the read/write Docs scope
 //
@@ -42,9 +42,10 @@
 // It is a report, never a refusal. A partial grant comes from Google's granular
 // consent screen, where a person ticks a subset, and then the Docs calls will
 // 403. This is the one place that can say why before they do.
-// TestMissingScopesReadsDriveAsCoveringDocs and TestStatusIsQuietForAV1Token
-// are the pins, and the second is the working case: it fails if a token that
-// works ever starts carrying a warning.
+// TestMissingScopesReadsDriveAsCoveringDocs and
+// TestStatusIsQuietForATokenCarryingTheFullDriveScope are the pins, and the
+// second is the working case: it fails if a token that works ever starts
+// carrying a warning.
 //
 // # What the file records is what was granted, never what was asked for
 //

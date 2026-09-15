@@ -69,9 +69,9 @@
 // one, and each of them refuses a note that has none, so no shape this reader
 // does not know ever enters it. A key holding any other scalar does not get
 // that sentence: telling somebody to rewrite gdoc: 3 as a document id sends
-// them the wrong way. TestReadRefusesV1sPairingAndSaysWhatToDoAboutIt,
-// TestWriteRefusesV1sPairingRatherThanReplacingIt and
-// TestANonStringScalarUnderGdocIsNotV1sPairing are the pins.
+// them the wrong way. TestReadRefusesABareStringPairingAndSaysWhatToDoAboutIt,
+// TestWriteRefusesABareStringPairingRatherThanReplacingIt and
+// TestANonStringScalarUnderGdocIsNotABareStringPairing are the pins.
 //
 // # schema must be exactly 1
 //

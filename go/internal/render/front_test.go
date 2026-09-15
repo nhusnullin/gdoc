@@ -111,7 +111,7 @@ func buildWith(t *testing.T, f cover.Fields) *Package {
 // either side of an "or", for a person filling the cover in by hand to pick
 // one. A note with one title published a cover reading the title, then "or",
 // then the template's own highlighted "(Name of) Framework/Policy", which is
-// page one of every document. v1 deletes both lines, and so does this.
+// page one of every document. Both lines go.
 func TestOneTitleLeavesNoOrAndNoSecondTitle(t *testing.T) {
 	lines := coverLines(t, buildWith(t, cover.Fields{
 		Title: "Supplier Register", DocType: "Policy", Version: "1.0", Date: "8 September 2026",
@@ -175,7 +175,7 @@ func TestTheVersionLineKeepsItsLabel(t *testing.T) {
 		t.Errorf("the version reads %q, want 3.1", got)
 	}
 	// The yellow marks "a person fills this in". Once the note's own number is
-	// there the mark is misleading, which is v1's _clear_placeholder_marks.
+	// there the mark is misleading, so resolving a placeholder takes it off.
 	if runs[1].FindElement("w:rPr/w:highlight") != nil {
 		t.Error("the note's own version is still highlighted yellow")
 	}
@@ -429,8 +429,9 @@ func tableCells(t *testing.T, pkg *Package, n int) [][][2]string {
 }
 
 // TestTheVersionControlTableCarriesTheNotesOwnWords. The five value cells are
-// v1's five keys. They were parsed, validated and then dropped, so a note that
-// named its owner published a table with the owner cell blank.
+// the five version-control keys a note states. They were parsed, validated and
+// then dropped, so a note that named its owner published a table with the owner
+// cell blank.
 func TestTheVersionControlTableCarriesTheNotesOwnWords(t *testing.T) {
 	rows := tableCells(t, buildWith(t, cover.Fields{
 		Title: "Supplier Register Policy", Version: "1.0",
@@ -478,9 +479,9 @@ func TestARevisionRowIsWrittenPerRevision(t *testing.T) {
 	}
 }
 
-// TestANoteWithNoRevisionsKeepsTheTemplatesRows is the other direction. v1
-// returns early with no revisions and leaves the master's own rows, because a
-// table with a header and nothing under it is worse than the prototype.
+// TestANoteWithNoRevisionsKeepsTheTemplatesRows is the other direction. A note
+// declaring no revisions leaves the master's own rows, because a table with a
+// header and nothing under it is worse than the prototype.
 func TestANoteWithNoRevisionsKeepsTheTemplatesRows(t *testing.T) {
 	rows := tableCells(t, buildWith(t, cover.Fields{
 		Title: "Supplier Register Policy", Version: "1.0",

@@ -301,9 +301,9 @@ func TestOnlyTheGuardBuildsTheWire(t *testing.T) {
 	}
 }
 
-// TestNothingRunsAnExternalProgram is v1's rule, made true rather than stated.
-// v2 runs no external programs at all: that is what lets the login flow print a
-// URL instead of opening a browser, and it is why the binary is one file.
+// TestNothingRunsAnExternalProgram makes the rule true rather than stating it.
+// gdoc runs no external programs at all: that is what lets the login flow print
+// a URL instead of opening a browser, and it is why the binary is one file.
 func TestNothingRunsAnExternalProgram(t *testing.T) {
 	banned := map[string]bool{"os/exec": true, "syscall/js": true}
 	err := walkGo("..", func(rel, path string, f *ast.File) error {

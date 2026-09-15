@@ -206,10 +206,11 @@ func TestAnUnknownClassificationInTheFieldsFileIsRefusedNamingWhatWasWritten(t *
 	}
 }
 
-// TestHeadingNumberingReadsABooleanAndTheWordsV1Wrote. JSON has a boolean, so
-// that is what somebody writes; v1's notes say auto and none, and somebody
-// copying from one of those must not silently get the other answer.
-func TestHeadingNumberingReadsABooleanAndTheWordsV1Wrote(t *testing.T) {
+// TestHeadingNumberingReadsABooleanAndTheWordsANoteCarries. JSON has a boolean,
+// so that is what somebody writes; a note's front matter says auto and none,
+// and somebody copying from one of those must not silently get the other
+// answer.
+func TestHeadingNumberingReadsABooleanAndTheWordsANoteCarries(t *testing.T) {
 	for _, tc := range []struct {
 		written string
 		want    bool

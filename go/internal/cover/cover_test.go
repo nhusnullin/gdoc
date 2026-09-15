@@ -50,8 +50,8 @@ func TestANoteWithOnlyATitleReadsWithNumberingOnAndNoRevisions(t *testing.T) {
 
 // TestANoteWithNoDateIsDatedThisMonth. Left empty, the date reached the cover
 // as the template's own highlighted "May 2025", so every note that stated no
-// date published a page one dated to whenever the master was captured. v1
-// prints the current month instead.
+// date published a page one dated to whenever the master was captured. The
+// current month is printed instead.
 func TestANoteWithNoDateIsDatedThisMonth(t *testing.T) {
 	frozen := time.Date(2026, time.September, 8, 12, 0, 0, 0, time.UTC)
 	now = func() time.Time { return frozen }
@@ -110,9 +110,8 @@ func TestEveryOptionalKeyReads(t *testing.T) {
 	if f.Owner != "Head of Risk" {
 		t.Errorf("owner = %q, want Head of Risk", f.Owner)
 	}
-	// The other four cells of the version-control table. They are v1's keys and
-	// v1 writes all five, so a note written for the Python tool has to publish
-	// the same table here.
+	// The other four cells of the version-control table. All five keys are
+	// written, because a note that states them expects the whole table.
 	if f.LastApproval != "14 August 2026" {
 		t.Errorf("last_approval = %q, want 14 August 2026", f.LastApproval)
 	}
@@ -262,11 +261,11 @@ func TestAHeadingInsideAFenceIsNotACandidate(t *testing.T) {
 }
 
 func TestTheGdocKeyIsIgnoredWhateverItsShape(t *testing.T) {
-	v1 := note("title: A Policy\ngdoc: 1AbCdEf_GhIjKlMnOpQrStUvWxYz0123456789", "Body\n")
-	if f, _ := read(t, v1); f.Title != "A Policy" {
-		t.Errorf("title = %q with v1's gdoc: string, want A Policy", f.Title)
+	bare := note("title: A Policy\ngdoc: 1AbCdEf_GhIjKlMnOpQrStUvWxYz0123456789", "Body\n")
+	if f, _ := read(t, bare); f.Title != "A Policy" {
+		t.Errorf("title = %q with a bare gdoc: string, want A Policy", f.Title)
 	}
-	v2 := note(strings.Join([]string{
+	block := note(strings.Join([]string{
 		"title: A Policy",
 		"gdoc:",
 		"  schema: 1",
@@ -275,8 +274,8 @@ func TestTheGdocKeyIsIgnoredWhateverItsShape(t *testing.T) {
 		"    - id: suggest.abc",
 		"      comment_id: AAABBB",
 	}, "\n"), "Body\n")
-	if f, _ := read(t, v2); f.Title != "A Policy" {
-		t.Errorf("title = %q with v2's gdoc: block, want A Policy", f.Title)
+	if f, _ := read(t, block); f.Title != "A Policy" {
+		t.Errorf("title = %q with a gdoc: block, want A Policy", f.Title)
 	}
 }
 

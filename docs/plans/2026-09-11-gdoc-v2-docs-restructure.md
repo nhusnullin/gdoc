@@ -630,11 +630,11 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Modify: every `_test.go` under `go/` the same grep names, and every `doc.go` that cites a renamed test
 
-- [ ] rename the seven test functions carrying "V1" to say what they test (`TestLoadReadsTheAuthorizedUserShape`, and so on), and rewrite every test comment the grep names
-- [ ] `grep -rn` each old test name across `go/`; every doc.go citation is updated in this commit
-- [ ] the grep from Task 20 over test files returns nothing; exceptions listed
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "test(v2): test names say what they test"`
+- [x] rename the seven test functions carrying "V1" to say what they test (`TestLoadReadsTheAuthorizedUserShape`, and so on), and rewrite every test comment the grep names
+- [x] `grep -rn` each old test name across `go/`; every doc.go citation is updated in this commit
+- [x] the grep from Task 20 over test files returns nothing; exceptions listed
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "test(v2): test names say what they test"`
 
 ### Task 22: SPEC.md in the present tense
 

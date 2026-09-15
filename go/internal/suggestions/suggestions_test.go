@@ -79,8 +79,8 @@ func TestRunsSharingOneIDJoin(t *testing.T) {
 	})
 }
 
-// TestARunWithTwoIDsIsTwoPendings is where the port leaves v1 behind. v1 took
-// ids[0] and lost the rest; every id a run carries is a suggestion.
+// TestARunWithTwoIDsIsTwoPendings. Reading ids[0] and losing the rest is the
+// natural mistake here: every id a run carries is a suggestion.
 func TestARunWithTwoIDsIsTwoPendings(t *testing.T) {
 	d := doc(para("NORMAL_TEXT", text("critical ", []string{"suggest.a1", "suggest.b2"}, nil)))
 	assertPending(t, List(d), []Pending{
@@ -155,7 +155,7 @@ func TestEachTabStartsWithNoHeading(t *testing.T) {
 }
 
 // TestWhitespaceOnlyTextIsDropped. A suggestion whose whole text is a newline
-// says nothing a reader can act on, and v1 dropped it for the same reason.
+// says nothing a reader can act on, so the listing leaves it out.
 func TestWhitespaceOnlyTextIsDropped(t *testing.T) {
 	d := doc(para("NORMAL_TEXT",
 		text("\n", []string{"suggest.blank"}, nil),
