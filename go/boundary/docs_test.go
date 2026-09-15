@@ -31,14 +31,13 @@ import (
 // repoRoot is where the module sits: go/boundary is two levels down.
 const repoRoot = "../.."
 
-// claudeCeiling is the line count CLAUDE.md may not pass. It is today's count,
-// so the guard is live from this commit and measures a file nobody has rewritten
-// yet. Task 24 of the docs restructure rewrites that file whole and lowers this
-// to 300. Raising it after that is a decision somebody explains in the commit
-// message, not a number somebody nudges to make a test green: this file is
-// loaded into every session unasked, so its length is a cost paid by every
-// reader whether or not they needed the words.
-const claudeCeiling = 3311
+// claudeCeiling is the line count CLAUDE.md may not pass. Raising it is a
+// decision somebody explains in the commit message, not a number somebody
+// nudges to make a test green: the file is loaded into every session unasked,
+// so its length is a cost paid by every reader whether or not they needed the
+// words. What belongs in a longer file is a package's own doc.go, which a
+// reader opens when the task reaches that package.
+const claudeCeiling = 300
 
 func TestCLAUDEmdIsUnderTheCeiling(t *testing.T) {
 	path := filepath.Join(repoRoot, "CLAUDE.md")
@@ -216,8 +215,6 @@ var backticked = regexp.MustCompile("`([^`]+)`")
 // empty pass: a map that is not there is the same silence as a map full of dead
 // rows, and this test exists to make that audible.
 func TestTheTaskMapNamesFilesThatExist(t *testing.T) {
-	t.Skip("fails until Task 24 writes the heading; Task 24 removes this skip")
-
 	b, err := os.ReadFile(filepath.Join(repoRoot, "CLAUDE.md"))
 	if err != nil {
 		t.Fatal(err)

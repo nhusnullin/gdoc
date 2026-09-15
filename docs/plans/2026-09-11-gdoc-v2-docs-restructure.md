@@ -671,12 +671,12 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Modify: `CLAUDE.md`, `go/boundary/docs_test.go` (lower the ceiling, remove the skip)
 
-- [ ] write the file in seven parts: read first (PRINCIPLES.md, then the doc.go of the package the task touches); "What lives where", v2 rows only from CLAUDE.md 12–85, one line each; the invariants, each one sentence naming its test, including nothing runs git (2942–2957), skills are linked (3246–3263), a house-style test states its value as a literal (3264–3283), the binary prints facts, one JSON object on stdout, no prompts; `## If you touch`, the task map table with a backticked path per row; building and testing as a table from 2824–2851; running a milestone in ten lines from 2786–2823 with a pointer to `.ralphex/board/README.md`; Never from 3284–3308 minus the v1 lines; writing style
-- [ ] the two written rules in the head: a SPEC change is a DECISIONS entry the same day with its register row; a doc.go names the test for every rule or carries `TODO(test)`
-- [ ] tick list in the commit body: every rule in the old Never list and every invariant is in the new file or in a doc.go the task map points at
-- [ ] lower `claudeCeiling` to 300; remove the `t.Skip` from `TestTheTaskMapNamesFilesThatExist`
-- [ ] `wc -l CLAUDE.md` under 300; `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): CLAUDE.md is the invariants"`
+- [x] write the file in seven parts: read first (PRINCIPLES.md, then the doc.go of the package the task touches); "What lives where", v2 rows only from CLAUDE.md 12–85, one line each; the invariants, each one sentence naming its test, including nothing runs git (2942–2957), skills are linked (3246–3263), a house-style test states its value as a literal (3264–3283), the binary prints facts, one JSON object on stdout, no prompts; `## If you touch`, the task map table with a backticked path per row; building and testing as a table from 2824–2851; running a milestone in ten lines from 2786–2823 with a pointer to `.ralphex/board/README.md`; Never from 3284–3308 minus the v1 lines; writing style
+- [x] the two written rules in the head: a SPEC change is a DECISIONS entry the same day with its register row; a doc.go names the test for every rule or carries `TODO(test)`
+- [x] tick list in the commit body: every rule in the old Never list and every invariant is in the new file or in a doc.go the task map points at
+- [x] lower `claudeCeiling` to 300; remove the `t.Skip` from `TestTheTaskMapNamesFilesThatExist`
+- [x] `wc -l CLAUDE.md` under 300; `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): CLAUDE.md is the invariants"`
 
 ### Task 25: README.md and PRINCIPLES.md without v1
 
