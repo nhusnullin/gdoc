@@ -444,12 +444,12 @@ opening "Command " or "Package <name>". Left as it is.
 - Create: `go/internal/view/doc.go`
 - Modify: `go/internal/view/text.go` (demote)
 
-- [ ] move CLAUDE.md 769–866: the markers as a table, every marker escaped and why, the backslash and the parity rule, the escape advances by one rune, a chip's label is escaped, `[rule]` not `---`, inverted ranges are warnings, `--structure`; and from 643–768 the list and pipe-table rules
-- [ ] the per-run escaping limit points at `docs/backlog/escaping-across-run-boundaries.md`
-- [ ] name the pinning tests, the golden file among them
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): view's package comment"`
+- [x] move CLAUDE.md 769–866: the markers as a table, every marker escaped and why, the backslash and the parity rule, the escape advances by one rune, a chip's label is escaped, `[rule]` not `---`, inverted ranges are warnings, `--structure`; and from 643–768 the list and pipe-table rules
+- [x] the per-run escaping limit points at `docs/backlog/escaping-across-run-boundaries.md`
+- [x] name the pinning tests, the golden file among them
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): view's package comment"`
 
 ### Task 9: `internal/comments/doc.go`
 
