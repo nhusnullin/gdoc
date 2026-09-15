@@ -720,10 +720,10 @@ package clause is one decision for Task 27, not a choice per package.
 
 ### Task 28: close the milestone
 
-- [ ] `.ralphex/board/README.md` names no v1 Python: the venv, pytest, the `gdoc` package. `refresh_board.py` stays and is named as the board tool
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] PLAN.md's done table gains this milestone's row
-- [ ] `git commit -m "docs(v2): close the docs restructure"`
+- [x] `.ralphex/board/README.md` names no v1 Python: the venv, pytest, the `gdoc` package. `refresh_board.py` stays and is named as the board tool
+- [x] move this plan to `docs/plans/completed/`
+- [x] PLAN.md's done table gains this milestone's row
+- [x] `git commit -m "docs(v2): close the docs restructure"`
 
 ## Post-Completion
 

@@ -34,6 +34,7 @@ one is written against the code that exists by then.
 | M7 | `restyle --dry-run`, the survey of what a document holds before anything is done to it, and the seven paragraph elements the decoder used to drop in silence | 2026-09-09 | `2026-09-09-gdoc-v2-m7-survey.md` |
 | M7b | `restyle --from`, the house style given to a handed-in document where it stands, under a grant that lasts one run and carries four request kinds, none of which can change a character | 2026-09-09 | `2026-09-09-gdoc-v2-m7b-restyle-in-place.md` |
 | M7c | `restyle --fields`, the cover, the three front-matter tables and the legend proposed as suggestions on a policy that granted nothing, marked by one named range | 2026-09-10 | `2026-09-10-gdoc-v2-m7c-house-template-as-suggestion.md` |
+| the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
 ## M8. The diff, alignment, and the align skill
 
