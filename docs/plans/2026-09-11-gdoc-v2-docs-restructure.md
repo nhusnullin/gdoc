@@ -697,14 +697,14 @@ package clause is one decision for Task 27, not a choice per package.
 - Delete (untracked): `gdoc.egg-info/`
 - Modify: `install.sh`, `.gitignore`, `README.md` (the install section), `Makefile` (only if it names anything removed)
 
-- [ ] `git rm -r` the tracked paths; `rm -rf gdoc.egg-info`; confirm `tools/tlsdiag/` and `.ralphex/board/refresh_board.py` are untouched
-- [ ] `install.sh` becomes: `make build`, link `bin/gdoc` to `~/.local/bin/gdoc`, remove a stale `gdoc2` link, link `skills/gdoc-review`, remove the `~/.claude/skills/gdoc-apply` symlink when it points into this repo and say so, refuse to replace a real directory whose contents differ, print `+ uncommitted changes` on a dirty tree; it never touches `~/.config/gdoc-agent/` and its head comment says so
-- [ ] README.md's install section describes that script
-- [ ] `.gitignore` loses `.pytest_cache/`, `.venv/`, `venv/`, `docs/gdoc/*/out/`
-- [ ] the gate: `grep -rnE 'venv|pytest|pandoc|gdoc-apply|superpowers|spike/render|docs/v2/spikes' --exclude-dir=.git --exclude-dir=plans .` returns only the named exceptions: SPEC.md's "pandoc is gone entirely", PRINCIPLES.md principle 1, `internal/body`'s parser comments, DECISIONS.md and MEASURED.md history; anything else is fixed in this task
-- [ ] run `./install.sh` on this machine; it exits 0 and `gdoc auth status` still answers `ok: true`
-- [ ] `make test`, `make vet`, `make dist` green
-- [ ] `git commit -m "chore: retire v1"`
+- [x] `git rm -r` the tracked paths; `rm -rf gdoc.egg-info`; confirm `tools/tlsdiag/` and `.ralphex/board/refresh_board.py` are untouched
+- [x] `install.sh` becomes: `make build`, link `bin/gdoc` to `~/.local/bin/gdoc`, remove a stale `gdoc2` link, link `skills/gdoc-review`, remove the `~/.claude/skills/gdoc-apply` symlink when it points into this repo and say so, refuse to replace a real directory whose contents differ, print `+ uncommitted changes` on a dirty tree; it never touches `~/.config/gdoc-agent/` and its head comment says so
+- [x] README.md's install section describes that script
+- [x] `.gitignore` loses `.pytest_cache/`, `.venv/`, `venv/`, `docs/gdoc/*/out/`
+- [x] the gate: `grep -rnE 'venv|pytest|pandoc|gdoc-apply|superpowers|spike/render|docs/v2/spikes' --exclude-dir=.git --exclude-dir=plans .` returns only the named exceptions: SPEC.md's "pandoc is gone entirely", PRINCIPLES.md principle 1, `internal/body`'s parser comments, DECISIONS.md and MEASURED.md history; anything else is fixed in this task
+- [x] run `./install.sh` on this machine; it exits 0 and `gdoc auth status` still answers `ok: true`
+- [x] `make test`, `make vet`, `make dist` green
+- [x] `git commit -m "chore: retire v1"`
 
 ### Task 27: verify acceptance criteria
 

@@ -604,7 +604,7 @@ func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
 	b.Published = &Published{
 		At:    time.Date(2026, 9, 8, 14, 30, 0, 0, time.UTC),
 		Title: "Supplier register policy",
-		House: "docs/v2/spikes/config/house.yaml",
+		House: "go/internal/house/house.yaml",
 	}
 	out, err := Write(src, b)
 	if err != nil {

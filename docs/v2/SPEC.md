@@ -79,9 +79,9 @@ in a repo, and `GDOC_CONFIG_DIR` overrides both, which is what the tests use.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
-read/write scope, because v2 writes suggestions through the Docs API. That is
-wider than the read-only Docs scope the Python tool asks for, so the widening
-runs one way. `auth status` never guesses either: being signed out is an answer
+read/write scope, because v2 writes suggestions through the Docs API. Read-only
+would be enough to read a document and not enough to suggest a change to one,
+so the wider of the two is the one asked for. `auth status` never guesses either: being signed out is an answer
 and comes back `ok: true`, a token file that exists and cannot be read is a
 failure naming the file, and a token carrying less than v2 asks for is reported
 and never refused, because the login worked.

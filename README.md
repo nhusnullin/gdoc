@@ -20,9 +20,24 @@ at all.
 
 ## Installing
 
-The install script is rewritten by the next commit in this milestone, the v1
-retirement, and this section describes it then. Until that lands, `make build`
-writes `bin/gdoc`.
+```bash
+./install.sh
+```
+
+It builds `bin/gdoc` with `make build`, links it to `~/.local/bin/gdoc`, and
+links `skills/gdoc-review` into `~/.claude/skills/`. Linked, not copied, so
+`make build` refreshes the command and an edit to the skill is live with no
+reinstall. It is safe to re-run: every step checks what is there first, and it
+refuses to replace a real directory whose contents differ rather than write
+over work that exists nowhere else. It prints the commit it installed from, and
+`+ uncommitted changes` when the tree is dirty.
+
+The script never touches `~/.config/gdoc-agent/`. Your token and your config
+are written by `gdoc auth login` and by nothing else. After installing, run
+`gdoc auth status` to see whether you are signed in.
+
+`~/.local/bin` is not on the macOS default PATH. The script says so when it is
+missing and tells you the line to add.
 
 ## What it does
 
