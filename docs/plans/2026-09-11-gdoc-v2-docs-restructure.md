@@ -683,12 +683,12 @@ package clause is one decision for Task 27, not a choice per package.
 **Files:**
 - Modify: `README.md`, `PRINCIPLES.md`
 
-- [ ] README.md: the v1 sections (The loop, What it does today, What you need, Setup, Using it, What you get told, Limitations) go; "The Go rewrite" becomes the body, retitled; the install section is left as one line saying Task 26 rewrites it, so this commit does not document a script that does not exist yet; "What is planned" points at PLAN.md
-- [ ] PRINCIPLES.md: the four principles stay; a principle's supporting text is rewritten where it names deleted code (pandoc in 1, `write_baseline` and `gdoc/guard.py` in 3), and the principle itself does not change
-- [ ] PRINCIPLES.md "Decisions": the entries that bind v2 move to DECISIONS.md with their dates and register rows: 2026-08-13 the markdown is the source; 2026-08-14 skills are symlinked; 2026-08-15 the client reaches only the files it was given; 2026-08-18 nothing runs git; 2026-08-29 the next version is written in Go. The rest go: Commenter-only (retired), the unstated `auth_mode` (v1), `ai:`-marked only (superseded by the 🤖 marker entries). "Open violations" goes. The classification goes in the commit body
-- [ ] "The gate" points at `docs/plans/` instead of `docs/superpowers/` and drops `tests/test_pandoc_path.py`
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs: README and PRINCIPLES describe one tool"`
+- [x] README.md: the v1 sections (The loop, What it does today, What you need, Setup, Using it, What you get told, Limitations) go; "The Go rewrite" becomes the body, retitled; the install section is left as one line saying Task 26 rewrites it, so this commit does not document a script that does not exist yet; "What is planned" points at PLAN.md
+- [x] PRINCIPLES.md: the four principles stay; a principle's supporting text is rewritten where it names deleted code (pandoc in 1, `write_baseline` and `gdoc/guard.py` in 3), and the principle itself does not change
+- [x] PRINCIPLES.md "Decisions": the entries that bind v2 move to DECISIONS.md with their dates and register rows: 2026-08-13 the markdown is the source; 2026-08-14 skills are symlinked; 2026-08-15 the client reaches only the files it was given; 2026-08-18 nothing runs git; 2026-08-29 the next version is written in Go. The rest go: Commenter-only (retired), the unstated `auth_mode` (v1), `ai:`-marked only (superseded by the 🤖 marker entries). "Open violations" goes. The classification goes in the commit body
+- [x] "The gate" points at `docs/plans/` instead of `docs/superpowers/` and drops `tests/test_pandoc_path.py`
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs: README and PRINCIPLES describe one tool"`
 
 ### Task 26: the v1 retirement
 

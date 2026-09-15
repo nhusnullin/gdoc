@@ -14,7 +14,12 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 
 | Date | Decision | Status |
 |---|---|---|
+| 2026-08-13 | The markdown is the source, the Google Doc is a rendering | holds |
+| 2026-08-14 | Skills are symlinked into `~/.claude/skills/`, never copied | holds |
+| 2026-08-15 | The client reaches only the files it was given | holds |
 | 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | holds |
+| 2026-08-18 | Nothing runs git, and the agent never commits | holds |
+| 2026-08-29 | The next version of gdoc is written in Go | holds |
 | 2026-08-29 | gdoc never replaces the body of a document that already exists | holds |
 | 2026-08-29 | Never trust a success. Verify with a second, independent probe | holds |
 | 2026-08-29 | gdoc marks its own changes by colour, never by highlight | superseded 2026-08-29 (the colour scheme is retired) |
@@ -65,6 +70,51 @@ A row whose status is `MEASURED.md` has its text in
 [MEASURED.md](MEASURED.md), under a heading of the same name. It moved because a
 measurement is what Google does, not a choice gdoc made.
 
+## 2026-08-13. The markdown is the source, the Google Doc is a rendering.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15, when
+that file became the four principles and nothing else.
+
+Domain choice, no principle above it. A document-wide change is made in the
+paired markdown and reaches the document as a new version of it. A reply goes in
+the comment thread that asked, because a thread is comment surface and not
+content.
+
+In v2 the same rule decides which command does what. `publish` renders the note
+into a document. `propose` reaches into a document, and everything it writes
+there is a suggestion. `reply` writes into a thread and nowhere else.
+
+## 2026-08-14. Skills are symlinked into `~/.claude/skills/`, never copied.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15.
+
+Domain choice, no principle above it. A copy drifts silently: an edit to the
+skill in this repository would be invisible to the session running the copy.
+`~/.claude/skills/gdoc-review` is a symlink into `skills/`, so an edit is live
+the moment it is saved and before it is committed. `./install.sh` defends this.
+It refuses to replace a real directory whose contents differ, and it is safe to
+re-run.
+
+## 2026-08-15. The client reaches only the files it was given.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15.
+
+Serves principle 3. Under OAuth the credential can reach every file the
+signed-in user owns, so the guard holds a set of file ids, the ones the command
+was handed plus the ones its own creates returned, and refuses every request
+addressing anything else. A listing is refused outright, so the tool cannot
+search Drive. An empty set refuses everything, so a command that does not name a
+document reaches nothing.
+
+The cost is stated rather than hidden: on a file in the set, the guard bounds
+which methods carry, not what a method could do to the words. "The agent cannot
+edit a reviewed document" is "it does not", and the decision of 2026-08-13 above
+is held up by design rather than by a permission Google enforces.
+
+This is the entry the 2026-08-29 decision "The guard owns the transport" below
+is built on: v2 adds the write levels to the same set of ids, and
+`internal/guard` is where both live.
+
 ## 2026-08-18. The OAuth client is shipped in git, and the client stays Internal.
 
 Serves principle 1. Nobody using gdoc visits a cloud console, so the client id
@@ -101,6 +151,63 @@ reason, which is evasion of automated revocation rather than security.
 Before this repository is ever public: create a fresh client, distribute it as a
 file out of band, and clear the two constants. Do not obfuscate them to get past
 the scanner.
+
+## 2026-08-18. Nothing runs git, and the agent never commits.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15.
+
+Serves principle 1. Committing is Nail's job. A person receiving this tool
+should not have to think about git at all, and the skills should not carry a
+conditional and a "nothing was committed" sentence for a case that may never
+apply to them.
+
+The skills do not commit. They name every file that changed on disk instead, so
+Nail commits them himself. Trying the commit and reporting what git said was
+considered and rejected: that still makes committing the agent's job.
+
+Nothing asks git anything either, not whether the tree is a repository and not
+whether a file is dirty. Outside a repository the answer is always "cannot
+tell", which is most of the time, and where the root is a synced folder a
+Dropbox or Nextcloud rewrite is exactly what git cannot see, so the check read
+as safety while providing none. What replaced it is disk state: an existing
+output file is never overwritten without `--force`, in any directory, which is
+principle 3 held without a subprocess.
+
+The cost is that a document generated from an uncommitted note is not matched to
+a commit. That was only ever true on Nail's own machine, and it was never
+checked. `install.sh` is the one exception, and it reads git about this
+repository rather than about somebody's documents.
+
+## 2026-08-29. The next version of gdoc is written in Go.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15. It is
+the decision this whole file descends from.
+
+Serves principle 1. Principle 1 drew its line at "a program pip cannot install
+does not travel", and pandoc was that program. It survived three specs because
+removing it in Python meant writing a Markdown parser and rewriting the AST
+walker in the module where the body's pixel fidelity lives. In Go it is an
+import, and a Go build is one static binary: no interpreter, no package
+manager, no external program that has to already be on the machine. That is
+principle 1 satisfied rather than managed, and it is the whole reason for the
+decision. Speed is not.
+
+The fidelity question was measured before deciding, because it was the assumed
+risk. Six documents were built by both renderers, published to Drive by both,
+exported as PDF by Google, rasterised at 300 dpi and compared with a zero
+tolerance: 418,385,088 pixels across 48 pages, none different. Run twice on
+separate publishes.
+
+It ported exactly for a structural reason worth keeping in mind. Neither
+renderer builds a .docx from nothing. Both copy the master and cut into it, so
+the cover, the logo, the running head and the coloured tables travel as bytes. A
+.docx is a zip of XML, and the body was already written as OOXML by hand against
+constants measured out of the template.
+
+**What the decision did not rest on.** The docx *reader* was load-bearing rather
+than a fallback: it is the only route that brings a picture out of a Google Doc,
+goldmark does not replace it, and it was unmeasured on the day. It is
+`internal/docx` now.
 
 ## 2026-08-29. gdoc never replaces the body of a document that already exists.
 
