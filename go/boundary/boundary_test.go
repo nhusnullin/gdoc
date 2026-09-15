@@ -1,12 +1,6 @@
-// Package boundary enforces that gdoc has exactly one wire, runs no external
-// programs, and depends on nothing outside the standard library. This is the v1
-// allowlist test, ported: the wire checks fail in BOTH directions, on spread
-// and on silent disappearance.
-//
-// Two wire checks, because importing net/http and dialing with it are not the
-// same thing. The import allowlist says which packages may name the type at
-// all. The builder allowlist says who may make a client out of it, and that is
-// the single room the guard occupies.
+// The wire checks, the external-program ban, and the dependency list. Each one
+// fails in both directions, on spread and on silent disappearance. The reasons
+// are in doc.go.
 package boundary
 
 import (

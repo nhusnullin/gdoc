@@ -63,9 +63,9 @@ var docRoots = []string{"cmd/gdoc", "internal", "boundary"}
 // the task that fixes a package has to delete its row rather than leave a name
 // here that stopped meaning anything.
 //
-// Both entries are packages whose only files are tests, so their package
-// comment sits where `go doc` does not look. Task 6 gives boundary a doc.go and
-// Task 19 gives internal/live one, and each deletes its own row.
+// The one entry left is a package whose only files are tests, so its package
+// comment sits where `go doc` does not look. Task 6 gave boundary a doc.go and
+// deleted its row; Task 19 gives internal/live one and deletes the last.
 //
 // The docs restructure plan named four here, adding cmd/gdoc and internal/render
 // on the belief that cmd/gdoc carried no package comment and internal/render
@@ -74,7 +74,6 @@ var docRoots = []string{"cmd/gdoc", "internal", "boundary"}
 // Both already hold the rule, so listing them would fail this test on its own
 // second assertion.
 var known = map[string]string{
-	"boundary":      "its package comment is on boundary_test.go, and go doc does not read test files",
 	"internal/live": "its package comment is on live_test.go, and go doc does not read test files",
 }
 

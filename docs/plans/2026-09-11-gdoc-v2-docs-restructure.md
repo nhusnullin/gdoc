@@ -417,13 +417,13 @@ opening "Command " or "Package <name>". Left as it is.
 - Create: `go/boundary/doc.go`
 - Modify: `go/boundary/boundary_test.go` (demote), `go/boundary/docs_test.go` (delete `boundary` from `known`)
 
-- [ ] move CLAUDE.md 528–612: the import allowlist and the builder allowlist and why they differ, the eight ways to make a wire and the canary, no `os/exec`, `allowedModules` with the three modules and their reasons, `TestAllowedModulesAreReallyRequired`
-- [ ] describe the three docs guards from Task 1
-- [ ] demote `boundary_test.go`'s package comment; delete `boundary` from `known`
-- [ ] name the pinning tests
-- [ ] tick list in the commit body
-- [ ] `make test`, `make vet` green
-- [ ] `git commit -m "docs(v2): boundary's package comment"`
+- [x] move CLAUDE.md 528–612: the import allowlist and the builder allowlist and why they differ, the eight ways to make a wire and the canary, no `os/exec`, `allowedModules` with the three modules and their reasons, `TestAllowedModulesAreReallyRequired`
+- [x] describe the three docs guards from Task 1
+- [x] demote `boundary_test.go`'s package comment; delete `boundary` from `known`
+- [x] name the pinning tests
+- [x] tick list in the commit body
+- [x] `make test`, `make vet` green
+- [x] `git commit -m "docs(v2): boundary's package comment"`
 
 ### Task 7: `internal/docs/doc.go`
 
