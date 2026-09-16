@@ -156,4 +156,43 @@
 // it produces anything, and it fails only on the machine that has never built
 // before, which is the machine somebody is trying gdoc on for the first time.
 // TestEveryTargetThatWritesIntoBinMakesIt is the pin.
+// # What a colleague installs, and the two lists that describe it
+//
+// Nobody outside this repository clones it. A colleague adds it as a Claude
+// Code marketplace and installs one plugin, and what lands on their machine is
+// whatever the two manifests at the root say plus whatever sits under skills/.
+// Nothing reads those files on the way past, so a half made skill or a version
+// that disagrees with the next tag reaches somebody else unnoticed, and the
+// person who finds out is the colleague rather than the author.
+//
+// TestThePluginNamesTheSkillsThatExist parses both manifests strictly, the way
+// every other input this tree reads is parsed, and asks for the four things a
+// wrong value would break on a stranger's machine: the plugin is named gdoc,
+// because that is the word after the at sign; it carries a description, which
+// is the one line /plugin shows before anyone installs; its version is vX.Y.Z
+// shaped, because the release workflow checks it against the tag; and the
+// marketplace lists exactly one plugin, sourced from ./, because the manifests
+// and skills/ sit at the root together. Then it stats a SKILL.md in every
+// directory under skills/, since a directory without one is a skill Claude Code
+// fails to load.
+//
+// TestTheInstallerLinksEverySkillThePluginShips is the disappearance half, the
+// same rule the wire and module lists hold. install.sh names the skills it
+// links in one array, and that array is a second list of the same thing. A
+// skill in one and not the other means the colleague on the plugin and the
+// person in the checkout have different tools under one name, which is the
+// failure nobody reports because each of them is sure they are right.
+//
+// # The tag target refuses before it writes
+//
+// make tag is the one hand-cut release: it writes the version into the plugin
+// manifest, commits, tags and pushes. It takes only x.y.0, because the nightly
+// owns the patch numbers and a patch cut by hand would collide with the one CI
+// cuts at 02:00 UTC.
+//
+// TestMakeTagRefusesAVersionThatIsNotAMinor reads the recipe rather than
+// running it, since running it would push. It asks that the refusal is there
+// and that it comes before the write: a rejected version has to leave the tree
+// exactly as it was, or a typo costs somebody a dirty plugin.json they then
+// have to notice.
 package boundary

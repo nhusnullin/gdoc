@@ -35,4 +35,26 @@ dist:
 	cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-darwin-amd64 ./cmd/gdoc
 	cd go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-windows-amd64.exe ./cmd/gdoc
 
-.PHONY: test vet build dist
+# `make tag VERSION=vX.Y.0` cuts a release by hand: it writes the version into
+# the plugin manifest, commits, tags and pushes, and the tag is what the
+# release workflow builds from.
+#
+# Only a minor. The nightly owns the patch numbers, so a patch cut here would
+# collide with the one CI cuts at 02:00 UTC, and two tags on the same number
+# are two releases a colleague cannot tell apart.
+#
+# The refusals come before anything is written. A rejected version leaves the
+# tree exactly as it was, so a typo costs nothing but the message.
+tag:
+	@echo "$(VERSION)" | grep -Eq '^v[0-9]+\.[0-9]+\.0$$' || { echo "make tag: VERSION=$(VERSION) is not vX.Y.0. Patch versions are the nightly's."; exit 1; }
+	@git diff --quiet HEAD || { echo "make tag: the tree has uncommitted changes. Commit them first."; exit 1; }
+	@git rev-parse -q --verify "refs/tags/$(VERSION)" >/dev/null && { echo "make tag: $(VERSION) is already a tag."; exit 1; } || true
+	sed -e 's|"version": "[^"]*"|"version": "$(VERSION)"|' .claude-plugin/plugin.json > .claude-plugin/plugin.json.new
+	mv .claude-plugin/plugin.json.new .claude-plugin/plugin.json
+	git add .claude-plugin/plugin.json
+	git commit -m "chore: version $(VERSION)"
+	git tag "$(VERSION)"
+	git push origin HEAD
+	git push origin "refs/tags/$(VERSION)"
+
+.PHONY: test vet build dist tag

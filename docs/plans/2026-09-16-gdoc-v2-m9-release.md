@@ -476,22 +476,53 @@ and `house.yaml` is read by both writers:
 - Create: `go/boundary/plugin_test.go`
 - Modify: `Makefile`, `install.sh`
 
-- [ ] Test first, `TestThePluginNamesTheSkillsThatExist`: `plugin.json`
+- [x] Test first, `TestThePluginNamesTheSkillsThatExist`: `plugin.json`
       parses, its `name` is `gdoc`, its `version` is `vX.Y.Z` shaped, and
       `marketplace.json` lists exactly one plugin with source `./`. Every
       directory under `skills/` holds a `SKILL.md`, so the plugin ships
       nothing half made.
-- [ ] The two files, with the version `v2.0.0`.
-- [ ] `make tag VERSION=vX.Y.Z`: refuses a version that is not `x.y.0`,
+- [x] The two files, with the version `v2.0.0`.
+      ➕ `TestTheInstallerLinksEverySkillThePluginShips` was added beside it:
+      `install.sh`'s `SKILLS` array and the folders under `skills/` are two
+      lists of one thing, so they fail in both directions like the wire and
+      module lists.
+      ➕ `marketplace.json` carries a `description`, which
+      `claude plugin validate --strict` asks for.
+- [x] `make tag VERSION=vX.Y.Z`: refuses a version that is not `x.y.0`,
       writes it into `plugin.json`, commits `chore: version vX.Y.Z`, tags,
       and pushes the commit and the tag. Nightly versions are CI's, Task 12.
-- [ ] `install.sh` in the checkout: unchanged for the binary and the symlinked
+- [x] `install.sh` in the checkout: unchanged for the binary and the symlinked
       skills, and its summary says the plugin is how a colleague gets them.
-- [ ] On this machine: `/plugin marketplace add` from the local checkout path
+- [x] On this machine: `/plugin marketplace add` from the local checkout path
       and `/plugin install gdoc@gdoc` in a scratch project, and the three
       skills show in `/plugin`. Paste the listing here.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(release): this repository is a Claude Code marketplace and a plugin"`
+      ➕ Run through the `claude plugin` CLI with `CLAUDE_CONFIG_DIR` pointed at
+      a scratch config, so nothing landed in Nail's own. The listing:
+
+      ```
+      gdoc v2.0.0
+        Description: Review, publish and restyle Google Docs in the Altery
+        house style, through the gdoc binary.
+        Source: gdoc@gdoc
+
+      Component inventory
+        Skills (3)  gdoc-publish, gdoc-restyle, gdoc-review
+        Agents (0)
+        Hooks (0)
+        MCP servers (0)
+        LSP servers (0)
+
+      Projected token cost
+        Always-on:   ~222 tok   added to every session
+      ```
+
+      `claude plugin validate .` passes on the marketplace manifest, `--strict`
+      included. The plugin manifest passes with one warning, that CLAUDE.md at
+      the plugin root is not loaded as plugin context. That is what we want:
+      CLAUDE.md is for whoever works on this repository, and the plugin ships
+      the skills.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(release): this repository is a Claude Code marketplace and a plugin"`
 
 ### Task 6: the guard's update grant
 
