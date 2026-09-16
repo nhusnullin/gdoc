@@ -104,9 +104,10 @@ func helpEntries(matched []command) []helpCommand {
 // but not its flags needs.
 func helpProse(matched []command, all bool) string {
 	if all {
-		return helpList(matched)
+		return versionHeading() + helpList(matched)
 	}
 	var b strings.Builder
+	b.WriteString(versionHeading())
 	for i, c := range matched {
 		if i > 0 {
 			b.WriteString("\n")
@@ -114,6 +115,16 @@ func helpProse(matched []command, all bool) string {
 		b.WriteString(helpOne(c))
 	}
 	return b.String()
+}
+
+// versionHeading opens the words a person reads with the release they are
+// running, because a screenshot of a problem otherwise names no build. An
+// untagged build opens with the usage line, as it always did.
+func versionHeading() string {
+	if v := releaseVersion(); v != "" {
+		return "gdoc " + v + "\n\n"
+	}
+	return ""
 }
 
 // helpList is every command, one line each, name and sentence aligned.

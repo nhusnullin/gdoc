@@ -365,19 +365,20 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Modify: `go/internal/emit/emit.go`, `emit_test.go`
 - Modify: `Makefile`
 
-- [ ] Test first, `TestTheVersionReachesTheEnvelopeAndTheHelp`: with
+- [x] Test first, `TestTheVersionReachesTheEnvelopeAndTheHelp`: with
       `version` set in the test, every object carries `version`, the help
       prose opens with it, and `auth status` data carries it; with `dev` the
       field is absent and no existing test sees a change.
-- [ ] `var version = "dev"` in `main.go`; `emit.Result` gains `Version string
+- [x] `var version = "dev"` in `main.go`; `emit.Result` gains `Version string
       \`json:"version,omitempty"\``; `run` sets it.
-- [ ] `Makefile`: `VERSION := $(shell git describe --tags --always --dirty)`,
+- [x] `Makefile`: `VERSION := $(shell git describe --tags --always --dirty)`,
       and `LDFLAGS` gains `-s -w -X main.version=$(VERSION)` beside the
       client secret; both targets add `-trimpath`.
-- [ ] `make dist && strings bin/gdoc-darwin-arm64 | grep -c nailkhusnullin`
-      prints 0. Record the three binary sizes here.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the version in every envelope, and builds trimmed and stripped"`
+- [x] `make dist && strings bin/gdoc-darwin-arm64 | grep -c nailkhusnullin`
+      prints 0, for all three binaries. Sizes: darwin-arm64 12,022,530 bytes,
+      darwin-amd64 12,937,296 bytes, windows-amd64.exe 12,988,928 bytes.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the version in every envelope, and builds trimmed and stripped"`
 
 ### Task 2: the skills say "you", and name the version they need
 

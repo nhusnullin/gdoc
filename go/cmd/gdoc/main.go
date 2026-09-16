@@ -19,6 +19,22 @@ import (
 	"gdoc/internal/guard"
 )
 
+// version is the release this binary was built from. The linker sets it from
+// the tag, in both Make targets; a build nobody tagged keeps "dev". It is a
+// var and not a const because -X can only write a var, and it is read through
+// releaseVersion so one place decides what "dev" means.
+var version = "dev"
+
+// releaseVersion is the version as the envelope and the help print it: empty
+// for an untagged build, so nothing a colleague sends back names a release
+// that does not exist.
+func releaseVersion() string {
+	if version == "dev" {
+		return ""
+	}
+	return version
+}
+
 // login is the login flow behind a variable so a test can stand in for the
 // browser trip. The client is the guard's, so even the token exchange passes a
 // policy that could refuse it.
@@ -41,6 +57,10 @@ func main() {
 // nothing else.
 func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	r := safeDispatch(ctx, args, errOut)
+	// The version is set here and nowhere else, so every object carries it:
+	// the answers, the refusals and the panic envelope alike. A report of
+	// something odd names the build that did it without anyone being asked.
+	r.Version = releaseVersion()
 	if err := emit.Print(out, r); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -99,6 +119,24 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	return c.run(ctx, a, errOut)
 }
 
+// statusData is the auth report with the version beside it. `gdoc auth status`
+// is the command a person runs to ask what they have, so the build is one of
+// the facts it reports, not only a field of the envelope around it.
+type statusData struct {
+	*auth.StatusReport
+	Version string `json:"version,omitempty"`
+}
+
+// statusReport is the report as it goes out. A nil report stays nil rather
+// than becoming an object holding nothing but a version: a config dir gdoc
+// cannot locate has no facts to report, and that is what the error says.
+func statusReport(r *auth.StatusReport) any {
+	if r == nil {
+		return r
+	}
+	return statusData{StatusReport: r, Version: releaseVersion()}
+}
+
 func authStatus() emit.Result {
 	report, err := auth.Status()
 	if err != nil {
@@ -106,9 +144,9 @@ func authStatus() emit.Result {
 		// still learns which file was being read and what else is in the way,
 		// and the error names what was wrong with it. The run that fails is the
 		// one where the extra fact is worth most.
-		return emit.Result{OK: false, Error: err.Error(), Data: report, Warnings: statusWarnings(report)}
+		return emit.Result{OK: false, Error: err.Error(), Data: statusReport(report), Warnings: statusWarnings(report)}
 	}
-	return emit.Result{OK: true, Data: report, Warnings: statusWarnings(report)}
+	return emit.Result{OK: true, Data: statusReport(report), Warnings: statusWarnings(report)}
 }
 
 // statusWarnings says what the report cannot say in a field: a fact that is
