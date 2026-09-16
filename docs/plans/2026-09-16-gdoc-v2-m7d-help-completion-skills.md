@@ -594,33 +594,33 @@ cursor or a wait length. A document URL offers nothing either.
 **Files:**
 - Create: `skills/gdoc-restyle/SKILL.md`
 
-- [ ] Read `go/internal/prelude/doc.go`, `go/internal/restyle/doc.go` and
+- [x] Read `go/internal/prelude/doc.go`, `go/internal/restyle/doc.go` and
       `cover.Fields` first. The cover values and the second-run rules in this
       skill come from those, not from this plan.
-- [ ] Front matter: `name: gdoc-restyle`, and a description naming the
+- [x] Front matter: `name: gdoc-restyle`, and a description naming the
       trigger: Nail gives a link to a Google Doc gdoc did not write and wants
       it in the house style where it stands.
-- [ ] Setup, credential and dry-run paragraphs as in Task 6, with the same
+- [x] Setup, credential and dry-run paragraphs as in Task 6, with the same
       help-first rule.
-- [ ] Step 1, the survey, always: `restyle <url> --dry-run` to a file, then say
+- [x] Step 1, the survey, always: `restyle <url> --dry-run` to a file, then say
       in plain words what the document holds: threads, pending suggestions,
       chips, tabs, named ranges. If `nothing_to_protect` is true, offer the
       read-note-publish route in one sentence and never take it alone.
-- [ ] Step 2, the cover: ask whether the house cover is wanted. If yes, propose
+- [x] Step 2, the cover: ask whether the house cover is wanted. If yes, propose
       each of the thirteen values from the document and the hub, show them,
       and write the fields file only after Nail confirms. `Title` is never
       invented: it is proposed and confirmed.
-- [ ] Step 3, the styling run: say what will be sent and ask once more, because
+- [x] Step 3, the styling run: say what will be sent and ask once more, because
       this is the one direct edit gdoc ever makes. Then `restyle <url> --from
       <survey> [--fields <fields>]`.
-- [ ] Step 4, the report: read `manual` out loud, each step with its menu path;
+- [x] Step 4, the report: read `manual` out loud, each step with its menu path;
       say `verified`; say if the run stopped half way and what that leaves;
       say that a restyle is a moment and not a setting, so the next heading
       Nail types will not carry the house look.
-- [ ] Never: never run the styling without the survey read in this session,
+- [x] Never: never run the styling without the survey read in this session,
       never retry a batch Docs refused, never run on a document with more than
       one tab, never invent a cover value, never run git.
-- [ ] `git commit -m "feat(skill): gdoc-restyle"`
+- [x] `git commit -m "feat(skill): gdoc-restyle"`
 
 ### Task 8: the test over every skill
 
