@@ -527,23 +527,32 @@ and `house.yaml` is read by both writers:
 ### Task 6: the guard's update grant
 
 **Files:**
-- Modify: `go/internal/guard/policy.go`, `policy_test.go`, `doc.go`
+- Modify: `go/internal/guard/policy.go`, `doc.go`, `transport.go`
+- Create: `go/internal/guard/update_test.go`
 
-- [ ] Test first, as an attack: a policy without the grant refuses
+- [x] Test first, as an attack: a policy without the grant refuses
       `api.github.com` by name, as today. With `AllowUpdateFrom(repo)`: the
       releases listing carries, the download path for that repository
       carries, the asset host carries for GET; a POST, another repository,
       another path, and any Google request through the same policy are each
       refused by name.
-- [ ] Test, `TestAnUpdateRequestCarriesNoBearer`: a request to any of the
+- [x] Test, `TestAnUpdateRequestCarriesNoBearer`: a request to any of the
       three hosts with an Authorization header is refused before it leaves.
-- [ ] `AllowUpdateFrom` in the shape of `AllowCreateIn`: per-run, one
+- [x] `AllowUpdateFrom` in the shape of `AllowCreateIn`: per-run, one
       repository, read-only. `Judge` gains the three hosts under it.
-- [ ] `doc.go`'s "Two doors into the set, and four grants beside it" becomes
+- [x] `doc.go`'s "Two doors into the set, and four grants beside it" becomes
       five, with the reason and the tests.
-- [ ] Every existing guard test passes without an assertion changed.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): one read-only guard door for updates"`
+- [x] Every existing guard test passes without an assertion changed.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): one read-only guard door for updates"`
+
+➕ The tests went into a new `update_test.go` rather than into
+`policy_test.go`, which holds one subject as `copy_test.go` and
+`marker_test.go` do. The no-bearer rule is in `transport.go`, because a header
+is not something `Judge` is handed; it refuses on the host rather than on the
+grant, so it holds for a run that was never granted an update. `probe/doc.go`
+and `withdraw/doc.go` name the renamed guard section, so both were corrected
+to "five grants beside it".
 
 ### Task 7: releases, versions and the policy
 

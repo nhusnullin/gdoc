@@ -83,7 +83,7 @@
 // The guard's create door was kept at M2 on the strength of publish needing it
 // at M6. This package is what reached it first, at M3. The door itself, and
 // what a create is judged on, are internal/guard's, in its package comment
-// under "Two doors into the set, and four grants beside it".
+// under "Two doors into the set, and five grants beside it".
 //
 // # Two rules this package rests on and does not hold
 //

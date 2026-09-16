@@ -242,6 +242,16 @@ func checkWireMatchesJudgment(req *http.Request) error {
 		}
 	}
 	if vals, ok := byName["authorization"]; ok {
+		if isUpdateHost(req.URL.Host) {
+			// The only bearer gdoc holds is Google's, and Google is not who
+			// answers here. An update reads a public release, so a credential
+			// on one of these requests is either the wrong credential sent to
+			// the wrong party or a caller that has confused two sessions.
+			// Either way it does not leave this process. The rule is on the
+			// host rather than on the grant, so it holds for a run that was
+			// never granted an update too.
+			return refuse("a request to %q carries an Authorization header, and the update carries no credential: the only bearer gdoc holds is Google's", req.URL.Host)
+		}
 		if err := checkAuthorization(vals); err != nil {
 			return err
 		}
