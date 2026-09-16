@@ -387,19 +387,32 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
   `skills/gdoc-restyle/SKILL.md`
 - Modify: `go/cmd/gdoc/skills_test.go`
 
-- [ ] Test first, three checks added to the SKILL.md walk: no file contains
+- [x] Test first, three checks added to the SKILL.md walk: no file contains
       the word `Nail`; none contains `/Users/` or `~/src/`; each front matter
       carries `needs: vX.Y.Z` that parses; and none runs `$GDOC update`.
-- [ ] "Nail" becomes "you" for the person at the keyboard and "a colleague" or
+      `TestNoSkillNamesAPersonOrAMachinesPath`,
+      `TestEverySkillNamesTheGdocItNeeds`, `TestNoSkillRunsUpdateOnItsOwn`,
+      with the `needs` reader pinned against literals by
+      `TestANeedsLineIsReadAsThreeNumbers` and
+      `TestANeedsLineThatIsNotAVersionIsCaught`.
+- [x] "Nail" becomes "you" for the person at the keyboard and "a colleague" or
       "the reviewer" where the text means somebody else in the document. The
-      descriptions trigger on what the person says.
-- [ ] The review skill's `Spec:` line pointing into a checkout goes. Read the
+      descriptions trigger on what the person says. Inside a skill "you" now
+      means the person and nobody else: where the text meant the session it
+      says so, or it says it as an imperative.
+- [x] The review skill's `Spec:` line pointing into a checkout goes. Read the
       spec sections it names and confirm the skill already carries every
-      sentence it needs; add the missing ones, not a path.
-- [ ] Setup in each skill: `$GDOC help` first, the version read from the
+      sentence it needs; add the missing ones, not a path. Three sentences
+      were missing and are now in the skills: every read takes in every tab,
+      the docx export is the honest witness because Drive's own anchor
+      survives a detachment, and `commentUpdateState: ALL_SAVED` is part of a
+      reply's `verified`. The publish and restyle `Spec:` lines went the same
+      way, because they named the same checkout.
+- [x] Setup in each skill: `$GDOC help` first, the version read from the
       object, and the sentence naming `gdoc update` when it is below `needs`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(skill): the skills address whoever is at the keyboard, and name the gdoc they need"`
+      A build with no `version` is a build from source and not an error.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(skill): the skills address whoever is at the keyboard, and name the gdoc they need"`
 
 ### Task 3: the page_break block in the docx route
 

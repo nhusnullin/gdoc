@@ -1,11 +1,12 @@
 ---
 name: gdoc-publish
-description: Use when Nail names a note in the hub and a Drive folder and wants that note in Drive as a Google Doc in the Altery house style. Reads the note's front matter, builds it, uploads it into the one folder Nail named, and reads back what came out.
+description: Use when the request names a note in the hub and a Drive folder and asks for that note in Drive as a Google Doc in the Altery house style. Reads the note's front matter, builds it, uploads it into the one folder the request named, and reads back what came out.
+needs: v2.0.0
 ---
 
 # Publish a note as a Google Doc
 
-Nail names a note and a folder. The note is markdown in the hub. The folder is
+You name a note and a folder. The note is markdown in the hub. The folder is
 where the document goes. gdoc renders the note in the house style, uploads it,
 reads it back and records the pairing in the note's own front matter.
 
@@ -13,18 +14,23 @@ A note is published once. The `gdoc:` block in its front matter is the record of
 that, and it is the reason the binary refuses a second publish. The block is
 gdoc's memory of a document, not a setting somebody tidies away.
 
-Spec: `~/src/personal/gdoc/docs/v2/SPEC.md`, sections "The binary", "The
-skills", "Verification: never trust a success" and "Never".
-
 ## Setup
 
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
+$GDOC help
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+
+`help` is the first call of every session, because its object carries
+`version`, the release this binary was built from. This skill needs the version
+its own front matter names on the `needs` line, or a later one. An older binary
+is one the skill is ahead of: say so, say that `gdoc update` is the command
+that fixes it, and stop there. No `version` at all is a build made from source
+rather than a release, which is not an error: say it once and carry on.
 
 One root, `$ROOT`, and it is `$PWD`. It is the hub: the tree the note lives in,
 and the only place a note is read from or written to. Scratch output, the dry
@@ -33,7 +39,7 @@ note.
 
 Nothing here runs git. Not to commit, not to check whether the note is dirty.
 
-## Learn the command before you call it
+## Learn the command before calling it
 
 Before the first call of a command in this session, run:
 
@@ -57,14 +63,14 @@ error. `build` is not one of them: it touches no network at all. Run `$GDOC auth
 status` and read it before guessing. It reports whether a token is present,
 whether it expired, and which scopes are missing.
 
-The fix is `$GDOC auth login`. It prints a URL, waits for Nail to approve in the
+The fix is `$GDOC auth login`. It prints a URL, waits for you to approve in the
 browser, and saves the token. Ask before running it: it changes which account
 owns the document that is about to be created, and that account is visible to
 everyone the document is shared with.
 
-Never edit `~/.config/gdoc-agent/` by hand, and never tell Nail to.
+Never edit `~/.config/gdoc-agent/` by hand, and never tell anyone to.
 
-## If Nail asks for a dry run
+## If the request is a dry run
 
 Do every step, but put nothing in Drive and write nothing into the note.
 
@@ -82,32 +88,32 @@ front matter is untouched.
 Open the note and read its YAML front matter before running anything.
 
 **A `gdoc:` block naming a document means this note is already published.**
-Stop. Say it in Nail's words: this note is already paired with that document,
+Stop. Say it in plain words: this note is already paired with that document,
 gdoc publishes a note once, so open that document, or, if it names a document
-that has gone, take the block out by hand. Taking it out is Nail's, never
-yours. The binary refuses the run for the same reason, and the refusal names
+that has gone, take the block out by hand. Taking it out is yours, never this
+session's. The binary refuses the run for the same reason, and the refusal names
 the document id.
 
 **A note with no `gdoc:` block is a note that can be published.** Read the
-author's own keys while you are there. Only `title` is required. The optional
+author's own keys at the same time. Only `title` is required. The optional
 keys feed the cover page and the version-control table, and a key that is not
 there leaves its line blank rather than taking somebody else's value.
 
 **A note with no title is refused, and gdoc never invents one.** The refusal
 carries a candidate, drawn from the note's first heading or from its file name.
-Show Nail the candidate and ask him to confirm it. Then write it into the note's
+Show the candidate and wait for your word on it. Then write it into the note's
 front matter yourself, as `title`, and run again. Nothing else in the note
 changes.
 
 ## Step 2: Publish
 
 Run `$GDOC help publish`, then build the call from what it printed: the note,
-and the folder Nail named in this request.
+and the folder you named in this request.
 
 The folder is the one door this run has. gdoc is handed the folder and learns
 the new document's id from the create it carried itself. So the folder must be
-the one Nail named, in this conversation, and nothing else: not a folder another
-note was published into, not one you found in a different note's block.
+the one you named, in this conversation, and nothing else: not a folder another
+note was published into, not one found in a different note's block.
 
 Publish is one call. Never run it twice on one note. A run that failed has
 already dealt with what it left behind, and Step 3 says how to read that.
@@ -117,7 +123,7 @@ already dealt with what it left behind, and Step 3 says how to read that.
 The binary prints facts and judges none of them. Read the object and say, in
 this order:
 
-- **The URL**, so Nail can open it.
+- **The URL**, so you can open it.
 - **`verified`, and each of the three checks under `checks`.** They are three
   read-backs on separate routes: the Docs read says the document is there and
   readable, the tab count says it is one document rather than a shape a later
@@ -142,7 +148,7 @@ created and the note is untouched. If it failed after the upload and the answer
 could not be read, the error names the folder and says a document may be in it.
 Repeat that. Do not guess which.
 
-## Step 4: The three things only Nail can check
+## Step 4: The three things only you can check
 
 The binary cannot see a rendered page. After a publish that produced a document,
 say these three, as things to look at:
@@ -151,8 +157,8 @@ say these three, as things to look at:
 - the contents list, which Docs fills in when the document is opened,
 - the page numbers in the footer.
 
-Those are facts about the document gdoc just made, and Nail is the one who
-judges them. Do not claim them yourself.
+Those are facts about the document gdoc just made, and you are the one who
+judges them. The session never claims them itself.
 
 ## Never
 
@@ -161,11 +167,11 @@ judges them. Do not claim them yourself.
 - Never publish a note twice. One note, one document.
 - Never pass a folder the binary was not handed in this request.
 - Never invent a title, a date, an owner or a classification to make a build
-  pass. A missing value is a question for Nail.
+  pass. A missing value is a question for you.
 - Never run git.
 - Never trust a status code. Read `verified` and `checks`.
 - Never say a publish failed because `verified` is false. Say which route did
   not hold.
 - Never delete anything from Drive, except through the rollback gdoc did
   itself, which it reports.
-- Never export a PDF. Nail downloads it from the browser.
+- Never export a PDF. You download it from the browser.

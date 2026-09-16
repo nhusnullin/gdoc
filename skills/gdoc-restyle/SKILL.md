@@ -1,32 +1,38 @@
 ---
 name: gdoc-restyle
-description: Use when Nail gives a link to a Google Doc gdoc did not write and wants it in the Altery house style where it stands. Surveys what the document holds first, proposes the house cover when Nail asks for one, and styles the body in place.
+description: Use when the request gives a link to a Google Doc gdoc did not write and asks for it in the Altery house style where it stands. Surveys what the document holds first, proposes the house cover when the request asks for one, and styles the body in place.
+needs: v2.0.0
 ---
 
 # Restyle a document where it stands
 
-Nail names a document somebody else wrote. gdoc gives it the house look without
+You name a document somebody else wrote. gdoc gives it the house look without
 moving a character of the text: the page geometry, each paragraph's spacing and
 indent, each run's face, size and colour, and each table cell's padding and
-borders. When Nail asks for the house cover as well, the cover and the three
-front-matter tables arrive as a suggestion he accepts or rejects in the browser.
+borders. When you ask for the house cover as well, the cover and the three
+front-matter tables arrive as a suggestion you accept or reject in the browser.
 
 This is the one direct edit gdoc ever makes. Every other command in this binary
 proposes. So the run is two runs: a survey that writes nothing and is read by a
 person, and an apply that quotes the survey back. Nothing skips the survey.
-
-Spec: `~/src/personal/gdoc/docs/v2/SPEC.md`, sections "The binary", "The
-skills", "Verification: never trust a success" and "Never".
 
 ## Setup
 
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
+$GDOC help
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+
+`help` is the first call of every session, because its object carries
+`version`, the release this binary was built from. This skill needs the version
+its own front matter names on the `needs` line, or a later one. An older binary
+is one the skill is ahead of: say so, say that `gdoc update` is the command
+that fixes it, and stop there. No `version` at all is a build made from source
+rather than a release, which is not an error: say it once and carry on.
 
 One root, `$ROOT`, and it is `$PWD`. It is the hub: where a cover value may be
 found, and the only place a note is read from or written to. Scratch output, the
@@ -35,7 +41,7 @@ beside somebody's note.
 
 Nothing here runs git. Not to commit, not to check whether a file is dirty.
 
-## Learn the command before you call it
+## Learn the command before calling it
 
 Before the first call of a command in this session, run:
 
@@ -60,14 +66,14 @@ stops the run before anything is written. Run `$GDOC auth status` and read it
 before guessing. It reports whether a token is present, whether it expired, and
 which scopes are missing.
 
-The fix is `$GDOC auth login`. It prints a URL, waits for Nail to approve in
+The fix is `$GDOC auth login`. It prints a URL, waits for you to approve in
 the browser, and saves the token. Ask before running it: it changes which
 account edits the document, and that account is visible to everyone the
 document is shared with, in its version history.
 
-Never edit `~/.config/gdoc-agent/` by hand, and never tell Nail to.
+Never edit `~/.config/gdoc-agent/` by hand, and never tell anyone to.
 
-## If Nail asks for a dry run
+## If the request is a dry run
 
 Do Step 1 in full, then stop. The survey is the dry run: it reads the comment
 listing, the document and the docx export, and it writes to no document and to
@@ -75,7 +81,7 @@ no file. Report what it found, as Step 1 says, and offer the cover values as
 Step 2 does without writing the fields file.
 
 Say at the end that nothing was styled, nothing was proposed, and the document
-is as Nail left it.
+is as you left it.
 
 ## Step 1: The survey, always
 
@@ -89,7 +95,9 @@ a restyle has to keep:
 - **Threads.** Open and resolved, and the witness line for each. The witness is
   the text a comment is attached to, read out of the docx export. A thread the
   export could not answer for reads unmatched, and unmatched is no answer
-  rather than a missing anchor.
+  rather than a missing anchor. The export is the honest witness here: Drive's
+  own anchor and its copy of the quoted text survive a detachment and prove
+  nothing on their own.
 - **Pending suggestions.** Somebody else's unsettled edits, counted twice and
   in two units: the entries the listing reports, and the ids on elements the
   pending walk skips, such as a suggested page break. Do not add the two.
@@ -111,22 +119,22 @@ has at least one. When it is true, say in one sentence that there is a second
 route for a document with nothing in it to lose: `read` the document, put the
 text in a note with front matter, and `publish` that note, which gives a
 document built in the house style rather than one styled after the fact. Never
-take that route on your own. It makes a second document, and which document Nail
-keeps is his.
+take that route unasked. It makes a second document, and which document you
+keep is yours.
 
 The survey also carries the document's revision id. The apply hands it back and
 Docs refuses the batch if the document moved in between, so a survey read a day
 ago is not a survey this run can use.
 
-## Step 2: The cover, if Nail wants one
+## Step 2: The cover, if you want one
 
 Ask whether the house cover is wanted. Without it the run styles the body
 alone, which is the smaller and safer thing. With it, gdoc also proposes the
 cover page, the three front-matter tables and the legend, every character of it
-as a suggestion Nail accepts or rejects in the browser.
+as a suggestion you accept or reject in the browser.
 
-If he wants it, the values come from a JSON file you write, and there are
-thirteen of them. The keys are a note's own front-matter keys, because a
+If you want it, the values come from a JSON file the session writes, and there
+are thirteen of them. The keys are a note's own front-matter keys, because a
 restyle has no note to read:
 
 `title`, `alt_title`, `doc_type`, `version`, `date`, `owner`,
@@ -135,9 +143,10 @@ restyle has no note to read:
 rows, each with a version, a date, an author, an approver, an approval date, a
 section and what changed.
 
-Propose each value from the document you just surveyed and from the hub, show
-Nail the whole list, and write the file only after he confirms it. Say where
-each proposal came from, so he can see which are read and which are guesses.
+Propose each value from the document the survey just read and from the hub, put
+the whole list in front of you, and write the file only after you confirm it.
+Say where each proposal came from, so you can see which are read and which are
+guesses.
 
 `title` is never invented. It is proposed and confirmed, like every other
 value. The binary refuses a fields file with no title, and it carries no
@@ -155,15 +164,15 @@ first. Two things stop it, and both are read out rather than worked around:
 
 - The old prelude still being pending. The refusal names the suggestion ids and
   says to accept or reject in the browser first, because replacing it would
-  propose deleting text nobody has written yet. That is Nail's click, not
-  yours.
+  propose deleting text nobody has written yet. That is your click, not the
+  session's.
 - Two markers over settled text. gdoc cannot guess which prelude is the one,
   and the refusal says so.
 
 ## Step 3: The styling run
 
 Say what is about to be sent, and ask once more before sending it. This is the
-only direct edit gdoc makes, on a document Nail did not write, and the sentence
+only direct edit gdoc makes, on a document you did not write, and the sentence
 worth saying is what it overwrites: the face, the size and the colour of every
 run go to the house value, so an author's own emphasis by size or colour is
 gone. Bold and italic are left alone. Table cell fills are left alone. Not a
@@ -178,8 +187,8 @@ left, and Step 4 says how to read that.
 The binary prints facts and judges none of them. Read the object and say, in
 this order:
 
-- **`manual`, every step, each with its menu path.** This is the part Nail
-  acts on. It is what the house style states and no request could send: the
+- **`manual`, every step, each with its menu path.** This is the part you
+  act on. It is what the house style states and no request could send: the
   first-page header with the logo, the contents list, the footer page numbers,
   the lists, the table column widths, and, when there is one, a named style the
   house has no look for. A run that proposed a prelude adds the column widths
@@ -214,7 +223,7 @@ this order:
 Finish with the sentence nobody discovers on their own: a restyle is a moment,
 not a setting. Docs has no request that changes a document's named styles, so
 the look was applied paragraph by paragraph. The document reads right now, and
-the next heading Nail types is Google's Heading 1 again.
+the next heading you type is Google's Heading 1 again.
 
 ## Never
 
@@ -226,14 +235,14 @@ the next heading Nail types is Google's Heading 1 again.
 - Never retry a batch Docs refused. A stale revision means somebody edited the
   document after the survey, and a retry is gdoc styling a document while
   somebody is working in it.
-- Never invent a cover value. A missing value is a question for Nail, and a
+- Never invent a cover value. A missing value is a question for you, and a
   blank line is a better answer than a plausible one.
 - Never edit the survey file or the fields file after showing them, and never
   hand back a survey of a different document.
-- Never remove a named range by hand, and never tell Nail to. Nothing deletes
+- Never remove a named range by hand, and never tell anyone to. Nothing deletes
   one, and nothing needs to: the marker goes with the text under it.
 - Never run git.
 - Never trust a status code. Read `verified` and the read-back.
 - Never say a run failed because `verified` is false. Say which check did not
   hold.
-- Never take the read-note-publish route on your own. Offer it, once.
+- Never take the read-note-publish route unasked. Offer it, once.
