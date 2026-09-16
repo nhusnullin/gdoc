@@ -27,11 +27,36 @@ package guard
 
 import (
 	"net/url"
+	"strconv"
 	"strings"
 )
 
 // noParams is the empty allowlist: this call carries no query at all.
 var noParams = map[string]bool{}
+
+// updateListingParams are the parameters the GitHub releases listing may
+// carry, and there is one. GitHub answers thirty releases when nobody says
+// otherwise, and the nightly cuts one most days, so a listing of thirty stops
+// holding the last hand-cut stable release about a month after it was cut, and
+// `gdoc update` on the default channel then reports that there is no stable
+// release at all. `per_page` is how that page is made big enough to still hold
+// it. checkParamValue holds the value to GitHub's own maximum, so this cannot
+// become a request for an answer nothing bounds; gapi's own ceiling on the
+// body is the other half.
+//
+// `page` is not here. Walking pages is a second read whose count depends on
+// what the server said, and the run would have no bound of its own; one bigger
+// page has a bound this guard can state. Nail's decision, 2026-09-16,
+// DECISIONS.md.
+var updateListingParams = map[string]bool{
+	"per_page": true,
+}
+
+// updateListingMaxPerPage is GitHub's own ceiling on per_page, and so the
+// guard's. A larger number is not a larger answer, it is a request GitHub
+// refuses, and a request nobody has decided about is one this guard does not
+// send.
+const updateListingMaxPerPage = 100
 
 // docsReadParams are the parameters a Docs read may carry. suggestionsViewMode
 // is how gdoc sees pending suggestions, which Drive's export renders as though
@@ -194,6 +219,8 @@ func checkParamValue(name, v string) error {
 		}
 	case "mimeType":
 		return checkExportMime(v)
+	case "per_page":
+		return checkPerPage(v)
 	case "includeTabsContent":
 		// SPEC.md: "Always read with includeTabsContent=true. Reading without
 		// it silently sees one tab." The guard decides the value here, and it
@@ -214,6 +241,21 @@ func checkParamValue(name, v string) error {
 		if v != "true" {
 			return refuse("includeTabsContent=%q is not a read gdoc makes: without a plain true the answer covers one tab and says nothing about the rest", v)
 		}
+	}
+	return nil
+}
+
+// checkPerPage holds the releases listing's page size to a plain number
+// between one and GitHub's maximum. A page size is the one thing on that call
+// that decides how much comes back, so the guard decides it rather than
+// letting a caller ask for whatever it likes.
+func checkPerPage(v string) error {
+	n, err := strconv.Atoi(v)
+	if err != nil || strconv.Itoa(n) != v {
+		return refuse("per_page=%q is not a plain number, and a page size the guard cannot read is one it cannot bound", v)
+	}
+	if n < 1 || n > updateListingMaxPerPage {
+		return refuse("per_page=%d is outside 1..%d, which is what GitHub answers", n, updateListingMaxPerPage)
 	}
 	return nil
 }

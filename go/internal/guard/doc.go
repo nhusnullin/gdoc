@@ -85,24 +85,36 @@
 //     read, and it is the only grant that is not about a Google file. gdoc
 //     runs on a colleague's machine now, so gdoc update has to ask what the
 //     latest release is and fetch it. The door is as narrow as that job: GET,
-//     the three hosts named in policy.go, one repository's releases listing
-//     and its download path, no query the guard did not decide about, and no
-//     credential. A policy nobody granted an update refuses all three hosts,
-//     and nothing it admits is a document, so the set is untouched. Nail's
-//     decision, 2026-09-16, DECISIONS.md. The pins are in update_test.go:
+//     the hosts named in policy.go, one repository's releases listing and its
+//     download path, no query the guard did not decide about, and no
+//     credential. The listing carries per_page and nothing else, held to
+//     GitHub's own maximum, because a page of thirty stops holding the last
+//     stable release about a month after the nightly starts cutting over it; a
+//     page count is not admitted, since walking pages is a read count the
+//     server decides. A policy nobody granted an update refuses every one of
+//     those hosts, and nothing it admits is a document, so the set is
+//     untouched. Nail's decision, 2026-09-16, DECISIONS.md. The pins are in
+//     update_test.go:
 //     TestWithoutTheUpdateGrantGitHubIsRefused,
 //     TestTheUpdateGrantOpensNothingBesideThoseThreeReads,
 //     TestTheUpdateGrantAdmitsNoDocument and
 //     TestAnUnreadableUpdateGrantOpensNothing.
 //
-// The asset host is the one place the guard judges a method and a host and
+// An asset host is the one place the guard judges a method and a host and
 // nothing further, and the reason is that gdoc does not build that URL: it is
 // where github.com's download redirects, signed, with a query no allowlist
 // here can hold. What bounds that read is what the run then does with the
 // bytes, which is internal/update checking them against the release's own
 // checksum before anything is replaced.
 //
-// No request to any of the three carries a credential. The only bearer gdoc
+// There are two of them because GitHub moved. A download redirected to
+// objects.githubusercontent.com for years and redirects to
+// release-assets.githubusercontent.com today, measured 2026-09-16 against a
+// public release. Both are named: which one a redirect picks is GitHub's to
+// change, a host that is merely stale reaches nothing on its own, and a
+// redirect gdoc refuses to follow is a release it can never install.
+//
+// No request to any of those hosts carries a credential. The only bearer gdoc
 // holds is Google's, and a bearer on one of these requests is either the wrong
 // credential sent to the wrong party or two sessions confused for each other.
 // checkWireMatchesJudgment refuses it on the host rather than on the grant, so

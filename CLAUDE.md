@@ -76,8 +76,8 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestNetHTTPStaysInItsRooms`.
 - **The one host that is not Google's is the fifth grant.** `AllowUpdateFrom`
   names one GitHub repository for one run and admits GET on its releases
-  listing, its download path and the asset host that redirect lands on, with no
-  credential on any of the three, and `gdoc update` is the only caller:
+  listing, its download path and the two asset hosts that redirect lands on,
+  with no credential on any of them, and `gdoc update` is the only caller:
   `TestWithoutTheUpdateGrantGitHubIsRefused`,
   `TestTheUpdateGrantOpensNothingBesideThoseThreeReads` and
   `TestAnUpdateRequestCarriesNoBearer`.
@@ -114,9 +114,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   print a URL instead of opening a browser: `TestNothingRunsAnExternalProgram`.
 - **Nothing runs git.** No command and no skill runs it, to commit, to ask
   whether the tree is a repository, or to ask whether a file is dirty. Only
-  `install.sh`, `make tag` and the workflows read git, and that is about this
-  repository rather than about somebody's documents:
-  `TestNothingRunsAnExternalProgram` holds the binary half.
+  `install.sh`, the Makefile's version stamp, `make tag` and the workflows read
+  git, and that is about this repository rather than about somebody's
+  documents: `TestNothingRunsAnExternalProgram` holds the binary half.
 - **Three modules, each named in `allowedModules` with its reason in the spec**,
   and both directions fail: `TestNoThirdPartyDependencies` and
   `TestAllowedModulesAreReallyRequired`.

@@ -233,6 +233,35 @@ func TestAWrongChecksumReplacesNothing(t *testing.T) {
 	mustNotExist(t, path+".new")
 }
 
+// A read-back that cannot be read is the other post-rename failure, and it has
+// to put the old binary back the way the wrong-hash branch does. Apply cannot
+// be made to hit it on purpose, so the tail is called directly with a path
+// that holds nothing: that is exactly the state Apply would be in if the file
+// went away between the rename and the read.
+func TestAnUnreadableReadBackPutsTheOldBinaryBack(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "gdoc")
+	previous := PreviousPath(path)
+	if err := os.WriteFile(previous, []byte("the old binary"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := landed(path, previous, true, sum([]byte("the new binary")))
+	if err == nil {
+		t.Fatal("a binary that could not be read back was reported as installed")
+	}
+	if !strings.Contains(err.Error(), path) {
+		t.Errorf("the refusal does not name the file it could not read: %v", err)
+	}
+	if res.Sum != "" || res.Previous != "" {
+		t.Errorf("a failed read-back carries no result: %+v", res)
+	}
+	if body, err := os.ReadFile(path); err != nil || string(body) != "the old binary" {
+		t.Fatalf("the file at %s is %q, %v, and the old binary should be back", path, body, err)
+	}
+	mustNotExist(t, previous)
+}
+
 func TestAZipWithNoBinaryInItIsRefusedByName(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "gdoc")

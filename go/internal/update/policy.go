@@ -103,9 +103,21 @@ func decide(s State, f Flags) Decision {
 		return Decision{Action: UpToDate, Run: nightlyRun(s, f)}
 	}
 	if target.Major > s.Installed.Major && !f.Major {
-		return Decision{Action: MajorAvailable, To: target, Run: "gdoc update --major"}
+		return Decision{Action: MajorAvailable, To: target, Run: majorRun(f)}
 	}
 	return Decision{Action: Updated, To: target}
+}
+
+// majorRun is the command that would take the major this run declined, and it
+// carries the channel the run was on. Without the channel the named command is
+// a different run: on `gdoc update --nightly` the target is the nightly, and
+// `gdoc update --major` alone would go looking on the stable channel and take
+// something else, or nothing.
+func majorRun(f Flags) string {
+	if f.Channel() == Nightly {
+		return "gdoc update --major --nightly"
+	}
+	return "gdoc update --major"
 }
 
 // nightlyRun names the nightly command when a stable run has nothing to take

@@ -21,9 +21,11 @@ import (
 // may take.
 const ListingTimeout = 5 * time.Second
 
-// MaxListingBody is the ceiling on the releases listing. GitHub sends thirty
-// releases with their assets by default, which is tens of kilobytes, and a
-// body without a bound is a memory limit somebody else sets.
+// MaxListingBody is the ceiling on the releases listing. The update asks for a
+// hundred releases with their assets, which is a few hundred kilobytes, and a
+// body without a bound is a memory limit somebody else sets. The ceiling is
+// well above the biggest page GitHub will answer, on purpose: it is here to
+// stop an answer nothing bounds, not to trim a real one.
 const MaxListingBody = 8 << 20
 
 // Plain is one run's reach with no credential: the guard's client, and no

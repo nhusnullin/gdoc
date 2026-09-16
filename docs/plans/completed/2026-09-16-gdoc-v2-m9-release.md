@@ -939,7 +939,7 @@ makes the other documents agree with them.
 - Send colleagues the one line and the two `/plugin` commands. Everyone can
   open Issues with the template; a message to Nail still works.
 - Windows: hand the Windows zip from a nightly build to one colleague with the
-  checklist in `release/README.md`'s Windows section; when it comes back
+  checklist in `docs/backlog/windows-rollout-checklist.md`; when it comes back
   clean, add the line to `release/platforms` and tag the next `x.y.0`.
 
 **Manual verification:**

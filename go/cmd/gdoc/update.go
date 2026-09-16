@@ -29,13 +29,32 @@ import (
 // grant the run opens, so it is also the whole of what the run may reach.
 const updateRepo = "nhusnullin/gdoc"
 
-// releasesURL is the one call gdoc makes on api.github.com.
-const releasesURL = "https://api.github.com/repos/" + updateRepo + "/releases"
+// releasesURL is the one call gdoc makes on api.github.com, and it asks for
+// the biggest page GitHub gives.
+//
+// The size is the point, not a tuning. GitHub answers thirty releases when
+// nobody says otherwise, and the nightly cuts one most night main moved, so a
+// page of thirty stops carrying the last hand-cut stable release about a month
+// after it was cut. Choose would then find no stable candidate and a bare
+// `gdoc update` would report that there is no stable release at all, while
+// `--nightly` still worked. A hundred is GitHub's maximum, and the guard
+// admits `per_page` on this call alone and holds it to that number.
+//
+// A hundred moves the ceiling rather than removing it: about three months of
+// nightlies. Walking pages is the thing that removes it, and it is a decision
+// rather than a tidy-up, so it is in docs/backlog/ with its reason.
+const releasesURL = "https://api.github.com/repos/" + updateRepo + "/releases?per_page=100"
 
 // zipBinaryName is what the release workflow calls the binary at the top of
-// the zip. The platform is in the name of the zip, never in the name of the
-// file inside it, so an update installs the same name on every machine.
-const zipBinaryName = "gdoc"
+// the zip, and it is the one name that follows the platform. Every platform
+// gets `gdoc` except Windows, where the release workflow packs `gdoc.exe`,
+// because a Windows machine runs the extension and not the name.
+func zipBinaryName(goos string) string {
+	if goos == "windows" {
+		return "gdoc.exe"
+	}
+	return "gdoc"
+}
 
 // The two ceilings and the download's clock. The listing has its own
 // five-second bound inside gapi, because a person is waiting at a terminal for
@@ -252,7 +271,7 @@ func install(ctx context.Context, reach plain, rel update.Release, path string) 
 	if err != nil {
 		return update.Result{}, fmt.Errorf("%s could not be downloaded, so nothing was replaced: %v", rel.AssetName, err)
 	}
-	return update.Apply(archive, sums, rel.AssetName, zipBinaryName, path)
+	return update.Apply(archive, sums, rel.AssetName, zipBinaryName(runtime.GOOS), path)
 }
 
 // installedVersion is the running binary's own tag, and the warning for a

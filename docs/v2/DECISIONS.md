@@ -64,6 +64,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
 | 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | holds |
 | 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
+| 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1967,3 +1968,64 @@ anyone can write `@claude` in an issue and spend the token.
 **What this costs colleagues once.** A token issued under the old secret
 refreshes until it expires and then fails, so each person signs in again
 once with `gdoc auth login` after the rotation. The release README says so.
+
+## 2026-09-16. What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag.
+
+Three corrections to the release entry above, found by review on the day M9
+closed and before any of it had run against a real second release. None of them
+widens what the update may do; two widen where it may look, and the third takes
+a number out of the envelope. Serves principle 1: the point of `gdoc update` is
+that a colleague never assembles anything by hand, and all three of these leave
+them doing exactly that.
+
+**The redirect lands on a second host, and the grant names both.** The release
+entry named one asset host, `objects.githubusercontent.com`, which is where a
+release download redirected for years. Measured on 2026-09-16 against a public
+release: GitHub now answers a download with a 302 to
+`release-assets.githubusercontent.com`. The guard re-judges a redirect target,
+so every `gdoc update` would have refused its own first download, at the
+checksum file, before a single byte of a zip. The install path had never been
+run, because it needs a second published release, so nothing had said so. Both
+hosts are named now: which one a redirect picks is GitHub's to change, a stale
+host costs nothing, and neither is reachable without the grant, carries a
+credential, or escapes the checksum that is what actually bounds the read.
+
+**The listing asks for a hundred, and `per_page` is the one parameter it may
+carry.** The release entry said the listing takes no query at all. GitHub
+answers thirty releases when nobody says otherwise, and the nightly cuts one
+most nights main moved, so about a month after each hand-cut `x.y.0` that
+release stops being on the page. `Choose` would then find no stable candidate,
+and a bare `gdoc update` would tell every colleague there is no stable release
+while `--nightly` still worked. The guard admits `per_page` on the listing
+alone, holds it to GitHub's maximum of 100, and refuses a value it cannot read
+as a plain number in that range. `page` is deliberately not admitted: walking
+pages is a read count the server decides, and a run with no bound of its own is
+not a run this guard can state the shape of. A hundred moves the ceiling to
+about three months rather than removing it, which is `docs/backlog/` work with
+its reason written there, not a thing to slip in here.
+
+**A version is a clean tag or nothing.** The spec says a binary built from a
+checkout is `dev` and prints no version at all, and the skills gate on exactly
+that: an older binary than a skill needs stops the run and names `gdoc update`,
+and no version at all is a source build, which is not an error. The Makefile
+stamped `git describe --tags --always --dirty`, which never returns empty: with
+no tag it gives a bare commit hash, and over a tag with uncommitted work it
+gives `v2.0.0-dirty`, which parses as a pre-release *below* `v2.0.0`. So the
+source-build branch was unreachable and the maintainer's own daily binary
+carried a number naming no release. The stamp is
+`git describe --tags --exact-match --dirty` now, filtered so a dirty tag falls
+back to `dev` as well: a version rides in the envelope when there is a release
+behind it and never otherwise. `TestTheVersionStampNamesOnlyATag` in
+`go/boundary` reads the assignment, the way the tag target's refusal is read
+rather than run.
+
+**Two smaller things travelled with them.** The updater looks for `gdoc.exe` at
+the top of a Windows zip, which is the name `release.yml` already packs there;
+the single name would have failed after downloading and verifying the whole
+archive, and the line that adds `windows-amd64` to `release/platforms` should
+not also have to find that. And a major declined on the nightly channel now
+names `gdoc update --major --nightly`, because the command without the channel
+is a different run and would have taken something else, or nothing.
+
+**What did not change.** The door is still GET only, still one repository,
+still per-run, still credential-free, and still opened by `gdoc update` alone.

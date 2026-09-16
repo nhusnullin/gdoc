@@ -5,9 +5,10 @@
 # is also the list install.sh offers, and the two are compared on every commit,
 # so a platform in one and not the other cannot reach a colleague.
 #
-# Windows joins this list after a colleague has run its checklist. `make dist`
-# already builds windows-amd64, but no gdoc has ever replaced a running gdoc.exe
-# on Windows, so it is not offered as an install until somebody has done it once
-# by hand.
+# Windows joins this list after a colleague has run the checklist in
+# docs/backlog/windows-rollout-checklist.md. `make dist` already builds
+# windows-amd64 and the release workflow knows to pack it as gdoc.exe, but no
+# gdoc has ever replaced a running gdoc.exe on Windows, so it is not offered as
+# an install until somebody has done it once by hand.
 darwin-arm64
 darwin-amd64

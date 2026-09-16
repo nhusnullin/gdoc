@@ -156,6 +156,7 @@
 // it produces anything, and it fails only on the machine that has never built
 // before, which is the machine somebody is trying gdoc on for the first time.
 // TestEveryTargetThatWritesIntoBinMakesIt is the pin.
+//
 // # What a colleague installs, and the two lists that describe it
 //
 // Nobody outside this repository clones it. A colleague adds it as a Claude
@@ -195,6 +196,7 @@
 // and that it comes before the write: a rejected version has to leave the tree
 // exactly as it was, or a typo costs somebody a dirty plugin.json they then
 // have to notice.
+//
 // # What a colleague unpacks, and the lists that travel with it
 //
 // release/install.sh runs on a machine nobody here has seen, and it travels

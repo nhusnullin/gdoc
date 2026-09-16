@@ -3,9 +3,23 @@
 GO := cd go && go
 
 # The version comes from the tag, so a colleague's report names the build it
-# came from and nobody has to write a number down twice. A checkout with no
-# tag gets the commit, and --dirty marks a build made over uncommitted work.
-VERSION := $(shell git describe --tags --always --dirty)
+# came from and nobody has to write a number down twice.
+#
+# Only a tag, and only a clean one. `git describe --exact-match` names a
+# version when HEAD is exactly a release and says nothing otherwise, and
+# --dirty marks the tag that has uncommitted work over it, which is not that
+# release either. Anything but a clean tag keeps `dev`, which main.go's
+# releaseVersion reads as "no release is behind this binary" and leaves out of
+# the envelope. A commit hash here would put a number in every envelope that
+# names no release a colleague could fetch, and would be the one thing a
+# version-gated skill cannot compare against anything.
+#
+# Both assignments are lazy on purpose: git runs when a recipe expands VERSION,
+# which is `build` and `dist` through LDFLAGS and `tag` directly, so `make test`
+# and `make vet` run no git at all. `make tag VERSION=vX.Y.0` runs none of it
+# either, because a variable named on the command line wins over this one.
+DESCRIBED = $(shell git describe --tags --exact-match --dirty 2>/dev/null)
+VERSION = $(if $(filter-out %-dirty,$(DESCRIBED)),$(DESCRIBED),dev)
 
 # The OAuth client secret is not in the source: the linker sets it from the
 # environment, so a release build carries it and the tree never does. A build
@@ -15,7 +29,7 @@ VERSION := $(shell git describe --tags --always --dirty)
 # takes the build machine's paths out of it. -trimpath on the build itself
 # takes out the rest, so the same tag built anywhere is the same bytes and
 # nobody's home directory ships to the team.
-LDFLAGS := -s -w -X main.version=$(VERSION) -X gdoc/internal/auth.BundledClientSecret=$(GDOC_OAUTH_CLIENT_SECRET)
+LDFLAGS = -s -w -X main.version=$(VERSION) -X gdoc/internal/auth.BundledClientSecret=$(GDOC_OAUTH_CLIENT_SECRET)
 
 test:
 	$(GO) test -race ./...

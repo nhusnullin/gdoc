@@ -22,12 +22,21 @@ import (
 // version is the release this binary was built from. The linker sets it from
 // the tag, in both Make targets; a build nobody tagged keeps "dev". It is a
 // var and not a const because -X can only write a var, and it is read through
-// releaseVersion so one place decides what "dev" means.
+// releaseVersion so one place decides what counts as a release.
 var version = "dev"
 
 // releaseVersion is the version as the envelope and the help print it: empty
 // for an untagged build, so nothing a colleague sends back names a release
 // that does not exist.
+//
+// "dev" is the sentinel and the Makefile is what has to reach it. It stamps
+// the version from `git describe --tags --exact-match --dirty`, which names a
+// version only when HEAD is exactly a release with nothing uncommitted over
+// it, and leaves "dev" otherwise. A stamp that resolved to a commit hash
+// instead would never take this branch, and every envelope from a checkout
+// would carry a number naming no release a colleague could fetch and no
+// version a skill could compare. TestTheVersionStampNamesOnlyATag holds that
+// half, in go/boundary.
 func releaseVersion() string {
 	if version == "dev" {
 		return ""

@@ -115,8 +115,8 @@ Read every thread from the top, and ask what the last turn is:
   nothing. An unmarked follow-up carries context, never authority.
 - The thread has no marker anywhere: not work.
 
-A resolved thread is not work. You resolve a thread when you accept the
-answer.
+A resolved thread is not work. Resolving is the operator's, and they do it when
+they accept the answer.
 
 ### Before acting on an old marked comment again
 
@@ -230,9 +230,15 @@ it where the delegation happened, so a reader scrolling the margin sees that the
 work came from William and not from whoever gdoc posts as.
 
 The signed-in name is the `author` on gdoc's own replies in this document, the
-ones with `by_gdoc: true`. When the document carries none yet, treat your own
-name as the account: it is your login, and naming you in your own receipt is the
-one mistake this rule must not make. Your own comments are never named.
+ones with `by_gdoc: true`. Read it there first: it is a fact in the object, not
+a guess.
+
+When the document carries no such reply yet, the account is the operator's, the
+person who asked for this run in this session. So name a commenter only when
+the comment was written by somebody other than them, and when this session
+cannot tell the two apart, name nobody. A receipt that says nothing about who
+asked is thin; a receipt that credits the operator with asking themselves is
+the one mistake this rule must not make, and silence is the safe side of it.
 
 Identity is still never a gate. The marker decides whether a comment is work,
 and this changes the wording of a receipt and nothing else.
@@ -545,7 +551,7 @@ was posted.
 - Never edit the document. Every change to its words is a suggestion, and the
   guard refuses anything else on a document that was handed in.
 - Never resolve or reopen a thread. Resolving means the answer was accepted, and
-  only you accept.
+  only the operator accepts.
 - Never accept, reject or delete anyone else's suggestion. `withdraw` retracts
   gdoc's own pending proposal and nothing else.
 - Never delete anything from the hub.

@@ -200,3 +200,70 @@ func makeRecipe(makefile, target string) (string, bool) {
 	}
 	return strings.Join(recipe, "\n"), found
 }
+
+// TestTheVersionStampNamesOnlyATag pins what the Makefile writes into
+// main.version, which is the other half of releaseVersion's rule.
+//
+// `gdoc` prints its version in every envelope, and the skills gate on it: an
+// older binary than the skill needs is a run that stops and says `gdoc update`
+// fixes it, and no version at all is a build made from source, which is not an
+// error. Both branches need the stamp to be a release tag or the sentinel and
+// nothing in between. `git describe --always` gives a bare commit hash when
+// there is no tag, which is neither: a skill cannot compare it to a tag and a
+// colleague cannot fetch it, and the source-build branch becomes unreachable.
+// `--dirty` alone is the same problem in a subtler spelling, since v2.0.0-dirty
+// parses as a pre-release below v2.0.0 and sorts as older than the tag it was
+// built from.
+//
+// This reads the assignment rather than running it, for TestMakeTag's reason:
+// running it would describe whatever tree the test happens to sit in. It reads
+// the assignments themselves rather than any line that mentions git describe,
+// because the comment above them says the same words, and prose that satisfies
+// a test is a test a regressed assignment walks past.
+func TestTheVersionStampNamesOnlyATag(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(repoRoot, "Makefile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assignment := func(name string) string {
+		re := regexp.MustCompile(`(?m)^` + name + `\s*:?=(.*)$`)
+		m := re.FindStringSubmatch(string(b))
+		if m == nil {
+			return ""
+		}
+		return strings.TrimSpace(m[1])
+	}
+
+	stamp := assignment("DESCRIBED")
+	if stamp == "" {
+		t.Fatal("the Makefile has no DESCRIBED assignment; the version has to come from one git describe this test can read")
+	}
+	if !strings.Contains(stamp, "git describe") {
+		t.Fatalf("DESCRIBED is %q and it has to be a git describe; the version comes from the tag", stamp)
+	}
+	if !strings.Contains(stamp, "--exact-match") {
+		t.Errorf("the version stamp %q does not ask for an exact match, so a checkout between tags names a release it is not", stamp)
+	}
+	if strings.Contains(stamp, "--always") {
+		t.Errorf("the version stamp %q falls back to a commit hash, which names no release: a build with no tag has to keep the dev sentinel", stamp)
+	}
+
+	// The chain the rule is about: DESCRIBED reaches VERSION, VERSION reaches
+	// main.version, and a described string that is not a clean tag becomes the
+	// sentinel on the way.
+	version := assignment("VERSION")
+	if version == "" || !strings.Contains(version, "$(DESCRIBED)") {
+		t.Errorf("VERSION is %q and it has to be built from $(DESCRIBED); a second git describe is a second rule", version)
+	}
+	if !strings.Contains(version, "dev") {
+		t.Errorf("VERSION is %q and it never falls back to dev, so releaseVersion's empty branch is unreachable", version)
+	}
+	// A dirty tag is not that release either, so the described string cannot
+	// reach main.version unfiltered.
+	if strings.Contains(stamp, "--dirty") && !strings.Contains(version, "%-dirty") {
+		t.Errorf("the version stamp %q keeps --dirty and VERSION %q does not filter it, so v2.0.0-dirty would ship as a pre-release below v2.0.0", stamp, version)
+	}
+	if ldflags := assignment("LDFLAGS"); !strings.Contains(ldflags, "-X main.version=$(VERSION)") {
+		t.Errorf("LDFLAGS is %q and it does not stamp $(VERSION) into main.version; nothing would reach the envelope", ldflags)
+	}
+}

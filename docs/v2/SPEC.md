@@ -127,12 +127,14 @@ Serves principle 3. This is the safety property everything else stands on.
   `AllowCopy`, `AllowMarker`, and `AllowUpdateFrom`, which is the fifth and the
   only one that is not about a Google file. It names one GitHub repository and
   admits GET on that repository's releases listing, its download path, and the
-  asset host the download redirects to. No request to any of the three carries
-  a credential, because the only bearer gdoc holds is Google's, and the wire
+  two asset hosts a download redirects to. The listing carries one query
+  parameter, `per_page`, held to GitHub's own maximum of 100, and nothing else;
+  the download path carries none. No request to any of those hosts carries a
+  credential, because the only bearer gdoc holds is Google's, and the wire
   refuses one on the host rather than on the grant. A policy nobody granted an
-  update refuses all three hosts by name, and nothing the grant admits is a
-  document, so the reachable set is untouched. `gdoc update` is what opens it,
-  and nothing else does. Added 2026-09-16, DECISIONS.md.
+  update refuses every one of those hosts by name, and nothing the grant admits
+  is a document, so the reachable set is untouched. `gdoc update` is what opens
+  it, and nothing else does. Added 2026-09-16, DECISIONS.md.
 - **The level-1 write bar is what gdoc asks for, not what the server is known to
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from
@@ -402,7 +404,10 @@ this marketplace in `extraKnownMarketplaces` and turns the plugin on in
 nothing in the binary copies a skill folder.
 
 **`gdoc update` runs when a person types it and never otherwise.** No check when
-a session starts, no scheduler, no stamp file. What it takes: the same `x` with
+a session starts, no scheduler, no stamp file. It reads one page of releases,
+asking for a hundred, because GitHub answers thirty by default and the nightly
+would push the last hand-cut stable release off a page that size in about a
+month. What it takes: the same `x` with
 a higher `y` by default, a higher `x` only with `--major`, a higher `z` only
 with `--nightly`, and never a version below the one installed. `--check` reports
 what a run would take and writes nothing; `--rollback` puts the previous binary

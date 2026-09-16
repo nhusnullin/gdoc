@@ -71,7 +71,8 @@
 // old one back. Sum is hashed off the file at its final path rather than off
 // the bytes that were about to be written, because what a person runs
 // tomorrow is the file, not the download.
-// TestTheReplaceSequenceLeavesTheNewBinaryAndKeepsTheOld.
+// TestTheReplaceSequenceLeavesTheNewBinaryAndKeepsTheOld, and
+// TestAnUnreadableReadBackPutsTheOldBinaryBack for the read-back that fails.
 //
 // gdoc never runs the binary it just installed. Nothing under go/ runs an
 // external program, so the proof that the update worked is the next envelope
@@ -82,7 +83,13 @@
 // mistake is one more rollback away from where it started.
 // TestARollbackRunTwiceIsWhereItStarted.
 //
+// It is also the one place a failure after the swap moves nothing back, since
+// undoing it would take back the rollback a person asked for. It says where
+// the binaries ended up instead. TODO(test): nothing drives a read-back
+// failure after the swap.
+//
 // Windows is the same three renames, and os.Rename replaces the file it lands
-// on there as it does here. It is unmeasured until the Windows checklist in
-// the M9 plan runs, which is the first time gdoc replaces itself on Windows.
+// on there as it does here. It is unmeasured until the checklist in
+// docs/backlog/windows-rollout-checklist.md runs, which is the first time gdoc
+// replaces itself on Windows.
 package update

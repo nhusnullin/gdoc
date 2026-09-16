@@ -14,17 +14,19 @@ const (
 	testRepo    = "nhusnullin/gdoc"
 	testListing = "https://api.github.com/repos/nhusnullin/gdoc/releases"
 	testAsset   = "https://github.com/nhusnullin/gdoc/releases/download/v2.0.0/gdoc-v2.0.0-darwin-arm64.zip"
-	testObject  = "https://objects.githubusercontent.com/github-production-release-asset/1/2?X-Amz-Signature=abc"
+	testPaged   = "https://api.github.com/repos/nhusnullin/gdoc/releases?per_page=100"
+	testObject  = "https://release-assets.githubusercontent.com/github-production-release-asset/1/2?sig=abc"
+	testOldHost = "https://objects.githubusercontent.com/github-production-release-asset/1/2?X-Amz-Signature=abc"
 )
 
-// A policy nobody granted an update refuses the three hosts exactly as it did
-// before this door existed, and it says which rule refused. This is the first
+// A policy nobody granted an update refuses every one of GitHub's hosts
+// exactly as it did before this door existed, and it says which rule refused. This is the first
 // half of the grant: without it, GitHub is as far away as any other host.
 func TestWithoutTheUpdateGrantGitHubIsRefused(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
 
-	for _, u := range []string{testListing, testAsset, testObject} {
+	for _, u := range []string{testListing, testPaged, testAsset, testObject, testOldHost} {
 		err := p.Judge("GET", mustURL(t, u), nil)
 		if err == nil {
 			t.Fatalf("want a refusal for %s, got none", u)
@@ -35,14 +37,20 @@ func TestWithoutTheUpdateGrantGitHubIsRefused(t *testing.T) {
 	}
 }
 
-// What the grant opens: the releases listing of the one repository, the
-// download path under it, and the asset host the download redirects to. GET
-// only, for the run's length.
+// What the grant opens: the releases listing of the one repository, paged or
+// not, the download path under it, and both asset hosts a download redirects
+// to. GET only, for the run's length.
+//
+// Two asset hosts because GitHub moved: a download redirected to
+// objects.githubusercontent.com for years and redirects to
+// release-assets.githubusercontent.com today, measured 2026-09-16. A release
+// gdoc cannot follow the redirect of is a release it can never install, so
+// both are named and the checksum is what actually bounds the read.
 func TestTheUpdateGrantCarriesTheListingTheDownloadAndTheAsset(t *testing.T) {
 	p := NewPolicy()
 	p.AllowUpdateFrom(testRepo)
 
-	for _, u := range []string{testListing, testAsset, testObject} {
+	for _, u := range []string{testListing, testPaged, testAsset, testObject, testOldHost} {
 		if err := p.Judge("GET", mustURL(t, u), nil); err != nil {
 			t.Errorf("the update grant must carry GET %s: %v", u, err)
 		}
@@ -63,7 +71,9 @@ func TestTheUpdateGrantOpensNothingBesideThoseThreeReads(t *testing.T) {
 		{"another repository's listing", "GET", "https://api.github.com/repos/someone/else/releases", "is not the releases listing"},
 		{"another path on the API host", "GET", "https://api.github.com/repos/nhusnullin/gdoc/issues", "is not the releases listing"},
 		{"the user endpoint", "GET", "https://api.github.com/user", "is not the releases listing"},
-		{"a query the listing does not carry", "GET", testListing + "?per_page=100", "is not one this call carries"},
+		{"a query the listing does not carry", "GET", testListing + "?page=2", "is not one this call carries"},
+		{"a page size outside what GitHub answers", "GET", testListing + "?per_page=500", "outside 1..100"},
+		{"a page size that is not a number", "GET", testListing + "?per_page=all", "not a plain number"},
 		{"another repository's download", "GET", "https://github.com/someone/else/releases/download/v1/x.zip", "release downloads of"},
 		{"another path on the download host", "GET", "https://github.com/nhusnullin/gdoc/archive/main.zip", "release downloads of"},
 		{"a download naming no asset", "GET", "https://github.com/nhusnullin/gdoc/releases/download/v2.0.0", "names a tag and an asset"},
@@ -149,11 +159,11 @@ func TestAnUnreadableUpdateGrantOpensNothing(t *testing.T) {
 }
 
 // The only bearer gdoc holds is Google's, and it has no business on GitHub.
-// A request to any of the three hosts carrying an Authorization header is
+// A request to any of GitHub's hosts carrying an Authorization header is
 // refused before it leaves, granted or not, because the header allowlist runs
 // above the policy.
 func TestAnUpdateRequestCarriesNoBearer(t *testing.T) {
-	for _, u := range []string{testListing, testAsset, testObject} {
+	for _, u := range []string{testListing, testAsset, testObject, testOldHost} {
 		t.Run(u, func(t *testing.T) {
 			f := &fake{status: 200, body: `{}`}
 			p := NewPolicy()

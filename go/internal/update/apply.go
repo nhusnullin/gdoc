@@ -63,8 +63,9 @@ func Verify(archive, sums []byte, asset string) error {
 // binary back.
 //
 // Windows: the same three renames, and os.Rename replaces the file it lands
-// on there as it does here. It is unmeasured until the Windows checklist in
-// the M9 plan runs, which is the first time gdoc replaces itself on Windows.
+// on there as it does here. It is unmeasured until the checklist in
+// docs/backlog/windows-rollout-checklist.md runs, which is the first time
+// gdoc replaces itself on Windows.
 //
 // TestTheReplaceSequenceLeavesTheNewBinaryAndKeepsTheOld,
 // TestASecondUpdateOverwritesThePrevious, TestAWrongChecksumReplacesNothing
@@ -97,14 +98,30 @@ func Apply(archive, sums []byte, asset, binary, path string) (Result, error) {
 		os.Remove(staged)
 		return Result{}, fmt.Errorf("the new binary could not be moved to %s: %w", path, err)
 	}
-	got, err := sumOfFile(path)
-	if err != nil {
-		return Result{}, err
-	}
-	if want := sum(content); got != want {
+	return landed(path, previous, kept, sum(content))
+}
+
+// landed reads back what is now at path and says whether it is what the zip
+// held. It is the whole of the tail after the last rename, in one place, so
+// that "every failure after the first rename puts the old binary back" has one
+// place to hold rather than two: an unreadable file and a file that hashes
+// wrong both undo the swap before they raise.
+//
+// TestAWrongChecksumReplacesNothing and
+// TestAnUnreadableReadBackPutsTheOldBinaryBack.
+func landed(path, previous string, kept bool, want string) (Result, error) {
+	restore := func() {
 		if kept {
 			os.Rename(previous, path)
 		}
+	}
+	got, err := sumOfFile(path)
+	if err != nil {
+		restore()
+		return Result{}, err
+	}
+	if got != want {
+		restore()
 		return Result{}, fmt.Errorf("the file at %s hashes to %s and the zip held %s, so what landed is not what was verified", path, got, want)
 	}
 	out := Result{Sum: got}
@@ -148,9 +165,12 @@ func Rollback(path string) (Result, error) {
 		}
 		out.Previous = previous
 	}
+	// The swap is done by here, and undoing it would take back the rollback a
+	// person asked for. So this failure raises and says where the binaries
+	// ended up, rather than moving a third time.
 	got, err := sumOfFile(path)
 	if err != nil {
-		return Result{}, err
+		return Result{}, fmt.Errorf("%w; the swap had already happened, so %s is what runs now", err, path)
 	}
 	out.Sum = got
 	return out, nil

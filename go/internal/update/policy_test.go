@@ -34,6 +34,16 @@ func TestThePolicyTable(t *testing.T) {
 			action: MajorAvailable, to: "v3.0.0", run: "gdoc update --major",
 		},
 		{
+			name:      "a major named on the nightly channel names the nightly command",
+			installed: "v2.1.0", stable: "v2.1.0", nightly: "v3.0.1", flags: Flags{Nightly: true},
+			action: MajorAvailable, to: "v3.0.1", run: "gdoc update --major --nightly",
+		},
+		{
+			name:      "a nightly run across a major takes it once the person asks",
+			installed: "v2.1.0", stable: "v2.1.0", nightly: "v3.0.1", flags: Flags{Nightly: true, Major: true},
+			action: Updated, to: "v3.0.1",
+		},
+		{
 			name:      "the major the person asked for is taken",
 			installed: "v2.0.0", stable: "v3.0.0", flags: Flags{Major: true},
 			action: Updated, to: "v3.0.0",

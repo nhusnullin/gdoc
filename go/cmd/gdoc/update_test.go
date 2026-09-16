@@ -240,8 +240,11 @@ func TestACheckWritesNothingAndNamesWhatItWouldTake(t *testing.T) {
 	if data["verified"] == true || data["sha256"] != nil || data["previous"] != nil {
 		t.Errorf("a check installs nothing, so it verifies nothing: %v", data)
 	}
-	if len(pl.got) != 1 || !strings.HasSuffix(pl.got[0], "/repos/nhusnullin/gdoc/releases") {
-		t.Errorf("a check reads the listing and downloads nothing: %v", pl.got)
+	// The exact URL, query and all: the page size is what keeps the last
+	// hand-cut stable release on the page a month after the nightly starts
+	// cutting over it, and nothing else in this package pins it.
+	if len(pl.got) != 1 || pl.got[0] != releasesURL {
+		t.Errorf("a check reads %s and downloads nothing: %v", releasesURL, pl.got)
 	}
 	nothingMoved(t, path, "old")
 }
@@ -571,5 +574,31 @@ func TestNothingChecksForUpdatesUnasked(t *testing.T) {
 	}
 	if seen == 0 {
 		t.Fatal("no production Go files were read, so this test is measuring nothing")
+	}
+}
+
+// TestTheZipBinaryNameFollowsThePlatform states the name the updater looks for
+// at the top of a zip, as a literal per platform.
+//
+// release.yml packs the binary as `gdoc` on every platform except Windows,
+// where it packs `gdoc.exe`. The updater matches that name exactly and never
+// searches, so a single name would download and verify a whole Windows zip and
+// then fail saying it holds no gdoc. Windows is not in release/platforms yet,
+// so nothing reaches this today; the line that adds it is what makes it live,
+// and that line should not also have to find this.
+//
+// The names are written out here rather than read out of release.yml, so this
+// test does not follow the workflow wherever somebody moves it. The other side
+// of the pair, that release.yml really packs those names, is
+// TestTheZipCarriesWhatTheInstallerLooksFor in go/boundary.
+func TestTheZipBinaryNameFollowsThePlatform(t *testing.T) {
+	for goos, want := range map[string]string{
+		"darwin":  "gdoc",
+		"linux":   "gdoc",
+		"windows": "gdoc.exe",
+	} {
+		if got := zipBinaryName(goos); got != want {
+			t.Errorf("on %s the zip holds %q, and the updater looks for %q", goos, want, got)
+		}
 	}
 }

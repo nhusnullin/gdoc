@@ -266,27 +266,43 @@ func (p *Policy) AllowCreateIn(folderID string) {
 	p.createIn = folderID
 }
 
-// The three hosts an update reads from, and nothing else on any of them.
+// The hosts an update reads from, and nothing else on any of them.
 // api.github.com answers the releases listing, github.com serves the download
-// path, and the download redirects to the asset host, which is where the bytes
+// path, and the download redirects to an asset host, which is where the bytes
 // actually are. They are named here, beside the policy, because which hosts
 // exist at all is the policy's own business; transport.go reads them for the
 // one rule a header carries rather than a URL.
+//
+// There are two asset hosts because GitHub moved. A download redirected to
+// objects.githubusercontent.com for years and redirects to
+// release-assets.githubusercontent.com today, measured 2026-09-16 against a
+// public release. Both are named, because which one a redirect picks is
+// GitHub's to change and a host that is merely stale costs nothing: neither is
+// reachable without the grant, neither carries a credential, and the bytes off
+// either are checked against the release's published checksum before anything
+// moves.
 const (
 	updateAPIHost      = "api.github.com"
 	updateDownloadHost = "github.com"
-	updateAssetHost    = "objects.githubusercontent.com"
+	updateAssetHost    = "release-assets.githubusercontent.com"
+	updateOldAssetHost = "objects.githubusercontent.com"
 )
+
+// isUpdateAssetHost reports whether a host is one a release download redirects
+// to. It is the one place the two spellings are held together.
+func isUpdateAssetHost(host string) bool {
+	return host == updateAssetHost || host == updateOldAssetHost
+}
 
 // isUpdateHost reports whether a host is one the update reads from. It lives
 // beside the hosts and is read by transport.go, which judges the credential a
 // URL cannot carry.
 func isUpdateHost(host string) bool {
 	switch host {
-	case updateAPIHost, updateDownloadHost, updateAssetHost:
+	case updateAPIHost, updateDownloadHost:
 		return true
 	}
-	return false
+	return isUpdateAssetHost(host)
 }
 
 // AllowUpdateFrom names the one GitHub repository whose releases this run may
@@ -296,21 +312,25 @@ func isUpdateHost(host string) bool {
 // Nail's decision, 2026-09-16, M9, DECISIONS.md. gdoc runs on a colleague's
 // machine now, so `gdoc update` has to find out what the latest release is and
 // fetch it. That is the only reason any host but Google's three is reachable,
-// and the door is as narrow as the job: GET, three hosts, one repository's
+// and the door is as narrow as the job: GET, four hosts, one repository's
 // releases, no query the guard did not decide about, and no credential. Every
 // other method, path and repository on those hosts is refused by name, and a
-// policy nobody granted an update refuses all three hosts as it always did.
+// policy nobody granted an update refuses every one of those hosts as it
+// always did.
 //
 // It is not a door into the reachable set and it is not a level. Nothing it
 // admits is a Google file, so no id reaches files through it, and a document
 // nobody handed in stays unreachable for a run that is also reading releases.
 //
-// The one host it opens loosely is the asset host, and the reason is that gdoc
-// does not build that URL. It is where github.com's download redirects, signed,
-// with a query nobody here can allowlist, so the rule there is the method and
-// the host and nothing further. What bounds it is what the run then does with
-// the bytes: internal/update checks them against the checksum the release
-// published before anything is replaced.
+// The hosts it opens loosely are the asset hosts, and the reason is that gdoc
+// does not build those URLs. They are where github.com's download redirects,
+// signed, with a query nobody here can allowlist, so the rule there is the
+// method and the host and nothing further. There are two of them because
+// GitHub moved: a download redirected to objects.githubusercontent.com for
+// years and redirects to release-assets.githubusercontent.com today. What
+// bounds both is what the run then does with the bytes: internal/update checks
+// them against the checksum the release published before anything is
+// replaced.
 //
 // A grant the guard cannot read opens nothing and takes back the grant
 // standing before it, which is AllowMarker's rule for AllowMarker's reason: a
@@ -459,7 +479,8 @@ func (p *Policy) Judge(method string, u *url.URL, body []byte) error {
 		return p.judgeDocs(method, u, body)
 	case "www.googleapis.com":
 		return p.judgeDrive(method, u, body)
-	case updateAPIHost, updateDownloadHost, updateAssetHost:
+	}
+	if isUpdateHost(u.Host) {
 		return p.judgeUpdate(method, u)
 	}
 	return refuse("the host %q is not one gdoc talks to. It reaches docs.googleapis.com, www.googleapis.com and the token host, and nothing else", u.Host)
@@ -502,9 +523,9 @@ func plainPath(u *url.URL) error {
 	return nil
 }
 
-// judgeUpdate is the whole of what an update may reach: three reads on three
-// hosts, under the repository AllowUpdateFrom named. It is written as one
-// function rather than three so that the first thing read on any of those
+// judgeUpdate is the whole of what an update may reach: three reads on the
+// update's hosts, under the repository AllowUpdateFrom named. It is written as
+// one function rather than three so that the first thing read on any of those
 // hosts is whether a grant exists at all.
 func (p *Policy) judgeUpdate(method string, u *url.URL) error {
 	repo := p.grantedUpdate()
@@ -519,7 +540,7 @@ func (p *Policy) judgeUpdate(method string, u *url.URL) error {
 		if u.Path != "/repos/"+repo+"/releases" {
 			return refuse("the path %q is not the releases listing of %q, which is the one call gdoc makes on %s", u.Path, repo, u.Host)
 		}
-		return checkQuery(u, noParams)
+		return checkQuery(u, updateListingParams)
 	case updateDownloadHost:
 		rest, ok := strings.CutPrefix(u.Path, "/"+repo+"/releases/download/")
 		if !ok {

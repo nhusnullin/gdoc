@@ -225,6 +225,13 @@ func TestTheZipCarriesWhatTheInstallerLooksFor(t *testing.T) {
 	if !strings.Contains(script, "gh release create") {
 		t.Error("release.yml never creates the release; the zips would be built and left on the runner")
 	}
+	// Windows is the one platform whose name inside the zip is different, and
+	// internal/update's zipBinaryName states the same two names as literals.
+	// Drop this arm and a Windows update downloads a whole zip, verifies it,
+	// and then fails saying it holds no gdoc.exe.
+	if !strings.Contains(script, `name="gdoc.exe"`) {
+		t.Error(`release.yml never packs the binary as gdoc.exe for windows-*; that is the name zipBinaryName tells the updater to look for`)
+	}
 }
 
 // TestTheNightlyCutsThePatchAndOnlyWhenMainMoved holds the one thing about
