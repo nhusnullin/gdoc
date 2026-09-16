@@ -492,13 +492,26 @@ cursor or a wait length. A document URL offers nothing either.
 - Create: `go/cmd/gdoc/completion_bash.tmpl` (embedded)
 - Modify: `go/cmd/gdoc/completion.go`, `completion_test.go`
 
-- [ ] Test first, `TestTheBashScriptNamesEveryCommandAndEveryFlag`: the same
+- [x] Test first, `TestTheBashScriptNamesEveryCommandAndEveryFlag`: the same
       assertions as zsh over the bash rendering, ending with `complete -F
       _gdoc gdoc`, with `compgen -f` after a `file` flag and nothing after an
       id flag.
-- [ ] The report key is `add_to_bashrc`, asserted.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc completion bash"`
+- [x] The report key is `add_to_bashrc`, asserted, in
+      `TestCompletionBashWritesTheFileAndNamesBashrc`, which also asserts the
+      bash report never carries `add_to_zshrc`.
+- ➕ `shells()` became a table of rows, each a shell with the key its line to
+      add comes under and the function that renders it. The report is a map
+      rather than a struct, because the third key names the shell's own file.
+- ➕ `byFirstWord` was lifted out of `zshGroups`, because both renderings
+      group the table the same way and only say it differently. `doc.go` says
+      so in the completion section.
+- ⚠️ Scope, no `bash -n` in a test, as with zsh. The script was checked by
+      hand in this iteration: `bash -n` is clean, and sourcing it and driving
+      `_gdoc` with `COMP_WORDS` set gives the commands at word one, `status
+      login` under `auth`, the flags under `build`, `--house` for `--h`, and
+      nothing after `--wait`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc completion bash"`
 
 ### Task 5: install.sh writes the completion and links every skill
 

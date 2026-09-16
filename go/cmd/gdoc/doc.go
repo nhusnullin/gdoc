@@ -160,10 +160,12 @@
 //
 // # Completion is a file, and the reason is the output contract
 //
-// gdoc completion zsh --out <path> renders the command table as a zsh script,
-// writes it through internal/atomicfile, and prints one object saying the
-// shell, the absolute path it wrote and the line to add to .zshrc. The script
-// itself never reaches stdout. A script there would make this the one command
+// gdoc completion <shell> --out <path> renders the command table as a script
+// for that shell, writes it through internal/atomicfile, and prints one object
+// saying the shell, the absolute path it wrote and the line to add. That last
+// key names the file the line goes in, add_to_zshrc or add_to_bashrc, so a
+// bash user is never handed a line about .zshrc. The script itself never
+// reaches stdout. A script there would make this the one command
 // whose stdout is not an object, and the contract is worth more than a file
 // that has to be written again after an upgrade. install.sh writes it again on
 // every run, and it never edits .zshrc: it prints the line and a person adds
@@ -173,9 +175,17 @@
 // what the parser takes. A flag whose kind is a file offers file names, and
 // every other kind offers nothing, because nothing on this machine knows a
 // Drive folder id, a cursor or a wait length, and neither does anything know a
-// document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag is the pin, and
-// it asks the table rather than a list of its own, so a command added without
-// a line in the script fails there.
+// document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag and
+// TestTheBashScriptNamesEveryCommandAndEveryFlag are the pins, and each asks
+// the table rather than a list of its own, so a command added without a line
+// in the script fails there.
+//
+// Both shells group the table the same way, through byFirstWord, because both
+// complete the way a person types: one word, then a second word or a flag.
+// They differ in the language each says it in. zsh reads a description beside
+// every word and a spec per flag; bash has neither, so a flag is a word in a
+// compgen -W list and what follows it is a case over the word before the
+// cursor.
 //
 // --out is build's rule and build's own check: a file already there is refused
 // without --force, a directory is refused whatever the flag says, and a
@@ -188,8 +198,10 @@
 // is why its table entry says anyWords. The parser's refusal for one missing
 // word names a document, and what is missing here is a shell.
 //
-// zsh is the only shell today. bash follows in this milestone, and PowerShell
-// at M9 with the Windows smoke test.
+// zsh and bash today, PowerShell at M9 with the Windows smoke test. Each is a
+// row in shells(), which is what a refusal reads the known shells out of:
+// TestCompletionArgumentsAreStrict, with
+// TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
 //
 // No test sources the script in a real shell, because nothing under go/ runs an
 // external program and TestNothingRunsAnExternalProgram holds that over the

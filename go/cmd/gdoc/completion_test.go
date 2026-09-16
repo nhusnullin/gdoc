@@ -214,3 +214,129 @@ func TestCompletionArgumentsAreStrict(t *testing.T) {
 		}
 	}
 }
+
+// The bash script is the same table in a third language, and the test asks
+// the table for the same reason: a command added without a line here is a Tab
+// that stays silent. What follows a flag is the same rule as zsh's, said the
+// way bash says it: a file offers file names, and a Drive id, a cursor and a
+// wait length offer nothing.
+func TestTheBashScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
+	table := commands()
+	if len(table) == 0 {
+		t.Fatal("the command table is empty, so this test is measuring nothing")
+	}
+	script, err := bashScript(table)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// bash has no #compdef line. What it needs is the last line, which is what
+	// makes `source <path>` enough.
+	if !strings.HasPrefix(script, "# bash completion for gdoc") {
+		t.Errorf("the script must open by saying what it is: %q", head(script))
+	}
+	if !strings.HasSuffix(script, "complete -F _gdoc gdoc\n") {
+		t.Errorf("the script must end by registering itself: %q", tail(script))
+	}
+
+	for _, c := range table {
+		if !strings.Contains(script, c.name) {
+			t.Errorf("the script must name %q", c.name)
+		}
+		for _, f := range c.flags {
+			if !strings.Contains(script, f.name) {
+				t.Errorf("%s takes %s, and the script offers it nowhere", c.name, f.name)
+			}
+		}
+	}
+
+	// One kind per flag name, so the arms below can be read one at a time.
+	kinds := map[string]kind{}
+	for _, c := range table {
+		for _, f := range c.flags {
+			if was, seen := kinds[f.name]; seen && was != f.value {
+				t.Fatalf("%s carries two kinds, and this test reads the script an arm at a time", f.name)
+			}
+			kinds[f.name] = f.value
+		}
+	}
+
+	// Every arm of the case over the word before the cursor. A flag with a
+	// value is in one of them, and a flag without a value is in none, because
+	// nothing follows it.
+	armed := map[string]bool{}
+	for _, line := range strings.Split(script, "\n") {
+		arm := strings.TrimSpace(line)
+		if !strings.HasPrefix(arm, "--") {
+			continue
+		}
+		names, _, ok := strings.Cut(arm, ")")
+		if !ok {
+			t.Errorf("a flag arm is not an arm: %q", arm)
+			continue
+		}
+		files := strings.Contains(arm, "compgen -f")
+		for _, name := range strings.Split(names, "|") {
+			k, known := kinds[name]
+			if !known {
+				t.Errorf("the script answers for %q, which no command takes: %q", name, arm)
+				continue
+			}
+			if k == kindNone {
+				t.Errorf("%s carries no value, so nothing follows it: %q", name, arm)
+				continue
+			}
+			armed[name] = true
+			if files != (k == kindFile) {
+				t.Errorf("%s carries %q, and the script %s file names after it: %q",
+					name, k.placeholder(), map[bool]string{true: "offers", false: "offers no"}[files], arm)
+			}
+		}
+	}
+	for name, k := range kinds {
+		if k != kindNone && !armed[name] {
+			t.Errorf("%s carries %q, and the script says nothing about what follows it", name, k.placeholder())
+		}
+	}
+}
+
+// The line to add is reported under the name of the file it goes in. A bash
+// user handed add_to_zshrc would be gdoc's mistake and not theirs.
+func TestCompletionBashWritesTheFileAndNamesBashrc(t *testing.T) {
+	noSession(t)
+	dir := t.TempDir()
+	out := filepath.Join(dir, "gdoc.bash")
+
+	got, code := runJSON(t, "completion", "bash", "--out", out)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("completion bash: %v (exit %d)", got, code)
+	}
+	data, ok := got["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("no data object: %v", got)
+	}
+	if data["shell"] != "bash" {
+		t.Errorf("shell: %v", data["shell"])
+	}
+	if data["wrote"] != out {
+		t.Errorf("wrote: got %v, want %s", data["wrote"], out)
+	}
+	if want := "source " + out; data["add_to_bashrc"] != want {
+		t.Errorf("add_to_bashrc: got %v, want %q", data["add_to_bashrc"], want)
+	}
+	if _, says := data["add_to_zshrc"]; says {
+		t.Errorf("the bash report must not name .zshrc: %v", data)
+	}
+
+	written, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(written)
+	if !strings.HasPrefix(script, "# bash completion for gdoc") || !strings.HasSuffix(script, "complete -F _gdoc gdoc\n") {
+		t.Errorf("the file is the script: %q ... %q", head(script), tail(script))
+	}
+	if !strings.Contains(script, "publish") {
+		t.Errorf("the file must carry the commands: %q", script)
+	}
+}
