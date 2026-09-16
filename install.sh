@@ -44,11 +44,17 @@ warn() {
 # One static binary, built from go/. It is the whole tool: there is nothing
 # else to install.
 
+# Whether this run rebuilt the binary is remembered, because the completion
+# block below is the one other place that has to know. A binary this run built
+# and a binary an earlier run left behind fail that step for different reasons,
+# and only the second one is fixed by installing Go.
 if command -v go >/dev/null 2>&1; then
     make -C "$REPO" build >/dev/null || fail "go build failed. Run: make build"
     [ -x "$GO_BIN" ] || fail "make build wrote no $GO_BIN"
+    go_rebuilt=1
 elif [ -x "$GO_BIN" ]; then
     warn "go is not on PATH, so $GO_BIN was not rebuilt. The one already there is used."
+    go_rebuilt=0
 else
     fail "go is not on PATH and there is no $GO_BIN. Install Go, then re-run."
 fi
@@ -186,14 +192,18 @@ fi
 # on stdout and that object carries the error, so >/dev/null would throw away
 # the only diagnostic there is and leave this block guessing a cause: a full
 # disk and a binary too old to have this command read the same from out here.
-# The second line is a hint and says so, because the most common cause of a
-# binary too old to answer is that no go on PATH left the last one in place.
+# The second line is printed only when this run did not rebuild, because then
+# a binary too old to answer is the likely cause and installing Go is the fix.
+# A run that did build the binary it just called has some other cause, and the
+# captured reason names it: telling that person to install Go would be wrong.
 completion_written=0
 if reason="$("$GO_BIN" completion zsh --out "$COMPLETION" --force 2>&1)"; then
     completion_written=1
 else
     warn "$GO_BIN wrote no completion to $COMPLETION: $reason"
-    warn "with no go on PATH nothing was rebuilt here: install Go, then re-run."
+    if [ "$go_rebuilt" -eq 0 ]; then
+        warn "that binary is the one an earlier run built: install Go, then re-run."
+    fi
 fi
 
 # --------------------------------------------------------------------------
