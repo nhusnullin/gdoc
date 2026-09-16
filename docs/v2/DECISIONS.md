@@ -62,7 +62,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-11 | `restyle --new` is not built | holds |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | holds |
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
-| 2026-09-16 | The release: `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release | holds |
+| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | holds |
 | 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
@@ -1848,7 +1848,7 @@ of a deferred thing, with each "arrives at M8" changed to say so. Nothing in
 `go/` moves. The backlog item names the unknown that would bring M8 back: a
 person on the team asking for a document's edits to come back into the hub.
 
-## 2026-09-16. The release: `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release.
+## 2026-09-16. The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin.
 
 Nail's decisions, taken in the brainstorm that produced the M9 plan,
 `docs/plans/2026-09-16-gdoc-v2-m9-release.md`. Serves principle 1: a colleague
@@ -1869,21 +1869,16 @@ hand. A nightly job tags `x.y.(z+1)` when main has moved since the last tag.
 `z == 0` is stable, `z > 0` is nightly, and nothing else records which is
 which. The first tag is `v2.0.0`, because the tool is already gdoc v2.
 
-**The update policy.** `gdoc update`, run by every skill before its first
-call and throttled to one check a day. Same `x`, higher `y`: update, no
-question, and say so. Higher `x`: report only, with the command to run.
-Higher `z`: only when the person turned the nightly channel on. Never down.
-
-**Where this strains principle 3, and how it is bounded.** A minor version
-replaces the binary and the skills with no question asked. Uncertainty is not
-resolving toward the destructive answer here, because nothing is uncertain:
-the zip is verified against its checksum before a byte is replaced, the
-previous binary is kept and `gdoc update --rollback` swaps it back, the
-object says what happened and the session prints one line, and a major
-version never moves without a person running the command. That one line is
-the only place the plan does not do "silent": a tool changing under a person
-with no trace is what the principle exists to prevent, and one line costs
-nothing.
+**Updates are on demand.** `gdoc update` runs when a person types it and
+never otherwise: no check when a session starts, no scheduler, no stamp
+file. Nail's revision the same evening; the first draft had every skill
+running it before its first call and a minor version applying itself, and
+he withdrew that. What it applies when run: same `x`, higher `y`, by
+default; a higher `x` only with `--major`; a higher `z` only with
+`--nightly`; never down. Every download is verified against its checksum
+before a byte is replaced, the previous binary is kept, and `gdoc update
+--rollback` swaps it back. With nothing moving unasked, the strain on
+principle 3 the first draft carried is gone.
 
 **One read-only door in the guard.** `Policy.AllowUpdateFrom` names one
 repository for one run and admits GET on `api.github.com`,
@@ -1893,13 +1888,20 @@ gdoc holds is Google's. Opened by `gdoc update` alone, in the shape of
 `AllowCreateIn`. The Google rules do not move, and the request is still built
 in `internal/gapi`, so the wire's four rooms stay four.
 
-**Skills are linked in a checkout and copied from a release.** The
-2026-08-14 entry gains that clause. A release copy carries a `.release`
-marker naming its version, so the skills and the binary on a machine always
-came from one zip, and the updater replaces exactly the folders that carry
-the marker. A folder without it is somebody's own work and is refused. The
-installer asks one question, global or local, and the binary still never
-prompts.
+**The skills travel as a Claude Code plugin.** This repository carries
+`.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is
+both the plugin and the marketplace, and `skills/` stays where it is. A
+colleague installs with `/plugin marketplace add nhusnullin/gdoc` and
+`/plugin install gdoc@gdoc`, chooses global or per-project in Claude Code's
+own terms, and updates through Claude Code's per-marketplace toggle. The
+first draft of this entry had the installer copying skill folders with a
+version marker and the updater replacing them; Claude Code already does that
+job for every plugin, so gdoc does not do it twice. The 2026-08-14 decision,
+skills are linked and never copied, stays true as written. The plugin's
+version is the tag's, and a release whose two versions disagree is refused
+by the workflow. A skill names the binary version it needs in its front
+matter and, when `gdoc help` reports an older one, says so and names `gdoc
+update`.
 
 **Page breaks are a block in the house style.** `- block: page_break`, before
 the version control label and after the classification table, read by the

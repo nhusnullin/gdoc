@@ -1,91 +1,96 @@
 # gdoc v2 Milestone 9: the release, the nightly, and the updater
 
-2026-09-16.
+2026-09-16. Revised the same evening: updates are on demand only, and the
+skills travel as a Claude Code plugin from a marketplace in this repository.
 
 ## Principles
 
 Serves: 1, it runs on someone else's machine. The release is one zip a
-colleague unpacks, one installer they run, and one binary that keeps itself
-and its skills current from then on, with nothing else on the machine. Serves
-4, every word costs attention: a colleague learns gdoc from a hundred-line
-README and from `gdoc help`, and an update is one line in a session, never a
-question.
+colleague unpacks or one line they paste, one binary, and the skills through
+the channel Claude Code already has for them. Nothing else lands on the
+machine. Serves 4, every word costs attention: a colleague learns gdoc from a
+hundred-line README and from `gdoc help`, and an update is one command they
+chose to run.
 
-Strains: 3, uncertainty never resolves toward the destructive answer, in one
-place. A minor version updates the binary with no question asked. That is
-Nail's decision, and the plan bounds it: every download is verified against a
-checksum before a byte is replaced, the previous binary is kept and one
-command swaps it back, the object and the session both say it happened, and a
-major version never moves without a person running the command.
+Strains: none. The updater runs only when a person types `gdoc update`, so
+nothing changes under anyone. The first draft of this plan had a minor
+version applying itself before a session; Nail withdrew that the same
+evening, and with it the one strain on principle 3 this plan carried.
 
 ## Overview
 
 gdoc goes to the team. Colleagues are on macOS and Windows, all with Claude
-Code, some with access to this repository and some without, and they will try
-the whole lifecycle: review, publish, restyle. Feedback comes as a GitHub
-Issue or a message to Nail. macOS ships first; Windows follows under its own
-tag when a colleague has run its checklist.
+Code, and they will try the whole lifecycle: review, publish, restyle.
+Feedback comes as a GitHub Issue or a message to Nail. macOS ships first;
+Windows follows under its own tag when a colleague has run its checklist.
 
 | Piece | Today | After |
 |---|---|---|
 | version | none; no tags | `x.y.z` baked in from the tag, in `help`, `auth status` and every envelope |
 | release | `make dist` by hand | a tag builds it in CI, zips it, and publishes it as a GitHub Release of this repository, which is public |
-| nightly | none | main moved since the last tag: CI tags `x.y.(z+1)` at 02:00 UTC and releases it |
-| install | `install.sh` in a checkout | one line, `curl -fsSL .../release/install.sh \| bash`, which fetches the latest release zip and installs it; the same script runs from an unpacked zip. Asks global or local, strips quarantine |
-| update | by hand | `gdoc update`, run by every skill before its first call, once a day: minor updates apply, major ones are reported, nightly ones need the channel |
-| skills | say "Nail", point at Nail's checkout | say "you", carry no path, and travel in the zip with a version marker |
+| nightly | none | main moved since the last tag: CI bumps the plugin version, tags `x.y.(z+1)` at 02:00 UTC and releases it |
+| binary install | `install.sh` in a checkout | one line, `curl -fsSL .../release/install.sh \| bash`, which fetches the latest release zip, verifies it and copies the binary; the same script runs from an unpacked zip |
+| skills install | a symlink into a checkout | `/plugin marketplace add nhusnullin/gdoc` then `/plugin install gdoc@gdoc`; this repository is the marketplace and the plugin |
+| update | by hand | `gdoc update`, when a person runs it and never otherwise: minor by default, `--major` for a major, `--nightly` for a nightly, `--check` to look, `--rollback` to go back. Skills update through Claude Code's own plugin toggle |
+| skills | say "Nail", point at Nail's checkout | say "you", carry no path, and name the binary version they need |
 | page breaks | none in the docx route | before "Version Control" and before "Contents", in both routes, from one block in the house style |
 | feedback | none | an issue template asking for version, command, object and expectation |
 
 ## Decisions Nail took, 2026-09-16
 
-Taken in the brainstorm that produced this plan, and written into
-DECISIONS.md the same day. Each is a decision and not a refactor. A task that
-finds one wrong stops and says so.
+Taken in the brainstorm that produced this plan and in its revision the same
+evening, and written into DECISIONS.md. Each is a decision and not a
+refactor. A task that finds one wrong stops and says so.
 
 1. **Releases are GitHub Releases of this repository, which is public.**
    Nail made `nhusnullin/gdoc` public on 2026-09-16 after the assessment in
    DECISIONS.md: no secret beyond the Internal OAuth client, no document,
    and the client secret left the source the same day, injected at build
-   time from `GDOC_OAUTH_CLIENT_SECRET`. So there is no second repository
-   and no second token: colleagues download from this repository's releases
-   page, the updater fetches from it with no credential, and the release
-   workflow builds with the secret from this repository's secrets.
+   time from `GDOC_OAUTH_CLIENT_SECRET`, already stored as a repository
+   secret. Colleagues download from this repository's releases page and the
+   updater fetches from it with no credential.
 2. **Versions are `x.y.z`.** Nail tags `x.y.0` by hand. The nightly tags
    `x.y.(z+1)`. The number is the channel: `z == 0` is stable, `z > 0` is
-   nightly. The first tag is `v2.0.0`.
-3. **The update policy.** Same `x`, higher `y`: update, no question, and say
-   so. Higher `x`: report only, with the command to run. Higher `z`: only on
-   `channel: nightly`, off by default. The session prints one line when the
-   binary changed under it. That line is the one place this plan does not do
-   "silent": a tool changing with no trace is what principle 3 exists to
-   prevent, and one line costs nothing.
-4. **Skills are linked in a checkout and copied from a release.** The
-   2026-08-14 decision gains that clause. A release copy carries a `.release`
-   marker naming its version, so the skills and the binary on a machine always
-   came from one zip.
-5. **The installer asks global or local**, and nothing else. Global is
-   `~/.claude/skills`; local is `.claude/skills` in the folder it is run from,
-   one hub. `--skills global|local` answers without the prompt. The installer
-   is a shell script a person runs, so it may ask; the binary still never
-   does.
-6. **The guard gains one read-only door for updates.** `AllowUpdateFrom`
-   names one repository for one run and admits GET on
-   `api.github.com`, `github.com` and the asset host for that repository's
-   releases, with no Authorization header, because the only bearer gdoc holds
-   is Google's. Opened by `gdoc update` alone.
-7. **Page breaks are a block in the house style**, `- block: page_break`,
+   nightly. The first tag is `v2.0.0`. The plugin's version in
+   `.claude-plugin/plugin.json` is the same number, and a release whose tag
+   and plugin version disagree is refused by the workflow.
+3. **Updates are on demand.** `gdoc update` runs when a person types it and
+   never otherwise: no check at session start, no scheduler, no stamp. What
+   it applies when run: same `x`, higher `y`, by default; a higher `x` only
+   with `--major`; a higher `z` only with `--nightly`; never down. It says
+   what it did in its object.
+4. **The skills travel as a Claude Code plugin.** This repository carries
+   `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it
+   is both the plugin and the marketplace, and `skills/` stays exactly where
+   it is. A colleague installs with two `/plugin` commands, chooses global or
+   per-project in Claude Code's own terms, and updates through Claude Code's
+   per-marketplace toggle. The 2026-08-14 decision, skills are linked and
+   never copied, stays true as written: Claude Code holds its own copy the
+   way it holds every plugin, and nothing in gdoc copies a skill folder.
+5. **The zip carries the binary and the README**, and the installer copies
+   the binary, strips quarantine, and says the two plugin commands. It asks
+   nothing. The binary still never prompts.
+6. **A skill names the binary version it needs.** Its Setup runs `gdoc help`
+   first, reads the version from the object, and when it is older than the
+   skill's minimum says so and names `gdoc update`. Skills and binary can
+   drift by a minor version without harm, because a skill holds no flag list.
+7. **The guard gains one read-only door for updates.** `AllowUpdateFrom`
+   names one repository for one run and admits GET on `api.github.com`,
+   `github.com` and the asset host for that repository's releases, with no
+   Authorization header, because the only bearer gdoc holds is Google's.
+   Opened by `gdoc update` alone.
+8. **Page breaks are a block in the house style**, `- block: page_break`,
    before the `version_control` label and after the `document_classification`
    table, read by the docx renderer and by the prelude. One layout, two
    writers. The prelude's own cover page break becomes that block. The two
    rows the drift gate reports against the master join `drift.Known` with
    Nail's name and this date.
-8. **Builds are trimmed and stripped.** `-trimpath` and `-ldflags "-s -w"` in
+9. **Builds are trimmed and stripped.** `-trimpath` and `-ldflags "-s -w"` in
    `build` and `dist`: Nail's home path is not shipped, and a tagged build is
    the same bytes on every machine.
-9. **Windows ships when its checklist has run.** `release/platforms` lists
-   `darwin-arm64` and `darwin-amd64` for `v2.0.0`. Adding the Windows line is
-   its own commit after a colleague pastes the checklist back.
+10. **Windows ships when its checklist has run.** `release/platforms` lists
+    `darwin-arm64` and `darwin-amd64` for `v2.0.0`. Adding the Windows line
+    is its own commit after a colleague pastes the checklist back.
 
 ## Context (from discovery)
 
@@ -99,12 +104,10 @@ finds one wrong stops and says so.
   builds a request. The updater's fetches are built there, on a client from
   `guard.NewClient` with no session, so no bearer is ever set. The allowlist
   does not widen.
-- **`internal/config` knows two paths**, the dir and `oauth-token.json`.
-  `UpdatePath` is the third, `update.json`, read strictly like the token file.
 - **`internal/atomicfile.Replace`** is the one room that replaces a file's
-  contents. It writes the config and the skill files. The binary itself is
-  replaced by rename, because a running executable cannot be written through,
-  and the rename works on both platforms.
+  contents. The binary itself is replaced by rename, because a running
+  executable cannot be written through, and the rename works on both
+  platforms.
 - **The house style's front-matter blocks** are `cover`, `label`, `table`,
   `blank`, `legend` and `toc`, decoded in `go/internal/house/house.go` and
   walked by `go/internal/render/front.go` and
@@ -113,28 +116,34 @@ finds one wrong stops and says so.
   once from `cover.go:43`, pinned by `TestTheCoverEndsWithAPageBreak`.
 - **The master template has one page break**, before its first heading, so
   the two new ones are two rows in `drift.Known`, `go/internal/drift/compare.go`.
-- **`make dist`** builds three binaries with `CGO_ENABLED=0` and nothing else.
-  The Go workflow runs gofmt, vet, the raced suite and `make dist` on every
-  push.
+- **`make dist`** builds three binaries with `CGO_ENABLED=0` and, since
+  b8d903a, `-ldflags` carrying the client secret from the environment. The
+  Go workflow runs gofmt, vet, the raced suite and `make dist` on every push.
 - **A tag pushed with `GITHUB_TOKEN` triggers no other workflow.** The
   nightly cannot rely on the tag event; it calls the release workflow as a
   reusable one. `GITHUB_TOKEN` can create a release on this repository, so no
   second token is needed.
 - **The client secret is a repository secret**, `GDOC_OAUTH_CLIENT_SECRET`,
-  and the release workflow passes it to `make dist`. A build without it
-  cannot sign anyone in, so a release built without the secret is a failed
-  release, and the workflow refuses to publish one.
-- **The repository is public**, so `raw.githubusercontent.com` serves
-  `release/install.sh` to anyone and the releases API answers without a
-  token.
+  set on 2026-09-16, and the release workflow passes it to `make dist`. A
+  build without it cannot sign anyone in, so a release built without the
+  secret is a failed release, and the workflow refuses to publish one.
+- **A Claude Code plugin** is a folder with `.claude-plugin/plugin.json`,
+  holding `name`, `description` and an optional `version`, and a `skills/`
+  directory beside it. A marketplace is a repository with
+  `.claude-plugin/marketplace.json` listing plugins by source. Both files
+  can sit at this repository's root, with `./` as the plugin source, and
+  `skills/` is already there. Claude Code re-reads a skill's `SKILL.md` live
+  and updates marketplace plugins on its per-marketplace toggle. Plugins may
+  carry a `bin/` on PATH, but three binaries per release in git is the blob
+  problem M7d's review found, so the binary stays a release asset.
+  code.claude.com/docs/en/plugins, discover-plugins, skills.
 - **The zip on macOS is quarantined** when it arrives through a browser, and
   an unsigned binary then refuses to run. The installer strips the attribute.
   A binary the updater downloads itself is not quarantined.
 - **`go/version` is not semver.** Three integers and a comparison is a page
   of code with no dependency.
-- **The skills' Setup** runs `gdoc help <command>` before the first call. The
-  update runs right before that.
-- **`build` has no network at all**, and stays that way. Nothing in it checks.
+- **`build` has no network at all**, and stays that way. Only `update`
+  reaches GitHub, and only when typed.
 
 ## Development Approach
 
@@ -146,48 +155,52 @@ finds one wrong stops and says so.
   failure paths both.
 - **CRITICAL: all tests must pass before the next task starts.** `make test`
   runs `-race`; keep it there.
+- **CRITICAL: nothing checks for updates on its own.** No skill runs
+  `gdoc update`, no command calls it, and there is no stamp file. A test in
+  `skills_test.go` holds that no SKILL.md runs `update` without a person's
+  word, and `update` itself has no code path that fires unasked.
 - **CRITICAL: the guard's Google rules do not move.** A policy without
   `AllowUpdateFrom` refuses every GitHub host exactly as today, and every
   existing guard test stays green without an assertion changed.
 - **CRITICAL: no bearer to GitHub.** A test hands the recorded update request
   to the guard and asserts it carries no Authorization header.
 - **CRITICAL: nothing is replaced before it is verified.** The checksum check
-  comes before the rename, and a failed check leaves the old binary and the
-  old skills exactly as they were.
+  comes before the rename, and a failed check leaves the old binary exactly
+  as it was.
 - **CRITICAL: no `os/exec` anywhere, tests included.** The updater cannot run
   the new binary to verify it; the next run's envelope is the proof, and
   `verified` says whether the file on disk hashes to what was promised.
 - **CRITICAL: one object on stdout, always.** `update` reports through
   `internal/emit` like every command.
 - **CRITICAL: facts only in Go.** `update` says what it found and what it did.
-  Whether to run `update --major` is the person's.
 - **CRITICAL: update this plan file when scope changes during implementation.**
 - No em dashes in anything this plan produces. Plain English.
 
 ## Testing Strategy
 
 - **Unit, `cmd/gdoc`**: the version in `help`, `auth status` and the
-  envelope; `update`'s arguments, its policy on every version pair, the
-  throttle, `--now`, `--check`, `--major`, `--channel`, `--rollback`.
+  envelope; `update`'s arguments and its policy on every version pair;
+  `--check`, `--major`, `--nightly`, `--rollback`; the unreachable answer.
 - **Unit, `internal/guard`**: the update grant carries the three hosts with
   GET and nothing else; a policy without it refuses them; no Authorization
   header reaches GitHub; the Google rules unchanged.
 - **Unit, `internal/update`**: version parsing and comparison against
   literals; release selection per channel and platform from a recorded API
   answer; checksum verification refusing a wrong file; the replace sequence
-  on a temp dir; the skill folder rules, marker present, marker absent,
-  symlink.
+  on a temp dir; rollback.
 - **Unit, `internal/house`, `render`, `prelude`**: the `page_break` block
   decoded, rendered as `w:pageBreakBefore`, proposed as `insertPageBreak`;
   literals throughout.
 - **Unit, `internal/drift`**: the two new rows in `Known`, and the gate green
   against the master.
 - **Boundary**: `allowedModules` unchanged; `TestNetHTTPStaysInItsRooms`
-  green with the fetches in `gapi`; `TestNothingRunsAnExternalProgram` green.
-- **Skills**: `skills_test.go` gains two checks: no SKILL.md says "Nail", and
-  none names a path under a home directory.
-- **Live, opt-in, Task 16**: an rc tag through the whole pipeline, an install
-  in a scratch home, and an update from rc1 to rc2 on this machine.
+  green with the fetches in `gapi`; `TestNothingRunsAnExternalProgram`
+  green; the plugin manifest parses and names the three skills that exist.
+- **Skills**: `skills_test.go` gains three checks: no SKILL.md says "Nail",
+  none names a path under a home directory, and none runs `update`.
+- **Live, opt-in, Task 14**: an rc tag through the whole pipeline, the
+  binary installed in a scratch home, the plugin installed from the branch,
+  and an update from rc1 to rc2 on this machine.
 - Coverage standard: every exported function under `go/internal/` has a test;
   the new package at or above 80%.
 
@@ -199,6 +212,8 @@ finds one wrong stops and says so.
 - `make build && bin/gdoc help 2>&1 >/dev/null | head -1` shows the version
 - `make dist` and `strings bin/gdoc-darwin-arm64 | grep -c nailkhusnullin`
   prints 0
+- `python3 -c 'import json; print(json.load(open(".claude-plugin/plugin.json"))["version"])'`
+  prints the version the next tag will carry
 
 ## Progress Tracking
 
@@ -213,76 +228,67 @@ finds one wrong stops and says so.
 targets. It goes into `emit.Result` as `version`, omitted when `dev`, and
 into the help prose's first line and `auth status`'s data.
 
+**The plugin and the marketplace** are two files at the root.
+`.claude-plugin/plugin.json` names `gdoc`, describes it in one sentence, and
+carries the version. `.claude-plugin/marketplace.json` names the marketplace
+`gdoc` and lists one plugin with source `./`. `make tag VERSION=vX.Y.0`
+writes the version into `plugin.json`, commits it, tags and pushes; the
+nightly does the same for `x.y.(z+1)`.
+
 **The release path** is one workflow, `release.yml`, callable two ways:
-`push` of a tag `v*`, and `workflow_call` with a tag input. It runs the same
-four checks the Go workflow runs, then `make dist`, then for each line of
+`push` of a tag `v*`, and `workflow_call` with a tag input. It checks that
+`plugin.json` carries the tag's version, runs the same four checks the Go
+workflow runs, then `make dist` with the secret, then for each line of
 `release/platforms` packs `gdoc-<tag>-<platform>.zip` holding the binary,
-`skills/`, `install.sh`, `README.md` and `example/`, writes
-`SHA256SUMS-<tag>`, and creates the GitHub Release here. The nightly, `nightly.yml`,
-runs on a cron, reads the last tag, and if main moved, tags `x.y.(z+1)` and
-calls `release.yml` with it.
+`install.sh`, `README.md` and `example/`, writes `SHA256SUMS-<tag>`, and
+creates the GitHub Release. The nightly, `nightly.yml`, runs on a cron, reads
+the last tag, and if main moved, bumps `plugin.json`, commits, tags
+`x.y.(z+1)`, and calls `release.yml` with it.
 
 **The updater** is `go/internal/update`, pure where it can be: parse and
 compare versions, choose a release for a channel and a platform from the API
 answer, verify a zip against its checksum line, plan the replacement. The
-command in `cmd/gdoc/update.go` reads `update.json`, opens a policy with
-`AllowUpdateFrom`, fetches through `gapi`, and carries the plan out: the zip
-to a temp dir under the config dir, the binary to `<path>.new`, checksum, old
-to `<path>.previous`, new to `<path>`, then every skill folder at a recorded
-location that carries the `.release` marker. `--rollback` swaps `.previous`
-back. `--check` reports without touching anything. Every run is throttled to
-one check a day by `last_check` in `update.json` unless `--now`.
+command in `cmd/gdoc/update.go` opens a policy with `AllowUpdateFrom`,
+fetches through `gapi`, and carries the plan out: the zip to a temp dir
+under the config dir, the binary to `<path>.new`, checksum, old to
+`<path>.previous`, new to `<path>`. `--rollback` swaps `.previous` back.
+`--check` reports without touching anything. It holds no state between runs.
 
 **The installer** is one script with two entrances. Run from an unpacked zip
-it installs what is beside it. Run from `curl | bash` it asks the releases
+it installs the binary beside it. Run from `curl | bash` it asks the releases
 API for the latest stable tag, downloads the zip for this machine's platform
 and its checksum file, verifies, unpacks to a temp dir and installs from
-there. Either way it copies the binary, asks global or local, copies the skills with their
-markers, strips quarantine, runs `gdoc update --set-skills <where>` and
-`gdoc completion zsh --out` into the config dir, and ends with `gdoc auth
-status`.
+there. Either way it copies the binary to `~/.local/bin/gdoc`, strips
+quarantine, writes the completion into the config dir, prints the `source`
+line when `.zshrc` lacks it, prints the two `/plugin` commands, and ends with
+`gdoc auth status`.
 
 ## Technical Details
-
-**`update.json`**, read strictly, unknown keys refused:
-
-```json
-{
-  "source": "nhusnullin/gdoc",
-  "channel": "stable",
-  "skills": ["global", "/Users/x/hub"],
-  "last_check": "2026-09-16T09:00:00Z"
-}
-```
-
-`source` is fixed by the installer and never changes on its own. `channel` is
-`stable` or `nightly`. `skills` records where copies live, so an update
-replaces exactly the folders the installer wrote. The binary writes the file
-through `atomicfile`.
 
 **The update object**:
 
 ```json
-{"ok":true,"version":"v2.0.0","data":{"installed":"v2.0.0","channel":"stable","latest":"v2.1.0","action":"updated","verified":true,"skills_replaced":["global"],"previous":"/Users/x/.local/bin/gdoc.previous"}}
+{"ok":true,"version":"v2.0.0","data":{"installed":"v2.0.0","latest_stable":"v2.1.0","latest_nightly":"v2.1.2","action":"updated","to":"v2.1.0","verified":true,"previous":"/Users/x/.local/bin/gdoc.previous"}}
 ```
 
 `action` is one of `up_to_date`, `updated`, `major_available`,
-`nightly_available`, `checked_recently`, `unreachable`, `rolled_back`. An
-`unreachable` is `ok: true` with a warning naming the cause: the session runs
-on the version it has, and the skill goes straight to `help`. A `major_available`
-carries `run: "gdoc update --major"` beside it. `verified` is the checksum
-of the file at its final path.
+`nightly_available`, `unreachable`, `rolled_back`, `checked`. A
+`major_available` carries `run: "gdoc update --major"` beside it. An
+`unreachable` is `ok: true` with a warning naming the cause. `verified` is
+the checksum of the file at its final path.
 
 **The policy, as a table the test walks:**
 
-| installed | latest stable | latest nightly | channel | action |
+| installed | latest stable | latest nightly | flags | action |
 |---|---|---|---|---|
-| 2.0.0 | 2.0.0 | 2.0.3 | stable | up_to_date |
-| 2.0.0 | 2.1.0 | 2.1.2 | stable | updated to 2.1.0 |
-| 2.0.0 | 3.0.0 | | stable | major_available |
-| 2.0.0 | 2.0.0 | 2.0.3 | nightly | updated to 2.0.3 |
-| 2.0.3 | 2.1.0 | 2.1.0 | nightly | updated to 2.1.0 |
-| 2.1.0 | 2.0.0 | | stable | up_to_date, never down |
+| 2.0.0 | 2.0.0 | 2.0.3 | none | up_to_date, and `nightly_available` named |
+| 2.0.0 | 2.1.0 | 2.1.2 | none | updated to 2.1.0 |
+| 2.0.0 | 3.0.0 | | none | major_available |
+| 2.0.0 | 3.0.0 | | `--major` | updated to 3.0.0 |
+| 2.0.0 | 2.0.0 | 2.0.3 | `--nightly` | updated to 2.0.3 |
+| 2.0.3 | 2.1.0 | 2.1.0 | `--nightly` | updated to 2.1.0 |
+| 2.1.0 | 2.0.0 | | any | up_to_date, never down |
+| any | any | any | `--check` | checked, nothing written |
 
 **The guard grant.** `AllowUpdateFrom("nhusnullin/gdoc")` admits:
 `GET api.github.com/repos/nhusnullin/gdoc/releases`, `GET
@@ -290,7 +296,8 @@ github.com/nhusnullin/gdoc/releases/download/<tag>/<asset>`, and
 `GET objects.githubusercontent.com/...` reached by the redirect from the
 second, for the run's length. Any other method, path or repository on those
 hosts is refused by name. A request carrying Authorization to any of them is
-refused before it leaves.
+refused before it leaves. The listing call has a five-second timeout and the
+download a longer one.
 
 **The `page_break` block.** In `house.yaml`:
 
@@ -313,13 +320,18 @@ The renderer emits it as an empty paragraph with `w:pageBreakBefore`, which
 is how the first heading breaks today. The prelude emits `insertPageBreak`.
 The cover's `trailing_blanks` drop to what the layout needs without pushing.
 
+**The skill's version line.** Each SKILL.md's Setup: run `$GDOC help`, read
+`version` from the object, and if it is below the line `needs: v2.0.0` in
+the skill's own front matter, say "gdoc is older than this skill needs; run
+`gdoc update`" and stop. `skills_test.go` checks the line parses.
+
 **Global constraints:**
 
 - Exactly one JSON object on stdout, exit 0 if and only if `ok`. No prompting,
-  no stdin. The installer prompts; the binary never does.
+  no stdin. The installer asks nothing either.
 - Strict argument parsing. `update` takes no words and the flags `--check`,
-  `--now`, `--major`, `--channel <stable|nightly>`, `--set-skills <where>`,
-  `--rollback`; a combination that means two things is refused by name.
+  `--major`, `--nightly`, `--rollback`; a combination that means two things
+  is refused by name.
 - Nothing under `go/` imports `os/exec`, tests included.
 - `install.sh` never edits `.zshrc`. It prints the line.
 
@@ -339,31 +351,33 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
 - [ ] `var version = "dev"` in `main.go`; `emit.Result` gains `Version string
       \`json:"version,omitempty"\``; `run` sets it.
 - [ ] `Makefile`: `VERSION := $(shell git describe --tags --always --dirty)`,
-      and both `build` and `dist` pass `-trimpath -ldflags "-s -w -X
-      main.version=$(VERSION)"`.
+      and `LDFLAGS` gains `-s -w -X main.version=$(VERSION)` beside the
+      client secret; both targets add `-trimpath`.
 - [ ] `make dist && strings bin/gdoc-darwin-arm64 | grep -c nailkhusnullin`
       prints 0. Record the three binary sizes here.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "feat(v2): the version in every envelope, and builds trimmed and stripped"`
 
-### Task 2: the skills say "you"
+### Task 2: the skills say "you", and name the version they need
 
 **Files:**
 - Modify: `skills/gdoc-review/SKILL.md`, `skills/gdoc-publish/SKILL.md`,
   `skills/gdoc-restyle/SKILL.md`
 - Modify: `go/cmd/gdoc/skills_test.go`
 
-- [ ] Test first, two checks added to the SKILL.md walk: no file contains the
-      word `Nail`, and none contains `/Users/` or `~/src/`.
+- [ ] Test first, three checks added to the SKILL.md walk: no file contains
+      the word `Nail`; none contains `/Users/` or `~/src/`; each front matter
+      carries `needs: vX.Y.Z` that parses; and none runs `$GDOC update`.
 - [ ] "Nail" becomes "you" for the person at the keyboard and "a colleague" or
       "the reviewer" where the text means somebody else in the document. The
-      descriptions trigger on what the person says: "Use when you are given a
-      Google Doc link and want the marked comments handled".
+      descriptions trigger on what the person says.
 - [ ] The review skill's `Spec:` line pointing into a checkout goes. Read the
       spec sections it names and confirm the skill already carries every
       sentence it needs; add the missing ones, not a path.
+- [ ] Setup in each skill: `$GDOC help` first, the version read from the
+      object, and the sentence naming `gdoc update` when it is below `needs`.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(skill): the skills address whoever is at the keyboard"`
+- [ ] `git commit -m "feat(skill): the skills address whoever is at the keyboard, and name the gdoc they need"`
 
 ### Task 3: the page_break block in the docx route
 
@@ -405,21 +419,29 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "feat(v2): the prelude ends with a page break, from the same block"`
 
-### Task 5: update.json
+### Task 5: the plugin and the marketplace
 
 **Files:**
-- Create: `go/internal/update/config.go`, `config_test.go`, `doc.go`
-- Modify: `go/internal/config/config.go`, `config_test.go`
+- Create: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`
+- Create: `go/boundary/plugin_test.go`
+- Modify: `Makefile`, `install.sh`
 
-- [ ] Test first: the file read strictly, an unknown key refused by name, a
-      channel other than the two refused, a missing file meaning "not
-      installed from a release" rather than a failure, and a write through
-      `atomicfile` byte-identical when nothing changed.
-- [ ] `config.UpdatePath()` beside `TokenPath()`. `update.Config` with the four
-      fields, `Load`, `Save`.
-- [ ] `doc.go` opens `Package update` and names the tests.
+- [ ] Test first, `TestThePluginNamesTheSkillsThatExist`: `plugin.json`
+      parses, its `name` is `gdoc`, its `version` is `vX.Y.Z` shaped, and
+      `marketplace.json` lists exactly one plugin with source `./`. Every
+      directory under `skills/` holds a `SKILL.md`, so the plugin ships
+      nothing half made.
+- [ ] The two files, with the version `v2.0.0`.
+- [ ] `make tag VERSION=vX.Y.Z`: refuses a version that is not `x.y.0`,
+      writes it into `plugin.json`, commits `chore: version vX.Y.Z`, tags,
+      and pushes the commit and the tag. Nightly versions are CI's, Task 12.
+- [ ] `install.sh` in the checkout: unchanged for the binary and the symlinked
+      skills, and its summary says the plugin is how a colleague gets them.
+- [ ] On this machine: `/plugin marketplace add` from the local checkout path
+      and `/plugin install gdoc@gdoc` in a scratch project, and the three
+      skills show in `/plugin`. Paste the listing here.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): update.json, read strictly"`
+- [ ] `git commit -m "feat(release): this repository is a Claude Code marketplace and a plugin"`
 
 ### Task 6: the guard's update grant
 
@@ -445,8 +467,8 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
 ### Task 7: releases, versions and the policy
 
 **Files:**
-- Create: `go/internal/update/version.go`, `version_test.go`, `choose.go`,
-  `choose_test.go`, `testdata/releases.json`
+- Create: `go/internal/update/doc.go`, `version.go`, `version_test.go`,
+  `choose.go`, `choose_test.go`, `testdata/releases.json`
 - Modify: `go/internal/gapi/` (one plain GET without bearer, on a guard
   client with no session), and its test
 
@@ -456,61 +478,52 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       highest overall for nightly, for one platform, and returns nothing when
       the platform's asset is missing.
 - [ ] Test: the policy table, every row, as one table-driven test.
-- [ ] `gapi.Get(url)` for a client with no session: no bearer, JSON or bytes
-      back, and the guard judging it like every other request.
+- [ ] `gapi.Get(url)` for a client with no session: no bearer, a five-second
+      timeout on the listing, JSON or bytes back, and the guard judging it
+      like every other request.
+- [ ] `doc.go` opens `Package update` and names the tests.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "feat(v2): choosing a release, and the update policy"`
 
 ### Task 8: download, verify, replace, roll back
 
 **Files:**
-- Create: `go/internal/update/apply.go`, `apply_test.go`, `skills.go`,
-  `skills_test.go`
+- Create: `go/internal/update/apply.go`, `apply_test.go`
 
 - [ ] Test first, on a temp dir: a zip and its checksum line verify; a wrong
       checksum refuses and leaves every file as it was; the replace sequence
       leaves `<path>` as the new binary and `<path>.previous` as the old; a
       second replace overwrites `.previous`; `Rollback` swaps back and refuses
-      when there is no previous.
-- [ ] Test, the skill folders: a folder with `.release` is replaced whole and
-      the marker carries the new version; a folder without it is refused by
-      name; a symlink is refused by name; a recorded location that no longer
-      exists is a warning, not a failure.
-- [ ] `Apply` and `Rollback`, `archive/zip`, `crypto/sha256`, `os.Rename`,
-      `atomicfile` for the skill files. Windows: the same rename sequence, and
-      a note in `doc.go` that it is unmeasured until the Windows checklist.
+      when there is no previous; a download cut short fails the checksum and
+      replaces nothing.
+- [ ] `Apply` and `Rollback`, `archive/zip`, `crypto/sha256`, `os.Rename`.
+      Windows: the same rename sequence, and a note in `doc.go` that it is
+      unmeasured until the Windows checklist.
 - [ ] `verified` is the hash of the file at its final path.
 - [ ] `cd go && go test -race ./...` passes.
 - [ ] `git commit -m "feat(v2): the update applied, verified, and reversible"`
 
-### Task 9: gdoc update, and the skills run it first
+### Task 9: gdoc update
 
 **Files:**
 - Create: `go/cmd/gdoc/update.go`, `update_test.go`
 - Modify: `go/cmd/gdoc/commands.go`, `doc.go`
-- Modify: the three `skills/*/SKILL.md`
 
 - [ ] Test first: strict arguments, every flag combination that means two
-      things refused by name; `--check` touches nothing; the daily throttle
-      answers `checked_recently` and `--now` overrides it; a machine with no
-      `update.json` answers `not_installed_from_a_release` with `ok: true`;
-      the envelope on each failure path; the object shape against literals.
+      things refused by name; `--check` touches nothing; the object shape
+      against literals; the envelope on each failure path.
 - [ ] Test, `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure`: a listing
       that times out, refuses the connection, answers 5xx or answers the rate
       limit each gives `ok: true`, `action: "unreachable"`, a warning naming
-      the cause, no file written, and `last_check` not advanced, so the next
-      session tries again. The listing call has a five-second timeout and the
-      download a longer one, both literals in the test. A download cut short
-      fails the checksum and replaces nothing.
-- [ ] `--set-skills <global|path>` and `--channel` write the config and do no
-      check. `--major` applies a major. `--rollback` calls `Rollback`.
-- [ ] The three skills' Setup: `$GDOC update` right before the first `$GDOC
-      help`, and the one line the skill prints when `action` is `updated`.
-      `build` is never preceded by it.
-- [ ] `doc.go`: a section on the update, why it is throttled, why it never
-      runs before `build`, and the tests.
+      the cause, and no file written.
+- [ ] Test, `TestNothingChecksForUpdatesUnasked`: no other command's code
+      path reaches `update`, held by reading the table: only the `update`
+      entry names `cmdUpdate`.
+- [ ] `--major`, `--nightly`, `--rollback` as the policy table says.
+- [ ] `doc.go`: a section on the update, why it runs only when typed, why it
+      never runs before `build`, and the tests.
 - [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc update"`
+- [ ] `git commit -m "feat(v2): gdoc update, on demand"`
 
 ### Task 10: the release installer
 
@@ -529,16 +542,14 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       inside a checkout of this repository.
 - [ ] It copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
       sentence naming the developer install; strips `com.apple.quarantine`
-      when `xattr` is present; asks global or local unless `--skills` says;
-      copies the three skills with `.release` markers under the three rules;
-      runs `gdoc update --set-skills`, `gdoc completion zsh --out
-      ~/.config/gdoc-agent/completion.zsh --force`, prints the `source` line
-      when `.zshrc` lacks it in any spelling, and ends with `gdoc auth status`.
+      when `xattr` is present; runs `gdoc completion zsh --out
+      ~/.config/gdoc-agent/completion.zsh --force`; prints the `source` line
+      when `.zshrc` lacks it in any spelling; prints the two `/plugin`
+      commands; and ends with `gdoc auth status`. It asks nothing.
 - [ ] Run it by hand against a scratch `HOME` on this machine, both
-      placements and both entrances, and paste the summary into this task.
-      The one-line form is
+      entrances, and paste the summary into this task. The one-line form is
       `curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash`.
-- [ ] `git commit -m "feat(release): the installer in the zip"`
+- [ ] `git commit -m "feat(release): the installer in the zip, and the one line that fetches it"`
 
 ### Task 11: the user README, the example note, the issue template
 
@@ -547,9 +558,11 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
 - Create: `.github/ISSUE_TEMPLATE/report.md`
 
 - [ ] `README.md` under a hundred lines: what gdoc is in three sentences;
-      install; sign in with an `altery.com` account; three things to try;
-      how updates work and how to turn nightly on; how to report; what gdoc
-      never does. Plain English, no em dashes.
+      the one-line install; the two `/plugin` commands and where Claude Code
+      keeps its update toggle; sign in with an `altery.com` account, and that
+      everyone signs in once more after 2026-09-16; three things to try;
+      `gdoc update` and its flags, and that nothing updates on its own; how
+      to report; what gdoc never does. Plain English, no em dashes.
 - [ ] `first-note.md`: a short note with a valid `gdoc:` front-matter block
       and a body that exercises a heading, a list and a table. `gdoc build`
       over it succeeds in a test.
@@ -557,88 +570,73 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       as typed, the object it printed, what was expected.
 - [ ] `git commit -m "docs(release): the user README, the example note, the issue template"`
 
-### Task 12: the release workflow
+### Task 12: the release workflow and the nightly
 
 **Files:**
-- Create: `.github/workflows/release.yml`
+- Create: `.github/workflows/release.yml`, `.github/workflows/nightly.yml`
 
-- [ ] Triggers: `push` of tags `v*`, and `workflow_call` with a `tag` input.
-- [ ] Steps: checkout at the tag, setup-go from `go.mod`, gofmt, vet, the
-      raced suite, `make dist`, pack one zip per line of `release/platforms`
-      with the binary renamed to `gdoc`, `skills/`, `release/install.sh`,
-      `release/README.md`, `release/example/`, write `SHA256SUMS-<tag>`,
-      `gh release create <tag>` with the assets. `make dist` runs with
-      `GDOC_OAUTH_CLIENT_SECRET` from the repository's secrets, and a step
-      before packing refuses to continue when the secret is empty, because a
-      release that cannot sign anyone in is not a release. Release notes are
-      the commit subjects since the previous tag.
-- [ ] `git commit -m "ci: the release workflow"`
+- [ ] `release.yml` triggers: `push` of tags `v*`, and `workflow_call` with a
+      `tag` input. Steps: checkout at the tag; refuse when `plugin.json`'s
+      version is not the tag; setup-go from `go.mod`; gofmt, vet, the raced
+      suite; `make dist` with `GDOC_OAUTH_CLIENT_SECRET` from secrets, and a
+      refusal when it is empty; pack one zip per line of `release/platforms`
+      with the binary renamed to `gdoc`, `release/install.sh`,
+      `release/README.md`, `release/example/`; write `SHA256SUMS-<tag>`;
+      `gh release create <tag>` with the assets and the commit subjects since
+      the previous tag as notes.
+- [ ] `nightly.yml`: cron at 02:00 UTC and `workflow_dispatch` with a dry-run
+      input. Reads the last tag with `git describe --tags --abbrev=0`; exits
+      quietly when main has not moved since it; otherwise writes
+      `x.y.(z+1)` into `plugin.json`, commits `chore: nightly vX.Y.Z`, tags,
+      pushes both with a token that may write contents, and calls
+      `release.yml` with the tag. The dry run prints the tag it would cut.
+- [ ] `git commit -m "ci: the release workflow, and the nightly that tags what moved"`
 
-### Task 13: the nightly
-
-**Files:**
-- Create: `.github/workflows/nightly.yml`
-
-- [ ] Cron at 02:00 UTC and `workflow_dispatch`. Reads the last tag with
-      `git describe --tags --abbrev=0`; exits quietly when main has not moved
-      since it; otherwise tags `x.y.(z+1)`, pushes the tag with a token that
-      may write contents, and calls `release.yml` with it.
-- [ ] A dry-run input that computes and prints the next tag without creating
-      it, for the acceptance task.
-- [ ] `git commit -m "ci: the nightly tags and releases what moved"`
-
-### Task 14: the repository secret
-
-Nail's action, or the session's with his word in the transcript.
-
-- [ ] Store the rotated OAuth client secret as `GDOC_OAUTH_CLIENT_SECRET` in
-      this repository's Actions secrets, with `gh secret set`.
-- [ ] Record it as done here with the date. The value is written nowhere
-      else.
-
-### Task 15: the documents
+### Task 13: the documents
 
 **Files:**
 - Modify: `docs/v2/SPEC.md`, `docs/v2/PLAN.md`, `CLAUDE.md`, `README.md`,
   `go/internal/guard/doc.go`, `go/cmd/gdoc/doc.go`
 
-The DECISIONS.md entry is already written, dated 2026-09-16, with its
-register row. This task makes the other documents agree with it.
+The DECISIONS.md entries are already written, dated 2026-09-16. This task
+makes the other documents agree with them.
 
-- [ ] SPEC.md: an "Install and update" section in the present tense; the
-      guard section names the fifth grant; the version rules; the `page_break`
-      block under the generator.
-- [ ] PLAN.md: the M9 section becomes the row in Task 17; M10 does not exist.
-- [ ] CLAUDE.md: rows for `release/` and `go/internal/update/`; the invariant
-      "Skills are linked, not copied" gains its release clause; "The guard
-      owns the wire" names the fifth grant; "If you touch" gains the release
-      row. Under 300 lines.
+- [ ] SPEC.md: an "Install and update" section in the present tense, the
+      plugin and the marketplace, the guard section naming the fifth grant,
+      the version rules, the `page_break` block under the generator.
+- [ ] PLAN.md: the M9 section becomes the row in Task 15.
+- [ ] CLAUDE.md: rows for `release/`, `.claude-plugin/` and
+      `go/internal/update/`; "The guard owns the wire" names the fifth
+      grant; "If you touch" gains the release row. Under 300 lines.
 - [ ] README.md's install section says a checkout installs with `install.sh`
-      and a colleague installs from a release zip.
+      and a colleague installs with the one line and the two `/plugin`
+      commands.
 - [ ] `cd go && go test -race ./...` passes, the docs tests included.
-- [ ] `git commit -m "docs(v2): the release, the updater and the fifth grant in SPEC, PLAN and CLAUDE.md"`
+- [ ] `git commit -m "docs(v2): the release, the plugin, the updater and the fifth grant in SPEC, PLAN and CLAUDE.md"`
 
-### Task 16: acceptance, end to end on this machine
+### Task 14: acceptance, end to end on this machine
 
-- [ ] Tag `v2.0.0-rc1` and push it. The release workflow runs green, and the
-      releases page shows the release with two zips and the checksum file.
-- [ ] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1` and
-      `--skills global`, then from the unpacked zip in a scratch hub with
-      `--skills local`. `gdoc help` shows
-      `v2.0.0-rc1`, `gdoc auth status` answers, the completion sources.
-- [ ] Publish `example/first-note.md` from the scratch hub into Nail's test
-      folder, and read the document back.
-- [ ] Tag `v2.0.0-rc2`, push, wait for the release. In the scratch home, `gdoc
-      update --now` on the stable channel does nothing, because both are
-      pre-release; `gdoc update --now --channel nightly` is refused by name
-      for a pre-release; then set `source` to the rc for the test and confirm
-      the binary and both skill placements moved to rc2, `verified: true`,
-      and `gdoc update --rollback` brings rc1 back.
+- [ ] `make tag` is not used for an rc; by hand: write `v2.0.0-rc1` into
+      `plugin.json`, commit, tag, push. The release workflow runs green and
+      the releases page shows the release with two zips and the checksum
+      file.
+- [ ] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1`.
+      `gdoc help` shows `v2.0.0-rc1`, `gdoc auth status` answers, the
+      completion sources.
+- [ ] In a scratch project: `/plugin marketplace add` pointing at the branch
+      and `/plugin install gdoc@gdoc`; `gdoc-publish` triggers on a sentence
+      naming a note and a folder, runs `gdoc help` first, and reads the
+      version.
+- [ ] Publish `example/first-note.md` from the scratch project into Nail's
+      test folder, and read the document back.
+- [ ] Repeat the tag as `v2.0.0-rc2`. In the scratch home, `gdoc update
+      --check` names rc2 as available; `gdoc update` moves the binary to
+      rc2 with `verified: true`; `gdoc update --rollback` brings rc1 back.
 - [ ] `nightly.yml` dry run prints the next tag it would cut.
-- [ ] Delete both rc releases and tags.
+- [ ] Delete both rc releases and tags, and reset `plugin.json` to `v2.0.0`.
 - [ ] `make test`, `make vet`, `make dist` green; CI green on the branch.
 
-### Task 17: close the milestone
+### Task 15: close the milestone
 
 - [ ] Move this plan to `docs/plans/completed/`.
 - [ ] PLAN.md's done table gains the M9 row, and the open section goes.
@@ -648,27 +646,28 @@ register row. This task makes the other documents agree with it.
 
 **Nail's actions:**
 
-- Merge the PR, then `git tag v2.0.0 && git push --tags`. The workflow builds
-  and publishes; the zips appear on the releases page.
-- Send colleagues the one-line install. Everyone can open Issues with the
-  template now that the repository is public; a message to Nail still works.
+- Merge the PR, then `make tag VERSION=v2.0.0`. The workflow builds and
+  publishes; the zips appear on the releases page.
+- Send colleagues the one line and the two `/plugin` commands. Everyone can
+  open Issues with the template; a message to Nail still works.
 - Windows: hand the Windows zip from a nightly build to one colleague with the
   checklist in `release/README.md`'s Windows section; when it comes back
   clean, add the line to `release/platforms` and tag the next `x.y.0`.
 
 **Manual verification:**
 
-- Open a fresh Claude Code session on a machine that installed from the zip,
-  give it a document link, and watch `gdoc-review` run `gdoc update` and then
-  `gdoc help` before its first call.
-- After the first nightly, check that a stable-channel machine did not move
-  and a nightly-channel one did.
+- Open a fresh Claude Code session on a machine that installed from the zip
+  and the marketplace, give it a document link, and watch `gdoc-review` run
+  `gdoc help` first and read the version.
+- After the first nightly, confirm no colleague's binary moved, and that
+  `gdoc update --check` on one machine names the nightly as available.
 
 ## What this milestone leaves for later
 
+- Signing the release: an ed25519 key pair with the public key inside the
+  binary and the signing in CI, so `gdoc update` trusts the key and not the
+  origin. Standard library, a page of code.
 - Signing and notarising the macOS binary, which needs an Apple developer
   account, and would let the installer stop stripping quarantine.
 - PowerShell completion and the Windows installer script, with the Windows
   release.
-- A `gdoc update` that also refreshes a skill copy the person edited: today
-  an edited copy has no marker and is refused, by design.

@@ -47,20 +47,21 @@ whether it comes back.
 
 ## M9. The release, the nightly, and the updater
 
-Decided 2026-09-16, DECISIONS.md. Plan:
+Decided 2026-09-16 and revised the same evening, DECISIONS.md. Plan:
 `docs/plans/2026-09-16-gdoc-v2-m9-release.md`.
 
 gdoc goes to the team, on macOS first and Windows under its own tag once a
 colleague has run its checklist. What lands: the version `x.y.z` in every
-envelope, a tag that builds and publishes one zip per platform as a GitHub
-Release of this repository, which is public since 2026-09-16, and a one-line
-install that fetches the latest; a nightly that tags `x.y.(z+1)` when main moved; `gdoc update`, run by
-every skill before its first call, which applies a minor version, reports a
-major one, and takes a nightly only on that channel, through one read-only
-guard door; a release installer that copies the binary and the skills and
-asks global or local; the skills addressing whoever is at the keyboard; the
-two page breaks the front matter was missing, in both routes; a user README,
-an example note and an issue template.
+envelope; a tag that builds and publishes one zip per platform as a GitHub
+Release of this repository, which is public since 2026-09-16; a one-line
+install for the binary; the skills as a Claude Code plugin from a
+marketplace in this repository; a nightly that tags `x.y.(z+1)` when main
+moved; `gdoc update`, which runs only when a person types it, applies a
+minor version, takes a major one with `--major` and a nightly with
+`--nightly`, through one read-only guard door; the skills addressing whoever
+is at the keyboard and naming the gdoc they need; the two page breaks the
+front matter was missing, in both routes; a user README, an example note and
+an issue template.
 
 ## Outstanding by hand
 
