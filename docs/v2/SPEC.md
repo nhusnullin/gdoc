@@ -169,8 +169,8 @@ matter, and reports every file it changed on disk.
 changes travel as suggestions, and a document whose review has run its course is
 published again from its note, because the note is the source of truth:
 `publish` refuses a paired note, and its refusal says to take the `gdoc:` block
-out by hand when it names a document that has gone. Anything more is M8's, with
-alignment. Changed 2026-09-11, DECISIONS.md.
+out by hand when it names a document that has gone. Anything more is alignment's, which
+is deferred to the backlog. Changed 2026-09-11 and 2026-09-16, DECISIONS.md.
 
 ### `restyle`
 
@@ -341,7 +341,7 @@ literals, never by reading the constant they test.
 Four named workflows, all judgement rather than commands. Three of them are
 skills today, symlinked from this repo in one copy: the review session, the
 publish run and the restyle run. The alignment check is described here and
-arrives at M8. Two of the four run on a marked comment, and two Nail invokes by
+is deferred to the backlog, 2026-09-16, DECISIONS.md. Two of the four run on a marked comment, and two Nail invokes by
 name:
 
 - **The review session.** Reads the threads, answers `ai?` from the hub, carries
@@ -350,7 +350,7 @@ name:
   **live**, polling on the `--since` cursor until Nail stops it. A colleague's
   `ai!` acts too, by decision: the marker is the trigger, identity is not a gate,
   and the guard caps a handed-in document at suggest and reply.
-- **The alignment check**, M8, not built. Composes the diff, judges what
+- **The alignment check**, deferred to the backlog on 2026-09-16, not built. Composes the diff, judges what
   matters, proposes both ways: suggestions into the document, edits into the hub
   with agreement.
 - **The publish run**, `gdoc-publish`. Nail names a note, and the skill builds

@@ -61,6 +61,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-10 | A table takes one index of its own at the end | MEASURED.md |
 | 2026-09-11 | `restyle --new` is not built | holds |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | holds |
+| 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1823,3 +1824,24 @@ the other side of the wire for a different reason.
 --help is a failure", and the tests `TestTheUsageLineNamesEveryCommand` in its
 `--help` form and `TestEveryCommandDispatchReachesIsInTheUsageLine`, which read
 a switch that no longer exists. Their replacements are named in the M7d plan.
+
+## 2026-09-16. M8 is deferred to the backlog, and the release goes next.
+
+Nail's decision, the same day M7d merged. Alignment, the align skill, the diff
+question and the two things folded into M8 move whole into
+`docs/backlog/m8-alignment-and-the-align-skill.md`, and M9, the release, is the
+next milestone. A domain choice with no principle above it.
+
+**Why.** The tool is complete enough to hand to the team: a person and a
+session both learn it from `gdoc help`, and the review, publish and restyle
+loops all run. What the team says after using it is better evidence for what
+to build next than the plan's own guess, and alignment is the one open
+milestone whose value nobody has asked for yet. Building it first would spend
+an evening on a guess.
+
+**What changes.** PLAN.md's M8 section becomes one pointer at the backlog
+item, and its standing fact about `sergi/go-diff` says the candidate is
+deferred with it. SPEC.md keeps its two alignment sections as the description
+of a deferred thing, with each "arrives at M8" changed to say so. Nothing in
+`go/` moves. The backlog item names the unknown that would bring M8 back: a
+person on the team asking for a document's edits to come back into the hub.

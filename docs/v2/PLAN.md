@@ -14,8 +14,8 @@ one is written against the code that exists by then.
 - Go 1.27. The module is `gdoc`, at `go/`.
 - Three dependencies, `beevik/etree`, `yuin/goldmark` and `goccy/go-yaml`, each
   with its reason in SPEC.md and its line in `allowedModules`. A fourth needs
-  its reason written into SPEC.md first, and the open candidate is
-  `sergi/go-diff` at M8.
+  its reason written into SPEC.md first. The one candidate, `sergi/go-diff`,
+  is deferred with M8 to the backlog, 2026-09-16.
 - Platforms: darwin/arm64, darwin/amd64, windows/amd64. No linux. Every target
   cross-builds on every commit, so portability is never discovered late.
 - One template. Everything is measured against `altery-group-policy-v1.0`, and a
@@ -37,32 +37,13 @@ one is written against the code that exists by then.
 | M7d | one command table as the only description of a command, read by the dispatcher, the usage line, `help` and `completion`, `--help` and `-h` anywhere on the line, the zsh and bash completion scripts the binary writes, and the `gdoc-publish` and `gdoc-restyle` skills, each learning its flags from `gdoc help` | 2026-09-16 | `2026-09-16-gdoc-v2-m7d-help-completion-skills.md` |
 | the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
-## M8. The diff, alignment, and the align skill
+## M8. Deferred
 
-The align skill over `read`'s output and the hub markdown it reads itself:
-composes the comparison, judges what matters with Nail's word on which side is
-the source of truth, proposes both ways, never deletes from the hub, and works
-on a document gdoc never published.
-
-Whether a binary diff command earns its place at all is decided here, and with
-it the second dependency decision: `sergi/go-diff`, proven in the spike, with a
-written reason; a hand-rolled word diff; or nothing, if the skill reads both
-sides well enough without one.
-
-Two things arrive with it.
-
-**The hub-wide session.** One live session watches one document today, the link
-Nail gave. One watch over every paired note in a folder is this milestone's, and
-it is Nail's decision of 2026-09-07. It makes the cost of a poll matter, which
-is [the backlog item on the
-tick](../backlog/wait-polls-both-apis-every-tick.md).
-
-**A second version of a note.** `publish` refuses a note that already names a
-document, and the answer today is the refusal's own sentence: take the `gdoc:`
-block out by hand. `restyle --new` is not built, decided 2026-09-11. Alignment
-is where a state transition would live if one is ever wanted: the note takes the
-new id and a fresh publish record in the same change, and a document left
-unpaired is refused by alignment until it is paired on purpose.
+Alignment, the align skill, the diff question and the two things folded into
+M8 are deferred whole to
+[the backlog](../backlog/m8-alignment-and-the-align-skill.md), Nail's decision
+of 2026-09-16, DECISIONS.md. The team's feedback after the release decides
+whether it comes back.
 
 ## M9. Release
 
