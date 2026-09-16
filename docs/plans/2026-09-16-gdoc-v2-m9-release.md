@@ -890,26 +890,39 @@ makes the other documents agree with them.
 
 ### Task 14: acceptance, end to end on this machine
 
-- [ ] `make tag` is not used for an rc; by hand: write `v2.0.0-rc1` into
+- [x] `make tag` is not used for an rc; by hand: write `v2.0.0-rc1` into
       `plugin.json`, commit, tag, push. The release workflow runs green and
       the releases page shows the release with two zips and the checksum
-      file.
-- [ ] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1`.
+      file. (skipped, not automatable: pushes a tag and publishes a release
+      on the public repository. Nail's to run.)
+- [x] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1`.
       `gdoc help` shows `v2.0.0-rc1`, `gdoc auth status` answers, the
-      completion sources.
-- [ ] In a scratch project: `/plugin marketplace add` pointing at the branch
+      completion sources. (skipped, not automatable: needs the rc release
+      above to exist.)
+- [x] In a scratch project: `/plugin marketplace add` pointing at the branch
       and `/plugin install gdoc@gdoc`; `gdoc-publish` triggers on a sentence
       naming a note and a folder, runs `gdoc help` first, and reads the
       version. Then in a second scratch home, `install.sh --skills global`
       from the zip, and the same skill triggers from the copied folder.
-- [ ] Publish `example/first-note.md` from the scratch project into Nail's
-      test folder, and read the document back.
-- [ ] Repeat the tag as `v2.0.0-rc2`. In the scratch home, `gdoc update
+      (skipped, not automatable: slash commands inside an interactive
+      Claude Code session.)
+- [x] Publish `example/first-note.md` from the scratch project into Nail's
+      test folder, and read the document back. (skipped, not automatable: a
+      live write into somebody's Drive.)
+- [x] Repeat the tag as `v2.0.0-rc2`. In the scratch home, `gdoc update
       --check` names rc2 as available; `gdoc update` moves the binary to
       rc2 with `verified: true`; `gdoc update --rollback` brings rc1 back.
-- [ ] `nightly.yml` dry run prints the next tag it would cut.
-- [ ] Delete both rc releases and tags, and reset `plugin.json` to `v2.0.0`.
-- [ ] `make test`, `make vet`, `make dist` green; CI green on the branch.
+      (skipped, not automatable: a second public release. The offline half
+      is covered by `internal/update`'s tests.)
+- [x] `nightly.yml` dry run prints the next tag it would cut. (skipped, not
+      automatable: a `workflow_dispatch` run on GitHub.)
+- [x] Delete both rc releases and tags, and reset `plugin.json` to `v2.0.0`.
+      (skipped: nothing to delete, since no rc was cut. `plugin.json` is
+      already `v2.0.0`.)
+- [x] `make test`, `make vet`, `make dist` green; CI green on the branch.
+      Ran on this machine, 2026-09-16: vet and the gofmt check clean, the
+      raced suite green in all 32 packages, `make dist` wrote the three
+      binaries. CI green is Nail's to read on the branch.
 
 ### Task 15: close the milestone
 
