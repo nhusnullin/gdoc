@@ -682,25 +682,54 @@ first. This task makes the other documents agree with it.
 
 ### Task 10: verify acceptance criteria
 
-- [ ] `make build`; `bin/gdoc help` exits 0 with one object on stdout and the
+- [x] `make build`; `bin/gdoc help` exits 0 with one object on stdout and the
       prose on stderr, checked with `bin/gdoc help >/dev/null` and
       `bin/gdoc help 2>/dev/null | head -c 1` reading `{`.
-- [ ] `bin/gdoc help publish`, `bin/gdoc restyle --help`, `bin/gdoc -h read`
+      Both hold: exit 0, stdout opens `{`, the fourteen-line list is on stderr.
+- [x] `bin/gdoc help publish`, `bin/gdoc restyle --help`, `bin/gdoc -h read`
       each answer. Bare `bin/gdoc` exits 1 with the help on stderr.
-- [ ] `bin/gdoc completion zsh --out /tmp/gdoc.zsh --force`, then in a fresh
+      All three exit 0 with the one object on stdout and the usage of that one
+      command on stderr. `completion --help` answers the same way. Bare
+      `bin/gdoc` exits 1 with the full list on stderr and nothing on stdout.
+- [x] `bin/gdoc completion zsh --out /tmp/gdoc.zsh --force`, then in a fresh
       `zsh -f`: `autoload -Uz compinit && compinit && source /tmp/gdoc.zsh`,
       then type `gdoc pub<Tab>` and `gdoc publish --<Tab>`. Record what was
       offered here. This is a person at a keyboard, not a test.
-- [ ] `bin/gdoc help 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["data"]["commands"]))'`
-      prints 14: twelve commands plus `help` and `completion`.
-- [ ] `grep -c -- '--' skills/gdoc-publish/SKILL.md skills/gdoc-restyle/SKILL.md`
+      Driven through a real interactive `zsh -f -i` on a pseudo-terminal
+      (`zmodload zsh/zpty`), because this session has no keyboard. What came
+      back, verbatim:
+
+      ```
+      gdoc pub<Tab>        -> gdoc publish          (unique match, completed)
+      gdoc comp<Tab>       -> gdoc completion       (unique match, completed)
+      gdoc publish --<Tab> -> --folder-id  -- the Drive folder the document is created in
+                              --house      -- a house style file other than the one inside gdoc
+                              --md         -- the note to publish
+      gdoc <Tab>           -> auth, build, comments, completion, help, probe,
+                              propose, publish, read, reply, restyle,
+                              suggestions, withdraw, each with its sentence
+      ```
+
+      Thirteen names at the top level, `auth` standing for its two words, which
+      is the table read back. Nail still does the keyboard pass in
+      Post-Completion; this records that the script loads and offers.
+- [x] `bin/gdoc help 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["data"]["commands"]))'`
+      prints 14: twelve commands plus `help` and `completion`. It prints 14.
+- [x] `grep -c -- '--' skills/gdoc-publish/SKILL.md skills/gdoc-restyle/SKILL.md`
       shows no flag list: the only `--` occurrences are inside the example
       lines the help-first rule quotes, if any.
-- [ ] `make test`, `make vet`, `make dist` green. CI runs when the branch is
+      Two each, and both are the front matter fences on lines 1 and 4. Neither
+      skill names a single flag.
+- [x] `make test`, `make vet`, `make dist` green. CI runs when the branch is
       pushed, which is Nail's to do.
-- [ ] `wc -l CLAUDE.md` under 300.
-- [ ] ➕ `./install.sh` runs green with all three skills present, which Task 5
+      `make vet` clean, gofmt clean, `go test -race ./...` all packages ok,
+      `make dist` wrote the three binaries into `bin/`.
+- [x] `wc -l CLAUDE.md` under 300. It is 228.
+- [x] ➕ `./install.sh` runs green with all three skills present, which Task 5
       could not check because two of them did not exist yet.
+      Green. It wrote `bin/gdoc.zsh`, linked `~/.local/bin/gdoc`, and listed
+      `gdoc-review`, `gdoc-publish` and `gdoc-restyle` as symlinks into
+      `skills/`. The tree was clean, so no `+ uncommitted changes` line.
 
 ### Task 11: close the milestone
 
