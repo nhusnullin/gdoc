@@ -558,22 +558,61 @@ to "five grants beside it".
 
 **Files:**
 - Create: `go/internal/update/doc.go`, `version.go`, `version_test.go`,
-  `choose.go`, `choose_test.go`, `testdata/releases.json`
-- Modify: `go/internal/gapi/` (one plain GET without bearer, on a guard
-  client with no session), and its test
+  `choose.go`, `choose_test.go`, `policy.go`, `policy_test.go`,
+  `testdata/releases.json`
+- Create: `go/internal/gapi/plain.go`, `plain_test.go`
+- Modify: `go/internal/gapi/session.go` (GitHub's own error message)
 
-- [ ] Test first, literals: `Parse("v2.1.3")` and every malformed form
+- [x] Test first, literals: `Parse("v2.1.3")` and every malformed form
       refused; `Compare` on the table in Technical Details; `Choose` from the
       recorded releases answer picks the highest `z == 0` for stable and the
       highest overall for nightly, for one platform, and returns nothing when
       the platform's asset is missing.
-- [ ] Test: the policy table, every row, as one table-driven test.
-- [ ] `gapi.Get(url)` for a client with no session: no bearer, a five-second
+- [x] Test: the policy table, every row, as one table-driven test.
+      `TestThePolicyTable` walks all eight rows plus the four `--check` cases,
+      an rc below its release, and a channel nothing was found in.
+- [x] `gapi.Get(url)` for a client with no session: no bearer, a five-second
       timeout on the listing, JSON or bytes back, and the guard judging it
       like every other request.
-- [ ] `doc.go` opens `Package update` and names the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): choosing a release, and the update policy"`
+- [x] `doc.go` opens `Package update` and names the tests.
+- [x] `cd go && go test -race ./...` passes. `internal/update` is at 97.3%,
+      `internal/gapi` at 91.0%.
+- [x] `git commit -m "feat(v2): choosing a release, and the update policy"`
+
+➕ The policy went into `policy.go` beside `choose.go` rather than into the
+command, because the table is arithmetic over versions and that is what makes
+it a test over literals. `Decide` is handed a `State` and `Flags` and answers
+a `Decision`; the command in Task 9 opens the policy, fetches, and carries it
+out.
+
+➕ A version carries an optional pre-release word: `v2.0.0-rc1` parses, and an
+rc sorts below the release it names. Task 14 accepts this milestone by cutting
+`v2.0.0-rc1`, installing it, and updating from it to `rc2`, which three plain
+integers cannot express. Two pre-releases compare as text, so `rc10` sorts
+below `rc2`; reading the digits out would be a semver implementation arriving
+one function at a time.
+
+➕ The zero `Version` is how a channel with no release in it is said, and
+`v0.0.0` parses to that same value. gdoc's first release is `v2.0.0` and tags
+only go up, so the one tag that could be confused with nothing found is a tag
+that will never exist. `TestTheZeroVersionIsHowNothingFoundIsSaid` pins it.
+
+➕ `Choose` skips a draft and a tag that does not parse, and refuses when the
+latest release of the channel carries no zip for this platform or no checksum
+file. It never falls back to the release before it: an update that installs
+something other than the newest is worse than one that says what is missing.
+
+➕ `nightly_available` is not an action. The row it was written for is
+`up_to_date` with `run: "gdoc update --nightly"` beside it, and the object
+already carries `latest_nightly`, so a second action for the same state would
+be two ways to say one thing. `unreachable` and `rolled_back` stay in the
+`Action` list for Task 9, which is where a wire and a file are.
+
+➕ The unauthenticated reach is `gapi.Plain`, built by `OpenPlain`, rather
+than a package-level `Get`: `GetJSON` is the listing and carries the
+five-second timeout, `GetBytes` is the download and runs on the caller's own
+deadline. `statusError` gained GitHub's top-level `message` field, so a rate
+limit reaches the envelope as the sentence GitHub wrote.
 
 ### Task 8: download, verify, replace, roll back
 
