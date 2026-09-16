@@ -154,7 +154,8 @@ func TestTheSixDocumentsRenderToTheirGoldens(t *testing.T) {
 	}
 }
 
-// TestAPipeTableCarriesTheHouseRecipe states v1's table recipe as literals.
+// TestAPipeTableCarriesTheHouseRecipe states the house table recipe as
+// literals.
 func TestAPipeTableCarriesTheHouseRecipe(t *testing.T) {
 	out := walk(t, "| Field | Value |\n|---|---|\n| One | 1 |\n| Two | 2 |\n")
 
@@ -1140,8 +1141,8 @@ func TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo(t *testing.T) {
 // A heading that skips a level is numbered with a zero in it, and says so.
 //
 // The number is built from every counter down to the heading's own level, so a
-// "###" under a "#" reads "1.0.1-". The number itself is v1's, and what the
-// note gets here is the line to look at.
+// "###" under a "#" reads "1.0.1-". The number itself is the house format and
+// is left as it is, so what the note gets here is the line to look at.
 func TestASkippedHeadingLevelSaysSo(t *testing.T) {
 	out := walk(t, "# Alpha\n\n### Gamma\n")
 

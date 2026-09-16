@@ -33,7 +33,7 @@ func TestPlatformDefault(t *testing.T) {
 		if filepath.Base(d) != "gdoc-agent" {
 			t.Fatalf("windows dir: %q", d)
 		}
-	default: // darwin and everything else keep v1's path
+	default: // darwin and everything else keep ~/.config/gdoc-agent
 		if filepath.Base(filepath.Dir(d)) != ".config" || filepath.Base(d) != "gdoc-agent" {
 			t.Fatalf("unix dir: %q", d)
 		}
@@ -74,7 +74,7 @@ func TestDirForEachCase(t *testing.T) {
 			err:  true,
 		},
 		{
-			name: "unix keeps v1's path",
+			name: "unix keeps ~/.config/gdoc-agent",
 			in:   outside{goos: "darwin", home: filepath.Join("/Users", "nail")},
 			want: filepath.Join("/Users", "nail", ".config", "gdoc-agent"),
 		},

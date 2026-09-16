@@ -211,8 +211,8 @@ func TestPostSendsTheBodyVerbatimToTheRepliesURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sent.Content != goodBody {
-		// v1 appended [gdoc]. v2's mark is the prefix the skill already wrote,
-		// so anything added here is text gdoc put in Nail's document unasked.
+		// The mark is the prefix the skill already wrote, so anything added
+		// here is text gdoc put in Nail's document unasked.
 		t.Errorf("the body sent is %q, want it verbatim: %q", sent.Content, goodBody)
 	}
 }

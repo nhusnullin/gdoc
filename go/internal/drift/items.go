@@ -9,6 +9,7 @@
 // disagree without either of them failing. The Source interface is what makes
 // one reader serve both, and the compiler is what keeps the two document types
 // answering the same questions.
+
 package drift
 
 import "fmt"

@@ -32,8 +32,8 @@ func TestMissingScopesReadsDriveAsCoveringDocs(t *testing.T) {
 		have []string
 		want []string
 	}{
-		{"a v2 login", []string{drive, docs}, nil},
-		{"a v1 login", []string{drive, docsReadonly}, nil},
+		{"the login this binary makes", []string{drive, docs}, nil},
+		{"drive plus the read-only Docs scope", []string{drive, docsReadonly}, nil},
 		{"drive on its own", []string{drive}, nil},
 		{"docs on its own", []string{docs}, []string{drive}},
 		{"nothing at all", nil, []string{drive, docs}},

@@ -1,12 +1,8 @@
-// Package frontmatter reads and writes the gdoc: block in a markdown note's
-// YAML front matter, and nothing else in the file.
-//
-// Two rules shape every function here. The read is strict: an unknown key, a
-// duplicate key or a schema this version does not know is refused with the key
-// named, because a block gdoc half understands is a pairing it may act on
-// wrongly. The write is byte-preserving: only the gdoc: key's span changes, and
-// the author's keys, their line endings and the trailing newline come through
-// untouched.
+// This file is the block's own shape: the fields gdoc owns in a note, what a
+// Drive id looks like, and Validate, which names the first key a block breaks.
+// frontmatter.go is the read and the byte-preserving write, and doc.go holds
+// the package comment.
+
 package frontmatter
 
 import (

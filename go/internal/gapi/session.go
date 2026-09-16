@@ -8,6 +8,52 @@
 // A read is a GET, and a write is a POST or a PATCH carrying JSON or a POST
 // carrying a multipart/related upload. All of them go through one refresh
 // policy, in send below.
+//
+// This comment holds why the package refuses what it refuses. What it sends is
+// in the code beside it.
+//
+// # A write whose answer could not be read is not a write that never happened
+//
+// This package marks the failures raised after the server answered 2xx: a body
+// that is not JSON, a body over the ceiling, and every other way a read of the
+// answer can fail once the request is already in Docs. sentError is the mark,
+// and Sent reports it. TestAFailureAfterA2xxIsMarkedAsSent and
+// TestAMultipartAnswerThatIsNotJSONIsMarkedAsSent are the pins.
+//
+// A writer package asks by behaviour, through a Sent() bool method on the
+// error, rather than by importing this one. Naming *http.Client is what keeps
+// net/http out of those rooms, and an exported sentinel here would bring it
+// back through the side door: a writer that imports gapi imports the wire with
+// it. The interface each writer names is the whole reason.
+// TestASentErrorStillCarriesItsCause pins that the mark wraps rather than
+// replaces.
+//
+// All three writers ask it, and each keeps what the answer still carried. In
+// the usual case nothing decoded: reply.Post warns and says to check the thread
+// before posting again, propose.Apply runs the read-backs and reports the
+// proposal with the comment id unknown, and withdraw.Run runs its read-back and
+// reports the withdrawal it cannot confirm. When fields did decode all three
+// report them instead, because encoding/json saves the first type error and
+// keeps going, so valid JSON of the wrong shape reaches the caller with fields
+// in hand. The gate is the decoded field, never the path that was taken.
+//
+// # What is not marked is three cases, not two
+//
+// A guard refusal never left the machine, and a 4xx is Docs rejecting the
+// request whole. A caller is right to treat both as a change that did not
+// happen. TestAFailureBeforeTheWireIsNotMarkedAsSent and
+// TestAMultipartCreateTheGuardRefusesIsNotMarkedAsSent pin the refusal,
+// TestAFailedStatusIsNotMarkedAsSent pins the 4xx.
+//
+// A 5xx or a dropped connection is the third, and it is not marked either. gdoc
+// cannot tell it apart: the request was written and may have been applied.
+// Nothing claims otherwise in either direction, so a caller that sees a
+// transport failure or a 5xx reads the document before sending the same write
+// again. Widening the mark to cover it would make every one of those a
+// reported-not-raised failure, and that is a decision for Nail rather than a
+// refactor. TODO(test): no test pins the 5xx case. It takes the same path a
+// 4xx takes, so a change to statusError moves both at once and only the 4xx
+// would fail.
 package gapi
 
 import (

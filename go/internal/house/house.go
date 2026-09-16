@@ -3,13 +3,65 @@
 // house.yaml is the style: page geometry, the nine named styles, the cover,
 // the header and footer with the positioned logo, the three front-matter
 // tables cell by cell, the legend, the live contents field, heading numbering
-// and the logo itself as base64. It is embedded in the binary, so installing
-// gdoc is still one file, and LoadFile points at another copy for a change
-// under review. Nothing here reads the Word master, and nothing here reaches
-// the network.
+// and the logo itself as base64. TestTheNineStylesAreThere,
+// TestFrontMatterIsThirteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
+// TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoDecodesAsAPNGOfTheStatedSize
+// are the pins over what the file has to carry.
 //
-// Points stay points. Twips, half-points and EMU are computed by the writer,
-// never stored, so one value in the file has one meaning.
+// This comment holds why the package refuses what it refuses. What it reports
+// is in the code beside it.
+//
+// # The style is a file, and the Word master is provenance
+//
+// Nail's decision, 2026-08-29, DECISIONS.md. Nothing reads the master document
+// at run time and nothing copies a master and edits it: the docx is written
+// from this file, part by part. The failure that decision was taken against is
+// a surgery file becoming the real template while the master stops describing
+// the output. So this package reaches nothing: no network, no other file, and
+// no external program. TestNothingHereReachesTheNetwork is the pin, and it
+// bans os/exec in the same breath.
+//
+// # It is embedded, and LoadFile replaces it for one run
+//
+// go:embed house.yaml, so installing gdoc is still one file. LoadFile parses a
+// named copy under the same strict rules, which is how a change to the style is
+// reviewed before it is committed, and the caller reports which of the two it
+// read so a document built from a draft says so. TestLoadReadsTheEmbeddedFile,
+// TestLoadFileReadsACopyOfTheEmbeddedFile and TestLoadFileOnAMissingPathNamesThePath
+// are the pins.
+//
+// # Points stay points
+//
+// Every measurement is stored in points. Twips, half-points and EMU are
+// computed at the writer, never here, so one value in the file has one meaning
+// and a unit conversion lives in one room. TestPageIsA4InPoints and
+// TestUsableWidthIsTheSpaceBetweenTheSideMargins are the pins.
+//
+// # A highlight is a name, and Validate refuses anything else
+//
+// w:highlight takes one of OOXML's seventeen names, never a colour, while every
+// other colour in this file is hex. A hex value there reaches the part as
+// w:val="#FFFF00", which Word repairs the document over rather than showing.
+// Writing hex is the natural mistake and nothing downstream would have named
+// it, so the file is checked at the door.
+// TestAHighlightThatIsAColourIsRefused is the pin.
+//
+// Validate is the same rule over the rest of the file: an unknown key, a block
+// naming a table or a label that is not there, an unknown block kind, a missing
+// style, and a logo that is not a PNG are each refused naming what was written.
+// TestAnUnknownKeyIsRefusedNamingIt, TestABlockNamingATableThatIsNotThereIsRefused,
+// TestABlockNamingALabelThatIsNotThereIsRefused, TestAnUnknownBlockKindIsRefusedNamingIt,
+// TestAMissingStyleIsRefusedNamingIt and TestALogoThatIsNotAPNGIsRefused are the
+// pins. A style file gdoc half understands is a document somebody publishes.
+//
+// # A house-style test states its value as a literal
+//
+// if got != 595.28, never if got != cfg.Page.WidthPt. A test that reads the
+// constant it checks is a mirror: move the constant and the assertion follows
+// it and still passes, so it says nothing about what the house style is. Every
+// cfg. inside these tests is the printed actual in a t.Errorf, with the want
+// written out beside it as a number. The invariant is in CLAUDE.md, and it
+// holds for every test that reads this package.
 package house
 
 import (
@@ -300,9 +352,8 @@ type Border struct {
 // Row is one table row and the height it is at least. Repeat names the note's
 // own list this row is a prototype for: "revisions" renders the row once per
 // revision the note declares, and a note with none leaves the template's row
-// where it is, which is v1's rule. Without is the other half: the blank row a
-// person would fill in by hand is left out once the note declares the rows
-// itself.
+// where it is. Without is the other half: the blank row a person would fill in
+// by hand is left out once the note declares the rows itself.
 type Row struct {
 	MinHeightPt float64 `yaml:"min_height_pt"`
 	Repeat      string  `yaml:"repeat"`
@@ -332,8 +383,8 @@ type Cell struct {
 // it is shaded only when the document declares that class. The master was
 // captured with Internal marked, so writing the file's fills verbatim marked
 // every document Internal whatever the note said, which is worse than leaving
-// the row blank. It is v1's mark_classification: clear every description cell,
-// then shade the chosen one.
+// the row blank. So the rule is: clear every description cell, then shade the
+// chosen one.
 //
 // The rule is here rather than in a writer because the house style is written
 // twice, once as a docx by internal/render and once as Docs requests by

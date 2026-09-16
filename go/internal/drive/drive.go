@@ -2,14 +2,35 @@
 // the two URLs, and the one operation that has to be confirmed before it may be
 // reported as having happened.
 //
-// It exists because two callers do that operation. The probe puts its throwaway
-// document away after asking its question, and a publish that could not record
-// the pairing takes its document back. Both are the same three steps, PATCH the
-// file, read it again, and believe the read rather than the PATCH, and a second
-// copy of those steps is a second chance for the two to disagree about whether
-// an unconfirmed trash counts as a trash. The policy around them is each
-// caller's: the probe carries a warning and answers its question anyway, and a
-// publish reports a rollback that did not hold with the live id and the steps.
+// This comment holds why the package refuses what it refuses. What it reports
+// is in the code beside it.
+//
+// # The trash is believed on its confirming read, never on the PATCH
+//
+// Trash is three steps: PATCH the file, read it again, and believe the read.
+// Drive answering the PATCH says the request was taken, and the question the
+// caller has is whether the file is gone, which only the read answers. So a
+// PATCH that failed claims nothing at all about where the file is, a
+// confirmation that could not be read is a failure, and Drive saying the file
+// is not trashed is a failure rather than a success.
+// TestTrashPatchesThenConfirms, TestAFailedPatchClaimsNothingAboutWhereTheFileIs,
+// TestAConfirmationThatCouldNotBeReadIsAFailure and
+// TestDriveSayingItIsNotTrashedIsAFailureRatherThanASuccess are the four pins,
+// one per answer.
+//
+// # It exists because two callers believe that rule
+//
+// internal/probe puts its throwaway document away after asking its question,
+// and internal/publish takes its document back when the pairing could not be
+// recorded. Two copies of those three steps are two chances for one of them to
+// start reporting a document as gone that is still there, so there is one copy
+// and both callers ask it.
+//
+// The policy around the answer is each caller's, and they differ on purpose.
+// The probe carries a warning and answers its question anyway, because a
+// document left in the folder does not make its measurement wrong. A publish
+// reports a rollback that did not hold with the live id and the steps to take,
+// because there the document is the thing that must not be left behind.
 package drive
 
 import (

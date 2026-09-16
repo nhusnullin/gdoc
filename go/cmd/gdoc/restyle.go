@@ -44,6 +44,7 @@
 // paragraphs are gdoc's own, stating the cover's sizes and colours in full, and
 // giving them the house body look would leave Nail accepting a cover that had
 // already been turned into prose.
+
 package main
 
 import (

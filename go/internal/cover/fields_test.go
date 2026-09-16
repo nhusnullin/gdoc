@@ -206,10 +206,11 @@ func TestAnUnknownClassificationInTheFieldsFileIsRefusedNamingWhatWasWritten(t *
 	}
 }
 
-// TestHeadingNumberingReadsABooleanAndTheWordsV1Wrote. JSON has a boolean, so
-// that is what somebody writes; v1's notes say auto and none, and somebody
-// copying from one of those must not silently get the other answer.
-func TestHeadingNumberingReadsABooleanAndTheWordsV1Wrote(t *testing.T) {
+// TestHeadingNumberingReadsABooleanAndTheWordsANoteCarries. JSON has a boolean,
+// so that is what somebody writes; a note's front matter says auto and none,
+// and somebody copying from one of those must not silently get the other
+// answer.
+func TestHeadingNumberingReadsABooleanAndTheWordsANoteCarries(t *testing.T) {
 	for _, tc := range []struct {
 		written string
 		want    bool
@@ -365,8 +366,8 @@ func TestAValueCarryingACharacterDocsStripsIsRefusedByKey(t *testing.T) {
 // rather than a property of how the walk happens to be written today.
 //
 // heading_numbering is not in the sweep: it is read to a boolean and no text
-// from it reaches an inserted text. TestHeadingNumberingIsReadAsABooleanOrAWord
-// is what covers it.
+// from it reaches an inserted text.
+// TestHeadingNumberingReadsABooleanAndTheWordsANoteCarries is what covers it.
 func TestEveryValueInTheFileIsAskedForStrippedCharacters(t *testing.T) {
 	t.Run("the cover fields", func(t *testing.T) {
 		for _, key := range jsonKeys(t, reflect.TypeOf(fieldsFile{}), reflect.String) {

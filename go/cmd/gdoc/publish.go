@@ -13,6 +13,7 @@
 // resolves to keeping the document: a pairing that could not be recorded leaves
 // a document nobody knows about, which the next publish of the same note would
 // make a second of, so the document goes back and the report says so.
+
 package main
 
 import (

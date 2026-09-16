@@ -304,7 +304,8 @@ func (b *builder) cellFill(cell house.Cell) string {
 
 // rowIsLeftOut says whether a row the config marks with a list is dropped
 // because the note declared that list itself. It is the blank revision row a
-// person would fill in by hand, which v1 removes for the same reason.
+// person would fill in by hand, and a note that states its own revisions has
+// no use for it.
 func (b *builder) rowIsLeftOut(row house.Row) bool {
 	if row.Without == "" {
 		return false

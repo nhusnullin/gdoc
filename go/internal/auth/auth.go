@@ -1,13 +1,7 @@
-// Package auth holds the OAuth token and the bundled client. The secret is
-// deliberately in version control; see CLAUDE.md and RFC 8252 section 8.5. A
-// secret shipped to many users is not confidential and identifies the client,
-// nothing more. What protects an account is the per-user token, which never
-// leaves the machine.
-//
-// The token endpoint is two form POSTs, the refresh and the code exchange,
-// which is why x/oauth2 is not a dependency. This
-// package never builds an HTTP client: it is handed one, and the only place
-// that builds one is internal/guard.
+// This file is the token itself: the file it lives in, the two form POSTs to
+// the token endpoint, the crash-safe save, and the report auth status prints.
+// The rules this file holds are in the package comment in doc.go.
+
 package auth
 
 import (
@@ -29,18 +23,16 @@ import (
 )
 
 const (
-	// BundledClientID and BundledClientSecret are v1's constants, copied
-	// verbatim from gdoc/oauth.py. The client must stay User type Internal:
-	// that exempts gdoc from OAuth verification, from the unverified-app
-	// screen and from the 100-user cap, which matters because the Drive scope
-	// it needs is a restricted scope.
+	// BundledClientID and BundledClientSecret are shipped on purpose, and the
+	// client must stay User type Internal. The package comment in doc.go holds
+	// both rules and what would change them.
 	BundledClientID     = "4326046141-n9fho1g348nflsue7jdrj10dkst3a0a9.apps.googleusercontent.com"
 	BundledClientSecret = "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"
 
 	TokenURI = "https://oauth2.googleapis.com/token"
 
-	// clientFileName is v1's per-user client override. v2 does not read it
-	// yet: every v2 login uses the bundled client, and Status says so rather
+	// clientFileName is the per-user client override, and nothing here reads
+	// it yet: every login uses the bundled client, and Status says so rather
 	// than claiming an override that is not wired up.
 	clientFileName = "oauth-client.json"
 
@@ -57,13 +49,13 @@ const (
 // report, and only an absent one means signed out.
 var ErrNoToken = errors.New("no OAuth token")
 
-// Token is v1's oauth-token.json, the google-auth "authorized user" shape. The
-// field names are the file's, so a person logged in through v1 is logged in
-// here with no migration. UniverseDomain, Account and RaptToken are carried but
-// never used: google-auth's Credentials.to_json writes all three when they are
-// set, and a v2 save that dropped one would quietly rewrite a file both tools
-// share. RaptToken is the reauth proof token, and losing it makes v1 ask for
-// reauthentication again.
+// Token is oauth-token.json, the google-auth "authorized user" shape. The
+// field names are the file's, so a token any google-auth program wrote reads
+// here with no migration. UniverseDomain, Account and RaptToken are carried
+// but never used: google-auth's Credentials.to_json writes all three when they
+// are set, and a save that dropped one would quietly rewrite a file another
+// program shares. RaptToken is the reauth proof token, and losing it makes
+// that program ask for reauthentication again.
 type Token struct {
 	AccessToken    string    `json:"token"`
 	RefreshToken   string    `json:"refresh_token"`
@@ -115,8 +107,9 @@ func Load() (Token, error) {
 
 // missingFields names the fields an authorized-user token must carry. The set
 // is google-auth's: from_authorized_user_info refuses a file without
-// refresh_token, client_id or client_secret, and v1 reads this same file
-// through it. A file that parses but has none of them is not "signed in": it is
+// refresh_token, client_id or client_secret, and that is the library any other
+// reader of this file goes through. A file that parses but has none of them is
+// not "signed in": it is
 // a file that fails on the first refresh, after auth status has already
 // reported a token present.
 func (t Token) missingFields() []string {
@@ -272,14 +265,14 @@ func Status() (*StatusReport, error) {
 		return nil, err
 	}
 	out := &StatusReport{
-		AuthMode:     "oauth", // v2 is OAuth only; it does not read v1's config
+		AuthMode:     "oauth", // gdoc is OAuth only, and has no other credential
 		TokenPath:    path,
 		ClientSource: "bundled",
 	}
 	if _, err := os.Stat(filepath.Join(filepath.Dir(path), clientFileName)); err == nil {
-		// v1 lets this file override the bundled client. v2's login does not
-		// read it yet, so saying "file" here would name a client no token was
-		// ever issued to.
+		// The file is where a client of one's own would go, and the login does
+		// not read it yet, so saying "file" here would name a client no token
+		// was ever issued to.
 		out.ClientFileIgnored = true
 	}
 	tok, err := Load()
@@ -293,14 +286,14 @@ func Status() (*StatusReport, error) {
 	out.TokenPresent = true
 	out.Expired = &expired
 	out.Scopes = tok.Scopes
-	// A token can carry less than v2 asks for, from a granular consent screen
-	// where somebody ticked a subset, and then the Docs calls will 403. This is
-	// the one place that can say why before they do.
+	// A token can carry less than the login asks for, from a granular consent
+	// screen where somebody ticked a subset, and then the Docs calls will 403.
+	// This is the one place that can say why before they do.
 	//
-	// A v1 login is not such a case, and MissingScopes is where that is decided:
-	// v1 asks for documents.readonly rather than the read/write Docs scope, but
-	// it also asks for the full Drive scope, which the Docs API accepts. So a v1
-	// token reports nothing missing.
+	// A token carrying the full Drive scope and documents.readonly is not such
+	// a case, and MissingScopes is where that is decided: the Docs API accepts
+	// the Drive scope on the calls gdoc makes, so that token reports nothing
+	// missing.
 	out.MissingScopes = MissingScopes(tok.Scopes)
 	return out, nil
 }

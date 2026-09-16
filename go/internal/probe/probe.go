@@ -1,21 +1,7 @@
-// Package probe asks Google, on a document gdoc made for the purpose, whether
-// a suggestion written today is honoured as a suggestion.
-//
-// The reason it exists is in docs/v2/BLOCKED-BY-API.md. `writeMode` is absent
-// from the public Docs discovery document, and one morning a batchUpdate
-// carrying SUGGEST answered 200 and made a direct edit instead. The guard
-// refuses a write on a handed-in document unless the body says SUGGEST, but the
-// guard reads gdoc's own words: what the server did with them is a different
-// question, and only a read-back answers it.
-//
-// So the probe is that read-back, made where being wrong costs nothing. It
-// creates a throwaway document in the folder the command was given, writes one
-// sentence into it directly, suggests one word inside that sentence, reads the
-// document back and looks for the word carrying a suggestion id. Then it puts
-// the document in the trash and confirms it went.
-//
-// Nothing here decides anything. Enrolled is a fact about what Google answered,
-// and what to do about a false one is the caller's.
+// This file is the probe itself: the sentence and the word it writes, the
+// create, the two batches, the read-back that counts suggestion ids, and the
+// trash. doc.go holds the package comment.
+
 package probe
 
 import (

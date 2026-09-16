@@ -1,12 +1,7 @@
-// Package view is the document as text the AI reads, and the same document as
-// a tree with character indexes on it. Both are projections of one docs.Document
-// and neither is the other's summary: the text is what a reader reads, and the
-// structure is what a later milestone places a proposal into.
-//
-// The projection is deterministic. The same document gives the same bytes, so a
-// golden file is a specification rather than a snapshot. Nothing here judges
-// anything: a pending suggestion is marked as pending, a comment range is
-// marked as a range, and what any of it means is the skill's.
+// This file is the projection itself: the markup it adds, the escaping that
+// keeps a marker gdoc's own, the walk over a tab's blocks, and the tree
+// --structure prints. doc.go holds the package comment.
+
 package view
 
 import (

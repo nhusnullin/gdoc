@@ -141,7 +141,8 @@ func (b *builder) tableRows(name string, spec house.Table, cols int) [][]cellPla
 
 // rowIsLeftOut says whether a row the config marks with a list is dropped
 // because the fields declared that list themselves. It is the blank revision
-// row a person would fill in by hand, which v1 removes for the same reason.
+// row a person would fill in by hand, and fields that state their own
+// revisions have no use for it.
 func (b *builder) rowIsLeftOut(row house.Row) bool {
 	if row.Without == "" {
 		return false

@@ -1,17 +1,10 @@
-// Package render writes the Altery house .docx from house.yaml.
-//
-// Nothing here reads the Word master. The master is provenance, and the config
-// is the style: every size, colour, indent and cell in the output comes from a
-// value in house.yaml. That is the 2026-08-29 decision, and it is what makes
-// the drift test a measurement rather than a copy.
-//
-// Nothing here reaches the network either. A build is a file in and a file
-// out, and this package imports neither net/http nor internal/gapi.
-//
-// Elements are built with etree rather than concatenated as strings, because a
-// string template escapes nothing: one & in a note's title would break the
-// part. etree is not namespace aware, so a tag carries its literal prefix,
-// which is what a .docx does anyway.
+// This file is the writer's own vocabulary: the part shell with its namespaces,
+// the unit conversions, the run and paragraph builders, and the serialiser
+// every part goes out through. render.go builds the package, front.go the cover
+// and the front matter, headfoot.go the headers and footers, styles.go the
+// named styles and the settings, numbering.go the two lists, and doc.go holds
+// the package comment.
+
 package render
 
 import (

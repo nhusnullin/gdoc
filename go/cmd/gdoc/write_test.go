@@ -765,6 +765,50 @@ func TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes(t *testing.T) {
 	}
 }
 
+// TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun is freshNote's
+// fourth refusal, which is a different rule from the pairing check at the door.
+// That one fails the run before anything is sent. This one is reached after the
+// proposals are already in somebody's document, so refusing is a warning on an
+// otherwise-ok run: the note now records a different pairing, and writing this
+// run's provenance into it would hand withdraw the wrong permission.
+func TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun(t *testing.T) {
+	// Arrange: the note is repaired while the run is out, at the last request
+	// before the note is written.
+	note := copyFixture(t, "propose-note.md")
+	answers := proposeAnswers(t, true)
+	for _, a := range answers {
+		if strings.Contains(a.match, "/export?") {
+			a.before = func() {
+				if err := os.WriteFile(note, []byte(readFixture(t, "other-document.md")), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	stubWire(t, &fakeWire{answers: answers})
+	from := tempFile(t, "proposals.json", oneProposal)
+
+	// Act
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+
+	// Assert: the proposals were written, so the run is ok and the note's
+	// refusal is a warning naming which of the four it was.
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the proposals were written, so the run stands: %v (exit %d)", got, code)
+	}
+	warns := warningsOf(t, got)
+	if !hasWarning(warns, "is now paired") {
+		t.Errorf("the warning must say the note stopped naming this document: %v", warns)
+	}
+	after, err := os.ReadFile(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(after), "suggest.abc") {
+		t.Errorf("a note paired elsewhere must be left alone:\n%s", after)
+	}
+}
+
 // The proposals file is a hand-written input, so a key gdoc does not understand
 // is refused by name rather than dropped. quoted, replacement and why are caught
 // downstream by Check, because their empty values are refused; assignee is
@@ -913,22 +957,5 @@ func TestWithdrawWritesTheNoteTheVaultHasNow(t *testing.T) {
 	}
 	if !strings.Contains(string(after), "# Scope and owner") {
 		t.Errorf("the author's edit was thrown away:\n%s", after)
-	}
-}
-
-// The usage line is the whole of the help, so it has to name every command that
-// exists: there is no help command to read instead.
-func TestTheUsageLineNamesTheNineCommands(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-
-	got, _ := runJSON(t, "--help")
-	msg, _ := got["error"].(string)
-	for _, command := range []string{
-		"auth status", "auth login", "read", "comments", "suggestions",
-		"probe", "reply", "propose", "withdraw",
-	} {
-		if !strings.Contains(msg, command) {
-			t.Errorf("the usage line must name %q: %q", command, msg)
-		}
 	}
 }

@@ -347,9 +347,9 @@ func (b *builder) text(configured, placeholder string) string {
 //
 // The yellow highlight means "a person fills this in" and the red means "this
 // is guidance, not content". Once the note's own words are in the run both
-// marks are misleading, so a filled run loses them. That is v1's
-// _clear_placeholder_marks, and it is why "Version: " survives while the "1.0"
-// beside it does not: the label is a run of its own with no placeholder on it.
+// marks are misleading, so a filled run loses them. That is why "Version: "
+// survives while the "1.0" beside it does not: the label is a run of its own
+// with no placeholder on it.
 func (b *builder) runText(r house.Run, o runOpts) (string, runOpts) {
 	value, filled := b.placeholder(r.Placeholder)
 	if !filled {

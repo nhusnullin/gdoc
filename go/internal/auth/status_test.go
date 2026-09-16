@@ -45,8 +45,8 @@ func TestStatusWithNoToken(t *testing.T) {
 	}
 }
 
-// v1 lets oauth-client.json override the bundled client. v2's login does not
-// read it, so status must not claim it is in use: every v2 token belongs to the
+// oauth-client.json is a client override this login does not read yet, so
+// status must not claim it is in use: every token gdoc writes belongs to the
 // bundled client, and saying otherwise sends a person looking for a quota that
 // was never separated.
 func TestStatusSaysAClientFileIsNotUsedYet(t *testing.T) {
@@ -114,10 +114,10 @@ func TestStatusNamesTheScopesTheTokenDoesNotCarry(t *testing.T) {
 }
 
 // The Docs API accepts the full Drive scope on documents.get and
-// documents.batchUpdate. A v1 token carries drive plus documents.readonly, so
-// it can do everything v2 asks for, and a warning on the repository owner's own
-// machine would be a false one.
-func TestStatusIsQuietForAV1Token(t *testing.T) {
+// documents.batchUpdate. A token carrying drive plus documents.readonly can do
+// everything gdoc asks for, and a warning on the repository owner's own machine
+// would be a false one.
+func TestStatusIsQuietForATokenCarryingTheFullDriveScope(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	if err := Save(Token{AccessToken: "A", RefreshToken: "R", TokenURI: TokenURI,
 		ClientID: "CID", ClientSecret: "CS",
@@ -135,7 +135,7 @@ func TestStatusIsQuietForAV1Token(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(out.MissingScopes) > 0 {
-		t.Fatalf("a v1 token is missing nothing v2 needs: %v", out.MissingScopes)
+		t.Fatalf("this token is missing nothing gdoc needs: %v", out.MissingScopes)
 	}
 }
 

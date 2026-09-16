@@ -5,11 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -203,17 +207,72 @@ func TestTheUsageLineNamesEveryCommand(t *testing.T) {
 	}
 	msg, _ := got["error"].(string)
 	for _, command := range []string{"auth status", "auth login", "read", "comments",
-		"suggestions", "probe", "reply", "propose", "withdraw", "build"} {
+		"suggestions", "restyle", "probe", "reply", "propose", "withdraw", "build",
+		"publish"} {
 		if !strings.Contains(msg, command) {
 			t.Errorf("the usage line must name %q: %q", command, msg)
 		}
 	}
 }
 
+// The list above is written out word for word, the way a reader sees it, so it
+// cannot follow a rename of the constant it checks. That leaves one gap: a
+// command added to dispatch and forgotten everywhere else. This reads the case
+// labels out of dispatch itself and asks the help for each one, so the word a
+// caller can type and the words the help prints are checked against each other
+// rather than either against itself.
+func TestEveryCommandDispatchReachesIsInTheUsageLine(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	file, err := parser.ParseFile(token.NewFileSet(), "main.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dispatched []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "dispatch" {
+			return true
+		}
+		ast.Inspect(fn.Body, func(inner ast.Node) bool {
+			clause, ok := inner.(*ast.CaseClause)
+			if !ok {
+				return true
+			}
+			for _, expr := range clause.List {
+				lit, ok := expr.(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
+					continue
+				}
+				word, uerr := strconv.Unquote(lit.Value)
+				if uerr != nil {
+					t.Fatal(uerr)
+				}
+				dispatched = append(dispatched, word)
+			}
+			return true
+		})
+		return false
+	})
+	// A rename of dispatch, or a switch turned into a map, would leave this
+	// finding nothing and passing. Say so instead.
+	if len(dispatched) == 0 {
+		t.Fatal("no command words were read out of dispatch, so this test is measuring nothing")
+	}
+
+	got, _ := runJSON(t, "--help")
+	msg, _ := got["error"].(string)
+	for _, command := range dispatched {
+		if !strings.Contains(msg, command) {
+			t.Errorf("dispatch answers %q, but the usage line does not name it: %q", command, msg)
+		}
+	}
+}
+
 // A token granted less than gdoc asked for still reports ok, and says which
 // scope is missing. This is the granular consent screen: somebody ticked Docs
-// and left Drive unticked. A v1 token is NOT this case, because the full Drive
-// scope it carries covers the Docs calls too.
+// and left Drive unticked. A token carrying the full Drive scope is NOT this
+// case, because that scope covers the Docs calls too.
 func TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
@@ -237,10 +296,10 @@ func TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry(t *testing.T) {
 	}
 }
 
-// The repository owner's own token is a v1 token: drive plus
-// documents.readonly. The Docs API accepts the full Drive scope, so nothing is
-// missing and status must say nothing.
-func TestAuthStatusIsQuietForAV1Token(t *testing.T) {
+// The repository owner's own token carries drive plus documents.readonly. The
+// Docs API accepts the full Drive scope, so nothing is missing and status must
+// say nothing.
+func TestAuthStatusIsQuietForATokenCarryingTheFullDriveScope(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
 	token := `{"token":"A","refresh_token":"R","token_uri":"https://oauth2.googleapis.com/token",` +
@@ -252,10 +311,10 @@ func TestAuthStatusIsQuietForAV1Token(t *testing.T) {
 
 	got, code := runJSON(t, "auth", "status")
 	if code != 0 || got["ok"] != true {
-		t.Fatalf("a v1 token is a working token: %v (exit %d)", got, code)
+		t.Fatalf("this is a working token: %v (exit %d)", got, code)
 	}
 	if w, _ := got["warnings"].([]any); len(w) != 0 {
-		t.Fatalf("a v1 token is missing nothing v2 needs: %v", got["warnings"])
+		t.Fatalf("this token is missing nothing gdoc needs: %v", got["warnings"])
 	}
 }
 

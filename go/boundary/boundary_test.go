@@ -1,12 +1,7 @@
-// Package boundary enforces that gdoc has exactly one wire, runs no external
-// programs, and depends on nothing outside the standard library. This is the v1
-// allowlist test, ported: the wire checks fail in BOTH directions, on spread
-// and on silent disappearance.
-//
-// Two wire checks, because importing net/http and dialing with it are not the
-// same thing. The import allowlist says which packages may name the type at
-// all. The builder allowlist says who may make a client out of it, and that is
-// the single room the guard occupies.
+// The wire checks, the external-program ban, and the dependency list. Each one
+// fails in both directions, on spread and on silent disappearance. The reasons
+// are in doc.go.
+
 package boundary
 
 import (
@@ -307,9 +302,9 @@ func TestOnlyTheGuardBuildsTheWire(t *testing.T) {
 	}
 }
 
-// TestNothingRunsAnExternalProgram is v1's rule, made true rather than stated.
-// v2 runs no external programs at all: that is what lets the login flow print a
-// URL instead of opening a browser, and it is why the binary is one file.
+// TestNothingRunsAnExternalProgram makes the rule true rather than stating it.
+// gdoc runs no external programs at all: that is what lets the login flow print
+// a URL instead of opening a browser, and it is why the binary is one file.
 func TestNothingRunsAnExternalProgram(t *testing.T) {
 	banned := map[string]bool{"os/exec": true, "syscall/js": true}
 	err := walkGo("..", func(rel, path string, f *ast.File) error {

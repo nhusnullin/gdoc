@@ -1,20 +1,9 @@
-// Package propose writes one change into a Google Doc as a native suggestion,
-// with a comment beside it saying why, and then proves it by reading the
-// document back through routes the write did not go out on.
-//
-// Every write here is writeControl.writeMode SUGGEST. The guard refuses a
-// batchUpdate on a handed-in document without it, and that refusal is about
-// gdoc's own words: what Google did with them is a different question, and one
-// morning the answer was a silent direct edit. So the run does not stop at a
-// 200. It reads the document with suggestions inline, reads it again with them
-// hidden, and exports the docx to see whether the comment is really anchored.
-// All three holding, plus a write that answered commentUpdateState ALL_SAVED,
-// is Verified; anything less is the write reported with the route or the
-// answer that did not hold named.
-//
-// Nothing here decides whether a change is worth proposing, or what to say in
-// the comment. The words arrive written and the placement arrives quoted. This
-// package finds the words, writes what it was told, and reports what it saw.
+// This file is the proposal itself: Proposal and its shape rule, the one write
+// Apply makes, the batch of three requests it is made of, and Record, which
+// writes what landed into the note. span.go finds the words in the document,
+// verify.go reads the document back three ways, and doc.go holds the package
+// comment.
+
 package propose
 
 import (

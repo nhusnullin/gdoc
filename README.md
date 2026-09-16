@@ -1,501 +1,51 @@
 # gdoc
 
-Review a Google Doc by leaving comments in it, and let Claude Code answer them
-from your terminal.
+Review a Google Doc from your terminal. Claude Code reads the comments in the
+document, answers the marked ones in the thread they were asked in, and proposes
+document changes as native suggestions you accept or reject in Google Docs.
 
-You mark a comment with `ai:`. The agent reads it, answers small things right
-there in the comment thread, and queues the ones that need a rewrite of the whole
-document. Later you work through that queue: the agent edits the source markdown
-file and publishes a new version of the Google Doc from it.
+The markdown note is the source. The Google Doc is a rendering of it. Every
+change gdoc makes to the words of a document you handed it is a suggestion:
+nothing in the binary can edit one directly.
 
-The markdown file is the source. The Google Doc is a rendering of it. Nothing in
-the tool edits a document you point it at.
+The credential is your own Google account, approved once in a browser. It holds
+more than the tool needs, because Google's narrow `drive.file` scope only covers
+a file the app created or the user picked through Google's own file picker, and
+a terminal cannot show a picker. So the grant is full Drive, and the guard
+inside the binary narrows it back down: every request goes through it, and it
+carries a request only when the file addressed is one gdoc was handed or one
+gdoc created. Anything else is refused inside the process, a read included. The
+tool cannot see a document you did not point it at, and cannot search your Drive
+at all.
 
-There are two credentials, and `auth_mode` in the config picks one.
-
-**`oauth`** is the default. You approve it once in a browser and the agent acts as
-you, so nothing has to be shared with anything first. It holds more than the tool
-needs: the narrow `drive.file` scope does cover comments, but a file only enters
-that scope when the app created it or the user picked it through Google's file
-picker, and a terminal cannot show one. Pasting a URL means full Drive. `gdoc/guard.py` narrows it back down: every
-request goes through it, and it carries a request only when the file addressed is
-one gdoc was given or one gdoc created. Anything else is refused inside the
-process, a read included. So the tool cannot see a document you did not point it
-at, and cannot search your Drive at all.
-
-**`service_account`** is the original. The agent has its own account, you share a
-document with it as **Commenter**, and Google itself refuses every edit. No
-browser and no token to refresh, at the cost of one sharing step per document.
-
-You never edit the config to choose. `gdoc auth login` switches to `oauth`, and
-`gdoc auth use service_account` switches back. An install that already works on a
-service account keeps using it after an upgrade, because a config that never
-mentioned `auth_mode` is read as unstated rather than as oauth. `gdoc auth status`
-says which credential is in use and whether that came from the config or was
-worked out from the files present.
-
-The difference worth knowing: under `service_account` the tool *cannot* edit a
-reviewed document, because Google will not let it. Under `oauth` it *does not*,
-because no code in it does. The guard bounds which files are reachable. It does
-not bound what happens inside one.
-
-## The loop
-
-```
-1. You write the document as markdown        notes.md, in your notes folder
-2. /gdoc-apply publishes it as a Google Doc   house template, cover, contents, page numbers
-3. People read it and comment                 mark yours with ai: for the agent
-4. /gdoc-review answers the comments           replies posted in the threads
-5. /gdoc-apply publishes the next version      edits notes.md, publishes v2
-```
-
-Two skills, and `/gdoc-apply` does both publishes. The first time, there is
-nothing queued and publishing is the whole job. Later it works through what the
-review captured, then publishes again.
-
-Steps 4 and 5 are separate sessions on purpose. A reply in a thread is cheap. A
-rewrite of the whole document is not, so it is never done while you are reading
-comments.
-
-## What it does today
-
-**Reads your comments.** It shows you two lists: the comments waiting for the
-agent, and the ones it skipped with the reason visible. Comments it has already
-answered land in the skipped list, so running it twice posts nothing twice.
-
-**The marker decides.** A comment counts when it starts with `ai` plus a sign:
-
-| Marker | Meaning |
-|---|---|
-| `ai:` | you decide, agent or queue |
-| `ai?` | answer it in the thread |
-| `ai!` | this is a document-wide change, queue it |
-| `@ai` | the old form, still accepted |
-
-Anything else is left alone. A comment starting "AI tools are changing" is not a
-prompt.
-
-**Answers in the thread.** Replies are plain text, posted into the comment thread
-where you asked, and each one opens with 🤖 so a later run can tell them from
-everybody else's. The agent never resolves a comment. You resolve it, because
-resolving means you accepted the answer.
-
-**Proposes changes as suggestions.** When the answer is a change to the
-document's own words, it writes that as a native Google suggestion with a comment
-saying why, and proves it landed as a suggestion rather than an edit before it
-tells you so. It can take its own suggestion back. It never edits the document.
-
-**Queues the big ones.** Document-wide items are written to a queue file beside
-your markdown. Nothing is dropped silently. An item stays queued until it is
-applied or you remove it. The review skill fills that queue no longer: it was
-rewritten for the Go binary, and it now carries an `ai!` out in your notes there
-and then, and receipts it in the thread. `/gdoc-apply` still reads the queue, so
-anything already in one is still applied, and publishing is unchanged.
-
-**Publishes.** It renders your markdown through the house .docx template and
-uploads it to Drive as a new Google Doc. You get the cover page, the running head,
-the revision table, numbered headings, and a contents list with real page numbers.
-
-**Counts the pages properly.** Nothing in Python knows where a page break lands,
-so Google does the counting. It uploads once with blank page numbers, exports that
-copy as a PDF, reads which page each heading landed on, then uploads the version
-you publish and trashes the measuring copy.
-
-**Spots what you edited in the doc.** Every publish saves a snapshot of the
-document exactly as it was uploaded. A later run compares that snapshot with a
-fresh copy, so it can tell you what somebody changed by hand inside the Google Doc.
-
-**Keeps the version history.** Your markdown file records which document it is
-paired to, when it was last synced, and every version published from it.
-
-**Restyles a document it knows nothing about.** Point it at a Google Doc with no
-markdown behind it and it pulls the document, puts it in the house template, and
-publishes a new one. The open comment threads come across, each message carrying
-the name of whoever wrote it. The original is untouched, and nothing is saved on
-your side: a restyle is a throwaway copy, not a new note to look after.
-
-## What you need before you start
-
-- macOS or Linux, and a terminal.
-- Python 3.11 or newer.
-- [Claude Code](https://claude.com/claude-code), because the two skills run inside it.
-- pandoc. `brew install pandoc`, or your package manager. It is used to read
-  markdown, so publishing does not work without it.
-- A Google altery.com account. Nothing to create in Google Cloud: gdoc ships the
-  OAuth client it signs in with.
-
-## Setup
-
-### 1. Install the tool
+## Installing
 
 ```bash
-git clone https://github.com/nhusnullin/gdoc.git
-cd gdoc
 ./install.sh
 ```
 
-If GitHub says the repository does not exist, it is private. Ask Nail for access.
-
-`install.sh` creates a venv at `~/.config/gdoc-agent/venv`, installs the Python
-tool into it, builds the Go binary, links `gdoc` in `~/.local/bin` to the Go
-binary so it is on your PATH, and links the skills into `~/.claude/skills/` so
-Claude Code can find them. It prints the commit you are running. Safe to re-run:
-every step checks the current state first.
-
-`gdoc` on your PATH is the Go binary. The Python tool this README mostly
-describes is `~/.config/gdoc-agent/venv/bin/gdoc`, which is the full path its own
-skills call, so both keep working. "The Go rewrite" below says what the Go
-binary does.
-
-If it says `~/.local/bin` is not on your PATH, it prints the one line to add.
-
-To update later, `git pull` is the whole update. Re-run `./install.sh` only after
-dependencies change or a new skill is added.
-
-### 2. Sign in
-
-```bash
-gdoc auth login
-```
-
-`gdoc` is the Go binary, so this prints a sign-in link rather than opening a
-browser for you. Open it, approve, and it saves the token. There is no OAuth
-client to create and no config file to edit: gdoc ships its client.
-
-You can skip this step entirely. Run `/gdoc-review <url>` and the skill notices
-there is no token, asks whether to sign you in, and does it.
-
-To check:
-
-```bash
-gdoc auth status   # whether a token is there, whether it expired, what it is missing
-```
-
-Both tools read the same token file, so one login covers both in most cases. The
-one exception: the Go login asks for the Docs read/write scope, because writing
-suggestions needs it, and the Python tool checks that what *it* asked for is in
-the file. So after a Go login, `gdoc edits` on the Python side asks you to sign
-in through it once more. Its own commands are the ones that switch credential:
-
-```bash
-~/.config/gdoc-agent/venv/bin/gdoc auth status               # which credential, and whether it works
-~/.config/gdoc-agent/venv/bin/gdoc auth logout               # delete the local token
-~/.config/gdoc-agent/venv/bin/gdoc auth use service_account  # switch credential, if a key is installed
-```
-
-The token lands in `~/.config/gdoc-agent/oauth-token.json`, mode `0600`, and never
-leaves your machine. Revoke the grant at
-[myaccount.google.com/permissions](https://myaccount.google.com/permissions).
-
-### 3. Make a folder to publish into
-
-New documents have to be created somewhere. Make a folder for them, **in a Shared
-Drive, not in My Drive**.
-
-The Shared Drive is worth the extra click. Files created there belong to the
-Shared Drive, so your colleagues can open them without you sharing each one.
-
-Then copy the folder URL out of the address bar. That is the whole thing you hand
-over when you publish:
-
-```
-https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz
-```
-
-Nothing to configure. Paste that URL when the agent asks which folder, and it
-takes the id out of it.
-
-### 4. Nothing to share
-
-Under `oauth` there is no sharing step. The agent reaches whatever you can reach,
-and the guard keeps it to the document you named plus the folder you publish into.
-
-To keep the agent off something, do not point it at it. There is no list of
-documents anywhere, and no run can widen its own reach.
-
-### 5. Check it works
-
-In Claude Code, from the folder that holds your markdown:
-
-```
-/gdoc-review <google doc url>
-```
-
-It reads the comments, tells you what it found, and answers the marked ones. If
-it cannot see the document at all, run `gdoc auth status` and check which account
-you signed in as.
-
-### Optional: bring your own OAuth client
-
-Every user of the bundled client draws on the same Google rate limit. If that ever
-bites, create a Desktop app OAuth client of your own and save its JSON to
-`~/.config/gdoc-agent/oauth-client.json`.
-
-The Python tool reads that file, and it wins over the bundled client there:
-
-```bash
-~/.config/gdoc-agent/venv/bin/gdoc auth login
-~/.config/gdoc-agent/venv/bin/gdoc auth status   # says which client is in use
-```
-
-The Go binary does not read it yet. `gdoc auth login` always signs in with the
-bundled client, and `gdoc auth status` reports `client_source: bundled` plus
-`client_file_ignored: true` when the file is there, rather than claiming an
-override that is not wired up. What it does carry over is the refresh: a token
-minted through the Python tool with your own client keeps refreshing under that
-client, whichever binary makes the call. So a login through the Python tool moves
-your quota; a login through the Go binary puts it back on the shared client.
-
-Security is not the reason to do this. A client shipped to many users is a public
-client by definition, per RFC 8252 section 8.5, and `gh` and `gcloud` both ship
-theirs the same way. Quota is the reason.
-
-
-### Optional: stop it asking for the folder
-
-If you publish into the same folder every time, name it once in
-`~/.config/gdoc-agent/config.json` and the agent stops asking:
-
-```json
-{
-  "output_folder_id": "1AbCdEfGhIjKlMnOpQrStUvWxYz",
-  "template": "altery-group-policy-v1.0"
-}
-```
-
-Both keys are optional. `template` defaults to the bundled house style. The id is
-the part of the folder URL after `/folders/`.
-
-### Optional: use a service account instead
-
-The agent can have its own identity instead, with Commenter as a wall Google
-enforces. Create the account in **IAM and Admin → Service Accounts**, no project
-roles needed, add a JSON key, and save it as `~/.config/gdoc-agent/sa-key.json`
-with `chmod 600`. Share the publish folder with its address as **Content
-manager**, and every document you want reviewed as **Commenter**, keeping the two
-folders apart. Then:
-
-```bash
-gdoc auth use service_account
-```
-
-It writes the setting for you and warns if the key is not there yet. Going back is
-`gdoc auth login`.
-
-### For whoever maintains gdoc: the OAuth client
-
-Done once, for everybody. `gdoc/oauth.py` holds `BUNDLED_CLIENT_ID` and
-`BUNDLED_CLIENT_SECRET`. To create or replace them, in
-[console.cloud.google.com](https://console.cloud.google.com):
-
-1. Pick the project, and keep the **Google Drive API** enabled. It is the only
-   API gdoc calls.
-2. **OAuth consent screen**, User type **Internal**. Not optional. Internal is
-   what exempts gdoc from OAuth verification, from the unverified-app screen and
-   from the 100-user cap. gdoc needs the full Drive scope, which Google classes as
-   restricted, so going External would mean a
-   [CASA security assessment](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)
-   every 12 months. Internal also keeps refresh tokens from expiring after seven
-   days.
-3. **Credentials → Create credentials → OAuth client ID**, Application type
-   **Desktop app**.
-4. Paste the id and secret into the two constants in `gdoc/oauth.py`.
-
-Internal means only altery.com accounts can sign in. That is the audience.
-
-## Using it
-
-Run the skills from the folder that holds your markdown. That folder is also what
-the agent searches to ground its answers, so where you stand decides what it
-knows.
-
-### Publish a document
-
-```
-/gdoc-apply notes.md <folder url>
-```
-
-The folder URL is the one from step 3, copied out of the address bar. Give it in
-the same message, or wait to be asked, or set it once in the config and never type
-it again. All three work.
-
-A note that has never been published has nothing queued, so publishing it is the
-whole job. It asks once, then gives you the link.
-
-Your note needs a `title` in its front matter, because the cover page is built
-from it. If there is none, the agent proposes one and waits for you to pick.
-`gdoc/templates/altery-group-policy-v1.0/example.md` shows every other field the
-house template can use, including the revision table. All of them are optional.
-
-### Review the comments
-
-```
-/gdoc-review <google doc url>
-```
-
-This skill runs on the Go binary now. It lists what it found, then acts: a
-marker is your instruction, so it does not ask again. `ai?` is answered in its
-thread, `ai!` is carried out in your notes and receipted in the thread, and `ai:`
-leaves the choice to it and it says which one it took. An unmarked comment is
-never acted on.
-
-When the answer is a change to the document's own words, it proposes that as a
-Google suggestion with a comment saying why. It never edits the document, and it
-can withdraw its own suggestion, which is why proposing needs no confirmation.
-Say "dry run" and it does every step and writes nothing.
-
-Say "live" and the session stays open on that document:
-
-```
-/gdoc-review <google doc url> live
-```
-
-It does the pass above first, then keeps watching that one document. Write a
-marked comment in the browser and the answer appears in its thread a few seconds
-later, while you are still on the paragraph that prompted it. A quiet document
-costs nothing: the waiting happens inside the binary, not in the model. Stop it
-with Ctrl-C or by saying stop, and it prints what the session did: windows seen,
-threads answered, work carried out, changes proposed, files changed in your
-notes. Nothing keeps running after that. There is no watcher and no daemon, and
-liveness ends with the session.
-
-One live session watches one document, the link you gave. Watching every paired
-note in the folder is still planned.
-
-### Apply what was queued, and publish again
-
-```
-/gdoc-apply notes.md          your file
-/gdoc-apply <google doc url>  the document you were just reading
-/gdoc-apply                   whatever is queued here, and it asks if there are several
-```
-
-All three find the same queue, so use whichever you have at hand.
-
-It takes one item at a time, shows you the change it made to your markdown, and
-waits. When the items are done it publishes a new version and gives you the link.
-
-Its own bookkeeping lives in a `.gdoc/` folder beside your markdown. You never
-need to open it, or name it.
-
-## What you get told after a publish
-
-The skill reads the result and reports it in plain words. This is what those words
-mean, so a warning is not mistaken for a failure.
-
-One thing decides everything: **the link**. If you were given a link, the document
-exists.
-
-| What the skill says | What it means |
-|---|---|
-| a link, nothing else | Published. Open it. |
-| a link, plus one of the warnings below | Published, and something did not get recorded. Open the document, then read the warning. |
-| no link, and a reason | Nothing was created in Drive. The .docx is on disk, and the reason usually names the output folder. |
-| it needs a title, with a suggestion | Nothing was published. See below. |
-| a refusal | The message says what is wrong. Most often the note has no front matter block at all. |
-
-The four warnings, and what to do about each:
-
-- **Drift.** The page numbers in the contents list disagree with where the
-  headings actually landed. It names each heading, the number written and the real
-  one. Check the contents page before you share the document.
-- **A note about the document.** It was still created. Usually a measuring copy
-  was left in the output folder for you to delete.
-- **The snapshot was not saved.** The document is published, but the local
-  snapshot still describes the previous version. The next review cannot tell what
-  people edited by hand until you publish again.
-- **The version was not recorded.** It did not reach your markdown's front matter,
-  so the next version would reuse this number. Ask the agent to repair it. It knows
-  the one command that does it.
-
-None of these means "run it again and hope". A document either exists or it does
-not, and the link is the answer.
-
-## Limitations
-
-Worth reading before you rely on it.
-
-**It does not edit the document, but under `oauth` nothing stops it.** All it does
-inside a Google Doc is post replies in comment threads. Every real change goes to
-the markdown and comes back as a new version. Under `service_account` that is a
-permission Google enforces. Under `oauth` the guard bounds which files the tool can
-reach, not what it could do inside the one you named, so it is design discipline
-instead. Pointing the skill at a document is the trust decision.
-
-**Replies carry your name.** Under `oauth`, Drive reports you as the author of
-every reply, so a thread does not show that an agent wrote it. gdoc signs each
-reply with a `[gdoc]` line on its last line, which is also how it recognises its
-own replies on a later run. Under `service_account` the thread shows the raw
-`doc-agent@your-project.iam.gserviceaccount.com` address instead.
-
-**It cannot always see who else has access.** Under `service_account`, Commenter
-means Google refuses to say, so it cannot warn you that an outside collaborator is
-on the document. It says so every run, and the decision to post is yours.
-
-**A document you cannot share, it cannot read, under `service_account` only.** If
-you hold Commenter on somebody else's document you cannot add the service account,
-so you have to ask the owner. Under `oauth` any document you can open is readable.
-
-**Unmarked comments are ignored.** Only `ai:`, `ai?`, `ai!` and `@ai` count.
-Handling ordinary comments is planned, not built.
-
-**The author name is a label, not a gate.** A marked comment from anyone on the
-document is acted on. Google returns no email address for comment authors and
-display names are editable, so an identity check would be a guess. Pointing the
-skill at a document is the trust decision. Every name shows up in the report, so
-an unexpected one is visible.
-
-**Nothing runs by itself.** No watcher, no polling, no schedule. You start every
-run.
-
-**The template decides the look, so formatting done in the document is lost.**
-Every publish renders your markdown through the house template again. Fonts,
-colours, spacing and manual page breaks that somebody set inside the Google Doc do
-not survive into the next version. What survives is text and structure: headings,
-lists, tables, and the words.
-
-**Words you change in the document are carried back, once you ask.** `/gdoc-apply`
-starts by reading what changed in the document since it was generated, in editing
-mode and in suggesting mode both, and puts those changes into your markdown before
-it publishes the next version. It reports what it applied and asks about anything
-it could not place. Suggestions stay pending in the document: gdoc reads them, and
-accepting them is yours. If you never run `/gdoc-apply`, the next publish still
-overwrites the document with what the markdown says.
-
-**Page numbers cost an upload.** Every publish creates two documents and trashes
-the measuring one, because only Google can say which page a heading landed on. If
-a run dies halfway, check the folder for a leftover. To be fixed, tracked as
-[issue 23](https://github.com/nhusnullin/gdoc/issues/23).
-
-**A shared folder is safe while filenames stay unique.** Your notes folder may sync
-through Dropbox or Nextcloud. The tool's bookkeeping lives in `.gdoc/` beside your
-markdown, so it syncs too, and it is keyed by the filename rather than by who you
-are. You and a colleague working on differently named notes never collide. Two
-notes with the same filename share one queue and one snapshot, and so do two people
-reviewing the same document. Watch for sync conflict copies as well:
-`notes (conflicted copy).md` carries the same document id as `notes.md`, and the
-agent would pick up the copy. Tracked as
-[issue 25](https://github.com/nhusnullin/gdoc/issues/25).
-
-**Pictures come across, and drawings need one flag.** An ordinary embedded
-picture survives a plain `gdoc export`: Drive hands it back inside the markdown
-and the publish puts it in the new document. A **Google Drawing** does not: Drive
-leaves those out of its markdown entirely, so pull the document with
-`gdoc export --out note.md --media-dir note-media`, which takes the docx route
-and writes the pictures beside the note. Either way, a picture that could not be
-carried is named in the output rather than dropped quietly.
-
-**One house template.** `altery-group-policy-v1.0` is bundled. A second one needs
-code, because the cover and the tables are found by their placeholder text.
-
-## The Go rewrite
-
-A second implementation lives at `go/`: one static binary, no Python, no pandoc,
-nothing to install beside it. It is being built a milestone at a time
-(`docs/v2/PLAN.md`). It holds the credential, it reads, it writes suggestions,
-since M6 it builds a house-style document and publishes it, since M7 it surveys
-what a document holds before anything is done to it, and since M7b it can give
-that document the house style where it stands.
+It builds `bin/gdoc` with `make build`, links it to `~/.local/bin/gdoc`, and
+links `skills/gdoc-review` into `~/.claude/skills/`. Linked, not copied, so
+`make build` refreshes the command and an edit to the skill is live with no
+reinstall. It is safe to re-run: every step checks what is there first, and it
+refuses to replace a real directory whose contents differ rather than write
+over work that exists nowhere else. It prints the commit it installed from, and
+`+ uncommitted changes` when the tree is dirty.
+
+The script never touches `~/.config/gdoc-agent/`. Your token and your config
+are written by `gdoc auth login` and by nothing else. After installing, run
+`gdoc auth status` to see whether you are signed in.
+
+`~/.local/bin` is not on the macOS default PATH. The script says so when it is
+missing and tells you the line to add.
+
+## What it does
+
+One static binary at `go/`, twelve commands, nothing to install beside it. Each
+command takes arguments, prints one JSON object and exits. It holds the
+credential, it reads a document, it writes suggestions, it builds a house-style
+document and publishes it, it surveys what a document holds before anything is
+done to it, and it can give that document the house style where it stands.
 
 ```bash
 make build   # bin/gdoc, for this machine
@@ -512,14 +62,12 @@ reports, not an error. A token file that is there and cannot be read is a
 different answer: it fails and names the file, because "signed out" would send
 you to `auth login`, which overwrites the file and loses the evidence.
 
-If the token was granted less than the Go binary asks for, `auth status` still
+If the token was granted less than the binary asks for, `auth status` still
 says ok and lists the difference in `missing_scopes`, with a warning naming the
-scopes and telling you to sign in again. A token from the Python tool is not one
-of these: it asks for the read-only Docs scope, but it also asks for the full
-Drive scope, which the Docs API accepts, so nothing is reported missing.
+scopes and telling you to sign in again.
 
 `auth login` prints the link rather than opening a browser for you, because the
-Go binary runs no other program at all. While it waits it listens on 127.0.0.1
+binary runs no other program at all. While it waits it listens on 127.0.0.1
 on a port the kernel picks, which is what your browser comes back to, so a
 firewall may ask once. It gives up after three minutes.
 
@@ -527,14 +75,8 @@ Both print exactly one JSON object on stdout and nothing else. Prose and the
 sign-in link go to stderr, so anything reading the output has one object to
 parse and no filtering to do.
 
-It reads the same `~/.config/gdoc-agent/oauth-token.json` the Python tool
-writes, in the same format, so a Python login already signs you in here.
-
-The other direction is not symmetrical yet. `bin/gdoc auth login` asks for the
-Docs read/write scope, because writing suggestions needs it, while the Python
-tool asks for the read-only one and checks that what it asked for is in the
-file. So after a Go login, `gdoc edits` asks you to log in through the Python
-tool once more. Nothing else in either tool is affected.
+The token lives in `~/.config/gdoc-agent/oauth-token.json`, and the login asks
+for the Docs read and write scope, because writing a suggestion needs it.
 
 `GDOC_CONFIG_DIR` moves both files somewhere else, which is what the Go test
 suite uses so tests never touch your real config.
@@ -602,9 +144,9 @@ it, rather than silently absent. Tables become pipe tables, with a literal `|` i
 `\|` so the row keeps its shape, and footnotes are appended after a `---` line.
 Lists come back as `- ` items, two spaces of indent per level, so a numbered
 list reads back as a bulleted one: telling the two apart needs the document's
-`lists` map, which this milestone does not read. `--structure`
-adds the document tree with character indexes on it, which is what a later
-milestone needs to place a suggestion at an exact position. The text is not a
+`lists` map, which gdoc does not read. `--structure`
+adds the document tree with character indexes on it, which is what placing a
+suggestion at an exact position needs. The text is not a
 summary of the structure, and the structure is not a summary of the text.
 
 **`comments`** lists the threads. Each one carries its author, its content, its
@@ -612,8 +154,7 @@ replies, whether it is resolved, the sentence it quotes, and the character range
 the Docs read placed it at. A thread the Docs read could not place comes back
 with `range: null` and a warning, rather than failing the whole listing. The
 marker is a fact too: `ai:`, `ai?`, `ai!` or `none`, taken from the first word.
-`@ai` is not one of them. The Python tool still accepts that old form; the Go
-binary matches the three exactly.
+`@ai` is not one of them: the three are matched exactly.
 
 `--since` takes the `cursor` a previous run printed and asks for what changed
 after it. The cursor is opaque: it is the newest activity that run saw, encoded,
@@ -1027,8 +568,7 @@ says. The write goes through a temporary file and a rename, so a failed build
 cannot truncate a document you already had.
 
 The note needs a `title` in its front matter and nothing else. These are the
-keys it reads, and they are the same names the Python tool uses, so a note
-written for that publishes here with no edits:
+keys it reads:
 
 | Key | Does |
 |---|---|
@@ -1222,55 +762,17 @@ truncate your note.
 
 `gdoc publish` is the only thing that creates this block. `gdoc suggestions
 --md`, `gdoc propose --md` and `gdoc withdraw` update it, and each of them
-refuses a note that does not carry one already. A note the Python tool
-published carries `gdoc: <id>` as a plain string instead, and the Go binary
-refuses to read that: it names the shape and tells you to rewrite the line by
-hand once, or to publish the note again with `gdoc publish`. Building is
-unaffected, because `gdoc build` skips the `gdoc:` key whatever is in it.
-
-The `gdoc` on your PATH is the Go binary from here on. `./install.sh` links
-`~/.local/bin/gdoc` to `bin/gdoc`, and the temporary second name `gdoc2` is
-removed. The Python tool is still there and still does the publishing: it is
-`~/.config/gdoc-agent/venv/bin/gdoc`, which is the full path its two skills call,
-so nothing about them changed. Every `gdoc ...` example outside this section is
-the Python tool, and needs that path now.
-
-Two words mean two things across the two tools, and both are worth knowing
-before you type them. v1's `read` lists the comments; v2's `read` prints the
-document text, and v2's `comments` lists the comments. v1's `restyle` publishes
-a house-styled copy of a document into another folder; v2's `restyle --dry-run`
-reads one document and writes nothing.
+refuses a note that does not carry one already. A note whose `gdoc:` key is a
+bare string rather than a block is refused by name: gdoc tells you to rewrite
+the line by hand once, or to publish the note again with `gdoc publish`.
+Building is unaffected, because `gdoc build` skips the `gdoc:` key whatever is
+in it.
 
 ## What is planned
 
-**A restyled document that stays restyled.** `gdoc restyle --from` gives a
-document the house style today, paragraph by paragraph, because the Docs API
-cannot redefine a document's named styles. Making the style stick, so the next
-heading you type is the house one, needs something Google does not offer yet.
-
-**Lists and table layout in a restyle.** Bullets are left alone, because the
-request that sets one also deletes the tabs that set its nesting level, and
-column widths and row heights need two request kinds nobody has measured as
-suggestible, and a request Docs refuses takes the whole batch with it.
-
-**Heading numbering in a restyle.** The cover, the front-matter tables and the
-legend are proposed today. Numbering every heading can be proposed too, and what
-it still needs is an answer to what a second run does about a number gdoc
-already wrote, and to where each number goes, since a number sits inside your own
-sentence rather than beside it.
-
-**A live session over the whole folder.** Live works today on one document, the
-link you give it. Starting it once and having it watch every note you have
-published, so a comment on any of them is answered without naming which, is
-designed and not built yet.
-
-**Ordinary comments.** Reading and answering comments that carry no marker.
-
-**Fewer things to install.** Google can hand back markdown by itself, so the
-pandoc dependency should shrink.
-
-**A friendly reply name.** A real Workspace user for the agent, so `service_account`
-threads stop showing a raw address.
+`docs/v2/PLAN.md` holds the open work. The two you would notice from outside:
+a restyle that stays restyled after the run, and comments that carry no marker
+read and answered like the marked ones.
 
 ---
 

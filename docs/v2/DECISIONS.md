@@ -6,6 +6,209 @@ choice with none above it. Same convention as [PRINCIPLES.md](../../PRINCIPLES.m
 v2 is a rewrite in Go. The three principles carry over unchanged. What changes is
 which decisions implement them, and this file is where those start.
 
+## The register
+
+Every decision in this file, in date order, with its status stated rather than
+inferred. Status is one of `holds`, `rejected`, `superseded YYYY-MM-DD (what
+replaced it)`, or `MEASURED.md`. Nothing else.
+
+| Date | Decision | Status |
+|---|---|---|
+| 2026-08-13 | The markdown is the source, the Google Doc is a rendering | holds |
+| 2026-08-14 | Skills are symlinked into `~/.claude/skills/`, never copied | holds |
+| 2026-08-15 | The client reaches only the files it was given | holds |
+| 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | holds |
+| 2026-08-18 | Nothing runs git, and the agent never commits | holds |
+| 2026-08-29 | The next version of gdoc is written in Go | holds |
+| 2026-08-29 | gdoc never replaces the body of a document that already exists | holds |
+| 2026-08-29 | Never trust a success. Verify with a second, independent probe | holds |
+| 2026-08-29 | gdoc marks its own changes by colour, never by highlight | superseded 2026-08-29 (the colour scheme is retired) |
+| 2026-08-29 | A comment is a prompt. `align` is a separate question | holds |
+| 2026-08-29 | The marker is the trigger. Always | holds |
+| 2026-08-29 | gdoc judges whether to ask, rather than always asking | holds |
+| 2026-08-29 | There is no `release` command, and gdoc does not export PDFs | holds |
+| 2026-08-29 | Anchors are not banked | rejected |
+| 2026-08-29 | The Developer Preview arrived, and a third of this file retires | holds |
+| 2026-08-29 | gdoc proposes. It never accepts and never rejects | holds |
+| 2026-08-29 | MCP does not replace the REST client | holds |
+| 2026-08-29 | Tabs are out of scope, and gdoc defends against them | holds |
+| 2026-08-29 | Amendments from reading the documentation | holds |
+| 2026-08-29 | gdoc can retract its own proposal, and must check that it landed | holds |
+| 2026-08-29 | The house style is a config file. The .docx becomes provenance | holds |
+| 2026-08-29 | The finishing checklist is for `restyle` only | superseded 2026-09-09 (what an in-place restyle changes: the list is reported, not written) |
+| 2026-08-29 | `publish` builds a file. `restyle` has two modes | superseded 2026-09-11 (`restyle --new` is not built) |
+| 2026-08-29 | A comment is answered with the hub open | holds |
+| 2026-08-29 | Emoji reactions: still no API, preview or not | holds |
+| 2026-08-29 | The colour scheme is retired, not forgotten. Its "no named ranges" bullet is superseded 2026-09-10 (the house template reaches a document as a suggestion), which gives gdoc one named range as its own marker | holds |
+| 2026-08-29 | Alignment runs both ways, and it is not a command | holds |
+| 2026-08-29 | The product is three things, and it matters which does what | holds |
+| 2026-08-29 | Everything gdoc writes opens with 🤖 | holds |
+| 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds |
+| 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | holds |
+| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace` | holds |
+| 2026-08-29 | Publish runs once. Everything after travels as suggestions | holds |
+| 2026-08-29 | Live review is a session, not a service | holds |
+| 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds |
+| 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | holds |
+| 2026-09-09 | Which styling requests land in place | MEASURED.md |
+| 2026-09-09 | The guard carries `files.copy`, for one source | holds |
+| 2026-09-09 | Seven paragraph elements were dropped at decode | holds |
+| 2026-09-09 | M7 splits. The survey ships without the write | holds |
+| 2026-09-09 | What an in-place restyle changes, and what it deliberately does not write | holds |
+| 2026-09-10 | In-place styling preserves anchors and pending suggestions | MEASURED.md |
+| 2026-09-10 | The house template reaches a document as a suggestion | holds |
+| 2026-09-10 | A named range over a suggested insertion | MEASURED.md |
+| 2026-09-10 | A table takes one index of its own at the end | MEASURED.md |
+| 2026-09-11 | `restyle --new` is not built | holds |
+
+**An entry is never edited after this, except its status line.** A decision that
+changes is a new entry, dated today, with a new row here, and the old entry's
+status says what replaced it. That is what makes a status worth reading: it says
+the entry below was looked at, rather than that nobody has been back to it.
+
+A row whose status is `MEASURED.md` has its text in
+[MEASURED.md](MEASURED.md), under a heading of the same name. It moved because a
+measurement is what Google does, not a choice gdoc made.
+
+## 2026-08-13. The markdown is the source, the Google Doc is a rendering.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15, when
+that file became the four principles and nothing else.
+
+Domain choice, no principle above it. A document-wide change is made in the
+paired markdown and reaches the document as a new version of it. A reply goes in
+the comment thread that asked, because a thread is comment surface and not
+content.
+
+In v2 the same rule decides which command does what. `publish` renders the note
+into a document. `propose` reaches into a document, and everything it writes
+there is a suggestion. `reply` writes into a thread and nowhere else.
+
+## 2026-08-14. Skills are symlinked into `~/.claude/skills/`, never copied.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15.
+
+Domain choice, no principle above it. A copy drifts silently: an edit to the
+skill in this repository would be invisible to the session running the copy.
+`~/.claude/skills/gdoc-review` is a symlink into `skills/`, so an edit is live
+the moment it is saved and before it is committed. `./install.sh` defends this.
+It refuses to replace a real directory whose contents differ, and it is safe to
+re-run.
+
+## 2026-08-15. The client reaches only the files it was given.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15.
+
+Serves principle 3. Under OAuth the credential can reach every file the
+signed-in user owns, so the guard holds a set of file ids, the ones the command
+was handed plus the ones its own creates returned, and refuses every request
+addressing anything else. A listing is refused outright, so the tool cannot
+search Drive. An empty set refuses everything, so a command that does not name a
+document reaches nothing.
+
+The cost is stated rather than hidden: on a file in the set, the guard bounds
+which methods carry, not what a method could do to the words. "The agent cannot
+edit a reviewed document" is "it does not", and the decision of 2026-08-13 above
+is held up by design rather than by a permission Google enforces.
+
+This is the entry the 2026-08-29 decision "The guard owns the transport" below
+is built on: v2 adds the write levels to the same set of ids, and
+`internal/guard` is where both live.
+
+## 2026-08-18. The OAuth client is shipped in git, and the client stays Internal.
+
+Serves principle 1. Nobody using gdoc visits a cloud console, so the client id
+and secret are two constants in the source and a login is one browser trip.
+
+**The secret belongs in version control.** RFC 8252 section 8.5 says a secret
+shipped to many users "should not be treated as confidential" and serves no
+purpose "beyond client identification". `gh` ships its own with the comment
+"This value is safe to be embedded in version control", and `gcloud` ships a
+Google secret in a constant named `CLOUDSDK_CLIENT_NOTSOSECRET`. So moving it to
+a config file is not a fix, and a reader who tries should read this entry first.
+What protects an account is the per-user token, which never leaves the machine.
+
+**The client stays User type Internal.** gdoc needs the full Drive scope, which
+Google classes as restricted. Internal exempts gdoc from verification, from the
+unverified-app screen and from the 100-user cap. External would mean a CASA
+assessment every 12 months and refresh tokens expiring weekly.
+
+**A file in the config directory wins over the bundled client.** That is an
+override for quota, not a setup step, the way gcloud treats `--client-id-file`.
+One shared client shares one Google rate limit, which is why rclone is retiring
+its shared Drive client during 2026. The code reports where the client came
+from, so a status command can say which one is in use.
+
+### The one thing that changes this decision
+
+Making the repository public. GitHub secret scanning carries a **partner**
+pattern for `google_oauth_client_id, google_oauth_client_secret`. On a public
+repository a hit is reported to Google, who may revoke the client. So publishing
+this repository would break every colleague's login at once, without warning and
+without a commit to blame. rclone obfuscates its Google secret for exactly this
+reason, which is evasion of automated revocation rather than security.
+
+Before this repository is ever public: create a fresh client, distribute it as a
+file out of band, and clear the two constants. Do not obfuscate them to get past
+the scanner.
+
+## 2026-08-18. Nothing runs git, and the agent never commits.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15.
+
+Serves principle 1. Committing is Nail's job. A person receiving this tool
+should not have to think about git at all, and the skills should not carry a
+conditional and a "nothing was committed" sentence for a case that may never
+apply to them.
+
+The skills do not commit. They name every file that changed on disk instead, so
+Nail commits them himself. Trying the commit and reporting what git said was
+considered and rejected: that still makes committing the agent's job.
+
+Nothing asks git anything either, not whether the tree is a repository and not
+whether a file is dirty. Outside a repository the answer is always "cannot
+tell", which is most of the time, and where the root is a synced folder a
+Dropbox or Nextcloud rewrite is exactly what git cannot see, so the check read
+as safety while providing none. What replaced it is disk state: an existing
+output file is never overwritten without `--force`, in any directory, which is
+principle 3 held without a subprocess.
+
+The cost is that a document generated from an uncommitted note is not matched to
+a commit. That was only ever true on Nail's own machine, and it was never
+checked. `install.sh` is the one exception, and it reads git about this
+repository rather than about somebody's documents.
+
+## 2026-08-29. The next version of gdoc is written in Go.
+
+Written in PRINCIPLES.md on the date above and moved here on 2026-09-15. It is
+the decision this whole file descends from.
+
+Serves principle 1. Principle 1 drew its line at "a program pip cannot install
+does not travel", and pandoc was that program. It survived three specs because
+removing it in Python meant writing a Markdown parser and rewriting the AST
+walker in the module where the body's pixel fidelity lives. In Go it is an
+import, and a Go build is one static binary: no interpreter, no package
+manager, no external program that has to already be on the machine. That is
+principle 1 satisfied rather than managed, and it is the whole reason for the
+decision. Speed is not.
+
+The fidelity question was measured before deciding, because it was the assumed
+risk. Six documents were built by both renderers, published to Drive by both,
+exported as PDF by Google, rasterised at 300 dpi and compared with a zero
+tolerance: 418,385,088 pixels across 48 pages, none different. Run twice on
+separate publishes.
+
+It ported exactly for a structural reason worth keeping in mind. Neither
+renderer builds a .docx from nothing. Both copy the master and cut into it, so
+the cover, the logo, the running head and the coloured tables travel as bytes. A
+.docx is a zip of XML, and the body was already written as OOXML by hand against
+constants measured out of the template.
+
+**What the decision did not rest on.** The docx *reader* was load-bearing rather
+than a fallback: it is the only route that brings a picture out of a Google Doc,
+goldmark does not replace it, and it was unmeasured on the day. It is
+`internal/docx` now.
+
 ## 2026-08-29. gdoc never replaces the body of a document that already exists.
 
 Serves principle 3. Uncertainty never resolves toward the destructive answer, and
@@ -1019,145 +1222,6 @@ handed-in document the agent can only suggest and reply, so the worst a
 colleague's instruction can produce is a suggestion Nail rejects. A colleague
 who can already edit the whole document was always trusted with more than this.
 
-## 2026-09-09. What an in-place styling request actually reaches
-
-The 2026-08-29 run measured **survival**: what an in-place `batchUpdate` does
-not destroy. It never measured **fidelity**, and SPEC's sentence "the house
-style is approximate" has stood in for a list nobody had written. Nail's
-decision the same day was that M7b's scope comes from a measurement rather than
-from reading `house.yaml`. This is the measurement.
-
-`go/internal/live/fidelity_test.go`, run against a document it created in the
-test folder and trashed afterwards. Each request kind was sent in its own batch,
-so one refusal could not hide the rest, and the document was read back once at
-the end. Nine of the first ten landed, and the three kinds the first run skipped
-were measured the same day in commit `a5fc6e0`, so the table below is thirteen
-rows and ten of them land:
-
-| Request kind | Accepted | Landed |
-|---|---|---|
-| `updateDocumentStyle` (margins) | yes | yes |
-| `updateParagraphStyle` (`namedStyleType`) | yes | yes |
-| `updateParagraphStyle` (spacing, indent) | yes | yes |
-| `updateTextStyle` (font family, size) | yes | yes |
-| `updateTextStyle` (`foregroundColor`) | yes | yes |
-| `updateTextStyle` (`backgroundColor`) | yes | yes |
-| `createParagraphBullets` | yes | yes |
-| `createNamedRange` | yes | yes |
-| `updateParagraphStyle` (`borderBottom`) | yes | yes |
-| `updateTableCellStyle` (shading, padding) | yes | yes |
-| `updateNamedStyle` | **no** | no such request kind |
-| `updateParagraphStyle` (`tabStops`) | **no** | read-only in the reference |
-| `createHeader` (`FIRST_PAGE_HEADER`) | **no** | `HeaderFooterType` is `UNSPECIFIED` and `DEFAULT` only |
-
-**The limit is durability, not fidelity, and that is the sentence to tell
-somebody before a restyle.** `updateNamedStyle` does not exist, so the nine
-named styles cannot be redefined. But assigning a paragraph to `HEADING_1`
-lands, and overriding its visual properties per paragraph lands, which is
-exactly what the master template does: it states a heading colour on the style
-and overrides it on every paragraph, which is why eight rows sit in
-`drift.Known`. So an in-place restyle reaches the look. What it cannot do is
-make the **next** heading the author types inherit it.
-
-**Two things the M7 plan review listed as unreachable are reachable**, and the
-plan passed them on without checking:
-
-- The `highlight` house.yaml states as an OOXML name lands through
-  `backgroundColor` with an RGB value. It needs a name-to-hex mapping, not a
-  deferral.
-- Bullets land through `createParagraphBullets`. The `BULLET_DISC_CIRCLE_SQUARE`
-  preset is disc, circle, square, which is the `●○■` house.yaml asks for.
-
-**Corrected 2026-09-09, and the correction changed M7b's scope.**
-`createParagraphBullets` lands, which is true and incomplete. The reference says
-the leading tabs that set a bullet's nesting level "are removed by this
-request", so it deletes text the author typed, and it merges a bulleted range
-into an adjacent list with a matching preset, renumbering their items. The probe
-missed both because the content it wrote had no leading tabs and no neighbouring
-list. So bullets are out of `inPlaceKinds`, a restyle leaves every list with
-whatever bullets it has, and the milestone's defining property, that nothing it
-sends can change a character, is literally true rather than nearly true.
-
-**Corrected 2026-09-09.** This entry used to end by naming three things the run
-did not test, so M7b would not assume them: `updateTableCellStyle`, tab stops,
-and anything touching the first-page header. Commit `a5fc6e0` measured all
-three the same day, once `writeBody` learned to lay a table down in a second
-batch so a cell had something to be styled in, with the table's start index read
-back rather than computed. They are in the table above, and this is what they
-said:
-
-- `updateTableCellStyle` **lands**. The shaded, padded header row `house.yaml`
-  states for its three front-matter tables is reachable in place, which is
-  better than expected and is why the kind is on `inPlaceKinds`.
-- `ParagraphStyle.tabStops` is **read-only**, so the running head's tab-stop
-  layout cannot be applied in place at all.
-- `createHeader` with `FIRST_PAGE_HEADER` is **refused**, confirming the
-  2026-08-29 measurement that `HeaderFooterType` is exactly `UNSPECIFIED` and
-  `DEFAULT`. That is the reason the finishing checklist was invented, measured
-  here rather than trusted from a note.
-
-**The run was blocked for an hour by something unrelated**, recorded here
-because the symptom is so misleading. On the office wifi every Go TLS 1.3
-handshake times out, to every host, while `openssl s_client -tls1_3` succeeds on
-the same network to the same address and Go capped at TLS 1.2 works in 0.1s.
-gdoc reports it as `TLS handshake timeout` on the token refresh, which reads
-like an expired token. A mobile hotspot fixes it. Never work around it by
-letting gdoc fall back to TLS 1.2.
-
-## 2026-09-09. The guard carries `files.copy`, for one source, and it is a decision rather than a rule satisfied.
-
-Serves principle 3, and stretches it further than anything before it. Nail's
-decision, recorded here because M2's rule does not cover it.
-
-M2's rule is that a guard door with no **production** caller is deleted rather
-than carried. That is why `GrantInPlace` went, and why it came back at M7b
-beside the line that calls it. `Policy.AllowCopy` has no production caller and
-is not going to get one: its only caller is `TestLiveRestylePreservesTenFeatures`,
-the ten-feature preservation run. So the rule says delete it, and the decision is
-to keep it anyway.
-
-**What buys it is the measurement it makes possible.** The acceptance for an
-in-place restyle needs a document holding all ten features, an anchored comment,
-a pending suggestion, a smart chip, an image and a Google Drawing among them.
-A throwaway probe showed on the same day that the first several can be built
-from scratch through the API, and that the image and the Drawing cannot. It was
-`tools/copyprobe`, deleted at M7b once it had answered, and what it measured is
-in BLOCKED-BY-API.md. Without
-a copy route the ideal document is made by hand in a browser before every run,
-which is a test nobody runs, which is an acceptance that does not exist.
-`files.copy?copyComments=true` carries the threads still anchored and the
-pending suggestions with them, measured, so the run is unattended.
-
-**What it costs is worth naming rather than discovering.** A copy is the widest
-reach a handed-in id has ever produced. Every other route out of `LevelSuggest`
-reads: the export hands back the bytes, and that is all. A copy takes a full
-duplicate of somebody's document, comments and pending suggestions included,
-into gdoc's own folder, where `learnFromCreate` puts it at `LevelFull`, which is
-trash-and-rename. Nothing about the source changes and nothing about the source
-becomes more reachable, so principle 3's claim still holds as written. It is
-still the largest thing a handed-in id has ever produced, and a reader should
-meet that as a decision somebody took rather than as a door somebody opened.
-
-Four rules hold it down, and each is pinned by a test in
-`go/internal/guard/copy_test.go`:
-
-- **The grant is one source and one run.** `AllowCopy(id)` in the shape
-  `AllowReject` and `AllowCreateIn` already have. A second call replaces the
-  first, nothing writes it to disk, and no flag turns it on for every document.
-- **It admits no id.** A copy of a file nobody handed in is refused by the
-  file check, before the grant is read. Two doors, still.
-- **The copy lands in the one folder the run named.** A `files.copy` that omits
-  `parents` lands in the **source's** own parent, a folder gdoc was never given.
-  So the copy is a create in the transport's grammar too: `filesCopy` is
-  `filesCollection`'s rule for the second create shape, `isCreate` reads it, and
-  the same one-parent check and the same id learning run on it. A path only one
-  of the two called a create would carry an unparented duplicate and learn
-  nothing from the answer.
-- **Three parameters.** `copyComments`, `supportsAllDrives` and `fields`.
-  `ocr`, `keepRevisionForever`, `ignoreDefaultVisibility`, `enforceSingleParent`
-  and `includePermissionsForView` are refused with everything else the allowlist
-  does not name.
-
 ## 2026-09-07. A replace proposal cannot be fully withdrawn by a delete. Decided: reject gdoc's own.
 
 Found by the first live write test, on throwaway documents in the test folder,
@@ -1253,6 +1317,60 @@ id is the wrong way.
 
 `docs/backlog/v1-frontmatter-migration.md` is deleted by this entry. It asked
 the question and said Nail decides in M6.
+
+## 2026-09-09. The guard carries `files.copy`, for one source, and it is a decision rather than a rule satisfied.
+
+Serves principle 3, and stretches it further than anything before it. Nail's
+decision, recorded here because M2's rule does not cover it.
+
+M2's rule is that a guard door with no **production** caller is deleted rather
+than carried. That is why `GrantInPlace` went, and why it came back at M7b
+beside the line that calls it. `Policy.AllowCopy` has no production caller and
+is not going to get one: its only caller is `TestLiveRestylePreservesTenFeatures`,
+the ten-feature preservation run. So the rule says delete it, and the decision is
+to keep it anyway.
+
+**What buys it is the measurement it makes possible.** The acceptance for an
+in-place restyle needs a document holding all ten features, an anchored comment,
+a pending suggestion, a smart chip, an image and a Google Drawing among them.
+A throwaway probe showed on the same day that the first several can be built
+from scratch through the API, and that the image and the Drawing cannot. It was
+`tools/copyprobe`, deleted at M7b once it had answered, and what it measured is
+in BLOCKED-BY-API.md. Without
+a copy route the ideal document is made by hand in a browser before every run,
+which is a test nobody runs, which is an acceptance that does not exist.
+`files.copy?copyComments=true` carries the threads still anchored and the
+pending suggestions with them, measured, so the run is unattended.
+
+**What it costs is worth naming rather than discovering.** A copy is the widest
+reach a handed-in id has ever produced. Every other route out of `LevelSuggest`
+reads: the export hands back the bytes, and that is all. A copy takes a full
+duplicate of somebody's document, comments and pending suggestions included,
+into gdoc's own folder, where `learnFromCreate` puts it at `LevelFull`, which is
+trash-and-rename. Nothing about the source changes and nothing about the source
+becomes more reachable, so principle 3's claim still holds as written. It is
+still the largest thing a handed-in id has ever produced, and a reader should
+meet that as a decision somebody took rather than as a door somebody opened.
+
+Four rules hold it down, and each is pinned by a test in
+`go/internal/guard/copy_test.go`:
+
+- **The grant is one source and one run.** `AllowCopy(id)` in the shape
+  `AllowReject` and `AllowCreateIn` already have. A second call replaces the
+  first, nothing writes it to disk, and no flag turns it on for every document.
+- **It admits no id.** A copy of a file nobody handed in is refused by the
+  file check, before the grant is read. Two doors, still.
+- **The copy lands in the one folder the run named.** A `files.copy` that omits
+  `parents` lands in the **source's** own parent, a folder gdoc was never given.
+  So the copy is a create in the transport's grammar too: `filesCopy` is
+  `filesCollection`'s rule for the second create shape, `isCreate` reads it, and
+  the same one-parent check and the same id learning run on it. A path only one
+  of the two called a create would carry an unparented duplicate and learn
+  nothing from the answer.
+- **Three parameters.** `copyComments`, `supportsAllDrives` and `fields`.
+  `ocr`, `keepRevisionForever`, `ignoreDefaultVisibility`, `enforceSingleParent`
+  and `includePermissionsForView` are refused with everything else the allowlist
+  does not name.
 
 ## 2026-09-09. Seven paragraph elements were dropped at decode. The fixture is built from the reference, and the live check is outstanding.
 
@@ -1483,47 +1601,6 @@ a moved revision is never retried: retrying against a fresh revision would be
 gdoc styling a document somebody is editing, which is the exact case
 `writeControl.requiredRevisionId` exists to refuse.
 
-## 2026-09-10. In-place styling preserves anchors and pending suggestions, measured on a real document.
-
-Serves principle 3. This is the measurement M7b rests on, made against Google
-rather than reasoned about, and it is the first time this code has asked.
-
-**The run.** A copy of a real one-tab policy document, carrying one comment
-anchored to its words and one pending suggestion, restyled in place with 181
-styling requests in one batch: 49 paragraphs, 125 runs, 75 cells across 6
-tables. Before and after, read through the docx export because `comments.list`
-reports a destroyed anchor as healthy:
-
-| | threads | anchored | pending |
-|---|---|---|---|
-| before | 1 | 1 | `suggest.r1tnorocsz3h` |
-| after | 1 | 1 | `suggest.r1tnorocsz3h` |
-
-Nothing moved. That is the 2026-08-29 measurement holding from the other side:
-replacing a document's body destroyed 100% of comment anchors, 355 of 355
-characters across three anchors, and recreated every suggestion id. In-place
-styling destroyed none, and the suggestion kept its own id rather than being
-recreated under a new one.
-
-**The guard refused before the grant, in the same run.** `restyleCopy` sends one
-styling request before `GrantInPlace` and requires a `guard refused` error back.
-It got one. So the direct-edit door shut since M1 is really shut until one line
-in one command opens it for one id, and that is measured rather than asserted.
-
-**The source never moved.** Same revision id before and after, asserted on every
-path out including the failing ones. The 2026-08-29 rule, held.
-
-**The cheap acceptance is the one that gets run, and that is the decision here.**
-`TestLiveRestylePreservesTenFeatures` needs a document holding all ten of SPEC
-item 5's features, which is a document somebody builds by hand and keeps intact,
-and on 2026-09-10 the document it was pointed at held none of them and carried
-two tabs, which a restyle refuses outright. So it has never run.
-`TestLiveRestyleKeepsAnchorsAndSuggestions` needs one anchored comment and one
-pending suggestion, which is any document somebody has reviewed, and it answers
-the question the milestone actually rests on. Both stay. An acceptance nobody
-can run is not an acceptance, and the ten-feature run is still the fuller
-answer for the day somebody rebuilds the document.
-
 ## 2026-09-10. The house template reaches a document as a suggestion, not as a direct edit.
 
 Serves principle 3, and it is Nail's idea rather than a compromise found while
@@ -1622,138 +1699,6 @@ off the direct-edit branch alone would let a granted document take an
 something to prevent. They are now the design. So either a run styles and
 proposes through two policies, or that rule changes on purpose. It is a decision
 rather than a detail, and it is not made here.
-
-## 2026-09-10. A named range over a suggested insertion survives the accept, and vanishes with the reject.
-
-Serves principle 3. It is a measurement rather than a decision, and it is here
-because M7c's marker rests on it and nobody had asked.
-
-M7c proposes the house prelude rather than writing it, so the named range that
-marks gdoc's own prelude is created over text that exists only as a pending
-insertion. `TestLiveNamedRangeOverSuggestionProbe` asked Docs, one fresh
-document per case, for the reason the suggested-insert probe learned the hard
-way: a probe that measures its own leftovers answers about itself.
-
-| Question | Answer |
-|---|---|
-| created directly over a pending insertion? | yes, id `kix.wi79lhqfq91l` |
-| what it covers while the insertion is pending | exactly the proposed line, `[1,23)` |
-| after the suggestion is **rejected** | the marker is gone, no named range at all |
-| after the suggestion is **accepted** | it survives: same id, same range, now over the accepted text |
-
-The accept row was read separately, on 2026-09-10, and the reason it had to be
-is the part worth keeping. **gdoc cannot accept its own suggestion, and that is
-the guard working rather than a gap.** `judgeRequests` refuses every request kind
-whose name carries "suggestion" before it looks at the level, so a document the
-probe created a second ago is refused like anybody else's. `rejectSuggestion`
-has exactly one door, `AllowReject`, which `withdraw` already opens from the
-note's own record, so the reject case ran through it with the probe's own id.
-`acceptSuggestion` has no door. Opening one so that a probe could measure itself
-would be widening the guard for the tail rather than the dog, so the probe left
-its document in the test folder, printed the URL, and Nail accepted it in the
-browser the way he will accept a real prelude. The read-back is
-`TestLiveNamedRangeAfterAcceptedByHand`, which reads and writes nothing.
-
-**What it settles.** M7c's Task 6 is the replace-in-place design rather than the
-fallback, and `AllowMarker` has a production caller. A second run meets three
-shapes and each has an answer: a marker, which it replaces; no marker, which is
-a document gdoc never touched or one whose prelude was rejected, and both are
-proposed into cleanly; and a marker over a prelude still pending, which is
-refused, because accepting or rejecting the one already in front of him is
-Nail's and not gdoc's.
-
-**What it does not settle.** Whether the marker survives an accept the author
-makes one paragraph at a time, rather than the whole prelude at once. The probe
-accepted a single insertion. A prelude is many, and Docs numbers a partial
-accept differently. The milestone that meets a half-accepted prelude measures
-that; until then a marker whose range no longer covers a whole prelude is a
-shape nothing here has seen.
-
-## 2026-09-10. A table takes one index of its own at the end, and the prelude was one short.
-
-**Found by a failed live run, not by review.**
-`TestLivePreludeIsProposedNotWritten` sent the whole house prelude at the
-document Nail named, and Docs refused the batch whole:
-
-```
-Invalid requests[106].insertText: The insertion index must be inside the bounds
-of an existing paragraph. You can still create new paragraphs by inserting
-newlines.
-```
-
-Nothing was written. A batch Docs refuses is refused whole, everything in it was
-a suggestion in any case, and the source document's revision never moved. The
-guard was never in question: the requests it carried are the ones
-`internal/propose` sends every day.
-
-Request 106 is the spacer newline between two front-matter tables, at the index
-`internal/prelude` computed as one past the first table's last cell.
-
-**The measurement.** `TestLiveTableIndexProbe` in `internal/live`, one throwaway
-document per case, everything in SUGGEST mode, which is the mode the prelude
-sends in. A 2x2 table of empty cells asked for at index 1 reads back as:
-
-| Element | Range |
-|---|---|
-| paragraph, the newline `insertTable` writes in front | [1,2) |
-| **table** | **[2,14)** |
-| row 0 | [3,8) |
-| cell 0.0, and its paragraph | [4,6), [5,6) |
-| cell 0.1, and its paragraph | [6,8), [7,8) |
-| row 1 | [8,13) |
-| cell 1.0, and its paragraph | [9,11), [10,11) |
-| cell 1.1, and its paragraph | [11,13), [12,13) |
-| paragraph, what follows the table | [14,15) |
-
-The last cell ends at 13 and the table ends at 14. So a table takes one index of
-its own at the end that no row, no cell and no paragraph mark accounts for, and
-the paragraph behind a table begins at the table's own `endIndex`. An empty
-table is twelve units for a 2x2, which is one for the table, one per row, one
-per cell plus one for that cell's paragraph mark, **and one for the table's own
-end**, with a thirteenth unit for the newline in front of it.
-
-**Accepted is not the answer, and that is the trap.** The sweep asked six
-indexes, each on its own document, each in one batch with the table:
-
-| Index | Accepted | Where it went |
-|---|---|---|
-| 11 | no | inside no paragraph |
-| 12 | **yes** | **inside the last cell**: the table then spans [2,15) |
-| 13 | no | the table's own end, inside no paragraph |
-| 14 | yes | behind the table, which still spans [2,14) |
-| 15, 16 | no | past the end of the body |
-
-12 is the answer that reads like success and is not one. The probe's first run
-reported the first accepted index and stopped there, so it said 12, and a second
-table asked for at 13 was nested inside that cell rather than put behind the
-first. Every accepted candidate is read back now, and the verdict is where the
-insert really landed. A probe that stops at the status code answers a different
-question from the one it was asked.
-
-Two tables with one paragraph between them, spaced at 14, land as two top-level
-tables at [2,14) and [16,28), which is the shape the house front matter has.
-
-**The fix is one line and one comment**, `b.at = at + 1` at the end of
-`prelude.builder.table`, with `TestTheIndexBehindATableIsTheTablesOwnEnd`
-stating the measured map as numbers. Nothing else moved: the per-cell
-arithmetic was already right, and the two facts measured on 2026-09-10 still
-hold, that a 2x7 table inserted at 279 puts the first cell's content at 283 and
-that a cell holding ten characters puts the next cell's content at 295.
-
-**"Twelve marks for one 2x2" was not a measurement of indexes, and reading it as
-one is what put the bug there.** The suggested-insert probe counted the elements
-Docs recorded a `suggestedInsertionIds` on, and that count agrees with the
-arithmetic by coincidence: twelve marks, and twelve index units for the table
-plus one for its newline. A count of marks says nothing about where a table
-ends. The rule this leaves is the project's own: a number that reaches the code
-is measured against the question the code asks, or it is a guess wearing a
-measurement's clothes.
-
-**The live acceptance passes.** Re-run the same evening with the fix in:
-250 requests in one batch, 70 paragraphs, 3 tables and 34 cells all carrying
-suggestion ids, nothing written, the marker over [1,1243), the author's own text
-character for character what it was, and the source document still on the
-revision it started on.
 
 ## 2026-09-11. `restyle --new` is not built. Decided, not deferred.
 

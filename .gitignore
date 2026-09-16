@@ -1,13 +1,10 @@
 __pycache__/
 *.py[cod]
-.pytest_cache/
 .coverage
 htmlcov/
 *.egg-info/
 build/
 dist/
-.venv/
-venv/
 .DS_Store
 
 # Obsidian workspace state, personal and not part of the tool
@@ -17,9 +14,6 @@ venv/
 # so nothing here is the only copy of anything.
 .claude/worktrees/
 .claude/settings.local.json
-
-# Generated document versions, rebuilt from the paired markdown
-docs/gdoc/*/out/
 
 # Compiled Go binaries, rebuilt by `make build` and `make dist`
 bin/

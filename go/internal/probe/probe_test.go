@@ -433,7 +433,7 @@ func methods(f *fakeSession) []string {
 	return out
 }
 
-// TestTheGuardCarriesEverySixOfTheProbesRequests is the check that costs
+// TestTheGuardCarriesEveryOneOfTheProbesRequests is the check that costs
 // nothing to run and everything to be missing. Every URL this package builds
 // has to be one the policy a probe opens will carry: AllowCreateIn on the
 // folder, and the probe document learned from the create the guard itself

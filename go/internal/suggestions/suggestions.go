@@ -13,6 +13,38 @@
 // either way. So Gone reports that it left, with what it said last time, and
 // the skill reads the document text and decides. This is the milestone's
 // facts-only rule at its sharpest point.
+//
+// This comment holds why the package refuses what it refuses. What it reports
+// is in the code beside it.
+//
+// # What is pending is a question about ids, and that is why there are three
+//
+// List, All and IDs read the same walk and answer three different questions,
+// so a caller that takes the wrong one reports a fact that is not true.
+//
+// List is the listing a person reads. It drops the suggestions whose text is
+// only whitespace, because a suggestion that says nothing a reader can act on
+// is noise in a list somebody has to work through.
+// TestWhitespaceOnlyTextIsDropped is the pin.
+//
+// All is what the snapshot records, and IDs is what GoneSince compares against,
+// and both of them keep the whitespace-only ones. A suggestion the author has
+// since edited down to a space is still in the document, so reporting it in
+// gone_since_last_look would be a false fact in the one field the skill judges
+// accepted-or-rejected from. TestASuggestionEditedDownToWhitespaceIsNotGone is
+// the pin, and it is the whole reason IDs exists rather than the caller mapping
+// over List.
+//
+// The snapshot is written from All for the mirror reason. Built from the
+// filtered list it forgets that suggestion, so the run that later sees it
+// accepted or rejected has no record it was ever there and reports nothing at
+// all. TestGoneListsExactlyTheIDsThatLeft and TestGoneCarriesWhatTheSuggestionSaidLastTime
+// pin what a snapshot is for.
+//
+// The snapshot is written after a successful read, never before. A read that
+// failed knows nothing about what is pending, and a snapshot taken then reports
+// everything this run could not see as gone on the next one. That gate is the
+// caller's, in cmd/gdoc.
 package suggestions
 
 import (

@@ -30,9 +30,10 @@ const (
 	// 1 inch is 914400 EMU and 72 points, so one point is exactly 12700 EMU.
 	emuPerPoint = 12700
 	emuPerInch  = 914400
-	// python-docx falls back to 72 dpi whenever the file declares none, and a
-	// picture pasted into a Google Doc usually declares none. Matching that
-	// fallback is what keeps v1 and v2 the same size on the page.
+	// A picture pasted into a Google Doc usually declares no dpi, and 72 is
+	// what the docx writers that read these files fall back to, python-docx
+	// among them. Matching that fallback is what puts a picture on the page at
+	// the size every other tool gives it.
 	defaultDPI = 72
 )
 
@@ -46,8 +47,8 @@ type imageInfo struct {
 	vertDPI   int
 }
 
-// widthEMU and heightEMU are the picture's native size, which is the size v1
-// gives a picture that names no dimensions.
+// widthEMU and heightEMU are the picture's native size, which is what a
+// picture naming no dimensions gets.
 func (i imageInfo) widthEMU() int64 {
 	return int64(math.Round(float64(i.pxWidth) / float64(i.horzDPI) * emuPerInch))
 }

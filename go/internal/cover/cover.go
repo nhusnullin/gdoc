@@ -2,23 +2,87 @@
 // cover page, the version-control table and the running head.
 //
 // Only title is required. Anything can go in the house template: a policy, a
-// brief, a report, a set of notes. doc_type is free text and may be left out.
-// Classification is the one value still validated, because it shades a fixed
-// row in the front matter, so an unknown value would silently shade nothing.
+// brief, a report, a set of notes. alt_title, doc_type, version, date, owner,
+// last_approval, review_frequency, board_ratification, distribution,
+// classification, heading_numbering and revisions are optional, and owner,
+// last_approval, review_frequency, board_ratification and distribution are the
+// five rows of the version-control table. The key
+// names are not chosen here. They are the names the notes already carry, so a
+// note written before this package existed builds with no edits.
+// TestEveryOptionalKeyReads and TestANoteWithOnlyATitleReadsWithNumberingOnAndNoRevisions
+// are the pins.
 //
-// The keys are v1's, so a note written for the Python tool publishes here with
-// no edits. Two rules follow from that:
+// This comment holds why the package refuses what it refuses. What it reports
+// is in the code beside it.
 //
-// A key this package does not read is carried, never refused. The note is the
-// author's file and gdoc owns one key in it. In particular the gdoc: block is
-// internal/frontmatter's, in either v1's string shape or v2's mapping, and is
-// skipped here whatever it holds.
+// # A key this package does not read is carried, never refused
 //
-// A missing title is a refusal carrying a candidate rather than a title this
-// package invented. The skill proposes the candidate and writes it into the
-// note once the author agrees.
+// The note is the author's file and gdoc owns one key in it. In particular the
+// gdoc: block is internal/frontmatter's, and it is skipped here whatever shape
+// it holds: two readers of one block are two rules that drift.
+// TestAnUnknownAuthorKeyIsCarriedRatherThanRefused and
+// TestTheGdocKeyIsIgnoredWhateverItsShape are the pins.
 //
-// Nothing here reaches the network and nothing here writes a file.
+// # Nothing infers a title
+//
+// A missing title is MissingTitle, a refusal carrying a candidate rather than a
+// title this package invented. The candidate is the note's first heading, or
+// the file name with a date prefix stripped, and a heading inside a fence is
+// not one. The skill proposes it and the author writes it into the note.
+// Nothing in Go writes a title into somebody's file.
+// TestANoteWithNoTitleCarriesTheCandidateFromTheFirstHeading,
+// TestTheCandidateFallsBackToTheFileNameWithTheDatePrefixStripped and
+// TestAHeadingInsideAFenceIsNotACandidate are the pins.
+//
+// Where is the field that says which reader raised it. Empty means a note's
+// front matter, and the fields file names itself, so one sentence serves two
+// readers and neither names the other's.
+// TestAFieldsFileWithNoTitleIsRefusedAsAMissingTitle and
+// TestANoteWithNoTitleStillSaysFrontMatter are the two halves.
+//
+// # Two values take a default, and every other one stays blank
+//
+// A missing version publishes as 1.0 and a missing date as the month the build
+// runs in. Neither is tidiness. A cover line whose field is empty prints the
+// template's own words instead, so a note stating no date published a page one
+// carrying the month the master was captured in, in the template's yellow.
+// Every other optional key leaves its line or its row blank, which reads as
+// blank rather than as somebody else's value. TestANoteWithNoDateIsDatedThisMonth,
+// TestANoteThatStatesADateKeepsIt and
+// TestAFieldsFileWithOnlyATitleTakesTheSameDefaultsANoteTakes are the pins.
+//
+// A date the author wrote in words is left alone, and one YAML read as a date
+// is rendered in UK long form, because a bare 2026-09-11 on a cover is the one
+// value a reader has to translate. TestTheDateRendersInUKLongForm and
+// TestADateTheAuthorWroteInWordsIsLeftAlone are the pins.
+//
+// # Classification is the one value still validated
+//
+// It shades a fixed row in the front matter, so a value outside the set would
+// silently shade nothing, and a document that says nothing about its class
+// reads as a document nobody classified. heading_numbering is checked for the
+// same kind of reason: it decides whether every heading in the document carries
+// a number. TestAClassificationOutsideTheSetIsRefusedNamingTheValue,
+// TestHeadingNumberingOutsideTheSetIsRefusedNamingTheValue and
+// TestHeadingNumberingReadsATrueOrFalse are the pins.
+//
+// A revision is refused when it states no version or names a field the table
+// has no column for. TestARevisionMissingItsVersionIsRefusedNamingTheField,
+// TestARevisionWithAnUnknownFieldIsRefusedNamingIt and
+// TestRevisionsThatAreNotAListAreRefused are the pins.
+//
+// # The fields file is these same values, and not a second shape
+//
+// A restyle has no note, so ReadFields takes the thirteen values from a JSON
+// file the skill proposes and the author confirms. The keys are the note's own
+// keys and the defaults are shared rather than copied, so a file stating no
+// version reads as 1.0 exactly as a note does.
+// TestTheFieldsFileNamesTheSameThirteenValuesTheNoteDoes is the pin. Why that
+// file is read strictly, and why a value carrying a character Docs strips out
+// of an insert is refused by key, is internal/prelude's: it computes every
+// index it names from the length of the string it is about to send.
+//
+// # Nothing here reaches the network and nothing here writes a file
 package cover
 
 import (
@@ -46,8 +110,8 @@ var Classifications = map[string]string{
 // DefaultVersion is what a note that states no version publishes as.
 const DefaultVersion = "1.0"
 
-// defaultDateLayout is the month a note that states no date publishes as,
-// which is v1's "%B %Y".
+// defaultDateLayout is the month a note that states no date publishes as: the
+// month's name and the year.
 const defaultDateLayout = "January 2006"
 
 // now is a variable so a test can freeze the month.
@@ -263,9 +327,9 @@ func Read(src []byte) (Fields, []byte, error) {
 		f.Version = DefaultVersion
 	}
 	if f.Date == "" {
-		// v1's rule. Left empty, the cover line keeps the template's own
-		// highlighted "May 2025", so a note that states no date published a
-		// page one dated to whenever the master was captured.
+		// Left empty, the cover line keeps the template's own highlighted
+		// "May 2025", so a note that states no date publishes a page one dated
+		// to whenever the master was captured.
 		f.Date = now().Format(defaultDateLayout)
 	}
 	return f, []byte(body), nil
@@ -308,9 +372,9 @@ func names() []string {
 	return out
 }
 
-// readNumbering reads heading_numbering. v1 wrote "auto" and "none"; a boolean
-// is the shape a person guesses at, so both are read and anything else is
-// refused naming what was written.
+// readNumbering reads heading_numbering. The written words are "auto" and
+// "none", and a boolean is the shape a person guesses at, so both are read and
+// anything else is refused naming what was written.
 func readNumbering(fields map[string]ast.Node) (bool, error) {
 	return numbering(text(fields["heading_numbering"]))
 }

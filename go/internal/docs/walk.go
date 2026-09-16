@@ -5,6 +5,7 @@
 // is deliberately loose: what is named is read, what is not is ignored. The
 // front matter is the opposite case and decodes strictly, because there the
 // unknown key is a person's typo rather than Google's next release.
+
 package docs
 
 import (

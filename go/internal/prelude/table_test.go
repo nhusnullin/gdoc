@@ -183,8 +183,8 @@ func TestTheRevisionHistoryKeepsTheTemplatesRowsWhenTheFieldsDeclareNone(t *test
 	}
 
 	// Assert: the header, the template's own prototype row, and the blank row
-	// behind it. That is v1's early return: a note declaring no revisions
-	// keeps the rows a person fills in by hand.
+	// behind it. A note declaring no revisions keeps the rows a person fills
+	// in by hand.
 	rows, _ := tableSize(got.Requests, 1)
 	if rows != 3 {
 		t.Fatalf("the revision history has %d rows, want 3", rows)

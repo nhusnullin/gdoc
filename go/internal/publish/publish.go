@@ -1,24 +1,3 @@
-// Package publish puts a rendered document into Drive as a Google Doc.
-//
-// The upload is one multipart create: a JSON metadata part naming the folder,
-// the title and the Google Doc type, then the docx bytes internal/render
-// wrote. Drive converts the second part into a document because the first one
-// asked for it, and the new document's id comes back in the answer. That id is
-// also the second of the guard's two doors, so nothing here reaches a file the
-// run was not given: the policy opens with one folder and no file at all.
-//
-// A create that answered is not a document that is right, and this package does
-// not claim it is. It reads the document back through the Docs API for its
-// title and its tab count, and exports it as a docx to see whether the export
-// reads as one. Three facts, and Verified is the three together. Fewer than
-// three is the document reported with the route that did not hold named, never
-// a failure: a document that exists is a document that exists, and a caller
-// told the run failed is a caller that uploads a second one.
-//
-// Nothing here reads or writes a file. The note's bytes are cmd/gdoc's, which
-// is what keeps this package testable on a fake session, and it is also what
-// makes Rollback a separate call: whether the pairing could be recorded is a
-// question about a file, and this room does not have one.
 package publish
 
 import (

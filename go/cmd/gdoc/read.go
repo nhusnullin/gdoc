@@ -5,6 +5,7 @@
 // session on the guard's client, and hand what came back to a pure reader
 // package. The readers decide nothing, and neither does anything here: the
 // commands print facts and the skill reading the JSON judges.
+
 package main
 
 import (
@@ -70,15 +71,15 @@ var openSession = func(p *guard.Policy) (session, error) {
 // comment written behind it. Read cursorFloor for the rest of that.
 var now = time.Now
 
-// docURLPatterns are the URL shapes Nail pastes, ported from v1's
-// gdoc/docid.py. Three shapes, matched by two patterns: the editor URL is the
-// usual one, with or without the account segment below, and the ?id= shape is
-// what an older Drive link and a shared link carry.
+// docURLPatterns are the URL shapes Nail pastes. Three shapes, matched by two
+// patterns: the editor URL is the usual one, with or without the account
+// segment below, and the ?id= shape is what an older Drive link and a shared
+// link carry.
 //
 // The optional u/<n>/ segment is the account the browser is signed in as, and
-// it is in the address bar of anybody signed into more than one Google account.
-// v1's two patterns miss it, so the paste comes back as "not a Google Docs
-// URL" for a URL that is one.
+// it is in the address bar of anybody signed into more than one Google
+// account. A pattern that does not allow for it comes back as "not a Google
+// Docs URL" for a URL that is one.
 var docURLPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`/document/(?:u/\d+/)?d/([A-Za-z0-9_-]+)`),
 	regexp.MustCompile(`[?&]id=([A-Za-z0-9_-]+)`),
@@ -89,9 +90,9 @@ var docURLPatterns = []*regexp.Regexp{
 // as a 404 naming neither mistake.
 var driveID = regexp.MustCompile(`^[A-Za-z0-9_-]{20,}$`)
 
-// folderURLPattern is the shape a Drive folder URL has, ported from v1's
-// gdoc/docid.py. Opening the folder and copying the address bar is what a
-// person has at hand, so it is what the tool takes.
+// folderURLPattern is the shape a Drive folder URL has. Opening the folder and
+// copying the address bar is what a person has at hand, so it is what the tool
+// takes.
 var folderURLPattern = regexp.MustCompile(`/folders/([A-Za-z0-9_-]+)`)
 
 // documentURLPattern is a document URL, recognised here only so that handing
