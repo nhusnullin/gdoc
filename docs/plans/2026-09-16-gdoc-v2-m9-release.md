@@ -619,18 +619,32 @@ limit reaches the envelope as the sentence GitHub wrote.
 **Files:**
 - Create: `go/internal/update/apply.go`, `apply_test.go`
 
-- [ ] Test first, on a temp dir: a zip and its checksum line verify; a wrong
+- [x] Test first, on a temp dir: a zip and its checksum line verify; a wrong
       checksum refuses and leaves every file as it was; the replace sequence
       leaves `<path>` as the new binary and `<path>.previous` as the old; a
       second replace overwrites `.previous`; `Rollback` swaps back and refuses
       when there is no previous; a download cut short fails the checksum and
       replaces nothing.
-- [ ] `Apply` and `Rollback`, `archive/zip`, `crypto/sha256`, `os.Rename`.
+- [x] `Apply` and `Rollback`, `archive/zip`, `crypto/sha256`, `os.Rename`.
       Windows: the same rename sequence, and a note in `doc.go` that it is
       unmeasured until the Windows checklist.
-- [ ] `verified` is the hash of the file at its final path.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the update applied, verified, and reversible"`
+- [x] `verified` is the hash of the file at its final path.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the update applied, verified, and reversible"`
+
+➕ `Verify`, `Apply` and `Rollback`, with `Result` carrying the sum of the file
+at its final path and where the old binary went. The zip goes in as bytes
+rather than as a path: the command holds the download in memory anyway, and a
+checksum over bytes is one fewer temp file to clean up after a refusal.
+
+➕ The `.new` file is written through `internal/atomicfile`, which is already
+the one room that writes a file's contents and which syncs before its rename.
+The three renames after it are this package's own, because a running
+executable cannot be written through.
+
+➕ `Rollback` is a swap and not a move, so a rollback taken by mistake is one
+more rollback away from where it started:
+`TestARollbackRunTwiceIsWhereItStarted`. `internal/update` is at 87.7%.
 
 ### Task 9: gdoc update
 

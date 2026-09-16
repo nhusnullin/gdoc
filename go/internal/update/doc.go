@@ -1,11 +1,13 @@
 // Package update is the arithmetic of `gdoc update`: what a tag says, which
-// release of which channel a machine would install, and what a run does about
-// the difference. It holds no wire, no file and no state.
+// release of which channel a machine would install, what a run does about the
+// difference, and the replacement itself. It holds no wire and no state.
 //
-// Everything here is a function over values. The command in cmd/gdoc opens the
-// policy, fetches through internal/gapi and carries the decision out; this
-// package is handed what came back and answers. That is what makes the policy
-// table in the M9 plan a test over literals rather than a test over a network.
+// Everything but the replacement is a function over values. The command in
+// cmd/gdoc opens the policy, fetches through internal/gapi and carries the
+// decision out; this package is handed what came back and answers. That is
+// what makes the policy table in the M9 plan a test over literals rather than
+// a test over a network, and it is what leaves Apply with a temp directory as
+// its whole world.
 //
 // # Three integers, and not semver
 //
@@ -52,4 +54,35 @@
 // The decision says what to do and never why it matters. Whether a colleague
 // should take a nightly, and whether a major is worth the afternoon, is for
 // the person reading the object and the skills beside them.
+//
+// # Nothing moves before it is verified
+//
+// Apply checks the zip against its line of the release's checksum file first,
+// and only then touches the disk. A download cut short, a byte changed on the
+// way and an asset the checksum file says nothing about are all one refusal
+// with the old binary exactly where it was.
+// TestVerifyRefusesByNameWhatDoesNotMatch and
+// TestAWrongChecksumReplacesNothing.
+//
+// Then three renames: the new binary is written beside the old as <path>.new,
+// the old is renamed to <path>.previous, and the new is renamed into place. A
+// running executable cannot be written through, so a rename is the only way a
+// binary replaces itself, and every failure after the first rename puts the
+// old one back. Sum is hashed off the file at its final path rather than off
+// the bytes that were about to be written, because what a person runs
+// tomorrow is the file, not the download.
+// TestTheReplaceSequenceLeavesTheNewBinaryAndKeepsTheOld.
+//
+// gdoc never runs the binary it just installed. Nothing under go/ runs an
+// external program, so the proof that the update worked is the next envelope
+// a person sees, and Sum is what this run can honestly say about it.
+//
+// Rollback is a swap rather than a move: what was installed becomes
+// <path>.previous and the earlier binary comes back, so a rollback taken by
+// mistake is one more rollback away from where it started.
+// TestARollbackRunTwiceIsWhereItStarted.
+//
+// Windows is the same three renames, and os.Rename replaces the file it lands
+// on there as it does here. It is unmeasured until the Windows checklist in
+// the M9 plan runs, which is the first time gdoc replaces itself on Windows.
 package update
