@@ -733,10 +733,12 @@ first. This task makes the other documents agree with it.
 
 ### Task 11: close the milestone
 
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] PLAN.md's done table gains the M7d row, and the M7d section under open
-      work goes.
-- [ ] `git commit -m "docs(v2): close M7d"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] PLAN.md's done table gains the M7d row, and the M7d section under open
+      work goes. The row names the command table, the help, the two completion
+      scripts and the two skills. The M9 sentence that sent the `publish` and
+      `restyle` skills here stays, because it now points at a row.
+- [x] `git commit -m "docs(v2): close M7d"`
 
 ## Post-Completion
 
