@@ -701,32 +701,92 @@ every release, and below the major boundary too, so a checkout build is told
 - Create: `release/install.sh`
 - Create: `release/platforms`
 
-- [ ] `release/platforms` holds `darwin-arm64` and `darwin-amd64`, one per
+- [x] `release/platforms` holds `darwin-arm64` and `darwin-amd64`, one per
       line, with a comment saying Windows joins after its checklist.
-- [ ] `install.sh` has two entrances. Beside a `gdoc` binary, it installs
+- [x] `install.sh` has two entrances. Beside a `gdoc` binary, it installs
       what is there. Otherwise it asks `api.github.com` for the latest
       release of `nhusnullin/gdoc` whose tag has `z == 0`, downloads
       `gdoc-<tag>-<platform>.zip` and `SHA256SUMS-<tag>` for `uname -m`,
       verifies with `shasum -a 256`, unpacks to a temp dir and continues from
       there. `--tag <tag>` picks a release by hand. It refuses to run from
       inside a checkout of this repository.
-- [ ] It copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
+- [x] It copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
       sentence naming the developer install; strips `com.apple.quarantine`
       when `xattr` is present; runs `gdoc completion zsh --out
       ~/.config/gdoc-agent/completion.zsh --force`; prints the `source` line
       when `.zshrc` lacks it in any spelling; prints the two `/plugin`
       commands; and ends with `gdoc auth status`. It asks nothing.
-- [ ] `--skills global` or `--skills local` copies the three skill folders
+- [x] `--skills global` or `--skills local` copies the three skill folders
       from the zip into `~/.claude/skills` or `./.claude/skills`, each with
       a `.gdoc-installed` file naming the version. A folder carrying that
       file is replaced; a folder without it is refused by name; a symlink is
       refused by name. Without the flag no skill folder is touched, and the
       summary says the plugin commands are the first route and `--skills`
       the second.
-- [ ] Run it by hand against a scratch `HOME` on this machine, both
+- [x] Run it by hand against a scratch `HOME` on this machine, both
       entrances, and paste the summary into this task. The one-line form is
       `curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash`.
-- [ ] `git commit -m "feat(release): the installer in the zip, and the one line that fetches it"`
+- [x] `git commit -m "feat(release): the installer in the zip, and the one line that fetches it"`
+
+The two entrances, run against scratch homes on this machine on 2026-09-16.
+The zip entrance, from an unpacked folder holding `gdoc`, `skills/` and
+`install.sh`:
+
+```
+gdoc installed
+
+  version  c56940d
+  from     the zip unpacked at /tmp/gdoc-zip
+  gdoc     /tmp/gdoc-home/.local/bin/gdoc
+  complete /tmp/gdoc-home/.config/gdoc-agent/completion.zsh
+           add this line to ~/.zshrc:  source /tmp/gdoc-home/.config/gdoc-agent/completion.zsh
+
+  skills
+    not touched. The plugin is the first route, and Claude Code updates it:
+      /plugin marketplace add nhusnullin/gdoc
+      /plugin install gdoc@gdoc
+    Where plugins are turned off, re-run this with --skills global.
+
+  next     gdoc auth login, if this says signed out:
+
+{"ok":true,"data":{"auth_mode":"oauth","token_path":"/tmp/gdoc-home/.config/gdoc-agent/oauth-token.json","client_source":"bundled","token_present":false,"version":"c56940d"},"version":"c56940d"}
+```
+
+The fetching entrance, piped the way the one line pipes it. This repository has
+published no release yet, so the real run ends on the sentence for that, and it
+is the sentence a colleague gets if they run the one line before Task 14 cuts a
+tag:
+
+```
+$ cat release/install.sh | bash
+install: nhusnullin/gdoc has published no stable release yet. Ask Nail, or name a tag with --tag.
+```
+
+The download, the checksum and the unpack were rehearsed against a local
+release: the same script with `DOWNLOAD` pointed at a `file://` folder holding
+`gdoc-v2.0.0-darwin-arm64.zip` and `SHA256SUMS-v2.0.0`. It installed and
+reported `from     v2.0.0, downloaded and verified against SHA256SUMS-v2.0.0`,
+and with one byte appended to the zip it installed nothing:
+
+```
+install: gdoc-v2.0.0-darwin-arm64.zip hashes to 0dac49e4... and SHA256SUMS-v2.0.0 promised 39b7a1ed.... Nothing was installed.
+```
+
+The refusals were run too: a symlink at `~/.local/bin/gdoc`, a skill folder
+without the marker, a skill folder that is a symlink, an unknown flag, and the
+script run from inside this checkout. Each refuses by name, exits 1, and
+touches nothing. A release over the wire is Task 14's, with the rc tags.
+
+➕ The tag search needs `|| true` on its assignment. Under `pipefail` a listing
+with no stable release makes the middle `grep` exit 1, and the run died with no
+sentence at all before the empty tag could be reported.
+
+➕ Four boundary tests hold the script, in `go/boundary/release_test.go`. The
+script travels inside the zip and cannot read `release/platforms` or `skills/`
+from a stranger's machine, so it carries its own copy of both lists, and both
+copies are compared on every commit. The third test asks that the shell builds
+the same two file names `internal/update` asks the release for, and the fourth
+that no line touches `.zshrc` outside a `printf`, a `grep` or a comment.
 
 ### Task 11: the user README, the example note, the issue template
 

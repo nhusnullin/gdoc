@@ -195,4 +195,33 @@
 // and that it comes before the write: a rejected version has to leave the tree
 // exactly as it was, or a typo costs somebody a dirty plugin.json they then
 // have to notice.
+// # What a colleague unpacks, and the lists that travel with it
+//
+// release/install.sh runs on a machine nobody here has seen, and it travels
+// inside the release zip, so it cannot read release/platforms or skills/ from
+// that machine. It carries its own copy of both lists instead. Two copies of
+// one list is the shape that rots quietly, and the copy that rots is the one on
+// the stranger's machine, so both are compared here on every commit.
+//
+// TestTheInstallerOffersEveryPlatformTheReleaseCarries holds the installer's
+// PLATFORMS array against release/platforms, and both against the pairs make
+// dist builds. A platform in the file and not the array is a zip nobody can
+// install; one in the array and not the file is a download that 404s on the
+// machine that needs it. It also asks the platforms file to say why Windows is
+// built and not offered, which is a check that retires itself the day Windows
+// joins the list.
+//
+// TestTheReleaseInstallerCopiesEverySkillThePluginShips is the same rule
+// TestTheInstallerLinksEverySkillThePluginShips holds over the developer
+// install, over --skills instead of the symlinks.
+//
+// TestTheReleaseInstallerNamesTheFilesTheUpdaterNames pins the shell against
+// the Go. gdoc update and the installer fetch the same two files out of the
+// same release and each builds the names itself, so a renamed asset would be
+// fixed in one and forgotten in the other.
+//
+// TestTheReleaseInstallerNeverEditsTheZshrc holds the one promise the script
+// makes about a file it did not write. It prints the line to add and greps for
+// it; a mention of .zshrc outside a printf, a grep or a comment is the script
+// editing somebody's shell configuration.
 package boundary

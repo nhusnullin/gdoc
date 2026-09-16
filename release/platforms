@@ -1,0 +1,13 @@
+# The platforms a release carries a zip for, one per line, each <GOOS>-<GOARCH>.
+#
+# This is the list the release workflow walks: one zip per line, named
+# gdoc-<tag>-<platform>.zip, with one SHA256SUMS-<tag> covering all of them. It
+# is also the list install.sh offers, and the two are compared on every commit,
+# so a platform in one and not the other cannot reach a colleague.
+#
+# Windows joins this list after a colleague has run its checklist. `make dist`
+# already builds windows-amd64, but no gdoc has ever replaced a running gdoc.exe
+# on Windows, so it is not offered as an install until somebody has done it once
+# by hand.
+darwin-arm64
+darwin-amd64
