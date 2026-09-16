@@ -60,6 +60,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-10 | A named range over a suggested insertion | MEASURED.md |
 | 2026-09-10 | A table takes one index of its own at the end | MEASURED.md |
 | 2026-09-11 | `restyle --new` is not built | holds |
+| 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1745,3 +1746,62 @@ same result.
   about five counts, and nothing in the binary offered anything over it.
 
 Nothing in `go/` moves. No flag existed, so no flag is removed.
+
+## 2026-09-16. Help is an answer, completion is a written file, and two skills learn the tool from the tool.
+
+Nail's decision, taken in the brainstorm that produced the M7d plan. Serves
+principle 4, every word costs a reader's attention: a person at the terminal
+and a session in Claude Code both learn gdoc from gdoc, in the words it uses,
+and neither opens Go source to find a flag. Serves 1: nothing new has to be on
+the machine.
+
+**What was true before.** `gdoc --help` was `ok: false` and exit 1, and
+`cmd/gdoc/doc.go` said why: readable help would have to reach stdout beside
+the object, or exit 0 on a run that did no work. There was no completion. One
+skill existed, `gdoc-review`, and `build`, `publish` and `restyle` were learned
+by reading `doc.go`.
+
+**What changes.**
+
+- `gdoc help` and `gdoc help <words>` print one JSON object on stdout and the
+  human text on stderr, where the login URL already goes, and exit 0. Help is
+  an answer to a question, the way `auth status` with no token is. The output
+  contract does not move: one object, prose on stderr, exit 0 if and only if
+  the object says `ok`. `--help` and `-h` are aliases anywhere on the line,
+  recognised before the strict parser runs, so no parser refusal changes.
+- Bare `gdoc` still fails. It prints the help to stderr, keeps its `ok: false`
+  object, and exits 1. A run with no command did no work.
+- One command table in `cmd/gdoc/commands.go` is the only description of a
+  command. The dispatcher, the usage line, the help and the completion all
+  read it. A thirteenth command cannot exist without help and completion for
+  it, because the only way to be dispatched is to be in the table.
+- `gdoc completion zsh --out <path>` and `gdoc completion bash --out <path>`
+  write a shell completion script and report what they wrote. The script is
+  never printed to stdout, because that would be the one command whose stdout
+  is not an object. An existing path is refused without `--force`, the rule
+  `build --out` already holds. `install.sh` rewrites the zsh script on every
+  run and prints the `source` line; it never edits `.zshrc`. PowerShell waits
+  for M9 and the Windows smoke test.
+- Two new skills, `gdoc-publish` and `gdoc-restyle`. Two rather than one
+  router, because they start from different things, a note and a link, and a
+  skill triggers on its description. `gdoc-apply` stays retired and the name
+  is not reused.
+- A skill never holds a flag list. Before the first call of a command in a
+  session it runs `gdoc help <command>` and reads the words and flags from the
+  binary it is about to run. A test over every `SKILL.md` holds the other
+  direction: every command and flag a skill names exists in the table.
+- No fourth module. Cobra would give the help and the completion, and it would
+  replace a strict parser whose refusals are each pinned by a test.
+  `text/template` in the standard library renders the scripts.
+
+**What was rejected.** An MCP server inside the binary. Grants die with the
+process, and an MCP server is a long-lived process, so the per-run grant
+model would have to be argued about first. Every tool schema loads into every
+session against roughly forty tokens for an unopened skill. It does nothing
+for a person at the terminal. The 2026-08-29 entry above already keeps MCP on
+the other side of the wire for a different reason.
+
+**What this retires.** The `doc.go` paragraph "The binary never prompts, and
+--help is a failure", and the tests `TestTheUsageLineNamesEveryCommand` in its
+`--help` form and `TestEveryCommandDispatchReachesIsInTheUsageLine`, which read
+a switch that no longer exists. Their replacements are named in the M7d plan.

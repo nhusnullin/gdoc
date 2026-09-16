@@ -36,6 +36,26 @@ one is written against the code that exists by then.
 | M7c | `restyle --fields`, the cover, the three front-matter tables and the legend proposed as suggestions on a policy that granted nothing, marked by one named range | 2026-09-10 | `2026-09-10-gdoc-v2-m7c-house-template-as-suggestion.md` |
 | the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
+## M7d. Help, completion, and the two skills
+
+Decided 2026-09-16, DECISIONS.md. Plan:
+`docs/plans/2026-09-16-gdoc-v2-m7d-help-completion-skills.md`.
+
+gdoc has three readers and today all three learn it the hard way: a person at
+the terminal gets `ok: false` from `--help` and no completion, a Claude Code
+session has one skill and learns `build`, `publish` and `restyle` from
+`doc.go`, and a colleague's machine gets the same silence.
+
+What lands: one command table as the only description of a command, read by
+the dispatcher, the usage line, `help` and `completion`. `gdoc help` and
+`gdoc help <words>`, one object on stdout and the prose on stderr, exit 0,
+with `--help` and `-h` as aliases anywhere on the line. Bare `gdoc` still
+fails. `gdoc completion zsh --out` and `bash`, a written file and never
+stdout, rewritten by `install.sh` on every run. Two skills, `gdoc-publish` and
+`gdoc-restyle`, each running `gdoc help <command>` before its first call and
+holding no flag list, with a test over every `SKILL.md` holding the other
+direction. No fourth module.
+
 ## M8. The diff, alignment, and the align skill
 
 The align skill over `read`'s output and the hub markdown it reads itself:
@@ -71,13 +91,8 @@ smoke test over the config path, the token write-and-replace and the console
 output, the copy-one-file install story, and a stated install path for the
 skills on the one machine that runs them.
 
-The skills that do not exist yet land here, unless Nail wants one sooner.
-
-- **`publish` has no skill caller.** It is Nail-invoked.
-- **`restyle` has no skill caller either**, and it needs more than a wrapper.
-  Somebody has to write the fields file and read the report back: the sentence
-  that a restyle is a moment rather than a setting, and the `manual` list of what
-  gdoc could not do, are facts the binary prints and a skill has to say out loud.
+PowerShell completion lands here with the Windows smoke test. The `publish`
+and `restyle` skills moved to M7d on 2026-09-16.
 
 ## Outstanding by hand
 
