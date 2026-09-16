@@ -926,9 +926,9 @@ makes the other documents agree with them.
 
 ### Task 15: close the milestone
 
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] PLAN.md's done table gains the M9 row, and the open section goes.
-- [ ] `git commit -m "docs(v2): close M9"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] PLAN.md's done table gains the M9 row, and the open section goes.
+- [x] `git commit -m "docs(v2): close M9"`
 
 ## Post-Completion
 

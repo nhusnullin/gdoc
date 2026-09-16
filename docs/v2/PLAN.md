@@ -40,6 +40,7 @@ one is written against the code that exists by then.
 | M7b | `restyle --from`, the house style given to a handed-in document where it stands, under a grant that lasts one run and carries four request kinds, none of which can change a character | 2026-09-09 | `2026-09-09-gdoc-v2-m7b-restyle-in-place.md` |
 | M7c | `restyle --fields`, the cover, the three front-matter tables and the legend proposed as suggestions on a policy that granted nothing, marked by one named range | 2026-09-10 | `2026-09-10-gdoc-v2-m7c-house-template-as-suggestion.md` |
 | M7d | one command table as the only description of a command, read by the dispatcher, the usage line, `help` and `completion`, `--help` and `-h` anywhere on the line, the zsh and bash completion scripts the binary writes, and the `gdoc-publish` and `gdoc-restyle` skills, each learning its flags from `gdoc help` | 2026-09-16 | `2026-09-16-gdoc-v2-m7d-help-completion-skills.md` |
+| M9 | the version `x.y.z` from the tag in every envelope, a tag that builds and publishes a zip per platform as a GitHub Release, the one-line install, the skills as a Claude Code plugin from a marketplace in this repository, the nightly that tags `x.y.(z+1)` when main moved, and `gdoc update`, which runs only when a person types it and verifies what it downloads through the fifth guard grant | 2026-09-16 | `2026-09-16-gdoc-v2-m9-release.md` |
 | the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
 ## M8. Deferred
@@ -49,29 +50,6 @@ M8 are deferred whole to
 [the backlog](../backlog/m8-alignment-and-the-align-skill.md), Nail's decision
 of 2026-09-16, DECISIONS.md. The team's feedback after the release decides
 whether it comes back.
-
-## M9. The release, the nightly, and the updater
-
-Decided 2026-09-16 and revised the same evening, DECISIONS.md. Plan:
-`docs/plans/2026-09-16-gdoc-v2-m9-release.md`. Built and waiting on its
-acceptance run; it becomes a row in the table above when that run has passed.
-
-What landed: the version `x.y.z` in every envelope, in `help` and in `auth
-status`; a tag that builds and publishes one zip per platform as a GitHub
-Release of this repository, which is public since 2026-09-16; a one-line
-install for the binary and the same `install.sh` inside the zip; the skills as
-a Claude Code plugin from a marketplace in this repository, with two fallbacks
-for a managed Claude Code; a nightly that tags `x.y.(z+1)` when main moved;
-`gdoc update`, which runs only when a person types it, takes a minor version by
-default, a major one with `--major` and a nightly with `--nightly`, verifies
-every download and keeps the binary it replaced, through one read-only guard
-door; the skills addressing whoever is at the keyboard and naming the gdoc
-version they need; the two page breaks the front matter was missing, as one
-block read by both writers; a user README, an example note and an issue
-template.
-
-What is left: the acceptance run on Nail's own machine, `v2.0.0` itself, and
-Windows under its own tag once a colleague has run its checklist.
 
 ## Outstanding by hand
 

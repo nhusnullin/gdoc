@@ -1851,9 +1851,9 @@ person on the team asking for a document's edits to come back into the hub.
 ## 2026-09-16. The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin.
 
 Nail's decisions, taken in the brainstorm that produced the M9 plan,
-`docs/plans/2026-09-16-gdoc-v2-m9-release.md`. Serves principle 1: a colleague
-gets one zip, one installer and one binary that keeps itself current, with
-nothing else on the machine. Strains 3 in one bounded place, below.
+`docs/plans/completed/2026-09-16-gdoc-v2-m9-release.md`. Serves principle 1: a
+colleague gets one zip, one installer and one binary that keeps itself current,
+with nothing else on the machine. Strains 3 in one bounded place, below.
 
 **Releases live on this repository.** Nail made the source repository public
 later the same day, which is the entry below, so the separate releases
