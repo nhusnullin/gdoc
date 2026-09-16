@@ -1118,8 +1118,8 @@ func TestAnEmptyWindowIsNotWitnessed(t *testing.T) {
 // The wait is a flag on a command that already exists, so the usage line is
 // unchanged: there is no wait command, and nothing new to name.
 func TestTheWaitAddsNoCommandToTheUsageLine(t *testing.T) {
-	if strings.Contains(usage, "wait") {
-		t.Errorf("--wait is a flag, not a command: %q", usage)
+	if strings.Contains(usageLine(), "wait") {
+		t.Errorf("--wait is a flag, not a command: %q", usageLine())
 	}
 }
 

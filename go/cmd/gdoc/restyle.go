@@ -64,11 +64,7 @@ import (
 	"gdoc/internal/restyle"
 )
 
-func cmdRestyle(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--dry-run": false, "--from": true, "--fields": true})
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdRestyle(a *args) emit.Result {
 	switch {
 	case a.has("--dry-run") && a.has("--from"):
 		return emit.Result{OK: false, Error: "restyle takes --dry-run or --from, and this run gave both: " +
@@ -829,7 +825,7 @@ type savedSurvey struct {
 
 // readSurvey reads what `restyle --dry-run` printed and the caller saved.
 //
-// The read is strict, for the reason parseArgs refuses an unknown flag and
+// The read is strict, for the reason parseArgsN refuses an unknown flag and
 // frontmatter reads with yaml.Strict(). This file is the only record of what
 // the document held before the run and the only thing standing between a
 // direct-edit grant and a document nobody looked at, so a file gdoc half

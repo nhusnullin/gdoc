@@ -19,8 +19,6 @@ import (
 	"gdoc/internal/guard"
 )
 
-const usage = "Commands: auth status, auth login, read, comments, suggestions, restyle, probe, reply, propose, withdraw, build, publish"
-
 // login is the login flow behind a variable so a test can stand in for the
 // browser trip. The client is the guard's, so even the token exchange passes a
 // policy that could refuse it.
@@ -69,51 +67,36 @@ func safeDispatch(ctx context.Context, args []string, errOut io.Writer) (r emit.
 // trapped inside the wait rather than here: every other command makes its
 // requests and ends, and Ctrl-C kills it the way it always did.
 func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result {
-	// Exactly two words, and no more. A command that accepts and ignores what
-	// it does not understand tells the user it did something it did not:
-	// `gdoc auth login --token /path` must not read as a plain login.
-	if len(args) == 2 && args[0] == "auth" {
-		switch args[1] {
-		case "status":
-			return authStatus()
-		case "login":
-			return authLogin(errOut)
-		}
-	}
-	// The read and write commands take their own arguments, so they are matched
-	// on the first word and parse the rest themselves. Strictly: parseArgs
-	// refuses an unknown flag, a repeated one and an extra positional argument.
-	if len(args) > 0 {
-		switch args[0] {
-		case "read":
-			return cmdRead(args[1:])
-		case "comments":
-			return cmdComments(ctx, args[1:])
-		case "suggestions":
-			return cmdSuggestions(args[1:])
-		case "restyle":
-			return cmdRestyle(args[1:])
-		case "probe":
-			return cmdProbe(args[1:])
-		case "reply":
-			return cmdReply(args[1:])
-		case "propose":
-			return cmdPropose(args[1:])
-		case "withdraw":
-			return cmdWithdraw(args[1:])
-		case "build":
-			return cmdBuild(args[1:])
-		case "publish":
-			return cmdPublish(args[1:])
-		}
-	}
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown
-	// command ""` names nothing and reads like a fault in the tool.
+	// command ""` names nothing and reads like a fault in the tool. The run did
+	// no work, so it still fails and still exits 1. What is new is that the
+	// person who typed it reads the whole help, on the stream words go to.
 	if len(args) == 0 {
-		return emit.Result{OK: false, Error: "gdoc needs a command. " + usage}
+		fmt.Fprint(errOut, helpProse(commands(), true))
+		return emit.Result{OK: false, Error: "gdoc needs a command. " + usageLine()}
 	}
-	return emit.Result{OK: false,
-		Error: fmt.Sprintf("unknown command %q. %s", strings.Join(args, " "), usage)}
+	// --help and -h are the same question wherever they stand on the line, and
+	// they are answered before the table is walked and before the parser runs.
+	// So `gdoc restyle --from x --help` is an answer rather than a refusal of a
+	// flag restyle does not take, and no parser refusal changes.
+	if rest, asked := helpAsked(args); asked {
+		return cmdHelp(helpWords(rest), errOut)
+	}
+	c := match(args)
+	if c == nil {
+		return unknownCommand(args)
+	}
+	// The rest of the line is parsed here, with the flag set and the word count
+	// the command's own table entry describes. Strictly, as everywhere: an
+	// unknown flag, a repeated one, a missing value and an extra word each fail
+	// naming the offender. So `gdoc auth login --token /path` is refused for
+	// the flag rather than read as a plain login that quietly dropped it, and
+	// `gdoc auth` on its own matches no entry and is an unknown command.
+	a, err := parseArgsN(args[len(c.nameWords()):], c.flagSet(), c.wants())
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	return c.run(ctx, a, errOut)
 }
 
 func authStatus() emit.Result {

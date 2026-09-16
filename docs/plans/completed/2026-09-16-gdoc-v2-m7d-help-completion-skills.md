@@ -342,32 +342,56 @@ cursor or a wait length. A document URL offers nothing either.
 - Modify: `go/cmd/gdoc/main.go`, `read.go`, `write.go`, `restyle.go`, `build.go`, `publish.go`
 - Modify: `go/cmd/gdoc/main_test.go`
 
-- [ ] Test first, `TestEveryCommandInTheTableIsDispatchedAndNothingElseIs`:
+- [x] Test first, `TestEveryCommandInTheTableIsDispatchedAndNothingElseIs`:
       for each table entry, call `dispatch` with its name and a deliberately
       bad flag, and assert the refusal is the command's own and not `unknown
       command`; then call with a word that is in no entry and assert `unknown
       command`. This replaces `TestEveryCommandDispatchReachesIsInTheUsageLine`,
       which read the switch that no longer exists.
-- [ ] Test, `TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes`: for
+- [x] Test, `TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes`: for
       each entry, the `flagSet` derived from its flags is the one the command
       hands to `parseArgsN`. Written so a flag added to a command and not to
       its entry fails here.
-- [ ] `commands.go`: the `command` and `flag` types, the `kind` enum, the
+- [x] `commands.go`: the `command` and `flag` types, the `kind` enum, the
       `commands` slice with all twelve entries, `flagSet()` on a command, and
       `usageLine()` joined from the names. Each summary in the reader's words,
       each example a line a person can copy.
-- [ ] `main.go`: `dispatch` walks the table by longest matching name. The
+- [x] `main.go`: `dispatch` walks the table by longest matching name. The
       `usage` const goes; the unknown-command and no-command refusals print
       `usageLine()`. The two-word `auth` rule stays true by construction and
       its test stays green.
-- [ ] Each `cmd*` function takes its `flagSet` from its table entry instead of
+- [x] Each `cmd*` function takes its `flagSet` from its table entry instead of
       an inline literal.
-- [ ] `TestTheUsageLineNamesEveryCommand` keeps its literal list of twelve and
+- [x] `TestTheUsageLineNamesEveryCommand` keeps its literal list of twelve and
       asserts against the unknown-command refusal rather than `--help`, since
       `--help` changes meaning in Task 2.
-- [ ] Every existing `cmd/gdoc` test passes without an assertion changed.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "refactor(v2): one command table, and the dispatcher over it"`
+- [x] Every existing `cmd/gdoc` test passes without an assertion changed.
+- ➕ Test, `TestEveryFlagIsReadTheWayItsKindSays`: a flag the table says
+      carries a value is read for one, through `a.flags` or `required`, and a
+      flag that carries none is read for its presence and nothing else. Added
+      because the two tests above cannot catch a `kind` that lies: the parser
+      is fed the table either way.
+- ➕ Test, `TestNoCommandBuildsAFlagSetOfItsOwn`: no production file in the
+      package builds a `flagSet` any more, which is the other direction of the
+      flag-set test and what makes it more than a tautology.
+- ⚠️ Scope, the `run` signature. The plan wrote
+      `run(ctx, rest []string, errOut)` with each command parsing its own rest.
+      It is `run(ctx, a *args, errOut)` instead: `dispatch` parses with the
+      entry's flag set and `len(words)`, and hands the command its `*args`.
+      One parse call rather than twelve, and "a command parses with the flag
+      set its entry describes" is then true by construction rather than by
+      convention. Every parser refusal is unchanged, because the parser and
+      what it is fed are unchanged.
+- ⚠️ Scope, the `kind` enum has no `mask`. The plan listed one, and no flag in
+      the twelve is a field mask. `restyle --fields` names a file. Added when a
+      flag needs it.
+- ⚠️ Scope, `go/cmd/gdoc/doc.go` is touched in this task, not only in Task 9.
+      It named `TestEveryCommandDispatchReachesIsInTheUsageLine`, which is
+      gone, and said `gdoc auth login --token /path` is an unknown command.
+      It is now refused naming the flag, which is the same rule one word later.
+      The "--help is a failure" paragraph is untouched and stays for Task 2.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "refactor(v2): one command table, and the dispatcher over it"`
 
 ### Task 2: help
 
@@ -376,33 +400,52 @@ cursor or a wait length. A document URL offers nothing either.
 - Create: `go/cmd/gdoc/help_test.go`
 - Modify: `go/cmd/gdoc/commands.go`, `main.go`, `doc.go`
 
-- [ ] Test first, `TestHelpIsOneObjectAndTheProseIsOnStderr`: run `help` with
+- [x] Test first, `TestHelpIsOneObjectAndTheProseIsOnStderr`: run `help` with
       two buffers; stdout decodes as one object with `ok: true` and
       `data.commands` naming all twelve plus `help` and `completion`; stderr
       holds the usage line and each name; exit 0.
-- [ ] Test, `TestHelpForOneCommandCarriesItsWordsFlagsAndExample`: `help
+- [x] Test, `TestHelpForOneCommandCarriesItsWordsFlagsAndExample`: `help
       publish` returns one entry whose flags, placeholders and example match
       literals written in the test, not read from the table.
-- [ ] Test, `TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow`: `help auth`
+- [x] Test, `TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow`: `help auth`
       returns two entries; `help sing` is `ok: false`, exit 1, naming `sing`
       and the usage line.
-- [ ] Test, `TestDashDashHelpIsAnAliasAnywhereOnTheLine`: `--help`, `-h`,
+- [x] Test, `TestDashDashHelpIsAnAliasAnywhereOnTheLine`: `--help`, `-h`,
       `read --help`, `--help read` and `restyle --from x --help` each answer
       the same as `help` or `help read` or `help restyle`.
-- [ ] Test, `TestBareGdocStillFailsAndPrintsTheHelpToStderr`: no arguments is
+- [x] Test, `TestBareGdocStillFailsAndPrintsTheHelpToStderr`: no arguments is
       `ok: false`, exit 1, the object unchanged from today, and the full help
       on stderr. `TestNoArgumentsFails` stays as it is.
-- [ ] Test, `TestHelpTakesWordsAndNoFlags`: `help --md x` is refused by name.
-- [ ] `help.go`: the `help` entry in the table, the prefix match, the JSON
+- [x] Test, `TestHelpTakesWordsAndNoFlags`: `help --md x` is refused by name.
+- [x] `help.go`: the `help` entry in the table, the prefix match, the JSON
       rendering and the prose rendering. The alias check in `dispatch` before
       the table walk.
-- [ ] `doc.go`: the paragraph "The binary never prompts, and --help is a
+- [x] `doc.go`: the paragraph "The binary never prompts, and --help is a
       failure" becomes "The binary never prompts, and help is an answer",
       stating the rule, the reason, and naming the tests above. The section
       "The twelve commands" says the table is the one description and names
       Task 1's tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc help, one object on stdout and the prose on stderr"`
+- ⚠️ Scope, the table is a function and not a variable. `help` is an entry in
+      the table and reads the table, so `var commands` refers to itself through
+      a function, which Go refuses as an initialization cycle. `commands()`
+      hands each caller its own slice. `commands_test.go` reads `commands()`
+      instead of `commands`; no assertion in it changed.
+- ⚠️ Scope, "the usage line" on stderr is `Usage: gdoc <command> [words]
+      [flags]`, not the comma-joined line a refusal prints. Printing both would
+      name every command twice on one screen, which is principle 4 read
+      backwards. The refusal is unchanged and still carries `usageLine()`.
+- ➕ `everyCommandName` in `help_test.go` is the literal list `help` must come
+      back with, and Task 3 adds `completion` to it. The count is thirteen
+      today and fourteen after Task 3, which is what Task 10 checks.
+- ➕ `command.anyWords` and `command.wants()`: `help` takes however many words
+      it is handed, because the words are another command's name and that is
+      two, one, or none. `parseArgsN` already reads a negative want as "any",
+      so no parser refusal changed.
+- ➕ `unknownCommand` moved beside `usageLine` in `commands.go`, because both
+      `dispatch` and `help` refuse a word the table does not carry, and they
+      must refuse it with the same sentence.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc help, one object on stdout and the prose on stderr"`
 
 ### Task 3: completion for zsh
 
@@ -413,24 +456,35 @@ cursor or a wait length. A document URL offers nothing either.
 - Modify: `go/cmd/gdoc/commands.go`, `build.go` (only if `freeToWrite` needs
   to move to a shared file), `doc.go`
 
-- [ ] Test first, `TestTheZshScriptNamesEveryCommandAndEveryFlag`: render
+- [x] Add `completion` to `everyCommandName` in `help_test.go`, which is the
+      literal list `gdoc help` must come back with.
+- [x] Test first, `TestTheZshScriptNamesEveryCommandAndEveryFlag`: render
       the script and assert every table name and every flag appears, that a
       `file` flag is followed by `_files` and an id flag is not, that the
       script opens with `#compdef gdoc` and ends with `compdef _gdoc gdoc`.
-- [ ] Test, `TestCompletionWritesTheFileAndReportsTheLineToAdd`: `completion
+- [x] Test, `TestCompletionWritesTheFileAndReportsTheLineToAdd`: `completion
       zsh --out <tmp>` writes the script, stdout is one object with `shell`,
       `wrote` as an absolute path and `add_to_zshrc`, exit 0.
-- [ ] Test, `TestCompletionRefusesAnExistingOutUnlessForced`, in the shape of
+- [x] Test, `TestCompletionRefusesAnExistingOutUnlessForced`, in the shape of
       `TestBuildRefusesAnExistingOutUnlessForced`: refused, file left byte for
       byte, then replaced with `--force`. A directory is refused with the flag.
-- [ ] Test, `TestCompletionArgumentsAreStrict`: no shell word, an unknown
+- [x] Test, `TestCompletionArgumentsAreStrict`: no shell word, an unknown
       shell, a missing `--out`, and an extra word are each refused by name.
-- [ ] `completion.go`: the `completion` entry, the template data built from
+- [x] `completion.go`: the `completion` entry, the template data built from
       the table, `freeToWrite` reused, the write through `internal/atomicfile`.
-- [ ] `doc.go`: a section "Completion is a file, and the reason is the output
+- [x] `doc.go`: a section "Completion is a file, and the reason is the output
       contract", naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc completion zsh, written to a file"`
+- ⚠️ Scope, `completion` counts its own word. Its entry carries `anyWords`,
+      as `help` does, and `oneShell` refuses a missing word, an unknown shell
+      and an extra word by name. The parser's refusal for one missing word
+      says "this command needs a document", which is the wrong sentence for a
+      shell, and changing that sentence would change a refusal every other
+      command shares.
+- ⚠️ Scope, no `zsh -n` in a test, as the plan said. The script was checked by
+      hand in this iteration instead: `zsh -n` is clean and a bare `zsh -f`
+      sources it and registers `_gdoc`. Typing Tab at it is Task 10's.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc completion zsh, written to a file"`
 
 ### Task 4: completion for bash
 
@@ -438,109 +492,161 @@ cursor or a wait length. A document URL offers nothing either.
 - Create: `go/cmd/gdoc/completion_bash.tmpl` (embedded)
 - Modify: `go/cmd/gdoc/completion.go`, `completion_test.go`
 
-- [ ] Test first, `TestTheBashScriptNamesEveryCommandAndEveryFlag`: the same
+- [x] Test first, `TestTheBashScriptNamesEveryCommandAndEveryFlag`: the same
       assertions as zsh over the bash rendering, ending with `complete -F
       _gdoc gdoc`, with `compgen -f` after a `file` flag and nothing after an
       id flag.
-- [ ] The report key is `add_to_bashrc`, asserted.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc completion bash"`
+- [x] The report key is `add_to_bashrc`, asserted, in
+      `TestCompletionBashWritesTheFileAndNamesBashrc`, which also asserts the
+      bash report never carries `add_to_zshrc`.
+- ➕ `shells()` became a table of rows, each a shell with the key its line to
+      add comes under and the function that renders it. The report is a map
+      rather than a struct, because the third key names the shell's own file.
+- ➕ `byFirstWord` was lifted out of `zshGroups`, because both renderings
+      group the table the same way and only say it differently. `doc.go` says
+      so in the completion section.
+- ⚠️ Scope, no `bash -n` in a test, as with zsh. The script was checked by
+      hand in this iteration: `bash -n` is clean, and sourcing it and driving
+      `_gdoc` with `COMP_WORDS` set gives the commands at word one, `status
+      login` under `auth`, the flags under `build`, `--house` for `--h`, and
+      nothing after `--wait`.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc completion bash"`
 
 ### Task 5: install.sh writes the completion and links every skill
 
 **Files:**
 - Modify: `install.sh`
 
-- [ ] After the binary is built, `"$GO_BIN" completion zsh --out
+- [x] After the binary is built, `"$GO_BIN" completion zsh --out
       "$REPO/bin/gdoc.zsh" --force >/dev/null`, and the summary prints the
       `source` line when `.zshrc` does not already contain it. The script
       never edits `.zshrc`.
-- [ ] `SKILL=gdoc-review` becomes a list of three, and the link block runs
+- [x] `SKILL=gdoc-review` becomes a list of three, and the link block runs
       once per skill with the same three branches: a link is repointed, a
       differing real directory is refused, an equal one is replaced.
-- [ ] The "What is installed" summary lists every skill linked.
-- [ ] The comment at the top of the file names the completion file and says it
+- [x] The "What is installed" summary lists every skill linked.
+- [x] The comment at the top of the file names the completion file and says it
       is rewritten on every run.
-- [ ] Run `./install.sh` on this machine and paste its output into this task
+- [x] Run `./install.sh` on this machine and paste its output into this task
       as the check. `gdoc help` on PATH answers.
-- [ ] `git commit -m "chore: install.sh writes the completion and links three skills"`
+
+  ⚠️ The three-skill run is red until Task 7 lands, because `skills/gdoc-publish`
+  and `skills/gdoc-restyle` are written in Tasks 6 and 7. Every source is
+  checked before any link is made, so the run stops with nothing half done:
+
+  ```
+  install: missing /Users/nailkhusnullin/src/personal/gdoc/skills/gdoc-publish
+  exit: 1
+  ```
+
+  The same script with `SKILLS=(gdoc-review)` runs green, which is the check of
+  the completion, the loop and the summary:
+
+  ```
+  gdoc installed
+
+    source   /Users/nailkhusnullin/src/personal/gdoc
+    version  e70768c on gdoc-v2-m7d-help-completion-skills + uncommitted changes
+    gdoc     /Users/nailkhusnullin/.local/bin/gdoc -> /Users/nailkhusnullin/src/personal/gdoc/bin/gdoc
+    complete /Users/nailkhusnullin/src/personal/gdoc/bin/gdoc.zsh
+             add this line to ~/.zshrc:  source /Users/nailkhusnullin/src/personal/gdoc/bin/gdoc.zsh
+
+    skills (linked, so edits are live with no reinstall)
+      gdoc-review  -> /Users/nailkhusnullin/src/personal/gdoc/skills/gdoc-review
+
+    next     gdoc auth status, and gdoc auth login if it says signed out
+  ```
+
+  `gdoc help` on PATH answers with one object and exit 0. The full three-skill
+  run is a checkbox in Task 10.
+- [x] `git commit -m "chore: install.sh writes the completion and links three skills"`
 
 ### Task 6: the gdoc-publish skill
 
 **Files:**
 - Create: `skills/gdoc-publish/SKILL.md`
 
-- [ ] Front matter: `name: gdoc-publish`, and a description in one sentence
+- [x] Front matter: `name: gdoc-publish`, and a description in one sentence
       that names the trigger: Nail names a note in the hub and a Drive folder
       and wants the note in Drive as a Google Doc in the house style.
-- [ ] Setup, in `gdoc-review`'s shape: `GDOC=gdoc`, `ROOT="$PWD"`, the
+- [x] Setup, in `gdoc-review`'s shape: `GDOC=gdoc`, `ROOT="$PWD"`, the
       one-object rule, and the new rule: before the first call of a command in
       this session, run `$GDOC help <command>` and read its words and flags
       from the object. The skill lists no flag itself.
-- [ ] The credential paragraph and the dry-run paragraph, as the review skill
+- [x] The credential paragraph and the dry-run paragraph, as the review skill
       has them. A dry run here is `build` to a scratch path under the session's
       scratchpad, which touches no network, and the report read back.
-- [ ] Steps: read the note's front matter first, and if a `gdoc:` block already
+- [x] Steps: read the note's front matter first, and if a `gdoc:` block already
       names a document, repeat the binary's refusal in Nail's words and never
       remove the block. Then `publish` with the folder Nail named. Read the
       object back and say: the URL, what `verified` and each check say, what
       `files_changed` lists, whether `rolled_back` is set, and every warning.
-- [ ] After a publish, say the three things only a person can check by opening
+- [x] After a publish, say the three things only a person can check by opening
       the document: the logo in the first-page header, the contents list, the
       footer page numbers. Facts the binary printed, judged by Nail.
-- [ ] Never: never remove or edit a `gdoc:` block, never run git, never pass a
+- [x] Never: never remove or edit a `gdoc:` block, never run git, never pass a
       folder the binary was not handed, never call `publish` twice on one note.
-- [ ] `git commit -m "feat(skill): gdoc-publish"`
+- [x] `git commit -m "feat(skill): gdoc-publish"`
 
 ### Task 7: the gdoc-restyle skill
 
 **Files:**
 - Create: `skills/gdoc-restyle/SKILL.md`
 
-- [ ] Read `go/internal/prelude/doc.go`, `go/internal/restyle/doc.go` and
+- [x] Read `go/internal/prelude/doc.go`, `go/internal/restyle/doc.go` and
       `cover.Fields` first. The cover values and the second-run rules in this
       skill come from those, not from this plan.
-- [ ] Front matter: `name: gdoc-restyle`, and a description naming the
+- [x] Front matter: `name: gdoc-restyle`, and a description naming the
       trigger: Nail gives a link to a Google Doc gdoc did not write and wants
       it in the house style where it stands.
-- [ ] Setup, credential and dry-run paragraphs as in Task 6, with the same
+- [x] Setup, credential and dry-run paragraphs as in Task 6, with the same
       help-first rule.
-- [ ] Step 1, the survey, always: `restyle <url> --dry-run` to a file, then say
+- [x] Step 1, the survey, always: `restyle <url> --dry-run` to a file, then say
       in plain words what the document holds: threads, pending suggestions,
       chips, tabs, named ranges. If `nothing_to_protect` is true, offer the
       read-note-publish route in one sentence and never take it alone.
-- [ ] Step 2, the cover: ask whether the house cover is wanted. If yes, propose
+- [x] Step 2, the cover: ask whether the house cover is wanted. If yes, propose
       each of the thirteen values from the document and the hub, show them,
       and write the fields file only after Nail confirms. `Title` is never
       invented: it is proposed and confirmed.
-- [ ] Step 3, the styling run: say what will be sent and ask once more, because
+- [x] Step 3, the styling run: say what will be sent and ask once more, because
       this is the one direct edit gdoc ever makes. Then `restyle <url> --from
       <survey> [--fields <fields>]`.
-- [ ] Step 4, the report: read `manual` out loud, each step with its menu path;
+- [x] Step 4, the report: read `manual` out loud, each step with its menu path;
       say `verified`; say if the run stopped half way and what that leaves;
       say that a restyle is a moment and not a setting, so the next heading
       Nail types will not carry the house look.
-- [ ] Never: never run the styling without the survey read in this session,
+- [x] Never: never run the styling without the survey read in this session,
       never retry a batch Docs refused, never run on a document with more than
       one tab, never invent a cover value, never run git.
-- [ ] `git commit -m "feat(skill): gdoc-restyle"`
+- [x] `git commit -m "feat(skill): gdoc-restyle"`
 
 ### Task 8: the test over every skill
 
 **Files:**
-- Create: `go/cmd/gdoc/skills_test.go`
+- Create: `go/cmd/gdoc/skills_test.go`, which reads `../../../skills/*/SKILL.md`
 
-- [ ] Test first, `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas`: walk
+- [x] Test first, `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas`: walk
       `../../skills/*/SKILL.md`, find every `gdoc <words>` and `$GDOC <words>`,
       resolve the words against the table by longest prefix, and assert a
       match; for each `--flag` on the same line, assert the matched command
       takes it. A `--flag` on a line with no command is ignored.
-- [ ] The test fails when it finds no skill files, so a moved directory is a
+- [x] The test fails when it finds no skill files, so a moved directory is a
       failure rather than an empty pass.
-- [ ] Run it against the three skills; fix any stale call in `gdoc-review`
-      this finds, as its own checkbox added here with ➕.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "test(v2): every skill names only commands and flags the binary has"`
+- [x] Run it against the three skills; fix any stale call in `gdoc-review`
+      this finds, as its own checkbox added here with ➕. It found none: every
+      call in the three skills names a command in the table with flags that
+      command takes.
+- [x] ➕ The skills wrap an inline call across two lines, so the span reader
+      follows a call cut in half by a line break. Outside a code fence only
+      `$GDOC` opens a call, because prose puts a warning gdoc printed in
+      backticks too.
+- [x] ➕ `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` also fails when a
+      skill file carries no call at all, so a rewrite that stops naming the
+      binary is a failure rather than an empty pass.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "test(v2): every skill names only commands and flags the binary has"`
 
 ### Task 9: the documents
 
@@ -552,52 +658,87 @@ The DECISIONS.md entry for this milestone is already written, dated
 2026-09-16, with its register row, because a SPEC change is a DECISIONS entry
 first. This task makes the other documents agree with it.
 
-- [ ] SPEC.md "The binary": a paragraph on `help` and `completion`, in the
+- [x] SPEC.md "The binary": a paragraph on `help` and `completion`, in the
       present tense, with one sentence each on the output contract holding and
       on completion being a written file.
-- [ ] SPEC.md "Output contract": unchanged in every bullet. Read it and confirm
+- [x] SPEC.md "Output contract": unchanged in every bullet. Read it and confirm
       rather than assume, since decision 1 was designed to keep it so.
-- [ ] SPEC.md "The skills, and how a comment reaches one": four skills, two
+- [x] SPEC.md "The skills, and how a comment reaches one": four skills, two
       Nail-invoked, and the help-first rule as one sentence.
-- [ ] PLAN.md: the M7d section under "Done" becomes a row in Task 11. M9's
+- [x] PLAN.md: the M7d section under "Done" becomes a row in Task 11. M9's
       line "The skills that do not exist yet land here" and its two bullets go,
-      replaced by one sentence that PowerShell completion lands at M9.
-- [ ] CLAUDE.md "What lives where": `go/cmd/gdoc/` row says twelve commands
+      replaced by one sentence that PowerShell completion lands at M9. M9
+      already reads that way, so the Done row is all that is left, and that row
+      is Task 11's.
+- [x] CLAUDE.md "What lives where": `go/cmd/gdoc/` row says twelve commands
       plus help and completion. `skills/` row names three skills. "If you
       touch": the command row adds "its help"; a new row for a skill points at
       `skills/`. The invariant "Skills are linked, not copied" names all three.
       Stays under 300 lines.
-- [ ] `go/cmd/gdoc/doc.go`: every rule this milestone added names its test.
+- [x] `go/cmd/gdoc/doc.go`: every rule this milestone added names its test.
       `TestEveryPackageHasExactlyOnePackageComment` green.
-- [ ] `cd go && go test -race ./...` passes, the docs tests included.
-- [ ] `git commit -m "docs(v2): help, completion and the two skills in SPEC, PLAN and CLAUDE.md"`
+- [x] `cd go && go test -race ./...` passes, the docs tests included.
+- [x] `git commit -m "docs(v2): help, completion and the two skills in SPEC, PLAN and CLAUDE.md"`
 
 ### Task 10: verify acceptance criteria
 
-- [ ] `make build`; `bin/gdoc help` exits 0 with one object on stdout and the
+- [x] `make build`; `bin/gdoc help` exits 0 with one object on stdout and the
       prose on stderr, checked with `bin/gdoc help >/dev/null` and
       `bin/gdoc help 2>/dev/null | head -c 1` reading `{`.
-- [ ] `bin/gdoc help publish`, `bin/gdoc restyle --help`, `bin/gdoc -h read`
+      Both hold: exit 0, stdout opens `{`, the fourteen-line list is on stderr.
+- [x] `bin/gdoc help publish`, `bin/gdoc restyle --help`, `bin/gdoc -h read`
       each answer. Bare `bin/gdoc` exits 1 with the help on stderr.
-- [ ] `bin/gdoc completion zsh --out /tmp/gdoc.zsh --force`, then in a fresh
+      All three exit 0 with the one object on stdout and the usage of that one
+      command on stderr. `completion --help` answers the same way. Bare
+      `bin/gdoc` exits 1 with the full list on stderr and nothing on stdout.
+- [x] `bin/gdoc completion zsh --out /tmp/gdoc.zsh --force`, then in a fresh
       `zsh -f`: `autoload -Uz compinit && compinit && source /tmp/gdoc.zsh`,
       then type `gdoc pub<Tab>` and `gdoc publish --<Tab>`. Record what was
       offered here. This is a person at a keyboard, not a test.
-- [ ] `bin/gdoc help 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["data"]["commands"]))'`
-      prints 14: twelve commands plus `help` and `completion`.
-- [ ] `grep -c -- '--' skills/gdoc-publish/SKILL.md skills/gdoc-restyle/SKILL.md`
+      Driven through a real interactive `zsh -f -i` on a pseudo-terminal
+      (`zmodload zsh/zpty`), because this session has no keyboard. What came
+      back, verbatim:
+
+      ```
+      gdoc pub<Tab>        -> gdoc publish          (unique match, completed)
+      gdoc comp<Tab>       -> gdoc completion       (unique match, completed)
+      gdoc publish --<Tab> -> --folder-id  -- the Drive folder the document is created in
+                              --house      -- a house style file other than the one inside gdoc
+                              --md         -- the note to publish
+      gdoc <Tab>           -> auth, build, comments, completion, help, probe,
+                              propose, publish, read, reply, restyle,
+                              suggestions, withdraw, each with its sentence
+      ```
+
+      Thirteen names at the top level, `auth` standing for its two words, which
+      is the table read back. Nail still does the keyboard pass in
+      Post-Completion; this records that the script loads and offers.
+- [x] `bin/gdoc help 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d["data"]["commands"]))'`
+      prints 14: twelve commands plus `help` and `completion`. It prints 14.
+- [x] `grep -c -- '--' skills/gdoc-publish/SKILL.md skills/gdoc-restyle/SKILL.md`
       shows no flag list: the only `--` occurrences are inside the example
       lines the help-first rule quotes, if any.
-- [ ] `make test`, `make vet`, `make dist` green. CI runs when the branch is
+      Two each, and both are the front matter fences on lines 1 and 4. Neither
+      skill names a single flag.
+- [x] `make test`, `make vet`, `make dist` green. CI runs when the branch is
       pushed, which is Nail's to do.
-- [ ] `wc -l CLAUDE.md` under 300.
+      `make vet` clean, gofmt clean, `go test -race ./...` all packages ok,
+      `make dist` wrote the three binaries into `bin/`.
+- [x] `wc -l CLAUDE.md` under 300. It is 228.
+- [x] ➕ `./install.sh` runs green with all three skills present, which Task 5
+      could not check because two of them did not exist yet.
+      Green. It wrote `bin/gdoc.zsh`, linked `~/.local/bin/gdoc`, and listed
+      `gdoc-review`, `gdoc-publish` and `gdoc-restyle` as symlinks into
+      `skills/`. The tree was clean, so no `+ uncommitted changes` line.
 
 ### Task 11: close the milestone
 
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] PLAN.md's done table gains the M7d row, and the M7d section under open
-      work goes.
-- [ ] `git commit -m "docs(v2): close M7d"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] PLAN.md's done table gains the M7d row, and the M7d section under open
+      work goes. The row names the command table, the help, the two completion
+      scripts and the two skills. The M9 sentence that sent the `publish` and
+      `restyle` skills here stays, because it now points at a row.
+- [x] `git commit -m "docs(v2): close M7d"`
 
 ## Post-Completion
 

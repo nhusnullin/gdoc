@@ -19,10 +19,15 @@
 // test helper in both directions: a helper that accepts a trailing byte would
 // pass every other test in this package over output no skill can read.
 //
-// # The twelve commands
+// # The commands, and the one table that describes them
 //
-// dispatch matches these and nothing else. Each names the package that does the
-// work, so a reader looking for a rule starts there rather than here.
+// commands.go holds the table, and dispatch matches what is in it and nothing
+// else. Each entry carries the words a caller types, the flags it takes with a
+// sentence for each, one example, and the function that runs it. Nothing else
+// in this package lists a command or a flag: the usage line is joined from the
+// table, and the parser a command is handed is built from the flags its entry
+// names. The list below names the package that does the work, so a reader
+// looking for a rule starts there rather than here.
 //
 //   - auth status: the OAuth state, from internal/auth.
 //   - auth login: the browser trip, internal/auth and internal/auth/loopback.
@@ -45,13 +50,51 @@
 //     at all. internal/house, internal/cover, internal/body, internal/render.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
+//   - help [<command>]: the table itself, as an object and as words. help.go.
+//   - completion <shell> --out [--force]: the table as a shell script, written
+//     to a file. completion.go, with the template beside it.
 //
-// The usage line is the whole of the help, so it has to name every command
-// that exists. Two tests hold that together.
-// TestTheUsageLineNamesEveryCommand spells the twelve out word for word, as a
-// reader sees them. TestEveryCommandDispatchReachesIsInTheUsageLine reads the
-// case labels out of dispatch, so a thirteenth command cannot answer a caller
-// while the help stays silent about it.
+// The usage line names every command that exists, because it is joined from
+// the table. Three tests hold the table and the usage line together.
+// TestTheUsageLineNamesEveryCommand spells the fourteen out word for word, as a
+// reader sees them, so it cannot follow a rename in the code.
+// TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
+// asks it to refuse a flag, so a new command cannot sit in the table
+// unreachable, and a word in no entry is refused as unknown.
+// TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes and
+// TestNoCommandBuildsAFlagSetOfItsOwn hold the flags the same way: a command
+// takes what its entry names, and has nowhere else to keep a flag.
+// TestEveryFlagIsReadTheWayItsKindSays is the third direction, that a flag the
+// table says carries a file is read for a value and one that carries none is
+// read for its presence.
+//
+// The usage line is held the same way, and for the same reason. Each flag
+// carries how it stands in the call beside its kind, so the line brackets what
+// may be left out and puts a bar between alternatives: publish reads --md
+// --folder-id [--house <file>] and restyle reads --dry-run | --from <file>,
+// which is the list above rather than every flag run together. The object
+// carries the same thing as a word, because a skill reads the object where a
+// person reads the line. TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative
+// spells the twelve lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
+// holds the word beside them, and TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout
+// is the binary's own witness: a flag the table calls required is refused by
+// name when it is missing, and a flag marked wrong in either direction fails
+// there before it can reach a reader.
+//
+// The example is held the same way, because a skill builds its call from what
+// help printed and an example the binary would refuse teaches a call that
+// fails. TestEveryExampleIsACallTheTableAccepts reads every example without
+// running it: it opens with the binary and the command's own words, the rest
+// parses with that entry's flag set and word count, and a value whose kind
+// says how it is written is written that way, so a duration is 9m and not 60.
+// TestTheCommentsExampleShowsTheCursorItsWaitNeeds holds the one rule the
+// table cannot see, that cmdComments refuses --wait without --since.
+//
+// The table is a function and not a variable, and that is Go and not taste.
+// help is an entry in it and reads it, so a variable would refer to itself
+// through a function, which is an initialization cycle the compiler refuses.
+// Each caller is handed its own slice, so nothing keeps a pointer into a table
+// somebody else is reading.
 //
 // # auth status is a report, and being signed out is an answer
 //
@@ -98,20 +141,107 @@
 // TestAFailedLoginIsOneFailingEnvelope is the other half: a login that did not
 // happen is still one object.
 //
-// # The binary never prompts, and --help is a failure
+// # The binary never prompts, and help is an answer
 //
 // Nothing here reads stdin. A command missing something fails and says what is
-// missing, and does not ask. There is no help command either, so gdoc --help is
-// ok: false and exit 1, with the one-line usage string in the error. That is
-// deliberate rather than an oversight: readable help would have to reach stdout
-// beside the object, or exit 0 on a run that did no work, and both break the
-// contract every caller has. TestUnknownCommandFailsAndNamesItself is the pin,
-// and TestNoArgumentsFails covers the bare word, which quotes nothing back
+// missing, and does not ask.
+//
+// help is the one command whose whole output is words, and it still keeps the
+// contract. The object goes to stdout, the words a person reads go to stderr
+// where the login URL already goes, and it exits 0, because a question was
+// asked and answered. That is the same shape auth status has with no token.
+// TestHelpIsOneObjectAndTheProseIsOnStderr is the pin, with
+// TestHelpForOneCommandCarriesItsWordsFlagsAndExample over the shape a skill
+// reads and TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow over the prefix
+// match and the refusal.
+//
+// Until M7d gdoc --help was ok: false, and the reason written here was that
+// readable help would have to reach stdout beside the object or exit 0 on a run
+// that did no work. stderr answers the first and a question answered is not a
+// run that did no work, so the rule retired. The decision is in
+// docs/v2/DECISIONS.md, dated 2026-09-16.
+//
+// --help and -h are aliases for help, wherever they stand on the line, and they
+// are read before the table is walked and before the parser runs. So gdoc
+// restyle --from x --help is an answer rather than a refusal of a flag restyle
+// does not take, and every parser refusal below is untouched.
+// TestDashDashHelpIsAnAliasAnywhereOnTheLine is the pin.
+//
+// Bare gdoc is the one place the two halves part. It did no work, so it is
+// still ok: false and exit 1, with the object unchanged and nothing quoted back
 // because unknown command "" names nothing and reads like a fault in the tool.
+// The whole help goes to stderr beside it, so the person who typed it reads
+// what they could have typed. TestUnknownCommandFailsAndNamesItself,
+// TestNoArgumentsFails and TestBareGdocStillFailsAndPrintsTheHelpToStderr are
+// the pins, and TestHelpTakesWordsAndNoFlags holds that help itself is parsed
+// as strictly as everything else.
 //
 // TODO(test): no test pins that the binary never reads stdin. Nothing in the
 // tree names os.Stdin today, so the rule holds by absence rather than by a
 // check somebody would see fail.
+//
+// # Completion is a file, and the reason is the output contract
+//
+// gdoc completion <shell> --out <path> renders the command table as a script
+// for that shell, writes it through internal/atomicfile, and prints one object
+// saying the shell, the absolute path it wrote and the line to add. That last
+// key names the file the line goes in, add_to_zshrc or add_to_bashrc, so a
+// bash user is never handed a line about .zshrc. The script itself never
+// reaches stdout. A script there would make this the one command
+// whose stdout is not an object, and the contract is worth more than a file
+// that has to be written again after an upgrade. install.sh writes it again on
+// every run, or warns saying why it could not, and it never edits .zshrc: it
+// prints the line and a person adds it.
+//
+// The script is a rendering of the table help prints, so a Tab offers a word
+// or a flag the table holds and nothing else. A flag whose kind is a file
+// offers file names, and every other kind offers nothing, because nothing on
+// this machine knows a Drive folder id, a cursor or a wait length, and neither
+// does anything know a document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag and
+// TestTheBashScriptNamesEveryCommandAndEveryFlag are the pins, and each asks
+// the table rather than a list of its own, so a command added without a line
+// in the script fails there.
+//
+// The bash script sets complete -o filenames for the whole command, so a
+// directory offered for a file flag gets a trailing slash and no trailing
+// space, and a space in a path is escaped as it is inserted. Scoping the option
+// to the one arm that offers file names needs compopt, and macOS ships bash
+// 3.2, which has none, so it is set for all of them. The cost is the one place
+// a Tab offers what the parser refuses: a command word matching a directory in
+// the caller's current folder gets a slash too, so in a folder holding build/,
+// gdoc bu<Tab> completes to gdoc build/ and the binary refuses it by name. One
+// visible character on a rare word against every directory a file flag ever
+// descends into. zsh has neither problem, because _files does the work there.
+// TestTheBashScriptNamesEveryCommandAndEveryFlag pins the registration line
+// the option lives on.
+//
+// Both shells group the table the same way, through byFirstWord, because both
+// complete the way a person types: one word, then a second word or a flag.
+// They differ in the language each says it in. zsh reads a description beside
+// every word and a spec per flag; bash has neither, so a flag is a word in a
+// compgen -W list and what follows it is a case over the word before the
+// cursor.
+//
+// --out is build's rule and build's own check: a file already there is refused
+// without --force, a directory is refused whatever the flag says, and a
+// refused run writes nothing.
+// TestCompletionRefusesAnExistingOutUnlessForced is the pin, with
+// TestCompletionWritesTheFileAndReportsTheLineToAdd over what the object says
+// and TestCompletionArgumentsAreStrict over the four refusals.
+//
+// completion counts its own word rather than leaving it to the parser, which
+// is why its table entry says anyWords. The parser's refusal for one missing
+// word names a document, and what is missing here is a shell.
+//
+// zsh and bash today, PowerShell at M9 with the Windows smoke test. Each is a
+// row in shells(), which is what a refusal reads the known shells out of:
+// TestCompletionArgumentsAreStrict, with
+// TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
+//
+// No test sources the script in a real shell, because nothing under go/ runs an
+// external program and TestNothingRunsAnExternalProgram holds that over the
+// test files too. The script is checked structurally here, and a person types
+// Tab at it once per milestone.
 //
 // # A panic is still one envelope
 //
@@ -134,7 +264,7 @@
 // and ignores what it did not understand tells the caller it did something it
 // did not.
 //
-// The last of those is why parseArgs looks the next argument up in the
+// The last of those is why parseArgsN looks the next argument up in the
 // command's own flag set rather than refusing anything that starts with a dash:
 // a cursor is base64url, and "-" is in that alphabet, so a real cursor value
 // would be refused as a flag.
@@ -146,9 +276,10 @@
 // TestRestyleArgumentsAreStrict, TestPublishArgumentsAreStrict and
 // TestBuildRefusesAMissingFlagByName over the commands that take more.
 //
-// The same rule holds one word earlier. auth takes exactly two words, so
-// gdoc auth login --token /path is an unknown command rather than a plain
-// login that quietly ignored a flag.
+// The same rule holds for the commands that take nothing. auth login takes no
+// words and no flags, so gdoc auth login --token /path is refused naming the
+// flag rather than read as a plain login that quietly ignored it, and bare
+// gdoc auth matches no entry and is an unknown command.
 //
 // # Only the wait traps a signal
 //
