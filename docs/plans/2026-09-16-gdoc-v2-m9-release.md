@@ -30,7 +30,7 @@ Windows follows under its own tag when a colleague has run its checklist.
 | release | `make dist` by hand | a tag builds it in CI, zips it, and publishes it as a GitHub Release of this repository, which is public |
 | nightly | none | main moved since the last tag: CI bumps the plugin version, tags `x.y.(z+1)` at 02:00 UTC and releases it |
 | binary install | `install.sh` in a checkout | one line, `curl -fsSL .../release/install.sh \| bash`, which fetches the latest release zip, verifies it and copies the binary; the same script runs from an unpacked zip |
-| skills install | a symlink into a checkout | `/plugin marketplace add nhusnullin/gdoc` then `/plugin install gdoc@gdoc`; this repository is the marketplace and the plugin |
+| skills install | a symlink into a checkout | three routes by the machine's policy: `/plugin marketplace add nhusnullin/gdoc` then `/plugin install gdoc@gdoc` where plugins are open; `install.sh --skills global\|local` copying from the zip where marketplaces are restricted but local skills load; and the administrator enabling this plugin in managed settings where nothing else loads |
 | update | by hand | `gdoc update`, when a person runs it and never otherwise: minor by default, `--major` for a major, `--nightly` for a nightly, `--check` to look, `--rollback` to go back. Skills update through Claude Code's own plugin toggle |
 | skills | say "Nail", point at Nail's checkout | say "you", carry no path, and name the binary version they need |
 | page breaks | none in the docx route | before "Version Control" and before "Contents", in both routes, from one block in the house style |
@@ -59,16 +59,27 @@ refactor. A task that finds one wrong stops and says so.
    it applies when run: same `x`, higher `y`, by default; a higher `x` only
    with `--major`; a higher `z` only with `--nightly`; never down. It says
    what it did in its object.
-4. **The skills travel as a Claude Code plugin.** This repository carries
-   `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it
-   is both the plugin and the marketplace, and `skills/` stays exactly where
-   it is. A colleague installs with two `/plugin` commands, chooses global or
+4. **The skills travel as a Claude Code plugin, with two fallbacks by
+   policy.** This repository carries `.claude-plugin/plugin.json` and
+   `.claude-plugin/marketplace.json`, so it is both the plugin and the
+   marketplace, and `skills/` stays exactly where it is. Where plugins are
+   open, a colleague installs with two `/plugin` commands, chooses global or
    per-project in Claude Code's own terms, and updates through Claude Code's
-   per-marketplace toggle. The 2026-08-14 decision, skills are linked and
-   never copied, stays true as written: Claude Code holds its own copy the
-   way it holds every plugin, and nothing in gdoc copies a skill folder.
-5. **The zip carries the binary and the README**, and the installer copies
-   the binary, strips quarantine, and says the two plugin commands. It asks
+   per-marketplace toggle. Where an administrator has restricted
+   marketplaces but personal and project skills still load, the zip carries
+   `skills/` and `install.sh --skills global|local` copies them, marked so a
+   re-run replaces only what it wrote; re-running the installer is the
+   update. Where `strictPluginOnlyCustomization` blocks everything but
+   plugins and managed settings, the administrator enables this plugin in
+   `managed-settings.json` with `extraKnownMarketplaces` and
+   `enabledPlugins`, which is a two-line change because the plugin format is
+   what managed settings speak. The README says which route applies and
+   how to tell. The 2026-08-14 decision, skills are linked and never copied,
+   holds for a checkout; a release copy exists only on the fallback route,
+   and nothing in gdoc's binary copies a skill folder.
+5. **The zip carries the binary, the README and the skills**, and the
+   installer copies the binary, strips quarantine, and says the plugin
+   commands. It copies the skills only when `--skills` says so, and asks
    nothing. The binary still never prompts.
 6. **A skill names the binary version it needs.** Its Setup runs `gdoc help`
    first, reads the version from the object, and when it is older than the
@@ -127,6 +138,15 @@ refactor. A task that finds one wrong stops and says so.
   set on 2026-09-16, and the release workflow passes it to `make dist`. A
   build without it cannot sign anyone in, so a release built without the
   secret is a failed release, and the workflow refuses to publish one.
+- **A managed Claude Code can lock this down.** `strictKnownMarketplaces`
+  and `blockedMarketplaces` refuse a marketplace before any network call;
+  `strictPluginOnlyCustomization` blocks skills from `~/.claude/skills` and
+  `.claude/skills` entirely, leaving plugins and managed settings as the
+  only sources. An organisation distributes to everyone through
+  `managed-settings.json`, with `extraKnownMarketplaces` naming the
+  marketplace and `enabledPlugins` turning the plugin on, or through the
+  admin console. code.claude.com/docs/en/plugin-marketplaces,
+  settings-reference, admin-setup.
 - **A Claude Code plugin** is a folder with `.claude-plugin/plugin.json`,
   holding `name`, `description` and an optional `version`, and a `skills/`
   directory beside it. A marketplace is a repository with
@@ -240,7 +260,8 @@ nightly does the same for `x.y.(z+1)`.
 `plugin.json` carries the tag's version, runs the same four checks the Go
 workflow runs, then `make dist` with the secret, then for each line of
 `release/platforms` packs `gdoc-<tag>-<platform>.zip` holding the binary,
-`install.sh`, `README.md` and `example/`, writes `SHA256SUMS-<tag>`, and
+`skills/`, `install.sh`, `README.md` and `example/`, writes
+`SHA256SUMS-<tag>`, and
 creates the GitHub Release. The nightly, `nightly.yml`, runs on a cron, reads
 the last tag, and if main moved, bumps `plugin.json`, commits, tags
 `x.y.(z+1)`, and calls `release.yml` with it.
@@ -546,6 +567,13 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
       ~/.config/gdoc-agent/completion.zsh --force`; prints the `source` line
       when `.zshrc` lacks it in any spelling; prints the two `/plugin`
       commands; and ends with `gdoc auth status`. It asks nothing.
+- [ ] `--skills global` or `--skills local` copies the three skill folders
+      from the zip into `~/.claude/skills` or `./.claude/skills`, each with
+      a `.gdoc-installed` file naming the version. A folder carrying that
+      file is replaced; a folder without it is refused by name; a symlink is
+      refused by name. Without the flag no skill folder is touched, and the
+      summary says the plugin commands are the first route and `--skills`
+      the second.
 - [ ] Run it by hand against a scratch `HOME` on this machine, both
       entrances, and paste the summary into this task. The one-line form is
       `curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash`.
@@ -558,8 +586,12 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Create: `.github/ISSUE_TEMPLATE/report.md`
 
 - [ ] `README.md` under a hundred lines: what gdoc is in three sentences;
-      the one-line install; the two `/plugin` commands and where Claude Code
-      keeps its update toggle; sign in with an `altery.com` account, and that
+      the one-line install; the skills by policy, in three short paragraphs:
+      the two `/plugin` commands where plugins are open, `--skills` where a
+      marketplace is refused, and the two managed-settings lines to hand to
+      the administrator where nothing else loads, with the one command that
+      tells which case a machine is in; where Claude Code keeps its plugin
+      update toggle; sign in with an `altery.com` account, and that
       everyone signs in once more after 2026-09-16; three things to try;
       `gdoc update` and its flags, and that nothing updates on its own; how
       to report; what gdoc never does. Plain English, no em dashes.
@@ -580,7 +612,7 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
       version is not the tag; setup-go from `go.mod`; gofmt, vet, the raced
       suite; `make dist` with `GDOC_OAUTH_CLIENT_SECRET` from secrets, and a
       refusal when it is empty; pack one zip per line of `release/platforms`
-      with the binary renamed to `gdoc`, `release/install.sh`,
+      with the binary renamed to `gdoc`, `skills/`, `release/install.sh`,
       `release/README.md`, `release/example/`; write `SHA256SUMS-<tag>`;
       `gh release create <tag>` with the assets and the commit subjects since
       the previous tag as notes.
@@ -626,7 +658,8 @@ makes the other documents agree with them.
 - [ ] In a scratch project: `/plugin marketplace add` pointing at the branch
       and `/plugin install gdoc@gdoc`; `gdoc-publish` triggers on a sentence
       naming a note and a folder, runs `gdoc help` first, and reads the
-      version.
+      version. Then in a second scratch home, `install.sh --skills global`
+      from the zip, and the same skill triggers from the copied folder.
 - [ ] Publish `example/first-note.md` from the scratch project into Nail's
       test folder, and read the document back.
 - [ ] Repeat the tag as `v2.0.0-rc2`. In the scratch home, `gdoc update

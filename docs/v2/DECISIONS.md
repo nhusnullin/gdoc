@@ -1896,8 +1896,18 @@ colleague installs with `/plugin marketplace add nhusnullin/gdoc` and
 own terms, and updates through Claude Code's per-marketplace toggle. The
 first draft of this entry had the installer copying skill folders with a
 version marker and the updater replacing them; Claude Code already does that
-job for every plugin, so gdoc does not do it twice. The 2026-08-14 decision,
-skills are linked and never copied, stays true as written. The plugin's
+job for every plugin, so gdoc does not do it twice. Two fallbacks exist
+because a managed Claude Code can refuse a marketplace, and with
+`strictPluginOnlyCustomization` can refuse personal and project skills too:
+where a marketplace is refused but local skills load, the zip carries
+`skills/` and `install.sh --skills global|local` copies them, marked so a
+re-run replaces only what it wrote; where nothing but plugins and managed
+settings load, the administrator names this marketplace in
+`extraKnownMarketplaces` and turns the plugin on in `enabledPlugins`, two
+lines in `managed-settings.json`, which is the reason the plugin format is
+worth having even for a team that could copy folders. The 2026-08-14
+decision, skills are linked and never copied, holds for a checkout; a
+release copy exists only on the fallback route. The plugin's
 version is the tag's, and a release whose two versions disagree is refused
 by the workflow. A skill names the binary version it needs in its front
 matter and, when `gdoc help` reports an older one, says so and names `gdoc
