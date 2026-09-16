@@ -342,32 +342,56 @@ cursor or a wait length. A document URL offers nothing either.
 - Modify: `go/cmd/gdoc/main.go`, `read.go`, `write.go`, `restyle.go`, `build.go`, `publish.go`
 - Modify: `go/cmd/gdoc/main_test.go`
 
-- [ ] Test first, `TestEveryCommandInTheTableIsDispatchedAndNothingElseIs`:
+- [x] Test first, `TestEveryCommandInTheTableIsDispatchedAndNothingElseIs`:
       for each table entry, call `dispatch` with its name and a deliberately
       bad flag, and assert the refusal is the command's own and not `unknown
       command`; then call with a word that is in no entry and assert `unknown
       command`. This replaces `TestEveryCommandDispatchReachesIsInTheUsageLine`,
       which read the switch that no longer exists.
-- [ ] Test, `TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes`: for
+- [x] Test, `TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes`: for
       each entry, the `flagSet` derived from its flags is the one the command
       hands to `parseArgsN`. Written so a flag added to a command and not to
       its entry fails here.
-- [ ] `commands.go`: the `command` and `flag` types, the `kind` enum, the
+- [x] `commands.go`: the `command` and `flag` types, the `kind` enum, the
       `commands` slice with all twelve entries, `flagSet()` on a command, and
       `usageLine()` joined from the names. Each summary in the reader's words,
       each example a line a person can copy.
-- [ ] `main.go`: `dispatch` walks the table by longest matching name. The
+- [x] `main.go`: `dispatch` walks the table by longest matching name. The
       `usage` const goes; the unknown-command and no-command refusals print
       `usageLine()`. The two-word `auth` rule stays true by construction and
       its test stays green.
-- [ ] Each `cmd*` function takes its `flagSet` from its table entry instead of
+- [x] Each `cmd*` function takes its `flagSet` from its table entry instead of
       an inline literal.
-- [ ] `TestTheUsageLineNamesEveryCommand` keeps its literal list of twelve and
+- [x] `TestTheUsageLineNamesEveryCommand` keeps its literal list of twelve and
       asserts against the unknown-command refusal rather than `--help`, since
       `--help` changes meaning in Task 2.
-- [ ] Every existing `cmd/gdoc` test passes without an assertion changed.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "refactor(v2): one command table, and the dispatcher over it"`
+- [x] Every existing `cmd/gdoc` test passes without an assertion changed.
+- ➕ Test, `TestEveryFlagIsReadTheWayItsKindSays`: a flag the table says
+      carries a value is read for one, through `a.flags` or `required`, and a
+      flag that carries none is read for its presence and nothing else. Added
+      because the two tests above cannot catch a `kind` that lies: the parser
+      is fed the table either way.
+- ➕ Test, `TestNoCommandBuildsAFlagSetOfItsOwn`: no production file in the
+      package builds a `flagSet` any more, which is the other direction of the
+      flag-set test and what makes it more than a tautology.
+- ⚠️ Scope, the `run` signature. The plan wrote
+      `run(ctx, rest []string, errOut)` with each command parsing its own rest.
+      It is `run(ctx, a *args, errOut)` instead: `dispatch` parses with the
+      entry's flag set and `len(words)`, and hands the command its `*args`.
+      One parse call rather than twelve, and "a command parses with the flag
+      set its entry describes" is then true by construction rather than by
+      convention. Every parser refusal is unchanged, because the parser and
+      what it is fed are unchanged.
+- ⚠️ Scope, the `kind` enum has no `mask`. The plan listed one, and no flag in
+      the twelve is a field mask. `restyle --fields` names a file. Added when a
+      flag needs it.
+- ⚠️ Scope, `go/cmd/gdoc/doc.go` is touched in this task, not only in Task 9.
+      It named `TestEveryCommandDispatchReachesIsInTheUsageLine`, which is
+      gone, and said `gdoc auth login --token /path` is an unknown command.
+      It is now refused naming the flag, which is the same rule one word later.
+      The "--help is a failure" paragraph is untouched and stays for Task 2.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "refactor(v2): one command table, and the dispatcher over it"`
 
 ### Task 2: help
 

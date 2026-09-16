@@ -57,11 +57,7 @@ type publishData struct {
 	Body         body.Counts    `json:"body"`
 }
 
-func cmdPublish(raw []string) emit.Result {
-	a, err := parseArgsN(raw, flagSet{"--md": true, "--folder-id": true, "--house": true}, 0)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdPublish(a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}

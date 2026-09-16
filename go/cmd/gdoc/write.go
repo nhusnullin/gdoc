@@ -76,11 +76,7 @@ func required(a *args, name string) (string, error) {
 	return a.flags[name], nil
 }
 
-func cmdProbe(raw []string) emit.Result {
-	a, err := parseArgsN(raw, flagSet{"--folder": true}, 0)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdProbe(a *args) emit.Result {
 	folder, err := required(a, "--folder")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -110,11 +106,7 @@ type replyData struct {
 	Verified   bool   `json:"verified"`
 }
 
-func cmdReply(raw []string) emit.Result {
-	a, err := parseArgsN(raw, flagSet{"--body-file": true}, 2)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdReply(a *args) emit.Result {
 	path, err := required(a, "--body-file")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -196,11 +188,7 @@ type proposeData struct {
 	FilesChanged []string         `json:"files_changed,omitempty"`
 }
 
-func cmdPropose(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--from": true, "--folder": true, "--md": true})
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdPropose(a *args) emit.Result {
 	from, err := required(a, "--from")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -516,11 +504,7 @@ type withdrawData struct {
 	FilesChanged          []string `json:"files_changed,omitempty"`
 }
 
-func cmdWithdraw(raw []string) emit.Result {
-	a, err := parseArgsN(raw, flagSet{"--md": true}, 2)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdWithdraw(a *args) emit.Result {
 	suggestionID := a.at(1)
 	if suggestionID == "" {
 		return emit.Result{OK: false, Error: "this command needs the id of the suggestion to withdraw"}

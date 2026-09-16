@@ -338,11 +338,7 @@ type readData struct {
 	Structure  any    `json:"structure,omitempty"`
 }
 
-func cmdRead(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--structure": false})
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdRead(a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -480,19 +476,16 @@ func parseWait(text string) (time.Duration, error) {
 	return d, nil
 }
 
-func cmdComments(ctx context.Context, raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--since": true, "--witness": false, "--wait": true})
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdComments(ctx context.Context, a *args) emit.Result {
 	var since *comments.Cursor
 	if a.has("--since") {
 		// Before the session, because a cursor nobody can read is a mistake in
 		// the call rather than something a read could fix.
-		since, err = comments.ParseCursor(a.flags["--since"])
+		parsed, err := comments.ParseCursor(a.flags["--since"])
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error()}
 		}
+		since = parsed
 	}
 	var deadline time.Duration
 	if a.has("--wait") {
@@ -503,10 +496,11 @@ func cmdComments(ctx context.Context, raw []string) emit.Result {
 			return emit.Result{OK: false,
 				Error: "--wait needs --since: the cursor is what makes a window, and a wait without one answers with the whole document"}
 		}
-		deadline, err = parseWait(a.flags["--wait"])
+		parsed, err := parseWait(a.flags["--wait"])
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error()}
 		}
+		deadline = parsed
 	}
 	r, err := open(a.target())
 	if err != nil {
@@ -710,11 +704,7 @@ type suggestionsData struct {
 	FilesChanged []string              `json:"files_changed,omitempty"`
 }
 
-func cmdSuggestions(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--md": true})
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdSuggestions(a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}

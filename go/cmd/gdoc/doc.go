@@ -21,8 +21,13 @@
 //
 // # The twelve commands
 //
-// dispatch matches these and nothing else. Each names the package that does the
-// work, so a reader looking for a rule starts there rather than here.
+// commands.go holds the table, and dispatch matches what is in it and nothing
+// else. Each entry carries the words a caller types, the flags it takes with a
+// sentence for each, one example, and the function that runs it. Nothing else
+// in this package lists a command or a flag: the usage line is joined from the
+// table, and the parser a command is handed is built from the flags its entry
+// names. The list below names the package that does the work, so a reader
+// looking for a rule starts there rather than here.
 //
 //   - auth status: the OAuth state, from internal/auth.
 //   - auth login: the browser trip, internal/auth and internal/auth/loopback.
@@ -46,12 +51,19 @@
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
 //
-// The usage line is the whole of the help, so it has to name every command
-// that exists. Two tests hold that together.
+// The usage line is the whole of the help today, so it has to name every
+// command that exists. Three tests hold the table and the usage line together.
 // TestTheUsageLineNamesEveryCommand spells the twelve out word for word, as a
-// reader sees them. TestEveryCommandDispatchReachesIsInTheUsageLine reads the
-// case labels out of dispatch, so a thirteenth command cannot answer a caller
-// while the help stays silent about it.
+// reader sees them, so it cannot follow a rename in the code.
+// TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
+// asks it to refuse a flag, so a thirteenth command cannot sit in the table
+// unreachable, and a word in no entry is refused as unknown.
+// TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes and
+// TestNoCommandBuildsAFlagSetOfItsOwn hold the flags the same way: a command
+// takes what its entry names, and has nowhere else to keep a flag.
+// TestEveryFlagIsReadTheWayItsKindSays is the third direction, that a flag the
+// table says carries a file is read for a value and one that carries none is
+// read for its presence.
 //
 // # auth status is a report, and being signed out is an answer
 //
@@ -146,9 +158,10 @@
 // TestRestyleArgumentsAreStrict, TestPublishArgumentsAreStrict and
 // TestBuildRefusesAMissingFlagByName over the commands that take more.
 //
-// The same rule holds one word earlier. auth takes exactly two words, so
-// gdoc auth login --token /path is an unknown command rather than a plain
-// login that quietly ignored a flag.
+// The same rule holds for the commands that take nothing. auth login takes no
+// words and no flags, so gdoc auth login --token /path is refused naming the
+// flag rather than read as a plain login that quietly ignored it, and bare
+// gdoc auth matches no entry and is an unknown command.
 //
 // # Only the wait traps a signal
 //

@@ -64,11 +64,7 @@ import (
 	"gdoc/internal/restyle"
 )
 
-func cmdRestyle(raw []string) emit.Result {
-	a, err := parseArgs(raw, flagSet{"--dry-run": false, "--from": true, "--fields": true})
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdRestyle(a *args) emit.Result {
 	switch {
 	case a.has("--dry-run") && a.has("--from"):
 		return emit.Result{OK: false, Error: "restyle takes --dry-run or --from, and this run gave both: " +

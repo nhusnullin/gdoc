@@ -50,12 +50,7 @@ type buildData struct {
 	Body        body.Counts `json:"body"`
 }
 
-func cmdBuild(raw []string) emit.Result {
-	a, err := parseArgsN(raw, flagSet{
-		"--md": true, "--out": true, "--house": true, "--force": false}, 0)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
+func cmdBuild(a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
