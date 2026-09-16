@@ -456,18 +456,18 @@ and `house.yaml` is read by both writers:
 - Modify: `go/internal/prelude/frontmatter.go`, `cover.go`, `cover_test.go`,
   `frontmatter_test.go`, `readback.go`, `readback_test.go`, `doc.go`
 
-- [ ] Test first, `TestTheFrontMatterEndsWithAPageBreak`: the requests carry
+- [x] Test first, `TestTheFrontMatterEndsWithAPageBreak`: the requests carry
       an `insertPageBreak` after the classification table, and
       `TestTheCoverEndsWithAPageBreak` keeps passing with the break now coming
       from the block rather than from `cover.go:43`.
-- [ ] The hard-coded call in `coverBlock` goes, so one layout has two writers
+- [x] The hard-coded call in `coverBlock` goes, so one layout has two writers
       and no third. `block()` handling `page_break` landed in Task 3, which
       needed it to keep the suite green.
-- [ ] The read-back counts the second break, and `Verify` is unchanged in what
+- [x] The read-back counts the second break, and `Verify` is unchanged in what
       it asks.
-- [ ] `doc.go` names the two tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the prelude ends with a page break, from the same block"`
+- [x] `doc.go` names the two tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the prelude ends with a page break, from the same block"`
 
 ### Task 5: the plugin and the marketplace
 

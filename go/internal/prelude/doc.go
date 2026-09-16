@@ -286,18 +286,32 @@
 //
 // So it is pinned as literals, and it is measured rather than reasoned about.
 //
-// The cover's page break is one request and two index units. insertPageBreak
-// inserts a page break followed by a newline, in the reference's own words, so
-// the break takes one unit and the newline it brings takes another. An
-// insertText writing that newline as well is what used to stand beside it, and
-// it put three units in the document where the builder counted two: the third
-// was a stray empty paragraph that every later insert pushed along until it sat
-// one past the prelude's end, outside the marker, outside the span phase 2 walks
-// past, left behind by a second run's deleteContentRange and joined by another
-// on the third. Nothing in the suite could see it, because every check here is
-// the builder's arithmetic asked about itself and the live acceptance reads only
+// A page break is one request and two index units. insertPageBreak inserts a
+// page break followed by a newline, in the reference's own words, so the break
+// takes one unit and the newline it brings takes another. An insertText writing
+// that newline as well is what used to stand beside it, and it put three units
+// in the document where the builder counted two: the third was a stray empty
+// paragraph that every later insert pushed along until it sat one past the
+// prelude's end, outside the marker, outside the span phase 2 walks past, left
+// behind by a second run's deleteContentRange and joined by another on the
+// third. Nothing in the suite could see it, because every check here is the
+// builder's arithmetic asked about itself and the live acceptance reads only
 // inside the span. It is read out of the reference rather than measured, and the
-// live acceptance is what confirms it. TestTheCoverEndsWithAPageBreak is the pin.
+// live acceptance is what confirms it.
+//
+// There are two of them, and house.yaml states where both go: a page_break
+// block after the cover, and another after the classification table, so the
+// version control heading and the contents heading each start a page.
+// TestTheCoverEndsWithAPageBreak and TestTheFrontMatterEndsWithAPageBreak are
+// the pins, and both read the breaks out of FrontMatter, because no writer here
+// holds a page turn of its own: TestTheCoverBlockWritesNoPageBreakOfItsOwn says
+// the cover writer does not.
+//
+// Both breaks are inside the span the marker covers, so the read-back counts
+// them. A break carries no words, so it reaches the read as a run of its own
+// kind beside the newline behind it, which is two of the runs Proposed counts
+// per break. TestThePreludeReadsBackAsSuggestions states those counts as
+// literals.
 //
 // A table is inserted and then filled, which is more requests than the docx
 // writer needs and is the shape the Docs API has: insertTable makes a grid of
