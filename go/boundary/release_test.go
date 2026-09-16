@@ -189,3 +189,84 @@ func shellArray(t *testing.T, script, opening string) []string {
 	sort.Strings(names)
 	return names
 }
+
+// releaseREADMECeiling is the line count the colleague's README stays under.
+// It is the first and often the only gdoc document a colleague reads, and a
+// hundred lines is about what somebody reads before they start typing. Longer
+// than that belongs in `gdoc help`, which is the thing that cannot go stale.
+const releaseREADMECeiling = 100
+
+// TestTheReleaseREADMEIsUnderTheCeiling holds the length and the house writing
+// rule. The em dash is checked here rather than trusted, because this file is
+// read by people outside this repository and the rule is easy to lose in an
+// edit somebody made in a hurry.
+func TestTheReleaseREADMEIsUnderTheCeiling(t *testing.T) {
+	text := releaseREADME(t)
+	if lines := len(strings.Split(strings.TrimRight(text, "\n"), "\n")); lines > releaseREADMECeiling {
+		t.Errorf("release/README.md is %d lines and the ceiling is %d; what does not fit goes into `gdoc help`", lines, releaseREADMECeiling)
+	}
+	if i := strings.Index(text, "—"); i >= 0 {
+		t.Errorf("release/README.md carries an em dash at byte %d; the house rule is a comma, a colon or a full stop", i)
+	}
+}
+
+// TestTheReleaseREADMENamesEveryRouteToTheSkills asks that the three policy
+// routes are all there. A colleague whose machine refuses a marketplace and
+// finds only the `/plugin` commands has no way on, and the route they need is
+// the one nobody tests by hand because this machine is not restricted.
+func TestTheReleaseREADMENamesEveryRouteToTheSkills(t *testing.T) {
+	text := releaseREADME(t)
+	for _, want := range []string{
+		// The one line that installs the binary, and the update that is
+		// never taken for anyone.
+		"release/install.sh",
+		"gdoc update",
+		"gdoc auth login",
+		// Route one, plugins open.
+		"/plugin marketplace add nhusnullin/gdoc",
+		"/plugin install gdoc@gdoc",
+		// Route two, marketplaces refused and local skills still loading.
+		"--skills global",
+		// Route three, nothing but plugins and managed settings.
+		"extraKnownMarketplaces",
+		"enabledPlugins",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("release/README.md never says %q, and a colleague on that route has nowhere to go", want)
+		}
+	}
+	for _, skill := range skillFolders(t) {
+		if !strings.Contains(text, skill) {
+			t.Errorf("release/README.md never names the %s skill, which the plugin installs", skill)
+		}
+	}
+}
+
+// TestTheIssueTemplateAsksForTheFourFacts holds the report form. A report
+// missing the version is a report nobody can place against a release, and a
+// report missing the object gdoc printed is a guess about what happened.
+func TestTheIssueTemplateAsksForTheFourFacts(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(repoRoot, ".github", "ISSUE_TEMPLATE", "report.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, want := range []string{"gdoc help", "version", "command", "object", "expected"} {
+		if !strings.Contains(strings.ToLower(text), want) {
+			t.Errorf(".github/ISSUE_TEMPLATE/report.md never asks for %q", want)
+		}
+	}
+	if i := strings.Index(text, "—"); i >= 0 {
+		t.Errorf(".github/ISSUE_TEMPLATE/report.md carries an em dash at byte %d", i)
+	}
+}
+
+// releaseREADME is the README the zip carries and the one line points at.
+func releaseREADME(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(repoRoot, "release", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}

@@ -794,7 +794,7 @@ that no line touches `.zshrc` outside a `printf`, a `grep` or a comment.
 - Create: `release/README.md`, `release/example/first-note.md`
 - Create: `.github/ISSUE_TEMPLATE/report.md`
 
-- [ ] `README.md` under a hundred lines: what gdoc is in three sentences;
+- [x] `README.md` under a hundred lines: what gdoc is in three sentences;
       the one-line install; the skills by policy, in three short paragraphs:
       the two `/plugin` commands where plugins are open, `--skills` where a
       marketplace is refused, and the two managed-settings lines to hand to
@@ -804,12 +804,26 @@ that no line touches `.zshrc` outside a `printf`, a `grep` or a comment.
       everyone signs in once more after 2026-09-16; three things to try;
       `gdoc update` and its flags, and that nothing updates on its own; how
       to report; what gdoc never does. Plain English, no em dashes.
-- [ ] `first-note.md`: a short note with a valid `gdoc:` front-matter block
+- [x] `first-note.md`: a short note with a valid `gdoc:` front-matter block
       and a body that exercises a heading, a list and a table. `gdoc build`
       over it succeeds in a test.
-- [ ] `report.md` asks for four things: version from `gdoc help`, the command
+- [x] `report.md` asks for four things: version from `gdoc help`, the command
       as typed, the object it printed, what was expected.
-- [ ] `git commit -m "docs(release): the user README, the example note, the issue template"`
+- [x] `git commit -m "docs(release): the user README, the example note, the issue template"`
+
+➕ The example note carries no `gdoc:` block. A note that already names a
+document is one `gdoc publish` refuses by name, so an example carrying that
+block could never be published, and Task 14 asks for exactly that. It carries
+the front matter the cover and the version-control table read instead, which is
+the block a colleague writes.
+
+➕ Four tests hold these three files. Three in `go/boundary/release_test.go`:
+the README's line ceiling and its em dash, the three policy routes and the
+three skills named in it, and the four facts the issue form asks for. The
+fourth, `TestTheReleaseExampleNoteBuilds` in `go/cmd/gdoc`, builds the example
+from a copy the way a colleague does, because nothing else in the tree reads
+that note and a front-matter key renamed would reach a colleague as a refusal
+on their first command.
 
 ### Task 12: the release workflow and the nightly
 
