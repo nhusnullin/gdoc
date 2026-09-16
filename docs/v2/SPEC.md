@@ -60,6 +60,20 @@ reason as principle 1 requires:
 Everything else is the standard library. A fourth needs its reason written here
 first, and the one open candidate is `sergi/go-diff`.
 
+One command table in `cmd/gdoc/commands.go` describes every command once: the
+words it takes, its flags, one sentence, one example, and the function that runs
+it. The dispatcher, the usage line in every refusal, `help` and `completion` all
+read that table, so a command cannot exist without help and completion for it.
+
+`gdoc help` prints the table, and `gdoc help <command>` prints one entry.
+`--help` and `-h` are aliases anywhere on the line. Help keeps the output
+contract: the object on stdout, the words a person reads on stderr, exit 0,
+because a question was asked and answered. Bare `gdoc` did no work, so it still
+fails with the help on stderr. `gdoc completion zsh --out <path>` and the same
+for bash write a shell script and report the path and the line to add: the
+script is a written file and never stdout, because stdout is the object.
+PowerShell lands at M9. Decided 2026-09-16, DECISIONS.md.
+
 ### Output contract
 
 - Every command writes exactly one JSON object to stdout and exits. Human prose
@@ -319,8 +333,9 @@ literals, never by reading the constant they test.
 
 ## The skills, and how a comment reaches one
 
-Two named workflows, both judgement, both skills rather than commands, and both
-symlinked from this repo in one copy:
+Four named workflows, all judgement, all skills rather than commands, and all
+symlinked from this repo in one copy. Two of them run on a marked comment, and
+two Nail invokes by name:
 
 - **The review session.** Reads the threads, answers `ai?` from the hub, carries
   out `ai!` against the hub, proposes document changes as suggestions. If it
@@ -330,6 +345,14 @@ symlinked from this repo in one copy:
   and the guard caps a handed-in document at suggest and reply.
 - **The alignment check.** Composes the diff, judges what matters, proposes both
   ways: suggestions into the document, edits into the hub with agreement.
+- **The publish run**, `gdoc-publish`. Nail names a note, and the skill builds
+  it, publishes it into the folder, and reads back what came out.
+- **The restyle run**, `gdoc-restyle`. Nail gives a link, and the skill surveys
+  the document before it proposes anything to it.
+
+**No skill holds a flag list.** Before the first call of a command in a session
+a skill runs `gdoc help <command>` and reads the words and flags from the binary
+it is about to run. Added 2026-09-16, DECISIONS.md.
 
 **There is no watcher, and the loop starts when Nail starts it**, in the hub
 folder. A comment written today waits, visible in the document, until a session

@@ -21,7 +21,7 @@ Two rules about the documents themselves:
 | Path | Holds |
 |---|---|
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
-| `go/cmd/gdoc/` | the entry point and the twelve commands. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | the entry point, the twelve commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -52,7 +52,7 @@ Two rules about the documents themselves:
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/live/` | the opt-in end-to-end tests. Tests only, no production code |
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
-| `skills/` | `gdoc-review`. Symlinked into `~/.claude/skills/`, so edits are live |
+| `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `docs/v2/` | what v2 is, what is next, why, and what Google does |
 | `docs/backlog/` | deferred work, one file per item |
 | `docs/plans/` | the milestone plans. `completed/` holds the ones that ran |
@@ -124,9 +124,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestMarkdownNamesWhatDocsWouldRenderLiterally`.
 - **Identity is never a gate.** Whose account wrote a comment decides nothing.
   The marker decides.
-- **Skills are linked, not copied.** `~/.claude/skills/gdoc-review` is a symlink
-  into `skills/`, so an edit is live the moment it is saved and before it is
-  committed. `./install.sh` prints `+ uncommitted changes` on a dirty tree,
+- **Skills are linked, not copied.** `~/.claude/skills/gdoc-review`,
+  `gdoc-publish` and `gdoc-restyle` are symlinks into `skills/`, so an edit is
+  live the moment it is saved and before it is committed. `./install.sh` prints `+ uncommitted changes` on a dirty tree,
   refuses to replace a real directory whose contents differ, and is safe to
   re-run after any move.
 - **A house-style test states its value as a literal**, never reading the
@@ -147,7 +147,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | This | Read |
 |---|---|
 | the network, a URL, a request shape, a grant | `go/internal/guard/doc.go` |
-| a command's arguments, its flags, its envelope | `go/cmd/gdoc/doc.go` |
+| a command's arguments, its flags, its help, its envelope | `go/cmd/gdoc/doc.go` |
 | the token, the login, the scopes | `go/internal/auth/doc.go` |
 | the Docs read: tabs, ranges, named ranges, elements | `go/internal/docs/doc.go` |
 | what the text projection prints, and its escaping | `go/internal/view/doc.go` |
@@ -163,6 +163,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
 | what the review session does with what the binary prints | `skills/gdoc-review/SKILL.md` |
+| what a skill tells a session to run | `skills/`, and `gdoc help <command>` |
 | what v2 is | `docs/v2/SPEC.md` |
 | what is next | `docs/v2/PLAN.md` |
 | why something is the way it is | `docs/v2/DECISIONS.md` |

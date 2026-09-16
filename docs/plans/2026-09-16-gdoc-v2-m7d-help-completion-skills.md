@@ -658,25 +658,27 @@ The DECISIONS.md entry for this milestone is already written, dated
 2026-09-16, with its register row, because a SPEC change is a DECISIONS entry
 first. This task makes the other documents agree with it.
 
-- [ ] SPEC.md "The binary": a paragraph on `help` and `completion`, in the
+- [x] SPEC.md "The binary": a paragraph on `help` and `completion`, in the
       present tense, with one sentence each on the output contract holding and
       on completion being a written file.
-- [ ] SPEC.md "Output contract": unchanged in every bullet. Read it and confirm
+- [x] SPEC.md "Output contract": unchanged in every bullet. Read it and confirm
       rather than assume, since decision 1 was designed to keep it so.
-- [ ] SPEC.md "The skills, and how a comment reaches one": four skills, two
+- [x] SPEC.md "The skills, and how a comment reaches one": four skills, two
       Nail-invoked, and the help-first rule as one sentence.
-- [ ] PLAN.md: the M7d section under "Done" becomes a row in Task 11. M9's
+- [x] PLAN.md: the M7d section under "Done" becomes a row in Task 11. M9's
       line "The skills that do not exist yet land here" and its two bullets go,
-      replaced by one sentence that PowerShell completion lands at M9.
-- [ ] CLAUDE.md "What lives where": `go/cmd/gdoc/` row says twelve commands
+      replaced by one sentence that PowerShell completion lands at M9. M9
+      already reads that way, so the Done row is all that is left, and that row
+      is Task 11's.
+- [x] CLAUDE.md "What lives where": `go/cmd/gdoc/` row says twelve commands
       plus help and completion. `skills/` row names three skills. "If you
       touch": the command row adds "its help"; a new row for a skill points at
       `skills/`. The invariant "Skills are linked, not copied" names all three.
       Stays under 300 lines.
-- [ ] `go/cmd/gdoc/doc.go`: every rule this milestone added names its test.
+- [x] `go/cmd/gdoc/doc.go`: every rule this milestone added names its test.
       `TestEveryPackageHasExactlyOnePackageComment` green.
-- [ ] `cd go && go test -race ./...` passes, the docs tests included.
-- [ ] `git commit -m "docs(v2): help, completion and the two skills in SPEC, PLAN and CLAUDE.md"`
+- [x] `cd go && go test -race ./...` passes, the docs tests included.
+- [x] `git commit -m "docs(v2): help, completion and the two skills in SPEC, PLAN and CLAUDE.md"`
 
 ### Task 10: verify acceptance criteria
 
