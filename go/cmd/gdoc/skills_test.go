@@ -262,3 +262,186 @@ func TestProseAboutGdocIsNotReadAsACall(t *testing.T) {
 		t.Errorf("want no problems, got %v", problems)
 	}
 }
+
+// A skill ships to a colleague's machine, so it may not name the person who
+// wrote it, may not point at a checkout only one machine has, and may not fetch
+// a new binary on its own. It also says which gdoc it needs, because a skill and
+// a binary travel apart: the plugin updates on Claude Code's toggle and the
+// binary updates when somebody types `gdoc update`.
+
+// skillFrontMatter is the lines between the opening fence and the closing one.
+// A file that does not open with `---` has no front matter, and that is a
+// failure rather than an empty answer: Claude Code reads that block first.
+func skillFrontMatter(src string) ([]string, bool) {
+	lines := strings.Split(src, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return nil, false
+	}
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			return lines[1:i], true
+		}
+	}
+	return nil, false
+}
+
+// skillNeeds is the version on the front matter's `needs:` line, as three
+// integers. It reads `needs: v2.0.0` and nothing looser: a version with a word
+// in it, or with a piece missing, is no version and says so, because a skill
+// that cannot say which binary it needs cannot check one.
+func skillNeeds(src string) ([3]int, bool) {
+	front, ok := skillFrontMatter(src)
+	if !ok {
+		return [3]int{}, false
+	}
+	for _, line := range front {
+		rest, found := strings.CutPrefix(strings.TrimSpace(line), "needs:")
+		if !found {
+			continue
+		}
+		return parseSkillVersion(strings.TrimSpace(rest))
+	}
+	return [3]int{}, false
+}
+
+// parseSkillVersion reads `vX.Y.Z` into its three numbers. The binary's own
+// comparison lives elsewhere; this is the test reading a line a person wrote,
+// so it is strict about the shape and says nothing about what the numbers mean.
+func parseSkillVersion(text string) ([3]int, bool) {
+	digits, found := strings.CutPrefix(text, "v")
+	if !found {
+		return [3]int{}, false
+	}
+	parts := strings.Split(digits, ".")
+	if len(parts) != 3 {
+		return [3]int{}, false
+	}
+	var version [3]int
+	for i, part := range parts {
+		if part == "" {
+			return [3]int{}, false
+		}
+		n := 0
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return [3]int{}, false
+			}
+			n = n*10 + int(r-'0')
+		}
+		version[i] = n
+	}
+	return version, true
+}
+
+func TestNoSkillNamesAPersonOrAMachinesPath(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		for _, banned := range []string{"Nail", "/Users/", "~/src/"} {
+			if strings.Contains(string(src), banned) {
+				t.Errorf("%s names %q. A skill runs on a colleague's machine: address whoever is at the keyboard, and carry no path into a checkout", file, banned)
+			}
+		}
+	}
+}
+
+func TestEverySkillNamesTheGdocItNeeds(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if _, ok := skillNeeds(string(src)); !ok {
+			t.Errorf("%s carries no front matter line `needs: vX.Y.Z`. A skill says which binary it needs, because the two travel apart", file)
+		}
+	}
+}
+
+func TestNoSkillRunsUpdateOnItsOwn(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		for _, call := range skillCalls(file, string(src)) {
+			if call.words[0] == "update" {
+				t.Errorf("%s:%d tells a session to run update. An update happens when a person types it and never otherwise", file, call.line)
+			}
+		}
+	}
+}
+
+func TestANeedsLineIsReadAsThreeNumbers(t *testing.T) {
+	// Arrange
+	src := "---\nname: gdoc-review\nneeds: v2.10.3\n---\n\n# A skill\n"
+
+	// Act
+	version, ok := skillNeeds(src)
+
+	// Assert
+	if !ok {
+		t.Fatalf("want the needs line read, got nothing")
+	}
+	if version != [3]int{2, 10, 3} {
+		t.Errorf("want 2.10.3, got %v", version)
+	}
+}
+
+func TestANeedsLineThatIsNotAVersionIsCaught(t *testing.T) {
+	// Arrange
+	bad := []string{
+		"---\nneeds: 2.0.0\n---\n",
+		"---\nneeds: v2.0\n---\n",
+		"---\nneeds: vlatest\n---\n",
+		"---\nneeds: v2.0.x\n---\n",
+		"---\nneeds: v2..0\n---\n",
+		"---\nname: gdoc-review\n---\n",
+		"name: gdoc-review\nneeds: v2.0.0\n",
+	}
+
+	// Act and assert
+	for _, src := range bad {
+		if version, ok := skillNeeds(src); ok {
+			t.Errorf("want %q refused, got %v", src, version)
+		}
+	}
+}
+
+func TestASkillRunningUpdateIsSeenAsACall(t *testing.T) {
+	// Arrange
+	src := "```bash\n$GDOC update --nightly\n```\n"
+
+	// Act
+	calls := skillCalls("SKILL.md", src)
+
+	// Assert
+	if len(calls) != 1 {
+		t.Fatalf("want the one call, got %v", calls)
+	}
+	if calls[0].words[0] != "update" {
+		t.Errorf("want the update call seen, got %v", calls[0].words)
+	}
+}

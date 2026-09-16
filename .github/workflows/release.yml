@@ -1,0 +1,149 @@
+# A tag is a release. Nothing else publishes one, and nobody builds a zip by
+# hand for a colleague, because a binary built on somebody's laptop carries
+# that laptop's paths and whatever was uncommitted at the time.
+#
+# Two entrances. A tag `v*` pushed by a person runs this on the push event, and
+# the nightly calls it with the tag it just cut, because a tag pushed with
+# GITHUB_TOKEN triggers no workflow at all.
+#
+# The order of the steps is the point. The version check is first and costs
+# nothing, so a tag whose manifest disagrees is refused before a build. The
+# suite runs before the binaries, so a release is never cut from code that does
+# not pass. The zips are checksummed before the release is created, so there is
+# no window where a colleague can download an asset nothing can verify.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag to build and publish, such as v2.1.0.
+        required: true
+        type: string
+    secrets:
+      GDOC_OAUTH_CLIENT_SECRET:
+        description: The OAuth client secret the binary is linked with.
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      # The full history, because the release notes are the commit subjects
+      # since the previous tag, and `make dist` reads the version out of
+      # `git describe`.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - name: the plugin version is the tag
+        run: |
+          version="$(jq -r .version .claude-plugin/plugin.json)"
+          if [ "$version" != "$TAG" ]; then
+            echo "The tag is $TAG and .claude-plugin/plugin.json carries $version." >&2
+            echo "A colleague reports a bug against the version the plugin shows, so the two are one number." >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+
+      - name: gofmt
+        run: cd go && test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: vet
+        run: cd go && go vet ./...
+
+      - name: test
+        run: cd go && go test -race ./...
+
+      # The client secret is linked in rather than committed. A build without
+      # it produces a gdoc that reads with a token it already holds and cannot
+      # sign anybody in, and nobody finds that out until a new colleague runs
+      # `gdoc auth login`.
+      - name: dist
+        env:
+          GDOC_OAUTH_CLIENT_SECRET: ${{ secrets.GDOC_OAUTH_CLIENT_SECRET }}
+        run: |
+          if [ -z "$GDOC_OAUTH_CLIENT_SECRET" ]; then
+            echo "The GDOC_OAUTH_CLIENT_SECRET secret is empty on this run." >&2
+            echo "A release built without it cannot sign anyone in, so nothing is published." >&2
+            exit 1
+          fi
+          make dist
+
+      # One zip per line of release/platforms, which is the list. install.sh
+      # carries the only copy of that list this tree tolerates, because it
+      # travels inside the zip; this file stays in the repository and reads it.
+      #
+      # The zip is flat: the binary as `gdoc`, the installer, the README, the
+      # example note and the three skills. install.sh unpacks it into a temp
+      # directory and installs what it finds beside itself, so a folder level
+      # here would be a folder it cannot see past.
+      - name: pack
+        run: |
+          mkdir -p dist
+          while read -r platform || [ -n "$platform" ]; do
+            case "$platform" in ''|'#'*) continue ;; esac
+
+            binary="bin/gdoc-$platform"
+            name="gdoc"
+            # Windows is built already and offered only after its checklist has
+            # been run. When it joins release/platforms, its binary is the one
+            # with the extension and so is the name inside the zip.
+            case "$platform" in windows-*) binary="$binary.exe"; name="gdoc.exe" ;; esac
+            if [ ! -f "$binary" ]; then
+              echo "release/platforms asks for $platform and make dist built no $binary." >&2
+              exit 1
+            fi
+
+            stage="$(mktemp -d)"
+            install -m 755 "$binary" "$stage/$name"
+            install -m 755 release/install.sh "$stage/install.sh"
+            cp release/README.md "$stage/README.md"
+            cp -R release/example "$stage/example"
+            cp -R skills "$stage/skills"
+
+            asset="gdoc-$TAG-$platform.zip"
+            ( cd "$stage" && zip -qr "$GITHUB_WORKSPACE/dist/$asset" . )
+            rm -rf "$stage"
+            echo "packed dist/$asset"
+          done < release/platforms
+
+          cd dist
+          sha256sum gdoc-*.zip > "SHA256SUMS-$TAG"
+          cat "SHA256SUMS-$TAG"
+
+      # The commit subjects since the previous tag. What a change means is the
+      # reader's, and a release page that tries to say it goes stale the first
+      # time somebody forgets to edit it.
+      - name: the notes
+        run: |
+          previous="$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)"
+          if [ -n "$previous" ]; then
+            printf 'Changes since %s\n\n' "$previous" > dist/notes.md
+            git log --no-merges --pretty=format:'- %s' "$previous..$TAG" >> dist/notes.md
+          else
+            printf 'The first release.\n\n' > dist/notes.md
+            git log --no-merges --pretty=format:'- %s' "$TAG" >> dist/notes.md
+          fi
+          printf '\n' >> dist/notes.md
+          cat dist/notes.md
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file dist/notes.md \
+            dist/*.zip "dist/SHA256SUMS-$TAG"

@@ -1,0 +1,103 @@
+# A nightly release, when there is something in it.
+#
+# At 02:00 UTC this asks one question: has main moved since the last tag. A
+# night where nothing landed cuts nothing, so the releases page stays a list of
+# changes rather than a list of dates, and a colleague reading it can tell what
+# they would be installing.
+#
+# Nothing on anyone's machine moves because of this. A nightly is a release
+# sitting on the page until somebody types `gdoc update --nightly`.
+#
+# The patch number is the whole of the difference between the two channels.
+# `make tag` cuts x.y.0 by hand, this cuts x.y.(z+1), and neither cuts the
+# other's number. A minor cut here would collide with the next release Nail
+# cuts, and two tags on one number are two releases nobody can tell apart.
+#
+# The tag is pushed with GITHUB_TOKEN, which triggers no workflow, so this does
+# not push and walk away: it calls release.yml with the tag it cut.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the tag this run would cut, and cut nothing.
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.next.outputs.tag }}
+    steps:
+      # The full history and every tag, because the next version is counted
+      # from the last one.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: the next tag, if main moved
+        id: next
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          last="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [ -z "$last" ]; then
+            echo "This repository carries no tag yet. The first one is make tag's, and a nightly is counted from it."
+            exit 0
+          fi
+          if ! printf '%s' "$last" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "The last tag is $last, which is not vX.Y.Z." >&2
+            echo "A nightly is counted from a plain version, so this run stops rather than guessing one." >&2
+            exit 1
+          fi
+          if [ "$(git rev-list -n 1 "$last")" = "$(git rev-parse HEAD)" ]; then
+            echo "main is still $last. Nothing landed since it, so there is no nightly to cut tonight."
+            exit 0
+          fi
+
+          version="${last#v}"
+          major="${version%%.*}"
+          rest="${version#*.}"
+          minor="${rest%%.*}"
+          patch="${rest##*.}"
+          next="v$major.$minor.$((patch + 1))"
+          echo "main moved since $last. The next nightly tag is $next."
+
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            echo "This is a dry run. Nothing was written, committed, tagged or published."
+            exit 0
+          fi
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+
+      # The version the plugin reports moves with the tag, or release.yml
+      # refuses the tag this step just pushed.
+      - name: bump the plugin version, commit and tag
+        if: steps.next.outputs.tag != ''
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          jq --arg tag "$TAG" '.version = $tag' .claude-plugin/plugin.json > plugin.json.new
+          mv plugin.json.new .claude-plugin/plugin.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/plugin.json
+          git commit -m "chore: nightly $TAG"
+          git tag "$TAG"
+          git push origin HEAD:main
+          git push origin "refs/tags/$TAG"
+
+  release:
+    needs: tag
+    if: needs.tag.outputs.tag != ''
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+    secrets: inherit

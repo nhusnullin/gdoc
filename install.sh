@@ -246,4 +246,13 @@ printf '\n  skills (linked, so edits are live with no reinstall)\n'
 for skill in "${SKILLS[@]}"; do
     printf '    %-12s -> %s\n' "$skill" "$(readlink "$SKILLS_DIR/$skill")"
 done
+# The links above are for whoever works on this repository, and they exist so
+# an edit to a SKILL.md is live before it is committed. That is not how anyone
+# else should get these skills: a colleague adds this repository as a Claude
+# Code marketplace and installs the plugin, which carries the same three
+# folders and updates when they ask it to. Said here because the person reading
+# this summary is the one a colleague asks how to get them.
+printf '\n  colleagues install the skills as a plugin, not as links:\n'
+printf '    /plugin marketplace add nhusnullin/gdoc\n'
+printf '    /plugin install gdoc@gdoc\n'
 printf '\n  next     gdoc auth status, and gdoc auth login if it says signed out\n\n'

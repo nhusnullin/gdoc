@@ -93,16 +93,17 @@ func TestTheCoverIsTheHouseCoverLineByLine(t *testing.T) {
 		"Third Party Risk Policy",
 		"Version: 1.0",
 		"May 2026",
-		"", "", "", "", "", "", "", "", // the eight trailing blanks
+		// Nothing under the date: the eight blanks that pushed the version
+		// control label onto page two were replaced by the page break block.
 	}
 	if got := texts(got.Requests); !equal(got, want) {
 		t.Errorf("the cover reads\n%q\nwant\n%q", got, want)
 	}
-	// One paragraph more than there are texts, and it is the page break's own.
-	// insertPageBreak writes the break and the newline behind it, so that
-	// paragraph reaches the document with no insertText of its own.
-	if want := len(want) + 1; got.Paragraphs != want {
-		t.Errorf("Paragraphs = %d, want %d", got.Paragraphs, want)
+	// One paragraph per line and no more. The page break that used to stand
+	// here is the page_break block house.yaml states after the cover, so it is
+	// counted where it is written.
+	if got.Paragraphs != len(want) {
+		t.Errorf("Paragraphs = %d, want %d", got.Paragraphs, len(want))
 	}
 }
 
@@ -305,36 +306,51 @@ func TestAClassificationCellIsShadedOnlyWhenTheFieldsDeclareThatClass(t *testing
 	}
 }
 
+// The cover ends where the next page begins, and the break that does it is the
+// page_break block house.yaml states after the cover, not a call inside the
+// cover writer. One layout, two writers, and no third place that knows where
+// the page turns.
 func TestTheCoverEndsWithAPageBreak(t *testing.T) {
 	// Arrange
 	cfg := testConfig(t)
 
 	// Act
-	got, err := coverBlock(cfg, testFields(), 1)
+	got, err := FrontMatter(cfg, testFields(), 1)
 	if err != nil {
-		t.Fatalf("coverBlock() = %v", err)
+		t.Fatalf("FrontMatter() = %v", err)
 	}
 
-	// Assert: the break is inside gdoc's own last paragraph, so what follows
-	// starts at the top of the next page and the author's own paragraph is
-	// left as it was.
-	breaks := 0
-	var at int
+	// Assert: the first break comes after the cover's last line and before
+	// anything the front matter writes, so the version control heading starts
+	// page two.
+	breaks := pageBreakIndexes(got.Requests)
+	if len(breaks) == 0 {
+		t.Fatalf("the front matter carries no page break at all")
+	}
+	at := breaks[0]
+	before := ""
 	for _, r := range got.Requests {
-		if body, ok := r["insertPageBreak"].(map[string]any); ok {
-			breaks++
-			at = body["location"].(map[string]any)["index"].(int)
+		body, ok := r["insertText"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if body["location"].(map[string]any)["index"].(int) < at {
+			before = body["text"].(string)
 		}
 	}
-	if breaks != 1 {
-		t.Fatalf("the cover carries %d page breaks, want 1", breaks)
+	if before != "May 2026\n" {
+		t.Errorf("the last words in front of the first break are %q, want the cover's date %q", before, "May 2026\n")
 	}
-	last := paragraphSpans(got.Requests)[len(paragraphSpans(got.Requests))-1]
-	if at != last[0] || last[1] != last[0]+2 {
-		t.Errorf("the break sits at %d and its paragraph is %v, want the break first in the last paragraph", at, last)
+
+	// Assert: the break is inside gdoc's own paragraph, so what follows starts
+	// at the top of the next page and the author's own paragraph is left as it
+	// was. Two index units: insertPageBreak writes the break and a newline.
+	span, ok := paragraphSpanAt(got.Requests, at)
+	if !ok {
+		t.Fatalf("no paragraph begins at the break's own index %d", at)
 	}
-	if got.End != last[1] {
-		t.Errorf("End = %d, want %d, one past the last character the prelude inserts", got.End, last[1])
+	if span[1] != span[0]+2 {
+		t.Errorf("the break's paragraph is %v, want two index units", span)
 	}
 
 	// Assert: one request writes that paragraph, and nothing writes a newline
@@ -351,6 +367,25 @@ func TestTheCoverEndsWithAPageBreak(t *testing.T) {
 			t.Errorf("an insertText writes %q at %d, where the page break already writes its own newline",
 				body["text"], at)
 		}
+	}
+}
+
+// The cover block on its own writes the cover and stops. The page break behind
+// it is house.yaml's, so a caller asking for the cover alone gets the cover
+// alone.
+func TestTheCoverBlockWritesNoPageBreakOfItsOwn(t *testing.T) {
+	// Arrange
+	cfg := testConfig(t)
+
+	// Act
+	got, err := coverBlock(cfg, testFields(), 1)
+	if err != nil {
+		t.Fatalf("coverBlock() = %v", err)
+	}
+
+	// Assert
+	if breaks := pageBreakIndexes(got.Requests); len(breaks) != 0 {
+		t.Errorf("the cover block writes %d page break(s) at %v, want none: the break is the page_break block", len(breaks), breaks)
 	}
 }
 

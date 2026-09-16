@@ -122,3 +122,22 @@ func TestAFalsyDataIsStillPrinted(t *testing.T) {
 		})
 	}
 }
+
+// The version is a field of the envelope so every object a colleague sends
+// back names the build that printed it. It is absent when nothing set it,
+// because a binary built from a checkout belongs to no release.
+func TestTheVersionIsPrintedWhenSetAndAbsentWhenNot(t *testing.T) {
+	var set, unset bytes.Buffer
+	if err := Print(&set, Result{OK: true, Version: "v2.4.1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Print(&unset, Result{OK: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(set.String()); got != `{"ok":true,"version":"v2.4.1"}` {
+		t.Errorf("a set version is printed: %s", got)
+	}
+	if got := strings.TrimSpace(unset.String()); got != `{"ok":true}` {
+		t.Errorf("an unset version is absent: %s", got)
+	}
+}

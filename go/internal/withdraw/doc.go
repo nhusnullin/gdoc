@@ -58,7 +58,7 @@
 // rejectSuggestion naming another id is refused, and a second field beside the
 // id is refused because nobody here has read what it does. That is
 // internal/guard's, in its package comment under "Two doors into the set, and
-// four grants beside it", and
+// five grants beside it", and
 // TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes is the pin.
 //
 // Rejecting gdoc's own unaccepted proposal is not resolving Nail's decision,

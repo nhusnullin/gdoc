@@ -20,6 +20,11 @@ at all.
 
 ## Installing
 
+Two routes, and which one you are on depends on whether you have this
+repository checked out.
+
+**From a checkout**, which is how the tool is developed:
+
 ```bash
 ./install.sh
 ```
@@ -48,9 +53,37 @@ are written by `gdoc auth login` and by nothing else. After installing, run
 `~/.local/bin` is not on the macOS default PATH. The script says so when it is
 missing and tells you the line to add.
 
+**Without a checkout**, which is how a colleague installs it. One line for the
+binary, which downloads the newest release for this machine, checks it against
+the published checksum, and copies the binary into `~/.local/bin`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash
+```
+
+Then two commands inside Claude Code for the skills, which travel as a plugin
+from a marketplace in this same repository:
+
+```
+/plugin marketplace add nhusnullin/gdoc
+/plugin install gdoc@gdoc
+```
+
+Claude Code asks whether you want the skills everywhere or in this project
+only, and it keeps their update switch on the marketplace's screen in
+`/plugin`. A managed Claude Code can refuse a marketplace, and
+[release/README.md](release/README.md) holds the two fallbacks for that, along
+with everything else a colleague needs. The zip on the releases page carries
+the same `install.sh` for an install with no `curl | bash` in it.
+
+Nothing updates on its own. `gdoc update` takes the newest stable release when
+you type it, `gdoc update --check` says what it would take and writes nothing,
+and `gdoc update --rollback` puts back the binary that was there. The skills
+update through Claude Code.
+
 ## What it does
 
-One static binary at `go/`, twelve commands plus `help` and `completion`,
+One static binary at `go/`, thirteen commands plus `help` and `completion`,
 nothing to install beside it. Each command takes arguments, prints one JSON
 object and exits. It holds the credential, it reads a document, it writes
 suggestions, it builds a house-style document and publishes it, it surveys what

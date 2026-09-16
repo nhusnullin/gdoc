@@ -13,13 +13,24 @@ import (
 // at the top, every run of it carrying one suggestion id, the marker over it,
 // and the author's own paragraph behind it untouched.
 //
-// The prelude is a paragraph and a one-cell table, because the house front
-// matter is both and a walk that read paragraphs alone would call a wholly
-// proposed table settled.
+// The prelude is a paragraph, a one-cell table and the two page breaks, because
+// the house front matter is all three. A walk reading paragraphs alone would
+// call a wholly proposed table settled, and a walk reading text alone would
+// miss the breaks: a page break carries no words, so it reaches the read as a
+// run of its own kind beside the newline insertPageBreak wrote behind it.
 func preludeAsRead(suggested bool) *docs.Document {
 	id := []string{"suggest.abc123"}
 	if !suggested {
 		id = nil
+	}
+	pageBreak := func(at int) docs.Block {
+		return docs.Block{Paragraph: &docs.Paragraph{
+			Style: "NORMAL_TEXT", StartIndex: at, EndIndex: at + 2,
+			Runs: []docs.Run{
+				{Kind: docs.KindPageBreak, StartIndex: at, EndIndex: at + 1, InsertionIDs: id},
+				{Kind: docs.KindText, Text: "\n", StartIndex: at + 1, EndIndex: at + 2, InsertionIDs: id},
+			},
+		}}
 	}
 	return &docs.Document{
 		ID: "DOC1",
@@ -29,24 +40,32 @@ func preludeAsRead(suggested bool) *docs.Document {
 				{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 1, EndIndex: 10, Runs: []docs.Run{
 					{Kind: docs.KindText, Text: "A Policy\n", StartIndex: 1, EndIndex: 10, InsertionIDs: id},
 				}}},
-				{Table: &docs.Table{StartIndex: 10, Rows: [][]docs.Cell{{{Blocks: []docs.Block{
-					{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 12, EndIndex: 20, Runs: []docs.Run{
-						{Kind: docs.KindText, Text: "Version\n", StartIndex: 12, EndIndex: 20, InsertionIDs: id},
+				// The break behind the cover.
+				pageBreak(10),
+				{Table: &docs.Table{StartIndex: 12, Rows: [][]docs.Cell{{{Blocks: []docs.Block{
+					{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 14, EndIndex: 22, Runs: []docs.Run{
+						{Kind: docs.KindText, Text: "Version\n", StartIndex: 14, EndIndex: 22, InsertionIDs: id},
 					}}},
 				}}}}}},
-				{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 21, EndIndex: 39, Runs: []docs.Run{
-					{Kind: docs.KindText, Text: "The author's own.\n", StartIndex: 21, EndIndex: 39},
+				// The break behind the classification table.
+				pageBreak(23),
+				{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 25, EndIndex: 43, Runs: []docs.Run{
+					{Kind: docs.KindText, Text: "The author's own.\n", StartIndex: 25, EndIndex: 43},
 				}}},
 			},
 			NamedRanges: []docs.NamedRange{{
 				ID:     "kix.wi79lhqfq91l",
 				Name:   MarkerName,
 				Tab:    "t.0",
-				Ranges: []docs.Range{{Tab: "t.0", Start: 1, End: 21}},
+				Ranges: []docs.Range{{Tab: "t.0", Start: 1, End: 25}},
 			}},
 		}},
 	}
 }
+
+// preludeEnd is one past the last unit the prelude proposed, which is where the
+// author's own paragraph begins.
+const preludeEnd = 25
 
 // The author's own text as it stood before a word of the prelude was proposed.
 const authorBefore = "The author's own.\n"
@@ -59,7 +78,7 @@ func TestThePreludeReadsBackAsSuggestions(t *testing.T) {
 	d := preludeAsRead(true)
 
 	// Act
-	got, warnings := Verify(authorBefore, d, 1, 21)
+	got, warnings := Verify(authorBefore, d, 1, preludeEnd)
 
 	// Assert
 	if !got.Verified {
@@ -68,11 +87,15 @@ func TestThePreludeReadsBackAsSuggestions(t *testing.T) {
 	if len(warnings) != 0 {
 		t.Errorf("warnings = %v, want none", warnings)
 	}
-	if got.Proposed.Paragraphs != 2 || got.Proposed.Tables != 1 || got.Proposed.Cells != 1 {
-		t.Errorf("proposed = %+v, want 2 paragraphs, 1 table and 1 cell, counted the way the run counts what it sent", got.Proposed)
+	if got.Proposed.Paragraphs != 4 || got.Proposed.Tables != 1 || got.Proposed.Cells != 1 {
+		t.Errorf("proposed = %+v, want 4 paragraphs, 1 table and 1 cell, counted the way the run counts what it sent", got.Proposed)
 	}
-	if got.Proposed.Runs != 2 {
-		t.Errorf("proposed.runs = %d, want 2", got.Proposed.Runs)
+	// Six runs: the cover line, the cell, and two apiece for the two page
+	// breaks, which is the break itself and the newline insertPageBreak writes
+	// behind it. Both breaks are inside the span, so both are counted: the one
+	// behind the cover and the one behind the classification table.
+	if got.Proposed.Runs != 6 {
+		t.Errorf("proposed.runs = %d, want 6", got.Proposed.Runs)
 	}
 	if (got.Written != Pieces{}) {
 		t.Errorf("written = %+v, want nothing at all: a piece with no suggestion id is a character gdoc put in on its own authority", got.Written)
@@ -91,7 +114,7 @@ func TestARunWithNoSuggestionIDIsWrittenRatherThanProposed(t *testing.T) {
 	d.Tabs[0].Body[0].Paragraph.Runs[0].InsertionIDs = nil
 
 	// Act
-	got, warnings := Verify(authorBefore, d, 1, 21)
+	got, warnings := Verify(authorBefore, d, 1, preludeEnd)
 
 	// Assert
 	if got.Verified {
@@ -100,8 +123,8 @@ func TestARunWithNoSuggestionIDIsWrittenRatherThanProposed(t *testing.T) {
 	if got.Written.Runs != 1 || got.Written.Paragraphs != 1 {
 		t.Errorf("written = %+v, want the one run and the paragraph holding it", got.Written)
 	}
-	if got.Proposed.Runs != 1 {
-		t.Errorf("proposed.runs = %d, want the cell's run, which is still a suggestion", got.Proposed.Runs)
+	if got.Proposed.Runs != 5 {
+		t.Errorf("proposed.runs = %d, want the cell's run and the two breaks' four, which are still suggestions", got.Proposed.Runs)
 	}
 	if !strings.Contains(strings.Join(warnings, " "), "A Policy") {
 		t.Errorf("warnings = %v, want the words that are in the document named", warnings)
@@ -113,10 +136,10 @@ func TestARunWithNoSuggestionIDIsWrittenRatherThanProposed(t *testing.T) {
 func TestTheAuthorsOwnTextIsCheckedBeforeAgainstAfter(t *testing.T) {
 	// Arrange
 	d := preludeAsRead(true)
-	d.Tabs[0].Body[2].Paragraph.Runs[0].Text = "The author's own words, edited.\n"
+	d.Tabs[0].Body[4].Paragraph.Runs[0].Text = "The author's own words, edited.\n"
 
 	// Act
-	got, warnings := Verify(authorBefore, d, 1, 21)
+	got, warnings := Verify(authorBefore, d, 1, preludeEnd)
 
 	// Assert
 	if got.BodyUnchanged {
@@ -138,7 +161,7 @@ func TestAPreludeWithNoMarkerOverItIsNotVerified(t *testing.T) {
 	d.Tabs[0].NamedRanges = nil
 
 	// Act
-	got, warnings := Verify(authorBefore, d, 1, 21)
+	got, warnings := Verify(authorBefore, d, 1, preludeEnd)
 
 	// Assert
 	if got.Marked || got.Verified {

@@ -1,36 +1,42 @@
 ---
 name: gdoc-review
-description: Use when Nail gives a Google Doc link and wants the marked comments in it handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until Nail stops it.
+description: Use when the request gives a Google Doc link and asks for the marked comments in it to be handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until it is stopped.
+needs: v2.0.0
 ---
 
 # Google Docs review
 
-Answer the marked comments in a document, whoever wrote them. Nail chose the
+Answer the marked comments in a document, whoever wrote them. You chose the
 document, and the marker is the instruction.
 
 `ai?` is answered in its thread. `ai!` is carried out in the hub and receipted
-in its thread. `ai:` leaves the choice to you, and you say which one you chose.
-An unmarked comment is never acted on.
+in its thread. `ai:` leaves the choice to the session, which says which one it
+chose. An unmarked comment is never acted on.
 
-When the right answer is a change to the document's own words, you propose it as
-a Google suggestion with a comment explaining why. You never edit the document.
-
-Spec: `~/src/personal/gdoc/docs/v2/SPEC.md`, sections "Skills", "How a comment
-reaches the agent", "Verification: never trust a success" and "Never".
+When the right answer is a change to the document's own words, propose it as a
+Google suggestion with a comment explaining why. Never edit the document.
 
 ## Setup
 
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
+$GDOC help
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
 
-One root, `$ROOT`, and it is `$PWD`. It is the hub: the corpus you search to
-ground an answer, the tree that holds the notes paired to documents, and the
-place an `ai!` writes.
+`help` is the first call of every session, because its object carries
+`version`, the release this binary was built from. This skill needs the version
+its own front matter names on the `needs` line, or a later one. An older binary
+is one the skill is ahead of: say so, say that `gdoc update` is the command
+that fixes it, and stop there. No `version` at all is a build made from source
+rather than a release, which is not an error: say it once and carry on.
+
+One root, `$ROOT`, and it is `$PWD`. It is the hub: the corpus this session
+searches to ground an answer, the tree that holds the notes paired to
+documents, and the place an `ai!` writes.
 
 Nothing here runs git. Not to commit, not to check whether a file is dirty.
 
@@ -48,13 +54,13 @@ Any command can fail with no token or a permission error. Run `$GDOC auth
 status` and read it before guessing. It reports whether a token is present,
 whether it expired, and which scopes are missing.
 
-The fix is `$GDOC auth login`. It prints a URL, waits for Nail to approve in the
+The fix is `$GDOC auth login`. It prints a URL, waits for you to approve in the
 browser, and saves the token. Ask before running it: it changes which account
 posts replies, and that account name is visible to everyone on the document.
 
-Never edit `~/.config/gdoc-agent/` by hand, and never tell Nail to.
+Never edit `~/.config/gdoc-agent/` by hand, and never tell anyone to.
 
-## If Nail asks for a dry run
+## If the request is a dry run
 
 Do every step, but write nothing. Print each reply and each proposal in the
 terminal instead of running `$GDOC reply` and `$GDOC propose`. Say at the end
@@ -80,19 +86,23 @@ it.
 
 `read` gives the document's text, with `[[c:ID]]words[[/c]]` around the span a
 comment is attached to and `{+text+}[s:ID]` around a pending suggestion. That is
-how you see a comment in the words around it.
+how a comment is seen in the words around it. Every read takes in every tab, so
+a document with more than one is read whole and reported as what it is.
 
-`multi_tab: true` stops the run for writing. You may still read and answer, but
-`propose` refuses a multi-tab document, so say so instead of proposing.
+`multi_tab: true` stops the run for writing. The session may still read and
+answer, but `propose` refuses a multi-tab document, so say so instead of
+proposing.
 
 Add `--witness` to `comments` when it matters whether a thread is still attached
 to text. It costs a docx export, and it reports `anchored`, `detached` or
-`unmatched` per thread.
+`unmatched` per thread. The export is the honest witness here: Drive's own
+anchor and its copy of the quoted text survive a detachment and prove nothing on
+their own.
 
 ## Step 2: Decide which threads still need an answer
 
 The binary reports facts and judges nothing. There is no `handled` field, on
-purpose. You read the thread and decide.
+purpose. Read the thread and decide.
 
 Read every thread from the top, and ask what the last turn is:
 
@@ -105,8 +115,8 @@ Read every thread from the top, and ask what the last turn is:
   nothing. An unmarked follow-up carries context, never authority.
 - The thread has no marker anywhere: not work.
 
-A resolved thread is not work. Nail resolves a thread when he accepts the
-answer.
+A resolved thread is not work. Resolving is the operator's, and they do it when
+they accept the answer.
 
 ### Before acting on an old marked comment again
 
@@ -132,14 +142,14 @@ is the re-read failing over a write that came back perfectly well. Do not report
 it as a write that failed. So `suggestions` is the document's own answer and the
 note is gdoc's memory of it: read both.
 
-## Step 3: Say what you found
+## Step 3: Say what the run found
 
-Print the list before you act. A marker is Nail's instruction, so acting on it
+Print the list before acting. A marker is your instruction, so acting on it
 needs no confirmation, and this is a statement rather than a question.
 
 ```
-Will answer:      "reviewed annually" (Nail, ai?), "term is wrong" (William Mejia, ai:)
-Will carry out:   "add this to the decision log" (Nail, ai!)
+Will answer:      "reviewed annually" (William Mejia, ai?), "term is wrong" (Priya Nair, ai:)
+Will carry out:   "add this to the decision log" (William Mejia, ai!)
 Already answered: 2 threads
 Newer replies:    1 answered thread has an unmarked reply since my last one
 Pending:          3 suggestions in the document, 1 of them mine
@@ -149,8 +159,8 @@ see who that is. They post under the account gdoc is signed in as.
 ```
 
 Report the unmarked follow-ups every run, even when there are none. "Nothing to
-do" and "he wrote something I may not act on" are different answers, and the
-second one loses instructions.
+do" and "somebody wrote something I may not act on" are different answers, and
+the second one loses instructions.
 
 ## Step 4: Ground the answer
 
@@ -171,8 +181,8 @@ that does not.
 
 Shape:
 
-1. The answer or the replacement text first, so the first thing Nail reads is
-   the thing he copies.
+1. The answer or the replacement text first, so the first thing the reader sees
+   is the thing they copy.
 2. One short reason line, only when the reason is not obvious.
 3. Sources as plain paths, last.
 
@@ -183,8 +193,9 @@ EOF
 $GDOC reply <url> <comment_id> --body-file /tmp/reply.txt
 ```
 
-Read `verified` in the answer. It is the thread read back after the write, not
-the status code. `verified: false` means the reply may not be there: say so in
+Read `verified` in the answer. It is the thread read back after the write, and
+`commentUpdateState: ALL_SAVED` in what the write itself answered, not the
+status code. `verified: false` means the reply may not be there: say so in
 the terminal and read the thread again before posting a second time.
 
 ## Step 6: Carry out an `ai!`
@@ -199,8 +210,9 @@ Then receipt it in the thread, once, after the work is done and saved:
 ```
 
 The receipt names where the work landed, in reader language. A file path is
-fine when the reader is Nail and the document is internal. On a document shared
-outside Altery, say what changed without naming internal files.
+fine when the readers are your own team and the document is internal. On a
+document shared outside Altery, say what changed without naming internal
+files.
 
 Never delete a file from the hub. Editing is the whole of what `ai!` may do.
 
@@ -218,9 +230,15 @@ it where the delegation happened, so a reader scrolling the margin sees that the
 work came from William and not from whoever gdoc posts as.
 
 The signed-in name is the `author` on gdoc's own replies in this document, the
-ones with `by_gdoc: true`. When the document carries none yet, treat Nail as the
-account: it is his login, and naming him in his own receipt is the one mistake
-this rule must not make. Nail's own comments are never named.
+ones with `by_gdoc: true`. Read it there first: it is a fact in the object, not
+a guess.
+
+When the document carries no such reply yet, the account is the operator's, the
+person who asked for this run in this session. So name a commenter only when
+the comment was written by somebody other than them, and when this session
+cannot tell the two apart, name nobody. A receipt that says nothing about who
+asked is thin; a receipt that credits the operator with asking themselves is
+the one mistake this rule must not make, and silence is the safe side of it.
 
 Identity is still never a gate. The marker decides whether a comment is work,
 and this changes the wording of a receipt and nothing else.
@@ -252,7 +270,7 @@ $GDOC propose <url> \
 
 `quoted` must appear exactly once in the document. The command refuses none and
 refuses more than one, and the fix is to quote more of the sentence. Never work
-out a character index yourself: the command finds the words in a fresh read.
+out a character index by hand: the command finds the words in a fresh read.
 
 The quote must also not run across a footnote mark, a picture, an equation or a
 page break. `read` prints those as `[^1]`, `[image]` and so on, and a quote built
@@ -275,10 +293,10 @@ with the trailing newline still on it would take the paragraph mark with it and
 merge two paragraphs. Quote the words, not the line.
 
 `why` becomes the body of a comment anchored on the new words, opening with 🤖.
-gdoc adds that prefix, so do not write it yourself: a reason that already opens
+gdoc adds that prefix, so never write it into the reason: one that already opens
 with it is refused, because the comment would arrive signed twice and every
 read-back would still pass. This is the opposite of `--body-file` for a reply,
-where the prefix is yours to write and a body missing it is refused. A leading
+where the prefix belongs in the body and a body missing it is refused. A leading
 space or newline in front of the robot does not get around the refusal, and
 neither does the robot with no space after it: all three land the same doubled
 mark. A reason that is only whitespace is refused too, because the comment would
@@ -322,8 +340,8 @@ Read `verified` and `checks` per proposal:
 
 `verified: true` is all three checks and a write that answered
 `commentUpdateState: ALL_SAVED`. Anything less means the write happened and
-something could not confirm it. Tell Nail in the terminal what did not hold for
-which proposal: the route whose check is false, or, when all three are true, the
+something could not confirm it. Say in the terminal what did not hold for which
+proposal: the route whose check is false, or, when all three are true, the
 warning saying Docs took the batch and its answer could not be read. Never
 report a proposal as landed because the command exited 0.
 
@@ -340,12 +358,12 @@ It works only on suggestions the note records as gdoc's own. Then reply in the
 where it is: gdoc does not delete comments.
 
 Never accept, reject or delete a suggestion anyone else wrote, and never accept
-your own. Accepting is Nail's.
+one of gdoc's own. Accepting is yours.
 
 ## Two messages at most
 
 A thread carries an acknowledgment and a receipt per piece of work, and nothing
-else. A thread you answered can ask again: a marked comment or reply written
+else. A thread already answered can ask again: a marked comment or reply written
 after gdoc's last 🤖 reply is new work, and it gets its own pair. Live mode
 makes that ordinary rather than rare, because the session sees the second
 question arrive.
@@ -359,10 +377,10 @@ Never a progress feed. The margin is the readers' room, and the terminal is
 where the operator's record goes. An acknowledgment and a receipt are two
 replies, never an edit of one.
 
-## When you stop and ask
+## When to stop and ask
 
-You judge the draft before it is posted. Stop, show it, and wait when any of
-these is true:
+Judge the draft before it is posted. Stop, show it, and wait when any of these
+is true:
 
 - **It carries something out of the hub that this document should not.** An
   internal figure, an unpublished decision, the name of an internal document, a
@@ -372,29 +390,28 @@ these is true:
   the document.
 - **A rule in the root says it is not shared.** A note marked confidential or
   internal, or anything the surrounding documents treat that way.
-- **You are not confident the answer is true.** Not "I have no source", which
-  Step 4 covers by saying so in the reply, but "I think this is right and I could
-  be wrong".
+- **The answer may not be true.** Not "I have no source", which Step 4 covers
+  by saying so in the reply, but "this reads right and could still be wrong".
 - **The comment is genuinely ambiguous.**
-- **It would be a second reply to a thread you already answered.**
+- **It would be a second reply to a thread already answered.**
 
-Say which of those it is, show the draft, and wait. When you post but cut
-something out of the draft first, post it and say what you cut and why.
+Say which of those it is, show the draft, and wait. When a draft goes out with
+something cut from it, post it and say what was cut and why.
 
 Everything else goes out.
 
-## If Nail asks for all the comments
+## If the request is for all the comments
 
-By default only marked comments are work. When Nail says he wants to go through
+By default only marked comments are work. When you say you want to go through
 every comment, print the numbered list of unresolved threads with author, quote
-and content, answered threads last and labelled, and let him pick.
+and content, answered threads last and labelled, and wait for you to pick.
 
-For each one he picks: draft the reply, show it, wait, then post. An unmarked
-comment carries no instruction, so it is classified by you and he approves it.
+For each one you pick: draft the reply, show it, wait, then post. An unmarked
+comment carries no instruction, so the session classifies it and you approve it.
 Never batch-approve in this mode.
 
-Picking an answered thread is allowed. It is the one case where you reply twice
-to the same thread, and you say so before posting.
+Picking an answered thread is allowed. It is the one case where a thread gets a
+second reply, and the session says so before posting.
 
 ## Step 8: Report
 
@@ -409,7 +426,7 @@ files changed in the hub: domains/regulatory/decisions.md, policy.md
 ```
 
 Then the full text of every reply and every comment body, exactly as sent, with
-the thread it went to. Not a summary. Nothing else in the run shows Nail what is
+the thread it went to. Not a summary. Nothing else in the run shows you what is
 now visible to everyone on the document.
 
 ```
@@ -420,20 +437,20 @@ now visible to everyone on the document.
 🤖 <the body, exactly as sent>
 ```
 
-Say what you cut from a draft and why, which threads you stopped on and are
-still waiting for, and which proposals did not verify.
+Say what was cut from a draft and why, which threads the session stopped on and
+is still waiting on, and which proposals did not verify.
 
-If you could not read half the review, say so and do not report clean. A
+If half the review could not be read, say so and do not report clean. A
 `comments` run with warnings, a thread whose range came back null, a suggestions
 read that failed: each one means part of the review was invisible on this run.
 
 ## Live mode
 
-Nail says "live" in the request, and the session stays open on that one
+You say "live" in the request, and the session stays open on that one
 document. Everything above runs first, once, and its Step 3 list and Step 8
 report are printed as they always are. Then the session starts watching.
 
-One session watches one document, the link Nail gave. There is no hub-wide
+One session watches one document, the link you gave. There is no hub-wide
 watch.
 
 The loop. `CURSOR` starts as the `cursor` from Step 1's `comments` run. That
@@ -448,7 +465,7 @@ Run it with the Bash tool's `timeout` set to `600000`, ten minutes in
 milliseconds. The default is two minutes, so a nine minute wait left on the
 default is cut short at two: killed outright it is a timeout matching none of
 the four paths below, and killed with a signal it comes back
-`waited.interrupted: true`, which reads as Nail having stopped the session. Set
+`waited.interrupted: true`, which reads as you having stopped the session. Set
 the timeout on every call in this loop.
 
 That one call blocks. The binary polls Drive every ten seconds inside it and
@@ -463,9 +480,9 @@ object and take one of four paths:
   and call again.
 - **`ok: false`.** A poll failed. Print the error, wait thirty seconds, call
   again with the cursor you already had. Never move the cursor past a failed
-  poll: that window is unread, not empty. Three failures in a row and you stop
-  and say so.
-- **`waited.interrupted: true`.** Nail stopped it. Print the totals below and
+  poll: that window is unread, not empty. Three failures in a row and the
+  session stops and says so.
+- **`waited.interrupted: true`.** You stopped it. Print the totals below and
   stop.
 
 Nine minutes, and never more. The binary would look for an hour, but the tool
@@ -506,8 +523,8 @@ the work is already there, write the missing receipt rather than doing it twice.
 
 ### Stop, and the totals
 
-Nail stops it with Ctrl-C or by saying stop. An answer carrying
-`waited.interrupted: true` is Nail stopping, not a failure: the object says
+You stop it with Ctrl-C or by saying stop. An answer carrying
+`waited.interrupted: true` is you stopping, not a failure: the object says
 `ok: true` and the cursor is the one handed in.
 
 Then print the session's totals, in the shape of the Step 8 report:
@@ -534,7 +551,7 @@ was posted.
 - Never edit the document. Every change to its words is a suggestion, and the
   guard refuses anything else on a document that was handed in.
 - Never resolve or reopen a thread. Resolving means the answer was accepted, and
-  only Nail accepts.
+  only the operator accepts.
 - Never accept, reject or delete anyone else's suggestion. `withdraw` retracts
   gdoc's own pending proposal and nothing else.
 - Never delete anything from the hub.
@@ -543,12 +560,12 @@ was posted.
 - Never write a reply that does not open with `🤖 `, and never put the mark in a
   proposal's `why`: gdoc adds it there, and a reason carrying it is refused.
 - Never trust a status code. Read `verified`, and `checks` where it is there.
-- Never act on an unmarked comment unless Nail asked for all-comments mode and
+- Never act on an unmarked comment unless you asked for all-comments mode and
   picked that one.
 - Never reply twice to the same piece of work. A thread that asks again gets a
-  second answer, and so does an answered thread Nail picked in all-comments
-  mode, where you say so before posting.
+  second answer, and so does an answered thread you picked in all-comments
+  mode, where the session says so before posting.
 - Never write to a multi-tab document.
-- Never export a PDF. Nail downloads it from the browser.
-- Never post a reply you did not print in full afterwards. That printing is the
-  record.
+- Never export a PDF. You download it from the browser.
+- Never post a reply that is not printed in full afterwards. That printing is
+  the record.

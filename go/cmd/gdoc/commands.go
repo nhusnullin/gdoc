@@ -281,6 +281,20 @@ func commands() []command {
 			},
 		},
 		{
+			name: "update",
+			flags: []flag{
+				{"--check", kindNone, needOptional, "say what a run would take, and write nothing"},
+				{"--major", kindNone, needOptional, "take a release across a major boundary, which is never taken without this"},
+				{"--nightly", kindNone, needOptional, "take the newest release there is, cut by the nightly or by hand"},
+				{"--rollback", kindNone, needOptional, "put the binary that was here before the last update back"},
+			},
+			summary: "Replace this gdoc with the newest release, or say what one would take.",
+			example: "gdoc update",
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdUpdate(ctx, a)
+			},
+		},
+		{
 			name:     "help",
 			words:    []string{"<command>"},
 			anyWords: true,

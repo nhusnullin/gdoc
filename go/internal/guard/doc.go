@@ -39,7 +39,7 @@
 // body says SUGGEST, or the document is the one id this run was granted.
 // TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant is the pin.
 //
-// # Two doors into the set, and four grants beside it
+// # Two doors into the set, and five grants beside it
 //
 // Ids reach the reachable set two ways and no more. AllowFile is the id a
 // command was pointed at. Learn is the id a create the guard itself carried
@@ -47,7 +47,7 @@
 // and TestFailedCreateTeachesNothing are the pins: a create that did not
 // succeed teaches nothing.
 //
-// Four grants sit beside the set. Each names one object, opens one shape, and
+// Five grants sit beside the set. Each names one object, opens one shape, and
 // dies with the process. None of them is a level and none is a third door.
 //
 //   - AllowCreateIn names the one folder a create may target. A create naming
@@ -81,8 +81,48 @@
 //     just shown it cannot compute a range must not be left with an earlier
 //     one live. TestASecondAllowMarkerReplacesTheFirst and
 //     TestARefusedSecondMarkerGrantTakesTheFirstBack are the pins.
+//   - AllowUpdateFrom names the one GitHub repository whose releases a run may
+//     read, and it is the only grant that is not about a Google file. gdoc
+//     runs on a colleague's machine now, so gdoc update has to ask what the
+//     latest release is and fetch it. The door is as narrow as that job: GET,
+//     the hosts named in policy.go, one repository's releases listing and its
+//     download path, no query the guard did not decide about, and no
+//     credential. The listing carries per_page and nothing else, held to
+//     GitHub's own maximum, because a page of thirty stops holding the last
+//     stable release about a month after the nightly starts cutting over it; a
+//     page count is not admitted, since walking pages is a read count the
+//     server decides. A policy nobody granted an update refuses every one of
+//     those hosts, and nothing it admits is a document, so the set is
+//     untouched. Nail's decision, 2026-09-16, DECISIONS.md. The pins are in
+//     update_test.go:
+//     TestWithoutTheUpdateGrantGitHubIsRefused,
+//     TestTheUpdateGrantOpensNothingBesideThoseThreeReads,
+//     TestTheUpdateGrantAdmitsNoDocument and
+//     TestAnUnreadableUpdateGrantOpensNothing.
 //
-// GrantInPlace is the fifth of that shape and the only door to LevelInPlace.
+// An asset host is the one place the guard judges a method and a host and
+// nothing further, and the reason is that gdoc does not build that URL: it is
+// where github.com's download redirects, signed, with a query no allowlist
+// here can hold. What bounds that read is what the run then does with the
+// bytes, which is internal/update checking them against the release's own
+// checksum before anything is replaced.
+//
+// There are two of them because GitHub moved. A download redirected to
+// objects.githubusercontent.com for years and redirects to
+// release-assets.githubusercontent.com today, measured 2026-09-16 against a
+// public release. Both are named: which one a redirect picks is GitHub's to
+// change, a host that is merely stale reaches nothing on its own, and a
+// redirect gdoc refuses to follow is a release it can never install.
+//
+// No request to any of those hosts carries a credential. The only bearer gdoc
+// holds is Google's, and a bearer on one of these requests is either the wrong
+// credential sent to the wrong party or two sessions confused for each other.
+// checkWireMatchesJudgment refuses it on the host rather than on the grant, so
+// the rule holds for a run that was never granted an update.
+// TestAnUpdateRequestCarriesNoBearer and
+// TestTheUpdateReadsGoOutWithNoCredential are the pins.
+//
+// GrantInPlace is the sixth of that shape and the only door to LevelInPlace.
 // It upgrades an id already in files and admits nothing new, so it is not a
 // third door into the set. AllowFile refuses to hand that level out at all,
 // because taking any level there was the side door around the invariant.

@@ -50,13 +50,16 @@
 //     at all. internal/house, internal/cover, internal/body, internal/render.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
+//   - update [--check] [--major] [--nightly] [--rollback]: this binary
+//     replaced by a newer release of it. internal/update, and the one reach
+//     that carries no credential, gapi.Plain.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
 //     to a file. completion.go, with the template beside it.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the fourteen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the fifteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -75,7 +78,7 @@
 // which is the list above rather than every flag run together. The object
 // carries the same thing as a word, because a skill reads the object where a
 // person reads the line. TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative
-// spells the twelve lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
+// spells the thirteen lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
 // holds the word beside them, and TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout
 // is the binary's own witness: a flag the table calls required is refused by
 // name when it is missing, and a flag marked wrong in either direction fails
@@ -242,6 +245,57 @@
 // external program and TestNothingRunsAnExternalProgram holds that over the
 // test files too. The script is checked structurally here, and a person types
 // Tab at it once per milestone.
+//
+// # The update runs when it is typed, and at no other moment
+//
+// `gdoc update` is the one command that reaches a host which is not Google's,
+// and it is the one command that writes over the binary a person is running.
+// Both are why nothing starts it but a person typing it.
+//
+// No command checks for a release on its way to doing something else. There is
+// no check before a build, none on the first run of the day, and nothing
+// written down between runs to say when the last check was. A build is a
+// person waiting for a docx with no network at all, and a review session is
+// somebody's document open in front of them; a background fetch in either is a
+// second thing happening that nobody asked for, and on a slow connection it is
+// the command taking longer for a reason the person cannot see. The rule is
+// held by reading this package rather than by trusting it:
+// TestNothingChecksForUpdatesUnasked says one entry in the table names
+// cmdUpdate and no other file here reaches internal/update at all, and
+// TestNoSkillRunsUpdateOnItsOwn says the same of the three skills.
+//
+// What the run may reach is the fifth grant, AllowUpdateFrom, and nothing
+// else: the releases listing of one repository, the download under it, and the
+// asset host the download redirects to, all GET, all without a credential.
+// TestTheUpdateRunReachesTheReleasesAndNothingElse judges the policy this
+// command opens, so a document id cannot come along for the ride.
+//
+// GitHub not answering is an answer. A listing that times out, refuses the
+// connection, answers 5xx or answers the rate limit is ok: true with
+// action: unreachable and a warning naming the cause, because the person asked
+// a question and the honest answer is that today gdoc cannot say. Nothing on
+// disk is touched: TestAnUnreachableGitHubIsAnAnswerAndNotAFailure.
+//
+// The flags name one run each. --rollback is a file move on this machine and
+// --check, --major and --nightly are about which release to fetch, so typing
+// one of each is refused naming both: TestUpdateRefusesWhatMeansTwoThings. The
+// rest of the policy is internal/update's, and its table is a test over
+// literals there rather than a test over a wire here.
+//
+// Two refusals belong to this layer. A symlinked binary is a checkout install,
+// and replacing it would drop a release over the link and leave `make build`
+// writing to a file nobody runs: TestASymlinkedBinaryIsRefusedByName. And a
+// run that fails part way carries no action at all, because every word in that
+// field is something that finished, and "updated" beside ok: false would be
+// the object contradicting itself:
+// TestAZipThatDoesNotMatchTheChecksumReplacesNothing.
+//
+// The object says two things about the file it left behind. sha256 is the hash
+// of what is at the path now, after an update and after a rollback alike.
+// verified says that hash came out of bytes the release published a checksum
+// for, which a rollback cannot say about a binary it only put back:
+// TestTheUpdateObjectIsWhatTheSkillsRead and
+// TestRollbackPutsTheEarlierBinaryBack.
 //
 // # A panic is still one envelope
 //

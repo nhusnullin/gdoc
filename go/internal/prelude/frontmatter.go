@@ -65,6 +65,11 @@ func (b *builder) block(i int, block house.Block) {
 	switch block.Block {
 	case "cover":
 		b.cover()
+	case "page_break":
+		// The break the cover used to write itself is a block of its own, so
+		// house.yaml states where the page turns and both writers read it
+		// there. internal/render makes the same block an empty paragraph
+		// carrying w:pageBreakBefore.
 		b.pageBreak()
 	case "label":
 		b.label(block.Ref)

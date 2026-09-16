@@ -440,8 +440,8 @@ func (s *Session) refresh(ctx context.Context) error {
 	return nil
 }
 
-// statusError carries the status and Google's own message, and never the raw
-// body. A refusal goes into the JSON a command prints, and an HTML error page
+// statusError carries the status and the server's own message, and never the
+// raw body. A refusal goes into the JSON a command prints, and an HTML error page
 // on the envelope is noise nobody reads.
 func statusError(rawURL string, status int, body []byte) error {
 	var e struct {
@@ -451,6 +451,15 @@ func statusError(rawURL string, status int, body []byte) error {
 	}
 	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" {
 		return fmt.Errorf("%s answered %d: %s", rawURL, status, e.Error.Message)
+	}
+	// GitHub puts its message at the top level, and the releases listing is
+	// read through this same function. The rate limit is the one a person
+	// actually meets, and it is worth reading rather than guessing at.
+	var g struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(body, &g) == nil && g.Message != "" {
+		return fmt.Errorf("%s answered %d: %s", rawURL, status, g.Message)
 	}
 	return fmt.Errorf("%s answered %d with no readable message", rawURL, status)
 }

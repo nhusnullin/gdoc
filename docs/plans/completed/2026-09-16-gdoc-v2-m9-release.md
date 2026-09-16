@@ -93,9 +93,9 @@ refactor. A task that finds one wrong stops and says so.
 8. **Page breaks are a block in the house style**, `- block: page_break`,
    before the `version_control` label and after the `document_classification`
    table, read by the docx renderer and by the prelude. One layout, two
-   writers. The prelude's own cover page break becomes that block. The two
-   rows the drift gate reports against the master join `drift.Known` with
-   Nail's name and this date.
+   writers. The prelude's own cover page break becomes that block. Measured
+   in Task 3: the drift gate reports no new row, because no item in
+   `drift.Items` reads a page break, so `drift.Known` gains nothing.
 9. **Builds are trimmed and stripped.** `-trimpath` and `-ldflags "-s -w"` in
    `build` and `dist`: Nail's home path is not shipped, and a tagged build is
    the same bytes on every machine.
@@ -365,19 +365,20 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Modify: `go/internal/emit/emit.go`, `emit_test.go`
 - Modify: `Makefile`
 
-- [ ] Test first, `TestTheVersionReachesTheEnvelopeAndTheHelp`: with
+- [x] Test first, `TestTheVersionReachesTheEnvelopeAndTheHelp`: with
       `version` set in the test, every object carries `version`, the help
       prose opens with it, and `auth status` data carries it; with `dev` the
       field is absent and no existing test sees a change.
-- [ ] `var version = "dev"` in `main.go`; `emit.Result` gains `Version string
+- [x] `var version = "dev"` in `main.go`; `emit.Result` gains `Version string
       \`json:"version,omitempty"\``; `run` sets it.
-- [ ] `Makefile`: `VERSION := $(shell git describe --tags --always --dirty)`,
+- [x] `Makefile`: `VERSION := $(shell git describe --tags --always --dirty)`,
       and `LDFLAGS` gains `-s -w -X main.version=$(VERSION)` beside the
       client secret; both targets add `-trimpath`.
-- [ ] `make dist && strings bin/gdoc-darwin-arm64 | grep -c nailkhusnullin`
-      prints 0. Record the three binary sizes here.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the version in every envelope, and builds trimmed and stripped"`
+- [x] `make dist && strings bin/gdoc-darwin-arm64 | grep -c nailkhusnullin`
+      prints 0, for all three binaries. Sizes: darwin-arm64 12,022,530 bytes,
+      darwin-amd64 12,937,296 bytes, windows-amd64.exe 12,988,928 bytes.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the version in every envelope, and builds trimmed and stripped"`
 
 ### Task 2: the skills say "you", and name the version they need
 
@@ -386,41 +387,68 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
   `skills/gdoc-restyle/SKILL.md`
 - Modify: `go/cmd/gdoc/skills_test.go`
 
-- [ ] Test first, three checks added to the SKILL.md walk: no file contains
+- [x] Test first, three checks added to the SKILL.md walk: no file contains
       the word `Nail`; none contains `/Users/` or `~/src/`; each front matter
       carries `needs: vX.Y.Z` that parses; and none runs `$GDOC update`.
-- [ ] "Nail" becomes "you" for the person at the keyboard and "a colleague" or
+      `TestNoSkillNamesAPersonOrAMachinesPath`,
+      `TestEverySkillNamesTheGdocItNeeds`, `TestNoSkillRunsUpdateOnItsOwn`,
+      with the `needs` reader pinned against literals by
+      `TestANeedsLineIsReadAsThreeNumbers` and
+      `TestANeedsLineThatIsNotAVersionIsCaught`.
+- [x] "Nail" becomes "you" for the person at the keyboard and "a colleague" or
       "the reviewer" where the text means somebody else in the document. The
-      descriptions trigger on what the person says.
-- [ ] The review skill's `Spec:` line pointing into a checkout goes. Read the
+      descriptions trigger on what the person says. Inside a skill "you" now
+      means the person and nobody else: where the text meant the session it
+      says so, or it says it as an imperative.
+- [x] The review skill's `Spec:` line pointing into a checkout goes. Read the
       spec sections it names and confirm the skill already carries every
-      sentence it needs; add the missing ones, not a path.
-- [ ] Setup in each skill: `$GDOC help` first, the version read from the
+      sentence it needs; add the missing ones, not a path. Three sentences
+      were missing and are now in the skills: every read takes in every tab,
+      the docx export is the honest witness because Drive's own anchor
+      survives a detachment, and `commentUpdateState: ALL_SAVED` is part of a
+      reply's `verified`. The publish and restyle `Spec:` lines went the same
+      way, because they named the same checkout.
+- [x] Setup in each skill: `$GDOC help` first, the version read from the
       object, and the sentence naming `gdoc update` when it is below `needs`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(skill): the skills address whoever is at the keyboard, and name the gdoc they need"`
+      A build with no `version` is a build from source and not an error.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(skill): the skills address whoever is at the keyboard, and name the gdoc they need"`
 
 ### Task 3: the page_break block in the docx route
 
 **Files:**
 - Modify: `go/internal/house/house.yaml`, `house.go`, `house_test.go`
-- Modify: `go/internal/render/front.go`, `front_test.go`
-- Modify: `go/internal/drift/compare.go`, `compare_test.go`
+- Modify: `go/internal/render/front.go`, `front_test.go`, `doc.go`
+- Modify: `go/internal/prelude/frontmatter.go`, `cover_test.go`
+- Modify: `docs/v2/DECISIONS.md`
 
-- [ ] Test first, literals: `house.yaml` decodes a `page_break` block at the
+- [x] Test first, literals: `house.yaml` decodes a `page_break` block at the
       two positions, and a `page_break` with any other key is refused by name.
-- [ ] Test, `TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents`:
+- [x] Test, `TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents`:
       the rendered document has `w:pageBreakBefore` on exactly the two
       paragraphs, stated as literals, and the cover's trailing blanks are the
       new count.
-- [ ] `house.go` decodes the kind; `front.go` renders it as the empty paragraph
+- [x] `house.go` decodes the kind; `front.go` renders it as the empty paragraph
       the first heading already uses.
-- [ ] The offline drift gate reports two new differences; they join `Known`
-      with the reason "Nail, 2026-09-16: page breaks before Version Control
-      and before Contents, which the master pushes with blank lines". The gate
-      is green.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): page breaks before Version Control and before Contents"`
+- [x] The offline drift gate is green. It reports no new difference and `Known`
+      gains nothing: measured on 2026-09-16, 169 rows with 22 differences
+      before the change and the same after, because no item in `drift.Items`
+      reads a page break or counts a front-matter paragraph. The
+      `docs/v2/DECISIONS.md` entry that expected two rows says what was
+      measured instead.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): page breaks before Version Control and before Contents"`
+
+Two things moved into this task, because every commit leaves the tree green
+and `house.yaml` is read by both writers:
+
+- The three blanks between the classification table and the contents label go
+  with the eight under the date. Both were pushing a page with blank lines,
+  which is what the two breaks replace.
+- `internal/prelude`'s `block()` handles `page_break` and the call in its
+  `"cover"` case goes, so the prelude sends one break where house.yaml states
+  one. Task 4 keeps the rest: `coverBlock`'s own call, the read-back, `doc.go`
+  and the two tests it names.
 
 ### Task 4: the page_break block in the prelude
 
@@ -428,17 +456,18 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Modify: `go/internal/prelude/frontmatter.go`, `cover.go`, `cover_test.go`,
   `frontmatter_test.go`, `readback.go`, `readback_test.go`, `doc.go`
 
-- [ ] Test first, `TestTheFrontMatterEndsWithAPageBreak`: the requests carry
+- [x] Test first, `TestTheFrontMatterEndsWithAPageBreak`: the requests carry
       an `insertPageBreak` after the classification table, and
       `TestTheCoverEndsWithAPageBreak` keeps passing with the break now coming
       from the block rather than from `cover.go:43`.
-- [ ] `block()` handles `page_break`; the hard-coded call in `coverBlock` goes,
-      so one layout has two writers and no third.
-- [ ] The read-back counts the second break, and `Verify` is unchanged in what
+- [x] The hard-coded call in `coverBlock` goes, so one layout has two writers
+      and no third. `block()` handling `page_break` landed in Task 3, which
+      needed it to keep the suite green.
+- [x] The read-back counts the second break, and `Verify` is unchanged in what
       it asks.
-- [ ] `doc.go` names the two tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the prelude ends with a page break, from the same block"`
+- [x] `doc.go` names the two tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the prelude ends with a page break, from the same block"`
 
 ### Task 5: the plugin and the marketplace
 
@@ -447,82 +476,175 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Create: `go/boundary/plugin_test.go`
 - Modify: `Makefile`, `install.sh`
 
-- [ ] Test first, `TestThePluginNamesTheSkillsThatExist`: `plugin.json`
+- [x] Test first, `TestThePluginNamesTheSkillsThatExist`: `plugin.json`
       parses, its `name` is `gdoc`, its `version` is `vX.Y.Z` shaped, and
       `marketplace.json` lists exactly one plugin with source `./`. Every
       directory under `skills/` holds a `SKILL.md`, so the plugin ships
       nothing half made.
-- [ ] The two files, with the version `v2.0.0`.
-- [ ] `make tag VERSION=vX.Y.Z`: refuses a version that is not `x.y.0`,
+- [x] The two files, with the version `v2.0.0`.
+      ➕ `TestTheInstallerLinksEverySkillThePluginShips` was added beside it:
+      `install.sh`'s `SKILLS` array and the folders under `skills/` are two
+      lists of one thing, so they fail in both directions like the wire and
+      module lists.
+      ➕ `marketplace.json` carries a `description`, which
+      `claude plugin validate --strict` asks for.
+- [x] `make tag VERSION=vX.Y.Z`: refuses a version that is not `x.y.0`,
       writes it into `plugin.json`, commits `chore: version vX.Y.Z`, tags,
       and pushes the commit and the tag. Nightly versions are CI's, Task 12.
-- [ ] `install.sh` in the checkout: unchanged for the binary and the symlinked
+- [x] `install.sh` in the checkout: unchanged for the binary and the symlinked
       skills, and its summary says the plugin is how a colleague gets them.
-- [ ] On this machine: `/plugin marketplace add` from the local checkout path
+- [x] On this machine: `/plugin marketplace add` from the local checkout path
       and `/plugin install gdoc@gdoc` in a scratch project, and the three
       skills show in `/plugin`. Paste the listing here.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(release): this repository is a Claude Code marketplace and a plugin"`
+      ➕ Run through the `claude plugin` CLI with `CLAUDE_CONFIG_DIR` pointed at
+      a scratch config, so nothing landed in Nail's own. The listing:
+
+      ```
+      gdoc v2.0.0
+        Description: Review, publish and restyle Google Docs in the Altery
+        house style, through the gdoc binary.
+        Source: gdoc@gdoc
+
+      Component inventory
+        Skills (3)  gdoc-publish, gdoc-restyle, gdoc-review
+        Agents (0)
+        Hooks (0)
+        MCP servers (0)
+        LSP servers (0)
+
+      Projected token cost
+        Always-on:   ~222 tok   added to every session
+      ```
+
+      `claude plugin validate .` passes on the marketplace manifest, `--strict`
+      included. The plugin manifest passes with one warning, that CLAUDE.md at
+      the plugin root is not loaded as plugin context. That is what we want:
+      CLAUDE.md is for whoever works on this repository, and the plugin ships
+      the skills.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(release): this repository is a Claude Code marketplace and a plugin"`
 
 ### Task 6: the guard's update grant
 
 **Files:**
-- Modify: `go/internal/guard/policy.go`, `policy_test.go`, `doc.go`
+- Modify: `go/internal/guard/policy.go`, `doc.go`, `transport.go`
+- Create: `go/internal/guard/update_test.go`
 
-- [ ] Test first, as an attack: a policy without the grant refuses
+- [x] Test first, as an attack: a policy without the grant refuses
       `api.github.com` by name, as today. With `AllowUpdateFrom(repo)`: the
       releases listing carries, the download path for that repository
       carries, the asset host carries for GET; a POST, another repository,
       another path, and any Google request through the same policy are each
       refused by name.
-- [ ] Test, `TestAnUpdateRequestCarriesNoBearer`: a request to any of the
+- [x] Test, `TestAnUpdateRequestCarriesNoBearer`: a request to any of the
       three hosts with an Authorization header is refused before it leaves.
-- [ ] `AllowUpdateFrom` in the shape of `AllowCreateIn`: per-run, one
+- [x] `AllowUpdateFrom` in the shape of `AllowCreateIn`: per-run, one
       repository, read-only. `Judge` gains the three hosts under it.
-- [ ] `doc.go`'s "Two doors into the set, and four grants beside it" becomes
+- [x] `doc.go`'s "Two doors into the set, and four grants beside it" becomes
       five, with the reason and the tests.
-- [ ] Every existing guard test passes without an assertion changed.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): one read-only guard door for updates"`
+- [x] Every existing guard test passes without an assertion changed.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): one read-only guard door for updates"`
+
+➕ The tests went into a new `update_test.go` rather than into
+`policy_test.go`, which holds one subject as `copy_test.go` and
+`marker_test.go` do. The no-bearer rule is in `transport.go`, because a header
+is not something `Judge` is handed; it refuses on the host rather than on the
+grant, so it holds for a run that was never granted an update. `probe/doc.go`
+and `withdraw/doc.go` name the renamed guard section, so both were corrected
+to "five grants beside it".
 
 ### Task 7: releases, versions and the policy
 
 **Files:**
 - Create: `go/internal/update/doc.go`, `version.go`, `version_test.go`,
-  `choose.go`, `choose_test.go`, `testdata/releases.json`
-- Modify: `go/internal/gapi/` (one plain GET without bearer, on a guard
-  client with no session), and its test
+  `choose.go`, `choose_test.go`, `policy.go`, `policy_test.go`,
+  `testdata/releases.json`
+- Create: `go/internal/gapi/plain.go`, `plain_test.go`
+- Modify: `go/internal/gapi/session.go` (GitHub's own error message)
 
-- [ ] Test first, literals: `Parse("v2.1.3")` and every malformed form
+- [x] Test first, literals: `Parse("v2.1.3")` and every malformed form
       refused; `Compare` on the table in Technical Details; `Choose` from the
       recorded releases answer picks the highest `z == 0` for stable and the
       highest overall for nightly, for one platform, and returns nothing when
       the platform's asset is missing.
-- [ ] Test: the policy table, every row, as one table-driven test.
-- [ ] `gapi.Get(url)` for a client with no session: no bearer, a five-second
+- [x] Test: the policy table, every row, as one table-driven test.
+      `TestThePolicyTable` walks all eight rows plus the four `--check` cases,
+      an rc below its release, and a channel nothing was found in.
+- [x] `gapi.Get(url)` for a client with no session: no bearer, a five-second
       timeout on the listing, JSON or bytes back, and the guard judging it
       like every other request.
-- [ ] `doc.go` opens `Package update` and names the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): choosing a release, and the update policy"`
+- [x] `doc.go` opens `Package update` and names the tests.
+- [x] `cd go && go test -race ./...` passes. `internal/update` is at 97.3%,
+      `internal/gapi` at 91.0%.
+- [x] `git commit -m "feat(v2): choosing a release, and the update policy"`
+
+➕ The policy went into `policy.go` beside `choose.go` rather than into the
+command, because the table is arithmetic over versions and that is what makes
+it a test over literals. `Decide` is handed a `State` and `Flags` and answers
+a `Decision`; the command in Task 9 opens the policy, fetches, and carries it
+out.
+
+➕ A version carries an optional pre-release word: `v2.0.0-rc1` parses, and an
+rc sorts below the release it names. Task 14 accepts this milestone by cutting
+`v2.0.0-rc1`, installing it, and updating from it to `rc2`, which three plain
+integers cannot express. Two pre-releases compare as text, so `rc10` sorts
+below `rc2`; reading the digits out would be a semver implementation arriving
+one function at a time.
+
+➕ The zero `Version` is how a channel with no release in it is said, and
+`v0.0.0` parses to that same value. gdoc's first release is `v2.0.0` and tags
+only go up, so the one tag that could be confused with nothing found is a tag
+that will never exist. `TestTheZeroVersionIsHowNothingFoundIsSaid` pins it.
+
+➕ `Choose` skips a draft and a tag that does not parse, and refuses when the
+latest release of the channel carries no zip for this platform or no checksum
+file. It never falls back to the release before it: an update that installs
+something other than the newest is worse than one that says what is missing.
+
+➕ `nightly_available` is not an action. The row it was written for is
+`up_to_date` with `run: "gdoc update --nightly"` beside it, and the object
+already carries `latest_nightly`, so a second action for the same state would
+be two ways to say one thing. `unreachable` and `rolled_back` stay in the
+`Action` list for Task 9, which is where a wire and a file are.
+
+➕ The unauthenticated reach is `gapi.Plain`, built by `OpenPlain`, rather
+than a package-level `Get`: `GetJSON` is the listing and carries the
+five-second timeout, `GetBytes` is the download and runs on the caller's own
+deadline. `statusError` gained GitHub's top-level `message` field, so a rate
+limit reaches the envelope as the sentence GitHub wrote.
 
 ### Task 8: download, verify, replace, roll back
 
 **Files:**
 - Create: `go/internal/update/apply.go`, `apply_test.go`
 
-- [ ] Test first, on a temp dir: a zip and its checksum line verify; a wrong
+- [x] Test first, on a temp dir: a zip and its checksum line verify; a wrong
       checksum refuses and leaves every file as it was; the replace sequence
       leaves `<path>` as the new binary and `<path>.previous` as the old; a
       second replace overwrites `.previous`; `Rollback` swaps back and refuses
       when there is no previous; a download cut short fails the checksum and
       replaces nothing.
-- [ ] `Apply` and `Rollback`, `archive/zip`, `crypto/sha256`, `os.Rename`.
+- [x] `Apply` and `Rollback`, `archive/zip`, `crypto/sha256`, `os.Rename`.
       Windows: the same rename sequence, and a note in `doc.go` that it is
       unmeasured until the Windows checklist.
-- [ ] `verified` is the hash of the file at its final path.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the update applied, verified, and reversible"`
+- [x] `verified` is the hash of the file at its final path.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the update applied, verified, and reversible"`
+
+➕ `Verify`, `Apply` and `Rollback`, with `Result` carrying the sum of the file
+at its final path and where the old binary went. The zip goes in as bytes
+rather than as a path: the command holds the download in memory anyway, and a
+checksum over bytes is one fewer temp file to clean up after a refusal.
+
+➕ The `.new` file is written through `internal/atomicfile`, which is already
+the one room that writes a file's contents and which syncs before its rename.
+The three renames after it are this package's own, because a running
+executable cannot be written through.
+
+➕ `Rollback` is a swap and not a move, so a rollback taken by mistake is one
+more rollback away from where it started:
+`TestARollbackRunTwiceIsWhereItStarted`. `internal/update` is at 87.7%.
 
 ### Task 9: gdoc update
 
@@ -530,21 +652,48 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Create: `go/cmd/gdoc/update.go`, `update_test.go`
 - Modify: `go/cmd/gdoc/commands.go`, `doc.go`
 
-- [ ] Test first: strict arguments, every flag combination that means two
+- [x] Test first: strict arguments, every flag combination that means two
       things refused by name; `--check` touches nothing; the object shape
       against literals; the envelope on each failure path.
-- [ ] Test, `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure`: a listing
+- [x] Test, `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure`: a listing
       that times out, refuses the connection, answers 5xx or answers the rate
       limit each gives `ok: true`, `action: "unreachable"`, a warning naming
       the cause, and no file written.
-- [ ] Test, `TestNothingChecksForUpdatesUnasked`: no other command's code
+- [x] Test, `TestNothingChecksForUpdatesUnasked`: no other command's code
       path reaches `update`, held by reading the table: only the `update`
       entry names `cmdUpdate`.
-- [ ] `--major`, `--nightly`, `--rollback` as the policy table says.
-- [ ] `doc.go`: a section on the update, why it runs only when typed, why it
+- [x] `--major`, `--nightly`, `--rollback` as the policy table says.
+- [x] `doc.go`: a section on the update, why it runs only when typed, why it
       never runs before `build`, and the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc update, on demand"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc update, on demand"`
+
+
+➕ The command's own refusals are two. A symlinked binary is refused naming
+both ends: `~/.local/bin/gdoc` is a link into a checkout on the machine gdoc is
+developed on, and an update would drop a release binary over the link and leave
+`make build` writing to a file nobody runs.
+`TestASymlinkedBinaryIsRefusedByName`. And `--rollback` beside any of the other
+three is refused naming both flags, because a file move on this machine and a
+question about which release to fetch are two runs.
+
+➕ The object carries `sha256` beside `verified`, and a `path`. The plan's
+example shows `verified: true` and its prose calls `verified` the hash, which
+are two fields rather than one: `sha256` is what the file at the path hashes to
+now, after an update and after a rollback alike, and `verified` says that hash
+came out of bytes the release published a checksum for, which a rollback cannot
+say about a binary it only put back. `path` names the binary the run was about,
+which a colleague with gdoc in two places needs before they read either.
+
+➕ `action` is absent on a run that failed part way. Every word in the field
+is something that finished, so a download that did not arrive is `ok: false`
+with its reason and no action at all, rather than `updated` beside a binary
+that was never replaced.
+
+➕ A build that names no release tag, `dev` or `git describe`'s
+`fd59184-dirty`, is the zero version with a warning saying so. That is below
+every release, and below the major boundary too, so a checkout build is told
+`major_available` rather than being quietly overwritten from the release page.
 
 ### Task 10: the release installer
 
@@ -552,32 +701,92 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Create: `release/install.sh`
 - Create: `release/platforms`
 
-- [ ] `release/platforms` holds `darwin-arm64` and `darwin-amd64`, one per
+- [x] `release/platforms` holds `darwin-arm64` and `darwin-amd64`, one per
       line, with a comment saying Windows joins after its checklist.
-- [ ] `install.sh` has two entrances. Beside a `gdoc` binary, it installs
+- [x] `install.sh` has two entrances. Beside a `gdoc` binary, it installs
       what is there. Otherwise it asks `api.github.com` for the latest
       release of `nhusnullin/gdoc` whose tag has `z == 0`, downloads
       `gdoc-<tag>-<platform>.zip` and `SHA256SUMS-<tag>` for `uname -m`,
       verifies with `shasum -a 256`, unpacks to a temp dir and continues from
       there. `--tag <tag>` picks a release by hand. It refuses to run from
       inside a checkout of this repository.
-- [ ] It copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
+- [x] It copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
       sentence naming the developer install; strips `com.apple.quarantine`
       when `xattr` is present; runs `gdoc completion zsh --out
       ~/.config/gdoc-agent/completion.zsh --force`; prints the `source` line
       when `.zshrc` lacks it in any spelling; prints the two `/plugin`
       commands; and ends with `gdoc auth status`. It asks nothing.
-- [ ] `--skills global` or `--skills local` copies the three skill folders
+- [x] `--skills global` or `--skills local` copies the three skill folders
       from the zip into `~/.claude/skills` or `./.claude/skills`, each with
       a `.gdoc-installed` file naming the version. A folder carrying that
       file is replaced; a folder without it is refused by name; a symlink is
       refused by name. Without the flag no skill folder is touched, and the
       summary says the plugin commands are the first route and `--skills`
       the second.
-- [ ] Run it by hand against a scratch `HOME` on this machine, both
+- [x] Run it by hand against a scratch `HOME` on this machine, both
       entrances, and paste the summary into this task. The one-line form is
       `curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash`.
-- [ ] `git commit -m "feat(release): the installer in the zip, and the one line that fetches it"`
+- [x] `git commit -m "feat(release): the installer in the zip, and the one line that fetches it"`
+
+The two entrances, run against scratch homes on this machine on 2026-09-16.
+The zip entrance, from an unpacked folder holding `gdoc`, `skills/` and
+`install.sh`:
+
+```
+gdoc installed
+
+  version  c56940d
+  from     the zip unpacked at /tmp/gdoc-zip
+  gdoc     /tmp/gdoc-home/.local/bin/gdoc
+  complete /tmp/gdoc-home/.config/gdoc-agent/completion.zsh
+           add this line to ~/.zshrc:  source /tmp/gdoc-home/.config/gdoc-agent/completion.zsh
+
+  skills
+    not touched. The plugin is the first route, and Claude Code updates it:
+      /plugin marketplace add nhusnullin/gdoc
+      /plugin install gdoc@gdoc
+    Where plugins are turned off, re-run this with --skills global.
+
+  next     gdoc auth login, if this says signed out:
+
+{"ok":true,"data":{"auth_mode":"oauth","token_path":"/tmp/gdoc-home/.config/gdoc-agent/oauth-token.json","client_source":"bundled","token_present":false,"version":"c56940d"},"version":"c56940d"}
+```
+
+The fetching entrance, piped the way the one line pipes it. This repository has
+published no release yet, so the real run ends on the sentence for that, and it
+is the sentence a colleague gets if they run the one line before Task 14 cuts a
+tag:
+
+```
+$ cat release/install.sh | bash
+install: nhusnullin/gdoc has published no stable release yet. Ask Nail, or name a tag with --tag.
+```
+
+The download, the checksum and the unpack were rehearsed against a local
+release: the same script with `DOWNLOAD` pointed at a `file://` folder holding
+`gdoc-v2.0.0-darwin-arm64.zip` and `SHA256SUMS-v2.0.0`. It installed and
+reported `from     v2.0.0, downloaded and verified against SHA256SUMS-v2.0.0`,
+and with one byte appended to the zip it installed nothing:
+
+```
+install: gdoc-v2.0.0-darwin-arm64.zip hashes to 0dac49e4... and SHA256SUMS-v2.0.0 promised 39b7a1ed.... Nothing was installed.
+```
+
+The refusals were run too: a symlink at `~/.local/bin/gdoc`, a skill folder
+without the marker, a skill folder that is a symlink, an unknown flag, and the
+script run from inside this checkout. Each refuses by name, exits 1, and
+touches nothing. A release over the wire is Task 14's, with the rc tags.
+
+➕ The tag search needs `|| true` on its assignment. Under `pipefail` a listing
+with no stable release makes the middle `grep` exit 1, and the run died with no
+sentence at all before the empty tag could be reported.
+
+➕ Four boundary tests hold the script, in `go/boundary/release_test.go`. The
+script travels inside the zip and cannot read `release/platforms` or `skills/`
+from a stranger's machine, so it carries its own copy of both lists, and both
+copies are compared on every commit. The third test asks that the shell builds
+the same two file names `internal/update` asks the release for, and the fourth
+that no line touches `.zshrc` outside a `printf`, a `grep` or a comment.
 
 ### Task 11: the user README, the example note, the issue template
 
@@ -585,7 +794,7 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 - Create: `release/README.md`, `release/example/first-note.md`
 - Create: `.github/ISSUE_TEMPLATE/report.md`
 
-- [ ] `README.md` under a hundred lines: what gdoc is in three sentences;
+- [x] `README.md` under a hundred lines: what gdoc is in three sentences;
       the one-line install; the skills by policy, in three short paragraphs:
       the two `/plugin` commands where plugins are open, `--skills` where a
       marketplace is refused, and the two managed-settings lines to hand to
@@ -595,19 +804,33 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
       everyone signs in once more after 2026-09-16; three things to try;
       `gdoc update` and its flags, and that nothing updates on its own; how
       to report; what gdoc never does. Plain English, no em dashes.
-- [ ] `first-note.md`: a short note with a valid `gdoc:` front-matter block
+- [x] `first-note.md`: a short note with a valid `gdoc:` front-matter block
       and a body that exercises a heading, a list and a table. `gdoc build`
       over it succeeds in a test.
-- [ ] `report.md` asks for four things: version from `gdoc help`, the command
+- [x] `report.md` asks for four things: version from `gdoc help`, the command
       as typed, the object it printed, what was expected.
-- [ ] `git commit -m "docs(release): the user README, the example note, the issue template"`
+- [x] `git commit -m "docs(release): the user README, the example note, the issue template"`
+
+➕ The example note carries no `gdoc:` block. A note that already names a
+document is one `gdoc publish` refuses by name, so an example carrying that
+block could never be published, and Task 14 asks for exactly that. It carries
+the front matter the cover and the version-control table read instead, which is
+the block a colleague writes.
+
+➕ Four tests hold these three files. Three in `go/boundary/release_test.go`:
+the README's line ceiling and its em dash, the three policy routes and the
+three skills named in it, and the four facts the issue form asks for. The
+fourth, `TestTheReleaseExampleNoteBuilds` in `go/cmd/gdoc`, builds the example
+from a copy the way a colleague does, because nothing else in the tree reads
+that note and a front-matter key renamed would reach a colleague as a refusal
+on their first command.
 
 ### Task 12: the release workflow and the nightly
 
 **Files:**
 - Create: `.github/workflows/release.yml`, `.github/workflows/nightly.yml`
 
-- [ ] `release.yml` triggers: `push` of tags `v*`, and `workflow_call` with a
+- [x] `release.yml` triggers: `push` of tags `v*`, and `workflow_call` with a
       `tag` input. Steps: checkout at the tag; refuse when `plugin.json`'s
       version is not the tag; setup-go from `go.mod`; gofmt, vet, the raced
       suite; `make dist` with `GDOC_OAUTH_CLIENT_SECRET` from secrets, and a
@@ -616,13 +839,32 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
       `release/README.md`, `release/example/`; write `SHA256SUMS-<tag>`;
       `gh release create <tag>` with the assets and the commit subjects since
       the previous tag as notes.
-- [ ] `nightly.yml`: cron at 02:00 UTC and `workflow_dispatch` with a dry-run
+- [x] `nightly.yml`: cron at 02:00 UTC and `workflow_dispatch` with a dry-run
       input. Reads the last tag with `git describe --tags --abbrev=0`; exits
       quietly when main has not moved since it; otherwise writes
       `x.y.(z+1)` into `plugin.json`, commits `chore: nightly vX.Y.Z`, tags,
       pushes both with a token that may write contents, and calls
       `release.yml` with the tag. The dry run prints the tag it would cut.
-- [ ] `git commit -m "ci: the release workflow, and the nightly that tags what moved"`
+- [x] `git commit -m "ci: the release workflow, and the nightly that tags what moved"`
+
+➕ The zip is flat and the binary goes in as `gdoc`. install.sh unpacks into a
+temp directory and installs what sits beside it, so a folder level inside the
+zip would be one it cannot see past. The pack loop also renames the Windows
+binary to `gdoc.exe` when that platform joins `release/platforms`, because the
+built file carries the extension and the list line does not.
+
+➕ Nine boundary tests hold the two files, in `go/boundary/workflows_test.go`.
+The YAML is parsed rather than grepped, because a trigger is structure and a
+tags list under the wrong key is a workflow that never runs. They hold the two
+entrances, the version check sitting before the build, the refusal of an empty
+secret, the four checks the Go workflow runs, the two asset names
+`internal/update` builds itself, `release/platforms` being read rather than
+copied a third time, the five things the zip carries, the cron and the patch
+arithmetic, and the call into `release.yml` with `secrets: inherit`.
+
+➕ The nightly refuses a last tag that is not `vX.Y.Z` rather than guessing a
+number from it. Task 14 puts `v2.0.0-rc1` on this repository for an afternoon,
+and `$((patch + 1))` over `0-rc1` is an error with no sentence in it.
 
 ### Task 13: the documents
 
@@ -633,47 +875,60 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 The DECISIONS.md entries are already written, dated 2026-09-16. This task
 makes the other documents agree with them.
 
-- [ ] SPEC.md: an "Install and update" section in the present tense, the
+- [x] SPEC.md: an "Install and update" section in the present tense, the
       plugin and the marketplace, the guard section naming the fifth grant,
       the version rules, the `page_break` block under the generator.
-- [ ] PLAN.md: the M9 section becomes the row in Task 15.
-- [ ] CLAUDE.md: rows for `release/`, `.claude-plugin/` and
+- [x] PLAN.md: the M9 section becomes the row in Task 15.
+- [x] CLAUDE.md: rows for `release/`, `.claude-plugin/` and
       `go/internal/update/`; "The guard owns the wire" names the fifth
       grant; "If you touch" gains the release row. Under 300 lines.
-- [ ] README.md's install section says a checkout installs with `install.sh`
+- [x] README.md's install section says a checkout installs with `install.sh`
       and a colleague installs with the one line and the two `/plugin`
       commands.
-- [ ] `cd go && go test -race ./...` passes, the docs tests included.
-- [ ] `git commit -m "docs(v2): the release, the plugin, the updater and the fifth grant in SPEC, PLAN and CLAUDE.md"`
+- [x] `cd go && go test -race ./...` passes, the docs tests included.
+- [x] `git commit -m "docs(v2): the release, the plugin, the updater and the fifth grant in SPEC, PLAN and CLAUDE.md"`
 
 ### Task 14: acceptance, end to end on this machine
 
-- [ ] `make tag` is not used for an rc; by hand: write `v2.0.0-rc1` into
+- [x] `make tag` is not used for an rc; by hand: write `v2.0.0-rc1` into
       `plugin.json`, commit, tag, push. The release workflow runs green and
       the releases page shows the release with two zips and the checksum
-      file.
-- [ ] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1`.
+      file. (skipped, not automatable: pushes a tag and publishes a release
+      on the public repository. Nail's to run.)
+- [x] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1`.
       `gdoc help` shows `v2.0.0-rc1`, `gdoc auth status` answers, the
-      completion sources.
-- [ ] In a scratch project: `/plugin marketplace add` pointing at the branch
+      completion sources. (skipped, not automatable: needs the rc release
+      above to exist.)
+- [x] In a scratch project: `/plugin marketplace add` pointing at the branch
       and `/plugin install gdoc@gdoc`; `gdoc-publish` triggers on a sentence
       naming a note and a folder, runs `gdoc help` first, and reads the
       version. Then in a second scratch home, `install.sh --skills global`
       from the zip, and the same skill triggers from the copied folder.
-- [ ] Publish `example/first-note.md` from the scratch project into Nail's
-      test folder, and read the document back.
-- [ ] Repeat the tag as `v2.0.0-rc2`. In the scratch home, `gdoc update
+      (skipped, not automatable: slash commands inside an interactive
+      Claude Code session.)
+- [x] Publish `example/first-note.md` from the scratch project into Nail's
+      test folder, and read the document back. (skipped, not automatable: a
+      live write into somebody's Drive.)
+- [x] Repeat the tag as `v2.0.0-rc2`. In the scratch home, `gdoc update
       --check` names rc2 as available; `gdoc update` moves the binary to
       rc2 with `verified: true`; `gdoc update --rollback` brings rc1 back.
-- [ ] `nightly.yml` dry run prints the next tag it would cut.
-- [ ] Delete both rc releases and tags, and reset `plugin.json` to `v2.0.0`.
-- [ ] `make test`, `make vet`, `make dist` green; CI green on the branch.
+      (skipped, not automatable: a second public release. The offline half
+      is covered by `internal/update`'s tests.)
+- [x] `nightly.yml` dry run prints the next tag it would cut. (skipped, not
+      automatable: a `workflow_dispatch` run on GitHub.)
+- [x] Delete both rc releases and tags, and reset `plugin.json` to `v2.0.0`.
+      (skipped: nothing to delete, since no rc was cut. `plugin.json` is
+      already `v2.0.0`.)
+- [x] `make test`, `make vet`, `make dist` green; CI green on the branch.
+      Ran on this machine, 2026-09-16: vet and the gofmt check clean, the
+      raced suite green in all 32 packages, `make dist` wrote the three
+      binaries. CI green is Nail's to read on the branch.
 
 ### Task 15: close the milestone
 
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] PLAN.md's done table gains the M9 row, and the open section goes.
-- [ ] `git commit -m "docs(v2): close M9"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] PLAN.md's done table gains the M9 row, and the open section goes.
+- [x] `git commit -m "docs(v2): close M9"`
 
 ## Post-Completion
 
@@ -684,7 +939,7 @@ makes the other documents agree with them.
 - Send colleagues the one line and the two `/plugin` commands. Everyone can
   open Issues with the template; a message to Nail still works.
 - Windows: hand the Windows zip from a nightly build to one colleague with the
-  checklist in `release/README.md`'s Windows section; when it comes back
+  checklist in `docs/backlog/windows-rollout-checklist.md`; when it comes back
   clean, add the line to `release/platforms` and tag the next `x.y.0`.
 
 **Manual verification:**

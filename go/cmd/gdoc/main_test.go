@@ -206,7 +206,7 @@ func TestTheUsageLineNamesEveryCommand(t *testing.T) {
 	msg, _ := got["error"].(string)
 	for _, command := range []string{"auth status", "auth login", "read", "comments",
 		"suggestions", "restyle", "probe", "reply", "propose", "withdraw", "build",
-		"publish", "help", "completion"} {
+		"publish", "update", "help", "completion"} {
 		if !strings.Contains(msg, command) {
 			t.Errorf("the usage line must name %q: %q", command, msg)
 		}
@@ -339,5 +339,95 @@ func TestOnlyTheWaitTrapsTheSignal(t *testing.T) {
 	sort.Strings(traps)
 	if !reflect.DeepEqual(traps, []string{"read.go"}) {
 		t.Errorf("os/signal is named in %v, and only read.go's wait may trap a signal", traps)
+	}
+}
+
+// atVersion sets the version this binary reports for the length of one test,
+// which is what the linker does for the length of one build.
+func atVersion(t *testing.T, v string) {
+	t.Helper()
+	was := version
+	version = v
+	t.Cleanup(func() { version = was })
+}
+
+// The version a colleague is running has to reach the report they send back,
+// and the only thing they are certain to send is the object gdoc printed. So
+// every envelope carries it, `gdoc help` opens with it in words, and `auth
+// status` carries it beside the token facts, which is the one command a person
+// runs to ask what they have.
+//
+// A build nobody tagged says "dev", and then the field is absent rather than
+// saying a release that does not exist. The literals here are a tag, so a
+// version stitched together from the table would still have to match them.
+func TestTheVersionReachesTheEnvelopeAndTheHelp(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	atVersion(t, "v2.4.1")
+
+	// Every object, the answers and the refusals both.
+	for _, args := range [][]string{
+		{"help"},
+		{"auth", "status"},
+		{"nonsense"},
+		{"read"},
+	} {
+		got, _ := runJSONCtx(t, context.Background(), args...)
+		if got["version"] != "v2.4.1" {
+			t.Errorf("%v must carry the version in its envelope: %v", args, got)
+		}
+	}
+
+	// The words a person reads open with it, so a screenshot names the build.
+	_, prose, code := runHelp(t, "help")
+	if code != 0 {
+		t.Fatalf("help must answer: exit %d", code)
+	}
+	if !strings.HasPrefix(prose, "gdoc v2.4.1\n") {
+		t.Errorf("the help prose must open with the version: %q", prose)
+	}
+
+	// And the status data, beside the token facts.
+	got, code := runJSON(t, "auth", "status")
+	if code != 0 {
+		t.Fatalf("status must answer on an empty config dir: %v (exit %d)", got, code)
+	}
+	data, ok := got["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("no data object: %v", got)
+	}
+	if data["version"] != "v2.4.1" {
+		t.Errorf("auth status data must carry the version: %v", data)
+	}
+	if data["auth_mode"] != "oauth" || data["token_path"] == nil {
+		t.Errorf("the token facts must stand where they stood: %v", data)
+	}
+}
+
+// The other half: an untagged build says nothing about a release, so nobody
+// reads a version out of a binary built on somebody's laptop.
+func TestAnUntaggedBuildCarriesNoVersionAnywhere(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	atVersion(t, "dev")
+
+	got, _ := runJSON(t, "auth", "status")
+	if _, there := got["version"]; there {
+		t.Errorf("a dev build must not name a version: %v", got)
+	}
+	data, ok := got["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("no data object: %v", got)
+	}
+	if _, there := data["version"]; there {
+		t.Errorf("a dev build must not name a version in the data either: %v", data)
+	}
+
+	_, prose, _ := runHelp(t, "help")
+	if !strings.HasPrefix(prose, "Usage: gdoc") {
+		t.Errorf("a dev build's help opens with the usage line: %q", prose)
+	}
+	if strings.Contains(prose, "dev") {
+		t.Errorf("a dev build's help must not name a version: %q", prose)
 	}
 }

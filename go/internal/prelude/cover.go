@@ -10,11 +10,15 @@ import (
 // coverBlock is the house cover as requests, starting at the index it is given.
 //
 // It is the same cover internal/render writes into a docx, read out of the
-// same house.Cover: the leading blanks, the lines, the trailing blanks, and
-// then the page break that puts what follows at the top of the next page. A
+// same house.Cover: the leading blanks, the lines and the trailing blanks. A
 // line whose placeholder the fields filled in prints their words; a line whose
 // placeholder they left empty prints the template's own, which are the
 // highlighted words a person fills in by hand.
+//
+// The page break that puts what follows at the top of the next page is not
+// written here. It is house.yaml's own page_break block, standing after the
+// cover in front_matter, so one file says where the page turns and both writers
+// read it there. TestTheCoverBlockWritesNoPageBreakOfItsOwn is the pin.
 //
 // start is where the prelude goes, which is index 1 for a document whose body
 // gdoc is putting a cover in front of. It is a parameter rather than a
@@ -25,9 +29,9 @@ import (
 // door with no production caller is deleted rather than carried, which is why
 // GrantInPlace went at M2 and came back at M7b beside the line that calls it.
 // Every run goes through FrontMatter, which walks house.yaml's own front_matter
-// list and reaches this same pair of calls through block("cover"). What is left
-// here is the cover asked for on its own, which is a question only this
-// package's tests ask.
+// list and reaches this same call through block("cover"). What is left here is
+// the cover asked for on its own, which is a question only this package's tests
+// ask.
 //
 // Nothing is sent here. What comes back is a list of requests for the caller
 // to send in writeMode SUGGEST, and a range for the marker.
@@ -40,7 +44,6 @@ func coverBlock(cfg *house.Config, f cover.Fields, start int) (Result, error) {
 	}
 	b := &builder{cfg: cfg, fields: f, at: start}
 	b.cover()
-	b.pageBreak()
 	if b.err != nil {
 		return Result{}, fmt.Errorf("prelude: %w", b.err)
 	}
@@ -142,8 +145,11 @@ func (b *builder) placeholder(name string) (string, bool) {
 	return value, filled
 }
 
-// pageBreak ends the cover with a page break inside a paragraph of gdoc's own,
-// so what follows starts at the top of the next page.
+// pageBreak writes one page break inside a paragraph of gdoc's own, so what
+// follows starts at the top of the next page.
+//
+// It is reached from block("page_break") and nowhere else, so house.yaml states
+// where the page turns and this writer only carries it out.
 //
 // Inside gdoc's own paragraph, rather than at the start of the author's first
 // one, for two reasons. The author's paragraph is theirs, and a break put at
