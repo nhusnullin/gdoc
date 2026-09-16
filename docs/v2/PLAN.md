@@ -45,16 +45,22 @@ M8 are deferred whole to
 of 2026-09-16, DECISIONS.md. The team's feedback after the release decides
 whether it comes back.
 
-## M9. Release
+## M9. The release, the nightly, and the updater
 
-Packaging only, because portability was continuous from M1: the dist matrix
-(darwin/arm64, darwin/amd64, windows/amd64, `CGO_ENABLED=0`), a real Windows
-smoke test over the config path, the token write-and-replace and the console
-output, the copy-one-file install story, and a stated install path for the
-skills on the one machine that runs them.
+Decided 2026-09-16, DECISIONS.md. Plan:
+`docs/plans/2026-09-16-gdoc-v2-m9-release.md`.
 
-PowerShell completion lands here with the Windows smoke test. The `publish`
-and `restyle` skills moved to M7d on 2026-09-16.
+gdoc goes to the team, on macOS first and Windows under its own tag once a
+colleague has run its checklist. What lands: the version `x.y.z` in every
+envelope, a tag that builds and publishes one zip per platform to
+`nhusnullin/gdoc-releases`, a public repository holding releases and nothing
+else; a nightly that tags `x.y.(z+1)` when main moved; `gdoc update`, run by
+every skill before its first call, which applies a minor version, reports a
+major one, and takes a nightly only on that channel, through one read-only
+guard door; a release installer that copies the binary and the skills and
+asks global or local; the skills addressing whoever is at the keyboard; the
+two page breaks the front matter was missing, in both routes; a user README,
+an example note and an issue template.
 
 ## Outstanding by hand
 

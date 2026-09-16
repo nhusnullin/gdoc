@@ -62,6 +62,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-11 | `restyle --new` is not built | holds |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | holds |
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
+| 2026-09-16 | The release: a public releases repository, `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1845,3 +1846,71 @@ deferred with it. SPEC.md keeps its two alignment sections as the description
 of a deferred thing, with each "arrives at M8" changed to say so. Nothing in
 `go/` moves. The backlog item names the unknown that would bring M8 back: a
 person on the team asking for a document's edits to come back into the hub.
+
+## 2026-09-16. The release: a public releases repository, `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release.
+
+Nail's decisions, taken in the brainstorm that produced the M9 plan,
+`docs/plans/2026-09-16-gdoc-v2-m9-release.md`. Serves principle 1: a colleague
+gets one zip, one installer and one binary that keeps itself current, with
+nothing else on the machine. Strains 3 in one bounded place, below.
+
+**A public repository holds the releases and nothing else.**
+`nhusnullin/gdoc-releases`: GitHub Releases, a README, no source. Colleagues
+without access to this repository download from it, and the updater fetches
+from it with no credential. Assessed the same day over every tracked file and
+the whole history: the zip carries no secret beyond the Internal OAuth client,
+which every colleague's laptop already holds and which only an `altery.com`
+sign-in can use, and no document. What becomes public is the Altery logo, the
+template's shape inside the binary, and the skills' wording. Nail accepts
+that. **This repository stays private.** The 2026-08-18 entry stands: a public
+source repository would get the client revoked by GitHub's partner scanning,
+which reads commits and not release assets.
+
+**Versions are `x.y.z`, and the number is the channel.** Nail tags `x.y.0` by
+hand. A nightly job tags `x.y.(z+1)` when main has moved since the last tag.
+`z == 0` is stable, `z > 0` is nightly, and nothing else records which is
+which. The first tag is `v2.0.0`, because the tool is already gdoc v2.
+
+**The update policy.** `gdoc update`, run by every skill before its first
+call and throttled to one check a day. Same `x`, higher `y`: update, no
+question, and say so. Higher `x`: report only, with the command to run.
+Higher `z`: only when the person turned the nightly channel on. Never down.
+
+**Where this strains principle 3, and how it is bounded.** A minor version
+replaces the binary and the skills with no question asked. Uncertainty is not
+resolving toward the destructive answer here, because nothing is uncertain:
+the zip is verified against its checksum before a byte is replaced, the
+previous binary is kept and `gdoc update --rollback` swaps it back, the
+object says what happened and the session prints one line, and a major
+version never moves without a person running the command. That one line is
+the only place the plan does not do "silent": a tool changing under a person
+with no trace is what the principle exists to prevent, and one line costs
+nothing.
+
+**One read-only door in the guard.** `Policy.AllowUpdateFrom` names one
+releases repository for one run and admits GET on `api.github.com`,
+`github.com` and the asset host for that repository's releases, and nothing
+else on them. It carries no Authorization header, because the only bearer
+gdoc holds is Google's. Opened by `gdoc update` alone, in the shape of
+`AllowCreateIn`. The Google rules do not move, and the request is still built
+in `internal/gapi`, so the wire's four rooms stay four.
+
+**Skills are linked in a checkout and copied from a release.** The
+2026-08-14 entry gains that clause. A release copy carries a `.release`
+marker naming its version, so the skills and the binary on a machine always
+came from one zip, and the updater replaces exactly the folders that carry
+the marker. A folder without it is somebody's own work and is refused. The
+installer asks one question, global or local, and the binary still never
+prompts.
+
+**Page breaks are a block in the house style.** `- block: page_break`, before
+the version control label and after the classification table, read by the
+docx renderer and by the prelude. Nail found the version control table on the
+title page of a published document on 2026-09-16; the master pushes its
+tables apart with blank lines, which Google's conversion spaces differently.
+The two rows the drift gate reports against the master join `drift.Known`
+with this date as the reason.
+
+**Builds are trimmed and stripped**, so a home path is not shipped and a
+tagged build is the same bytes everywhere. Windows ships under its own tag
+when a colleague has run its checklist; `v2.0.0` is macOS.
