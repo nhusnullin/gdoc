@@ -99,16 +99,28 @@
 // anomaly rather than a normal reply. TestExchangeRefusesA200WithNoRefreshToken
 // and TestARefreshlessExchangeDoesNotOverwriteAGoodToken are the pins.
 //
-// # The OAuth client is shipped, and the secret belongs in version control
+// # The client id is shipped, and the secret is injected at build time
 //
-// BundledClientID and BundledClientSecret are constants in this package, so
-// nobody using gdoc visits a cloud console. RFC 8252 section 8.5: a secret
-// shipped to many users "should not be treated as confidential" and serves no
-// purpose "beyond client identification". gh ships its own with the comment
-// "This value is safe to be embedded in version control", and gcloud ships a
-// Google secret in a constant named CLOUDSDK_CLIENT_NOTSOSECRET. Do not "fix"
-// this by moving it to the config dir. What protects an account is the per-user
-// token, which never leaves the machine. Decided 2026-08-18, docs/v2/DECISIONS.md.
+// BundledClientID is a constant: a client id is public in every sign-in URL,
+// and nobody using gdoc visits a cloud console. BundledClientSecret is a
+// variable that is empty in the source and set by the linker from
+// GDOC_OAUTH_CLIENT_SECRET in make build and make dist, so a release build
+// carries it and the tree never does. RFC 8252 section 8.5 still holds, a
+// secret shipped to many users "should not be treated as confidential", and
+// what protects an account is still the per-user token, which never leaves the
+// machine. What changed on 2026-09-16 is where the secret lives, not what it
+// protects: the repository went public that day, and GitHub reports a Google
+// client secret it finds in a public commit to Google, who may revoke the
+// client and break every colleague's login at once. The secret that had been
+// in the tree was rotated the same day. Decided 2026-08-18 and amended
+// 2026-09-16, docs/v2/DECISIONS.md.
+//
+// A build without the secret can refresh a token it already holds, because
+// the token file carries the secret it was issued with, but it cannot sign
+// anyone in, and Login refuses before it opens a listener or prints a URL.
+// TestLoginRefusesABuildWithNoClientSecret is the pin, and
+// TestNoGoogleClientSecretInTheTree in go/boundary holds the other half: no
+// file in the tree carries a string shaped like a Google client secret.
 //
 // # The client must stay User type Internal
 //
@@ -117,24 +129,8 @@
 // the 100-user cap. External would mean a CASA assessment every 12 months, and
 // refresh tokens expiring weekly.
 //
-// # Making this repository public means a fresh client first
-//
-// The decision above assumed a private repository, and one condition breaks it.
-// GitHub secret scanning carries a partner pattern for
-// google_oauth_client_id, google_oauth_client_secret. On a public repository a
-// hit is reported to Google, who may revoke the client. Publishing this
-// repository would then break every colleague's login at once, without warning
-// and without a commit to blame. rclone obfuscates its Google secret for
-// exactly this reason, which is evasion of automated revocation rather than
-// security.
-//
-// So before this repository is ever made public: create a fresh client,
-// distribute it as a file out of band, and clear these two constants. Do not
-// obfuscate them to get past the scanner.
-//
-// TODO(test): no test pins the three client rules. They are about the
-// repository and the Google project rather than about code, so there is
-// nothing in the tree for a test to read.
+// TODO(test): no test pins the client type. It is about the Google project
+// rather than about code, so there is nothing in the tree for a test to read.
 //
 // # The per-user client override is read by nothing yet
 //

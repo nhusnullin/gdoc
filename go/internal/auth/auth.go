@@ -22,12 +22,19 @@ import (
 	"gdoc/internal/config"
 )
 
+// BundledClientSecret is the OAuth client's secret, and it is not in the
+// source. A release build carries it, set by the linker from
+// GDOC_OAUTH_CLIENT_SECRET through make build and make dist; a build without
+// it can refresh a token it already holds but cannot sign anyone in, and Login
+// says so. The package comment in doc.go holds why it left the tree on
+// 2026-09-16.
+var BundledClientSecret = ""
+
 const (
-	// BundledClientID and BundledClientSecret are shipped on purpose, and the
-	// client must stay User type Internal. The package comment in doc.go holds
-	// both rules and what would change them.
-	BundledClientID     = "4326046141-n9fho1g348nflsue7jdrj10dkst3a0a9.apps.googleusercontent.com"
-	BundledClientSecret = "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"
+	// BundledClientID is shipped on purpose: a client id is public in every
+	// sign-in URL. The client must stay User type Internal, and the package
+	// comment in doc.go holds that rule and what would change it.
+	BundledClientID = "4326046141-n9fho1g348nflsue7jdrj10dkst3a0a9.apps.googleusercontent.com"
 
 	TokenURI = "https://oauth2.googleapis.com/token"
 

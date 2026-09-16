@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -167,6 +168,10 @@ func satisfied(got map[string]bool, want string) bool {
 // programs at all. It opens a listener on a port the kernel picks on
 // 127.0.0.1, and gives up after loginTimeout.
 func Login(c *http.Client, w io.Writer) error {
+	if BundledClientSecret == "" {
+		return errors.New("this build carries no OAuth client secret, so it cannot sign anyone in. " +
+			"A release build carries one; a local build needs GDOC_OAUTH_CLIENT_SECRET set when running make build")
+	}
 	state := randomToken()
 	srv, err := loopback.Listen(state)
 	if err != nil {

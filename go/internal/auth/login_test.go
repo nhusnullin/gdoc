@@ -4,8 +4,10 @@ package auth
 // what the whole flow leaves on disk.
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -270,4 +272,43 @@ func TestLoginThroughTheGuardsOwnClient(t *testing.T) {
 	if _, err := Load(); err != nil {
 		t.Fatalf("the login did not save a token: %v", err)
 	}
+}
+
+// The tests below drive a fake Google, which validates nothing, so any
+// non-empty secret serves. The value is set here rather than in source
+// because the real one is injected at build time and is never in the tree.
+func init() {
+	if BundledClientSecret == "" {
+		BundledClientSecret = "test-client-secret"
+	}
+}
+
+// A build without the secret cannot sign anyone in, and it says so before
+// opening a listener or printing a URL, because a login that fails at the
+// code exchange minutes later would blame Google for a build problem.
+func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
+	saved := BundledClientSecret
+	BundledClientSecret = ""
+	t.Cleanup(func() { BundledClientSecret = saved })
+
+	var w bytes.Buffer
+	err := Login(&http.Client{Transport: refuseAll{}}, &w)
+	if err == nil {
+		t.Fatal("a build with no client secret must refuse to log in")
+	}
+	for _, want := range []string{"client secret", "GDOC_OAUTH_CLIENT_SECRET"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal must say %q: %q", want, err)
+		}
+	}
+	if w.Len() != 0 {
+		t.Errorf("nothing must be printed before the refusal: %q", w.String())
+	}
+}
+
+// refuseAll fails any request, so a test can prove nothing left the machine.
+type refuseAll struct{}
+
+func (refuseAll) RoundTrip(r *http.Request) (*http.Response, error) {
+	return nil, fmt.Errorf("unexpected request to %s", r.URL)
 }
