@@ -74,6 +74,11 @@
 // TestTheReplaceSequenceLeavesTheNewBinaryAndKeepsTheOld, and
 // TestAnUnreadableReadBackPutsTheOldBinaryBack for the read-back that fails.
 //
+// Where there was no old one to put back, the failing read-back removes what
+// it could not verify instead. There is nothing to restore, and leaving the
+// file would leave an unverified binary for the next run to execute.
+// TestAFailedReadBackWithNothingToRestoreLeavesNoBinary.
+//
 // gdoc never runs the binary it just installed. Nothing under go/ runs an
 // external program, so the proof that the update worked is the next envelope
 // a person sees, and Sum is what this run can honestly say about it.
@@ -85,8 +90,14 @@
 //
 // It is also the one place a failure after the swap moves nothing back, since
 // undoing it would take back the rollback a person asked for. It says where
-// the binaries ended up instead. TODO(test): nothing drives a read-back
-// failure after the swap.
+// the binaries ended up instead, and it removes nothing: after the swap the
+// binary that was rolled back from is the only copy of that release on the
+// machine. TestAFailedKeepLeavesTheRolledBackBinaryOnDisk. TODO(test):
+// nothing drives a read-back failure after the swap.
+//
+// A rollback reports no installed version. The binary it put back is the one
+// gdoc is not running, and reading its version would mean running it.
+// TestRollbackPutsTheEarlierBinaryBack.
 //
 // Windows is the same three renames, and os.Rename replaces the file it lands
 // on there as it does here. It is unmeasured until the checklist in

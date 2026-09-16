@@ -154,6 +154,14 @@ func oneRun(f update.Flags) error {
 // checkout on the machine gdoc is developed on, and replacing it would drop a
 // release binary over the link, leaving `make build` writing to a file nobody
 // runs any more. Not knowing never resolves to overwrite.
+//
+// The refusal holds where os.Executable returns the path gdoc was invoked
+// through, which is darwin. On Linux it reads /proc/self/exe, which the kernel
+// has already resolved, so an update run through such a link replaces the
+// checkout's own build instead of being refused. That is the file `make build`
+// writes, so the next build takes it back; it is a worse answer than the
+// refusal rather than a lost binary. Windows is unmeasured until the checklist
+// in docs/backlog/windows-rollout-checklist.md runs.
 func binaryPath() (string, error) {
 	path, err := executable()
 	if err != nil {
@@ -176,8 +184,16 @@ func binaryPath() (string, error) {
 // runRollback puts the earlier binary back. It reads no listing: what it does
 // depends on one file being beside another, and GitHub has nothing to say
 // about that.
+//
+// The object carries no `installed`. What ends up at the path is the earlier
+// binary, and the only way to read its version would be to run it, which
+// nothing under go/ does. The release that printed the object is already the
+// envelope's `version`, and putting it under `installed` beside a `sha256` of
+// the older file would be one fact contradicting another.
+//
+// TestRollbackPutsTheEarlierBinaryBack.
 func runRollback(path string) emit.Result {
-	data := updateData{Installed: releaseVersion(), Path: path}
+	data := updateData{Path: path}
 	res, err := update.Rollback(path)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data}

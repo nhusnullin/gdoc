@@ -354,3 +354,49 @@ func TestRollbackRefusesWhenThereIsNoPrevious(t *testing.T) {
 		t.Fatalf("the file at %s is %q, %v, and it should not have been touched", path, body, err)
 	}
 }
+
+// A rollback that cannot keep what it rolled back from leaves that binary on
+// disk and names it. The swap has already happened by then, so removing the
+// file would destroy the only copy of the release a person just left.
+func TestAFailedKeepLeavesTheRolledBackBinaryOnDisk(t *testing.T) {
+	dir := t.TempDir()
+	held := filepath.Join(dir, "gdoc.new")
+	previous := filepath.Join(dir, "gdoc.previous")
+	if err := os.WriteFile(held, []byte("the new binary"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(previous, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := keepRolledBack(held, previous)
+	if err == nil {
+		t.Fatal("a rename onto a directory was reported as a kept binary")
+	}
+	if !strings.Contains(err.Error(), held) {
+		t.Errorf("the failure does not name where the binary is: %v", err)
+	}
+	if body, err := os.ReadFile(held); err != nil || string(body) != "the new binary" {
+		t.Fatalf("the file at %s is %q, %v, and it is the only copy there is", held, body, err)
+	}
+}
+
+// A read-back that fails with nothing to put back leaves nothing at path. The
+// file there is the one that just failed verification, and leaving it is
+// leaving an unverified binary for the next run to execute.
+func TestAFailedReadBackWithNothingToRestoreLeavesNoBinary(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "gdoc")
+	if err := os.WriteFile(path, []byte("not what the zip held"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := landed(path, PreviousPath(path), false, sum([]byte("the new binary")))
+	if err == nil {
+		t.Fatal("a binary that hashes wrong was reported as installed")
+	}
+	if res.Sum != "" || res.Previous != "" {
+		t.Errorf("a failed read-back carries no result: %+v", res)
+	}
+	mustNotExist(t, path)
+}

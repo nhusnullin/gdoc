@@ -107,13 +107,19 @@ func Apply(archive, sums []byte, asset, binary, path string) (Result, error) {
 // place to hold rather than two: an unreadable file and a file that hashes
 // wrong both undo the swap before they raise.
 //
-// TestAWrongChecksumReplacesNothing and
-// TestAnUnreadableReadBackPutsTheOldBinaryBack.
+// TestAWrongChecksumReplacesNothing, TestAnUnreadableReadBackPutsTheOldBinaryBack
+// and TestAFailedReadBackWithNothingToRestoreLeavesNoBinary.
 func landed(path, previous string, kept bool, want string) (Result, error) {
+	// With nothing to put back, the file at path is the one that just failed
+	// its read-back, and leaving it there leaves an unverified binary for the
+	// next run to execute. Not knowing never resolves to overwrite, and it
+	// never resolves to run something either.
 	restore := func() {
 		if kept {
 			os.Rename(previous, path)
+			return
 		}
+		os.Remove(path)
 	}
 	got, err := sumOfFile(path)
 	if err != nil {
@@ -159,9 +165,8 @@ func Rollback(path string) (Result, error) {
 	}
 	out := Result{}
 	if swap {
-		if err := os.Rename(held, previous); err != nil {
-			os.Remove(held)
-			return Result{}, fmt.Errorf("the binary that was rolled back could not be kept at %s: %w", previous, err)
+		if err := keepRolledBack(held, previous); err != nil {
+			return Result{}, err
 		}
 		out.Previous = previous
 	}
@@ -174,6 +179,22 @@ func Rollback(path string) (Result, error) {
 	}
 	out.Sum = got
 	return out, nil
+}
+
+// keepRolledBack puts the binary the rollback moved aside where a second
+// rollback would look for it.
+//
+// A failure here leaves that binary at held and names it. The swap has already
+// happened by this point, so the file at held is the only copy of the release
+// a person just left, and removing it would take away the only way back to it
+// short of another download.
+//
+// TestAFailedKeepLeavesTheRolledBackBinaryOnDisk.
+func keepRolledBack(held, previous string) error {
+	if err := os.Rename(held, previous); err != nil {
+		return fmt.Errorf("the binary that was rolled back could not be kept at %s, so it is still at %s: %w", previous, held, err)
+	}
+	return nil
 }
 
 // fileIn reads one file out of the zip by name. The release workflow packs the

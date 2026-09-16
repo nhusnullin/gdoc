@@ -435,6 +435,9 @@ func TestRollbackPutsTheEarlierBinaryBack(t *testing.T) {
 	if data["verified"] == true {
 		t.Errorf("a rollback is checked against no published checksum, so it claims none: %v", data)
 	}
+	if _, ok := data["installed"]; ok {
+		t.Errorf("the binary at the path is the earlier one and gdoc cannot read its version, so the object claims none: %v", data)
+	}
 	if fileText(t, path) != "old" || fileText(t, path+".previous") != "new" {
 		t.Errorf("the two binaries must have swapped: %q and %q", fileText(t, path), fileText(t, path+".previous"))
 	}
