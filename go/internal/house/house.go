@@ -4,7 +4,7 @@
 // the header and footer with the positioned logo, the three front-matter
 // tables cell by cell, the legend, the live contents field, heading numbering
 // and the logo itself as base64. TestTheNineStylesAreThere,
-// TestFrontMatterIsThirteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
+// TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
 // TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoDecodesAsAPNGOfTheStatedSize
 // are the pins over what the file has to carry.
 //
@@ -54,6 +54,11 @@
 // TestAMissingStyleIsRefusedNamingIt and TestALogoThatIsNotAPNGIsRefused are the
 // pins. A style file gdoc half understands is a document somebody publishes.
 //
+// A page_break block is held to the same rule from the other side: it is the
+// whole block, and a ref, a count or a size written beside it is refused naming
+// the key. TestAPageBreakCarryingAnotherKeyIsRefusedNamingIt and
+// TestACountedPageBreakIsRefused are the pins.
+//
 // # A house-style test states its value as a literal
 //
 // if got != 595.28, never if got != cfg.Page.WidthPt. A test that reads the
@@ -93,7 +98,7 @@ var styleNames = []string{
 // blockKinds is what a front_matter entry may name.
 var blockKinds = map[string]bool{
 	"cover": true, "label": true, "table": true,
-	"blank": true, "legend": true, "toc": true,
+	"blank": true, "legend": true, "toc": true, "page_break": true,
 }
 
 // Config mirrors house.yaml, one field per key.
@@ -679,9 +684,42 @@ func (c *Config) validateFrontMatter() error {
 			if _, ok := c.Tables[b.Ref]; !ok {
 				return fmt.Errorf("front_matter[%d]: no table named %q", i, b.Ref)
 			}
+		case "page_break":
+			if key := pageBreakExtra(b); key != "" {
+				return fmt.Errorf("front_matter[%d]: a page_break block carries no other key, and this one names %s", i, key)
+			}
 		}
 	}
 	return nil
+}
+
+// pageBreakExtra names the first key a page_break block carries beside its
+// kind, or the empty string when it carries none.
+//
+// A page break is the whole block: a ref, a count or a size written beside it
+// is a value both writers would drop in silence. The docx route makes the
+// break an empty paragraph and the Docs route sends insertPageBreak, so a
+// height stated here could only be honoured by one of them, and one layout
+// that is a paragraph taller in the docx than in the Doc is the two routes
+// drifting apart.
+func pageBreakExtra(b Block) string {
+	switch {
+	case b.Ref != "":
+		return "ref"
+	case b.Count != 0:
+		return "count"
+	case b.Align != "":
+		return "align"
+	case b.SizePt != nil:
+		return "size_pt"
+	case b.LineSpacing != nil:
+		return "line_spacing"
+	case b.SpaceBeforePt != nil:
+		return "space_before_pt"
+	case b.SpaceAfterPt != nil:
+		return "space_after_pt"
+	}
+	return ""
 }
 
 // validateLogo decodes the logo and checks it against what the file says it

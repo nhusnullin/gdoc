@@ -113,7 +113,7 @@ func TestTOCIsALiveFieldOverThreeHeadingLevels(t *testing.T) {
 	}
 }
 
-func TestFrontMatterIsThirteenBlocksInOrder(t *testing.T) {
+func TestFrontMatterIsFourteenBlocksInOrder(t *testing.T) {
 	cfg := load(t)
 	type want struct {
 		kind string
@@ -121,6 +121,7 @@ func TestFrontMatterIsThirteenBlocksInOrder(t *testing.T) {
 	}
 	order := []want{
 		{"cover", ""},
+		{"page_break", ""},
 		{"label", "version_control"},
 		{"table", "version_control"},
 		{"blank", ""},
@@ -130,12 +131,12 @@ func TestFrontMatterIsThirteenBlocksInOrder(t *testing.T) {
 		{"blank", ""},
 		{"label", "document_classification"},
 		{"table", "document_classification"},
-		{"blank", ""},
+		{"page_break", ""},
 		{"label", "contents"},
 		{"toc", ""},
 	}
-	if len(cfg.FrontMatter) != 13 {
-		t.Fatalf("front_matter has %d blocks, want 13", len(cfg.FrontMatter))
+	if len(cfg.FrontMatter) != 14 {
+		t.Fatalf("front_matter has %d blocks, want 14", len(cfg.FrontMatter))
 	}
 	for i, w := range order {
 		got := cfg.FrontMatter[i]
@@ -221,8 +222,8 @@ func TestLoadFileReadsACopyOfTheEmbeddedFile(t *testing.T) {
 	if cfg.Page.WidthPt != 595.2755905511811 {
 		t.Errorf("page.width_pt = %v, want A4's 595.2755905511811", cfg.Page.WidthPt)
 	}
-	if len(cfg.FrontMatter) != 13 {
-		t.Errorf("front_matter has %d blocks, want 13", len(cfg.FrontMatter))
+	if len(cfg.FrontMatter) != 14 {
+		t.Errorf("front_matter has %d blocks, want 14", len(cfg.FrontMatter))
 	}
 }
 
@@ -291,6 +292,60 @@ func TestAnUnknownBlockKindIsRefusedNamingIt(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "sidebar") {
 		t.Errorf("error %q does not name sidebar", err)
+	}
+}
+
+// TestAPageBreakCarryingAnotherKeyIsRefusedNamingIt. A page break is the whole
+// block: it has no ref, no count and no size of its own. A key written beside
+// it is a value the writers would drop in silence, and a break that is a
+// paragraph tall in one route and something else in the other is the two
+// routes drifting apart, so it is refused at the door.
+func TestAPageBreakCarryingAnotherKeyIsRefusedNamingIt(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("- block: page_break\n- block: label\n  ref: contents\n"),
+		[]byte("- block: page_break\n  ref: contents\n- block: label\n  ref: contents\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the page_break before the contents label was not found to replace")
+	}
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a page_break block carrying a ref was accepted")
+	}
+	if !strings.Contains(err.Error(), "page_break") || !strings.Contains(err.Error(), "ref") {
+		t.Errorf("error %q does not name the page_break block and the ref it carries", err)
+	}
+}
+
+// TestACountedPageBreakIsRefused is the same rule over the key somebody would
+// reach for first: three breaks written as one block are three pages nobody
+// asked for.
+func TestACountedPageBreakIsRefused(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("- block: cover\n- block: page_break\n"),
+		[]byte("- block: cover\n- block: page_break\n  count: 3\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the page_break after the cover was not found to replace")
+	}
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a page_break block carrying a count was accepted")
+	}
+	if !strings.Contains(err.Error(), "page_break") || !strings.Contains(err.Error(), "count") {
+		t.Errorf("error %q does not name the page_break block and the count it carries", err)
+	}
+}
+
+// TestTheCoverEndsWithNoTrailingBlanks. The eight blanks under the date were
+// how the master pushed the version control label onto page two. The break
+// does the pushing now, and eight empty paragraphs left behind are eight lines
+// a person deletes by hand the first time they edit the cover.
+func TestTheCoverEndsWithNoTrailingBlanks(t *testing.T) {
+	cfg := load(t)
+	if got := len(cfg.Cover.TrailingBlanks); got != 0 {
+		t.Errorf("the cover carries %d trailing blanks, want 0", got)
+	}
+	if got := len(cfg.Cover.LeadingBlanks); got != 5 {
+		t.Errorf("the cover opens with %d blanks, want 5", got)
 	}
 }
 

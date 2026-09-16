@@ -93,9 +93,9 @@ refactor. A task that finds one wrong stops and says so.
 8. **Page breaks are a block in the house style**, `- block: page_break`,
    before the `version_control` label and after the `document_classification`
    table, read by the docx renderer and by the prelude. One layout, two
-   writers. The prelude's own cover page break becomes that block. The two
-   rows the drift gate reports against the master join `drift.Known` with
-   Nail's name and this date.
+   writers. The prelude's own cover page break becomes that block. Measured
+   in Task 3: the drift gate reports no new row, because no item in
+   `drift.Items` reads a page break, so `drift.Known` gains nothing.
 9. **Builds are trimmed and stripped.** `-trimpath` and `-ldflags "-s -w"` in
    `build` and `dist`: Nail's home path is not shipped, and a tagged build is
    the same bytes on every machine.
@@ -418,23 +418,37 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
 
 **Files:**
 - Modify: `go/internal/house/house.yaml`, `house.go`, `house_test.go`
-- Modify: `go/internal/render/front.go`, `front_test.go`
-- Modify: `go/internal/drift/compare.go`, `compare_test.go`
+- Modify: `go/internal/render/front.go`, `front_test.go`, `doc.go`
+- Modify: `go/internal/prelude/frontmatter.go`, `cover_test.go`
+- Modify: `docs/v2/DECISIONS.md`
 
-- [ ] Test first, literals: `house.yaml` decodes a `page_break` block at the
+- [x] Test first, literals: `house.yaml` decodes a `page_break` block at the
       two positions, and a `page_break` with any other key is refused by name.
-- [ ] Test, `TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents`:
+- [x] Test, `TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents`:
       the rendered document has `w:pageBreakBefore` on exactly the two
       paragraphs, stated as literals, and the cover's trailing blanks are the
       new count.
-- [ ] `house.go` decodes the kind; `front.go` renders it as the empty paragraph
+- [x] `house.go` decodes the kind; `front.go` renders it as the empty paragraph
       the first heading already uses.
-- [ ] The offline drift gate reports two new differences; they join `Known`
-      with the reason "Nail, 2026-09-16: page breaks before Version Control
-      and before Contents, which the master pushes with blank lines". The gate
-      is green.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): page breaks before Version Control and before Contents"`
+- [x] The offline drift gate is green. It reports no new difference and `Known`
+      gains nothing: measured on 2026-09-16, 169 rows with 22 differences
+      before the change and the same after, because no item in `drift.Items`
+      reads a page break or counts a front-matter paragraph. The
+      `docs/v2/DECISIONS.md` entry that expected two rows says what was
+      measured instead.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): page breaks before Version Control and before Contents"`
+
+Two things moved into this task, because every commit leaves the tree green
+and `house.yaml` is read by both writers:
+
+- The three blanks between the classification table and the contents label go
+  with the eight under the date. Both were pushing a page with blank lines,
+  which is what the two breaks replace.
+- `internal/prelude`'s `block()` handles `page_break` and the call in its
+  `"cover"` case goes, so the prelude sends one break where house.yaml states
+  one. Task 4 keeps the rest: `coverBlock`'s own call, the read-back, `doc.go`
+  and the two tests it names.
 
 ### Task 4: the page_break block in the prelude
 
@@ -446,8 +460,9 @@ the skill's own front matter, say "gdoc is older than this skill needs; run
       an `insertPageBreak` after the classification table, and
       `TestTheCoverEndsWithAPageBreak` keeps passing with the break now coming
       from the block rather than from `cover.go:43`.
-- [ ] `block()` handles `page_break`; the hard-coded call in `coverBlock` goes,
-      so one layout has two writers and no third.
+- [ ] The hard-coded call in `coverBlock` goes, so one layout has two writers
+      and no third. `block()` handling `page_break` landed in Task 3, which
+      needed it to keep the suite green.
 - [ ] The read-back counts the second break, and `Verify` is unchanged in what
       it asks.
 - [ ] `doc.go` names the two tests.

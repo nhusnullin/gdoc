@@ -1918,8 +1918,10 @@ the version control label and after the classification table, read by the
 docx renderer and by the prelude. Nail found the version control table on the
 title page of a published document on 2026-09-16; the master pushes its
 tables apart with blank lines, which Google's conversion spaces differently.
-The two rows the drift gate reports against the master join `drift.Known`
-with this date as the reason.
+The offline drift gate reports nothing new: measured on 2026-09-16, the same
+169 rows with the same 22 differences, because no item in `drift.Items` reads
+a page break or counts a front-matter paragraph. So `drift.Known` gains
+nothing, and the two rows this entry expected were never there to explain.
 
 **Builds are trimmed and stripped**, so a home path is not shipped and a
 tagged build is the same bytes everywhere. Windows ships under its own tag

@@ -101,6 +101,18 @@
 // TestANoteWithNoRevisionsKeepsTheTemplatesRows and
 // TestTheVersionControlTableCarriesTheNotesOwnWords are the pins.
 //
+// # A page turns where the style file says it turns
+//
+// The master pushes the version control label onto page two with eight empty
+// paragraphs under the date, and the contents heading onto its own page with
+// three more. Blank lines push a page only while nothing above them moves, so
+// a title one line taller reflowed the whole front matter. house.yaml states
+// the two turns as page_break blocks instead, and this package writes each one
+// as the empty paragraph carrying w:pageBreakBefore that the first body
+// heading already uses. internal/prelude reads the same two blocks and sends
+// insertPageBreak, so one layout still has one statement.
+// TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents is the pin.
+//
 // # The contents list is a Word field, not a measured list
 //
 // The style file states the instruction and this package emits the field, so

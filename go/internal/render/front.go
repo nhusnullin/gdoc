@@ -32,6 +32,13 @@ func (b *builder) frontMatter() []*etree.Element {
 					Line:   block.LineSpacing,
 				}, block.SizePt))
 			}
+		case "page_break":
+			// The break is an empty paragraph carrying w:pageBreakBefore,
+			// which is how the first body heading opens its own page. The
+			// block states nothing else, so the paragraph takes the document
+			// defaults and internal/prelude sends one insertPageBreak for the
+			// same block.
+			out = append(out, b.blank(paraOpts{PageBreak: true}, nil))
 		case "legend":
 			out = append(out, b.legend()...)
 		case "toc":

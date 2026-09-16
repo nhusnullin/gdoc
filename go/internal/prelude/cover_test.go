@@ -93,7 +93,8 @@ func TestTheCoverIsTheHouseCoverLineByLine(t *testing.T) {
 		"Third Party Risk Policy",
 		"Version: 1.0",
 		"May 2026",
-		"", "", "", "", "", "", "", "", // the eight trailing blanks
+		// Nothing under the date: the eight blanks that pushed the version
+		// control label onto page two were replaced by the page break block.
 	}
 	if got := texts(got.Requests); !equal(got, want) {
 		t.Errorf("the cover reads\n%q\nwant\n%q", got, want)

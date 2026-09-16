@@ -560,3 +560,56 @@ func TestAClassNothingDescribesIsRefused(t *testing.T) {
 		t.Errorf("the refusal does not name the class: %v", err)
 	}
 }
+
+// TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents. The master
+// pushes the version control label onto page two with eight empty paragraphs
+// under the date, and the contents heading onto its own page with three more.
+// Blank lines push a page only as long as nothing above them moves, so a
+// slightly taller title reflowed the whole front matter. The two breaks are the
+// same layout stated rather than measured.
+func TestTheFrontMatterBreaksBeforeVersionControlAndBeforeContents(t *testing.T) {
+	// Arrange
+	pkg := build(t)
+
+	// Act
+	blocks := bodyBlocks(t, pkg)
+
+	// Assert: two breaks, and nothing else in the document carries one.
+	var breaks []int
+	for i, block := range blocks {
+		if block.FindElement("w:pPr/w:pageBreakBefore") != nil {
+			breaks = append(breaks, i)
+		}
+	}
+	if len(breaks) != 2 {
+		t.Fatalf("the front matter carries %d page breaks, want 2", len(breaks))
+	}
+
+	// Assert: each break is an empty paragraph, and the block under it is the
+	// label the new page opens with.
+	for i, at := range breaks {
+		if got := blocks[at].FullTag(); got != "w:p" {
+			t.Errorf("break %d is a %s, want an empty paragraph", i, got)
+		}
+		if blocks[at].FindElement(".//w:t") != nil {
+			t.Errorf("break %d carries text, and a page break writes none", i)
+		}
+	}
+	if got := firstLabel(blocks[breaks[0]+1]); got != "Version Control" {
+		t.Errorf("the first break is followed by %q, want the Version Control label", got)
+	}
+	if got := firstLabel(blocks[breaks[1]+1]); got != "Contents" {
+		t.Errorf("the second break is followed by %q, want the Contents label", got)
+	}
+
+	// Assert: the cover's trailing blanks are gone, so the date line is the
+	// last thing on page one and the break comes straight after it.
+	if got := firstLabel(blocks[breaks[0]-1]); got != "8 September 2026" {
+		t.Errorf("the block above the first break reads %q, and the cover now ends at the date line", got)
+	}
+	// The three blanks that pushed the contents heading are gone too: the
+	// classification table is the block above the second break.
+	if got := blocks[breaks[1]-1].FullTag(); got != "w:tbl" {
+		t.Errorf("the block above the second break is a %s, want the classification table", got)
+	}
+}

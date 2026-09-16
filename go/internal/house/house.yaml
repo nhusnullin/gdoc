@@ -269,22 +269,7 @@ cover:
     size_pt: 20
     highlight: yellow
     placeholder: date
-  trailing_blanks:
-  - &id001
-    align: justify
-    space_before_pt: 18
-    space_after_pt: 0
-    size_pt: 10
-  - *id001
-  - *id001
-  - *id001
-  - *id001
-  - *id001
-  - *id001
-  - align: justify
-    space_before_pt: 18
-    space_after_pt: 0
-    size_pt: 12
+  trailing_blanks: []
 labels:
   version_control:
     text: Version Control
@@ -324,6 +309,7 @@ legend:
     - '  Existing information has been removed'
 front_matter:
 - block: cover
+- block: page_break
 - block: label
   ref: version_control
 - block: table
@@ -348,11 +334,7 @@ front_matter:
   ref: document_classification
 - block: table
   ref: document_classification
-- block: blank
-  count: 3
-  size_pt: 16
-  space_before_pt: 24
-  space_after_pt: 0
+- block: page_break
 - block: label
   ref: contents
 - block: toc
