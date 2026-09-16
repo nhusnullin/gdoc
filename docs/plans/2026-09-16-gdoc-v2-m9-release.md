@@ -830,7 +830,7 @@ on their first command.
 **Files:**
 - Create: `.github/workflows/release.yml`, `.github/workflows/nightly.yml`
 
-- [ ] `release.yml` triggers: `push` of tags `v*`, and `workflow_call` with a
+- [x] `release.yml` triggers: `push` of tags `v*`, and `workflow_call` with a
       `tag` input. Steps: checkout at the tag; refuse when `plugin.json`'s
       version is not the tag; setup-go from `go.mod`; gofmt, vet, the raced
       suite; `make dist` with `GDOC_OAUTH_CLIENT_SECRET` from secrets, and a
@@ -839,13 +839,32 @@ on their first command.
       `release/README.md`, `release/example/`; write `SHA256SUMS-<tag>`;
       `gh release create <tag>` with the assets and the commit subjects since
       the previous tag as notes.
-- [ ] `nightly.yml`: cron at 02:00 UTC and `workflow_dispatch` with a dry-run
+- [x] `nightly.yml`: cron at 02:00 UTC and `workflow_dispatch` with a dry-run
       input. Reads the last tag with `git describe --tags --abbrev=0`; exits
       quietly when main has not moved since it; otherwise writes
       `x.y.(z+1)` into `plugin.json`, commits `chore: nightly vX.Y.Z`, tags,
       pushes both with a token that may write contents, and calls
       `release.yml` with the tag. The dry run prints the tag it would cut.
-- [ ] `git commit -m "ci: the release workflow, and the nightly that tags what moved"`
+- [x] `git commit -m "ci: the release workflow, and the nightly that tags what moved"`
+
+➕ The zip is flat and the binary goes in as `gdoc`. install.sh unpacks into a
+temp directory and installs what sits beside it, so a folder level inside the
+zip would be one it cannot see past. The pack loop also renames the Windows
+binary to `gdoc.exe` when that platform joins `release/platforms`, because the
+built file carries the extension and the list line does not.
+
+➕ Nine boundary tests hold the two files, in `go/boundary/workflows_test.go`.
+The YAML is parsed rather than grepped, because a trigger is structure and a
+tags list under the wrong key is a workflow that never runs. They hold the two
+entrances, the version check sitting before the build, the refusal of an empty
+secret, the four checks the Go workflow runs, the two asset names
+`internal/update` builds itself, `release/platforms` being read rather than
+copied a third time, the five things the zip carries, the cron and the patch
+arithmetic, and the call into `release.yml` with `secrets: inherit`.
+
+➕ The nightly refuses a last tag that is not `vX.Y.Z` rather than guessing a
+number from it. Task 14 puts `v2.0.0-rc1` on this repository for an afternoon,
+and `$((patch + 1))` over `0-rc1` is an error with no sentence in it.
 
 ### Task 13: the documents
 
