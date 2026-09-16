@@ -567,27 +567,27 @@ cursor or a wait length. A document URL offers nothing either.
 **Files:**
 - Create: `skills/gdoc-publish/SKILL.md`
 
-- [ ] Front matter: `name: gdoc-publish`, and a description in one sentence
+- [x] Front matter: `name: gdoc-publish`, and a description in one sentence
       that names the trigger: Nail names a note in the hub and a Drive folder
       and wants the note in Drive as a Google Doc in the house style.
-- [ ] Setup, in `gdoc-review`'s shape: `GDOC=gdoc`, `ROOT="$PWD"`, the
+- [x] Setup, in `gdoc-review`'s shape: `GDOC=gdoc`, `ROOT="$PWD"`, the
       one-object rule, and the new rule: before the first call of a command in
       this session, run `$GDOC help <command>` and read its words and flags
       from the object. The skill lists no flag itself.
-- [ ] The credential paragraph and the dry-run paragraph, as the review skill
+- [x] The credential paragraph and the dry-run paragraph, as the review skill
       has them. A dry run here is `build` to a scratch path under the session's
       scratchpad, which touches no network, and the report read back.
-- [ ] Steps: read the note's front matter first, and if a `gdoc:` block already
+- [x] Steps: read the note's front matter first, and if a `gdoc:` block already
       names a document, repeat the binary's refusal in Nail's words and never
       remove the block. Then `publish` with the folder Nail named. Read the
       object back and say: the URL, what `verified` and each check say, what
       `files_changed` lists, whether `rolled_back` is set, and every warning.
-- [ ] After a publish, say the three things only a person can check by opening
+- [x] After a publish, say the three things only a person can check by opening
       the document: the logo in the first-page header, the contents list, the
       footer page numbers. Facts the binary printed, judged by Nail.
-- [ ] Never: never remove or edit a `gdoc:` block, never run git, never pass a
+- [x] Never: never remove or edit a `gdoc:` block, never run git, never pass a
       folder the binary was not handed, never call `publish` twice on one note.
-- [ ] `git commit -m "feat(skill): gdoc-publish"`
+- [x] `git commit -m "feat(skill): gdoc-publish"`
 
 ### Task 7: the gdoc-restyle skill
 
