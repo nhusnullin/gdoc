@@ -518,19 +518,49 @@ cursor or a wait length. A document URL offers nothing either.
 **Files:**
 - Modify: `install.sh`
 
-- [ ] After the binary is built, `"$GO_BIN" completion zsh --out
+- [x] After the binary is built, `"$GO_BIN" completion zsh --out
       "$REPO/bin/gdoc.zsh" --force >/dev/null`, and the summary prints the
       `source` line when `.zshrc` does not already contain it. The script
       never edits `.zshrc`.
-- [ ] `SKILL=gdoc-review` becomes a list of three, and the link block runs
+- [x] `SKILL=gdoc-review` becomes a list of three, and the link block runs
       once per skill with the same three branches: a link is repointed, a
       differing real directory is refused, an equal one is replaced.
-- [ ] The "What is installed" summary lists every skill linked.
-- [ ] The comment at the top of the file names the completion file and says it
+- [x] The "What is installed" summary lists every skill linked.
+- [x] The comment at the top of the file names the completion file and says it
       is rewritten on every run.
-- [ ] Run `./install.sh` on this machine and paste its output into this task
+- [x] Run `./install.sh` on this machine and paste its output into this task
       as the check. `gdoc help` on PATH answers.
-- [ ] `git commit -m "chore: install.sh writes the completion and links three skills"`
+
+  ⚠️ The three-skill run is red until Task 7 lands, because `skills/gdoc-publish`
+  and `skills/gdoc-restyle` are written in Tasks 6 and 7. Every source is
+  checked before any link is made, so the run stops with nothing half done:
+
+  ```
+  install: missing /Users/nailkhusnullin/src/personal/gdoc/skills/gdoc-publish
+  exit: 1
+  ```
+
+  The same script with `SKILLS=(gdoc-review)` runs green, which is the check of
+  the completion, the loop and the summary:
+
+  ```
+  gdoc installed
+
+    source   /Users/nailkhusnullin/src/personal/gdoc
+    version  e70768c on gdoc-v2-m7d-help-completion-skills + uncommitted changes
+    gdoc     /Users/nailkhusnullin/.local/bin/gdoc -> /Users/nailkhusnullin/src/personal/gdoc/bin/gdoc
+    complete /Users/nailkhusnullin/src/personal/gdoc/bin/gdoc.zsh
+             add this line to ~/.zshrc:  source /Users/nailkhusnullin/src/personal/gdoc/bin/gdoc.zsh
+
+    skills (linked, so edits are live with no reinstall)
+      gdoc-review  -> /Users/nailkhusnullin/src/personal/gdoc/skills/gdoc-review
+
+    next     gdoc auth status, and gdoc auth login if it says signed out
+  ```
+
+  `gdoc help` on PATH answers with one object and exit 0. The full three-skill
+  run is a checkbox in Task 10.
+- [x] `git commit -m "chore: install.sh writes the completion and links three skills"`
 
 ### Task 6: the gdoc-publish skill
 
@@ -658,6 +688,8 @@ first. This task makes the other documents agree with it.
 - [ ] `make test`, `make vet`, `make dist` green. CI runs when the branch is
       pushed, which is Nail's to do.
 - [ ] `wc -l CLAUDE.md` under 300.
+- [ ] ➕ `./install.sh` runs green with all three skills present, which Task 5
+      could not check because two of them did not exist yet.
 
 ### Task 11: close the milestone
 

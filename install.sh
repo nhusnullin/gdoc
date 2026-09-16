@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Build the gdoc binary and link it, and its skill, into place.
+# Build the gdoc binary and link it, its completion and its skills, into place.
 #
 # Safe to re-run. Every step checks the current state first and does nothing
-# when it is already correct. The skill is linked, not copied, so editing
-# skills/gdoc-review/SKILL.md takes effect immediately and the skill can never
+# when it is already correct. A skill is linked, not copied, so editing a
+# skills/<name>/SKILL.md takes effect immediately and a skill can never
 # disagree with the binary it calls.
+#
+# One file is rewritten on every run: bin/gdoc.zsh, the shell completion. It
+# is a rendering of the binary that was just built, so it has to be written
+# again after an upgrade or a Tab would offer a flag the parser no longer
+# takes. Nothing else here replaces a file. .zshrc is never edited: the
+# summary prints the one line to add and a person adds it.
 #
 # This script never touches ~/.config/gdoc-agent/. Your token and your config
 # are yours: nothing here creates, rewrites or removes a file in that folder.
@@ -16,7 +22,10 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="$HOME/.claude/skills"
 BIN_DIR="$HOME/.local/bin"
 GO_BIN="$REPO/bin/gdoc"
-SKILL=gdoc-review
+COMPLETION="$REPO/bin/gdoc.zsh"
+# Every skill this repo owns. The link block below runs once per name, so a
+# fourth skill is one word here and nothing else.
+SKILLS=(gdoc-review gdoc-publish gdoc-restyle)
 
 fail() {
     printf 'install: %s\n' "$1" >&2
@@ -96,32 +105,53 @@ case ":$PATH:" in
 esac
 
 # --------------------------------------------------------------------------
-# The skill
+# The completion
 # --------------------------------------------------------------------------
+#
+# Written by the binary that was just built, into bin/ beside it, so the tool
+# and what Tab offers are always the same table. --force because this file is
+# gdoc's own: rewriting it is what this line is for.
+#
+# .zshrc is not edited here. The summary prints the line to add when that file
+# does not already name this one.
+
+"$GO_BIN" completion zsh --out "$COMPLETION" --force >/dev/null \
+    || fail "the completion could not be written to $COMPLETION"
+
+# --------------------------------------------------------------------------
+# The skills
+# --------------------------------------------------------------------------
+#
+# Every source is checked before any link is made, so a name in SKILLS that
+# the repo does not have stops the run with nothing half done.
 
 mkdir -p "$SKILLS_DIR"
 
-src="$REPO/skills/$SKILL"
-dst="$SKILLS_DIR/$SKILL"
+for skill in "${SKILLS[@]}"; do
+    [ -d "$REPO/skills/$skill" ] || fail "missing $REPO/skills/$skill"
+done
 
-[ -d "$src" ] || fail "missing $src"
+for skill in "${SKILLS[@]}"; do
+    src="$REPO/skills/$skill"
+    dst="$SKILLS_DIR/$skill"
 
-if [ -L "$dst" ]; then
-    # Already a link. Leave it alone when it points here, repoint otherwise.
-    [ "$(readlink "$dst")" = "$src" ] || { rm "$dst"; ln -s "$src" "$dst"; }
-elif [ -e "$dst" ]; then
-    # A real directory from an older copy-based install. Replacing it is only
-    # safe when it holds no edits that exist nowhere else.
-    if ! diff -rq -x .DS_Store "$src" "$dst" >/dev/null 2>&1; then
-        fail "$dst differs from the repo.
+    if [ -L "$dst" ]; then
+        # Already a link. Leave it alone when it points here, repoint otherwise.
+        [ "$(readlink "$dst")" = "$src" ] || { rm "$dst"; ln -s "$src" "$dst"; }
+    elif [ -e "$dst" ]; then
+        # A real directory from an older copy-based install. Replacing it is only
+        # safe when it holds no edits that exist nowhere else.
+        if ! diff -rq -x .DS_Store "$src" "$dst" >/dev/null 2>&1; then
+            fail "$dst differs from the repo.
   Copy the edits you want into $src, then re-run.
   Compare with: diff -r -x .DS_Store '$src' '$dst'"
+        fi
+        rm -rf "$dst"
+        ln -s "$src" "$dst"
+    else
+        ln -s "$src" "$dst"
     fi
-    rm -rf "$dst"
-    ln -s "$src" "$dst"
-else
-    ln -s "$src" "$dst"
-fi
+done
 
 # The apply skill was removed with the Python tool it called. An old install
 # left a link to it here, and a link to a folder that no longer exists is a
@@ -163,6 +193,16 @@ printf '  version  %s on %s%s\n' "$commit" "$branch" "$state"
 # somebody else's gdoc alone, the summary has to say so rather than claim a link
 # it did not make.
 printf '  gdoc     %s -> %s\n' "$link" "$(readlink "$link" 2>/dev/null || echo 'left alone, not this install')"
-printf '\n  skill (linked, so edits are live with no reinstall)\n'
-printf '    %-12s -> %s\n' "$SKILL" "$(readlink "$dst")"
+printf '  complete %s\n' "$COMPLETION"
+# grep -F, so the path is a string and not a pattern. A missing .zshrc reads
+# the same as one that does not name the file: the line is printed either way.
+if grep -qF "$COMPLETION" "$HOME/.zshrc" 2>/dev/null; then
+    printf '           sourced from ~/.zshrc already\n'
+else
+    printf '           add this line to ~/.zshrc:  source %s\n' "$COMPLETION"
+fi
+printf '\n  skills (linked, so edits are live with no reinstall)\n'
+for skill in "${SKILLS[@]}"; do
+    printf '    %-12s -> %s\n' "$skill" "$(readlink "$SKILLS_DIR/$skill")"
+done
 printf '\n  next     gdoc auth status, and gdoc auth login if it says signed out\n\n'
