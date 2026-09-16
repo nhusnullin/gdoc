@@ -68,6 +68,15 @@
 // table says carries a file is read for a value and one that carries none is
 // read for its presence.
 //
+// The example is held the same way, because a skill builds its call from what
+// help printed and an example the binary would refuse teaches a call that
+// fails. TestEveryExampleIsACallTheTableAccepts reads every example without
+// running it: it opens with the binary and the command's own words, the rest
+// parses with that entry's flag set and word count, and a value whose kind
+// says how it is written is written that way, so a duration is 9m and not 60.
+// TestTheCommentsExampleShowsTheCursorItsWaitNeeds holds the one rule the
+// table cannot see, that cmdComments refuses --wait without --since.
+//
 // The table is a function and not a variable, and that is Go and not taste.
 // help is an entry in it and reads it, so a variable would refer to itself
 // through a function, which is an initialization cycle the compiler refuses.

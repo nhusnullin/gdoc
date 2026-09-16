@@ -27,7 +27,7 @@ const (
 	kindFile
 	kindFolderID
 	kindCursor
-	kindSeconds
+	kindDuration
 )
 
 // placeholder is the value as a reader sees it, or the empty string for a flag
@@ -40,8 +40,8 @@ func (k kind) placeholder() string {
 		return "<folder id>"
 	case kindCursor:
 		return "<cursor>"
-	case kindSeconds:
-		return "<seconds>"
+	case kindDuration:
+		return "<duration>"
 	}
 	return ""
 }
@@ -141,10 +141,10 @@ func commands() []command {
 			flags: []flag{
 				{"--since", kindCursor, "only what is newer than this cursor, which an earlier run printed"},
 				{"--witness", kindNone, "export the document and say which threads the export still shows"},
-				{"--wait", kindSeconds, "wait this long for something new before answering"},
+				{"--wait", kindDuration, "wait this long for something new before answering, written as 9m or 90s"},
 			},
 			summary: "List the comment threads with their ranges, their replies and the next cursor.",
-			example: "gdoc comments https://docs.google.com/document/d/1AbC.../edit --wait 60",
+			example: "gdoc comments https://docs.google.com/document/d/1AbC.../edit --since <cursor> --wait 9m",
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdComments(ctx, a)
 			},

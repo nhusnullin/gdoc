@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The table is the one description of what gdoc answers, so the two halves of
@@ -171,4 +172,83 @@ func TestNoCommandBuildsAFlagSetOfItsOwn(t *testing.T) {
 	if strings.Contains(productionSource(t), "flagSet{") {
 		t.Error("a command builds a flag set of its own: the table is the one description of what a command takes")
 	}
+}
+
+// The example is the one whole call a command's help prints, and Decision 8
+// tells a session to build its call from what help printed. So an example that
+// the binary would refuse teaches a call that fails at the terminal.
+//
+// Most of that the table can check on itself: the example opens with the
+// binary and the command's own words, and what follows parses with the flag set
+// and the word count the entry describes. The value kinds go further. A kind
+// that says how a value is written is a promise the example keeps too, so a
+// duration in an example is a length of time and not a bare number.
+//
+// Nothing here runs a command or opens a session: the example is read, not
+// executed, because its document ids and file names are placeholders.
+func TestEveryExampleIsACallTheTableAccepts(t *testing.T) {
+	table := commands()
+	if len(table) == 0 {
+		t.Fatal("the command table is empty, so this test is measuring nothing")
+	}
+
+	for _, c := range table {
+		fields := strings.Fields(c.example)
+		if len(fields) == 0 || fields[0] != "gdoc" {
+			t.Errorf("the %s example must open with the binary: %q", c.name, c.example)
+			continue
+		}
+		rest := fields[1:]
+		words := c.nameWords()
+		if len(rest) < len(words) || strings.Join(rest[:len(words)], " ") != c.name {
+			t.Errorf("the %s example must name the command it is for: %q", c.name, c.example)
+			continue
+		}
+		rest = rest[len(words):]
+		if _, err := parseArgsN(rest, c.flagSet(), c.wants()); err != nil {
+			t.Errorf("the %s example is a call the parser refuses: %v", c.name, err)
+			continue
+		}
+
+		kinds := make(map[string]kind, len(c.flags))
+		for _, f := range c.flags {
+			kinds[f.name] = f.value
+		}
+		for i, field := range rest {
+			name, value, joined := strings.Cut(field, "=")
+			if !joined {
+				if i+1 >= len(rest) {
+					continue
+				}
+				value = rest[i+1]
+			}
+			if kinds[name] != kindDuration {
+				continue
+			}
+			if _, err := time.ParseDuration(value); err != nil {
+				t.Errorf("the %s example writes %s %q, and the command reads a length of time such as 9m",
+					c.name, name, value)
+			}
+		}
+	}
+}
+
+// --wait is refused without --since, in cmdComments and not in the table, so
+// the table cannot catch this one on itself. The rule is in read.go: a wait
+// with no cursor would answer with the whole document, which is the one-shot
+// read under another name.
+func TestTheCommentsExampleShowsTheCursorItsWaitNeeds(t *testing.T) {
+	for _, c := range commands() {
+		if c.name != "comments" {
+			continue
+		}
+		if !strings.Contains(c.example, "--wait") {
+			return
+		}
+		if !strings.Contains(c.example, "--since") {
+			t.Errorf("--wait is refused without --since, and the comments example shows only the wait: %q", c.example)
+		}
+		return
+	}
+	t.Fatal("no comments command in the table, so this test is measuring nothing")
 }
