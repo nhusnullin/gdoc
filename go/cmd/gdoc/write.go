@@ -457,7 +457,7 @@ func readNote(path, docID string) (*notePath, error) {
 // than run: a probe document would be created and trashed for a run with
 // nothing to propose.
 //
-// The read is strict, for the reason parseArgs refuses an unknown flag and
+// The read is strict, for the reason parseArgsN refuses an unknown flag and
 // frontmatter reads with yaml.Strict(). A misspelled `quoted`, `replacement` or
 // `why` is caught a few lines down, because Check refuses their empty values;
 // `assignee` is optional, so a dropped one landed a comment with nobody

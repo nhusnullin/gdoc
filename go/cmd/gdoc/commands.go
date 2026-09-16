@@ -2,9 +2,9 @@
 //
 // Nothing else in this package lists a command or a flag. The dispatcher walks
 // this table, the usage line is joined from it, and the parser each command is
-// handed is built from the flags its entry names. A thirteenth command cannot
-// answer a caller without being here, and a flag cannot be taken without being
-// written down beside the sentence that says what it is for.
+// handed is built from the flags its entry names. A new command cannot answer a
+// caller without being here, and a flag cannot be taken without being written
+// down beside the sentence that says what it is for.
 
 package main
 

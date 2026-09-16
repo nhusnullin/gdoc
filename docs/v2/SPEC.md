@@ -333,9 +333,11 @@ literals, never by reading the constant they test.
 
 ## The skills, and how a comment reaches one
 
-Four named workflows, all judgement, all skills rather than commands, and all
-symlinked from this repo in one copy. Two of them run on a marked comment, and
-two Nail invokes by name:
+Four named workflows, all judgement rather than commands. Three of them are
+skills today, symlinked from this repo in one copy: the review session, the
+publish run and the restyle run. The alignment check is described here and
+arrives at M8. Two of the four run on a marked comment, and two Nail invokes by
+name:
 
 - **The review session.** Reads the threads, answers `ai?` from the hub, carries
   out `ai!` against the hub, proposes document changes as suggestions. If it
@@ -343,8 +345,9 @@ two Nail invokes by name:
   **live**, polling on the `--since` cursor until Nail stops it. A colleague's
   `ai!` acts too, by decision: the marker is the trigger, identity is not a gate,
   and the guard caps a handed-in document at suggest and reply.
-- **The alignment check.** Composes the diff, judges what matters, proposes both
-  ways: suggestions into the document, edits into the hub with agreement.
+- **The alignment check**, M8, not built. Composes the diff, judges what
+  matters, proposes both ways: suggestions into the document, edits into the hub
+  with agreement.
 - **The publish run**, `gdoc-publish`. Nail names a note, and the skill builds
   it, publishes it into the folder, and reads back what came out.
 - **The restyle run**, `gdoc-restyle`. Nail gives a link, and the skill surveys
@@ -352,7 +355,15 @@ two Nail invokes by name:
 
 **No skill holds a flag list.** Before the first call of a command in a session
 a skill runs `gdoc help <command>` and reads the words and flags from the binary
-it is about to run. Added 2026-09-16, DECISIONS.md.
+it is about to run. `gdoc-publish` and `gdoc-restyle` do this, and `gdoc-review`
+is the one that still names its flags, until it is converted. One direction
+holds for all three meanwhile:
+`TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` reads the call lines, the
+ones opening with `gdoc` or `$GDOC`, and fails when one names a command the
+table does not have or a flag that command does not take. A flag named in prose,
+or standing on a continuation line under the call, is not covered, so a rename
+in the table can still leave a skill telling a session to pass it. Added
+2026-09-16, DECISIONS.md.
 
 **There is no watcher, and the loop starts when Nail starts it**, in the hub
 folder. A comment written today waits, visible in the document, until a session

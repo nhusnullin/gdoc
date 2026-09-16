@@ -6,10 +6,11 @@
 # skills/<name>/SKILL.md takes effect immediately and a skill can never
 # disagree with the binary it calls.
 #
-# One file is rewritten on every run: bin/gdoc.zsh, the shell completion. It
-# is a rendering of the binary that was just built, so it has to be written
-# again after an upgrade or a Tab would offer a flag the parser no longer
-# takes. Nothing else here replaces a file. .zshrc is never edited: the
+# One file is written again on every run: bin/gdoc.zsh, the shell completion.
+# When it cannot be written the run warns, says what the binary reported, and
+# carries on. It is a rendering of the binary that was just built, so it has to
+# be written again after an upgrade or a Tab would offer a flag the parser no
+# longer takes. Nothing else here replaces a file. .zshrc is never edited: the
 # summary prints the one line to add and a person adds it.
 #
 # This script never touches ~/.config/gdoc-agent/. Your token and your config
@@ -105,20 +106,6 @@ case ":$PATH:" in
 esac
 
 # --------------------------------------------------------------------------
-# The completion
-# --------------------------------------------------------------------------
-#
-# Written by the binary that was just built, into bin/ beside it, so the tool
-# and what Tab offers are always the same table. --force because this file is
-# gdoc's own: rewriting it is what this line is for.
-#
-# .zshrc is not edited here. The summary prints the line to add when that file
-# does not already name this one.
-
-"$GO_BIN" completion zsh --out "$COMPLETION" --force >/dev/null \
-    || fail "the completion could not be written to $COMPLETION"
-
-# --------------------------------------------------------------------------
 # The skills
 # --------------------------------------------------------------------------
 #
@@ -176,6 +163,40 @@ elif [ -e "$stale" ]; then
 fi
 
 # --------------------------------------------------------------------------
+# The completion
+# --------------------------------------------------------------------------
+#
+# Written by the binary that was just built, into bin/ beside it, so the tool
+# and what Tab offers are always the same table. --force because this file is
+# gdoc's own: rewriting it is what this line is for.
+#
+# Last, after the skills, and a warning rather than a failure. The binary here
+# is not always the one this checkout describes: with no Go on PATH the block
+# at the top keeps whatever was already built, and a binary older than the
+# completion command refuses the call. That is a reason to say so, not a reason
+# to leave the skills unlinked. The summary reads this run's outcome and not the
+# file: bin/ is not in git and survives between runs, so a script an earlier run
+# wrote is still sitting there after this one failed, and it renders a binary
+# that is no longer the one on PATH.
+#
+# .zshrc is not edited here. The summary prints the line to add when that file
+# does not already name this one.
+
+# The reason is captured, never discarded. Every command prints one JSON object
+# on stdout and that object carries the error, so >/dev/null would throw away
+# the only diagnostic there is and leave this block guessing a cause: a full
+# disk and a binary too old to have this command read the same from out here.
+# The second line is a hint and says so, because the most common cause of a
+# binary too old to answer is that no go on PATH left the last one in place.
+completion_written=0
+if reason="$("$GO_BIN" completion zsh --out "$COMPLETION" --force 2>&1)"; then
+    completion_written=1
+else
+    warn "$GO_BIN wrote no completion to $COMPLETION: $reason"
+    warn "with no go on PATH nothing was rebuilt here: install Go, then re-run."
+fi
+
+# --------------------------------------------------------------------------
 # What is installed
 # --------------------------------------------------------------------------
 
@@ -193,13 +214,23 @@ printf '  version  %s on %s%s\n' "$commit" "$branch" "$state"
 # somebody else's gdoc alone, the summary has to say so rather than claim a link
 # it did not make.
 printf '  gdoc     %s -> %s\n' "$link" "$(readlink "$link" 2>/dev/null || echo 'left alone, not this install')"
-printf '  complete %s\n' "$COMPLETION"
-# grep -F, so the path is a string and not a pattern. A missing .zshrc reads
-# the same as one that does not name the file: the line is printed either way.
-if grep -qF "$COMPLETION" "$HOME/.zshrc" 2>/dev/null; then
-    printf '           sourced from ~/.zshrc already\n'
+# This run, not the filesystem: a file at that path may be the previous run's,
+# and reporting it as fresh would tell somebody a stale script matches the
+# binary they just built. Three outcomes, so all three are said out loud.
+if [ "$completion_written" -eq 1 ]; then
+    printf '  complete %s\n' "$COMPLETION"
+    # grep -F, so the path is a string and not a pattern. A missing .zshrc reads
+    # the same as one that does not name the file: the line is printed either way.
+    if grep -qF "$COMPLETION" "$HOME/.zshrc" 2>/dev/null; then
+        printf '           sourced from ~/.zshrc already\n'
+    else
+        printf '           add this line to ~/.zshrc:  source %s\n' "$COMPLETION"
+    fi
+elif [ -f "$COMPLETION" ]; then
+    printf '  complete %s\n' "$COMPLETION"
+    printf '           not rewritten this run, see the warning above\n'
 else
-    printf '           add this line to ~/.zshrc:  source %s\n' "$COMPLETION"
+    printf '  complete not written, see the warning above\n'
 fi
 printf '\n  skills (linked, so edits are live with no reinstall)\n'
 for skill in "${SKILLS[@]}"; do

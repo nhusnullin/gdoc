@@ -32,12 +32,22 @@ func TestTheZshScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 		t.Errorf("the script must end by registering itself: %q", tail(script))
 	}
 
+	// The body, never the header. The header is one comment line carrying the
+	// usage line, which names every command in the table, so a test that reads
+	// the whole file would pass on the comment alone and say nothing about what
+	// Tab offers.
+	body := withoutComments(script)
 	for _, c := range table {
-		if !strings.Contains(script, c.name) {
-			t.Errorf("the script must name %q", c.name)
+		// Every word a caller types is a _describe entry, which zshEntry writes
+		// as 'word:what it is. A two-word command is two of them, the first word
+		// at the top level and the second under it.
+		for _, word := range c.nameWords() {
+			if !strings.Contains(body, "'"+word+":") {
+				t.Errorf("the script must offer %q as an entry of %q", word, c.name)
+			}
 		}
 		for _, f := range c.flags {
-			if !strings.Contains(script, f.name+"[") {
+			if !strings.Contains(body, f.name+"[") {
 				t.Errorf("%s takes %s, and the script offers it nowhere", c.name, f.name)
 			}
 		}
@@ -53,7 +63,7 @@ func TestTheZshScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 			kinds[f.name] = f.value
 		}
 	}
-	for _, line := range strings.Split(script, "\n") {
+	for _, line := range strings.Split(body, "\n") {
 		spec := strings.TrimSpace(line)
 		if !strings.HasPrefix(spec, "'--") {
 			continue
@@ -73,6 +83,55 @@ func TestTheZshScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 				name, k.placeholder(), map[bool]string{true: "offers", false: "offers no"}[files], spec)
 		}
 	}
+}
+
+// withoutComments is the script with its comment lines dropped, which is what
+// every assertion about what Tab offers reads. Both scripts open with a comment
+// carrying the usage line, and the usage line names every command in the table,
+// so a command missing from the completion logic would still be found by a
+// search over the whole file.
+func withoutComments(script string) string {
+	var kept []string
+	for _, line := range strings.Split(script, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return strings.Join(kept, "\n")
+}
+
+// flagArms is every arm of the bash script's case over the word before the
+// cursor, each one whole: the line that opens it, and every line after it up to
+// and including the ;; that closes it. An arm opens with a dash, which is what
+// tells a flag arm from a command arm.
+func flagArms(script string) []string {
+	var arms []string
+	var current []string
+	for _, line := range strings.Split(script, "\n") {
+		text := strings.TrimSpace(line)
+		if current == nil && !strings.HasPrefix(text, "--") {
+			continue
+		}
+		current = append(current, text)
+		if strings.Contains(text, ";;") {
+			arms = append(arms, strings.Join(current, " "))
+			current = nil
+		}
+	}
+	return arms
+}
+
+// hasArm reports whether the bash script answers for this word, which is a line
+// opening an arm of a case: the word, then the closing parenthesis. A flag arm
+// opens with a dash, so it is never mistaken for a command word.
+func hasArm(script, word string) bool {
+	for _, line := range strings.Split(script, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), word+")") {
+			return true
+		}
+	}
+	return false
 }
 
 // head and tail are the ends of the script, for a failure a person can read
@@ -235,16 +294,23 @@ func TestTheBashScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 	if !strings.HasPrefix(script, "# bash completion for gdoc") {
 		t.Errorf("the script must open by saying what it is: %q", head(script))
 	}
-	if !strings.HasSuffix(script, "complete -F _gdoc gdoc\n") {
+	if !strings.HasSuffix(script, "complete -o filenames -F _gdoc gdoc\n") {
 		t.Errorf("the script must end by registering itself: %q", tail(script))
 	}
 
+	// The body, never the header, for the reason the zsh test says: the header
+	// carries the usage line, which names every command already.
+	body := withoutComments(script)
 	for _, c := range table {
-		if !strings.Contains(script, c.name) {
-			t.Errorf("the script must name %q", c.name)
+		// Every word a caller types is an arm of a case. A two-word command is
+		// two of them, the first word at the top level and the second under it.
+		for _, word := range c.nameWords() {
+			if !hasArm(body, word) {
+				t.Errorf("the script must answer for %q, which is a word of %q", word, c.name)
+			}
 		}
 		for _, f := range c.flags {
-			if !strings.Contains(script, f.name) {
+			if !strings.Contains(body, f.name) {
 				t.Errorf("%s takes %s, and the script offers it nowhere", c.name, f.name)
 			}
 		}
@@ -263,13 +329,10 @@ func TestTheBashScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 
 	// Every arm of the case over the word before the cursor. A flag with a
 	// value is in one of them, and a flag without a value is in none, because
-	// nothing follows it.
+	// nothing follows it. An arm is read whole, up to and including the ;; that
+	// closes it, because what it offers may stand on a line of its own.
 	armed := map[string]bool{}
-	for _, line := range strings.Split(script, "\n") {
-		arm := strings.TrimSpace(line)
-		if !strings.HasPrefix(arm, "--") {
-			continue
-		}
+	for _, arm := range flagArms(body) {
 		names, _, ok := strings.Cut(arm, ")")
 		if !ok {
 			t.Errorf("a flag arm is not an arm: %q", arm)
@@ -296,6 +359,58 @@ func TestTheBashScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 	for name, k := range kinds {
 		if k != kindNone && !armed[name] {
 			t.Errorf("%s carries %q, and the script says nothing about what follows it", name, k.placeholder())
+		}
+	}
+}
+
+// The file arm's shape, not just that it calls compgen. An unquoted
+// $(compgen -f) is split on IFS, so ~/My Notes/ comes back as "My" and
+// "Notes/", two candidates that are each a path to nothing. The read loop is
+// what keeps one path one candidate, and the one-liner it replaced contains
+// compgen -f too, so the assertion above would pass on the bug. The loop runs
+// in the calling shell, which is an interactive shell, so the variable it
+// assigns has to be declared local or it leaks into the person's session.
+func TestTheBashFileArmKeepsAPathWithASpaceWhole(t *testing.T) {
+	script, err := bashScript(commands())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := withoutComments(script)
+
+	var file string
+	for _, arm := range flagArms(body) {
+		if strings.Contains(arm, "compgen -f") {
+			file = arm
+		}
+	}
+	if file == "" {
+		t.Fatal("no arm of the case offers file names, so this test is measuring nothing")
+	}
+	if !strings.Contains(file, "while IFS= read -r candidate") {
+		t.Errorf("the file arm must read one candidate a line, so a path holding a space stays one: %q", file)
+	}
+	if strings.Contains(file, "COMPREPLY=( $(compgen") {
+		t.Errorf("an unquoted $(compgen) is split on IFS, and splits a path holding a space: %q", file)
+	}
+
+	// Every variable the body assigns is declared, because the read loop runs
+	// in the shell that sourced this file.
+	assigned := []string{"cur", "prev", "candidate"}
+	local := ""
+	for _, line := range strings.Split(body, "\n") {
+		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, "local ") {
+			local = trimmed
+		}
+	}
+	if local == "" {
+		t.Fatal("the function declares nothing local, so every variable it assigns leaks into the shell")
+	}
+	for _, name := range assigned {
+		if !strings.Contains(local, " "+name) {
+			t.Errorf("%s is assigned in the function and not declared: %q", name, local)
+		}
+		if !strings.Contains(body, name) {
+			t.Errorf("%s is declared and assigned nowhere, so this test names a variable the script dropped", name)
 		}
 	}
 }
@@ -333,7 +448,7 @@ func TestCompletionBashWritesTheFileAndNamesBashrc(t *testing.T) {
 		t.Fatal(err)
 	}
 	script := string(written)
-	if !strings.HasPrefix(script, "# bash completion for gdoc") || !strings.HasSuffix(script, "complete -F _gdoc gdoc\n") {
+	if !strings.HasPrefix(script, "# bash completion for gdoc") || !strings.HasSuffix(script, "complete -o filenames -F _gdoc gdoc\n") {
 		t.Errorf("the file is the script: %q ... %q", head(script), tail(script))
 	}
 	if !strings.Contains(script, "publish") {

@@ -9,7 +9,7 @@
 # Source it from .bashrc.
 
 _gdoc() {
-  local cur prev
+  local cur prev candidate
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -18,7 +18,13 @@ _gdoc() {
   # a wait length are offered nothing, because nothing on this machine knows one.
   case "$prev" in
 {{- if .FileFlags}}
-    {{.FileFlags}}) COMPREPLY=( $(compgen -f -- "$cur") ); return ;;
+    {{.FileFlags}})
+      # A line at a time, so a path holding a space stays one candidate. An
+      # unquoted $(compgen) is split on IFS and would offer "My" and "Notes/"
+      # for ~/My Notes/. No mapfile and no compopt: macOS ships bash 3.2, which
+      # has neither, and that is the shell this file is most likely sourced in.
+      while IFS= read -r candidate; do COMPREPLY+=( "$candidate" ); done < <(compgen -f -- "$cur")
+      return ;;
 {{- end}}
 {{- if .OpaqueFlags}}
     {{.OpaqueFlags}}) return ;;
@@ -56,4 +62,16 @@ _gdoc() {
   esac
 }
 
-complete -F _gdoc gdoc
+# -o filenames, so a directory offered for a file flag gets a trailing slash and
+# no trailing space, which is what lets a person Tab again to descend into it,
+# and so a space in a path is escaped as it is inserted.
+#
+# It is set for the whole command and not for the one arm that offers file
+# names, because scoping it needs compopt and macOS ships bash 3.2, which has
+# none. The cost is that a command word matching a directory in the current
+# folder gets a slash too: in a folder holding build/, `gdoc bu<Tab>` completes
+# to `gdoc build/`, which the binary then refuses by name. That is one visible
+# character on a rare word against every directory a file flag ever descends
+# into, so this is the side to be wrong on. zsh has neither problem: _files does
+# the work there.
+complete -o filenames -F _gdoc gdoc

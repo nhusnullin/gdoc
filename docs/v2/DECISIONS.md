@@ -1773,14 +1773,15 @@ by reading `doc.go`.
   object, and exits 1. A run with no command did no work.
 - One command table in `cmd/gdoc/commands.go` is the only description of a
   command. The dispatcher, the usage line, the help and the completion all
-  read it. A thirteenth command cannot exist without help and completion for
-  it, because the only way to be dispatched is to be in the table.
+  read it. A new command cannot exist without help and completion for it,
+  because the only way to be dispatched is to be in the table.
 - `gdoc completion zsh --out <path>` and `gdoc completion bash --out <path>`
   write a shell completion script and report what they wrote. The script is
   never printed to stdout, because that would be the one command whose stdout
   is not an object. An existing path is refused without `--force`, the rule
-  `build --out` already holds. `install.sh` rewrites the zsh script on every
-  run and prints the `source` line; it never edits `.zshrc`. PowerShell waits
+  `build --out` already holds. `install.sh` attempts the zsh script on every
+  run: it prints the `source` line when the write landed, and a warning naming
+  why it did not when it failed. It never edits `.zshrc`. PowerShell waits
   for M9 and the Windows smoke test.
 - Two new skills, `gdoc-publish` and `gdoc-restyle`. Two rather than one
   router, because they start from different things, a note and a link, and a
@@ -1788,8 +1789,13 @@ by reading `doc.go`.
   is not reused.
 - A skill never holds a flag list. Before the first call of a command in a
   session it runs `gdoc help <command>` and reads the words and flags from the
-  binary it is about to run. A test over every `SKILL.md` holds the other
-  direction: every command and flag a skill names exists in the table.
+  binary it is about to run. The two new skills are written this way today;
+  `gdoc-review` still names its flags and is converted when it is next opened,
+  because rewriting the longest skill was not this milestone's work. A test over
+  every `SKILL.md` holds one direction meanwhile: on a call line, the line
+  opening with `gdoc` or `$GDOC`, every command and every flag exists in the
+  table. Prose and continuation lines are not read, so the test narrows the
+  blast radius of a rename rather than closing it.
 - No fourth module. Cobra would give the help and the completion, and it would
   replace a strict parser whose refusals are each pinned by a test.
   `text/template` in the standard library renders the scripts.

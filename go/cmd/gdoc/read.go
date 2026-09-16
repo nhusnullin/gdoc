@@ -179,8 +179,10 @@ type args struct {
 func (a *args) target() string { return a.at(0) }
 
 // at is one positional argument, or the empty string when the command took
-// fewer than that. The count is checked in parseArgs, so a caller reading a
-// word it asked for always gets one.
+// fewer than that. The count is checked in parseArgsN, so a caller reading a
+// word it asked for always gets one, except under anyCount, where the command
+// counts its own words and this returns the empty string for a word it did not
+// get.
 func (a *args) at(i int) string {
 	if i >= len(a.positional) {
 		return ""
@@ -194,22 +196,24 @@ func (a *args) has(name string) bool {
 	return given
 }
 
-// parseArgs is strict, as dispatch already is. An unknown flag, a repeated
+// parseArgsN is strict, as dispatch already is. An unknown flag, a repeated
 // flag, a missing value and an extra positional argument each fail naming the
 // offender. Nothing is accepted and ignored: a command that quietly drops what
 // it did not understand tells the caller it did something it did not.
-func parseArgs(raw []string, spec flagSet) (*args, error) {
-	return parseArgsN(raw, spec, 1)
-}
-
-// parseArgsN is parseArgs for a command that takes a different number of words
-// before its flags: none for probe, which names a folder with a flag, and two
-// for reply and withdraw, which name a document and then a thing inside it.
 //
-// want is exact in both directions. One word too many is refused because a
-// command that ignores what it did not understand tells the caller it did
-// something it did not, and one too few is refused because the missing word is
-// what the command is about.
+// want is the number of words the command takes before its flags: one for the
+// commands that name a document, none for probe, which names a folder with a
+// flag, and two for reply and withdraw, which name a document and then a thing
+// inside it. It is exact in both directions. One word too many is refused
+// because a command that ignores what it did not understand tells the caller it
+// did something it did not, and one too few is refused because the missing word
+// is what the command is about.
+//
+// anyCount is the one exception, and it is the table's word rather than this
+// function's: neither guard fires, so the command is handed however many words
+// it was given and counts them itself. help and completion carry it, because
+// the refusal a missing word deserves there names a command or a shell, and the
+// refusal below names a document.
 func parseArgsN(raw []string, spec flagSet, want int) (*args, error) {
 	a := &args{flags: map[string]string{}}
 	for i := 0; i < len(raw); i++ {

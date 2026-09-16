@@ -126,9 +126,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   The marker decides.
 - **Skills are linked, not copied.** `~/.claude/skills/gdoc-review`,
   `gdoc-publish` and `gdoc-restyle` are symlinks into `skills/`, so an edit is
-  live the moment it is saved and before it is committed. `./install.sh` prints `+ uncommitted changes` on a dirty tree,
-  refuses to replace a real directory whose contents differ, and is safe to
-  re-run after any move.
+  live the moment it is saved and before it is committed. `./install.sh` prints
+  `+ uncommitted changes` on a dirty tree, refuses to replace a real directory
+  whose contents differ, and is safe to re-run after any move.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.

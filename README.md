@@ -25,12 +25,21 @@ at all.
 ```
 
 It builds `bin/gdoc` with `make build`, links it to `~/.local/bin/gdoc`, and
-links `skills/gdoc-review` into `~/.claude/skills/`. Linked, not copied, so
-`make build` refreshes the command and an edit to the skill is live with no
+links all three skills, `skills/gdoc-review`, `skills/gdoc-publish` and
+`skills/gdoc-restyle`, into `~/.claude/skills/`. Linked, not copied, so
+`make build` refreshes the command and an edit to a skill is live with no
 reinstall. It is safe to re-run: every step checks what is there first, and it
 refuses to replace a real directory whose contents differ rather than write
 over work that exists nowhere else. It prints the commit it installed from, and
 `+ uncommitted changes` when the tree is dirty.
+
+It writes `bin/gdoc.zsh`, the zsh completion, again on every run, or warns
+saying what stopped it. The binary writes it, so a script this run wrote is the
+table the parser reads. When the write fails the earlier run's script is still
+on disk, and the summary says it was not rewritten this run. `.zshrc` is never
+edited: the summary says `sourced from ~/.zshrc already`, or prints the one
+`source` line to add yourself, or points at the warning when nothing was
+written.
 
 The script never touches `~/.config/gdoc-agent/`. Your token and your config
 are written by `gdoc auth login` and by nothing else. After installing, run
@@ -41,11 +50,31 @@ missing and tells you the line to add.
 
 ## What it does
 
-One static binary at `go/`, twelve commands, nothing to install beside it. Each
-command takes arguments, prints one JSON object and exits. It holds the
-credential, it reads a document, it writes suggestions, it builds a house-style
-document and publishes it, it surveys what a document holds before anything is
-done to it, and it can give that document the house style where it stands.
+One static binary at `go/`, twelve commands plus `help` and `completion`,
+nothing to install beside it. Each command takes arguments, prints one JSON
+object and exits. It holds the credential, it reads a document, it writes
+suggestions, it builds a house-style document and publishes it, it surveys what
+a document holds before anything is done to it, and it can give that document
+the house style where it stands.
+
+```bash
+bin/gdoc help              # every command, one sentence each
+bin/gdoc help propose      # the words one command takes, its flags, an example
+bin/gdoc completion zsh --out ~/.gdoc-completion.zsh
+```
+
+`help` prints the command table: the words each command takes, every flag with
+a sentence saying what it is for, and one example. `--help` and `-h` mean the
+same thing anywhere on the line. `completion` renders that same table as a
+shell script and writes it to the file you name, for `zsh` or for `bash`. An
+existing file is refused without `--force`, so the path above is not the
+`bin/gdoc.zsh` that `install.sh` owns. Both read the one table the parser
+reads, so neither offers a word or a flag the table does not hold. The bash
+script has one rough edge: it sets `complete -o filenames` for the whole
+command, because scoping that to the one arm offering file names needs
+`compopt` and macOS ships bash 3.2, which has none. So a command word that
+matches a directory in the folder you are standing in gets a trailing slash,
+and the binary then refuses it by name.
 
 ```bash
 make build   # bin/gdoc, for this machine

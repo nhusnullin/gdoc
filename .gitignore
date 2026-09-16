@@ -20,3 +20,7 @@ bin/
 
 # the live test's recordings hold a real document's content; the shape lives in go/internal/docs/testdata/anchors.json
 go/internal/live/testdata/
+
+# A `go build` run from inside go/cmd/gdoc leaves the binary beside the source.
+# `bin/` above does not cover that path, and one got committed once.
+go/cmd/gdoc/gdoc

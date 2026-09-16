@@ -29,8 +29,9 @@ ROOT="$PWD"
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
 
 One root, `$ROOT`, and it is `$PWD`. It is the hub: where a cover value may be
-found, and the only place a file is read from or written to. The survey and the
-fields file go under the session's scratchpad, never beside somebody's note.
+found, and the only place a note is read from or written to. Scratch output, the
+survey and the fields file included, goes under the session's scratchpad, never
+beside somebody's note.
 
 Nothing here runs git. Not to commit, not to check whether a file is dirty.
 
@@ -103,12 +104,15 @@ a restyle has to keep:
 - **Every warning.** An element the read could not name is one, and a document
   holding one holds something no count here speaks for.
 
-`nothing_to_protect` is true only when the first five counts are all zero. When
-it is true, say in one sentence that there is a second route for a document
-with nothing in it to lose: `read` the document, put the text in a note with
-front matter, and `publish` that note, which gives a document built in the
-house style rather than one styled after the fact. Never take that route on
-your own. It makes a second document, and which document Nail keeps is his.
+`nothing_to_protect` is true only when five of those counts are zero: threads,
+pending suggestions in both units, chips, elements the read could not name, and
+named ranges. Tabs is not one of them and could never be, because every document
+has at least one. When it is true, say in one sentence that there is a second
+route for a document with nothing in it to lose: `read` the document, put the
+text in a note with front matter, and `publish` that note, which gives a
+document built in the house style rather than one styled after the fact. Never
+take that route on your own. It makes a second document, and which document Nail
+keeps is his.
 
 The survey also carries the document's revision id. The apply hands it back and
 Docs refuses the batch if the document moved in between, so a survey read a day

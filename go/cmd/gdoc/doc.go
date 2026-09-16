@@ -56,10 +56,10 @@
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the twelve out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the fourteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
-// asks it to refuse a flag, so a thirteenth command cannot sit in the table
+// asks it to refuse a flag, so a new command cannot sit in the table
 // unreachable, and a word in no entry is refused as unknown.
 // TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes and
 // TestNoCommandBuildsAFlagSetOfItsOwn hold the flags the same way: a command
@@ -168,17 +168,30 @@
 // reaches stdout. A script there would make this the one command
 // whose stdout is not an object, and the contract is worth more than a file
 // that has to be written again after an upgrade. install.sh writes it again on
-// every run, and it never edits .zshrc: it prints the line and a person adds
-// it.
+// every run, or warns saying why it could not, and it never edits .zshrc: it
+// prints the line and a person adds it.
 //
-// The script is a rendering of the table help prints, so what a Tab offers is
-// what the parser takes. A flag whose kind is a file offers file names, and
-// every other kind offers nothing, because nothing on this machine knows a
-// Drive folder id, a cursor or a wait length, and neither does anything know a
-// document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag and
+// The script is a rendering of the table help prints, so a Tab offers a word
+// or a flag the table holds and nothing else. A flag whose kind is a file
+// offers file names, and every other kind offers nothing, because nothing on
+// this machine knows a Drive folder id, a cursor or a wait length, and neither
+// does anything know a document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag and
 // TestTheBashScriptNamesEveryCommandAndEveryFlag are the pins, and each asks
 // the table rather than a list of its own, so a command added without a line
 // in the script fails there.
+//
+// The bash script sets complete -o filenames for the whole command, so a
+// directory offered for a file flag gets a trailing slash and no trailing
+// space, and a space in a path is escaped as it is inserted. Scoping the option
+// to the one arm that offers file names needs compopt, and macOS ships bash
+// 3.2, which has none, so it is set for all of them. The cost is the one place
+// a Tab offers what the parser refuses: a command word matching a directory in
+// the caller's current folder gets a slash too, so in a folder holding build/,
+// gdoc bu<Tab> completes to gdoc build/ and the binary refuses it by name. One
+// visible character on a rare word against every directory a file flag ever
+// descends into. zsh has neither problem, because _files does the work there.
+// TestTheBashScriptNamesEveryCommandAndEveryFlag pins the registration line
+// the option lives on.
 //
 // Both shells group the table the same way, through byFirstWord, because both
 // complete the way a person types: one word, then a second word or a flag.
@@ -229,7 +242,7 @@
 // and ignores what it did not understand tells the caller it did something it
 // did not.
 //
-// The last of those is why parseArgs looks the next argument up in the
+// The last of those is why parseArgsN looks the next argument up in the
 // command's own flag set rather than refusing anything that starts with a dash:
 // a cursor is base64url, and "-" is in that alphabet, so a real cursor value
 // would be refused as a flag.

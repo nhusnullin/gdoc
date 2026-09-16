@@ -27,7 +27,9 @@ ROOT="$PWD"
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
 
 One root, `$ROOT`, and it is `$PWD`. It is the hub: the tree the note lives in,
-and the only place a file is read from or written to.
+and the only place a note is read from or written to. Scratch output, the dry
+run's docx included, goes to the session's scratchpad and never beside somebody's
+note.
 
 Nothing here runs git. Not to commit, not to check whether the note is dirty.
 
@@ -66,11 +68,11 @@ Never edit `~/.config/gdoc-agent/` by hand, and never tell Nail to.
 
 Do every step, but put nothing in Drive and write nothing into the note.
 
-The dry run is `build`, to a scratch path under `/tmp`. It renders the same
-bytes `publish` would upload, on this machine, with no network. Read its report
-back: the file it wrote, its size, the title and the running head it took from
-the note's front matter, the house style it used, and the counts of what it
-found in the body.
+The dry run is `build`, to a scratch path under the session's scratchpad. It
+renders the same bytes `publish` would upload, on this machine, with no
+network. Read its report back: the file it wrote, its size, the title and the
+running head it took from the note's front matter, the house style it used, and
+the counts of what it found in the body.
 
 Say at the end that nothing was uploaded, no document exists, and the note's
 front matter is untouched.
