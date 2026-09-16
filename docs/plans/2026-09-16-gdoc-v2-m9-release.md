@@ -29,9 +29,9 @@ tag when a colleague has run its checklist.
 | Piece | Today | After |
 |---|---|---|
 | version | none; no tags | `x.y.z` baked in from the tag, in `help`, `auth status` and every envelope |
-| release | `make dist` by hand | a tag builds it in CI, zips it, and publishes it to `nhusnullin/gdoc-releases`, a public repository holding releases and nothing else |
+| release | `make dist` by hand | a tag builds it in CI, zips it, and publishes it as a GitHub Release of this repository, which is public |
 | nightly | none | main moved since the last tag: CI tags `x.y.(z+1)` at 02:00 UTC and releases it |
-| install | `install.sh` in a checkout | a release `install.sh` in the zip: copies the binary and the skills, asks global or local, strips quarantine |
+| install | `install.sh` in a checkout | one line, `curl -fsSL .../release/install.sh \| bash`, which fetches the latest release zip and installs it; the same script runs from an unpacked zip. Asks global or local, strips quarantine |
 | update | by hand | `gdoc update`, run by every skill before its first call, once a day: minor updates apply, major ones are reported, nightly ones need the channel |
 | skills | say "Nail", point at Nail's checkout | say "you", carry no path, and travel in the zip with a version marker |
 | page breaks | none in the docx route | before "Version Control" and before "Contents", in both routes, from one block in the house style |
@@ -43,13 +43,14 @@ Taken in the brainstorm that produced this plan, and written into
 DECISIONS.md the same day. Each is a decision and not a refactor. A task that
 finds one wrong stops and says so.
 
-1. **The releases repository is public**, `nhusnullin/gdoc-releases`, holding
-   GitHub Releases and a README and no source. Assessed the same day: the zip
-   carries no secret beyond the Internal OAuth client, which every colleague's
-   laptop already holds, and no document; what becomes public is the Altery
-   logo, the template's shape and the skills' wording, and Nail accepts that.
-   The source repository stays private, because a public source repository
-   would get the client revoked by GitHub's scanning.
+1. **Releases are GitHub Releases of this repository, which is public.**
+   Nail made `nhusnullin/gdoc` public on 2026-09-16 after the assessment in
+   DECISIONS.md: no secret beyond the Internal OAuth client, no document,
+   and the client secret left the source the same day, injected at build
+   time from `GDOC_OAUTH_CLIENT_SECRET`. So there is no second repository
+   and no second token: colleagues download from this repository's releases
+   page, the updater fetches from it with no credential, and the release
+   workflow builds with the secret from this repository's secrets.
 2. **Versions are `x.y.z`.** Nail tags `x.y.0` by hand. The nightly tags
    `x.y.(z+1)`. The number is the channel: `z == 0` is stable, `z > 0` is
    nightly. The first tag is `v2.0.0`.
@@ -69,7 +70,7 @@ finds one wrong stops and says so.
    is a shell script a person runs, so it may ask; the binary still never
    does.
 6. **The guard gains one read-only door for updates.** `AllowUpdateFrom`
-   names one releases repository for one run and admits GET on
+   names one repository for one run and admits GET on
    `api.github.com`, `github.com` and the asset host for that repository's
    releases, with no Authorization header, because the only bearer gdoc holds
    is Google's. Opened by `gdoc update` alone.
@@ -117,11 +118,15 @@ finds one wrong stops and says so.
   push.
 - **A tag pushed with `GITHUB_TOKEN` triggers no other workflow.** The
   nightly cannot rely on the tag event; it calls the release workflow as a
-  reusable one. `GITHUB_TOKEN` is scoped to this repository, so publishing to
-  `gdoc-releases` needs a fine-grained token with contents write on that one
-  repository, stored as `RELEASES_TOKEN`.
-- **Nail's `gh` token carries `repo` and `workflow`**, enough to create the
-  public repository and set the secret from a session.
+  reusable one. `GITHUB_TOKEN` can create a release on this repository, so no
+  second token is needed.
+- **The client secret is a repository secret**, `GDOC_OAUTH_CLIENT_SECRET`,
+  and the release workflow passes it to `make dist`. A build without it
+  cannot sign anyone in, so a release built without the secret is a failed
+  release, and the workflow refuses to publish one.
+- **The repository is public**, so `raw.githubusercontent.com` serves
+  `release/install.sh` to anyone and the releases API answers without a
+  token.
 - **The zip on macOS is quarantined** when it arrives through a browser, and
   an unsigned binary then refuses to run. The installer strips the attribute.
   A binary the updater downloads itself is not quarantined.
@@ -213,8 +218,7 @@ into the help prose's first line and `auth status`'s data.
 four checks the Go workflow runs, then `make dist`, then for each line of
 `release/platforms` packs `gdoc-<tag>-<platform>.zip` holding the binary,
 `skills/`, `install.sh`, `README.md` and `example/`, writes
-`SHA256SUMS-<tag>`, creates the GitHub Release here, and creates the same
-release in `gdoc-releases` with `RELEASES_TOKEN`. The nightly, `nightly.yml`,
+`SHA256SUMS-<tag>`, and creates the GitHub Release here. The nightly, `nightly.yml`,
 runs on a cron, reads the last tag, and if main moved, tags `x.y.(z+1)` and
 calls `release.yml` with it.
 
@@ -229,8 +233,11 @@ location that carries the `.release` marker. `--rollback` swaps `.previous`
 back. `--check` reports without touching anything. Every run is throttled to
 one check a day by `last_check` in `update.json` unless `--now`.
 
-**The installer** in the zip does what the updater does, once, by hand: it
-copies the binary, asks global or local, copies the skills with their
+**The installer** is one script with two entrances. Run from an unpacked zip
+it installs what is beside it. Run from `curl | bash` it asks the releases
+API for the latest stable tag, downloads the zip for this machine's platform
+and its checksum file, verifies, unpacks to a temp dir and installs from
+there. Either way it copies the binary, asks global or local, copies the skills with their
 markers, strips quarantine, runs `gdoc update --set-skills <where>` and
 `gdoc completion zsh --out` into the config dir, and ends with `gdoc auth
 status`.
@@ -241,7 +248,7 @@ status`.
 
 ```json
 {
-  "source": "nhusnullin/gdoc-releases",
+  "source": "nhusnullin/gdoc",
   "channel": "stable",
   "skills": ["global", "/Users/x/hub"],
   "last_check": "2026-09-16T09:00:00Z"
@@ -275,9 +282,9 @@ of the file at its final path.
 | 2.0.3 | 2.1.0 | 2.1.0 | nightly | updated to 2.1.0 |
 | 2.1.0 | 2.0.0 | | stable | up_to_date, never down |
 
-**The guard grant.** `AllowUpdateFrom("nhusnullin/gdoc-releases")` admits:
-`GET api.github.com/repos/nhusnullin/gdoc-releases/releases`, `GET
-github.com/nhusnullin/gdoc-releases/releases/download/<tag>/<asset>`, and
+**The guard grant.** `AllowUpdateFrom("nhusnullin/gdoc")` admits:
+`GET api.github.com/repos/nhusnullin/gdoc/releases`, `GET
+github.com/nhusnullin/gdoc/releases/download/<tag>/<asset>`, and
 `GET objects.githubusercontent.com/...` reached by the redirect from the
 second, for the run's length. Any other method, path or repository on those
 hosts is refused by name. A request carrying Authorization to any of them is
@@ -504,8 +511,14 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
 
 - [ ] `release/platforms` holds `darwin-arm64` and `darwin-amd64`, one per
       line, with a comment saying Windows joins after its checklist.
-- [ ] `install.sh`: refuses to run from inside a checkout of this repository;
-      copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
+- [ ] `install.sh` has two entrances. Beside a `gdoc` binary, it installs
+      what is there. Otherwise it asks `api.github.com` for the latest
+      release of `nhusnullin/gdoc` whose tag has `z == 0`, downloads
+      `gdoc-<tag>-<platform>.zip` and `SHA256SUMS-<tag>` for `uname -m`,
+      verifies with `shasum -a 256`, unpacks to a temp dir and continues from
+      there. `--tag <tag>` picks a release by hand. It refuses to run from
+      inside a checkout of this repository.
+- [ ] It copies `gdoc` to `~/.local/bin/gdoc`, refusing a symlink there with a
       sentence naming the developer install; strips `com.apple.quarantine`
       when `xattr` is present; asks global or local unless `--skills` says;
       copies the three skills with `.release` markers under the three rules;
@@ -513,7 +526,9 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       ~/.config/gdoc-agent/completion.zsh --force`, prints the `source` line
       when `.zshrc` lacks it in any spelling, and ends with `gdoc auth status`.
 - [ ] Run it by hand against a scratch `HOME` on this machine, both
-      placements, and paste the summary into this task.
+      placements and both entrances, and paste the summary into this task.
+      The one-line form is
+      `curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash`.
 - [ ] `git commit -m "feat(release): the installer in the zip"`
 
 ### Task 11: the user README, the example note, the issue template
@@ -543,10 +558,11 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       raced suite, `make dist`, pack one zip per line of `release/platforms`
       with the binary renamed to `gdoc`, `skills/`, `release/install.sh`,
       `release/README.md`, `release/example/`, write `SHA256SUMS-<tag>`,
-      `gh release create <tag>` here with the assets, then `gh release create
-      <tag> --repo nhusnullin/gdoc-releases` with `RELEASES_TOKEN` and the
-      same assets. Release notes are the commit subjects since the previous
-      tag.
+      `gh release create <tag>` with the assets. `make dist` runs with
+      `GDOC_OAUTH_CLIENT_SECRET` from the repository's secrets, and a step
+      before packing refuses to continue when the secret is empty, because a
+      release that cannot sign anyone in is not a release. Release notes are
+      the commit subjects since the previous tag.
 - [ ] `git commit -m "ci: the release workflow"`
 
 ### Task 13: the nightly
@@ -562,15 +578,14 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       it, for the acceptance task.
 - [ ] `git commit -m "ci: the nightly tags and releases what moved"`
 
-### Task 14: the releases repository and the token
+### Task 14: the repository secret
 
-Nail's two actions, or the session's with his word in the transcript.
+Nail's action, or the session's with his word in the transcript.
 
-- [ ] Create `nhusnullin/gdoc-releases`, public, with a README that says what
-      it is, how to install, and that issues belong in a message to Nail.
-- [ ] Create a fine-grained token with contents write on that repository
-      alone, and store it as `RELEASES_TOKEN` in this repository's secrets.
-- [ ] Record both as done here with the date.
+- [ ] Store the rotated OAuth client secret as `GDOC_OAUTH_CLIENT_SECRET` in
+      this repository's Actions secrets, with `gh secret set`.
+- [ ] Record it as done here with the date. The value is written nowhere
+      else.
 
 ### Task 15: the documents
 
@@ -596,10 +611,11 @@ register row. This task makes the other documents agree with it.
 
 ### Task 16: acceptance, end to end on this machine
 
-- [ ] Tag `v2.0.0-rc1` and push it. The release workflow runs green, and
-      both repositories show the release with two zips and the checksum file.
-- [ ] In a scratch `HOME`: unzip, run `install.sh` with `--skills global`,
-      then again in a scratch hub with `--skills local`. `gdoc help` shows
+- [ ] Tag `v2.0.0-rc1` and push it. The release workflow runs green, and the
+      releases page shows the release with two zips and the checksum file.
+- [ ] In a scratch `HOME`: the one-line install with `--tag v2.0.0-rc1` and
+      `--skills global`, then from the unpacked zip in a scratch hub with
+      `--skills local`. `gdoc help` shows
       `v2.0.0-rc1`, `gdoc auth status` answers, the completion sources.
 - [ ] Publish `example/first-note.md` from the scratch hub into Nail's test
       folder, and read the document back.
@@ -610,7 +626,7 @@ register row. This task makes the other documents agree with it.
       the binary and both skill placements moved to rc2, `verified: true`,
       and `gdoc update --rollback` brings rc1 back.
 - [ ] `nightly.yml` dry run prints the next tag it would cut.
-- [ ] Delete both rc releases and tags in both repositories.
+- [ ] Delete both rc releases and tags.
 - [ ] `make test`, `make vet`, `make dist` green; CI green on the branch.
 
 ### Task 17: close the milestone
@@ -624,9 +640,9 @@ register row. This task makes the other documents agree with it.
 **Nail's actions:**
 
 - Merge the PR, then `git tag v2.0.0 && git push --tags`. The workflow builds
-  and publishes; the zips appear in `gdoc-releases`.
-- Send colleagues the link to `gdoc-releases`. Those with source access can
-  open Issues with the template; the others send a message.
+  and publishes; the zips appear on the releases page.
+- Send colleagues the one-line install. Everyone can open Issues with the
+  template now that the repository is public; a message to Nail still works.
 - Windows: hand the Windows zip from a nightly build to one colleague with the
   checklist in `release/README.md`'s Windows section; when it comes back
   clean, add the line to `release/platforms` and tag the next `x.y.0`.

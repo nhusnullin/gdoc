@@ -52,9 +52,9 @@ Decided 2026-09-16, DECISIONS.md. Plan:
 
 gdoc goes to the team, on macOS first and Windows under its own tag once a
 colleague has run its checklist. What lands: the version `x.y.z` in every
-envelope, a tag that builds and publishes one zip per platform to
-`nhusnullin/gdoc-releases`, a public repository holding releases and nothing
-else; a nightly that tags `x.y.(z+1)` when main moved; `gdoc update`, run by
+envelope, a tag that builds and publishes one zip per platform as a GitHub
+Release of this repository, which is public since 2026-09-16, and a one-line
+install that fetches the latest; a nightly that tags `x.y.(z+1)` when main moved; `gdoc update`, run by
 every skill before its first call, which applies a minor version, reports a
 major one, and takes a nightly only on that channel, through one read-only
 guard door; a release installer that copies the binary and the skills and

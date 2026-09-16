@@ -17,7 +17,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-13 | The markdown is the source, the Google Doc is a rendering | holds |
 | 2026-08-14 | Skills are symlinked into `~/.claude/skills/`, never copied | holds |
 | 2026-08-15 | The client reaches only the files it was given | holds |
-| 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | holds |
+| 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | superseded 2026-09-16 (the secret is injected at build time; the client stays Internal) |
 | 2026-08-18 | Nothing runs git, and the agent never commits | holds |
 | 2026-08-29 | The next version of gdoc is written in Go | holds |
 | 2026-08-29 | gdoc never replaces the body of a document that already exists | holds |
@@ -62,7 +62,8 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-11 | `restyle --new` is not built | holds |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | holds |
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
-| 2026-09-16 | The release: a public releases repository, `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release | holds |
+| 2026-09-16 | The release: `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release | holds |
+| 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1847,24 +1848,21 @@ of a deferred thing, with each "arrives at M8" changed to say so. Nothing in
 `go/` moves. The backlog item names the unknown that would bring M8 back: a
 person on the team asking for a document's edits to come back into the hub.
 
-## 2026-09-16. The release: a public releases repository, `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release.
+## 2026-09-16. The release: `x.y.z` with a nightly, an updater with one read-only guard door, skills copied from a release.
 
 Nail's decisions, taken in the brainstorm that produced the M9 plan,
 `docs/plans/2026-09-16-gdoc-v2-m9-release.md`. Serves principle 1: a colleague
 gets one zip, one installer and one binary that keeps itself current, with
 nothing else on the machine. Strains 3 in one bounded place, below.
 
-**A public repository holds the releases and nothing else.**
-`nhusnullin/gdoc-releases`: GitHub Releases, a README, no source. Colleagues
-without access to this repository download from it, and the updater fetches
-from it with no credential. Assessed the same day over every tracked file and
-the whole history: the zip carries no secret beyond the Internal OAuth client,
-which every colleague's laptop already holds and which only an `altery.com`
-sign-in can use, and no document. What becomes public is the Altery logo, the
-template's shape inside the binary, and the skills' wording. Nail accepts
-that. **This repository stays private.** The 2026-08-18 entry stands: a public
-source repository would get the client revoked by GitHub's partner scanning,
-which reads commits and not release assets.
+**Releases live on this repository.** Nail made the source repository public
+later the same day, which is the entry below, so the separate releases
+repository this entry first named is not needed: the GitHub Releases of
+`nhusnullin/gdoc` are the store, colleagues download from them with no
+credential, and the updater fetches from them. The assessment that preceded
+it stands: the zip carries no secret beyond the Internal OAuth client, which
+only an `altery.com` sign-in can use, and no document; what is public is the
+Altery logo, the template's shape inside the binary, and the skills' wording.
 
 **Versions are `x.y.z`, and the number is the channel.** Nail tags `x.y.0` by
 hand. A nightly job tags `x.y.(z+1)` when main has moved since the last tag.
@@ -1888,7 +1886,7 @@ with no trace is what the principle exists to prevent, and one line costs
 nothing.
 
 **One read-only door in the guard.** `Policy.AllowUpdateFrom` names one
-releases repository for one run and admits GET on `api.github.com`,
+repository for one run and admits GET on `api.github.com`,
 `github.com` and the asset host for that repository's releases, and nothing
 else on them. It carries no Authorization header, because the only bearer
 gdoc holds is Google's. Opened by `gdoc update` alone, in the shape of
@@ -1914,3 +1912,44 @@ with this date as the reason.
 **Builds are trimmed and stripped**, so a home path is not shipped and a
 tagged build is the same bytes everywhere. Windows ships under its own tag
 when a colleague has run its checklist; `v2.0.0` is macOS.
+
+## 2026-09-16. The source repository is public, and the client secret is injected at build time.
+
+Nail made `nhusnullin/gdoc` public on 2026-09-16, after the assessment
+recorded in the release entry above found no secret beyond the OAuth client
+and no document anywhere in the tree or its history. Serves principle 1 one
+step further: a colleague installs with one line from the repository itself,
+and there is no second repository to keep in step.
+
+**What the 2026-08-18 entry foresaw, and what was done about it.** GitHub
+scans every public repository for partner patterns whether or not the owner
+turned alerts on, and Google is the partner for OAuth client secrets, so the
+secret that had been in `auth.go` and in the v1 history was treated as
+reported the moment the repository turned public. Two things happened the
+same day: the secret left the source, and Nail rotated it in the Google
+Cloud console so the reported one is dead.
+
+**Where the secret lives now.** `BundledClientSecret` is an empty variable
+in the source, set by the linker from `GDOC_OAUTH_CLIENT_SECRET` in `make
+build` and `make dist`, and in the release workflow from a repository
+secret. A release build carries it, so principle 1 still holds for a
+colleague: one binary, nothing else. A build without it can refresh a token
+it already holds, because the token file carries the secret it was issued
+with, but cannot sign anyone in, and `Login` refuses before it opens a
+listener or prints a URL. `TestLoginRefusesABuildWithNoClientSecret` pins
+that. `TestNoGoogleClientSecretInTheTree` in `go/boundary` refuses the shape
+of a Google client secret in any file of the tree, so the next person who
+"fixes" a local login by pasting one in finds out before the commit does.
+
+**What does not change.** The client id stays a constant: it is public in
+every sign-in URL. The client stays User type Internal. RFC 8252's point
+stands, the per-user token is what protects an account, and it never leaves
+the machine.
+
+**One more door closed.** The Claude workflow in `.github/workflows` answers
+only the repository owner's own comments now, because on a public repository
+anyone can write `@claude` in an issue and spend the token.
+
+**What this costs colleagues once.** A token issued under the old secret
+refreshes until it expires and then fails, so each person signs in again
+once with `gdoc auth login` after the rotation. The release README says so.
