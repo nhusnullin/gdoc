@@ -625,19 +625,28 @@ cursor or a wait length. A document URL offers nothing either.
 ### Task 8: the test over every skill
 
 **Files:**
-- Create: `go/cmd/gdoc/skills_test.go`
+- Create: `go/cmd/gdoc/skills_test.go`, which reads `../../../skills/*/SKILL.md`
 
-- [ ] Test first, `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas`: walk
+- [x] Test first, `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas`: walk
       `../../skills/*/SKILL.md`, find every `gdoc <words>` and `$GDOC <words>`,
       resolve the words against the table by longest prefix, and assert a
       match; for each `--flag` on the same line, assert the matched command
       takes it. A `--flag` on a line with no command is ignored.
-- [ ] The test fails when it finds no skill files, so a moved directory is a
+- [x] The test fails when it finds no skill files, so a moved directory is a
       failure rather than an empty pass.
-- [ ] Run it against the three skills; fix any stale call in `gdoc-review`
-      this finds, as its own checkbox added here with ➕.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "test(v2): every skill names only commands and flags the binary has"`
+- [x] Run it against the three skills; fix any stale call in `gdoc-review`
+      this finds, as its own checkbox added here with ➕. It found none: every
+      call in the three skills names a command in the table with flags that
+      command takes.
+- [x] ➕ The skills wrap an inline call across two lines, so the span reader
+      follows a call cut in half by a line break. Outside a code fence only
+      `$GDOC` opens a call, because prose puts a warning gdoc printed in
+      backticks too.
+- [x] ➕ `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` also fails when a
+      skill file carries no call at all, so a rewrite that stops naming the
+      binary is a failure rather than an empty pass.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "test(v2): every skill names only commands and flags the binary has"`
 
 ### Task 9: the documents
 
