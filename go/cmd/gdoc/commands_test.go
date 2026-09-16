@@ -19,11 +19,12 @@ func TestEveryCommandInTheTableIsDispatchedAndNothingElseIs(t *testing.T) {
 
 	// A table read out of an empty slice would pass every loop below without
 	// measuring anything.
-	if len(commands) == 0 {
+	table := commands()
+	if len(table) == 0 {
 		t.Fatal("the command table is empty, so this test is measuring nothing")
 	}
 
-	for _, c := range commands {
+	for _, c := range table {
 		args := append(strings.Fields(c.name), "--not-a-flag")
 		got, code := runJSON(t, args...)
 		if code == 0 || got["ok"] != false {
@@ -62,11 +63,12 @@ func TestEveryCommandInTheTableIsDispatchedAndNothingElseIs(t *testing.T) {
 func TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
-	if len(commands) == 0 {
+	table := commands()
+	if len(table) == 0 {
 		t.Fatal("the command table is empty, so this test is measuring nothing")
 	}
 
-	for _, c := range commands {
+	for _, c := range table {
 		for _, f := range c.flags {
 			if f.value == kindNone {
 				// A value written onto a flag that takes none is refused for
@@ -110,7 +112,7 @@ func TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes(t *testing.T) {
 func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 	source := productionSource(t)
 
-	for _, c := range commands {
+	for _, c := range commands() {
 		for _, f := range c.flags {
 			presence := strings.Contains(source, `a.has("`+f.name+`")`)
 			value := strings.Contains(source, `a.flags["`+f.name+`"]`) ||

@@ -400,33 +400,52 @@ cursor or a wait length. A document URL offers nothing either.
 - Create: `go/cmd/gdoc/help_test.go`
 - Modify: `go/cmd/gdoc/commands.go`, `main.go`, `doc.go`
 
-- [ ] Test first, `TestHelpIsOneObjectAndTheProseIsOnStderr`: run `help` with
+- [x] Test first, `TestHelpIsOneObjectAndTheProseIsOnStderr`: run `help` with
       two buffers; stdout decodes as one object with `ok: true` and
       `data.commands` naming all twelve plus `help` and `completion`; stderr
       holds the usage line and each name; exit 0.
-- [ ] Test, `TestHelpForOneCommandCarriesItsWordsFlagsAndExample`: `help
+- [x] Test, `TestHelpForOneCommandCarriesItsWordsFlagsAndExample`: `help
       publish` returns one entry whose flags, placeholders and example match
       literals written in the test, not read from the table.
-- [ ] Test, `TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow`: `help auth`
+- [x] Test, `TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow`: `help auth`
       returns two entries; `help sing` is `ok: false`, exit 1, naming `sing`
       and the usage line.
-- [ ] Test, `TestDashDashHelpIsAnAliasAnywhereOnTheLine`: `--help`, `-h`,
+- [x] Test, `TestDashDashHelpIsAnAliasAnywhereOnTheLine`: `--help`, `-h`,
       `read --help`, `--help read` and `restyle --from x --help` each answer
       the same as `help` or `help read` or `help restyle`.
-- [ ] Test, `TestBareGdocStillFailsAndPrintsTheHelpToStderr`: no arguments is
+- [x] Test, `TestBareGdocStillFailsAndPrintsTheHelpToStderr`: no arguments is
       `ok: false`, exit 1, the object unchanged from today, and the full help
       on stderr. `TestNoArgumentsFails` stays as it is.
-- [ ] Test, `TestHelpTakesWordsAndNoFlags`: `help --md x` is refused by name.
-- [ ] `help.go`: the `help` entry in the table, the prefix match, the JSON
+- [x] Test, `TestHelpTakesWordsAndNoFlags`: `help --md x` is refused by name.
+- [x] `help.go`: the `help` entry in the table, the prefix match, the JSON
       rendering and the prose rendering. The alias check in `dispatch` before
       the table walk.
-- [ ] `doc.go`: the paragraph "The binary never prompts, and --help is a
+- [x] `doc.go`: the paragraph "The binary never prompts, and --help is a
       failure" becomes "The binary never prompts, and help is an answer",
       stating the rule, the reason, and naming the tests above. The section
       "The twelve commands" says the table is the one description and names
       Task 1's tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc help, one object on stdout and the prose on stderr"`
+- ⚠️ Scope, the table is a function and not a variable. `help` is an entry in
+      the table and reads the table, so `var commands` refers to itself through
+      a function, which Go refuses as an initialization cycle. `commands()`
+      hands each caller its own slice. `commands_test.go` reads `commands()`
+      instead of `commands`; no assertion in it changed.
+- ⚠️ Scope, "the usage line" on stderr is `Usage: gdoc <command> [words]
+      [flags]`, not the comma-joined line a refusal prints. Printing both would
+      name every command twice on one screen, which is principle 4 read
+      backwards. The refusal is unchanged and still carries `usageLine()`.
+- ➕ `everyCommandName` in `help_test.go` is the literal list `help` must come
+      back with, and Task 3 adds `completion` to it. The count is thirteen
+      today and fourteen after Task 3, which is what Task 10 checks.
+- ➕ `command.anyWords` and `command.wants()`: `help` takes however many words
+      it is handed, because the words are another command's name and that is
+      two, one, or none. `parseArgsN` already reads a negative want as "any",
+      so no parser refusal changed.
+- ➕ `unknownCommand` moved beside `usageLine` in `commands.go`, because both
+      `dispatch` and `help` refuse a word the table does not carry, and they
+      must refuse it with the same sentence.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc help, one object on stdout and the prose on stderr"`
 
 ### Task 3: completion for zsh
 
@@ -437,6 +456,8 @@ cursor or a wait length. A document URL offers nothing either.
 - Modify: `go/cmd/gdoc/commands.go`, `build.go` (only if `freeToWrite` needs
   to move to a shared file), `doc.go`
 
+- [ ] Add `completion` to `everyCommandName` in `help_test.go`, which is the
+      literal list `gdoc help` must come back with.
 - [ ] Test first, `TestTheZshScriptNamesEveryCommandAndEveryFlag`: render
       the script and assert every table name and every flag appears, that a
       `file` flag is followed by `_files` and an id flag is not, that the

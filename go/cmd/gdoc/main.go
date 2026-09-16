@@ -68,14 +68,23 @@ func safeDispatch(ctx context.Context, args []string, errOut io.Writer) (r emit.
 // requests and ends, and Ctrl-C kills it the way it always did.
 func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result {
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown
-	// command ""` names nothing and reads like a fault in the tool.
+	// command ""` names nothing and reads like a fault in the tool. The run did
+	// no work, so it still fails and still exits 1. What is new is that the
+	// person who typed it reads the whole help, on the stream words go to.
 	if len(args) == 0 {
+		fmt.Fprint(errOut, helpProse(commands(), true))
 		return emit.Result{OK: false, Error: "gdoc needs a command. " + usageLine()}
+	}
+	// --help and -h are the same question wherever they stand on the line, and
+	// they are answered before the table is walked and before the parser runs.
+	// So `gdoc restyle --from x --help` is an answer rather than a refusal of a
+	// flag restyle does not take, and no parser refusal changes.
+	if rest, asked := helpAsked(args); asked {
+		return cmdHelp(helpWords(rest), errOut)
 	}
 	c := match(args)
 	if c == nil {
-		return emit.Result{OK: false,
-			Error: fmt.Sprintf("unknown command %q. %s", strings.Join(args, " "), usageLine())}
+		return unknownCommand(args)
 	}
 	// The rest of the line is parsed here, with the flag set and the word count
 	// the command's own table entry describes. Strictly, as everywhere: an
@@ -83,7 +92,7 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	// naming the offender. So `gdoc auth login --token /path` is refused for
 	// the flag rather than read as a plain login that quietly dropped it, and
 	// `gdoc auth` on its own matches no entry and is an unknown command.
-	a, err := parseArgsN(args[len(c.nameWords()):], c.flagSet(), len(c.words))
+	a, err := parseArgsN(args[len(c.nameWords()):], c.flagSet(), c.wants())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}

@@ -19,7 +19,7 @@
 // test helper in both directions: a helper that accepts a trailing byte would
 // pass every other test in this package over output no skill can read.
 //
-// # The twelve commands
+// # The commands, and the one table that describes them
 //
 // commands.go holds the table, and dispatch matches what is in it and nothing
 // else. Each entry carries the words a caller types, the flags it takes with a
@@ -50,9 +50,10 @@
 //     at all. internal/house, internal/cover, internal/body, internal/render.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
+//   - help [<command>]: the table itself, as an object and as words. help.go.
 //
-// The usage line is the whole of the help today, so it has to name every
-// command that exists. Three tests hold the table and the usage line together.
+// The usage line names every command that exists, because it is joined from
+// the table. Three tests hold the table and the usage line together.
 // TestTheUsageLineNamesEveryCommand spells the twelve out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
@@ -64,6 +65,12 @@
 // TestEveryFlagIsReadTheWayItsKindSays is the third direction, that a flag the
 // table says carries a file is read for a value and one that carries none is
 // read for its presence.
+//
+// The table is a function and not a variable, and that is Go and not taste.
+// help is an entry in it and reads it, so a variable would refer to itself
+// through a function, which is an initialization cycle the compiler refuses.
+// Each caller is handed its own slice, so nothing keeps a pointer into a table
+// somebody else is reading.
 //
 // # auth status is a report, and being signed out is an answer
 //
@@ -110,16 +117,40 @@
 // TestAFailedLoginIsOneFailingEnvelope is the other half: a login that did not
 // happen is still one object.
 //
-// # The binary never prompts, and --help is a failure
+// # The binary never prompts, and help is an answer
 //
 // Nothing here reads stdin. A command missing something fails and says what is
-// missing, and does not ask. There is no help command either, so gdoc --help is
-// ok: false and exit 1, with the one-line usage string in the error. That is
-// deliberate rather than an oversight: readable help would have to reach stdout
-// beside the object, or exit 0 on a run that did no work, and both break the
-// contract every caller has. TestUnknownCommandFailsAndNamesItself is the pin,
-// and TestNoArgumentsFails covers the bare word, which quotes nothing back
+// missing, and does not ask.
+//
+// help is the one command whose whole output is words, and it still keeps the
+// contract. The object goes to stdout, the words a person reads go to stderr
+// where the login URL already goes, and it exits 0, because a question was
+// asked and answered. That is the same shape auth status has with no token.
+// TestHelpIsOneObjectAndTheProseIsOnStderr is the pin, with
+// TestHelpForOneCommandCarriesItsWordsFlagsAndExample over the shape a skill
+// reads and TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow over the prefix
+// match and the refusal.
+//
+// Until M7d gdoc --help was ok: false, and the reason written here was that
+// readable help would have to reach stdout beside the object or exit 0 on a run
+// that did no work. stderr answers the first and a question answered is not a
+// run that did no work, so the rule retired. The decision is in
+// docs/v2/DECISIONS.md, dated 2026-09-16.
+//
+// --help and -h are aliases for help, wherever they stand on the line, and they
+// are read before the table is walked and before the parser runs. So gdoc
+// restyle --from x --help is an answer rather than a refusal of a flag restyle
+// does not take, and every parser refusal below is untouched.
+// TestDashDashHelpIsAnAliasAnywhereOnTheLine is the pin.
+//
+// Bare gdoc is the one place the two halves part. It did no work, so it is
+// still ok: false and exit 1, with the object unchanged and nothing quoted back
 // because unknown command "" names nothing and reads like a fault in the tool.
+// The whole help goes to stderr beside it, so the person who typed it reads
+// what they could have typed. TestUnknownCommandFailsAndNamesItself,
+// TestNoArgumentsFails and TestBareGdocStillFailsAndPrintsTheHelpToStderr are
+// the pins, and TestHelpTakesWordsAndNoFlags holds that help itself is parsed
+// as strictly as everything else.
 //
 // TODO(test): no test pins that the binary never reads stdin. Nothing in the
 // tree names os.Stdin today, so the rule holds by absence rather than by a
