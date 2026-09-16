@@ -875,18 +875,18 @@ and `$((patch + 1))` over `0-rc1` is an error with no sentence in it.
 The DECISIONS.md entries are already written, dated 2026-09-16. This task
 makes the other documents agree with them.
 
-- [ ] SPEC.md: an "Install and update" section in the present tense, the
+- [x] SPEC.md: an "Install and update" section in the present tense, the
       plugin and the marketplace, the guard section naming the fifth grant,
       the version rules, the `page_break` block under the generator.
-- [ ] PLAN.md: the M9 section becomes the row in Task 15.
-- [ ] CLAUDE.md: rows for `release/`, `.claude-plugin/` and
+- [x] PLAN.md: the M9 section becomes the row in Task 15.
+- [x] CLAUDE.md: rows for `release/`, `.claude-plugin/` and
       `go/internal/update/`; "The guard owns the wire" names the fifth
       grant; "If you touch" gains the release row. Under 300 lines.
-- [ ] README.md's install section says a checkout installs with `install.sh`
+- [x] README.md's install section says a checkout installs with `install.sh`
       and a colleague installs with the one line and the two `/plugin`
       commands.
-- [ ] `cd go && go test -race ./...` passes, the docs tests included.
-- [ ] `git commit -m "docs(v2): the release, the plugin, the updater and the fifth grant in SPEC, PLAN and CLAUDE.md"`
+- [x] `cd go && go test -race ./...` passes, the docs tests included.
+- [x] `git commit -m "docs(v2): the release, the plugin, the updater and the fifth grant in SPEC, PLAN and CLAUDE.md"`
 
 ### Task 14: acceptance, end to end on this machine
 

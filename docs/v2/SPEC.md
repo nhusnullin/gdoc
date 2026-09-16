@@ -77,7 +77,8 @@ because a question was asked and answered. Bare `gdoc` did no work, so it still
 fails with the help on stderr. `gdoc completion zsh --out <path>` and the same
 for bash write a shell script and report the path and the line to add: the
 script is a written file and never stdout, because stdout is the object.
-PowerShell lands at M9. Decided 2026-09-16, DECISIONS.md.
+PowerShell lands with Windows, under the tag that ships it. Decided
+2026-09-16, DECISIONS.md.
 
 ### Output contract
 
@@ -121,6 +122,17 @@ Serves principle 3. This is the safety property everything else stands on.
   writable, because gdoc made it; a handed-in id is read and suggest only, never
   direct-editable; and the styling grant is the one exception, given for one id
   and one run, never inherited and never remembered.
+- **Five grants stand beside the set**, each naming one object for one run,
+  never inherited and nowhere written down: `AllowCreateIn`, `AllowReject`,
+  `AllowCopy`, `AllowMarker`, and `AllowUpdateFrom`, which is the fifth and the
+  only one that is not about a Google file. It names one GitHub repository and
+  admits GET on that repository's releases listing, its download path, and the
+  asset host the download redirects to. No request to any of the three carries
+  a credential, because the only bearer gdoc holds is Google's, and the wire
+  refuses one on the host rather than on the grant. A policy nobody granted an
+  update refuses all three hosts by name, and nothing the grant admits is a
+  document, so the reachable set is untouched. `gdoc update` is what opens it,
+  and nothing else does. Added 2026-09-16, DECISIONS.md.
 - **The level-1 write bar is what gdoc asks for, not what the server is known to
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from
@@ -324,7 +336,16 @@ person supplies the context instead of a paired note.
 `house.yaml` is the house style: page geometry, all nine named styles, the cover,
 header and footer, the three tables cell by cell, the contents field, heading
 numbering, and the logo as base64. The generator reads it plus markdown and emits
-a docx. Nothing reads the master `.docx` at runtime: it stays in the repo as
+a docx.
+
+**The front matter's page breaks are blocks in that file**, `- block:
+page_break`, one after the cover and one after the classification table, beside
+`cover`, `label`, `table`, `blank`, `legend` and `toc`. One layout, two writers:
+the docx renderer emits the block as a paragraph carrying `pageBreakBefore`, the
+prelude emits it as `insertPageBreak`, and neither holds a page break of its own
+any more. The drift gate reports nothing new for it, because no item in the
+measured list reads a page break or counts a front-matter paragraph. Added
+2026-09-16, DECISIONS.md. Nothing reads the master `.docx` at runtime: it stays in the repo as
 provenance and as the drift test's fixture. **The comparison is the acceptance
 gate, and it runs both ways.** The list of
 169 measured values is written once, with one reader per item: offline that
@@ -336,10 +357,68 @@ Either way a difference not named in the list of known ones, with its reason,
 fails the gate. No item reads a PDF. House-style tests state house values as
 literals, never by reading the constant they test.
 
+## Install and update
+
+**The version is `x.y.z`, and the number is the channel.** Nail cuts `x.y.0` by
+hand with `make tag`; the nightly cuts `x.y.(z+1)` when main has moved since the
+last tag. `z == 0` is stable, `z > 0` is nightly, and nothing else records which
+is which. The linker sets it from the tag, so a binary built from a checkout is
+`dev` and prints no version at all: `version` rides in the envelope only when
+there is a release behind it, and `gdoc help` and `gdoc auth status` read the
+same value. The plugin carries the same number, and a release whose tag and
+`.claude-plugin/plugin.json` disagree is refused by the workflow. Builds are
+trimmed and stripped, so no home path ships and one tag is the same bytes on
+every machine.
+
+**A release is one GitHub Release of this repository**, which is public since
+2026-09-16. A tag builds it: the four checks every push runs, then `make dist`
+with the client secret from a repository secret, then one zip per line of
+`release/platforms`, named `gdoc-<tag>-<platform>.zip`, and one
+`SHA256SUMS-<tag>` over all of them. A zip carries five things: the binary, the
+user `README.md`, `install.sh`, `skills/` and `example/`. `release/platforms` is
+`darwin-arm64` and `darwin-amd64`, and Windows joins it under its own tag once a
+colleague has run its checklist.
+
+**The installer is one script with two entrances.** From an unpacked zip it
+installs the binary beside it; from `curl -fsSL .../release/install.sh | bash`
+it asks the releases API for the newest stable tag, downloads the zip for this
+machine and its checksum file, verifies it, and installs out of a temp dir.
+Either way it copies the binary to `~/.local/bin/gdoc`, strips quarantine,
+writes the completion into the config dir, prints the `source` line when
+`.zshrc` lacks it, prints the two `/plugin` commands, and ends with `gdoc auth
+status`. It asks nothing and it edits no shell file.
+
+**The skills travel as a Claude Code plugin.** This repository carries
+`.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is
+both the plugin and the marketplace, and `skills/` stays where it is. A
+colleague runs `/plugin marketplace add nhusnullin/gdoc` and `/plugin install
+gdoc@gdoc`, chooses global or per-project in Claude Code's own terms, and
+updates on that marketplace's toggle. Two fallbacks exist by policy, because a
+managed Claude Code can refuse a marketplace and can refuse personal and project
+skills with it: `install.sh --skills global|local` copies `skills/` out of the
+zip, marked so a re-run replaces only what it wrote, and an administrator names
+this marketplace in `extraKnownMarketplaces` and turns the plugin on in
+`enabledPlugins`. A checkout still links its skills and never copies them, and
+nothing in the binary copies a skill folder.
+
+**`gdoc update` runs when a person types it and never otherwise.** No check when
+a session starts, no scheduler, no stamp file. What it takes: the same `x` with
+a higher `y` by default, a higher `x` only with `--major`, a higher `z` only
+with `--nightly`, and never a version below the one installed. `--check` reports
+what a run would take and writes nothing; `--rollback` puts the previous binary
+back. The zip is verified against the release's own checksum before a byte is
+replaced, the binary that was there is kept beside the new one, and the object
+names one of `up_to_date`, `updated`, `major_available`, `checked`,
+`unreachable` and `rolled_back`, with `run` naming the command that would go
+further where there is one. Unreachable is `ok: true` with a warning, because a
+network that is not there is not a failed update. The command holds no state
+between runs.
+
 ## The skills, and how a comment reaches one
 
 Four named workflows, all judgement rather than commands. Three of them are
-skills today, symlinked from this repo in one copy: the review session, the
+skills today, one copy in this repo: symlinked into a checkout, and installed on
+a colleague's machine as the plugin above. They are the review session, the
 publish run and the restyle run. The alignment check is described here and
 is deferred to the backlog, 2026-09-16, DECISIONS.md. Two of the four run on a marked comment, and two Nail invokes by
 name:
@@ -357,6 +436,14 @@ name:
   it, publishes it into the folder, and reads back what came out.
 - **The restyle run**, `gdoc-restyle`. Nail gives a link, and the skill surveys
   the document before it proposes anything to it.
+
+**A skill names the binary version it needs**, as `needs:` in its own front
+matter. Its setup runs `gdoc help` first and reads `version` from the object,
+and an older binary stops the skill with one sentence naming `gdoc update`. No
+`version` at all is a build made from source rather than a release, which is not
+an error: the skill says so once and carries on. Skill and binary may drift by a minor
+version without harm, because a skill holds no flag list, which is the next
+rule. Added 2026-09-16, DECISIONS.md.
 
 **No skill holds a flag list.** Before the first call of a command in a session
 a skill runs `gdoc help <command>` and reads the words and flags from the binary
@@ -406,7 +493,9 @@ where it cannot.
 - Never resolve or reopen a comment thread.
 - Never delete from the hub.
 - Never run git, in the binary or in the skills.
-- Never prompt, in the binary.
+- Never prompt, in the binary, and never in the installer either.
+- Never update unasked. `gdoc update` runs when a person types it and at no
+  other moment.
 - Never export a PDF. Nail downloads it from the browser.
 - Never write to a multi-tab document.
 - Never write markdown into a comment thread.

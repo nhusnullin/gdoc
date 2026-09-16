@@ -50,9 +50,12 @@ Two rules about the documents themselves:
 | `go/internal/cover/` | the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
+| `go/internal/update/` | the releases GitHub lists, the version comparison, the channel policy, and this binary replaced from a zip it checked |
 | `go/internal/live/` | the opt-in end-to-end tests. Tests only, no production code |
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
 | `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`. Symlinked into `~/.claude/skills/`, so edits are live |
+| `.claude-plugin/` | the plugin manifest and the marketplace entry, so this repository is how a colleague's Claude Code gets `skills/` |
+| `release/` | what a colleague gets: the one-line installer, the user README, the example note, and the platform list a release walks |
 | `docs/v2/` | what v2 is, what is next, why, and what Google does |
 | `docs/backlog/` | deferred work, one file per item |
 | `docs/plans/` | the milestone plans. `completed/` holds the ones that ran |
@@ -71,6 +74,13 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `*http.Client` is made, so the first request in the program's history has
   already been judged: `TestOnlyTheGuardBuildsTheWire` and
   `TestNetHTTPStaysInItsRooms`.
+- **The one host that is not Google's is the fifth grant.** `AllowUpdateFrom`
+  names one GitHub repository for one run and admits GET on its releases
+  listing, its download path and the asset host that redirect lands on, with no
+  credential on any of the three, and `gdoc update` is the only caller:
+  `TestWithoutTheUpdateGrantGitHubIsRefused`,
+  `TestTheUpdateGrantOpensNothingBesideThoseThreeReads` and
+  `TestAnUpdateRequestCarriesNoBearer`.
 - **The reachable set has two doors**, the ids a command was handed and the id a
   create the guard itself carried came back with, and naming a folder to create
   in does not open a third: `TestAllowCreateInDoesNotAdmitTheFolder` and
@@ -82,8 +92,8 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   one run to four styling request kinds, none of which can change a character:
   `TestNothingAtLevelInPlaceCanChangeACharacter`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
-  `AllowReject`, `AllowCopy`, `AllowMarker` and `GrantInPlace` are per-run, and
-  nothing writes one down:
+  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom` and
+  `GrantInPlace` are per-run, and nothing writes one down:
   `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes` and
   `TestAGrantedMarkerCarriesAndNothingElseDoes`.
 - **Nothing trusts a success.** Every write is read back through a route it did
@@ -104,8 +114,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   print a URL instead of opening a browser: `TestNothingRunsAnExternalProgram`.
 - **Nothing runs git.** No command and no skill runs it, to commit, to ask
   whether the tree is a repository, or to ask whether a file is dirty. Only
-  `install.sh` reads git, and that is about this repository rather than about
-  somebody's documents: `TestNothingRunsAnExternalProgram` holds the binary half.
+  `install.sh`, `make tag` and the workflows read git, and that is about this
+  repository rather than about somebody's documents:
+  `TestNothingRunsAnExternalProgram` holds the binary half.
 - **Three modules, each named in `allowedModules` with its reason in the spec**,
   and both directions fail: `TestNoThirdPartyDependencies` and
   `TestAllowedModulesAreReallyRequired`.
@@ -128,7 +139,10 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `gdoc-publish` and `gdoc-restyle` are symlinks into `skills/`, so an edit is
   live the moment it is saved and before it is committed. `./install.sh` prints
   `+ uncommitted changes` on a dirty tree, refuses to replace a real directory
-  whose contents differ, and is safe to re-run after any move.
+  whose contents differ, and is safe to re-run after any move. A colleague gets
+  the same three through the plugin in `.claude-plugin/`, and the one route that
+  copies a folder is `release/install.sh --skills`, which marks what it wrote.
+  Nothing in the binary copies a skill.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
@@ -161,6 +175,8 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | a house style value, or the gate that measures it | `go/internal/house/house.yaml`, `go/internal/drift/doc.go` |
 | putting a document into Drive | `go/internal/publish/doc.go` |
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
+| a version, a tag, a release or the updater | `go/internal/update/doc.go`, `.github/workflows/release.yml` |
+| what a colleague installs, and how | `release/README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
 | what the review session does with what the binary prints | `skills/gdoc-review/SKILL.md` |
 | what a skill tells a session to run | `skills/`, and `gdoc help <command>` |
@@ -181,6 +197,7 @@ TDD. Write the failing test first.
 | `make vet` | `go vet ./...` and the gofmt check |
 | `make build` | `bin/gdoc`, for this machine |
 | `make dist` | the three platform binaries, static, CGO off |
+| `make tag` | `VERSION=vX.Y.0` into `plugin.json`, committed, tagged and pushed. CI does the rest |
 
 `~/.local/bin/gdoc` links to this repo's `bin/gdoc`, so `make build` refreshes
 what a person typing `gdoc` gets, with no reinstall.
