@@ -21,7 +21,7 @@ Two rules about the documents themselves:
 | Path | Holds |
 |---|---|
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
-| `go/cmd/gdoc/` | the entry point, the twelve commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | the entry point, the thirteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |

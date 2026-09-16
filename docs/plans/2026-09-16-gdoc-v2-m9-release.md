@@ -652,21 +652,48 @@ more rollback away from where it started:
 - Create: `go/cmd/gdoc/update.go`, `update_test.go`
 - Modify: `go/cmd/gdoc/commands.go`, `doc.go`
 
-- [ ] Test first: strict arguments, every flag combination that means two
+- [x] Test first: strict arguments, every flag combination that means two
       things refused by name; `--check` touches nothing; the object shape
       against literals; the envelope on each failure path.
-- [ ] Test, `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure`: a listing
+- [x] Test, `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure`: a listing
       that times out, refuses the connection, answers 5xx or answers the rate
       limit each gives `ok: true`, `action: "unreachable"`, a warning naming
       the cause, and no file written.
-- [ ] Test, `TestNothingChecksForUpdatesUnasked`: no other command's code
+- [x] Test, `TestNothingChecksForUpdatesUnasked`: no other command's code
       path reaches `update`, held by reading the table: only the `update`
       entry names `cmdUpdate`.
-- [ ] `--major`, `--nightly`, `--rollback` as the policy table says.
-- [ ] `doc.go`: a section on the update, why it runs only when typed, why it
+- [x] `--major`, `--nightly`, `--rollback` as the policy table says.
+- [x] `doc.go`: a section on the update, why it runs only when typed, why it
       never runs before `build`, and the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc update, on demand"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc update, on demand"`
+
+
+➕ The command's own refusals are two. A symlinked binary is refused naming
+both ends: `~/.local/bin/gdoc` is a link into a checkout on the machine gdoc is
+developed on, and an update would drop a release binary over the link and leave
+`make build` writing to a file nobody runs.
+`TestASymlinkedBinaryIsRefusedByName`. And `--rollback` beside any of the other
+three is refused naming both flags, because a file move on this machine and a
+question about which release to fetch are two runs.
+
+➕ The object carries `sha256` beside `verified`, and a `path`. The plan's
+example shows `verified: true` and its prose calls `verified` the hash, which
+are two fields rather than one: `sha256` is what the file at the path hashes to
+now, after an update and after a rollback alike, and `verified` says that hash
+came out of bytes the release published a checksum for, which a rollback cannot
+say about a binary it only put back. `path` names the binary the run was about,
+which a colleague with gdoc in two places needs before they read either.
+
+➕ `action` is absent on a run that failed part way. Every word in the field
+is something that finished, so a download that did not arrive is `ok: false`
+with its reason and no action at all, rather than `updated` beside a binary
+that was never replaced.
+
+➕ A build that names no release tag, `dev` or `git describe`'s
+`fd59184-dirty`, is the zero version with a warning saying so. That is below
+every release, and below the major boundary too, so a checkout build is told
+`major_available` rather than being quietly overwritten from the release page.
 
 ### Task 10: the release installer
 
