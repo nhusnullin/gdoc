@@ -267,7 +267,9 @@ through `atomicfile`.
 ```
 
 `action` is one of `up_to_date`, `updated`, `major_available`,
-`nightly_available`, `checked_recently`, `rolled_back`. A `major_available`
+`nightly_available`, `checked_recently`, `unreachable`, `rolled_back`. An
+`unreachable` is `ok: true` with a warning naming the cause: the session runs
+on the version it has, and the skill goes straight to `help`. A `major_available`
 carries `run: "gdoc update --major"` beside it. `verified` is the checksum
 of the file at its final path.
 
@@ -493,6 +495,13 @@ The cover's `trailing_blanks` drop to what the layout needs without pushing.
       answers `checked_recently` and `--now` overrides it; a machine with no
       `update.json` answers `not_installed_from_a_release` with `ok: true`;
       the envelope on each failure path; the object shape against literals.
+- [ ] Test, `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure`: a listing
+      that times out, refuses the connection, answers 5xx or answers the rate
+      limit each gives `ok: true`, `action: "unreachable"`, a warning naming
+      the cause, no file written, and `last_check` not advanced, so the next
+      session tries again. The listing call has a five-second timeout and the
+      download a longer one, both literals in the test. A download cut short
+      fails the checksum and replaces nothing.
 - [ ] `--set-skills <global|path>` and `--channel` write the config and do no
       check. `--major` applies a major. `--rollback` calls `Rollback`.
 - [ ] The three skills' Setup: `$GDOC update` right before the first `$GDOC
