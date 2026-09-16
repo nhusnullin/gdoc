@@ -1787,6 +1787,18 @@ by reading `doc.go`.
   router, because they start from different things, a note and a link, and a
   skill triggers on its description. `gdoc-apply` stays retired and the name
   is not reused.
+- Each flag in the table says how it stands in the call beside what it carries:
+  required, optional, or one of a set the command needs exactly one of. The
+  usage line brackets what may be left out and puts a bar between alternatives,
+  and the object carries the same as a word under `need`. Without it the line
+  was every flag run together, which told a reader that `publish` wants a
+  `--house` file nobody has and that `restyle` takes `--dry-run --from` in one
+  call, which the binary refuses. A skill builds its call from what help
+  printed, so that line has to be a call the binary would accept. The binary is
+  its own witness rather than the table being trusted:
+  `TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout` runs each command
+  with one required flag missing and every other one given, and a flag marked
+  wrong in either direction fails there.
 - A skill never holds a flag list. Before the first call of a command in a
   session it runs `gdoc help <command>` and reads the words and flags from the
   binary it is about to run. The two new skills are written this way today;

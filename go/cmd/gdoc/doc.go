@@ -68,6 +68,19 @@
 // table says carries a file is read for a value and one that carries none is
 // read for its presence.
 //
+// The usage line is held the same way, and for the same reason. Each flag
+// carries how it stands in the call beside its kind, so the line brackets what
+// may be left out and puts a bar between alternatives: publish reads --md
+// --folder-id [--house <file>] and restyle reads --dry-run | --from <file>,
+// which is the list above rather than every flag run together. The object
+// carries the same thing as a word, because a skill reads the object where a
+// person reads the line. TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative
+// spells the twelve lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
+// holds the word beside them, and TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout
+// is the binary's own witness: a flag the table calls required is refused by
+// name when it is missing, and a flag marked wrong in either direction fails
+// there before it can reach a reader.
+//
 // The example is held the same way, because a skill builds its call from what
 // help printed and an example the binary would refuse teaches a call that
 // fails. TestEveryExampleIsACallTheTableAccepts reads every example without

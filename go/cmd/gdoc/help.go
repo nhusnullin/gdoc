@@ -34,10 +34,13 @@ type helpCommand struct {
 
 // helpFlag carries the placeholder as help prints it rather than the kind it
 // came from: a reader cares what to type, not what the table calls it. A flag
-// that takes no value carries the empty string.
+// that takes no value carries the empty string. Need says how the flag stands
+// in the call, spelled out, so a skill building a call knows which flags it
+// must find a value for and which it may leave out.
 type helpFlag struct {
 	Name    string `json:"name"`
 	Value   string `json:"value"`
+	Need    string `json:"need"`
 	Summary string `json:"summary"`
 }
 
@@ -81,6 +84,7 @@ func helpEntries(matched []command) []helpCommand {
 			flags = append(flags, helpFlag{
 				Name:    f.name,
 				Value:   f.value.placeholder(),
+				Need:    f.need.word(),
 				Summary: f.summary,
 			})
 		}
@@ -137,8 +141,8 @@ func helpOne(c command) string {
 	for _, w := range c.words {
 		b.WriteString(" " + w)
 	}
-	for _, f := range c.flags {
-		b.WriteString(" " + flagWords(f))
+	for _, part := range usageFlags(c) {
+		b.WriteString(" " + part)
 	}
 	fmt.Fprintf(&b, "\n  %s\n", c.summary)
 	if len(c.flags) > 0 {
@@ -155,6 +159,37 @@ func helpOne(c command) string {
 	}
 	fmt.Fprintf(&b, "\n  Example: %s\n", c.example)
 	return b.String()
+}
+
+// usageFlags is the flags of one command as they stand in the call, in the
+// table's order: a required flag bare, an optional one in brackets, and
+// alternatives joined by a bar into one part. Without this the line is a list
+// of every flag run together, which for restyle is a call the binary refuses
+// and for publish is a file nobody was asked for.
+//
+// Alternatives join where the first of them stands, so the bar sits between
+// them and the optional flags keep their own place after.
+func usageFlags(c command) []string {
+	parts := make([]string, 0, len(c.flags))
+	joining := false
+	for _, f := range c.flags {
+		words := flagWords(f)
+		switch {
+		case f.need == needEither && joining:
+			parts[len(parts)-1] += " | " + words
+			continue
+		case f.need == needEither:
+			parts = append(parts, words)
+			joining = true
+			continue
+		case f.need == needOptional:
+			parts = append(parts, "["+words+"]")
+		default:
+			parts = append(parts, words)
+		}
+		joining = false
+	}
+	return parts
 }
 
 // flagWords is the flag as it is typed: the name, and the placeholder after it

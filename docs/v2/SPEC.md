@@ -61,12 +61,17 @@ Everything else is the standard library. A fourth needs its reason written here
 first, and the one open candidate is `sergi/go-diff`.
 
 One command table in `cmd/gdoc/commands.go` describes every command once: the
-words it takes, its flags, one sentence, one example, and the function that runs
-it. The dispatcher, the usage line in every refusal, `help` and `completion` all
-read that table, so a command cannot exist without help and completion for it.
+words it takes, its flags with how each one stands in the call, one sentence,
+one example, and the function that runs it. The dispatcher, the usage line in
+every refusal, `help` and `completion` all read that table, so a command cannot
+exist without help and completion for it.
 
-`gdoc help` prints the table, and `gdoc help <command>` prints one entry.
-`--help` and `-h` are aliases anywhere on the line. Help keeps the output
+`gdoc help` prints the table, and `gdoc help <command>` prints one entry. The
+usage line is a call the binary would accept: what may be left out stands in
+brackets, and alternatives are joined by a bar, so `publish` reads `--md
+--folder-id [--house <file>]` and `restyle` reads `--dry-run | --from <file>`.
+Each flag in the object carries the same under `need`, as `required`, `optional`
+or `either`. `--help` and `-h` are aliases anywhere on the line. Help keeps the output
 contract: the object on stdout, the words a person reads on stderr, exit 0,
 because a question was asked and answered. Bare `gdoc` did no work, so it still
 fails with the help on stderr. `gdoc completion zsh --out <path>` and the same

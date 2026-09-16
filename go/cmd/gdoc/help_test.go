@@ -115,10 +115,10 @@ func TestHelpForOneCommandCarriesItsWordsFlagsAndExample(t *testing.T) {
 		t.Error("a command carries one sentence saying what it is for")
 	}
 
-	wantFlags := [][2]string{
-		{"--md", "<file>"},
-		{"--folder-id", "<folder id>"},
-		{"--house", "<file>"},
+	wantFlags := [][3]string{
+		{"--md", "<file>", "required"},
+		{"--folder-id", "<folder id>", "required"},
+		{"--house", "<file>", "optional"},
 	}
 	flags, ok := entry["flags"].([]any)
 	if !ok || len(flags) != len(wantFlags) {
@@ -128,6 +128,9 @@ func TestHelpForOneCommandCarriesItsWordsFlagsAndExample(t *testing.T) {
 		f, _ := flags[i].(map[string]any)
 		if f["name"] != want[0] || f["value"] != want[1] {
 			t.Errorf("flag %d: got %v %v, want %s %s", i, f["name"], f["value"], want[0], want[1])
+		}
+		if f["need"] != want[2] {
+			t.Errorf("%s stands as %v, want %q", want[0], f["need"], want[2])
 		}
 		if s, _ := f["summary"].(string); s == "" {
 			t.Errorf("%s carries no sentence saying what it is for", want[0])
@@ -143,8 +146,8 @@ func TestHelpForOneCommandCarriesItsWordsFlagsAndExample(t *testing.T) {
 		t.Fatalf("read takes one flag: %v", entry["flags"])
 	}
 	f, _ := flags[0].(map[string]any)
-	if f["name"] != "--structure" || f["value"] != "" {
-		t.Errorf("--structure takes no value: %v", f)
+	if f["name"] != "--structure" || f["value"] != "" || f["need"] != "optional" {
+		t.Errorf("--structure takes no value and may be left out: %v", f)
 	}
 	words, ok = entry["words"].([]any)
 	if !ok || len(words) != 1 || words[0] != "<url>" {
@@ -261,4 +264,135 @@ func TestHelpTakesWordsAndNoFlags(t *testing.T) {
 			t.Errorf("%v must be refused by name: %q", args, msg)
 		}
 	}
+}
+
+// The usage line is what a skill builds its call from, so a line the binary
+// would refuse teaches a call that fails. The lines are spelled out here rather
+// than joined from the table the way help joins them, because a test that
+// joined them would agree with any rendering at all, the one that runs two
+// alternatives together included.
+func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	for _, want := range []struct {
+		words []string
+		usage string
+	}{
+		{[]string{"help", "read"}, "Usage: gdoc read <url> [--structure]"},
+		{[]string{"help", "comments"}, "Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]"},
+		{[]string{"help", "suggestions"}, "Usage: gdoc suggestions <url> [--md <file>]"},
+		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},
+		{[]string{"help", "probe"}, "Usage: gdoc probe --folder <folder id>"},
+		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body-file <file>"},
+		{[]string{"help", "propose"}, "Usage: gdoc propose <url> --from <file> --folder <folder id> [--md <file>]"},
+		{[]string{"help", "withdraw"}, "Usage: gdoc withdraw <url> <suggestion id> --md <file>"},
+		{[]string{"help", "build"}, "Usage: gdoc build --md <file> --out <file> [--house <file>] [--force]"},
+		{[]string{"help", "publish"}, "Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]"},
+		{[]string{"help", "completion"}, "Usage: gdoc completion <shell> --out <file> [--force]"},
+		{[]string{"help", "auth", "status"}, "Usage: gdoc auth status"},
+	} {
+		_, prose, code := runHelp(t, want.words...)
+		if code != 0 {
+			t.Errorf("%v must answer: exit %d", want.words, code)
+			continue
+		}
+		if !strings.Contains(prose, want.usage+"\n") {
+			t.Errorf("%v must print\n  %s\nand printed\n%s", want.words, want.usage, prose)
+		}
+	}
+}
+
+// The object carries the same thing the usage line does, because a skill reads
+// the object and a person reads the line. A flag says how it stands by name:
+// required, optional, or one of the alternatives a command needs exactly one
+// of.
+func TestTheObjectSaysHowEachFlagStands(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	for _, want := range []struct {
+		words []string
+		flags map[string]string
+	}{
+		{[]string{"help", "build"}, map[string]string{
+			"--md": "required", "--out": "required", "--house": "optional", "--force": "optional"}},
+		{[]string{"help", "restyle"}, map[string]string{
+			"--dry-run": "either", "--from": "either", "--fields": "optional"}},
+	} {
+		got, _, code := runHelp(t, want.words...)
+		if code != 0 {
+			t.Errorf("%v must answer: exit %d", want.words, code)
+			continue
+		}
+		entry, _ := helpCommands(t, got)[0].(map[string]any)
+		flags, _ := entry["flags"].([]any)
+		if len(flags) != len(want.flags) {
+			t.Errorf("%v: %d flags, want %d", want.words, len(flags), len(want.flags))
+			continue
+		}
+		for _, raw := range flags {
+			f, _ := raw.(map[string]any)
+			name, _ := f["name"].(string)
+			if f["need"] != want.flags[name] {
+				t.Errorf("%v %s stands as %v, want %q", want.words, name, f["need"], want.flags[name])
+			}
+		}
+	}
+}
+
+// The binary is the witness for what the table calls required: a flag marked
+// so is one the command refuses to run without, naming it. Each run below
+// gives every other required flag and omits one, so the refusal that comes
+// back is about the flag under test and not about the one before it.
+//
+// Every one of these refusals is written before a session is opened, so none
+// of them touches the network.
+func TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	counted := 0
+	for _, c := range commands() {
+		for _, missing := range c.flags {
+			if missing.need != needRequired {
+				continue
+			}
+			args := strings.Fields(c.name)
+			for _, w := range c.words {
+				args = append(args, standInFor(w))
+			}
+			for _, f := range c.flags {
+				if f.name == missing.name || f.need != needRequired {
+					continue
+				}
+				args = append(args, f.name)
+				if f.value != kindNone {
+					args = append(args, "x")
+				}
+			}
+			got, code := runJSON(t, args...)
+			if code == 0 || got["ok"] != false {
+				t.Errorf("%s says %s is required, and ran without it: %v", c.name, missing.name, got)
+				continue
+			}
+			if msg, _ := got["error"].(string); !strings.Contains(msg, missing.name) {
+				t.Errorf("%s without %s must name it: %q", c.name, missing.name, msg)
+			}
+			counted++
+		}
+	}
+	if counted == 0 {
+		t.Fatal("no command in the table names a required flag, so this test is measuring nothing")
+	}
+}
+
+// standInFor is a word that parses where the table names a placeholder. Only
+// the shell is read before the refusal these tests are after; the rest go no
+// further than the parser.
+func standInFor(word string) string {
+	switch word {
+	case "<url>":
+		return "https://docs.google.com/document/d/1AbCdEf/edit"
+	case "<shell>":
+		return "zsh"
+	}
+	return "x"
 }
