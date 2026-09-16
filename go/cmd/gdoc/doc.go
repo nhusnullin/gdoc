@@ -51,6 +51,8 @@
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
+//   - completion <shell> --out [--force]: the table as a shell script, written
+//     to a file. completion.go, with the template beside it.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
@@ -155,6 +157,44 @@
 // TODO(test): no test pins that the binary never reads stdin. Nothing in the
 // tree names os.Stdin today, so the rule holds by absence rather than by a
 // check somebody would see fail.
+//
+// # Completion is a file, and the reason is the output contract
+//
+// gdoc completion zsh --out <path> renders the command table as a zsh script,
+// writes it through internal/atomicfile, and prints one object saying the
+// shell, the absolute path it wrote and the line to add to .zshrc. The script
+// itself never reaches stdout. A script there would make this the one command
+// whose stdout is not an object, and the contract is worth more than a file
+// that has to be written again after an upgrade. install.sh writes it again on
+// every run, and it never edits .zshrc: it prints the line and a person adds
+// it.
+//
+// The script is a rendering of the table help prints, so what a Tab offers is
+// what the parser takes. A flag whose kind is a file offers file names, and
+// every other kind offers nothing, because nothing on this machine knows a
+// Drive folder id, a cursor or a wait length, and neither does anything know a
+// document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag is the pin, and
+// it asks the table rather than a list of its own, so a command added without
+// a line in the script fails there.
+//
+// --out is build's rule and build's own check: a file already there is refused
+// without --force, a directory is refused whatever the flag says, and a
+// refused run writes nothing.
+// TestCompletionRefusesAnExistingOutUnlessForced is the pin, with
+// TestCompletionWritesTheFileAndReportsTheLineToAdd over what the object says
+// and TestCompletionArgumentsAreStrict over the four refusals.
+//
+// completion counts its own word rather than leaving it to the parser, which
+// is why its table entry says anyWords. The parser's refusal for one missing
+// word names a document, and what is missing here is a shell.
+//
+// zsh is the only shell today. bash follows in this milestone, and PowerShell
+// at M9 with the Windows smoke test.
+//
+// No test sources the script in a real shell, because nothing under go/ runs an
+// external program and TestNothingRunsAnExternalProgram holds that over the
+// test files too. The script is checked structurally here, and a person types
+// Tab at it once per milestone.
 //
 // # A panic is still one envelope
 //

@@ -15,6 +15,7 @@ import (
 var everyCommandName = []string{
 	"auth status", "auth login", "read", "comments", "suggestions", "restyle",
 	"probe", "reply", "propose", "withdraw", "build", "publish", "help",
+	"completion",
 }
 
 // runHelp runs the command with both streams held apart, because the split is

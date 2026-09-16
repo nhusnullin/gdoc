@@ -1,0 +1,63 @@
+#compdef gdoc
+#
+# zsh completion for gdoc, written by gdoc itself:
+#
+#   gdoc completion zsh --out <path>
+#
+# {{.Usage}}
+#
+# Every command and every flag below came out of the binary that wrote this
+# file. Write the file again after an upgrade, which is what install.sh does.
+# Source it from .zshrc, after oh-my-zsh has run compinit.
+
+_gdoc_commands() {
+  local -a gdoc_commands
+  gdoc_commands=(
+{{- range .Groups}}
+    {{.Entry}}
+{{- end}}
+  )
+  _describe -t commands 'gdoc command' gdoc_commands
+}
+{{range .Groups}}{{if .Subs}}
+_gdoc_{{.Word}}_commands() {
+  local -a gdoc_{{.Word}}_commands
+  gdoc_{{.Word}}_commands=(
+{{- range .Subs}}
+    {{.Entry}}
+{{- end}}
+  )
+  _describe -t commands 'gdoc {{.Word}} command' gdoc_{{.Word}}_commands
+}
+{{end}}{{end}}
+_gdoc() {
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
+
+  _arguments -C '1: :_gdoc_commands' '*:: :->command' && return
+  [[ "$state" = command ]] || return
+
+  case "$words[1]" in
+{{- range .Groups}}
+  {{.Word}})
+{{- if .Subs}}
+    _arguments -C '1: :_gdoc_{{.Word}}_commands' '*:: :->{{.Word}}' && return
+    [[ "$state" = {{.Word}} ]] || return
+    case "$words[1]" in
+{{- range .Subs}}
+    {{.Word}})
+      _arguments{{range .Specs}} \
+        {{.}}{{end}}
+      ;;
+{{- end}}
+    esac
+{{- else}}
+    _arguments{{range .Specs}} \
+      {{.}}{{end}}
+{{- end}}
+    ;;
+{{- end}}
+  esac
+}
+
+compdef _gdoc gdoc

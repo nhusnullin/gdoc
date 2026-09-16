@@ -68,8 +68,11 @@ type command struct {
 }
 
 // anyCount is the word count of a command that takes however many words it is
-// handed. Only help carries it: the words it takes are another command's name,
-// and that is two words, or one, or none at all.
+// handed, and whose own function says what it will take. Two commands carry
+// it. help takes another command's name, which is two words, or one, or none
+// at all. completion takes one shell, and counts the words itself so that a
+// missing one is refused naming a shell rather than naming a document, which
+// is what the parser's refusal for one missing word says.
 const anyCount = -1
 
 // wants is the number of words the parser insists on, in both directions.
@@ -256,6 +259,20 @@ func commands() []command {
 			example:  "gdoc help publish",
 			run: func(_ context.Context, a *args, errOut io.Writer) emit.Result {
 				return cmdHelp(a.positional, errOut)
+			},
+		},
+		{
+			name:     "completion",
+			words:    []string{"<shell>"},
+			anyWords: true,
+			flags: []flag{
+				{"--out", kindFile, "the file to write the completion script to"},
+				{"--force", kindNone, "replace the out file if something is already there"},
+			},
+			summary: "Write the completion script for one shell, and say the line that turns it on.",
+			example: "gdoc completion zsh --out ~/.gdoc-completion.zsh",
+			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdCompletion(a)
 			},
 		},
 	}

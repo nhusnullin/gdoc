@@ -456,26 +456,35 @@ cursor or a wait length. A document URL offers nothing either.
 - Modify: `go/cmd/gdoc/commands.go`, `build.go` (only if `freeToWrite` needs
   to move to a shared file), `doc.go`
 
-- [ ] Add `completion` to `everyCommandName` in `help_test.go`, which is the
+- [x] Add `completion` to `everyCommandName` in `help_test.go`, which is the
       literal list `gdoc help` must come back with.
-- [ ] Test first, `TestTheZshScriptNamesEveryCommandAndEveryFlag`: render
+- [x] Test first, `TestTheZshScriptNamesEveryCommandAndEveryFlag`: render
       the script and assert every table name and every flag appears, that a
       `file` flag is followed by `_files` and an id flag is not, that the
       script opens with `#compdef gdoc` and ends with `compdef _gdoc gdoc`.
-- [ ] Test, `TestCompletionWritesTheFileAndReportsTheLineToAdd`: `completion
+- [x] Test, `TestCompletionWritesTheFileAndReportsTheLineToAdd`: `completion
       zsh --out <tmp>` writes the script, stdout is one object with `shell`,
       `wrote` as an absolute path and `add_to_zshrc`, exit 0.
-- [ ] Test, `TestCompletionRefusesAnExistingOutUnlessForced`, in the shape of
+- [x] Test, `TestCompletionRefusesAnExistingOutUnlessForced`, in the shape of
       `TestBuildRefusesAnExistingOutUnlessForced`: refused, file left byte for
       byte, then replaced with `--force`. A directory is refused with the flag.
-- [ ] Test, `TestCompletionArgumentsAreStrict`: no shell word, an unknown
+- [x] Test, `TestCompletionArgumentsAreStrict`: no shell word, an unknown
       shell, a missing `--out`, and an extra word are each refused by name.
-- [ ] `completion.go`: the `completion` entry, the template data built from
+- [x] `completion.go`: the `completion` entry, the template data built from
       the table, `freeToWrite` reused, the write through `internal/atomicfile`.
-- [ ] `doc.go`: a section "Completion is a file, and the reason is the output
+- [x] `doc.go`: a section "Completion is a file, and the reason is the output
       contract", naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): gdoc completion zsh, written to a file"`
+- ⚠️ Scope, `completion` counts its own word. Its entry carries `anyWords`,
+      as `help` does, and `oneShell` refuses a missing word, an unknown shell
+      and an extra word by name. The parser's refusal for one missing word
+      says "this command needs a document", which is the wrong sentence for a
+      shell, and changing that sentence would change a refusal every other
+      command shares.
+- ⚠️ Scope, no `zsh -n` in a test, as the plan said. The script was checked by
+      hand in this iteration instead: `zsh -n` is clean and a bare `zsh -f`
+      sources it and registers `_gdoc`. Typing Tab at it is Task 10's.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): gdoc completion zsh, written to a file"`
 
 ### Task 4: completion for bash
 
