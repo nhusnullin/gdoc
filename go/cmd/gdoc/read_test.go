@@ -1181,3 +1181,11 @@ func TestThePollReadsTheListingBeforeTheDocument(t *testing.T) {
 		t.Errorf("the second read is %q, want the Docs read", f.urls[1])
 	}
 }
+
+func TestTheWaitIntervalIsTwoSeconds(t *testing.T) {
+	// The literal, never the constant: a test that read waitInterval would
+	// follow it wherever somebody moved it. Nail's decision of 2026-09-18.
+	if waitInterval != 2*time.Second {
+		t.Fatalf("waitInterval is %v, want 2s", waitInterval)
+	}
+}

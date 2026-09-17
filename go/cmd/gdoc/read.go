@@ -380,12 +380,12 @@ func unplacedWarnings(d *docs.Document) []string {
 	return out
 }
 
-// waitInterval is how long a wait sleeps between polls. It is a constant in
-// the spec's five to fifteen seconds, and a package variable only so a test can
-// drive two polls in no wall time. It is deliberately not a flag: a caller that
-// could set it could poll Drive as fast as it liked, and nothing on the wire
-// would say the interval had changed.
-var waitInterval = 10 * time.Second
+// waitInterval is how long a wait sleeps between polls. It is two seconds, a
+// constant the spec names, and a package variable only so a test can drive two
+// polls in no wall time. It is deliberately not a flag: a caller that could set
+// it could poll Drive as fast as it liked, and nothing on the wire would say
+// the interval had changed. TestTheWaitIntervalIsTwoSeconds pins the literal.
+var waitInterval = 2 * time.Second
 
 // maxWait is the longest one call will look. The skill asks for nine minutes,
 // because the tool that runs the command waits ten at most; the hour is the bar
