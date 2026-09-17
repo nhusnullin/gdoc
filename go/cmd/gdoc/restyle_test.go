@@ -906,6 +906,39 @@ func TestASurveyThisBinaryPrintedIsOneItCanApply(t *testing.T) {
 	}
 }
 
+// The round trip above runs on a checkout, where the envelope carries no
+// version. A release binary stamps one into every object it prints, the survey
+// included, so the survey a colleague saves carries a key the checkout's never
+// does. The strict read has to know that key, or every survey a release printed
+// is refused by its own apply while this suite still passes: that is how v2.1.0
+// shipped refusing its own surveys with `json: unknown field "version"`.
+func TestASurveyAReleaseBinaryPrintedIsOneItCanApply(t *testing.T) {
+	// Arrange: a release-stamped survey run, its stdout saved as the caller saves it.
+	atVersion(t, "v9.9.9")
+	stubSession(t, restyleSession(t))
+	var printed bytes.Buffer
+	if code := run(context.Background(),
+		[]string{"restyle", fixtureDocID, "--dry-run"}, &printed, io.Discard); code != 0 {
+		t.Fatalf("restyle --dry-run failed: exit %d, %s", code, printed.String())
+	}
+	if !bytes.Contains(printed.Bytes(), []byte(`"version":"v9.9.9"`)) {
+		t.Fatalf("the release survey must carry the version, or this test proves nothing: %s", printed.String())
+	}
+	from := filepath.Join(t.TempDir(), "survey.json")
+	if err := os.WriteFile(from, printed.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Act: the apply, reading exactly those bytes.
+	stubWire(t, applyWire(t))
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the survey a release binary printed was refused by its own apply: %v (exit %d)", got, code)
+	}
+}
+
 // sentAnywayErr marks an error the way internal/gapi marks a write whose answer
 // could not be read: the request reached Docs, and the run cannot say what it
 // did. Asked by behaviour rather than by importing the sentinel, which is how

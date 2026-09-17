@@ -821,6 +821,11 @@ type savedSurvey struct {
 	Data     restyle.Report `json:"data"`
 	Error    string         `json:"error,omitempty"`
 	Warnings []string       `json:"warnings,omitempty"`
+	// Version is the release that printed the survey. A checkout prints none
+	// and a release prints one on every object, so the strict read has to name
+	// it or refuse every survey a release printed. It is read and not checked:
+	// Data.Schema is what decides whether the fields mean what this gdoc reads.
+	Version string `json:"version,omitempty"`
 }
 
 // readSurvey reads what `restyle --dry-run` printed and the caller saved.
