@@ -396,18 +396,18 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Modify: `.github/workflows/nightly.yml`, `.github/workflows/release.yml`
 - Modify: `go/boundary/workflows_test.go`, `doc.go`
 
-- [ ] Test first, `TestOnlyMakeTagMovesThePluginVersion`: `nightly.yml`
+- [x] Test first, `TestOnlyMakeTagMovesThePluginVersion`: `nightly.yml`
       contains no `plugin.json` and no `git commit`; `release.yml`'s plugin
       check step carries an `if` on a tag matching `\.0$`.
-- [ ] `nightly.yml`: the bump step becomes a tag step, tagging `main` as it
+- [x] `nightly.yml`: the bump step becomes a tag step, tagging `main` as it
       stands and pushing the tag; the comment says why the plugin does not
       follow.
-- [ ] `release.yml`: the check "the plugin version is the tag" runs for
+- [x] `release.yml`: the check "the plugin version is the tag" runs for
       `x.y.0` tags only, with one sentence saying a nightly is a binary
       release and never a plugin release.
-- [ ] `boundary/doc.go` names the test.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "ci: the nightly tags the binary and leaves the plugin version alone"`
+- [x] `boundary/doc.go` names the test.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "ci: the nightly tags the binary and leaves the plugin version alone"`
 
 ### Task 5: the documents that stated the old rule
 

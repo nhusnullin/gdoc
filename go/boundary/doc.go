@@ -197,6 +197,20 @@
 // exactly as it was, or a typo costs somebody a dirty plugin.json they then
 // have to notice.
 //
+// # The plugin version is a release of the skills, not of the binary
+//
+// Claude Code pins a plugin to the version string in its manifest and hands a
+// colleague a new copy when that string changes. So the string releases the
+// skills, and the nightly releases the binary, and those are not the same
+// event: a nightly that moved the version would re-install the skills on
+// every machine every night to carry a binary nobody asked for.
+//
+// TestOnlyMakeTagMovesThePluginVersion holds both halves of that. The nightly
+// names no plugin.json and runs no git commit, so it tags main as it stands;
+// release.yml still refuses a tag the manifest does not carry, under an if on
+// an x.y.0 tag, because a nightly tag carries a patch the manifest never
+// names and the unconditional check would refuse every nightly.
+//
 // # What a colleague unpacks, and the lists that travel with it
 //
 // release/install.sh runs on a machine nobody here has seen, and it travels
