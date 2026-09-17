@@ -37,8 +37,10 @@ rather than a release, which is not an error: say it once and carry on.
 The same object may also carry `update`, which says what is installed and what
 is published: `installed`, `latest_stable`, `latest_nightly` and `checked_at`.
 When `latest_stable` is there and its three numbers are ahead of `version`,
-say once that a newer gdoc is published, name it, and say that `gdoc update`
-installs it. Then carry on with the work. This is a remark and never a gate:
+say once that a newer gdoc is published, name it, and name what installs it:
+`gdoc update`, or `gdoc update --major` when the first of the three numbers is
+the one that is ahead, because a major release is one a person asks for by
+name. Then carry on with the work. This is a remark and never a gate:
 `needs` is the only version that stops a session. No `update` key at all is a
 build from a checkout, and the skill says nothing about it.
 

@@ -73,8 +73,9 @@ func TestAFailedCheckKeepsWhatItHeardAndNamesTheCause(t *testing.T) {
 	}
 }
 
-// Stale has four causes and each one says what was wrong, because the answer
-// reaches a person through a warning and "stale" alone names nothing.
+// Stale has four causes and each one says what was wrong, because "stale"
+// alone names nothing: a caller that chooses to report the reason, and a
+// person reading the file by hand, both need to know which cause it was.
 func TestMissingCorruptAndOldAreEachStaleAndNamed(t *testing.T) {
 	now := time.Date(2026, 9, 18, 7, 0, 0, 0, time.UTC)
 	for _, c := range []struct {

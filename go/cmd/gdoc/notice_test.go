@@ -250,6 +250,28 @@ func TestAnUnreachableGitHubIsStampedAndHelpStillAnswers(t *testing.T) {
 	}
 }
 
+// A word that names no command is refused before the check happens, so a typo
+// costs nothing: no request, no stamp, and the refusal a person reads. The
+// order in cmdHelp is the whole of this rule, and moving the check above the
+// match would cost a mistyped help two seconds on a slow network.
+func TestAnUnknownHelpWordIsRefusedBeforeTheCheck(t *testing.T) {
+	path := checking(t, "v2.2.0", &refusingPlain{t: t})
+
+	got, prose, code := runHelp(t, "help", "publsh")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a word that names no command must fail: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "publsh") {
+		t.Errorf("the refusal names what it does not know: %q", msg)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("a refused help writes no stamp, and %s is there: %v", path, err)
+	}
+	if strings.Contains(prose, "is published") {
+		t.Errorf("a refused help says nothing about a release: %q", prose)
+	}
+}
+
 // A config dir nothing can be written into is one warning and not a failure.
 // The check still happened, so it is not tried a second time in this run.
 func TestAStampThatCannotBeWrittenIsOneWarning(t *testing.T) {
@@ -263,9 +285,12 @@ func TestAStampThatCannotBeWrittenIsOneWarning(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(dir, 0o500); err != nil {
-		t.Fatal(err)
+		t.Skipf("this filesystem does not do read-only directories: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	if os.Geteuid() == 0 {
+		t.Skip("root writes into a read-only directory anyway")
+	}
 
 	got, _, code := runHelp(t, "help")
 	if code != 0 || got["ok"] != true {

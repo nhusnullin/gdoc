@@ -64,6 +64,9 @@ func notice(ctx context.Context, errOut io.Writer) (*updateFacts, []string) {
 	}
 
 	var warns []string
+	// Why the stamp is stale is dropped rather than reported: asking GitHub
+	// again is the whole answer, and the ordinary case is the first run on a
+	// machine, where a warning about a file nobody has written yet is noise.
 	stamp, stale, _ := lastcheck.Read(path, time.Now())
 	if stale {
 		var checkWarns []string

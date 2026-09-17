@@ -267,7 +267,10 @@
 // and TestAnUnreachableGitHubIsStampedAndHelpStillAnswers. A stamp younger
 // than a day is the answer on its own, with no request at all:
 // TestAFreshStampMakesNoRequest. A build from a checkout names no release, so
-// it has nothing to compare and never asks: TestACheckoutBuildNeverChecks.
+// it has nothing to compare and never asks: TestACheckoutBuildNeverChecks. A
+// word that names no command is refused before any of it happens, so a
+// mistyped help costs nothing at all:
+// TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
 //
 // No other command checks. There is no check before a build and none on the
 // way to reading somebody's document. A build is a person waiting for a docx
