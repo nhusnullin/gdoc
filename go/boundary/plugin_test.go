@@ -211,9 +211,9 @@ func makeRecipe(makefile, target string) (string, bool) {
 // nothing in between. `git describe --always` gives a bare commit hash when
 // there is no tag, which is neither: a skill cannot compare it to a tag and a
 // colleague cannot fetch it, and the source-build branch becomes unreachable.
-// `--dirty` alone is the same problem in a subtler spelling, since v2.0.0-dirty
-// parses as a pre-release below v2.0.0 and sorts as older than the tag it was
-// built from.
+// `--dirty` alone is the same problem in a subtler spelling: v2.0.0-dirty is a
+// tag nothing can fetch, and since 2026-09-17 a version with a dash does not
+// even parse, so a skill would read it as a source build over a real release.
 //
 // This reads the assignment rather than running it, for TestMakeTag's reason:
 // running it would describe whatever tree the test happens to sit in. It reads
@@ -261,7 +261,7 @@ func TestTheVersionStampNamesOnlyATag(t *testing.T) {
 	// A dirty tag is not that release either, so the described string cannot
 	// reach main.version unfiltered.
 	if strings.Contains(stamp, "--dirty") && !strings.Contains(version, "%-dirty") {
-		t.Errorf("the version stamp %q keeps --dirty and VERSION %q does not filter it, so v2.0.0-dirty would ship as a pre-release below v2.0.0", stamp, version)
+		t.Errorf("the version stamp %q keeps --dirty and VERSION %q does not filter it, so v2.0.0-dirty would ship as a version nothing can parse or fetch, below v2.0.0", stamp, version)
 	}
 	if ldflags := assignment("LDFLAGS"); !strings.Contains(ldflags, "-X main.version=$(VERSION)") {
 		t.Errorf("LDFLAGS is %q and it does not stamp $(VERSION) into main.version; nothing would reach the envelope", ldflags)

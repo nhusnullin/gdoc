@@ -65,6 +65,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | holds |
 | 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
 | 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
+| 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2029,3 +2030,38 @@ is a different run and would have taken something else, or nothing.
 
 **What did not change.** The door is still GET only, still one repository,
 still per-run, still credential-free, and still opened by `gdoc update` alone.
+
+## 2026-09-17. There is no rc. The nightly is the pre-release channel.
+
+The M9 plan accepted the release by cutting `v2.0.0-rc1`, installing it in a
+scratch home, cutting `v2.0.0-rc2` and updating from one to the other. Run for
+real on 2026-09-17, the first tag failed in CI before a build: the boundary
+test on `plugin.json` holds the version to `vX.Y.Z`, `release.yml` refuses a
+tag whose manifest disagrees, and `nightly.yml` stops on a last tag that is not
+`vX.Y.Z`. Only `update.Version` accepted `-rc1`, and `IsStable` still called it
+stable because its patch is zero, so a real rc would have reached every
+colleague on a plain `gdoc update`. Four places said one thing and one said
+another, and the one was the rc.
+
+**Decision.** There is no rc. The 2026-09-16 release entry made the number the
+channel: patch zero is stable and patch above zero is nightly. A nightly is a
+release on the page that nobody gets until they type `gdoc update --nightly` or
+install it by name with `--tag`, which is everything an rc is for. An rc would
+be a third channel for one use, the day-one acceptance, and that use is covered
+by throwaway plain versions: the acceptance ran on `v0.1.0` and `v0.2.0`, both
+deleted the same morning. From `v2.0.0` on, every release gets its rehearsal
+for free: main moves, 02:00 UTC cuts `x.y.(z+1)`, somebody tries it with
+`--nightly`, and when it holds Nail cuts `x.(y+1).0`.
+
+**What changed.** `Version` is three integers and nothing else. `Parse`
+refuses a dash by name and says why. `Compare` is the three numbers in order.
+The rc rows in `version_test.go` and `policy_test.go` are gone, and the refusal
+table gains `v2.0.0-rc1` and `v2.0.0-dirty`. Nothing in the workflows, the
+installer or the guard moves, because none of them ever accepted an rc.
+
+**What the run found on the way.** The one-line install, the zip install with
+`--skills global`, the plugin install at project scope, a publish into the test
+folder with the release binary, its read-back, `update --check`, `update` and
+`update --rollback` all held on the first try. The nightly dry run on a main
+with no tag says so and cuts nothing. Serves principle 4: a colleague learns
+two channels, and the words `rc` and `pre-release` appear nowhere they read.

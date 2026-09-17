@@ -89,11 +89,6 @@ func TestThePolicyTable(t *testing.T) {
 			action: Checked, to: "v2.0.3",
 		},
 		{
-			name:      "an rc is below the release it is an rc of",
-			installed: "v2.0.0-rc1", stable: "v2.0.0",
-			action: Updated, to: "v2.0.0",
-		},
-		{
 			name:      "a channel nothing was found in takes nothing",
 			installed: "v2.0.0",
 			action:    UpToDate,
