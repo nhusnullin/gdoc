@@ -62,12 +62,13 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-11 | `restyle --new` is not built | holds |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | holds |
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
-| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | holds |
+| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | superseded 2026-09-18 (the "no check, no stamp file" clause only: `help` checks once a day; everything else in the entry holds) |
 | 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
 | 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
 | 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds |
 | 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds |
 | 2026-09-18 | The wait polls every two seconds | holds |
+| 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2125,3 +2126,62 @@ literal, and a change to it is an entry here first.
 A domain choice with no principle above it, by the same argument as the
 2026-08-29 live-review decision: the comment and the 🤖 reply arrive within
 seconds, and two is closer to that than ten.
+
+## 2026-09-18. The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number.
+
+Nail's decisions, taken in the brainstorm that produced the M10 plan,
+`docs/plans/2026-09-18-gdoc-v2-m10-update-notice.md`. Serves principle 1: a
+colleague who never opens the releases page hears about a release from the tool
+itself. Serves 4: one line, once a day, absent when there is nothing to say.
+Strains 3 in one bounded place, below.
+
+**One clause of the 2026-09-16 entry is reversed.** That entry said "no check
+when a session starts, no scheduler, no stamp file", and recorded that Nail
+withdrew a first draft where every skill ran the updater before its first call
+and a minor version applied itself. What comes back is the smallest part of that
+draft: a check, and a file that remembers it. What stays withdrawn is
+everything that moved: no skill runs `gdoc update`, no version applies itself,
+and `gdoc update` still installs only when a person types it.
+
+**`help` checks, and nothing else does.** `help` is the first call of every
+skill session, it already carries `version`, and no document is open in front
+of it. A stamp, `update-check.json` beside the token file, holds when gdoc last
+asked GitHub and what it heard. `help` refreshes it when it is missing or older
+than 24 hours, under a two-second ceiling, on the same read-only grant
+`gdoc update` opens, with no credential and no document id. A failed check is
+stamped too, so a network that refuses GitHub costs two seconds a day. Every
+other command is as fast and as offline from GitHub as it was, and a build from
+a checkout, which carries no version, never checks at all.
+
+**The object carries facts and the person gets one line.** Under `update`:
+`installed`, `latest_stable`, `latest_nightly`, `checked_at`, `error`. No
+field says "available" or "behind". The one line on stderr, beside the help
+prose, names the newer stable and `gdoc update`, or `--major` across a major.
+The skills read the facts, say one line, and carry on; `needs` stays the only
+hard gate, and it names a stable `x.y.0`.
+
+**The plugin carries the stable number only.** Claude Code pins a plugin to
+the `version` string in `plugin.json` and delivers it when the string changes,
+which is its own update mechanism. The nightly stops bumping that file, so a
+colleague's skills move when `make tag` moves them. There is no nightly
+channel for skills: Nail runs the symlinked checkout, which is ahead of nightly,
+and nobody else asked. A `stable` branch was considered and dropped, because
+one pin serves one channel and one channel is all there is. The release check
+that the plugin carries the tag applies to `x.y.0` tags.
+
+**The hub declares the marketplace.** `extraKnownMarketplaces.gdoc` with
+`autoUpdate: true` and `enabledPlugins["altery@gdoc"]` in the hub's committed
+`.claude/settings.json`. Read from Claude Code's own bundle on 2026-09-18: that
+flag in user or project settings is copied into `known_marketplaces.json` on
+startup, so a colleague gets marketplace, plugin and auto-update after one trust
+prompt. Nail's machine turns `altery@gdoc` off in the hub's local settings, so
+the plugin copy never loads beside the symlinks, and the 2026-08-14 decision
+holds for a checkout.
+
+**Not built.** A nudge in the skill about the plugin itself, because the hub
+turns auto-update on for everyone. An off switch for the check, because a
+stamped failure already bounds its cost; the backlog holds it.
+
+The strain on principle 3 is that a command reaches a host a person did not
+name, and its bound is the whole of the design above: one command, once a day,
+two seconds, one file of gdoc's own, and nothing replaced.

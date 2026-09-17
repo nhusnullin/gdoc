@@ -22,7 +22,8 @@ one is written against the code that exists by then.
   ones until a colleague has run the Windows checklist.
 - Versions are `x.y.z` and they come from the tag. `x.y.0` is stable and Nail
   cuts it with `make tag`; `x.y.(z+1)` is nightly and CI cuts it when main has
-  moved. `.claude-plugin/plugin.json` carries the same number.
+  moved. `.claude-plugin/plugin.json` carries the same number until M10 lands,
+  and the last stable number after it.
 - One template. Everything is measured against `altery-group-policy-v1.0`, and a
   second one is a decision nobody has taken.
 
@@ -50,6 +51,20 @@ M8 are deferred whole to
 [the backlog](../backlog/m8-alignment-and-the-align-skill.md), Nail's decision
 of 2026-09-16, DECISIONS.md. The team's feedback after the release decides
 whether it comes back.
+
+## M10. The update notice
+
+Decided 2026-09-18, DECISIONS.md. Plan:
+`docs/plans/2026-09-18-gdoc-v2-m10-update-notice.md`.
+
+The binary notices a newer release by itself and says so, without slowing any
+run. What lands: a stamp file beside the token that remembers the last check;
+`help` refreshing it once a day under a two-second ceiling and printing the
+facts, with one line on stderr for a person; the skills mentioning a newer gdoc
+once and carrying on, with `needs` held to a stable release; the nightly
+leaving `plugin.json` alone so the plugin follows the stable number; and the
+hub declaring the marketplace with auto-update on, which is a two-key change
+in the other repository, by hand.
 
 ## Outstanding by hand
 
