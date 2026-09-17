@@ -6,22 +6,22 @@ import (
 	"strings"
 )
 
-// Version is a release tag read as three numbers and an optional pre-release
-// word: v2.1.3, or v2.0.0-rc1.
+// Version is a release tag read as three numbers: v2.1.3.
 //
-// It is not semver. There is no build metadata, no comparison of dot-separated
-// pre-release fields, and no range syntax, because gdoc compares two tags and
-// nothing else. Three integers and a comparison is a page of code with no
-// dependency, and the module list stays at three.
+// It is not semver. There is no pre-release word, no build metadata and no
+// range syntax, because gdoc compares two tags and nothing else. Three
+// integers and a comparison is a page of code with no dependency, and the
+// module list stays at three.
+//
+// There is no pre-release because the nightly is the pre-release channel: a
+// release with a patch above zero sits on the page until somebody types
+// `gdoc update --nightly` or installs it by name, which is everything an rc
+// would be for. The 2026-09-17 entry in DECISIONS.md says why the rc that the
+// M9 plan wrote was taken out again.
 type Version struct {
 	Major int
 	Minor int
 	Patch int
-
-	// Pre is the text after the dash, without it, and empty for a release.
-	// It exists because a milestone is accepted by cutting v2.0.0-rc1 and
-	// updating from it to v2.0.0-rc2 on a real machine.
-	Pre string
 }
 
 // Parse reads a tag. Everything about the shape is refused by name, because
@@ -36,18 +36,11 @@ func Parse(s string) (Version, error) {
 	if !ok {
 		return Version{}, fmt.Errorf("the version %q opens with a v and this one does not", s)
 	}
-	pre := ""
-	if numbers, tail, cut := strings.Cut(rest, "-"); cut {
-		if err := checkPre(s, tail); err != nil {
-			return Version{}, err
-		}
-		rest, pre = numbers, tail
-	}
 	fields := strings.Split(rest, ".")
 	if len(fields) != 3 {
 		return Version{}, fmt.Errorf("the version %q is three numbers after the v, and this one has %d", s, len(fields))
 	}
-	out := Version{Pre: pre}
+	var out Version
 	into := []*int{&out.Major, &out.Minor, &out.Patch}
 	for i, f := range fields {
 		n, err := number(s, f)
@@ -61,10 +54,15 @@ func Parse(s string) (Version, error) {
 
 // number reads one field of the three. strconv.Atoi alone takes "+2", " 2" and
 // "-1", each of which would make two tags that are not the same text compare
-// as the same version.
+// as the same version. A number followed by a dash is the pre-release shape,
+// v2.0.0-rc1, and is refused by that name rather than as a malformed number,
+// so the person who typed it learns which channel to use instead.
 func number(whole, field string) (int, error) {
 	if field == "" {
 		return 0, fmt.Errorf("the version %q is three numbers after the v, and one of them is empty", whole)
+	}
+	if digits, _, dashed := strings.Cut(field, "-"); dashed && digits != "" {
+		return 0, fmt.Errorf("the version %q carries a dash, and gdoc has no pre-release: a nightly is the pre-release channel", whole)
 	}
 	for _, r := range field {
 		if r < '0' || r > '9' {
@@ -81,34 +79,13 @@ func number(whole, field string) (int, error) {
 	return n, nil
 }
 
-// checkPre holds the pre-release word to letters, numbers and dots, so that a
-// tag with a space or an underscore in it is refused here rather than turning
-// into an asset name nothing on the releases page carries.
-func checkPre(whole, pre string) error {
-	if pre == "" {
-		return fmt.Errorf("the version %q ends in a dash with no pre-release word after it", whole)
-	}
-	for _, r := range pre {
-		switch {
-		case r >= '0' && r <= '9', r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r == '.':
-		default:
-			return fmt.Errorf("the pre-release word %q in %q holds %q, and a pre-release is letters, numbers and dots", pre, whole, r)
-		}
-	}
-	return nil
-}
-
 // String prints the tag back, and prints nothing at all for the zero Version,
 // which is how a channel that holds no release is said.
 func (v Version) String() string {
 	if v.IsZero() {
 		return ""
 	}
-	s := fmt.Sprintf("v%d.%d.%d", v.Major, v.Minor, v.Patch)
-	if v.Pre != "" {
-		s += "-" + v.Pre
-	}
-	return s
+	return fmt.Sprintf("v%d.%d.%d", v.Major, v.Minor, v.Patch)
 }
 
 // IsZero reports the value that means nothing was found: a channel with no
@@ -127,28 +104,14 @@ func (v Version) IsZero() bool { return v == Version{} }
 // number is the whole of the difference between the two channels.
 func (v Version) IsStable() bool { return v.Patch == 0 }
 
-// Compare orders a against b: -1, 0 or 1.
-//
-// A pre-release sorts below the release it names, which is the one rule this
-// takes from semver and the reason an rc can be updated from. Two pre-releases
-// are compared as text, so rc10 sorts below rc2. gdoc cuts rc1 and rc2 by hand
-// in one sitting, and reading the digits out would be a semver implementation
-// arriving one function at a time.
+// Compare orders a against b: -1, 0 or 1, on the three numbers in order.
 func Compare(a, b Version) int {
 	for _, pair := range [][2]int{{a.Major, b.Major}, {a.Minor, b.Minor}, {a.Patch, b.Patch}} {
 		if pair[0] != pair[1] {
 			return sign(pair[0] - pair[1])
 		}
 	}
-	switch {
-	case a.Pre == b.Pre:
-		return 0
-	case a.Pre == "":
-		return 1
-	case b.Pre == "":
-		return -1
-	}
-	return sign(strings.Compare(a.Pre, b.Pre))
+	return 0
 }
 
 func sign(n int) int {

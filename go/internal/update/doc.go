@@ -11,10 +11,11 @@
 //
 // # Three integers, and not semver
 //
-// A version is v2.1.3, with an optional pre-release word after a dash. There
-// is no build metadata, no range syntax and no comparison of dot-separated
-// pre-release fields, because gdoc compares two tags and nothing else. The
-// module list stays at three, and a page of code is cheaper than a fourth.
+// A version is v2.1.3 and nothing else: no pre-release word, no build
+// metadata, no range syntax, because gdoc compares two tags and nothing else.
+// A dash is refused by name, because the nightly is the pre-release channel
+// and an rc would be a third channel for one use (DECISIONS.md, 2026-09-17).
+// The module list stays at three, and a page of code is cheaper than a fourth.
 // TestAVersionIsThreeNumbersAfterAV and
 // TestAVersionThatIsNotThreeNumbersIsRefusedByName pin what parses, and
 // TestCompareOrdersTheVersionsThePolicyReadsAbout pins the order.

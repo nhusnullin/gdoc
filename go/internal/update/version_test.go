@@ -11,22 +11,19 @@ func TestAVersionIsThreeNumbersAfterAV(t *testing.T) {
 		major int
 		minor int
 		patch int
-		pre   string
 	}{
-		{"v2.1.3", 2, 1, 3, ""},
-		{"v2.0.0", 2, 0, 0, ""},
-		{"v10.20.30", 10, 20, 30, ""},
-		{"v2.0.0-rc1", 2, 0, 0, "rc1"},
-		{"v2.0.13-rc10", 2, 0, 13, "rc10"},
+		{"v2.1.3", 2, 1, 3},
+		{"v2.0.0", 2, 0, 0},
+		{"v10.20.30", 10, 20, 30},
 	}
 	for _, c := range cases {
 		got, err := Parse(c.in)
 		if err != nil {
 			t.Fatalf("Parse(%q): %v", c.in, err)
 		}
-		if got.Major != c.major || got.Minor != c.minor || got.Patch != c.patch || got.Pre != c.pre {
-			t.Errorf("Parse(%q) = %d.%d.%d-%q, want %d.%d.%d-%q",
-				c.in, got.Major, got.Minor, got.Patch, got.Pre, c.major, c.minor, c.patch, c.pre)
+		if got.Major != c.major || got.Minor != c.minor || got.Patch != c.patch {
+			t.Errorf("Parse(%q) = %d.%d.%d, want %d.%d.%d",
+				c.in, got.Major, got.Minor, got.Patch, c.major, c.minor, c.patch)
 		}
 		if got.String() != c.in {
 			t.Errorf("Parse(%q).String() = %q, want the same text back", c.in, got.String())
@@ -55,9 +52,10 @@ func TestAVersionThatIsNotThreeNumbersIsRefusedByName(t *testing.T) {
 		{"v+2.1.3", "three numbers"},
 		{"v01.2.3", "leading zero"},
 		{"v2.1.03", "leading zero"},
-		{"v2.1.3-", "pre-release"},
-		{"v2.1.3-rc 1", "pre-release"},
-		{"v2.1.3-rc_1", "pre-release"},
+		{"v2.1.3-", "no pre-release"},
+		{"v2.0.0-rc1", "no pre-release"},
+		{"v2.0.0-dirty", "no pre-release"},
+		{"v2.1.3-rc 1", "no pre-release"},
 	}
 	for _, c := range cases {
 		got, err := Parse(c.in)
@@ -85,11 +83,6 @@ func TestCompareOrdersTheVersionsThePolicyReadsAbout(t *testing.T) {
 		{"v3.0.0", "v2.9.9", 1},
 		{"v10.0.0", "v9.0.0", 1},
 		{"v2.0.10", "v2.0.9", 1},
-		{"v2.0.0-rc1", "v2.0.0", -1},
-		{"v2.0.0", "v2.0.0-rc1", 1},
-		{"v2.0.0-rc1", "v2.0.0-rc2", -1},
-		{"v2.0.0-rc1", "v2.0.0-rc1", 0},
-		{"v2.0.0-rc9", "v2.0.1-rc1", -1},
 	}
 	for _, c := range cases {
 		a, b := mustParse(t, c.a), mustParse(t, c.b)
@@ -124,9 +117,6 @@ func TestAStableVersionIsOneWhosePatchIsZero(t *testing.T) {
 	}
 	if mustParse(t, "v2.1.3").IsStable() {
 		t.Error("v2.1.3, a nightly, is reported as stable")
-	}
-	if !mustParse(t, "v2.1.0-rc2").IsStable() {
-		t.Error("v2.1.0-rc2 is not reported as stable; an rc of x.y.0 is cut by hand like one")
 	}
 }
 
