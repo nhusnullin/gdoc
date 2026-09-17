@@ -468,7 +468,7 @@ the four paths below, and killed with a signal it comes back
 `waited.interrupted: true`, which reads as you having stopped the session. Set
 the timeout on every call in this loop.
 
-That one call blocks. The binary polls Drive every ten seconds inside it and
+That one call blocks. The binary polls Drive every two seconds inside it and
 comes back on the first activity after the cursor, or at the deadline with an
 empty window. So a quiet document costs one call and no thinking. Read the
 object and take one of four paths:

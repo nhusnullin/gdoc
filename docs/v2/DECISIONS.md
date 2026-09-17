@@ -67,6 +67,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
 | 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds |
 | 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds |
+| 2026-09-18 | The wait polls every two seconds | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2092,3 +2093,35 @@ A colleague who already installed `gdoc@gdoc` sees a new plugin called
 `altery` on that marketplace's screen after the next version, and removes the
 old one by hand. Serves principle 4: the prefix names whose skills these are,
 and the skill names still say what they do.
+
+## 2026-09-18. The wait polls every two seconds.
+
+Nail's decision, made with the quota page open. `comments --wait` polled every
+ten seconds, inside the five to fifteen the 2026-08-29 live-review decision
+named. It now polls every two, and the range is retired.
+
+**The quota is per user per project, and it is far away.** Google's Docs limits
+page states 300 read requests a minute per user per project, 3,000 per project,
+and separate pools of 60 and 600 for writes. "Per user" is any one particular
+user in the Cloud project, so it is the OAuth token: one colleague's polling
+never counts against another's. A poll is one Docs read and one Drive listing,
+and Drive is metered in units that a listing barely touches.
+
+| Interval | Docs reads a minute, one user | Users in live review the project pool holds |
+|---|---|---|
+| 10s | 6 | 500 |
+| 5s | 12 | 250 |
+| 2s | 30 | 100 |
+
+Two seconds is a tenth of one person's read quota, and a hundred colleagues in
+live review at once would still fit the project. Reads and writes are separate
+pools, so the poll never eats into the 60 writes a proposal and its reply use.
+
+**What does not change.** The interval is still a constant and never a flag,
+the first poll still happens at once, the deadline still bounds the call, and
+the loop is still the skill's. `TestTheWaitIntervalIsTwoSeconds` pins the
+literal, and a change to it is an entry here first.
+
+A domain choice with no principle above it, by the same argument as the
+2026-08-29 live-review decision: the comment and the 🤖 reply arrive within
+seconds, and two is closer to that than ten.

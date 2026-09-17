@@ -246,13 +246,14 @@ a person's choice. Changed 2026-09-11, DECISIONS.md.
 Lists threads with real character ranges (`commentsViewMode`, which requires
 `includeTabsContent=true`). Takes a `--since` cursor and reports only activity
 after it, so a live session's poll is one cheap call. `--wait` makes that call
-poll: it repeats the same listing every ten seconds and returns the first window
+poll: it repeats the same listing every two seconds and returns the first window
 with activity in it, or an empty one at the deadline. It needs `--since` and
 keeps no state of its own. `waited` says how many times it asked, how long it
 looked and whether a signal ended it: an interrupt is an answer, and a failed
 poll is `ok: false` with the polls so far, so the skill can tell an unread window
 from an empty one. The cursor is opaque, the binary emits it and the caller hands
-it back, and it dies with the session. Anything that must survive across sessions
+it back, and it dies with the session. The interval was ten seconds until
+2026-09-18, DECISIONS.md. Anything that must survive across sessions
 lives in the front matter, nowhere else. Each comment is reported with its
 marker: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an unmarked
 follow-up in a thread gdoc has answered, is reported and never acted on. The

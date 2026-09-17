@@ -173,9 +173,11 @@
 // missing poll, a non-positive interval and a negative deadline
 // (TestWaitRefusesOptionsItCannotRun).
 //
-// The interval is ten seconds, a constant, and never a flag. It sits in the
-// spec's five to fifteen. cmd/gdoc's waitInterval is a package variable only so
-// a test can shorten it. The first poll happens at once rather than after an
+// The interval is two seconds, a constant, and never a flag. It was ten until
+// 2026-09-18, when Nail halved the latency again on the measured quota: a poll
+// is one Docs read against a limit of 300 a minute per user, so thirty a minute
+// spends a tenth of it. cmd/gdoc's waitInterval is a package variable only so
+// a test can shorten it, and TestTheWaitIntervalIsTwoSeconds pins the literal. The first poll happens at once rather than after an
 // interval, because latency is the point of a live session: a wait that slept
 // first would cost the interval on every call the skill makes, quiet document
 // or not. The last gap is slept out rather than polled on, because a poll
