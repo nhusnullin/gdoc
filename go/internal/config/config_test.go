@@ -20,6 +20,10 @@ func TestEnvOverrideWins(t *testing.T) {
 	if p != filepath.Join(dir, "oauth-token.json") {
 		t.Fatalf("token path: %q", p)
 	}
+	c, _ := LastCheckPath()
+	if c != filepath.Join(dir, "update-check.json") {
+		t.Fatalf("last check path: %q", c)
+	}
 }
 
 func TestPlatformDefault(t *testing.T) {

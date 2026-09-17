@@ -305,23 +305,23 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Create: `go/internal/lastcheck/doc.go`, `lastcheck.go`, `lastcheck_test.go`
 - Modify: `go/internal/config/config.go`, `config_test.go` (the path)
 
-- [ ] Test first, `TestAWrittenStampReadsBackByteForByte`: write a stamp
+- [x] Test first, `TestAWrittenStampReadsBackByteForByte`: write a stamp
       into a temp config dir, read the file, compare the bytes with a literal.
-- [ ] Test, `TestMissingCorruptAndOldAreEachStaleAndNamed`: no file, a file
+- [x] Test, `TestMissingCorruptAndOldAreEachStaleAndNamed`: no file, a file
       holding `{`, and a file whose `checked_at` is 25 hours before the clock
       handed in are each stale, and each reason names what was wrong. A file
       23 hours old is fresh.
-- [ ] Test, `TestTheIntervalIsADay`: the literal `24h`, never the constant.
-- [ ] Test, `TestAWriteLeavesNoTempFileBehind`: after `Write` the config dir
+- [x] Test, `TestTheIntervalIsADay`: the literal `24h`, never the constant.
+- [x] Test, `TestAWriteLeavesNoTempFileBehind`: after `Write` the config dir
       holds one file.
-- [ ] `config.LastCheckPath()` beside `TokenPath()`, with its case in
+- [x] `config.LastCheckPath()` beside `TokenPath()`, with its case in
       `TestEnvOverrideWins`.
-- [ ] `lastcheck.Read(path, now)` and `lastcheck.Write(path, stamp)`, the
+- [x] `lastcheck.Read(path, now)` and `lastcheck.Write(path, stamp)`, the
       write through `atomicfile.Replace` at mode 0600 like the token. Strict
       decoding, refused by name, as every input is.
-- [ ] `doc.go` opens `Package lastcheck` and names the four tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the stamp of the last release check"`
+- [x] `doc.go` opens `Package lastcheck` and names the four tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the stamp of the last release check"`
 
 ### Task 2: help checks once a day and prints the facts
 

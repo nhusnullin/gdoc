@@ -70,3 +70,16 @@ func TokenPath() (string, error) {
 	}
 	return filepath.Join(d, "oauth-token.json"), nil
 }
+
+// LastCheckPath is where the record of the last release check sits. The file
+// is update-check.json in the config dir, in the shape internal/lastcheck
+// reads and writes. It is gdoc's own bookkeeping and never a credential, but
+// it lives beside the token because both are per-user state this machine
+// keeps.
+func LastCheckPath() (string, error) {
+	d, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, "update-check.json"), nil
+}
