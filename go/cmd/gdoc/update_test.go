@@ -523,9 +523,12 @@ func TestTheUpdateRunReachesTheReleasesAndNothingElse(t *testing.T) {
 	}
 }
 
-// Nothing checks for an update unasked. The table is the whole of it: one
-// entry names cmdUpdate, and no other file in this package reaches the
-// updater, so no run of read, publish or restyle can end up at GitHub.
+// Nothing installs an update unasked, and only two files here may ask what is
+// published. One table entry names cmdUpdate, so `gdoc update` is the one
+// command that replaces the binary; update.go and notice.go are the only files
+// that reach internal/update at all, so no run of read, publish or restyle can
+// end up at GitHub. notice.go is the daily check help makes, and its own tests
+// hold what it may cost and what it may reach.
 //
 // It reads the syntax rather than the text, because doc.go says all this in
 // prose and a prose sentence naming the updater is not a call to it.
@@ -568,6 +571,13 @@ func TestNothingChecksForUpdatesUnasked(t *testing.T) {
 		case "update.go":
 			if !imported {
 				t.Error("update.go is where the updater is reached, and it does not import it")
+			}
+		case "notice.go":
+			if !imported {
+				t.Error("notice.go is the daily check, and it does not reach the updater")
+			}
+			if named > 0 {
+				t.Error("the check asks what is published and never installs, so it does not name cmdUpdate")
 			}
 		default:
 			if imported || named > 0 {

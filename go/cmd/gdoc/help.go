@@ -8,6 +8,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -19,6 +20,10 @@ import (
 // written against `gdoc help publish` reads `gdoc help` without a second path.
 type helpReport struct {
 	Commands []helpCommand `json:"commands"`
+	// Update is what gdoc last heard about published releases, and it is
+	// absent for a build from a checkout, which names no release and so has
+	// nothing to compare. See notice.go for when it is fetched.
+	Update *updateFacts `json:"update,omitempty"`
 }
 
 // helpCommand is one entry of the table as JSON. Words and Flags are always
@@ -47,13 +52,23 @@ type helpFlag struct {
 // cmdHelp answers with every command, or with the ones whose name opens with
 // the words it was given. Words that match nothing are refused the way an
 // unknown command is, because that is what they are.
-func cmdHelp(words []string, errOut io.Writer) emit.Result {
+//
+// It takes the context because this is the one command that reaches GitHub
+// without being told to: once a day, for at most two seconds, to say whether
+// there is a newer gdoc. Words that name no command are refused before that
+// happens, so a typo costs nothing. See notice.go.
+func cmdHelp(ctx context.Context, words []string, errOut io.Writer) emit.Result {
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
 	}
+	facts, warns := notice(ctx, errOut)
 	fmt.Fprint(errOut, helpProse(matched, len(words) == 0))
-	return emit.Result{OK: true, Data: helpReport{Commands: helpEntries(matched)}}
+	return emit.Result{
+		OK:       true,
+		Data:     helpReport{Commands: helpEntries(matched), Update: facts},
+		Warnings: warns,
+	}
 }
 
 // helpMatches is every command whose name opens with these words, so `help

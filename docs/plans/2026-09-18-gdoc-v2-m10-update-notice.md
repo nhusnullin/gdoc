@@ -331,43 +331,43 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Modify: `go/cmd/gdoc/update_test.go` (`TestNothingChecksForUpdatesUnasked`)
 - Modify: `go/cmd/gdoc/doc.go`
 
-- [ ] Test first, `TestAStaleStampMakesHelpAskOnce`: `version` set to
+- [x] Test first, `TestAStaleStampMakesHelpAskOnce`: `version` set to
       `v2.2.0`, no stamp, `stubPlain` listing `v2.3.0` and `v2.3.4`; `help`
       makes one request, the stamp lands with both versions, the object's
       `update` carries the four facts, and stderr opens with the line naming
       `v2.3.0` and `gdoc update`.
-- [ ] Test, `TestAFreshStampMakesNoRequest`: a stamp 23 hours old and a reach
+- [x] Test, `TestAFreshStampMakesNoRequest`: a stamp 23 hours old and a reach
       whose `GetJSON` fails the test; the object still carries `update` from
       the stamp.
-- [ ] Test, `TestACheckoutBuildNeverChecks`: `version` left as `dev`, no stamp,
+- [x] Test, `TestACheckoutBuildNeverChecks`: `version` left as `dev`, no stamp,
       the same failing reach; no request, no stamp written, no `update` key.
-- [ ] Test, `TestTheCheckIsBoundedByTwoSeconds`: the context the reach saw
+- [x] Test, `TestTheCheckIsBoundedByTwoSeconds`: the context the reach saw
       carries a deadline at most two seconds from the test's clock, literal.
-- [ ] Test, `TestAnUnreachableGitHubIsStampedAndHelpStillAnswers`: the four
+- [x] Test, `TestAnUnreachableGitHubIsStampedAndHelpStillAnswers`: the four
       causes `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure` lists; each is
       `ok: true`, writes the stamp with `error`, and carries a warning naming
       the cause. A second `help` in the same test makes no request.
-- [ ] Test, `TestAStampThatCannotBeWrittenIsOneWarning`: config dir made
+- [x] Test, `TestAStampThatCannotBeWrittenIsOneWarning`: config dir made
       read-only; `ok: true`, one warning, one request and not two.
-- [ ] Test, `TestTheHelpCheckOpensThePolicyTheUpdateOpens`: the same judge as
+- [x] Test, `TestTheHelpCheckOpensThePolicyTheUpdateOpens`: the same judge as
       `TestTheUpdateRunReachesTheReleasesAndNothingElse`, against the policy
       `help` opened.
-- [ ] Test, `TestTheLineNamesMajorForAMajor`: latest stable `v3.0.0`, the
+- [x] Test, `TestTheLineNamesMajorForAMajor`: latest stable `v3.0.0`, the
       line names `gdoc update --major`; latest stable equal to installed, no
       line at all.
-- [ ] Test, `TestReadNeverReachesTheCheck`: `read` with a stale stamp and the
+- [x] Test, `TestReadNeverReachesTheCheck`: `read` with a stale stamp and the
       failing reach, against the existing fake session; no request.
-- [ ] `TestNothingChecksForUpdatesUnasked` rewritten: `update.go` and
+- [x] `TestNothingChecksForUpdatesUnasked` rewritten: `update.go` and
       `notice.go` import `internal/update`, no third file does, and the table
       still names `cmdUpdate` once.
-- [ ] `notice.go` as the Solution Overview says. `cmdHelp` takes `ctx`; the
+- [x] `notice.go` as the Solution Overview says. `cmdHelp` takes `ctx`; the
       three call sites hand it through.
-- [ ] `doc.go`: the section "The update runs when it is typed, and at no other
+- [x] `doc.go`: the section "The update runs when it is typed, and at no other
       moment" becomes "The update runs when it is typed; help asks once a
       day", naming the tests above and the two files that may reach the
       updater.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): help notices a newer release once a day"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): help notices a newer release once a day"`
 
 ### Task 3: the skills say one line and carry on
 

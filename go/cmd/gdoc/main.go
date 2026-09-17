@@ -109,7 +109,7 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	// So `gdoc restyle --from x --help` is an answer rather than a refusal of a
 	// flag restyle does not take, and no parser refusal changes.
 	if rest, asked := helpAsked(args); asked {
-		return cmdHelp(helpWords(rest), errOut)
+		return cmdHelp(ctx, helpWords(rest), errOut)
 	}
 	c := match(args)
 	if c == nil {
