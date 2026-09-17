@@ -376,19 +376,19 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
   `skills/gdoc-restyle/SKILL.md`
 - Modify: `go/cmd/gdoc/skills_test.go`
 
-- [ ] Test first, `TestEverySkillNeedsAStableRelease`: every `needs` line
+- [x] Test first, `TestEverySkillNeedsAStableRelease`: every `needs` line
       parses and its third number is 0; a fixture with `needs: v2.1.3` is
       caught and named.
-- [ ] Test, `TestNoSkillRunsUpdateOnItsOwn` stays green after the wording
+- [x] Test, `TestNoSkillRunsUpdateOnItsOwn` stays green after the wording
       lands, which proves the new paragraph names the command in prose and
       never on a call line.
-- [ ] The paragraph under Setup in each skill, after the `needs` sentence:
+- [x] The paragraph under Setup in each skill, after the `needs` sentence:
       read `update.latest_stable` when the object carries it, compare with
       `version` as three numbers, and when it is ahead say once that a newer
       gdoc is published and that `gdoc update` installs it, then carry on. No
       `update` key is a checkout build, and the skill says nothing about it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(skill): the skills mention a newer gdoc once and carry on"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(skill): the skills mention a newer gdoc once and carry on"`
 
 ### Task 4: the plugin carries a stable number only
 

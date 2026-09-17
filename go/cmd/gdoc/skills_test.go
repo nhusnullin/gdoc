@@ -445,3 +445,60 @@ func TestASkillRunningUpdateIsSeenAsACall(t *testing.T) {
 		t.Errorf("want the update call seen, got %v", calls[0].words)
 	}
 }
+
+// A skill's `needs` line names a stable release, `vX.Y.0`, and not a nightly.
+// `gdoc update` installs a stable, and `gdoc update --nightly` is the channel a
+// person opts into by typing it, so a skill that needs `v2.1.3` sends a
+// colleague after a binary the plain command never brings.
+
+// skillNeedsProblem is what is wrong with one skill's `needs` line, in words a
+// person can act on, or the empty string when the line names a stable release.
+func skillNeedsProblem(file, src string) string {
+	version, ok := skillNeeds(src)
+	if !ok {
+		return fmt.Sprintf("%s carries no front matter line `needs: vX.Y.Z`. A skill says which binary it needs, because the two travel apart", file)
+	}
+	if version[2] != 0 {
+		return fmt.Sprintf("%s needs v%d.%d.%d, which is a nightly. A skill names a stable release, vX.Y.0, because that is what `gdoc update` installs",
+			file, version[0], version[1], version[2])
+	}
+	return ""
+}
+
+func TestEverySkillNeedsAStableRelease(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if problem := skillNeedsProblem(file, string(src)); problem != "" {
+			t.Error(problem)
+		}
+	}
+}
+
+func TestANeedsLineNamingANightlyIsCaughtAndNamed(t *testing.T) {
+	// Arrange
+	src := "---\nname: gdoc-review\nneeds: v2.1.3\n---\n\n# A skill\n"
+
+	// Act
+	problem := skillNeedsProblem("skills/gdoc-review/SKILL.md", src)
+
+	// Assert
+	if problem == "" {
+		t.Fatalf("want v2.1.3 refused, got no problem")
+	}
+	if !strings.Contains(problem, "skills/gdoc-review/SKILL.md") || !strings.Contains(problem, "v2.1.3") {
+		t.Errorf("the problem names neither the file nor the version: %s", problem)
+	}
+	if problem := skillNeedsProblem("skills/gdoc-review/SKILL.md", "---\nneeds: v2.1.0\n---\n"); problem != "" {
+		t.Errorf("want a stable release accepted, got %s", problem)
+	}
+}
