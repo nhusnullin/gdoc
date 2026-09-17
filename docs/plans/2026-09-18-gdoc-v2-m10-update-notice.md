@@ -418,32 +418,32 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Modify: `go/internal/update/doc.go`
 - Create: `docs/backlog/update-check-has-no-off-switch.md`
 
-- [ ] Test first: `TestCLAUDEmdIsUnderTheCeiling` and
+- [x] Test first: `TestCLAUDEmdIsUnderTheCeiling` and
       `TestTheTaskMapNamesFilesThatExist` stay green, and the task map gains
       the row "a release notice, the stamp" naming `go/internal/lastcheck/doc.go`
       and `go/cmd/gdoc/doc.go`.
-- [ ] SPEC.md: the guard paragraph says `gdoc update` and the daily check in
+- [x] SPEC.md: the guard paragraph says `gdoc update` and the daily check in
       `help` open the grant; "Install and update" replaces "No check when a
       session starts, no scheduler, no stamp file" with the stamp, the
       interval, the ceiling and the facts, and says the plugin carries a stable
       number; the Never list's "Never update unasked" becomes "Never install
       unasked", with the check named as the one thing that runs by itself.
-- [ ] CLAUDE.md: the fifth-grant invariant names two callers; the skills
+- [x] CLAUDE.md: the fifth-grant invariant names two callers; the skills
       invariant says the hub declares the marketplace.
-- [ ] `release/README.md`: "The skills" opens with the hub route and one trust
+- [x] `release/README.md`: "The skills" opens with the hub route and one trust
       prompt, keeps the `/plugin` lines for a machine outside the hub, and
       keeps the two fallbacks; "Updates" says gdoc tells you once a day and
       installs when you type `gdoc update`; "What gdoc never does" keeps
       "never updates itself".
-- [ ] `internal/update/doc.go`: one sentence that the stamp lives in
+- [x] `internal/update/doc.go`: one sentence that the stamp lives in
       `internal/lastcheck` and this package still holds no state.
-- [ ] DECISIONS.md: the 2026-09-18 entry written with this plan gains what
+- [x] DECISIONS.md: the 2026-09-18 entry written with this plan gains what
       Task 2 measured, the time a cold `help` takes on this machine.
-- [ ] PLAN.md: the standing fact about the plugin number.
-- [ ] The backlog item: why there is no off switch, what it would look like,
+- [x] PLAN.md: the standing fact about the plugin number.
+- [x] The backlog item: why there is no off switch, what it would look like,
       and what would make it worth adding.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs(v2): the release notice, and the plugin on the stable number"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs(v2): the release notice, and the plugin on the stable number"`
 
 ### Task 6: the hub, by hand
 

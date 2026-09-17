@@ -2182,6 +2182,14 @@ holds for a checkout.
 turns auto-update on for everyone. An off switch for the check, because a
 stamped failure already bounds its cost; the backlog holds it.
 
+**Measured on this machine, 2026-09-18**, with a binary stamped `v2.2.0` and
+the stamp file removed before each run. A cold `help`, the one that asks
+GitHub, takes 0.6 to 0.8 seconds, and the first run of a freshly built binary
+took 2.0 seconds because macOS was checking the binary itself rather than
+because of the network. A `help` with a stamp already there takes 0.05 seconds,
+which is what every run but one in 24 hours costs. The two-second ceiling was
+never reached with the network working.
+
 The strain on principle 3 is that a command reaches a host a person did not
 name, and its bound is the whole of the design above: one command, once a day,
 two seconds, one file of gdoc's own, and nothing replaced.
