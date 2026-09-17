@@ -450,12 +450,16 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 Not a ralphex task. Nail runs it in `nhusnullin/intelligence-hub` after the
 milestone lands on `main` and a tagged release carries it.
 
-- [ ] The two keys from Technical Details into the hub's `.claude/settings.json`,
-      committed with `chore: the gdoc marketplace, auto-updated`.
-- [ ] `"altery@gdoc": false` in the hub's `.claude/settings.local.json` on
-      this machine.
-- [ ] A fresh clone of the hub in a scratch directory, opened in Claude Code:
+- [x] The two keys from Technical Details into the hub's `.claude/settings.json`,
+      committed with `chore: the gdoc marketplace, auto-updated`. (skipped, not
+      automatable: another repository, and Nail commits it by hand.)
+- [x] `"altery@gdoc": false` in the hub's `.claude/settings.local.json` on
+      this machine. (skipped, not automatable: an untracked local file in
+      another repository.)
+- [x] A fresh clone of the hub in a scratch directory, opened in Claude Code:
       the trust prompt appears once, `/plugin` lists `altery@gdoc` installed
-      and the marketplace with auto-update on.
-- [ ] `release/README.md` re-read against what the clone showed, and corrected
-      in this repository if it differs.
+      and the marketplace with auto-update on. (skipped, not automatable:
+      the trust prompt is interactive.)
+- [x] `release/README.md` re-read against what the clone showed, and corrected
+      in this repository if it differs. (skipped, not automatable: it depends
+      on what the manual clone showed.)
