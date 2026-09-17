@@ -33,7 +33,7 @@ Claude Code allows. One command tells you which case you are in:
 **It worked.** Install the plugin and you have all three skills:
 
 ```
-/plugin install gdoc@gdoc
+/plugin install altery@gdoc
 ```
 
 Claude Code asks whether you want them everywhere or in this project only, and
@@ -52,7 +52,7 @@ These are copies, so run the same line again after `gdoc update`.
 **It was refused and `--skills` changed nothing.** Your Claude Code is locked to
 plugins your administrator turns on. Send them this repository and these two
 keys for `managed-settings.json`: `extraKnownMarketplaces` naming
-`nhusnullin/gdoc`, and `enabledPlugins` turning `gdoc@gdoc` on.
+`nhusnullin/gdoc`, and `enabledPlugins` turning `altery@gdoc` on.
 
 ## Sign in
 

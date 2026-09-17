@@ -21,7 +21,7 @@
 # a person asks it to:
 #
 #   /plugin marketplace add nhusnullin/gdoc
-#   /plugin install gdoc@gdoc
+#   /plugin install altery@gdoc
 #
 # --skills is the second route, for a machine where plugins are turned off. It
 # copies rather than links, and it marks what it wrote with a .gdoc-installed
@@ -394,7 +394,7 @@ if [ -n "$skills_where" ]; then
 else
     printf '    not touched. The plugin is the first route, and Claude Code updates it:\n'
     printf '      /plugin marketplace add nhusnullin/gdoc\n'
-    printf '      /plugin install gdoc@gdoc\n'
+    printf '      /plugin install altery@gdoc\n'
     printf '    Where plugins are turned off, re-run this with --skills global.\n'
 fi
 

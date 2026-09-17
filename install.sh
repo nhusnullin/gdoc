@@ -254,5 +254,5 @@ done
 # this summary is the one a colleague asks how to get them.
 printf '\n  colleagues install the skills as a plugin, not as links:\n'
 printf '    /plugin marketplace add nhusnullin/gdoc\n'
-printf '    /plugin install gdoc@gdoc\n'
+printf '    /plugin install altery@gdoc\n'
 printf '\n  next     gdoc auth status, and gdoc auth login if it says signed out\n\n'

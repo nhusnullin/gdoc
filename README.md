@@ -66,7 +66,7 @@ from a marketplace in this same repository:
 
 ```
 /plugin marketplace add nhusnullin/gdoc
-/plugin install gdoc@gdoc
+/plugin install altery@gdoc
 ```
 
 Claude Code asks whether you want the skills everywhere or in this project
