@@ -394,7 +394,7 @@ status`. It asks nothing and it edits no shell file.
 `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is
 both the plugin and the marketplace, and `skills/` stays where it is. A
 colleague runs `/plugin marketplace add nhusnullin/gdoc` and `/plugin install
-gdoc@gdoc`, chooses global or per-project in Claude Code's own terms, and
+altery@gdoc`, chooses global or per-project in Claude Code's own terms, and
 updates on that marketplace's toggle. Two fallbacks exist by policy, because a
 managed Claude Code can refuse a marketplace and can refuse personal and project
 skills with it: `install.sh --skills global|local` copies `skills/` out of the

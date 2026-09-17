@@ -224,7 +224,7 @@ func TestTheReleaseREADMENamesEveryRouteToTheSkills(t *testing.T) {
 		"gdoc auth login",
 		// Route one, plugins open.
 		"/plugin marketplace add nhusnullin/gdoc",
-		"/plugin install gdoc@gdoc",
+		"/plugin install altery@gdoc",
 		// Route two, marketplaces refused and local skills still loading.
 		"--skills global",
 		// Route three, nothing but plugins and managed settings.

@@ -1,12 +1,12 @@
 {
   "name": "gdoc",
-  "description": "The gdoc plugin: the three skills that drive the gdoc binary against Google Docs.",
+  "description": "The Altery skills that drive the gdoc binary against Google Docs.",
   "owner": {
     "name": "Nail Khusnullin"
   },
   "plugins": [
     {
-      "name": "gdoc",
+      "name": "altery",
       "source": "./",
       "description": "Review, publish and restyle Google Docs in the Altery house style, through the gdoc binary."
     }

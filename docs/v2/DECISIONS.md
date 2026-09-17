@@ -66,6 +66,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
 | 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
 | 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds |
+| 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2065,3 +2066,29 @@ folder with the release binary, its read-back, `update --check`, `update` and
 `update --rollback` all held on the first try. The nightly dry run on a main
 with no tag says so and cuts nothing. Serves principle 4: a colleague learns
 two channels, and the words `rc` and `pre-release` appear nowhere they read.
+
+## 2026-09-17. The plugin is named `altery`, and the marketplace stays `gdoc`.
+
+Installed from the marketplace, the three skills showed in Claude Code's
+picker as `gdoc:gdoc-review`, `gdoc:gdoc-publish` and `gdoc:gdoc-restyle`. The
+prefix is the plugin's name from `plugin.json`, the rest is the skill's own
+name, and both said gdoc. Nail chose the prefix over the skills: the plugin is
+now `altery`, and the picker shows `altery:gdoc-review`, `altery:gdoc-publish`
+and `altery:gdoc-restyle`. The skills keep their names, so the symlinks under
+`~/.claude/skills/`, the `--skills` copies and every document that names one
+stay as they were.
+
+**What changed.** `plugin.json` names `altery`, and the one plugin listed in
+`marketplace.json` names the same. The install line is `/plugin install
+altery@gdoc` everywhere it is printed or written: both READMEs, both
+installers, SPEC.md, and the boundary test that pins the manifests and the
+release README. The 2026-09-16 release entry keeps the old line, because it
+records what was true that day.
+
+**What did not change.** The marketplace is still `gdoc`, because it is the
+name a colleague's Claude Code registered when they ran `/plugin marketplace
+add nhusnullin/gdoc`, and renaming it would make their update a reinstall.
+A colleague who already installed `gdoc@gdoc` sees a new plugin called
+`altery` on that marketplace's screen after the next version, and removes the
+old one by hand. Serves principle 4: the prefix names whose skills these are,
+and the skill names still say what they do.

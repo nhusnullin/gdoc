@@ -53,8 +53,8 @@ func TestThePluginNamesTheSkillsThatExist(t *testing.T) {
 	var plugin pluginManifest
 	readJSON(t, filepath.Join(repoRoot, ".claude-plugin", "plugin.json"), &plugin)
 
-	if plugin.Name != "gdoc" {
-		t.Errorf("plugin.json names the plugin %q; it is what a colleague types after the at sign, so it is gdoc", plugin.Name)
+	if plugin.Name != "altery" {
+		t.Errorf("plugin.json names the plugin %q; it is the prefix every skill shows under, and the part before the at sign, so it is altery", plugin.Name)
 	}
 	if plugin.Description == "" {
 		t.Error("plugin.json carries no description; it is the one line /plugin shows before anyone installs")
@@ -67,7 +67,7 @@ func TestThePluginNamesTheSkillsThatExist(t *testing.T) {
 	readJSON(t, filepath.Join(repoRoot, ".claude-plugin", "marketplace.json"), &market)
 
 	if market.Name != "gdoc" {
-		t.Errorf("marketplace.json names the marketplace %q; it is what a colleague types after the at sign, so it is gdoc", market.Name)
+		t.Errorf("marketplace.json names the marketplace %q; it is what a colleague types after the at sign, and what their Claude Code already registered, so it is gdoc", market.Name)
 	}
 	if len(market.Plugins) != 1 {
 		t.Fatalf("marketplace.json lists %d plugins; this repository is one plugin", len(market.Plugins))
