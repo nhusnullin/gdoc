@@ -237,3 +237,21 @@ func count(warnings []string, want string) int {
 	}
 	return n
 }
+
+// TestAHeadingInsideAFootnoteIsNoAnchor: a footnote definition is dropped
+// whole, so a heading written inside one reaches no paragraph and carries no
+// bookmark. The pre-walk must not count its id either, or the link to it comes
+// out live and jumps nowhere, which is the one failure this feature exists to
+// prevent. The link falls to the dead-anchor branch instead and is named.
+func TestAHeadingInsideAFootnoteIsNoAnchor(t *testing.T) {
+	out := walk(t, "Body.[^1]\n\nSee [jump](#hidden-heading).\n\n[^1]: the detail\n\n    # Hidden heading\n")
+
+	body := serialise(t, out.Blocks)
+	if strings.Contains(body, `w:anchor="h_hidden_heading"`) {
+		t.Errorf("the body carries a live anchor to a heading inside a footnote, which no bookmark marks:\n%s", body)
+	}
+	want := "line 3: the link to #hidden-heading names no heading in this note, so its words are printed as plain text"
+	if !has(out.Warnings, want) {
+		t.Errorf("the warnings are %v, want one reading %q", out.Warnings, want)
+	}
+}

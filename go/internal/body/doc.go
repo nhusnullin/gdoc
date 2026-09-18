@@ -145,6 +145,13 @@
 // own line rather than the list's. TestAFootnoteWarnsAndIsLeftOut and
 // TestEveryFootnoteIsNamedByItsOwnLine are the pins.
 //
+// The definition is dropped whole, children and all, so the two walks that run
+// before the blocks skip that subtree as well: a heading written inside a
+// footnote is not a heading of this document, it carries no bookmark, and it
+// does not set the depth every other heading numbers from.
+// TestAHeadingInsideAFootnoteIsNoAnchor and
+// TestAHeadingInsideAFootnoteSetsNoHeadingDepth are the pins.
+//
 // # An email autolink carries the mailto: scheme, and the label does not
 //
 // goldmark puts the scheme on in its HTML renderer and never in AutoLink.URL,
@@ -186,10 +193,15 @@
 // can fix it. The heading ids are collected before the blocks are walked, so a
 // link to a heading further down resolves, and the pre-walk collects only the
 // headings that will carry a bookmark: a figure-only heading emits no
-// paragraph, so a link naming it is as dead as a link naming nothing.
+// paragraph, so a link naming it is as dead as a link naming nothing, and so
+// does a heading inside a footnote definition, which the block walk drops
+// whole. A pre-walk that counted either would write a live w:anchor naming a
+// bookmark nothing wrote, which is the one failure this is here to prevent,
+// and it would do it silently.
 // TestAnAnchorLinkIsAJumpAndNotARelationship,
-// TestAnAnchorToNoHeadingWarnsAndPrintsPlainText and
-// TestAFigureOnlyHeadingCarriesNoBookmark are the pins, and
+// TestAnAnchorToNoHeadingWarnsAndPrintsPlainText,
+// TestAFigureOnlyHeadingCarriesNoBookmark and
+// TestAHeadingInsideAFootnoteIsNoAnchor are the pins, and
 // TestALinkIsAHyperlinkWithARelationship is the https link, unchanged.
 //
 // The line the warning names is renderer.curLine, because addRuns is six

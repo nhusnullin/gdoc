@@ -375,12 +375,16 @@ func bookmarkName(id string) string {
 // headingAnchors is every goldmark heading id that will carry a bookmark, read
 // before the blocks are walked so that a link to a heading further down the
 // note resolves. A figure-only heading is left out: it emits no paragraph, so
-// there is nothing for a jump to land on.
+// there is nothing for a jump to land on. So is anything inside a footnote
+// definition, which the block walk drops whole.
 func headingAnchors(root ast.Node, source []byte) map[string]bool {
 	ids := map[string]bool{}
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
+		}
+		if _, dropped := node.(*east.FootnoteList); dropped {
+			return ast.WalkSkipChildren, nil
 		}
 		heading, ok := node.(*ast.Heading)
 		if !ok {
@@ -417,6 +421,13 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
+		}
+		// A footnote definition is dropped whole by the block walk, so a
+		// heading written inside one is not a heading of this document and
+		// does not set the depth. Otherwise a stray "# " in a footnote
+		// numbers every real heading "0.1-".
+		if _, dropped := node.(*east.FootnoteList); dropped {
+			return ast.WalkSkipChildren, nil
 		}
 		heading, ok := node.(*ast.Heading)
 		if !ok {

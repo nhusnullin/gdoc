@@ -1156,3 +1156,16 @@ func TestASkippedHeadingLevelSaysSo(t *testing.T) {
 		}
 	}
 }
+
+// TestAHeadingInsideAFootnoteSetsNoHeadingDepth: a footnote definition is
+// dropped whole, so a heading written inside one is not a heading of this
+// document and must not set the depth every other heading numbers from.
+// Otherwise a stray "# " in a footnote numbers the real headings "0.1-".
+func TestAHeadingInsideAFootnoteSetsNoHeadingDepth(t *testing.T) {
+	out := walk(t, "## Real heading\n\nBody.[^1]\n\n[^1]: the detail\n\n    # Hidden heading\n")
+
+	body := serialise(t, out.Blocks)
+	if !strings.Contains(body, "1-Real heading") || strings.Contains(body, "0.1-Real heading") {
+		t.Errorf("the only heading is not numbered 1, so a heading inside a footnote set the depth:\n%s", body)
+	}
+}
