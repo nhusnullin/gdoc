@@ -234,23 +234,26 @@ func apply(ctx context.Context, s Session, docID string, requests []map[string]a
 
 		next := answer.WriteControl.RequiredRevisionID
 		if next == "" {
+			// What the run cannot say is where the document ended up, and it
+			// says that rather than reporting a revision the batch has already
+			// moved past. RevisionID stays the revision this batch was sent
+			// against, on both paths out of here.
+			out.Warnings = append(out.Warnings, RevisionUnconfirmedWarning)
+			out.RevisionUnconfirmed = true
 			if i == len(batches)-1 {
-				// Nothing follows, so there is nothing to read a revision for.
-				// What the run cannot say is where the document ended up, and
-				// it says that rather than reporting a revision the last batch
-				// has already moved past.
-				out.Warnings = append(out.Warnings, RevisionUnconfirmedWarning)
-				out.RevisionUnconfirmed = true
+				// Nothing follows, so nothing needs a revision.
 				break
 			}
-			read, err := RevisionOf(ctx, s, docID)
-			if err != nil {
-				out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
-				return out, fmt.Errorf(
-					"batch %d of %d was accepted and its answer named no revision id, and the document could not be read for one, so the run stopped rather than sending the next batch without: %w",
-					i+1, len(batches), err)
-			}
-			next = read
+			// A batch still to send, and no revision to send it against. The
+			// loop reads nothing: a revision read here is the document as it is
+			// now, foreign edit included, so that edit would be adopted as this
+			// run's own and every batch behind it accepted against it. Stopping
+			// leaves a half-styled document, which a person can see, rather
+			// than a run that quietly styled over somebody's edit.
+			out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
+			return out, fmt.Errorf(
+				"batch %d of %d was accepted and its answer named no revision id, so the run stopped rather than sending the next batch against a revision read from the document, which could carry somebody else's edit",
+				i+1, len(batches))
 		}
 		out.RevisionID = next
 	}
@@ -451,24 +454,22 @@ type batchAnswer struct {
 // mask names documentId, revisionId and the named ranges, and it was measured
 // at 982 bytes against 12,907 for the document itself.
 //
-// It breaks the chain, and that is the cost of this fallback rather than a
-// property of it. Every other batch is sent against the revision the batch
-// before it produced, so an edit somebody else made in between refuses the next
-// batch at Docs. A revision read here is the document as it is now, foreign edit
-// included, so that edit is adopted as this run's own and the batches behind it
-// are accepted against it. Two things bound the cost. The answer was measured
-// carrying the field (docs/v2/DECISIONS.md, 2026-09-09), so this is the rare
-// path, and none of the four kinds the level carries can change a character, so
-// the loss is a paragraph's own run formatting rather than a word of anybody's
-// text. Stopping the run instead, which is what a refused batch gets, trades a
-// rare wrong landing for a half-styled document on every run whose answer went
-// quiet, and choosing between the two is Nail's.
-// docs/backlog/restyle-revision-fallback-breaks-the-chain.md holds it.
+// The apply loop does not call it. It breaks the chain: every batch is sent
+// against the revision the batch before it produced, so an edit somebody else
+// made in between refuses the next batch at Docs, and a revision read here is
+// the document as it is now, foreign edit included. Read mid-run, that edit
+// would be adopted as this run's own and the batches behind it accepted
+// against it, so a quiet answer with a batch still to send stops the run
+// instead (docs/v2/DECISIONS.md, 2026-09-18).
+// TestAnAnswerCarryingNoRevisionMidRunStopsTheRun is the pin.
 //
-// It is exported for the second caller, which is the prelude run: the marker
-// goes out in a batch of its own and the styling phase is sent against whatever
-// revision that batch produced, so a marker batch that came back
-// RevisionUnconfirmed needs this read before the styling can be sent at all.
+// It stays exported for its one caller, the prelude run in
+// cmd/gdoc/restyle.go: the marker goes out in a batch of its own and the
+// styling phase is sent against whatever revision that batch produced, so a
+// marker batch that came back RevisionUnconfirmed needs this read before the
+// styling can be sent at all. That read sits at a phase boundary rather than
+// between two batches of one run, and that caller's own comment says what it
+// costs.
 func RevisionOf(ctx context.Context, s Session, docID string) (string, error) {
 	var raw json.RawMessage
 	if err := s.GetJSON(ctx, docs.NamedRangesURL(docID), &raw); err != nil {

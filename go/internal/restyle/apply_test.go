@@ -28,11 +28,10 @@ type scripted struct {
 	// answers are what each POST comes back with, in order. A short list is a
 	// test asking for more writes than it scripted, which fails loudly.
 	answers []scriptedAnswer
-	// reads is how many times the loop fell back to a read, and readRevision
-	// what that read answers with. readErr fails it instead.
-	reads        int
-	readRevision string
-	readErr      error
+	// reads is how many times the loop read the document. The loop reads
+	// nothing between batches, so every test here wants 0 and GetJSON fails
+	// rather than answering.
+	reads int
 }
 
 // scriptedAnswer is one POST's outcome: the revision Docs reports back, or the
@@ -72,14 +71,7 @@ func (s *scripted) PostJSON(ctx context.Context, rawURL string, body any, into a
 
 func (s *scripted) GetJSON(ctx context.Context, rawURL string, into any) error {
 	s.reads++
-	if s.readErr != nil {
-		return s.readErr
-	}
-	out, err := json.Marshal(map[string]any{"documentId": "DOC1", "revisionId": s.readRevision})
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(out, into)
+	return fmt.Errorf("the loop must not read the document: it read %s", rawURL)
 }
 
 // sent marks an error as one raised after the server had accepted the request,
@@ -352,58 +344,50 @@ func TestAFirstBatchThatMayHaveLandedNeverSaysTheDocumentIsAsItWas(t *testing.T)
 	}
 }
 
-// An answer carrying no revision id leaves the loop with nothing to send the
-// next batch under, so it reads one. The read is for the revision alone:
-// nothing on the in-place allowlist changes a character, so no index the
-// requests carry can have moved.
-func TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone(t *testing.T) {
+// An answer carrying no revision id, with a batch still to send, leaves the
+// loop with nothing to send the next batch under. It stops the run rather than
+// reading the document for one: a revision read here is the document as it is
+// now, so a foreign edit made in the gap would be adopted as this run's own and
+// the batches behind it accepted against it. The batches that landed stay, and
+// the warnings say the document is half styled.
+func TestAnAnswerCarryingNoRevisionMidRunStopsTheRun(t *testing.T) {
 	oneRequestPerBatch(t, threeRequests())
-	s := &scripted{
-		answers:      []scriptedAnswer{{revision: ""}, {revision: "rev3"}, {revision: "rev4"}},
-		readRevision: "rev2",
-	}
-
-	got, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1")
-	if err != nil {
-		t.Fatalf("the run must hold: %v", err)
-	}
-
-	if s.reads != 1 {
-		t.Errorf("the loop read %d times, want 1: one answer carried no revision", s.reads)
-	}
-	if rev := revisionIn(t, s.posts[1]); rev != "rev2" {
-		t.Errorf("batch 2 carried %q, want rev2, the revision the read answered with", rev)
-	}
-	if got.Batches != 3 {
-		t.Errorf("Batches = %d, want 3", got.Batches)
-	}
-	// A revision the loop read for is a revision Docs named, so the flag that
-	// sends the caller to read for one stays off. A caller that reads it as set
-	// here makes a fourth request for a revision it already has.
-	if got.RevisionUnconfirmed {
-		t.Error("RevisionUnconfirmed is set on a run whose every batch answered with a revision the loop went on to use")
-	}
-}
-
-// The read that stands in for a missing revision can fail, and then the run has
-// no revision for the next batch. It stops rather than sending one without.
-func TestAFailedRevisionReadStopsTheRun(t *testing.T) {
-	oneRequestPerBatch(t, threeRequests())
-	s := &scripted{
-		answers: []scriptedAnswer{{revision: ""}, {revision: "rev3"}},
-		readErr: errors.New("the document could not be read"),
-	}
+	s := &scripted{answers: []scriptedAnswer{{revision: ""}, {revision: "rev3"}, {revision: "rev4"}}}
 
 	got, err := Apply(context.Background(), s, "DOC1", threeRequests(), "rev1")
 
 	if err == nil {
-		t.Fatalf("a failed revision read must fail the run, got %+v", got)
+		t.Fatalf("a quiet answer mid-run must fail the run, got %+v", got)
+	}
+	if !strings.Contains(err.Error(), "batch 1 of 3") || !strings.Contains(err.Error(), "revision") {
+		t.Errorf("the error must name the batch and the revision: %v", err)
+	}
+	if s.reads != 0 {
+		t.Errorf("the loop read %d times, want 0: it never reads between batches", s.reads)
 	}
 	if len(s.posts) != 1 {
 		t.Errorf("the loop sent %d batches, want 1: without a revision it sends nothing", len(s.posts))
 	}
 	if got.Batches != 1 {
-		t.Errorf("the first batch held, and Applied reports %d", got.Batches)
+		t.Errorf("Batches = %d, want 1: the first batch landed", got.Batches)
+	}
+	if got.RevisionID != "rev1" {
+		t.Errorf("RevisionID = %q, want rev1, the revision that batch was sent against", got.RevisionID)
+	}
+	if !got.RevisionUnconfirmed {
+		t.Error("RevisionUnconfirmed = false on a run whose last batch sent answered with no revision id")
+	}
+	// Neither flag belongs here. Docs accepted the batch and answered, so
+	// nothing was refused as stale and nothing may be in the document
+	// uncounted.
+	if got.Stale {
+		t.Error("Stale is set on a run no batch of which was refused")
+	}
+	if got.MaybeApplied {
+		t.Error("MaybeApplied is set on a run whose every sent batch was answered")
+	}
+	if joined := strings.Join(got.Warnings, " "); !strings.Contains(joined, "half styled") {
+		t.Errorf("the warnings must say the document is half styled: %v", got.Warnings)
 	}
 }
 

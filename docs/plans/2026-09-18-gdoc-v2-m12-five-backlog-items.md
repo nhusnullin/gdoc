@@ -424,31 +424,31 @@ paths that only run after a prelude phase that returned no error.
   `go/internal/restyle/doc.go`
 - Remove: `docs/backlog/restyle-revision-fallback-breaks-the-chain.md`
 
-- [ ] Test first, `TestAnAnswerCarryingNoRevisionMidRunStopsTheRun`: three
+- [x] Test first, `TestAnAnswerCarryingNoRevisionMidRunStopsTheRun`: three
       one-request batches, answers `{"", "rev3", "rev4"}`, `readRevision`
       `"rev2"` available; the run returns an error containing `batch 1 of 3`
       and `revision`; `s.reads` is 0; one POST; `Batches` 1; `RevisionID`
       `"rev1"`; `RevisionUnconfirmed` true; `Stale` and `MaybeApplied` false;
       the joined warnings contain `half styled`. Watch it fail.
-- [ ] Delete `TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone` and
+- [x] Delete `TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone` and
       `TestAFailedRevisionReadStopsTheRun`; keep
       `TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead` unchanged.
       In `scripted`, drop `readRevision` and `readErr`, keep `reads`, and have
       `GetJSON` count the read and return an error saying the loop must not
       read; shrink the field comment to match.
-- [ ] `apply`: in the `next == ""` branch, append `RevisionUnconfirmedWarning`
+- [x] `apply`: in the `next == ""` branch, append `RevisionUnconfirmedWarning`
       and set the flag for every quiet answer; if it is the last batch, break;
       otherwise append `out.leftBehind(len(batches), false)` and return the
       error in Technical Details. The `RevisionOf` call leaves the loop.
-- [ ] `RevisionOf`'s comment: it is no longer called by the loop, it names the
+- [x] `RevisionOf`'s comment: it is no longer called by the loop, it names the
       new test, and it names its one caller in `cmd/gdoc`. `doc.go:142`: the
       paragraph "The loop reads between batches" becomes "The loop reads
       nothing between batches", says why, and names the two pins.
-- [ ] `grep -rn 'RevisionOf(' go/` shows the definition and
+- [x] `grep -rn 'RevisionOf(' go/` shows the definition and
       `cmd/gdoc/restyle.go` only.
-- [ ] `cd go && go test -race ./internal/restyle/ ./cmd/...` passes.
-- [ ] `git rm docs/backlog/restyle-revision-fallback-breaks-the-chain.md`
-- [ ] `git commit -m "fix(restyle): a quiet answer mid-run stops the loop instead of reading the revision"`
+- [x] `cd go && go test -race ./internal/restyle/ ./cmd/...` passes.
+- [x] `git rm docs/backlog/restyle-revision-fallback-breaks-the-chain.md`
+- [x] `git commit -m "fix(restyle): a quiet answer mid-run stops the loop instead of reading the revision"`
 
 ### Task 3: the offline gate pins the measured pair
 
