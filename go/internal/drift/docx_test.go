@@ -213,12 +213,19 @@ func docxOf(t *testing.T, styles string) *Docx {
 // reading is nothing: the row goes MISSING rather than carrying a number in the
 // wrong unit. Measured by the M5 review, 2026-09-08.
 func TestAnExactLineHeightIsNotAPercentage(t *testing.T) {
+	// The defaults and a base style both state 115%, the way the master does,
+	// so nothing here can read as nil by having nothing to inherit.
+	const inherited = `<w:docDefaults><w:pPrDefault><w:pPr><w:spacing w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>` +
+		`<w:style w:type="paragraph" w:styleId="Normal"><w:pPr><w:spacing w:line="276" w:lineRule="auto"/></w:pPr></w:style>`
 	style := func(rule string) string {
 		attr := ""
 		if rule != "" {
 			attr = ` w:lineRule="` + rule + `"`
 		}
-		return `<w:style w:type="paragraph" w:styleId="Tall"><w:pPr><w:spacing w:line="360"` + attr + `/></w:pPr></w:style>`
+		return inherited + `<w:style w:type="paragraph" w:styleId="Tall"><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:line="360"` + attr + `/></w:pPr></w:style>`
+	}
+	if got := docxOf(t, inherited).Style("Normal").LineSpacing; got != 115.0 {
+		t.Fatalf("the fixture's base style read %v, and it states 115%%", got)
 	}
 	if got := docxOf(t, style("auto")).Style("Tall").LineSpacing; got != 150.0 {
 		t.Errorf("line=360 under auto read %v, and 360/240 is 150%%", got)
