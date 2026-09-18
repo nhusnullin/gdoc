@@ -558,18 +558,50 @@ an unknown key; an empty list.
 
 ### Task 8: Verify acceptance criteria
 
-- [ ] `gdoc annotate <url> --from annotations.json` on a throwaway document
+- [x] `gdoc annotate <url> --from annotations.json` on a throwaway document
       leaves one anchored 🤖 comment per entry and the envelope says
       `verified: true` for each.
-- [ ] `gdoc annotate <url> --quote "..." --body-file why.txt` leaves one.
-- [ ] Every refusal in Technical Details is reproduced by hand once and names
+      ➕ Run 2026-09-18 against document `1H4P2Pu10Qah6A0Oa6i5Oga-9duV18pEPdPOlWEDj_G0`,
+      published into the test folder from `release/example/first-note.md`. Two
+      entries, both `sent: true`, `comment_update_state: ALL_SAVED`,
+      `drive_listing true`, `docx_anchored true`, `verified true`, `ok: true`.
+- [x] `gdoc annotate <url> --quote "..." --body-file why.txt` leaves one.
+      ➕ Same document, one entry on `the identity provider`, all three answers
+      as above. `gdoc comments --witness` then read all three threads back:
+      each opens with `🤖 ` and each is `anchored`. The document was trashed
+      after the run.
+- [x] Every refusal in Technical Details is reproduced by hand once and names
       what is wrong.
-- [ ] The guard tests are green with no assertion changed.
-- [ ] `bin/gdoc help annotate` prints the usage line above, and
+      ➕ Reproduced against the built binary: no input, `--from` beside
+      `--quote`, `--quote` without `--body-file`, `--body-file` without
+      `--quote`, an unknown key, an empty list, a quote with no text, a quote
+      carrying a line break, an empty why, a why opening with the robot, a why
+      carrying `**`, and no url. Each printed one object naming what is wrong
+      and exited 1. ⚠️ The more-than-one-tab refusal is the one that cannot be
+      reproduced without a multi-tab document to hand; it stays covered by
+      `TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite`, which also
+      pins that no POST leaves the machine.
+- [x] The guard tests are green with no assertion changed.
+      ➕ `git diff main...HEAD -- go/internal/guard/` is empty and
+      `go test -race -count=1 ./internal/guard/` passes.
+- [x] `bin/gdoc help annotate` prints the usage line above, and
       `bin/gdoc completion zsh --out /dev/stdout` carries the command.
-- [ ] `make test`, `make vet` and `make build` pass.
-- [ ] Nothing to commit: this task changes no file. If it finds something,
+      ➕ The help line is the literal
+      `Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]`.
+      `--out /dev/stdout` is refused because the file is already there, which is
+      the `--force` rule working; written to a temp file instead, the zsh script
+      carries `annotate` in the command list, the description line and its own
+      arm, and the bash script carries it in three places too.
+- [x] `make test`, `make vet` and `make build` pass.
+      ⚠️ `make test` fails in this shell only because the ralphex environment
+      exports `GDOC_LIVE_TEST=1` and `GDOC_LIVE_WRITE=1` without
+      `GDOC_LIVE_IDEAL_DOC_ID`, so `TestLiveRestylePreservesTenFeatures` stops
+      and says the copy grant names no source. That test is untouched on this
+      branch. With the three live variables unset, `cd go && go test -race
+      ./...` passes in every package, which is this plan's own validation line.
+- [x] Nothing to commit: this task changes no file. If it finds something,
       that is a ➕ task with its own commit.
+      ➕ Nothing found. The only change is this plan's checkboxes.
 
 ### Task 9: Update documentation
 
