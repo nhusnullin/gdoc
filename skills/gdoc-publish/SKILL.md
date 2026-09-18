@@ -32,6 +32,16 @@ is one the skill is ahead of: say so, say that `gdoc update` is the command
 that fixes it, and stop there. No `version` at all is a build made from source
 rather than a release, which is not an error: say it once and carry on.
 
+The same object may also carry `update`, which says what is installed and what
+is published: `installed`, `latest_stable`, `latest_nightly` and `checked_at`.
+When `latest_stable` is there and its three numbers are ahead of `version`,
+say once that a newer gdoc is published, name it, and name what installs it:
+`gdoc update`, or `gdoc update --major` when the first of the three numbers is
+the one that is ahead, because a major release is one a person asks for by
+name. Then carry on with the work. This is a remark and never a gate:
+`needs` is the only version that stops a session. No `update` key at all is a
+build from a checkout, and the skill says nothing about it.
+
 One root, `$ROOT`, and it is `$PWD`. It is the hub: the tree the note lives in,
 and the only place a note is read from or written to. Scratch output, the dry
 run's docx included, goes to the session's scratchpad and never beside somebody's

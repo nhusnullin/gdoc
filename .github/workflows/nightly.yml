@@ -72,26 +72,26 @@ jobs:
           echo "main moved since $last. The next nightly tag is $next."
 
           if [ "${DRY_RUN:-false}" = "true" ]; then
-            echo "This is a dry run. Nothing was written, committed, tagged or published."
+            echo "This is a dry run. Nothing was tagged and nothing was published."
             exit 0
           fi
           echo "tag=$next" >> "$GITHUB_OUTPUT"
 
-      # The version the plugin reports moves with the tag, or release.yml
-      # refuses the tag this step just pushed.
-      - name: bump the plugin version, commit and tag
+      # main as it stands, tagged. Nothing is written and nothing is committed,
+      # so the tag sits on the commit a person pushed.
+      #
+      # The plugin version does not follow. That string is Claude Code's own
+      # update mechanism for the skills: a colleague receives a new copy when
+      # it changes and not otherwise, so moving it nightly would re-install the
+      # skills on every machine every night to carry a binary release they did
+      # not ask for. `make tag` moves it, for x.y.0, and release.yml checks it
+      # for x.y.0 only.
+      - name: tag main
         if: steps.next.outputs.tag != ''
         env:
           TAG: ${{ steps.next.outputs.tag }}
         run: |
-          jq --arg tag "$TAG" '.version = $tag' .claude-plugin/plugin.json > plugin.json.new
-          mv plugin.json.new .claude-plugin/plugin.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .claude-plugin/plugin.json
-          git commit -m "chore: nightly $TAG"
           git tag "$TAG"
-          git push origin HEAD:main
           git push origin "refs/tags/$TAG"
 
   release:

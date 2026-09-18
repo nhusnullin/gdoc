@@ -23,23 +23,22 @@ also download the zip from the releases page, unpack it, and run the
 ## The skills
 
 The binary does the work and three Claude Code skills drive it: `gdoc-review`,
-`gdoc-publish` and `gdoc-restyle`. How you install them depends on what your
-Claude Code allows. One command tells you which case you are in:
+`gdoc-publish` and `gdoc-restyle`.
+
+**In the hub, they are already there.** The hub asks you once to trust its
+settings. Say yes, and you have all three, kept up to date for you.
+
+**Outside the hub**, two commands install them:
 
 ```
 /plugin marketplace add nhusnullin/gdoc
-```
-
-**It worked.** Install the plugin and you have all three skills:
-
-```
 /plugin install altery@gdoc
 ```
 
 Claude Code asks whether you want them everywhere or in this project only, and
 it keeps their update switch in `/plugin`, on the marketplace's own screen.
 
-**It was refused.** Your Claude Code does not take marketplaces. Install the
+**Marketplaces were refused.** Your Claude Code does not take them. Install the
 skills from the release zip instead, with `--skills global` for every project or
 `--skills local` for this one:
 
@@ -49,8 +48,8 @@ curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/instal
 
 These are copies, so run the same line again after `gdoc update`.
 
-**It was refused and `--skills` changed nothing.** Your Claude Code is locked to
-plugins your administrator turns on. Send them this repository and these two
+**They were refused and `--skills` changed nothing.** Your Claude Code is locked
+to plugins your administrator turns on. Send them this repository and these two
 keys for `managed-settings.json`: `extraKnownMarketplaces` naming
 `nhusnullin/gdoc`, and `enabledPlugins` turning `altery@gdoc` on.
 
@@ -76,7 +75,8 @@ before it stops refreshing.
 
 ## Updates
 
-Nothing updates on its own. `gdoc update` runs when you type it, and never otherwise:
+Once a day `gdoc help` asks GitHub what is published and prints one line when
+yours is behind. It downloads nothing: installing is yours to type.
 
 ```
 gdoc update              take the newest stable release

@@ -70,6 +70,7 @@ type workflowJobFields struct {
 type workflowStep struct {
 	Name string `yaml:"name"`
 	Uses string `yaml:"uses"`
+	If   string `yaml:"if"`
 	Run  string `yaml:"run"`
 }
 
@@ -106,11 +107,11 @@ func TestTheReleaseRunsOnATagAndWhenTheNightlyCallsIt(t *testing.T) {
 }
 
 // TestTheReleaseRefusesATagThePluginDoesNotName holds the version rule at the
-// only place it can be held. `make tag` writes the version into plugin.json
-// and the nightly writes the one it cut, so a tag whose manifest says
-// something else is a plugin reporting a version no colleague can place
-// against a release. The refusal comes before the build, because a release
-// that is going to be refused should cost nothing.
+// only place it can be held. `make tag` writes the version into plugin.json as
+// it cuts an x.y.0, so a tag whose manifest says something else is a plugin
+// reporting a version no colleague can place against a release. The refusal
+// comes before the build, because a release that is going to be refused should
+// cost nothing.
 func TestTheReleaseRefusesATagThePluginDoesNotName(t *testing.T) {
 	steps := releaseSteps(t)
 
@@ -128,6 +129,32 @@ func TestTheReleaseRefusesATagThePluginDoesNotName(t *testing.T) {
 	}
 	if check > build {
 		t.Error("release.yml builds before it checks the version against the tag; the refusal is cheap and belongs first")
+	}
+}
+
+// TestOnlyMakeTagMovesThePluginVersion holds the one number a colleague reads.
+// The plugin is pinned by its version string: Claude Code hands somebody a new
+// copy when that string changes and not otherwise, so the string is a release
+// of the skills and not a release of the binary. The nightly releases the
+// binary, every night main moves, and nobody wants the skills re-installed
+// nightly. So the nightly stops touching the manifest and commits nothing, and
+// the release workflow asks the manifest to match the tag only when the tag is
+// an x.y.0 that `make tag` cut.
+func TestOnlyMakeTagMovesThePluginVersion(t *testing.T) {
+	night := workflowScript(t, readWorkflow(t, "nightly.yml"))
+	for _, forbidden := range []string{"plugin.json", "git commit"} {
+		if strings.Contains(night, forbidden) {
+			t.Errorf("nightly.yml says %q; a nightly is a binary release, and moving the plugin version would re-install the skills on every colleague's machine every night", forbidden)
+		}
+	}
+
+	steps := releaseSteps(t)
+	check := stepSaying(steps, "plugin.json")
+	if check < 0 {
+		t.Fatal("release.yml never reads .claude-plugin/plugin.json; nothing would hold an x.y.0 tag against the version the plugin reports")
+	}
+	if !strings.Contains(steps[check].If, ".0") {
+		t.Errorf("release.yml's plugin check runs on the condition %q; a nightly tag carries a patch the manifest never names, so the check is for x.y.0 tags", steps[check].If)
 	}
 }
 
@@ -257,10 +284,8 @@ func TestTheNightlyCutsThePatchAndOnlyWhenMainMoved(t *testing.T) {
 		// Only the patch moves. The minor is `make tag`'s and the nightly
 		// cutting one would collide with the next release Nail cuts by hand.
 		"patch + 1",
-		// The version the plugin reports moves with the tag, or the release
-		// workflow refuses the tag this one just pushed.
-		"plugin.json",
-		"chore: nightly",
+		// main as it stands, tagged. What the tag does not move is
+		// TestOnlyMakeTagMovesThePluginVersion's.
 		"git tag",
 	} {
 		if !strings.Contains(script, want) {
@@ -294,7 +319,7 @@ func TestTheNightlyPublishesThroughTheReleaseWorkflow(t *testing.T) {
 		t.Errorf("nightly.yml passes secrets %q to the release workflow; it needs inherit, or the build carries no client secret", caller.Secrets)
 	}
 	if w.Permissions["contents"] != "write" {
-		t.Errorf("nightly.yml has contents permission %q; it commits the version bump and pushes a tag", w.Permissions["contents"])
+		t.Errorf("nightly.yml has contents permission %q; it pushes the tag it cut", w.Permissions["contents"])
 	}
 }
 

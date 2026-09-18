@@ -133,8 +133,10 @@ Serves principle 3. This is the safety property everything else stands on.
   credential, because the only bearer gdoc holds is Google's, and the wire
   refuses one on the host rather than on the grant. A policy nobody granted an
   update refuses every one of those hosts by name, and nothing the grant admits
-  is a document, so the reachable set is untouched. `gdoc update` is what opens
-  it, and nothing else does. Added 2026-09-16, DECISIONS.md.
+  is a document, so the reachable set is untouched. Two callers open it:
+  `gdoc update`, and the once-a-day check in `gdoc help`, which reads the
+  listing and replaces nothing. Added 2026-09-16, the second caller 2026-09-18,
+  DECISIONS.md.
 - **The level-1 write bar is what gdoc asks for, not what the server is known to
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from
@@ -368,10 +370,12 @@ last tag. `z == 0` is stable, `z > 0` is nightly, and nothing else records which
 is which. The linker sets it from the tag, so a binary built from a checkout is
 `dev` and prints no version at all: `version` rides in the envelope only when
 there is a release behind it, and `gdoc help` and `gdoc auth status` read the
-same value. The plugin carries the same number, and a release whose tag and
-`.claude-plugin/plugin.json` disagree is refused by the workflow. Builds are
-trimmed and stripped, so no home path ships and one tag is the same bytes on
-every machine.
+same value. The plugin carries the last stable number: `make tag` writes it
+into `.claude-plugin/plugin.json`, the nightly leaves that file alone, and an
+`x.y.0` release whose tag and plugin disagree is refused by the workflow. A
+nightly is a binary release and never a plugin release. Builds are trimmed and
+stripped, so no home path ships and one tag is the same bytes on every
+machine.
 
 **A release is one GitHub Release of this repository**, which is public since
 2026-09-16. A tag builds it: the four checks every push runs, then `make dist`
@@ -394,23 +398,27 @@ status`. It asks nothing and it edits no shell file.
 **The skills travel as a Claude Code plugin.** This repository carries
 `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is
 both the plugin and the marketplace, and `skills/` stays where it is. A
-colleague runs `/plugin marketplace add nhusnullin/gdoc` and `/plugin install
-altery@gdoc`, chooses global or per-project in Claude Code's own terms, and
-updates on that marketplace's toggle. Two fallbacks exist by policy, because a
-managed Claude Code can refuse a marketplace and can refuse personal and project
-skills with it: `install.sh --skills global|local` copies `skills/` out of the
-zip, marked so a re-run replaces only what it wrote, and an administrator names
-this marketplace in `extraKnownMarketplaces` and turns the plugin on in
-`enabledPlugins`. A checkout still links its skills and never copies them, and
-nothing in the binary copies a skill folder.
+colleague working in the hub gets all three from the hub's own committed
+`.claude/settings.json`, which names this marketplace in
+`extraKnownMarketplaces` with `autoUpdate: true` and turns `altery@gdoc` on in
+`enabledPlugins`: one trust prompt and the plugin is there. Outside the hub the
+two `/plugin` lines are the route, `/plugin marketplace add nhusnullin/gdoc`
+and `/plugin install altery@gdoc`, global or per-project in Claude Code's own
+terms. Claude Code delivers a plugin when its `version` string changes, which
+is why that string moves on `make tag` and on nothing else. Two fallbacks exist
+by policy, because a managed Claude Code can refuse a marketplace and can
+refuse personal and project skills with it: `install.sh --skills global|local`
+copies `skills/` out of the zip, marked so a re-run replaces only what it
+wrote, and an administrator names the same two keys in
+`managed-settings.json`. A checkout still links its skills and never copies
+them, and nothing in the binary copies a skill folder.
 
-**`gdoc update` runs when a person types it and never otherwise.** No check when
-a session starts, no scheduler, no stamp file. It reads one page of releases,
-asking for a hundred, because GitHub answers thirty by default and the nightly
-would push the last hand-cut stable release off a page that size in about a
-month. What it takes: the same `x` with
-a higher `y` by default, a higher `x` only with `--major`, a higher `z` only
-with `--nightly`, and never a version below the one installed. `--check` reports
+**`gdoc update` installs when a person types it and never otherwise.** It reads
+one page of releases, asking for a hundred, because GitHub answers thirty by
+default and the nightly would push the last hand-cut stable release off a page
+that size in about a month. What it takes: the same `x` with a higher `y` by
+default, a higher `x` only with `--major`, a higher `z` only with `--nightly`,
+and never a version below the one installed. `--check` reports
 what a run would take and writes nothing; `--rollback` puts the previous binary
 back. The zip is verified against the release's own checksum before a byte is
 replaced, the binary that was there is kept beside the new one, and the object
@@ -419,6 +427,23 @@ names one of `up_to_date`, `updated`, `major_available`, `checked`,
 further where there is one. Unreachable is `ok: true` with a warning, because a
 network that is not there is not a failed update. The command holds no state
 between runs.
+
+**`gdoc help` asks what is published, once a day.** It is the one thing gdoc
+does that nobody typed, and the whole of it is one read. A stamp,
+`update-check.json` beside the token file, holds when gdoc last asked and what
+it heard. `help` refreshes it when it is missing, unreadable or older than 24
+hours, on the grant above, under a two-second ceiling rather than the listing's
+five, with no credential and no document id. A failed check is stamped too, so
+a machine that cannot reach GitHub pays the ceiling once a day rather than once
+a run. A binary built from a checkout carries no version, so it has nothing to
+compare and never asks. Every other command is as fast and as offline from
+GitHub as it ever was. The object carries `update` with `installed`,
+`latest_stable`, `latest_nightly`, `checked_at` and `error`, and judges none of
+them; one line on stderr, beside the help prose, names a newer stable of the
+same major and `gdoc update`, or `gdoc update --major` across a major, and is
+absent when there is nothing to say. Nothing is downloaded and nothing is
+replaced: the install still waits for a person to type it. Added 2026-09-18,
+DECISIONS.md.
 
 ## The skills, and how a comment reaches one
 
@@ -500,8 +525,10 @@ where it cannot.
 - Never delete from the hub.
 - Never run git, in the binary or in the skills.
 - Never prompt, in the binary, and never in the installer either.
-- Never update unasked. `gdoc update` runs when a person types it and at no
-  other moment.
+- Never install unasked. `gdoc update` replaces the binary when a person types
+  it and at no other moment. The one thing that runs by itself is the check in
+  `gdoc help`, once a day, which reads what is published and writes one file of
+  gdoc's own.
 - Never export a PDF. Nail downloads it from the browser.
 - Never write to a multi-tab document.
 - Never write markdown into a comment thread.

@@ -305,23 +305,23 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Create: `go/internal/lastcheck/doc.go`, `lastcheck.go`, `lastcheck_test.go`
 - Modify: `go/internal/config/config.go`, `config_test.go` (the path)
 
-- [ ] Test first, `TestAWrittenStampReadsBackByteForByte`: write a stamp
+- [x] Test first, `TestAWrittenStampReadsBackByteForByte`: write a stamp
       into a temp config dir, read the file, compare the bytes with a literal.
-- [ ] Test, `TestMissingCorruptAndOldAreEachStaleAndNamed`: no file, a file
+- [x] Test, `TestMissingCorruptAndOldAreEachStaleAndNamed`: no file, a file
       holding `{`, and a file whose `checked_at` is 25 hours before the clock
       handed in are each stale, and each reason names what was wrong. A file
       23 hours old is fresh.
-- [ ] Test, `TestTheIntervalIsADay`: the literal `24h`, never the constant.
-- [ ] Test, `TestAWriteLeavesNoTempFileBehind`: after `Write` the config dir
+- [x] Test, `TestTheIntervalIsADay`: the literal `24h`, never the constant.
+- [x] Test, `TestAWriteLeavesNoTempFileBehind`: after `Write` the config dir
       holds one file.
-- [ ] `config.LastCheckPath()` beside `TokenPath()`, with its case in
+- [x] `config.LastCheckPath()` beside `TokenPath()`, with its case in
       `TestEnvOverrideWins`.
-- [ ] `lastcheck.Read(path, now)` and `lastcheck.Write(path, stamp)`, the
+- [x] `lastcheck.Read(path, now)` and `lastcheck.Write(path, stamp)`, the
       write through `atomicfile.Replace` at mode 0600 like the token. Strict
       decoding, refused by name, as every input is.
-- [ ] `doc.go` opens `Package lastcheck` and names the four tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): the stamp of the last release check"`
+- [x] `doc.go` opens `Package lastcheck` and names the four tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): the stamp of the last release check"`
 
 ### Task 2: help checks once a day and prints the facts
 
@@ -331,43 +331,43 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Modify: `go/cmd/gdoc/update_test.go` (`TestNothingChecksForUpdatesUnasked`)
 - Modify: `go/cmd/gdoc/doc.go`
 
-- [ ] Test first, `TestAStaleStampMakesHelpAskOnce`: `version` set to
+- [x] Test first, `TestAStaleStampMakesHelpAskOnce`: `version` set to
       `v2.2.0`, no stamp, `stubPlain` listing `v2.3.0` and `v2.3.4`; `help`
       makes one request, the stamp lands with both versions, the object's
       `update` carries the four facts, and stderr opens with the line naming
       `v2.3.0` and `gdoc update`.
-- [ ] Test, `TestAFreshStampMakesNoRequest`: a stamp 23 hours old and a reach
+- [x] Test, `TestAFreshStampMakesNoRequest`: a stamp 23 hours old and a reach
       whose `GetJSON` fails the test; the object still carries `update` from
       the stamp.
-- [ ] Test, `TestACheckoutBuildNeverChecks`: `version` left as `dev`, no stamp,
+- [x] Test, `TestACheckoutBuildNeverChecks`: `version` left as `dev`, no stamp,
       the same failing reach; no request, no stamp written, no `update` key.
-- [ ] Test, `TestTheCheckIsBoundedByTwoSeconds`: the context the reach saw
+- [x] Test, `TestTheCheckIsBoundedByTwoSeconds`: the context the reach saw
       carries a deadline at most two seconds from the test's clock, literal.
-- [ ] Test, `TestAnUnreachableGitHubIsStampedAndHelpStillAnswers`: the four
+- [x] Test, `TestAnUnreachableGitHubIsStampedAndHelpStillAnswers`: the four
       causes `TestAnUnreachableGitHubIsAnAnswerAndNotAFailure` lists; each is
       `ok: true`, writes the stamp with `error`, and carries a warning naming
       the cause. A second `help` in the same test makes no request.
-- [ ] Test, `TestAStampThatCannotBeWrittenIsOneWarning`: config dir made
+- [x] Test, `TestAStampThatCannotBeWrittenIsOneWarning`: config dir made
       read-only; `ok: true`, one warning, one request and not two.
-- [ ] Test, `TestTheHelpCheckOpensThePolicyTheUpdateOpens`: the same judge as
+- [x] Test, `TestTheHelpCheckOpensThePolicyTheUpdateOpens`: the same judge as
       `TestTheUpdateRunReachesTheReleasesAndNothingElse`, against the policy
       `help` opened.
-- [ ] Test, `TestTheLineNamesMajorForAMajor`: latest stable `v3.0.0`, the
+- [x] Test, `TestTheLineNamesMajorForAMajor`: latest stable `v3.0.0`, the
       line names `gdoc update --major`; latest stable equal to installed, no
       line at all.
-- [ ] Test, `TestReadNeverReachesTheCheck`: `read` with a stale stamp and the
+- [x] Test, `TestReadNeverReachesTheCheck`: `read` with a stale stamp and the
       failing reach, against the existing fake session; no request.
-- [ ] `TestNothingChecksForUpdatesUnasked` rewritten: `update.go` and
+- [x] `TestNothingChecksForUpdatesUnasked` rewritten: `update.go` and
       `notice.go` import `internal/update`, no third file does, and the table
       still names `cmdUpdate` once.
-- [ ] `notice.go` as the Solution Overview says. `cmdHelp` takes `ctx`; the
+- [x] `notice.go` as the Solution Overview says. `cmdHelp` takes `ctx`; the
       three call sites hand it through.
-- [ ] `doc.go`: the section "The update runs when it is typed, and at no other
+- [x] `doc.go`: the section "The update runs when it is typed, and at no other
       moment" becomes "The update runs when it is typed; help asks once a
       day", naming the tests above and the two files that may reach the
       updater.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(v2): help notices a newer release once a day"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(v2): help notices a newer release once a day"`
 
 ### Task 3: the skills say one line and carry on
 
@@ -376,19 +376,19 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
   `skills/gdoc-restyle/SKILL.md`
 - Modify: `go/cmd/gdoc/skills_test.go`
 
-- [ ] Test first, `TestEverySkillNeedsAStableRelease`: every `needs` line
+- [x] Test first, `TestEverySkillNeedsAStableRelease`: every `needs` line
       parses and its third number is 0; a fixture with `needs: v2.1.3` is
       caught and named.
-- [ ] Test, `TestNoSkillRunsUpdateOnItsOwn` stays green after the wording
+- [x] Test, `TestNoSkillRunsUpdateOnItsOwn` stays green after the wording
       lands, which proves the new paragraph names the command in prose and
       never on a call line.
-- [ ] The paragraph under Setup in each skill, after the `needs` sentence:
+- [x] The paragraph under Setup in each skill, after the `needs` sentence:
       read `update.latest_stable` when the object carries it, compare with
       `version` as three numbers, and when it is ahead say once that a newer
       gdoc is published and that `gdoc update` installs it, then carry on. No
       `update` key is a checkout build, and the skill says nothing about it.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(skill): the skills mention a newer gdoc once and carry on"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(skill): the skills mention a newer gdoc once and carry on"`
 
 ### Task 4: the plugin carries a stable number only
 
@@ -396,18 +396,18 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Modify: `.github/workflows/nightly.yml`, `.github/workflows/release.yml`
 - Modify: `go/boundary/workflows_test.go`, `doc.go`
 
-- [ ] Test first, `TestOnlyMakeTagMovesThePluginVersion`: `nightly.yml`
+- [x] Test first, `TestOnlyMakeTagMovesThePluginVersion`: `nightly.yml`
       contains no `plugin.json` and no `git commit`; `release.yml`'s plugin
       check step carries an `if` on a tag matching `\.0$`.
-- [ ] `nightly.yml`: the bump step becomes a tag step, tagging `main` as it
+- [x] `nightly.yml`: the bump step becomes a tag step, tagging `main` as it
       stands and pushing the tag; the comment says why the plugin does not
       follow.
-- [ ] `release.yml`: the check "the plugin version is the tag" runs for
+- [x] `release.yml`: the check "the plugin version is the tag" runs for
       `x.y.0` tags only, with one sentence saying a nightly is a binary
       release and never a plugin release.
-- [ ] `boundary/doc.go` names the test.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "ci: the nightly tags the binary and leaves the plugin version alone"`
+- [x] `boundary/doc.go` names the test.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "ci: the nightly tags the binary and leaves the plugin version alone"`
 
 ### Task 5: the documents that stated the old rule
 
@@ -418,44 +418,48 @@ gdoc v3.0.0 is published and this is v2.2.0. It is a major release: `gdoc update
 - Modify: `go/internal/update/doc.go`
 - Create: `docs/backlog/update-check-has-no-off-switch.md`
 
-- [ ] Test first: `TestCLAUDEmdIsUnderTheCeiling` and
+- [x] Test first: `TestCLAUDEmdIsUnderTheCeiling` and
       `TestTheTaskMapNamesFilesThatExist` stay green, and the task map gains
       the row "a release notice, the stamp" naming `go/internal/lastcheck/doc.go`
       and `go/cmd/gdoc/doc.go`.
-- [ ] SPEC.md: the guard paragraph says `gdoc update` and the daily check in
+- [x] SPEC.md: the guard paragraph says `gdoc update` and the daily check in
       `help` open the grant; "Install and update" replaces "No check when a
       session starts, no scheduler, no stamp file" with the stamp, the
       interval, the ceiling and the facts, and says the plugin carries a stable
       number; the Never list's "Never update unasked" becomes "Never install
       unasked", with the check named as the one thing that runs by itself.
-- [ ] CLAUDE.md: the fifth-grant invariant names two callers; the skills
+- [x] CLAUDE.md: the fifth-grant invariant names two callers; the skills
       invariant says the hub declares the marketplace.
-- [ ] `release/README.md`: "The skills" opens with the hub route and one trust
+- [x] `release/README.md`: "The skills" opens with the hub route and one trust
       prompt, keeps the `/plugin` lines for a machine outside the hub, and
       keeps the two fallbacks; "Updates" says gdoc tells you once a day and
       installs when you type `gdoc update`; "What gdoc never does" keeps
       "never updates itself".
-- [ ] `internal/update/doc.go`: one sentence that the stamp lives in
+- [x] `internal/update/doc.go`: one sentence that the stamp lives in
       `internal/lastcheck` and this package still holds no state.
-- [ ] DECISIONS.md: the 2026-09-18 entry written with this plan gains what
+- [x] DECISIONS.md: the 2026-09-18 entry written with this plan gains what
       Task 2 measured, the time a cold `help` takes on this machine.
-- [ ] PLAN.md: the standing fact about the plugin number.
-- [ ] The backlog item: why there is no off switch, what it would look like,
+- [x] PLAN.md: the standing fact about the plugin number.
+- [x] The backlog item: why there is no off switch, what it would look like,
       and what would make it worth adding.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs(v2): the release notice, and the plugin on the stable number"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs(v2): the release notice, and the plugin on the stable number"`
 
 ### Task 6: the hub, by hand
 
 Not a ralphex task. Nail runs it in `nhusnullin/intelligence-hub` after the
 milestone lands on `main` and a tagged release carries it.
 
-- [ ] The two keys from Technical Details into the hub's `.claude/settings.json`,
-      committed with `chore: the gdoc marketplace, auto-updated`.
-- [ ] `"altery@gdoc": false` in the hub's `.claude/settings.local.json` on
-      this machine.
-- [ ] A fresh clone of the hub in a scratch directory, opened in Claude Code:
+- [x] The two keys from Technical Details into the hub's `.claude/settings.json`,
+      committed with `chore: the gdoc marketplace, auto-updated`. (skipped, not
+      automatable: another repository, and Nail commits it by hand.)
+- [x] `"altery@gdoc": false` in the hub's `.claude/settings.local.json` on
+      this machine. (skipped, not automatable: an untracked local file in
+      another repository.)
+- [x] A fresh clone of the hub in a scratch directory, opened in Claude Code:
       the trust prompt appears once, `/plugin` lists `altery@gdoc` installed
-      and the marketplace with auto-update on.
-- [ ] `release/README.md` re-read against what the clone showed, and corrected
-      in this repository if it differs.
+      and the marketplace with auto-update on. (skipped, not automatable:
+      the trust prompt is interactive.)
+- [x] `release/README.md` re-read against what the clone showed, and corrected
+      in this repository if it differs. (skipped, not automatable: it depends
+      on what the manual clone showed.)

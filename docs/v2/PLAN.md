@@ -22,8 +22,10 @@ one is written against the code that exists by then.
   ones until a colleague has run the Windows checklist.
 - Versions are `x.y.z` and they come from the tag. `x.y.0` is stable and Nail
   cuts it with `make tag`; `x.y.(z+1)` is nightly and CI cuts it when main has
-  moved. `.claude-plugin/plugin.json` carries the same number until M10 lands,
-  and the last stable number after it.
+  moved. `.claude-plugin/plugin.json` carries the last stable number, written by
+  `make tag` alone: Claude Code delivers a plugin when that string changes, so
+  the nightly leaves it where it is and there is no nightly channel for skills.
+  2026-09-18, DECISIONS.md.
 - One template. Everything is measured against `altery-group-policy-v1.0`, and a
   second one is a decision nobody has taken.
 

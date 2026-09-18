@@ -300,8 +300,8 @@ func commands() []command {
 			anyWords: true,
 			summary:  "Print every command gdoc takes, or the words and flags of one.",
 			example:  "gdoc help publish",
-			run: func(_ context.Context, a *args, errOut io.Writer) emit.Result {
-				return cmdHelp(a.positional, errOut)
+			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
+				return cmdHelp(ctx, a.positional, errOut)
 			},
 		},
 		{

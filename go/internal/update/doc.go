@@ -2,6 +2,11 @@
 // release of which channel a machine would install, what a run does about the
 // difference, and the replacement itself. It holds no wire and no state.
 //
+// It still holds none after the daily check landed on 2026-09-18: what
+// remembers when gdoc last asked GitHub, and what it heard, is the stamp file
+// in internal/lastcheck, and this package is handed those versions the same
+// way the command hands it a listing.
+//
 // Everything but the replacement is a function over values. The command in
 // cmd/gdoc opens the policy, fetches through internal/gapi and carries the
 // decision out; this package is handed what came back and answers. That is

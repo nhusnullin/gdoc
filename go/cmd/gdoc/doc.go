@@ -246,29 +246,58 @@
 // test files too. The script is checked structurally here, and a person types
 // Tab at it once per milestone.
 //
-// # The update runs when it is typed, and at no other moment
+// # The update runs when it is typed; help asks once a day
 //
-// `gdoc update` is the one command that reaches a host which is not Google's,
-// and it is the one command that writes over the binary a person is running.
-// Both are why nothing starts it but a person typing it.
+// `gdoc update` is the one command that writes over the binary a person is
+// running, and that is why nothing starts it but a person typing it. Nothing
+// installs unasked, ever.
 //
-// No command checks for a release on its way to doing something else. There is
-// no check before a build, none on the first run of the day, and nothing
-// written down between runs to say when the last check was. A build is a
-// person waiting for a docx with no network at all, and a review session is
-// somebody's document open in front of them; a background fetch in either is a
-// second thing happening that nobody asked for, and on a slow connection it is
-// the command taking longer for a reason the person cannot see. The rule is
-// held by reading this package rather than by trusting it:
-// TestNothingChecksForUpdatesUnasked says one entry in the table names
-// cmdUpdate and no other file here reaches internal/update at all, and
-// TestNoSkillRunsUpdateOnItsOwn says the same of the three skills.
+// Asking what is published is a smaller thing than installing it, and `gdoc
+// help` does it by itself, at most once in 24 hours. Help is the one place: it
+// is the first call of every skill session, it already carries the version,
+// and no document is open in front of it. A colleague who never reads the
+// releases page hears about a release from the tool itself, in the session
+// they already opened.
 //
-// What the run may reach is the fifth grant, AllowUpdateFrom, and nothing
-// else: the releases listing of one repository, the download under it, and the
-// asset host the download redirects to, all GET, all without a credential.
-// TestTheUpdateRunReachesTheReleasesAndNothingElse judges the policy this
-// command opens, so a document id cannot come along for the ride.
+// What keeps that bounded is that nothing moves. The check reads one listing,
+// writes one file of gdoc's own, replaces no binary and touches no document.
+// It runs under a two-second ceiling instead of the listing's five, and a
+// failed check is written down too, so a network that refuses GitHub costs two
+// seconds a day and not two seconds a run: TestTheCheckIsBoundedByTwoSeconds
+// and TestAnUnreachableGitHubIsStampedAndHelpStillAnswers. A stamp younger
+// than a day is the answer on its own, with no request at all:
+// TestAFreshStampMakesNoRequest. A build from a checkout names no release, so
+// it has nothing to compare and never asks: TestACheckoutBuildNeverChecks. A
+// word that names no command is refused before any of it happens, so a
+// mistyped help costs nothing at all:
+// TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
+//
+// No other command checks. There is no check before a build and none on the
+// way to reading somebody's document. A build is a person waiting for a docx
+// with no network at all, and a review session is somebody's document open in
+// front of them; a background fetch in either is a second thing happening that
+// nobody asked for, and on a slow connection it is the command taking longer
+// for a reason the person cannot see. The rule is held by reading this package
+// rather than by trusting it: TestNothingChecksForUpdatesUnasked says one
+// entry in the table names cmdUpdate, and that update.go and notice.go are the
+// only two files here that reach internal/update at all.
+// TestReadNeverReachesTheCheck runs a read with a month-old stamp and a reach
+// that fails the test if it is called, and TestNoSkillRunsUpdateOnItsOwn says
+// no skill runs the updater either. A skill may say there is a newer gdoc,
+// because saying is not running.
+//
+// The check judges nothing. The object under `update` carries `installed`,
+// `latest_stable`, `latest_nightly`, `checked_at` and `error`, and the one
+// line for a person goes to stderr where the help prose already goes, so
+// stdout is still exactly one JSON object.
+//
+// What either of them may reach is the fifth grant, AllowUpdateFrom, and
+// nothing else: the releases listing of one repository, the download under it,
+// and the asset host the download redirects to, all GET, all without a
+// credential. TestTheUpdateRunReachesTheReleasesAndNothingElse judges the
+// policy the command opens and TestTheHelpCheckOpensThePolicyTheUpdateOpens
+// judges the policy the check opens, so a document id cannot come along for
+// the ride on either.
 //
 // GitHub not answering is an answer. A listing that times out, refuses the
 // connection, answers 5xx or answers the rate limit is ok: true with

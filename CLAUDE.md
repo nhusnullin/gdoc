@@ -51,6 +51,7 @@ Two rules about the documents themselves:
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/update/` | the releases GitHub lists, the version comparison, the channel policy, and this binary replaced from a zip it checked |
+| `go/internal/lastcheck/` | the stamp beside the token: when gdoc last asked GitHub what is published, and what it heard |
 | `go/internal/live/` | the opt-in end-to-end tests. Tests only, no production code |
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
 | `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`. Symlinked into `~/.claude/skills/`, so edits are live |
@@ -77,10 +78,17 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 - **The one host that is not Google's is the fifth grant.** `AllowUpdateFrom`
   names one GitHub repository for one run and admits GET on its releases
   listing, its download path and the two asset hosts that redirect lands on,
-  with no credential on any of them, and `gdoc update` is the only caller:
+  with no credential on any of them, and it has two callers: `gdoc update`,
+  and the daily check in `help`, which reads the listing and installs nothing:
   `TestWithoutTheUpdateGrantGitHubIsRefused`,
-  `TestTheUpdateGrantOpensNothingBesideThoseThreeReads` and
-  `TestAnUpdateRequestCarriesNoBearer`.
+  `TestTheUpdateGrantOpensNothingBesideThoseThreeReads`,
+  `TestAnUpdateRequestCarriesNoBearer` and
+  `TestTheHelpCheckOpensThePolicyTheUpdateOpens`.
+- **`help` is the one command that asks unasked**, once in 24 hours, under a
+  two-second ceiling, and never from a checkout build, which names no release:
+  `TestAStaleStampMakesHelpAskOnce`, `TestAFreshStampMakesNoRequest`,
+  `TestTheCheckIsBoundedByTwoSeconds`, `TestACheckoutBuildNeverChecks` and
+  `TestReadNeverReachesTheCheck`.
 - **The reachable set has two doors**, the ids a command was handed and the id a
   create the guard itself carried came back with, and naming a folder to create
   in does not open a third: `TestAllowCreateInDoesNotAdmitTheFolder` and
@@ -140,9 +148,10 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   live the moment it is saved and before it is committed. `./install.sh` prints
   `+ uncommitted changes` on a dirty tree, refuses to replace a real directory
   whose contents differ, and is safe to re-run after any move. A colleague gets
-  the same three through the plugin in `.claude-plugin/`, and the one route that
-  copies a folder is `release/install.sh --skills`, which marks what it wrote.
-  Nothing in the binary copies a skill.
+  the same three through the plugin in `.claude-plugin/`, which the hub's
+  committed `.claude/settings.json` declares as a marketplace with auto-update
+  on, and the one route that copies a folder is `release/install.sh --skills`,
+  which marks what it wrote. Nothing in the binary copies a skill.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
@@ -176,6 +185,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | putting a document into Drive | `go/internal/publish/doc.go` |
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
 | a version, a tag, a release or the updater | `go/internal/update/doc.go`, `.github/workflows/release.yml` |
+| a release notice, the stamp | `go/internal/lastcheck/doc.go`, `go/cmd/gdoc/doc.go` |
 | what a colleague installs, and how | `release/README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
 | what the review session does with what the binary prints | `skills/gdoc-review/SKILL.md` |

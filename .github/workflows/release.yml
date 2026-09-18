@@ -44,7 +44,12 @@ jobs:
           ref: ${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
 
+      # x.y.0 only. `make tag` cuts those and writes the version into the
+      # manifest as it goes, so the two are one number. A nightly is a binary
+      # release and never a plugin release: it tags main as it stands and moves
+      # no version, so there is nothing here to hold it against.
       - name: the plugin version is the tag
+        if: endsWith(env.TAG, '.0')
         run: |
           version="$(jq -r .version .claude-plugin/plugin.json)"
           if [ "$version" != "$TAG" ]; then
