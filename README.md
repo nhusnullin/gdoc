@@ -132,8 +132,8 @@ prints one JSON object and exits. A skill of your own can build on any of them.
 | `help`, `completion` | print every command, or write the shell completion script |
 
 Every request goes through a guard inside the binary. It carries a request only
-for a document gdoc was handed or created, so a skill of yours cannot reach
-further than the ids it names.
+for a document gdoc was handed or created. A skill of yours cannot reach further
+than the ids it names.
 
 ## Nothing updates on its own
 
