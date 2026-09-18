@@ -204,6 +204,18 @@
 // own that the author would recognise.
 // TestADeadAnchorInsideATableNamesTheTablesOwnLine is the pin on the table.
 //
+// One dead link is one sentence. addRuns runs once per run and merge splits a
+// link's words at every mark boundary, so a destination inside bold text
+// reached the envelope twice and the note read as holding two dead links
+// where it held one. renderer.deadAnchors keeps the line and the destination
+// of every sentence already raised, and two links on one line naming the same
+// missing heading are one sentence for the same reason: the sentence holds a
+// line and a destination and nothing else, so the second copy says nothing.
+// Two lines are still two sentences, because they are two places to go and
+// fix. TestOneDeadAnchorWarnsOnce,
+// TestTwoDeadAnchorsOnOneLineWarnOncePerDestination and
+// TestTheSameDeadAnchorOnTwoLinesWarnsTwice are the pins.
+//
 // # A numbered list starts at 1, and a list that opens elsewhere says so
 //
 // A w:num is where Word keeps a list's running count, so two numbered lists

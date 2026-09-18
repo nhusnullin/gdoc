@@ -6,6 +6,7 @@ package body
 // the reason it is what it is.
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -281,8 +282,7 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 		}
 		if anchor, ok := strings.CutPrefix(run.Link, "#"); ok {
 			if !r.anchors[anchor] {
-				r.warn("line %d: the link to #%s names no heading in this note, so its words are printed as plain text",
-					r.curLine, anchor)
+				r.warnDeadAnchor(anchor)
 				textRun(parent, run.Text, o)
 				continue
 			}
@@ -297,6 +297,22 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 		o.Underline = true
 		textRun(wrapper, run.Text, o)
 	}
+}
+
+// warnDeadAnchor names a jump that lands nowhere once for each line and
+// destination. addRuns is reached once per run and merge splits a link's words
+// at every mark boundary, so one link is several runs and warning from there
+// unguarded prints the same sentence two or three times. Two links on one line
+// naming the same missing heading are one sentence for the same reason: the
+// author reads a line and a destination, and both copies say the same.
+func (r *renderer) warnDeadAnchor(anchor string) {
+	key := fmt.Sprintf("%d\x00%s", r.curLine, anchor)
+	if r.deadAnchors[key] {
+		return
+	}
+	r.deadAnchors[key] = true
+	r.warn("line %d: the link to #%s names no heading in this note, so its words are printed as plain text",
+		r.curLine, anchor)
 }
 
 // bodyRun is the run formatting an ordinary body paragraph starts from.

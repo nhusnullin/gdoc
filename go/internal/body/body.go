@@ -94,6 +94,13 @@ type renderer struct {
 	anchors    map[string]bool
 	bookmarkID int
 
+	// deadAnchors is every line and destination already named on the
+	// envelope, because addRuns runs once per run and a link whose words
+	// carry mixed formatting is several. The sentence holds a line and a
+	// destination and nothing else, so a second copy of it says nothing the
+	// first did not and makes one dead link read as two.
+	deadAnchors map[string]bool
+
 	// curLine is the line of the block being built, set where the node is in
 	// hand. addRuns is six callers deep from a node and needs a line to name
 	// the link that jumps nowhere.
@@ -134,7 +141,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 
 	r := &renderer{
 		cfg: cfg, base: base, source: source,
-		anchors: headingAnchors(root, source), curLine: 1,
+		anchors: headingAnchors(root, source), deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
 		firstHeading: true,
 	}

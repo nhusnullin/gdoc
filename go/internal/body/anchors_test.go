@@ -181,3 +181,59 @@ func has(warnings []string, want string) bool {
 	}
 	return false
 }
+
+// TestOneDeadAnchorWarnsOnce: the check sits in addRuns, which runs once per
+// run, and a link whose words carry mixed formatting is several runs. Warned
+// per run, one dead link prints the identical sentence twice and the envelope
+// says the note holds two of them. The sentence names a line and a
+// destination and nothing else, so a second copy carries nothing.
+func TestOneDeadAnchorWarnsOnce(t *testing.T) {
+	out := walk(t, "# Purpose\n\nSee [**bold** and plain](#nowhere) here.\n")
+
+	want := "line 3: the link to #nowhere names no heading in this note, so its words are printed as plain text"
+	if got := count(out.Warnings, want); got != 1 {
+		t.Errorf("the warnings are %v, want exactly one reading %q, got %d", out.Warnings, want, got)
+	}
+}
+
+// TestTwoDeadAnchorsOnOneLineWarnOncePerDestination: two links on one line
+// that jump nowhere are two separate sentences when they name different
+// headings, and one when they name the same one, because the sentence the
+// author reads would otherwise repeat itself word for word.
+func TestTwoDeadAnchorsOnOneLineWarnOncePerDestination(t *testing.T) {
+	out := walk(t, "# Purpose\n\nSee [a](#nowhere) and [b](#nowhere) and [c](#elsewhere).\n")
+
+	same := "line 3: the link to #nowhere names no heading in this note, so its words are printed as plain text"
+	other := "line 3: the link to #elsewhere names no heading in this note, so its words are printed as plain text"
+	if got := count(out.Warnings, same); got != 1 {
+		t.Errorf("the warnings are %v, want exactly one reading %q, got %d", out.Warnings, same, got)
+	}
+	if got := count(out.Warnings, other); got != 1 {
+		t.Errorf("the warnings are %v, want exactly one reading %q, got %d", out.Warnings, other, got)
+	}
+}
+
+// TestTheSameDeadAnchorOnTwoLinesWarnsTwice: the warning is deduplicated on
+// the line as well as the destination, because two lines are two places the
+// author has to go and fix.
+func TestTheSameDeadAnchorOnTwoLinesWarnsTwice(t *testing.T) {
+	out := walk(t, "# Purpose\n\nSee [a](#nowhere).\n\nAnd [b](#nowhere).\n")
+
+	first := "line 3: the link to #nowhere names no heading in this note, so its words are printed as plain text"
+	second := "line 5: the link to #nowhere names no heading in this note, so its words are printed as plain text"
+	if !has(out.Warnings, first) || !has(out.Warnings, second) {
+		t.Errorf("the warnings are %v, want one reading %q and one reading %q",
+			out.Warnings, first, second)
+	}
+}
+
+// count is how many of the walk's warnings read exactly want.
+func count(warnings []string, want string) int {
+	n := 0
+	for _, warning := range warnings {
+		if warning == want {
+			n++
+		}
+	}
+	return n
+}
