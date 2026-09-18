@@ -502,31 +502,31 @@ an unknown key; an empty list.
   `CLAUDE.md`, `docs/guide/writing.md`, `README.md`,
   `docs/backlog/propose-inside-tables.md`
 
-- [ ] DECISIONS.md: an entry dated 2026-09-18, "annotate: a comment on quoted
+- [x] DECISIONS.md: an entry dated 2026-09-18, "annotate: a comment on quoted
       words, and nothing else", holding the eight decisions above with their
       reasons, the probe clause bent for this one writer and why, and its row
       in the register.
-- [ ] SPEC.md: `### annotate` after `### propose`, the two input forms, the
+- [x] SPEC.md: `### annotate` after `### propose`, the two input forms, the
       prefix rule, no probe, the two read-backs, the stop at the first
       failure, the limits. The Never list gains nothing: the existing lines
       already cover a comment.
-- [ ] PLAN.md: `## M11. annotate` after M10, naming the decision date and this
+- [x] PLAN.md: `## M11. annotate` after M10, naming the decision date and this
       plan, and what lands. On completion the row moves to the Done table.
-- [ ] CLAUDE.md: the row `go/internal/annotate/` in "What lives where", the
+- [x] CLAUDE.md: the row `go/internal/annotate/` in "What lives where", the
       row "a comment gdoc leaves on quoted words" in "If you touch", the
       command count in the `go/cmd/gdoc/` row moved from thirteen to
       fourteen. Under 300 lines.
-- [ ] `docs/guide/writing.md`: the title and the opening say five commands,
+- [x] `docs/guide/writing.md`: the title and the opening say five commands,
       the call block gains the two annotate lines, a paragraph for `annotate`
       after `propose` saying what it sends, what it reads back, that the file
       carries no prefix, and the limits.
-- [ ] README.md: the command table row for `annotate <url>`, and the guide
+- [x] README.md: the command table row for `annotate <url>`, and the guide
       index row for Writing names it.
-- [ ] `docs/backlog/propose-inside-tables.md`: one line saying the comment-only
+- [x] `docs/backlog/propose-inside-tables.md`: one line saying the comment-only
       shape is measured by `TestLiveAnnotateParagraphAndTable` in Task 7, with
       the answer filled in after that task runs.
-- [ ] `cd go && go test -race ./boundary/` passes: the task map, the ceiling.
-- [ ] `git commit -m "docs(v2): annotate, decided and described"`
+- [x] `cd go && go test -race ./boundary/` passes: the task map, the ceiling.
+- [x] `git commit -m "docs(v2): annotate, decided and described"`
 
 ### Task 7: the live test, opt-in
 

@@ -1,15 +1,17 @@
-# Writing into a document: probe, reply, propose, withdraw
+# Writing into a document: probe, reply, propose, withdraw, annotate
 
-This page holds the four commands that write into a document you handed in.
-Each write is a suggestion, and the page says why. It is for somebody who wants
-to know what the review skill sends and how the read-back is checked.
+This page holds the five commands that write into a document you handed in.
+Every change they make there is a suggestion, and the page says why. It is for
+somebody who wants to know what the review skill sends and how the read-back is
+checked.
 
 ## Writing into a document
 
-Four commands write into a document you handed in, and every change they make
-there is a suggestion. None of them edits it, and the guard refuses the attempt
-inside the process: a `batchUpdate` on a document you handed in is carried only
-when the body says `writeMode: SUGGEST`. The one exception is the restyle in [restyle.md](restyle.md),
+Five commands write into a document you handed in. Every change they make there
+is a suggestion, and the fifth changes nothing at all: it leaves a comment. None
+of them edits the document, and the guard refuses the attempt inside the
+process: a `batchUpdate` on a document you handed in is carried only when the
+body says `writeMode: SUGGEST`. The one exception is the restyle in [restyle.md](restyle.md),
 which is granted a direct edit on one document for one run, for four request
 kinds that cannot change a character, plus the one named range it marks its own
 proposed template with.
@@ -19,6 +21,8 @@ gdoc probe --folder <folder url or id>
 gdoc reply <url> <comment id> --body-file reply.txt
 gdoc propose <url> --from proposals.json --folder <probe folder> [--md note.md]
 gdoc withdraw <url> <suggestion id> --md note.md
+gdoc annotate <url> --from annotations.json
+gdoc annotate <url> --quote "reviewed annually" --body-file why.txt
 ```
 
 None of them decides what to write. The body of a reply, the words of a proposal
@@ -120,8 +124,49 @@ recorded two proposals and lost the third still names the note and carries the
 warning about the one it lost. Read the warnings, not the file list. `gdoc suggestions` is the document's own
 answer, and the note is gdoc's memory of it: read both.
 
+**`annotate`** leaves a comment on the exact words you quote and changes
+nothing else. It takes either `--from`, a file of `{quoted, why, assignee?}`,
+or `--quote` with `--body-file` for one comment by hand:
+
+```json
+[{
+  "quoted": "reviewed annually",
+  "why": "the register above says quarterly"
+}]
+```
+
+`quoted` is found the way `propose` finds it: a fresh read, the exact words,
+refused when they are not there exactly once. `why` is the bare reason, with no
+`🤖 ` on it, because gdoc writes the prefix itself and refuses a reason that
+already carries one. It must be plain text, for the reason a reply must: a Docs
+thread renders markdown literally. Every entry is checked before the first one
+is sent, and a run stops at the first entry that cannot be sent, with
+`ok: false` and every annotation still reported with `sent` answered for itself.
+
+`annotate` needs no folder and no note. There is no probe, because the batch
+holds one `insertComment` and nothing beside it, so no character can move even
+if Google ignored the write mode. There is no note either, because a comment
+cannot be withdrawn: a wrong one is removed by a person in the document, since
+deleting a comment is a write the guard does not carry.
+
+After the write it reads the comment back two ways, and `checks` says which
+held:
+
+| Check | Asks |
+|---|---|
+| `drive_listing` | Drive's comments carry the returned id, with the body that was sent |
+| `docx_anchored` | the docx export wraps the quoted words in that comment |
+
+Both, plus `commentUpdateState: ALL_SAVED`, is `verified: true`. Anything less
+is `verified: false` with a warning naming the route, and never an error: the
+comment is in the document, and a caller told the run failed would write it
+again. The limits are `propose`'s. A document with more than one tab stops the
+run before anything is sent, and only body text can be quoted: not a header, a
+footer or a footnote.
+
 The review skill runs over these commands. It reads the threads, decides which
 ones still need an answer, and writes the reply and proposal files the binary
-sends. The binary reports facts either way: there is no `handled` field, and no
+sends, and the annotations when a comment is all that is called for. The binary
+reports facts either way: there is no `handled` field, and no
 rule in Go that says a comment is answered.
 

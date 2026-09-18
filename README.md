@@ -143,6 +143,7 @@ prints one JSON object and exits. A skill of your own can build on any of them.
 | `reply <url> <comment id>` | write one reply into a thread, under the robot prefix |
 | `propose <url>` | propose changes as native suggestions, each with the comment that says why |
 | `withdraw <url> <suggestion id>` | take back one pending suggestion gdoc proposed itself |
+| `annotate <url>` | leave a comment on the exact words you quote, changing nothing |
 | `build` | build a note as a house-style docx on this machine, with no network |
 | `publish` | build a note as a house-style document and upload it into one folder |
 | `update` | replace this gdoc with the newest release, or say what one would take |
@@ -186,7 +187,7 @@ printed, and what you expected instead.
 | [How it works](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/how-it-works.md) | the credential, the guard, suggestions only, the JSON envelope |
 | [From a checkout](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/from-a-checkout.md) | `install.sh`, `make build`, `make dist`, completion, `GDOC_CONFIG_DIR` |
 | [Reading](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/reading.md) | `read`, `comments`, `suggestions`, the cursor, `--wait` |
-| [Writing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/writing.md) | `probe`, `reply`, `propose`, `withdraw` |
+| [Writing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/writing.md) | `probe`, `reply`, `propose`, `withdraw`, `annotate` |
 | [Restyle](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/restyle.md) | the survey, restyle in place, the house template as a suggestion |
 | [Publishing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/publishing.md) | `build`, `publish`, the `gdoc:` block |
 | [What is planned](https://github.com/nhusnullin/gdoc/blob/main/docs/v2/PLAN.md) | the open work |

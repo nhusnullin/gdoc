@@ -26,3 +26,9 @@ docx witness, which walks `w:p` under `w:body` and may not descend into `w:tbl`,
 
 Out of M4's scope. Belongs with the next milestone that touches `propose`, or its own small
 plan if it blocks a real review first.
+
+Measured for the comment-only shape by `TestLiveAnnotateParagraphAndTable` in `go/internal/live/`,
+added 2026-09-18 with `gdoc annotate`: it places one comment in an ordinary paragraph and one in a
+table cell in the same document and prints what each read-back said. The answer for the table cell
+goes here when that test has run: _not run yet_. An `insertComment` alone tells the first suspect
+above from the other two, because no `deleteContentRange` goes with it.

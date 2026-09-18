@@ -21,7 +21,7 @@ Two rules about the documents themselves:
 | Path | Holds |
 |---|---|
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
-| `go/cmd/gdoc/` | the entry point, the thirteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | the entry point, the fourteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -37,6 +37,7 @@ Two rules about the documents themselves:
 | `go/internal/reply/` | one robot reply into a thread, and the thread read back |
 | `go/internal/propose/` | a change as a suggestion, its comment, and the three read-backs |
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
+| `go/internal/annotate/` | a comment on the words a caller quotes, anchored, and nothing else |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
 | `go/internal/restyle/` | the survey, and the house look applied where the document stands |
 | `go/internal/prelude/` | the house template as Docs requests, proposed rather than written, and the named range that marks it |
@@ -177,6 +178,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | what the text projection prints, and its escaping | `go/internal/view/doc.go` |
 | threads, the cursor, the wait | `go/internal/comments/doc.go` |
 | a suggestion gdoc writes, or takes back | `go/internal/propose/doc.go`, `go/internal/withdraw/doc.go` |
+| a comment gdoc leaves on quoted words | `go/internal/annotate/doc.go` |
 | whether SUGGEST is honoured today | `go/internal/probe/doc.go` |
 | the survey, the apply loop, the in-place styling | `go/internal/restyle/doc.go` |
 | the cover, the front-matter tables, the marker | `go/internal/prelude/doc.go` |

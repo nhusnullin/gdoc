@@ -68,6 +68,20 @@ leaving `plugin.json` alone so the plugin follows the stable number; and the
 hub declaring the marketplace with auto-update on, which is a two-key change
 in the other repository, by hand.
 
+## M11. annotate
+
+Decided 2026-09-18, DECISIONS.md. Plan:
+`docs/plans/2026-09-18-gdoc-v2-m11-annotate.md`.
+
+A fifth writer beside `probe`, `reply`, `propose` and `withdraw`: a comment on
+the exact words a colleague quotes, anchored, under the robot prefix, changing
+nothing. What lands: `go/internal/annotate` with the shape rule, the one-request
+batch and the two read-backs; `gdoc annotate <url>` taking `--quote` with
+`--body-file` or `--from` a file of many; a flag kind that carries free text; no
+probe, because a batch holding one `insertComment` cannot move a character; the
+guard unchanged and pinned from the writer's side; and the live test that says
+whether the comment-only shape lands inside a table.
+
 ## Outstanding by hand
 
 Three checks nobody can automate, each one Nail's.
