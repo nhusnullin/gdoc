@@ -28,6 +28,14 @@ const (
 	kindFolderID
 	kindCursor
 	kindDuration
+	// kindText is words rather than a name for something somewhere. The parser
+	// takes the value as it was typed, spaces and quotes included, and the
+	// command uses it as it stands, so nothing on this machine and nothing in
+	// Drive is looked up for it. The text case in
+	// TestEveryFlagIsReadTheWayItsKindSays holds the reading, and
+	// TestATextFlagIsOpaqueToBothScripts holds what Tab offers after it, which
+	// is nothing.
+	kindText
 )
 
 // placeholder is the value as a reader sees it, or the empty string for a flag
@@ -42,6 +50,8 @@ func (k kind) placeholder() string {
 		return "<cursor>"
 	case kindDuration:
 		return "<duration>"
+	case kindText:
+		return "<text>"
 	}
 	return ""
 }
@@ -251,6 +261,20 @@ func commands() []command {
 			example: "gdoc withdraw https://docs.google.com/document/d/1AbC.../edit suggest.abc123 --md note.md",
 			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdWithdraw(a)
+			},
+		},
+		{
+			name:  "annotate",
+			words: []string{"<url>"},
+			flags: []flag{
+				{"--quote", kindText, needEither, "the exact words in the document to leave the comment on"},
+				{"--from", kindFile, needEither, "the file holding the comments to leave, each with the words it goes on"},
+				{"--body-file", kindFile, needOptional, "the file holding the reason, which --quote needs"},
+			},
+			summary: "Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
+			example: "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
+			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdAnnotate(a)
 			},
 		},
 		{

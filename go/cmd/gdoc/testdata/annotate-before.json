@@ -1,0 +1,22 @@
+{
+  "documentId": "1AnNoTaTe0000000000000000000000000000000",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXbefore",
+  "body": {"content": [
+    {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+    {"startIndex": 1, "endIndex": 68, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 1, "endIndex": 68, "textRun": {
+          "content": "The supplier register is reviewed annually by the operations team.\n",
+          "textStyle": {}}}
+      ]}},
+    {"startIndex": 68, "endIndex": 113, "paragraph": {
+      "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+      "elements": [
+        {"startIndex": 68, "endIndex": 113, "textRun": {
+          "content": "It is kept by the Cyprus entity in Limassol.\n",
+          "textStyle": {}}}
+      ]}}
+  ]}
+}

@@ -44,6 +44,8 @@ one is written against the code that exists by then.
 | M7c | `restyle --fields`, the cover, the three front-matter tables and the legend proposed as suggestions on a policy that granted nothing, marked by one named range | 2026-09-10 | `2026-09-10-gdoc-v2-m7c-house-template-as-suggestion.md` |
 | M7d | one command table as the only description of a command, read by the dispatcher, the usage line, `help` and `completion`, `--help` and `-h` anywhere on the line, the zsh and bash completion scripts the binary writes, and the `gdoc-publish` and `gdoc-restyle` skills, each learning its flags from `gdoc help` | 2026-09-16 | `2026-09-16-gdoc-v2-m7d-help-completion-skills.md` |
 | M9 | the version `x.y.z` from the tag in every envelope, a tag that builds and publishes a zip per platform as a GitHub Release, the one-line install, the skills as a Claude Code plugin from a marketplace in this repository, the nightly that tags `x.y.(z+1)` when main moved, and `gdoc update`, which runs only when a person types it and verifies what it downloads through the fifth guard grant | 2026-09-16 | `2026-09-16-gdoc-v2-m9-release.md` |
+| M10 | the release notice: a stamp file beside the token, `help` refreshing it once a day under a two-second ceiling and printing the facts, the skills mentioning a newer gdoc once and carrying on, and the nightly leaving `plugin.json` on the stable number | 2026-09-18 | `2026-09-18-gdoc-v2-m10-update-notice.md` |
+| M11 | `annotate`, a fifth writer: a comment on the exact words a colleague quotes, anchored, under the robot prefix, changing nothing, taking `--quote` with `--body-file` or `--from` a file of many, verified by two routes the write did not go out on, and no probe, because a batch holding one `insertComment` cannot move a character | 2026-09-18 | `2026-09-18-gdoc-v2-m11-annotate.md` |
 | the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
 ## M8. Deferred
@@ -53,20 +55,6 @@ M8 are deferred whole to
 [the backlog](../backlog/m8-alignment-and-the-align-skill.md), Nail's decision
 of 2026-09-16, DECISIONS.md. The team's feedback after the release decides
 whether it comes back.
-
-## M10. The update notice
-
-Decided 2026-09-18, DECISIONS.md. Plan:
-`docs/plans/2026-09-18-gdoc-v2-m10-update-notice.md`.
-
-The binary notices a newer release by itself and says so, without slowing any
-run. What lands: a stamp file beside the token that remembers the last check;
-`help` refreshing it once a day under a two-second ceiling and printing the
-facts, with one line on stderr for a person; the skills mentioning a newer gdoc
-once and carrying on, with `needs` held to a stable release; the nightly
-leaving `plugin.json` alone so the plugin follows the stable number; and the
-hub declaring the marketplace with auto-update on, which is a two-key change
-in the other repository, by hand.
 
 ## Outstanding by hand
 

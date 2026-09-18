@@ -128,6 +128,21 @@ wanted therefore resolves to asking rather than to writing.
   vanishes with the reject. A prelude still pending is refused instead, because
   replacing it would propose deleting text that has never been written.
 
+*Amended 2026-09-18, for M11. Nail's decision.* One clause above overstates the
+probe. It runs before every proposal, and two writers do not run it at all, the
+first of them since M7b. The read-back half of that clause holds for both, with
+no exception.
+
+- `gdoc restyle` sends its phase 1 unprobed. The probe needs a folder to create
+  its throwaway document in and restyle takes none, and giving it one would be a
+  second create door on a command that writes to the one document it was handed.
+  `prelude.Verify`'s `Written` count, read back after the write, stands in its
+  place. `go/cmd/gdoc/restyle.go` holds that reasoning beside the call.
+- `gdoc annotate` runs no probe at all. The batch it sends holds one
+  `insertComment` and nothing beside it, and no `insertComment` can move a
+  character whatever the write mode does, so the probe has no question to answer
+  here. The 2026-09-18 entry in `docs/v2/DECISIONS.md` holds that decision.
+
 ## 4. Every word costs a reader's attention
 
 Added 2026-08-29, Nail's principle, wording settled with a second opinion.

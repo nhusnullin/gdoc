@@ -1,0 +1,13 @@
+{
+  "documentId": "1AnNoTaTe0000000000000000000000000000000",
+  "replies": [
+    {"insertComment": {
+      "commentThread": {
+        "commentId": "AAACOne",
+        "anchorId": "kix.anchor0"
+      }
+    }}
+  ],
+  "writeControl": {"requiredRevisionId": "ALm37BXafter"},
+  "commentUpdateState": "ALL_SAVED"
+}

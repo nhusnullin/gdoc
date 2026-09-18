@@ -212,7 +212,7 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 		return out, err
 	}
 
-	var answer batchAnswer
+	var answer BatchAnswer
 	answerRead := true
 	var sentErr error
 	if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(Batch(r, p)), &answer); err != nil {
@@ -236,8 +236,8 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 	// server really did send is kept. It is kept on purpose: a comment id that
 	// was decoded is the provenance withdraw needs, and throwing it away is the
 	// one loss this package exists to avoid.
-	out.CommentID = answer.commentID()
-	out.CommentUpdateState = answer.state()
+	out.CommentID = answer.CommentID()
+	out.CommentUpdateState = answer.State()
 	if sentErr != nil {
 		msg := "the proposal was accepted by Docs and its answer could not be read"
 		if out.CommentID == "" {
@@ -337,7 +337,12 @@ func BatchURL(docID string) string {
 	return "https://docs.googleapis.com/v1/documents/" + docID + ":batchUpdate"
 }
 
-// batchAnswer is what came back from the write.
+// BatchAnswer is what came back from the write, and it is exported because
+// internal/annotate sends the same insertComment and reads the same two fields
+// out of the answer. The measured shape below has one owner for the reason
+// FindSpan and BatchURL have one each: a second copy is a second place to fix
+// on the day Google moves a field, and the copy that was missed reports a
+// comment id as missing.
 //
 // The preview's response shape is not in the public reference, so it was
 // measured, on 2026-09-07, on a throwaway document in the test folder. The
@@ -354,7 +359,7 @@ func BatchURL(docID string) string {
 // did not name is exactly what the first live write test did: the proposal
 // landed, the id was in the answer, and withdraw would have refused it for
 // ever. testdata/batch-saved-measured.json is the measured answer.
-type batchAnswer struct {
+type BatchAnswer struct {
 	DocumentID         string `json:"documentId"`
 	CommentUpdateState string `json:"commentUpdateState"`
 	Replies            []struct {
@@ -373,7 +378,9 @@ type batchAnswer struct {
 	} `json:"writeControl"`
 }
 
-func (a batchAnswer) commentID() string {
+// CommentID is the comment the write created, at whichever of the two levels
+// it arrived.
+func (a BatchAnswer) CommentID() string {
 	for _, r := range a.Replies {
 		if r.InsertComment == nil {
 			continue
@@ -388,7 +395,9 @@ func (a batchAnswer) commentID() string {
 	return ""
 }
 
-func (a batchAnswer) state() string {
+// State is the commentUpdateState the answer carries, from the top of the
+// answer or from the reply that holds it.
+func (a BatchAnswer) State() string {
 	if a.CommentUpdateState != "" {
 		return a.CommentUpdateState
 	}

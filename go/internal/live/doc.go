@@ -96,6 +96,16 @@
 //     time and reads each accepted one back to say where the insert really
 //     landed. Measured 2026-09-10, MEASURED.md "A table takes one index of its
 //     own at the end".
+//   - TestLiveAnnotateParagraphAndTable, M11's. It creates a document holding
+//     one sentence and a one-row table of two cells, fills the cells, leaves
+//     one comment on words in the sentence and one on words inside a cell, and
+//     reads both back through Drive's listing and the docx export. The
+//     paragraph case is the milestone's acceptance bar and asserts both routes.
+//     The table case is a measurement and asserts nothing: it is the question
+//     docs/backlog/propose-inside-tables.md was left open on, and an
+//     insertComment with no deleteContentRange beside it is what tells the
+//     suspects apart. Measured 2026-09-18: both comments verified, in the cell
+//     as in the paragraph.
 //
 // Copied, and the original never written to:
 //

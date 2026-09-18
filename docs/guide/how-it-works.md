@@ -24,12 +24,13 @@ at all.
 
 ## What it does
 
-One static binary at `go/`, thirteen commands plus `help` and `completion`,
+One static binary at `go/`, fourteen commands plus `help` and `completion`,
 nothing to install beside it. Each command takes arguments, prints one JSON
 object and exits. It holds the credential, it reads a document, it writes
-suggestions, it builds a house-style document and publishes it, it surveys what
-a document holds before anything is done to it, and it can give that document
-the house style where it stands.
+suggestions, it leaves a comment on words a caller quotes, it builds a
+house-style document and publishes it, it surveys what a document holds before
+anything is done to it, and it can give that document the house style where it
+stands.
 
 ```bash
 gdoc auth status   # which token, where it is, whether it has expired

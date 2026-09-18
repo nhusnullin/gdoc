@@ -347,19 +347,19 @@ an unknown key; an empty list.
 **Files:**
 - Create: `go/internal/annotate/doc.go`, `annotate.go`, `annotate_test.go`
 
-- [ ] Test first, `TestCheckRefusesEachBadShapeByName`: table of an empty
+- [x] Test first, `TestCheckRefusesEachBadShapeByName`: table of an empty
       quote, a quote with `\n`, an empty why, a why opening with `🤖 `, a why
       holding `**bold**`; each refused with a sentence naming what is wrong.
-- [ ] Test, `TestCheckAcceptsAPlainAnnotation`: a quote and a why pass, with
+- [x] Test, `TestCheckAcceptsAPlainAnnotation`: a quote and a why pass, with
       and without an assignee.
-- [ ] Test, `TestBodyIsTheRobotAndTheWhy`: `Body("The register.")` is the
+- [x] Test, `TestBodyIsTheRobotAndTheWhy`: `Body("The register.")` is the
       literal `"🤖 The register."`.
-- [ ] `Annotation`, `Check`, `Body` in `annotate.go`, the markdown rule asked
+- [x] `Annotation`, `Check`, `Body` in `annotate.go`, the markdown rule asked
       through `plaintext.Markdown` of the why alone.
-- [ ] `doc.go` opens `Package annotate`, says why the prefix is added here and
+- [x] `doc.go` opens `Package annotate`, says why the prefix is added here and
       required in reply, and names the three tests.
-- [ ] `cd go && go test -race ./internal/annotate/` passes.
-- [ ] `git commit -m "feat(v2): the annotation and its shape rule"`
+- [x] `cd go && go test -race ./internal/annotate/` passes.
+- [x] `git commit -m "feat(v2): the annotation and its shape rule"`
 
 ### Task 2: the batch, the guard, and the id it comes back with
 
@@ -368,38 +368,38 @@ an unknown key; an empty list.
   `batch-saved.json`, `batch-saved-flat.json`, `batch-failed.json`
 - Modify: `go/internal/annotate/annotate.go`, `annotate_test.go`, `doc.go`
 
-- [ ] Test first, `TestBatchIsOneInsertCommentUnderSuggest`: `Batch` over a
+- [x] Test first, `TestBatchIsOneInsertCommentUnderSuggest`: `Batch` over a
       literal range and body is one request at the literal start and end,
       content the literal robot body, `writeMode` SUGGEST, and no
       `assigneeEmailAddress` key; with an assignee the key is present.
-- [ ] Test, `TestTheGuardCarriesTheAnnotateBatchOnAHandedInDocument`: a policy
+- [x] Test, `TestTheGuardCarriesTheAnnotateBatchOnAHandedInDocument`: a policy
       with one handed-in id and nothing granted carries `POST` on
       `propose.BatchURL(id)` with `Batch`'s real output.
-- [ ] Test, `TestTheGuardRefusesTheSameBatchWithoutSuggestMode`: the same body
+- [x] Test, `TestTheGuardRefusesTheSameBatchWithoutSuggestMode`: the same body
       with no `writeControl` is refused and the refusal names SUGGEST. Both
       pass with no change under `guard/`. If one does not, stop: the design
       rests on this and the plan is wrong.
-- [ ] Test, `TestApplySendsTheBatchAtTheSpanItFound`: a stub session answering
+- [x] Test, `TestApplySendsTheBatchAtTheSpanItFound`: a stub session answering
       `before.json` to the document read; the POST body is `Batch` at the
       literal range the quote sits at.
-- [ ] Test, `TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite`:
+- [x] Test, `TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite`:
       `two-tabs.json`; an error naming the tab count, no POST.
-- [ ] Test, `TestApplyReadsTheCommentIdFromTheThreadFirst`: `batch-saved.json`
+- [x] Test, `TestApplyReadsTheCommentIdFromTheThreadFirst`: `batch-saved.json`
       yields the thread's id; `batch-saved-flat.json`, carrying only the flat
       field, yields that one.
-- [ ] Test, `TestAnUpdateStateOtherThanSavedIsAWarning`: `batch-failed.json`
+- [x] Test, `TestAnUpdateStateOtherThanSavedIsAWarning`: `batch-failed.json`
       gives a result with a warning naming the state and no error.
-- [ ] Test, `TestApplyRefusesBeforeTheWriteAndSendsNothing`: a bad shape and
+- [x] Test, `TestApplyRefusesBeforeTheWriteAndSendsNothing`: a bad shape and
       a span not found each return an error and the stub saw no POST.
-- [ ] Test, `TestAGuardRefusalIsAnErrorAndTheWireSawNoBatch`: the session
+- [x] Test, `TestAGuardRefusalIsAnErrorAndTheWireSawNoBatch`: the session
       refuses the POST; the error carries the refusal.
-- [ ] `Session`, `Batch`, `Apply`, `Result`, the range from
+- [x] `Session`, `Batch`, `Apply`, `Result`, the range from
       `propose.FindSpan`, the URL from `propose.BatchURL`, the id read as
       propose reads it. Verify stubbed to nothing until Task 3.
-- [ ] `doc.go` gains the sections on the batch and on the guard and names the
+- [x] `doc.go` gains the sections on the batch and on the guard and names the
       tests.
-- [ ] `cd go && go test -race ./internal/annotate/` passes.
-- [ ] `git commit -m "feat(v2): annotate sends one comment and reads its id"`
+- [x] `cd go && go test -race ./internal/annotate/` passes.
+- [x] `git commit -m "feat(v2): annotate sends one comment and reads its id"`
 
 ### Task 3: the two read-backs
 
@@ -408,32 +408,32 @@ an unknown key; an empty list.
   `testdata/comments.json`, `testdata/document.xml`, `testdata/comments.xml`
 - Modify: `go/internal/annotate/annotate.go`, `doc.go`
 
-- [ ] Test first, `TestVerifiedIsBothRoutesHolding`: the listing carries the
+- [x] Test first, `TestVerifiedIsBothRoutesHolding`: the listing carries the
       id with the sent body and the quote as `quotedFileContent`, the export
       carries one comment reading the sent body, anchored, whose span holds
       the quote; `verified` true, both checks true, no warning.
-- [ ] Test, `TestAListingWithoutTheIdIsAWarningNotAnError`: `drive_listing`
+- [x] Test, `TestAListingWithoutTheIdIsAWarningNotAnError`: `drive_listing`
       false, `verified` false, a warning naming the id, no error.
-- [ ] Test, `TestAnExportThatDoesNotAnchorTheCommentIsAWarning`: the comment
+- [x] Test, `TestAnExportThatDoesNotAnchorTheCommentIsAWarning`: the comment
       is in the export and `Anchored` is false; `docx_anchored` false, the
       warning says it is attached to no text.
-- [ ] Test, `TestTwoExportedCommentsThatDisagreeGiveNoAnswer`: two comments
+- [x] Test, `TestTwoExportedCommentsThatDisagreeGiveNoAnswer`: two comments
       reading the same body, one anchored and one not; `docx_anchored` false
       with the warning propose uses for the same case.
-- [ ] Test, `TestAReadBackThatFailedIsAWarningNamingTheRoute`: each GET
+- [x] Test, `TestAReadBackThatFailedIsAWarningNamingTheRoute`: each GET
       failing gives a warning naming the route and leaves the other check to
       answer for itself.
-- [ ] `Verify(ctx, s, docID, commentID, quoted, body)` returning `Checks` and
+- [x] `Verify(ctx, s, docID, commentID, quoted, body)` returning `Checks` and
       warnings. The Drive route through `comments.Fetch`, matching the id and
       comparing `Content` and `QuotedFileContent`. The docx route in the
       `docxHolds` shape: `docx.Export`, `docx.Parse`, the hits in
       `f.Comments` by `Text`, no answer when hits disagree, then `Anchored`
       and `Span` containing the quote.
-- [ ] `Apply` calls it after the write and never returns an error after the
+- [x] `Apply` calls it after the write and never returns an error after the
       write.
-- [ ] `doc.go` gains the section on the read-backs and names the tests.
-- [ ] `cd go && go test -race ./internal/annotate/` passes.
-- [ ] `git commit -m "feat(v2): annotate reads its comment back two ways"`
+- [x] `doc.go` gains the section on the read-backs and names the tests.
+- [x] `cd go && go test -race ./internal/annotate/` passes.
+- [x] `git commit -m "feat(v2): annotate reads its comment back two ways"`
 
 ### Task 4: the text flag kind
 
@@ -441,17 +441,17 @@ an unknown key; an empty list.
 - Modify: `go/cmd/gdoc/commands.go`, `commands_test.go`, `completion.go`,
   `completion_test.go`, `help.go`
 
-- [ ] Test first, a case in `TestEveryFlagIsReadTheWayItsKindSays` for a kind
+- [x] Test first, a case in `TestEveryFlagIsReadTheWayItsKindSays` for a kind
       that reads its value as given, spaces and quotes included, and refuses
       an empty value by name.
-- [ ] Test, a case in the completion tests: a text flag lands in the opaque
+- [x] Test, a case in the completion tests: a text flag lands in the opaque
       arm of both scripts, with no file or folder completion offered.
-- [ ] Test, `placeholder()` prints `<text>` for the kind.
-- [ ] `kindText` in `commands.go`, its arm in `placeholder()`, its read in the
+- [x] Test, `placeholder()` prints `<text>` for the kind.
+- [x] `kindText` in `commands.go`, its arm in `placeholder()`, its read in the
       parser, and its arms in `zshFlagSpec` and `bashFlagArms`. `help.go`
       wherever it switches on kind.
-- [ ] `cd go && go test -race ./cmd/gdoc/` passes.
-- [ ] `git commit -m "feat(v2): a flag kind that carries text as given"`
+- [x] `cd go && go test -race ./cmd/gdoc/` passes.
+- [x] `git commit -m "feat(v2): a flag kind that carries text as given"`
 
 ### Task 5: the command
 
@@ -462,38 +462,38 @@ an unknown key; an empty list.
   `annotations.json`
 - Modify: `go/cmd/gdoc/commands.go`, `help_test.go`, `doc.go`
 
-- [ ] Test first, `TestAnnotateRefusesFromBesideQuote`: both given, refused by
+- [x] Test first, `TestAnnotateRefusesFromBesideQuote`: both given, refused by
       name, no request.
-- [ ] Test, `TestAnnotateNeedsAQuoteWithItsBodyFile`: `--quote` alone,
+- [x] Test, `TestAnnotateNeedsAQuoteWithItsBodyFile`: `--quote` alone,
       `--body-file` alone, and nothing at all, each refused by name.
-- [ ] Test, `TestAnnotateRefusesAnUnknownKeyInTheFile` and
+- [x] Test, `TestAnnotateRefusesAnUnknownKeyInTheFile` and
       `TestAnnotateRefusesAnEmptyList`.
-- [ ] Test, `TestAnnotateRefusesARobotInTheWhyBeforeAnyRequest` and
+- [x] Test, `TestAnnotateRefusesARobotInTheWhyBeforeAnyRequest` and
       `TestAnnotateRefusesMarkdownBeforeAnyRequest`: the stub saw nothing.
-- [ ] Test, `TestAnnotatePlacesEachEntryAndVerifiesIt`: a file of two lands
+- [x] Test, `TestAnnotatePlacesEachEntryAndVerifiesIt`: a file of two lands
       two batches in order, prints two results with `sent: true`, `ok: true`.
-- [ ] Test, `TestAnnotateByHandPlacesOne`: `--quote` and `--body-file` land one.
-- [ ] Test, `TestAnnotateStopsAtTheFirstEntryThatCannotBeSent`: the second
+- [x] Test, `TestAnnotateByHandPlacesOne`: `--quote` and `--body-file` land one.
+- [x] Test, `TestAnnotateStopsAtTheFirstEntryThatCannotBeSent`: the second
       quote is absent; the first lands with `sent: true`, the second is
       reported `sent: false`, the envelope is `ok: false` and `error` names
       the quote.
-- [ ] Test, the annotate row in
+- [x] Test, the annotate row in
       `TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative` with the
       literal `Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]`.
-- [ ] The table row: `annotate <url>`, flags in the order `--quote`
+- [x] The table row: `annotate <url>`, flags in the order `--quote`
       (`kindText`, either), `--from` (`kindFile`, either), `--body-file`
       (`kindFile`, optional), summary "Leave a comment on the exact words you
       quote, under the robot prefix, changing nothing.", example
       `gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json`.
-- [ ] `cmdAnnotate`, `runAnnotate` and `annotateData` in `annotate.go`, with
+- [x] `cmdAnnotate`, `runAnnotate` and `annotateData` in `annotate.go`, with
       a body-file reader whose error text names annotate. Entries checked all
       before the first is sent; the loop stops at the first `Apply` error the
       way `runPropose` does, reporting every entry.
-- [ ] `cmd/gdoc/doc.go` gains the command's line in the list and a short
+- [x] `cmd/gdoc/doc.go` gains the command's line in the list and a short
       section on why it takes no folder and no note.
-- [ ] `cd go && go test -race ./...` passes, including the table, example and
+- [x] `cd go && go test -race ./...` passes, including the table, example and
       skills walks.
-- [ ] `git commit -m "feat(v2): gdoc annotate"`
+- [x] `git commit -m "feat(v2): gdoc annotate"`
 
 ### Task 6: the documents, the same day
 
@@ -502,31 +502,31 @@ an unknown key; an empty list.
   `CLAUDE.md`, `docs/guide/writing.md`, `README.md`,
   `docs/backlog/propose-inside-tables.md`
 
-- [ ] DECISIONS.md: an entry dated 2026-09-18, "annotate: a comment on quoted
+- [x] DECISIONS.md: an entry dated 2026-09-18, "annotate: a comment on quoted
       words, and nothing else", holding the eight decisions above with their
       reasons, the probe clause bent for this one writer and why, and its row
       in the register.
-- [ ] SPEC.md: `### annotate` after `### propose`, the two input forms, the
+- [x] SPEC.md: `### annotate` after `### propose`, the two input forms, the
       prefix rule, no probe, the two read-backs, the stop at the first
       failure, the limits. The Never list gains nothing: the existing lines
       already cover a comment.
-- [ ] PLAN.md: `## M11. annotate` after M10, naming the decision date and this
+- [x] PLAN.md: `## M11. annotate` after M10, naming the decision date and this
       plan, and what lands. On completion the row moves to the Done table.
-- [ ] CLAUDE.md: the row `go/internal/annotate/` in "What lives where", the
+- [x] CLAUDE.md: the row `go/internal/annotate/` in "What lives where", the
       row "a comment gdoc leaves on quoted words" in "If you touch", the
       command count in the `go/cmd/gdoc/` row moved from thirteen to
       fourteen. Under 300 lines.
-- [ ] `docs/guide/writing.md`: the title and the opening say five commands,
+- [x] `docs/guide/writing.md`: the title and the opening say five commands,
       the call block gains the two annotate lines, a paragraph for `annotate`
       after `propose` saying what it sends, what it reads back, that the file
       carries no prefix, and the limits.
-- [ ] README.md: the command table row for `annotate <url>`, and the guide
+- [x] README.md: the command table row for `annotate <url>`, and the guide
       index row for Writing names it.
-- [ ] `docs/backlog/propose-inside-tables.md`: one line saying the comment-only
+- [x] `docs/backlog/propose-inside-tables.md`: one line saying the comment-only
       shape is measured by `TestLiveAnnotateParagraphAndTable` in Task 7, with
       the answer filled in after that task runs.
-- [ ] `cd go && go test -race ./boundary/` passes: the task map, the ceiling.
-- [ ] `git commit -m "docs(v2): annotate, decided and described"`
+- [x] `cd go && go test -race ./boundary/` passes: the task map, the ceiling.
+- [x] `git commit -m "docs(v2): annotate, decided and described"`
 
 ### Task 7: the live test, opt-in
 
@@ -534,43 +534,98 @@ an unknown key; an empty list.
 - Create: `go/internal/live/annotate_test.go`
 - Modify: `go/internal/live/doc.go`
 
-- [ ] `TestLiveAnnotateParagraphAndTable`, under `GDOC_LIVE_WRITE=1`: create a
+- [x] `TestLiveAnnotateParagraphAndTable`, under `GDOC_LIVE_WRITE=1`: create a
       document in the test folder holding one paragraph and a two-cell table,
       annotate one phrase in the paragraph and one inside a cell, assert both
       results are `verified: true` with both checks, then trash the document
       and confirm the trash.
-- [ ] `live/doc.go` names the test and what it creates.
-- [ ] Run it once by hand against the test folder and record the table answer
+      ➕ The paragraph case asserts both checks and `verified`. The table case
+      logs them and asserts nothing, because it is the open question in
+      `docs/backlog/propose-inside-tables.md` and the house rule for the live
+      probes is that a measurement which fails the build has already decided
+      the answer. The ⚠️ below is what that choice serves.
+- [x] `live/doc.go` names the test and what it creates.
+- [x] Run it once by hand against the test folder and record the table answer
       in `docs/backlog/propose-inside-tables.md`. ⚠️ If the table case does not
       verify, record which check failed and leave the backlog item open; the
       paragraph case is the acceptance bar for this milestone.
-- [ ] `cd go && go test -race ./...` still passes without the variables set.
-- [ ] `git commit -m "test(v2): annotate, live"`
+      ➕ Run 2026-09-18: both cases `drive_listing true, docx_anchored true,
+      verified true`, the cell as the paragraph. Two of the three suspects in
+      the backlog item are cleared and it stays open on the third,
+      `deleteContentRange` inside a cell, which annotate never sends.
+- [x] `cd go && go test -race ./...` still passes without the variables set.
+- [x] `git commit -m "test(v2): annotate, live"`
 
 ### Task 8: Verify acceptance criteria
 
-- [ ] `gdoc annotate <url> --from annotations.json` on a throwaway document
+- [x] `gdoc annotate <url> --from annotations.json` on a throwaway document
       leaves one anchored 🤖 comment per entry and the envelope says
       `verified: true` for each.
-- [ ] `gdoc annotate <url> --quote "..." --body-file why.txt` leaves one.
-- [ ] Every refusal in Technical Details is reproduced by hand once and names
+      ➕ Run 2026-09-18 against document `1H4P2Pu10Qah6A0Oa6i5Oga-9duV18pEPdPOlWEDj_G0`,
+      published into the test folder from `release/example/first-note.md`. Two
+      entries, both `sent: true`, `comment_update_state: ALL_SAVED`,
+      `drive_listing true`, `docx_anchored true`, `verified true`, `ok: true`.
+- [x] `gdoc annotate <url> --quote "..." --body-file why.txt` leaves one.
+      ➕ Same document, one entry on `the identity provider`, all three answers
+      as above. `gdoc comments --witness` then read all three threads back:
+      each opens with `🤖 ` and each is `anchored`. The document was trashed
+      after the run.
+- [x] Every refusal in Technical Details is reproduced by hand once and names
       what is wrong.
-- [ ] The guard tests are green with no assertion changed.
-- [ ] `bin/gdoc help annotate` prints the usage line above, and
+      ➕ Reproduced against the built binary: no input, `--from` beside
+      `--quote`, `--quote` without `--body-file`, `--body-file` without
+      `--quote`, an unknown key, an empty list, a quote with no text, a quote
+      carrying a line break, an empty why, a why opening with the robot, a why
+      carrying `**`, and no url. Each printed one object naming what is wrong
+      and exited 1. ⚠️ The more-than-one-tab refusal is the one that cannot be
+      reproduced without a multi-tab document to hand; it stays covered by
+      `TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite`, which also
+      pins that no POST leaves the machine.
+- [x] The guard tests are green with no assertion changed.
+      ➕ `git diff main...HEAD -- go/internal/guard/` is empty and
+      `go test -race -count=1 ./internal/guard/` passes.
+- [x] `bin/gdoc help annotate` prints the usage line above, and
       `bin/gdoc completion zsh --out /dev/stdout` carries the command.
-- [ ] `make test`, `make vet` and `make build` pass.
-- [ ] Nothing to commit: this task changes no file. If it finds something,
+      ➕ The help line is the literal
+      `Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]`.
+      `--out /dev/stdout` is refused because the file is already there, which is
+      the `--force` rule working; written to a temp file instead, the zsh script
+      carries `annotate` in the command list, the description line and its own
+      arm, and the bash script carries it in three places too.
+- [x] `make test`, `make vet` and `make build` pass.
+      ⚠️ `make test` fails in this shell only because the ralphex environment
+      exports `GDOC_LIVE_TEST=1` and `GDOC_LIVE_WRITE=1` without
+      `GDOC_LIVE_IDEAL_DOC_ID`, so `TestLiveRestylePreservesTenFeatures` stops
+      and says the copy grant names no source. That test is untouched on this
+      branch. With the three live variables unset, `cd go && go test -race
+      ./...` passes in every package, which is this plan's own validation line.
+- [x] Nothing to commit: this task changes no file. If it finds something,
       that is a ➕ task with its own commit.
+      ➕ Nothing found. The only change is this plan's checkboxes.
 
 ### Task 9: Update documentation
 
-- [ ] Re-read CLAUDE.md's invariants list: none needs a new line, since the
+- [x] Re-read CLAUDE.md's invariants list: none needs a new line, since the
       prefix rule, the quote rule and the guard rule already cover annotate.
       Add one only if a test in this milestone pins something no line names.
-- [ ] PLAN.md: the M11 heading becomes a row in the Done table.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M11 annotate, completed"`
+      ➕ Read line by line against this milestone's tests. Every rule
+      annotate pins is already named: the robot prefix and no markdown, a
+      change that names text and is refused unless the quote is there exactly
+      once, nothing trusts a success, every change inside a handed-in document
+      is a suggestion, one JSON object, and no prompt. Nothing new. The one
+      thing this milestone decided that no invariant names is the probe it does
+      not run, and that is a DECISIONS.md entry, written in Task 6, not an
+      invariant: CLAUDE.md never claimed the probe runs every time.
+      `go/internal/annotate/` already carries its row in both tables from
+      Task 6, and CLAUDE.md stays at 258 lines.
+- [x] PLAN.md: the M11 heading becomes a row in the Done table.
+      ➕ M10's heading became a row in the same edit. Its plan was already
+      under `docs/plans/completed/`, so the open heading named a path that had
+      moved, against PLAN.md's own rule that a done milestone is one row and a
+      file under `completed/`. Left on main by the M10 run.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M11 annotate, completed"`
 
 ## Post-Completion
 

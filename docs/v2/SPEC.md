@@ -300,6 +300,37 @@ at indexes computed from a read, so a concurrent proposer shifts the ground unde
 the other and the API reports 200 either way. Each proposal re-reads before
 computing its indexes and reads back after landing.
 
+### `annotate`
+
+Leaves one comment on the exact words a caller quotes, anchored to them, and
+changes nothing else. Two input forms, exclusive: `--quote` with `--body-file`
+for one comment by hand, `--from` for a file of
+`{quoted, why, assignee?}`. The words are found in a document that just came
+back, through the same span walk `propose` uses, so a quote that is not there
+exactly once is refused. The reason arrives bare and gdoc writes `🤖 ` in front
+of it; a reason already carrying the mark is refused, as is markdown a thread
+would render literally. Every entry is checked before the first one is sent.
+
+**The probe does not run here**, and that is the one place a writer skips it.
+The batch holds one `insertComment` and nothing beside it, so no character can
+move even if `writeMode: SUGGEST` were ignored, and the question the probe asks
+has no bearing on what this write can do wrong. Decided 2026-09-18,
+DECISIONS.md. The guard is unchanged: the batch is carried because it says
+SUGGEST, and refused without it.
+
+**Two read-backs, on routes the write did not go out on**: Drive's comment
+listing must carry the returned id with the body that was sent, and the docx
+export must wrap the quoted words in a comment range. Both holding, with a
+write that answered `commentUpdateState: ALL_SAVED`, is `verified: true`.
+Anything less is a warning naming the route, never an error, because the
+comment exists.
+
+A run stops at the first entry that cannot be sent: the envelope is `ok: false`
+and every annotation is still reported with `sent` answered for itself. The
+limits are `propose`'s: one tab, body text only, and no folder and no note,
+because nothing here can be withdrawn. A wrong comment is removed by a person
+in the document.
+
 ### Withdrawing a proposal
 
 gdoc may retract its own pending, unaccepted suggestion: `rejectSuggestion`

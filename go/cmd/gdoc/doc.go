@@ -46,6 +46,8 @@
 //     internal/propose.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
 //     internal/withdraw.
+//   - annotate <url> --quote | --from [--body-file]: a comment on the words a
+//     caller quotes, and nothing else. internal/annotate.
 //   - build --md --out [--house] [--force]: the house-style docx, no network
 //     at all. internal/house, internal/cover, internal/body, internal/render.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
@@ -59,7 +61,7 @@
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the fifteen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the sixteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -69,7 +71,9 @@
 // takes what its entry names, and has nowhere else to keep a flag.
 // TestEveryFlagIsReadTheWayItsKindSays is the third direction, that a flag the
 // table says carries a file is read for a value and one that carries none is
-// read for its presence.
+// read for its presence. It also holds the one kind that is words rather than
+// a name for something somewhere: a text flag is read as it was typed, spaces
+// and quotes included, and an empty value is refused naming the flag.
 //
 // The usage line is held the same way, and for the same reason. Each flag
 // carries how it stands in the call beside its kind, so the line brackets what
@@ -78,7 +82,7 @@
 // which is the list above rather than every flag run together. The object
 // carries the same thing as a word, because a skill reads the object where a
 // person reads the line. TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative
-// spells the thirteen lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
+// spells the fourteen lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
 // holds the word beside them, and TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout
 // is the binary's own witness: a flag the table calls required is refused by
 // name when it is missing, and a flag marked wrong in either direction fails
@@ -199,11 +203,13 @@
 // The script is a rendering of the table help prints, so a Tab offers a word
 // or a flag the table holds and nothing else. A flag whose kind is a file
 // offers file names, and every other kind offers nothing, because nothing on
-// this machine knows a Drive folder id, a cursor or a wait length, and neither
-// does anything know a document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag and
+// this machine knows a Drive folder id, a cursor, a wait length or a quotation
+// out of somebody's document, and neither does anything know a document URL.
+// TestTheZshScriptNamesEveryCommandAndEveryFlag and
 // TestTheBashScriptNamesEveryCommandAndEveryFlag are the pins, and each asks
 // the table rather than a list of its own, so a command added without a line
-// in the script fails there.
+// in the script fails there. TestATextFlagIsOpaqueToBothScripts is the pin for
+// the text kind, which annotate carries as --quote.
 //
 // The bash script sets complete -o filenames for the whole command, so a
 // directory offered for a file flag gets a trailing slash and no trailing
@@ -391,6 +397,42 @@
 // here. TestAnInterruptedWaitIsAnAnswerAndNotAFailure covers the answer.
 // dispatch still takes a context, because a test hands a wait one that is
 // already done.
+//
+// # annotate takes no folder and no note
+//
+// The writers before it each carry something annotate does not, and in both
+// cases what is missing is a question this command cannot ask wrongly.
+//
+// No folder, so no probe. propose creates a throwaway document every run to
+// find out whether Docs honours SUGGEST today, because a SUGGEST that is
+// quietly ignored turns a proposal into a direct edit of somebody's prose. The
+// batch annotate sends holds one insertComment and nothing else, and no
+// insertComment can move a character whatever the write mode does. So the probe
+// has no question to answer here, and running it would litter a folder asking
+// it. PRINCIPLES.md says the probe runs every time, and this is the second
+// writer it does not run for, restyle's phase 1 being the first: that file's
+// 2026-09-18 amendment note names both, docs/v2/DECISIONS.md holds the bend
+// under the same date, and internal/annotate's Batch holds the shape the
+// reasoning rests on.
+//
+// No note, so no provenance. The note exists so withdraw can recognise gdoc's
+// own pending suggestions later, and a comment is not a suggestion: it is in
+// the thread, signed with the robot, and a person deletes it in the browser in
+// one gesture. Recording it would be provenance for a permission nothing uses.
+//
+// The two input forms are two calls, and a run naming both is refused before a
+// session opens, by the flag it was given rather than by the flag it was
+// missing: TestAnnotateRefusesFromBesideQuote,
+// TestAnnotateRefusesFromBesideBodyFile and
+// TestAnnotateNeedsAQuoteWithItsBodyFile. Every entry is checked before the
+// first one is sent, so a file whose second comment is malformed writes neither:
+// TestAnnotateRefusesASecondBadEntryBeforeAnyRequest hands in that file and says
+// the wire saw nothing, and
+// TestAnnotateRefusesARobotInTheWhyBeforeAnyRequest and
+// TestAnnotateRefusesMarkdownBeforeAnyRequest are the two shapes it refuses.
+// TestAnnotatePlacesEachEntryAndVerifiesIt is the whole run, and
+// TestAnnotateStopsAtTheFirstEntryThatCannotBeSent is the report keeping one
+// entry per annotation when it stops in the middle.
 //
 // # The note is read again just before it is written
 //

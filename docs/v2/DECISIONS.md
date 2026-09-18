@@ -69,6 +69,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds |
 | 2026-09-18 | The wait polls every two seconds | holds |
 | 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | holds |
+| 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2193,3 +2194,68 @@ never reached with the network working.
 The strain on principle 3 is that a command reaches a host a person did not
 name, and its bound is the whole of the design above: one command, once a day,
 two seconds, one file of gdoc's own, and nothing replaced.
+
+## 2026-09-18. annotate: a comment on quoted words, and nothing else.
+
+Nail's decisions, taken in the brainstorm that produced the M11 plan,
+`docs/plans/2026-09-18-gdoc-v2-m11-annotate.md`. Serves principle 3: a comment
+is the least a writer can do inside somebody's document, and the batch that
+carries it cannot move a character whatever Google does with the write mode.
+Serves 2: the skill reads the document, decides in the hub, and hands gdoc the
+words and the reason. Bends the probe clause of principle 3 in one bounded
+place, below.
+
+**A new command and a new package, not a fourth shape of `propose`.** A
+proposal with an empty replacement is refused today on purpose, `propose` runs
+the probe and records itself in the note, and its comment id is what lets
+`withdraw` find its suggestion later. A comment with no suggestion shares none
+of that, so it sits beside those writers rather than inside them.
+
+**The name is `annotate`.** `comment` sits one letter from `comments`, the read
+command, and a typo in either direction would be silent: a read where a write
+was meant, or a write where a read was meant.
+
+**Both input forms, and they are exclusive.** `--quote` with `--body-file`
+leaves one comment by hand. `--from` reads a file of many. Giving both is
+refused by name, and so is `--quote` without its body file and the reverse,
+before any request leaves the machine.
+
+**The binary adds the prefix.** The file carries the reason and gdoc writes
+`🤖 ` in front of it, as `propose` does. A reason that already opens with the
+robot is refused, so a comment can never carry two marks. The 🤖 stays the only
+record of authorship there is, because Google records every comment under the
+operator's own account, and a doubled mark would pass both read-backs: they
+compare against the string that was sent.
+
+**No probe, no folder, no note.** The probe answers one question, whether
+SUGGEST makes a real suggestion today or a silent direct edit, and this batch
+makes no suggestion: a request that inserts a comment cannot edit a character
+even when the mode is ignored. So this writer does not run it, which is the
+bend in the probe clause, and the bend is one writer wide. Nothing is written
+into a note either, because nothing here can be withdrawn. Nothing in the guard
+moves: its write levels, its comment routes and its suggestion rules are
+untouched, and two tests beside the writer pin that the shape this command
+sends is already carried and its unsuggested twin already refused.
+
+**Two read-backs, and nothing raises after the write.** Drive's comment listing
+must carry the id with the body that was sent, and the docx export must wrap
+the quoted words in a comment range. Neither is enough alone: the export
+carries no Drive comment id, and the listing keeps reporting the text a
+destroyed anchor used to hold, which is this writer's failure. Both holding is
+`verified: true`. Anything less is `verified: false` with a warning naming the
+route, reported and never raised, because the comment is in the document and a
+caller told the run failed writes it a second time.
+
+**The limits are stated, not lifted.** A document with more than one tab is
+refused, as `propose` refuses it. Body text only: headers, footers and
+footnotes cannot be quoted. Tables are walked and the live test says whether
+the comment-only shape lands in one. A wrong comment is removed by a person in
+the document, because deleting a comment is a write the guard does not carry.
+Lifting the tab rule is its own small change and not part of this one.
+
+**A run stops at the first entry that cannot be sent, as `propose` does.** The
+envelope is then `ok: false`, and the report still carries one entry per
+annotation in the file, each answering `sent` for itself, so a stop in the
+middle names what landed and what never left. `ok: true` over a run where an
+entry failed would give the envelope's `ok` a second meaning, and the exit code
+follows `ok`.
