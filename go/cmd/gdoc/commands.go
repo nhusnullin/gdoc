@@ -264,6 +264,20 @@ func commands() []command {
 			},
 		},
 		{
+			name:  "annotate",
+			words: []string{"<url>"},
+			flags: []flag{
+				{"--quote", kindText, needEither, "the exact words in the document to leave the comment on"},
+				{"--from", kindFile, needEither, "the file holding the comments to leave, each with the words it goes on"},
+				{"--body-file", kindFile, needOptional, "the file holding the reason, which --quote needs"},
+			},
+			summary: "Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
+			example: "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
+			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdAnnotate(a)
+			},
+		},
+		{
 			name: "build",
 			flags: []flag{
 				{"--md", kindFile, needRequired, "the note to build"},

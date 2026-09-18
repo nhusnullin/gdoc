@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:r><w:t xml:space="preserve">The supplier register is </w:t></w:r>
+      <w:commentRangeStart w:id="0"/>
+      <w:r><w:t>reviewed annually</w:t></w:r>
+      <w:commentRangeEnd w:id="0"/>
+      <w:r><w:t xml:space="preserve"> by the operations team.</w:t></w:r>
+      <w:r><w:commentReference w:id="0"/></w:r>
+    </w:p>
+    <w:p>
+      <w:r><w:t xml:space="preserve">It is kept by </w:t></w:r>
+      <w:commentRangeStart w:id="1"/>
+      <w:r><w:t>the Cyprus entity</w:t></w:r>
+      <w:commentRangeEnd w:id="1"/>
+      <w:r><w:t xml:space="preserve"> in Limassol.</w:t></w:r>
+      <w:r><w:commentReference w:id="1"/></w:r>
+    </w:p>
+  </w:body>
+</w:document>

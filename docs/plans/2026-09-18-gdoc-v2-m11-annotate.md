@@ -462,38 +462,38 @@ an unknown key; an empty list.
   `annotations.json`
 - Modify: `go/cmd/gdoc/commands.go`, `help_test.go`, `doc.go`
 
-- [ ] Test first, `TestAnnotateRefusesFromBesideQuote`: both given, refused by
+- [x] Test first, `TestAnnotateRefusesFromBesideQuote`: both given, refused by
       name, no request.
-- [ ] Test, `TestAnnotateNeedsAQuoteWithItsBodyFile`: `--quote` alone,
+- [x] Test, `TestAnnotateNeedsAQuoteWithItsBodyFile`: `--quote` alone,
       `--body-file` alone, and nothing at all, each refused by name.
-- [ ] Test, `TestAnnotateRefusesAnUnknownKeyInTheFile` and
+- [x] Test, `TestAnnotateRefusesAnUnknownKeyInTheFile` and
       `TestAnnotateRefusesAnEmptyList`.
-- [ ] Test, `TestAnnotateRefusesARobotInTheWhyBeforeAnyRequest` and
+- [x] Test, `TestAnnotateRefusesARobotInTheWhyBeforeAnyRequest` and
       `TestAnnotateRefusesMarkdownBeforeAnyRequest`: the stub saw nothing.
-- [ ] Test, `TestAnnotatePlacesEachEntryAndVerifiesIt`: a file of two lands
+- [x] Test, `TestAnnotatePlacesEachEntryAndVerifiesIt`: a file of two lands
       two batches in order, prints two results with `sent: true`, `ok: true`.
-- [ ] Test, `TestAnnotateByHandPlacesOne`: `--quote` and `--body-file` land one.
-- [ ] Test, `TestAnnotateStopsAtTheFirstEntryThatCannotBeSent`: the second
+- [x] Test, `TestAnnotateByHandPlacesOne`: `--quote` and `--body-file` land one.
+- [x] Test, `TestAnnotateStopsAtTheFirstEntryThatCannotBeSent`: the second
       quote is absent; the first lands with `sent: true`, the second is
       reported `sent: false`, the envelope is `ok: false` and `error` names
       the quote.
-- [ ] Test, the annotate row in
+- [x] Test, the annotate row in
       `TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative` with the
       literal `Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]`.
-- [ ] The table row: `annotate <url>`, flags in the order `--quote`
+- [x] The table row: `annotate <url>`, flags in the order `--quote`
       (`kindText`, either), `--from` (`kindFile`, either), `--body-file`
       (`kindFile`, optional), summary "Leave a comment on the exact words you
       quote, under the robot prefix, changing nothing.", example
       `gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json`.
-- [ ] `cmdAnnotate`, `runAnnotate` and `annotateData` in `annotate.go`, with
+- [x] `cmdAnnotate`, `runAnnotate` and `annotateData` in `annotate.go`, with
       a body-file reader whose error text names annotate. Entries checked all
       before the first is sent; the loop stops at the first `Apply` error the
       way `runPropose` does, reporting every entry.
-- [ ] `cmd/gdoc/doc.go` gains the command's line in the list and a short
+- [x] `cmd/gdoc/doc.go` gains the command's line in the list and a short
       section on why it takes no folder and no note.
-- [ ] `cd go && go test -race ./...` passes, including the table, example and
+- [x] `cd go && go test -race ./...` passes, including the table, example and
       skills walks.
-- [ ] `git commit -m "feat(v2): gdoc annotate"`
+- [x] `git commit -m "feat(v2): gdoc annotate"`
 
 ### Task 6: the documents, the same day
 

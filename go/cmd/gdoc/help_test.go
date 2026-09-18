@@ -14,8 +14,8 @@ import (
 // here rather than arriving in the help unannounced.
 var everyCommandName = []string{
 	"auth status", "auth login", "read", "comments", "suggestions", "restyle",
-	"probe", "reply", "propose", "withdraw", "build", "publish", "update",
-	"help", "completion",
+	"probe", "reply", "propose", "withdraw", "annotate", "build", "publish",
+	"update", "help", "completion",
 }
 
 // runHelp runs the command with both streams held apart, because the split is
@@ -286,6 +286,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body-file <file>"},
 		{[]string{"help", "propose"}, "Usage: gdoc propose <url> --from <file> --folder <folder id> [--md <file>]"},
 		{[]string{"help", "withdraw"}, "Usage: gdoc withdraw <url> <suggestion id> --md <file>"},
+		{[]string{"help", "annotate"}, "Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]"},
 		{[]string{"help", "build"}, "Usage: gdoc build --md <file> --out <file> [--house <file>] [--force]"},
 		{[]string{"help", "publish"}, "Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]"},
 		{[]string{"help", "update"}, "Usage: gdoc update [--check] [--major] [--nightly] [--rollback]"},
