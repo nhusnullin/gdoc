@@ -305,6 +305,40 @@ suggestion ids, nothing written, the marker over [1,1243), the author's own text
 character for character what it was, and the source document still on the
 revision it started on.
 
+## A proposal into a table cell lands
+
+Measured 2026-09-18, by hand with the released command, on a document
+`gdoc publish` created in the test folder from `release/example/first-note.md`
+and its two-column table (`1jkKjzNSu5EzaTQZ-eYy4UZQEcucN6S7mwTfDKIK02PA`, left
+in the folder with the suggestion pending so it can be looked at).
+
+Recheck on the document Nail saw it fail on, 2026-09-08, or on a table with
+merged cells, a nested table, or a quote that runs across a cell boundary. None
+of those was measured here.
+
+`docs/backlog/propose-inside-tables.md` records Nail's finding from the M4
+acceptance run that a suggestion into words inside a table did not land, and
+lists three suspects. The first step it asks for is a reproduction, and this is
+it. The quote `The system the account reaches` sits alone in one cell of the
+example note's table. The same command was run twice, once into that cell and
+once into an ordinary paragraph as a control, each with its own probe:
+
+| Target | `sent` | `verified` | `suggestions_inline` | `preview_without_suggestions` | `docx_anchored` |
+|---|---|---|---|---|---|
+| ordinary paragraph | true | true | true | true | true |
+| table cell | true | true | true | true | true |
+
+`gdoc read` afterwards prints the cell as
+`System | {+[[c:AAACHTigeJI]]The system the account can reach[[/c]]+}[s:...]{-The system the account reaches-}[s:...]`,
+so the suggestion, its comment and the docx witness all agree that it landed
+inside the cell. None of the three suspects in the backlog item fired on this
+shape: the comment range stayed inside one cell, `deleteContentRange` took the
+cell text, and the witness found the anchor under `w:tbl`.
+
+What this does not say is why the 2026-09-08 run failed. That document, its
+table's shape and the envelope it printed were not kept, so the defect is
+unreproduced rather than absent.
+
 ## Not measured yet
 
 The seven paragraph elements `internal/docs` decodes are a fixture built from
