@@ -174,3 +174,61 @@ func TestAStyleThatIsNotInTheFileCarriesNothing(t *testing.T) {
 		t.Error("Heading 1 is in the master and read no font size")
 	}
 }
+
+// docxOf packs a minimal docx around one styles part, so a test can state a
+// paragraph property in Word's own words and read what this package makes of
+// it. The document and rels parts are the empty shells the opener insists on.
+func docxOf(t *testing.T, styles string) *Docx {
+	t.Helper()
+	var buf bytes.Buffer
+	z := zip.NewWriter(&buf)
+	for name, body := range map[string]string{
+		"word/document.xml":            `<w:document xmlns:w="` + wordNS + `"><w:body/></w:document>`,
+		"word/styles.xml":              `<w:styles xmlns:w="` + wordNS + `">` + styles + `</w:styles>`,
+		"word/_rels/document.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`,
+	} {
+		w, err := z.Create(name)
+		if err != nil {
+			t.Fatalf("the fixture zip could not be written: %v", err)
+		}
+		if _, err := w.Write([]byte(body)); err != nil {
+			t.Fatalf("the fixture zip could not be written: %v", err)
+		}
+	}
+	if err := z.Close(); err != nil {
+		t.Fatalf("the fixture zip could not be closed: %v", err)
+	}
+	d, err := OpenDocx(buf.Bytes())
+	if err != nil {
+		t.Fatalf("the fixture docx did not open: %v", err)
+	}
+	return d
+}
+
+// TestAnExactLineHeightIsNotAPercentage. w:line is 240ths of a line only under
+// lineRule="auto". Under "exact" or "atLeast" the same number is twips, so an
+// 18pt line (360 twips) read as 150% spacing, and line="276" compared IDENTICAL
+// whichever rule it was under. lineSpacing is the row with a tolerance of zero,
+// and Docs has no length to compare an exact height against, so the honest
+// reading is nothing: the row goes MISSING rather than carrying a number in the
+// wrong unit. Measured by the M5 review, 2026-09-08.
+func TestAnExactLineHeightIsNotAPercentage(t *testing.T) {
+	style := func(rule string) string {
+		attr := ""
+		if rule != "" {
+			attr = ` w:lineRule="` + rule + `"`
+		}
+		return `<w:style w:type="paragraph" w:styleId="Tall"><w:pPr><w:spacing w:line="360"` + attr + `/></w:pPr></w:style>`
+	}
+	if got := docxOf(t, style("auto")).Style("Tall").LineSpacing; got != 150.0 {
+		t.Errorf("line=360 under auto read %v, and 360/240 is 150%%", got)
+	}
+	if got := docxOf(t, style("")).Style("Tall").LineSpacing; got != 150.0 {
+		t.Errorf("line=360 with no rule read %v, and the schema's default rule is auto", got)
+	}
+	for _, rule := range []string{"exact", "atLeast"} {
+		if got := docxOf(t, style(rule)).Style("Tall").LineSpacing; got != nil {
+			t.Errorf("line=360 under %s read %v, and 360 twips is a height, not a percentage", rule, got)
+		}
+	}
+}
