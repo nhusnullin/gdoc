@@ -1,48 +1,59 @@
 # gdoc
 
-Whatever gdoc puts into Google Drive looks like Altery.
+gdoc works on Google Docs from your terminal, through Claude Code.
+Whatever it puts into Drive looks like Altery.
 It never changes a word you wrote: every text edit is a suggestion, with your name on the accept button.
-Install it below, then ask Claude Code to publish a note, restyle a document, or review one live.
+Install it in one line below, then publish a note, restyle a document, or review one live.
 
-## Install in one line, then sign in once
-
-The line below downloads the newest release for your Mac and checks it against
-the published checksum. It puts one binary into `~/.local/bin` and one zsh
-completion file into `~/.config/gdoc-agent`, and nothing else.
+## Install in one line
 
 ```
 curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash
 ```
 
-If it says `~/.local/bin` is not on your PATH, run the `echo` line it prints.
-Then open a new terminal. The zip at
-https://github.com/nhusnullin/gdoc/releases carries the same `install.sh`.
+That downloads the newest release for your Mac, checks it against the published
+checksum, and puts one binary into `~/.local/bin`. If it says `~/.local/bin` is
+not on your PATH, run the `echo` line it prints and open a new terminal.
 
-Then run `gdoc auth login` once. It prints a URL. Open it and sign in with your
-`altery.com` account. The token stays on your machine. If you signed in before
-2026-09-16, sign in again: the secret changed that day.
+Then sign in once with `gdoc auth login`. It prints a URL. Open it with your
+`altery.com` Google account. The token stays on your machine.
 
-## The skills reach you by the first route that fits
+The second route is a checkout: `git clone https://github.com/nhusnullin/gdoc`,
+then `./install.sh` inside it builds the binary and links the skills. It needs
+Go and make, so take it only when you want to change gdoc. Details in
+[From a checkout](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/from-a-checkout.md).
+
+## Add the skills to Claude Code
 
 gdoc does the work. Three Claude Code skills drive it: `gdoc-review`,
-`gdoc-publish` and `gdoc-restyle`. Take the first row that fits you.
+`gdoc-publish` and `gdoc-restyle`. Take the first recipe that works.
 
-| Where you are | What to do |
-|---|---|
-| Claude Code accepts plugins | In Claude Code, type `/plugin marketplace add nhusnullin/gdoc`, then `/plugin install altery@gdoc`. It asks: everywhere, or this project only. |
-| Claude Code refused the marketplace | Run the line below, with `--skills global` for every project or `--skills local` for this one. |
-| `--skills` changed nothing | Your Claude Code is locked to the plugins your administrator turns on. Send them https://github.com/nhusnullin/gdoc and two keys for `managed-settings.json`: `extraKnownMarketplaces` naming `nhusnullin/gdoc`, and `enabledPlugins` turning `altery@gdoc` on. |
+**1. Plugins are allowed.** In Claude Code, type these two lines. It asks
+whether you want them everywhere or in this project only.
+
+```
+/plugin marketplace add nhusnullin/gdoc
+/plugin install altery@gdoc
+```
+
+**2. Claude Code refused the marketplace.** Install the skills as copies from
+the release zip, with `--skills global` for every project or `--skills local`
+for this one:
 
 ```
 curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash -s -- --skills global
 ```
 
+**3. Your administrator locks plugins.** Send them
+https://github.com/nhusnullin/gdoc and two keys for `managed-settings.json`:
+`extraKnownMarketplaces` naming `nhusnullin/gdoc`, and `enabledPlugins` turning
+`altery@gdoc` on.
+
 ## Claude Code runs gdoc for you
 
 You work in Claude Code, in a terminal, with the hub as the working directory.
-The hub is the folder that holds Altery's notes. You ask in plain words and
-paste the document link. The skill runs gdoc: you never type a gdoc command to
-publish, restyle or review.
+You ask in plain words and paste the document link. The skill runs gdoc: you
+never type a gdoc command to publish, restyle or review.
 
 Nothing happens in a document by itself. A comment that starts with `ai?` asks
 a question. The answer lands in that thread. A comment that starts with `ai!`
@@ -56,29 +67,73 @@ by saying stop. Close the session and the marks wait.
 
 1. **Publish a note.** Save
    https://github.com/nhusnullin/gdoc/blob/main/release/example/first-note.md
-   into the hub and change the words. Paste a Drive folder link and ask Claude
-   Code to publish `first-note.md` into that folder. gdoc builds it in the house style,
-   uploads it, reads it back and writes the document's id into the note. You see
-   a new Google Doc in that folder, in the house style. Then check the three
-   things gdoc cannot see: the logo in the header, the contents list and the
-   page numbers.
-2. **Restyle a document somebody else wrote.** Paste its link and ask for it in
-   the Altery house style. gdoc surveys the document first. Claude Code shows
-   you the survey. It asks whether you want the Altery cover page, and asks once
-   more before it sends the styling. gdoc then styles the page, the paragraphs,
-   the text and the table cells in place. Not one character of the text moves.
-   This styling is the one direct edit gdoc ever makes, so the undo is the
-   document's version history. The cover arrives as a suggestion. You see the
-   same document in the house style, with your comments and suggestions still
-   there. Claude Code lists what you finish in Docs yourself.
-3. **Review a document.** Open a Google Doc you can comment on and write a
-   comment that starts with `ai?`, then your question. In Claude Code, paste the
-   link and ask it to handle the marked comments. Add the word "live" to keep it
-   watching. Claude Code answers each `ai?` in its own thread. Each reply opens
-   with 🤖, so the document shows which words are gdoc's. A change to the words
-   arrives as a Google suggestion with a comment saying why. Claude Code never
-   acts on an unmarked comment. You see the reply in the thread and the
-   suggestion waiting for you to accept or reject.
+   into the hub and change the words. Then ask, with a Drive folder link:
+
+   > Publish first-note.md into https://drive.google.com/drive/folders/1AbC…
+
+   gdoc builds it in the house style, uploads it and reads it back. It writes
+   the document's id into the note's front matter. You see a new Google Doc in
+   that folder, in the house style. Then check the three things gdoc cannot
+   see: the logo in the header, the contents list and the page numbers.
+2. **Restyle a document somebody else wrote.** Ask, with its link:
+
+   > Give https://docs.google.com/document/d/1AbC…/edit the Altery house style
+
+   gdoc surveys the document first. Claude Code shows you the survey and asks
+   whether you want the Altery cover page. It asks once more before it sends
+   the styling. gdoc then styles the page, the paragraphs, the text and the
+   table cells in place. Not one character of the text moves. This styling is
+   the one direct edit gdoc ever makes, so the undo is the document's version
+   history. The cover arrives as a suggestion. You see the same document in
+   the house style, with your comments and suggestions still there. Claude
+   Code lists what you finish in Docs yourself.
+3. **Review a document live.** Start the session first, with the link:
+
+   > Review https://docs.google.com/document/d/1AbC…/edit live
+
+   Now open the document and write a comment that starts with `ai?`, then your
+   question. Claude Code answers in that thread while you watch. Each reply
+   opens with 🤖, so the document shows which words are gdoc's. A change to
+   the words arrives as a Google suggestion with a comment saying why. Claude
+   Code never acts on an unmarked comment. Stop the session with Ctrl-C or by
+   saying stop. Without the word "live", the session answers the marks that
+   are there now and ends.
+
+## Why gdoc can do what the ordinary Docs API cannot
+
+Google granted this project the Docs API Developer Preview on 2026-08-29. The
+preview lets gdoc write a real suggestion and anchor a comment to the exact
+words it is about. It also returns every comment with its character range.
+Through the ordinary API a "suggestion" lands as a direct edit. A comment
+cannot be pinned to a range at all. The preview is pre-GA and may be withdrawn.
+gdoc probes it on every run that proposes, and reads back every write, so a
+change of behaviour is reported rather than trusted.
+
+## Build your own skill on the binary
+
+The three skills are prompts over one binary. Every command takes arguments,
+prints one JSON object and exits, so a skill of your own can build on any of
+them. `gdoc help <command>` prints the words, the flags and an example.
+
+| Command | Does |
+|---|---|
+| `auth status`, `auth login` | say whether gdoc has a token and what it may reach, or sign in |
+| `read <url>` | print the document as text, with the ids a comment or suggestion is named by |
+| `comments <url>` | list the threads with their ranges, replies and the next cursor, or wait for new ones |
+| `suggestions <url>` | list the suggestions pending in the document |
+| `restyle <url>` | survey a document against the house style, or apply it where the document stands |
+| `probe` | create a throwaway document and say whether Docs honours a suggestion today |
+| `reply <url> <comment id>` | write one reply into a thread, under the robot prefix |
+| `propose <url>` | propose changes as native suggestions, each with the comment that says why |
+| `withdraw <url> <suggestion id>` | take back one pending suggestion gdoc proposed itself |
+| `build` | build a note as a house-style docx on this machine, with no network |
+| `publish` | build a note as a house-style document and upload it into one folder |
+| `update` | replace this gdoc with the newest release, or say what one would take |
+| `help`, `completion` | print every command, or write the shell completion script |
+
+Every request goes through a guard inside the binary. It carries a request only
+for a document gdoc was handed or created, so a skill of yours cannot reach
+further than the ids it names.
 
 ## Nothing updates on its own
 
