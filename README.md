@@ -106,13 +106,25 @@ by saying stop. Close the session and the marks wait.
 
 ## Why gdoc can do what the ordinary Docs API cannot
 
-Google granted this project the Docs API Developer Preview on 2026-08-29. The
-preview lets gdoc write a real suggestion and anchor a comment to the exact
-words it is about. It also returns every comment with its character range.
-Through the ordinary API a "suggestion" lands as a direct edit. A comment
-cannot be pinned to a range at all. The preview is pre-GA and may be withdrawn.
-gdoc probes it on every run that proposes and reads back every write. A change
-of behaviour is reported, never trusted.
+Google Docs has a public API and a Developer Preview. The preview is a set of
+extra requests that Google switches on for one project at a time, on
+application. Google granted this project the preview on 2026-08-29. Three
+things gdoc does need it.
+
+| What you see in the document | Through the public API | With the preview |
+|---|---|---|
+| An edit as a suggestion, with an accept button | lands as a direct edit, no button | a real suggestion |
+| A comment on the exact words it is about | lands on the document as a whole | anchored to those words |
+| Which words each comment is about | not returned | returned with every comment |
+
+The preview is not a general release. Google may change it or withdraw it, and
+its terms say so. If it goes, gdoc loses proposing in the document. Replies in
+existing threads survive, because they use the public API.
+
+So gdoc trusts nothing. Before it proposes, it creates a throwaway document and
+checks that a suggestion lands as a suggestion. A project without the preview
+gets a success answer and a silent direct edit. After every write, gdoc reads
+the document back and reports what it found.
 
 ## Build your own skill on the binary
 
