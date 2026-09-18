@@ -653,29 +653,40 @@ line 34.
 - Modify: `docs/v2/DECISIONS.md`, `PRINCIPLES.md`, `docs/v2/SPEC.md`,
   `docs/v2/PLAN.md`, `CLAUDE.md` (only if a check below says so)
 
-- [ ] DECISIONS.md: one entry, `## 2026-09-18. Five backlog items closed, and
+- [x] DECISIONS.md: one entry, `## 2026-09-18. Five backlog items closed, and
       what each decided.`, in the shape of the annotate entry at line 2198, with the
       five decisions above as its paragraphs, each naming the test that pins
       it; and one register row, `holds`. The register row for 2026-09-09 M7b
       is unchanged: nothing in it is superseded, the grant is narrowed by
       nothing and widened by nothing.
-- [ ] PRINCIPLES.md line 104: the no-rollback bullet gains one sentence, that
+- [x] PRINCIPLES.md line 104: the no-rollback bullet gains one sentence, that
       a batch answer naming no revision mid-run stops the run for the same
       reason the refused batch is never retried.
-- [ ] SPEC.md: read the styling paragraph at line 204 and the restyle section
+- [x] SPEC.md: read the styling paragraph at line 204 and the restyle section
       around it; if it says the loop reads between batches, or describes the
       grant on a created document, amend the sentence; if it says neither,
       change nothing and say so here as a ➕ note. Read the `publish` and
       `build` sections for a sentence about numbered lists or links; amend
       only what is now false.
-- [ ] PLAN.md: this milestone is one row in the Done table, `M12`, listing
+- [x] PLAN.md: this milestone is one row in the Done table, `M12`, listing
       the five items in one sentence, and the plan file's name.
-- [ ] CLAUDE.md: re-read the invariants list against this milestone's tests.
+- [x] CLAUDE.md: re-read the invariants list against this milestone's tests.
       The grant invariant ("The one door in that wall is `Policy.GrantInPlace`")
       gains nothing unless a test here pins something no line names; expected
       answer is no change. `wc -l CLAUDE.md` under 300 either way.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M12, five backlog items, decided and recorded"`
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M12, five backlog items, decided and recorded"`
+
+➕ SPEC.md changed nothing. The `restyle` styling paragraph at line 204 does
+not say the loop reads between batches, and nothing in the file describes the
+grant on a document a create the guard carried, so neither sentence exists to
+amend. The `publish` and `build` sections say nothing about numbered lists or
+about links, so nothing there is now false either.
+
+➕ CLAUDE.md changed nothing, as expected, and is 258 lines. The grant
+invariant at line 101 says `GrantInPlace` "raises one id for one run", which
+Task 1 made literally exact rather than nearly true, and no test in this
+milestone pins something no line already names.
 
 ### Task 7: Verify acceptance criteria
 

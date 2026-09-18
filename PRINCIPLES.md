@@ -104,7 +104,11 @@ shut.
 - There is no rollback, so a run that stops half way leaves a half-styled
   document and says so. A batch Docs refused on a moved revision is never
   retried: retrying would be gdoc styling a document somebody is editing, which
-  is uncertainty resolving toward the destructive answer.
+  is uncertainty resolving toward the destructive answer. An accepted batch
+  whose answer names no revision stops the run for the same reason, because the
+  only way to carry on would be to read the document for a revision, and that
+  revision could already carry somebody else's edit. Amended 2026-09-18,
+  DECISIONS.md.
 
 *Amended 2026-09-10, for M7c. Nail's idea.* The clause above stands as it is,
 and this milestone deliberately did not widen it. `gdoc restyle --fields` adds
