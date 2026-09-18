@@ -526,11 +526,23 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	//
 	// The last document read is kept for the envelope's fields, which
 	// comments.Waited does not carry and does not need to.
+	//
+	// The document is read on the first poll and then only on a poll whose
+	// narrowed listing carries something. The read exists to place comments,
+	// so a quiet tick has nothing to place and the read would answer the same
+	// bytes as the tick before: at two seconds a tick, a quiet nine-minute
+	// wait was 270 whole-document reads. The first poll keeps its read so the
+	// envelope carries the document's fields either way, and the document it
+	// kept is handed back on the quiet ticks, which Threads places nothing
+	// against. TestAQuietPollReadsTheListingAlone.
 	var d *docs.Document
 	poll := func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
 		raws, err := comments.Fetch(ctx, r.session, r.id, since)
 		if err != nil {
 			return nil, nil, err
+		}
+		if len(raws) == 0 && d != nil {
+			return d, raws, nil
 		}
 		got, err := docs.Fetch(ctx, r.session, r.id)
 		if err != nil {

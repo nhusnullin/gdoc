@@ -802,8 +802,9 @@ func shortPolls(t *testing.T) {
 }
 
 // waitWire is the two reads one poll makes, with the listing scripted in order.
-// The Docs answer is reusable because every poll reads the document again; the
-// listings are spent one at a time, which is what makes an order testable.
+// The Docs answer is reusable because a poll with news reads the document
+// again; the listings are spent one at a time, which is what makes an order
+// testable.
 func waitWire(t *testing.T, listings ...*answer) *fakeWire {
 	t.Helper()
 	f := &fakeWire{answers: []*answer{
@@ -1187,5 +1188,42 @@ func TestTheWaitIntervalIsTwoSeconds(t *testing.T) {
 	// follow it wherever somebody moved it. Nail's decision of 2026-09-18.
 	if waitInterval != 2*time.Second {
 		t.Fatalf("waitInterval is %v, want 2s", waitInterval)
+	}
+}
+
+// A quiet poll is one request, not two. The document read exists to place the
+// comments the listing carried, so a tick whose narrowed listing is empty has
+// nothing to place and the read would answer the same bytes as the tick before.
+// At two seconds a tick, a quiet nine-minute wait was 270 whole-document reads.
+// The first poll still reads it, so the envelope carries the document's fields
+// and a deadline-cut first poll stays distinguishable by tabs: 0.
+func TestAQuietPollReadsTheListingAlone(t *testing.T) {
+	shortPolls(t)
+	f := stubWire(t, waitWire(t, emptyListing(), emptyListing(), emptyListing(), newsListing(t)))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--wait", "9m")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("comments --wait: %v (exit %d)", got, code)
+	}
+	if polls := waitedOf(t, got)["polls"]; polls != float64(4) {
+		t.Fatalf("polls = %v, want 4: three empty windows and then the news", polls)
+	}
+	var docReads, listings int
+	for _, c := range f.calls {
+		switch {
+		case strings.Contains(c.URL, "docs.googleapis.com"):
+			docReads++
+		case strings.Contains(c.URL, "/comments?"):
+			listings++
+		}
+	}
+	if listings != 4 {
+		t.Errorf("the wire saw %d listings, want one per poll", listings)
+	}
+	if docReads != 2 {
+		t.Errorf("the wire saw %d document reads, want 2: the first poll's and the one that placed the news", docReads)
+	}
+	if dataOf(t, got)["tabs"] != float64(1) {
+		t.Errorf("tabs = %v, want the document's fields on the envelope", dataOf(t, got)["tabs"])
 	}
 }
