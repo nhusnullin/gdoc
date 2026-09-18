@@ -443,3 +443,45 @@ func TestAMaskNamingExactlyWhatItSetsCarries(t *testing.T) {
 		})
 	}
 }
+
+// The grant never narrows. An id at LevelFull came back from a create the
+// guard itself carried, and the in-place level would take reach away: the
+// Drive PATCH judgeDrive carries at LevelFull alone would stop being carried,
+// and inPlaceKinds would start to bind. The levels are names and not a ladder,
+// so the grant leaves that id where it is and says on the envelope that it
+// changed nothing.
+func TestGrantInPlaceLeavesACreatedDocumentAtFull(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("MADE", LevelFull)
+	p.GrantInPlace("MADE")
+
+	if lvl, known := p.level("MADE"); !known || lvl != LevelFull {
+		t.Fatalf("the grant must leave a created document at the full level; got %v, known=%v", lvl, known)
+	}
+	u := mustURL(t, "https://www.googleapis.com/drive/v3/files/MADE")
+	if err := p.Judge("PATCH", u, []byte(`{"trashed":true}`)); err != nil {
+		t.Fatalf("the trash on a created document must still carry after the grant: %v", err)
+	}
+	warnings := p.Warnings()
+	if len(warnings) != 1 {
+		t.Fatalf("the grant that changed nothing must be one entry on the envelope; got %v", warnings)
+	}
+	if !strings.Contains(warnings[0], "MADE") || !strings.Contains(warnings[0], "full") {
+		t.Fatalf("the warning must name the id and the level; got %q", warnings[0])
+	}
+}
+
+// A second grant on an id the first one raised changes nothing and says
+// nothing: it is the same level written again, and there is nothing for a
+// reader to do about it.
+func TestASecondInPlaceGrantIsQuiet(t *testing.T) {
+	p := granted(t)
+	p.GrantInPlace("DOC1")
+
+	if lvl, known := p.level("DOC1"); !known || lvl != LevelInPlace {
+		t.Fatalf("a second grant must leave the id at the in-place level; got %v, known=%v", lvl, known)
+	}
+	if warnings := p.Warnings(); len(warnings) != 0 {
+		t.Fatalf("a second grant must say nothing; got %v", warnings)
+	}
+}

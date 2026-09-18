@@ -127,7 +127,11 @@
 // third door into the set. AllowFile refuses to hand that level out at all,
 // because taking any level there was the side door around the invariant.
 // TestGrantInPlaceNeverAdmitsAnUnknownID and TestAllowFileCannotOpenTheInPlaceDoor
-// are the pins.
+// are the pins. The grant also never narrows: an id at LevelFull, which a
+// create the guard carried gave it, is left there and the grant says on the
+// envelope that it changed nothing, because the levels are names and writing
+// the in-place level over the full one would take the Drive PATCH away.
+// TestGrantInPlaceLeavesACreatedDocumentAtFull is the pin.
 //
 // A create whose response carries no readable id is recorded on the policy and
 // readable through Warnings. Silence there turns into "file was not given to

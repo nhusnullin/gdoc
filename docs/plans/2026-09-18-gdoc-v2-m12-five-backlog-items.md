@@ -398,24 +398,24 @@ paths that only run after a prelude phase that returned no error.
   `go/internal/guard/doc.go`
 - Remove: `docs/backlog/grantinplace-silently-demotes-a-created-document.md`
 
-- [ ] Test first, `TestGrantInPlaceLeavesACreatedDocumentAtFull`: `AllowFile("MADE",
+- [x] Test first, `TestGrantInPlaceLeavesACreatedDocumentAtFull`: `AllowFile("MADE",
       LevelFull)`, `GrantInPlace("MADE")`; the level is still `LevelFull`, a
       `PATCH` on `https://www.googleapis.com/drive/v3/files/MADE` with
       `{"trashed":true}` is carried, and `Warnings()` is one entry naming
       `MADE` and the word `full`. Watch it fail.
-- [ ] Test, `TestASecondInPlaceGrantIsQuiet`: `granted(t)` then
+- [x] Test, `TestASecondInPlaceGrantIsQuiet`: `granted(t)` then
       `GrantInPlace("DOC1")` again; level unchanged, no warning.
-- [ ] `GrantInPlace`: read `p.level(id)`; when known and `LevelFull`, `p.note`
+- [x] `GrantInPlace`: read `p.level(id)`; when known and `LevelFull`, `p.note`
       the sentence in Technical Details and return; otherwise as today. The
       note is written outside the lock.
-- [ ] The function's comment says why the grant never narrows and names both
+- [x] The function's comment says why the grant never narrows and names both
       tests; `doc.go:125` gains one sentence naming the first.
-- [ ] `cd go && go test -race ./internal/guard/` passes with no other
+- [x] `cd go && go test -race ./internal/guard/` passes with no other
       assertion changed;
       `git diff main -- go/internal/guard/policy.go go/internal/guard/doc.go | grep '^-' | grep -v '^---' | grep -v '^-\s*//'`
       is empty: nothing left the guard but comment lines.
-- [ ] `git rm docs/backlog/grantinplace-silently-demotes-a-created-document.md`
-- [ ] `git commit -m "fix(guard): GrantInPlace leaves a created document at full"`
+- [x] `git rm docs/backlog/grantinplace-silently-demotes-a-created-document.md`
+- [x] `git commit -m "fix(guard): GrantInPlace leaves a created document at full"`
 
 ### Task 2: a quiet answer mid-run stops the loop
 
