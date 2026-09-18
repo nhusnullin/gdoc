@@ -347,19 +347,19 @@ an unknown key; an empty list.
 **Files:**
 - Create: `go/internal/annotate/doc.go`, `annotate.go`, `annotate_test.go`
 
-- [ ] Test first, `TestCheckRefusesEachBadShapeByName`: table of an empty
+- [x] Test first, `TestCheckRefusesEachBadShapeByName`: table of an empty
       quote, a quote with `\n`, an empty why, a why opening with `🤖 `, a why
       holding `**bold**`; each refused with a sentence naming what is wrong.
-- [ ] Test, `TestCheckAcceptsAPlainAnnotation`: a quote and a why pass, with
+- [x] Test, `TestCheckAcceptsAPlainAnnotation`: a quote and a why pass, with
       and without an assignee.
-- [ ] Test, `TestBodyIsTheRobotAndTheWhy`: `Body("The register.")` is the
+- [x] Test, `TestBodyIsTheRobotAndTheWhy`: `Body("The register.")` is the
       literal `"🤖 The register."`.
-- [ ] `Annotation`, `Check`, `Body` in `annotate.go`, the markdown rule asked
+- [x] `Annotation`, `Check`, `Body` in `annotate.go`, the markdown rule asked
       through `plaintext.Markdown` of the why alone.
-- [ ] `doc.go` opens `Package annotate`, says why the prefix is added here and
+- [x] `doc.go` opens `Package annotate`, says why the prefix is added here and
       required in reply, and names the three tests.
-- [ ] `cd go && go test -race ./internal/annotate/` passes.
-- [ ] `git commit -m "feat(v2): the annotation and its shape rule"`
+- [x] `cd go && go test -race ./internal/annotate/` passes.
+- [x] `git commit -m "feat(v2): the annotation and its shape rule"`
 
 ### Task 2: the batch, the guard, and the id it comes back with
 
