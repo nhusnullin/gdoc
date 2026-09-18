@@ -98,6 +98,28 @@ func TestAnnotateRefusesFromBesideQuote(t *testing.T) {
 	}
 }
 
+// --body-file beside --from is refused by the arm that names it, and not by the
+// one below that arm. The one below says --quote is what says which words the
+// reason goes on, and adding --quote is the one change that makes this run
+// worse: it is then a run naming both forms at once, refused a second time.
+func TestAnnotateRefusesFromBesideBodyFile(t *testing.T) {
+	f := stubWire(t, &fakeWire{})
+	from := tempFile(t, "annotations.json", readFixture(t, "annotations.json"))
+	body := tempFile(t, "why.txt", "The 2026 register says quarterly.\n")
+
+	got, code := runJSON(t, "annotate", annotateDocID, "--from", from, "--body-file", body)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("--body-file beside --from must be refused: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if !strings.Contains(msg, "--from") || !strings.Contains(msg, "drop --body-file") {
+		t.Errorf("the refusal must name the real mistake and the flag to drop: %q", msg)
+	}
+	if len(f.calls) != 0 {
+		t.Errorf("nothing may reach the wire before the call is understood: %v", f.calls)
+	}
+}
+
 // The by-hand form is a pair. One half of it names words with no reason, and
 // the other names a reason with nothing to put it on, and neither is a comment.
 func TestAnnotateNeedsAQuoteWithItsBodyFile(t *testing.T) {
@@ -200,6 +222,31 @@ func TestAnnotateRefusesMarkdownBeforeAnyRequest(t *testing.T) {
 	}
 	if len(f.calls) != 0 {
 		t.Errorf("the refusal must come before the first request: %v", f.calls)
+	}
+}
+
+// The file is checked as a batch and not entry by entry as it is sent. An entry
+// the run would refuse in the middle is refused now: the first comment would
+// otherwise be in somebody's document when the run stops on the second.
+func TestAnnotateRefusesASecondBadEntryBeforeAnyRequest(t *testing.T) {
+	f := stubWire(t, &fakeWire{answers: annotateAnswers(t)})
+	from := tempFile(t, "annotations.json",
+		`[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."},`+
+			`{"quoted":"named twice","why":"Spelled **two** ways."}]`)
+
+	got, code := runJSON(t, "annotate", annotateDocID, "--from", from)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a file whose second entry is malformed must be refused: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if !strings.Contains(msg, "annotations[1]") {
+		t.Errorf("the refusal must name the entry it refused: %q", msg)
+	}
+	if !strings.Contains(msg, "**") {
+		t.Errorf("the refusal must name the mark it found: %q", msg)
+	}
+	if len(f.calls) != 0 {
+		t.Errorf("the first entry must not be written before the second is checked: %v", f.calls)
 	}
 }
 

@@ -166,7 +166,9 @@ footer or a footnote.
 
 The review skill runs over these commands. It reads the threads, decides which
 ones still need an answer, and writes the reply and proposal files the binary
-sends, and the annotations when a comment is all that is called for. The binary
-reports facts either way: there is no `handled` field, and no
-rule in Go that says a comment is answered.
+sends. `annotate` is there for a review skill to call when a comment is all that
+is called for, and the one in this repository does not call it yet: a colleague's
+own skill is what will, and this page is what it reads. The binary reports facts
+either way: there is no `handled` field, and no rule in Go that says a comment is
+answered.
 

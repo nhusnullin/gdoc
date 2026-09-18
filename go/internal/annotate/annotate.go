@@ -151,9 +151,10 @@ type Result struct {
 // one saw, but the rule is the same one propose holds and holding it in one
 // shape is cheaper than holding it in two.
 //
-// The span walk and the write path are propose's: FindSpan and BatchURL have
-// one owner each, and a second copy of either is a second place a quote can be
-// placed differently.
+// The span walk, the write path and the answer shape are propose's: FindSpan,
+// BatchURL and BatchAnswer have one owner each, and a second copy of any of
+// them is a second place a quote can be placed differently, or a second place
+// to fix when Google moves a field in the answer.
 //
 // It fails only before the write. After the batch has gone out the comment
 // exists, and everything from there is reported rather than raised.
@@ -179,12 +180,12 @@ func Apply(ctx context.Context, s Session, docID string, a Annotation) (Result, 
 	}
 
 	body := Body(a.Why)
-	var answer batchAnswer
+	var answer propose.BatchAnswer
 	if err := s.PostJSON(ctx, propose.BatchURL(docID), json.RawMessage(Batch(r, body, a.Assignee)), &answer); err != nil {
 		return out, fmt.Errorf("the comment could not be written: %w", err)
 	}
-	out.CommentID = answer.commentID()
-	out.CommentUpdateState = answer.state()
+	out.CommentID = answer.CommentID()
+	out.CommentUpdateState = answer.State()
 	if out.CommentUpdateState != stateAllSaved {
 		// The status code says nothing about whether the comment was saved.
 		// This is the field that does.
@@ -240,61 +241,4 @@ func Batch(r docs.Range, body, assignee string) []byte {
 	// caller from being able to change what the guard already judged.
 	raw, _ := json.Marshal(out)
 	return raw
-}
-
-// batchAnswer is what came back from the write, in the shape propose measured
-// on 2026-09-07: the id sits under insertComment.commentThread.commentId,
-// beside an anchorId, and commentUpdateState sits at the top of the answer.
-//
-// The flat insertComment.commentId was the guess made before that measurement.
-// It stays as a fallback because reading one more field costs nothing, and
-// reporting a comment id as missing because it arrived at a level this struct
-// did not name is exactly what the first live write test did.
-type batchAnswer struct {
-	DocumentID         string `json:"documentId"`
-	CommentUpdateState string `json:"commentUpdateState"`
-	Replies            []struct {
-		CommentUpdateState string `json:"commentUpdateState"`
-		InsertComment      *struct {
-			CommentID          string `json:"commentId"`
-			CommentUpdateState string `json:"commentUpdateState"`
-			CommentThread      *struct {
-				CommentID string `json:"commentId"`
-				AnchorID  string `json:"anchorId"`
-			} `json:"commentThread"`
-		} `json:"insertComment"`
-	} `json:"replies"`
-	WriteControl struct {
-		RequiredRevisionID string `json:"requiredRevisionId"`
-	} `json:"writeControl"`
-}
-
-func (a batchAnswer) commentID() string {
-	for _, r := range a.Replies {
-		if r.InsertComment == nil {
-			continue
-		}
-		if t := r.InsertComment.CommentThread; t != nil && t.CommentID != "" {
-			return t.CommentID
-		}
-		if r.InsertComment.CommentID != "" {
-			return r.InsertComment.CommentID
-		}
-	}
-	return ""
-}
-
-func (a batchAnswer) state() string {
-	if a.CommentUpdateState != "" {
-		return a.CommentUpdateState
-	}
-	for _, r := range a.Replies {
-		if r.CommentUpdateState != "" {
-			return r.CommentUpdateState
-		}
-		if r.InsertComment != nil && r.InsertComment.CommentUpdateState != "" {
-			return r.InsertComment.CommentUpdateState
-		}
-	}
-	return ""
 }

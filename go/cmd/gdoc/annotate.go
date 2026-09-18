@@ -81,6 +81,13 @@ func annotationsFor(a *args) ([]annotate.Annotation, error) {
 	case a.has("--from") && a.has("--quote"):
 		return nil, fmt.Errorf("annotate takes --quote with --body-file, or --from <file>, and this run gave both: " +
 			"one names a single comment on the command line and the other names a file of them")
+	// --body-file beside --from is the same mistake as --quote beside it, and
+	// it has to be named here: the --body-file arm below would otherwise tell
+	// this caller to add --quote, which is the one flag that makes the run
+	// worse. A refusal that names the wrong mistake costs two attempts.
+	case a.has("--from") && a.has("--body-file"):
+		return nil, fmt.Errorf("--from carries the reason for every comment in the file, and --body-file belongs to --quote: " +
+			"drop --body-file to leave the comments the file names")
 	case a.has("--quote") && !a.has("--body-file"):
 		return nil, fmt.Errorf("--quote names the words to comment on, and the reason goes in --body-file <file>: " +
 			"a comment that says nothing is one Nail has to guess at")

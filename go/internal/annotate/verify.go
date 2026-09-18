@@ -118,7 +118,9 @@ func docxHolds(ctx context.Context, s Session, docID, quoted, body string) (bool
 	// no Drive comment id to tell one from the other. Comments reading the same
 	// words that disagree about where they are attached give no answer: taking
 	// the first would report this comment on the strength of another one. It is
-	// the rule internal/docx's own witness follows, on the same join.
+	// internal/docx's question on the same join and one more: docx compares
+	// whether the candidates are anchored, and this compares the words they are
+	// attached to as well, because the span is what is being verified here.
 	for _, c := range hits[1:] {
 		if c.Anchored != hits[0].Anchored || c.Span != hits[0].Span {
 			return false, fmt.Sprintf(

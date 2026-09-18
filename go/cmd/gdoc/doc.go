@@ -409,10 +409,11 @@
 // batch annotate sends holds one insertComment and nothing else, and no
 // insertComment can move a character whatever the write mode does. So the probe
 // has no question to answer here, and running it would litter a folder asking
-// it. PRINCIPLES.md says the probe runs every time, and this is the one writer
-// it does not run for: the bend is written down in docs/v2/DECISIONS.md, dated
-// 2026-09-18, and internal/annotate's Batch holds the shape the reasoning rests
-// on.
+// it. PRINCIPLES.md says the probe runs every time, and this is the second
+// writer it does not run for, restyle's phase 1 being the first: that file's
+// 2026-09-18 amendment note names both, docs/v2/DECISIONS.md holds the bend
+// under the same date, and internal/annotate's Batch holds the shape the
+// reasoning rests on.
 //
 // No note, so no provenance. The note exists so withdraw can recognise gdoc's
 // own pending suggestions later, and a comment is not a suggestion: it is in
@@ -420,11 +421,15 @@
 // one gesture. Recording it would be provenance for a permission nothing uses.
 //
 // The two input forms are two calls, and a run naming both is refused before a
-// session opens: TestAnnotateRefusesFromBesideQuote and
+// session opens, by the flag it was given rather than by the flag it was
+// missing: TestAnnotateRefusesFromBesideQuote,
+// TestAnnotateRefusesFromBesideBodyFile and
 // TestAnnotateNeedsAQuoteWithItsBodyFile. Every entry is checked before the
 // first one is sent, so a file whose second comment is malformed writes neither:
+// TestAnnotateRefusesASecondBadEntryBeforeAnyRequest hands in that file and says
+// the wire saw nothing, and
 // TestAnnotateRefusesARobotInTheWhyBeforeAnyRequest and
-// TestAnnotateRefusesMarkdownBeforeAnyRequest say the wire saw nothing.
+// TestAnnotateRefusesMarkdownBeforeAnyRequest are the two shapes it refuses.
 // TestAnnotatePlacesEachEntryAndVerifiesIt is the whole run, and
 // TestAnnotateStopsAtTheFirstEntryThatCannotBeSent is the report keeping one
 // entry per annotation when it stops in the middle.

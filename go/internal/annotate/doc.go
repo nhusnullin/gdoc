@@ -20,9 +20,10 @@
 //
 // The caller hands over the exact words to comment on, and the span is looked
 // up in a document that has just come back, through propose.FindSpan. The span
-// walk has one owner: a quote that occurs twice, a quote that is not there, and
-// a quote crossing a footnote mark or a smart chip are refused there, by the
-// same rule and with the same words as they are for a proposal. A quote carrying
+// walk has one owner, as propose.BatchURL and propose.BatchAnswer do: a quote
+// that occurs twice, a quote that is not there, and a quote crossing a footnote
+// mark or a smart chip are refused there, by the same rule and with the same
+// words as they are for a proposal. A quote carrying
 // a line break is refused here instead, before the document is read, because
 // that walk reads one paragraph at a time and such a quote could only ever come
 // back as "not found". TestCheckRefusesEachBadShapeByName is the pin.
@@ -71,7 +72,10 @@
 // Comments in the export that read the same words and disagree about the text
 // they are attached to give no answer, because the export has no Drive comment
 // id to tell one from another and taking the first would report this comment on
-// the strength of somebody else's. It is the rule internal/docx's own witness
-// follows on the same join, and TestTwoExportedCommentsThatDisagreeGiveNoAnswer
-// pins it.
+// the strength of somebody else's. That is internal/docx's question on the same
+// join and one more: docx asks whether the candidates agree about being
+// anchored, and this asks whether they agree about the words they are attached
+// to as well, because here the span is the thing being verified. propose asks
+// only docx's half, and its own copy of this paragraph stays as it is.
+// TestTwoExportedCommentsThatDisagreeGiveNoAnswer pins it.
 package annotate

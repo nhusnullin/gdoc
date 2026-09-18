@@ -1,10 +1,11 @@
 // Package plaintext holds the two rules about what gdoc may write into a Google
 // Docs thread: it opens with the robot, and it carries no markdown.
 //
-// Both writers ask this package rather than holding a copy, because two copies
+// Every writer asks this package rather than holding a copy, because two copies
 // of one regular expression are two rules that drift. internal/reply asks it of
-// a reply, and internal/propose asks it of the reason a proposal carries as a
-// comment.
+// a reply, internal/propose asks it of the reason a proposal carries as a
+// comment, and internal/annotate asks it of the reason a comment carries, adding
+// the prefix as propose does.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
@@ -54,9 +55,9 @@
 // TestMarkdownLeavesPlainWordsAlone are the pins.
 //
 // The heading arm is anchored to a line start, because a hash in the middle of a
-// sentence is a number sign somebody typed. That anchoring is why both callers
-// ask the rule behind the mark rather than in front of it: reply.Check's own
-// comment holds the argument.
+// sentence is a number sign somebody typed. That anchoring is why all three
+// callers ask the rule behind the mark rather than in front of it: reply.Check's
+// own comment holds the argument.
 package plaintext
 
 import (
