@@ -52,8 +52,10 @@ https://github.com/nhusnullin/gdoc and two keys for `managed-settings.json`:
 ## Claude Code runs gdoc for you
 
 You work in Claude Code, in a terminal, with the hub as the working directory.
-You ask in plain words and paste the document link. The skill runs gdoc: you
-never type a gdoc command to publish, restyle or review.
+Each skill is a slash command: type its name, then the request in plain words
+with the link. The skill runs gdoc: you never type a gdoc command to publish,
+restyle or review. Skills that came as the plugin carry its prefix, so
+`/gdoc-review` is `/altery:gdoc-review` there.
 
 Nothing happens in a document by itself. A comment that starts with `ai?` asks
 a question. The answer lands in that thread. A comment that starts with `ai!`
@@ -65,39 +67,42 @@ by saying stop. Close the session and the marks wait.
 
 ## Try one of these first
 
-1. **Publish a note.** Save
-   https://github.com/nhusnullin/gdoc/blob/main/release/example/first-note.md
-   into the hub and change the words. Then ask, with a Drive folder link:
+1. **Publish a note.** Save [first-note.md](https://github.com/nhusnullin/gdoc/blob/main/release/example/first-note.md)
+   into the hub and change the words. Then call the skill:
 
-   > Publish first-note.md into https://drive.google.com/drive/folders/1AbC…
+   ```
+   /gdoc-publish first-note.md into https://drive.google.com/drive/folders/<folder id>
+   ```
 
    gdoc builds it in the house style, uploads it and reads it back. It writes
    the document's id into the note's front matter. You see a new Google Doc in
-   that folder, in the house style. Then check the three things gdoc cannot
-   see: the logo in the header, the contents list and the page numbers.
-2. **Restyle a document somebody else wrote.** Ask, with its link:
+   that folder, in the house style. Then check what gdoc cannot see: the logo
+   in the header, the contents list and the page numbers.
+2. **Restyle a document somebody else wrote.** Call the skill with its link:
 
-   > Give https://docs.google.com/document/d/1AbC…/edit the house style
+   ```
+   /gdoc-restyle https://docs.google.com/document/d/<document id>/edit with the cover
+   ```
 
    gdoc surveys the document first. Claude Code shows you the survey and asks
-   whether you want the house cover page. It asks once more before it sends
-   the styling. gdoc then styles the page, the paragraphs, the text and the
-   table cells in place. Not one character of the text moves. This styling is
-   the one direct edit gdoc ever makes, so the undo is the document's version
-   history. The cover arrives as a suggestion. You see the same document in
-   the house style, with your comments and suggestions still there. Claude
-   Code lists what you finish in Docs yourself.
+   once more before it sends the styling. gdoc then styles the page, the
+   paragraphs, the text and the table cells in place. Not one character of the
+   text moves. This styling is the one direct edit gdoc ever makes, so the undo
+   is the document's version history. The cover arrives as a suggestion. Leave
+   out "with the cover" and gdoc styles the body alone. You see the same document
+   in the house style, with your comments and suggestions still there.
 3. **Review a document live.** Start the session first, with the link:
 
-   > Review https://docs.google.com/document/d/1AbC…/edit live
+   ```
+   /gdoc-review live https://docs.google.com/document/d/<document id>/edit
+   ```
 
    Now open the document and write a comment that starts with `ai?`, then your
    question. Claude Code answers in that thread while you watch. Each reply
    opens with 🤖, so the document shows which words are gdoc's. A change to
    the words arrives as a Google suggestion with a comment saying why. Claude
    Code never acts on an unmarked comment. Stop the session with Ctrl-C or by
-   saying stop. Without the word "live", the session answers the marks that
-   are there now and ends.
+   saying stop.
 
 ## Why gdoc can do what the ordinary Docs API cannot
 
@@ -147,7 +152,7 @@ yours is behind. It downloads nothing: installing is yours to type.
 | `gdoc update --rollback` | puts the binary that was here before back |
 
 `--major` and `--nightly` are in `gdoc help update`. Plugin skills update
-through Claude Code. Skills from the `--skills` line update when you run it again.
+through Claude Code, copied skills when you run the `--skills` line again.
 
 ## A problem report needs four things
 
