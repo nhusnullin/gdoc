@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
@@ -389,6 +390,16 @@ func TestAnAnswerCarryingNoRevisionMidRunStopsTheRun(t *testing.T) {
 	if joined := strings.Join(got.Warnings, " "); !strings.Contains(joined, "half styled") {
 		t.Errorf("the warnings must say the document is half styled: %v", got.Warnings)
 	}
+	// The sentence RevisionUnconfirmedWarning holds says the last batch went
+	// quiet, and here the quiet one was the first of three. Put on the envelope
+	// beside an error naming batch 1 of 3, the two disagree about which batch
+	// stopped the run, and the skill reads both of them to Nail.
+	if slices.Contains(got.Warnings, RevisionUnconfirmedWarning) {
+		t.Errorf("the mid-run stop says the last batch went quiet: %v", got.Warnings)
+	}
+	if !strings.Contains(strings.Join(got.Warnings, " "), "batch 1 of 3") {
+		t.Errorf("the warnings must name the batch whose answer was quiet: %v", got.Warnings)
+	}
 }
 
 // The last batch needs no revision after it, so an answer that carries none
@@ -409,8 +420,12 @@ func TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead(t *testing.T) {
 	if got.RevisionID != "rev3" {
 		t.Errorf("RevisionID = %q, want rev3, the revision the last batch was sent against", got.RevisionID)
 	}
-	if !strings.Contains(strings.Join(got.Warnings, " "), "revision") {
-		t.Errorf("the last answer named no revision, and the warnings must say so: %v", got.Warnings)
+	// By value, because this path is the one cmd/gdoc drops the sentence on:
+	// dropWarning matches RevisionUnconfirmedWarning exactly, so a literal put
+	// here in its place would leave the sentence on the prelude envelope beside
+	// the revision the styling phase went and confirmed.
+	if !slices.Contains(got.Warnings, RevisionUnconfirmedWarning) {
+		t.Errorf("the last answer named no revision, and the warnings must carry RevisionUnconfirmedWarning: %v", got.Warnings)
 	}
 	// The flag, and it is what the caller acts on rather than the sentence. A
 	// marker batch is the last batch of its own run, and the styling phase that

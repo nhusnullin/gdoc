@@ -62,6 +62,20 @@ note's own directory, or decoded when the markdown carries it as a `data:` URI;
 PNG and JPEG. A picture at an `http` address is refused naming the line, because
 a document built from a link is a document that breaks when the link expires.
 
+A link whose destination opens with `#` is a jump inside the document rather
+than a link out of it. It lands on the heading it names, so `[see below](#scope)`
+jumps to the `Scope` heading. The name is built from the heading's own words:
+lower case, every space, hyphen and underscore becomes a hyphen, and anything
+that is not an ASCII letter or digit is dropped. So `## Data Protection (GDPR)`
+is `#data-protection-gdpr` and `# KYC_AML checks` is `#kyc-aml-checks`. A heading
+with accents or in another alphabet loses those letters, so `## Café` is `#caf`,
+and a heading with no ASCII letter or digit in it at all is `#heading`, the next
+such heading `#heading-1`. Two headings with the same words give the second one
+`-1` too. A `#` link that names no heading in the note is printed as the words
+you wrote, with a warning naming the line and the destination you asked for. A
+heading that is nothing but a picture is a figure rather than a heading, so it
+is nothing to jump to and a link naming it warns the same way.
+
 Code blocks are not rendered. The house style has nothing to render them in, so
 a note carrying one gets a warning naming the line and the block is left out
 rather than dropped in silence. Blocks of HTML, inline HTML and footnotes are

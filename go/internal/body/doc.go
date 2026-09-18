@@ -192,6 +192,18 @@
 // TestAFigureOnlyHeadingCarriesNoBookmark are the pins, and
 // TestALinkIsAHyperlinkWithARelationship is the https link, unchanged.
 //
+// The line the warning names is renderer.curLine, because addRuns is six
+// callers deep from the node and has no line of its own. Every path that emits
+// runs sets it where the node is in hand: headingBlock, paragraphBlock, the
+// table branch of block, and quoteBlock, which handles a top-level paragraph
+// itself rather than through paragraphBlock. A path that forgets names the
+// block before it, and the author looks for the link there.
+// TestADeadAnchorInsideABlockQuoteNamesItsOwnLine is the pin on the quote,
+// which is the one that was forgotten. A table names the table's own line
+// rather than the cell's, which is Nail's decision: a cell has no line of its
+// own that the author would recognise.
+// TestADeadAnchorInsideATableNamesTheTablesOwnLine is the pin on the table.
+//
 // # A numbered list starts at 1, and a list that opens elsewhere says so
 //
 // A w:num is where Word keeps a list's running count, so two numbered lists
@@ -209,8 +221,10 @@
 // TestOneNumberedListDefinitionPerNumberedList are the pins.
 //
 // What stays wrong is the number a list opens on. Every level of the numbered
-// abstract list states w:start 1, and honouring an author's "5." would be a
-// w:startOverride on that list's own w:num, which gdoc does not write, so the
+// abstract list states w:start 1, and every list's own w:num states
+// w:startOverride 1 over it, which is what makes the restart the file's rather
+// than one reading of the spec. Honouring an author's "5." is that same
+// override carrying their number instead, which gdoc does not write, so the
 // list opens at 1 and warnListNumbers names the line. The silence around a list
 // that starts at 1 is deliberate, because the prose beside a numbered list
 // cross-references the numbers the author wrote.

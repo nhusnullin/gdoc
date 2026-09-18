@@ -523,10 +523,11 @@ func (r *renderer) itemBlocks(item ast.Node, level int, list listCtx) error {
 // not write. This is not a construct the walker declined to render: the list is
 // there and its first number is somebody else's.
 //
-// Every level of the numbered abstract list states w:start 1, and honouring an
-// author's "5." would be a w:startOverride on that list's own w:num, which gdoc
-// does not write. So a list that opens at 5 in the note opens at 1 in the
-// document, whatever depth it sits at.
+// Every level of the numbered abstract list states w:start 1, and every list's
+// own w:num states w:startOverride 1 over it. Honouring an author's "5." is
+// that same override carrying their number instead, which gdoc does not write.
+// So a list that opens at 5 in the note opens at 1 in the document, whatever
+// depth it sits at.
 //
 // The silence around a list that starts at 1 is deliberate: the prose beside a
 // numbered list cross-references the numbers the author wrote, so a document
@@ -780,6 +781,11 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 			continue
 		}
 		line := r.line(paragraph)
+		// This is the one path that emits runs without going through
+		// paragraphBlock, so it sets the current line itself. Left to the
+		// block before it, a dead anchor link inside the quote is named at
+		// that block's line and the author looks for it there.
+		r.curLine = line
 		r.warnRawHTML(paragraph, line)
 		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
 		r.emit(r.quote(inlineRuns(paragraph, r.source), r.quoteDepth))

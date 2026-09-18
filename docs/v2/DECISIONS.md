@@ -2316,14 +2316,23 @@ measured pair to pin there.
 5, 6. The body walker now hands a fresh list id to every ordered list that is
 not nested inside an ordered list, counts them on `Result`, and `render.Build`
 writes that many `w:num` entries, all pointing at the one numbered abstract
-list. A nested ordered list names its parent's id, so level restarts work as
-they did. The arithmetic lives in `render` beside `numberingPart`, which is why
-`NumberNumID` became a function, and `NumberNumID(1)` is still `"2"`, so a
-document with one list is unchanged. The "carries on from the one above"
-warning is gone, because it is no longer true. The "starts at N in the note and
-at 1 in the document" warning stays: honouring an author's start number is a
-`w:startOverride` and it is a decision nobody has taken.
+list, each stating `w:startOverride` 1 on all nine of its levels. The override
+is the restart said in the file rather than assumed of the reader: a fresh id
+alone rests on Word keeping its count per instance and not per abstract list,
+which nothing here measures, and pandoc and python-docx both write the override.
+The override is correct under either reading of ECMA-376 17.9.27 and costs nine
+empty elements per list. The Word master restarts a third way, one
+`w:abstractNum` per list, which needs no override and costs a definition per
+list instead. A nested ordered list names its parent's
+id, so level restarts work as they did. The arithmetic lives in `render` beside
+`numberingPart`, which is why `NumberNumID` became a function, and
+`NumberNumID(1)` is still `"2"`, so a body paragraph in a document with one
+list names the list it always did. The "carries on from the one above" warning
+is gone, because it is no longer true. The "starts at N in the note and at 1 in
+the document" warning stays: honouring an author's start number is that same
+override carrying their number, and it is a decision nobody has taken.
 `TestOneNumberedListDefinitionPerNumberedList`,
+`TestEveryNumberedListOverridesItsStart`,
 `TestASecondNumberedListStartsAgain`, `TestANestedNumberedListNamesItsParent`,
 `TestANumberedListUnderABulletOpensItsOwn` and
 `TestAListThatStartsElsewhereStillSaysSo` pin it.
@@ -2344,9 +2353,16 @@ which is how a code block is already refused: a dead jump in Word is worse than
 words that do not jump. The walk collects the heading ids before it renders, so
 a link to a heading further down resolves, and it collects only the headings
 that will carry a bookmark, so a link to a figure-only heading is a dead anchor
-like any other. `TestBookmarkNameIsWordSafe`, `TestEveryHeadingCarriesABookmark`,
+like any other. The line the warning names is the walker's current line, set on
+every path that emits runs: a heading, a paragraph, a table and a block quote,
+which handles a top-level paragraph itself rather than through
+`paragraphBlock`. A table names the table's own line rather than the cell's,
+because a cell has no line the author would recognise.
+`TestBookmarkNameIsWordSafe`, `TestEveryHeadingCarriesABookmark`,
 `TestAnAnchorLinkIsAJumpAndNotARelationship`,
-`TestAnAnchorToNoHeadingWarnsAndPrintsPlainText` and
+`TestAnAnchorToNoHeadingWarnsAndPrintsPlainText`,
+`TestADeadAnchorInsideABlockQuoteNamesItsOwnLine`,
+`TestADeadAnchorInsideATableNamesTheTablesOwnLine` and
 `TestAFigureOnlyHeadingCarriesNoBookmark` pin it. What Google's import does with
 a `w:anchor` hyperlink and a `w:bookmarkStart` is unmeasured, and if the jump
 does not survive it that is a MEASURED.md row, not a reason to revert the docx

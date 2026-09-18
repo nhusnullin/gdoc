@@ -1042,9 +1042,10 @@ func TestAnEmptyFenceNamesARealLine(t *testing.T) {
 // A numbered list that opens on a number the author did not write says so on
 // the envelope.
 //
-// Every level of the numbered abstract list states w:start 1, so an author's
-// "5." opens at 1 whatever depth it sits at, and honouring it would be a
-// w:startOverride gdoc does not write. The silence is not deferred, because
+// Every level of the numbered abstract list states w:start 1 and every list's
+// own w:num states w:startOverride 1 over it, so an author's "5." opens at 1
+// whatever depth it sits at. Honouring it is that same override carrying the
+// author's number, which gdoc does not write. The silence is not deferred, because
 // the prose around a list cross-references the numbers the author wrote.
 //
 // A second numbered list is no longer one of these shapes: it opens its own

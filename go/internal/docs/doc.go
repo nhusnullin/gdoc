@@ -166,9 +166,10 @@
 // The whole document answers with the ranges already, so a survey takes them
 // out of the read it has rather than making a fourth request. The narrowed read
 // is for the caller that wants one fact out of that answer, and its one caller
-// is restyle.RevisionOf, which reads it between batches for the revision id
-// alone: the measured saving was 982 bytes against 12,907 for the document
-// itself.
+// is restyle.RevisionOf, which cmd/gdoc's restyle makes between the marker
+// batch and the styling phase, for the revision id alone: the measured saving
+// was 982 bytes against 12,907 for the document itself. The apply loop reads
+// nothing between its own batches.
 //
 // Its mask selects each tab's id and its named ranges, and childTabs whole. A
 // field mask does not recurse into a nesting of unknown depth, so selecting a

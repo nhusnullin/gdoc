@@ -23,6 +23,18 @@ const bulletFont = "Noto Sans Symbols"
 // A w:num is where Word keeps a list's running count, so two numbered lists
 // sharing one carry one count: the second list printed 3. and 4. where the
 // author wrote 1. and 2. One each is what makes the second list start again.
+//
+// Each numbered one also states the restart rather than assuming its reader
+// makes it. ECMA-376 17.9.27 has w:startOverride say the number a level begins
+// at when it starts in the document, and a reader that keeps the count against
+// the abstract list would otherwise carry the first list's number into the
+// second, which is the defect the per-list w:num exists to fix. pandoc writes
+// the override on every ordered list and python-docx documents it as the way to
+// restart, so the file says the restart rather than resting on one reading of
+// the spec. The Word master needs none: it gives every list an abstract
+// definition of its own, seven w:num entries over seven w:abstractNum, which
+// costs a definition per list and is not the route this part takes. The bullet
+// list takes none either: a bullet has no count to carry.
 func (b *builder) numberingPart(numberedLists int) []byte {
 	doc, root := newPart("w:numbering")
 
@@ -36,6 +48,10 @@ func (b *builder) numberingPart(numberedLists int) []byte {
 	for i := 1; i <= numberedLists; i++ {
 		num := sub(root, "w:num", "w:numId", NumberNumID(i))
 		sub(num, "w:abstractNumId", "w:val", numberAbstractID)
+		for level := 0; level < listLevels; level++ {
+			override := sub(num, "w:lvlOverride", "w:ilvl", fmt.Sprint(level))
+			sub(override, "w:startOverride", "w:val", "1")
+		}
 	}
 	return b.serialise(doc, "word/numbering.xml")
 }
@@ -48,8 +64,8 @@ const BulletNumID = "1"
 // from 1. The ids are computed rather than named as constants because there is
 // one per list and the body only knows how many once it has walked: the
 // arithmetic lives here, beside the part that writes the matching w:num, so
-// the two cannot drift. The first numbered list is still "2", so a document
-// with one numbered list is byte for byte what gdoc wrote before.
+// the two cannot drift. The first numbered list is still "2", so a body
+// paragraph in a document with one numbered list names the list it always did.
 func NumberNumID(n int) string {
 	return strconv.Itoa(n + 1)
 }

@@ -71,8 +71,9 @@ func TestANumberedListUnderABulletOpensItsOwn(t *testing.T) {
 	}
 }
 
-// TestAListThatStartsElsewhereStillSaysSo: honouring the author's own start
-// number is a w:startOverride per list, which gdoc does not write, so a list
+// TestAListThatStartsElsewhereStillSaysSo: every list's own w:num already
+// states w:startOverride 1, and honouring the author's own start number is that
+// same override carrying their number, which gdoc does not write, so a list
 // that opens at 5 still opens at 1 in the document and still says so.
 func TestAListThatStartsElsewhereStillSaysSo(t *testing.T) {
 	out := walk(t, "5. a\n")

@@ -144,6 +144,33 @@ func TestAFigureOnlyHeadingCarriesNoBookmark(t *testing.T) {
 	}
 }
 
+// TestADeadAnchorInsideABlockQuoteNamesItsOwnLine: quoteBlock handles a
+// top-level paragraph itself rather than through paragraphBlock, so it is the
+// one walker path that has to set the current line for itself. Read off the
+// block before it, the warning names the last heading and the author looks for
+// the link there.
+func TestADeadAnchorInsideABlockQuoteNamesItsOwnLine(t *testing.T) {
+	out := walk(t, "# Purpose\n\n> See [below](#nowhere).\n")
+
+	want := "line 3: the link to #nowhere names no heading in this note, so its words are printed as plain text"
+	if !has(out.Warnings, want) {
+		t.Errorf("the warnings are %v, want one reading %q", out.Warnings, want)
+	}
+}
+
+// TestADeadAnchorInsideATableNamesTheTablesOwnLine: a cell is not a line the
+// author would recognise, so the table branch sets the current line to the
+// table's and every dead anchor in any of its cells names that. Read off the
+// block before it, the warning names the last heading instead.
+func TestADeadAnchorInsideATableNamesTheTablesOwnLine(t *testing.T) {
+	out := walk(t, "# Purpose\n\n| a | b |\n| --- | --- |\n| See [below](#nowhere). | c |\n")
+
+	want := "line 3: the link to #nowhere names no heading in this note, so its words are printed as plain text"
+	if !has(out.Warnings, want) {
+		t.Errorf("the warnings are %v, want one reading %q", out.Warnings, want)
+	}
+}
+
 // has is one exact warning among the walk's, because a warning read with
 // Contains passes on half a sentence.
 func has(warnings []string, want string) bool {
