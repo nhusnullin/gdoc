@@ -191,10 +191,12 @@ func shellArray(t *testing.T, script, opening string) []string {
 }
 
 // releaseREADMECeiling is the line count the colleague's README stays under.
-// It is the first and often the only gdoc document a colleague reads, and a
-// hundred lines is about what somebody reads before they start typing. Longer
-// than that belongs in `gdoc help`, which is the thing that cannot go stale.
-const releaseREADMECeiling = 100
+// It is the first and often the only gdoc document a colleague reads, on
+// GitHub and inside the zip, which carry the same file. A hundred lines is
+// about what somebody reads before they start typing, and twenty more carry
+// the three pitches the front page needs. Longer than that belongs in
+// `gdoc help`, which cannot go stale, or in `docs/guide/`.
+const releaseREADMECeiling = 120
 
 // TestTheReleaseREADMEIsUnderTheCeiling holds the length and the house writing
 // rule. The em dash is checked here rather than trusted, because this file is
@@ -203,10 +205,10 @@ const releaseREADMECeiling = 100
 func TestTheReleaseREADMEIsUnderTheCeiling(t *testing.T) {
 	text := releaseREADME(t)
 	if lines := len(strings.Split(strings.TrimRight(text, "\n"), "\n")); lines > releaseREADMECeiling {
-		t.Errorf("release/README.md is %d lines and the ceiling is %d; what does not fit goes into `gdoc help`", lines, releaseREADMECeiling)
+		t.Errorf("README.md is %d lines and the ceiling is %d; what does not fit goes into `gdoc help`", lines, releaseREADMECeiling)
 	}
 	if i := strings.Index(text, "—"); i >= 0 {
-		t.Errorf("release/README.md carries an em dash at byte %d; the house rule is a comma, a colon or a full stop", i)
+		t.Errorf("README.md carries an em dash at byte %d; the house rule is a comma, a colon or a full stop", i)
 	}
 }
 
@@ -232,12 +234,12 @@ func TestTheReleaseREADMENamesEveryRouteToTheSkills(t *testing.T) {
 		"enabledPlugins",
 	} {
 		if !strings.Contains(text, want) {
-			t.Errorf("release/README.md never says %q, and a colleague on that route has nowhere to go", want)
+			t.Errorf("README.md never says %q, and a colleague on that route has nowhere to go", want)
 		}
 	}
 	for _, skill := range skillFolders(t) {
 		if !strings.Contains(text, skill) {
-			t.Errorf("release/README.md never names the %s skill, which the plugin installs", skill)
+			t.Errorf("README.md never names the %s skill, which the plugin installs", skill)
 		}
 	}
 }
@@ -261,10 +263,11 @@ func TestTheIssueTemplateAsksForTheFourFacts(t *testing.T) {
 	}
 }
 
-// releaseREADME is the README the zip carries and the one line points at.
+// releaseREADME is the README the zip carries, which is the repository's own
+// README.md. One file, so GitHub and the zip never drift apart.
 func releaseREADME(t *testing.T) string {
 	t.Helper()
-	b, err := os.ReadFile(filepath.Join(repoRoot, "release", "README.md"))
+	b, err := os.ReadFile(filepath.Join(repoRoot, "README.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

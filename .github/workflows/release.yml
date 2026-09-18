@@ -90,7 +90,8 @@ jobs:
       # carries the only copy of that list this tree tolerates, because it
       # travels inside the zip; this file stays in the repository and reads it.
       #
-      # The zip is flat: the binary as `gdoc`, the installer, the README, the
+      # The zip is flat: the binary as `gdoc`, the installer, the repository's
+      # README (one file, so GitHub and the zip say the same thing), the
       # example note and the three skills. install.sh unpacks it into a temp
       # directory and installs what it finds beside itself, so a folder level
       # here would be a folder it cannot see past.
@@ -114,7 +115,7 @@ jobs:
             stage="$(mktemp -d)"
             install -m 755 "$binary" "$stage/$name"
             install -m 755 release/install.sh "$stage/install.sh"
-            cp release/README.md "$stage/README.md"
+            cp README.md "$stage/README.md"
             cp -R release/example "$stage/example"
             cp -R skills "$stage/skills"
 

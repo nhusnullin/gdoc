@@ -236,7 +236,7 @@ func TestTheZipCarriesWhatTheInstallerLooksFor(t *testing.T) {
 	script := releaseScript(t)
 	for _, want := range []string{
 		"release/install.sh",
-		"release/README.md",
+		`cp README.md "$stage/README.md"`,
 		"release/example",
 		"skills",
 	} {
