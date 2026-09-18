@@ -574,7 +574,7 @@ list, which is the body it was always describing.
 - Create: `go/internal/body/anchors_test.go`
 - Remove: `docs/backlog/internal-anchor-links.md`
 
-- [ ] Test first, `TestBookmarkNameIsWordSafe`: `bookmarkName("purpose-and-scope")`
+- [x] Test first, `TestBookmarkNameIsWordSafe`: `bookmarkName("purpose-and-scope")`
       is the literal `"h_purpose_and_scope"`, `bookmarkName("1-1-purpose")` is
       `"h_1_1_purpose"`, `bookmarkName("a.b")` is `"h_a_b"` (an input goldmark
       never produces, pinned because the rule is wider than the generator),
@@ -585,28 +585,28 @@ list, which is the body it was always describing.
       value once with a throwaway test, delete the throwaway, and add the
       whole 40-character literal to the test as a second assertion, so the
       hash is pinned too.
-- [ ] Test, `TestEveryHeadingCarriesABookmark`: `"# Purpose and scope\n\ntext\n\n## Scope\n"`
+- [x] Test, `TestEveryHeadingCarriesABookmark`: `"# Purpose and scope\n\ntext\n\n## Scope\n"`
       serialises with `w:bookmarkStart w:id="0" w:name="h_purpose_and_scope"`
       and a matching `w:bookmarkEnd w:id="0"` inside the first heading's
       paragraph, and `w:id="1"` with `h_scope` in the second.
-- [ ] Test, `TestAnAnchorLinkIsAJumpAndNotARelationship`:
+- [x] Test, `TestAnAnchorLinkIsAJumpAndNotARelationship`:
       `"See [below](#scope).\n\n## Scope\n"` serialises with
       `<w:hyperlink w:anchor="h_scope">`, no `r:id` on it, `len(out.Media)`
       0, and the run inside coloured and underlined. The link sits above the
       heading, which is the forward case.
-- [ ] Test, `TestAnAnchorToNoHeadingWarnsAndPrintsPlainText`:
+- [x] Test, `TestAnAnchorToNoHeadingWarnsAndPrintsPlainText`:
       `"See [below](#nowhere).\n"` has no `w:hyperlink`, the words `below` are
       in an ordinary run, `Media` is empty, and one warning is
       `line 1: the link to #nowhere names no heading in this note, so its words are printed as plain text`.
-- [ ] Test, `TestAFigureOnlyHeadingCarriesNoBookmark`: the note
+- [x] Test, `TestAFigureOnlyHeadingCarriesNoBookmark`: the note
       `"See [it](#altpicpng).\n\n## ![alt](pic.png)\n"` with `pic.png` a
       one-pixel PNG in the test's temp directory: the heading serialises with
       no `w:bookmarkStart` (goldmark names it `altpicpng`, built from the raw
       line), and the link is warned about as a dead anchor to `#altpicpng`
       and printed as plain text, because no bookmark was written for it.
-- [ ] `TestALinkIsAHyperlinkWithARelationship` runs unchanged: an `https` link
+- [x] `TestALinkIsAHyperlinkWithARelationship` runs unchanged: an `https` link
       is as it was.
-- [ ] `body`: `bookmarkName`, with `hash/fnv` for the long case; extract
+- [x] `body`: `bookmarkName`, with `hash/fnv` for the long case; extract
       the figure-only test `headingBlock` already makes at `body.go:547` into
       `isFigureOnly(heading, source) bool` and use it in both places; a
       pre-walk in `Render` (before the block walk) over `ast.Heading` nodes
@@ -619,14 +619,33 @@ list, which is the body it was always describing.
       takes the `#` branch: strip `#`, look the id up in the set, and either
       `w:hyperlink w:anchor` or the plain run plus the warning at `curLine`.
       No caller of `addRuns` changes.
-- [ ] `body/doc.go`: the autolink section's last sentence no longer names the
+- [x] `body/doc.go`: the autolink section's last sentence no longer names the
       backlog file, and a new section "An anchor link is a jump to a bookmark
       every heading with words carries" says why the name is rewritten, why a dead anchor
       is plain text rather than a broken jump, and names the five tests.
-- [ ] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
+- [x] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
       with no pin changed: a bookmark carries no text and no measured value.
-- [ ] `git rm docs/backlog/internal-anchor-links.md`
-- [ ] `git commit -m "fix(body): an internal anchor link jumps to a bookmark on the heading it names"`
+- [x] `git rm docs/backlog/internal-anchor-links.md`
+- [x] `git commit -m "fix(body): an internal anchor link jumps to a bookmark on the heading it names"`
+
+➕ `isFigureOnly` also replaces the same expression in
+`shallowestHeadingLevel`, which is the third place the test was written out:
+the plan named two, and leaving the third a copy is the drift the extraction
+exists to stop.
+
+➕ The six goldens under `body/testdata/golden/` grew 270 lines and lost none,
+every one a `w:bookmarkStart` or `w:bookmarkEnd`. `05-edge-cases.xml` shows the
+rewrite doing its work: `h_rsum_of_nderungen_nave_caf` for a heading of
+accented words, `h_overview` and `h_overview_1` for two headings with one name,
+and `h_a_table_with_an_empty_cell_and_c3cdb97` for one over the ceiling.
+
+➕ The long name's hash is `9cccf62`, read off the failing assertion rather
+than a throwaway test, and pinned as the whole 40-character literal.
+
+➕ The scratch note of the Validation Commands built: 3 `w:num`, 3
+`w:bookmarkStart`, one `w:anchor="h_the_third_heading"`, no `TargetMode`
+`External` relationship at all, and the dead anchor named on the envelope as
+line 34.
 
 ### Task 6: the documents
 

@@ -10,6 +10,7 @@ package body
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/beevik/etree"
@@ -86,6 +87,18 @@ type renderer struct {
 	// not one of them: it reuses its parent's id.
 	numberedLists int
 
+	// anchors is every heading id a bookmark will be written for, collected
+	// before the walk so a link to a heading further down the note resolves,
+	// and bookmarkID is the w:id the next pair takes, counting from 0 across
+	// the document.
+	anchors    map[string]bool
+	bookmarkID int
+
+	// curLine is the line of the block being built, set where the node is in
+	// hand. addRuns is six callers deep from a node and needs a line to name
+	// the link that jumps nowhere.
+	curLine int
+
 	relID      int
 	linkIDs    map[string]string
 	imageCount int
@@ -121,6 +134,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 
 	r := &renderer{
 		cfg: cfg, base: base, source: source,
+		anchors: headingAnchors(root, source), curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
 		firstHeading: true,
 	}
@@ -301,6 +315,93 @@ func firstTextNode(node ast.Node) *ast.Text {
 	return nil
 }
 
+// Word's own rule for a bookmark name: letters, digits and underscores,
+// opening with a letter, and at most 40 characters. A name outside it is not
+// refused, it is repaired, and a repaired name is one no w:anchor matches.
+const (
+	bookmarkPrefix  = "h_"
+	bookmarkMaxName = 40
+	// The stem is what is left of the name once the separator and the seven
+	// hex digits of the hash have their room: 32 + 1 + 7 is the ceiling.
+	bookmarkStem = bookmarkMaxName - 1 - bookmarkHashDigits
+	// Seven of the eight digits FNV-1a 32-bit prints. Two ids that collide
+	// here would have to differ only past their thirty-second character and
+	// then land on the same hash, and the cost of that is one jump landing on
+	// the wrong heading rather than anything lost.
+	bookmarkHashDigits = 7
+)
+
+// bookmarkName turns goldmark's auto heading id into a name Word accepts.
+//
+// The id arrives as goldmark's generator made it, which is lower-case letters,
+// digits and hyphens, unique across the file. Word takes no hyphen, so every
+// character outside [A-Za-z0-9_] becomes an underscore: the rule is
+// deliberately wider than what goldmark emits, because the ids are the
+// document's and a generator that widens is not this package's to notice.
+//
+// The leading "h_" is what makes the name open with a letter, which Word
+// requires and a heading called "1.1 Purpose" would otherwise break.
+//
+// A name over the ceiling keeps its first characters, which is what makes it
+// readable in Word's bookmark list, and takes the hash of the whole id, which
+// is what keeps two long headings sharing a prefix apart. The hash is of the
+// id as it arrived rather than of the underscored name, so two ids that differ
+// only in a character both rewrites drop still get two names.
+func bookmarkName(id string) string {
+	safe := []rune(bookmarkPrefix + id)
+	for i, c := range safe {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '_':
+		default:
+			safe[i] = '_'
+		}
+	}
+	if len(safe) <= bookmarkMaxName {
+		return string(safe)
+	}
+	sum := fnv.New32a()
+	_, _ = sum.Write([]byte(id))
+	digest := fmt.Sprintf("%08x", sum.Sum32())
+	return string(safe[:bookmarkStem]) + "_" + digest[:bookmarkHashDigits]
+}
+
+// headingAnchors is every goldmark heading id that will carry a bookmark, read
+// before the blocks are walked so that a link to a heading further down the
+// note resolves. A figure-only heading is left out: it emits no paragraph, so
+// there is nothing for a jump to land on.
+func headingAnchors(root ast.Node, source []byte) map[string]bool {
+	ids := map[string]bool{}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		heading, ok := node.(*ast.Heading)
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+		if isFigureOnly(heading, source) {
+			return ast.WalkSkipChildren, nil
+		}
+		if id, ok := heading.AttributeString("id"); ok {
+			if raw, ok := id.([]byte); ok {
+				ids[string(raw)] = true
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return ids
+}
+
+// isFigureOnly is a heading that holds a picture and no words of its own,
+// which Drive writes as "# ![][image1]" for a picture sitting on its own line.
+// It is a figure rather than a heading: it takes no number, no contents entry,
+// no place in the document's heading depth and no bookmark, because the walk
+// emits no heading paragraph for it at all.
+func isFigureOnly(heading ast.Node, source []byte) bool {
+	return len(collectImages(heading, source)) > 0 &&
+		strings.TrimSpace(plainText(inlineRuns(heading, source))) == ""
+}
+
 // shallowestHeadingLevel finds the smallest heading level anywhere in the
 // document, so a body lifted out of a note that already had its own title line
 // still numbers from 1.
@@ -318,8 +419,7 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 		// set the document's heading depth either. Otherwise Drive's
 		// "# ![][image1]" makes every real heading one level deeper than it is,
 		// and they come out numbered "0.1-".
-		if len(collectImages(heading, source)) > 0 &&
-			strings.TrimSpace(plainText(inlineRuns(heading, source))) == "" {
+		if isFigureOnly(heading, source) {
 			return ast.WalkSkipChildren, nil
 		}
 		if found == 0 || heading.Level < found {
@@ -476,6 +576,7 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *east.Table:
+		r.curLine = r.line(typed)
 		r.emit(r.makeTable(r.tableRows(typed)))
 		r.counts.Tables++
 		r.afterTable = true
@@ -541,6 +642,22 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 	}
 }
 
+// headingBookmark is the name the bookmark on this heading takes, or empty
+// when goldmark handed the heading no id at all. Every heading that reaches a
+// paragraph gets one whether or not this note links to it: the bookmark is
+// what a jump lands on, and a note is edited after it is published.
+func (r *renderer) headingBookmark(heading *ast.Heading) string {
+	id, ok := heading.AttributeString("id")
+	if !ok {
+		return ""
+	}
+	raw, ok := id.([]byte)
+	if !ok {
+		return ""
+	}
+	return bookmarkName(string(raw))
+}
+
 // headingBlock is one heading, its number and any picture it names.
 //
 // Drive exports a picture that sits on its own line as a heading,
@@ -548,14 +665,15 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 // vanish, leaving an empty heading that still took a number and an empty line
 // in the contents list.
 func (r *renderer) headingBlock(heading *ast.Heading) error {
+	r.curLine = r.line(heading)
 	images := collectImages(heading, r.source)
 	runs := inlineRuns(heading, r.source)
 	plain := plainText(runs)
 	r.warnRawHTML(heading, r.line(heading))
 
-	if len(images) > 0 && strings.TrimSpace(plain) == "" {
+	if isFigureOnly(heading, r.source) {
 		// Nothing but a picture. It is a figure, not a heading, so it takes no
-		// number and no contents entry.
+		// number, no contents entry and no bookmark.
 		if err := r.emitImages(images, r.line(heading)); err != nil {
 			return err
 		}
@@ -584,7 +702,8 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 	pageBreak := r.firstHeading && r.cfg.Body.FirstHeadingPageBreak
 	r.firstHeading = false
 
-	r.emit(r.heading(r.numberer.styleLevel(heading.Level), runs, pageBreak))
+	r.emit(r.heading(r.numberer.styleLevel(heading.Level), runs, pageBreak,
+		r.headingBookmark(heading)))
 	r.counts.Headings++
 
 	// A heading that names a picture keeps its words and gets the picture
@@ -601,6 +720,7 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 	images := collectImages(node, r.source)
 	runs := inlineRuns(node, r.source)
 	line := r.line(node)
+	r.curLine = line
 	r.warnRawHTML(node, line)
 	if level > 0 {
 		// A figure inside a bullet would break the numbering it sits in, so

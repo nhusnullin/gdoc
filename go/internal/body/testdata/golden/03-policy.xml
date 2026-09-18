@@ -8,12 +8,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="0" w:name="h_third_party_and_outsourcing_policy"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1-Third Party and Outsourcing Policy</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="0"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -23,12 +25,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="1" w:name="h_purpose_and_scope"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1-Purpose and scope</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="1"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -72,12 +76,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="h_what_counts_as_outsourcing"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1.1-What counts as outsourcing</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="2"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -187,12 +193,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="3" w:name="h_what_is_out_of_scope"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1.2-What is out of scope</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="3"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -268,12 +276,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="4" w:name="h_governance"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2-Governance</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="4"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -859,12 +869,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="5" w:name="h_the_register"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2.1-The register</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="5"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -891,12 +903,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="6" w:name="h_selection_and_due_diligence"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3-Selection and due diligence</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="6"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1033,12 +1047,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="7" w:name="h_sub_outsourcing"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.1-Sub-outsourcing</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="7"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1065,12 +1081,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="8" w:name="h_contracting"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.4-Contracting</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="8"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1229,12 +1247,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="9" w:name="h_monitoring"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5-Monitoring</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="9"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1261,12 +1281,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="10" w:name="h_key_indicators"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5.1-Key indicators</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="10"/>
   </w:p>
   <w:tbl>
     <w:tblPr>
@@ -1835,12 +1857,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="11" w:name="h_exit"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.6-Exit</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="11"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1884,12 +1908,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="12" w:name="h_appendix_a_criticality_assessment"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">Appendix A: criticality assessment</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="12"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1916,12 +1942,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="13" w:name="h_appendix_b_definitions"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">Appendix B: definitions</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="13"/>
   </w:p>
   <w:tbl>
     <w:tblPr>

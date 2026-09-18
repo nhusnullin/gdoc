@@ -153,8 +153,44 @@
 // document's own location: the link opens nothing, and a contact address is
 // ordinary in a policy. The run's text stays the bare address, which is what the
 // author typed. TestAnEmailAutolinkCarriesTheMailtoScheme and
-// TestAWebAutolinkKeepsItsOwnScheme are the pins. An internal anchor link is
-// the case still open, in docs/backlog/internal-anchor-links.md.
+// TestAWebAutolinkKeepsItsOwnScheme are the pins.
+//
+// # An anchor link is a jump to a bookmark every heading with words carries
+//
+// A destination opening with "#" is a place in this document, not an address.
+// Written as a relationship, which is what every other link is, Word resolves
+// it against the document's own location, so "[see below](#scope)" published
+// as a link that opens nothing and said nothing about it. The OOXML form for
+// a jump is w:hyperlink w:anchor with no relationship at all, and it lands on
+// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first: every
+// heading that emits a paragraph carries one, whether or not this note links
+// to it, because a note is edited after it is published.
+//
+// The name is goldmark's own auto heading id, which parser.WithAutoHeadingID
+// already computes and keeps unique across the file, rewritten by bookmarkName
+// into what Word takes: letters, digits and underscores, opening with a
+// letter, at most 40 characters. The leading "h_" is what makes a heading
+// called "1.1 Purpose" open with a letter; every character outside
+// [A-Za-z0-9_] becomes an underscore, which is wider than the lower-case
+// letters, digits and hyphens goldmark emits, on purpose, because the ids are
+// the generator's and this package does not get to notice when it widens; and
+// a name over the ceiling keeps its first 32 characters, so it reads in Word's
+// bookmark list, and takes seven hex digits of the FNV-1a hash of the id as it
+// arrived, so two long headings sharing a prefix keep two names.
+// TestBookmarkNameIsWordSafe pins all four cases and
+// TestEveryHeadingCarriesABookmark pins the pair around the runs.
+//
+// A "#" naming no heading in the note is warned about by line and its words
+// are printed as plain text, which is how a code block is already refused: a
+// jump that lands nowhere is worse than no jump, and the author is the one who
+// can fix it. The heading ids are collected before the blocks are walked, so a
+// link to a heading further down resolves, and the pre-walk collects only the
+// headings that will carry a bookmark: a figure-only heading emits no
+// paragraph, so a link naming it is as dead as a link naming nothing.
+// TestAnAnchorLinkIsAJumpAndNotARelationship,
+// TestAnAnchorToNoHeadingWarnsAndPrintsPlainText and
+// TestAFigureOnlyHeadingCarriesNoBookmark are the pins, and
+// TestALinkIsAHyperlinkWithARelationship is the https link, unchanged.
 //
 // # A numbered list starts at 1, and a list that opens elsewhere says so
 //

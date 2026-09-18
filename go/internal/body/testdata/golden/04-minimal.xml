@@ -8,12 +8,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="0" w:name="h_the_shortest_document_that_publishes"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1-The Shortest Document That Publishes</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="0"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -23,12 +25,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="1" w:name="h_one_heading"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1-One heading</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="1"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -55,12 +59,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="h_a_second_heading"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2-A second heading</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="2"/>
   </w:p>
   <w:p>
     <w:pPr>
