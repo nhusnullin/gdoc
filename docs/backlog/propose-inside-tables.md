@@ -29,6 +29,17 @@ plan if it blocks a real review first.
 
 Measured for the comment-only shape by `TestLiveAnnotateParagraphAndTable` in `go/internal/live/`,
 added 2026-09-18 with `gdoc annotate`: it places one comment in an ordinary paragraph and one in a
-table cell in the same document and prints what each read-back said. The answer for the table cell
-goes here when that test has run: _not run yet_. An `insertComment` alone tells the first suspect
-above from the other two, because no `deleteContentRange` goes with it.
+table cell in the same document and prints what each read-back said. An `insertComment` alone tells
+the first suspect above from the other two, because no `deleteContentRange` goes with it.
+
+**Measured 2026-09-18**: the table cell answered exactly as the paragraph did. `sent true,
+drive_listing true, docx_anchored true, verified true` for both. So two of the three suspects are
+cleared for the comment-only shape:
+
+- The `insertComment` range does not have to stay inside one cell to be accepted, and a range
+  `propose.FindSpan` found inside a cell is a range Docs anchors a comment on.
+- The docx witness does descend into `w:tbl`, so `docx_anchored` coming back false is not something
+  the export walk does to a table.
+
+What is left is `deleteContentRange` over a span inside a cell, which is the half of a proposal
+annotate does not send. The item stays open for `propose` on that one suspect.

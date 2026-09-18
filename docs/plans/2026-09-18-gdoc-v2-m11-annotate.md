@@ -534,18 +534,27 @@ an unknown key; an empty list.
 - Create: `go/internal/live/annotate_test.go`
 - Modify: `go/internal/live/doc.go`
 
-- [ ] `TestLiveAnnotateParagraphAndTable`, under `GDOC_LIVE_WRITE=1`: create a
+- [x] `TestLiveAnnotateParagraphAndTable`, under `GDOC_LIVE_WRITE=1`: create a
       document in the test folder holding one paragraph and a two-cell table,
       annotate one phrase in the paragraph and one inside a cell, assert both
       results are `verified: true` with both checks, then trash the document
       and confirm the trash.
-- [ ] `live/doc.go` names the test and what it creates.
-- [ ] Run it once by hand against the test folder and record the table answer
+      ➕ The paragraph case asserts both checks and `verified`. The table case
+      logs them and asserts nothing, because it is the open question in
+      `docs/backlog/propose-inside-tables.md` and the house rule for the live
+      probes is that a measurement which fails the build has already decided
+      the answer. The ⚠️ below is what that choice serves.
+- [x] `live/doc.go` names the test and what it creates.
+- [x] Run it once by hand against the test folder and record the table answer
       in `docs/backlog/propose-inside-tables.md`. ⚠️ If the table case does not
       verify, record which check failed and leave the backlog item open; the
       paragraph case is the acceptance bar for this milestone.
-- [ ] `cd go && go test -race ./...` still passes without the variables set.
-- [ ] `git commit -m "test(v2): annotate, live"`
+      ➕ Run 2026-09-18: both cases `drive_listing true, docx_anchored true,
+      verified true`, the cell as the paragraph. Two of the three suspects in
+      the backlog item are cleared and it stays open on the third,
+      `deleteContentRange` inside a cell, which annotate never sends.
+- [x] `cd go && go test -race ./...` still passes without the variables set.
+- [x] `git commit -m "test(v2): annotate, live"`
 
 ### Task 8: Verify acceptance criteria
 
