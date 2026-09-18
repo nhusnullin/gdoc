@@ -56,7 +56,8 @@ Two rules about the documents themselves:
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
 | `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `.claude-plugin/` | the plugin manifest and the marketplace entry, so this repository is how a colleague's Claude Code gets `skills/` |
-| `release/` | what a colleague gets: the one-line installer, the user README, the example note, and the platform list a release walks |
+| `release/` | what a colleague gets: the one-line installer, the example note, and the platform list a release walks. The README in the zip is this repository's `README.md` |
+| `docs/guide/` | the colleague's pages the README links to: how gdoc stays inside the document, and each command walked through |
 | `docs/v2/` | what v2 is, what is next, why, and what Google does |
 | `docs/backlog/` | deferred work, one file per item |
 | `docs/plans/` | the milestone plans. `completed/` holds the ones that ran |
@@ -186,7 +187,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
 | a version, a tag, a release or the updater | `go/internal/update/doc.go`, `.github/workflows/release.yml` |
 | a release notice, the stamp | `go/internal/lastcheck/doc.go`, `go/cmd/gdoc/doc.go` |
-| what a colleague installs, and how | `release/README.md`, `release/install.sh`, `.claude-plugin/` |
+| what a colleague installs, and how | `README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
 | what the review session does with what the binary prints | `skills/gdoc-review/SKILL.md` |
 | what a skill tells a session to run | `skills/`, and `gdoc help <command>` |
