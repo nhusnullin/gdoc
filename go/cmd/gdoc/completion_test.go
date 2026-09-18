@@ -455,3 +455,61 @@ func TestCompletionBashWritesTheFileAndNamesBashrc(t *testing.T) {
 		t.Errorf("the file must carry the commands: %q", script)
 	}
 }
+
+// A text flag carries the words a caller typed out of somebody's document, and
+// nothing on this machine holds a list of those. So both scripts must offer
+// nothing after it: no file names, no folder ids, no words at all.
+//
+// The case is built rather than read out of the table, because the first
+// command carrying this kind arrives after the kind does. Both scripts are
+// written from the same built table, so what Tab offers is read from the real
+// generators.
+func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
+	quote := flag{"--quote", kindText, needRequired, "the words to leave the comment on"}
+	table := []command{{
+		name:    "annotate",
+		words:   []string{"<url>"},
+		flags:   []flag{quote},
+		summary: "leave a comment on the words a caller quoted",
+		example: "gdoc annotate <url> --quote text",
+	}}
+
+	spec := zshFlagSpec(quote)
+	if !strings.Contains(spec, ":text:") {
+		t.Errorf("zsh must name the value after a text flag: %q", spec)
+	}
+	if !strings.HasSuffix(spec, ":text:'") {
+		t.Errorf("zsh must offer nothing after a text flag: %q", spec)
+	}
+	if strings.Contains(spec, "_files") {
+		t.Errorf("zsh must not offer file names after a text flag: %q", spec)
+	}
+
+	zsh, err := zshScript(table)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(withoutComments(zsh), spec) {
+		t.Errorf("the zsh script must carry the spec the flag makes: %q", zsh)
+	}
+
+	files, opaque := bashFlagArms(table)
+	if files != "" {
+		t.Errorf("a text flag is not a file flag: %q", files)
+	}
+	if opaque != "--quote" {
+		t.Errorf("a text flag belongs in the opaque arm: %q", opaque)
+	}
+
+	bash, err := bashScript(table)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := withoutComments(bash)
+	if !strings.Contains(body, "--quote) return ;;") {
+		t.Errorf("the bash script must answer for --quote with nothing: %q", bash)
+	}
+	if strings.Contains(body, "compgen -f") {
+		t.Errorf("the bash script must not offer file names after a text flag: %q", bash)
+	}
+}

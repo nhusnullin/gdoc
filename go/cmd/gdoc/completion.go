@@ -238,8 +238,8 @@ func zshSpecs(c command) []string {
 
 // zshFlagSpec is one flag as _arguments reads it: the name, the sentence the
 // table carries, and for a flag with a value the placeholder and what to offer
-// for it. Only a file is offered, because a folder id, a cursor and a wait
-// length live nowhere on this machine.
+// for it. Only a file is offered, because a folder id, a cursor, a wait length
+// and a quotation live nowhere on this machine.
 func zshFlagSpec(f flag) string {
 	spec := "'" + f.name + "[" + zshText(f.summary) + "]"
 	if f.value == kindNone {
@@ -360,9 +360,9 @@ func bashFlagWords(c command) string {
 
 // bashFlagArms is the two arms of the case over the word before the cursor,
 // each a bash pattern: the flags that carry a file, which offer file names,
-// and the flags that carry a folder id, a cursor or a wait length, which offer
-// nothing because nothing on this machine knows one. A flag that carries no
-// value is in neither arm, because nothing follows it.
+// and the flags that carry a folder id, a cursor, a wait length or a
+// quotation, which offer nothing because nothing on this machine knows one. A
+// flag that carries no value is in neither arm, because nothing follows it.
 func bashFlagArms(table []command) (files, opaque string) {
 	var withFile, withOpaque []string
 	seen := map[string]bool{}

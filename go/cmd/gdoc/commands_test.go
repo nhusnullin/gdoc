@@ -133,6 +133,49 @@ func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 			}
 		}
 	}
+
+	// One kind carries neither a path nor an id but the words a caller typed,
+	// and the command uses them as they stand: no trimming, no resolving, no
+	// splitting. Spaces and quotes are inside the value, because the caller
+	// quoted a sentence out of somebody's document.
+	//
+	// The case is written against the parser the table feeds rather than
+	// against a row of the table, because the loop above can only see the
+	// flags a command was handed, and the first command to carry this kind
+	// arrives after it does.
+	text := command{
+		name:  "text",
+		words: []string{"<url>"},
+		flags: []flag{{"--quote", kindText, needRequired, "the words to leave the comment on"}},
+	}
+	if got := kindText.placeholder(); got != "<text>" {
+		t.Errorf("help prints %q after a text flag, and a reader types words there", got)
+	}
+	const typed = `reviewed "annually", every year`
+	for _, raw := range [][]string{
+		{"doc", "--quote", typed},
+		{"doc", "--quote=" + typed},
+	} {
+		a, err := parseArgsN(raw, text.flagSet(), 1)
+		if err != nil {
+			t.Fatalf("a text flag carries a value, and %v was refused: %v", raw, err)
+		}
+		if a.flags["--quote"] != typed {
+			t.Errorf("a text flag is read as given: got %q, want %q", a.flags["--quote"], typed)
+		}
+	}
+	for _, raw := range [][]string{
+		{"doc", "--quote="},
+		{"doc", "--quote", ""},
+	} {
+		_, err := parseArgsN(raw, text.flagSet(), 1)
+		if err == nil {
+			t.Fatalf("%v gives --quote no words, and it was taken", raw)
+		}
+		if !strings.Contains(err.Error(), "--quote") {
+			t.Errorf("an empty text value is refused naming the flag: %q", err.Error())
+		}
+	}
 }
 
 // productionSource is every Go file in this package that is not a test, read as

@@ -441,17 +441,17 @@ an unknown key; an empty list.
 - Modify: `go/cmd/gdoc/commands.go`, `commands_test.go`, `completion.go`,
   `completion_test.go`, `help.go`
 
-- [ ] Test first, a case in `TestEveryFlagIsReadTheWayItsKindSays` for a kind
+- [x] Test first, a case in `TestEveryFlagIsReadTheWayItsKindSays` for a kind
       that reads its value as given, spaces and quotes included, and refuses
       an empty value by name.
-- [ ] Test, a case in the completion tests: a text flag lands in the opaque
+- [x] Test, a case in the completion tests: a text flag lands in the opaque
       arm of both scripts, with no file or folder completion offered.
-- [ ] Test, `placeholder()` prints `<text>` for the kind.
-- [ ] `kindText` in `commands.go`, its arm in `placeholder()`, its read in the
+- [x] Test, `placeholder()` prints `<text>` for the kind.
+- [x] `kindText` in `commands.go`, its arm in `placeholder()`, its read in the
       parser, and its arms in `zshFlagSpec` and `bashFlagArms`. `help.go`
       wherever it switches on kind.
-- [ ] `cd go && go test -race ./cmd/gdoc/` passes.
-- [ ] `git commit -m "feat(v2): a flag kind that carries text as given"`
+- [x] `cd go && go test -race ./cmd/gdoc/` passes.
+- [x] `git commit -m "feat(v2): a flag kind that carries text as given"`
 
 ### Task 5: the command
 

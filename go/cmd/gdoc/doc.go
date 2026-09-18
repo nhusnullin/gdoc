@@ -69,7 +69,9 @@
 // takes what its entry names, and has nowhere else to keep a flag.
 // TestEveryFlagIsReadTheWayItsKindSays is the third direction, that a flag the
 // table says carries a file is read for a value and one that carries none is
-// read for its presence.
+// read for its presence. It also holds the one kind that is words rather than
+// a name for something somewhere: a text flag is read as it was typed, spaces
+// and quotes included, and an empty value is refused naming the flag.
 //
 // The usage line is held the same way, and for the same reason. Each flag
 // carries how it stands in the call beside its kind, so the line brackets what
@@ -199,11 +201,13 @@
 // The script is a rendering of the table help prints, so a Tab offers a word
 // or a flag the table holds and nothing else. A flag whose kind is a file
 // offers file names, and every other kind offers nothing, because nothing on
-// this machine knows a Drive folder id, a cursor or a wait length, and neither
-// does anything know a document URL. TestTheZshScriptNamesEveryCommandAndEveryFlag and
+// this machine knows a Drive folder id, a cursor, a wait length or a quotation
+// out of somebody's document, and neither does anything know a document URL.
+// TestTheZshScriptNamesEveryCommandAndEveryFlag and
 // TestTheBashScriptNamesEveryCommandAndEveryFlag are the pins, and each asks
 // the table rather than a list of its own, so a command added without a line
-// in the script fails there.
+// in the script fails there. TestATextFlagIsOpaqueToBothScripts is the pin for
+// the text kind, which no command carries until annotate does.
 //
 // The bash script sets complete -o filenames for the whole command, so a
 // directory offered for a file flag gets a trailing slash and no trailing
