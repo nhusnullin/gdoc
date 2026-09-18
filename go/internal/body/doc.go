@@ -156,22 +156,30 @@
 // TestAWebAutolinkKeepsItsOwnScheme are the pins. An internal anchor link is
 // the case still open, in docs/backlog/internal-anchor-links.md.
 //
-// # A numbered list whose numbers are not the author's says so, and the number
-// stays wrong
+// # A numbered list starts at 1, and a list that opens elsewhere says so
 //
-// Two shapes. internal/render's numbering part defines one w:num per list kind,
-// so every ordered list in the body names the same one and a second top-level
-// list carries on from the first: the author's 1. and 2. print as 3. and 4.
-// Every level of that part states w:start 1, so an author's "5." opens at 1
-// whatever depth it sits at. warnListNumbers names the line for both. The
-// structural fix is docs/backlog/one-numbered-list-per-document.md; the silence
-// was not deferred with it, because the prose around a list cross-references
-// the numbers the author wrote. A nested list is deliberately not in the count:
-// an absent w:lvlRestart restarts a level whenever the level above it moves, so
-// the sub-lists under two items of one list each start again on their own, and
-// warning there would be the cry-wolf warning this tool avoids everywhere else.
-// TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo is the pin, and it asks
-// the nested case as well as the two that warn.
+// A w:num is where Word keeps a list's running count, so two numbered lists
+// sharing one carried one count and the author's 1. and 2. printed as 3. and
+// 4. The walker hands a fresh id to every numbered list that is not nested
+// inside a numbered list, counts them on Result.NumberedLists, and render.Build
+// writes that many w:num entries, all on the one numbered abstract list. A
+// numbered list nested in a numbered item reuses its parent's id: an absent
+// w:lvlRestart already restarts the inner level whenever the outer one moves,
+// and a second id there would make one list two counts Word draws side by side.
+// A numbered list nested in a bullet is not nested in a count at all, so it
+// opens its own. TestASecondNumberedListStartsAgain,
+// TestANestedNumberedListNamesItsParent,
+// TestANumberedListUnderABulletOpensItsOwn and
+// TestOneNumberedListDefinitionPerNumberedList are the pins.
+//
+// What stays wrong is the number a list opens on. Every level of the numbered
+// abstract list states w:start 1, and honouring an author's "5." would be a
+// w:startOverride on that list's own w:num, which gdoc does not write, so the
+// list opens at 1 and warnListNumbers names the line. The silence around a list
+// that starts at 1 is deliberate, because the prose beside a numbered list
+// cross-references the numbers the author wrote.
+// TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo and
+// TestAListThatStartsElsewhereStillSaysSo are the pins.
 //
 // # A heading that skips a level is numbered with a zero in it, and says so
 //

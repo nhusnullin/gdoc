@@ -43,7 +43,7 @@ func config(t *testing.T) *house.Config {
 
 func build(t *testing.T) *Package {
 	t.Helper()
-	pkg, err := Build(config(t), fields(), nil, nil)
+	pkg, err := Build(config(t), fields(), nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestSectionPropertiesAreA4InTwipsWithTheFourReferences(t *testing.T) {
 func TestATitleCarryingXMLCharactersIsEscaped(t *testing.T) {
 	f := fields()
 	f.Title = "R&D <policy>"
-	pkg, err := Build(config(t), f, nil, nil)
+	pkg, err := Build(config(t), f, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestATitleCarryingXMLCharactersIsEscaped(t *testing.T) {
 func TestTheBodyElementsSitBetweenTheFrontMatterAndTheSectionProperties(t *testing.T) {
 	p := etree.NewElement("w:p")
 	p.CreateElement("w:r").CreateElement("w:t").SetText("the body")
-	pkg, err := Build(config(t), fields(), []*etree.Element{p}, nil)
+	pkg, err := Build(config(t), fields(), []*etree.Element{p}, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestTheBodyElementsSitBetweenTheFrontMatterAndTheSectionProperties(t *testi
 
 func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 	media := []Media{{RelID: "rId8", Name: "image1.jpeg", Data: []byte("not really a jpeg")}}
-	pkg, err := Build(config(t), fields(), nil, media)
+	pkg, err := Build(config(t), fields(), nil, media, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 // under word/media/ and [Content_Types].xml gains no extension.
 func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
 	media := []Media{{RelID: "rId8", Target: "https://example.com/p?a=1&b=2"}}
-	pkg, err := Build(config(t), fields(), nil, media)
+	pkg, err := Build(config(t), fields(), nil, media, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
 func TestARelationshipThatIsBothALinkAndAFileIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId8", Name: "image1.png", Data: []byte("x"),
 		Target: "https://example.com/"}}
-	_, err := Build(config(t), fields(), nil, media)
+	_, err := Build(config(t), fields(), nil, media, 0)
 	if err == nil {
 		t.Fatal("Build accepted a relationship that is a link and a file at once")
 	}
@@ -328,7 +328,7 @@ func TestARelationshipThatIsBothALinkAndAFileIsRefused(t *testing.T) {
 
 func TestAnImageIdThatCollidesWithTheShellIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId4", Name: "image1.png", Data: []byte("x")}}
-	_, err := Build(config(t), fields(), nil, media)
+	_, err := Build(config(t), fields(), nil, media, 0)
 	if err == nil {
 		t.Fatal("Build accepted an image relationship id the shell already uses")
 	}
@@ -342,7 +342,7 @@ func TestTwoImagesSharingOneIdAreRefused(t *testing.T) {
 		{RelID: "rId8", Name: "image1.png", Data: []byte("x")},
 		{RelID: "rId8", Name: "image2.png", Data: []byte("y")},
 	}
-	_, err := Build(config(t), fields(), nil, media)
+	_, err := Build(config(t), fields(), nil, media, 0)
 	if err == nil {
 		t.Fatal("Build accepted two images with one relationship id")
 	}

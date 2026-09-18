@@ -511,28 +511,28 @@ silence, because the row is named in `Known`. `house.yaml` set back.
 - Create: `go/internal/body/lists_test.go`
 - Remove: `docs/backlog/one-numbered-list-per-document.md`
 
-- [ ] Test first, in `render/numbering_test.go`,
+- [x] Test first, in `render/numbering_test.go`,
       `TestOneNumberedListDefinitionPerNumberedList`: `Build` with
       `numberedLists` 2 writes `w:num` ids `1`, `2`, `3`, the first on the
       bullet abstract list and the other two on the numbered one; with 0 it
       writes `1` alone; `NumberNumID(1)` is the literal `"2"` and
       `NumberNumID(3)` is `"4"`. Watch it fail to compile.
-- [ ] Test, in `body/lists_test.go`, `TestASecondNumberedListStartsAgain`:
+- [x] Test, in `body/lists_test.go`, `TestASecondNumberedListStartsAgain`:
       `"1. a\n2. b\n\ntext\n\n1. c\n2. d\n"` names `w:numId` `2` on the first
       two items and `3` on the last two, `Result.NumberedLists` is 2, and no
       warning says "carries on".
-- [ ] Test, `TestANestedNumberedListNamesItsParent`: a numbered list nested in
+- [x] Test, `TestANestedNumberedListNamesItsParent`: a numbered list nested in
       a numbered item names the parent's id; `NumberedLists` is 1.
-- [ ] Test, `TestANumberedListUnderABulletOpensItsOwn`: a numbered list nested
+- [x] Test, `TestANumberedListUnderABulletOpensItsOwn`: a numbered list nested
       in a bullet names `2`, and a second top-level numbered list after it
       names `3`; `NumberedLists` is 2.
-- [ ] Test, `TestAListThatStartsElsewhereStillSaysSo`: `"5. a\n"` still
+- [x] Test, `TestAListThatStartsElsewhereStillSaysSo`: `"5. a\n"` still
       warns "starts at 5 in the note and at 1 in the document".
-- [ ] `render`: `NumberNumID(n int) string` returning `strconv.Itoa(n + 1)`;
+- [x] `render`: `NumberNumID(n int) string` returning `strconv.Itoa(n + 1)`;
       `numberingPart(numberedLists int)` writing the bullet `w:num` and one per
       list; `Build(cfg, f, body, media, numberedLists int)`; the doc comment on
       the constants says why the ids are computed.
-- [ ] `body`: `Result.NumberedLists int`; `listCtx` gains `ordered bool` and
+- [x] `body`: `Result.NumberedLists int`; `listCtx` gains `ordered bool` and
       `itemBlocks` takes `(item, level, list listCtx)` instead of the bare id;
       `block` opens a fresh id when the list is ordered and the enclosing
       `listCtx` is not ordered, by incrementing `numberedLists` and calling
@@ -541,22 +541,30 @@ silence, because the row is named in `Known`. `house.yaml` set back.
       `ordered` and the one at `:631` reads `list.ordered`, and neither
       compares an id string any more; `warnListNumbers` keeps only the start
       warning and its comment shrinks to match.
-- [ ] The three `Build` callers pass `walked.NumberedLists`:
+- [x] The three `Build` callers pass `walked.NumberedLists`:
       `cmd/gdoc/build.go:155`, `internal/drift/drift_test.go:306`,
       `internal/live/publish_test.go:333`.
-- [ ] `TestANumberedListNamesTheNumberedList` and
+- [x] `TestANumberedListNamesTheNumberedList` and
       `TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo` updated to the new
       behaviour: the first still expects `2` for a single list; the second
       drops the "carries on" case and keeps the start and nested cases.
-- [ ] `body/doc.go:159`: the section becomes "A numbered list starts at 1,
+- [x] `body/doc.go:159`: the section becomes "A numbered list starts at 1,
       and a list that opens elsewhere says so", names the four new tests and
       no longer names the backlog file. `docs/guide/publishing.md:75`: the
       paragraph says a second numbered list starts again at 1 and keeps the
       start-number sentence.
-- [ ] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
+- [x] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
       with no pin changed.
-- [ ] `git rm docs/backlog/one-numbered-list-per-document.md`
-- [ ] `git commit -m "fix(body): every numbered list gets its own definition and starts at 1"`
+- [x] `git rm docs/backlog/one-numbered-list-per-document.md`
+- [x] `git commit -m "fix(body): every numbered list gets its own definition and starts at 1"`
+
+➕ Two goldens moved, both as the change intends and neither a house value:
+`render/testdata/numbering.xml` loses the numbered `w:num`, because the shell
+it is built from has no body and so no numbered list, and
+`body/testdata/golden/01-kitchen-sink.xml` names `2`, `3` and `4` where it
+named `2` four times, with the nested list still on its parent's `2`.
+`TestNumberingHoldsTheBulletedAndTheNumberedList` now builds with one numbered
+list, which is the body it was always describing.
 
 ### Task 5: an internal anchor link jumps
 

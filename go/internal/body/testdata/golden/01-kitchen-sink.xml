@@ -502,7 +502,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="3"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -524,7 +524,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="3"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -561,7 +561,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="4"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -583,7 +583,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="4"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>

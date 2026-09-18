@@ -72,12 +72,14 @@ line the author wrote it on. So is a picture inside a list item, a block quote o
 house style puts a figure on a centred line of its own, which it cannot be
 there, and the warning names the line.
 
-Two things about a numbered list carry a warning rather than the numbers you
-wrote. The document defines one numbered list, so a second one carries on from
-the first: your 1. and 2. print as 3. and 4. And every level of it starts at 1,
-so a list you opened at "5." opens at 1. Both name the line. A heading that
-skips a level is the third: a `###` under a `#` is numbered `1.0.1-`, and the
-warning carries the number it wrote.
+Every numbered list gets its own definition in the document, so a second
+numbered list starts again at 1 rather than carrying on from the first. A list
+nested inside a numbered item shares its parent's, which is what makes it
+restart under each item the way you wrote it. One thing about a numbered list
+still carries a warning rather than the numbers you wrote: every level starts at
+1, so a list you opened at "5." opens at 1, and the warning names the line. A
+heading that skips a level is the other: a `###` under a `#` is numbered
+`1.0.1-`, and the warning carries the number it wrote.
 
 A list item that holds one of those and nothing else, or nothing at all, has no
 words to put a marker on. It takes none, and the warning names the line and

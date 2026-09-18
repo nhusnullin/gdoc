@@ -99,11 +99,15 @@ var shellRels = []struct{ id, kind, target string }{
 const FirstMediaRelID = 8
 
 // Build renders one document: the house style, the note's fields as
-// internal/cover read them, the body the markdown walker produced, and the
-// images it read. The note has one reader and this package only spends what it
-// returns, so the cover and the running head cannot disagree. Nothing here
-// reaches the network, and nothing reads the Word master.
-func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Media) (*Package, error) {
+// internal/cover read them, the body the markdown walker produced, the images
+// it read, and how many numbered lists it walked. The note has one reader and
+// this package only spends what it returns, so the cover and the running head
+// cannot disagree. Nothing here reaches the network, and nothing reads the
+// Word master.
+//
+// numberedLists is body.Result.NumberedLists. Every one of them gets its own
+// w:num in word/numbering.xml, which is what makes each start at 1.
+func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Media, numberedLists int) (*Package, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("render: no house style")
 	}
@@ -124,7 +128,7 @@ func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Med
 		{"word/_rels/header2.xml.rels", b.headerRels()},
 		{"word/document.xml", b.documentPart(body)},
 		{"word/styles.xml", b.stylesPart()},
-		{"word/numbering.xml", b.numberingPart()},
+		{"word/numbering.xml", b.numberingPart(numberedLists)},
 		{"word/settings.xml", b.settingsPart()},
 		{"word/header1.xml", b.headerPart(cfg.Header.Default, false, "word/header1.xml")},
 		{"word/header2.xml", b.headerPart(cfg.Header.First, true, "word/header2.xml")},

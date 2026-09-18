@@ -19,8 +19,7 @@ func abstractNum(t *testing.T, doc *etree.Document, id string) *etree.Element {
 }
 
 func TestNumberingHoldsTheBulletedAndTheNumberedList(t *testing.T) {
-	pkg := build(t)
-	doc := parse(t, part(t, pkg, "word/numbering.xml"))
+	doc := numbering(t, 1)
 	if got := len(doc.FindElements("//w:abstractNum")); got != 2 {
 		t.Fatalf("word/numbering.xml defines %d abstract lists, want 2", got)
 	}
@@ -112,4 +111,50 @@ func TestTheNumberedListStartsAtOneDecimalAtThirtySixPoints(t *testing.T) {
 			t.Errorf("numbered level %d start = %q, want 1", i, got)
 		}
 	}
+}
+
+// TestOneNumberedListDefinitionPerNumberedList: every numbered list in the
+// body gets its own w:num, all of them on the one numbered abstract list, so
+// each list restarts at 1. The bullet w:num is there whatever the body holds.
+func TestOneNumberedListDefinitionPerNumberedList(t *testing.T) {
+	if got := NumberNumID(1); got != "2" {
+		t.Errorf("the first numbered list names %q, want 2", got)
+	}
+	if got := NumberNumID(3); got != "4" {
+		t.Errorf("the third numbered list names %q, want 4", got)
+	}
+
+	two := numbering(t, 2)
+	want := map[string]string{"1": "1", "2": "2", "3": "2"}
+	got := map[string]string{}
+	for _, e := range two.FindElements("//w:num") {
+		got[e.SelectAttrValue("w:numId", "")] = e.SelectElement("w:abstractNumId").SelectAttrValue("w:val", "")
+	}
+	if len(got) != len(want) {
+		t.Fatalf("a body with two numbered lists defines %d w:num entries, want 3: %v", len(got), got)
+	}
+	for id, abstract := range want {
+		if got[id] != abstract {
+			t.Errorf("numId %s points at abstract %q, want %s", id, got[id], abstract)
+		}
+	}
+
+	none := numbering(t, 0)
+	ids := []string{}
+	for _, e := range none.FindElements("//w:num") {
+		ids = append(ids, e.SelectAttrValue("w:numId", ""))
+	}
+	if len(ids) != 1 || ids[0] != "1" {
+		t.Errorf("a body with no numbered list defines w:num %v, want the bullet's 1 alone", ids)
+	}
+}
+
+// numbering builds word/numbering.xml for a body holding n numbered lists.
+func numbering(t *testing.T, n int) *etree.Document {
+	t.Helper()
+	pkg, err := Build(config(t), fields(), nil, nil, n)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	return parse(t, part(t, pkg, "word/numbering.xml"))
 }

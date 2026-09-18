@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/beevik/etree"
 )
@@ -15,8 +16,14 @@ const listLevels = 9
 const bulletFont = "Noto Sans Symbols"
 
 // numberingPart writes word/numbering.xml: one abstract list for bullets and
-// one for numbers, each reachable by the numId the body paragraphs name.
-func (b *builder) numberingPart() []byte {
+// one for numbers, then the w:num entries a body paragraph may name. There is
+// one for bullets, and one per numbered list in the body, every one of them on
+// the numbered abstract list.
+//
+// A w:num is where Word keeps a list's running count, so two numbered lists
+// sharing one carry one count: the second list printed 3. and 4. where the
+// author wrote 1. and 2. One each is what makes the second list start again.
+func (b *builder) numberingPart(numberedLists int) []byte {
 	doc, root := newPart("w:numbering")
 
 	bullets := sub(root, "w:abstractNum", "w:abstractNumId", bulletAbstractID)
@@ -24,23 +31,28 @@ func (b *builder) numberingPart() []byte {
 	numbers := sub(root, "w:abstractNum", "w:abstractNumId", numberAbstractID)
 	b.numberLevels(numbers)
 
-	for _, pair := range [][2]string{
-		{BulletNumID, bulletAbstractID},
-		{NumberNumID, numberAbstractID},
-	} {
-		num := sub(root, "w:num", "w:numId", pair[0])
-		sub(num, "w:abstractNumId", "w:val", pair[1])
+	num := sub(root, "w:num", "w:numId", BulletNumID)
+	sub(num, "w:abstractNumId", "w:val", bulletAbstractID)
+	for i := 1; i <= numberedLists; i++ {
+		num := sub(root, "w:num", "w:numId", NumberNumID(i))
+		sub(num, "w:abstractNumId", "w:val", numberAbstractID)
 	}
 	return b.serialise(doc, "word/numbering.xml")
 }
 
-// The two lists, by the ids a body paragraph names. They are exported because
-// the body walker writes w:numPr and has to name the same list this part
-// defines.
-const (
-	BulletNumID = "1"
-	NumberNumID = "2"
-)
+// BulletNumID is the one list every bullet names. It is exported because the
+// body walker writes w:numPr and has to name the list this part defines.
+const BulletNumID = "1"
+
+// NumberNumID is the list the n-th numbered list of the body names, counting
+// from 1. The ids are computed rather than named as constants because there is
+// one per list and the body only knows how many once it has walked: the
+// arithmetic lives here, beside the part that writes the matching w:num, so
+// the two cannot drift. The first numbered list is still "2", so a document
+// with one numbered list is byte for byte what gdoc wrote before.
+func NumberNumID(n int) string {
+	return strconv.Itoa(n + 1)
+}
 
 const (
 	bulletAbstractID = "1"

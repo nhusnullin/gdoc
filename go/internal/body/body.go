@@ -54,6 +54,12 @@ type Result struct {
 	Warnings []string
 	Counts   Counts
 	Sources  []string
+
+	// NumberedLists is how many w:num entries word/numbering.xml needs for the
+	// numbered lists in these blocks. It is plumbing for render.Build rather
+	// than a fact for a reader, which is why it is not on Counts and not in the
+	// envelope a command prints.
+	NumberedLists int
 }
 
 // renderer holds the state one walk needs.
@@ -74,9 +80,10 @@ type renderer struct {
 	// that spends it can be a container or two down from the item.
 	pendingMark bool
 
-	// numberedLists counts the top-level ordered lists the walk has reached,
-	// because they all name one w:num and the second one carries on from the
-	// first. See warnListNumbers.
+	// numberedLists counts the numbered lists that opened their own w:num, so
+	// the next one takes the next id and render.Build knows how many entries
+	// word/numbering.xml needs. A numbered list nested in a numbered list is
+	// not one of them: it reuses its parent's id.
 	numberedLists int
 
 	relID      int
@@ -126,7 +133,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 		return Result{}, r.err
 	}
 	return Result{Blocks: r.blocks, Media: r.media, Warnings: r.warnings,
-		Counts: r.counts, Sources: r.sources}, nil
+		Counts: r.counts, Sources: r.sources, NumberedLists: r.numberedLists}, nil
 }
 
 // parse is goldmark, configured to the extension set the previous generator
@@ -327,14 +334,20 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 }
 
 // listCtx is what a block inherits from the list it sits in: the list in
-// numbering.xml it belongs to, which is what the item's indent is read off.
+// numbering.xml it belongs to, which is what the item's indent is read off,
+// and whether that list is numbered.
+//
+// ordered is a field rather than a comparison on numID, because there is one
+// numbered w:num per numbered list now and no single id says "this is the
+// numbered one" any more.
 //
 // Whether a block carries the item's marker is not in here. The marker belongs
 // to the first paragraph the item actually emits, and which block that is
 // cannot be read off a node type from outside: it is the renderer's own
 // pendingMark, which itemBlocks arms and paragraphBlock spends.
 type listCtx struct {
-	numID string
+	numID   string
+	ordered bool
 }
 
 // walk renders a block subtree. level counts list nesting: 0 is the body, 1 is
@@ -365,7 +378,7 @@ func (r *renderer) walk(parent ast.Node, level int, list listCtx) error {
 // first child instead breaks the mirror of that, an item opening with a fenced
 // code block, which is a child that renders nothing and would spend the marker
 // on a paragraph nobody sees. Pending, both take exactly one marker.
-func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
+func (r *renderer) itemBlocks(item ast.Node, level int, list listCtx) error {
 	// A nested list is walked from inside this loop, so the item's own marker
 	// is put back on the way out: the sub-list's items arm and spend their own,
 	// and an outer item whose first paragraph comes after the sub-list still
@@ -374,7 +387,7 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	r.pendingMark = true
 	defer func() { r.pendingMark = outer }()
 	for node := item.FirstChild(); node != nil; node = node.NextSibling() {
-		if err := r.block(node, level, listCtx{numID: numID}); err != nil {
+		if err := r.block(node, level, list); err != nil {
 			return err
 		}
 	}
@@ -395,7 +408,7 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	// and telling the author to check numbering that is not wrong is the
 	// cry-wolf warning this tool avoids everywhere else.
 	if r.pendingMark {
-		if numID == render.NumberNumID {
+		if list.ordered {
 			r.warn("line %d: this list item has no text of its own, so it takes no number and the items after it are numbered one lower",
 				r.itemLine(item))
 		} else {
@@ -406,32 +419,20 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	return nil
 }
 
-// warnListNumbers names a numbered list whose numbers are not the author's.
+// warnListNumbers names a numbered list that opens on a number the author did
+// not write. This is not a construct the walker declined to render: the list is
+// there and its first number is somebody else's.
 //
-// Two shapes, and neither is a construct the walker declined to render: the
-// list is there and its numbers are somebody else's. numbering.xml defines one
-// w:num per list kind, so every ordered list in the body names the same one
-// and a second top-level list carries on from the first: 1. and 2. print as
-// 3. and 4. Every level of that part states w:start 1, so an author's "5."
-// opens at 1 whatever depth it sits at.
+// Every level of the numbered abstract list states w:start 1, and honouring an
+// author's "5." would be a w:startOverride on that list's own w:num, which gdoc
+// does not write. So a list that opens at 5 in the note opens at 1 in the
+// document, whatever depth it sits at.
 //
-// A nested list is not in the count. An absent w:lvlRestart restarts a level
-// whenever the level above it moves, so the sub-lists under two items of one
-// list each start again on their own, and warning about them would be the
-// cry-wolf warning this tool avoids everywhere else.
-//
-// The structural fix is docs/backlog/one-numbered-list-per-document.md. The
-// silence is not deferred with it: the prose around a numbered list
-// cross-references the numbers the author wrote, so a document that prints
-// others has to say so on the envelope.
-func (r *renderer) warnListNumbers(list *ast.List, level int) {
-	if level == 0 {
-		r.numberedLists++
-		if r.numberedLists > 1 {
-			r.warn("line %d: this numbered list carries on from the one above it rather than starting again at 1",
-				r.itemLine(list))
-		}
-	}
+// The silence around a list that starts at 1 is deliberate: the prose beside a
+// numbered list cross-references the numbers the author wrote, so a document
+// that prints others has to say so on the envelope, and a document that prints
+// the author's own says nothing.
+func (r *renderer) warnListNumbers(list *ast.List) {
 	if list.Start != 1 {
 		r.warn("line %d: this numbered list starts at %d in the note and at 1 in the document",
 			r.itemLine(list), list.Start)
@@ -447,19 +448,27 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return r.paragraphBlock(node, level, list)
 
 	case *ast.List:
-		// The two lists numbering.xml defines are the two a body may name. A
-		// second numbered list therefore carries on from the first, which is
-		// docs/backlog/one-numbered-list-per-document.md.
-		id := render.BulletNumID
+		// Every bullet names the one bulleted list. A numbered list opens its
+		// own w:num, so it starts again at 1, unless it is nested inside a
+		// numbered list: there an absent w:lvlRestart already restarts the
+		// inner level whenever the outer one moves, and a second w:num would
+		// make the two lists two counts Word draws side by side.
+		inner := listCtx{numID: render.BulletNumID}
 		if typed.IsOrdered() {
-			id = render.NumberNumID
-			r.warnListNumbers(typed, level)
+			inner.ordered = true
+			if list.ordered {
+				inner.numID = list.numID
+			} else {
+				r.numberedLists++
+				inner.numID = render.NumberNumID(r.numberedLists)
+			}
+			r.warnListNumbers(typed)
 		}
 		if level == 0 {
 			r.counts.Lists++
 		}
 		for item := typed.FirstChild(); item != nil; item = item.NextSibling() {
-			if err := r.itemBlocks(item, level+1, id); err != nil {
+			if err := r.itemBlocks(item, level+1, inner); err != nil {
 				return err
 			}
 		}
@@ -628,7 +637,7 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 			r.pendingMark = false
 		}
 		r.emit(r.listItem(runs, numID, min(level-1, maxListLevel),
-			list.numID == render.NumberNumID))
+			list.ordered))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false

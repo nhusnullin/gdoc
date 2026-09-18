@@ -1039,16 +1039,16 @@ func TestAnEmptyFenceNamesARealLine(t *testing.T) {
 	}
 }
 
-// A numbered list prints numbers the author did not write, in two shapes, and
-// both are named on the envelope.
+// A numbered list that opens on a number the author did not write says so on
+// the envelope.
 //
-// numbering.xml defines one w:num per list kind, so every ordered list in the
-// body names the same one and a second top-level list carries on from the
-// first: 1. and 2. print as 3. and 4. Every level of that part states
-// w:start 1, so an author's "5." opens at 1 whatever depth it sits at. The
-// structural fix is docs/backlog/one-numbered-list-per-document.md; the
-// silence is not deferred, because the prose around a list cross-references
-// the numbers the author wrote.
+// Every level of the numbered abstract list states w:start 1, so an author's
+// "5." opens at 1 whatever depth it sits at, and honouring it would be a
+// w:startOverride gdoc does not write. The silence is not deferred, because
+// the prose around a list cross-references the numbers the author wrote.
+//
+// A second numbered list is no longer one of these shapes: it opens its own
+// w:num and starts again at 1. See TestASecondNumberedListStartsAgain.
 func TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -1056,20 +1056,6 @@ func TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo(t *testing.T) {
 		want     string
 		line     int
 	}{
-		{
-			name: "a second numbered list",
-			markdown: []string{
-				"1. one",
-				"2. two",
-				"",
-				"Prose between.",
-				"",
-				"1. alpha",
-				"2. beta",
-			},
-			want: "carries on from the one above it",
-			line: 6,
-		},
 		{
 			name: "a numbered list that starts at five",
 			markdown: []string{

@@ -100,7 +100,7 @@ func firstLabel(block *etree.Element) string {
 // buildWith is Build over one note's fields.
 func buildWith(t *testing.T, f cover.Fields) *Package {
 	t.Helper()
-	pkg, err := Build(config(t), f, nil, nil)
+	pkg, err := Build(config(t), f, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestTheVersionLineKeepsItsLabel(t *testing.T) {
 }
 
 func TestANoteWithNoTitleKeepsTheTemplatesHighlightedPlaceholder(t *testing.T) {
-	pkg, err := Build(config(t), cover.Fields{}, nil, nil)
+	pkg, err := Build(config(t), cover.Fields{}, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -552,7 +552,7 @@ func TestAClassNothingDescribesIsRefused(t *testing.T) {
 	_, err := Build(config(t), cover.Fields{
 		Title: "Supplier Register Policy", Version: "1.0",
 		Classification: "Secret (S)",
-	}, nil, nil)
+	}, nil, nil, 0)
 	if err == nil {
 		t.Fatal("a class no cell describes was accepted")
 	}

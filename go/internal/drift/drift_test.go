@@ -310,7 +310,7 @@ func buildNote(t *testing.T) *Docx {
 	if err != nil {
 		t.Fatalf("the note's markdown did not render: %v", err)
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media)
+	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}
