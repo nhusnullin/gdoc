@@ -47,4 +47,31 @@
 // prefix, for the reason propose.Check gives: the heading arm is anchored to a
 // line start, and the prefix in front of it would let a reason opening with a
 // hash through. TestCheckRefusesEachBadShapeByName carries that case.
+//
+// # Two read-backs, and nothing raises after the write
+//
+// Once the batch has gone out the comment is in somebody's document, so
+// everything from there is reported rather than raised: a caller told the run
+// failed is a caller that writes the comment a second time.
+// TestAListingWithoutTheIdIsAWarningNotAnError and
+// TestAReadBackThatFailedIsAWarningNamingTheRoute hold that, each on a route
+// that could not be read or did not hold.
+//
+// The comment is read back through two routes the write did not go out on, and
+// neither is enough alone. Drive's comment listing says the comment exists with
+// the words that were sent, which the export cannot say because it carries no
+// comment id. The docx export says those words are wrapped around the quote,
+// which the listing cannot say because Drive keeps reporting the text a
+// destroyed anchor used to hold, and a destroyed anchor is the failure this
+// writer has. Both holding is verified, and TestVerifiedIsBothRoutesHolding is
+// the pin. TestAnExportThatDoesNotAnchorTheCommentIsAWarning and
+// TestAnExportAnchoredToOtherWordsIsAWarning are the two ways the second route
+// answers no.
+//
+// Comments in the export that read the same words and disagree about the text
+// they are attached to give no answer, because the export has no Drive comment
+// id to tell one from another and taking the first would report this comment on
+// the strength of somebody else's. It is the rule internal/docx's own witness
+// follows on the same join, and TestTwoExportedCommentsThatDisagreeGiveNoAnswer
+// pins it.
 package annotate

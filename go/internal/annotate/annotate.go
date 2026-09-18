@@ -193,20 +193,11 @@ func Apply(ctx context.Context, s Session, docID string, a Annotation) (Result, 
 			out.CommentUpdateState, stateAllSaved))
 	}
 
-	checks, warns := verify(ctx, s, docID, out.CommentID, a.Quoted, body)
+	checks, warns := Verify(ctx, s, docID, out.CommentID, a.Quoted, body)
 	out.Checks = checks
 	out.Warnings = append(out.Warnings, warns...)
 	out.Verified = checks.all() && out.CommentUpdateState == stateAllSaved
 	return out, nil
-}
-
-// verify is the two read-backs. verify.go replaces this body with the Drive
-// listing and the export; until then nothing is read back, so nothing is
-// claimed and Verified is false.
-//
-// TODO(verify): the two routes, each answering for itself.
-func verify(context.Context, Session, string, string, string, string) (Checks, []string) {
-	return Checks{}, nil
 }
 
 // stateAllSaved is the one commentUpdateState that means the comment landed.

@@ -408,32 +408,32 @@ an unknown key; an empty list.
   `testdata/comments.json`, `testdata/document.xml`, `testdata/comments.xml`
 - Modify: `go/internal/annotate/annotate.go`, `doc.go`
 
-- [ ] Test first, `TestVerifiedIsBothRoutesHolding`: the listing carries the
+- [x] Test first, `TestVerifiedIsBothRoutesHolding`: the listing carries the
       id with the sent body and the quote as `quotedFileContent`, the export
       carries one comment reading the sent body, anchored, whose span holds
       the quote; `verified` true, both checks true, no warning.
-- [ ] Test, `TestAListingWithoutTheIdIsAWarningNotAnError`: `drive_listing`
+- [x] Test, `TestAListingWithoutTheIdIsAWarningNotAnError`: `drive_listing`
       false, `verified` false, a warning naming the id, no error.
-- [ ] Test, `TestAnExportThatDoesNotAnchorTheCommentIsAWarning`: the comment
+- [x] Test, `TestAnExportThatDoesNotAnchorTheCommentIsAWarning`: the comment
       is in the export and `Anchored` is false; `docx_anchored` false, the
       warning says it is attached to no text.
-- [ ] Test, `TestTwoExportedCommentsThatDisagreeGiveNoAnswer`: two comments
+- [x] Test, `TestTwoExportedCommentsThatDisagreeGiveNoAnswer`: two comments
       reading the same body, one anchored and one not; `docx_anchored` false
       with the warning propose uses for the same case.
-- [ ] Test, `TestAReadBackThatFailedIsAWarningNamingTheRoute`: each GET
+- [x] Test, `TestAReadBackThatFailedIsAWarningNamingTheRoute`: each GET
       failing gives a warning naming the route and leaves the other check to
       answer for itself.
-- [ ] `Verify(ctx, s, docID, commentID, quoted, body)` returning `Checks` and
+- [x] `Verify(ctx, s, docID, commentID, quoted, body)` returning `Checks` and
       warnings. The Drive route through `comments.Fetch`, matching the id and
       comparing `Content` and `QuotedFileContent`. The docx route in the
       `docxHolds` shape: `docx.Export`, `docx.Parse`, the hits in
       `f.Comments` by `Text`, no answer when hits disagree, then `Anchored`
       and `Span` containing the quote.
-- [ ] `Apply` calls it after the write and never returns an error after the
+- [x] `Apply` calls it after the write and never returns an error after the
       write.
-- [ ] `doc.go` gains the section on the read-backs and names the tests.
-- [ ] `cd go && go test -race ./internal/annotate/` passes.
-- [ ] `git commit -m "feat(v2): annotate reads its comment back two ways"`
+- [x] `doc.go` gains the section on the read-backs and names the tests.
+- [x] `cd go && go test -race ./internal/annotate/` passes.
+- [x] `git commit -m "feat(v2): annotate reads its comment back two ways"`
 
 ### Task 4: the text flag kind
 

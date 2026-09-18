@@ -125,13 +125,16 @@ type call struct {
 }
 
 // fakeSession is Google as far as this package is concerned: the Docs read the
-// span is found in, and the one batchUpdate. Nothing here names net/http: the
-// rooms that may are the ones the boundary test lists, and this is not one.
+// span is found in, the one batchUpdate, and the two read-backs, Drive's
+// comment listing and the docx export. Nothing here names net/http: the rooms
+// that may are the ones the boundary test lists, and this is not one.
 type fakeSession struct {
-	calls  []call
-	inline []byte
-	batch  []byte
-	failAt map[int]error
+	calls   []call
+	inline  []byte
+	batch   []byte
+	listing []byte
+	export  []byte
+	failAt  map[int]error
 }
 
 func (f *fakeSession) record(method, rawURL string, body any) error {
@@ -152,8 +155,11 @@ func (f *fakeSession) GetJSON(_ context.Context, rawURL string, into any) error 
 		return err
 	}
 	answer := []byte(`{}`)
-	if rawURL == docs.URL(testDocID) {
+	switch {
+	case rawURL == docs.URL(testDocID):
 		answer = f.inline
+	case strings.Contains(rawURL, "/comments?"):
+		answer = f.listing
 	}
 	if into == nil {
 		return nil
@@ -165,7 +171,7 @@ func (f *fakeSession) GetBytes(_ context.Context, rawURL string, _ int64) ([]byt
 	if err := f.record("GET", rawURL, nil); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return f.export, nil
 }
 
 func (f *fakeSession) PostJSON(_ context.Context, rawURL string, body any, into any) error {
@@ -179,13 +185,17 @@ func (f *fakeSession) PostJSON(_ context.Context, rawURL string, body any, into 
 }
 
 // script is a Google that answers the read from a named fixture and the write
-// from another.
+// from another, with both read-backs holding. A test about a read-back that
+// does not hold replaces the one route it is about, so every other test says
+// what it is about by saying nothing.
 func script(t *testing.T, before, batch string) *fakeSession {
 	t.Helper()
 	return &fakeSession{
-		inline: fixture(t, before),
-		batch:  fixture(t, batch),
-		failAt: map[int]error{},
+		inline:  fixture(t, before),
+		batch:   fixture(t, batch),
+		listing: fixture(t, "comments.json"),
+		export:  exportOf(t, string(fixture(t, "document.xml")), string(fixture(t, "comments.xml"))),
+		failAt:  map[int]error{},
 	}
 }
 
@@ -356,12 +366,16 @@ func TestApplyReadsTheCommentIdFromTheThreadFirst(t *testing.T) {
 	for _, c := range []struct {
 		fixture string
 		want    string
+		listing string
 	}{
-		{"batch-saved.json", "AAACThReAd"},
-		{"batch-saved-flat.json", "AAACFlAt"},
+		{"batch-saved.json", "AAACThReAd", "comments.json"},
+		{"batch-saved-flat.json", "AAACFlAt", "comments-flat.json"},
 	} {
 		t.Run(c.fixture, func(t *testing.T) {
 			f := script(t, "before.json", c.fixture)
+			// The listing is the one Drive would answer with after this write,
+			// so the read-backs hold and the only thing under test is the id.
+			f.listing = fixture(t, c.listing)
 
 			res, err := Apply(context.Background(), f, testDocID, testAnnotation)
 			if err != nil {
