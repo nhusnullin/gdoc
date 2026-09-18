@@ -368,38 +368,38 @@ an unknown key; an empty list.
   `batch-saved.json`, `batch-saved-flat.json`, `batch-failed.json`
 - Modify: `go/internal/annotate/annotate.go`, `annotate_test.go`, `doc.go`
 
-- [ ] Test first, `TestBatchIsOneInsertCommentUnderSuggest`: `Batch` over a
+- [x] Test first, `TestBatchIsOneInsertCommentUnderSuggest`: `Batch` over a
       literal range and body is one request at the literal start and end,
       content the literal robot body, `writeMode` SUGGEST, and no
       `assigneeEmailAddress` key; with an assignee the key is present.
-- [ ] Test, `TestTheGuardCarriesTheAnnotateBatchOnAHandedInDocument`: a policy
+- [x] Test, `TestTheGuardCarriesTheAnnotateBatchOnAHandedInDocument`: a policy
       with one handed-in id and nothing granted carries `POST` on
       `propose.BatchURL(id)` with `Batch`'s real output.
-- [ ] Test, `TestTheGuardRefusesTheSameBatchWithoutSuggestMode`: the same body
+- [x] Test, `TestTheGuardRefusesTheSameBatchWithoutSuggestMode`: the same body
       with no `writeControl` is refused and the refusal names SUGGEST. Both
       pass with no change under `guard/`. If one does not, stop: the design
       rests on this and the plan is wrong.
-- [ ] Test, `TestApplySendsTheBatchAtTheSpanItFound`: a stub session answering
+- [x] Test, `TestApplySendsTheBatchAtTheSpanItFound`: a stub session answering
       `before.json` to the document read; the POST body is `Batch` at the
       literal range the quote sits at.
-- [ ] Test, `TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite`:
+- [x] Test, `TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite`:
       `two-tabs.json`; an error naming the tab count, no POST.
-- [ ] Test, `TestApplyReadsTheCommentIdFromTheThreadFirst`: `batch-saved.json`
+- [x] Test, `TestApplyReadsTheCommentIdFromTheThreadFirst`: `batch-saved.json`
       yields the thread's id; `batch-saved-flat.json`, carrying only the flat
       field, yields that one.
-- [ ] Test, `TestAnUpdateStateOtherThanSavedIsAWarning`: `batch-failed.json`
+- [x] Test, `TestAnUpdateStateOtherThanSavedIsAWarning`: `batch-failed.json`
       gives a result with a warning naming the state and no error.
-- [ ] Test, `TestApplyRefusesBeforeTheWriteAndSendsNothing`: a bad shape and
+- [x] Test, `TestApplyRefusesBeforeTheWriteAndSendsNothing`: a bad shape and
       a span not found each return an error and the stub saw no POST.
-- [ ] Test, `TestAGuardRefusalIsAnErrorAndTheWireSawNoBatch`: the session
+- [x] Test, `TestAGuardRefusalIsAnErrorAndTheWireSawNoBatch`: the session
       refuses the POST; the error carries the refusal.
-- [ ] `Session`, `Batch`, `Apply`, `Result`, the range from
+- [x] `Session`, `Batch`, `Apply`, `Result`, the range from
       `propose.FindSpan`, the URL from `propose.BatchURL`, the id read as
       propose reads it. Verify stubbed to nothing until Task 3.
-- [ ] `doc.go` gains the sections on the batch and on the guard and names the
+- [x] `doc.go` gains the sections on the batch and on the guard and names the
       tests.
-- [ ] `cd go && go test -race ./internal/annotate/` passes.
-- [ ] `git commit -m "feat(v2): annotate sends one comment and reads its id"`
+- [x] `cd go && go test -race ./internal/annotate/` passes.
+- [x] `git commit -m "feat(v2): annotate sends one comment and reads its id"`
 
 ### Task 3: the two read-backs
 
