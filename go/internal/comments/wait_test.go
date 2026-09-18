@@ -25,6 +25,7 @@ type script struct {
 	t       *testing.T
 	answers []answer
 	polls   int
+	reads   int
 	events  []string
 	clock   time.Time
 	// onSleep runs before each sleep advances the clock, so a test can cancel
@@ -53,10 +54,10 @@ func newScript(t *testing.T, answers ...answer) *script {
 	return s
 }
 
-// fetch is the Poll the wait calls. A script that runs out of answers fails the
-// test rather than blocking: an extra poll is the defect the test is looking
-// for.
-func (s *script) fetch(ctx context.Context) (*docs.Document, []RawComment, error) {
+// list is the listing the wait calls, and the half of a poll that carries the
+// scripted answer's error. A script that runs out of answers fails the test
+// rather than blocking: an extra poll is the defect the test is looking for.
+func (s *script) list(ctx context.Context) ([]RawComment, error) {
 	s.events = append(s.events, "poll")
 	if s.onPoll != nil {
 		s.onPoll()
@@ -68,15 +69,26 @@ func (s *script) fetch(ctx context.Context) (*docs.Document, []RawComment, error
 	s.polls++
 	// A poll takes a moment, the way a Docs read and a Drive listing do.
 	s.clock = s.clock.Add(100 * time.Millisecond)
-	return a.doc, a.raw, a.err
+	return a.raw, a.err
+}
+
+// read is the document read, answering with the document of the poll in
+// flight and counting how often the wait asked for it.
+func (s *script) read(ctx context.Context) (*docs.Document, error) {
+	s.reads++
+	return s.answers[s.polls-1].doc, nil
 }
 
 func (s *script) options(interval, deadline time.Duration) WaitOptions {
-	return WaitOptions{Interval: interval, Deadline: deadline, Fetch: s.fetch}
+	return WaitOptions{Interval: interval, Deadline: deadline, List: s.list, Read: s.read}
 }
 
 // quiet is a poll that found nothing.
 func quiet() answer { return answer{doc: &docs.Document{}} }
+
+// noList and noRead are polls that answer nothing, for the options table.
+func noList(context.Context) ([]RawComment, error)   { return nil, nil }
+func noRead(context.Context) (*docs.Document, error) { return &docs.Document{}, nil }
 
 // oneComment is a poll that found one comment, at the given instant.
 func oneComment(id, content, modified string) answer {
@@ -343,10 +355,11 @@ func TestWaitRefusesOptionsItCannotRun(t *testing.T) {
 		o    WaitOptions
 		want string
 	}{
-		{"no interval", WaitOptions{Deadline: time.Minute, Fetch: func(context.Context) (*docs.Document, []RawComment, error) { return nil, nil, nil }}, "interval"},
-		{"negative interval", WaitOptions{Interval: -time.Second, Deadline: time.Minute, Fetch: func(context.Context) (*docs.Document, []RawComment, error) { return nil, nil, nil }}, "interval"},
-		{"no fetch", WaitOptions{Interval: time.Second, Deadline: time.Minute}, "poll"},
-		{"negative deadline", WaitOptions{Interval: time.Second, Deadline: -time.Minute, Fetch: func(context.Context) (*docs.Document, []RawComment, error) { return nil, nil, nil }}, "deadline"},
+		{"no interval", WaitOptions{Deadline: time.Minute, List: noList, Read: noRead}, "interval"},
+		{"negative interval", WaitOptions{Interval: -time.Second, Deadline: time.Minute, List: noList, Read: noRead}, "interval"},
+		{"no listing", WaitOptions{Interval: time.Second, Deadline: time.Minute, Read: noRead}, "listing"},
+		{"no read", WaitOptions{Interval: time.Second, Deadline: time.Minute, List: noList}, "read"},
+		{"negative deadline", WaitOptions{Interval: time.Second, Deadline: -time.Minute, List: noList, Read: noRead}, "deadline"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -387,10 +400,10 @@ func TestTheDeadlineBoundsTheCallAndNotOnlyTheGapsBetweenPolls(t *testing.T) {
 	// other tests drive is deliberately not in the way.
 	since := &Cursor{At: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
 	polls := 0
-	stalled := func(ctx context.Context) (*docs.Document, []RawComment, error) {
+	stalled := func(ctx context.Context) ([]RawComment, error) {
 		polls++
 		<-ctx.Done()
-		return nil, nil, ctx.Err()
+		return nil, ctx.Err()
 	}
 
 	// On its own goroutine, so a Wait that never returns fails here in five
@@ -407,7 +420,8 @@ func TestTheDeadlineBoundsTheCallAndNotOnlyTheGapsBetweenPolls(t *testing.T) {
 		w, err := Wait(context.Background(), since, WaitOptions{
 			Interval: 10 * time.Second,
 			Deadline: 50 * time.Millisecond,
-			Fetch:    stalled,
+			List:     stalled,
+			Read:     noRead,
 		})
 		done <- answer{w, err}
 	}()
@@ -445,16 +459,17 @@ func TestAnInterruptDuringAStalledPollIsStillAnInterrupt(t *testing.T) {
 	// deadline would also have cut is the person stopping the session, and the
 	// flag is the only thing that says so.
 	ctx, cancel := context.WithCancel(context.Background())
-	stalled := func(ctx context.Context) (*docs.Document, []RawComment, error) {
+	stalled := func(ctx context.Context) ([]RawComment, error) {
 		cancel()
 		<-ctx.Done()
-		return nil, nil, ctx.Err()
+		return nil, ctx.Err()
 	}
 
 	w, err := Wait(ctx, nil, WaitOptions{
 		Interval: 10 * time.Second,
 		Deadline: time.Minute,
-		Fetch:    stalled,
+		List:     stalled,
+		Read:     noRead,
 	})
 
 	if err != nil {
@@ -501,12 +516,12 @@ func TestAPollThatFailedOfItsOwnAccordPastTheDeadlineIsStillAFailure(t *testing.
 	since := &Cursor{At: time.Date(2026, 9, 7, 12, 0, 0, 0, time.UTC)}
 	drive := errors.New("drive answered 503")
 	polls := 0
-	late := func(ctx context.Context) (*docs.Document, []RawComment, error) {
+	late := func(ctx context.Context) ([]RawComment, error) {
 		polls++
 		// Past the deadline, and then a failure that is Drive's own rather than
 		// the context's.
 		time.Sleep(80 * time.Millisecond)
-		return nil, nil, drive
+		return nil, drive
 	}
 
 	type outcome struct {
@@ -518,7 +533,8 @@ func TestAPollThatFailedOfItsOwnAccordPastTheDeadlineIsStillAFailure(t *testing.
 		w, err := Wait(context.Background(), since, WaitOptions{
 			Interval: 10 * time.Second,
 			Deadline: 20 * time.Millisecond,
-			Fetch:    late,
+			List:     late,
+			Read:     noRead,
 		})
 		done <- outcome{w, err}
 	}()
@@ -541,5 +557,27 @@ func TestAPollThatFailedOfItsOwnAccordPastTheDeadlineIsStillAFailure(t *testing.
 	}
 	if got.w.Interrupted {
 		t.Error("interrupted is true, and nothing sent a signal")
+	}
+}
+
+// A quiet poll is the listing alone. The document is read on the first poll,
+// so the caller's envelope has its fields, and after that only on a poll whose
+// listing carried something, because the read exists to place comments and a
+// quiet tick has none to place.
+func TestAQuietPollDoesNotReadTheDocument(t *testing.T) {
+	s := newScript(t, quiet(), quiet(), quiet(), oneComment("c1", "a comment", "2026-09-07T12:01:00.000Z"))
+
+	w, err := Wait(context.Background(), &Cursor{At: s.clock}, s.options(10*time.Second, time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Polls != 4 {
+		t.Fatalf("polls = %d, want 4", w.Polls)
+	}
+	if s.reads != 2 {
+		t.Errorf("the wait read the document %d times, want 2: the first poll's and the one with news", s.reads)
+	}
+	if len(w.Threads) != 1 {
+		t.Errorf("threads = %v, want the one the last poll carried", w.Threads)
 	}
 }

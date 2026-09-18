@@ -556,10 +556,12 @@ func TestLiveWaitSeesANewComment(t *testing.T) {
 	defer func() { <-posted }()
 
 	started := time.Now()
+	list, read := poller(s, docID, base)
 	w, err := comments.Wait(ctx, base, comments.WaitOptions{
 		Interval: waitInterval,
 		Deadline: waitDeadline,
-		Fetch:    poller(s, docID, base),
+		List:     list,
+		Read:     read,
 	})
 	if err != nil {
 		t.Fatalf("the wait failed after %d polls in %s: %v", w.Polls, time.Since(started).Round(time.Millisecond), err)
@@ -608,10 +610,12 @@ func TestLiveWaitSeesANewComment(t *testing.T) {
 	// The same document, the cursor the wait just handed back, and nothing
 	// written this time. It must run out its deadline and come back empty.
 	quiet := time.Now()
+	list, read = poller(s, docID, w.Cursor)
 	q, err := comments.Wait(ctx, w.Cursor, comments.WaitOptions{
 		Interval: waitInterval,
 		Deadline: quietDeadline,
-		Fetch:    poller(s, docID, w.Cursor),
+		List:     list,
+		Read:     read,
 	})
 	if err != nil {
 		t.Fatalf("the quiet wait failed after %d polls in %s: %v", q.Polls, time.Since(quiet).Round(time.Millisecond), err)
@@ -635,18 +639,12 @@ func TestLiveWaitSeesANewComment(t *testing.T) {
 // order for the command's reason: a comment written between the two reads is
 // placed by the read that runs after it rather than missed by the one that ran
 // before it.
-func poller(s *gapi.Session, docID string, since *comments.Cursor) comments.Poll {
-	return func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
-		raws, err := comments.Fetch(ctx, s, docID, since)
-		if err != nil {
-			return nil, nil, err
+func poller(s *gapi.Session, docID string, since *comments.Cursor) (comments.List, comments.Read) {
+	return func(ctx context.Context) ([]comments.RawComment, error) {
+			return comments.Fetch(ctx, s, docID, since)
+		}, func(ctx context.Context) (*docs.Document, error) {
+			return docs.Fetch(ctx, s, docID)
 		}
-		d, err := docs.Fetch(ctx, s, docID)
-		if err != nil {
-			return nil, nil, err
-		}
-		return d, raws, nil
-	}
 }
 
 // baselineCursor is the first listing of a live session: no cursor, everything

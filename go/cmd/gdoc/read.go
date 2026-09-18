@@ -527,36 +527,31 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	// The last document read is kept for the envelope's fields, which
 	// comments.Waited does not carry and does not need to.
 	//
-	// The document is read on the first poll and then only on a poll whose
-	// narrowed listing carries something. The read exists to place comments,
-	// so a quiet tick has nothing to place and the read would answer the same
-	// bytes as the tick before: at two seconds a tick, a quiet nine-minute
-	// wait was 270 whole-document reads. The first poll keeps its read so the
-	// envelope carries the document's fields either way, and the document it
-	// kept is handed back on the quiet ticks, which Threads places nothing
-	// against. TestAQuietPollReadsTheListingAlone.
+	// Under a wait the document is read on the first poll and then only on a
+	// poll whose narrowed listing carries something; comments.Wait decides,
+	// and its doc comment says why. The one-shot listing reads both.
 	var d *docs.Document
-	poll := func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
-		raws, err := comments.Fetch(ctx, r.session, r.id, since)
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(raws) == 0 && d != nil {
-			return d, raws, nil
-		}
+	list := func(ctx context.Context) ([]comments.RawComment, error) {
+		return comments.Fetch(ctx, r.session, r.id, since)
+	}
+	read := func(ctx context.Context) (*docs.Document, error) {
 		got, err := docs.Fetch(ctx, r.session, r.id)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		d = got
-		return got, raws, nil
+		return got, nil
 	}
 
 	if !a.has("--wait") {
 		// Before the poll, because it is what a baseline cursor is dated from
 		// and the reads must not spend the floor it is biased by.
 		at := now()
-		got, raws, err := poll(ctx)
+		raws, err := list(ctx)
+		if err != nil {
+			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		}
+		got, err := read(ctx)
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 		}
@@ -584,7 +579,8 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	w, err := comments.Wait(sigCtx, since, comments.WaitOptions{
 		Interval: waitInterval,
 		Deadline: deadline,
-		Fetch:    poll,
+		List:     list,
+		Read:     read,
 	})
 	// Off the moment the wait is over. What follows is a --witness export, and
 	// a Ctrl-C during that must kill the run the way it kills every other

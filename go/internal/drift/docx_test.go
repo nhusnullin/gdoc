@@ -22,19 +22,10 @@ func TestABadDocxIsAnErrorNamingWhatIsWrong(t *testing.T) {
 		t.Errorf("a missing file came back with %v, and the error names the path", err)
 	}
 
-	var buf bytes.Buffer
-	z := zip.NewWriter(&buf)
-	w, err := z.Create("word/document.xml")
-	if err != nil {
-		t.Fatalf("the fixture zip could not be written: %v", err)
-	}
-	if _, err := w.Write([]byte(`<w:document xmlns:w="` + wordNS + `"><w:body/></w:document>`)); err != nil {
-		t.Fatalf("the fixture zip could not be written: %v", err)
-	}
-	if err := z.Close(); err != nil {
-		t.Fatalf("the fixture zip could not be closed: %v", err)
-	}
-	if _, err := OpenDocx(buf.Bytes()); err == nil || !strings.Contains(err.Error(), "word/styles.xml") {
+	noStyles := zipOf(t, map[string]string{
+		"word/document.xml": `<w:document xmlns:w="` + wordNS + `"><w:body/></w:document>`,
+	})
+	if _, err := OpenDocx(noStyles); err == nil || !strings.Contains(err.Error(), "word/styles.xml") {
 		t.Errorf("a package with no styles came back with %v, and the error names the missing part", err)
 	}
 }
@@ -175,18 +166,12 @@ func TestAStyleThatIsNotInTheFileCarriesNothing(t *testing.T) {
 	}
 }
 
-// docxOf packs a minimal docx around one styles part, so a test can state a
-// paragraph property in Word's own words and read what this package makes of
-// it. The document and rels parts are the empty shells the opener insists on.
-func docxOf(t *testing.T, styles string) *Docx {
+// zipOf packs named parts into a zip, which is all a docx is to the opener.
+func zipOf(t *testing.T, parts map[string]string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	z := zip.NewWriter(&buf)
-	for name, body := range map[string]string{
-		"word/document.xml":            `<w:document xmlns:w="` + wordNS + `"><w:body/></w:document>`,
-		"word/styles.xml":              `<w:styles xmlns:w="` + wordNS + `">` + styles + `</w:styles>`,
-		"word/_rels/document.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`,
-	} {
+	for name, body := range parts {
 		w, err := z.Create(name)
 		if err != nil {
 			t.Fatalf("the fixture zip could not be written: %v", err)
@@ -198,7 +183,19 @@ func docxOf(t *testing.T, styles string) *Docx {
 	if err := z.Close(); err != nil {
 		t.Fatalf("the fixture zip could not be closed: %v", err)
 	}
-	d, err := OpenDocx(buf.Bytes())
+	return buf.Bytes()
+}
+
+// docxOf packs a minimal docx around one styles part, so a test can state a
+// paragraph property in Word's own words and read what this package makes of
+// it. The document and rels parts are the empty shells the opener insists on.
+func docxOf(t *testing.T, styles string) *Docx {
+	t.Helper()
+	d, err := OpenDocx(zipOf(t, map[string]string{
+		"word/document.xml":            `<w:document xmlns:w="` + wordNS + `"><w:body/></w:document>`,
+		"word/styles.xml":              `<w:styles xmlns:w="` + wordNS + `">` + styles + `</w:styles>`,
+		"word/_rels/document.xml.rels": `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>`,
+	}))
 	if err != nil {
 		t.Fatalf("the fixture docx did not open: %v", err)
 	}

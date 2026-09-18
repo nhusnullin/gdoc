@@ -31,11 +31,14 @@ var (
 	}
 )
 
-// Poll is one look at the document: the Docs read and the comment listing, as
-// the command already makes them. It is a parameter so this package still holds
+// List is the comment listing, narrowed to the cursor, and Read is the Docs
+// read its ranges come from. They are parameters so this package still holds
 // no session and no URL, which is what keeps net/http out of this room and lets
-// every test hand in a script.
-type Poll func(ctx context.Context) (*docs.Document, []RawComment, error)
+// every test hand in a script. They are two rather than one so the wait can
+// decide when the second is needed: the listing goes out every tick, and the
+// document is read only when there is something to place.
+type List func(ctx context.Context) ([]RawComment, error)
+type Read func(ctx context.Context) (*docs.Document, error)
 
 // WaitOptions is what one wait needs, and nothing more.
 type WaitOptions struct {
@@ -43,8 +46,11 @@ type WaitOptions struct {
 	Interval time.Duration
 	// Deadline is how long to look before answering with an empty window.
 	Deadline time.Duration
-	// Fetch is one poll.
-	Fetch Poll
+	// List is the listing one poll makes.
+	List List
+	// Read is the document read a poll makes when its listing carried
+	// something, and on the first poll.
+	Read Read
 }
 
 // Waited is what one wait saw. Every field is a fact: what arrived, where the
@@ -66,6 +72,14 @@ type Waited struct {
 // is the point of a live session: a wait that slept first would cost the
 // interval on every call the skill makes, quiet document or not.
 //
+// A poll is the listing, and the document read only when the listing carried
+// something or nothing has been read yet. The read exists to place comments,
+// so a quiet tick has none to place and the read would answer the same bytes
+// as the tick before: at two seconds a tick, a quiet nine-minute wait was 270
+// whole-document reads and is one. The first poll reads either way, so the
+// document the caller keeps for its envelope is there on a wait that stays
+// quiet to its deadline. TestAQuietPollDoesNotReadTheDocument.
+//
 // The three quiet endings are answers, not failures. A deadline reached and an
 // interrupt both come back with no threads and the cursor handed in unchanged,
 // so the next call asks the same question and nothing is lost. A failed poll is
@@ -73,8 +87,11 @@ type Waited struct {
 // failed is not retried in silence, because a caller told the document was
 // quiet would believe it.
 func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
-	if o.Fetch == nil {
-		return Waited{}, errors.New("the wait was given no poll to make")
+	if o.List == nil {
+		return Waited{}, errors.New("the wait was given no listing to poll")
+	}
+	if o.Read == nil {
+		return Waited{}, errors.New("the wait was given no document read to poll")
 	}
 	if o.Interval <= 0 {
 		return Waited{}, errors.New("the wait needs a positive interval between polls")
@@ -106,40 +123,55 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 		defer cancel()
 	}
 
+	// failed is the answer to a poll that did not come back, whichever of its
+	// two reads failed. The signal and the deadline are the quiet endings;
+	// anything else is the poll's own failure, reported rather than retried.
+	failed := func(err error) (Waited, error) {
+		if ctx.Err() != nil {
+			// The signal that ends the session ends the request in flight.
+			// Blaming Drive for the person's Ctrl-C would send somebody to
+			// look at a read that was fine.
+			return interrupted(out, start), nil
+		}
+		if poll.Err() != nil && errors.Is(err, context.DeadlineExceeded) {
+			// The deadline cut the poll short. That is the quiet ending
+			// this call already has a shape for: no threads, the cursor
+			// handed in, and the next call asks the same question.
+			//
+			// The gate is the error's own identity and not just the
+			// context's state, because the two answer different questions.
+			// A poll that is still in flight when the deadline lands can
+			// return a Drive failure of its own a moment later: a 503 read
+			// at the tail of the window, or a body that did not decode. The
+			// context is done by then either way, so reading only that
+			// reported a failed poll as a quiet document, which is the one
+			// thing this call's doc comment promises it never does. A
+			// degraded Drive answering slower than the interval makes that
+			// the last poll of every wait rather than a knife-edge race.
+			out.Waited = now().Sub(start)
+			return out, nil
+		}
+		out.Waited = now().Sub(start)
+		return out, err
+	}
+
+	var d *docs.Document
 	for {
 		if ctx.Err() != nil {
 			return interrupted(out, start), nil
 		}
 
-		d, raw, err := o.Fetch(poll)
+		raw, err := o.List(poll)
 		out.Polls++
 		if err != nil {
-			if ctx.Err() != nil {
-				// The signal that ends the session ends the request in flight.
-				// Blaming Drive for the person's Ctrl-C would send somebody to
-				// look at a read that was fine.
-				return interrupted(out, start), nil
+			return failed(err)
+		}
+		if len(raw) > 0 || d == nil {
+			got, err := o.Read(poll)
+			if err != nil {
+				return failed(err)
 			}
-			if poll.Err() != nil && errors.Is(err, context.DeadlineExceeded) {
-				// The deadline cut the poll short. That is the quiet ending
-				// this call already has a shape for: no threads, the cursor
-				// handed in, and the next call asks the same question.
-				//
-				// The gate is the error's own identity and not just the
-				// context's state, because the two answer different questions.
-				// A poll that is still in flight when the deadline lands can
-				// return a Drive failure of its own a moment later: a 503 read
-				// at the tail of the window, or a body that did not decode. The
-				// context is done by then either way, so reading only that
-				// reported a failed poll as a quiet document, which is the one
-				// thing this call's doc comment promises it never does. A
-				// degraded Drive answering slower than the interval makes that
-				// the last poll of every wait rather than a knife-edge race.
-				out.Waited = now().Sub(start)
-				return out, nil
-			}
-			out.Waited = now().Sub(start)
-			return out, err
+			d = got
 		}
 
 		threads, unplaced := Threads(raw, d)
