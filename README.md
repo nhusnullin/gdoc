@@ -1,7 +1,7 @@
 # gdoc
 
 gdoc works on Google Docs from your terminal, through Claude Code.
-Whatever it puts into Drive looks like Altery.
+Whatever it puts into Drive comes out in the house style.
 It never changes a word you wrote: every text edit is a suggestion, with your name on the accept button.
 Install it in one line below, then publish a note, restyle a document, or review one live.
 
@@ -16,7 +16,7 @@ checksum, and puts one binary into `~/.local/bin`. If it says `~/.local/bin` is
 not on your PATH, run the `echo` line it prints and open a new terminal.
 
 Then sign in once with `gdoc auth login`. It prints a URL. Open it with your
-`altery.com` Google account. The token stays on your machine.
+work Google account. The token stays on your machine.
 
 The second route is a checkout: `git clone https://github.com/nhusnullin/gdoc`,
 then `./install.sh` inside it builds the binary and links the skills. It needs
@@ -77,10 +77,10 @@ by saying stop. Close the session and the marks wait.
    see: the logo in the header, the contents list and the page numbers.
 2. **Restyle a document somebody else wrote.** Ask, with its link:
 
-   > Give https://docs.google.com/document/d/1AbC…/edit the Altery house style
+   > Give https://docs.google.com/document/d/1AbC…/edit the house style
 
    gdoc surveys the document first. Claude Code shows you the survey and asks
-   whether you want the Altery cover page. It asks once more before it sends
+   whether you want the house cover page. It asks once more before it sends
    the styling. gdoc then styles the page, the paragraphs, the text and the
    table cells in place. Not one character of the text moves. This styling is
    the one direct edit gdoc ever makes, so the undo is the document's version
