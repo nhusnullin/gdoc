@@ -26,8 +26,8 @@ Three things were folded into M8 and are deferred with it:
   dependency question, `sergi/go-diff`, proven in a spike. PLAN.md's standing
   facts still name it as the one open candidate.
 - The hub-wide live session, one watch over every paired note in a folder,
-  Nail's decision of 2026-09-07. It makes the cost of a poll matter, which is
-  `wait-polls-both-apis-every-tick.md` in this directory.
+  Nail's decision of 2026-09-07. It makes the cost of a poll matter. A quiet
+  tick has been one listing and no document read since 2026-09-18.
 - A second version of a note. `publish` refuses a paired note, and the
   refusal's own sentence, take the `gdoc:` block out by hand, is the answer
   until alignment says more. `restyle --new` is not built, decided 2026-09-11.

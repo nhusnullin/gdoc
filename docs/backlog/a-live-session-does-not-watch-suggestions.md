@@ -19,17 +19,17 @@ or reports the proposal as still pending.
 Two shapes, and picking one is a decision rather than a patch.
 
 A second poll inside the wait would read the document's pending suggestion ids
-each tick and end the wait when the set shrinks. It is honest and it doubles the
-Docs reads, which is the cost
-[wait-polls-both-apis-every-tick.md](wait-polls-both-apis-every-tick.md) already
-wants to cut rather than double.
+each tick and end the wait when the set shrinks. It is honest, and since
+2026-09-18 it is the whole cost: a quiet tick is one listing and no document
+read, so watching suggestions would put a document read back on every tick.
+That is what `wait-polls-both-apis-every-tick.md` was filed to remove, and it
+was removed the same day the tick went to two seconds.
 
-The other is to take the ids off the document read the poll already makes. The
-wait reads the whole document every tick today for the comment ranges, and that
-same answer carries `suggestionsViewMode=SUGGESTIONS_INLINE`, so the pending ids
-are in hand and nothing reads them. That is free while the tick stays as it is,
-and it disappears the moment the tick gets cheaper. The two items have to be
-decided together.
+The other is to read the ids only when the document is read anyway, which is
+now the first tick and any tick with a new comment. That answers a session
+that asked about a comment, and it still misses an accept with no comment
+beside it, which is the case this item is about. Cheaper and only half an
+answer; the two costs have to be weighed together.
 
 Either way the field is a fact and not a verdict: what left the pending set, not
 whether it was accepted or thrown away. Nothing in the binary can tell those

@@ -411,10 +411,18 @@ func (d *Docx) applyPara(st *Style, pPr *etree.Element) {
 			st.SpaceBelow = twipsPt(v)
 		}
 		if v := sp.SelectAttrValue(p.w+":line", ""); v != "" {
-			if n, ok := numberOf(v).(float64); ok {
-				// Word states line spacing in 240ths of a line; Docs states the
-				// same thing as a percentage, and this list is read under the
-				// Docs names.
+			// Word states line spacing in 240ths of a line, but only under
+			// lineRule="auto", which is also the schema's default. Under
+			// "exact" and "atLeast" the same number is a height in twips,
+			// and Docs has no length to compare a height against: the row
+			// reads as nothing rather than as a percentage in the wrong unit.
+			// Nothing here means clearing what the defaults or a base style
+			// set, because the master's own docDefaults state 115% and an
+			// exact height on a style that inherits them is not 115%.
+			// TestAnExactLineHeightIsNotAPercentage.
+			if rule := sp.SelectAttrValue(p.w+":lineRule", "auto"); rule != "auto" {
+				st.LineSpacing = nil
+			} else if n, ok := numberOf(v).(float64); ok {
 				st.LineSpacing = round3(n / 240 * 100)
 			}
 		}

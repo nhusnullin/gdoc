@@ -1,5 +1,5 @@
 ---
-worth: later
+worth: no
 where: go/internal/drift/docx.go:75
 added: 2026-09-08
 ---
@@ -18,14 +18,15 @@ Two things it is not. There is no zip-slip here, because nothing is written to
 disk. Go's `encoding/xml` does not expand DTD entities, so a billion-laughs
 archive is not reachable either.
 
-`worth: later` because the value decision is unresolved rather than the work.
-The two inputs are the master committed in `testdata/` and a document this same
-process wrote a moment earlier, both in an offline test. What would settle it is
-whether this reader ever opens a file that did not come from one of those two:
-the live gate at M6 reads Docs answers rather than archives, so the answer today
-looks like no. If it stays no, the honest close is a `no` recording that the
-reader is test-only, not a fix. If any command ever hands it a file somebody
-sent, read the parts by name or check `f.UncompressedSize64` and a running total
-before decompressing.
+`worth: no`, settled 2026-09-18. The question the item asked was whether this
+reader ever opens a file that did not come from the master in `testdata/` or
+from the builder in the same test process. It does not: `internal/drift` is
+imported by nothing under `go/` outside its own tests, so no command can hand
+it a file somebody sent. A ceiling on a reader nobody can reach from the
+binary is code with no caller to protect. This stays as a `no` so the next
+review of `OpenDocx` does not file it again. If a command ever imports
+`drift` to read a file from outside the repo, read the parts by name or check
+`f.UncompressedSize64` against a running total before decompressing, and
+delete this file in that commit.
 
 Found by the M5 review, 2026-09-08.

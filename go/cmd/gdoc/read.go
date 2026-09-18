@@ -526,25 +526,32 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	//
 	// The last document read is kept for the envelope's fields, which
 	// comments.Waited does not carry and does not need to.
+	//
+	// Under a wait the document is read on the first poll and then only on a
+	// poll whose narrowed listing carries something; comments.Wait decides,
+	// and its doc comment says why. The one-shot listing reads both.
 	var d *docs.Document
-	poll := func(ctx context.Context) (*docs.Document, []comments.RawComment, error) {
-		raws, err := comments.Fetch(ctx, r.session, r.id, since)
-		if err != nil {
-			return nil, nil, err
-		}
+	list := func(ctx context.Context) ([]comments.RawComment, error) {
+		return comments.Fetch(ctx, r.session, r.id, since)
+	}
+	read := func(ctx context.Context) (*docs.Document, error) {
 		got, err := docs.Fetch(ctx, r.session, r.id)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		d = got
-		return got, raws, nil
+		return got, nil
 	}
 
 	if !a.has("--wait") {
 		// Before the poll, because it is what a baseline cursor is dated from
 		// and the reads must not spend the floor it is biased by.
 		at := now()
-		got, raws, err := poll(ctx)
+		raws, err := list(ctx)
+		if err != nil {
+			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		}
+		got, err := read(ctx)
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 		}
@@ -572,7 +579,8 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	w, err := comments.Wait(sigCtx, since, comments.WaitOptions{
 		Interval: waitInterval,
 		Deadline: deadline,
-		Fetch:    poll,
+		List:     list,
+		Read:     read,
 	})
 	// Off the moment the wait is over. What follows is a --witness export, and
 	// a Ctrl-C during that must kill the run the way it kills every other

@@ -55,6 +55,14 @@
 // TestRestyleListsTheCommentsBeforeItReadsTheDocument pins the survey, both in
 // cmd/gdoc, so a later edit cannot swap them in either.
 //
+// Under a wait the document read is also conditional, and Wait itself decides.
+// The listing goes out on every tick; the document is read on the first tick
+// and after that only on a tick whose narrowed listing carried something,
+// because the read exists to place comments and a quiet tick has none to place.
+// A quiet nine-minute wait is therefore one document read and 270 listings
+// rather than 270 of each. TestAQuietPollDoesNotReadTheDocument pins it here
+// and TestAQuietPollReadsTheListingAlone in cmd/gdoc pins it on the wire.
+//
 // # The cursor is opaque, and it dies with the session
 //
 // base64url(JSON{"v":1,"t":"<RFC3339 UTC>","i":["<comment id>"]}), holding the
