@@ -193,11 +193,11 @@ func shellArray(t *testing.T, script, opening string) []string {
 // releaseREADMECeiling is the line count the colleague's README stays under.
 // It is the first and often the only gdoc document a colleague reads, on
 // GitHub and inside the zip, which carry the same file. The page installs,
-// shows the three things to try with the words to type, says why the preview
-// API matters, and lists every command so a colleague can build a skill of
+// shows the three things to try with the words to type, explains the preview
+// API in a table, and lists every command so a colleague can build a skill of
 // their own. Longer than that belongs in `gdoc help`, which cannot go stale,
 // or in `docs/guide/`.
-const releaseREADMECeiling = 180
+const releaseREADMECeiling = 200
 
 // TestTheReleaseREADMEIsUnderTheCeiling holds the length and the house writing
 // rule. The em dash is checked here rather than trusted, because this file is
