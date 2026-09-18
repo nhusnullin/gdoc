@@ -458,36 +458,45 @@ paths that only run after a prelude phase that returned no error.
   `go/internal/drift/compare.go` (the `Known` comment only)
 - Remove: `docs/backlog/drift-known-pins-no-value.md`
 
-- [ ] Print the current pair for every `Known` row once, with a throwaway
+- [x] Print the current pair for every `Known` row once, with a throwaway
       test that logs `show(r.A)` and `show(r.B)` for the rows of
       `Compare(FromDocx(buildNote(t)), FromDocx(openMaster(t)))` whose name is
       in `Known`, and delete the throwaway before committing. The table in
       Context is what it printed on 2026-09-18; use what it prints now.
-- [ ] Test first, `TestEveryKnownDifferenceHasItsPairPinned` in
+- [x] Test first, `TestEveryKnownDifferenceHasItsPairPinned` in
       `pins_test.go`: every name in `Known` is a key of `knownOffline` and
       every key of `knownOffline` is a name in `Known`. With an empty
       `knownOffline` it fails 25 times. Watch it fail.
-- [ ] Test, `TestAKnownRowWhoseValuesMovedFailsTheGate`: a row list built by
+- [x] Test, `TestAKnownRowWhoseValuesMovedFailsTheGate`: a row list built by
       hand with one `Known` name and values that differ from its pin goes
       through the same check the gate uses (extract it as
       `unpinned(rows) []string` in `pins_test.go`, returning one sentence per
       row) and comes back with one sentence naming the row, both values and
       the pin. A row matching its pin comes back with none. Watch it fail.
-- [ ] `knownOffline`, 25 literal pairs, with a comment above it saying what a
+- [x] `knownOffline`, 25 literal pairs, with a comment above it saying what a
       failure means and that re-recording is a decision written down with the
       reason, the same rule `Known` states.
-- [ ] `TestTheOfflineGate` calls `unpinned(rows)` after `Unexplained` and
+- [x] `TestTheOfflineGate` calls `unpinned(rows)` after `Unexplained` and
       fails on every sentence it returns.
-- [ ] Set one pin wrong by hand, watch the gate fail naming the row, set it
+- [x] Set one pin wrong by hand, watch the gate fail naming the row, set it
       back. Change `heading_1.color` in `house.yaml` to `#FF00FF` by hand,
       watch the gate fail on `HEADING_1 colour`, set it back. Record both in
       this plan as ➕ notes.
-- [ ] `compare.go`: the `Known` comment says the offline gate also pins the
+- [x] `compare.go`: the `Known` comment says the offline gate also pins the
       pair, in `pins_test.go`. `doc.go`'s "Known explains a difference" section
       says the same and names the two new tests.
-- [ ] `cd go && go test -race ./internal/drift/` passes.
-- [ ] `git rm docs/backlog/drift-known-pins-no-value.md`
-- [ ] `git commit -m "test(drift): the offline gate pins the measured pair of every known difference"`
+- [x] `cd go && go test -race ./internal/drift/` passes.
+- [x] `git rm docs/backlog/drift-known-pins-no-value.md`
+- [x] `git commit -m "test(drift): the offline gate pins the measured pair of every known difference"`
+
+➕ `table count` pinned as `7` against a document reading `6`: the gate failed
+with `known difference "table count" now reads 6 | 3, and the pinned pair is
+7 | 3`. Pin set back.
+
+➕ `heading_1.color` set to `#FF00FF` in `house.yaml`: the gate failed with
+`known difference "HEADING_1 colour" now reads "#FF00FF" | "#06436E", and the
+pinned pair is "#22265F" | "#06436E"`. Before this task that move passed in
+silence, because the row is named in `Known`. `house.yaml` set back.
 
 ### Task 4: one numbered list definition per numbered list
 

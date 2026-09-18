@@ -97,6 +97,16 @@
 // names a row that really disagrees. An entry whose row went IDENTICAL exempts
 // that row for ever.
 //
+// A name alone would still exempt the row from the values it reads, so the
+// offline gate pins the pair as well. knownOffline in pins_test.go holds the
+// two sides of every Known row as show prints them, one literal each, and
+// TestTheOfflineGate fails on a row that moved away from its pin, naming the
+// row, what it reads now and what it read then. Re-recording a pin is the same
+// decision as adding a name: it is written down with the reason.
+// TestEveryKnownDifferenceHasItsPairPinned holds the two maps against each
+// other in both directions, and TestAKnownRowWhoseValuesMovedFailsTheGate runs
+// the check over rows built by hand.
+//
 // Row.Bug is the split between a difference and a fault. A reading that did not
 // line up, by name or by length, and two halves of one row answering in
 // different types are all faults in this package, so they set it, and

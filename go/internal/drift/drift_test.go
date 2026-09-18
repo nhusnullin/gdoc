@@ -182,6 +182,10 @@ func TestAFieldPrintsItsInstructionAndNotItsCachedValue(t *testing.T) {
 // TestTheOfflineGate is the measurement DECISIONS.md left as a test: build a
 // note from the embedded house style, open the Word master, read the same list
 // out of both, and fail on any row that moved and is not already explained.
+//
+// It runs the pins over the explained rows too. Known says why a row differs,
+// and knownOffline in pins_test.go says what the two sides read when that
+// reason was written, so a row named in Known cannot move again in silence.
 func TestTheOfflineGate(t *testing.T) {
 	rows := Compare(FromDocx(buildNote(t)), FromDocx(openMaster(t)))
 	t.Log(Summary(rows))
@@ -189,6 +193,9 @@ func TestTheOfflineGate(t *testing.T) {
 	if len(unexplained) > 0 {
 		t.Errorf("%d rows moved and are not in Known:\n%s\n\nthe whole table:\n%s",
 			len(unexplained), Table(unexplained), Table(rows))
+	}
+	for _, sentence := range unpinned(rows) {
+		t.Error(sentence)
 	}
 }
 

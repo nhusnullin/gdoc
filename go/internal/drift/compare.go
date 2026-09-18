@@ -72,6 +72,11 @@ type Row struct {
 // whose name is not in here, so adding a name is a decision somebody writes
 // down rather than a test somebody loosens.
 //
+// A name here exempts the row from the gate, never from the values it reads:
+// knownOffline in pins_test.go pins the pair every row below reads today, and
+// the offline gate fails on a row that moved away from its pin. A new entry
+// here needs a new pin there.
+//
 // Three groups, and they are three different kinds of thing.
 //
 // The first is the master saying one thing in a style and the opposite on every
