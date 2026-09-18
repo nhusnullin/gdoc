@@ -690,17 +690,36 @@ milestone pins something no line already names.
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] `make test`, `make vet` and `make build` pass.
-- [ ] Every Validation Command above gives the answer it states. Record the
+- [x] `make test`, `make vet` and `make build` pass.
+- [x] Every Validation Command above gives the answer it states. Record the
       three counts and the anchor name here as ➕ notes, and delete the scratch
       note and docx afterwards.
-- [ ] `ls docs/backlog/` lists 18 files and none of the five.
-- [ ] `git diff main...HEAD -- go/internal/guard/ | grep '^-' | grep -v '^---' | grep -v '^-\s*//'`
+- [x] `ls docs/backlog/` lists 18 files and none of the five.
+- [x] `git diff main...HEAD -- go/internal/guard/ | grep '^-' | grep -v '^---' | grep -v '^-\s*//'`
       is empty: nothing but comment lines left the guard.
-- [ ] `grep -rn 'RevisionOf(' go/` shows the definition and one caller in
+- [x] `grep -rn 'RevisionOf(' go/` shows the definition and one caller in
       `cmd/gdoc/restyle.go`.
-- [ ] Nothing to commit: this task changes no file. If it finds something,
-      that is a ➕ task with its own commit.
+- [x] Nothing to commit: this task changes no file. If it finds something,
+      that is a ➕ task with its own commit. It found nothing: the tree was
+      clean before this task and the only file it writes is this plan.
+
+➕ The scratch note built on the second try. The Validation Command above
+writes `bin/gdoc build /tmp/m12-note.md`, and `build` takes no bare argument:
+the line it ran is `bin/gdoc build --md /tmp/m12-note.md --out /tmp/m12.docx
+--force`, which is what `gdoc help build` prints. The plan's line is a typo,
+not a missing flag in the binary.
+
+➕ The three counts, on a note with three headings, two top-level numbered
+lists and one `[see below](#the-third-heading)` above the third heading:
+`<w:num ` in `word/numbering.xml` is 3, `w:bookmarkStart` in
+`word/document.xml` is 3, and the one anchor is
+`w:anchor="h_the_third_heading"`. The envelope read
+`"lists":2,"headings":3`. The scratch note and docx are deleted.
+
+➕ `ls docs/backlog/ | wc -l` is 18 and none of the five names is there.
+`wc -l CLAUDE.md` is 258, under the 300 ceiling. The guard removal grep is
+empty. `RevisionOf` has its definition in `internal/restyle/apply.go:473` and
+one caller, `cmd/gdoc/restyle.go:581`.
 
 ### Task 8: Update documentation
 
