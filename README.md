@@ -106,8 +106,8 @@ preview lets gdoc write a real suggestion and anchor a comment to the exact
 words it is about. It also returns every comment with its character range.
 Through the ordinary API a "suggestion" lands as a direct edit. A comment
 cannot be pinned to a range at all. The preview is pre-GA and may be withdrawn.
-gdoc probes it on every run that proposes, and reads back every write, so a
-change of behaviour is reported rather than trusted.
+gdoc probes it on every run that proposes and reads back every write. A change
+of behaviour is reported, never trusted.
 
 ## Build your own skill on the binary
 
