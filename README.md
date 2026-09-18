@@ -71,7 +71,7 @@ by saying stop. Close the session and the marks wait.
    into the hub and change the words. Then call the skill:
 
    ```
-   /gdoc-publish first-note.md into https://drive.google.com/drive/folders/<folder id>
+   /gdoc-publish first-note.md into <url of a folder in Google Drive>
    ```
 
    gdoc builds it in the house style, uploads it and reads it back. It writes
@@ -81,7 +81,7 @@ by saying stop. Close the session and the marks wait.
 2. **Restyle a document somebody else wrote.** Call the skill with its link:
 
    ```
-   /gdoc-restyle https://docs.google.com/document/d/<document id>/edit with the cover
+   /gdoc-restyle <url of the Google Doc> with the cover
    ```
 
    gdoc surveys the document first. Claude Code shows you the survey and asks
@@ -94,7 +94,7 @@ by saying stop. Close the session and the marks wait.
 3. **Review a document live.** Start the session first, with the link:
 
    ```
-   /gdoc-review live https://docs.google.com/document/d/<document id>/edit
+   /gdoc-review live <url of the Google Doc>
    ```
 
    Now open the document and write a comment that starts with `ai?`, then your
