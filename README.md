@@ -112,8 +112,8 @@ of behaviour is reported, never trusted.
 ## Build your own skill on the binary
 
 The three skills are prompts over one binary. Every command takes arguments,
-prints one JSON object and exits, so a skill of your own can build on any of
-them. `gdoc help <command>` prints the words, the flags and an example.
+prints one JSON object and exits. A skill of your own can build on any of them.
+`gdoc help <command>` prints the words, the flags and an example.
 
 | Command | Does |
 |---|---|
