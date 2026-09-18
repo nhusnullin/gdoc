@@ -723,9 +723,9 @@ one caller, `cmd/gdoc/restyle.go:581`.
 
 ### Task 8: Update documentation
 
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M12 five backlog items, completed"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M12 five backlog items, completed"`
 
 ## Post-Completion
 
