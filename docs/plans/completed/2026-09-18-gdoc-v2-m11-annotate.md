@@ -605,13 +605,27 @@ an unknown key; an empty list.
 
 ### Task 9: Update documentation
 
-- [ ] Re-read CLAUDE.md's invariants list: none needs a new line, since the
+- [x] Re-read CLAUDE.md's invariants list: none needs a new line, since the
       prefix rule, the quote rule and the guard rule already cover annotate.
       Add one only if a test in this milestone pins something no line names.
-- [ ] PLAN.md: the M11 heading becomes a row in the Done table.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M11 annotate, completed"`
+      ➕ Read line by line against this milestone's tests. Every rule
+      annotate pins is already named: the robot prefix and no markdown, a
+      change that names text and is refused unless the quote is there exactly
+      once, nothing trusts a success, every change inside a handed-in document
+      is a suggestion, one JSON object, and no prompt. Nothing new. The one
+      thing this milestone decided that no invariant names is the probe it does
+      not run, and that is a DECISIONS.md entry, written in Task 6, not an
+      invariant: CLAUDE.md never claimed the probe runs every time.
+      `go/internal/annotate/` already carries its row in both tables from
+      Task 6, and CLAUDE.md stays at 258 lines.
+- [x] PLAN.md: the M11 heading becomes a row in the Done table.
+      ➕ M10's heading became a row in the same edit. Its plan was already
+      under `docs/plans/completed/`, so the open heading named a path that had
+      moved, against PLAN.md's own rule that a done milestone is one row and a
+      file under `completed/`. Left on main by the M10 run.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M11 annotate, completed"`
 
 ## Post-Completion
 
