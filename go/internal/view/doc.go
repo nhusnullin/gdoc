@@ -9,7 +9,7 @@
 //
 // The projection is deterministic, which is the property every rule below
 // stands on: the same document gives the same bytes, so a golden file is a
-// specification rather than a snapshot. TestGolden is the pin, over the five
+// specification rather than a snapshot. TestGolden is the pin, over the eight
 // fixtures in testdata, and TestTheProjectionIsDeterministic asks the same
 // document twice. Two rules keep it true where the answer itself carries no
 // order: ranges that open at one index are ordered by id
@@ -40,6 +40,15 @@
 //	                                 named by its member
 //	[^1]                             a footnote reference, with its text under
 //	                                 a --- rule at the end
+//	[words](target)                  a run of text that points somewhere, with
+//	                                 the address, or #slug for a heading in
+//	                                 this document
+//	1. text                          an item of a numbered list, counted per
+//	                                 list and per level, three spaces of
+//	                                 indent per level
+//	<!-- image: floating, kix.p1 --> an object laid out beside the text rather
+//	                                 than in it, after the paragraph it is
+//	                                 anchored to
 //
 // TITLE and SUBTITLE are plain paragraphs on purpose: the title is on the
 // envelope already, and a document whose first line is its own title reads
@@ -84,11 +93,16 @@
 // reads as a literal and is dropped, and a sentence the author wrote as \{+text+}
 // reads as a pending suggestion gdoc never marked. Both directions hand a
 // marker to the wrong side, which is the thing the escaping exists to prevent.
-// The rule for a reader is a parity: an even run of backslashes is the author's
-// own text and the marker behind it is gdoc's, an odd run ends in gdoc's escape
-// and the marker behind it is the author's.
+// The rule for a reader is one sentence: a backslash makes the one character
+// after it the document's own, so a marker whose first character carries one is
+// the document's text and every other marker is gdoc's. An even run of
+// backslashes is then the author's own and the marker behind it is gdoc's, and
+// an odd run ends in gdoc's escape, which is the parity internal/markers reads.
 // TestTheDocumentsOwnBackslashIsEscaped and
-// TestARealMarkerAfterTextEndingInABackslashIsNotEscaped are the two halves.
+// TestARealMarkerAfterTextEndingInABackslashIsNotEscaped are the two halves,
+// and TestUnescapeAfterEscapeIsIdentity is the reader written out: it undoes
+// the rule this paragraph states over every fixture and gets the document's own
+// text back.
 //
 // The escape advances by one rune rather than two. Two literals can share a
 // character: "{-}" is "{-" and then "-}", so consuming both halves of the first
@@ -100,10 +114,27 @@
 // and a chip's label, and two copies would be two rules with one of them
 // drifting.
 //
-// The escaping is per run. A marker whose two halves fall in two runs, and a
-// document character sitting against one of gdoc's own markers, still reach the
-// text unescaped. That limit is written down rather than guessed at, in
-// docs/backlog/escaping-across-run-boundaries.md.
+// The escaping is not per run. A document character is escaped when it and the
+// character after it would read as one of gdoc's pairs, wherever that next
+// character comes from: the rest of its own run, the first character of the next
+// run, or the first character of a marker gdoc is about to write. Docs splits a
+// run at every formatting change, so a paragraph whose first "[" is bold and
+// whose second is not arrives as two runs, and a per-run escaping never sees the
+// pair. TestEscapingHoldsAcrossTwoRuns is the pin, with
+// TestADocumentCharacterAgainstAMarkerIsEscaped over the same ambiguity against
+// gdoc's own markup.
+//
+// It is done by holding the document's last character back until what follows it
+// is known, rather than by carrying the previous one forward, because the
+// backslash goes in front of the pair's first half and that half is the document's
+// on both sides of the question. gdoc's own marker never carries a backslash: one
+// in front of it would hand that marker to the document, which is the defect this
+// exists to prevent. So a document character on either side of a marker is the one
+// that takes it.
+//
+// A document character after a marker that does not pair with it needs nothing:
+// the reader takes gdoc's markup first, left to right, and what is left is the
+// document's own.
 //
 // # A chip's placeholder carries the label the document shows
 //
@@ -139,9 +170,10 @@
 //     newline inside a label becomes a space rather than nothing: the document's
 //     own text is written in chunks that carry the paragraph break, and a label
 //     has no chunking, so dropping it glues the words either side together.
-//     TestANewlineInALabelBecomesASpace is the pin. Escaping a single [ or ]
-//     inside a placeholder is the wider convention question, and it stays in
-//     docs/backlog/escaping-across-run-boundaries.md.
+//     TestANewlineInALabelBecomesASpace is the pin. One bracket inside a label
+//     is not escaped: it is escaped inside a link's words, where the words end
+//     at the first one, and a label ends at the bracket mark writes behind it,
+//     which is the last rune the window above already covers.
 //
 // # A horizontal rule prints [rule] and not ---
 //
@@ -181,13 +213,68 @@
 // forms answer the same. TestATabSharingAnIDIsNotArmedOnTheOtherTabsText is the
 // pin.
 //
+// # A link is printed as [words](target)
+//
+// The words are the document's own and the target is where they point: the
+// address for a link out of the document, and "#" with the heading's own words
+// slugged for a link to a heading inside it. The slug is the rule a note's own
+// heading ids follow, so a link read out of a document and the link a note wrote
+// are the same string, which is what lets a session compare the two without
+// translating either. TestALinkPrintsItsTarget and links.golden are the pins.
+//
+// A heading this document does not hold, and a bookmark, are named by their id.
+// There are no words to slug for either: a bookmark is a place with no title,
+// and a heading in a tab the read did not cover has no text here. A link naming
+// only a tab has no target at all, so its words print alone rather than pointing
+// at a guess, because a tab is another document rather than a place in this text.
+//
+// Adjacent runs pointing at one target are one link. Docs splits a run wherever
+// the formatting changes, so a linked phrase with one bold word in it arrives as
+// three runs, and three forms around it would read as three links. Only a run of
+// text carries one: a chip has a target of its own, which reaches --structure,
+// and printing it here would put two targets on one placeholder.
+//
+// The form makes one bracket markup where it was not before, because the words
+// end at the first "]" a reader meets. So a bracket the document holds inside a
+// link's words is escaped, and outside one it is not.
+// TestABracketInsideALinksWordsIsEscaped is the pin. The markers that open where
+// the link opens are drained before the opening bracket, so gdoc's "[" never
+// lands against gdoc's "[[", which is the one pair neither of them could be
+// escaped out of.
+//
+// # A floating object is a placeholder after the paragraph it hangs from
+//
+// An object laid out beside the text rather than in it has no character index a
+// placeholder could go at, so the paragraph it is anchored to is the only
+// position the answer gives. It prints as an HTML comment naming the object's
+// kind and its id: the kind, because a floating drawing is not a picture and
+// calling it one is a false fact; the id, because that is what pairs the
+// placeholder with the bytes a docx export carries. One warning goes with each,
+// in the words every other placeholder's warning uses.
+// TestAFloatingObjectIsAPlaceholderAndAWarning and positioned.golden are the
+// pins.
+//
 // # Lists and tables
 //
 // A list item comes back as a "- " item with two spaces of indent per nesting
-// level. A numbered list reads back as a bulleted one: telling the two apart
-// needs the document's lists map, which this read does not carry, so the
-// numbers an author typed are not in the text at all. TestGolden is the pin on
-// the shape, over a fixture holding a nested item.
+// level, and an item of a numbered list as "1. " with three, which is the width
+// of the marker it sits under. Which of the two it is comes from the tab's own
+// lists map, through docs.Bullet.Ordered: a glyph type Docs names is a number of
+// some kind, and GLYPH_TYPE_UNSPECIFIED is Docs saying this list is not numbered.
+//
+// The number is a count, per list id and per nesting level, not the glyph. A
+// list numbered a, b, c in the document reads 1., 2., 3. here, because what the
+// reader needs is which item this is and the glyph is typography. The count is
+// per list id because two adjacent numbered lists are one long list without it,
+// and the second one's first item would then say it is the fourth. It is per tab
+// for the reason the arming is: one list id names one list per tab.
+//
+// An item holding no text prints nothing and still counts, so the numbers say
+// what the document shows rather than closing the gap over an item nobody typed
+// into. A heading that is also an item is a heading and takes no number, which
+// is the same rule as the bullet above it. TestANumberedListIsNumbered and
+// TestAHeadingInAListIsNotNumbered are the pins, with lists.golden over the
+// whole shape.
 //
 // A table is a pipe table, the rows in reading order with a separator after the
 // first, and the widths are not padded: the reader is a language model and the

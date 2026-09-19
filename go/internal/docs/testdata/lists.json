@@ -61,6 +61,40 @@
           ]}}
         }
       }
+    },
+    {
+      "tabProperties": {"tabId": "t.2", "title": "Steps", "index": 2},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 16, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listthree", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 1, "endIndex": 16, "textRun": {"content": "Boil the water\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 16, "endIndex": 32, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listthree", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 16, "endIndex": 32, "textRun": {"content": "Add the leaves\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 32, "endIndex": 50, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listfour", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 32, "endIndex": 50, "textRun": {"content": "Fill in the form\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "lists": {
+          "kix.listthree": {"listProperties": {"nestingLevels": [
+            {"glyphType": "DECIMAL", "glyphFormat": "%0."}
+          ]}},
+          "kix.listfour": {"listProperties": {"nestingLevels": [
+            {"glyphType": "DECIMAL", "glyphFormat": "%0."}
+          ]}}
+        }
+      }
     }
   ]
 }

@@ -537,34 +537,88 @@ Serves decision 3 and the spec's "The file". Closes the across-runs blocker.
   `go/internal/view/testdata/lists.golden`, `go/internal/view/testdata/positioned.golden`
 - Remove: `docs/backlog/escaping-across-run-boundaries.md`
 
-- [ ] Test first, golden `links.golden`: `[words](https://...)`,
+- [x] Test first, golden `links.golden`: `[words](https://...)`,
       `[words](#the-heading-words)` for a heading id, the label alone for a
       tab link; the same under `--structure` as a `link` field. Watch it
       fail.
-- [ ] Test, golden `lists.golden`: `1.`, `2.`, nested `   1.`, a second list
+- [x] Test, golden `lists.golden`: `1.`, `2.`, nested `   1.`, a second list
       starting at `1.` again, bullets unchanged.
-- [ ] Test, golden `positioned.golden`: `<!-- picture: floating, kix.p1 -->`
+- [x] Test, golden `positioned.golden`: `<!-- picture: floating, kix.p1 -->`
       after the anchoring paragraph, and one warning.
-- [ ] Test, `TestEscapingHoldsAcrossTwoRuns`: `["` in one run and `[` in the
+- [x] Test, `TestEscapingHoldsAcrossTwoRuns`: `["` in one run and `[` in the
       next gives `[\[` in the text; `{` then `+` gives `{\+`; a run ending
       in `[` before a comment-open marker gives `[\[[c:ID]]`.
-- [ ] Implement in `text.go`: `prefix` reads `Bullet`; `span` writes the link
+- [x] Implement in `text.go`: `prefix` reads `Bullet`; `span` writes the link
       form; `writeText` carries the previous rune; the placeholder after a
       paragraph with `Positioned`.
-- [ ] `doc.go`: the marker table gains the link and number shapes; the
+- [x] `doc.go`: the marker table gains the link and number shapes; the
       escaping paragraph states the across-runs rule and names the test.
       `docs/guide/reading.md` drops the two lines that said links and
       numbering are lost.
-- [ ] Test, `TestUnescapeAfterEscapeIsIdentity`: a test-only inverse in
+- [x] Test, `TestUnescapeAfterEscapeIsIdentity`: a test-only inverse in
       `links_test.go` that undoes the escaping rules `doc.go` states; over
       every fixture and over a marker split across two runs, unescape after
       escape gives the source text back.
-- [ ] Re-record the five goldens that change, and paste the `git diff` of
+- [x] Re-record the five goldens that change, and paste the `git diff` of
       each golden into this plan as a ➕ note under this task, so revmux
       reads what moved: only link targets, numbers and placeholders.
-- [ ] `cd go && go test -race ./internal/view/ ./cmd/...` passes.
-- [ ] `git rm docs/backlog/escaping-across-run-boundaries.md`
-- [ ] `git commit -m "feat(view): read prints link targets and numbering, and escapes across runs"`
+- [x] `cd go && go test -race ./internal/view/ ./cmd/...` passes.
+- [x] `git rm docs/backlog/escaping-across-run-boundaries.md`
+- [x] `git commit -m "feat(view): read prints link targets and numbering, and escapes across runs"`
+
+➕ **None of the five goldens moved.** `git status` lists no change under
+`view/testdata/` beside the three new files. None of the five fixtures holds a
+link, a numbered list or a floating object, and none holds a character that the
+new escaping reaches: the literal markers in `single-tab.json` sit inside one run
+and are already escaped on their first half, and no fixture has a document
+character against one of gdoc's markers. `TestGolden` now reads eight fixtures
+rather than five.
+
+⚠️ **The escaping convention is the first half, not the second.** The plan said
+`writeText` carries the previous run's last rune and escapes the second half, so
+`[` then `[` would read `[\[`. That convention cannot spell the plan's own third
+case: a run ending in `[` before a comment-open marker would put the backslash in
+front of gdoc's marker, and a reader then takes the marker as the document's text
+and loses it. So the projection holds the document's last character back until it
+knows what follows, and escapes the first half everywhere: two runs give `\[[`,
+and a character against a marker gives `\[[[c:ID]]`. One convention, not two, and
+the reader's rule is one sentence: a backslash makes the one character after it
+the document's own. That is the parity `internal/markers` already reads, and
+`TestUnescapeAfterEscapeIsIdentity` is the reader written out. Nail's line in
+Task 13's DECISIONS entry should record this wording rather than the plan's.
+
+➕ **A bracket inside a link's words is escaped.** The link form makes one
+bracket markup where it was not before, because a reader takes the words up to
+the first `]`. Left alone, a document holding `Q3 [draft] plan` under a link
+would cut the link short and leave its target standing as prose, which is the
+defect the escaping exists to stop. `TestABracketInsideALinksWordsIsEscaped` is
+the pin. One bracket inside a chip's label is still not escaped, which is the
+older question `docs/backlog/escaping-across-run-boundaries.md` mentioned in
+passing; `view/doc.go` now states it in place of the file, and the backlog count
+stays at 22 here, 20 after Task 13.
+
+➕ **The placeholder names the object's kind.** The plan wrote
+`<!-- picture: floating, kix.p1 -->`. The fixture's second floating object is a
+Google Drawing, and calling it a picture is a false fact of exactly the kind this
+tree refuses, so the word before the colon is the kind the walk read:
+`<!-- image: floating, kix.posone -->` and
+`<!-- drawing: floating, kix.postwo -->`. Task 7's `positioned.md` golden and the
+export warning should follow it.
+
+➕ **`lists.json` gained a third tab.** The fixture Task 5 wrote holds one
+numbered item, one nested item and one bullet, so it could not show `2.` or a
+second list starting at `1.` again. Tab `t.2` holds two items of one list and one
+item of another. Task 5's `TestABulletCarriesItsListAndGlyph` reads tabs 0 and 1
+and is unchanged.
+
+➕ **A numbered item counts even when it prints nothing.** An item holding no
+text is skipped as every empty paragraph is, and still advances its count, so the
+numbers say what the document shows rather than closing the gap over an item
+nobody typed into.
+
+➕ **A contents block still prints nothing.** `view` walks paragraphs and tables
+and steps over `Block.TOC`, as it did before Task 5 made the element a block.
+Task 7 owns the prelude and the strip, so nothing here prints one.
 
 ### Task 7: the export projection
 

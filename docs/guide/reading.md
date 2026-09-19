@@ -35,6 +35,9 @@ pending marked in it:
 | `[person: Ada Lovelace]`, `[date: Sep 9, 2026]`, `[link: Q3 planning]` | a smart chip, with the label it shows |
 | `[auto text: PAGE_NUMBER]`, `[page break]`, `[column break]`, `[rule]` | the rest of what a paragraph can hold |
 | `[unknown: member]` | something in the document this version of gdoc has never seen |
+| `[words](target)` | text that points somewhere: the address, or `#slug` for a heading in the document |
+| `1. text` | an item of a numbered list, counted per list and per level |
+| `<!-- image: floating, kix.p1 -->` | an object laid out beside the text, after the paragraph it is anchored to |
 
 Every placeholder row in that table comes back with a warning naming what the
 read did not take from it, the chips and the breaks included. A policy with
@@ -44,13 +47,14 @@ the messages rather than counting them.
 
 If the document's own text contains one of those markers, it comes back with a
 backslash in front of it, and a backslash the author typed comes back doubled.
-So the rule for reading the text back is a parity: an even run of backslashes is
-the author's own text and the marker behind it is gdoc's, an odd run ends in
-gdoc's escape and the marker behind it is the author's. The escaping is done one
-text run at a time, so a marker whose two halves fall in two runs, or a document
-character sitting against one of gdoc's own markers, can still reach the text
-unescaped. That gap is written up in
-`docs/backlog/escaping-across-run-boundaries.md`. `[object]`
+So the rule for reading the text back is one sentence: a backslash makes the one
+character after it the author's own, so a marker whose first character carries one
+is the author's text and every other marker is gdoc's. An even run of backslashes
+is then the author's own and the marker behind it is gdoc's, and an odd run ends
+in gdoc's escape. The escaping is not done one run at a time: a character is
+escaped against whatever follows it, which may be the next run's first character
+or one of gdoc's own markers, so a marker with its two halves in two runs does not
+reach the text bare. `[object]`
 is an embedded object the read could not classify: calling it an image would be
 a guess.
 
@@ -65,9 +69,12 @@ tells you who is there; the email address and a link's target are in
 in the document this version of gdoc has never seen, named by what Google calls
 it, rather than silently absent. Tables become pipe tables, with a literal `|` in a cell escaped as
 `\|` so the row keeps its shape, and footnotes are appended after a `---` line.
-Lists come back as `- ` items, two spaces of indent per level, so a numbered
-list reads back as a bulleted one: telling the two apart needs the document's
-`lists` map, which gdoc does not read. `--structure`
+Lists come back as `- ` items with two spaces of indent per level, and a numbered
+list as `1. ` items with three, counted per list and per level. The number is a
+count and not the glyph the document draws: a list lettered a, b, c reads back as
+1., 2., 3., because what a reader needs is which item this is. A link comes back
+as `[words](target)`, with a heading link as `#slug` from the heading's own words,
+which is the form a note writes its own links in. `--structure`
 adds the document tree with character indexes on it, which is what placing a
 suggestion at an exact position needs. The text is not a
 summary of the structure, and the structure is not a summary of the text.

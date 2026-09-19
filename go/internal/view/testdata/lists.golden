@@ -1,0 +1,21 @@
+<!-- tab t.0: Numbered -->
+
+1. First step
+
+   1. A substep
+
+- A bullet
+
+Prose.
+
+<!-- tab t.1: Bulleted -->
+
+- A bullet
+
+<!-- tab t.2: Steps -->
+
+1. Boil the water
+
+2. Add the leaves
+
+1. Fill in the form
