@@ -25,8 +25,9 @@ Go and make, so take it only when you want to change gdoc. Details in
 
 ## Add the skills to Claude Code
 
-gdoc does the work. Three Claude Code skills drive it: `gdoc-review`,
-`gdoc-publish` and `gdoc-restyle`. Take the first recipe that works.
+gdoc does the work. Five Claude Code skills drive it: `gdoc-review`,
+`gdoc-publish`, `gdoc-restyle`, `gdoc-export` and `gdoc-align`. Take the first
+recipe that works.
 
 **1. Plugins are allowed.** In Claude Code, type these two lines. It asks
 whether you want them everywhere or in this project only.
@@ -54,7 +55,7 @@ https://github.com/nhusnullin/gdoc and two keys for `managed-settings.json`:
 You work in Claude Code, in a terminal, with the hub as the working directory.
 Each skill is a slash command: type its name, then the request in plain words
 with the link. The skill runs gdoc: you never type a gdoc command to publish,
-restyle or review. Skills that came as the plugin carry its prefix, so
+restyle, review, export or align. Skills that came as the plugin carry its prefix, so
 `/gdoc-review` is `/altery:gdoc-review` there.
 
 Nothing happens in a document by itself. A comment that starts with `ai?` asks

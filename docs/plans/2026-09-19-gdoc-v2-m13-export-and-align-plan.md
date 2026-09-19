@@ -940,30 +940,30 @@ Serves decisions 7, 12, 13, 14, 16, 17. Scenarios 1 to 3, 12, 13, 15, 20, 22.
   `go/cmd/gdoc/skills_test.go`
 - Remove: `docs/backlog/publish-skill-renders-an-svg-picture.md`
 
-- [ ] Test first, in `skills_test.go`: five skills, each with `name`,
+- [x] Test first, in `skills_test.go`: five skills, each with `name`,
       `description` and `needs`; four say `v2.4.0`, restyle `v2.0.0`; no
       skill carries `disable-model-invocation`; no skill names a person or a
       machine's path; `gdoc-export/markers.md` exists and `gdoc-align/SKILL.md`
       names it. Watch it fail.
-- [ ] `gdoc-export/SKILL.md`: the export skill section of the spec as steps;
+- [x] `gdoc-export/SKILL.md`: the export skill section of the spec as steps;
       the first line naming the skill; `needs: v2.4.0`.
-- [ ] `gdoc-export/markers.md`: each marker, its meaning, its escaping, how
+- [x] `gdoc-export/markers.md`: each marker, its meaning, its escaping, how
       a session undoes it, and the rule that gdoc's own pending proposals are
       not asked about.
-- [ ] `gdoc-align/SKILL.md`: the three runs, the paragraph and logic
+- [x] `gdoc-align/SKILL.md`: the three runs, the paragraph and logic
       conflicts, the ask before the first `propose`, the stale copies, the
       folder check for a second file naming the document, the two sentences,
       the promises and refusals.
-- [ ] `gdoc-publish/SKILL.md`: Step 1 no longer says a block means
+- [x] `gdoc-publish/SKILL.md`: Step 1 no longer says a block means
       published; the once-only sentence goes; the paired-note ask; the SVG
       section and `svg2png.js` from the backlog item; `needs: v2.4.0`.
-- [ ] `gdoc-review/SKILL.md`: `ai!` may not run export, one reply says so;
+- [x] `gdoc-review/SKILL.md`: `ai!` may not run export, one reply says so;
       `needs: v2.4.0`; the first line.
-- [ ] `install.sh:29` lists five; `release/install.sh` copies five;
+- [x] `install.sh:29` lists five; `release/install.sh` copies five;
       `plugin.json` description names export and align.
-- [ ] `cd go && go test -race ./cmd/...` passes.
-- [ ] `git rm docs/backlog/publish-skill-renders-an-svg-picture.md`
-- [ ] `git commit -m "feat(skills): gdoc-export and gdoc-align, and publish asks on a paired note"`
+- [x] `cd go && go test -race ./cmd/...` passes.
+- [x] `git rm docs/backlog/publish-skill-renders-an-svg-picture.md`
+- [x] `git commit -m "feat(skills): gdoc-export and gdoc-align, and publish asks on a paired note"`
 
 ### Task 13: the documents, the decisions and the backlog
 

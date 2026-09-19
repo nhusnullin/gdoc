@@ -1,18 +1,23 @@
 ---
 name: gdoc-publish
 description: Use when the request names a note in the hub and a Drive folder and asks for that note in Drive as a Google Doc in the Altery house style. Reads the note's front matter, builds it, uploads it into the one folder the request named, and reads back what came out.
-needs: v2.0.0
+needs: v2.4.0
 ---
 
 # Publish a note as a Google Doc
+
+This is `gdoc-publish`. Say that in the first line of your reply, because three
+skills answer a request about a note and a document, and this is the one that
+makes a new document.
 
 You name a note and a folder. The note is markdown in the hub. The folder is
 where the document goes. gdoc renders the note in the house style, uploads it,
 reads it back and records the pairing in the note's own front matter.
 
-A note is published once. The `gdoc:` block in its front matter is the record of
-that, and it is the reason the binary refuses a second publish. The block is
-gdoc's memory of a document, not a setting somebody tidies away.
+Every publish makes a new document. The `gdoc:` block in the note's front matter
+is a list of every document that note has met, and a publish appends one entry to
+it and touches no other. The block is gdoc's memory of those documents, not a
+setting somebody tidies away.
 
 ## Setup
 
@@ -93,21 +98,100 @@ the counts of what it found in the body.
 Say at the end that nothing was uploaded, no document exists, and the note's
 front matter is untouched.
 
+## If a picture is refused
+
+`build` and `publish` read PNG and JPEG only. An SVG is refused, and the refusal
+names the line and the format. Google Docs does not import SVG out of a docx, so
+the PNG has to come from this session.
+
+The refusal happens on this machine before anything leaves it: no document was
+created and the note is untouched. So rendering the picture and running again is
+not a second publish.
+
+What to do, in order:
+
+1. Read the refusal. It names the file and the line. Read the SVG's root element
+   for `width` and `height`; when only `viewBox` is there, take its third and
+   fourth numbers.
+2. Render it at scale 2, which lands at about 400 ppi once gdoc scales the picture
+   to the text column. Not higher: it only makes the docx bigger.
+3. Render to the session's scratchpad first and look at the PNG before anything
+   goes near the hub. Arrowheads present, text at the right weight. Both dead
+   ends below were found by looking, not by an exit code.
+4. The PNG goes beside the SVG with the same stem. A PNG already there under that
+   name is a stop, not an overwrite: this session cannot tell stale output from
+   somebody's own picture.
+5. Repoint the one link on the named line from `.svg` to `.png`. The SVG stays.
+   It is the master.
+6. Run `build` to the scratchpad. A clean object means publish, once.
+
+### What renders it
+
+On macOS nothing has to be installed. `svg2png.js` sits beside this file, in the
+base directory Claude Code printed when it loaded this skill, and it drives
+WebKit, which ships with the OS:
+
+```bash
+osascript -l JavaScript svg2png.js in.svg out.png <width> <height> 2
+```
+
+It prints `ok <pixels>` or the reason it could not. Measured on 2026-09-19 over
+four diagrams: the same pixels a headless Chrome run gave, a fifth of a second
+each, and `build` embedded the result.
+
+When it says the legacy WebView is unavailable, which a later macOS may do, fall
+back to a Chromium-family browser by its app path:
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+  --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
+  --window-size=<width>,<height> --screenshot=out.png "file://$PWD/in.svg"
+```
+
+`rsvg-convert --zoom 2 in.svg -o out.png` is cheaper still where librsvg is
+installed, and `brew install librsvg` is what installs it.
+
+When none of them is present, stop and say so: name the picture, name what to
+install, and offer the other door, a PNG you export by hand and link from the
+note. Never download a browser or a package to get one. That would be this
+session fetching code onto your machine on its own.
+
+Four dead ends, one line each, so nobody spends the calls again: QuickLook
+(`qlmanage -t`) crops to a square, `cairosvg` needs libcairo, `NSImage` drops
+`marker-end` so every arrowhead vanishes and semibold text comes out regular, and
+`safaridriver` needs a one-time `sudo` and opens a visible window.
+
 ## Step 1: Read the note's front matter
 
 Open the note and read its YAML front matter before running anything.
 
-**A `gdoc:` block naming a document means this note is already published.**
-Stop. Say it in plain words: this note is already paired with that document,
-gdoc publishes a note once, so open that document, or, if it names a document
-that has gone, take the block out by hand. Taking it out is yours, never this
-session's. The binary refuses the run for the same reason, and the refusal names
-the document id.
+**A `gdoc:` block naming a document means this note has been published before,
+and it is a stop for a question rather than a refusal.** The binary will publish
+it again, into a new document. So ask, once, before running anything:
 
-**A note with no `gdoc:` block is a note that can be published.** Read the
-author's own keys at the same time. Only `title` is required. The optional
-keys feed the cover page and the version-control table, and a key that is not
-there leaves its line blank rather than taking somebody else's value.
+- **A new document.** The old one keeps its URL, its threads and its entry in the
+  block, and it goes stale the moment the new one exists. Say that in one line,
+  then carry on with Step 2.
+- **The changes in the document that is already there.** Not this skill. gdoc
+  never replaces a document's body: the route is `/gdoc-align`, which reads the
+  note and the document and proposes each change as a suggestion for the owner to
+  accept. Name it and stop.
+
+Name the documents the block already lists, with the date each was published, so
+the answer is given on facts. A block naming a document that has gone is the same
+question: a new document is the answer, and nothing has to be taken out by hand.
+
+**A note with no `gdoc:` block is a note being published for the first time.**
+Read the author's own keys at the same time. Only `title` is required. The
+optional keys feed the cover page and the version-control table, and a key that is
+not there leaves its line blank rather than taking somebody else's value.
+
+**A body carrying a gdoc marker is refused, by line.** `{+words+}[s:ID]`,
+`{-words-}[s:ID]` and `[[c:ID]]words[[/c]]` are what `gdoc export` writes into a
+file, and a note that still holds one has markers nobody resolved. The refusal
+names the line. The fix is `/gdoc-align`, resolve only, which runs
+`$GDOC suggestions <url> --md <note>.md` and works through the markers with the
+person. Never delete a marker's words to get past the refusal.
 
 **A note with no title is refused, and gdoc never invents one.** The refusal
 carries a candidate, drawn from the note's first heading or from its file name.
@@ -125,8 +209,11 @@ the new document's id from the create it carried itself. So the folder must be
 the one you named, in this conversation, and nothing else: not a folder another
 note was published into, not one found in a different note's block.
 
-Publish is one call. Never run it twice on one note. A run that failed has
-already dealt with what it left behind, and Step 3 says how to read that.
+Publish is one call per run. A second call is a second document, so never run it
+twice to get one. A run that failed has already dealt with what it left behind,
+and Step 3 says how to read that. A refusal that happened before anything left
+this machine, a missing title or a picture gdoc cannot read, is not a publish at
+all: fix it and run once.
 
 ## Step 3: Read the object back and say what it says
 
@@ -142,7 +229,10 @@ this order:
   document exists. A route that did not hold is a route that did not hold, and
   saying the run failed is how a second document gets made.
 - **`files_changed`.** The note whose front matter now records the pairing. If
-  it is not there, nothing in the hub changed.
+  it is not there, nothing in the hub changed. When the block was written before
+  this milestone, the reply also says it was rewritten to schema 2: say that once,
+  and say a colleague on an older binary gets a refusal naming `documents` until
+  they run `gdoc update`.
 - **`rolled_back`, when it is there at all.** It is absent on a run that
   recorded the pairing. `true` means the pairing could not be written and gdoc
   trashed the document it had just made, confirmed by reading it back: there is
@@ -152,6 +242,10 @@ this order:
   by hand. Say that plainly, with the id.
 - **Every warning**, each one in full. A title that came back from Drive
   different from the one on the cover is a warning, not a check.
+- **Any picture this session rendered.** A PNG made from an SVG is a change to
+  the hub the binary did not make and cannot list, so say it yourself: which SVG,
+  which PNG, and which line was rewritten. The hub may not be under git, and then
+  this reply is the only record.
 
 If the run failed before anything left the machine, say so: no document was
 created and the note is untouched. If it failed after the upload and the answer
@@ -172,9 +266,13 @@ judges them. The session never claims them itself.
 
 ## Never
 
-- Never remove or edit a `gdoc:` block in a note. gdoc writes it, and only
-  `publish` creates it. A block in the way is a stop, not an obstacle.
-- Never publish a note twice. One note, one document.
+- Never remove or edit a `gdoc:` block in a note. gdoc writes it, and `publish`
+  and `export` are what append to it. A block in the way is a question, not an
+  obstacle, and never something to take out.
+- Never publish twice in one run. Each publish is another document, and the
+  colleagues reading the old one are not told.
+- Never publish a body that still carries a gdoc marker, and never strip a marker
+  to get past the refusal.
 - Never pass a folder the binary was not handed in this request.
 - Never invent a title, a date, an owner or a classification to make a build
   pass. A missing value is a question for you.

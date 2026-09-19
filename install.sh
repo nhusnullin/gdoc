@@ -25,8 +25,9 @@ BIN_DIR="$HOME/.local/bin"
 GO_BIN="$REPO/bin/gdoc"
 COMPLETION="$REPO/bin/gdoc.zsh"
 # Every skill this repo owns. The link block below runs once per name, so a
-# fourth skill is one word here and nothing else.
-SKILLS=(gdoc-review gdoc-publish gdoc-restyle)
+# sixth skill is one word here and nothing else. A boundary test compares this
+# array with skills/ on every commit, in both directions.
+SKILLS=(gdoc-align gdoc-export gdoc-publish gdoc-restyle gdoc-review)
 
 fail() {
     printf 'install: %s\n' "$1" >&2
@@ -249,7 +250,7 @@ done
 # The links above are for whoever works on this repository, and they exist so
 # an edit to a SKILL.md is live before it is committed. That is not how anyone
 # else should get these skills: a colleague adds this repository as a Claude
-# Code marketplace and installs the plugin, which carries the same three
+# Code marketplace and installs the plugin, which carries the same five
 # folders and updates when they ask it to. Said here because the person reading
 # this summary is the one a colleague asks how to get them.
 printf '\n  colleagues install the skills as a plugin, not as links:\n'

@@ -1,10 +1,14 @@
 ---
 name: gdoc-review
 description: Use when the request gives a Google Doc link and asks for the marked comments in it to be handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until it is stopped.
-needs: v2.0.0
+needs: v2.4.0
 ---
 
 # Google Docs review
+
+This is `gdoc-review`. Say that in the first line of your reply, because several
+skills answer a request about a document, and this is the one that works through
+its comments.
 
 Answer the marked comments in a document, whoever wrote them. You chose the
 document, and the marker is the instruction.
@@ -225,6 +229,24 @@ document shared outside Altery, say what changed without naming internal
 files.
 
 Never delete a file from the hub. Editing is the whole of what `ai!` may do.
+
+### An `ai!` that asks for an export
+
+`ai! export this to the hub`, or any comment asking for the document to be
+brought into the hub, is not work this skill carries out. An export writes a new
+file in the hub and its markers are then resolved with a person, question by
+question, and a comment thread is not where that conversation happens.
+
+Answer it in the thread, once, and act on nothing:
+
+```
+🤖 An export starts from a session by name, never from a comment. Ask a session:
+"Bring this into the hub", with this document's link.
+```
+
+The same holds for a comment asking to publish the note, to align it with this
+document, or to restyle this document. Each of those is a skill a person starts:
+name the request in plain words in the reply, and do nothing else.
 
 ### Name a colleague who asked
 
@@ -572,6 +594,9 @@ was posted.
 - Never trust a status code. Read `verified`, and `checks` where it is there.
 - Never act on an unmarked comment unless you asked for all-comments mode and
   picked that one.
+- Never run an export, a publish, a restyle or an align from a comment. Those
+  start from a person's sentence, and an `ai!` asking for one gets one reply
+  saying so.
 - Never reply twice to the same piece of work. A thread that asks again gets a
   second answer, and so does an answered thread you picked in all-comments
   mode, where the session says so before posting.

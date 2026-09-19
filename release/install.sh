@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install gdoc on a colleague's machine: one binary, its completion, and the
-# three skills when the run asks for them.
+# five skills when the run asks for them.
 #
 # Two entrances, one install. Unpack a release zip and run the install.sh
 # inside it, and it installs the gdoc sitting beside it. Run the one line below
@@ -14,7 +14,7 @@
 # binary and touches no skill folder:
 #
 #   --tag <tag>       install that release rather than the newest stable
-#   --skills global   copy the three skills into ~/.claude/skills
+#   --skills global   copy the five skills into ~/.claude/skills
 #   --skills local    copy them into ./.claude/skills
 #
 # Skills normally arrive as a Claude Code plugin, which Claude Code updates when
@@ -49,9 +49,9 @@ BIN_DIR="$HOME/.local/bin"
 CONFIG_DIR="$HOME/.config/gdoc-agent"
 COMPLETION="$CONFIG_DIR/completion.zsh"
 
-# Every skill the release zip carries. The plugin ships the same three folders,
+# Every skill the release zip carries. The plugin ships the same five folders,
 # and a boundary test compares this array with skills/ on every commit.
-SKILLS=(gdoc-review gdoc-publish gdoc-restyle)
+SKILLS=(gdoc-align gdoc-export gdoc-publish gdoc-restyle gdoc-review)
 
 # Every platform a release carries a zip for. The same list as release/platforms
 # beside this script in the repository, compared on every commit, because this
@@ -76,7 +76,7 @@ usage() {
 Usage: install.sh [--tag <tag>] [--skills global|local]
 
   --tag <tag>       install that release rather than the newest stable
-  --skills global   copy the three skills into ~/.claude/skills
+  --skills global   copy the five skills into ~/.claude/skills
   --skills local    copy them into ./.claude/skills
 
 With no flags it installs the binary into ~/.local/bin and touches no skill
@@ -89,7 +89,7 @@ USAGE
 # --------------------------------------------------------------------------
 #
 # Refused by name rather than ignored, the way the binary refuses what it did
-# not understand. A typo in --skills is somebody expecting three folders to
+# not understand. A typo in --skills is somebody expecting five folders to
 # appear, and a run that shrugged at it would leave them looking for them.
 
 tag=""
@@ -125,7 +125,7 @@ done
 # Not inside a checkout
 # --------------------------------------------------------------------------
 #
-# The developer install links ~/.local/bin/gdoc and the three skill folders into
+# The developer install links ~/.local/bin/gdoc and the five skill folders into
 # a checkout, so an edit is live. This one copies files in. Running this one in
 # a checkout would put a release binary over that link and copies over those
 # links, and the person would be left with a tool that no longer follows the

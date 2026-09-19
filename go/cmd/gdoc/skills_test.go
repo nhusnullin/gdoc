@@ -502,3 +502,134 @@ func TestANeedsLineNamingANightlyIsCaughtAndNamed(t *testing.T) {
 		t.Errorf("want a stable release accepted, got %s", problem)
 	}
 }
+
+// The repository carries five skills, and the shape of each one's front matter
+// is what Claude Code reads before it reads a word of the instructions. The
+// tests below hold the list and the shape.
+//
+// Five, because two answer "align" and "publish" between them and a sixth that
+// nobody linked would be a folder in the plugin and nothing on a machine. The
+// list is written here as literals: a test that reads skills/ to learn what
+// skills there are cannot notice one that went missing.
+
+// skillWants is what one skill's front matter has to say: the folder it lives
+// in, and the release it needs. The name and the description are checked for
+// every skill and are not in the table, because they are required of all five
+// and a table column of "yes" five times says nothing.
+var skillWants = []struct {
+	folder string
+	needs  string
+}{
+	{"gdoc-align", "v2.4.0"},
+	{"gdoc-export", "v2.4.0"},
+	{"gdoc-publish", "v2.4.0"},
+	{"gdoc-restyle", "v2.0.0"},
+	{"gdoc-review", "v2.4.0"},
+}
+
+// skillFrontMatterValue is what the front matter says after this key, or the
+// empty string when it says nothing. It is a line read, not a YAML parse: the
+// three keys this file asks about are one line each, and a parser here would be
+// a second decoder of a file Claude Code decodes itself.
+func skillFrontMatterValue(src, key string) string {
+	front, ok := skillFrontMatter(src)
+	if !ok {
+		return ""
+	}
+	for _, line := range front {
+		rest, found := strings.CutPrefix(strings.TrimSpace(line), key+":")
+		if !found {
+			continue
+		}
+		return strings.TrimSpace(rest)
+	}
+	return ""
+}
+
+func TestTheRepositoryCarriesTheFiveSkillsAndEachSaysWhatItNeeds(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	var folders []string
+	for _, file := range files {
+		folders = append(folders, filepath.Base(filepath.Dir(file)))
+	}
+	var want []string
+	for _, w := range skillWants {
+		want = append(want, w.folder)
+	}
+	if strings.Join(folders, " ") != strings.Join(want, " ") {
+		t.Fatalf("skills/ holds [%s] and this milestone says [%s]. A skill nobody links is a folder in the plugin and nothing on a machine",
+			strings.Join(folders, " "), strings.Join(want, " "))
+	}
+
+	for _, w := range skillWants {
+		path := filepath.Join(skillsDir, w.folder, "SKILL.md")
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("reading %s: %v", path, err)
+			continue
+		}
+		src := string(b)
+		if got := skillFrontMatterValue(src, "name"); got != w.folder {
+			t.Errorf("%s says name %q and lives in %s. Claude Code reads the name, and the two have to be one word", path, got, w.folder)
+		}
+		if skillFrontMatterValue(src, "description") == "" {
+			t.Errorf("%s carries no description. That sentence is the whole of what decides whether the skill fires", path)
+		}
+		if got := skillFrontMatterValue(src, "needs"); got != w.needs {
+			t.Errorf("%s needs %q and this milestone says %s. A skill and a binary travel apart, so the floor is the release whose behaviour the skill was written against", path, got, w.needs)
+		}
+	}
+}
+
+// A skill with disable-model-invocation on fires only when somebody types its
+// name, and a session with gdoc on PATH can run any command by hand. So the
+// flag does not stop the action: it skips the asking, which is the one thing
+// the skills exist to do. Decision 17 of the milestone 13 specification.
+func TestNoSkillRefusesToBeInvokedByTheModel(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		front, ok := skillFrontMatter(string(b))
+		if !ok {
+			t.Errorf("%s opens with no front matter block", file)
+			continue
+		}
+		for _, line := range front {
+			if strings.HasPrefix(strings.TrimSpace(line), "disable-model-invocation:") {
+				t.Errorf("%s carries %q. Every skill starts from a colleague's sentence, and a skill that does not fire only skips the asking", file, strings.TrimSpace(line))
+			}
+		}
+	}
+}
+
+// The marker rules are written once and read by two skills. gdoc-export owns
+// the file, because it is the skill that first puts markers in front of a
+// person, and gdoc-align points at it rather than holding a second copy: two
+// copies of an escaping rule are two rules, and the one that drifts resolves a
+// marker wrongly.
+func TestTheMarkerRulesAreOneFileAndAlignNamesIt(t *testing.T) {
+	const markers = "markers.md"
+	path := filepath.Join(skillsDir, "gdoc-export", markers)
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("%s is not there: %v. It is the one copy of the marker rules", path, err)
+	}
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-align", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), markers) {
+		t.Errorf("skills/gdoc-align/SKILL.md names no %s. It resolves markers, and the rules for them live beside gdoc-export's SKILL.md", markers)
+	}
+}
