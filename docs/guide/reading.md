@@ -69,11 +69,12 @@ tells you who is there; the email address and a link's target are in
 in the document this version of gdoc has never seen, named by what Google calls
 it, rather than silently absent. Tables become pipe tables, with a literal `|` in a cell escaped as
 `\|` so the row keeps its shape, and footnotes are appended after a `---` line.
-Lists come back as `- ` items with two spaces of indent per level, and a numbered
-list as `1. ` items with three, counted per list and per level. The number is a
+Lists come back as `- ` items and numbered lists as `1. ` items, counted per
+list and per level. A sub-list is indented to the column its parent's content
+starts at, which is where Markdown nests one from. The number is a
 count and not the glyph the document draws: a list lettered a, b, c reads back as
 1., 2., 3., because what a reader needs is which item this is. A link comes back
-as `[words](target)`, with a heading link as `#slug` from the heading's own words,
+as `[words](target)`, with a heading link as `#slug` from the heading's own line,
 which is the form a note writes its own links in. `--structure`
 adds the document tree with character indexes on it, which is what placing a
 suggestion at an exact position needs. The text is not a

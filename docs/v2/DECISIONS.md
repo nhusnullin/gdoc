@@ -73,6 +73,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-18 | Five backlog items closed, and what each decided | holds |
 | 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds |
 | 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
+| 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2596,3 +2597,48 @@ to the second, and there is nothing in a heading's words for `view.Anchor` to
 tell the two apart with. A link to the second lands on the first, which is what
 markdown does with them anyway. It is noted in `view.Anchor` rather than worked
 around.
+
+## 2026-09-19. The projection is measured against goldmark: a sub-list's indent and a heading's anchor.
+
+Found in the second review of milestone 13, measured rather than argued. It is
+the entry above carried one step further: that one found two rules that had to
+be one rule, and this one finds two more, in the same place and for the same
+reason.
+
+A file `export` writes is read back by goldmark. So every rule about what the
+projection writes is a claim about what goldmark reads, and a claim nobody
+measured is a claim that is wrong about a third of the time.
+
+**A sub-list is indented to the column its parent's content starts at.** The
+rule was a width per nesting level, two spaces for a bullet and three for a
+number, taken from the width of the item's own marker. CommonMark nests a
+sub-list from the column the parent's content starts at, which is the parent's
+marker and not the child's. Three ordinary shapes lost their nesting: a bullet
+under a numbered item, two spaces against a column of three, which goldmark
+reads as a second list beside the first; a sub-list under the tenth item or
+later, three spaces against a column of four, which goldmark reads as one more
+item of the outer list and numbers accordingly; and a third level, which
+compounds both. Nothing warned about any of them, because nothing was lost: the
+words were all there and only the shape of the document had changed, which for
+a round trip is the same harm. `TestASubListViewWritesNestsWhenBodyReadsIt`
+puts the file goldmark reads beside the list `view` wrote, in this repository
+rather than in somebody's note.
+
+**A heading's anchor is taken from the line it projects to.** It was taken from
+the heading's text runs. goldmark takes its id from the whole line, and
+milestone 13 is what made the two differ: printing a link's target means a
+heading holding a hyperlink projects as `[words](url)`, and goldmark reads the
+address into the id. So a link to that heading was written `#see-the-policy`
+and the heading was `see-the-policyhttpsecom`, and every link to it in the
+exported file was dead. A chip in a heading is the same shape, and a footnote
+reference too. `view.Project` walks the document twice for this, the first walk
+only to measure the lines, which is one extra walk of a document already in
+memory. `TestAHeadingsAnchorIsTheIDOfTheLineItProjects` is the pin here and
+`TestAProjectedHeadingsAnchorIsTheIDBodyCollects` is the one that asks goldmark.
+
+**A contents list still prints nothing, and now says so.** The milestone 13
+plan decided it and no rule in `internal/view` stated it, which matters because
+that walk is the only one in the package that stops at the element: `cut`,
+`indexes` and `headingWords` all recurse into it, and so do `docs.blocks` and
+`docs.writePlain`. A reader of any of those would take the omission for a gap.
+`TestAContentsListPrintsNothing` is the pin.

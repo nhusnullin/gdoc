@@ -439,12 +439,14 @@ func TestANumberedSubListUnderBulletsStartsAgain(t *testing.T) {
 		item(0, false, "Second"), item(1, true, "c"),
 	}}}}
 	got, _ := Text(d)
-	for _, want := range []string{"- First", "   1. a", "   2. b", "- Second", "   1. c"} {
+	// Two spaces, not three: the sub-list lines up with the content of the
+	// bullet above it, which is where CommonMark nests one from.
+	for _, want := range []string{"- First", "  1. a", "  2. b", "- Second", "  1. c"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Text() =\n%s\nwant it to carry %q", got, want)
 		}
 	}
-	if strings.Contains(got, "   3. c") {
+	if strings.Contains(got, "  3. c") {
 		t.Errorf("the sub-list under the second bullet carried the first one's count:\n%s", got)
 	}
 }

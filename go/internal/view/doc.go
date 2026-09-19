@@ -44,8 +44,8 @@
 //	                                 the address, or #slug for a heading in
 //	                                 this document
 //	1. text                          an item of a numbered list, counted per
-//	                                 list and per level, three spaces of
-//	                                 indent per level
+//	                                 list and per level, indented to the
+//	                                 column its parent's content starts at
 //	<!-- image: floating, kix.p1 --> an object laid out beside the text rather
 //	                                 than in it, after the paragraph it is
 //	                                 anchored to
@@ -226,14 +226,24 @@
 // # A link is printed as [words](target)
 //
 // The words are the document's own and the target is where they point: the
-// address for a link out of the document, and "#" with the heading's own words
-// as an anchor for a link to a heading inside it. The anchor rule is goldmark's,
-// asked of goldmark in Anchor rather than written out again, because the ids
-// internal/body resolves a note's links against are the ids goldmark made: a
-// link read out of a document and the link a note wrote are then the same
-// string, which is what lets a session compare the two without translating
-// either. TestALinkPrintsItsTarget, links.golden and
+// address for a link out of the document, and "#" with an anchor for a link to
+// a heading inside it. The anchor rule is goldmark's, asked of goldmark in
+// Anchor rather than written out again, because the ids internal/body resolves
+// a note's links against are the ids goldmark made: a link read out of a
+// document and the link a note wrote are then the same string, which is what
+// lets a session compare the two without translating either.
+// TestALinkPrintsItsTarget, links.golden and
 // TestTheAnchorViewWritesIsTheIDBodyCollects are the pins.
+//
+// The anchor is taken from the heading's projected line and not from its text
+// runs, because goldmark takes its id from the whole line: a heading holding a
+// hyperlink is "[words](url)" in the file and goldmark reads the address into
+// the id, and a heading holding a person chip is "[person: Ann]" and goldmark
+// reads the label. Printing a link's target is what made the two diverge, so
+// the rule arrived with it. Project walks the document twice for this, the
+// first walk only to measure the lines, and a heading the walk does not reach,
+// one inside a table cell, keeps the words headingWords collected.
+// TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
 //
 // A heading this document does not hold, and a bookmark, are named by their id.
 // There are no words to make an anchor from for either: a bookmark is a place
@@ -284,13 +294,40 @@
 // picture file no line of the note points at.
 // TestAFloatingObjectInACellIsPrintedInThatCell is the pin.
 //
+// # A contents list prints nothing
+//
+// The walk takes paragraphs and tables and steps over the contents element.
+// Docs generates that list from the headings, every one of which is printed
+// anyway, so printing it as well would put the document's outline in the file
+// twice, under no heading of its own and with each entry pointing at a line a
+// few paragraphs below it.
+//
+// It is stated here because it is the one walk in this package that stops at
+// the element: cut, indexes and headingWords all recurse into it, and so do
+// docs.blocks and docs.writePlain, so a reader of any of those would take the
+// omission for a gap. TestAContentsListPrintsNothing is the pin.
+//
 // # Lists and tables
 //
-// A list item comes back as a "- " item with two spaces of indent per nesting
-// level, and an item of a numbered list as "1. " with three, which is the width
-// of the marker it sits under. Which of the two it is comes from the tab's own
-// lists map, through docs.Bullet.Ordered: a glyph type Docs names is a number of
-// some kind, and GLYPH_TYPE_UNSPECIFIED is Docs saying this list is not numbered.
+// A list item comes back as a "- " item and an item of a numbered list as
+// "1. ". Which of the two it is comes from the tab's own lists map, through
+// docs.Bullet.Ordered: a glyph type Docs names is a number of some kind, and
+// GLYPH_TYPE_UNSPECIFIED is Docs saying this list is not numbered.
+//
+// An item is indented to the column its parent's content starts at, which is
+// the column CommonMark nests a sub-list from. A width taken from the item's
+// own marker was the rule until it was measured against goldmark, the parser
+// internal/body reads a note back with, and it loses the nesting in three
+// ordinary shapes: a bullet under a numbered item is two spaces against a
+// parent column of three, which reads as a second list beside the first; a
+// sub-list under the tenth item is three spaces against a column of four,
+// which reads as the eleventh item of the outer list; and a third level
+// compounds both. Nothing is lost from the text, and the document changes
+// shape on the way home, which for a round trip is the same harm.
+// TestASubListIndentsToItsParentsColumn, TestASubListUnderAWideMarkerClearsIt
+// and TestADeeperSubListClearsItsOwnParent are the pins, and
+// TestASubListWithNoParentFallsBackToItsLevel holds the list that starts
+// already nested, where there is no parent column to measure.
 //
 // The number is a count, per list id and per nesting level, not the glyph. A
 // list numbered a, b, c in the document reads 1., 2., 3. here, because what the
@@ -306,6 +343,8 @@
 // the list, whether or not that item takes a number itself, because one list id
 // can hold a bulleted level above a numbered one, which is what a Word
 // multilevel list comes back as.
+// The recorded columns go the same way, for the same reason: a sub-list drawn
+// again under a later item lines up with that item.
 // TestANestedListStartsAgainEachTimeItIsEntered and
 // TestANumberedSubListUnderBulletsStartsAgain are the pins.
 //

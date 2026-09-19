@@ -292,6 +292,33 @@ func TestTheAnchorViewWritesIsTheIDBodyCollects(t *testing.T) {
 	}
 }
 
+// TestAProjectedHeadingsAnchorIsTheIDBodyCollects is the same round trip over
+// the heading lines the projection itself writes rather than over plain words.
+// It is the half that was missing: goldmark takes its id from the whole line,
+// so a heading holding a hyperlink or a chip has an id the heading's text runs
+// do not give, and every link to it in the exported file was dead.
+//
+// The lines are view's own output for those headings, not strings written out
+// here, so a change to how a link or a chip is projected fails here rather than
+// in somebody's note.
+func TestAProjectedHeadingsAnchorIsTheIDBodyCollects(t *testing.T) {
+	for _, line := range []string{
+		"See [the policy](https://e.com)",
+		"Risk [person: Ann] and Control",
+		"Owner: [person: Ann]",
+		"Scope and [the register](https://e.com/r)",
+		"A [link: Q3 plan](https://drive.google.com/x) heading",
+	} {
+		source := []byte("# " + line + "\n")
+		ids := headingAnchors(parse().Parser().Parse(text.NewReader(source)), source)
+
+		if anchor := view.Anchor(line); !ids[anchor] {
+			t.Errorf("the heading line %q is %v to goldmark and %q to view.Anchor",
+				line, anchorNames(ids), anchor)
+		}
+	}
+}
+
 // anchorNames is the ids a map holds, for a failure to name.
 func anchorNames(ids map[string]bool) []string {
 	out := make([]string, 0, len(ids))

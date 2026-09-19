@@ -19,16 +19,16 @@ and any later session reads this file and undoes them. `gdoc-export` and
 | `[[c:ID]]words[[/c]]` | the words a comment thread is anchored to, by Drive comment id |
 | `[^1]` and `[^1]: text` | a footnote reference, with its text under a `---` rule at the end |
 | `![](assets/<stem>-<n>.png)` | a picture, as the file export wrote beside the note |
-| `<!-- picture: floating, <id> -->` | a picture laid out beside the text, after the paragraph it is anchored to |
+| `<!-- image: floating, <id> -->` | a picture laid out beside the text, after the paragraph it is anchored to. A drawing reads `drawing:` |
 | `[drawing]` `[equation]` `[object]` | content the read does not take, with a warning naming it |
 | `[person: Name]` `[date: Sep 9, 2026]` `[link: Title]` | a smart chip, with the label the document shows |
 | `[auto text: PAGE_NUMBER]` `[page break]` `[column break]` `[rule]` | the members that hold no text of their own |
 | `[unknown: member]` | a paragraph element gdoc has never seen, named by its member |
 
 A link is `[words](target)`, an external URL as it stands and `#slug` for a
-heading in this document. A numbered list is numbered, `1.` and `2.`, three
-spaces of indent per level. Neither is a marker: both are ordinary Markdown and
-both stay.
+heading in this document. A numbered list is numbered, `1.` and `2.`, and a
+sub-list is indented to the column its parent's content starts at. Neither is a
+marker: both are ordinary Markdown and both stay.
 
 ## Escaping, which is the part to get right
 
@@ -107,10 +107,10 @@ body or into a bracket, with the person.
 is the note's own link: leave that alone, because the note's own picture may be
 rendered from an SVG that is the master.
 
-**A floating picture's comment.** `<!-- picture: floating, <id> -->` says a
-picture sits beside the text there. The file for it is written. Decide with the
-person whether the note wants the picture as a line at that place, then delete
-the comment.
+**A floating picture's comment.** `<!-- image: floating, <id> -->`, or
+`<!-- drawing: floating, <id> -->`, says a picture sits beside the text there.
+The file for it is written. Decide with the person whether the note wants the
+picture as a line at that place, then delete the comment.
 
 **A placeholder in brackets.** `[drawing]`, `[equation]`, `[object]`,
 `[page break]` and the rest are content the read could not take. Each one has a

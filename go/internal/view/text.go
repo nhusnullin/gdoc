@@ -128,8 +128,46 @@ func Text(d *docs.Document) (string, []string) {
 
 // Project is Text with the options above. One emitter, so the read and the
 // export cannot drift into two escapings of one document.
+//
+// It walks twice, and the first walk is thrown away. A link to a heading is
+// written as "#" and goldmark's id for that heading, and goldmark takes the id
+// from the whole line, so the anchor cannot be known until the line is written:
+// a heading holding a hyperlink is "[words](url)" in the file and a heading
+// holding a chip is "[person: Ann]", and goldmark reads both, markup and all.
+// The first walk measures every heading's line, the second writes the document
+// with the anchors those lines give, and a heading whose line the walk never
+// reaches, one inside a table cell, keeps the words headingWords collected.
+// TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
+//
+// The cost is one extra walk of a document already in memory, for the one
+// guarantee the export rests on: a link read out of a document is a link the
+// file resolves.
 func Project(d *docs.Document, o Options) (string, []string) {
-	e := &emitter{seen: map[string]bool{}, headings: headingWords(d), opts: o}
+	_, _, lines := onePass(d, o, headingWords(d))
+	text, warnings, _ := onePass(d, o, anchors(headingWords(d), lines))
+	return text, warnings
+}
+
+// anchors is the words each heading is named by: the line it projected to
+// where there is one, and the words it holds where there is not. An empty line
+// is no line: the heading printed nothing, so it is not in the file at all and
+// the words are still the better guess.
+func anchors(words, lines map[string]string) map[string]string {
+	out := make(map[string]string, len(words)+len(lines))
+	for id, w := range words {
+		out[id] = w
+	}
+	for id, line := range lines {
+		if line != "" {
+			out[id] = line
+		}
+	}
+	return out
+}
+
+// onePass is one walk of the document, and the heading lines it wrote.
+func onePass(d *docs.Document, o Options, headings map[string]string) (string, []string, map[string]string) {
+	e := &emitter{seen: map[string]bool{}, headings: headings, lines: map[string]string{}, opts: o}
 	for _, tab := range d.Tabs {
 		if d.MultiTab() {
 			e.chunk(fmt.Sprintf("<!-- tab %s: %s -->", tab.ID, tab.Title))
@@ -139,7 +177,7 @@ func Project(d *docs.Document, o Options) (string, []string) {
 	}
 	e.unplaced(d.CommentRanges)
 	e.appendFootnotes(d)
-	return strings.Join(e.chunks, "\n\n") + "\n", e.warnings
+	return strings.Join(e.chunks, "\n\n") + "\n", e.warnings, e.lines
 }
 
 // Structure is the tree as the `structure` field of the read: every paragraph
@@ -193,13 +231,18 @@ type emitter struct {
 	cur      int
 	seen     map[string]bool
 	order    []note
-	// nums counts a numbered list's items, by list id and nesting level, and
-	// objects is the tab being walked's floating objects. Both are the tab's
-	// own: two tabs can name one list id and mean two different lists.
+	// nums counts a numbered list's items, by list id and nesting level, cols
+	// records the column each of those levels' content starts at, and objects
+	// is the tab being walked's floating objects. All three are the tab's own:
+	// two tabs can name one list id and mean two different lists.
 	nums     map[string]int
+	cols     map[string]int
 	objects  map[string]docs.Object
 	headings map[string]string
-	opts     Options
+	// lines is the line each heading projected to, by the heading id a link
+	// names, which is what the anchor written for that link is taken from.
+	lines map[string]string
+	opts  Options
 	// inLink says the words being written are a link's. One bracket is markup
 	// there and nowhere else, because the words end at the first one a reader
 	// meets.
@@ -515,6 +558,12 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 	// list that holds no text still counts: the numbers then say what the
 	// document shows rather than closing the gap over an item nobody typed into.
 	prefix := e.prefix(p)
+	// The line, before the prefix, is what a link to this heading is named by.
+	// It is recorded whatever the style, because headingWords names a paragraph
+	// carrying a heading id whether or not it is one of the six levels.
+	if p.HeadingID != "" {
+		e.lines[p.HeadingID] = strings.TrimSpace(text)
+	}
 	if text != "" {
 		// An empty paragraph is the document's blank line, and the chunks are
 		// already separated by one.
@@ -528,8 +577,16 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 // printing both markers would say it is two things. A heading takes no number
 // for the same reason, and does not advance the count.
 //
-// A numbered item is indented by three spaces per level and a bullet by two,
-// which is the width of the marker each of them sits under.
+// An item is indented to the column its parent's content starts at, which is
+// the column CommonMark nests a sub-list from. The width of the item's own
+// marker is the wrong measure and was the rule until it was measured: a bullet
+// under a numbered item is two spaces against a parent content column of three,
+// which goldmark reads as a second list beside the first rather than inside it,
+// and a sub-list under the tenth item is three spaces against a column of four,
+// which goldmark reads as the eleventh item of the outer list. Neither loses a
+// character, and both change the shape of the document on the way home.
+// TestASubListIndentsToItsParentsColumn and TestASubListUnderAWideMarkerClearsIt
+// are the pins.
 func (e *emitter) prefix(p *docs.Paragraph) string {
 	if p.Bullet != nil {
 		e.enter(p.Bullet)
@@ -540,10 +597,40 @@ func (e *emitter) prefix(p *docs.Paragraph) string {
 	if p.Bullet == nil {
 		return ""
 	}
-	if !p.Bullet.Ordered {
-		return strings.Repeat("  ", p.Bullet.NestingLevel) + "- "
+	marker := "- "
+	if p.Bullet.Ordered {
+		marker = strconv.Itoa(e.number(p.Bullet)) + ". "
 	}
-	return strings.Repeat("   ", p.Bullet.NestingLevel) + strconv.Itoa(e.number(p.Bullet)) + ". "
+	indent := e.indent(p.Bullet, len(marker))
+	e.setColumn(p.Bullet, indent+len(marker))
+	return strings.Repeat(" ", indent) + marker
+}
+
+// indent is the column this item's marker starts at: the column its parent's
+// content starts at, which setColumn recorded when that parent was written.
+//
+// A list whose first item is already nested has no parent to measure, and the
+// item's own marker width per level is the only guess there is. It is what the
+// projection did for every item before the columns were tracked, so the shape
+// of an orphan sub-list is unchanged. TestASubListWithNoParentFallsBackToItsLevel
+// is the pin.
+func (e *emitter) indent(b *docs.Bullet, width int) int {
+	if b.NestingLevel <= 0 {
+		return 0
+	}
+	if col, ok := e.cols[levelKey(b.ListID, b.NestingLevel-1)]; ok {
+		return col
+	}
+	return b.NestingLevel * width
+}
+
+// setColumn records where this item's content starts, for the items nested
+// under it to line up with.
+func (e *emitter) setColumn(b *docs.Bullet, col int) {
+	if e.cols == nil {
+		e.cols = map[string]int{}
+	}
+	e.cols[countKey(b)] = col
 }
 
 // number is this item's place in its own list at its own level. Counting per
@@ -571,17 +658,31 @@ func (e *emitter) number(b *docs.Bullet) int {
 // item takes no number either: if only the numbered items dropped the deeper
 // counts, a sub-list under either of those would carry on from the one before
 // it.
+// The columns go with the counts. A sub-list drawn again under a later item
+// lines up with that item, so a column measured under the one before it is a
+// fact about a list level that has closed.
 func (e *emitter) enter(b *docs.Bullet) {
 	for k := range e.nums {
 		if id, level, ok := splitCount(k); ok && id == b.ListID && level > b.NestingLevel {
 			delete(e.nums, k)
 		}
 	}
+	for k := range e.cols {
+		if id, level, ok := splitCount(k); ok && id == b.ListID && level > b.NestingLevel {
+			delete(e.cols, k)
+		}
+	}
 }
 
 // countKey is the counter one list holds for one nesting level.
 func countKey(b *docs.Bullet) string {
-	return b.ListID + "\x00" + strconv.Itoa(b.NestingLevel)
+	return levelKey(b.ListID, b.NestingLevel)
+}
+
+// levelKey is countKey's key for a level named on its own, so an item can ask
+// for the level above its own.
+func levelKey(listID string, level int) string {
+	return listID + "\x00" + strconv.Itoa(level)
 }
 
 // splitCount reads a counter's key back into the list and the level it counts.
