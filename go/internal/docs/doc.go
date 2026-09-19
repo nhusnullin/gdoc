@@ -156,7 +156,11 @@
 // would number one tab's bullets from the other tab's glyphs. Glyph is the
 // answer's own glyphType, passed through rather than translated, and Ordered is
 // the one question asked of it: GLYPH_TYPE_UNSPECIFIED is Docs saying this
-// level is not numbered. A list the tab does not hold, or a level the list does
+// level is not numbered, and NONE is Docs saying this level draws an empty
+// glyph, which is a list showing no marker rather than a numbered one.
+// TestAGlyphOfNONEIsNotANumberedList is the pin on the second, which the reader
+// would otherwise count 1., 2., 3. and export into the hub that way.
+// A list the tab does not hold, or a level the list does
 // not describe, leaves both empty rather than failing the read, and the reader
 // prints the bullet it printed before. testdata/lists.json is written from the
 // reference, and TestABulletCarriesItsListAndGlyph is the pin, with

@@ -598,6 +598,25 @@ func (e *emitter) chipTarget(r docs.Run) string {
 	return ""
 }
 
+// Destination is a target written so that a reader takes all of it. The bare
+// form ends at the first ")", so a target carrying one, a "(" or a space goes in
+// the angle bracket form instead, and an angle bracket inside that form is
+// escaped, because an unescaped one would end it the same way.
+//
+// It is exported because internal/export writes the same parentheses around a
+// picture's address, and one rule in two places is two chances for one of them
+// to be wrong. A chip's address does not come here: chipTarget drops a target it
+// cannot write bare, because a chip prints a label rather than the words the
+// address belongs to.
+func Destination(target string) string {
+	if !strings.ContainsAny(target, " ()<>") {
+		return target
+	}
+	return "<" + angleBrackets.Replace(target) + ">"
+}
+
+var angleBrackets = strings.NewReplacer("<", `\<`, ">", `\>`)
+
 func plainTarget(s string) string {
 	if s == "" || strings.ContainsAny(s, "()[] \t\n") {
 		return ""
@@ -882,7 +901,7 @@ func (e *emitter) linked(rs []docs.Run, l *docs.Link) {
 		e.one(r)
 	}
 	e.inLink = false
-	e.write("](" + target + ")")
+	e.write("](" + Destination(target) + ")")
 }
 
 // textLink is the target of a run of the document's own text, or nothing. Only

@@ -312,6 +312,15 @@ Words that stop right before the marker are fine, and so are words that start
 right after it. The count is against the whole document, so a quote that reads
 once as plain text and once across a marker is refused as ambiguous too.
 
+A link is the other way round: its words are the document's own, but the markup
+around them is not. `read` prints text that points somewhere as
+`[words](target)`, and `propose` searches the document's text runs, which hold
+`words` and nothing else. So a quote copied with the brackets and the address
+still on it comes back as not found. Take the markup off and quote the words:
+`[the policy](https://example.com/p) is reviewed` is quoted as
+`the policy is reviewed`. Words that run from before a link into it, or out of
+it, are fine, because the document's text does not break where the brackets do.
+
 Quote the body only. `read` prints each footnote's own text under the rule at
 the end, as `[^1]: ...`, and a proposal cannot be placed there: `propose` looks
 in the body, so those words come back as not found even though they are on

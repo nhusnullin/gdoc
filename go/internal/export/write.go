@@ -494,11 +494,9 @@ func tabSlug(t Tab, i int) string {
 	return "tab-" + strconv.Itoa(i+1)
 }
 
-// imageLink is one picture's markdown. A target holding a space or a bracket
-// goes in angle brackets, because the ordinary form ends at the first ")".
+// imageLink is one picture's markdown. The address goes through the same rule
+// the text link route writes its own targets by, so a picture and a link in the
+// same file cannot disagree about what a parenthesis does.
 func imageLink(target string) string {
-	if strings.ContainsAny(target, " ()<>") {
-		return "![](<" + target + ">)"
-	}
-	return "![](" + target + ")"
+	return "![](" + view.Destination(target) + ")"
 }

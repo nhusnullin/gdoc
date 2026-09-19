@@ -61,6 +61,32 @@ func TestALinkPrintsItsTarget(t *testing.T) {
 	}
 }
 
+// A link destination is read up to the first ")", so a target carrying one, or
+// a space, or a "(", has to be written in the angle bracket form instead. The
+// picture route already does this; the text route is the same document read out
+// through a second door, and an address that comes back cut in half is not the
+// address the document holds.
+func TestALinkTargetThatWouldEndEarlyIsBracketed(t *testing.T) {
+	for _, c := range []struct{ url, want string }{
+		// A closing paren ends the destination, so the rest of the address
+		// would stand in the prose as words.
+		{"https://example.com/x)y", "[words](<https://example.com/x)y>)"},
+		// A space is not allowed in the bare form at all.
+		{"https://example.com/a b", "[words](<https://example.com/a b>)"},
+		{"https://example.com/a(b", "[words](<https://example.com/a(b>)"},
+		// An angle bracket cannot stand unescaped inside the angle form.
+		{"https://example.com/a>b", `[words](<https://example.com/a\>b>)`},
+		// An ordinary address keeps the bare form.
+		{"https://example.com/guide", "[words](https://example.com/guide)"},
+	} {
+		r := run("words", 1)
+		r.Link = &docs.Link{URL: c.url}
+		if got := project(r); got != c.want {
+			t.Errorf("a link to %q printed as %q, want %q", c.url, got, c.want)
+		}
+	}
+}
+
 // The structure view carries the target too, as the link field docs decodes, so
 // a caller that wants the id rather than the slug reads it there.
 func TestTheStructureCarriesTheLinkField(t *testing.T) {

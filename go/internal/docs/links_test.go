@@ -6,7 +6,10 @@
 
 package docs
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 // linked is the run whose text is exactly this, in the tab's paragraph p. A
 // test that reads runs by index moves every time the fixture gains a word.
@@ -211,5 +214,25 @@ func TestAnInlineObjectCarriesItsObjectID(t *testing.T) {
 		if got[id] != kind {
 			t.Errorf("object %s is %q, want %q", id, got[id], kind)
 		}
+	}
+}
+
+// NONE is the Docs enum for a level drawn with an empty glyph: the list is
+// there and its items show no marker at all. It is not an absence and not
+// GLYPH_TYPE_UNSPECIFIED, so the check that reads "is this level numbered" has
+// to name it, or a list that draws nothing reads back as 1., 2., 3. and is
+// exported that way into the hub.
+func TestAGlyphOfNONEIsNotANumberedList(t *testing.T) {
+	var blank rawList
+	if err := json.Unmarshal([]byte(`{"listProperties":{"nestingLevels":[{"glyphType":"NONE"}]}}`), &blank); err != nil {
+		t.Fatal(err)
+	}
+
+	got := bullet("kix.blank", 0, map[string]rawList{"kix.blank": blank})
+	if got == nil {
+		t.Fatal("a level with a NONE glyph carries no bullet")
+	}
+	if got.Ordered || got.Glyph != "" {
+		t.Errorf("a level with a NONE glyph = %+v, want neither ordered nor a glyph", got)
 	}
 }

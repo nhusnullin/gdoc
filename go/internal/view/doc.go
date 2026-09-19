@@ -242,6 +242,16 @@
 // lands against gdoc's "[[", which is the one pair neither of them could be
 // escaped out of.
 //
+// The target side ends at the first ")" the same way, so a target carrying one,
+// a "(" or a space is written in the angle bracket form, with an angle bracket
+// inside that form escaped. Without it an address came back cut in half and the
+// rest of it stood in the prose as words, which is a different address rather
+// than a visible break. Destination is the one rule, and internal/export writes
+// a picture's address through it too, so the two cannot drift.
+// TestALinkTargetThatWouldEndEarlyIsBracketed is the pin. A chip's address is
+// the exception: chipTarget drops one it cannot write bare, because a chip
+// prints a label rather than the words the address belongs to.
+//
 // # A floating object is a placeholder after the paragraph it hangs from
 //
 // An object laid out beside the text rather than in it has no character index a

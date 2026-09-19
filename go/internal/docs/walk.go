@@ -502,8 +502,10 @@ func bullet(listID string, level int, lists map[string]rawList) *Bullet {
 	}
 	glyph := levels[level].GlyphType
 	// GLYPH_TYPE_UNSPECIFIED is Docs saying this level is not numbered, and it
-	// is the answer's own word for it rather than an absence.
-	if glyph == "" || glyph == "GLYPH_TYPE_UNSPECIFIED" {
+	// is the answer's own word for it rather than an absence. NONE is the enum
+	// for a level drawn with an empty glyph: the items show no marker at all, so
+	// numbering them here would print a count the document does not draw.
+	if glyph == "" || glyph == "GLYPH_TYPE_UNSPECIFIED" || glyph == "NONE" {
 		return out
 	}
 	out.Glyph = glyph
