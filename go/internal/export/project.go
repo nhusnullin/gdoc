@@ -134,7 +134,27 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 // export creates and a note export stamps carry the same bytes for the same
 // block.
 func File(body string, b *frontmatter.Block) ([]byte, error) {
-	return frontmatter.Write([]byte(body), b)
+	return frontmatter.Write([]byte(pushDown(body)), b)
+}
+
+// pushDown is a body whose own first line would be read as the opener of front
+// matter, moved down by one blank line.
+//
+// A paragraph whose whole text is "---" is the document's, and the block goes
+// in front of the body without it: frontmatter.Write would otherwise read that
+// line as front matter somebody wrote and put the block inside it, so the
+// paragraph after it becomes YAML and leaves the file, or the write is refused
+// because the document holds no second delimiter to close it with.
+//
+// Nothing of the body is dropped and nothing is escaped: the line is a
+// thematic break to a reader either way, which is what the projection already
+// made of it. TestABodyOpeningWithTheDelimiterKeepsItsFirstParagraph is the
+// pin.
+func pushDown(body string) string {
+	if frontmatter.Opens([]byte(body)) {
+		return "\n" + body
+	}
+	return body
 }
 
 // picture wraps the caller's naming so view is handed nothing when there is

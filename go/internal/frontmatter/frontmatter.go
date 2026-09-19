@@ -445,6 +445,23 @@ func trim(line string) string {
 	return strings.TrimRight(line, "\r\n")
 }
 
+// Opens says whether these bytes begin with the line that opens front matter.
+// A caller holding a body it built itself asks before writing a block in front
+// of it: a body whose own first line is the delimiter would be read here as
+// front matter somebody wrote, and Write would put the block inside it or
+// refuse the file for never closing it.
+//
+// The rule is parse's own, asked of the same isDelimiter, so a body this says
+// nothing about is a body parse also reads as having no front matter.
+// TestOpensIsTrueOfTheLineParseOpensOn is the pin.
+func Opens(src []byte) bool {
+	lines := splitLines(string(src))
+	if len(lines) == 0 {
+		return false
+	}
+	return isDelimiter(strings.TrimPrefix(lines[0], bom), openDelimiter)
+}
+
 // isDelimiter reports whether the line is that front-matter delimiter. Trailing
 // spaces and tabs do not stop it being one: Jekyll, python-frontmatter and
 // goldmark-meta all accept them, so a note written that way has front matter

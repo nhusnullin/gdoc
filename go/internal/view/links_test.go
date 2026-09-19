@@ -273,6 +273,28 @@ func TestUnescapeAfterEscapeIsIdentity(t *testing.T) {
 			t.Errorf("unescape of the link gave %q, want %q", got, want)
 		}
 	})
+	t.Run("a comment over a link's words", func(t *testing.T) {
+		// The ordinary review shape: somebody marked hyperlinked words. The
+		// comment's markers land inside the link, so the reader meets them
+		// before it has read the "](" that says the bracket is a link's.
+		for _, c := range []struct{ text, want string }{
+			{text: "Q3 plan", want: "Q3 plan"},
+			{text: "abcd", want: "abcd"},
+		} {
+			d := &docs.Document{
+				Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{
+					Style: "NORMAL_TEXT",
+					Runs: []docs.Run{{Kind: docs.KindText, Text: c.text + "\n", StartIndex: 1,
+						EndIndex: 1 + len(c.text) + 1, Link: &docs.Link{URL: "https://example.com/q3"}}},
+				}}}}},
+				CommentRanges: map[string]docs.Range{"ID": {Tab: "t.0", Start: 1, End: 1 + len(c.text)}},
+			}
+			got, _ := Text(d)
+			if u := unescape(strings.TrimSuffix(got, "\n")); u != c.want {
+				t.Errorf("unescape(%q) = %q, want %q", got, u, c.want)
+			}
+		}
+	})
 	t.Run("a character against a marker", func(t *testing.T) {
 		d := &docs.Document{
 			Tabs:          []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", Runs: []docs.Run{run("x[y\n", 1)}}}}}},
@@ -347,15 +369,28 @@ func unescape(s string) string {
 }
 
 // linkAhead says whether what follows a bracket is a link's words: an unescaped
-// "](" before any other unescaped bracket.
+// "](" before any other unescaped bracket that is not gdoc's own markup.
+//
+// The markers are stepped over rather than stopped at, because they are made of
+// the same brackets and a comment anchored over hyperlinked words puts one
+// inside the link. Stopping at the marker's bracket would read the link's own
+// opening bracket as the document's text.
 func linkAhead(rs []rune) bool {
 	for i := 0; i < len(rs); i++ {
-		switch {
-		case rs[i] == '\\':
+		if rs[i] == '\\' {
 			i++
-		case strings.HasPrefix(string(rs[i:]), "]("):
+			continue
+		}
+		// The words' own closing bracket is the answer, so it is read before
+		// the markup, which is the other thing "](" is the front of.
+		if strings.HasPrefix(string(rs[i:]), "](") {
 			return true
-		case rs[i] == '[', rs[i] == ']':
+		}
+		if n := gdocMarkup(rs[i:]); n > 0 {
+			i += n - 1
+			continue
+		}
+		if rs[i] == '[' || rs[i] == ']' {
 			return false
 		}
 	}

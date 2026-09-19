@@ -7,6 +7,7 @@ package export
 import (
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -210,15 +211,33 @@ func readPicture(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("it could not be opened")
 	}
+	// A regular file, because the size of anything else says nothing about how
+	// much reading it gives back: a device node stats at nothing and reads for
+	// ever, and a pipe blocks the run. A directory is one of these and keeps
+	// its own sentence, because it is the one a person actually writes by
+	// mistake.
 	if info.IsDir() {
 		return nil, fmt.Errorf("it is a directory")
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("it is not a regular file")
 	}
 	if info.Size() > MaxPictureBytes {
 		return nil, fmt.Errorf("it is larger than the %d bytes this read allows", MaxPictureBytes)
 	}
-	b, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("it could not be read")
+	}
+	defer f.Close()
+	// The ceiling again, over the read itself. The stat above is a fact about
+	// the file a moment ago, and the file can grow between the two.
+	b, err := io.ReadAll(io.LimitReader(f, MaxPictureBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("it could not be read")
+	}
+	if int64(len(b)) > MaxPictureBytes {
+		return nil, fmt.Errorf("it is larger than the %d bytes this read allows", MaxPictureBytes)
 	}
 	if !isPNG(b) && !isJPEG(b) {
 		return nil, fmt.Errorf("it is neither a PNG nor a JPEG, and those are the two this read carries")

@@ -239,6 +239,18 @@
 // the whole run rather than leaving half a document in the hub:
 // TestTheDoorChecks and TestATabPathIsCheckedLikeOut.
 //
+// A note is stamped once a run, however many tabs wanted its name. A name an
+// earlier tab already answered for is this run's from then on, so the tab
+// after it reads the name as taken and takes the next number rather than
+// finding the same note a second time:
+// TestOneNoteIsStampedOnceWhenTwoTabsWantItsName.
+//
+// A write that stops half way names the files it had already written. They are
+// whole, nothing was replaced to make them, and the run somebody tries next
+// writes the whole export again under the next free number, so the one thing
+// that would be lost is knowing they are there:
+// TestAFailedWriteNamesTheFilesItHadAlreadyWritten.
+//
 // A further tab's file is <stem>-<title slugged>.md through view.Slug, which
 // is the file-name rule and not the heading id rule; a tab whose title slugs to
 // nothing is tab-<n> by its position,

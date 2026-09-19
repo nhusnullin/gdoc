@@ -691,3 +691,29 @@ func TestANonStringScalarUnderGdocIsNotABareStringPairing(t *testing.T) {
 		t.Errorf("error %q gives a number the bare string pairing's sentence", err)
 	}
 }
+
+// TestOpensIsTrueOfTheLineParseOpensOn: Opens answers for the same line the
+// parser opens front matter on, because a caller asks it to find out whether
+// Write would read a body of its own as front matter.
+func TestOpensIsTrueOfTheLineParseOpensOn(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		src  string
+		want bool
+	}{
+		{name: "the delimiter alone", src: "---\nwords\n", want: true},
+		{name: "the delimiter with trailing spaces", src: "---  \nwords\n", want: true},
+		{name: "the delimiter behind a byte order mark", src: "\ufeff---\nwords\n", want: true},
+		{name: "the delimiter and nothing after it", src: "---", want: true},
+		{name: "a thematic break further down", src: "words\n---\n", want: false},
+		{name: "ordinary words", src: "words\n", want: false},
+		{name: "four dashes", src: "----\nwords\n", want: false},
+		{name: "nothing at all", src: "", want: false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := Opens([]byte(c.src)); got != c.want {
+				t.Errorf("Opens(%q) is %v, want %v", c.src, got, c.want)
+			}
+		})
+	}
+}

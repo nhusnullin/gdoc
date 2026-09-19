@@ -167,3 +167,72 @@ func tail(s string, n int) string {
 	}
 	return strings.Join(parts, "\n\n") + "\n"
 }
+
+// TestATabsColumnsAreItsOwn: a list id names one list per tab, so the column a
+// list level reached in one tab says nothing about the same id in the next. It
+// is pinned because export writes one file per tab, and a column carried over
+// would make a tab's file depend on a tab that is not in it.
+func TestATabsColumnsAreItsOwn(t *testing.T) {
+	alone := &docs.Document{Tabs: []docs.Tab{
+		{ID: "t.1", Body: []docs.Block{item(false, 1, "l1", "orphan", 1)}},
+	}}
+	after := &docs.Document{Tabs: []docs.Tab{
+		{ID: "t.0", Body: []docs.Block{
+			item(true, 0, "l1", "one", 1),
+			item(false, 1, "l1", "sub", 10),
+		}},
+		{ID: "t.1", Body: []docs.Block{item(false, 1, "l1", "orphan", 1)}},
+	}}
+
+	one, _ := Text(alone)
+	two, _ := Text(after)
+	if want := "  - orphan"; lastLine(one) != want {
+		t.Fatalf("the one-tab projection ends %q, want %q", lastLine(one), want)
+	}
+	if lastLine(two) != lastLine(one) {
+		t.Errorf("the second tab ends %q and the same tab on its own ends %q", lastLine(two), lastLine(one))
+	}
+}
+
+// lastLine is a projection's last line with content, for an indent to be read
+// off exactly rather than matched at the end of the whole text.
+func lastLine(s string) string {
+	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
+	return lines[len(lines)-1]
+}
+
+// TestAHeadingLinkInsideAHeadingStillResolves: a heading can hold a link to
+// another heading, and writing that link changes the line the first heading is
+// named by. Every other link to it has to carry the id of the line the file
+// really holds, not the id of the line an earlier walk wrote.
+func TestAHeadingLinkInsideAHeadingStillResolves(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		{Paragraph: &docs.Paragraph{Style: "HEADING_1", HeadingID: "h.a", Runs: []docs.Run{
+			run("Owner: ", 1),
+			{Kind: docs.KindPerson, StartIndex: 8, EndIndex: 9, Detail: &docs.Detail{Label: "Ann"}},
+		}}},
+		{Paragraph: &docs.Paragraph{Style: "HEADING_1", HeadingID: "h.b", Runs: []docs.Run{
+			run("See ", 20),
+			{Kind: docs.KindText, Text: "B", StartIndex: 24, EndIndex: 25,
+				Link: &docs.Link{HeadingID: "h.a"}},
+		}}},
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", Runs: []docs.Run{
+			{Kind: docs.KindText, Text: "go", StartIndex: 40, EndIndex: 42,
+				Link: &docs.Link{HeadingID: "h.b"}},
+		}}},
+	}}}}
+
+	text, _ := Text(d)
+	line := ""
+	for _, l := range strings.Split(text, "\n") {
+		if strings.HasPrefix(l, "# See ") {
+			line = strings.TrimPrefix(l, "# ")
+		}
+	}
+	if line == "" {
+		t.Fatalf("the projection printed no second heading: %q", text)
+	}
+	if want := "[go](#" + Anchor(line) + ")"; !strings.Contains(text, want) {
+		t.Errorf("the projection is %q, want it to carry %q", text, want)
+	}
+}

@@ -614,3 +614,36 @@ func TestACommentNamingAMissingTabIsNamed(t *testing.T) {
 		t.Fatalf("nothing named the comment whose tab the document does not have: %v", warnings)
 	}
 }
+
+// TestABodyOpeningWithTheDelimiterKeepsItsFirstParagraph: a document whose
+// first paragraph is the three characters that open front matter is a document
+// like any other. The file export writes carries every word of it, and reads
+// back with the gdoc: block as its front matter and nothing else.
+func TestABodyOpeningWithTheDelimiterKeepsItsFirstParagraph(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		body string
+	}{
+		{name: "a second delimiter further down", body: "---\n\nThe first words.\n\n---\n\nMore words.\n"},
+		{name: "no second delimiter at all", body: "---\n\nThe only words.\n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, err := File(c.body, block(testDocID))
+			if err != nil {
+				t.Fatalf("File: %v", err)
+			}
+			for _, want := range []string{"The first words.", "More words.", "The only words."} {
+				if strings.Contains(c.body, want) && !strings.Contains(string(out), want) {
+					t.Errorf("the file lost %q:\n%s", want, out)
+				}
+			}
+			got, err := frontmatter.Read(out)
+			if err != nil {
+				t.Fatalf("the file does not read back: %v\n%s", err, out)
+			}
+			if got == nil || len(got.Documents) != 1 || got.Documents[0].ID != testDocID {
+				t.Errorf("the block read back is %+v, want the one entry for the document:\n%s", got, out)
+			}
+		})
+	}
+}

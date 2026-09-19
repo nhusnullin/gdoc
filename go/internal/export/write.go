@@ -7,7 +7,9 @@ package export
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -217,27 +219,36 @@ func Write(l *Layout, files []TabFile) (*Written, error) {
 	if err := makeAssets(l); err != nil {
 		return nil, err
 	}
+	// made is every file this run created, for a failure half way through to
+	// name them. Nothing here removes one: they are this run's and they are
+	// whole, export replaces nothing, and a person told which files exist can
+	// decide what to do with them. An error that named none of them would
+	// leave them for somebody to find.
+	var made []string
 	for _, p := range l.Pictures {
 		if len(p.Bytes) == 0 {
 			continue
 		}
-		if err := atomicfile.Create(filepath.Join(l.dir, filepath.FromSlash(p.File)), p.Bytes); err != nil {
-			return nil, fmt.Errorf("export: the picture %s was not written: %w", p.File, err)
+		path := filepath.Join(l.dir, filepath.FromSlash(p.File))
+		if err := atomicfile.Create(path, p.Bytes); err != nil {
+			return nil, fmt.Errorf("export: the picture %s was not written: %w%s", p.File, err, alsoOnDisk(made))
 		}
+		made = append(made, path)
 	}
 
 	for i, placed := range l.Files {
 		if files[i].TabID != placed.TabID {
-			return nil, fmt.Errorf("export: the file at position %d is tab %q and the plan holds tab %q",
-				i, files[i].TabID, placed.TabID)
+			return nil, fmt.Errorf("export: the file at position %d is tab %q and the plan holds tab %q%s",
+				i, files[i].TabID, placed.TabID, alsoOnDisk(made))
 		}
 		b, err := File(files[i].Body, l.block(placed))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w%s", err, alsoOnDisk(made))
 		}
 		if err := atomicfile.Create(placed.Path, b); err != nil {
-			return nil, fmt.Errorf("export: %s was not written: %w", placed.Path, err)
+			return nil, fmt.Errorf("export: %s was not written: %w%s", placed.Path, err, alsoOnDisk(made))
 		}
+		made = append(made, placed.Path)
 	}
 
 	w := &Written{Files: l.Files, Pictures: l.Pictures}
@@ -254,6 +265,16 @@ func Write(l *Layout, files []TabFile) (*Written, error) {
 		w.Stamped = append(w.Stamped, s)
 	}
 	return w, nil
+}
+
+// alsoOnDisk is the tail of an error from half way through a write: the files
+// this run had already created when it stopped. It is empty when there are
+// none, so the first failure reads as the one sentence it is.
+func alsoOnDisk(made []string) string {
+	if len(made) == 0 {
+		return ""
+	}
+	return ", and this run had already written " + strings.Join(made, ", ")
 }
 
 // block is the front matter of one file this export writes: one entry, the
@@ -346,12 +367,27 @@ func schemaOf(src []byte) int {
 // matter that does not read are the two refusals.
 func place(dir, name, ext, documentID string, taken map[string]bool) (Placed, error) {
 	base := filepath.Join(dir, name+ext)
+
+	// A name an earlier tab of this run already answered for is taken by this
+	// run, and it is not inspected a second time. Two tabs whose titles slug
+	// to one name is the ordinary way here: without this the note behind that
+	// name is found twice, stamped twice and named twice in the answer, which
+	// is one note reported as two.
+	if taken[base] {
+		path, err := nextFree(dir, name, ext, taken)
+		if err != nil {
+			return Placed{}, err
+		}
+		taken[path] = true
+		return Placed{Path: path, Taken: true}, nil
+	}
+
 	state, err := inspect(base, documentID)
 	if err != nil {
 		return Placed{}, err
 	}
-	if state == free && !taken[base] {
-		taken[base] = true
+	taken[base] = true
+	if state == free {
 		return Placed{Path: base}, nil
 	}
 	path, err := nextFree(dir, name, ext, taken)
@@ -385,7 +421,13 @@ const (
 // refuse. It never writes and never repairs.
 func inspect(path, documentID string) (state, error) {
 	if _, err := os.Lstat(path); err != nil {
-		return free, nil
+		if errors.Is(err, fs.ErrNotExist) {
+			return free, nil
+		}
+		// Anything else is a path this run cannot see, and a path it cannot
+		// see is not a path it may call empty: Create would refuse it a moment
+		// later with a sentence about a write rather than about the door.
+		return free, fmt.Errorf("export: %s could not be looked at, so nothing was written: %w", path, err)
 	}
 	src, err := os.ReadFile(path)
 	if err != nil {
@@ -412,8 +454,12 @@ func nextFree(dir, name, ext string, taken map[string]bool) (string, error) {
 		if taken[path] {
 			continue
 		}
-		if _, err := os.Lstat(path); err == nil {
+		_, err := os.Lstat(path)
+		if err == nil {
 			continue
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", fmt.Errorf("export: %s could not be looked at, so nothing was written: %w", path, err)
 		}
 		return path, nil
 	}

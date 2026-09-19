@@ -240,10 +240,16 @@
 // hyperlink is "[words](url)" in the file and goldmark reads the address into
 // the id, and a heading holding a person chip is "[person: Ann]" and goldmark
 // reads the label. Printing a link's target is what made the two diverge, so
-// the rule arrived with it. Project walks the document twice for this, the
-// first walk only to measure the lines, and a heading the walk does not reach,
-// one inside a table cell, keeps the words headingWords collected.
-// TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
+// the rule arrived with it. Project walks the document again for this, the
+// walks before the last one only to measure the lines, and a heading the walk
+// does not reach, one inside a table cell, keeps the words headingWords
+// collected. TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
+//
+// The walks repeat until the lines stop moving, under a ceiling, because a
+// heading can hold a link to another heading and writing that link changes the
+// line the first heading is named by. A document whose headings link to no
+// heading settles on the second walk, which is what this always cost.
+// TestAHeadingLinkInsideAHeadingStillResolves is the pin.
 //
 // A heading this document does not hold, and a bookmark, are named by their id.
 // There are no words to make an anchor from for either: a bookmark is a place

@@ -564,3 +564,75 @@ func addedLines(t *testing.T, before, after string) []string {
 	}
 	return added
 }
+
+// TestOneNoteIsStampedOnceWhenTwoTabsWantItsName: two tab titles can slug to
+// one name, and that name can hold a note for this document. The first tab
+// lands beside the note and stamps it; the second reads the name as taken and
+// takes the next number. A note stamped twice is one note reported as two, and
+// one note rewritten twice for a single run.
+func TestOneNoteIsStampedOnceWhenTwoTabsWantItsName(t *testing.T) {
+	dir := t.TempDir()
+	writeText(t, filepath.Join(dir, "note-appendix.md"), note(testDocID))
+
+	req := one(dir)
+	req.Tabs = []Tab{
+		{ID: "t.0", Title: "Scope"},
+		{ID: "t.1", Title: "Appendix"},
+		{ID: "t.2", Title: "appendix!"},
+	}
+	w, err := run(t, req, "one\n", "two\n", "three\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := w.Files[1].Note, "note-appendix.md"; got != want {
+		t.Errorf("the first tab to ask for the name says note = %q, want %q", got, want)
+	}
+	if got := w.Files[2].Note; got != "" {
+		t.Errorf("the second tab says note = %q, want nothing: the name was this run's by then", got)
+	}
+	if !w.Files[2].Taken {
+		t.Error("the second tab's name was taken by the first and the reply does not say so")
+	}
+	if len(w.Stamped) != 1 {
+		t.Errorf("Stamped = %v, want the one note stamped once", w.Stamped)
+	}
+	if got, want := filepath.Base(w.Files[1].Path), "note-appendix.2.md"; got != want {
+		t.Errorf("the first tab to ask landed at %s, want %s: the note keeps its own name", got, want)
+	}
+	if got, want := filepath.Base(w.Files[2].Path), "note-appendix.3.md"; got != want {
+		t.Errorf("the second tab landed at %s, want %s: .2 was this run's already", got, want)
+	}
+}
+
+// TestAFailedWriteNamesTheFilesItHadAlreadyWritten: a write that stops half
+// way leaves whole files on disk, and export has no --force, so the run
+// somebody tries next writes the whole export again under the next free
+// number. The error names them for the same reason a failed stamp is a
+// warning: an answer that names none of them leaves them to be found.
+func TestAFailedWriteNamesTheFilesItHadAlreadyWritten(t *testing.T) {
+	dir := t.TempDir()
+	req := one(dir, Picture{ObjectID: "kix.one", Ext: ".png", Bytes: []byte("first")})
+	req.Tabs = []Tab{{ID: "t.0", Title: "Scope"}, {ID: "t.1", Title: "Appendix"}}
+
+	l, err := Plan(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The second tab's path appears between the plan and the write, which is
+	// the race the door cannot close.
+	writeText(t, l.Files[1].Path, "somebody else got there first\n")
+
+	_, err = Write(l, []TabFile{
+		{TabID: "t.0", Body: "one\n"},
+		{TabID: "t.1", Body: "two\n"},
+	})
+	if err == nil {
+		t.Fatal("the write did not fail, and the second path was taken")
+	}
+	for _, want := range []string{l.Files[0].Path, filepath.Join(dir, "assets", "note-1.png")} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error is %q, want it to name %s", err, want)
+		}
+	}
+}

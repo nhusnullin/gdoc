@@ -129,23 +129,58 @@ func Text(d *docs.Document) (string, []string) {
 // Project is Text with the options above. One emitter, so the read and the
 // export cannot drift into two escapings of one document.
 //
-// It walks twice, and the first walk is thrown away. A link to a heading is
-// written as "#" and goldmark's id for that heading, and goldmark takes the id
-// from the whole line, so the anchor cannot be known until the line is written:
-// a heading holding a hyperlink is "[words](url)" in the file and a heading
-// holding a chip is "[person: Ann]", and goldmark reads both, markup and all.
-// The first walk measures every heading's line, the second writes the document
-// with the anchors those lines give, and a heading whose line the walk never
-// reaches, one inside a table cell, keeps the words headingWords collected.
+// It walks until the heading lines stop moving, and every walk but the last is
+// thrown away. A link to a heading is written as "#" and goldmark's id for that
+// heading, and goldmark takes the id from the whole line, so the anchor cannot
+// be known until the line is written: a heading holding a hyperlink is
+// "[words](url)" in the file and a heading holding a chip is "[person: Ann]",
+// and goldmark reads both, markup and all. Each walk measures every heading's
+// line, the next writes the document with the anchors those lines give, and a
+// heading whose line the walk never reaches, one inside a table cell, keeps the
+// words headingWords collected.
 // TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
 //
-// The cost is one extra walk of a document already in memory, for the one
-// guarantee the export rests on: a link read out of a document is a link the
-// file resolves.
+// The walk repeats because a heading's own line can hold a link to another
+// heading, and writing that link changes the line the first heading is named
+// by. One more walk then names it correctly, and the walk after that is the
+// same document again. A document whose headings link to no heading settles on
+// the second walk, which is the cost this always paid.
+// TestAHeadingLinkInsideAHeadingStillResolves is the pin.
+//
+// The ceiling is there because a cycle of headings linking to each other need
+// never settle, and a document is not worth an unbounded number of walks. The
+// last walk's text is the answer either way: every anchor in it is the id of a
+// line some walk of this document wrote, so the file is readable, and only a
+// link inside that cycle can point at the wrong heading.
 func Project(d *docs.Document, o Options) (string, []string) {
-	_, _, lines := onePass(d, o, headingWords(d))
-	text, warnings, _ := onePass(d, o, anchors(headingWords(d), lines))
+	words := headingWords(d)
+	_, _, lines := onePass(d, o, words)
+	for i := 0; i < anchorPasses; i++ {
+		text, warnings, next := onePass(d, o, anchors(words, lines))
+		if sameLines(lines, next) {
+			return text, warnings
+		}
+		lines = next
+	}
+	text, warnings, _ := onePass(d, o, anchors(words, lines))
 	return text, warnings
+}
+
+// anchorPasses is how many times Project rewrites the document looking for the
+// heading lines to settle, after the first walk that measures them.
+const anchorPasses = 4
+
+// sameLines says whether two walks wrote every heading to the same line.
+func sameLines(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for id, line := range a {
+		if b[id] != line {
+			return false
+		}
+	}
+	return true
 }
 
 // anchors is the words each heading is named by: the line it projected to
@@ -357,10 +392,12 @@ func escape(enc string) string {
 // On a document whose tab ids are unique the two answers are the same one.
 func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 	e.events, e.cur = nil, 0
-	// The numbering and the floating objects are the tab's own, for the reason
-	// the arming below is: a list id names one list per tab, and an object id
-	// names one object per tab.
-	e.nums, e.objects = map[string]int{}, t.Positioned
+	// The numbering, the columns it lines up with and the floating objects are
+	// the tab's own, for the reason the arming below is: a list id names one
+	// list per tab, and an object id names one object per tab. A column left
+	// behind by an earlier tab would indent this tab's orphan sub-list against
+	// a list that is not in it.
+	e.nums, e.cols, e.objects = map[string]int{}, map[string]int{}, t.Positioned
 	cut := e.cut(t.Body)
 	for _, id := range sortedIDs(d.CommentRanges) {
 		r := d.CommentRanges[id]

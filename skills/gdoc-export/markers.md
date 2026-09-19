@@ -60,6 +60,11 @@ Inside a link's words a `[` is escaped as well, because an unescaped one there
 breaks the link. Inside a table row a `|` the author typed is escaped, because an
 unescaped one is a column boundary.
 
+A marker can sit inside a link's words: a comment anchored over hyperlinked
+words reads `[[[c:ID]]words[[/c]]](target)`. The brackets a marker is made of
+are gdoc's, so step over the whole marker when you are deciding where the link's
+words start and end. The link's own brackets are the unescaped ones left.
+
 ## How a session undoes each one
 
 **A pending insertion, `{+words+}[s:ID]`.** Somebody proposed adding these words

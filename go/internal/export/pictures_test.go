@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"gdoc/internal/docs"
 	"gdoc/internal/docx"
@@ -301,5 +303,32 @@ func write(t *testing.T, path string, b []byte) {
 	t.Helper()
 	if err := os.WriteFile(path, b, 0o644); err != nil {
 		t.Fatalf("%s could not be written: %v", path, err)
+	}
+}
+
+// TestANotePictureIsOnlyEverAReadOfARegularFile: the ceiling this read states
+// is a fact about a regular file's size, and about nothing else. A note that
+// links a device node or a pipe would otherwise read until the machine runs
+// out of memory, or block the command for ever, on a stat that said nothing.
+func TestANotePictureIsOnlyEverAReadOfARegularFile(t *testing.T) {
+	dir := t.TempDir()
+	fifo := filepath.Join(dir, "pipe.png")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Skipf("this filesystem makes no fifo: %v", err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, warnings := NotePictures([]byte("![](pipe.png)\n"), dir)
+		if len(warnings) != 1 || !strings.Contains(warnings[0], "pipe.png") {
+			t.Errorf("the warnings read %v, and one of them names pipe.png", warnings)
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the read of a fifo did not come back: it is waiting for a writer that will never come")
 	}
 }
