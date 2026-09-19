@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -143,21 +142,13 @@ func indented(t *testing.T, raw json.RawMessage) []byte {
 	return pretty.Bytes()
 }
 
-// recordFile saves one answer under testdata/. What it writes is a real
-// document's real content: it is read and redacted by a person before it is
-// committed, and the log line says so rather than leaving it to be discovered
-// in a diff.
+// recordFile saves one answer under this package's testdata/. The writing and
+// the warning are recordAt's, in export_measure_test.go, because the
+// measurement records into the export package's testdata and the two would
+// otherwise be the same eight lines twice.
 func recordFile(t *testing.T, name string, body []byte) {
 	t.Helper()
-	dir := "testdata"
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, body, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("recorded %s: this is a real document's content, so redact it before committing it", path)
+	recordAt(t, "testdata", name, body)
 }
 
 // The write test's own variables and the folder it creates in.

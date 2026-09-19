@@ -321,12 +321,12 @@ Test only; Nail runs it by hand at any point, and Task 13 writes its answers.
 - Create: `go/internal/live/export_measure_test.go`
 - Modify: `go/internal/live/doc.go`
 
-- [ ] `doc.go` names `GDOC_LIVE_EXPORT_DOC_ID`: a document Nail makes by hand
+- [x] `doc.go` names `GDOC_LIVE_EXPORT_DOC_ID`: a document Nail makes by hand
       in the test folder holding, in this order, one inline PNG picture
       uploaded from `body/testdata/`'s pictures note, one Google Drawing, one
       floating picture, and a second tab titled `Appendix` with one picture.
       The read test creates nothing.
-- [ ] `TestLiveExportMeasurements`, gated on `GDOC_LIVE_TEST` and the id:
+- [x] `TestLiveExportMeasurements`, gated on `GDOC_LIVE_TEST` and the id:
       reads the Docs JSON with `includeTabsContent`, lists every inline and
       positioned object id in body order per tab; fetches the docx export,
       lists every `r:embed` in `word/document.xml` order with the media part
@@ -336,18 +336,18 @@ Test only; Nail runs it by hand at any point, and Task 13 writes its answers.
       objects in the JSON's first tab and second tab. It fails only when the
       export or the read fails; the facts are printed, not asserted, because
       they are the measurement.
-- [ ] `TestLiveExportMeasurements` also saves the Docs read and the docx zip
+- [x] `TestLiveExportMeasurements` also saves the Docs read and the docx zip
       under `go/internal/export/testdata/fixture-measured/` when
       `GDOC_LIVE_RECORD=1`, the way the read test records.
-- [ ] `doc.go` also names `GDOC_LIVE_PUBLISHED_DOC_ID` and
+- [x] `doc.go` also names `GDOC_LIVE_PUBLISHED_DOC_ID` and
       `GDOC_LIVE_RESTYLED_DOC_ID`: a document `publish` made and one `restyle`
       styled with `--fields`, both in the test folder. With `GDOC_LIVE_RECORD=1`
       the test saves their Docs reads under
       `go/internal/export/testdata/publish-prelude/` and `restyle-prelude/`,
       so Task 7's strip goldens rest on real documents.
-- [ ] `cd go && go test -race ./internal/live/` compiles and skips without the
+- [x] `cd go && go test -race ./internal/live/` compiles and skips without the
       variables.
-- [ ] `git commit -m "test(live): the three export measurements, printed not asserted"`
+- [x] `git commit -m "test(live): the three export measurements, printed not asserted"`
 
 ### Task 2: the block is a list of documents, and every writer acts on the entry the URL names
 

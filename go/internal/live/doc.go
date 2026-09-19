@@ -42,6 +42,16 @@
 //   - GDOC_LIVE_ANCHOR_DOC_ID: the document the anchors test copies.
 //   - GDOC_LIVE_PRELUDE_DOC_ID: the document the prelude acceptance copies.
 //   - GDOC_LIVE_ACCEPTED_DOC_ID: the probe document Nail has accepted by hand.
+//   - GDOC_LIVE_EXPORT_DOC_ID: the document M13's measurement reads both ways.
+//     Nail makes it by hand in the test folder, and it holds, in this order,
+//     one inline PNG picture uploaded from the pictures note under
+//     internal/body/testdata/docs, one Google Drawing, one floating picture,
+//     and a second tab titled Appendix with one picture in it. The
+//     measurement creates nothing and writes nothing to Drive.
+//   - GDOC_LIVE_PUBLISHED_DOC_ID: a document publish made, in the test folder.
+//   - GDOC_LIVE_RESTYLED_DOC_ID: a document restyle styled with --fields, in
+//     the test folder. Those two are read only under GDOC_LIVE_RECORD, for the
+//     two prelude fixtures the export's strip rests on.
 //
 // # GDOC_LIVE_RECORD writes somebody's document into testdata
 //
@@ -49,6 +59,13 @@
 // the docx export into testdata/. Those bytes are a real document's content,
 // so a person redacts them before they are committed. The recording the
 // measured anchors fixture was modelled on is gitignored for that reason.
+//
+// The measurement below records elsewhere, because what it saves is another
+// package's fixture: the read and the export of GDOC_LIVE_EXPORT_DOC_ID go
+// under internal/export/testdata/fixture-measured/, and the reads of
+// GDOC_LIVE_PUBLISHED_DOC_ID and GDOC_LIVE_RESTYLED_DOC_ID go under
+// publish-prelude/ and restyle-prelude/ beside it. The same warning holds:
+// they are somebody's document until a person has read them.
 //
 // # The read test creates nothing
 //
@@ -145,7 +162,20 @@
 // say the anchors survived and the suggestion ids are there; whether the cover
 // reads right is Nail's, in the document. Trash them once you have looked.
 //
-// # One test here asks for no network at all
+// # The export measurement asserts nothing
+//
+// TestLiveExportMeasurements is M13's, and it is the one test here that is a
+// measurement and nothing else. It reads GDOC_LIVE_EXPORT_DOC_ID through the
+// Docs API and through the docx export and prints the two lists of pictures
+// side by side: the object ids in body order per tab against the media parts
+// in word/document.xml order, the sha256 of each media part against the
+// pictures the fixture was uploaded from, and the count of w:drawing against
+// each tab's own count. It fails when a read or an export fails and on
+// nothing else, because the three answers are Google's and a test that
+// asserted them would be deciding what it was sent to find out. Task 13 of
+// M13 writes them into MEASURED.md.
+//
+// # Two tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -153,4 +183,9 @@
 // otherwise be found by Nail in the middle of a live run rather than by the
 // suite. It is the pin, and it is in publish_test.go beside the tests it
 // covers.
+//
+// TestTheMeasurementReadsTheFixtureItPairsAgainst is the same pin for the
+// measurement, in export_measure_test.go: it compares what Drive sends back
+// against the pictures on this disk, so a picture that moved out of
+// internal/body/testdata/docs is found by the suite instead.
 package live
