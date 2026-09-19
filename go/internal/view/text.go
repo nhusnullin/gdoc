@@ -11,6 +11,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/parser"
+
 	"gdoc/internal/docs"
 )
 
@@ -762,15 +765,39 @@ func headingWords(d *docs.Document) map[string]string {
 	return out
 }
 
-// Slug is a heading's words as a link target: lower case, every run of
-// characters that are neither letters nor digits one hyphen, and nothing else.
-// It is the rule the note's own heading ids follow, so a link into the document
-// reads back as the link a note held.
+// Anchor is a heading's words as the id a link to it names. It is goldmark's
+// own heading id rule, asked of goldmark rather than written out again here,
+// because the ids internal/body collects are the ids goldmark made: a second
+// copy of the rule is the copy that drifts, and a link whose target is one
+// character off is a link `publish` prints as plain text.
 //
-// It is exported because internal/export takes the house number off a heading
-// and has to move the links that pointed at it: "1-Scope" and "Scope" are two
-// slugs, and a second copy of this rule there would be the one that drifted.
-// TestAHeadingLinkRoundTripsToItsSlug is the pin.
+// The rule is not Slug's. goldmark keeps ASCII letters and digits, turns each
+// space, hyphen and underscore into one hyphen, and drops everything else,
+// accented letters included. So "Risk & Control" is "risk--control" and
+// "Résumé" is "rsum". Two rules that look alike and are not is why this one is
+// asked rather than copied. TestTheAnchorViewWritesIsTheIDBodyCollects, which
+// asks goldmark for the answer rather than stating one, is the pin, and
+// TestAHeadingLinkRoundTripsToItsSlug is the same rule seen from the file.
+//
+// A fresh generator each call, so the answer is these words' own id and never
+// carries the "-1" goldmark adds to a heading it has already seen. Two headings
+// with the same words share an anchor and a link to the second lands on the
+// first, which is what markdown itself does with them.
+func Anchor(s string) string {
+	return string(parser.NewContext().IDs().Generate([]byte(s), ast.KindHeading))
+}
+
+// Slug is a heading's words as a file name: lower case, every run of
+// characters that are neither letters nor digits one hyphen, and nothing else.
+// It keeps a letter Go calls a letter, so a tab titled "Résumé" is a file
+// called "résumé" rather than a file called nothing.
+//
+// It is exported because internal/export names a further tab's file by its
+// title and a second copy of the rule there would be the one that drifted.
+// TestTabSlugsCollide is the pin.
+//
+// It is not the rule a heading id follows. That rule is goldmark's, and it is
+// Anchor.
 func Slug(s string) string {
 	var b strings.Builder
 	gap := false
@@ -1032,7 +1059,7 @@ func (e *emitter) target(l *docs.Link) string {
 		return l.URL
 	case l.HeadingID != "":
 		if words := e.headings[l.HeadingID]; words != "" {
-			return "#" + Slug(words)
+			return "#" + Anchor(words)
 		}
 		return "#" + l.HeadingID
 	case l.BookmarkID != "":

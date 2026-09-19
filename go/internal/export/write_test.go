@@ -269,6 +269,46 @@ func TestNothingCanReplaceAFile(t *testing.T) {
 	}
 }
 
+// TestAFailedStampIsAWarningAndTheFilesAreStillNamed is the note changing under
+// the run. The stamp reads it fresh for exactly this reason, so a stamp that
+// cannot be made is a fact about the note and not a failed export: everything
+// the command went out for is on disk by then, and an error there would print
+// an answer naming none of it. The next run would then write the whole export
+// again under the next free number, because nothing here replaces a file.
+func TestAFailedStampIsAWarningAndTheFilesAreStillNamed(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "note.md")
+	writeText(t, path, note(testDocID))
+
+	l, err := Plan(one(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The session that started this export took the block out of the note
+	// while the two reads were in the air.
+	writeText(t, path, "---\ntitle: The scope\n---\n\n# Scope\n")
+
+	w, err := Write(l, []TabFile{{TabID: "t.0", TabTitle: "Scope", Body: "# Scope\n\nThe document's words.\n"}})
+	if err != nil {
+		t.Fatalf("the stamp failed and took the whole run with it: %v", err)
+	}
+	if len(w.Files) != 1 {
+		t.Fatalf("Files = %+v, want the one copy this run wrote", w.Files)
+	}
+	if _, err := os.Stat(w.Files[0].Path); err != nil {
+		t.Fatalf("the answer names %s and it is not on disk: %v", w.Files[0].Path, err)
+	}
+	if len(w.Stamped) != 0 {
+		t.Errorf("Stamped = %+v, want nothing: the note could not be stamped", w.Stamped)
+	}
+	if len(w.Warnings) != 1 || !strings.Contains(w.Warnings[0], "gdoc: block") {
+		t.Fatalf("Warnings = %v, want one warning naming what happened to the note", w.Warnings)
+	}
+	if !strings.Contains(w.Warnings[0], "on disk") {
+		t.Errorf("the warning does not say the files are there: %s", w.Warnings[0])
+	}
+}
+
 // TestExportStampsTheNoteAndChangesNoOtherByte is scenario 2: the note is left
 // as it stands but for one dated fact, and the copy lands beside it knowing
 // which note it belongs to.

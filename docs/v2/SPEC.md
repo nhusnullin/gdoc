@@ -370,7 +370,9 @@ list numbering, and the docx export, which carries the picture bytes. It opens
 no host the guard does not already open and asks for no grant.
 
 **One file per tab.** The first tab lands at `--out`, each further tab beside it
-as `<stem>-<tab title>.md`, slugged the way a heading id is. Pictures follow
+as `<stem>-<tab title>.md`, the title lower-cased with every run of characters
+that are neither letters nor digits as one hyphen. It is not the heading id
+rule, which is goldmark's and drops an accented letter. Pictures follow
 their own tab.
 
 **Nothing is overwritten, and no flag could.** A taken path takes the next free

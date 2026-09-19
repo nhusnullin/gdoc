@@ -112,6 +112,7 @@ func cmdExport(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}
 	}
+	notes = append(notes, written.Warnings...)
 	for _, s := range written.Stamped {
 		notes = append(notes, rewritten(s.Path, s.SchemaRewritten)...)
 	}

@@ -72,6 +72,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds |
 | 2026-09-18 | Five backlog items closed, and what each decided | holds |
 | 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds |
+| 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2558,3 +2559,40 @@ stays at `v2.0.0`.
 name. The review skill answers such a comment with one reply saying so, which
 keeps the rule that a comment is a prompt into the hub and not a way to write
 files somebody did not ask for.
+
+
+## 2026-09-19. A heading link is goldmark's id. A file name is gdoc's own slug.
+
+Found in review of milestone 13, measured rather than argued.
+
+`export` writes a link to a heading in the same file as `#` and the heading's
+words run through a slug rule. `publish` resolves such a link by looking the
+target up in the ids goldmark gave the note's headings. The two rules were not
+the same rule. `view.Slug` collapsed a run of punctuation to one hyphen and kept
+an accented letter; goldmark writes one hyphen per space, hyphen or underscore,
+drops every other character, and drops a letter that is not ASCII. So
+"Risk & Control" was `risk-control` on the way out and `risk--control` on the
+way back, and "Résumé" was `résumé` and `rsum`. A file exported from a document
+with such a heading published back with that link printed as plain text and a
+warning, which is the round trip `gdoc-align` exists to make.
+
+**The heading id rule is goldmark's, and gdoc asks goldmark for it.**
+`view.Anchor` calls goldmark's own id generator rather than restating what it
+does. A rule restated in two places is one rule until somebody changes one of
+them, and the cost of that drift is a link nobody notices is gone.
+`TestTheAnchorViewWritesIsTheIDBodyCollects` asks goldmark for the answer and
+compares it with `view.Anchor`, so a goldmark that changes its mind fails in
+this repository rather than in somebody's document.
+
+**A tab's file name stays `view.Slug`.** A file name is gdoc's own choice and
+nothing reads it back, so the rule that keeps an accented letter is the better
+one there: a tab titled "Résumé" is a file called `résumé`, not `rsum`. The spec
+said a tab file is slugged the way a heading id is; that sentence is now wrong
+and says instead what the rule is. The two rules are named apart in
+`internal/view`, and neither doc comment claims to be the other.
+
+**Two headings with the same words still share an anchor.** goldmark adds `-1`
+to the second, and there is nothing in a heading's words for `view.Anchor` to
+tell the two apart with. A link to the second lands on the first, which is what
+markdown does with them anyway. It is noted in `view.Anchor` rather than worked
+around.

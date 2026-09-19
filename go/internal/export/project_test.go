@@ -202,16 +202,40 @@ func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
 
 // TestAHeadingLinkRoundTripsToItsSlug is the link into the document as the
 // note writes one. The two headings are the shapes 05-edge-cases.md holds: an
-// ampersand between two spaces, and accents.
+// ampersand between two spaces, and accents. Both are goldmark's answer and
+// not the file-name slug's: goldmark writes one hyphen per space and drops a
+// letter it does not call ASCII, so these two are the headings that tell the
+// rules apart. TestTheAnchorViewWritesIsTheIDBodyCollects is the other half,
+// which asks goldmark itself rather than a literal.
 func TestAHeadingLinkRoundTripsToItsSlug(t *testing.T) {
 	files, _, _ := Project(fixture(t, "headings.json"), nil)
 
 	for _, want := range []string{
-		"[Risk & Control <ampersands>](#risk-control-ampersands)",
-		"[the changes](#résumé-of-änderungen-naïve-café)",
+		"[Risk & Control <ampersands>](#risk--control-ampersands)",
+		"[the changes](#rsum-of-nderungen-nave-caf)",
 	} {
 		if !strings.Contains(files[0].Body, want) {
 			t.Errorf("%s is not in the file:\n%s", want, files[0].Body)
+		}
+	}
+}
+
+// TestRepointDoesNotChainRewrites is two headings whose numbers come off into
+// each other: "1-2024-Report" becomes "2024-Report", which is what the second
+// heading was called before its own number came off. A rewrite per entry of the
+// map would run the second rule over what the first wrote, and Go's map order
+// would decide which answer the file carried, so the same document exported
+// twice would differ. One pass answers each link once.
+func TestRepointDoesNotChainRewrites(t *testing.T) {
+	md := "# 1-2024-Report\n\nSee [the report](#1-2024-report).\n\n# 2024-Report\n\nSee [the other](#2024-report).\n"
+
+	for i := 0; i < 50; i++ {
+		got, _ := stripHeadingNumbers(md)
+		if !strings.Contains(got, "[the report](#2024-report)") {
+			t.Fatalf("run %d moved the first link somewhere else:\n%s", i, got)
+		}
+		if !strings.Contains(got, "[the other](#report)") {
+			t.Fatalf("run %d moved the second link somewhere else:\n%s", i, got)
 		}
 	}
 }

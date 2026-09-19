@@ -5,6 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/yuin/goldmark/text"
+
+	"gdoc/internal/view"
 )
 
 // TestBookmarkNameIsWordSafe pins the rewrite, which is wider than anything
@@ -254,4 +258,45 @@ func TestAHeadingInsideAFootnoteIsNoAnchor(t *testing.T) {
 	if !has(out.Warnings, want) {
 		t.Errorf("the warnings are %v, want one reading %q", out.Warnings, want)
 	}
+}
+
+// TestTheAnchorViewWritesIsTheIDBodyCollects is the round trip the export and
+// align skills rest on. `gdoc export` writes a link to a heading in the same
+// file as "#" and view.Anchor of the heading's words; this package resolves
+// such a link by looking its target up in headingAnchors, which holds the ids
+// goldmark made. The two have to be one rule, so this test asks goldmark for
+// the answer rather than stating one: a goldmark that changes its mind fails
+// here rather than in somebody's document.
+//
+// The headings are the shapes that tell a hand-written slug rule from this one:
+// punctuation between two spaces, two separators in a row, accents, a colon,
+// and words that are only punctuation.
+func TestTheAnchorViewWritesIsTheIDBodyCollects(t *testing.T) {
+	for _, heading := range []string{
+		"Scope",
+		"Risk & Control <ampersands>",
+		"Résumé of Änderungen: naïve café",
+		"Hello -- world",
+		"1-Scope",
+		"Data, privacy and retention",
+		"under_score and space",
+		"+++",
+	} {
+		source := []byte("# " + heading + "\n")
+		ids := headingAnchors(parse().Parser().Parse(text.NewReader(source)), source)
+
+		if anchor := view.Anchor(heading); !ids[anchor] {
+			t.Errorf("the heading %q is %v to goldmark and %q to view.Anchor",
+				heading, anchorNames(ids), anchor)
+		}
+	}
+}
+
+// anchorNames is the ids a map holds, for a failure to name.
+func anchorNames(ids map[string]bool) []string {
+	out := make([]string, 0, len(ids))
+	for id := range ids {
+		out = append(out, id)
+	}
+	return out
 }

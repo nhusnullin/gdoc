@@ -87,7 +87,9 @@
 // A note built from a file that kept those numbers and published again would be
 // numbered twice over, "1-1-Scope", so the prefix comes off and is listed as a
 // piece. The links that pointed at that heading move with it, through
-// view.Slug, which is the one copy of the slug rule.
+// view.Anchor, which is goldmark's own heading id rule and so is the rule the
+// note's links will be resolved by. One pass over the targets moves them, not
+// one pass per heading: TestRepointDoesNotChainRewrites.
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks and
 // TestTheHeadingNumberIsTheHouseSeparator are the pins, the second stating
 // house.yaml's own format as a literal.
@@ -237,8 +239,9 @@
 // the whole run rather than leaving half a document in the hub:
 // TestTheDoorChecks and TestATabPathIsCheckedLikeOut.
 //
-// A further tab's file is <stem>-<title slugged>.md through view.Slug, the one
-// slug rule; a tab whose title slugs to nothing is tab-<n> by its position,
+// A further tab's file is <stem>-<title slugged>.md through view.Slug, which
+// is the file-name rule and not the heading id rule; a tab whose title slugs to
+// nothing is tab-<n> by its position,
 // and two tabs with one title take the numbering rule like any other taken
 // name. TestTabSlugsCollide is the pin.
 package export

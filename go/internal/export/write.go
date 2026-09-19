@@ -104,10 +104,15 @@ type Layout struct {
 }
 
 // Written is what one export put on disk.
+//
+// Warnings is what went wrong after the files existed, which is the stamp and
+// only the stamp. A note that was not stamped is a fact about the note, not a
+// failed export: the files are there and the answer names them.
 type Written struct {
 	Files    []Placed
 	Pictures []Picture
 	Stamped  []Stamp
+	Warnings []string
 }
 
 // Plan decides where every file of this export lands and refuses what it must
@@ -192,6 +197,15 @@ func (l *Layout) PictureNames() PictureNames {
 // The pictures go first, so a file that exists always has the pictures its
 // text names, and the stamp goes last, because it is the only thing here that
 // touches a file somebody else wrote.
+//
+// A stamp that fails is a warning and not an error. Everything this command
+// went out for is on disk by then, and the stamp reads the note fresh precisely
+// because a session may have changed it while the export ran, so the failure is
+// one this code expects. Returning an error there would print an envelope that
+// names none of the files that now exist, and `export` has no --force and
+// replaces nothing, so the run somebody tries next writes the whole export a
+// second time under the next free number.
+// TestAFailedStampIsAWarningAndTheFilesAreStillNamed is the pin.
 func Write(l *Layout, files []TabFile) (*Written, error) {
 	if l == nil {
 		return nil, fmt.Errorf("export: nothing was planned, so there is nothing to write")
@@ -233,7 +247,9 @@ func Write(l *Layout, files []TabFile) (*Written, error) {
 		}
 		s, err := stamp(filepath.Join(l.dir, placed.Note), l.documentID, l.at)
 		if err != nil {
-			return nil, err
+			w.Warnings = append(w.Warnings, err.Error()+
+				", and the files this export wrote are on disk and named in this answer")
+			continue
 		}
 		w.Stamped = append(w.Stamped, s)
 	}

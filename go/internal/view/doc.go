@@ -227,13 +227,17 @@
 //
 // The words are the document's own and the target is where they point: the
 // address for a link out of the document, and "#" with the heading's own words
-// slugged for a link to a heading inside it. The slug is the rule a note's own
-// heading ids follow, so a link read out of a document and the link a note wrote
-// are the same string, which is what lets a session compare the two without
-// translating either. TestALinkPrintsItsTarget and links.golden are the pins.
+// as an anchor for a link to a heading inside it. The anchor rule is goldmark's,
+// asked of goldmark in Anchor rather than written out again, because the ids
+// internal/body resolves a note's links against are the ids goldmark made: a
+// link read out of a document and the link a note wrote are then the same
+// string, which is what lets a session compare the two without translating
+// either. TestALinkPrintsItsTarget, links.golden and
+// TestTheAnchorViewWritesIsTheIDBodyCollects are the pins.
 //
 // A heading this document does not hold, and a bookmark, are named by their id.
-// There are no words to slug for either: a bookmark is a place with no title,
+// There are no words to make an anchor from for either: a bookmark is a place
+// with no title,
 // and a heading in a tab the read did not cover has no text here. A link naming
 // only a tab has no target at all, so its words print alone rather than pointing
 // at a guess, because a tab is another document rather than a place in this text.

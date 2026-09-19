@@ -335,7 +335,7 @@ func stripHeadingNumbers(md string) (string, []Piece) {
 		numbered, words := m[2]+headingNumberSeparator+m[3], m[3]
 		lines[i] = m[1] + words
 		out = append(out, Piece{Kind: PieceHeadingNumber, Text: numbered})
-		if from, to := view.Slug(numbered), view.Slug(words); from != to {
+		if from, to := view.Anchor(numbered), view.Anchor(words); from != to {
 			moved[from] = to
 		}
 	}
@@ -371,12 +371,29 @@ func keptNumbers(tab, md string) []string {
 }
 
 // repoint moves the links that pointed at a heading the number came off. The
-// target is the heading's own words slugged, so a heading that loses "1-" loses
-// it from every link into it as well, and a file whose links land nowhere is
-// not a file a session can merge.
+// target is the heading's own words as an anchor, so a heading that loses "1-"
+// loses it from every link into it as well, and a file whose links land nowhere
+// is not a file a session can merge.
+//
+// One pass over the targets, not one pass per entry of the map. Sequential
+// replacements chain: a document where one heading's new anchor is another
+// heading's old one has the second rule rewrite what the first just wrote, and
+// which of the two answers comes out is Go's map order, so the same document
+// exports differently on two runs. TestRepointDoesNotChainRewrites is the pin.
 func repoint(md string, moved map[string]string) string {
-	for from, to := range moved {
-		md = strings.ReplaceAll(md, "](#"+from+")", "](#"+to+")")
+	if len(moved) == 0 {
+		return md
 	}
-	return md
+	return headingLink.ReplaceAllStringFunc(md, func(m string) string {
+		from := m[len("](#") : len(m)-1]
+		if to, ok := moved[from]; ok {
+			return "](#" + to + ")"
+		}
+		return m
+	})
 }
+
+// headingLink is a markdown link whose target is a place in this file. The
+// projection writes every one of them itself, so the shape is known: "](#",
+// the target, and the closing bracket, with no parentheses inside.
+var headingLink = regexp.MustCompile(`\]\(#[^()]*\)`)
