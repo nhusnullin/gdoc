@@ -1,6 +1,6 @@
 ---
 worth: yes
-where: skills/gdoc-publish/SKILL.md:112
+where: skills/gdoc-publish/SKILL.md:83
 added: 2026-09-19
 ---
 # The publish skill says nothing about a note whose picture is an SVG
@@ -111,6 +111,81 @@ The browser paths by platform: the macOS app bundle above, `google-chrome`,
 `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` on
 Windows. The rsvg line was not run on 2026-09-19 because librsvg is not on
 this Mac; check its flags when writing the skill.
+
+## How the skill changes, from the experiments
+
+Sized S once the decisions below stand: one new section in `SKILL.md`, one
+script file beside it, no binary change, `needs` stays at v2.0.0.
+
+**Where.** A new `## If a picture is refused` section after `## If the
+request is a dry run` and before Step 1, in the voice of the two `If`
+sections already there. Step 1 is the wrong home: the refusal comes out of
+`build` or `publish`, not out of the front matter.
+
+**The one sentence the section must carry about publish-once.** The
+picture refusal happens on this machine before anything leaves it: no
+document was created and the note is untouched, and the error says so. So
+fixing the picture and running again is not a second publish. The section
+says that in plain words, then tells the session to run `build` to the
+scratchpad after the fix, so the note is proven acceptable with no network,
+and to run `publish` once after that. That keeps "Publish is one call"
+true as written.
+
+**The script's home.** `skills/gdoc-publish/svg2png.js`, beside `SKILL.md`,
+no subfolder. All four routes a colleague gets a skill by carry the folder
+whole: the plugin, the zip (`cp -R skills` in `release.yml`), `install.sh
+--skills` (`cp -R "$src/skills/$skill"`) and the developer symlink. No
+list has to learn the file's name. The tests that read skills touch only
+`SKILL.md` (`skills_test.go`, `plugin_test.go`), so they neither break nor
+notice; `make test` stays the gate. The skill names the script by its
+place, "beside this file, in the base directory Claude Code printed when it
+loaded this skill", never by a path, because
+`TestNoSkillNamesAPersonOrAMachinesPath` bans `/Users/` and `~/src/` and a
+colleague's checkout is not this one.
+
+**The order the section states, short on purpose.** `release/platforms`
+lists two darwin pairs and nothing else, so every colleague the release
+reaches is on a Mac and the WebKit script is the route. The section names
+one fallback, a Chromium-family browser by its app path, for a macOS that
+has dropped the legacy `WebView`, and the stop. The Linux and Windows
+lines above stay in this item and go into the skill when
+`windows-rollout-checklist.md` lands and `release/platforms` grows, not
+before.
+
+**What the session does, step by step, as the section will put it.**
+
+1. Read the refusal: it names the line and the file. Read the SVG's root
+   element for `width` and `height`; when only `viewBox` is there, take its
+   third and fourth numbers.
+2. Render with the script at scale 2 to the scratchpad first, and look at
+   the PNG before touching the hub: arrowheads present, text at the right
+   weight. The two dead ends were both discovered by looking, not by an
+   exit code.
+3. The PNG goes beside the SVG with the same stem. A PNG already there
+   under that name is a stop, not an overwrite, because the session cannot
+   know whether it is stale output or somebody's own picture.
+4. Repoint the one link on the named line from `.svg` to `.png`. The SVG
+   stays; it is the master.
+5. Run `build` to the scratchpad. A clean object means publish, once.
+6. In the reply, beside `files_changed`, say what the binary cannot: which
+   SVG, which PNG, which line was rewritten. The hub may not be under git,
+   so the reply is the only record.
+
+**The reply shape in Step 3.** One added bullet: a picture the session
+rendered is a change to the hub the binary did not make and cannot list, so
+the session lists it itself, file and line.
+
+**Rollout, which is not the skill's problem but is Nail's.** On this Mac
+`/altery:gdoc-publish` loads from the plugin cache, which holds v2.1.0
+while the latest tag is v2.3.4, and `~/.claude/skills` carries no gdoc
+links. So an edit to `skills/` reaches nobody's session, this machine
+included, until a release moves the plugin. The skill change ships with the
+next `make tag`.
+
+**Done when.** `make test` is green; a scratch note with one SVG is refused
+by `build`, the section is followed as written, and `build` then accepts
+it; the reply names the file and the line; and `docs/guide/publishing.md:62`
+gains one sentence saying the publish skill knows the route.
 
 Open edge, not for the skill to solve: the PNG is derived output living beside
 its source, and an edited SVG leaves a stale PNG and a stale document with no
