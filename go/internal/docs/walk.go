@@ -22,7 +22,12 @@ type rawDocument struct {
 	Body          *rawBody                   `json:"body"`
 	Footnotes     map[string]rawFootnote     `json:"footnotes"`
 	InlineObjects map[string]rawInlineObject `json:"inlineObjects"`
-	Tabs          []rawTab                   `json:"tabs"`
+	// Lists and PositionedObjects are the pre-tabs locations, beside the
+	// top-level body, and they are read from there for the same reason the body
+	// is: on that shape there is no tab to read them from.
+	Lists             map[string]rawList             `json:"lists"`
+	PositionedObjects map[string]rawPositionedObject `json:"positionedObjects"`
+	Tabs              []rawTab                       `json:"tabs"`
 	// NamedRanges is the pre-tabs location. Every read gdoc makes carries
 	// includeTabsContent=true, which leaves this empty and puts the ranges in
 	// the tab, so this field answers on a document written before tabs existed
@@ -47,6 +52,14 @@ type rawDocumentTab struct {
 	Body          *rawBody                   `json:"body"`
 	Footnotes     map[string]rawFootnote     `json:"footnotes"`
 	InlineObjects map[string]rawInlineObject `json:"inlineObjects"`
+	// Lists is this tab's lists, keyed by the id a bullet names. It is read per
+	// tab because the id is the tab's: two tabs may each name kix.list0 and
+	// mean two different lists, and a map read from the document would number
+	// one tab's bullets from the other tab's glyphs.
+	Lists map[string]rawList `json:"lists"`
+	// PositionedObjects is this tab's floating objects, keyed by object id. A
+	// paragraph names the ones anchored to it and carries no object itself.
+	PositionedObjects map[string]rawPositionedObject `json:"positionedObjects"`
 	// CommentAnchors is where COMMENTS_VIEW_MODE_INCLUDED puts the ranges,
 	// measured 2026-09-06 on a real document: keyed by anchorId, and each
 	// `comments[]` entry names its anchorId. The reference for documents.get
@@ -153,30 +166,64 @@ type rawFootnote struct {
 	Content    []rawElement `json:"content"`
 }
 
+// rawEmbedded is the embedded object itself, as both an inline object and a
+// positioned one carry it. The two properties are the only fields read: they
+// are what says whether this is a picture, a drawing, or something gdoc cannot
+// name.
+type rawEmbedded struct {
+	ImageProperties           json.RawMessage `json:"imageProperties"`
+	EmbeddedDrawingProperties json.RawMessage `json:"embeddedDrawingProperties"`
+}
+
 type rawInlineObject struct {
 	InlineObjectProperties struct {
-		EmbeddedObject struct {
-			ImageProperties           json.RawMessage `json:"imageProperties"`
-			EmbeddedDrawingProperties json.RawMessage `json:"embeddedDrawingProperties"`
-		} `json:"embeddedObject"`
+		EmbeddedObject rawEmbedded `json:"embeddedObject"`
 	} `json:"inlineObjectProperties"`
 }
 
+// rawPositionedObject is an object that floats: anchored to a paragraph and
+// laid out beside it rather than sitting in the text. The positioning is not
+// read, because gdoc lays nothing out and a reader is told the picture floats
+// rather than where it floats to.
+type rawPositionedObject struct {
+	PositionedObjectProperties struct {
+		EmbeddedObject rawEmbedded `json:"embeddedObject"`
+	} `json:"positionedObjectProperties"`
+}
+
+// rawList is one list, keyed in the tab by the id a bullet names. Only the
+// glyph type of each nesting level is read: it is what says whether the level
+// is numbered, and the rest of a nesting level is indentation gdoc does not
+// print.
+type rawList struct {
+	ListProperties struct {
+		NestingLevels []struct {
+			GlyphType string `json:"glyphType"`
+		} `json:"nestingLevels"`
+	} `json:"listProperties"`
+}
+
 type rawElement struct {
-	StartIndex int           `json:"startIndex"`
-	EndIndex   int           `json:"endIndex"`
-	Paragraph  *rawParagraph `json:"paragraph"`
-	Table      *rawTable     `json:"table"`
+	StartIndex      int           `json:"startIndex"`
+	EndIndex        int           `json:"endIndex"`
+	Paragraph       *rawParagraph `json:"paragraph"`
+	Table           *rawTable     `json:"table"`
+	TableOfContents *struct {
+		Content []rawElement `json:"content"`
+	} `json:"tableOfContents"`
 }
 
 type rawParagraph struct {
 	Elements       []rawParaElement `json:"elements"`
 	ParagraphStyle struct {
 		NamedStyleType string `json:"namedStyleType"`
+		HeadingID      string `json:"headingId"`
 	} `json:"paragraphStyle"`
 	Bullet *struct {
-		NestingLevel int `json:"nestingLevel"`
+		NestingLevel int    `json:"nestingLevel"`
+		ListID       string `json:"listId"`
 	} `json:"bullet"`
+	PositionedObjectIDs []string `json:"positionedObjectIds"`
 }
 
 // rawParaElement is one member of the ParagraphElement union, which the
@@ -322,8 +369,56 @@ type rawSuggested struct {
 }
 
 type rawTextRun struct {
-	Content string `json:"content"`
+	Content   string `json:"content"`
+	TextStyle struct {
+		Link *rawLink `json:"link"`
+	} `json:"textStyle"`
 	rawSuggested
+}
+
+// rawLink is where a run points. The reference documents heading and bookmark
+// as objects carrying an id and the tab the target is in, with headingId and
+// bookmarkId as the older flat spelling of the same fact, so both are read and
+// both land on the same two fields.
+type rawLink struct {
+	URL        string `json:"url"`
+	TabID      string `json:"tabId"`
+	HeadingID  string `json:"headingId"`
+	BookmarkID string `json:"bookmarkId"`
+	Heading    *struct {
+		ID    string `json:"id"`
+		TabID string `json:"tabId"`
+	} `json:"heading"`
+	Bookmark *struct {
+		ID    string `json:"id"`
+		TabID string `json:"tabId"`
+	} `json:"bookmark"`
+}
+
+// link reads the raw link into the shape a caller reads, or nothing when the
+// run points nowhere. A link naming no target at all is no link: an empty Link
+// on a run would tell a reader this text points somewhere and not where.
+func (l *rawLink) link() *Link {
+	if l == nil {
+		return nil
+	}
+	out := Link{URL: l.URL, TabID: l.TabID, HeadingID: l.HeadingID, BookmarkID: l.BookmarkID}
+	if l.Heading != nil {
+		out.HeadingID = l.Heading.ID
+		if l.Heading.TabID != "" {
+			out.TabID = l.Heading.TabID
+		}
+	}
+	if l.Bookmark != nil {
+		out.BookmarkID = l.Bookmark.ID
+		if l.Bookmark.TabID != "" {
+			out.TabID = l.Bookmark.TabID
+		}
+	}
+	if out == (Link{}) {
+		return nil
+	}
+	return &out
 }
 
 type rawInlineObjectElement struct {
@@ -345,35 +440,89 @@ type rawTable struct {
 	} `json:"tableRows"`
 }
 
-// blocks walks a body into paragraphs and tables, in reading order. An element
-// that is neither carries no text gdoc reads: a section break, a table of
-// contents Google generated, and whatever is added next.
-func blocks(content []rawElement, objs map[string]rawInlineObject) []Block {
+// body is what walking a tab's content needs of the tab around it: the two maps
+// a paragraph's pieces are looked up in. It is passed rather than read from a
+// package variable, because both maps are the tab's own and a document is a
+// list of tabs that may each name one id and mean two different things.
+type body struct {
+	objs  map[string]rawInlineObject
+	lists map[string]rawList
+}
+
+// blocks walks a body into paragraphs, tables and contents lists, in reading
+// order. An element that is none of the three carries no text gdoc reads: a
+// section break, and whatever is added next.
+func blocks(content []rawElement, b body) []Block {
 	var out []Block
 	for _, el := range content {
 		switch {
 		case el.Paragraph != nil:
-			out = append(out, Block{Paragraph: paragraph(el, objs)})
+			out = append(out, Block{Paragraph: paragraph(el, b)})
 		case el.Table != nil:
-			out = append(out, Block{Table: table(el, objs)})
+			out = append(out, Block{Table: table(el, b)})
+		case el.TableOfContents != nil:
+			// The contents list holds paragraphs, each linking to the heading
+			// it names, so it is walked like any other body.
+			out = append(out, Block{TOC: &TOC{Blocks: blocks(el.TableOfContents.Content, b)}})
 		}
 	}
 	return out
 }
 
-func paragraph(el rawElement, objs map[string]rawInlineObject) *Paragraph {
+func paragraph(el rawElement, b body) *Paragraph {
 	p := &Paragraph{
 		Style:      el.Paragraph.ParagraphStyle.NamedStyleType,
+		HeadingID:  el.Paragraph.ParagraphStyle.HeadingID,
+		Positioned: append([]string(nil), el.Paragraph.PositionedObjectIDs...),
 		StartIndex: el.StartIndex,
 		EndIndex:   el.EndIndex,
 	}
 	if el.Paragraph.Bullet != nil {
-		p.Bullet = &Bullet{NestingLevel: el.Paragraph.Bullet.NestingLevel}
+		p.Bullet = bullet(el.Paragraph.Bullet.ListID, el.Paragraph.Bullet.NestingLevel, b.lists)
 	}
 	for _, e := range el.Paragraph.Elements {
-		p.Runs = append(p.Runs, run(e, objs))
+		p.Runs = append(p.Runs, run(e, b.objs))
 	}
 	return p
+}
+
+// bullet reads one paragraph's list membership, with the glyph of its own level
+// of its own list.
+//
+// A list the tab does not hold, and a level the list does not describe, leave
+// the glyph empty rather than failing the read: what the document says about
+// this paragraph is that it is an item at that depth, and the marker it is
+// drawn with is the part that went missing. A reader then prints a bullet,
+// which is what it printed for every list before this.
+func bullet(listID string, level int, lists map[string]rawList) *Bullet {
+	out := &Bullet{NestingLevel: level, ListID: listID}
+	levels := lists[listID].ListProperties.NestingLevels
+	if listID == "" || level < 0 || level >= len(levels) {
+		return out
+	}
+	glyph := levels[level].GlyphType
+	// GLYPH_TYPE_UNSPECIFIED is Docs saying this level is not numbered, and it
+	// is the answer's own word for it rather than an absence.
+	if glyph == "" || glyph == "GLYPH_TYPE_UNSPECIFIED" {
+		return out
+	}
+	out.Glyph = glyph
+	out.Ordered = true
+	return out
+}
+
+// objects reads a tab's floating objects, each with the kind an inline object
+// is read with. An empty map stays nil: a tab with no floating object carries
+// no map, rather than an empty one a reader has to tell from a missing one.
+func objects(raw map[string]rawPositionedObject) map[string]Object {
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make(map[string]Object, len(raw))
+	for id, o := range raw {
+		out[id] = Object{ID: id, Kind: objectKind(o.PositionedObjectProperties.EmbeddedObject)}
+	}
+	return out
 }
 
 // run reads one paragraph element. Every element becomes a run, including one
@@ -393,9 +542,10 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 	case e.TextRun != nil:
 		r.Kind = KindText
 		r.Text = e.TextRun.Content
+		r.Link = e.TextRun.TextStyle.Link.link()
 		r.InsertionIDs, r.DeletionIDs = e.TextRun.ids()
 	case e.InlineObjectElement != nil:
-		r.Kind = objectKind(objs[e.InlineObjectElement.InlineObjectID])
+		r.Kind = objectKind(objs[e.InlineObjectElement.InlineObjectID].InlineObjectProperties.EmbeddedObject)
 		r.InsertionIDs, r.DeletionIDs = e.InlineObjectElement.ids()
 	case e.FootnoteReference != nil:
 		r.Kind = KindFootnoteRef
@@ -470,11 +620,11 @@ func (s rawSuggested) ids() (insertions, deletions []string) {
 // objectKind says what an embedded object is, by the properties it carries. An
 // object with neither is reported as an object: what it is, is a fact gdoc does
 // not have.
-func objectKind(o rawInlineObject) string {
+func objectKind(o rawEmbedded) string {
 	switch {
-	case len(o.InlineObjectProperties.EmbeddedObject.EmbeddedDrawingProperties) > 0:
+	case len(o.EmbeddedDrawingProperties) > 0:
 		return KindDrawing
-	case len(o.InlineObjectProperties.EmbeddedObject.ImageProperties) > 0:
+	case len(o.ImageProperties) > 0:
 		return KindImage
 	}
 	return KindObject
@@ -484,12 +634,12 @@ func objectKind(o rawInlineObject) string {
 // than from anything inside it, which is what makes a table inside a cell carry
 // its own: a nested table is an element of that cell's content, walked by the
 // same two functions.
-func table(el rawElement, objs map[string]rawInlineObject) *Table {
+func table(el rawElement, b body) *Table {
 	out := &Table{StartIndex: el.StartIndex, Rows: make([][]Cell, 0, len(el.Table.TableRows))}
 	for _, row := range el.Table.TableRows {
 		cells := make([]Cell, 0, len(row.TableCells))
 		for _, c := range row.TableCells {
-			cells = append(cells, Cell{Blocks: blocks(c.Content, objs)})
+			cells = append(cells, Cell{Blocks: blocks(c.Content, b)})
 		}
 		out.Rows = append(out.Rows, cells)
 	}
@@ -501,15 +651,24 @@ func table(el rawElement, objs map[string]rawInlineObject) *Table {
 // body has its own projection, in internal/view.
 func plainText(bs []Block) string {
 	var b strings.Builder
+	writePlain(&b, bs)
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// writePlain is the walk itself, trimming nothing. A contents block holds
+// paragraphs, so it is walked into; trimming inside that walk would eat the
+// newline between the last entry and the text after it.
+func writePlain(b *strings.Builder, bs []Block) {
 	for _, blk := range bs {
-		if blk.Paragraph == nil {
-			continue
-		}
-		for _, r := range blk.Paragraph.Runs {
-			b.WriteString(r.Text)
+		switch {
+		case blk.TOC != nil:
+			writePlain(b, blk.TOC.Blocks)
+		case blk.Paragraph != nil:
+			for _, r := range blk.Paragraph.Runs {
+				b.WriteString(r.Text)
+			}
 		}
 	}
-	return strings.TrimRight(b.String(), "\n")
 }
 
 // commentRanges reads the top-level comments array of the Docs response.

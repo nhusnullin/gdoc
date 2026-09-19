@@ -1,0 +1,66 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789list",
+  "title": "Two lists, and a second tab that numbers its own",
+  "revisionId": "ALm37BXlists",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "Numbered", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 13, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listone", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 1, "endIndex": 13, "textRun": {"content": "First step\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 13, "endIndex": 25, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listone", "nestingLevel": 1, "textStyle": {}},
+            "elements": [
+              {"startIndex": 13, "endIndex": 25, "textRun": {"content": "A substep\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 25, "endIndex": 37, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listtwo", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 25, "endIndex": 37, "textRun": {"content": "A bullet\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 37, "endIndex": 49, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 37, "endIndex": 49, "textRun": {"content": "Prose.\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "lists": {
+          "kix.listone": {"listProperties": {"nestingLevels": [
+            {"glyphType": "DECIMAL", "glyphFormat": "%0.", "indentFirstLine": {"magnitude": 18, "unit": "PT"}},
+            {"glyphType": "ALPHA", "glyphFormat": "%1.", "indentFirstLine": {"magnitude": 54, "unit": "PT"}}
+          ]}},
+          "kix.listtwo": {"listProperties": {"nestingLevels": [
+            {"glyphType": "GLYPH_TYPE_UNSPECIFIED", "glyphSymbol": "●", "glyphFormat": "%0"}
+          ]}}
+        }
+      }
+    },
+    {
+      "tabProperties": {"tabId": "t.1", "title": "Bulleted", "index": 1},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 13, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.listone", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 1, "endIndex": 13, "textRun": {"content": "A bullet\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "lists": {
+          "kix.listone": {"listProperties": {"nestingLevels": [
+            {"glyphSymbol": "●", "glyphFormat": "%0"}
+          ]}}
+        }
+      }
+    }
+  ]
+}

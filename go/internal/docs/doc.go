@@ -124,6 +124,76 @@
 // DECISIONS.md, 2026-09-09. TestTheDroppedElementsFixtureNamesAllSeven and
 // TestTheSevenElementsDecodeIntoRuns are the pins.
 //
+// # A link is a fact about a run, and it is read from the reference
+//
+// A text run's textStyle.link says where that text points, and Run.Link carries
+// it as one of four targets: a URL outside the document, a heading id, a
+// bookmark id, or a tab. The reference documents heading and bookmark as
+// objects carrying an id and the tab the target is in, with headingId and
+// bookmarkId as the older flat spelling, so both forms are read into the same
+// two fields and a tab id beside either of them says which tab that target is
+// in. A run pointing nowhere carries no Link at all: an empty one would tell a
+// reader this text points somewhere and not where.
+//
+// It is read on a text run and on nothing else. The three chips carry their
+// own target in Detail already, and a picture that is a link is printed as a
+// placeholder either way, so a link there would be a field with no reader.
+// testdata/links.json is written from the reference, the way elements.json is,
+// and stays a hypothesis until a live read agrees with it.
+// TestARunCarriesItsLinkTarget and TestALinkInItsNestedFormIsTheSameFact are
+// the pins.
+//
+// # A bullet names its list, and the tab's lists name the glyph
+//
+// Bullet carried the nesting level alone, which is all a reader printing "- "
+// needs. Numbering needs two more facts: which list the item is in, so two
+// adjacent lists are not counted as one, and whether that level of that list is
+// numbered at all. The second sits in the tab's lists map, under the id the
+// bullet names, at the item's own nesting level, as a glyphType.
+//
+// The map is read per tab, not per document. The id is the tab's own, two tabs
+// may each name kix.list0 and mean two different lists, and a document-wide map
+// would number one tab's bullets from the other tab's glyphs. Glyph is the
+// answer's own glyphType, passed through rather than translated, and Ordered is
+// the one question asked of it: GLYPH_TYPE_UNSPECIFIED is Docs saying this
+// level is not numbered. A list the tab does not hold, or a level the list does
+// not describe, leaves both empty rather than failing the read, and the reader
+// prints the bullet it printed before. testdata/lists.json is written from the
+// reference, and TestABulletCarriesItsListAndGlyph is the pin, with
+// TestAParagraphCarriesItsHeadingID over the heading id a link points at.
+//
+// # The contents element is a block, because it is a boundary
+//
+// blocks() dropped tableOfContents with the section breaks, as an element
+// carrying no text gdoc reads. It carries the text of every heading in the
+// document, and more than that it is where the house prelude ends: a document
+// publish made opens with the cover, three tables and this list, and export
+// strips to the end of it. A dropped element is a boundary nothing downstream
+// can name.
+//
+// So Block gains a third member, TOC, holding its entries walked as an ordinary
+// body: each is a paragraph linking to the heading it names. plainText walks
+// into it for the same reason. Nothing prints it yet, because internal/view
+// walks Paragraph and Table and steps over anything else, which is why the five
+// goldens did not move when this landed. testdata/toc.json is written from the
+// reference, and TestATableOfContentsIsABlock is the pin.
+//
+// # A floating object is named by its paragraph and held by its tab
+//
+// A picture that floats is not in the text at all: the paragraph it is anchored
+// to names it in positionedObjectIds, and the object sits in the tab's
+// positionedObjects map. Both halves are read, Paragraph.Positioned and
+// Tab.Positioned, because two paragraphs can name one object and the answer
+// keys them in the tab. The kind is read the way an inline object's is, off the
+// same embeddedObject, so a floating picture and an inline one answer the same
+// question the same way.
+//
+// The positioning itself, the layout and the two offsets, is not read: gdoc
+// lays nothing out, and a reader is told the picture floats rather than where
+// it floats to. Before this the object was in no part of the tree and read said
+// nothing at all about it. testdata/positioned.json is written from the
+// reference, and TestAPositionedObjectIsCarriedOnItsParagraph is the pin.
+//
 // # Named ranges are keyed by id, and they live in the tab
 //
 // NamedRange is {id, name, tab, ranges}, Document.NamedRanges is every one of

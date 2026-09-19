@@ -71,36 +71,80 @@ type Tab struct {
 	// one document reads the same way twice. Docs keys them by name in a map,
 	// and a map is walked in no order.
 	NamedRanges []NamedRange `json:"named_ranges,omitempty"`
+	// Positioned is this tab's floating objects, by object id. A paragraph
+	// names the ones anchored to it in Paragraph.Positioned, and the object
+	// itself sits here, because two paragraphs can name one object and the
+	// answer keys them in the tab. TestAPositionedObjectIsCarriedOnItsParagraph
+	// is the pin.
+	Positioned map[string]Object `json:"positioned,omitempty"`
 	// anchors is the tab's commentAnchors, by anchorId, each already carrying
 	// this tab's id. Unexported: it feeds CommentRanges and is not part of the
 	// structure a caller reads.
 	anchors map[string]Range
 }
 
-// Block is one element of a body: either a paragraph or a table, never both and
-// never neither. Everything else Docs puts in a body (a section break, a table
-// of contents) carries no text gdoc reads, so the walk drops it.
+// Object is an embedded object the body points at rather than holds: a picture
+// or a drawing that floats, anchored to a paragraph and laid out beside it.
+// Kind is one of the run kinds, read the same way an inline object's is, so a
+// floating picture and an inline one answer the same question the same way.
+type Object struct {
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// Block is one element of a body: a paragraph, a table or a contents list,
+// never two of them and never none. Everything else Docs puts in a body, a
+// section break today, carries no text gdoc reads, so the walk drops it.
 type Block struct {
 	Paragraph *Paragraph `json:"paragraph,omitempty"`
 	Table     *Table     `json:"table,omitempty"`
+	TOC       *TOC       `json:"toc,omitempty"`
+}
+
+// TOC is the contents list Docs generates and keeps in step with the headings.
+// Its entries are paragraphs, each linking to the heading it names, so they are
+// walked like any other body. TestATableOfContentsIsABlock is the pin.
+//
+// It is a block rather than dropped because it is the end of the house prelude:
+// a document publish made carries the cover, the tables and this list, and
+// export strips to the end of it. A dropped element is a boundary nothing can
+// name.
+type TOC struct {
+	Blocks []Block `json:"blocks"`
 }
 
 // Paragraph is a run of text with one named style. Style is the document's own
 // namedStyleType (HEADING_1, TITLE, NORMAL_TEXT and the rest), passed through
 // rather than translated: what a style means is the reader's business.
 type Paragraph struct {
-	Style      string  `json:"style"`
-	Bullet     *Bullet `json:"bullet,omitempty"`
-	Runs       []Run   `json:"runs"`
-	StartIndex int     `json:"start_index"`
-	EndIndex   int     `json:"end_index"`
+	Style  string  `json:"style"`
+	Bullet *Bullet `json:"bullet,omitempty"`
+	// HeadingID is the id a link to this heading names. It is empty on an
+	// ordinary paragraph, and on a heading nothing links to.
+	HeadingID string `json:"heading_id,omitempty"`
+	Runs      []Run  `json:"runs"`
+	// Positioned are the floating objects anchored to this paragraph, in the
+	// order the answer named them. The objects themselves are in Tab.Positioned.
+	Positioned []string `json:"positioned,omitempty"`
+	StartIndex int      `json:"start_index"`
+	EndIndex   int      `json:"end_index"`
 }
 
-// Bullet is the list membership of a paragraph. The nesting level is the only
-// fact the text projection needs; which list it belongs to changes nothing gdoc
-// prints.
+// Bullet is the list membership of a paragraph: which list, how deep, and what
+// that depth of that list is marked with.
+//
+// The list id is what makes numbering possible. A reader counting items has to
+// know where one list ends and the next begins, and two adjacent numbered lists
+// look like one long list without it. Glyph is the document's own glyphType,
+// passed through rather than translated, and Ordered is the one question the
+// projection asks of it: a glyph type Docs names is a number of some kind, and
+// GLYPH_TYPE_UNSPECIFIED is Docs saying this list is not numbered.
+// TestABulletCarriesItsListAndGlyph is the pin.
 type Bullet struct {
-	NestingLevel int `json:"nesting_level"`
+	NestingLevel int    `json:"nesting_level"`
+	ListID       string `json:"list_id,omitempty"`
+	Ordered      bool   `json:"ordered,omitempty"`
+	Glyph        string `json:"glyph,omitempty"`
 }
 
 // Table is one table: where it starts, and its rows of cells in reading order.
@@ -132,7 +176,22 @@ type Run struct {
 	InsertionIDs []string `json:"insertion_ids,omitempty"`
 	DeletionIDs  []string `json:"deletion_ids,omitempty"`
 	FootnoteID   string   `json:"footnote_id,omitempty"`
+	Link         *Link    `json:"link,omitempty"`
 	Detail       *Detail  `json:"detail,omitempty"`
+}
+
+// Link is where a run of text points. One of the four fields says what kind of
+// target it is, and a run pointing nowhere carries no Link at all.
+//
+// URL is an address outside the document. HeadingID and BookmarkID name a
+// place inside it, and TabID beside either of them says which tab that place
+// is in. TabID alone is a link to a tab. TestARunCarriesItsLinkTarget and
+// TestALinkInItsNestedFormIsTheSameFact are the pins.
+type Link struct {
+	URL        string `json:"url,omitempty"`
+	HeadingID  string `json:"heading_id,omitempty"`
+	BookmarkID string `json:"bookmark_id,omitempty"`
+	TabID      string `json:"tab_id,omitempty"`
 }
 
 // Detail is what a run that is not text carries besides its position: the
@@ -385,12 +444,14 @@ func Parse(raw []byte) (*Document, error) {
 		// ranges sit beside that body, at the top level, and are read from
 		// there for the same reason the body is: on this shape there is no tab
 		// to read either of them from.
+		b := body{objs: r.InlineObjects, lists: r.Lists}
 		d.Tabs = append(d.Tabs, Tab{
 			ID:          defaultTabID,
-			Body:        blocks(r.Body.content(), r.InlineObjects),
+			Body:        blocks(r.Body.content(), b),
 			NamedRanges: namedRanges(r.NamedRanges, defaultTabID),
+			Positioned:  objects(r.PositionedObjects),
 		})
-		d.addFootnotes(r.Footnotes, r.InlineObjects)
+		d.addFootnotes(r.Footnotes, b)
 	}
 	d.CommentRanges, d.Unplaced = commentRanges(r.Comments, d.Tabs)
 	if len(d.Footnotes) == 0 {
@@ -408,9 +469,11 @@ func (d *Document) appendTab(t rawTab) {
 		tab.ID = defaultTabID
 	}
 	if t.DocumentTab != nil {
-		tab.Body = blocks(t.DocumentTab.Body.content(), t.DocumentTab.InlineObjects)
+		b := body{objs: t.DocumentTab.InlineObjects, lists: t.DocumentTab.Lists}
+		tab.Body = blocks(t.DocumentTab.Body.content(), b)
 		tab.NamedRanges = namedRanges(t.DocumentTab.NamedRanges, tab.ID)
-		d.addFootnotes(t.DocumentTab.Footnotes, t.DocumentTab.InlineObjects)
+		tab.Positioned = objects(t.DocumentTab.PositionedObjects)
+		d.addFootnotes(t.DocumentTab.Footnotes, b)
 		for anchorID, a := range t.DocumentTab.CommentAnchors {
 			if len(a.Ranges) == 0 {
 				continue // an anchor with no range places nothing; the comment stays unplaced
@@ -430,8 +493,8 @@ func (d *Document) appendTab(t rawTab) {
 // addFootnotes records each footnote's text under its id. The text is what the
 // footnote says, with the trailing newline of its last paragraph dropped,
 // because the reader prints it as a line of its own.
-func (d *Document) addFootnotes(fns map[string]rawFootnote, objs map[string]rawInlineObject) {
+func (d *Document) addFootnotes(fns map[string]rawFootnote, b body) {
 	for id, fn := range fns {
-		d.Footnotes[id] = plainText(blocks(fn.Content, objs))
+		d.Footnotes[id] = plainText(blocks(fn.Content, b))
 	}
 }

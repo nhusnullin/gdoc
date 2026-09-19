@@ -1,0 +1,47 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789toc0",
+  "title": "A contents list Docs generated",
+  "revisionId": "ALm37BXtoc",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 14, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "TITLE"},
+            "elements": [
+              {"startIndex": 1, "endIndex": 14, "textRun": {"content": "The policy\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 14, "endIndex": 48, "tableOfContents": {
+            "suggestedInsertionIds": [],
+            "suggestedDeletionIds": [],
+            "content": [
+              {"startIndex": 14, "endIndex": 30, "paragraph": {
+                "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                "elements": [
+                  {"startIndex": 14, "endIndex": 30, "textRun": {
+                    "content": "1-Scope\n",
+                    "textStyle": {"link": {"headingId": "h.scope"}}
+                  }}
+                ]}},
+              {"startIndex": 30, "endIndex": 48, "paragraph": {
+                "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                "elements": [
+                  {"startIndex": 30, "endIndex": 48, "textRun": {
+                    "content": "2-Who decides\n",
+                    "textStyle": {"link": {"headingId": "h.whodecides"}}
+                  }}
+                ]}}
+            ]
+          }},
+          {"startIndex": 48, "endIndex": 57, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "HEADING_1", "headingId": "h.scope"},
+            "elements": [
+              {"startIndex": 48, "endIndex": 57, "textRun": {"content": "1-Scope\n", "textStyle": {}}}
+            ]}}
+        ]}
+      }
+    }
+  ]
+}

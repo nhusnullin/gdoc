@@ -1,0 +1,42 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789posi",
+  "title": "Two pictures that float",
+  "revisionId": "ALm37BXpositioned",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 30, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "positionedObjectIds": ["kix.posone", "kix.postwo"],
+            "elements": [
+              {"startIndex": 1, "endIndex": 30, "textRun": {"content": "The chart sits beside this.\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 30, "endIndex": 44, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 30, "endIndex": 44, "textRun": {"content": "Plain prose.\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "positionedObjects": {
+          "kix.posone": {
+            "objectId": "kix.posone",
+            "positionedObjectProperties": {
+              "positioning": {"layout": "WRAP_TEXT", "leftOffset": {"magnitude": 72, "unit": "PT"}, "topOffset": {"magnitude": 36, "unit": "PT"}},
+              "embeddedObject": {"imageProperties": {"contentUri": "https://lh3.googleusercontent.com/y"}}
+            }
+          },
+          "kix.postwo": {
+            "objectId": "kix.postwo",
+            "positionedObjectProperties": {
+              "positioning": {"layout": "BREAK_LEFT"},
+              "embeddedObject": {"embeddedDrawingProperties": {}}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

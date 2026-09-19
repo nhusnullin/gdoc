@@ -506,25 +506,25 @@ Serves decision 10 and the spec's "The file". Scenarios 4, 9, 19.
   `go/internal/docs/testdata/lists.json`, `go/internal/docs/testdata/toc.json`,
   `go/internal/docs/testdata/positioned.json`
 
-- [ ] Test first, `TestARunCarriesItsLinkTarget`: fixtures written from the
+- [x] Test first, `TestARunCarriesItsLinkTarget`: fixtures written from the
       API reference for `url`, `headingId`, `bookmarkId` and `tabId`; each
       lands on `Run.Link`; a run with no link has nil. Watch it fail.
-- [ ] Test, `TestABulletCarriesItsListAndGlyph`: a `lists` map with an
+- [x] Test, `TestABulletCarriesItsListAndGlyph`: a `lists` map with an
       ordered and an unordered list; `Bullet.ListID`, `Ordered`, `Glyph`,
       `Level` per paragraph; the map is read per tab.
-- [ ] Test, `TestAParagraphCarriesItsHeadingID`.
-- [ ] Test, `TestATableOfContentsIsABlock`: the element lands as `Block.TOC`
+- [x] Test, `TestAParagraphCarriesItsHeadingID`.
+- [x] Test, `TestATableOfContentsIsABlock`: the element lands as `Block.TOC`
       with its paragraphs, and `plainText` includes them.
-- [ ] Test, `TestAPositionedObjectIsCarriedOnItsParagraph`: the paragraph
+- [x] Test, `TestAPositionedObjectIsCarriedOnItsParagraph`: the paragraph
       lists the id; the tab carries the object with its kind.
-- [ ] Implement the four decodes. Nothing else in the tree changes yet
+- [x] Implement the four decodes. Nothing else in the tree changes yet
       (`view` prints nothing new until Task 6).
-- [ ] `doc.go`: a section per new fact, each saying it is written from the
+- [x] `doc.go`: a section per new fact, each saying it is written from the
       reference until a live read agrees, naming the test, the way the
       seven-elements fixture is described.
-- [ ] `cd go && go test -race ./internal/docs/ ./internal/view/` passes with
+- [x] `cd go && go test -race ./internal/docs/ ./internal/view/` passes with
       the five goldens unchanged.
-- [ ] `git commit -m "feat(docs): links, list numbering, the contents element and floating objects"`
+- [x] `git commit -m "feat(docs): links, list numbering, the contents element and floating objects"`
 
 ### Task 6: read prints links and numbers, and escapes across runs
 
