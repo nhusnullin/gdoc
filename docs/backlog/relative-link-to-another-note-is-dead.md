@@ -1,5 +1,5 @@
 ---
-worth: later
+worth: yes
 where: go/internal/body/build.go:295
 added: 2026-09-19
 ---
@@ -16,25 +16,24 @@ note carries a few dead links at the bottom.
 Seen 2026-09-19 in the Bridge sales-deck note, whose four Related links all
 point at other hub notes by relative path.
 
-`later` because the value decision is open, not the work. Three shapes, and
-none is obviously right:
+## Decision, Nail, 2026-09-19
 
-- Print the words as plain text and warn naming the line, which is how a code
-  block and a dead `#` anchor are already refused. Cheap and honest; the
-  reader loses the pointer to the other note, which was the point of the
-  section.
-- Rewrite the link to the other note's own Drive document, when the other
-  note has been published. That needs the `gdoc:` block of the other file,
-  read from the note's directory the way a relative picture path already is,
-  and a rule for a note that has no block yet. It makes publish order matter.
-- Keep the file name as plain text and append nothing. The Related section
-  reads as a list of note names, which is what a colleague in Drive can search
-  the hub for.
+Keep the file name as plain text. Related is hub navigation: a colleague
+reading in Drive is not meant to follow it, only to know which notes sit
+beside this one, and a note name is what they can search the hub for. So a
+link whose destination is a relative path, no scheme and no leading `#`, is
+written as its words with no hyperlink, no relationship and no `Media` entry,
+and no warning, because nothing is wrong with the note.
 
-The unknown that settles it: whether a colleague reading in Drive should be
-able to follow a Related link at all, or whether Related is hub navigation
-that has no meaning outside the hub. That is a question about what Related is
-for, not about the docx.
+Rejected: refusing it with a warning the way a dead `#` anchor is refused,
+because the note is correct and the author has nothing to fix; and rewriting
+it to the other note's Drive document from its `gdoc:` block, because it
+makes publish order matter and needs a rule for a note not yet published.
 
-`TestALinkIsAHyperlinkWithARelationship` in `body/body_test.go:323` states the
-current behaviour.
+The one open edge: a relative path that is not a note, such as a folder
+(`202608-eagle-money-flow/`). Same rule, plain words, since the docx cannot
+reach it either.
+
+`TestALinkIsAHyperlinkWithARelationship` in `body/body_test.go:323` states
+the current behaviour, and `TestAnEmailAutolinkCarriesTheMailtoScheme` beside
+it is the shape the test for a scheme-less destination takes.
