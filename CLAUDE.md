@@ -154,12 +154,13 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestMarkdownNamesWhatDocsWouldRenderLiterally`.
 - **Identity is never a gate.** Whose account wrote a comment decides nothing.
   The marker decides.
-- **Skills are linked, not copied.** `~/.claude/skills/gdoc-review`,
-  `gdoc-publish` and `gdoc-restyle` are symlinks into `skills/`, so an edit is
-  live the moment it is saved and before it is committed. `./install.sh` prints
+- **Skills are linked, not copied.** The five folders under `skills/`,
+  `gdoc-align`, `gdoc-export`, `gdoc-publish`, `gdoc-restyle` and `gdoc-review`,
+  are symlinked into `~/.claude/skills/`, so an edit is live the moment it is
+  saved and before it is committed. `./install.sh` prints
   `+ uncommitted changes` on a dirty tree, refuses to replace a real directory
   whose contents differ, and is safe to re-run after any move. A colleague gets
-  the same three through the plugin in `.claude-plugin/`, which the hub's
+  the same five through the plugin in `.claude-plugin/`, which the hub's
   committed `.claude/settings.json` declares as a marketplace with auto-update
   on, and the one route that copies a folder is `release/install.sh --skills`,
   which marks what it wrote. Nothing in the binary copies a skill.

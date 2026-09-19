@@ -31,10 +31,39 @@ const headingNumberSeparator = "-"
 // heading's own words behind it.
 var numberedHeading = regexp.MustCompile(`^(#{1,6} )([0-9]+(?:\.[0-9]+)*)` + headingNumberSeparator + `(\S.*)$`)
 
+// route is which shape recognised this tab, and it answers one question beside
+// the strip: whether the numbers in front of the headings are gdoc's own.
+//
+// Only publish writes those numbers, and a document publish made comes back
+// through the layout shape alone. A restyle writes none: heading numbering is
+// out of that route for its own reasons, which internal/prelude's doc.go
+// states. So a "1-" in a document wearing the marker is text somebody typed.
+type route int
+
+const (
+	// routeNone is a tab holding nothing that looks like a house prelude.
+	routeNone route = iota
+	// routeMarker is the restyle shape: gdoc's own named range.
+	routeMarker
+	// routeLayout is the publish shape: the house layout in front of the
+	// first body heading. The one route whose heading numbers are gdoc's.
+	routeLayout
+	// routeUnsure is a tab that looks like a house document and does not
+	// match: nothing is stripped and the warning names what stayed.
+	routeUnsure
+)
+
 // stripPrelude says which of this tab's blocks are the house prelude, what
-// each piece of it held, and what it could not recognise.
+// each piece of it held, what it could not recognise, and which shape
+// recognised it.
 //
 // Two shapes, and a third that strips nothing.
+//
+// A refused marker is the third on its own. When gdoc's own record of the
+// prelude is there and cannot be read, falling back to the layout would guess
+// at exactly the span that is in doubt, so nothing is stripped and no number
+// comes off. That is what keeps the restyle rule true: a document restyle made
+// never loses a heading number, whether its marker reads or not.
 //
 // A document restyle made carries gdoc's own named range over its prelude, and
 // that range is the answer: the blocks inside it go. A document publish made
@@ -49,9 +78,13 @@ var numberedHeading = regexp.MustCompile(`^(#{1,6} )([0-9]+(?:\.[0-9]+)*)` + hea
 // cover alone, and what comes back is the whole document with a warning naming
 // what stood there. Stripping on a guess would take somebody's own front page
 // out of their note, and nothing puts it back.
-func stripPrelude(t docs.Tab, m *prelude.Marker) (func(docs.Block) bool, []Piece, []string) {
+func stripPrelude(t docs.Tab, m *prelude.Marker, refused bool) (func(docs.Block) bool, []Piece, []string, route) {
 	if m != nil {
-		return byMarker(t, *m)
+		skip, cut, w := byMarker(t, *m)
+		return skip, cut, w, routeMarker
+	}
+	if refused {
+		return nil, nil, nil, routeUnsure
 	}
 	return byLayout(t)
 }
@@ -83,24 +116,42 @@ func byMarker(t docs.Tab, m prelude.Marker) (func(docs.Block) bool, []Piece, []s
 // byLayout is the publish shape: the span from the body's start to the end of
 // the contents list, when the three house tables stand in front of the first
 // level-one heading.
-func byLayout(t docs.Tab) (func(docs.Block) bool, []Piece, []string) {
+func byLayout(t docs.Tab) (func(docs.Block) bool, []Piece, []string, route) {
 	toc := firstTOC(t.Body)
 	if toc < 0 {
 		// No contents list is no house prelude. A document gdoc never touched
 		// is the common case, and it is not a warning: there is nothing here
 		// that looks like a prelude at all.
-		return nil, nil, nil
+		return nil, nil, nil, routeNone
 	}
-	heading := firstHeading(t.Body)
-	tables := countTables(t.Body[:min(heading, len(t.Body))])
+	heading, ok := firstHeading(t.Body)
+	if !ok {
+		// A house document always opens its body with a level-one heading, so
+		// a tab with none is not one. Without that heading the span in front
+		// of it is the whole tab, every table in the document counts as a
+		// house table, and what came out of somebody's note would be their own
+		// front page.
+		//
+		// A note holding no heading at all is the case this gives up on: it is
+		// published with the whole house prelude and no Heading 1 behind it,
+		// so its prelude stays in the file and the warning names it. Counting
+		// the tables over the span in front of the contents list instead would
+		// strip the front page of a document whose own three tables stand
+		// there, which is the loss this guard exists to refuse.
+		cut := t.Body[:toc+1]
+		return nil, nil, []string{fmt.Sprintf(
+			"tab %s holds a contents list and no level-one heading, so gdoc cannot tell a house prelude from the document's own front page: nothing was stripped, and what stands in front of that list is %s",
+			t.ID, describe(pieces(cut)))}, routeUnsure
+	}
+	tables := countTables(t.Body[:heading])
 	if toc > heading || tables < houseTables {
 		cut := t.Body[:toc+1]
 		return nil, nil, []string{fmt.Sprintf(
 			"tab %s holds a contents list, and the span in front of its first level-one heading holds %d of the %d house tables, so gdoc cannot tell a house prelude from the document's own front page: nothing was stripped, and what stands in front of that list is %s",
-			t.ID, tables, houseTables, describe(pieces(cut)))}
+			t.ID, tables, houseTables, describe(pieces(cut)))}, routeUnsure
 	}
 	cut := t.Body[:toc+1]
-	return skipper(cut), pieces(cut), nil
+	return skipper(cut), pieces(cut), nil, routeLayout
 }
 
 // skipper is the set of blocks to drop, by the identity of what the block
@@ -158,15 +209,16 @@ func firstTOC(bs []docs.Block) int {
 	return -1
 }
 
-// firstHeading is where the body starts: the first HEADING_1 paragraph, or the
-// end of the tab when there is none.
-func firstHeading(bs []docs.Block) int {
+// firstHeading is where the body starts: the first HEADING_1 paragraph, and
+// whether the tab holds one at all. The second answer is the one byLayout acts
+// on: a tab with no level-one heading has no span in front of it to read.
+func firstHeading(bs []docs.Block) (int, bool) {
 	for i, b := range bs {
 		if b.Paragraph != nil && b.Paragraph.Style == "HEADING_1" {
-			return i
+			return i, true
 		}
 	}
-	return len(bs)
+	return len(bs), false
 }
 
 func countTables(bs []docs.Block) int {
@@ -288,6 +340,34 @@ func stripHeadingNumbers(md string) (string, []Piece) {
 		}
 	}
 	return repoint(strings.Join(lines, "\n"), moved), out
+}
+
+// keptNumbers names the headings that still open the way a house number does,
+// for a tab whose prelude gdoc could not recognise. It changes nothing: it says
+// what is in the file, because the warning about the prelude that stayed is
+// about the front page alone and the session reading it decides about these
+// too.
+//
+// It is a fact and not a verdict, and the wording is the whole of the care
+// here. The shape it matches is digits and the house separator, which is what
+// "2024-2025 Budget" and "1-on-1 meetings" open with as well, and this route is
+// reached by any tab holding a contents list that did not match the house
+// layout, most of them documents gdoc never touched. So it says what the
+// headings look like and names the one thing that would make them gdoc's, and
+// leaves that to the session, which knows where the document came from. A tab
+// whose headings open with no digits raises nothing.
+func keptNumbers(tab, md string) []string {
+	_, numbers := stripHeadingNumbers(md)
+	if len(numbers) == 0 {
+		return nil
+	}
+	texts := make([]string, 0, len(numbers))
+	for _, p := range numbers {
+		texts = append(texts, p.Text)
+	}
+	return []string{fmt.Sprintf(
+		"tab %s keeps %d headings opening with digits and %q (%s): gdoc takes a number off only where the layout shape recognised publish's prelude, so these are house numbers if gdoc publish wrote this document, and the author's own words if it did not",
+		tab, len(numbers), headingNumberSeparator, strings.Join(texts, ", "))}
 }
 
 // repoint moves the links that pointed at a heading the number came off. The

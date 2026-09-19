@@ -10,6 +10,7 @@ import (
 	"gdoc/internal/docs"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/house"
+	"gdoc/internal/prelude"
 )
 
 // fixture parses a recorded Docs answer. The prelude fixtures are this
@@ -153,13 +154,35 @@ func TestARestyledPreludeIsStrippedOverItsNamedRange(t *testing.T) {
 func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
 	files, pieces, warnings := Project(fixture(t, "edited-prelude.json"), nil)
 
-	for _, p := range pieces {
-		if p.Kind != PieceHeadingNumber {
-			t.Errorf("a prelude nothing recognised stripped a %s", p.Kind)
-		}
+	if len(pieces) != 0 {
+		t.Errorf("a prelude nothing recognised stripped %v", kinds(pieces))
 	}
 	if !strings.Contains(files[0].Body, "Altery Group") {
 		t.Errorf("the cover is gone from a document nothing recognised:\n%s", files[0].Body)
+	}
+	// The numbers stay with the cover, because the shape that recognises them
+	// as gdoc's own is the shape that did not match.
+	if !strings.Contains(files[0].Body, "# 1-Scope") {
+		t.Errorf("the heading number came off a prelude nothing recognised:\n%s", files[0].Body)
+	}
+	kept := ""
+	for _, w := range warnings {
+		if strings.Contains(w, "headings opening with digits") {
+			kept = w
+		}
+	}
+	if kept == "" {
+		t.Fatalf("nothing named the heading numbers that stayed: %v", warnings)
+	}
+	for _, want := range []string{"1-Scope", "1.1-Out of scope", "2-Who decides"} {
+		if !strings.Contains(kept, want) {
+			t.Errorf("the warning does not name %q: %s", want, kept)
+		}
+	}
+	// The same warning is raised on documents gdoc never published, so it may
+	// not call the digits gdoc's own: it names what would make them so.
+	if !strings.Contains(kept, "if gdoc publish wrote this document") {
+		t.Errorf("the warning calls the numbers the house's without asking where the document came from: %s", kept)
 	}
 	found := ""
 	for _, w := range warnings {
@@ -322,5 +345,193 @@ func TestAPictureIsWrittenWhereItStands(t *testing.T) {
 		if strings.Contains(w, "an image at index") {
 			t.Errorf("a picture that was written is still a warning: %s", w)
 		}
+	}
+}
+
+// para is one paragraph of one style, holding one run of text.
+func para(style, text string) docs.Block {
+	return docs.Block{Paragraph: &docs.Paragraph{
+		Style: style,
+		Runs:  []docs.Run{{Kind: docs.KindText, Text: text + "\n", StartIndex: 1, EndIndex: 1 + len([]rune(text)) + 1}},
+	}}
+}
+
+// TestAPlainDocumentKeepsAHeadingThatOpensWithANumber is the heading number
+// rule held to the documents it is about. "2024-2025 Budget" is a heading
+// somebody wrote, not a number publish put there, and taking the "2024-" off
+// it would delete the author's own words with nothing to put them back.
+func TestAPlainDocumentKeepsAHeadingThatOpensWithANumber(t *testing.T) {
+	d := &docs.Document{ID: "doc", Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		para("HEADING_1", "2024-2025 Budget"),
+		para("HEADING_2", "1-on-1 meetings"),
+		para("NORMAL_TEXT", "Prose."),
+	}}}}
+	files, pieces, _ := Project(d, nil)
+	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
+		if !strings.Contains(files[0].Body, want) {
+			t.Errorf("%q lost its own words:\n%s", want, files[0].Body)
+		}
+	}
+	for _, p := range pieces {
+		t.Errorf("a document with no house prelude was stripped of a %s (%q)", p.Kind, p.Text)
+	}
+}
+
+// TestARestyledDocumentKeepsAHeadingThatOpensWithANumber is the heading number
+// rule held to the other route in. A document restyle made wears gdoc's marker
+// over its prelude and none of its headings were numbered by gdoc: heading
+// numbering is out of the restyle route, which internal/prelude's doc.go
+// states. So "2024-2025 Budget" there is somebody's own words, the same as in a
+// document gdoc never touched.
+func TestARestyledDocumentKeepsAHeadingThatOpensWithANumber(t *testing.T) {
+	at := func(style, text string, start int) docs.Block {
+		return docs.Block{Paragraph: &docs.Paragraph{
+			Style:      style,
+			StartIndex: start,
+			Runs:       []docs.Run{{Kind: docs.KindText, Text: text + "\n", StartIndex: start, EndIndex: start + len([]rune(text)) + 1}},
+		}}
+	}
+	d := &docs.Document{ID: "doc", Tabs: []docs.Tab{{
+		ID: "t.0",
+		NamedRanges: []docs.NamedRange{{
+			ID: "kix.marker1", Name: prelude.MarkerName, Tab: "t.0",
+			Ranges: []docs.Range{{Tab: "t.0", Start: 1, End: 20}},
+		}},
+		Body: []docs.Block{
+			at("TITLE", "Altery Group", 1),
+			at("HEADING_1", "2024-2025 Budget", 40),
+			at("HEADING_2", "1-on-1 meetings", 80),
+			at("NORMAL_TEXT", "Prose.", 120),
+		},
+	}}}
+	files, pieces, _ := Project(d, nil)
+	if strings.Contains(files[0].Body, "Altery Group") {
+		t.Errorf("the marked prelude is still in the file:\n%s", files[0].Body)
+	}
+	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
+		if !strings.Contains(files[0].Body, want) {
+			t.Errorf("%q lost its own words:\n%s", want, files[0].Body)
+		}
+	}
+	for _, p := range pieces {
+		if p.Kind == PieceHeadingNumber {
+			t.Errorf("a restyled document was stripped of a heading number (%q)", p.Text)
+		}
+	}
+}
+
+// TestATabWithNoLevelOneHeadingIsNotAPrelude is the layout rule's other edge.
+// The span in front of the first level-one heading is the whole tab when there
+// is no such heading, so every table in the document would be counted as a
+// house table and somebody's own front page would come out of their note.
+func TestATabWithNoLevelOneHeadingIsNotAPrelude(t *testing.T) {
+	table := docs.Block{Table: &docs.Table{Rows: [][]docs.Cell{{{Blocks: []docs.Block{
+		para("NORMAL_TEXT", "a cell"),
+	}}}}}}
+	d := &docs.Document{ID: "doc", Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		para("TITLE", "Somebody's own front page"),
+		docs.Block{TOC: &docs.TOC{Blocks: []docs.Block{para("NORMAL_TEXT", "Scope")}}},
+		para("HEADING_2", "Scope"),
+		table, table, table,
+	}}}}
+	files, pieces, warnings := Project(d, nil)
+	if !strings.Contains(files[0].Body, "Somebody's own front page") {
+		t.Errorf("the front page is gone from a document nothing recognised:\n%s", files[0].Body)
+	}
+	if len(pieces) != 0 {
+		t.Errorf("pieces = %v, want nothing stripped", pieces)
+	}
+	found := ""
+	for _, w := range warnings {
+		if strings.Contains(w, "nothing was stripped") {
+			found = w
+		}
+	}
+	if found == "" {
+		t.Fatalf("nothing warned about the prelude that stayed: %v", warnings)
+	}
+	if !strings.Contains(found, "no level-one heading") {
+		t.Errorf("the warning does not say why: %s", found)
+	}
+}
+
+// TestAPlainDocumentWithAContentsListIsNotToldItsNumbersAreTheHouses holds the
+// wording of the kept-numbers warning to the documents that reach it. A tab
+// with a contents list and no house tables is the common foreign shape, so the
+// warning may not tell the session reading it that "2024-2025 Budget" opens
+// with a number gdoc wrote: the words are the author's until the session says
+// the document came from publish.
+func TestAPlainDocumentWithAContentsListIsNotToldItsNumbersAreTheHouses(t *testing.T) {
+	d := &docs.Document{ID: "doc", Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		para("TITLE", "Somebody's own budget"),
+		{TOC: &docs.TOC{Blocks: []docs.Block{para("NORMAL_TEXT", "2024-2025 Budget")}}},
+		para("HEADING_1", "2024-2025 Budget"),
+		para("HEADING_2", "1-on-1 meetings"),
+	}}}}
+	files, pieces, warnings := Project(d, nil)
+
+	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
+		if !strings.Contains(files[0].Body, want) {
+			t.Errorf("%q lost its own words:\n%s", want, files[0].Body)
+		}
+	}
+	if len(pieces) != 0 {
+		t.Errorf("a document with no house prelude was stripped of %v", kinds(pieces))
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "house number") && !strings.Contains(w, "if gdoc publish wrote this document") {
+			t.Errorf("the author's own heading was called a house number: %s", w)
+		}
+	}
+}
+
+// TestARefusedMarkerStripsNothing is the restyle rule held where gdoc's own
+// record of the prelude cannot be read. Two ranges wearing the marker's name
+// is prelude's refusal, and falling back to the layout would strip the span in
+// doubt and take the heading numbers off a document restyle made, which never
+// wrote one.
+func TestARefusedMarkerStripsNothing(t *testing.T) {
+	marker := func(id string, start, end int) docs.NamedRange {
+		return docs.NamedRange{
+			ID: id, Name: prelude.MarkerName, Tab: "t.0",
+			Ranges: []docs.Range{{Tab: "t.0", Start: start, End: end}},
+		}
+	}
+	table := docs.Block{Table: &docs.Table{Rows: [][]docs.Cell{{{Blocks: []docs.Block{
+		para("NORMAL_TEXT", "a cell"),
+	}}}}}}
+	d := &docs.Document{ID: "doc", Tabs: []docs.Tab{{
+		ID:          "t.0",
+		NamedRanges: []docs.NamedRange{marker("kix.one", 1, 20), marker("kix.two", 1, 20)},
+		Body: []docs.Block{
+			para("TITLE", "Altery Group"),
+			table, table, table,
+			para("NORMAL_TEXT", "Contents"),
+			{TOC: &docs.TOC{Blocks: []docs.Block{para("NORMAL_TEXT", "1-Scope")}}},
+			para("HEADING_1", "1-Scope"),
+		},
+	}}}
+	files, pieces, warnings := Project(d, nil)
+
+	if !strings.Contains(files[0].Body, "Altery Group") {
+		t.Errorf("a prelude whose marker was refused was stripped by the layout:\n%s", files[0].Body)
+	}
+	if !strings.Contains(files[0].Body, "# 1-Scope") {
+		t.Errorf("the heading number came off under a refused marker:\n%s", files[0].Body)
+	}
+	if len(pieces) != 0 {
+		t.Errorf("pieces = %v, want nothing stripped", kinds(pieces))
+	}
+	found := ""
+	for _, w := range warnings {
+		if strings.Contains(w, "two "+prelude.MarkerName+" markers") {
+			found = w
+		}
+	}
+	if found == "" {
+		t.Fatalf("nothing named the two markers: %v", warnings)
+	}
+	if !strings.Contains(found, "nothing was stripped") {
+		t.Errorf("the warning does not say what was done: %s", found)
 	}
 }

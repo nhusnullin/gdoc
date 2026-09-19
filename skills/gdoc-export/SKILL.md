@@ -157,7 +157,14 @@ this order:
   carry: a floating picture as a placeholder comment, a footnote flattened, a
   Drawing with no PNG, a picture count that did not match, a prelude the run did
   not recognise. Read them out. A prelude warning means nothing was stripped and
-  the cover is still in the file, which is yours to take out.
+  the cover is still in the file, which is yours to take out. A second warning
+  then names the headings that open with digits and a `-`. It says nothing about
+  whose they are, and neither do you: the same warning reaches a published
+  document whose cover somebody edited and a document gdoc never touched. Read
+  the headings it names, say that `2024-2025 Budget` looks like the author's own
+  words, and ask. Take a number out only when you say `gdoc publish` wrote this
+  document. Leaving one costs a second edit; taking one out deletes words
+  nothing puts back.
 
 ## Step 4: The threads, when there are any
 

@@ -89,9 +89,11 @@ func TestLiveExportMeasurements(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// The raw answer, because the object ids this measurement counts are
-	// fields the docs package does not carry yet. Task 5 adds them; today the
-	// question is what Google sends, so the bytes are walked as they came.
+	// The raw answer, because the question here is what Google sends. The docs
+	// package carries the object ids now, in Tab.Positioned and
+	// Paragraph.Positioned, and export.Objects reads them into the same list
+	// measuredTabs builds by hand: walking the bytes as they came is what keeps
+	// this measurement independent of the walk it measures against.
 	var raw json.RawMessage
 	if err := s.GetJSON(ctx, docs.URL(id), &raw); err != nil {
 		t.Fatalf("the Docs read failed: %v", err)
@@ -338,8 +340,8 @@ type rawMeasuredProps struct {
 
 // measuredTabs walks the read into one entry per tab, each holding its objects
 // in body order: an inline object where it sits in the text, and a paragraph's
-// floating objects after that paragraph, which is the order Task 7's pairing
-// will use.
+// floating objects after that paragraph, which is the order export.Objects
+// gives the pairing.
 func measuredTabs(raw json.RawMessage) ([]measuredTab, error) {
 	var r rawMeasuredRead
 	if err := json.Unmarshal(raw, &r); err != nil {

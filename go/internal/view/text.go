@@ -427,6 +427,9 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 // A numbered item is indented by three spaces per level and a bullet by two,
 // which is the width of the marker each of them sits under.
 func (e *emitter) prefix(p *docs.Paragraph) string {
+	if p.Bullet != nil {
+		e.enter(p.Bullet)
+	}
 	if n := headingLevel(p.Style); n > 0 {
 		return strings.Repeat("#", n) + " "
 	}
@@ -447,9 +450,47 @@ func (e *emitter) number(b *docs.Bullet) int {
 	if e.nums == nil {
 		e.nums = map[string]int{}
 	}
-	key := b.ListID + "\x00" + strconv.Itoa(b.NestingLevel)
+	key := countKey(b)
 	e.nums[key]++
 	return e.nums[key]
+}
+
+// enter is the walk going down into a level of a list. Every level below the
+// one it entered starts again, because Docs draws a sub-list from one each
+// time the list goes into it. Carrying the count on would number the second
+// sub-list 3., 4. under an item the document shows as 1., 2., which is a false
+// fact about the document.
+//
+// It happens for every item of a list, whether or not that item takes a number
+// itself. One list id can hold a bulleted level above a numbered one, which is
+// what a Word multilevel list comes back as, and a heading that is also an
+// item takes no number either: if only the numbered items dropped the deeper
+// counts, a sub-list under either of those would carry on from the one before
+// it.
+func (e *emitter) enter(b *docs.Bullet) {
+	for k := range e.nums {
+		if id, level, ok := splitCount(k); ok && id == b.ListID && level > b.NestingLevel {
+			delete(e.nums, k)
+		}
+	}
+}
+
+// countKey is the counter one list holds for one nesting level.
+func countKey(b *docs.Bullet) string {
+	return b.ListID + "\x00" + strconv.Itoa(b.NestingLevel)
+}
+
+// splitCount reads a counter's key back into the list and the level it counts.
+func splitCount(key string) (string, int, bool) {
+	id, rest, ok := strings.Cut(key, "\x00")
+	if !ok {
+		return "", 0, false
+	}
+	level, err := strconv.Atoi(rest)
+	if err != nil {
+		return "", 0, false
+	}
+	return id, level, true
 }
 
 // floating prints one placeholder per object anchored to this paragraph, after
@@ -461,6 +502,21 @@ func (e *emitter) number(b *docs.Bullet) int {
 // because a floating drawing is not one, and the object id is named because that
 // is what pairs the placeholder with the bytes the docx export carries.
 func (e *emitter) floating(p *docs.Paragraph) {
+	for _, s := range e.floatingOf(p) {
+		e.chunk(s)
+	}
+}
+
+// floatingOf is what this paragraph's floating objects are written as, in
+// order, with the warning for each raised as it is built.
+//
+// It hands the pieces back rather than writing them, because a paragraph inside
+// a table cell carries them too and a chunk of its own there would land the
+// placeholder under the table instead of in the cell. internal/export counts
+// the objects on a cell's paragraphs, so a cell that printed nothing for one
+// would name a file no line of the note points at.
+func (e *emitter) floatingOf(p *docs.Paragraph) []string {
+	var out []string
 	for _, id := range p.Positioned {
 		ph, ok := placeholders[e.objects[id].Kind]
 		if !ok {
@@ -469,15 +525,18 @@ func (e *emitter) floating(p *docs.Paragraph) {
 			ph = placeholders[docs.KindObject]
 		}
 		m := "<!-- " + ph.label + ": floating, " + id + " -->"
-		e.chunk(m)
+		out = append(out, m)
 		e.warnings = append(e.warnings, fmt.Sprintf(
 			"%s floating beside the paragraph at index %d is printed as %s: %s", ph.noun, p.StartIndex, m, ph.why))
 		// The placeholder stays even when the bytes are here, because the
 		// placeholder is the one record that this picture floats beside the
 		// text rather than sitting in it, and a file on its own says nothing
 		// about that. So does the warning: what was lost is the position.
-		e.chunk(e.pictureOf(e.objects[id].Kind, id))
+		if s := e.pictureOf(e.objects[id].Kind, id); s != "" {
+			out = append(out, s)
+		}
 	}
+	return out
 }
 
 // picture is what this run is written as when it is a picture and the caller
@@ -660,6 +719,9 @@ func (e *emitter) table(t *docs.Table) {
 // cell is one table cell on one line. A cell holding two paragraphs, or a table
 // of its own, is flattened with spaces: a newline inside a cell would end the
 // row.
+//
+// A floating object anchored to one of the cell's paragraphs is written here
+// too, after that paragraph's text, for the reason floatingOf gives.
 func (e *emitter) cell(c docs.Cell) string {
 	var parts []string
 	for _, b := range c.Blocks {
@@ -667,6 +729,7 @@ func (e *emitter) cell(c docs.Cell) string {
 			if s := e.capture(func() { e.runs(b.Paragraph.Runs) }); s != "" {
 				parts = append(parts, s)
 			}
+			parts = append(parts, e.floatingOf(b.Paragraph)...)
 			continue
 		}
 		if b.Table == nil {

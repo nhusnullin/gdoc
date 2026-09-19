@@ -91,9 +91,29 @@ can tell you that somebody edited the Document Owner cell.
 
 It recognises the prelude by its position and never by its words, so an edited
 cover title still comes out. A heading somebody added inside the cover does not
-match, and then nothing is stripped at all: the whole document stays in the file
-and a warning names what stood there. Stripping on a guess would take somebody's
-own front page out of their note, and nothing puts it back.
+match, and neither does a tab with no level-one heading at all, and then nothing
+is stripped: the whole document stays in the file and a warning names what stood
+there. Stripping on a guess would take somebody's own front page out of their
+note, and nothing puts it back.
+
+The `1-` numbers come off only where the layout of a published document was
+recognised. That is the one route that wrote them: `gdoc restyle` never numbers
+a heading, so a document it styled keeps every heading as it stands, and so does
+a document with no house layout. `2024-2025 Budget` and `1-on-1 meetings` stay
+your words.
+
+The layout is a position and not a proof. A document of your own with a title
+page, three tables and a contents list in front of its first Heading 1 looks
+like a published one, so its front page is stripped and a heading prefix comes
+off with it. Nothing goes quietly: `stripped` lists every number the run took,
+with the whole heading as it stood, so you can put it back.
+
+When the prelude does not match, the numbers stay too, and a second warning
+names each heading that opens with digits and a `-`. It does not say whose they
+are, because it cannot: the same shape reaches a published document whose cover
+somebody edited and a document gdoc never touched. If `gdoc publish` wrote the
+document, take those numbers out with the cover. If it did not, they are the
+author's words and they stay.
 
 ## What it writes into your note
 
@@ -136,8 +156,8 @@ simply a taken path, and the run goes to the next free number.
     "tabs": 1,
     "multi_tab": false,
     "files": [{"path": "/Users/you/notes/supplier-register-policy.2.md",
-               "note": "supplier-register-policy.md", "taken": true}],
-    "pictures": [{"file": "/Users/you/notes/assets/supplier-register-policy-1.png"}],
+               "note": "supplier-register-policy.md"}],
+    "pictures": [{"file": "assets/supplier-register-policy-1.png"}],
     "pending": 3,
     "own": 1,
     "threads": 2,

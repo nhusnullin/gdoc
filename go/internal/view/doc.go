@@ -254,6 +254,12 @@
 // TestAFloatingObjectIsAPlaceholderAndAWarning and positioned.golden are the
 // pins.
 //
+// A paragraph inside a table cell carries them too, and the placeholder is
+// written in that cell rather than under the table: internal/export counts a
+// cell's floating objects, so a cell printing nothing for one would name a
+// picture file no line of the note points at.
+// TestAFloatingObjectInACellIsPrintedInThatCell is the pin.
+//
 // # Lists and tables
 //
 // A list item comes back as a "- " item with two spaces of indent per nesting
@@ -268,6 +274,16 @@
 // per list id because two adjacent numbered lists are one long list without it,
 // and the second one's first item would then say it is the fourth. It is per tab
 // for the reason the arming is: one list id names one list per tab.
+//
+// A deeper level starts again every time the list goes down into it, which is
+// how Docs draws a sub-list: the counters for every level below the one the
+// item sits at are dropped. Carrying them on would number the second sub-list
+// 3., 4. under an item the document shows as 1., 2. It happens on every item of
+// the list, whether or not that item takes a number itself, because one list id
+// can hold a bulleted level above a numbered one, which is what a Word
+// multilevel list comes back as.
+// TestANestedListStartsAgainEachTimeItIsEntered and
+// TestANumberedSubListUnderBulletsStartsAgain are the pins.
 //
 // An item holding no text prints nothing and still counts, so the numbers say
 // what the document shows rather than closing the gap over an item nobody typed

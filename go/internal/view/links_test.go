@@ -366,3 +366,89 @@ func until(s, shut string) int {
 	}
 	return len([]rune(s[:at+len(shut)]))
 }
+
+// A nested numbered list starts again every time the document goes down into
+// it, the way Docs draws it: the sub-list under the second item is 1. again
+// and not the count carried on from the first.
+func TestANestedListStartsAgainEachTimeItIsEntered(t *testing.T) {
+	item := func(level int, text string) docs.Block {
+		return docs.Block{Paragraph: &docs.Paragraph{
+			Style:  "NORMAL_TEXT",
+			Bullet: &docs.Bullet{ListID: "kix.one", Ordered: true, Glyph: "DECIMAL", NestingLevel: level},
+			Runs:   []docs.Run{run(text+"\n", 1)},
+		}}
+	}
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		item(0, "First"), item(1, "a"), item(1, "b"),
+		item(0, "Second"), item(1, "c"),
+	}}}}
+	got, _ := Text(d)
+	for _, want := range []string{"1. First", "   1. a", "   2. b", "2. Second", "   1. c"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("Text() =\n%s\nwant it to carry %q", got, want)
+		}
+	}
+	if strings.Contains(got, "   3. c") {
+		t.Errorf("the second sub-list carried the first one's count:\n%s", got)
+	}
+}
+
+// One list id can hold a bulleted level above a numbered one, which is what a
+// Word multilevel list comes back as. The sub-list under the second bullet
+// starts at 1. again, the same as a sub-list under a numbered item.
+func TestANumberedSubListUnderBulletsStartsAgain(t *testing.T) {
+	item := func(level int, ordered bool, text string) docs.Block {
+		glyph := "GLYPH_TYPE_UNSPECIFIED"
+		if ordered {
+			glyph = "DECIMAL"
+		}
+		return docs.Block{Paragraph: &docs.Paragraph{
+			Style:  "NORMAL_TEXT",
+			Bullet: &docs.Bullet{ListID: "kix.mixed", Ordered: ordered, Glyph: glyph, NestingLevel: level},
+			Runs:   []docs.Run{run(text+"\n", 1)},
+		}}
+	}
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		item(0, false, "First"), item(1, true, "a"), item(1, true, "b"),
+		item(0, false, "Second"), item(1, true, "c"),
+	}}}}
+	got, _ := Text(d)
+	for _, want := range []string{"- First", "   1. a", "   2. b", "- Second", "   1. c"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("Text() =\n%s\nwant it to carry %q", got, want)
+		}
+	}
+	if strings.Contains(got, "   3. c") {
+		t.Errorf("the sub-list under the second bullet carried the first one's count:\n%s", got)
+	}
+}
+
+// A floating object anchored to a paragraph inside a table cell is printed in
+// that cell. The export counts it, so a cell that printed nothing for it would
+// write a file no line of the note points at.
+func TestAFloatingObjectInACellIsPrintedInThatCell(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{
+		ID:         "t.0",
+		Positioned: map[string]docs.Object{"kix.posone": {ID: "kix.posone", Kind: docs.KindImage}},
+		Body: []docs.Block{{Table: &docs.Table{Rows: [][]docs.Cell{{{Blocks: []docs.Block{
+			{Paragraph: &docs.Paragraph{
+				Style:      "NORMAL_TEXT",
+				Positioned: []string{"kix.posone"},
+				Runs:       []docs.Run{run("Beside the chart\n", 1)},
+			}},
+		}}}}}}},
+	}}}
+	got, warnings := Text(d)
+	if !strings.Contains(got, "Beside the chart <!-- image: floating, kix.posone -->") {
+		t.Errorf("Text() =\n%s\nwant the placeholder in the cell", got)
+	}
+	if len(warnings) != 1 {
+		t.Errorf("warnings = %v, want one for the floating object", warnings)
+	}
+	// With a file named for it, the picture is written in the cell too, beside
+	// the placeholder that says it floats.
+	named, _ := Project(d, Options{Picture: func(string) string { return "![](assets/note-1.png)" }})
+	if !strings.Contains(named, "![](assets/note-1.png)") {
+		t.Errorf("Project() =\n%s\nwant the picture written in the cell", named)
+	}
+}

@@ -62,17 +62,25 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 	var warnings []string
 
 	marks, err := prelude.Markers(d)
+	refused := false
 	if err != nil {
 		// A marker this run cannot read as one span is the prelude package's
 		// refusal, and the answer here is the answer to anything else it
 		// cannot recognise: the words stay in the file and the reason is
-		// named. Nothing is stripped on a guess.
+		// named. Nothing is stripped on a guess, and refused says so for
+		// every tab, because the refusal is about the document.
 		warnings = append(warnings, fmt.Sprintf("%s, so nothing was stripped and the prelude is in the file", err))
-		marks = nil
+		marks, refused = nil, true
 	}
 
 	for _, t := range d.Tabs {
-		skip, cut, w := stripPrelude(t, markerFor(marks, t.ID))
+		mark, twoMarkers := markerFor(marks, t.ID)
+		if twoMarkers {
+			warnings = append(warnings, fmt.Sprintf(
+				"tab %s wears two %s markers, so gdoc cannot tell which of them covers its prelude: nothing was stripped and the prelude is in the file",
+				t.ID, prelude.MarkerName))
+		}
+		skip, cut, w, shape := stripPrelude(t, mark, refused || twoMarkers)
 		pieces, warnings = append(pieces, cut...), append(warnings, w...)
 
 		body, tw := view.Project(oneTab(d, t), view.Options{
@@ -82,8 +90,25 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 		})
 		warnings = append(warnings, tw...)
 
-		body, numbers := stripHeadingNumbers(body)
-		pieces = append(pieces, numbers...)
+		// The numbers come off only where the layout shape recognised
+		// publish's prelude, which is the one route whose numbers are gdoc's
+		// own. "2024-2025 Budget" is a heading somebody wrote, and taking the
+		// "2024-" off it in a document gdoc never published would delete the
+		// author's words with nothing to put them back. A document restyle
+		// made is that document: it wears gdoc's marker and none of its
+		// headings were numbered by gdoc.
+		//
+		// Where the shape looked like a house document and did not match, the
+		// numbers stay and the warning names them, so the session taking the
+		// cover out of the file takes them out with it.
+		switch shape {
+		case routeLayout:
+			var numbers []Piece
+			body, numbers = stripHeadingNumbers(body)
+			pieces = append(pieces, numbers...)
+		case routeUnsure:
+			warnings = append(warnings, keptNumbers(t.ID, body)...)
+		}
 		warnings = append(warnings, footnoteWarnings(t)...)
 
 		files = append(files, TabFile{TabID: t.ID, TabTitle: t.Title, Body: body})
@@ -112,22 +137,27 @@ func picture(pics PictureNames) func(string) string {
 	return func(id string) string { return pics(id) }
 }
 
-// markerFor is this tab's house prelude marker, or nothing. Two markers in one
-// tab is prelude.Decide's refusal rather than this one's: a projection that
-// picked one of them would strip a span on a guess, so it strips neither and
-// says so.
-func markerFor(marks []prelude.Marker, tab string) *prelude.Marker {
+// markerFor is this tab's house prelude marker, or nothing, and whether the
+// tab wears two of them. Two markers in one tab is prelude.Decide's refusal
+// rather than this one's: a projection that picked one of them would strip a
+// span on a guess, so it strips neither and says so.
+//
+// The second answer is why this refusal is not the same as no marker at all. A
+// tab with no marker is read by its layout, and a tab whose marker cannot be
+// read is not: gdoc's own record of the prelude is the thing in doubt there,
+// and the layout would guess at the same span.
+func markerFor(marks []prelude.Marker, tab string) (*prelude.Marker, bool) {
 	var found *prelude.Marker
 	for i, m := range marks {
 		if m.Tab != tab {
 			continue
 		}
 		if found != nil {
-			return nil
+			return nil, true
 		}
 		found = &marks[i]
 	}
-	return found
+	return found, false
 }
 
 // oneTab is the document as this tab alone sees it: the tab, and the comment

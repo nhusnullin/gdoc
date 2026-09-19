@@ -48,10 +48,23 @@
 // rule here reads a word of it; a heading somebody added inside the cover does
 // not, because the span in front of the first heading is then the cover alone,
 // and the whole document stays in the file with a warning naming what stood
-// there. TestAnEditedPreludeStaysAndWarns is the pin. Stripping on a guess
+// there. TestAnEditedPreludeStaysAndWarns is the pin. A tab holding no
+// level-one heading at all is not a prelude either, and is warned about the
+// same way: a house document opens its body with one, and without it the span
+// in front of the first heading would be the whole tab, with every table in the
+// document counted as a house table.
+// TestATabWithNoLevelOneHeadingIsNotAPrelude is the pin. Stripping on a guess
 // would take somebody's own front page out of their note, and nothing puts it
 // back. A document with no contents list at all is not warned about: there is
 // nothing there that looks like a prelude.
+//
+// A note holding no heading at all is the one house document this gives up on.
+// internal/body maps the shallowest heading in the note onto Heading 1, so a
+// note whose top level is "##" is fine, but a note with none produces no
+// level-one heading anywhere and its own prelude then stays in the file with
+// that warning. Counting the tables over the span in front of the contents list
+// instead would read a foreign document whose three tables stand there as a
+// house prelude, which is the loss this guard exists to refuse.
 //
 // A piece is named by its position in the house layout. A run of paragraphs is
 // one piece: the cover when nothing stripped stands in front of it, the
@@ -73,6 +86,45 @@
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks and
 // TestTheHeadingNumberIsTheHouseSeparator are the pins, the second stating
 // house.yaml's own format as a literal.
+//
+// It happens only where the layout shape recognised publish's prelude, which is
+// the nearest thing to a record that publish wrote this document: publish is
+// the one route that numbers a heading. "2024-2025 Budget" and "1-on-1
+// meetings" are headings somebody wrote, and a document gdoc never published is
+// the common case for an export: taking a prefix off those words would delete
+// the author's own, and nothing puts them back.
+// TestAPlainDocumentKeepsAHeadingThatOpensWithANumber is the pin.
+//
+// The layout shape is a position and not a proof, and this is where that
+// matters most. A document gdoc never touched, laid out with a title page, the
+// three tables and a contents list in front of its first Heading 1, matches it,
+// and then its prelude is stripped by position and its heading prefixes come
+// off with it. The project accepts that trade for the prelude, and the number
+// rides on the same guess. What holds it is that nothing is thrown away
+// quietly: every number taken off is a piece carrying the whole heading as it
+// stood, "2024-2025 Budget", so a session reading the reply can put it back.
+//
+// A document restyle made is that document too, and the marker over its prelude
+// does not change it. Heading numbering is out of the restyle route, which
+// internal/prelude's doc.go states and its own milestone would have to open, so
+// every number in front of a heading there is text somebody typed.
+// TestARestyledDocumentKeepsAHeadingThatOpensWithANumber is the pin. A marker
+// gdoc cannot read is the same answer rather than a fall back to the layout:
+// the record of the prelude is the thing in doubt, so nothing is stripped, no
+// number comes off, and the warning naming the refusal stays true.
+// TestARefusedMarkerStripsNothing is the pin.
+//
+// Where the shape looked like a house document and did not match, the numbers
+// stay and a warning names each of them, so a session taking the cover out of
+// the file can take them out with it. The warning is a fact and not a verdict,
+// and it is worded as one: this route is reached by any tab holding a contents
+// list the house layout did not match, most of them documents gdoc never
+// touched, so it says the headings open with digits and the house separator and
+// names the one thing that would make them gdoc's. Whether publish wrote this
+// document is the session's to know. A tab whose headings open with no digits
+// raises nothing. TestAnEditedPreludeStaysAndWarns and
+// TestAPlainDocumentWithAContentsListIsNotToldItsNumbersAreTheHouses are the
+// pins.
 //
 // It is done on the projected line rather than on the run, because a run's text
 // is what the comment markers are placed in by index, and taking characters out
