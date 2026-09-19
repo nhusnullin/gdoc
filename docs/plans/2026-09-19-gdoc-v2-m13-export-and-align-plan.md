@@ -479,22 +479,22 @@ Serves decision 3, last paragraph. Scenarios 13, 22.
   package comment file), `go/cmd/gdoc/write.go`
 - Create: `go/internal/body/markers_test.go`, `go/cmd/gdoc/propose_markers_test.go`
 
-- [ ] Test first, `TestMarkersNamesEachOpener`: the four openers and their
+- [x] Test first, `TestMarkersNamesEachOpener`: the four openers and their
       closers as literals; `Find` returns the first one on a line and false on
       a line with an escaped one (`\{+`). Watch it fail.
-- [ ] Test, `TestBuildRefusesAMarkerByLine`: a note with `{+words+}[s:1]` on
+- [x] Test, `TestBuildRefusesAMarkerByLine`: a note with `{+words+}[s:1]` on
       line 7; `body.Render` refuses naming line 7 and the marker; the same for
       `[[c:1]]`.
-- [ ] Test, `TestPlaintextRefusesAMarker`: `plaintext.Markdown` names a marker
+- [x] Test, `TestPlaintextRefusesAMarker`: `plaintext.Markdown` names a marker
       the way it names markdown.
-- [ ] Test, `TestProposeRefusesAMarkerInTheFile`: a `--from` file whose
+- [x] Test, `TestProposeRefusesAMarkerInTheFile`: a `--from` file whose
       replacement carries `{-x-}`; `propose` refuses before any request,
       naming the field.
-- [ ] Implement the package, the three call sites, and the package comment
+- [x] Implement the package, the three call sites, and the package comment
       of `markers` saying why a marker is refused everywhere text goes out.
-- [ ] `body/doc.go` and `plaintext`'s comment name the new tests.
-- [ ] `cd go && go test -race ./internal/markers/ ./internal/body/ ./internal/plaintext/ ./cmd/...` passes.
-- [ ] `git commit -m "feat: a gdoc marker is refused on every route into a document"`
+- [x] `body/doc.go` and `plaintext`'s comment name the new tests.
+- [x] `cd go && go test -race ./internal/markers/ ./internal/body/ ./internal/plaintext/ ./cmd/...` passes.
+- [x] `git commit -m "feat: a gdoc marker is refused on every route into a document"`
 
 ### Task 5: the Docs read carries links, numbering, the contents element and floating objects
 

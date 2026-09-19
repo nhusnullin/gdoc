@@ -89,6 +89,11 @@ func (a Annotation) Check() error {
 	if m := plaintext.Markdown(a.Why); m != "" {
 		return fmt.Errorf("the reason for the annotation carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", m)
 	}
+	// The same rule about the same thing: a marker of gdoc's own says a
+	// document holds a suggestion, and in the document it is prose.
+	if m := plaintext.Marker(a.Why); m != "" {
+		return fmt.Errorf("the reason for the annotation carries %s, one of gdoc's own markers; a marker travels out of a document and never back in, so it would arrive as typed", m)
+	}
 	return nil
 }
 

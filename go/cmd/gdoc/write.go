@@ -24,6 +24,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/guard"
+	"gdoc/internal/markers"
 	"gdoc/internal/probe"
 	"gdoc/internal/propose"
 	"gdoc/internal/reply"
@@ -492,6 +493,20 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	for i, p := range out {
 		if err := p.Check(); err != nil {
 			return nil, fmt.Errorf("%s proposals[%d]: %w", path, i, err)
+		}
+		// The quote and the replacement are document text, and document text
+		// never passes through internal/plaintext: Check asks that package
+		// about the reason alone, because the reason is what goes into a
+		// thread. So the marker rule is asked here, over the two fields that
+		// go into the document itself. A skill proposing from a note it has
+		// just exported, with the markers unresolved, is what this refuses:
+		// TestProposeRefusesAMarkerInTheFile.
+		for _, f := range []struct{ name, text string }{
+			{"quoted", p.Quoted}, {"replacement", p.Replacement},
+		} {
+			if m, ok := markers.Find(f.text); ok {
+				return nil, fmt.Errorf("%s proposals[%d]: the %s carries %s, one of gdoc's own markers; a marker travels out of a document and never back in, so resolve the markers in the note before proposing from it", path, i, f.name, m)
+			}
 		}
 	}
 	return out, nil

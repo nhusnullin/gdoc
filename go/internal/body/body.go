@@ -22,6 +22,7 @@ import (
 	"github.com/yuin/goldmark/text"
 
 	"gdoc/internal/house"
+	"gdoc/internal/markers"
 	"gdoc/internal/render"
 )
 
@@ -137,6 +138,14 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	}
 
 	source := markdown
+	// A marker of gdoc's own is refused before the note is parsed, because it
+	// is a fact about the source line rather than about any block goldmark
+	// builds: the export writes it into the middle of a sentence, and the
+	// sentence is a paragraph like any other. internal/markers holds why every
+	// route out of the hub asks, and TestBuildRefusesAMarkerByLine is the pin.
+	if m, line := markers.Lines(string(source)); line > 0 {
+		return Result{}, fmt.Errorf("line %d carries %s, one of gdoc's own markers; the note was exported out of a document and its suggestions and comments have not been resolved, so publishing it would put the marker into the document as words", line, m)
+	}
 	root := parse().Parser().Parse(text.NewReader(source))
 
 	r := &renderer{
