@@ -1,7 +1,7 @@
 # gdoc v2 Milestone 13: export and align, plan
 
 2026-09-19. The task list for the specification at
-`docs/plans/2026-09-19-gdoc-v2-m13-export-and-align.md`. The spec holds the
+`docs/plans/completed/2026-09-19-gdoc-v2-m13-export-and-align.md`. The spec holds the
 seventeen decisions Nail took, the shapes, and the twenty-three scenarios that
 are the acceptance list. This file holds the order the work lands in, one
 commit per task, for ralphex. A task names the decision and the scenarios it
@@ -975,7 +975,7 @@ Serves decisions 5 and 9, and the spec's "Documents that change",
   `docs/v2/SPEC.md`, `docs/v2/DECISIONS.md`, `docs/v2/MEASURED.md`,
   `docs/v2/PLAN.md`, `CLAUDE.md`, `docs/backlog/m8-alignment-and-the-align-skill.md`,
   `docs/backlog/read-pictures-and-drawings.md`,
-  `docs/plans/2026-09-19-gdoc-v2-m13-export-and-align.md`
+  `docs/plans/completed/2026-09-19-gdoc-v2-m13-export-and-align.md`
 - Create: `docs/guide/exporting.md`
 - Remove: `docs/backlog/export-a-document-as-markdown-with-its-pictures.md`
 
@@ -1086,9 +1086,9 @@ Counts, run on this branch at 3eda744:
 
 ### Task 15: Update documentation
 
-- [ ] Move this plan and the spec to `docs/plans/completed/`.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M13 export and align, completed"`
+- [x] Move this plan and the spec to `docs/plans/completed/`.
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M13 export and align, completed"`
 
 ## Post-Completion
 

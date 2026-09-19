@@ -2372,7 +2372,7 @@ side, which Word reads.
 ## 2026-09-19. Export, and the `gdoc:` block as a list of documents.
 
 Nail's decisions, taken in the brainstorm that produced the M13 spec,
-`docs/plans/2026-09-19-gdoc-v2-m13-export-and-align.md`, which holds all
+`docs/plans/completed/2026-09-19-gdoc-v2-m13-export-and-align.md`, which holds all
 seventeen of them with the twenty-three scenarios they were read against. This
 entry holds what changed in this file. Serves principle 3 in the first row
 below, because the one new output is the one thing that can never be replaced,
