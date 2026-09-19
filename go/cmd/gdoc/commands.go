@@ -201,6 +201,18 @@ func commands() []command {
 			},
 		},
 		{
+			name:  "export",
+			words: []string{"<url>"},
+			flags: []flag{
+				{"--out", kindFile, needRequired, "the Markdown file to write, or the note this document is already paired with"},
+			},
+			summary: "Write the document into the hub as Markdown, one file per tab, with its pictures beside it.",
+			example: "gdoc export https://docs.google.com/document/d/1AbC.../edit --out note.md",
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdExport(ctx, a)
+			},
+		},
+		{
 			name:  "restyle",
 			words: []string{"<url>"},
 			flags: []flag{

@@ -690,13 +690,20 @@ func witness(ctx context.Context, r *reach, threads []comments.Thread, own []str
 	return docx.Match(threads, f), own
 }
 
-// exportFile is the export read and parsed, and it is the one export path in
-// this binary. Both callers that want a witness go through it: `comments
-// --witness` above, and the survey. Two export paths would be two chances for
-// one of them to ask Drive for a different document, or to read the answer to a
-// different ceiling.
+// exportBytes is the docx export itself, and it is the one place this binary
+// asks Drive for one. Three callers want those bytes: `comments --witness`
+// above, the survey, and `gdoc export`, which reads the picture parts rather
+// than the comments. Two export paths would be two chances for one of them to
+// ask Drive for a different document, or to read the answer to a different
+// ceiling.
+func exportBytes(ctx context.Context, r *reach) ([]byte, error) {
+	return docx.Export(ctx, r.session, r.id)
+}
+
+// exportFile is those bytes parsed for their comments, which is what a witness
+// is.
 func exportFile(ctx context.Context, r *reach) (*docx.File, error) {
-	b, err := docx.Export(ctx, r.session, r.id)
+	b, err := exportBytes(ctx, r)
 	if err != nil {
 		return nil, err
 	}

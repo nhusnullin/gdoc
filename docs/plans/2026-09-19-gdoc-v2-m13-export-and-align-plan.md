@@ -882,25 +882,25 @@ Serves decisions 10, 15. Every export scenario.
 - Modify: `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/doc.go`,
   `go/cmd/gdoc/help_test.go`, `go/cmd/gdoc/completion_test.go`
 
-- [ ] Test first, in `help_test.go`: the fifteenth usage line
+- [x] Test first, in `help_test.go`: the fifteenth usage line
       `export <url> --out <file>` in
       `TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative`; completion
       lists it. Watch it fail.
-- [ ] Test, `TestExportOpensOnlyThePolicyReadOpens` in `guard`: the requests
+- [x] Test, `TestExportOpensOnlyThePolicyReadOpens` in `guard`: the requests
       export makes, the Docs read with tabs and the docx export, are the ones
       `read` and `comments --witness` already make; no other host, no other
       method.
-- [ ] Test, `TestExportRefusesAFileThatIsNotADocument`.
-- [ ] Test, `TestExportEnvelopeCountsPendingOwnThreadsAndStripped`: the
+- [x] Test, `TestExportRefusesAFileThatIsNotADocument`.
+- [x] Test, `TestExportEnvelopeCountsPendingOwnThreadsAndStripped`: the
       counts, `own` present only when `--out` holds a note listing proposals
       for this document, the stripped pieces with text, the files with tabs,
       the pictures with `matched`, the schema line.
-- [ ] Test, `TestExportSendsNothingThatWrites`: over a scripted session, no
+- [x] Test, `TestExportSendsNothingThatWrites`: over a scripted session, no
       POST, PATCH or DELETE.
-- [ ] Implement the row, the flag, `run`, and the `doc.go` entry for `help
+- [x] Implement the row, the flag, `run`, and the `doc.go` entry for `help
       export`, which names `assets`, the numbering rule and the block.
-- [ ] `cd go && go test -race ./cmd/... ./internal/guard/` passes.
-- [ ] `git commit -m "feat(gdoc): export, a Google Doc into the hub as Markdown with its pictures"`
+- [x] `cd go && go test -race ./cmd/... ./internal/guard/` passes.
+- [x] `git commit -m "feat(gdoc): export, a Google Doc into the hub as Markdown with its pictures"`
 
 ### Task 11: the live round trip
 
