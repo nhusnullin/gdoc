@@ -1,34 +1,38 @@
 ---
-worth: yes
+worth: later
 added: 2026-09-06
 ---
-# `gdoc read` must also read pictures, diagrams and Google Drawings
+# `gdoc read` still prints a placeholder where a picture is
 
-Nail's requirement, recorded during the M2 re-cut on 2026-09-06: `gdoc read` gives the AI the document as
-text today. A document also carries inline pictures, schemas and diagrams, and Google Drawings, and the AI
-must be able to read those too, not only the words around them. Out of M2's scope on purpose: M2 lands
-the text side first.
+Nail's requirement, recorded during the M2 re-cut on 2026-09-06: the AI should
+be able to read a document's pictures, diagrams and Google Drawings, not only
+the words around them. Half of it landed on 2026-09-19 in M13, and this item is
+what is left.
 
-What is known already (v1, CLAUDE.md "Pictures"): Drive's markdown export returns an embedded image as a
-base64 `data:` URI and leaves a Google Drawing out entirely; the docx export carries both as PNG bytes.
-So the docx export reader M2 builds is the likely route for the bytes, and the open question is the form
-the AI reads them in (a file path per image on the envelope, or inline bytes).
+**What landed.** `gdoc export` writes the picture bytes into the hub as PNG
+files beside the note, taken from the docx export and paired with the Docs read
+by body order, `contentUri` staying out because its host is one the guard does
+not admit. A floating picture is no longer silent either: `internal/docs` reads
+`positionedObjectIds` and the `positionedObjects` map, and `read` prints
+`<!-- image: floating, kix.p1 -->` after the paragraph the object is anchored
+to, naming the kind the walk read rather than guessing at a picture. That was
+the worse half of this item, because a document with a diagram in it came back
+with no sign the diagram existed.
 
-## A positioned picture is silent, and an inline one is not
+**What is left.** `gdoc read` itself still prints `[image]`, `[drawing]`,
+`[equation]` and `[object]`, so a review session reading a document with a
+schema in it reads a placeholder. The bytes exist and a route to them exists.
+The question nobody has answered is what `read` should do with them, and it is
+a question about the projection rather than about the decode:
 
-Found in the M2 review, 2026-09-06. `internal/docs/walk.go` decodes
-`inlineObjectElement`, so an inline picture, drawing, equation or object prints
-`[image]`, `[drawing]`, `[equation]` or `[object]` and warns. It decodes neither
-`positionedObjectIds` on a paragraph nor the document's `positionedObjects` map,
-so a **wrapped or floating** picture prints nothing and warns nothing. The AI
-reading that document has no sign the picture exists.
+- A path per object on the envelope means `read` writes files, and `read` is a
+  pure read that writes nothing on disk today. Changing that is a decision.
+- Inline bytes on the envelope make a read of a picture-heavy document large
+  enough to matter in a session's context, for a picture the session may not
+  need.
+- Saying nothing and pointing at `gdoc export` is the answer today, and it
+  costs one command more in a review session.
 
-That is worse than not reading the bytes, because M2's own rule is that content
-`read` cannot read prints a placeholder and warns. Reading the bytes can wait;
-the silence should not.
-
-Why it is not a one-line fix: a positioned object is anchored to a paragraph
-rather than sitting in a run, so where its placeholder goes in the text is a
-decision about the projection, and the golden files are the projection's
-specification. Options are a placeholder at the end of the anchoring paragraph,
-one at the start, or a warning with no mark in the text at all.
+Worth `later` rather than `yes` because the export route already gives a
+session the pictures when it wants them, so what is left is convenience rather
+than a gap.

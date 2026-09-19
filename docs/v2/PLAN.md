@@ -15,7 +15,8 @@ one is written against the code that exists by then.
 - Three dependencies, `beevik/etree`, `yuin/goldmark` and `goccy/go-yaml`, each
   with its reason in SPEC.md and its line in `allowedModules`. A fourth needs
   its reason written into SPEC.md first. The one candidate, `sergi/go-diff`,
-  is deferred with M8 to the backlog, 2026-09-16.
+  stays in the backlog: M13 built the align skill without it, so nothing asks
+  for a fourth today.
 - Platforms: darwin/arm64, darwin/amd64, windows/amd64. No linux. Every target
   cross-builds on every commit, so portability is never discovered late. A
   release carries a zip per line of `release/platforms`, which is the two darwin
@@ -47,19 +48,34 @@ one is written against the code that exists by then.
 | M10 | the release notice: a stamp file beside the token, `help` refreshing it once a day under a two-second ceiling and printing the facts, the skills mentioning a newer gdoc once and carrying on, and the nightly leaving `plugin.json` on the stable number | 2026-09-18 | `2026-09-18-gdoc-v2-m10-update-notice.md` |
 | M11 | `annotate`, a fifth writer: a comment on the exact words a colleague quotes, anchored, under the robot prefix, changing nothing, taking `--quote` with `--body-file` or `--from` a file of many, verified by two routes the write did not go out on, and no probe, because a batch holding one `insertComment` cannot move a character | 2026-09-18 | `2026-09-18-gdoc-v2-m11-annotate.md` |
 | M12 | five backlog items: `GrantInPlace` leaves a created document at full and says the grant changed nothing, a styling batch whose answer names no revision stops the run instead of reading the document for one, the offline drift gate pins the measured pair of every known difference, every numbered list gets its own definition and starts at 1, and an internal anchor link jumps to a bookmark every heading with words carries | 2026-09-18 | `2026-09-18-gdoc-v2-m12-five-backlog-items.md` |
+| M13 | `export`, the fifteenth command: a Google Doc written into the hub as Markdown, one file per tab, its pictures as PNG files beside it, the house prelude taken out and listed, and nothing on disk replaced. With it the `gdoc:` block became a list of documents, `publish` learned to run again, every route into a document learned to refuse gdoc's own markers, `read` gained link targets and list numbering, and two skills landed, `gdoc-export` and `gdoc-align` | 2026-09-19 | `2026-09-19-gdoc-v2-m13-export-and-align.md` |
 | the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
-## M8. Deferred
+## M8. Landed in M13, except two things
 
-Alignment, the align skill, the diff question and the two things folded into
-M8 are deferred whole to
-[the backlog](../backlog/m8-alignment-and-the-align-skill.md), Nail's decision
-of 2026-09-16, DECISIONS.md. The team's feedback after the release decides
-whether it comes back.
+The align skill landed in M13 as `gdoc-align`, over `export` and the note
+rather than over a diff command, so M8's own question, whether the binary needs
+one, was answered by not needing one. Two of the three things folded into M8
+stay deferred in
+[the backlog](../backlog/m8-alignment-and-the-align-skill.md): the hub-wide
+live session, and `sergi/go-diff` as a fourth dependency, which nothing asks
+for while the skill reads two files.
+
+## What is next
+
+Nothing is in flight. The open work is the by-hand list below, the backlog, and
+what the team asks for after M13 reaches them. A milestone starts when Nail
+names it, and its plan is written then, against the code that exists by then.
+
+The three candidates, in no order, each a backlog item today: the picture bytes
+inside `read` itself, so a review session sees a diagram rather than a
+placeholder; the hub-wide live session; and proposing into one tab of a tabbed
+document, which stays refused until somebody measures what a write into a tab
+does.
 
 ## Outstanding by hand
 
-Three checks nobody can automate, each one Nail's.
+Four checks nobody can automate, each one Nail's.
 
 - **A built document read by a person.** A house-style docx opened in Word and
   in Drive, against the master. The offline and live drift gates measure 169
@@ -71,8 +87,17 @@ Three checks nobody can automate, each one Nail's.
 - **A second account in the margin.** The colleague `ai!` path is exercised by
   the skill's own rules and its wording. The first real proof is a session with
   somebody else commenting.
+- **The export fixture document.** `TestLiveExportMeasurements` is written and
+  has never run, because the document it reads has to be made by hand: one
+  inline PNG picture, one Google Drawing, one floating picture, and a second tab
+  titled `Appendix` with one picture, in that order, in the test folder. Its
+  three answers are the MEASURED.md rows, and the second of them decides whether
+  `export` keeps a note's own picture file.
 
-`docs/v2/MEASURED.md` holds a fourth under "Not measured yet": the seven
+`docs/v2/MEASURED.md` holds the rest under "Not measured yet": the seven
 paragraph elements are a fixture built from the API reference, and a real
 document holding a person chip, a date chip and a calendar link has not been
-read against it.
+read against it; and the three export measurements, which need one fixture
+document made by hand in the test folder. The second of those three decides
+whether `export` keeps a note's own picture file, so until it is run every
+picture is written as a new file and the reply says so.

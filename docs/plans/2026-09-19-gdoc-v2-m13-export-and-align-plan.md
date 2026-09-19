@@ -979,38 +979,54 @@ Serves decisions 5 and 9, and the spec's "Documents that change",
 - Create: `docs/guide/exporting.md`
 - Remove: `docs/backlog/export-a-document-as-markdown-with-its-pictures.md`
 
-- [ ] `DECISIONS.md`: one entry dated 2026-09-19 with the register rows the
+- [x] `DECISIONS.md`: one entry dated 2026-09-19 with the register rows the
       spec lists, plus the across-runs escaping convention from Task 6, and
       the register updated. Decision 5 is the row that supersedes
       2026-08-13.
-- [ ] The spec's decision 9 and scenario 18, and the export guide: the
+- [x] The spec's decision 9 and scenario 18, and the export guide: the
       sentence the shipped binary prints on a schema 2 block is the literal
       Task 2 pinned and left here as a ➕ note, a strict-yaml refusal naming
       the unknown key `documents`, not a schema sentence. Rewrite all three
       to that literal.
-- [ ] `MEASURED.md`: if Nail has run Task 1 and written its three answers as
+- [x] `MEASURED.md`: if Nail has run Task 1 and written its three answers as
       ➕ notes in this plan, the three rows go in as measured; otherwise the
       three rows go under "Not measured yet". The `MatchByHash` option ships
       `false` either way; flipping it is Nail's commit after the merge, named
       in Post-Completion. No Go file changes in this task.
-- [ ] `SPEC.md`: `publish` runs more than once; a new `export` section; the
+- [x] `SPEC.md`: `publish` runs more than once; a new `export` section; the
       diff section describes the two skills as built; each change dated.
-- [ ] `README.md`: the fourth recipe. `how-it-works.md`: the source-of-truth
+- [x] `README.md`: the fourth recipe. `how-it-works.md`: the source-of-truth
       line and the `assets` line. `publishing.md`: the block in its list
       shape, publish-many, the SVG sentence. `exporting.md`: the numbering
       rule, the PNG names, what the markers mean, one file per tab.
-- [ ] `CLAUDE.md`: `go/internal/export/` and `go/internal/markers/` in the
+- [x] `CLAUDE.md`: `go/internal/export/` and `go/internal/markers/` in the
       table, five skills in the `skills/` row, and the invariant list gains
       "Nothing is overwritten by export" naming `TestNothingCanReplaceAFile`.
       Under 300 lines.
-- [ ] `PLAN.md`: M13 recorded, the next milestone open.
-- [ ] Backlog: `git rm` the export item; rewrite the M8 item to hold only the
+- [x] `PLAN.md`: M13 recorded, the next milestone open.
+- [x] Backlog: `git rm` the export item; rewrite the M8 item to hold only the
       hub-wide live session and `sergi/go-diff`; rewrite the pictures item to
       hold only what is still not read (the bytes in `read` itself, if Nail
       wants them there).
-- [ ] `cd go && go test -race ./boundary/ ./cmd/...` passes (CLAUDE.md
+- [x] `cd go && go test -race ./boundary/ ./cmd/...` passes (CLAUDE.md
       ceiling, task map, skills).
-- [ ] `git commit -m "docs(v2): M13 export and align, decisions, guides and backlog"`
+- [x] `git commit -m "docs(v2): M13 export and align, decisions, guides and backlog"`
+- ➕ **The three measurements have not been run**, so the MEASURED.md rows went
+      in under "Not measured yet" with the fixture document described, which is
+      what this task's own checkbox allows. `MatchByHash` ships `false` and no
+      Go file changed for it. The recheck line names what flipping it costs.
+- ➕ **README.md hit its own ceiling.** The fourth recipe took it to 210 lines
+      against `releaseREADMECeiling` of 200, so six paragraphs elsewhere were
+      reflowed rather than the ceiling being raised: it is now 199. One comment
+      in `go/boundary/release_test.go` said "the three things to try" and now
+      says four. That is the only Go file this task touched, and only its prose.
+- ➕ **Three documents changed beyond the checkbox list.** `docs/v2/SPEC.md`
+      gained a second new section, "The `gdoc:` block is a list of documents",
+      because the export section alone would have left the block described in
+      its schema 1 shape. Its "Out of scope" line on tabs and three lines of its
+      "Never" list are narrowed, because `export` reads a tabbed document and
+      `gdoc-align` deletes a copy it made itself. `docs/guide/reading.md` needed
+      nothing: Task 6 had already written the link and numbering rows.
 
 ### Task 14: Verify acceptance criteria
 

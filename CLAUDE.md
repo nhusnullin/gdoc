@@ -21,7 +21,7 @@ Two rules about the documents themselves:
 | Path | Holds |
 |---|---|
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
-| `go/cmd/gdoc/` | the entry point, the fourteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | the entry point, the fifteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -39,6 +39,8 @@ Two rules about the documents themselves:
 | `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
 | `go/internal/annotate/` | a comment on the words a caller quotes, anchored, and nothing else |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
+| `go/internal/export/` | a Google Doc as Markdown in the hub: one file per tab, the house prelude taken out, the pictures beside it, and nothing replaced |
+| `go/internal/markers/` | the four openers gdoc writes into a file, so no route into a document carries one back |
 | `go/internal/restyle/` | the survey, and the house look applied where the document stands |
 | `go/internal/prelude/` | the house template as Docs requests, proposed rather than written, and the named range that marks it |
 | `go/internal/docsreq/` | the shapes a Docs request is made of: a measurement, a colour, an alignment, a length, a style object with its mask |
@@ -55,7 +57,7 @@ Two rules about the documents themselves:
 | `go/internal/lastcheck/` | the stamp beside the token: when gdoc last asked GitHub what is published, and what it heard |
 | `go/internal/live/` | the opt-in end-to-end tests. Tests only, no production code |
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
-| `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`. Symlinked into `~/.claude/skills/`, so edits are live |
+| `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`, `gdoc-export`, `gdoc-align`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `.claude-plugin/` | the plugin manifest and the marketplace entry, so this repository is how a colleague's Claude Code gets `skills/` |
 | `release/` | what a colleague gets: the one-line installer, the example note, and the platform list a release walks. The README in the zip is this repository's `README.md` |
 | `docs/guide/` | the colleague's pages the README links to: how gdoc stays inside the document, and each command walked through |
@@ -142,6 +144,10 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   and a note's block is rewritten byte for byte through `internal/atomicfile`:
   `TestBuildRefusesAnExistingOutUnlessForced` and
   `TestWriteAnUnchangedBlockIsByteIdentical`.
+- **Nothing is overwritten by `export`**, which has no `--force` to add: a taken
+  path takes the next free number, and the one file it writes into is the note
+  it stamps. `TestNothingCanReplaceAFile` reads the package's own source, and
+  `TestCreateRefusesAPathThatExists` holds the link-not-rename underneath it.
 - **Everything gdoc writes into a thread opens with the robot prefix and carries
   no markdown**, because a Docs thread renders markdown literally, and because
   the marker is the only record of authorship there is:
@@ -192,6 +198,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
 | a version, a tag, a release or the updater | `go/internal/update/doc.go`, `.github/workflows/release.yml` |
 | a release notice, the stamp | `go/internal/lastcheck/doc.go`, `go/cmd/gdoc/doc.go` |
+| a document written back into the hub | `go/internal/export/doc.go`, `go/internal/markers/markers.go` |
 | what a colleague installs, and how | `README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
 | what the review session does with what the binary prints | `skills/gdoc-review/SKILL.md` |
