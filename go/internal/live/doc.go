@@ -113,6 +113,35 @@
 //     time and reads each accepted one back to say where the insert really
 //     landed. Measured 2026-09-10, MEASURED.md "A table takes one index of its
 //     own at the end".
+//   - TestLiveExportRoundTrip, M13's, and the one that answers a question no
+//     fixture can. It publishes each of the six notes under
+//     internal/body/testdata/docs, exports the document Drive made of it, and
+//     compares the file that came back with the note it started as. Six
+//     documents, all six trashed. The comparison cannot be equality, because a
+//     docx carries no fence, no emphasis character and no link to a file in the
+//     hub, so it is the drift gate's shape: a named list of differences, each
+//     with the reason it is there, in roundtrip_test.go. Every name that fired
+//     is logged with its count, and a line no name covers fails the run. A name
+//     that has to join the list is a decision Nail writes down with its reason,
+//     never a test somebody loosens.
+//   - TestLiveExportCarriesAProposal, M13's. It publishes the policy note,
+//     proposes one change into the document, exports, and asserts the
+//     suggestion id and the comment id are in the file, so a session merging
+//     that file can see what is proposed and what is not. It withdraws the
+//     proposal through a second policy granted that one id, and trashes the
+//     document.
+//   - TestLiveExportHashEquality, M13's, and a measurement until the binary
+//     makes it a rule. It publishes the pictures note, exports it, and prints
+//     the sha256 of each picture beside the sha256 of the file on this disk it
+//     was uploaded from. It asserts the equality only once cmd/gdoc turns
+//     export.Options.MatchByHash on, which it asks by reading that file: a
+//     constant here would be a second answer that could disagree with the
+//     binary. One document, trashed. This is measurement 2 of
+//     docs/v2/MEASURED.md.
+//   - TestLivePublishAgainAppendsAnEntry, M13's. It publishes one note twice
+//     and reads the block back: two entries, two different documents, both
+//     readable through the Docs API, both trashed. That is scenario 1, the
+//     refusal M13 took out.
 //   - TestLiveAnnotateParagraphAndTable, M11's. It creates a document holding
 //     one sentence and a one-row table of two cells, fills the cells, leaves
 //     one comment on words in the sentence and one on words inside a cell, and

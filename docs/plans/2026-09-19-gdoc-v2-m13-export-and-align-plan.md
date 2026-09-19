@@ -910,23 +910,23 @@ Serves the spec's Tests. Test only; Nail runs it.
 - Create: `go/internal/live/export_test.go`
 - Modify: `go/internal/live/doc.go`
 
-- [ ] `TestLiveExportRoundTrip`, gated on `GDOC_LIVE_WRITE`: publishes each
+- [x] `TestLiveExportRoundTrip`, gated on `GDOC_LIVE_WRITE`: publishes each
       of the six `body/testdata` notes into the test folder, exports each,
       compares the export body against the note against a named list of
       known differences with reasons (front matter, the prelude, footnotes,
       code blocks, relative links as words, heading numbers), fails on an
       unnamed difference, trashes every document.
-- [ ] `TestLiveExportCarriesAProposal`: publish, propose, export; the
+- [x] `TestLiveExportCarriesAProposal`: publish, propose, export; the
       suggestion id is in the file; withdraw; trash.
-- [ ] `TestLiveExportHashEquality`: publish the pictures note, export, print
+- [x] `TestLiveExportHashEquality`: publish the pictures note, export, print
       whether the media hash equals the upload; assert it only when the
       `MatchByHash` option is on in the binary, so the test is the
       measurement first and the pin later.
-- [ ] `TestLivePublishAgainAppendsAnEntry`: publish a note, publish it
+- [x] `TestLivePublishAgainAppendsAnEntry`: publish a note, publish it
       again; the block holds two entries, both documents exist; trash both.
-- [ ] `doc.go` names the three and what each creates.
-- [ ] `cd go && go test -race ./internal/live/` compiles and skips.
-- [ ] `git commit -m "test(live): the export round trip over the six body notes"`
+- [x] `doc.go` names the three and what each creates.
+- [x] `cd go && go test -race ./internal/live/` compiles and skips.
+- [x] `git commit -m "test(live): the export round trip over the six body notes"`
 
 ### Task 12: the five skills
 
