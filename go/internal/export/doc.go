@@ -8,13 +8,13 @@
 // which side is right, and whether a suggestion is taken are the session's, and
 // no field here answers any of them.
 //
-// Nothing here reaches the network, and nothing here writes. Project is a
-// function of one recorded read, so a golden file is a specification rather
-// than a snapshot, and File puts the gdoc: block in front of a body through
-// internal/frontmatter, the one writer of that block. The one thing that
-// touches the disk at all is NotePictures, which reads the pictures the note
-// at --out already links to, so the export can say which of the document's
-// pictures that note already holds.
+// Nothing here reaches the network. Project is a function of one recorded
+// read, so a golden file is a specification rather than a snapshot, and File
+// puts the gdoc: block in front of a body through internal/frontmatter, the
+// one writer of that block. Two things touch the disk: NotePictures, which
+// reads the pictures the note at --out already links to, so the export can say
+// which of the document's pictures that note already holds, and Write, which
+// creates the files and can replace none of them.
 //
 // This comment holds why the projection takes out what it takes out, with the
 // test that pins each rule. What it prints is in the code beside it.
@@ -143,4 +143,45 @@
 // read that could tell the session the link is broken.
 // TestTheNotesPicturesAreFoundThroughItsLinks and
 // TestANotePictureThatCannotBeReadIsNamed are the pins.
+//
+// # The files on disk, and the one stamp
+//
+// Nothing an export finds in its way is ever touched, decision 2. A taken name
+// takes the next free number, <stem>.2.md and then <stem>.3.md, pictures take
+// the next free number under assets/, and there is no flag that could replace
+// a file: TestAFreePathIsTaken, TestATakenPathGetsTheNextFreeNumber and
+// TestNothingCanReplaceAFile, the last of them read off this package's own
+// source, where the word force does not appear and the only call to
+// atomicfile.Replace is the stamp.
+//
+// That rests on atomicfile.Create, which ends in a link rather than a rename,
+// so a path that appeared between Plan looking and Write writing is refused
+// rather than replaced. Plan and Write are two halves for one reason: a
+// picture's line in the body names the file that picture lands in, so every
+// path has to be decided before the text exists. TestTheNamesReachTheBody is
+// that handover, with the note's own link kept for a picture that matched.
+//
+// The one thing export writes into a file somebody else owns is the date.
+// When the path at --out holds a note whose list names this document, that
+// note keeps every other byte and gains exported: {at} on that document's
+// entry, and the copy lands beside it carrying exported.note, which is what
+// makes every writer refuse a stray copy. A note written before 2026-09-19 is
+// schema 1, and the stamp is a write that changes the block, so it comes back
+// as schema 2 and the reply says so once:
+// TestExportStampsTheNoteAndChangesNoOtherByte and
+// TestASchemaOneNoteIsRewrittenAndSaidSo, scenarios 2 and 23. The note is read
+// again a moment before it is written, because a live review session may have
+// written the same block in between, decision 14.
+//
+// Two things are refused, at the door, before a byte is written: a note at a
+// path this run would land on that names other documents, and front matter
+// that does not read. Anything else at a path is a taken path and nothing
+// more. Every tab's path takes the same two checks, so one bad path refuses
+// the whole run rather than leaving half a document in the hub:
+// TestTheDoorChecks and TestATabPathIsCheckedLikeOut.
+//
+// A further tab's file is <stem>-<title slugged>.md through view.Slug, the one
+// slug rule; a tab whose title slugs to nothing is tab-<n> by its position,
+// and two tabs with one title take the numbering rule like any other taken
+// name. TestTabSlugsCollide is the pin.
 package export

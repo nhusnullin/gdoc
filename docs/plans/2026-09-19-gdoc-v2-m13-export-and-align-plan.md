@@ -812,35 +812,65 @@ Serves decisions 1, 2, 4, 11, 13, 14. Scenarios 1, 2, 15, 16, 19, 21, 22, 23.
 - Modify: `go/internal/export/doc.go`
 - Modify: `go/internal/atomicfile/atomicfile.go`, `go/internal/atomicfile/atomicfile_test.go`
 
-- [ ] Test first, `TestAFreePathIsTaken`: `<stem>.md` and `assets/<stem>-1.png`
+- [x] Test first, `TestAFreePathIsTaken`: `<stem>.md` and `assets/<stem>-1.png`
       written, the folder created, the block holds one entry with `exported`.
       Watch it fail.
-- [ ] Test, `TestATakenPathGetsTheNextFreeNumber`: `.2`, then `.3`; pictures
+- [x] Test, `TestATakenPathGetsTheNextFreeNumber`: `.2`, then `.3`; pictures
       from the next free number; nothing existing is touched, checked by
       hash.
-- [ ] Test first in `atomicfile`, `TestCreateRefusesAPathThatExists`:
+- [x] Test first in `atomicfile`, `TestCreateRefusesAPathThatExists`:
       `Replace` ends in `os.Rename`, which always replaces, so export cannot
       use it for a new file. Add `Create(path string, b []byte) error`: write
       the temp file in the same directory, then `os.Link` it to `path`, which
       fails when `path` exists, and remove the temp file either way. A path
       that appears between the free-name check and the link is refused, not
       replaced. The package comment says why there are two verbs.
-- [ ] Test, `TestNothingCanReplaceAFile`: the export package exposes no force
+- [x] Test, `TestNothingCanReplaceAFile`: the export package exposes no force
       parameter, every new file goes through `atomicfile.Create`, and only
       the stamp on a note goes through `Replace`.
-- [ ] Test, `TestExportStampsTheNoteAndChangesNoOtherByte`: a paired note at
+- [x] Test, `TestExportStampsTheNoteAndChangesNoOtherByte`: a paired note at
       the path; the copy lands at `.2` with `exported.note` relative to its
       directory; the note's bytes differ only inside the block, by the
       `exported` line.
-- [ ] Test, `TestTheDoorChecks`: a note naming other documents, broken front
+- [x] Test, `TestTheDoorChecks`: a note naming other documents, broken front
       matter, and the same two on a tab's path; refused before any file is
       written.
-- [ ] Test, `TestATabPathIsCheckedLikeOut` and `TestTabSlugsCollide`: the
+- [x] Test, `TestATabPathIsCheckedLikeOut` and `TestTabSlugsCollide`: the
       slug rule on literals, an empty title, two tabs with one title.
-- [ ] Implement `Write`.
-- [ ] `doc.go` names every test.
-- [ ] `cd go && go test -race ./internal/export/ ./internal/atomicfile/` passes.
-- [ ] `git commit -m "feat(export): files on disk, the stamp on the note, and the copy beside it"`
+- [x] Implement `Write`.
+- [x] `doc.go` names every test.
+- [x] `cd go && go test -race ./internal/export/ ./internal/atomicfile/` passes.
+- [x] `git commit -m "feat(export): files on disk, the stamp on the note, and the copy beside it"`
+
+
+➕ **Two halves, `Plan` and `Write`.** The plan named one function. A picture's
+line in the body names the file that picture lands in, so every path has to be
+decided before the text exists, and the text is what `Write` is handed. `Plan`
+takes every path and answers both door checks without writing a byte;
+`(*Layout).PictureNames` is the handover into `Project`; `Write` writes.
+`TestTheNamesReachTheBody` is that seam, and the gap between the two is closed
+by `atomicfile.Create` refusing a path that appeared in between rather than
+replacing it.
+
+➕ **`atomicfile.Create` takes no mode, and `NewMode` names the one it uses.**
+There is no file at the path to take a mode from, so the package states 0644
+as a constant rather than leaving a new file to whatever umask the temp file
+was born under. `Replace` still takes the mode, because there it is the mode of
+the file being replaced.
+
+➕ **A number under `assets/` is taken whatever extension wrote it.** A PNG at
+`<stem>-1.png` means 1 is gone, so a JPEG cannot land as `<stem>-1.jpg` beside
+it and leave a reader guessing which is which.
+
+➕ **The stamp carries an `exported.note` through.** Only a person takes that
+line out, by hand, so a stamp on a file that has one sets the date and leaves
+the line where it is.
+
+➕ **Three tests beyond the plan's list.** `TestTheNamesReachTheBody` above;
+`TestASchemaOneNoteIsRewrittenAndSaidSo`, which is scenario 23 and is what
+every note on the team does on its first stamp; and, in `atomicfile`,
+`TestCreateWritesAFileThatWasNotThere` and
+`TestCreateRefusesADirectoryThatExists` beside the refusal the plan named.
 
 ### Task 10: the export command
 
