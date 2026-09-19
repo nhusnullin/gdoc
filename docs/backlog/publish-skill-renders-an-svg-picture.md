@@ -29,13 +29,22 @@ One section beside the title refusal, in the same voice:
   `height` at device scale factor 2, which lands at about 400 ppi once gdoc
   scales the picture to the text column. Not higher: it only inflates the
   docx.
-- Chrome is what this Mac happened to have, not a rule. The skill names a
-  detection order and the session takes the first one present: `rsvg-convert`
-  (librsvg, the cheapest and the one to suggest installing), then a
-  Chromium-family browser by its platform path, Chrome, Chromium or Edge, all
-  of which take the same headless flags, then `cairosvg` only if it starts.
-  Edge is on every Windows machine, so Windows always has a route; macOS and
-  Linux may have none.
+- Chrome is what this Mac happened to have, not a rule. On macOS the
+  session needs nothing installed: Safari's engine, WebKit, is reachable
+  from `osascript -l JavaScript`, which ships with the OS, and the script
+  below renders markers, weights and fonts exactly as Chrome does. Measured
+  2026-09-19 on macOS 26.3.1 over all four Bridge diagrams: same pixels as
+  the Chrome run, a fifth of a second each, and `gdoc build` embeds the
+  result. Two dead ends on the same road: `NSImage` also loads an SVG with
+  no install, but CoreSVG drops `marker-end`, so every arrowhead vanished
+  and semibold text came out regular; and `safaridriver` needs a one-time
+  `sudo safaridriver --enable` and opens a visible Safari window.
+- Elsewhere the skill names a detection order and the session takes the
+  first one present: `rsvg-convert` (librsvg, the cheapest and the one to
+  suggest installing), then a Chromium-family browser by its platform
+  path, Chrome, Chromium or Edge, all of which take the same headless
+  flags, then `cairosvg` only if it starts. Edge is on every Windows
+  machine, so Windows always has a route; Linux may have none.
 - When nothing is present, stop and say so: name the picture, name what to
   install (`brew install librsvg`, or the distribution's package), and offer
   the other door, a PNG the author exports by hand and links from the note.
@@ -45,9 +54,48 @@ One section beside the title refusal, in the same voice:
   from `.svg` to `.png`, and keep the SVG as the master. Say in the reply
   which lines were rewritten, because the hub may not be under git and the
   transcript is then the only record.
-- Name the two dead ends in one line each, so nobody tries them again.
+- Name the dead ends in one line each, so nobody tries them again:
+  QuickLook crops to a square, cairosvg needs libcairo, NSImage drops
+  markers, safaridriver needs sudo and a window.
 
-The two commands, for the skill to carry:
+The macOS script, for the skill to carry as a file beside `SKILL.md`. It
+uses the legacy in-process `WebView`, deprecated since 10.14 and still
+present in 26.3; `WKWebView` renders out of process and its snapshot call
+takes a block the bridge cannot pass. If a later macOS drops `WebView`, the
+script says so on its first line and the order falls through to the next
+renderer.
+
+```
+// osascript -l JavaScript svg2png.js in.svg out.png width height [scale]
+ObjC.import('Cocoa'); ObjC.import('WebKit');
+function run(argv) {
+  const inPath=argv[0], outPath=argv[1], w=parseInt(argv[2]), h=parseInt(argv[3]), scale=parseFloat(argv[4]||'2');
+  $.NSApplication.sharedApplication;
+  const rect=$.NSMakeRect(0,0,w,h);
+  const win=$.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(rect, 0, $.NSBackingStoreBuffered, false);
+  const wv=$.WebView.alloc.initWithFrameFrameNameGroupName(rect, $(), $());
+  if (wv.isNil()) return 'legacy WebView unavailable';
+  win.contentView.addSubview(wv);
+  wv.mainFrame.loadRequest($.NSURLRequest.requestWithURL($.NSURL.fileURLWithPath(inPath)));
+  const deadline=Date.now()+10000;
+  while (wv.isLoading && Date.now()<deadline) $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.05));
+  if (wv.isLoading) return 'timed out loading';
+  $.NSRunLoop.currentRunLoop.runUntilDate($.NSDate.dateWithTimeIntervalSinceNow(0.2));
+  const docView=wv.mainFrame.frameView.documentView;
+  const pw=Math.round(w*scale), ph=Math.round(h*scale);
+  const big=$.NSBitmapImageRep.alloc.initWithBitmapDataPlanesPixelsWidePixelsHighBitsPerSampleSamplesPerPixelHasAlphaIsPlanarColorSpaceNameBytesPerRowBitsPerPixel(null,pw,ph,8,4,true,false,$.NSCalibratedRGBColorSpace,0,0);
+  big.setSize($.NSMakeSize(w,h));
+  $.NSGraphicsContext.saveGraphicsState;
+  $.NSGraphicsContext.setCurrentContext($.NSGraphicsContext.graphicsContextWithBitmapImageRep(big));
+  docView.displayRectIgnoringOpacityInContext(rect, $.NSGraphicsContext.currentContext);
+  $.NSGraphicsContext.restoreGraphicsState;
+  const png=big.representationUsingTypeProperties($.NSBitmapImageFileTypePNG,$.NSDictionary.dictionary);
+  return (png.writeToFileAtomically(outPath,true)?'ok ':'write failed ')+pw+'x'+ph;
+}
+```
+
+Width and height are the SVG's own `width` and `height` attributes, which
+the session reads from the file. The other two commands:
 
 ```
 rsvg-convert --zoom 2 diagram.svg -o out.png
