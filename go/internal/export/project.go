@@ -73,7 +73,13 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 		marks, refused = nil, true
 	}
 
-	for _, t := range d.Tabs {
+	// A range naming a tab this document does not have belongs to no tab file,
+	// so no per-tab projection would see it and no route would name it. It
+	// rides along with the first tab, where view's own unplaced warning picks
+	// it up: one wording for the fact, whether read prints it or export does.
+	ghosts := ghostRanges(d)
+
+	for i, t := range d.Tabs {
 		mark, twoMarkers := markerFor(marks, t.ID)
 		if twoMarkers {
 			warnings = append(warnings, fmt.Sprintf(
@@ -83,7 +89,11 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 		skip, cut, w, shape := stripPrelude(t, mark, refused || twoMarkers)
 		pieces, warnings = append(pieces, cut...), append(warnings, w...)
 
-		body, tw := view.Project(oneTab(d, t), view.Options{
+		extra := ghosts
+		if i > 0 {
+			extra = nil
+		}
+		body, tw := view.Project(oneTab(d, t, extra), view.Options{
 			Picture:     picture(pics),
 			Skip:        skip,
 			ChipTargets: true,
@@ -172,12 +182,15 @@ func markerFor(marks []prelude.Marker, tab string) (*prelude.Marker, bool) {
 // heading's words, which is what view does for a heading it cannot see. That
 // heading is in another file, so a "#slug" into this one would point at
 // nothing.
-func oneTab(d *docs.Document, t docs.Tab) *docs.Document {
+func oneTab(d *docs.Document, t docs.Tab, extra map[string]docs.Range) *docs.Document {
 	ranges := map[string]docs.Range{}
 	for id, r := range d.CommentRanges {
 		if r.Tab == t.ID {
 			ranges[id] = r
 		}
+	}
+	for id, r := range extra {
+		ranges[id] = r
 	}
 	if len(ranges) == 0 {
 		ranges = nil
@@ -190,6 +203,26 @@ func oneTab(d *docs.Document, t docs.Tab) *docs.Document {
 		CommentRanges: ranges,
 		Footnotes:     d.Footnotes,
 	}
+}
+
+// ghostRanges are the ranges naming a tab the document does not have. They are
+// nobody's tab file, and the projection has to be handed them somewhere or the
+// fact that a thread has no marker is lost.
+func ghostRanges(d *docs.Document) map[string]docs.Range {
+	has := make(map[string]bool, len(d.Tabs))
+	for _, t := range d.Tabs {
+		has[t.ID] = true
+	}
+	out := map[string]docs.Range{}
+	for id, r := range d.CommentRanges {
+		if !has[r.Tab] {
+			out[id] = r
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // footnoteWarnings names what a file holding a footnote loses on its way to

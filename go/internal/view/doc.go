@@ -205,6 +205,16 @@
 // TestARangeOutsideTheTextIsAWarningAndIsNotPrinted and
 // TestARangeNamingAnAbsentTabIsAWarning over the other two shapes.
 //
+// A range inside a block Options.Skip takes out is the same answer for a third
+// reason. The markers are armed for the whole tab and the drain places them by
+// index, so a range in words that never reach the text would put both of its
+// markers at the first surviving character, saying a comment covers words the
+// file does not contain; a range opening in the cut and closing outside it
+// would overstate the span the same way. So the cut is measured before the
+// arming and a range that shares a character with it is named instead.
+// TestACommentInTheStrippedPreludeIsNotMarkedInTheBody, in internal/export
+// where the only Skip lives, is the pin.
+//
 // The walk arms its markers from the tab's form of the rule, docs.Tab.Places,
 // because the markers go into the tab being walked. Two tabs sharing an id,
 // which happens when a tab carries no tabId and takes the default t.0, would

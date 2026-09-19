@@ -28,6 +28,11 @@
 // document does not have, and that tab is in the file beside this one.
 // TestTwoTabsGiveTwoProjections is the pin.
 //
+// A range naming a tab the document does not have at all belongs to no file,
+// so it rides along with the first tab and is warned about in internal/view's
+// own wording rather than a second one written here.
+// TestACommentNamingAMissingTabIsNamed is the pin.
+//
 // A link to a heading in another tab is named by its id rather than by that
 // heading's words, which is what internal/view does for a heading it cannot
 // see. The heading is in another file, so "#slug" into this one would point at

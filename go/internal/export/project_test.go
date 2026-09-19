@@ -535,3 +535,58 @@ func TestARefusedMarkerStripsNothing(t *testing.T) {
 		t.Errorf("the warning does not say what was done: %s", found)
 	}
 }
+
+// TestACommentInTheStrippedPreludeIsNotMarkedInTheBody holds the rule that a
+// comment anchored in words the prelude strip took out leaves no marker in the
+// file. The markers are armed for the whole tab, so without this the first
+// surviving paragraph collects every marker the cover held, and the file says a
+// comment covers text it does not contain. It is named instead, through the
+// route a range naming a tab the document lacks already takes.
+func TestACommentInTheStrippedPreludeIsNotMarkedInTheBody(t *testing.T) {
+	d := fixture(t, "publish-prelude.json")
+	d.CommentRanges = map[string]docs.Range{
+		"CoverComment": {Tab: "t.0", Start: 15, End: 34},
+	}
+
+	files, _, warnings := Project(d, nil)
+	if len(files) != 1 {
+		t.Fatalf("got %d files, want 1", len(files))
+	}
+	if strings.Contains(files[0].Body, "CoverComment") {
+		t.Errorf("a comment on the stripped cover left a marker in the body:\n%s", files[0].Body)
+	}
+	if !strings.HasPrefix(files[0].Body, "# Scope") {
+		t.Errorf("the body does not open at its first heading:\n%s", files[0].Body)
+	}
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "CoverComment") {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("nothing named the comment that was stripped with the prelude: %v", warnings)
+	}
+}
+
+// TestACommentNamingAMissingTabIsNamed holds that a range whose tab is not in
+// the document is warned about here too. The projection is handed one tab at a
+// time, and a range naming no tab at all would otherwise be filtered out of
+// every one of them and reach no warning on any route.
+func TestACommentNamingAMissingTabIsNamed(t *testing.T) {
+	d := fixture(t, "publish-prelude.json")
+	d.CommentRanges = map[string]docs.Range{
+		"Ghost": {Tab: "t.9", Start: 300, End: 310},
+	}
+
+	_, _, warnings := Project(d, nil)
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "Ghost") && strings.Contains(w, "t.9") {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("nothing named the comment whose tab the document does not have: %v", warnings)
+	}
+}

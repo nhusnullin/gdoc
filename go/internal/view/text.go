@@ -315,6 +315,7 @@ func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 	// the arming below is: a list id names one list per tab, and an object id
 	// names one object per tab.
 	e.nums, e.objects = map[string]int{}, t.Positioned
+	cut := e.cut(t.Body)
 	for _, id := range sortedIDs(d.CommentRanges) {
 		r := d.CommentRanges[id]
 		if r.Tab != t.ID {
@@ -327,6 +328,17 @@ func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 			}
 		}
 		if !t.Places(r) {
+			continue
+		}
+		if overlaps(cut, r) {
+			// The words this range covers are in a block Skip takes out, so
+			// there is nothing in the file for it to mark. Arming it anyway
+			// would emit both markers at the first surviving text, saying a
+			// comment covers words the file does not contain, and an open in
+			// the cut with its close outside it would overstate the span.
+			// Neither is a fact the document holds, so the range is named
+			// instead.
+			e.warnings = append(e.warnings, strippedWarning(id, r))
 			continue
 		}
 		e.events = append(e.events, event{index: r.Start, open: true, id: id})
@@ -344,6 +356,95 @@ func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 		}
 		return a.id < b.id
 	})
+}
+
+// cutSpan is the character range one block Skip takes out occupies. It is a
+// span rather than a block because what the arming needs to know is whether a
+// comment sits inside the words that are going away.
+type cutSpan struct{ first, last int }
+
+// cut is every span of this tab the caller's Skip drops, tables and contents
+// lists walked into, because blocks asks Skip there too. Nothing is dropped
+// when no Skip was given, which is the read.
+func (e *emitter) cut(bs []docs.Block) []cutSpan {
+	if e.opts.Skip == nil {
+		return nil
+	}
+	var out []cutSpan
+	for _, b := range bs {
+		if e.opts.Skip(b) {
+			if first, last, ok := indexes([]docs.Block{b}); ok {
+				out = append(out, cutSpan{first, last})
+			}
+			continue
+		}
+		switch {
+		case b.Table != nil:
+			for _, row := range b.Table.Rows {
+				for _, c := range row {
+					out = append(out, e.cut(c.Blocks)...)
+				}
+			}
+		case b.TOC != nil:
+			out = append(out, e.cut(b.TOC.Blocks)...)
+		}
+	}
+	return out
+}
+
+// indexes is the lowest and highest character index these blocks reach, tables
+// and contents lists walked into. ok is false where nothing inside them
+// carries an index, which is a block no comment can sit in.
+func indexes(bs []docs.Block) (first, last int, ok bool) {
+	note := func(f, l int) {
+		if !ok || f < first {
+			first = f
+		}
+		if !ok || l > last {
+			last = l
+		}
+		ok = true
+	}
+	for _, b := range bs {
+		switch {
+		case b.Paragraph != nil:
+			note(b.Paragraph.StartIndex, b.Paragraph.EndIndex)
+		case b.Table != nil:
+			note(b.Table.StartIndex, b.Table.StartIndex)
+			for _, row := range b.Table.Rows {
+				for _, c := range row {
+					if f, l, got := indexes(c.Blocks); got {
+						note(f, l)
+					}
+				}
+			}
+		case b.TOC != nil:
+			if f, l, got := indexes(b.TOC.Blocks); got {
+				note(f, l)
+			}
+		}
+	}
+	return first, last, ok
+}
+
+// overlaps says whether r shares a character with any span that is going away.
+// A range that ends where a cut span begins is the first character after it and
+// does not overlap, which is why the ends are exclusive on both sides.
+func overlaps(cut []cutSpan, r docs.Range) bool {
+	for _, c := range cut {
+		if r.Start < c.last && c.first < r.End {
+			return true
+		}
+	}
+	return false
+}
+
+// strippedWarning names a range whose words this projection took out. It is the
+// same shape as unplacedWarning and for the same reason: the file carries no
+// marker for the comment, and a session that cannot see why would go looking
+// for words that are not there.
+func strippedWarning(id string, r docs.Range) string {
+	return fmt.Sprintf("comment %s: its range %d..%d is in a block this projection took out, so it is not marked", id, r.Start, r.End)
 }
 
 // unplaced warns about a range naming a tab the document does not have. A range
