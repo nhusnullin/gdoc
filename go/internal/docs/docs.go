@@ -321,7 +321,9 @@ func URL(id string) string {
 // document answers with them too, so this exists for the caller that wants one
 // fact out of that answer rather than the prose: the measured saving was 982
 // bytes against 12,907 for the document itself. Its caller is
-// restyle.RevisionOf, which reads it between batches for the revision id alone.
+// restyle.RevisionOf, which cmd/gdoc's restyle makes between the marker batch
+// and the styling phase, for the revision id alone. The apply loop reads
+// nothing between its own batches.
 //
 // includeTabsContent stays true, because that is where the ranges are. The
 // mask selects each tab's id and its named ranges, and childTabs whole: a mask

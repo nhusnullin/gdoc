@@ -48,10 +48,17 @@
 // TestTheNumberedListStartsAtOneDecimalAtThirtySixPoints is the pin, and it
 // asks every level rather than the first.
 //
-// One consequence belongs to the walker rather than here, and internal/body
-// says it: this part defines one w:num per list kind, and every level of the
-// numbered one starts at 1, so a second top-level list carries on from the
-// first and an author's own opening number is not honoured. That package warns.
+// This part defines one w:num for the bullets and one per numbered list in the
+// body, each numbered one stating w:startOverride 1 on all nine of its levels.
+// The id alone would rest on a reader keeping its count per instance rather
+// than per abstract list, and pandoc and python-docx both write the override
+// instead, so the restart is stated rather than assumed. The Word master takes
+// a third route, one abstract list per numbered list, which needs no override
+// and costs a definition per list.
+// TestOneNumberedListDefinitionPerNumberedList and
+// TestEveryNumberedListOverridesItsStart are the pins. What is still not
+// honoured is an author's own opening number, which is this same override
+// carrying their value: internal/body warns by line.
 //
 // # A header or footer line carries its own size on the paragraph mark
 //

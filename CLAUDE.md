@@ -99,8 +99,11 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   process unless the body says `writeMode: SUGGEST`:
   `TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant`.
 - **The one door in that wall is `Policy.GrantInPlace`**, which raises one id for
-  one run to four styling request kinds, none of which can change a character:
-  `TestNothingAtLevelInPlaceCanChangeACharacter`.
+  one run to four styling request kinds, none of which can change a character.
+  It never narrows: an id already at the full level, which only a create the
+  guard itself carried gives, is left there and the call is noted:
+  `TestNothingAtLevelInPlaceCanChangeACharacter` and
+  `TestGrantInPlaceLeavesACreatedDocumentAtFull`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
   `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom` and
   `GrantInPlace` are per-run, and nothing writes one down:

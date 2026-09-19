@@ -8,12 +8,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="0" w:name="h_rendering_conformance_note"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1-Rendering Conformance Note</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="0"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -23,12 +25,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="1" w:name="h_purpose"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1-Purpose</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="1"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -187,12 +191,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="h_lists"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2-Lists</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="2"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -202,12 +208,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="3" w:name="h_bulleted_three_deep"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2.1-Bulleted, three deep</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="3"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -364,12 +372,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="4" w:name="h_numbered_restarting"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2.2-Numbered, restarting</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="4"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -502,7 +512,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="3"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -524,7 +534,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="3"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -550,18 +560,20 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="5" w:name="h_a_list_starting_at_seven"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2.3-A list starting at seven</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="5"/>
   </w:p>
   <w:p>
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="4"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -583,7 +595,7 @@
     <w:pPr>
       <w:numPr>
         <w:ilvl w:val="0"/>
-        <w:numId w:val="2"/>
+        <w:numId w:val="4"/>
       </w:numPr>
       <w:spacing w:before="0" w:after="60"/>
       <w:ind w:left="720" w:hanging="360"/>
@@ -609,12 +621,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="6" w:name="h_tables"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3-Tables</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="6"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -624,12 +638,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="7" w:name="h_a_narrow_table_with_a_date_column"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.1-A narrow table with a date column</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="7"/>
   </w:p>
   <w:tbl>
     <w:tblPr>
@@ -1246,12 +1262,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="8" w:name="h_a_table_with_one_wide_column"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.2-A table with one wide column</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="8"/>
   </w:p>
   <w:tbl>
     <w:tblPr>
@@ -1583,12 +1601,14 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="9" w:name="h_a_table_carrying_marks_and_a_link"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.3-A table carrying marks and a link</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="9"/>
   </w:p>
   <w:tbl>
     <w:tblPr>
@@ -1964,12 +1984,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="10" w:name="h_quoted_and_preformatted"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.4-Quoted and preformatted</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="10"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2005,12 +2027,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="11" w:name="h_deep_headings"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5-Deep headings</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="11"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2020,12 +2044,14 @@
         <w:color w:val="000000"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="12" w:name="h_a_fourth_level_heading"/>
     <w:r>
       <w:rPr>
         <w:color w:val="000000"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5.0.1-A fourth-level heading</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="12"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2052,12 +2078,14 @@
         <w:color w:val="000000"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="13" w:name="h_a_fifth_level_heading"/>
     <w:r>
       <w:rPr>
         <w:color w:val="000000"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5.0.1.1-A fifth-level heading</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="13"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2084,12 +2112,14 @@
         <w:color w:val="000000"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="14" w:name="h_a_sixth_level_heading"/>
     <w:r>
       <w:rPr>
         <w:color w:val="000000"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5.0.1.1.1-A sixth-level heading</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="14"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2116,12 +2146,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="15" w:name="h_7_a_heading_that_numbers_itself"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">7. A heading that numbers itself</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="15"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2148,12 +2180,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="16" w:name="h_a_heading_after_the_authored_one"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.6-A heading after the authored one</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="16"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -2180,12 +2214,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="17" w:name="h_appendix_a_things_that_are_nev_3840771"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">Appendix A: things that are never numbered</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="17"/>
   </w:p>
   <w:p>
     <w:pPr>

@@ -139,14 +139,28 @@
 // TestEachBatchCarriesTheRevisionFromTheLastAnswer and
 // TestAnEmptyRevisionIsRefusedBeforeAnythingIsSent are the pins.
 //
-// The loop reads between batches for the revision id, and for nothing else.
-// None of the four request kinds the in-place level carries can change a
-// character, so no index built before the first batch can have moved by the
-// last. The answer usually names the next revision, and RevisionOf is what
-// stands in when it does not: it is docs.NamedRangesURL, the narrowed read,
-// because the revision is all the loop wants.
-// TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone and
-// TestAFailedRevisionReadStopsTheRun are the pins.
+// The loop reads nothing between batches. Each batch is sent against the
+// revision the batch before it answered with, and an answer that names none
+// ends the run: reading the document for a revision would read it as it is
+// now, foreign edit included, so that edit would be adopted as this run's own
+// and every batch behind it accepted against it. The run stops instead, the
+// batches that landed stay, and the warnings say the document is half styled.
+// The last batch is the one case with nothing behind it, so a quiet answer
+// there is a warning and not a stop.
+// TestAnAnswerCarryingNoRevisionMidRunStopsTheRun and
+// TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead are the pins.
+//
+// RevisionOf is the read the loop does not make, kept for the one caller at a
+// phase boundary rather than between two batches: the prelude in
+// cmd/gdoc/restyle.go, whose marker batch is the last batch of its own run, so
+// an answer naming no revision leaves the styling phase with nothing to send
+// against. Because the loop never calls it, the scripted session in
+// apply_test.go fails every read, and nothing there reaches it. Its own four
+// pins are in revision_test.go, against a session of that file's own:
+// TestRevisionOfReadsTheNamedRangesURLAndReturnsTheRevision,
+// TestRevisionOfPassesTheTransportErrorThrough,
+// TestRevisionOfNamesADecodeFailure and
+// TestRevisionOfRefusesAnAnswerCarryingNoRevision.
 //
 // A refusal is never retried, and a stale revision is reported as itself. Docs
 // refusing a batch on a moved revision means somebody edited the document after

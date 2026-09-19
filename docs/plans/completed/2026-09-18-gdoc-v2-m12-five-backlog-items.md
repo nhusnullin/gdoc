@@ -398,24 +398,24 @@ paths that only run after a prelude phase that returned no error.
   `go/internal/guard/doc.go`
 - Remove: `docs/backlog/grantinplace-silently-demotes-a-created-document.md`
 
-- [ ] Test first, `TestGrantInPlaceLeavesACreatedDocumentAtFull`: `AllowFile("MADE",
+- [x] Test first, `TestGrantInPlaceLeavesACreatedDocumentAtFull`: `AllowFile("MADE",
       LevelFull)`, `GrantInPlace("MADE")`; the level is still `LevelFull`, a
       `PATCH` on `https://www.googleapis.com/drive/v3/files/MADE` with
       `{"trashed":true}` is carried, and `Warnings()` is one entry naming
       `MADE` and the word `full`. Watch it fail.
-- [ ] Test, `TestASecondInPlaceGrantIsQuiet`: `granted(t)` then
+- [x] Test, `TestASecondInPlaceGrantIsQuiet`: `granted(t)` then
       `GrantInPlace("DOC1")` again; level unchanged, no warning.
-- [ ] `GrantInPlace`: read `p.level(id)`; when known and `LevelFull`, `p.note`
+- [x] `GrantInPlace`: read `p.level(id)`; when known and `LevelFull`, `p.note`
       the sentence in Technical Details and return; otherwise as today. The
       note is written outside the lock.
-- [ ] The function's comment says why the grant never narrows and names both
+- [x] The function's comment says why the grant never narrows and names both
       tests; `doc.go:125` gains one sentence naming the first.
-- [ ] `cd go && go test -race ./internal/guard/` passes with no other
+- [x] `cd go && go test -race ./internal/guard/` passes with no other
       assertion changed;
       `git diff main -- go/internal/guard/policy.go go/internal/guard/doc.go | grep '^-' | grep -v '^---' | grep -v '^-\s*//'`
       is empty: nothing left the guard but comment lines.
-- [ ] `git rm docs/backlog/grantinplace-silently-demotes-a-created-document.md`
-- [ ] `git commit -m "fix(guard): GrantInPlace leaves a created document at full"`
+- [x] `git rm docs/backlog/grantinplace-silently-demotes-a-created-document.md`
+- [x] `git commit -m "fix(guard): GrantInPlace leaves a created document at full"`
 
 ### Task 2: a quiet answer mid-run stops the loop
 
@@ -424,31 +424,31 @@ paths that only run after a prelude phase that returned no error.
   `go/internal/restyle/doc.go`
 - Remove: `docs/backlog/restyle-revision-fallback-breaks-the-chain.md`
 
-- [ ] Test first, `TestAnAnswerCarryingNoRevisionMidRunStopsTheRun`: three
+- [x] Test first, `TestAnAnswerCarryingNoRevisionMidRunStopsTheRun`: three
       one-request batches, answers `{"", "rev3", "rev4"}`, `readRevision`
       `"rev2"` available; the run returns an error containing `batch 1 of 3`
       and `revision`; `s.reads` is 0; one POST; `Batches` 1; `RevisionID`
       `"rev1"`; `RevisionUnconfirmed` true; `Stale` and `MaybeApplied` false;
       the joined warnings contain `half styled`. Watch it fail.
-- [ ] Delete `TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone` and
+- [x] Delete `TestTheLoopReadsForTheRevisionWhenAnAnswerCarriesNone` and
       `TestAFailedRevisionReadStopsTheRun`; keep
       `TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead` unchanged.
       In `scripted`, drop `readRevision` and `readErr`, keep `reads`, and have
       `GetJSON` count the read and return an error saying the loop must not
       read; shrink the field comment to match.
-- [ ] `apply`: in the `next == ""` branch, append `RevisionUnconfirmedWarning`
+- [x] `apply`: in the `next == ""` branch, append `RevisionUnconfirmedWarning`
       and set the flag for every quiet answer; if it is the last batch, break;
       otherwise append `out.leftBehind(len(batches), false)` and return the
       error in Technical Details. The `RevisionOf` call leaves the loop.
-- [ ] `RevisionOf`'s comment: it is no longer called by the loop, it names the
+- [x] `RevisionOf`'s comment: it is no longer called by the loop, it names the
       new test, and it names its one caller in `cmd/gdoc`. `doc.go:142`: the
       paragraph "The loop reads between batches" becomes "The loop reads
       nothing between batches", says why, and names the two pins.
-- [ ] `grep -rn 'RevisionOf(' go/` shows the definition and
+- [x] `grep -rn 'RevisionOf(' go/` shows the definition and
       `cmd/gdoc/restyle.go` only.
-- [ ] `cd go && go test -race ./internal/restyle/ ./cmd/...` passes.
-- [ ] `git rm docs/backlog/restyle-revision-fallback-breaks-the-chain.md`
-- [ ] `git commit -m "fix(restyle): a quiet answer mid-run stops the loop instead of reading the revision"`
+- [x] `cd go && go test -race ./internal/restyle/ ./cmd/...` passes.
+- [x] `git rm docs/backlog/restyle-revision-fallback-breaks-the-chain.md`
+- [x] `git commit -m "fix(restyle): a quiet answer mid-run stops the loop instead of reading the revision"`
 
 ### Task 3: the offline gate pins the measured pair
 
@@ -458,36 +458,45 @@ paths that only run after a prelude phase that returned no error.
   `go/internal/drift/compare.go` (the `Known` comment only)
 - Remove: `docs/backlog/drift-known-pins-no-value.md`
 
-- [ ] Print the current pair for every `Known` row once, with a throwaway
+- [x] Print the current pair for every `Known` row once, with a throwaway
       test that logs `show(r.A)` and `show(r.B)` for the rows of
       `Compare(FromDocx(buildNote(t)), FromDocx(openMaster(t)))` whose name is
       in `Known`, and delete the throwaway before committing. The table in
       Context is what it printed on 2026-09-18; use what it prints now.
-- [ ] Test first, `TestEveryKnownDifferenceHasItsPairPinned` in
+- [x] Test first, `TestEveryKnownDifferenceHasItsPairPinned` in
       `pins_test.go`: every name in `Known` is a key of `knownOffline` and
       every key of `knownOffline` is a name in `Known`. With an empty
       `knownOffline` it fails 25 times. Watch it fail.
-- [ ] Test, `TestAKnownRowWhoseValuesMovedFailsTheGate`: a row list built by
+- [x] Test, `TestAKnownRowWhoseValuesMovedFailsTheGate`: a row list built by
       hand with one `Known` name and values that differ from its pin goes
       through the same check the gate uses (extract it as
       `unpinned(rows) []string` in `pins_test.go`, returning one sentence per
       row) and comes back with one sentence naming the row, both values and
       the pin. A row matching its pin comes back with none. Watch it fail.
-- [ ] `knownOffline`, 25 literal pairs, with a comment above it saying what a
+- [x] `knownOffline`, 25 literal pairs, with a comment above it saying what a
       failure means and that re-recording is a decision written down with the
       reason, the same rule `Known` states.
-- [ ] `TestTheOfflineGate` calls `unpinned(rows)` after `Unexplained` and
+- [x] `TestTheOfflineGate` calls `unpinned(rows)` after `Unexplained` and
       fails on every sentence it returns.
-- [ ] Set one pin wrong by hand, watch the gate fail naming the row, set it
+- [x] Set one pin wrong by hand, watch the gate fail naming the row, set it
       back. Change `heading_1.color` in `house.yaml` to `#FF00FF` by hand,
       watch the gate fail on `HEADING_1 colour`, set it back. Record both in
       this plan as ➕ notes.
-- [ ] `compare.go`: the `Known` comment says the offline gate also pins the
+- [x] `compare.go`: the `Known` comment says the offline gate also pins the
       pair, in `pins_test.go`. `doc.go`'s "Known explains a difference" section
       says the same and names the two new tests.
-- [ ] `cd go && go test -race ./internal/drift/` passes.
-- [ ] `git rm docs/backlog/drift-known-pins-no-value.md`
-- [ ] `git commit -m "test(drift): the offline gate pins the measured pair of every known difference"`
+- [x] `cd go && go test -race ./internal/drift/` passes.
+- [x] `git rm docs/backlog/drift-known-pins-no-value.md`
+- [x] `git commit -m "test(drift): the offline gate pins the measured pair of every known difference"`
+
+➕ `table count` pinned as `7` against a document reading `6`: the gate failed
+with `known difference "table count" now reads 6 | 3, and the pinned pair is
+7 | 3`. Pin set back.
+
+➕ `heading_1.color` set to `#FF00FF` in `house.yaml`: the gate failed with
+`known difference "HEADING_1 colour" now reads "#FF00FF" | "#06436E", and the
+pinned pair is "#22265F" | "#06436E"`. Before this task that move passed in
+silence, because the row is named in `Known`. `house.yaml` set back.
 
 ### Task 4: one numbered list definition per numbered list
 
@@ -502,28 +511,28 @@ paths that only run after a prelude phase that returned no error.
 - Create: `go/internal/body/lists_test.go`
 - Remove: `docs/backlog/one-numbered-list-per-document.md`
 
-- [ ] Test first, in `render/numbering_test.go`,
+- [x] Test first, in `render/numbering_test.go`,
       `TestOneNumberedListDefinitionPerNumberedList`: `Build` with
       `numberedLists` 2 writes `w:num` ids `1`, `2`, `3`, the first on the
       bullet abstract list and the other two on the numbered one; with 0 it
       writes `1` alone; `NumberNumID(1)` is the literal `"2"` and
       `NumberNumID(3)` is `"4"`. Watch it fail to compile.
-- [ ] Test, in `body/lists_test.go`, `TestASecondNumberedListStartsAgain`:
+- [x] Test, in `body/lists_test.go`, `TestASecondNumberedListStartsAgain`:
       `"1. a\n2. b\n\ntext\n\n1. c\n2. d\n"` names `w:numId` `2` on the first
       two items and `3` on the last two, `Result.NumberedLists` is 2, and no
       warning says "carries on".
-- [ ] Test, `TestANestedNumberedListNamesItsParent`: a numbered list nested in
+- [x] Test, `TestANestedNumberedListNamesItsParent`: a numbered list nested in
       a numbered item names the parent's id; `NumberedLists` is 1.
-- [ ] Test, `TestANumberedListUnderABulletOpensItsOwn`: a numbered list nested
+- [x] Test, `TestANumberedListUnderABulletOpensItsOwn`: a numbered list nested
       in a bullet names `2`, and a second top-level numbered list after it
       names `3`; `NumberedLists` is 2.
-- [ ] Test, `TestAListThatStartsElsewhereStillSaysSo`: `"5. a\n"` still
+- [x] Test, `TestAListThatStartsElsewhereStillSaysSo`: `"5. a\n"` still
       warns "starts at 5 in the note and at 1 in the document".
-- [ ] `render`: `NumberNumID(n int) string` returning `strconv.Itoa(n + 1)`;
+- [x] `render`: `NumberNumID(n int) string` returning `strconv.Itoa(n + 1)`;
       `numberingPart(numberedLists int)` writing the bullet `w:num` and one per
       list; `Build(cfg, f, body, media, numberedLists int)`; the doc comment on
       the constants says why the ids are computed.
-- [ ] `body`: `Result.NumberedLists int`; `listCtx` gains `ordered bool` and
+- [x] `body`: `Result.NumberedLists int`; `listCtx` gains `ordered bool` and
       `itemBlocks` takes `(item, level, list listCtx)` instead of the bare id;
       `block` opens a fresh id when the list is ordered and the enclosing
       `listCtx` is not ordered, by incrementing `numberedLists` and calling
@@ -532,22 +541,30 @@ paths that only run after a prelude phase that returned no error.
       `ordered` and the one at `:631` reads `list.ordered`, and neither
       compares an id string any more; `warnListNumbers` keeps only the start
       warning and its comment shrinks to match.
-- [ ] The three `Build` callers pass `walked.NumberedLists`:
+- [x] The three `Build` callers pass `walked.NumberedLists`:
       `cmd/gdoc/build.go:155`, `internal/drift/drift_test.go:306`,
       `internal/live/publish_test.go:333`.
-- [ ] `TestANumberedListNamesTheNumberedList` and
+- [x] `TestANumberedListNamesTheNumberedList` and
       `TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo` updated to the new
       behaviour: the first still expects `2` for a single list; the second
       drops the "carries on" case and keeps the start and nested cases.
-- [ ] `body/doc.go:159`: the section becomes "A numbered list starts at 1,
+- [x] `body/doc.go:159`: the section becomes "A numbered list starts at 1,
       and a list that opens elsewhere says so", names the four new tests and
       no longer names the backlog file. `docs/guide/publishing.md:75`: the
       paragraph says a second numbered list starts again at 1 and keeps the
       start-number sentence.
-- [ ] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
+- [x] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
       with no pin changed.
-- [ ] `git rm docs/backlog/one-numbered-list-per-document.md`
-- [ ] `git commit -m "fix(body): every numbered list gets its own definition and starts at 1"`
+- [x] `git rm docs/backlog/one-numbered-list-per-document.md`
+- [x] `git commit -m "fix(body): every numbered list gets its own definition and starts at 1"`
+
+➕ Two goldens moved, both as the change intends and neither a house value:
+`render/testdata/numbering.xml` loses the numbered `w:num`, because the shell
+it is built from has no body and so no numbered list, and
+`body/testdata/golden/01-kitchen-sink.xml` names `2`, `3` and `4` where it
+named `2` four times, with the nested list still on its parent's `2`.
+`TestNumberingHoldsTheBulletedAndTheNumberedList` now builds with one numbered
+list, which is the body it was always describing.
 
 ### Task 5: an internal anchor link jumps
 
@@ -557,7 +574,7 @@ paths that only run after a prelude phase that returned no error.
 - Create: `go/internal/body/anchors_test.go`
 - Remove: `docs/backlog/internal-anchor-links.md`
 
-- [ ] Test first, `TestBookmarkNameIsWordSafe`: `bookmarkName("purpose-and-scope")`
+- [x] Test first, `TestBookmarkNameIsWordSafe`: `bookmarkName("purpose-and-scope")`
       is the literal `"h_purpose_and_scope"`, `bookmarkName("1-1-purpose")` is
       `"h_1_1_purpose"`, `bookmarkName("a.b")` is `"h_a_b"` (an input goldmark
       never produces, pinned because the rule is wider than the generator),
@@ -568,28 +585,28 @@ paths that only run after a prelude phase that returned no error.
       value once with a throwaway test, delete the throwaway, and add the
       whole 40-character literal to the test as a second assertion, so the
       hash is pinned too.
-- [ ] Test, `TestEveryHeadingCarriesABookmark`: `"# Purpose and scope\n\ntext\n\n## Scope\n"`
+- [x] Test, `TestEveryHeadingCarriesABookmark`: `"# Purpose and scope\n\ntext\n\n## Scope\n"`
       serialises with `w:bookmarkStart w:id="0" w:name="h_purpose_and_scope"`
       and a matching `w:bookmarkEnd w:id="0"` inside the first heading's
       paragraph, and `w:id="1"` with `h_scope` in the second.
-- [ ] Test, `TestAnAnchorLinkIsAJumpAndNotARelationship`:
+- [x] Test, `TestAnAnchorLinkIsAJumpAndNotARelationship`:
       `"See [below](#scope).\n\n## Scope\n"` serialises with
       `<w:hyperlink w:anchor="h_scope">`, no `r:id` on it, `len(out.Media)`
       0, and the run inside coloured and underlined. The link sits above the
       heading, which is the forward case.
-- [ ] Test, `TestAnAnchorToNoHeadingWarnsAndPrintsPlainText`:
+- [x] Test, `TestAnAnchorToNoHeadingWarnsAndPrintsPlainText`:
       `"See [below](#nowhere).\n"` has no `w:hyperlink`, the words `below` are
       in an ordinary run, `Media` is empty, and one warning is
       `line 1: the link to #nowhere names no heading in this note, so its words are printed as plain text`.
-- [ ] Test, `TestAFigureOnlyHeadingCarriesNoBookmark`: the note
+- [x] Test, `TestAFigureOnlyHeadingCarriesNoBookmark`: the note
       `"See [it](#altpicpng).\n\n## ![alt](pic.png)\n"` with `pic.png` a
       one-pixel PNG in the test's temp directory: the heading serialises with
       no `w:bookmarkStart` (goldmark names it `altpicpng`, built from the raw
       line), and the link is warned about as a dead anchor to `#altpicpng`
       and printed as plain text, because no bookmark was written for it.
-- [ ] `TestALinkIsAHyperlinkWithARelationship` runs unchanged: an `https` link
+- [x] `TestALinkIsAHyperlinkWithARelationship` runs unchanged: an `https` link
       is as it was.
-- [ ] `body`: `bookmarkName`, with `hash/fnv` for the long case; extract
+- [x] `body`: `bookmarkName`, with `hash/fnv` for the long case; extract
       the figure-only test `headingBlock` already makes at `body.go:547` into
       `isFigureOnly(heading, source) bool` and use it in both places; a
       pre-walk in `Render` (before the block walk) over `ast.Heading` nodes
@@ -602,14 +619,33 @@ paths that only run after a prelude phase that returned no error.
       takes the `#` branch: strip `#`, look the id up in the set, and either
       `w:hyperlink w:anchor` or the plain run plus the warning at `curLine`.
       No caller of `addRuns` changes.
-- [ ] `body/doc.go`: the autolink section's last sentence no longer names the
+- [x] `body/doc.go`: the autolink section's last sentence no longer names the
       backlog file, and a new section "An anchor link is a jump to a bookmark
       every heading with words carries" says why the name is rewritten, why a dead anchor
       is plain text rather than a broken jump, and names the five tests.
-- [ ] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
+- [x] `cd go && go test -race ./...` passes, and `TestTheOfflineGate` is green
       with no pin changed: a bookmark carries no text and no measured value.
-- [ ] `git rm docs/backlog/internal-anchor-links.md`
-- [ ] `git commit -m "fix(body): an internal anchor link jumps to a bookmark on the heading it names"`
+- [x] `git rm docs/backlog/internal-anchor-links.md`
+- [x] `git commit -m "fix(body): an internal anchor link jumps to a bookmark on the heading it names"`
+
+➕ `isFigureOnly` also replaces the same expression in
+`shallowestHeadingLevel`, which is the third place the test was written out:
+the plan named two, and leaving the third a copy is the drift the extraction
+exists to stop.
+
+➕ The six goldens under `body/testdata/golden/` grew 270 lines and lost none,
+every one a `w:bookmarkStart` or `w:bookmarkEnd`. `05-edge-cases.xml` shows the
+rewrite doing its work: `h_rsum_of_nderungen_nave_caf` for a heading of
+accented words, `h_overview` and `h_overview_1` for two headings with one name,
+and `h_a_table_with_an_empty_cell_and_c3cdb97` for one over the ceiling.
+
+➕ The long name's hash is `9cccf62`, read off the failing assertion rather
+than a throwaway test, and pinned as the whole 40-character literal.
+
+➕ The scratch note of the Validation Commands built: 3 `w:num`, 3
+`w:bookmarkStart`, one `w:anchor="h_the_third_heading"`, no `TargetMode`
+`External` relationship at all, and the dead anchor named on the envelope as
+line 34.
 
 ### Task 6: the documents
 
@@ -617,49 +653,79 @@ paths that only run after a prelude phase that returned no error.
 - Modify: `docs/v2/DECISIONS.md`, `PRINCIPLES.md`, `docs/v2/SPEC.md`,
   `docs/v2/PLAN.md`, `CLAUDE.md` (only if a check below says so)
 
-- [ ] DECISIONS.md: one entry, `## 2026-09-18. Five backlog items closed, and
+- [x] DECISIONS.md: one entry, `## 2026-09-18. Five backlog items closed, and
       what each decided.`, in the shape of the annotate entry at line 2198, with the
       five decisions above as its paragraphs, each naming the test that pins
       it; and one register row, `holds`. The register row for 2026-09-09 M7b
       is unchanged: nothing in it is superseded, the grant is narrowed by
       nothing and widened by nothing.
-- [ ] PRINCIPLES.md line 104: the no-rollback bullet gains one sentence, that
+- [x] PRINCIPLES.md line 104: the no-rollback bullet gains one sentence, that
       a batch answer naming no revision mid-run stops the run for the same
       reason the refused batch is never retried.
-- [ ] SPEC.md: read the styling paragraph at line 204 and the restyle section
+- [x] SPEC.md: read the styling paragraph at line 204 and the restyle section
       around it; if it says the loop reads between batches, or describes the
       grant on a created document, amend the sentence; if it says neither,
       change nothing and say so here as a ➕ note. Read the `publish` and
       `build` sections for a sentence about numbered lists or links; amend
       only what is now false.
-- [ ] PLAN.md: this milestone is one row in the Done table, `M12`, listing
+- [x] PLAN.md: this milestone is one row in the Done table, `M12`, listing
       the five items in one sentence, and the plan file's name.
-- [ ] CLAUDE.md: re-read the invariants list against this milestone's tests.
+- [x] CLAUDE.md: re-read the invariants list against this milestone's tests.
       The grant invariant ("The one door in that wall is `Policy.GrantInPlace`")
       gains nothing unless a test here pins something no line names; expected
       answer is no change. `wc -l CLAUDE.md` under 300 either way.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M12, five backlog items, decided and recorded"`
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M12, five backlog items, decided and recorded"`
+
+➕ SPEC.md changed nothing. The `restyle` styling paragraph at line 204 does
+not say the loop reads between batches, and nothing in the file describes the
+grant on a document a create the guard carried, so neither sentence exists to
+amend. The `publish` and `build` sections say nothing about numbered lists or
+about links, so nothing there is now false either.
+
+➕ CLAUDE.md changed nothing, as expected, and is 258 lines. The grant
+invariant at line 101 says `GrantInPlace` "raises one id for one run", which
+Task 1 made literally exact rather than nearly true, and no test in this
+milestone pins something no line already names.
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] `make test`, `make vet` and `make build` pass.
-- [ ] Every Validation Command above gives the answer it states. Record the
+- [x] `make test`, `make vet` and `make build` pass.
+- [x] Every Validation Command above gives the answer it states. Record the
       three counts and the anchor name here as ➕ notes, and delete the scratch
       note and docx afterwards.
-- [ ] `ls docs/backlog/` lists 18 files and none of the five.
-- [ ] `git diff main...HEAD -- go/internal/guard/ | grep '^-' | grep -v '^---' | grep -v '^-\s*//'`
+- [x] `ls docs/backlog/` lists 18 files and none of the five.
+- [x] `git diff main...HEAD -- go/internal/guard/ | grep '^-' | grep -v '^---' | grep -v '^-\s*//'`
       is empty: nothing but comment lines left the guard.
-- [ ] `grep -rn 'RevisionOf(' go/` shows the definition and one caller in
+- [x] `grep -rn 'RevisionOf(' go/` shows the definition and one caller in
       `cmd/gdoc/restyle.go`.
-- [ ] Nothing to commit: this task changes no file. If it finds something,
-      that is a ➕ task with its own commit.
+- [x] Nothing to commit: this task changes no file. If it finds something,
+      that is a ➕ task with its own commit. It found nothing: the tree was
+      clean before this task and the only file it writes is this plan.
+
+➕ The scratch note built on the second try. The Validation Command above
+writes `bin/gdoc build /tmp/m12-note.md`, and `build` takes no bare argument:
+the line it ran is `bin/gdoc build --md /tmp/m12-note.md --out /tmp/m12.docx
+--force`, which is what `gdoc help build` prints. The plan's line is a typo,
+not a missing flag in the binary.
+
+➕ The three counts, on a note with three headings, two top-level numbered
+lists and one `[see below](#the-third-heading)` above the third heading:
+`<w:num ` in `word/numbering.xml` is 3, `w:bookmarkStart` in
+`word/document.xml` is 3, and the one anchor is
+`w:anchor="h_the_third_heading"`. The envelope read
+`"lists":2,"headings":3`. The scratch note and docx are deleted.
+
+➕ `ls docs/backlog/ | wc -l` is 18 and none of the five names is there.
+`wc -l CLAUDE.md` is 258, under the 300 ceiling. The guard removal grep is
+empty. `RevisionOf` has its definition in `internal/restyle/apply.go:473` and
+one caller, `cmd/gdoc/restyle.go:581`.
 
 ### Task 8: Update documentation
 
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M12 five backlog items, completed"`
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M12 five backlog items, completed"`
 
 ## Post-Completion
 

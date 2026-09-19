@@ -1,6 +1,7 @@
 package render
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/beevik/etree"
@@ -19,8 +20,7 @@ func abstractNum(t *testing.T, doc *etree.Document, id string) *etree.Element {
 }
 
 func TestNumberingHoldsTheBulletedAndTheNumberedList(t *testing.T) {
-	pkg := build(t)
-	doc := parse(t, part(t, pkg, "word/numbering.xml"))
+	doc := numbering(t, 1)
 	if got := len(doc.FindElements("//w:abstractNum")); got != 2 {
 		t.Fatalf("word/numbering.xml defines %d abstract lists, want 2", got)
 	}
@@ -112,4 +112,97 @@ func TestTheNumberedListStartsAtOneDecimalAtThirtySixPoints(t *testing.T) {
 			t.Errorf("numbered level %d start = %q, want 1", i, got)
 		}
 	}
+}
+
+// TestOneNumberedListDefinitionPerNumberedList: every numbered list in the
+// body gets its own w:num, all of them on the one numbered abstract list, so
+// each list restarts at 1. The bullet w:num is there whatever the body holds.
+func TestOneNumberedListDefinitionPerNumberedList(t *testing.T) {
+	if got := NumberNumID(1); got != "2" {
+		t.Errorf("the first numbered list names %q, want 2", got)
+	}
+	if got := NumberNumID(3); got != "4" {
+		t.Errorf("the third numbered list names %q, want 4", got)
+	}
+
+	two := numbering(t, 2)
+	want := map[string]string{"1": "1", "2": "2", "3": "2"}
+	got := map[string]string{}
+	for _, e := range two.FindElements("//w:num") {
+		got[e.SelectAttrValue("w:numId", "")] = e.SelectElement("w:abstractNumId").SelectAttrValue("w:val", "")
+	}
+	if len(got) != len(want) {
+		t.Fatalf("a body with two numbered lists defines %d w:num entries, want 3: %v", len(got), got)
+	}
+	for id, abstract := range want {
+		if got[id] != abstract {
+			t.Errorf("numId %s points at abstract %q, want %s", id, got[id], abstract)
+		}
+	}
+
+	none := numbering(t, 0)
+	ids := []string{}
+	for _, e := range none.FindElements("//w:num") {
+		ids = append(ids, e.SelectAttrValue("w:numId", ""))
+	}
+	if len(ids) != 1 || ids[0] != "1" {
+		t.Errorf("a body with no numbered list defines w:num %v, want the bullet's 1 alone", ids)
+	}
+}
+
+// TestEveryNumberedListOverridesItsStart: a w:num of its own may not be enough
+// to restart a list. A reader that keeps the running count against the abstract
+// list would carry the first list's number into the second, which is the defect
+// the per-list w:num exists to fix and which nothing here measures.
+// w:startOverride states the restart in the file rather than assuming the reader
+// makes it, so the restart is true under either reading of ECMA-376 17.9.27, and
+// pandoc and python-docx both write it. The bullet list takes none, because a
+// bullet has no count to carry.
+func TestEveryNumberedListOverridesItsStart(t *testing.T) {
+	two := numbering(t, 2)
+	for _, numID := range []string{"2", "3"} {
+		num := numByID(t, two, numID)
+		overrides := num.SelectElements("w:lvlOverride")
+		if len(overrides) != listLevels {
+			t.Errorf("numId %s carries %d level overrides, want %d", numID, len(overrides), listLevels)
+		}
+		for i, override := range overrides {
+			if got := override.SelectAttrValue("w:ilvl", ""); got != fmt.Sprint(i) {
+				t.Errorf("numId %s override %d names level %q, want %d", numID, i, got, i)
+			}
+			start := override.SelectElement("w:startOverride")
+			if start == nil {
+				t.Errorf("numId %s level %d overrides no start, so that level carries on from the list above it", numID, i)
+				continue
+			}
+			if got := start.SelectAttrValue("w:val", ""); got != "1" {
+				t.Errorf("numId %s level %d starts at %q, want 1", numID, i, got)
+			}
+		}
+	}
+	if got := len(numByID(t, two, "1").SelectElements("w:lvlOverride")); got != 0 {
+		t.Errorf("the bullet list carries %d level overrides, want none", got)
+	}
+}
+
+// numByID returns one w:num by its id.
+func numByID(t *testing.T, doc *etree.Document, id string) *etree.Element {
+	t.Helper()
+	for _, e := range doc.FindElements("//w:num") {
+		if e.SelectAttrValue("w:numId", "") == id {
+			return e
+		}
+	}
+	t.Fatalf("word/numbering.xml defines no w:num %q", id)
+	return nil
+}
+
+// numbering builds word/numbering.xml for a body holding n numbered lists.
+func numbering(t *testing.T, n int) *etree.Document {
+	t.Helper()
+	pkg, err := Build(config(t), fields(), nil, nil, n)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	return parse(t, part(t, pkg, "word/numbering.xml"))
 }

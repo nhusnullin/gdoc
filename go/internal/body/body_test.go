@@ -1039,16 +1039,17 @@ func TestAnEmptyFenceNamesARealLine(t *testing.T) {
 	}
 }
 
-// A numbered list prints numbers the author did not write, in two shapes, and
-// both are named on the envelope.
+// A numbered list that opens on a number the author did not write says so on
+// the envelope.
 //
-// numbering.xml defines one w:num per list kind, so every ordered list in the
-// body names the same one and a second top-level list carries on from the
-// first: 1. and 2. print as 3. and 4. Every level of that part states
-// w:start 1, so an author's "5." opens at 1 whatever depth it sits at. The
-// structural fix is docs/backlog/one-numbered-list-per-document.md; the
-// silence is not deferred, because the prose around a list cross-references
-// the numbers the author wrote.
+// Every level of the numbered abstract list states w:start 1 and every list's
+// own w:num states w:startOverride 1 over it, so an author's "5." opens at 1
+// whatever depth it sits at. Honouring it is that same override carrying the
+// author's number, which gdoc does not write. The silence is not deferred, because
+// the prose around a list cross-references the numbers the author wrote.
+//
+// A second numbered list is no longer one of these shapes: it opens its own
+// w:num and starts again at 1. See TestASecondNumberedListStartsAgain.
 func TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -1056,20 +1057,6 @@ func TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo(t *testing.T) {
 		want     string
 		line     int
 	}{
-		{
-			name: "a second numbered list",
-			markdown: []string{
-				"1. one",
-				"2. two",
-				"",
-				"Prose between.",
-				"",
-				"1. alpha",
-				"2. beta",
-			},
-			want: "carries on from the one above it",
-			line: 6,
-		},
 		{
 			name: "a numbered list that starts at five",
 			markdown: []string{
@@ -1167,5 +1154,18 @@ func TestASkippedHeadingLevelSaysSo(t *testing.T) {
 		if strings.Contains(warning, "skips a level") {
 			t.Errorf("a document that skips nothing warned: %q", warning)
 		}
+	}
+}
+
+// TestAHeadingInsideAFootnoteSetsNoHeadingDepth: a footnote definition is
+// dropped whole, so a heading written inside one is not a heading of this
+// document and must not set the depth every other heading numbers from.
+// Otherwise a stray "# " in a footnote numbers the real headings "0.1-".
+func TestAHeadingInsideAFootnoteSetsNoHeadingDepth(t *testing.T) {
+	out := walk(t, "## Real heading\n\nBody.[^1]\n\n[^1]: the detail\n\n    # Hidden heading\n")
+
+	body := serialise(t, out.Blocks)
+	if !strings.Contains(body, "1-Real heading") || strings.Contains(body, "0.1-Real heading") {
+		t.Errorf("the only heading is not numbered 1, so a heading inside a footnote set the depth:\n%s", body)
 	}
 }

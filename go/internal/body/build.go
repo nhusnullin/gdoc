@@ -6,6 +6,7 @@ package body
 // the reason it is what it is.
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -254,6 +255,14 @@ func (r *renderer) align(a string) string {
 // addRuns writes a stretch of marked text into a paragraph or a cell. A run
 // carrying a link is wrapped in a w:hyperlink naming the relationship the
 // destination took.
+//
+// A destination opening with "#" is a jump inside this document rather than an
+// address, so it is a w:anchor naming the bookmark on the heading and no
+// relationship at all: written as a relationship, Word reads it as an address
+// relative to the document's own location and clicking it opens nothing. A "#"
+// naming no heading in the note is refused the way a code block is refused,
+// named on the envelope and printed as the words the author wrote, because a
+// jump that lands nowhere is worse than no jump.
 func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 	for _, run := range runs {
 		if run.Text == "" {
@@ -271,11 +280,39 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 			textRun(parent, run.Text, o)
 			continue
 		}
+		if anchor, ok := strings.CutPrefix(run.Link, "#"); ok {
+			if !r.anchors[anchor] {
+				r.warnDeadAnchor(anchor)
+				textRun(parent, run.Text, o)
+				continue
+			}
+			wrapper := sub(parent, "w:hyperlink", "w:anchor", bookmarkName(anchor))
+			o.Color = linkColor
+			o.Underline = true
+			textRun(wrapper, run.Text, o)
+			continue
+		}
 		wrapper := sub(parent, "w:hyperlink", "r:id", r.linkID(run.Link))
 		o.Color = linkColor
 		o.Underline = true
 		textRun(wrapper, run.Text, o)
 	}
+}
+
+// warnDeadAnchor names a jump that lands nowhere once for each line and
+// destination. addRuns is reached once per run and merge splits a link's words
+// at every mark boundary, so one link is several runs and warning from there
+// unguarded prints the same sentence two or three times. Two links on one line
+// naming the same missing heading are one sentence for the same reason: the
+// author reads a line and a destination, and both copies say the same.
+func (r *renderer) warnDeadAnchor(anchor string) {
+	key := fmt.Sprintf("%d\x00%s", r.curLine, anchor)
+	if r.deadAnchors[key] {
+		return
+	}
+	r.deadAnchors[key] = true
+	r.warn("line %d: the link to #%s names no heading in this note, so its words are printed as plain text",
+		r.curLine, anchor)
 }
 
 // bodyRun is the run formatting an ordinary body paragraph starts from.
@@ -306,7 +343,12 @@ func (r *renderer) paragraph(runs []Run) *etree.Element {
 
 // heading is one heading paragraph, at the house style for its level and in
 // the colour that style states.
-func (r *renderer) heading(level int, runs []Run, pageBreak bool) *etree.Element {
+//
+// bookmark is the name a jump to this heading lands on, empty for a heading
+// that carries none. The pair wraps the runs rather than the paragraph,
+// because a bookmark outside the paragraph it names is one Word moves with the
+// paragraph mark and not with the words.
+func (r *renderer) heading(level int, runs []Run, pageBreak bool, bookmark string) *etree.Element {
 	if level > 6 {
 		level = 6
 	}
@@ -320,7 +362,16 @@ func (r *renderer) heading(level int, runs []Run, pageBreak bool) *etree.Element
 		HangingPt: &zero,
 		Mark:      &mark,
 	})
+	id := ""
+	if bookmark != "" {
+		id = strconv.Itoa(r.bookmarkID)
+		r.bookmarkID++
+		sub(p, "w:bookmarkStart", "w:id", id, "w:name", bookmark)
+	}
 	r.addRuns(p, runs, runOpts{Color: style.Color})
+	if bookmark != "" {
+		sub(p, "w:bookmarkEnd", "w:id", id)
+	}
 	return p
 }
 

@@ -70,6 +70,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-18 | The wait polls every two seconds | holds |
 | 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | holds |
 | 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds |
+| 2026-09-18 | Five backlog items closed, and what each decided | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2259,3 +2260,110 @@ annotation in the file, each answering `sent` for itself, so a stop in the
 middle names what landed and what never left. `ok: true` over a run where an
 entry failed would give the envelope's `ok` a second meaning, and the exit code
 follows `ok`.
+
+## 2026-09-18. Five backlog items closed, and what each decided.
+
+Nail's decisions, taken in the brainstorm that produced the M12 plan,
+`docs/plans/2026-09-18-gdoc-v2-m12-five-backlog-items.md`. Five items from
+`docs/backlog/` whose value was already agreed, each with one design choice
+left. Nothing here opens a door, reaches a new host or adds a command. Two
+narrow what the binary does, one makes a test stricter, and two fix the docx
+the generator writes. Serves principle 3 in the first three and principle 1 in
+the last two.
+
+**The grant never narrows.** `Policy.GrantInPlace` on an id already at
+`LevelFull`, which is the level a create the guard itself carried gives a
+document, used to write `LevelInPlace` over it: the Drive `PATCH` stopped being
+carried and the styling allowlist started to bind, both in silence. Now it
+leaves the id where it is and notes through `p.note` that the grant changed
+nothing, naming the id and the level. This keeps the levels names rather than
+rungs: nothing is compared with `<` or `>`, the one case is matched with `==`
+on `LevelFull`. A second grant on an id already at `LevelInPlace` changes
+nothing and says nothing. `TestGrantInPlaceLeavesACreatedDocumentAtFull` and
+`TestASecondInPlaceGrantIsQuiet` pin both. No command reaches the branch today,
+because both production callers grant on ids handed in at `LevelSuggest`.
+
+**The apply loop stops on a quiet answer.** A styling batch Docs accepted whose
+answer names no `requiredRevisionId` used to send gdoc back to the document to
+read the current revision, and the next batch went out against it. That adopts
+whatever a colleague typed in the gap, which is uncertainty resolving toward
+the destructive answer. Now a quiet answer with a batch still to send ends the
+run the way a refused batch does: the batches that landed stay, `leftBehind`
+says the document is half styled, `RevisionUnconfirmed` is set and the error
+names the batch. The loop reads nothing between batches at all.
+`TestAnAnswerCarryingNoRevisionMidRunStopsTheRun` pins the mid-run stop and
+`TestTheLastAnswerCarryingNoRevisionIsAWarningAndNotARead` keeps the last-batch
+case, which was already a warning. `RevisionOf` stays exported for its one
+remaining caller, the prelude phase boundary in `cmd/gdoc/restyle.go`, whose
+own comment says what that read costs.
+
+**The offline drift gate pins the measured pair.** `drift.Known` is a map of
+name to reason, and a row named in it used to pass on any difference in either
+direction, so the gate could no longer tell a known difference from a house
+value somebody moved. `Known` stays as it is, shared by both gates, and the
+offline gate gains a second map beside it, `knownOffline` in
+`internal/drift/pins_test.go`, from name to the two values as `show` prints
+them, every one a literal. A `Known` row whose values move now fails until
+somebody re-records the pair with its reason, which is the golden-file
+discipline the gate already has. `TestEveryKnownDifferenceHasItsPairPinned`
+holds the two maps to each other in both directions and
+`TestAKnownRowWhoseValuesMovedFailsTheGate` holds the check itself. The live
+gate is left alone, because no person has read its rows yet, so there is no
+measured pair to pin there.
+
+**One numbered list definition per numbered list.** The generator wrote one
+`w:num` for the whole document, so a second numbered list in a note printed 4,
+5, 6. The body walker now hands a fresh list id to every ordered list that is
+not nested inside an ordered list, counts them on `Result`, and `render.Build`
+writes that many `w:num` entries, all pointing at the one numbered abstract
+list, each stating `w:startOverride` 1 on all nine of its levels. The override
+is the restart said in the file rather than assumed of the reader: a fresh id
+alone rests on Word keeping its count per instance and not per abstract list,
+which nothing here measures, and pandoc and python-docx both write the override.
+The override is correct under either reading of ECMA-376 17.9.27 and costs nine
+empty elements per list. The Word master restarts a third way, one
+`w:abstractNum` per list, which needs no override and costs a definition per
+list instead. A nested ordered list names its parent's
+id, so level restarts work as they did. The arithmetic lives in `render` beside
+`numberingPart`, which is why `NumberNumID` became a function, and
+`NumberNumID(1)` is still `"2"`, so a body paragraph in a document with one
+list names the list it always did. The "carries on from the one above" warning
+is gone, because it is no longer true. The "starts at N in the note and at 1 in
+the document" warning stays: honouring an author's start number is that same
+override carrying their number, and it is a decision nobody has taken.
+`TestOneNumberedListDefinitionPerNumberedList`,
+`TestEveryNumberedListOverridesItsStart`,
+`TestASecondNumberedListStartsAgain`, `TestANestedNumberedListNamesItsParent`,
+`TestANumberedListUnderABulletOpensItsOwn` and
+`TestAListThatStartsElsewhereStillSaysSo` pin it.
+
+**An anchor link is a jump to a bookmark every heading with words carries.**
+`[see below](#scope)` used to become an external relationship to the literal
+string `#scope`, and Word opened nothing. Every heading that emits a paragraph
+now carries a `w:bookmarkStart`/`w:bookmarkEnd` pair around its runs, named
+from goldmark's auto heading id through one function: `h_` and then the id with
+every character outside `[A-Za-z0-9_]` replaced by `_`, and when that is longer
+than 40 characters, which is Word's ceiling on a bookmark name, the first 32
+characters, then `_`, then the first 7 hex digits of the FNV-1a 32-bit hash of
+the id as it arrived. The rule is deliberately wider than what goldmark emits.
+A link whose destination opens with `#` becomes `<w:hyperlink w:anchor>` with
+no relationship and no `Media` entry, through the same function. A `#` link
+naming no heading is warned about with its line and printed as plain text,
+which is how a code block is already refused: a dead jump in Word is worse than
+words that do not jump. The walk collects the heading ids before it renders, so
+a link to a heading further down resolves, and it collects only the headings
+that will carry a bookmark, so a link to a figure-only heading is a dead anchor
+like any other. The line the warning names is the walker's current line, set on
+every path that emits runs: a heading, a paragraph, a table and a block quote,
+which handles a top-level paragraph itself rather than through
+`paragraphBlock`. A table names the table's own line rather than the cell's,
+because a cell has no line the author would recognise.
+`TestBookmarkNameIsWordSafe`, `TestEveryHeadingCarriesABookmark`,
+`TestAnAnchorLinkIsAJumpAndNotARelationship`,
+`TestAnAnchorToNoHeadingWarnsAndPrintsPlainText`,
+`TestADeadAnchorInsideABlockQuoteNamesItsOwnLine`,
+`TestADeadAnchorInsideATableNamesTheTablesOwnLine` and
+`TestAFigureOnlyHeadingCarriesNoBookmark` pin it. What Google's import does with
+a `w:anchor` hyperlink and a `w:bookmarkStart` is unmeasured, and if the jump
+does not survive it that is a MEASURED.md row, not a reason to revert the docx
+side, which Word reads.

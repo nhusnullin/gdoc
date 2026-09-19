@@ -152,7 +152,7 @@ func renderNote(source []byte, md string, a *args) (*noteDocx, error) {
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media)
+	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.NumberedLists)
 	if err != nil {
 		return nil, err
 	}

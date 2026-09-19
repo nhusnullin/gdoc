@@ -10,6 +10,7 @@ package body
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/beevik/etree"
@@ -54,6 +55,12 @@ type Result struct {
 	Warnings []string
 	Counts   Counts
 	Sources  []string
+
+	// NumberedLists is how many w:num entries word/numbering.xml needs for the
+	// numbered lists in these blocks. It is plumbing for render.Build rather
+	// than a fact for a reader, which is why it is not on Counts and not in the
+	// envelope a command prints.
+	NumberedLists int
 }
 
 // renderer holds the state one walk needs.
@@ -74,10 +81,30 @@ type renderer struct {
 	// that spends it can be a container or two down from the item.
 	pendingMark bool
 
-	// numberedLists counts the top-level ordered lists the walk has reached,
-	// because they all name one w:num and the second one carries on from the
-	// first. See warnListNumbers.
+	// numberedLists counts the numbered lists that opened their own w:num, so
+	// the next one takes the next id and render.Build knows how many entries
+	// word/numbering.xml needs. A numbered list nested in a numbered list is
+	// not one of them: it reuses its parent's id.
 	numberedLists int
+
+	// anchors is every heading id a bookmark will be written for, collected
+	// before the walk so a link to a heading further down the note resolves,
+	// and bookmarkID is the w:id the next pair takes, counting from 0 across
+	// the document.
+	anchors    map[string]bool
+	bookmarkID int
+
+	// deadAnchors is every line and destination already named on the
+	// envelope, because addRuns runs once per run and a link whose words
+	// carry mixed formatting is several. The sentence holds a line and a
+	// destination and nothing else, so a second copy of it says nothing the
+	// first did not and makes one dead link read as two.
+	deadAnchors map[string]bool
+
+	// curLine is the line of the block being built, set where the node is in
+	// hand. addRuns is six callers deep from a node and needs a line to name
+	// the link that jumps nowhere.
+	curLine int
 
 	relID      int
 	linkIDs    map[string]string
@@ -114,6 +141,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 
 	r := &renderer{
 		cfg: cfg, base: base, source: source,
+		anchors: headingAnchors(root, source), deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
 		firstHeading: true,
 	}
@@ -126,7 +154,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 		return Result{}, r.err
 	}
 	return Result{Blocks: r.blocks, Media: r.media, Warnings: r.warnings,
-		Counts: r.counts, Sources: r.sources}, nil
+		Counts: r.counts, Sources: r.sources, NumberedLists: r.numberedLists}, nil
 }
 
 // parse is goldmark, configured to the extension set the previous generator
@@ -294,6 +322,97 @@ func firstTextNode(node ast.Node) *ast.Text {
 	return nil
 }
 
+// Word's own rule for a bookmark name: letters, digits and underscores,
+// opening with a letter, and at most 40 characters. A name outside it is not
+// refused, it is repaired, and a repaired name is one no w:anchor matches.
+const (
+	bookmarkPrefix  = "h_"
+	bookmarkMaxName = 40
+	// The stem is what is left of the name once the separator and the seven
+	// hex digits of the hash have their room: 32 + 1 + 7 is the ceiling.
+	bookmarkStem = bookmarkMaxName - 1 - bookmarkHashDigits
+	// Seven of the eight digits FNV-1a 32-bit prints. Two ids that collide
+	// here would have to differ only past their thirty-second character and
+	// then land on the same hash, and the cost of that is one jump landing on
+	// the wrong heading rather than anything lost.
+	bookmarkHashDigits = 7
+)
+
+// bookmarkName turns goldmark's auto heading id into a name Word accepts.
+//
+// The id arrives as goldmark's generator made it, which is lower-case letters,
+// digits and hyphens, unique across the file. Word takes no hyphen, so every
+// character outside [A-Za-z0-9_] becomes an underscore: the rule is
+// deliberately wider than what goldmark emits, because the ids are the
+// document's and a generator that widens is not this package's to notice.
+//
+// The leading "h_" is what makes the name open with a letter, which Word
+// requires and a heading called "1.1 Purpose" would otherwise break.
+//
+// A name over the ceiling keeps its first characters, which is what makes it
+// readable in Word's bookmark list, and takes the hash of the whole id, which
+// is what keeps two long headings sharing a prefix apart. The hash is of the
+// id as it arrived rather than of the underscored name, so two ids that differ
+// only in a character both rewrites drop still get two names.
+func bookmarkName(id string) string {
+	safe := []rune(bookmarkPrefix + id)
+	for i, c := range safe {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '_':
+		default:
+			safe[i] = '_'
+		}
+	}
+	if len(safe) <= bookmarkMaxName {
+		return string(safe)
+	}
+	sum := fnv.New32a()
+	_, _ = sum.Write([]byte(id))
+	digest := fmt.Sprintf("%08x", sum.Sum32())
+	return string(safe[:bookmarkStem]) + "_" + digest[:bookmarkHashDigits]
+}
+
+// headingAnchors is every goldmark heading id that will carry a bookmark, read
+// before the blocks are walked so that a link to a heading further down the
+// note resolves. A figure-only heading is left out: it emits no paragraph, so
+// there is nothing for a jump to land on. So is anything inside a footnote
+// definition, which the block walk drops whole.
+func headingAnchors(root ast.Node, source []byte) map[string]bool {
+	ids := map[string]bool{}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, dropped := node.(*east.FootnoteList); dropped {
+			return ast.WalkSkipChildren, nil
+		}
+		heading, ok := node.(*ast.Heading)
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+		if isFigureOnly(heading, source) {
+			return ast.WalkSkipChildren, nil
+		}
+		if id, ok := heading.AttributeString("id"); ok {
+			if raw, ok := id.([]byte); ok {
+				ids[string(raw)] = true
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return ids
+}
+
+// isFigureOnly is a heading that holds a picture and no words of its own,
+// which Drive writes as "# ![][image1]" for a picture sitting on its own line.
+// It is a figure rather than a heading: it takes no number, no contents entry,
+// no place in the document's heading depth and no bookmark, because the walk
+// emits no heading paragraph for it at all.
+func isFigureOnly(heading ast.Node, source []byte) bool {
+	return len(collectImages(heading, source)) > 0 &&
+		strings.TrimSpace(plainText(inlineRuns(heading, source))) == ""
+}
+
 // shallowestHeadingLevel finds the smallest heading level anywhere in the
 // document, so a body lifted out of a note that already had its own title line
 // still numbers from 1.
@@ -303,6 +422,13 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
+		// A footnote definition is dropped whole by the block walk, so a
+		// heading written inside one is not a heading of this document and
+		// does not set the depth. Otherwise a stray "# " in a footnote
+		// numbers every real heading "0.1-".
+		if _, dropped := node.(*east.FootnoteList); dropped {
+			return ast.WalkSkipChildren, nil
+		}
 		heading, ok := node.(*ast.Heading)
 		if !ok {
 			return ast.WalkContinue, nil
@@ -311,8 +437,7 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 		// set the document's heading depth either. Otherwise Drive's
 		// "# ![][image1]" makes every real heading one level deeper than it is,
 		// and they come out numbered "0.1-".
-		if len(collectImages(heading, source)) > 0 &&
-			strings.TrimSpace(plainText(inlineRuns(heading, source))) == "" {
+		if isFigureOnly(heading, source) {
 			return ast.WalkSkipChildren, nil
 		}
 		if found == 0 || heading.Level < found {
@@ -327,14 +452,20 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 }
 
 // listCtx is what a block inherits from the list it sits in: the list in
-// numbering.xml it belongs to, which is what the item's indent is read off.
+// numbering.xml it belongs to, which is what the item's indent is read off,
+// and whether that list is numbered.
+//
+// ordered is a field rather than a comparison on numID, because there is one
+// numbered w:num per numbered list now and no single id says "this is the
+// numbered one" any more.
 //
 // Whether a block carries the item's marker is not in here. The marker belongs
 // to the first paragraph the item actually emits, and which block that is
 // cannot be read off a node type from outside: it is the renderer's own
 // pendingMark, which itemBlocks arms and paragraphBlock spends.
 type listCtx struct {
-	numID string
+	numID   string
+	ordered bool
 }
 
 // walk renders a block subtree. level counts list nesting: 0 is the body, 1 is
@@ -365,7 +496,7 @@ func (r *renderer) walk(parent ast.Node, level int, list listCtx) error {
 // first child instead breaks the mirror of that, an item opening with a fenced
 // code block, which is a child that renders nothing and would spend the marker
 // on a paragraph nobody sees. Pending, both take exactly one marker.
-func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
+func (r *renderer) itemBlocks(item ast.Node, level int, list listCtx) error {
 	// A nested list is walked from inside this loop, so the item's own marker
 	// is put back on the way out: the sub-list's items arm and spend their own,
 	// and an outer item whose first paragraph comes after the sub-list still
@@ -374,7 +505,7 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	r.pendingMark = true
 	defer func() { r.pendingMark = outer }()
 	for node := item.FirstChild(); node != nil; node = node.NextSibling() {
-		if err := r.block(node, level, listCtx{numID: numID}); err != nil {
+		if err := r.block(node, level, list); err != nil {
 			return err
 		}
 	}
@@ -395,7 +526,7 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	// and telling the author to check numbering that is not wrong is the
 	// cry-wolf warning this tool avoids everywhere else.
 	if r.pendingMark {
-		if numID == render.NumberNumID {
+		if list.ordered {
 			r.warn("line %d: this list item has no text of its own, so it takes no number and the items after it are numbered one lower",
 				r.itemLine(item))
 		} else {
@@ -406,32 +537,21 @@ func (r *renderer) itemBlocks(item ast.Node, level int, numID string) error {
 	return nil
 }
 
-// warnListNumbers names a numbered list whose numbers are not the author's.
+// warnListNumbers names a numbered list that opens on a number the author did
+// not write. This is not a construct the walker declined to render: the list is
+// there and its first number is somebody else's.
 //
-// Two shapes, and neither is a construct the walker declined to render: the
-// list is there and its numbers are somebody else's. numbering.xml defines one
-// w:num per list kind, so every ordered list in the body names the same one
-// and a second top-level list carries on from the first: 1. and 2. print as
-// 3. and 4. Every level of that part states w:start 1, so an author's "5."
-// opens at 1 whatever depth it sits at.
+// Every level of the numbered abstract list states w:start 1, and every list's
+// own w:num states w:startOverride 1 over it. Honouring an author's "5." is
+// that same override carrying their number instead, which gdoc does not write.
+// So a list that opens at 5 in the note opens at 1 in the document, whatever
+// depth it sits at.
 //
-// A nested list is not in the count. An absent w:lvlRestart restarts a level
-// whenever the level above it moves, so the sub-lists under two items of one
-// list each start again on their own, and warning about them would be the
-// cry-wolf warning this tool avoids everywhere else.
-//
-// The structural fix is docs/backlog/one-numbered-list-per-document.md. The
-// silence is not deferred with it: the prose around a numbered list
-// cross-references the numbers the author wrote, so a document that prints
-// others has to say so on the envelope.
-func (r *renderer) warnListNumbers(list *ast.List, level int) {
-	if level == 0 {
-		r.numberedLists++
-		if r.numberedLists > 1 {
-			r.warn("line %d: this numbered list carries on from the one above it rather than starting again at 1",
-				r.itemLine(list))
-		}
-	}
+// The silence around a list that starts at 1 is deliberate: the prose beside a
+// numbered list cross-references the numbers the author wrote, so a document
+// that prints others has to say so on the envelope, and a document that prints
+// the author's own says nothing.
+func (r *renderer) warnListNumbers(list *ast.List) {
 	if list.Start != 1 {
 		r.warn("line %d: this numbered list starts at %d in the note and at 1 in the document",
 			r.itemLine(list), list.Start)
@@ -447,19 +567,27 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return r.paragraphBlock(node, level, list)
 
 	case *ast.List:
-		// The two lists numbering.xml defines are the two a body may name. A
-		// second numbered list therefore carries on from the first, which is
-		// docs/backlog/one-numbered-list-per-document.md.
-		id := render.BulletNumID
+		// Every bullet names the one bulleted list. A numbered list opens its
+		// own w:num, so it starts again at 1, unless it is nested inside a
+		// numbered list: there an absent w:lvlRestart already restarts the
+		// inner level whenever the outer one moves, and a second w:num would
+		// make the two lists two counts Word draws side by side.
+		inner := listCtx{numID: render.BulletNumID}
 		if typed.IsOrdered() {
-			id = render.NumberNumID
-			r.warnListNumbers(typed, level)
+			inner.ordered = true
+			if list.ordered {
+				inner.numID = list.numID
+			} else {
+				r.numberedLists++
+				inner.numID = render.NumberNumID(r.numberedLists)
+			}
+			r.warnListNumbers(typed)
 		}
 		if level == 0 {
 			r.counts.Lists++
 		}
 		for item := typed.FirstChild(); item != nil; item = item.NextSibling() {
-			if err := r.itemBlocks(item, level+1, id); err != nil {
+			if err := r.itemBlocks(item, level+1, inner); err != nil {
 				return err
 			}
 		}
@@ -467,6 +595,7 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *east.Table:
+		r.curLine = r.line(typed)
 		r.emit(r.makeTable(r.tableRows(typed)))
 		r.counts.Tables++
 		r.afterTable = true
@@ -532,6 +661,22 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 	}
 }
 
+// headingBookmark is the name the bookmark on this heading takes, or empty
+// when goldmark handed the heading no id at all. Every heading that reaches a
+// paragraph gets one whether or not this note links to it: the bookmark is
+// what a jump lands on, and a note is edited after it is published.
+func (r *renderer) headingBookmark(heading *ast.Heading) string {
+	id, ok := heading.AttributeString("id")
+	if !ok {
+		return ""
+	}
+	raw, ok := id.([]byte)
+	if !ok {
+		return ""
+	}
+	return bookmarkName(string(raw))
+}
+
 // headingBlock is one heading, its number and any picture it names.
 //
 // Drive exports a picture that sits on its own line as a heading,
@@ -539,14 +684,15 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 // vanish, leaving an empty heading that still took a number and an empty line
 // in the contents list.
 func (r *renderer) headingBlock(heading *ast.Heading) error {
+	r.curLine = r.line(heading)
 	images := collectImages(heading, r.source)
 	runs := inlineRuns(heading, r.source)
 	plain := plainText(runs)
 	r.warnRawHTML(heading, r.line(heading))
 
-	if len(images) > 0 && strings.TrimSpace(plain) == "" {
+	if isFigureOnly(heading, r.source) {
 		// Nothing but a picture. It is a figure, not a heading, so it takes no
-		// number and no contents entry.
+		// number, no contents entry and no bookmark.
 		if err := r.emitImages(images, r.line(heading)); err != nil {
 			return err
 		}
@@ -575,7 +721,8 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 	pageBreak := r.firstHeading && r.cfg.Body.FirstHeadingPageBreak
 	r.firstHeading = false
 
-	r.emit(r.heading(r.numberer.styleLevel(heading.Level), runs, pageBreak))
+	r.emit(r.heading(r.numberer.styleLevel(heading.Level), runs, pageBreak,
+		r.headingBookmark(heading)))
 	r.counts.Headings++
 
 	// A heading that names a picture keeps its words and gets the picture
@@ -592,6 +739,7 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 	images := collectImages(node, r.source)
 	runs := inlineRuns(node, r.source)
 	line := r.line(node)
+	r.curLine = line
 	r.warnRawHTML(node, line)
 	if level > 0 {
 		// A figure inside a bullet would break the numbering it sits in, so
@@ -628,7 +776,7 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 			r.pendingMark = false
 		}
 		r.emit(r.listItem(runs, numID, min(level-1, maxListLevel),
-			list.numID == render.NumberNumID))
+			list.ordered))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
@@ -651,6 +799,11 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 			continue
 		}
 		line := r.line(paragraph)
+		// This is the one path that emits runs without going through
+		// paragraphBlock, so it sets the current line itself. Left to the
+		// block before it, a dead anchor link inside the quote is named at
+		// that block's line and the author looks for it there.
+		r.curLine = line
 		r.warnRawHTML(paragraph, line)
 		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
 		r.emit(r.quote(inlineRuns(paragraph, r.source), r.quoteDepth))

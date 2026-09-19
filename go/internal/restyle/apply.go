@@ -18,15 +18,17 @@ package restyle
 // empty string and Docs would take the batch, so the only protection this
 // milestone has would be gone with nothing said.
 //
-// The loop reads between batches for the revision id, and for nothing else. An
-// earlier draft of this milestone justified the loop with shifting indexes: a
-// batch that inserts or deletes moves the positions later batches were computed
-// from, so every batch had to be recomputed from a fresh read. That reason went
-// with the bullets. None of the four request kinds the in-place level carries
-// can change a character, so no index in a request built before the first batch
-// can have moved by the last. What the loop still needs from Docs is the next
-// revision id, which the answer usually names, and the read below is what
-// stands in when it does not.
+// The loop reads nothing between batches. An earlier draft of this milestone
+// justified a read with shifting indexes: a batch that inserts or deletes moves
+// the positions later batches were computed from, so every batch had to be
+// recomputed from a fresh read. That reason went with the bullets. None of the
+// four request kinds the in-place level carries can change a character, so no
+// index in a request built before the first batch can have moved by the last.
+// What the loop still needs from Docs is the next revision id, which the answer
+// names, and an answer that names none ends the run: a revision read here is
+// the document as it is now, foreign edit included, so that edit would be
+// adopted as this run's own. The last batch is the one case with nothing behind
+// it, so a quiet answer there is a warning and not a stop.
 //
 // A failed run has no rollback, and what it leaves behind is written down
 // rather than discovered. A run that stops at batch twelve leaves a half-styled
@@ -90,9 +92,10 @@ type Applied struct {
 	// the last batch was sent against.
 	RevisionID string `json:"revision_id"`
 	// RevisionUnconfirmed says RevisionID is that second thing: the last batch
-	// was accepted, its answer named no revision id, and nothing followed it to
-	// read one for. The document has moved past it, and a caller that sends
-	// another batch against it has that batch refused as stale.
+	// this run sent was accepted and its answer named no revision id, whether
+	// the run then ended there or stopped with batches still to send. The
+	// document has moved past that revision, and a caller that sends another
+	// batch against it has that batch refused as stale.
 	//
 	// It is a field rather than a warning because a caller acts on it. The
 	// prelude run is the one that does: it sends the marker in a batch of its
@@ -234,23 +237,37 @@ func apply(ctx context.Context, s Session, docID string, requests []map[string]a
 
 		next := answer.WriteControl.RequiredRevisionID
 		if next == "" {
+			// What the run cannot say is where the document ended up, and it
+			// says that rather than reporting a revision the batch has already
+			// moved past. RevisionID stays the revision this batch was sent
+			// against, on both paths out of here.
+			out.RevisionUnconfirmed = true
 			if i == len(batches)-1 {
-				// Nothing follows, so there is nothing to read a revision for.
-				// What the run cannot say is where the document ended up, and
-				// it says that rather than reporting a revision the last batch
-				// has already moved past.
+				// Nothing follows, so nothing needs a revision, and the
+				// sentence saying so is the one cmd/gdoc drops by value on the
+				// path that goes and reads.
 				out.Warnings = append(out.Warnings, RevisionUnconfirmedWarning)
-				out.RevisionUnconfirmed = true
 				break
 			}
-			read, err := RevisionOf(ctx, s, docID)
-			if err != nil {
-				out.Warnings = append(out.Warnings, out.leftBehind(len(batches), false))
-				return out, fmt.Errorf(
-					"batch %d of %d was accepted and its answer named no revision id, and the document could not be read for one, so the run stopped rather than sending the next batch without: %w",
-					i+1, len(batches), err)
-			}
-			next = read
+			// A batch still to send, and no revision to send it against. The
+			// loop reads nothing: a revision read here is the document as it is
+			// now, foreign edit included, so that edit would be adopted as this
+			// run's own and every batch behind it accepted against it. Stopping
+			// leaves a half-styled document, which a person can see, rather
+			// than a run that quietly styled over somebody's edit.
+			// The sentence names this batch rather than the last one.
+			// RevisionUnconfirmedWarning says "the last batch", which is true
+			// where it is appended above and false here, and a warnings list
+			// disagreeing with the error beside it about which batch stopped
+			// the run is worse than either of them: the skill reads both to
+			// Nail.
+			out.Warnings = append(out.Warnings,
+				fmt.Sprintf("the revision reported here is the one batch %d of %d was sent against, not the one the document now carries, because that batch's answer named none",
+					i+1, len(batches)),
+				out.leftBehind(len(batches), false))
+			return out, fmt.Errorf(
+				"batch %d of %d was accepted and its answer named no revision id, so the run stopped rather than sending the next batch against a revision read from the document, which could carry somebody else's edit",
+				i+1, len(batches))
 		}
 		out.RevisionID = next
 	}
@@ -451,24 +468,22 @@ type batchAnswer struct {
 // mask names documentId, revisionId and the named ranges, and it was measured
 // at 982 bytes against 12,907 for the document itself.
 //
-// It breaks the chain, and that is the cost of this fallback rather than a
-// property of it. Every other batch is sent against the revision the batch
-// before it produced, so an edit somebody else made in between refuses the next
-// batch at Docs. A revision read here is the document as it is now, foreign edit
-// included, so that edit is adopted as this run's own and the batches behind it
-// are accepted against it. Two things bound the cost. The answer was measured
-// carrying the field (docs/v2/DECISIONS.md, 2026-09-09), so this is the rare
-// path, and none of the four kinds the level carries can change a character, so
-// the loss is a paragraph's own run formatting rather than a word of anybody's
-// text. Stopping the run instead, which is what a refused batch gets, trades a
-// rare wrong landing for a half-styled document on every run whose answer went
-// quiet, and choosing between the two is Nail's.
-// docs/backlog/restyle-revision-fallback-breaks-the-chain.md holds it.
+// The apply loop does not call it. It breaks the chain: every batch is sent
+// against the revision the batch before it produced, so an edit somebody else
+// made in between refuses the next batch at Docs, and a revision read here is
+// the document as it is now, foreign edit included. Read mid-run, that edit
+// would be adopted as this run's own and the batches behind it accepted
+// against it, so a quiet answer with a batch still to send stops the run
+// instead (docs/v2/DECISIONS.md, 2026-09-18).
+// TestAnAnswerCarryingNoRevisionMidRunStopsTheRun is the pin.
 //
-// It is exported for the second caller, which is the prelude run: the marker
-// goes out in a batch of its own and the styling phase is sent against whatever
-// revision that batch produced, so a marker batch that came back
-// RevisionUnconfirmed needs this read before the styling can be sent at all.
+// It stays exported for its one caller, the prelude run in
+// cmd/gdoc/restyle.go: the marker goes out in a batch of its own and the
+// styling phase is sent against whatever revision that batch produced, so a
+// marker batch that came back RevisionUnconfirmed needs this read before the
+// styling can be sent at all. That read sits at a phase boundary rather than
+// between two batches of one run, and that caller's own comment says what it
+// costs.
 func RevisionOf(ctx context.Context, s Session, docID string) (string, error) {
 	var raw json.RawMessage
 	if err := s.GetJSON(ctx, docs.NamedRangesURL(docID), &raw); err != nil {

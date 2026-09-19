@@ -206,7 +206,24 @@ func (p *Policy) AllowFile(id string, lvl Level) {
 // What it does not raise is the Drive file. judgeDrive carries a PATCH at
 // LevelFull and compares levels by name, so a restyle cannot trash or rename
 // the document it is styling.
+//
+// The grant never narrows. An id at LevelFull came back from a create the
+// guard itself carried, and writing the in-place level over it would take
+// reach away rather than give it: judgeDrive carries the PATCH at LevelFull
+// alone, and judgeRequests starts enforcing inPlaceKinds at LevelInPlace. The
+// levels are names and not a ladder, so that case is left where it is and
+// recorded, in the shape AllowFile one function up already has. Nail's
+// decision, 2026-09-18. The one case is matched with == on LevelFull, and
+// nothing here is compared with < or >.
+// TestGrantInPlaceLeavesACreatedDocumentAtFull and
+// TestASecondInPlaceGrantIsQuiet are the pins.
 func (p *Policy) GrantInPlace(id string) {
+	// p.note takes the lock itself, so the level is read and the note is
+	// written before p.mu.Lock() and never under it.
+	if lvl, known := p.level(id); known && lvl == LevelFull {
+		p.note("GrantInPlace on %q changed nothing: the id is at the full level, which a create the guard carried gave it, and the in-place level would narrow it", id)
+		return
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if _, known := p.files[id]; known {

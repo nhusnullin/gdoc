@@ -8,12 +8,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="0" w:name="h_pictures_and_links_report"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1-Pictures and Links Report</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="0"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -23,12 +25,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="1" w:name="h_a_picture_on_its_own_line"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1-A picture on its own line</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="1"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -120,12 +124,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="h_a_picture_drive_exported_as_a_heading"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2-A picture Drive exported as a heading</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="2"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -211,12 +217,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="3" w:name="h_a_picture_inside_a_paragraph"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3-A picture inside a paragraph</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="3"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -390,12 +398,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="4" w:name="h_a_picture_too_wide_for_the_column"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.4-A picture too wide for the column</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="4"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -487,12 +497,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="5" w:name="h_links_in_running_text"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5-Links in running text</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="5"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -625,12 +637,14 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="6" w:name="h_a_table_of_links"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.6-A table of links</w:t>
     </w:r>
+    <w:bookmarkEnd w:id="6"/>
   </w:p>
   <w:tbl>
     <w:tblPr>

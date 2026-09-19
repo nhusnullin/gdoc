@@ -145,6 +145,13 @@
 // own line rather than the list's. TestAFootnoteWarnsAndIsLeftOut and
 // TestEveryFootnoteIsNamedByItsOwnLine are the pins.
 //
+// The definition is dropped whole, children and all, so the two walks that run
+// before the blocks skip that subtree as well: a heading written inside a
+// footnote is not a heading of this document, it carries no bookmark, and it
+// does not set the depth every other heading numbers from.
+// TestAHeadingInsideAFootnoteIsNoAnchor and
+// TestAHeadingInsideAFootnoteSetsNoHeadingDepth are the pins.
+//
 // # An email autolink carries the mailto: scheme, and the label does not
 //
 // goldmark puts the scheme on in its HTML renderer and never in AutoLink.URL,
@@ -153,25 +160,100 @@
 // document's own location: the link opens nothing, and a contact address is
 // ordinary in a policy. The run's text stays the bare address, which is what the
 // author typed. TestAnEmailAutolinkCarriesTheMailtoScheme and
-// TestAWebAutolinkKeepsItsOwnScheme are the pins. An internal anchor link is
-// the case still open, in docs/backlog/internal-anchor-links.md.
+// TestAWebAutolinkKeepsItsOwnScheme are the pins.
 //
-// # A numbered list whose numbers are not the author's says so, and the number
-// stays wrong
+// # An anchor link is a jump to a bookmark every heading with words carries
 //
-// Two shapes. internal/render's numbering part defines one w:num per list kind,
-// so every ordered list in the body names the same one and a second top-level
-// list carries on from the first: the author's 1. and 2. print as 3. and 4.
-// Every level of that part states w:start 1, so an author's "5." opens at 1
-// whatever depth it sits at. warnListNumbers names the line for both. The
-// structural fix is docs/backlog/one-numbered-list-per-document.md; the silence
-// was not deferred with it, because the prose around a list cross-references
-// the numbers the author wrote. A nested list is deliberately not in the count:
-// an absent w:lvlRestart restarts a level whenever the level above it moves, so
-// the sub-lists under two items of one list each start again on their own, and
-// warning there would be the cry-wolf warning this tool avoids everywhere else.
-// TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo is the pin, and it asks
-// the nested case as well as the two that warn.
+// A destination opening with "#" is a place in this document, not an address.
+// Written as a relationship, which is what every other link is, Word resolves
+// it against the document's own location, so "[see below](#scope)" published
+// as a link that opens nothing and said nothing about it. The OOXML form for
+// a jump is w:hyperlink w:anchor with no relationship at all, and it lands on
+// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first: every
+// heading that emits a paragraph carries one, whether or not this note links
+// to it, because a note is edited after it is published.
+//
+// The name is goldmark's own auto heading id, which parser.WithAutoHeadingID
+// already computes and keeps unique across the file, rewritten by bookmarkName
+// into what Word takes: letters, digits and underscores, opening with a
+// letter, at most 40 characters. The leading "h_" is what makes a heading
+// called "1.1 Purpose" open with a letter; every character outside
+// [A-Za-z0-9_] becomes an underscore, which is wider than the lower-case
+// letters, digits and hyphens goldmark emits, on purpose, because the ids are
+// the generator's and this package does not get to notice when it widens; and
+// a name over the ceiling keeps its first 32 characters, so it reads in Word's
+// bookmark list, and takes seven hex digits of the FNV-1a hash of the id as it
+// arrived, so two long headings sharing a prefix keep two names.
+// TestBookmarkNameIsWordSafe pins all four cases and
+// TestEveryHeadingCarriesABookmark pins the pair around the runs.
+//
+// A "#" naming no heading in the note is warned about by line and its words
+// are printed as plain text, which is how a code block is already refused: a
+// jump that lands nowhere is worse than no jump, and the author is the one who
+// can fix it. The heading ids are collected before the blocks are walked, so a
+// link to a heading further down resolves, and the pre-walk collects only the
+// headings that will carry a bookmark: a figure-only heading emits no
+// paragraph, so a link naming it is as dead as a link naming nothing, and so
+// does a heading inside a footnote definition, which the block walk drops
+// whole. A pre-walk that counted either would write a live w:anchor naming a
+// bookmark nothing wrote, which is the one failure this is here to prevent,
+// and it would do it silently.
+// TestAnAnchorLinkIsAJumpAndNotARelationship,
+// TestAnAnchorToNoHeadingWarnsAndPrintsPlainText,
+// TestAFigureOnlyHeadingCarriesNoBookmark and
+// TestAHeadingInsideAFootnoteIsNoAnchor are the pins, and
+// TestALinkIsAHyperlinkWithARelationship is the https link, unchanged.
+//
+// The line the warning names is renderer.curLine, because addRuns is six
+// callers deep from the node and has no line of its own. Every path that emits
+// runs sets it where the node is in hand: headingBlock, paragraphBlock, the
+// table branch of block, and quoteBlock, which handles a top-level paragraph
+// itself rather than through paragraphBlock. A path that forgets names the
+// block before it, and the author looks for the link there.
+// TestADeadAnchorInsideABlockQuoteNamesItsOwnLine is the pin on the quote,
+// which is the one that was forgotten. A table names the table's own line
+// rather than the cell's, which is Nail's decision: a cell has no line of its
+// own that the author would recognise.
+// TestADeadAnchorInsideATableNamesTheTablesOwnLine is the pin on the table.
+//
+// One dead link is one sentence. addRuns runs once per run and merge splits a
+// link's words at every mark boundary, so a destination inside bold text
+// reached the envelope twice and the note read as holding two dead links
+// where it held one. renderer.deadAnchors keeps the line and the destination
+// of every sentence already raised, and two links on one line naming the same
+// missing heading are one sentence for the same reason: the sentence holds a
+// line and a destination and nothing else, so the second copy says nothing.
+// Two lines are still two sentences, because they are two places to go and
+// fix. TestOneDeadAnchorWarnsOnce,
+// TestTwoDeadAnchorsOnOneLineWarnOncePerDestination and
+// TestTheSameDeadAnchorOnTwoLinesWarnsTwice are the pins.
+//
+// # A numbered list starts at 1, and a list that opens elsewhere says so
+//
+// A w:num is where Word keeps a list's running count, so two numbered lists
+// sharing one carried one count and the author's 1. and 2. printed as 3. and
+// 4. The walker hands a fresh id to every numbered list that is not nested
+// inside a numbered list, counts them on Result.NumberedLists, and render.Build
+// writes that many w:num entries, all on the one numbered abstract list. A
+// numbered list nested in a numbered item reuses its parent's id: an absent
+// w:lvlRestart already restarts the inner level whenever the outer one moves,
+// and a second id there would make one list two counts Word draws side by side.
+// A numbered list nested in a bullet is not nested in a count at all, so it
+// opens its own. TestASecondNumberedListStartsAgain,
+// TestANestedNumberedListNamesItsParent,
+// TestANumberedListUnderABulletOpensItsOwn and
+// TestOneNumberedListDefinitionPerNumberedList are the pins.
+//
+// What stays wrong is the number a list opens on. Every level of the numbered
+// abstract list states w:start 1, and every list's own w:num states
+// w:startOverride 1 over it, which is what makes the restart the file's rather
+// than one reading of the spec. Honouring an author's "5." is that same
+// override carrying their number instead, which gdoc does not write, so the
+// list opens at 1 and warnListNumbers names the line. The silence around a list
+// that starts at 1 is deliberate, because the prose beside a numbered list
+// cross-references the numbers the author wrote.
+// TestANumberedListWhoseNumbersAreNotTheAuthorsSaysSo and
+// TestAListThatStartsElsewhereStillSaysSo are the pins.
 //
 // # A heading that skips a level is numbered with a zero in it, and says so
 //
