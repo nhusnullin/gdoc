@@ -1030,16 +1030,59 @@ Serves decisions 5 and 9, and the spec's "Documents that change",
 
 ### Task 14: Verify acceptance criteria
 
-- [ ] `make test`, `make vet`, `make build` and `make dist` pass.
-- [ ] Every Validation Command above gives the answer it states; record the
-      counts here as ➕ notes.
-- [ ] Every scenario in the spec names a task above that serves it, checked
-      by reading the list; a scenario no task serves is a ➕ task.
-- [ ] `git diff main...HEAD -- go/internal/guard/ | grep '^-' | grep -v '^---'`
+- [x] `make test`, `make vet`, `make build` and `make dist` pass. All 36
+      packages ok under `-race`; `gofmt -l .` empty; `make dist` writes the
+      three platform binaries.
+- [x] Every Validation Command above gives the answer it states; record the
+      counts here as ➕ notes. Two read differently from their literal text,
+      noted below.
+- [x] Every scenario in the spec names a task above that serves it, checked
+      by reading the list; a scenario no task serves is a ➕ task. The spec
+      holds 23 scenarios; the `Serves:` lines of Tasks 2 to 12 name every one
+      of them, so no ➕ task was needed.
+- [x] `git diff main...HEAD -- go/internal/guard/ | grep '^-' | grep -v '^---'`
       is empty: nothing left the guard.
-- [ ] `grep -rn 'force' go/internal/export/ go/cmd/gdoc/export.go` prints
-      nothing.
-- [ ] Nothing to commit: this task changes no file but this plan.
+- [x] `grep -rn 'force' go/internal/export/ go/cmd/gdoc/export.go` prints
+      nothing. Noted below: it prints four lines, and all four forbid a force.
+- [x] Nothing to commit: this task changes no file but this plan.
+
+Counts, run on this branch at 3eda744:
+
+- `bin/gdoc help | grep -c '^  '` prints 17, against 16 on main: the one more
+      line the plan states, `export`.
+- `ls skills/` prints the five folders; `ls skills/gdoc-export/` prints
+      `SKILL.md` and `markers.md`.
+- `grep -c 'needs: v2.4.0' skills/*/SKILL.md` prints 1 for export, publish,
+      align and review, and 0 for restyle.
+- `ls docs/backlog/ | wc -l` prints 20, against 24 on main: the four items
+      Tasks 6, 9, 12 and 13 removed.
+- `wc -l CLAUDE.md` prints 268, under the 300 ceiling.
+- `go test -race -run 'TestLiveExport' ./internal/live/` compiles and skips
+      all four tests without the variables.
+
+- ➕ **The force check prints four lines, and all four forbid a force.**
+      `write_test.go:210`, `:230` and `:231` are `TestNothingCanReplaceAFile`
+      itself, which walks this package's own syntax tree for an identifier
+      containing the word; `doc.go:154` is the sentence saying the word does
+      not appear in the source. The command the plan meant prints nothing:
+      `grep -rn 'force' go/internal/export/ go/cmd/gdoc/export.go
+      --include='*.go' | grep -v '_test.go' | grep -v 'doc.go'`. No flag, no
+      field and no call site in this milestone can replace a file.
+- ➕ **`gdoc help export` prints the usage line, not the three facts.** The
+      line is `export <url> --out <file>` as the plan states, and the `--out`
+      summary names the paired note. `assets`, the numbering rule and the
+      block are in the `# export reads twice` section of
+      `go/cmd/gdoc/doc.go`, which is what Task 10's checkbox asked for. The
+      command table's shape is a name, its words, its flags, one summary
+      sentence and one example, and nothing else, so the help text has no
+      room for them. Widening that shape is a decision, not this task's.
+- ➕ **The live validation line is Nail's, not this run's.** The four
+      `TestLiveExport` tests compile and skip without `GDOC_LIVE_TEST`,
+      `GDOC_LIVE_WRITE`, `GDOC_LIVE_FOLDER_ID` and `GDOC_LIVE_EXPORT_DOC_ID`.
+      The fixture document `GDOC_LIVE_EXPORT_DOC_ID` names does not exist yet:
+      Post-Completion assigns it to Nail by hand, and Task 13 already wrote
+      the three MEASURED.md rows under "Not measured yet", which the spec
+      allows.
 
 ### Task 15: Update documentation
 
