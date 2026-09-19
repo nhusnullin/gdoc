@@ -141,20 +141,27 @@ func TestPublishUploadsTheNoteAndPairsIt(t *testing.T) {
 	if block == nil {
 		t.Fatal("the note carries no gdoc: block after a publish")
 	}
-	if block.DocumentID != publishDocID || block.FolderID != testFolderID {
-		t.Errorf("the block records the pairing: %+v", block)
+	if block.Schema != frontmatter.Schema {
+		t.Errorf("schema = %d, want the shape gdoc writes today", block.Schema)
 	}
-	if block.Published == nil {
+	if len(block.Documents) != 1 {
+		t.Fatalf("documents = %d, want the one this run made", len(block.Documents))
+	}
+	e := block.Documents[0]
+	if e.ID != publishDocID || e.FolderID != testFolderID {
+		t.Errorf("the block records the pairing: %+v", e)
+	}
+	if e.Published == nil {
 		t.Fatal("the block carries no publish record")
 	}
-	if block.Published.At.IsZero() {
+	if e.Published.At.IsZero() {
 		t.Error("published.at is when the document was made")
 	}
-	if block.Published.Title != "Supplier Register Policy" {
-		t.Errorf("published.title is what went on the cover: %q", block.Published.Title)
+	if e.Published.Title != "Supplier Register Policy" {
+		t.Errorf("published.title is what went on the cover: %q", e.Published.Title)
 	}
-	if block.Published.House != "embedded" {
-		t.Errorf("published.house is where the style came from: %q", block.Published.House)
+	if e.Published.House != "embedded" {
+		t.Errorf("published.house is where the style came from: %q", e.Published.House)
 	}
 }
 
@@ -275,7 +282,8 @@ func TestPublishRollsBackWhenTheNoteCannotBePaired(t *testing.T) {
 					t.Fatal(err)
 				}
 				out, err := frontmatter.Write(src, &frontmatter.Block{
-					Schema: frontmatter.Schema, DocumentID: proposeDocID})
+					Schema:    frontmatter.Schema,
+					Documents: []frontmatter.Entry{{ID: proposeDocID}}})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -454,7 +462,7 @@ func TestPublishPairsTheNoteEvenWhenARouteDidNotHold(t *testing.T) {
 	if warns := warningText(got); !strings.Contains(warns, "docx") {
 		t.Errorf("the warnings must name the route: %q", warns)
 	}
-	if block := blockIn(t, md); block == nil || block.DocumentID != publishDocID {
+	if block := blockIn(t, md); block == nil || len(block.Documents) != 1 || block.Documents[0].ID != publishDocID {
 		t.Errorf("the pairing is recorded whatever the read-backs said: %+v", block)
 	}
 }
@@ -508,7 +516,10 @@ func TestPublishReportsTheHouseFileItWasGiven(t *testing.T) {
 		t.Errorf("house = %v, want %s", data["house"], style)
 	}
 	block := blockIn(t, md)
-	if block == nil || block.Published == nil || block.Published.House != style {
-		t.Errorf("published.house records the style the document was built from: %+v", block)
+	if block == nil || len(block.Documents) != 1 {
+		t.Fatalf("the note carries no one entry after a publish: %+v", block)
+	}
+	if e := block.Documents[0]; e.Published == nil || e.Published.House != style {
+		t.Errorf("published.house records the style the document was built from: %+v", e)
 	}
 }

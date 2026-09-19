@@ -426,7 +426,7 @@ func TestRecordAppendsTheProposalToTheNote(t *testing.T) {
 		CommentID:     "AAAC",
 	}
 
-	out, missed, err := Record(note, []Result{res}, at)
+	out, missed, err := Record(note, testDocID, []Result{res}, at)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -437,10 +437,10 @@ func TestRecordAppendsTheProposalToTheNote(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the note it wrote does not read back: %v", err)
 	}
-	if len(b.Proposals) != 1 {
-		t.Fatalf("proposals = %+v", b.Proposals)
+	if len(b.Documents[0].Proposals) != 1 {
+		t.Fatalf("proposals = %+v", b.Documents[0].Proposals)
 	}
-	p := b.Proposals[0]
+	p := b.Documents[0].Proposals[0]
 	if p.ID != "suggest.abc" || p.CommentID != "AAAC" || p.Quoted != "reviewed annually" || !p.At.Equal(at) {
 		t.Errorf("proposals[0] = %+v", p)
 	}
@@ -464,7 +464,7 @@ func TestRecordSkipsAProposalWithNoSuggestionIDAndSaysSo(t *testing.T) {
 		{Quoted: "b", SuggestionIDs: []string{"suggest.def"}, CommentID: "AAAD"},
 	}
 
-	out, missed, err := Record(note, results, at)
+	out, missed, err := Record(note, testDocID, results, at)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -472,8 +472,8 @@ func TestRecordSkipsAProposalWithNoSuggestionIDAndSaysSo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the note it wrote does not read back: %v", err)
 	}
-	if len(b.Proposals) != 1 || b.Proposals[0].ID != "suggest.def" {
-		t.Errorf("proposals = %+v", b.Proposals)
+	if len(b.Documents[0].Proposals) != 1 || b.Documents[0].Proposals[0].ID != "suggest.def" {
+		t.Errorf("proposals = %+v", b.Documents[0].Proposals)
 	}
 	if len(missed) != 1 || missed[0].Quoted != "a" {
 		t.Fatalf("missed = %+v, want the one result that could not be remembered", missed)
@@ -488,7 +488,7 @@ func TestRecordLeavesTheNoteAloneWhenNothingCanBeRemembered(t *testing.T) {
 	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + testDocID + "\n---\n")
 	at := time.Date(2026, 9, 7, 9, 0, 0, 0, time.UTC)
 
-	out, missed, err := Record(note, []Result{{Quoted: "a", CommentID: "AAAC"}}, at)
+	out, missed, err := Record(note, testDocID, []Result{{Quoted: "a", CommentID: "AAAC"}}, at)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -546,5 +546,46 @@ func TestTheGuardRefusesTheSameBatchWithoutSuggestMode(t *testing.T) {
 	}
 	if err := p.Judge("POST", u, raw); err == nil {
 		t.Fatal("the batch was carried on a handed-in document without SUGGEST")
+	}
+}
+
+// TestRecordWritesUnderTheDocumentItWasOf is the list rule at this level. A
+// note names every document it has been published to, and a proposal recorded
+// under the wrong one is a suggestion withdraw would refuse to take back.
+func TestRecordWritesUnderTheDocumentItWasOf(t *testing.T) {
+	const other = "9ZzYyXxWwVvUuTtSsRrQqPpOoNn0123456789zzzz"
+	note := []byte("---\ngdoc:\n  schema: 2\n  documents:\n    - id: " + testDocID +
+		"\n    - id: " + other + "\n---\n\n# Scope\n")
+	at := time.Date(2026, 9, 19, 9, 0, 0, 0, time.UTC)
+	res := Result{Quoted: "reviewed annually", SuggestionIDs: []string{"suggest.abc"}, CommentID: "AAAC"}
+
+	out, _, err := Record(note, other, []Result{res}, at)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b, err := frontmatter.Read(out)
+	if err != nil {
+		t.Fatalf("the note it wrote does not read back: %v", err)
+	}
+	if len(b.Documents[0].Proposals) != 0 {
+		t.Errorf("the other document's entry grew: %+v", b.Documents[0].Proposals)
+	}
+	if len(b.Documents[1].Proposals) != 1 || b.Documents[1].Proposals[0].ID != "suggest.abc" {
+		t.Errorf("documents[1].proposals = %+v", b.Documents[1].Proposals)
+	}
+}
+
+// A document the note does not name is a refusal, and the note is not written.
+func TestRecordRefusesADocumentTheNoteDoesNotName(t *testing.T) {
+	note := []byte("---\ngdoc:\n  schema: 2\n  documents:\n    - id: " + testDocID + "\n---\n")
+	at := time.Date(2026, 9, 19, 9, 0, 0, 0, time.UTC)
+	res := Result{Quoted: "a", SuggestionIDs: []string{"suggest.abc"}, CommentID: "AAAC"}
+
+	out, _, err := Record(note, "9ZzYyXxWwVvUuTtSsRrQqPpOoNn0123456789zzzz", []Result{res}, at)
+	if err == nil {
+		t.Fatalf("a document the note does not name was recorded:\n%s", out)
+	}
+	if !strings.Contains(err.Error(), testDocID) {
+		t.Errorf("the refusal %q does not name what the note does hold", err)
 	}
 }

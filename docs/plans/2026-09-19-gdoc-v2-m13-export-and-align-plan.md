@@ -366,26 +366,26 @@ to compile, and ralphex runs `make test` after every task.
 
 The block first, in `frontmatter`:
 
-- [ ] Test first, `TestReadAcceptsASchemaOneBlockWrittenBeforeToday`: every
+- [x] Test first, `TestReadAcceptsASchemaOneBlockWrittenBeforeToday`: every
       existing schema 1 fixture reads as one `Entry` with the old fields in
       place. Watch it fail on the new type.
-- [ ] Test, `TestWriteAnUnchangedSchemaOneBlockStaysSchemaOne`: read a schema 1
+- [x] Test, `TestWriteAnUnchangedSchemaOneBlockStaysSchemaOne`: read a schema 1
       fixture, write it back unchanged, bytes identical (the existing pin,
       restated on the new type, and the old test kept).
-- [ ] Test, `TestAChangingWriteRewritesSchemaOneAsTwo`: read schema 1, set
+- [x] Test, `TestAChangingWriteRewritesSchemaOneAsTwo`: read schema 1, set
       `Exported`, write; the output carries `schema: 2` and `documents:` with
       one entry, and reads back equal.
-- [ ] Test, `TestASchemaTwoBlockRoundTrips`: two entries, one with
+- [x] Test, `TestASchemaTwoBlockRoundTrips`: two entries, one with
       `published`, one with `exported {at, note}` and `tab_id`, each with its
       own `proposals` and `suggestions_seen`; write then read is equal; an
       unchanged write is byte-identical.
-- [ ] Test, `TestValidateNamesTheEntryItRefused`: two entries with one id;
+- [x] Test, `TestValidateNamesTheEntryItRefused`: two entries with one id;
       `exported` with no fields; a `tab_id` that is a path; an unknown key
       inside an entry. Each refusal names the key and the entry index.
-- [ ] Test, `TestEntryFindsTheDocumentTheURLNames`: `Entry("1AbC")` returns
+- [x] Test, `TestEntryFindsTheDocumentTheURLNames`: `Entry("1AbC")` returns
       the entry; `Entry("nope")` returns an error naming every id the block
       holds.
-- [ ] Test, `TestTheShippedDecoderRefusesADocumentsKeyByName`: the sentence
+- [x] Test, `TestTheShippedDecoderRefusesADocumentsKeyByName`: the sentence
       the binary on main prints on a schema 2 block, pinned as a literal by
       running the schema 1 decoder from `git show main:` in a testdata copy,
       or by reading the strict yaml error's shape: the read at
@@ -393,37 +393,56 @@ The block first, in `frontmatter`:
       binary names the unknown field `documents` and never reaches the
       schema sentence. The literal goes into this plan as a ➕ note for Task
       13, which writes decision 9 and scenario 18 to match.
-- [ ] Implement `Entry`, `Exported`, the schema 1 decode into one entry, the
+- ➕ The literal, for Task 13. The schema 1 decoder, which is what a gdoc from
+      before this milestone runs, refuses a schema 2 block with
+      `gdoc front matter: [3:3] unknown field "documents"` followed by the
+      four lines of YAML it was reading, the third marked. It never reaches
+      the schema sentence, so decision 9 and scenario 18 say the old binary
+      names the key rather than the version.
+- [x] Implement `Entry`, `Exported`, the schema 1 decode into one entry, the
       source-equality check in `Write`, `Schema = 2`, the `Validate` rules.
-- [ ] `doc.go`: a section "The block is a list, and schema 1 still reads",
+- [x] `doc.go`: a section "The block is a list, and schema 1 still reads",
       naming the tests above; the "publish is its only writer" sentence goes.
 
 Then the readers, in `cmd/gdoc`:
 
-- [ ] Test, `TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList`:
+- [x] Test, `TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList`:
       a note with two entries; `suggestions --md`, `propose`, `withdraw` and
       `annotate` each succeed on either URL and refuse a third, naming both
       ids.
-- [ ] Test, `TestAProposalIsRecordedUnderItsOwnDocument`: propose on document
+- ➕ `annotate` takes no `--md`, so the three commands that read a note are
+      `suggestions`, `propose` and `withdraw`, and the test covers those. The
+      note's entries are written with the run's own document second, so a
+      reader that took the first entry would fail. `annotate.go` is therefore
+      untouched by this task, and the files list above says otherwise.
+- [x] Test, `TestAProposalIsRecordedUnderItsOwnDocument`: propose on document
       B of a two-entry note; B's `proposals` grows, A's is untouched.
-- [ ] Test, `TestWithdrawNeverSendsAnIDFromAnotherDocument`: a proposal id
+- [x] Test, `TestWithdrawNeverSendsAnIDFromAnotherDocument`: a proposal id
       under A; `withdraw` with B's URL refuses naming A.
-- [ ] Test, `TestGoneSinceReadsTheSnapshotOfTheDocumentRead`: snapshots under
+- [x] Test, `TestGoneSinceReadsTheSnapshotOfTheDocumentRead`: snapshots under
       A and B; `suggestions` with B's URL compares against B's.
-- [ ] Test, `TestEveryWriterRefusesACopyThatNamesANote`: an entry with
+- [x] Test, `TestEveryWriterRefusesACopyThatNamesANote`: an entry with
       `exported.note`; every `--md` command refuses in one sentence naming
       the note path.
-- [ ] Test, `TestTheReplySaysOnceWhenTheBlockWasRewritten`: a schema 1 note
+- [x] Test, `TestTheReplySaysOnceWhenTheBlockWasRewritten`: a schema 1 note
       through `suggestions --md`; the envelope carries one warning saying the
       block in `<path>` was rewritten to schema 2; a second run carries none.
-- [ ] `paired.go`: `paired(path string, src []byte, id string) (*frontmatter.Block, *frontmatter.Entry, error)`
+- [x] `paired.go`: `paired(path string, src []byte, id string) (*frontmatter.Block, *frontmatter.Entry, error)`
       with the three refusals (other ids, broken front matter, `exported.note`);
-      every reader in `read.go`, `write.go`, `annotate.go` calls it; the
-      snapshot and proposal writes go into the entry; the schema line.
-- [ ] `doc.go`: the paragraph on `--md` says the URL picks the entry, and
+      every reader in `read.go` and `write.go` calls it; the snapshot and
+      proposal writes go into the entry; the schema line.
+- ➕ Three signatures moved with the entry, because a proposal under one
+      document says nothing about another: `propose.Record` takes the document
+      id, `withdraw.Mine` and `withdraw.Run` take the entry, and
+      `withdraw.Forget` takes the document id beside the suggestion id.
+- ➕ `freshNote`'s refusal now opens with "the note changed while the run was
+      under way", because `paired` writes the door check's own sentence and the
+      re-read needs to say which of the two it was.
+      `TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun` moved with it.
+- [x] `doc.go`: the paragraph on `--md` says the URL picks the entry, and
       names the tests.
-- [ ] `cd go && go test -race ./...` passes; `make vet` passes.
-- [ ] `git commit -m "feat(frontmatter): the gdoc block is a list of documents, and every writer acts on the one the URL names"`
+- [x] `cd go && go test -race ./...` passes; `make vet` passes.
+- [x] `git commit -m "feat(frontmatter): the gdoc block is a list of documents, and every writer acts on the one the URL names"`
 
 ### Task 3: publish accepts a paired note
 

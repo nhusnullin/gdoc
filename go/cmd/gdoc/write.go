@@ -344,7 +344,7 @@ func record(note *notePath, results []propose.Result, warns []string) ([]string,
 		return nil, append(warns, fmt.Sprintf(
 			"the proposals were written into the document and %s could not be recorded against them, so gdoc cannot withdraw them later: %v", note.path, err))
 	}
-	out, missed, err := propose.Record(src, results, now())
+	out, missed, err := propose.Record(src, note.id, results, now())
 	if err != nil {
 		return nil, append(warns, fmt.Sprintf(
 			"the proposals were written into the document and %s could not be updated to record them, so gdoc cannot withdraw them later: %v", note.path, err))
@@ -368,6 +368,7 @@ func record(note *notePath, results []propose.Result, warns []string) ([]string,
 		return nil, append(warns, fmt.Sprintf(
 			"the proposals were written into the document and %s could not be written, so gdoc cannot withdraw them later: %v", note.path, err))
 	}
+	warns = append(warns, rewritten(note.path, note.schemaOne)...)
 	return []string{note.path}, warns
 }
 
@@ -396,33 +397,40 @@ func missingID(r propose.Result) string {
 // Four things are refused rather than written, and each one drops the
 // provenance the caller was about to record: a file that cannot be read again,
 // one whose front matter no longer parses, one whose gdoc: block has gone, and
-// one that now names another document. Every caller warns with the reason, so
-// which of the four it was is on the envelope.
+// one that no longer names this document. Every caller warns with the reason,
+// so which of the four it was is on the envelope.
 func freshNote(note *notePath) ([]byte, *frontmatter.Block, error) {
 	src, err := os.ReadFile(note.path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("the markdown file could not be read again: %w", err)
 	}
-	block, err := frontmatter.Read(src)
+	block, _, err := paired(note.path, src, note.id)
 	if err != nil {
-		return nil, nil, err
-	}
-	if block == nil {
-		return nil, nil, fmt.Errorf("%s no longer carries a gdoc: front matter block", note.path)
-	}
-	if block.DocumentID != note.block.DocumentID {
-		return nil, nil, fmt.Errorf("%s is now paired with document %s, and this run was of %s", note.path, block.DocumentID, note.block.DocumentID)
+		// The note is read again here, so a refusal is the note having moved
+		// under the run rather than a door check at the start of it. Saying
+		// which it was is what tells a reader whether to run the command again
+		// or to go and look at the file.
+		return nil, nil, fmt.Errorf("the note changed while the run was under way: %w", err)
 	}
 	return src, block, nil
 }
 
-// notePath is the paired note: where it is, and the block the pairing check
-// read. The bytes that check ran over are deliberately not kept. Both writers
-// read the file again through freshNote, for the reason record gives, so a copy
-// held here would only be the stale bytes somebody later wrote back.
+// notePath is the paired note: where it is, which document the run is of, and
+// the entry the pairing check read. The bytes that check ran over are
+// deliberately not kept. Both writers read the file again through freshNote,
+// for the reason record gives, so a copy held here would only be the stale
+// bytes somebody later wrote back.
+//
+// The entry rather than the block, because everything downstream is about the
+// one document the URL names: a note with three documents in it has three
+// proposals lists, and only one of them is this run's.
 type notePath struct {
 	path  string
-	block *frontmatter.Block
+	id    string
+	entry *frontmatter.Entry
+	// schemaOne is whether the block was the shape publish wrote before
+	// 2026-09-19, so a run that rewrites it says so once.
+	schemaOne bool
 }
 
 // pairedNote reads the note --md named and checks it belongs to this document.
@@ -440,17 +448,11 @@ func readNote(path, docID string) (*notePath, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the markdown file could not be read: %w", err)
 	}
-	block, err := frontmatter.Read(src)
+	block, entry, err := paired(path, src, docID)
 	if err != nil {
 		return nil, err
 	}
-	if block == nil {
-		return nil, fmt.Errorf("%s carries no gdoc: front matter, so it is not paired with a document", path)
-	}
-	if block.DocumentID != docID {
-		return nil, fmt.Errorf("%s is paired with document %s, and this run is of %s", path, block.DocumentID, docID)
-	}
-	return &notePath{path: path, block: block}, nil
+	return &notePath{path: path, id: docID, entry: entry, schemaOne: block.Schema == frontmatter.SchemaOne}, nil
 }
 
 // readProposals reads the list the skill wrote. An empty list is refused rather
@@ -524,7 +526,7 @@ func cmdWithdraw(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	if !withdraw.Mine(note.block, suggestionID) {
+	if !withdraw.Mine(note.entry, suggestionID) {
 		return emit.Result{OK: false, Error: fmt.Sprintf(
 			"%s does not record %q as one of gdoc's own proposals, and gdoc withdraws only what it proposed", note.path, suggestionID)}
 	}
@@ -536,7 +538,7 @@ func cmdWithdraw(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	res, err := withdraw.Run(context.Background(), r.session, r.id, suggestionID, note.block)
+	res, err := withdraw.Run(context.Background(), r.session, r.id, suggestionID, note.entry)
 	data := withdrawData{
 		DocumentID:            r.id,
 		SuggestionID:          suggestionID,
@@ -556,6 +558,7 @@ func cmdWithdraw(a *args) emit.Result {
 			warns = append(warns, err.Error())
 		} else {
 			data.FilesChanged = changed
+			warns = append(warns, rewritten(note.path, note.schemaOne)...)
 		}
 	}
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
@@ -574,7 +577,7 @@ func forget(note *notePath, suggestionID string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the suggestion was withdrawn and %s still records it: %v", note.path, err)
 	}
-	out, err := frontmatter.Write(src, withdraw.Forget(block, suggestionID))
+	out, err := frontmatter.Write(src, withdraw.Forget(block, note.id, suggestionID))
 	if err != nil {
 		return nil, fmt.Errorf("the suggestion was withdrawn and %s still records it: %v", note.path, err)
 	}

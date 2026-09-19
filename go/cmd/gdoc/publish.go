@@ -163,8 +163,8 @@ func unpaired(md string, source []byte) error {
 		return err
 	}
 	if block != nil {
-		return fmt.Errorf("%s is already paired with document %s, and gdoc publishes a note once: open that document, or take the gdoc: block out by hand if it names a document that has gone",
-			md, block.DocumentID)
+		return fmt.Errorf("%s is already paired with %s, and gdoc publishes a note once: open that document, or take the gdoc: block out by hand if it names a document that has gone",
+			md, pairedWith(block))
 	}
 	return nil
 }
@@ -201,24 +201,27 @@ func pair(md string, source []byte, folder, docID string, doc *noteDocx) ([]stri
 		return nil, fmt.Errorf("the document was published and %s no longer reads, so the pairing could not be recorded: %v", md, err)
 	}
 	if block != nil {
-		return nil, fmt.Errorf("the document was published and %s now names document %s, so another run paired it while this one was uploading and this run's document is not recorded anywhere",
-			md, block.DocumentID)
+		return nil, fmt.Errorf("the document was published and %s now names %s, so another run paired it while this one was uploading and this run's document is not recorded anywhere",
+			md, pairedWith(block))
 	}
 	if !bytes.Equal(fresh, source) {
 		return nil, fmt.Errorf("the document was published and %s changed while it was being uploaded, so the document is a render of bytes the note no longer holds", md)
 	}
 	out, err := frontmatter.Write(fresh, &frontmatter.Block{
-		Schema:     frontmatter.Schema,
-		DocumentID: docID,
-		FolderID:   folder,
-		Published: &frontmatter.Published{
-			At: now().UTC(),
-			// What went on the cover, which is what the upload asked Drive to
-			// name the file. The read-back's title is reported on the envelope
-			// instead, and the two disagreeing is already a warning there.
-			Title: doc.Title,
-			House: doc.House,
-		},
+		Schema: frontmatter.Schema,
+		Documents: []frontmatter.Entry{{
+			ID:       docID,
+			FolderID: folder,
+			Published: &frontmatter.Published{
+				At: now().UTC(),
+				// What went on the cover, which is what the upload asked Drive
+				// to name the file. The read-back's title is reported on the
+				// envelope instead, and the two disagreeing is already a
+				// warning there.
+				Title: doc.Title,
+				House: doc.House,
+			},
+		}},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("the document was published and the gdoc: block could not be written into %s: %v", md, err)

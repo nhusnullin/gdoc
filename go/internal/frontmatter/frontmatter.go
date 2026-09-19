@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -29,6 +30,23 @@ const bom = "\uFEFF"
 // shape the file has.
 type wrapper struct {
 	Gdoc *Block `yaml:"gdoc"`
+}
+
+// blockOne is the shape a note written before 2026-09-19 carries: one document,
+// its fields beside the schema rather than under an entry. It is read and never
+// written: a block that changes is rendered as schema 2.
+type blockOne struct {
+	Schema          int              `yaml:"schema"`
+	DocumentID      string           `yaml:"document_id"`
+	FolderID        string           `yaml:"folder_id,omitempty"`
+	Published       *Published       `yaml:"published,omitempty"`
+	SuggestionsSeen *SuggestionsSeen `yaml:"suggestions_seen,omitempty"`
+	Proposals       []Proposal       `yaml:"proposals,omitempty"`
+}
+
+// wrapperOne is blockOne under the key, for the same reason wrapper exists.
+type wrapperOne struct {
+	Gdoc *blockOne `yaml:"gdoc"`
 }
 
 // document is a markdown file cut into lines, with the front matter and the
@@ -76,6 +94,16 @@ func readFrom(d *document) (*Block, error) {
 	}
 
 	span := normalize(strings.Join(d.lines[d.gdocStart:d.gdocEnd], ""))
+	return decode(span)
+}
+
+// decode reads one gdoc: span. Which shape it is read as follows the schema the
+// span states, so a note written before 2026-09-19 is read by the decoder that
+// knows its keys, and every other span is read by this gdoc's own.
+func decode(span string) (*Block, error) {
+	if v, ok := peekSchema(span); ok && v == SchemaOne {
+		return decodeSchemaOne(span)
+	}
 	var w wrapper
 	if err := yaml.UnmarshalWithOptions([]byte(span), &w, yaml.Strict()); err != nil {
 		if id, ok := barePairing(span); ok {
@@ -90,6 +118,47 @@ func readFrom(d *document) (*Block, error) {
 		return nil, err
 	}
 	return w.Gdoc, nil
+}
+
+// peekSchema reads the version the span states, and nothing else. It is a loose
+// read on purpose: a span this decoder cannot make sense of falls through to
+// the strict read below, which is where the refusals and their sentences are.
+func peekSchema(span string) (int, bool) {
+	var loose struct {
+		Gdoc struct {
+			Schema int `yaml:"schema"`
+		} `yaml:"gdoc"`
+	}
+	if err := yaml.Unmarshal([]byte(span), &loose); err != nil {
+		return 0, false
+	}
+	return loose.Gdoc.Schema, loose.Gdoc.Schema != 0
+}
+
+// decodeSchemaOne reads the old shape into one entry. The read is as strict as
+// the other one, so an unknown key in a note written last week is still refused
+// by name, and the block that comes back says schema 1: it is what the file
+// says, and Write leaves a block nothing changed in exactly as it was.
+func decodeSchemaOne(span string) (*Block, error) {
+	var w wrapperOne
+	if err := yaml.UnmarshalWithOptions([]byte(span), &w, yaml.Strict()); err != nil {
+		return nil, fmt.Errorf("gdoc front matter: %w", err)
+	}
+	if w.Gdoc == nil {
+		return nil, fmt.Errorf("gdoc front matter: the %s: key is empty", key)
+	}
+	o := w.Gdoc
+	b := &Block{Schema: o.Schema, Documents: []Entry{{
+		ID:              o.DocumentID,
+		FolderID:        o.FolderID,
+		Published:       o.Published,
+		SuggestionsSeen: o.SuggestionsSeen,
+		Proposals:       o.Proposals,
+	}}}
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // barePairing reports the id when the gdoc: key holds a plain string rather
@@ -117,7 +186,7 @@ func barePairing(span string) (string, bool) {
 // reader does not know never enters it. So the refusal names what it found,
 // the id inside it, and the two ways out.
 func barePairingRefusal(id string) error {
-	return fmt.Errorf("gdoc front matter: the %s: key is the plain string %q, and gdoc reads a block; write it as a %s: block carrying schema: %d and document_id: %s, or take the line out and pair the note again with gdoc publish",
+	return fmt.Errorf("gdoc front matter: the %s: key is the plain string %q, and gdoc reads a block; write it as a %s: block carrying schema: %d and a documents: list whose one entry is id: %s, or take the line out and pair the note again with gdoc publish",
 		key, id, key, Schema, id)
 }
 
@@ -126,6 +195,12 @@ func barePairingRefusal(id string) error {
 // and the trailing newline included, is carried through unchanged. A file whose
 // own block cannot be read is refused rather than overwritten: not knowing what
 // is there must never resolve to replacing it.
+//
+// A block equal to the one already in the file is a write with nothing to
+// write, and the file comes back byte for byte. That is what keeps a note
+// written before 2026-09-19 at schema 1 until something in it changes. Every
+// other write renders schema 2, whatever the block says, because this gdoc has
+// one shape it writes.
 func Write(src []byte, b *Block) ([]byte, error) {
 	if err := b.Validate(); err != nil {
 		return nil, err
@@ -134,11 +209,15 @@ func Write(src []byte, b *Block) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := readFrom(d); err != nil {
+	current, err := readFrom(d)
+	if err != nil {
 		return nil, err
 	}
+	if current != nil && reflect.DeepEqual(current, b) {
+		return append([]byte(nil), src...), nil
+	}
 
-	block, err := marshal(b, d.eol)
+	block, err := marshal(asWritten(b), d.eol)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +251,19 @@ func Write(src []byte, b *Block) ([]byte, error) {
 		out.WriteString(strings.Join(d.lines[d.closeAt:], ""))
 	}
 	return out.Bytes(), nil
+}
+
+// asWritten is the block in the shape this gdoc writes. It copies rather than
+// edits, because the caller's block is the one it goes on holding: a Write that
+// moved somebody's block to schema 2 in place would make the next comparison
+// against what the file says lie.
+func asWritten(b *Block) *Block {
+	if b.Schema == Schema {
+		return b
+	}
+	next := *b
+	next.Schema = Schema
+	return &next
 }
 
 // marshal renders the block under its key, with the file's line endings.

@@ -258,7 +258,9 @@ func TestSnapshotRoundTrips(t *testing.T) {
 	now := List(fixture(t, "single-tab.json"))
 	snapshot := Snapshot(now, at)
 
-	block := &frontmatter.Block{Schema: frontmatter.Schema, DocumentID: testDocumentID, SuggestionsSeen: snapshot}
+	block := &frontmatter.Block{Schema: frontmatter.Schema, Documents: []frontmatter.Entry{
+		{ID: testDocumentID, SuggestionsSeen: snapshot},
+	}}
 	src := []byte("---\ntitle: Supplier register policy\n---\n\n# Scope\n")
 	out, err := frontmatter.Write(src, block)
 	if err != nil {
@@ -268,16 +270,16 @@ func TestSnapshotRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatalf("frontmatter.Read: %v", err)
 	}
-	if back.SuggestionsSeen == nil {
+	if back.Documents[0].SuggestionsSeen == nil {
 		t.Fatal("the snapshot did not survive the round trip")
 	}
-	if !back.SuggestionsSeen.At.Equal(at) {
-		t.Errorf("at = %v, want %v", back.SuggestionsSeen.At, at)
+	if !back.Documents[0].SuggestionsSeen.At.Equal(at) {
+		t.Errorf("at = %v, want %v", back.Documents[0].SuggestionsSeen.At, at)
 	}
-	if len(back.SuggestionsSeen.Items) != len(now) {
-		t.Fatalf("items = %+v, want %d", back.SuggestionsSeen.Items, len(now))
+	if len(back.Documents[0].SuggestionsSeen.Items) != len(now) {
+		t.Fatalf("items = %+v, want %d", back.Documents[0].SuggestionsSeen.Items, len(now))
 	}
-	for i, item := range back.SuggestionsSeen.Items {
+	for i, item := range back.Documents[0].SuggestionsSeen.Items {
 		want := frontmatter.SuggestionSeen{ID: now[i].ID, Kind: now[i].Kind, Section: now[i].Section, Text: now[i].Text}
 		if item != want {
 			t.Errorf("items[%d] = %+v, want %+v", i, item, want)
@@ -289,7 +291,7 @@ func TestSnapshotRoundTrips(t *testing.T) {
 	for _, p := range now {
 		nowIDs = append(nowIDs, p.ID)
 	}
-	if got := GoneSince(back.SuggestionsSeen, nowIDs); got != nil {
+	if got := GoneSince(back.Documents[0].SuggestionsSeen, nowIDs); got != nil {
 		t.Errorf("GoneSince(snapshot, the same pendings) = %+v, want nil", got)
 	}
 }
@@ -305,7 +307,10 @@ func TestSnapshotOfNothingIsStillASnapshot(t *testing.T) {
 	if len(got.Items) != 0 || !got.At.Equal(at) {
 		t.Errorf("Snapshot(nil, at) = %+v, want an empty snapshot at %v", got, at)
 	}
-	if err := (&frontmatter.Block{Schema: frontmatter.Schema, DocumentID: testDocumentID, SuggestionsSeen: got}).Validate(); err != nil {
+	block := &frontmatter.Block{Schema: frontmatter.Schema, Documents: []frontmatter.Entry{
+		{ID: testDocumentID, SuggestionsSeen: got},
+	}}
+	if err := block.Validate(); err != nil {
 		t.Errorf("the empty snapshot does not validate: %v", err)
 	}
 }

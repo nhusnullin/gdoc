@@ -120,19 +120,24 @@ func script(t *testing.T, before, after, batch string) *fakeSession {
 	}
 }
 
-// note is a front-matter block carrying the proposals named, so a test says in
-// one line whose suggestion this is.
-func note(ids ...string) *frontmatter.Block {
-	b := &frontmatter.Block{Schema: frontmatter.Schema, DocumentID: testDocID}
+// note is the note's entry for this document, carrying the proposals named, so
+// a test says in one line whose suggestion this is.
+func note(ids ...string) *frontmatter.Entry {
+	e := &frontmatter.Entry{ID: testDocID}
 	for _, id := range ids {
-		b.Proposals = append(b.Proposals, frontmatter.Proposal{
+		e.Proposals = append(e.Proposals, frontmatter.Proposal{
 			ID:        id,
 			CommentID: "AAAC",
 			At:        time.Date(2026, 9, 7, 10, 0, 0, 0, time.UTC),
 			Quoted:    "reviewed annually",
 		})
 	}
-	return b
+	return e
+}
+
+// noteBlock is the whole block around that entry, for the tests that write one.
+func noteBlock(ids ...string) *frontmatter.Block {
+	return &frontmatter.Block{Schema: frontmatter.Schema, Documents: []frontmatter.Entry{*note(ids...)}}
 }
 
 // TestRunRefusesASuggestionTheNoteDoesNotName is the whole permission model.
@@ -522,17 +527,18 @@ func TestRunFailsWhenTheDocumentCannotBeRead(t *testing.T) {
 // one entry must not lose the others, because each of them is the permission to
 // withdraw one more suggestion.
 func TestForgetLeavesTheOtherProposalsInPlace(t *testing.T) {
-	b := note("suggest.one", testSuggestion, "suggest.three")
+	b := noteBlock("suggest.one", testSuggestion, "suggest.three")
 
-	next := Forget(b, testSuggestion)
+	next := Forget(b, testDocID, testSuggestion)
 
-	if len(next.Proposals) != 2 {
-		t.Fatalf("proposals = %d, want the other two", len(next.Proposals))
+	kept := next.Documents[0].Proposals
+	if len(kept) != 2 {
+		t.Fatalf("proposals = %d, want the other two", len(kept))
 	}
-	if next.Proposals[0].ID != "suggest.one" || next.Proposals[1].ID != "suggest.three" {
-		t.Errorf("proposals = %v, and the order should be the note's own", next.Proposals)
+	if kept[0].ID != "suggest.one" || kept[1].ID != "suggest.three" {
+		t.Errorf("proposals = %v, and the order should be the note's own", kept)
 	}
-	if next.DocumentID != b.DocumentID || next.Schema != b.Schema {
+	if next.Documents[0].ID != b.Documents[0].ID || next.Schema != b.Schema {
 		t.Errorf("the rest of the block changed: %+v", next)
 	}
 	if err := next.Validate(); err != nil {
@@ -544,34 +550,71 @@ func TestForgetLeavesTheOtherProposalsInPlace(t *testing.T) {
 // only when the withdrawal held, so a Forget that edited the block in place
 // would drop the provenance of a suggestion that is still in the document.
 func TestForgetDoesNotMutateItsInput(t *testing.T) {
-	b := note("suggest.one", testSuggestion)
+	b := noteBlock("suggest.one", testSuggestion)
 
-	next := Forget(b, testSuggestion)
+	next := Forget(b, testDocID, testSuggestion)
 
-	if len(b.Proposals) != 2 {
-		t.Fatalf("the input block now has %d proposals; Forget edited it in place", len(b.Proposals))
+	if len(b.Documents[0].Proposals) != 2 {
+		t.Fatalf("the input block now has %d proposals; Forget edited it in place", len(b.Documents[0].Proposals))
 	}
-	if b.Proposals[1].ID != testSuggestion {
-		t.Errorf("the input block's entries moved: %v", b.Proposals)
+	if b.Documents[0].Proposals[1].ID != testSuggestion {
+		t.Errorf("the input block's entries moved: %v", b.Documents[0].Proposals)
 	}
-	next.Proposals = append(next.Proposals, frontmatter.Proposal{ID: "suggest.four"})
-	if len(b.Proposals) != 2 {
+	next.Documents[0].Proposals = append(next.Documents[0].Proposals, frontmatter.Proposal{ID: "suggest.four"})
+	if len(b.Documents[0].Proposals) != 2 {
 		t.Error("the two blocks share the proposals slice, so writing one changes the other")
+	}
+	next.Documents = append(next.Documents, frontmatter.Entry{ID: "9ZzYyXxWwVvUuTtSsRrQqPpOoNn0123456789zzzz"})
+	if len(b.Documents) != 1 {
+		t.Error("the two blocks share the documents slice, so writing one changes the other")
+	}
+}
+
+// A document the block does not name changes nothing. The caller checked which
+// document the run was of before anything was written, and inventing an entry
+// here would record a document the note was never paired with.
+func TestForgetLeavesADocumentTheBlockDoesNotName(t *testing.T) {
+	b := noteBlock("suggest.one", testSuggestion)
+
+	next := Forget(b, "9ZzYyXxWwVvUuTtSsRrQqPpOoNn0123456789zzzz", testSuggestion)
+
+	if len(next.Documents) != 1 || len(next.Documents[0].Proposals) != 2 {
+		t.Errorf("block = %+v, want the note unchanged", next)
+	}
+}
+
+// The other document's proposals stay where they are, because a suggestion id
+// under one document says nothing about another.
+func TestForgetTouchesOnlyTheDocumentItWasOf(t *testing.T) {
+	b := noteBlock("suggest.one", testSuggestion)
+	b.Documents = append(b.Documents, frontmatter.Entry{
+		ID:        "9ZzYyXxWwVvUuTtSsRrQqPpOoNn0123456789zzzz",
+		Proposals: []frontmatter.Proposal{{ID: testSuggestion, CommentID: "AAAD", At: time.Date(2026, 9, 19, 9, 0, 0, 0, time.UTC)}},
+	})
+
+	next := Forget(b, testDocID, testSuggestion)
+
+	if len(next.Documents[0].Proposals) != 1 {
+		t.Errorf("documents[0].proposals = %+v, want the one that was not withdrawn", next.Documents[0].Proposals)
+	}
+	if len(next.Documents[1].Proposals) != 1 {
+		t.Errorf("the other document's proposal went with it: %+v", next.Documents[1].Proposals)
 	}
 }
 
 func TestForgetLeavesABlockThatNeverNamedTheSuggestion(t *testing.T) {
-	b := note("suggest.one")
+	b := noteBlock("suggest.one")
 
-	next := Forget(b, testSuggestion)
+	next := Forget(b, testDocID, testSuggestion)
 
-	if len(next.Proposals) != 1 || next.Proposals[0].ID != "suggest.one" {
-		t.Errorf("proposals = %v, want the note unchanged", next.Proposals)
+	kept := next.Documents[0].Proposals
+	if len(kept) != 1 || kept[0].ID != "suggest.one" {
+		t.Errorf("proposals = %v, want the note unchanged", kept)
 	}
 }
 
 func TestForgetOnANilBlockIsNil(t *testing.T) {
-	if Forget(nil, testSuggestion) != nil {
+	if Forget(nil, testDocID, testSuggestion) != nil {
 		t.Error("Forget invented a block out of nothing")
 	}
 }

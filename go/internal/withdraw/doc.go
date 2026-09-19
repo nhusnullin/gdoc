@@ -43,6 +43,12 @@
 // requires --md. Mine is that question in one function, so the command asks the
 // same question this package asks rather than a paraphrase of it, and a
 // suggestion missing from the list is refused before the document is read.
+//
+// Mine reads the entry for the document the run is of, not the whole block. A
+// note names every document it has been published to, and a suggestion id
+// recorded under one of them says nothing about another: reading the block
+// would let a proposal in document A be the permission to reject an id in
+// document B.
 // TestMineReadsTheNoteAndNothingElse,
 // TestRunRefusesASuggestionTheNoteDoesNotName and
 // TestRunRefusesWhenTheNoteIsMissing are the pins, with
@@ -92,11 +98,13 @@
 //
 // The entry leaves the note only then. Forgetting it while the suggestion is
 // still pending would leave gdoc refusing to withdraw its own work, so Forget
-// copies rather than edits and the caller writes the note only when the
-// withdrawal held. TestForgetLeavesTheOtherProposalsInPlace,
-// TestForgetDoesNotMutateItsInput, TestForgetLeavesABlockThatNeverNamedTheSuggestion
-// and TestForgetOnANilBlockIsNil are the pins, with
-// TestWithdrawRetractsAndForgetsTheProposal in cmd/gdoc.
+// copies rather than edits, the list of entries included, and the caller writes
+// the note only when the withdrawal held. It takes the document id too, and
+// touches no other entry. TestForgetLeavesTheOtherProposalsInPlace,
+// TestForgetDoesNotMutateItsInput, TestForgetLeavesABlockThatNeverNamedTheSuggestion,
+// TestForgetTouchesOnlyTheDocumentItWasOf,
+// TestForgetLeavesADocumentTheBlockDoesNotName and TestForgetOnANilBlockIsNil
+// are the pins, with TestWithdrawRetractsAndForgetsTheProposal in cmd/gdoc.
 //
 // The price is a reject Docs accepted whose answer could not be read. Usually
 // no ids came back, so Verified stays false, the entry stays in the note, and a

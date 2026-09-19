@@ -1,8 +1,10 @@
 // Package frontmatter is the gdoc: block in a note's YAML front matter, and
 // nothing else in the file.
 //
-// The block carries schema, document_id, folder_id, a published record, the
-// suggestions_seen snapshot and proposals. A proposal is
+// The block carries schema and documents, a list with one entry per document
+// the note is paired with. An entry carries id, folder_id, tab_id, a published
+// record, an exported record, the suggestions_seen snapshot and proposals. A
+// proposal is
 // {id, comment_id, at, quoted}: the suggestion id, the comment insertComment
 // returned, the time, and the words that were replaced. propose writes those
 // entries and withdraw reads them and shortens the list, so the block is the
@@ -16,7 +18,46 @@
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
 //
-// # The publish record is {at, title, house}, and publish is its only writer
+// # The block is a list, and schema 1 still reads
+//
+// A note published before 2026-09-19 carries schema 1: one document, its fields
+// beside the schema rather than under an entry. That note still reads, as a
+// block whose documents list holds one entry, and the Schema field says 1,
+// because that is what the file says.
+// TestReadAcceptsASchemaOneBlockWrittenBeforeToday and
+// TestASchemaOneBlockCarriesItsOldFieldsOnTheEntry are the pins.
+//
+// Write compares the block it is given against the one already in the file. A
+// block that is equal is a write with nothing to write, and the file comes back
+// byte for byte, which is what keeps those notes at schema 1 until something in
+// them changes. Any other write renders schema 2, whatever the block says,
+// because this package has one shape it writes.
+// TestWriteAnUnchangedSchemaOneBlockStaysSchemaOne,
+// TestAChangingWriteRewritesSchemaOneAsTwo and TestASchemaTwoBlockRoundTrips
+// are the pins.
+//
+// The reason for the list is that a note publishes more than once. Which entry
+// a run acts on is the document the URL names, and Entry is that lookup: it
+// returns the block's own entry, so a writer that changes it and writes the
+// block writes what it changed, and a document the block does not name is a
+// refusal naming every document it does. TestEntryFindsTheDocumentTheURLNames
+// and TestEntryIsTheBlocksOwnEntry are the pins.
+//
+// Two entries naming one document are refused, because gdoc could not tell
+// which one a run means. An exported record carrying neither at nor note is
+// refused, because one of them is what says what was exported. A tab_id that is
+// not a Docs tab id is refused, for the reason a document_id that is not a
+// Drive id is: a path or a URL fragment must not reach a field a later run
+// reads back. Each refusal names the key and the entry it is in.
+// TestValidateNamesTheEntryItRefused, TestValidateAcceptsADocsTabID and
+// TestValidateAcceptsAnExportedRecord are the pins.
+//
+// A gdoc from before this milestone reads a schema 2 note and refuses it by
+// name: its read is strict before it looks at the schema, so it names the
+// documents key it did not know rather than the version.
+// TestTheShippedDecoderRefusesADocumentsKeyByName is the pin.
+//
+// # The publish record is {at, title, house}
 //
 // When the run happened, the title that went on the cover, and whether the
 // style came from the embedded file or from a --house path. There is no
@@ -32,7 +73,7 @@
 // # The read is strict
 //
 // goccy/go-yaml with yaml.Strict(): an unknown key, a key given twice, a
-// missing document_id, a document_id that is not a Drive id, and a kind that is
+// missing id, an id that is not a Drive id, and a kind that is
 // neither insertion nor deletion. Each is refused naming the key, and the file
 // is left untouched. A block gdoc half understands is a pairing it may act on
 // wrongly. TestReadRefusesAndNamesWhatIsWrong and
@@ -60,8 +101,9 @@
 //
 // A gdoc: key holding a plain string is a pairing this reader does not read. It
 // is refused with the string it found named, and the message carries the two
-// ways out: write the key as a block stating schema and document_id, or take
-// the line out and pair the note again with gdoc publish. Nail's decision,
+// ways out: write the key as a block stating schema and a documents list whose
+// one entry names the id, or take the line out and pair the note again with
+// gdoc publish. Nail's decision,
 // 2026-09-08, DECISIONS.md.
 //
 // What makes the refusal safe to keep is that publish is the only command that
@@ -73,13 +115,14 @@
 // TestWriteRefusesABareStringPairingRatherThanReplacingIt and
 // TestANonStringScalarUnderGdocIsNotABareStringPairing are the pins.
 //
-// # schema must be exactly 1
+// # schema is 1 or 2, and nothing else
 //
 // A block stating another version is refused rather than read on a guess.
-// Schema is the constant, and bumping it is a decision rather than a refactor,
-// because the block is the record a later run reads before it acts. The schema
-// cases in TestValidateNamesTheKeyItRefused and
-// TestReadRefusesAndNamesWhatIsWrong, over schema2.md, are the pins.
+// Schema is the constant this package writes and SchemaOne is the one it still
+// reads, and adding a third is a decision rather than a refactor, because the
+// block is the record a later run reads before it acts. The schema cases in
+// TestValidateNamesTheKeyItRefused and TestReadRefusesAndNamesWhatIsWrong, over
+// schema3.md, are the pins.
 //
 // # The write is byte-preserving
 //

@@ -43,12 +43,15 @@ type Session interface {
 // places for it to drift.
 func BatchURL(docID string) string { return propose.BatchURL(docID) }
 
-// Mine says whether the note records this suggestion as one of gdoc's own.
+// Mine says whether the note records this suggestion as one of gdoc's own,
+// under the document the run is of.
 //
 // It is the permission question in one function, so the command asks the same
-// question this package asks rather than a paraphrase of it. A nil note names
-// nothing, and so does a note whose proposals list is empty.
-func Mine(note *frontmatter.Block, suggestionID string) bool {
+// question this package asks rather than a paraphrase of it. A nil entry names
+// nothing, and so does an entry whose proposals list is empty. The entry rather
+// than the block, because a note names every document it has been published to
+// and a suggestion id under one of them says nothing about another.
+func Mine(note *frontmatter.Entry, suggestionID string) bool {
 	if note == nil || suggestionID == "" {
 		return false
 	}
@@ -68,7 +71,7 @@ func Mine(note *frontmatter.Block, suggestionID string) bool {
 // to "is this still pending" is only true at the moment it is read, and a
 // reject of a suggestion that was already accepted or rejected would be
 // reported as a withdrawal with nothing withdrawn.
-func Run(ctx context.Context, s Session, docID, suggestionID string, note *frontmatter.Block) (Result, error) {
+func Run(ctx context.Context, s Session, docID, suggestionID string, note *frontmatter.Entry) (Result, error) {
 	out := Result{SuggestionID: suggestionID}
 	if suggestionID == "" {
 		return out, fmt.Errorf("no suggestion was named to withdraw")
@@ -214,23 +217,34 @@ func Batch(suggestionID string) []byte {
 	return raw
 }
 
-// Forget returns a new block without the suggestion's entry, leaving the rest
-// of the note as it was.
+// Forget returns a new block whose entry for docID no longer records the
+// suggestion, leaving the rest of the note as it was.
 //
-// It copies rather than edits. The caller writes the note only when the
-// withdrawal held, so a Forget that changed the block in place would drop the
-// provenance of a suggestion that is still sitting in the document, and gdoc
-// would then refuse to withdraw its own work.
-func Forget(note *frontmatter.Block, suggestionID string) *frontmatter.Block {
+// It copies rather than edits, the list of entries included. The caller writes
+// the note only when the withdrawal held, so a Forget that changed the block in
+// place would drop the provenance of a suggestion that is still sitting in the
+// document, and gdoc would then refuse to withdraw its own work.
+//
+// A docID the block does not name changes nothing: the caller checked that
+// before it wrote anything, and inventing an entry here would record a document
+// this note was never paired with.
+func Forget(note *frontmatter.Block, docID, suggestionID string) *frontmatter.Block {
 	if note == nil {
 		return nil
 	}
 	next := *note
-	next.Proposals = nil
-	for _, p := range note.Proposals {
-		if p.ID != suggestionID {
-			next.Proposals = append(next.Proposals, p)
+	next.Documents = append([]frontmatter.Entry{}, note.Documents...)
+	for i := range next.Documents {
+		if next.Documents[i].ID != docID {
+			continue
 		}
+		var kept []frontmatter.Proposal
+		for _, p := range next.Documents[i].Proposals {
+			if p.ID != suggestionID {
+				kept = append(kept, p)
+			}
+		}
+		next.Documents[i].Proposals = kept
 	}
 	return &next
 }

@@ -423,7 +423,11 @@ func (a BatchAnswer) State() string {
 // the two losses. Those results come back in the second return value instead,
 // because losing them quietly is what leaves gdoc refusing to withdraw a
 // suggestion it wrote. The caller says so.
-func Record(note []byte, results []Result, at time.Time) ([]byte, []Result, error) {
+// The proposals go under the document the run was of, which is the entry docID
+// names. A note names as many documents as it has been published to, and a
+// proposal recorded under the wrong one is a suggestion withdraw would refuse
+// to take back.
+func Record(note []byte, docID string, results []Result, at time.Time) ([]byte, []Result, error) {
 	b, err := frontmatter.Read(note)
 	if err != nil {
 		return nil, nil, err
@@ -435,13 +439,29 @@ func Record(note []byte, results []Result, at time.Time) ([]byte, []Result, erro
 	if len(entries) == 0 {
 		return note, missed, nil
 	}
-	next := *b
-	next.Proposals = append(append([]frontmatter.Proposal{}, b.Proposals...), entries...)
-	out, err := frontmatter.Write(note, &next)
+	next := copyBlock(b)
+	e, err := next.Entry(docID)
+	if err != nil {
+		return nil, nil, err
+	}
+	e.Proposals = append(e.Proposals, entries...)
+	out, err := frontmatter.Write(note, next)
 	if err != nil {
 		return nil, nil, err
 	}
 	return out, missed, nil
+}
+
+// copyBlock is the block with its own list of entries and its own list of
+// proposals under each, so the block the caller read is not the one that is
+// changed. A write that fails must leave what was read as it was.
+func copyBlock(b *frontmatter.Block) *frontmatter.Block {
+	next := *b
+	next.Documents = append([]frontmatter.Entry{}, b.Documents...)
+	for i := range next.Documents {
+		next.Documents[i].Proposals = append([]frontmatter.Proposal{}, next.Documents[i].Proposals...)
+	}
+	return &next
 }
 
 // recorded is the results that can be remembered, as front matter entries, and

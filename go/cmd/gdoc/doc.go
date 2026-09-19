@@ -434,6 +434,36 @@
 // TestAnnotateStopsAtTheFirstEntryThatCannotBeSent is the report keeping one
 // entry per annotation when it stops in the middle.
 //
+// # The URL picks the entry, and a note gdoc copied is refused
+//
+// A note names every document it has been published to, under documents: in
+// its gdoc: block, and the URL is what says which entry a run acts on. paired
+// in paired.go is that lookup, and every command taking --md goes through it,
+// so suggestions, propose and withdraw refuse the same things in the same
+// words. annotate takes no --md: it leaves a comment on the words a caller
+// quotes and records nothing.
+//
+// Three refusals. A note whose front matter does not read is frontmatter's own,
+// passed through. A note that does not name this document is the wrong file,
+// and the refusal names every document it does name, because the answer is
+// always to open one of those. A note whose entry carries exported.note is a
+// copy gdoc wrote beside somebody else's document rather than the source of
+// one: there is nothing in it to record, and a snapshot written into it would
+// be read next time as that document's own history.
+//
+// TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList,
+// TestAProposalIsRecordedUnderItsOwnDocument,
+// TestWithdrawNeverSendsAnIDFromAnotherDocument,
+// TestGoneSinceReadsTheSnapshotOfTheDocumentRead and
+// TestEveryWriterRefusesACopyThatNamesANote are the pins.
+//
+// A note published before 2026-09-19 carries schema 1, one document beside the
+// schema. It still reads, and the first run that writes to it rewrites the
+// block as a list. That is a change to somebody's file, so the envelope says so
+// once, and the next run has nothing to say because the block is already a
+// list. TestTheReplySaysOnceWhenTheBlockWasRewritten and
+// TestAReadThatWritesNothingNeverSaysTheBlockWasRewritten are the pins.
+//
 // # The note is read again just before it is written
 //
 // The pairing is checked before the session opens, and the run then spends
@@ -445,15 +475,18 @@
 //
 // freshNote reads the file again and refuses four things rather than writing
 // them: a file it cannot read again, one whose front matter no longer parses,
-// one whose gdoc: block has gone, and one that now names another document. Each
-// is a warning carrying the reason, and nothing is written into the note.
+// one whose gdoc: block has gone, and one that no longer names this document.
+// Each is a warning carrying the reason, and nothing is written into the note.
+// The refusal opens by saying the note changed while the run was under way,
+// because that is what tells a reader whether to run the command again or to go
+// and look at the file.
 //
 // The block is re-parsed from the fresh bytes too, so a proposal another run
 // recorded in that window survives: writing the block this run read into bytes
 // it did not would keep the author's prose and still drop that entry. notePath
-// therefore keeps the path and the block the pairing check read, and never the
-// bytes it read them from, because a copy held there would only be the stale
-// bytes somebody later wrote back.
+// therefore keeps the path, the document the run is of and the entry the
+// pairing check read, and never the bytes it read them from, because a copy
+// held there would only be the stale bytes somebody later wrote back.
 //
 // TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes and
 // TestWithdrawWritesTheNoteTheVaultHasNow are the pins, with

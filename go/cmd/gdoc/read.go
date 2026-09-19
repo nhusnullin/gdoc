@@ -741,56 +741,56 @@ func cmdSuggestions(a *args) emit.Result {
 		return emit.Result{OK: true, Data: data, Warnings: r.warnings()}
 	}
 	path := a.flags["--md"]
-	gone, err := recordSnapshot(path, r.id, suggestions.All(d), suggestions.IDs(d))
+	gone, warns, err := recordSnapshot(path, r.id, suggestions.All(d), suggestions.IDs(d))
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
 	}
 	data.Gone = &gone
 	data.FilesChanged = []string{path}
-	return emit.Result{OK: true, Data: data, Warnings: r.warnings()}
+	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
 }
 
 // recordSnapshot compares the file's last snapshot against what is pending now
 // and writes the new one. It is the only write the read commands make, and it
 // happens only after a read that fully succeeded.
 //
-// A file paired with another document is refused: writing this document's
-// observation into it would be the wrong file, and the next run would read the
-// snapshot as this document's history.
+// Which entry it writes into is the document the URL names, and paired is the
+// check: a file that does not name this document is refused, because writing
+// this document's observation into it would be the wrong file, and the next run
+// would read the snapshot as this document's history.
 // all is every pending suggestion, the whitespace-only ones the printed listing
 // drops included, and nowIDs is their ids. What left is a question about ids: a
 // suggestion the author edited down to a space has not left, and a snapshot
 // that forgot it cannot say so when it does.
-func recordSnapshot(path, id string, all []suggestions.Pending, nowIDs []string) ([]suggestions.Gone, error) {
+func recordSnapshot(path, id string, all []suggestions.Pending, nowIDs []string) ([]suggestions.Gone, []string, error) {
 	src, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("the markdown file could not be read: %w", err)
+		return nil, nil, fmt.Errorf("the markdown file could not be read: %w", err)
 	}
-	block, err := frontmatter.Read(src)
+	block, entry, err := paired(path, src, id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if block == nil {
-		return nil, fmt.Errorf("%s carries no gdoc: front matter, so it is not paired with a document", path)
-	}
-	if block.DocumentID != id {
-		return nil, fmt.Errorf("%s is paired with document %s, and this read was of %s", path, block.DocumentID, id)
-	}
-	gone := suggestions.GoneSince(block.SuggestionsSeen, nowIDs)
+	gone := suggestions.GoneSince(entry.SuggestionsSeen, nowIDs)
 	if gone == nil {
 		gone = []suggestions.Gone{}
 	}
 	// A copy, so the block that was read is not written to.
 	updated := *block
-	updated.SuggestionsSeen = suggestions.Snapshot(all, now())
+	updated.Documents = append([]frontmatter.Entry{}, block.Documents...)
+	for i := range updated.Documents {
+		if updated.Documents[i].ID == id {
+			updated.Documents[i].SuggestionsSeen = suggestions.Snapshot(all, now())
+		}
+	}
 	out, err := frontmatter.Write(src, &updated)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := writeFile(path, out); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return gone, nil
+	return gone, rewritten(path, block.Schema == frontmatter.SchemaOne), nil
 }
 
 // writeFile replaces the note, keeping the mode it had. A failed write must not

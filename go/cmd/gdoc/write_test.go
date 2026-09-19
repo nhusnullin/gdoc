@@ -797,8 +797,11 @@ func TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun(t *testing.T) {
 		t.Fatalf("the proposals were written, so the run stands: %v (exit %d)", got, code)
 	}
 	warns := warningsOf(t, got)
-	if !hasWarning(warns, "is now paired") {
-		t.Errorf("the warning must say the note stopped naming this document: %v", warns)
+	if !hasWarning(warns, "changed while the run was under way") {
+		t.Errorf("the warning must say the note moved under the run: %v", warns)
+	}
+	if !hasWarning(warns, "9ZzYyXxWwVvUuTtSsRrQqPpOoNn0123456789zzzz") || !hasWarning(warns, proposeDocID) {
+		t.Errorf("the warning must name the document the note now holds and the one this run was of: %v", warns)
 	}
 	after, err := os.ReadFile(note)
 	if err != nil {

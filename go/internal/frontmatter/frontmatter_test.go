@@ -51,45 +51,49 @@ func TestReadDecodesTheFullBlock(t *testing.T) {
 	if b.Schema != 1 {
 		t.Errorf("schema = %d, want 1", b.Schema)
 	}
-	if b.DocumentID != testDocumentID {
-		t.Errorf("document_id = %q, want %q", b.DocumentID, testDocumentID)
+	if len(b.Documents) != 1 {
+		t.Fatalf("documents = %d, want the one the old block named", len(b.Documents))
 	}
-	if b.FolderID != "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr" {
-		t.Errorf("folder_id = %q", b.FolderID)
+	e := b.Documents[0]
+	if e.ID != testDocumentID {
+		t.Errorf("document_id = %q, want %q", e.ID, testDocumentID)
 	}
-	if b.Published == nil {
+	if e.FolderID != "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr" {
+		t.Errorf("folder_id = %q", e.FolderID)
+	}
+	if e.Published == nil {
 		t.Fatal("published is absent")
 	}
 	wantPublished := time.Date(2026, 9, 6, 10, 12, 0, 0, time.UTC)
-	if !b.Published.At.Equal(wantPublished) {
-		t.Errorf("published.at = %v, want %v", b.Published.At, wantPublished)
+	if !e.Published.At.Equal(wantPublished) {
+		t.Errorf("published.at = %v, want %v", e.Published.At, wantPublished)
 	}
-	if b.Published.Title != "Supplier register policy" {
-		t.Errorf("published.title = %q", b.Published.Title)
+	if e.Published.Title != "Supplier register policy" {
+		t.Errorf("published.title = %q", e.Published.Title)
 	}
-	if b.Published.House != "embedded" {
-		t.Errorf("published.house = %q", b.Published.House)
+	if e.Published.House != "embedded" {
+		t.Errorf("published.house = %q", e.Published.House)
 	}
-	if b.SuggestionsSeen == nil {
+	if e.SuggestionsSeen == nil {
 		t.Fatal("suggestions_seen is absent")
 	}
-	if got := len(b.SuggestionsSeen.Items); got != 2 {
+	if got := len(e.SuggestionsSeen.Items); got != 2 {
 		t.Fatalf("suggestions_seen.items = %d, want 2", got)
 	}
-	first := b.SuggestionsSeen.Items[0]
+	first := e.SuggestionsSeen.Items[0]
 	want := SuggestionSeen{ID: "suggest.abc123", Kind: KindInsertion, Section: "Scope", Text: "critical "}
 	if first != want {
 		t.Errorf("items[0] = %+v, want %+v", first, want)
 	}
-	second := b.SuggestionsSeen.Items[1]
+	second := e.SuggestionsSeen.Items[1]
 	if second.Kind != KindDeletion || second.Section != "" || second.Text != "annually" {
 		t.Errorf("items[1] = %+v", second)
 	}
-	if len(b.Proposals) != 1 {
-		t.Fatalf("proposals = %d, want 1", len(b.Proposals))
+	if len(e.Proposals) != 1 {
+		t.Fatalf("proposals = %d, want 1", len(e.Proposals))
 	}
-	if b.Proposals[0].ID != "gdoc.p1" || b.Proposals[0].CommentID != "AAAABBBBCCCC" {
-		t.Errorf("proposals[0] = %+v", b.Proposals[0])
+	if e.Proposals[0].ID != "gdoc.p1" || e.Proposals[0].CommentID != "AAAABBBBCCCC" {
+		t.Errorf("proposals[0] = %+v", e.Proposals[0])
 	}
 }
 
@@ -98,11 +102,12 @@ func TestReadDecodesTheMinimalBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if b == nil || b.Schema != 1 || b.DocumentID != testDocumentID {
+	if b == nil || b.Schema != 1 || len(b.Documents) != 1 || b.Documents[0].ID != testDocumentID {
 		t.Fatalf("block = %+v", b)
 	}
-	if b.Published != nil || b.SuggestionsSeen != nil || len(b.Proposals) != 0 {
-		t.Errorf("absent keys came back set: %+v", b)
+	e := b.Documents[0]
+	if e.Published != nil || e.SuggestionsSeen != nil || len(e.Proposals) != 0 {
+		t.Errorf("absent keys came back set: %+v", e)
 	}
 }
 
@@ -111,7 +116,7 @@ func TestReadDecodesThroughCRLF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if b == nil || b.DocumentID != testDocumentID {
+	if b == nil || len(b.Documents) != 1 || b.Documents[0].ID != testDocumentID {
 		t.Fatalf("block = %+v", b)
 	}
 }
@@ -123,7 +128,7 @@ func TestReadRefusesAndNamesWhatIsWrong(t *testing.T) {
 	}{
 		{"unknown-key.md", "reviewed_by"},
 		{"duplicate-key.md", "schema"},
-		{"schema2.md", "schema"},
+		{"schema3.md", "schema"},
 		{"no-document-id.md", "document_id"},
 		{"bad-kind.md", "kind"},
 		{"twice.md", "gdoc"},
@@ -197,7 +202,7 @@ func TestWriteMovesNoLineOutsideTheBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
-	b.FolderID = "2ZzYyXxWwVvUuTtSsRrQqPpOoNnMmLlKk"
+	b.Documents[0].FolderID = "2ZzYyXxWwVvUuTtSsRrQqPpOoNnMmLlKk"
 
 	out, err := Write(src, b)
 	if err != nil {
@@ -229,7 +234,7 @@ func TestWriteTakesTheLineEndingsFromTheFrontMatterNotTheProse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
-	b.FolderID = "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr"
+	b.Documents[0].FolderID = "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr"
 
 	out, err := Write(src, b)
 	if err != nil {
@@ -250,7 +255,7 @@ func TestWriteKeepsCRLF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
-	b.FolderID = "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr"
+	b.Documents[0].FolderID = "1w0SresizE9Kr810VZRJwX4JtDBF4OqNr"
 
 	out, err := Write(src, b)
 	if err != nil {
@@ -266,8 +271,8 @@ func TestWriteKeepsCRLF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-reading what Write produced: %v", err)
 	}
-	if back.FolderID != b.FolderID {
-		t.Errorf("folder_id = %q, want %q", back.FolderID, b.FolderID)
+	if back.Documents[0].FolderID != b.Documents[0].FolderID {
+		t.Errorf("folder_id = %q, want %q", back.Documents[0].FolderID, b.Documents[0].FolderID)
 	}
 }
 
@@ -281,12 +286,12 @@ func TestWriteGivesAFileWithoutFrontMatterDelimitersAndNothingElse(t *testing.T)
 		t.Fatalf("the body was not left alone.\nwant suffix:\n%q\ngot:\n%q", src, out)
 	}
 	head := string(out[:len(out)-len(src)])
-	want := "---\ngdoc:\n  schema: 1\n  document_id: " + testDocumentID + "\n---\n"
+	want := "---\ngdoc:\n  schema: 2\n  documents:\n    - id: " + testDocumentID + "\n---\n"
 	if head != want {
 		t.Fatalf("front matter = %q, want %q", head, want)
 	}
 	back, err := Read(out)
-	if err != nil || back == nil || back.DocumentID != testDocumentID {
+	if err != nil || back == nil || len(back.Documents) != 1 || back.Documents[0].ID != testDocumentID {
 		t.Fatalf("re-read gave %+v, %v", back, err)
 	}
 }
@@ -310,14 +315,14 @@ func TestWriteAppendsIntoExistingFrontMatter(t *testing.T) {
 		t.Fatalf("the delimiters were not left as they were: %q", out)
 	}
 	back, err := Read(out)
-	if err != nil || back == nil || back.DocumentID != testDocumentID {
+	if err != nil || back == nil || len(back.Documents) != 1 || back.Documents[0].ID != testDocumentID {
 		t.Fatalf("re-read gave %+v, %v", back, err)
 	}
 }
 
 func TestWriteRefusesAnInvalidBlockAndTouchesNothing(t *testing.T) {
 	src := fixture(t, "full.md")
-	out, err := Write(src, &Block{Schema: 1})
+	out, err := Write(src, oneBlock(Entry{}))
 	if err == nil {
 		t.Fatal("an invalid block was written")
 	}
@@ -403,7 +408,7 @@ func TestControlCharactersSurviveTheRoundTrip(t *testing.T) {
 			t.Errorf("Read back %q: %v\n%s", text, err, src)
 			continue
 		}
-		if got := back.SuggestionsSeen.Items[0].Text; got != text {
+		if got := back.Documents[0].SuggestionsSeen.Items[0].Text; got != text {
 			t.Errorf("%q round-tripped to %q\n%s", text, got, src)
 		}
 	}
@@ -417,9 +422,9 @@ func TestVerifyRefusesABlockThatDoesNotReadBack(t *testing.T) {
 	b := blockWithText("one\ttwo")
 	// What the emitter wrote before the quoting rule: a plain scalar whose tab
 	// the parser drops.
-	lossy := []byte("gdoc:\n  schema: 1\n  document_id: 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r\n" +
-		"  suggestions_seen:\n    at: 2026-09-06T12:00:00Z\n    items:\n      - id: suggest.a1\n" +
-		"        kind: insertion\n        section: \"\"\n        text: one\ttwo\n")
+	lossy := []byte("gdoc:\n  schema: 2\n  documents:\n    - id: 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r\n" +
+		"      suggestions_seen:\n        at: 2026-09-06T12:00:00Z\n        items:\n          - id: suggest.a1\n" +
+		"            kind: insertion\n            section: \"\"\n            text: one\ttwo\n")
 	err := verify(lossy, b)
 	if err == nil {
 		t.Fatal("verify() = nil on a block whose tab the parser drops, want an error")
@@ -439,12 +444,14 @@ func TestVerifyRefusesABlockThatDoesNotReadBack(t *testing.T) {
 
 func blockWithText(text string) *Block {
 	return &Block{
-		Schema:     Schema,
-		DocumentID: "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r",
-		SuggestionsSeen: &SuggestionsSeen{
-			At:    time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC),
-			Items: []SuggestionSeen{{ID: "suggest.a1", Kind: KindInsertion, Text: text}},
-		},
+		Schema: Schema,
+		Documents: []Entry{{
+			ID: "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r",
+			SuggestionsSeen: &SuggestionsSeen{
+				At:    time.Date(2026, 9, 6, 12, 0, 0, 0, time.UTC),
+				Items: []SuggestionSeen{{ID: "suggest.a1", Kind: KindInsertion, Text: text}},
+			},
+		}},
 	}
 }
 
@@ -469,7 +476,7 @@ func TestWriteRefusesBrokenFrontMatterWithNoGdocKey(t *testing.T) {
 // broken. Not knowing what is there must never resolve to writing over it.
 func TestWriteRefusesAFileWhoseFrontMatterNeverCloses(t *testing.T) {
 	src := fixture(t, "unterminated.md")
-	out, err := Write(src, &Block{Schema: Schema, DocumentID: testDocumentID})
+	out, err := Write(src, validBlock())
 	if err == nil {
 		t.Fatalf("Write accepted an unclosed delimiter and returned:\n%s", out)
 	}
@@ -497,8 +504,8 @@ func TestTrailingSpaceOnTheDelimiterIsStillFrontMatter(t *testing.T) {
 	if b == nil {
 		t.Fatal("a note whose delimiters carry a trailing space read as unpaired")
 	}
-	if b.DocumentID != testDocumentID {
-		t.Errorf("document_id = %q", b.DocumentID)
+	if b.Documents[0].ID != testDocumentID {
+		t.Errorf("document_id = %q", b.Documents[0].ID)
 	}
 
 	out, err := Write(src, b)
@@ -534,7 +541,7 @@ func TestAByteOrderMarkDoesNotHideTheFrontMatter(t *testing.T) {
 	}
 
 	plain := []byte(bom + "# Title\n\nbody\n")
-	out, err = Write(plain, &Block{Schema: Schema, DocumentID: testDocumentID})
+	out, err = Write(plain, validBlock())
 	if err != nil {
 		t.Fatalf("Write on an unpaired note: %v", err)
 	}
@@ -552,13 +559,13 @@ func TestReadDecodesProposalsWithAndWithoutQuoted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(b.Proposals) != 2 {
-		t.Fatalf("proposals = %d, want 2", len(b.Proposals))
+	if len(b.Documents[0].Proposals) != 2 {
+		t.Fatalf("proposals = %d, want 2", len(b.Documents[0].Proposals))
 	}
-	if got := b.Proposals[0].Quoted; got != "reviewed annually" {
+	if got := b.Documents[0].Proposals[0].Quoted; got != "reviewed annually" {
 		t.Errorf("proposals[0].quoted = %q, want %q", got, "reviewed annually")
 	}
-	if got := b.Proposals[1].Quoted; got != "" {
+	if got := b.Documents[0].Proposals[1].Quoted; got != "" {
 		t.Errorf("proposals[1].quoted = %q, want empty: the key is absent and that is allowed", got)
 	}
 }
@@ -571,7 +578,7 @@ func TestWriteKeepsQuotedThroughARoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
-	b.Proposals = []Proposal{{
+	b.Documents[0].Proposals = []Proposal{{
 		ID:        "suggest.abc",
 		CommentID: "AAAABBBBCCCC",
 		At:        time.Date(2026, 9, 7, 9, 0, 0, 0, time.UTC),
@@ -585,8 +592,8 @@ func TestWriteKeepsQuotedThroughARoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read after Write: %v", err)
 	}
-	if len(back.Proposals) != 1 || back.Proposals[0].Quoted != "reviewed annually" {
-		t.Errorf("proposals = %+v", back.Proposals)
+	if len(back.Documents[0].Proposals) != 1 || back.Documents[0].Proposals[0].Quoted != "reviewed annually" {
+		t.Errorf("proposals = %+v", back.Documents[0].Proposals)
 	}
 }
 
@@ -601,7 +608,7 @@ func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
-	b.Published = &Published{
+	b.Documents[0].Published = &Published{
 		At:    time.Date(2026, 9, 8, 14, 30, 0, 0, time.UTC),
 		Title: "Supplier register policy",
 		House: "go/internal/house/house.yaml",
@@ -614,17 +621,18 @@ func TestWriteKeepsThePublishRecordThroughARoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read after Write: %v", err)
 	}
-	if back.Published == nil {
+	got, want := back.Documents[0].Published, b.Documents[0].Published
+	if got == nil {
 		t.Fatal("the publish record did not survive the write")
 	}
-	if !back.Published.At.Equal(b.Published.At) {
-		t.Errorf("published.at = %v, want %v", back.Published.At, b.Published.At)
+	if !got.At.Equal(want.At) {
+		t.Errorf("published.at = %v, want %v", got.At, want.At)
 	}
-	if back.Published.Title != b.Published.Title {
-		t.Errorf("published.title = %q, want %q", back.Published.Title, b.Published.Title)
+	if got.Title != want.Title {
+		t.Errorf("published.title = %q, want %q", got.Title, want.Title)
 	}
-	if back.Published.House != b.Published.House {
-		t.Errorf("published.house = %q, want %q", back.Published.House, b.Published.House)
+	if got.House != want.House {
+		t.Errorf("published.house = %q, want %q", got.House, want.House)
 	}
 }
 
@@ -644,7 +652,7 @@ func TestReadRefusesABareStringPairingAndSaysWhatToDoAboutIt(t *testing.T) {
 	if b != nil {
 		t.Errorf("a refused read still returned a block: %+v", b)
 	}
-	for _, want := range []string{"gdoc:", id, "document_id", "schema", "publish"} {
+	for _, want := range []string{"gdoc:", id, "documents", "schema", "publish"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q does not name %q", err, want)
 		}
@@ -664,7 +672,7 @@ func TestWriteRefusesABareStringPairingRatherThanReplacingIt(t *testing.T) {
 	if out != nil {
 		t.Errorf("a refused write returned bytes: %q", out)
 	}
-	if !strings.Contains(err.Error(), "document_id") {
+	if !strings.Contains(err.Error(), "documents") {
 		t.Errorf("error %q does not say what the block should look like", err)
 	}
 }
