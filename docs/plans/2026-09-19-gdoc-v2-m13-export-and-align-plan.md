@@ -724,31 +724,84 @@ Serves decision 10. Scenarios 4, 5.
 - Create: `go/internal/docx/media_test.go`, `go/internal/docx/testdata/pictures.docx`
 - Create: `go/internal/export/pictures.go`, `go/internal/export/pictures_test.go`
 
-- [ ] Before writing: `ls go/internal/export/testdata/fixture-measured/`. If
+- [x] Before writing: `ls go/internal/export/testdata/fixture-measured/`. If
       Task 1's recording is there, the fixtures below are those files. If
       not, they are built from `body/testdata`'s pictures note through
       `render`, and write ⚠️ here saying so: a docx gdoc rendered pins gdoc's
       own decoder against gdoc's own writer, and says nothing about the order
       Google's export uses, which only the recording can.
-- [ ] Test first, `TestMediaComesInBodyOrder`: a docx with two pictures;
+- [x] Test first, `TestMediaComesInBodyOrder`: a docx with two pictures;
       `Media` returns them in `document.xml` order with names and bytes.
       Watch it fail.
-- [ ] Test, `TestPicturesPairByOrder`: two objects, two media files; each
+- [x] Test, `TestPicturesPairByOrder`: two objects, two media files; each
       picture names its object id and bytes.
-- [ ] Test, `TestACountMismatchWritesNoPictureAndWarns`: three objects, two
+- [x] Test, `TestACountMismatchWritesNoPictureAndWarns`: three objects, two
       media; every picture is a placeholder, one warning.
-- [ ] Test, `TestTwoIdenticalPicturesKeepTheirOrder`.
-- [ ] Test, `TestTheHashMatchIsOffUntilMeasured`: with `Options.MatchByHash`
+- [x] Test, `TestTwoIdenticalPicturesKeepTheirOrder`.
+- [x] Test, `TestTheHashMatchIsOffUntilMeasured`: with `Options.MatchByHash`
       false a matching PNG beside the note still gets a file and the result
       says the match is off; with it true the note's link is kept. No
       package variable: the option is a field, so `-race` sees no shared
       state.
-- [ ] Test, `TestTheNotesPicturesAreFoundThroughItsLinks`: PNG and JPEG
+- [x] Test, `TestTheNotesPicturesAreFoundThroughItsLinks`: PNG and JPEG
       resolved against the note's directory; `data:` and `http` skipped; a
       second note is never read.
-- [ ] Implement `docx.Media` and `export.Pictures`.
-- [ ] `cd go && go test -race ./internal/docx/ ./internal/export/` passes.
-- [ ] `git commit -m "feat(export): picture bytes from the docx export, matched by order"`
+- [x] Implement `docx.Media` and `export.Pictures`.
+- [x] `cd go && go test -race ./internal/docx/ ./internal/export/` passes.
+- [x] `git commit -m "feat(export): picture bytes from the docx export, matched by order"`
+
+⚠️ **The docx fixtures are gdoc's own writer, not Google's export.** Task 1's
+recording is not in `go/internal/export/testdata/fixture-measured/`, so
+`TestMediaComesInBodyOrder` renders `badge.png` and `diagram.png` through
+`body` and `render` and reads that package back. It pins gdoc's decoder against
+gdoc's writer and says nothing about the order Google's export uses, which only
+measurement 1 can. Until that recording lands, the guard that matters is the
+count: the two routes disagreeing means every picture is a placeholder and
+nothing is written.
+
+➕ **No `pictures.docx` on disk.** The plan named a committed fixture. The test
+builds the package in memory through the generator instead, the way
+`drift_test.go` builds the note it measures, so there is no binary blob in the
+tree whose provenance a reader has to take on trust. The other four cases are
+hand-written zips through `docx_test.go`'s own `buildDocx`, because what they
+pin is a malformed export and the generator cannot write one.
+
+➕ **Only `a:blip` is read, and never VML.** Word writes a floating picture
+twice, as DrawingML inside `mc:Choice` and as VML inside `mc:Fallback`, so
+reading both would count one picture as two and put the pairing out by one. A
+picture that reaches the body as VML alone is therefore missing, and the count
+guard catches it: a missing picture is a placeholder, never a wrong file.
+
+➕ **A picture `Media` cannot resolve is refused, never skipped.** A relationship
+the part list does not hold, one marked `External`, and a part the zip does not
+carry are all errors naming what is missing. Skipping one would move every
+picture after it one place along, and the pairing is by position, so every
+picture behind it would get the wrong bytes under the right name.
+`TestMediaRefusesWhatItCannotResolve` is the pin.
+
+➕ **The "match is off" warning needs something to have matched.** The spec says
+the reply says the match is not trusted yet. It says so when the note at `--out`
+holds pictures of its own, and says nothing when it holds none: there was
+nothing the match could have kept, so the sentence would be noise on every
+export into a new file.
+
+➕ **A matched picture carries no bytes.** `Matched` and `Bytes` are never both
+set, so "no file is written" is the shape of the value rather than a rule Task 9
+has to remember. `Ext` comes off the media part's own name, so the writer names
+a file what it is without reading it.
+
+➕ **Two more tests than the plan named.**
+`TestADifferentPictureIsWrittenWhenTheMatchIsOn` is scenario 4 with the match
+on, which nothing else covered, and `TestANotePictureThatCannotBeReadIsNamed`
+holds the rule that a broken picture link in the note is named rather than
+dropped: the export is the one read that could have told the session about it.
+
+➕ **`Objects` is the list the pairing counts, and it lives here.** An inline
+picture stands where its run does and a floating one after the paragraph it is
+anchored to, which is where `internal/view` prints its placeholder. An equation
+or an object this read cannot name is a placeholder and never a file, so it is
+not counted: counting it would put the pairing one place out.
+`TestObjectsAreTheTabsPicturesInBodyOrder` is the pin.
 
 ### Task 9: the files on disk, the stamp and the copy
 

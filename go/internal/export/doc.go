@@ -8,10 +8,13 @@
 // which side is right, and whether a suggestion is taken are the session's, and
 // no field here answers any of them.
 //
-// Nothing here reaches the network or the disk. Project is a function of one
-// recorded read, so a golden file is a specification rather than a snapshot,
-// and File puts the gdoc: block in front of a body through internal/frontmatter,
-// the one writer of that block.
+// Nothing here reaches the network, and nothing here writes. Project is a
+// function of one recorded read, so a golden file is a specification rather
+// than a snapshot, and File puts the gdoc: block in front of a body through
+// internal/frontmatter, the one writer of that block. The one thing that
+// touches the disk at all is NotePictures, which reads the pictures the note
+// at --out already links to, so the export can say which of the document's
+// pictures that note already holds.
 //
 // This comment holds why the projection takes out what it takes out, with the
 // test that pins each rule. What it prints is in the code beside it.
@@ -97,4 +100,47 @@
 // (docs/backlog/suggestions-inside-footnotes.md), and a comment anchored inside
 // one carries no marker (docs/backlog/comment-anchors-in-headers-and-footnotes.md).
 // TestAFootnoteIsWrittenAndWarned is the pin.
+//
+// # The pictures are paired by order, and by nothing else
+//
+// A picture's bytes are not in the Docs answer. Its contentUri is a
+// googleusercontent.com host the guard does not admit, so the bytes come from
+// the docx export, which is a second read of the same document through a
+// second route. Nothing crosses those routes: the read has object ids the
+// export never mentions and the export has part names the read never mentions.
+// So the k-th picture of Objects is the k-th of docx.Media, and order is the
+// whole pairing. TestPicturesPairByOrder and
+// TestObjectsAreTheTabsPicturesInBodyOrder are the pins, the second stating
+// body order: an inline picture where its run stands, a floating one after the
+// paragraph it is anchored to, and an equation counted as neither.
+//
+// When the two counts disagree, every picture is a placeholder and no file is
+// written at all. A pairing one place out writes the wrong bytes under the
+// right name, and nobody reading the note afterwards can see it.
+// TestACountMismatchWritesNoPictureAndWarns is the pin, and
+// TestTwoIdenticalPicturesKeepTheirOrder is the other direction: the same
+// bytes twice are two pictures, because the position is the fact and the bytes
+// are not.
+//
+// # The note's own picture is kept only once the bytes are measured
+//
+// A note that already holds the picture should keep its own file, so the SVG
+// it was rendered from stays the master. That rests on a published PNG coming
+// back from the export byte for byte, which is measurement 2 of
+// docs/v2/MEASURED.md and is not measured yet. Until it is, Options.MatchByHash
+// is off, every picture is written as a new file, and the reply says the match
+// was off rather than saying nothing. TestTheHashMatchIsOffUntilMeasured is
+// the pin, with TestADifferentPictureIsWrittenWhenTheMatchIsOn for the other
+// answer once it is on. A matched picture carries no bytes, so no writer can
+// replace a file the note already has.
+//
+// The note's own pictures are found through its own image links, read with
+// goldmark, resolved against its directory, PNG and JPEG only. A data:
+// destination came with the markdown and an http one is a download, which
+// nothing here does: both are stepped over. Only the note at --out is read: a
+// second note in that folder naming the same document is somebody else's
+// pairing. A link that could not be read is named, because this is the one
+// read that could tell the session the link is broken.
+// TestTheNotesPicturesAreFoundThroughItsLinks and
+// TestANotePictureThatCannotBeReadIsNamed are the pins.
 package export
