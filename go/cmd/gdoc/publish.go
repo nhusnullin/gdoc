@@ -7,6 +7,11 @@
 // `suggestions --md`, `propose --md` and `withdraw` write into a block that is
 // already there, and each refuses a note that has none.
 //
+// A note that already names a document is published again. Each run makes its
+// own document and appends its own entry, and the entries already there are
+// carried through untouched: they are those documents' history, and this run
+// knows nothing about them.
+//
 // Two rules shape everything below. The run's only door is the folder: no file
 // is in the reachable set when the policy is opened, and the new document's id
 // is learned from the create the guard itself carried. And not knowing never
@@ -71,15 +76,15 @@ func cmdPublish(a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
-	// The note is read and judged before anything else happens. There is no
-	// republish: a note that already names a document has one, and publishing
-	// it again makes a second document with the first one's pairing left
-	// pointing at neither.
+	// The note is read and judged before anything else happens. A block gdoc
+	// cannot read is refused here, and a copy gdoc wrote beside somebody else's
+	// document is refused here: those are the two notes a publish must not
+	// write an entry into.
 	source, err := noteSource(md)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	if err := unpaired(md, source); err != nil {
+	if err := publishable(md, source); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
@@ -130,7 +135,8 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: sessionWarnings(s, warns)}
 	}
 
-	changed, pairErr := pair(md, source, folder, rep.DocumentID, doc)
+	changed, pairWarns, pairErr := pair(md, source, folder, rep.DocumentID, doc)
+	warns = append(warns, pairWarns...)
 	if pairErr == nil {
 		data.FilesChanged = changed
 		return emit.Result{OK: true, Data: data, Warnings: sessionWarnings(s, warns)}
@@ -151,28 +157,38 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 	return emit.Result{OK: false, Error: pairErr.Error(), Data: data, Warnings: sessionWarnings(s, warns)}
 }
 
-// unpaired refuses a note that already names a document.
+// publishable refuses the two notes a publish must not write into.
 //
-// A block gdoc cannot read is refused here too, and by the same sentence it
-// would be refused by anywhere else: a note whose front matter does not parse
-// is one publish would put a second block into, demoting the author's keys to
-// prose.
-func unpaired(md string, source []byte) error {
+// A block gdoc cannot read is refused by the same sentence it would be refused
+// by anywhere else: a note whose front matter does not parse is one publish
+// would put a second block into, demoting the author's keys to prose.
+//
+// A note whose entry carries exported.note is a copy gdoc wrote beside somebody
+// else's document. It is not a source: publishing it would make a document out
+// of words the note's own author never wrote, and record it in a file that is
+// already somebody else's history. That is paired's third refusal, asked here
+// over every entry because a publish names no document of its own.
+func publishable(md string, source []byte) error {
 	block, err := frontmatter.Read(source)
 	if err != nil {
 		return err
 	}
-	if block != nil {
-		return fmt.Errorf("%s is already paired with %s, and gdoc publishes a note once: open that document, or take the gdoc: block out by hand if it names a document that has gone",
-			md, pairedWith(block))
+	if block == nil {
+		return nil
+	}
+	for _, e := range block.Documents {
+		if e.Exported != nil && e.Exported.Note != "" {
+			return fmt.Errorf("%s is a copy gdoc exported from document %s, and the note it was exported beside is %s; publish that note instead",
+				md, e.ID, e.Exported.Note)
+		}
 	}
 	return nil
 }
 
-// pair records the pairing in the note, and refuses four things rather than
-// writing them: a note that could not be read again, one whose front matter no
-// longer parses, one whose gdoc: block has appeared, and one whose bytes
-// changed at all.
+// pair records this run's document in the note, appending an entry to the ones
+// already there. It refuses four things rather than writing them: a note that
+// could not be read again, one whose front matter no longer parses, one that
+// already names this run's document, and one whose bytes changed at all.
 //
 // The note is read again first, because seconds to tens of seconds of network
 // sit between the read the render was made from and here, and these notes live
@@ -180,56 +196,72 @@ func unpaired(md string, source []byte) error {
 // cannot read, or cannot parse, is one it cannot write into either, and writing
 // over it anyway would replace whatever landed there with this run's guess.
 //
-// The block refusal is the inverse of freshNote's rule: that one guards a
-// paired note and refuses a block that has gone, and this one starts from an
-// unpaired note and refuses a block that has appeared. A block that appeared is
-// another run pairing this note while this one was uploading, and overwriting
-// it would leave that run's document with no record at all.
+// The third refusal is the inverse of freshNote's rule: that one guards a
+// paired note and refuses an entry that has gone, and this one refuses an entry
+// that has appeared for the document this run just made. A note may name as
+// many documents as it has been published to, so another run's entry is not
+// what is refused here; an entry for this one is, because appending a second
+// would leave the note naming this document twice, which Validate refuses and
+// which no later run could tell apart.
 //
 // The fourth refusal is the note's own bytes changing. The document in Drive is
 // a render of the bytes this run read, so a note that has moved on is paired to
 // a document that is no longer what it builds to. All four are a rollback
 // rather than a warning: the caller's answer to each is to publish again from
 // what the note says now.
-func pair(md string, source []byte, folder, docID string, doc *noteDocx) ([]string, error) {
+//
+// It returns the files it wrote and the warnings that write earned, which is
+// the schema 1 block it rewrote as a list, said once.
+// TestPublishAppendsAnEntryToAPairedNote is the append, with
+// TestPublishRefusesACopyThatNamesANote over the note publishable turns away.
+func pair(md string, source []byte, folder, docID string, doc *noteDocx) ([]string, []string, error) {
 	fresh, err := os.ReadFile(md)
 	if err != nil {
-		return nil, fmt.Errorf("the document was published and %s could not be read again, so the pairing could not be recorded: %v", md, err)
+		return nil, nil, fmt.Errorf("the document was published and %s could not be read again, so the pairing could not be recorded: %v", md, err)
 	}
 	block, err := frontmatter.Read(fresh)
 	if err != nil {
-		return nil, fmt.Errorf("the document was published and %s no longer reads, so the pairing could not be recorded: %v", md, err)
+		return nil, nil, fmt.Errorf("the document was published and %s no longer reads, so the pairing could not be recorded: %v", md, err)
 	}
-	if block != nil {
-		return nil, fmt.Errorf("the document was published and %s now names %s, so another run paired it while this one was uploading and this run's document is not recorded anywhere",
-			md, pairedWith(block))
+	if _, found := block.Entry(docID); found == nil {
+		return nil, nil, fmt.Errorf("the document was published and %s already names document %s, so another run recorded it while this one was uploading and a second entry would name it twice",
+			md, docID)
 	}
 	if !bytes.Equal(fresh, source) {
-		return nil, fmt.Errorf("the document was published and %s changed while it was being uploaded, so the document is a render of bytes the note no longer holds", md)
+		return nil, nil, fmt.Errorf("the document was published and %s changed while it was being uploaded, so the document is a render of bytes the note no longer holds", md)
 	}
-	out, err := frontmatter.Write(fresh, &frontmatter.Block{
-		Schema: frontmatter.Schema,
-		Documents: []frontmatter.Entry{{
-			ID:       docID,
-			FolderID: folder,
-			Published: &frontmatter.Published{
-				At: now().UTC(),
-				// What went on the cover, which is what the upload asked Drive
-				// to name the file. The read-back's title is reported on the
-				// envelope instead, and the two disagreeing is already a
-				// warning there.
-				Title: doc.Title,
-				House: doc.House,
-			},
-		}},
-	})
+	out, err := frontmatter.Write(fresh, appended(block, frontmatter.Entry{
+		ID:       docID,
+		FolderID: folder,
+		Published: &frontmatter.Published{
+			At: now().UTC(),
+			// What went on the cover, which is what the upload asked Drive to
+			// name the file. The read-back's title is reported on the envelope
+			// instead, and the two disagreeing is already a warning there.
+			Title: doc.Title,
+			House: doc.House,
+		},
+	}))
 	if err != nil {
-		return nil, fmt.Errorf("the document was published and the gdoc: block could not be written into %s: %v", md, err)
+		return nil, nil, fmt.Errorf("the document was published and the gdoc: block could not be written into %s: %v", md, err)
 	}
 	if err := writeFile(md, out); err != nil {
-		return nil, fmt.Errorf("the document was published and %s could not be written, so the pairing could not be recorded: %v", md, err)
+		return nil, nil, fmt.Errorf("the document was published and %s could not be written, so the pairing could not be recorded: %v", md, err)
 	}
-	return []string{md}, nil
+	return []string{md}, rewritten(md, block != nil && block.Schema == frontmatter.SchemaOne), nil
+}
+
+// appended is the note's block with one entry added at the end. It copies
+// rather than appending in place, so the block the caller read stays the block
+// the file held, and it renders schema 2 because a block this run changed is
+// written in the shape gdoc writes today.
+func appended(block *frontmatter.Block, e frontmatter.Entry) *frontmatter.Block {
+	next := &frontmatter.Block{Schema: frontmatter.Schema, Documents: []frontmatter.Entry{e}}
+	if block == nil {
+		return next
+	}
+	next.Documents = append(append([]frontmatter.Entry{}, block.Documents...), e)
+	return next
 }
 
 // sessionWarnings is the session's warnings, which are the policy's followed by

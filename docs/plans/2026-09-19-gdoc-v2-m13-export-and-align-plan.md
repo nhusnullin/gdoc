@@ -452,21 +452,21 @@ Serves decisions 6 and 17. Scenarios 10, 12, 14.
 - Modify: `go/cmd/gdoc/publish.go`, `go/cmd/gdoc/publish_test.go`, `go/cmd/gdoc/doc.go`
 - Remove: `docs/backlog/publish-a-paired-note-again.md`
 
-- [ ] Test first, `TestPublishAppendsAnEntryToAPairedNote`: a note with one
+- [x] Test first, `TestPublishAppendsAnEntryToAPairedNote`: a note with one
       entry; publish with a stubbed session; the block holds two entries, the
       first untouched byte for byte within its span, the second with
       `published` and `folder_id`; the envelope names the new id. Watch it
       fail on `unpaired`.
-- [ ] Delete `TestPublishRefusesANoteThatIsAlreadyPaired`. Keep the
+- [x] Delete `TestPublishRefusesANoteThatIsAlreadyPaired`. Keep the
       "a block appeared during the run" refusal in `pair`, restated as "an
       entry for this id appeared".
-- [ ] `unpaired` goes; `pair` appends.
-- [ ] `doc.go`: the `publish` paragraph says a paired note publishes again
+- [x] `unpaired` goes; `pair` appends.
+- [x] `doc.go`: the `publish` paragraph says a paired note publishes again
       and names the test; the "open that document or take the block out"
       sentence goes.
-- [ ] `cd go && go test -race ./cmd/...` passes.
-- [ ] `git rm docs/backlog/publish-a-paired-note-again.md`
-- [ ] `git commit -m "feat(publish): a paired note publishes again, to a new document"`
+- [x] `cd go && go test -race ./cmd/...` passes.
+- [x] `git rm docs/backlog/publish-a-paired-note-again.md`
+- [x] `git commit -m "feat(publish): a paired note publishes again, to a new document"`
 
 ### Task 4: a marker never reaches a document
 

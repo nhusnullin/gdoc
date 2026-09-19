@@ -464,6 +464,16 @@
 // list. TestTheReplySaysOnceWhenTheBlockWasRewritten and
 // TestAReadThatWritesNothingNeverSaysTheBlockWasRewritten are the pins.
 //
+// publish is the writer that has no URL to pick with, because it is the run
+// that makes the document. It appends: a note that already names a document is
+// published again, into a new one, and the entries already there are carried
+// through untouched. Those are other documents' history and this run knows
+// nothing about them. It refuses one note before anything leaves the machine,
+// the copy carrying exported.note, because publish.publishable has to ask that
+// over every entry where paired asks it over one.
+// TestPublishAppendsAnEntryToAPairedNote and
+// TestPublishRefusesACopyThatNamesANote are the pins.
+//
 // # The note is read again just before it is written
 //
 // The pairing is checked before the session opens, and the run then spends
@@ -497,7 +507,8 @@
 // reached with the proposals already in the document, so it warns instead.
 //
 // publish reads the note again for the opposite reason, and that rule is
-// pair's, in publish.go beside this file: there the block appearing during the
-// upload is what is refused, and the refusal is a rollback that internal/publish
-// only carries out.
+// pair's, in publish.go beside this file: there an entry for the document this
+// run just made appearing during the upload is what is refused, because a
+// second one would name it twice, and the refusal is a rollback that
+// internal/publish only carries out.
 package main
