@@ -631,38 +631,89 @@ Serves decisions 3, 8, 11 and the spec's "The file". Scenarios 1, 6, 7, 8, 9.
 - Modify: `go/internal/view/text.go`, `go/internal/view/doc.go`
 - Create: `go/internal/view/project_test.go`
 
-- [ ] Test first, in `view`, `TestProjectSkipsAndNamesPictures`: `Skip`
+- [x] Test first, in `view`, `TestProjectSkipsAndNamesPictures`: `Skip`
       drops a block, `Picture` writes its name raw on its own line, and
       `Text` equals `Project` with zero options on every golden. Watch it
       fail; implement `Project` and name the test in `view/doc.go`.
-- [ ] Test, golden `plain.md` from the `elements` fixture: the same
+- [x] Test, golden `plain.md` from the `elements` fixture: the same
       text `read` prints, with markers, plus a front matter holding only a
       `gdoc:` block with one entry. Watch it fail.
-- [ ] Before the next two: `ls go/internal/export/testdata/publish-prelude/
+- [x] Before the next two: `ls go/internal/export/testdata/publish-prelude/
       restyle-prelude/`. If Task 1's recordings are there, they are the
       fixtures. If not, build each from `internal/prelude`'s own request
       list rendered into the Docs JSON shape by a test helper, and write a
       ⚠️ note here saying the strip is pinned against gdoc's own idea of the
       prelude, not against a document Google made, until the recordings
       exist.
-- [ ] Test, golden `publish-prelude.md`: opens at the first body heading;
+- [x] Test, golden `publish-prelude.md`: opens at the first body heading;
       `Stripped` lists cover, three tables, legend, contents, and the `{n}-`
       prefixes with their text.
-- [ ] Test, golden `restyle-prelude.md`: stripped over the named range.
-- [ ] Test, `TestAnEditedPreludeStaysAndWarns`: a cover with an added
+- [x] Test, golden `restyle-prelude.md`: stripped over the named range.
+- [x] Test, `TestAnEditedPreludeStaysAndWarns`: a cover with an added
       heading; nothing stripped, one warning naming what stood there.
-- [ ] Test, `TestAHeadingLinkRoundTripsToItsSlug` over the ampersand and
+- [x] Test, `TestAHeadingLinkRoundTripsToItsSlug` over the ampersand and
       accent headings of `body/testdata/05-edge-cases.md`'s shapes.
-- [ ] Test, `TestAChipExportsLabelAndTarget`.
-- [ ] Test, `TestAFootnoteIsWrittenAndWarned`.
-- [ ] Test, `TestTwoTabsGiveTwoProjections` with the tab title and id on
+- [x] Test, `TestAChipExportsLabelAndTarget`.
+- [x] Test, `TestAFootnoteIsWrittenAndWarned`.
+- [x] Test, `TestTwoTabsGiveTwoProjections` with the tab title and id on
       each.
-- [ ] Implement `Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)`
+- [x] Implement `Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)`
       on `view`'s emitter over a stripped tree.
-- [ ] `doc.go`: the package comment says it projects and decides nothing,
+- [x] `doc.go`: the package comment says it projects and decides nothing,
       the strip rule as the spec states it, and names every test.
-- [ ] `cd go && go test -race ./internal/export/` passes.
-- [ ] `git commit -m "feat(export): the Markdown projection with the prelude stripped"`
+- [x] `cd go && go test -race ./internal/export/` passes.
+- [x] `git commit -m "feat(export): the Markdown projection with the prelude stripped"`
+
+
+⚠️ **The two prelude fixtures are gdoc's own idea of the prelude.** Task 1's
+recordings were not in `go/internal/export/testdata/`, so `publish-prelude.json`
+and `restyle-prelude.json` are written by hand in the shape a Docs read comes
+back in, following house.yaml's own `front_matter` order: the cover lines, the
+label, the three tables, the legend, the classification label and the contents
+list, with the body numbered the way `body` numbers it. The strip is therefore
+pinned against what gdoc believes it wrote, not against a document Google made.
+The live recording replaces both files, and the goldens beside them say what
+changed when it does.
+
+➕ **A picture is written where it stands, not on a line of its own.** The spec
+says a picture lands on its own line, and a picture in a paragraph of its own is
+one: that is where `publish` puts one, and it is what `body` writes. A picture in
+the middle of a sentence stays in the middle of that sentence, because breaking
+the paragraph around it would cut the sentence into three chunks nothing joins
+back up. `objects.json` is the fixture that holds one, and
+`TestAPictureIsWrittenWhereItStands` is the pin.
+
+➕ **`view.Options` gained a third field, `ChipTargets`.** The spec's file rules
+say a chip keeps its label and its target, and `read` prints the label alone
+because the target is in `--structure`. A file in the hub has no second read to
+go back to, so the export asks for the target and gets
+`[link: Title](https://...)`, the placeholder kept so nothing turns a chip into
+an ordinary link behind a person's back. A target carrying a bracket, a
+parenthesis or a space is left out, because the form ends at the first `)`.
+`TestAChipCarriesItsTargetWhenAskedFor` and `TestAChipExportsLabelAndTarget` are
+the two halves, and `plain.md` is therefore not byte-for-byte what `read` prints:
+it is that text with the chip targets on it.
+
+➕ **An inline object carries its own id, in `docs.Run.Detail.ID`.** `Picture` is
+keyed by object id, and until now only a floating object had one: an inline
+picture's run carried its kind and nothing else, so nothing could name it. The
+decode is one line in `walk.go`, the run carries no label with it so every
+placeholder reads as it did, and `TestAnInlineObjectCarriesItsObjectID` is the
+pin. Task 8's pairing of the k-th media file with the k-th object names the
+object by this id.
+
+➕ **`view.slug` is exported as `view.Slug`, and a heading that loses its number
+takes its links with it.** A heading `publish` wrote as `1-Scope` is linked to as
+`#1-scope`, and the file holds `# Scope`, so the link would land nowhere. The
+export moves every `](#1-scope)` to `](#scope)` through the one slug rule rather
+than a second copy of it. `TestAHeadingLosesItsHouseNumberAndKeepsItsLinks` is
+the pin. The heading number piece holds the heading as the document wrote it,
+prefix and words, so a reader sees both what came off and what it stood on.
+
+➕ **The contents label and the list under it are one piece.** The `Contents`
+heading and the entries below it are what one page showed, and two pieces would
+be something a reader has to put back together. A run of paragraphs holding no
+text at all is not a piece: the house layout is half blank paragraphs.
 
 ### Task 8: the picture bytes, matched by order
 

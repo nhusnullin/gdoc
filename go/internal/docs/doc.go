@@ -194,6 +194,14 @@
 // nothing at all about it. testdata/positioned.json is written from the
 // reference, and TestAPositionedObjectIsCarriedOnItsParagraph is the pin.
 //
+// An inline object carries its own id too, in Detail.ID, which is the field a
+// chip's id already uses. It is the run's one identity: a docx export of the
+// same document carries the picture's bytes with nothing joining them to a
+// position, so what pairs the two is the order the objects stand in, and what
+// names one of them in a file list or a warning is this id. It carries no
+// label, so the placeholder a reader sees is the [image] it always was.
+// TestAnInlineObjectCarriesItsObjectID is the pin.
+//
 // # Named ranges are keyed by id, and they live in the tab
 //
 // NamedRange is {id, name, tab, ranges}, Document.NamedRanges is every one of

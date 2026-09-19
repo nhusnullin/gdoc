@@ -1,0 +1,908 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456edite",
+  "title": "An edited cover",
+  "revisionId": "ALm37BXdite",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 14,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 14,
+                    "textRun": {
+                      "content": "Altery Group\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 14,
+              "endIndex": 15,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 14,
+                    "endIndex": 15,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 15,
+              "endIndex": 35,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 15,
+                    "endIndex": 35,
+                    "textRun": {
+                      "content": "The Payments Policy\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 35,
+              "endIndex": 48,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 35,
+                    "endIndex": 48,
+                    "textRun": {
+                      "content": "Version: 1.0\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 48,
+              "endIndex": 57,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 48,
+                    "endIndex": 57,
+                    "textRun": {
+                      "content": "May 2025\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 57,
+              "endIndex": 58,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 57,
+                    "endIndex": 58,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 58,
+              "endIndex": 81,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.anote"
+                },
+                "elements": [
+                  {
+                    "startIndex": 58,
+                    "endIndex": 81,
+                    "textRun": {
+                      "content": "A note from the author\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 81,
+              "endIndex": 116,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 81,
+                    "endIndex": 116,
+                    "textRun": {
+                      "content": "Read the tables before the policy.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 116,
+              "endIndex": 132,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 116,
+                    "endIndex": 132,
+                    "textRun": {
+                      "content": "Version Control\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 132,
+              "endIndex": 188,
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 134,
+                            "endIndex": 149,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 134,
+                                  "endIndex": 149,
+                                  "textRun": {
+                                    "content": "Document Owner\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 149,
+                            "endIndex": 165,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 149,
+                                  "endIndex": 165,
+                                  "textRun": {
+                                    "content": "Nail Khusnullin\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 166,
+                            "endIndex": 178,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 166,
+                                  "endIndex": 178,
+                                  "textRun": {
+                                    "content": "Approved by\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 178,
+                            "endIndex": 188,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 178,
+                                  "endIndex": 188,
+                                  "textRun": {
+                                    "content": "The Board\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 188,
+              "endIndex": 189,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 188,
+                    "endIndex": 189,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 189,
+              "endIndex": 249,
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 191,
+                            "endIndex": 199,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 191,
+                                  "endIndex": 199,
+                                  "textRun": {
+                                    "content": "Version\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 199,
+                            "endIndex": 204,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 199,
+                                  "endIndex": 204,
+                                  "textRun": {
+                                    "content": "Date\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 204,
+                            "endIndex": 211,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 204,
+                                  "endIndex": 211,
+                                  "textRun": {
+                                    "content": "Author\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 211,
+                            "endIndex": 218,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 211,
+                                  "endIndex": 218,
+                                  "textRun": {
+                                    "content": "Change\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 219,
+                            "endIndex": 223,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 219,
+                                  "endIndex": 223,
+                                  "textRun": {
+                                    "content": "1.0\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 223,
+                            "endIndex": 232,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 223,
+                                  "endIndex": 232,
+                                  "textRun": {
+                                    "content": "May 2025\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 232,
+                            "endIndex": 237,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 232,
+                                  "endIndex": 237,
+                                  "textRun": {
+                                    "content": "gdoc\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 237,
+                            "endIndex": 249,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 237,
+                                  "endIndex": 249,
+                                  "textRun": {
+                                    "content": "First issue\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 249,
+              "endIndex": 250,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 249,
+                    "endIndex": 250,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 250,
+              "endIndex": 285,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 250,
+                    "endIndex": 285,
+                    "textRun": {
+                      "content": "New\tNew information has been added\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 285,
+              "endIndex": 330,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 285,
+                    "endIndex": 330,
+                    "textRun": {
+                      "content": "Update\tExisting information has been updated\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 330,
+              "endIndex": 331,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 330,
+                    "endIndex": 331,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 331,
+              "endIndex": 382,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 331,
+                    "endIndex": 382,
+                    "textRun": {
+                      "content": "Document Classification (Highlight as appropriate)\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 382,
+              "endIndex": 413,
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 384,
+                            "endIndex": 391,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 384,
+                                  "endIndex": 391,
+                                  "textRun": {
+                                    "content": "Public\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 391,
+                            "endIndex": 400,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 391,
+                                  "endIndex": 400,
+                                  "textRun": {
+                                    "content": "Internal\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 400,
+                            "endIndex": 413,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 400,
+                                  "endIndex": 413,
+                                  "textRun": {
+                                    "content": "Confidential\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 413,
+              "endIndex": 414,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 413,
+                    "endIndex": 414,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 414,
+              "endIndex": 423,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 414,
+                    "endIndex": 423,
+                    "textRun": {
+                      "content": "Contents\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 423,
+              "endIndex": 431,
+              "tableOfContents": {
+                "content": [
+                  {
+                    "startIndex": 423,
+                    "endIndex": 431,
+                    "paragraph": {
+                      "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT"
+                      },
+                      "elements": [
+                        {
+                          "startIndex": 423,
+                          "endIndex": 431,
+                          "textRun": {
+                            "content": "1-Scope\n",
+                            "textStyle": {
+                              "link": {
+                                "headingId": "h.scope"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 431,
+              "endIndex": 439,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.scope"
+                },
+                "elements": [
+                  {
+                    "startIndex": 431,
+                    "endIndex": 439,
+                    "textRun": {
+                      "content": "1-Scope\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 439,
+              "endIndex": 485,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 439,
+                    "endIndex": 485,
+                    "textRun": {
+                      "content": "The policy covers every payment Altery makes.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 485,
+              "endIndex": 502,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_2",
+                  "headingId": "h.outofscope"
+                },
+                "elements": [
+                  {
+                    "startIndex": 485,
+                    "endIndex": 502,
+                    "textRun": {
+                      "content": "1.1-Out of scope\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 502,
+              "endIndex": 524,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 502,
+                    "endIndex": 524,
+                    "textRun": {
+                      "content": "Cash is out of scope.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 524,
+              "endIndex": 538,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.whodecides"
+                },
+                "elements": [
+                  {
+                    "startIndex": 524,
+                    "endIndex": 538,
+                    "textRun": {
+                      "content": "2-Who decides\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 538,
+              "endIndex": 572,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 538,
+                    "endIndex": 557,
+                    "textRun": {
+                      "content": "The owner named in ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 557,
+                    "endIndex": 562,
+                    "textRun": {
+                      "content": "Scope",
+                      "textStyle": {
+                        "link": {
+                          "headingId": "h.scope"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 562,
+                    "endIndex": 572,
+                    "textRun": {
+                      "content": " decides.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

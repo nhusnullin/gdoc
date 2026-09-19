@@ -293,6 +293,27 @@
 // TestARangeInsideATableCellIsMarked says a comment anchored inside a cell is
 // still marked.
 //
+// # Project is the one door beside Text, and the read never walks through it
+//
+// The export writes a file into the hub out of the same document read prints,
+// and it needs three things read does not: a block dropped before it is
+// projected, which is how internal/export removes a house prelude it
+// recognised; a picture written as the file that now sits beside the note; and
+// a chip's target behind its label, because the session merging that file into
+// a note has no second read to go back to. So Options carries Skip, Picture and
+// ChipTargets, Text is Project with none of them set, and there is one emitter
+// rather than two escapings of one document.
+// TestProjectSkipsAndNamesPictures is the pin, with the zero options asked of
+// every golden, and TestAChipCarriesItsTargetWhenAskedFor is the chip half.
+//
+// A named picture raises no warning, because nothing was lost: the bytes are on
+// disk. A floating one keeps its placeholder and its warning either way, since
+// what the placeholder records is that the picture floats beside the text
+// rather than sitting in it, and a file on its own cannot say that. A picture
+// is written where it stands, so a picture in a paragraph of its own is a line
+// of its own, which is where publish puts one, and a picture in the middle of a
+// sentence stays in the middle of that sentence.
+//
 // # --structure is the other view, and neither is the other's summary
 //
 // Structure is the same document as a tree with the character indexes on it,

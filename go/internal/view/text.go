@@ -95,11 +95,38 @@ func detailLabel(r docs.Run) string {
 	return r.Detail.Member
 }
 
+// Options is what a caller may ask this projection to do differently. The zero
+// value is the read, which is why Text is Project with nothing set.
+//
+// Picture is what a picture object is written as, by object id. A non-empty
+// answer is written into the text exactly as it comes back, so a caller that
+// has the bytes on disk puts its own link there; an empty one leaves the
+// placeholder and its warning where they were. Skip drops a block of a tab's
+// body before it is projected, which is how a caller removes a span it
+// recognised. ChipTargets adds the address a chip points at behind its label.
+//
+// All three are the export's, and none of them is the read's: read prints what
+// the document holds and nothing that is not in it, and a file in the hub
+// carries a picture that has a file beside it and a chip's target a later
+// session has to resolve. TestProjectSkipsAndNamesPictures and
+// TestAChipCarriesItsTargetWhenAskedFor are the pins.
+type Options struct {
+	Picture     func(objectID string) string
+	Skip        func(docs.Block) bool
+	ChipTargets bool
+}
+
 // Text projects the document into the one string the AI reads, and returns the
 // warnings the projection raised: a placeholder printed in place of content,
 // and a comment range it could not place in the text.
 func Text(d *docs.Document) (string, []string) {
-	e := &emitter{seen: map[string]bool{}, headings: headingWords(d)}
+	return Project(d, Options{})
+}
+
+// Project is Text with the options above. One emitter, so the read and the
+// export cannot drift into two escapings of one document.
+func Project(d *docs.Document, o Options) (string, []string) {
+	e := &emitter{seen: map[string]bool{}, headings: headingWords(d), opts: o}
 	for _, tab := range d.Tabs {
 		if d.MultiTab() {
 			e.chunk(fmt.Sprintf("<!-- tab %s: %s -->", tab.ID, tab.Title))
@@ -169,6 +196,7 @@ type emitter struct {
 	nums     map[string]int
 	objects  map[string]docs.Object
 	headings map[string]string
+	opts     Options
 	// inLink says the words being written are a link's. One bracket is markup
 	// there and nowhere else, because the words end at the first one a reader
 	// meets.
@@ -365,6 +393,9 @@ func (e *emitter) drain(upTo int, closesOnly bool) {
 
 func (e *emitter) blocks(bs []docs.Block) {
 	for _, b := range bs {
+		if e.opts.Skip != nil && e.opts.Skip(b) {
+			continue
+		}
 		switch {
 		case b.Paragraph != nil:
 			e.paragraph(b.Paragraph)
@@ -441,7 +472,78 @@ func (e *emitter) floating(p *docs.Paragraph) {
 		e.chunk(m)
 		e.warnings = append(e.warnings, fmt.Sprintf(
 			"%s floating beside the paragraph at index %d is printed as %s: %s", ph.noun, p.StartIndex, m, ph.why))
+		// The placeholder stays even when the bytes are here, because the
+		// placeholder is the one record that this picture floats beside the
+		// text rather than sitting in it, and a file on its own says nothing
+		// about that. So does the warning: what was lost is the position.
+		e.chunk(e.pictureOf(e.objects[id].Kind, id))
 	}
+}
+
+// picture is what this run is written as when it is a picture and the caller
+// said what its file is called, and nothing otherwise. A drawing is a picture:
+// the docx export carries its bytes like any other object's.
+func (e *emitter) picture(r docs.Run) string {
+	if r.Detail == nil {
+		return ""
+	}
+	return e.pictureOf(r.Kind, r.Detail.ID)
+}
+
+// pictureOf is the same question for an object the tab holds rather than a run:
+// the kind says whether it is a picture at all, and the id is what the caller
+// named its file by.
+func (e *emitter) pictureOf(kind, id string) string {
+	if e.opts.Picture == nil || id == "" {
+		return ""
+	}
+	if kind != docs.KindImage && kind != docs.KindDrawing {
+		return ""
+	}
+	return e.opts.Picture(id)
+}
+
+// markOf is one placeholder with the address behind it, for a projection that
+// was asked for chip targets. The read prints the label alone: the target is in
+// --structure, and a reader of the text is being told somebody is there rather
+// than being handed their address. A file in the hub carries it, because the
+// session merging that file into a note has no second read to go back to.
+func (e *emitter) markOf(r docs.Run) string {
+	m := mark(r)
+	if t := e.chipTarget(r); t != "" {
+		return m + "(" + t + ")"
+	}
+	return m
+}
+
+// chipTarget is where a chip points: the rich link's address, and the person
+// chip's as a mailto. A date chip points nowhere, and neither does anything
+// that is not a chip.
+//
+// A target carrying a bracket, a parenthesis or a space is left out. The form
+// is the link form, a reader takes it up to the first ")", and a target that
+// cuts itself short would leave the rest of it standing in the text as prose.
+func (e *emitter) chipTarget(r docs.Run) string {
+	if !e.opts.ChipTargets || r.Detail == nil {
+		return ""
+	}
+	switch r.Kind {
+	case docs.KindRichLink:
+		return plainTarget(r.Detail.URI)
+	case docs.KindPerson:
+		if r.Detail.Email == "" {
+			return ""
+		}
+		return plainTarget("mailto:" + r.Detail.Email)
+	}
+	return ""
+}
+
+func plainTarget(s string) string {
+	if s == "" || strings.ContainsAny(s, "()[] \t\n") {
+		return ""
+	}
+	return s
 }
 
 // headingWords is every heading's own words, by the id a link to it names. It is
@@ -481,11 +583,16 @@ func headingWords(d *docs.Document) map[string]string {
 	return out
 }
 
-// slug is a heading's words as a link target: lower case, every run of
+// Slug is a heading's words as a link target: lower case, every run of
 // characters that are neither letters nor digits one hyphen, and nothing else.
 // It is the rule the note's own heading ids follow, so a link into the document
 // reads back as the link a note held.
-func slug(s string) string {
+//
+// It is exported because internal/export takes the house number off a heading
+// and has to move the links that pointed at it: "1-Scope" and "Scope" are two
+// slugs, and a second copy of this rule there would be the one that drifted.
+// TestAHeadingLinkRoundTripsToItsSlug is the pin.
+func Slug(s string) string {
 	var b strings.Builder
 	gap := false
 	for _, r := range strings.ToLower(s) {
@@ -666,11 +773,21 @@ func (e *emitter) one(r docs.Run) {
 		e.drain(r.EndIndex, true)
 	default:
 		e.drain(r.StartIndex, false)
+		if md := e.picture(r); md != "" {
+			// The picture has a file beside the note, so nothing was lost and
+			// there is nothing to warn about. It is written where it stands: a
+			// picture in a paragraph of its own is a line of its own, which is
+			// where publish puts one, and a picture in the middle of a sentence
+			// stays in the middle of that sentence.
+			e.write(md)
+			e.drain(r.EndIndex, true)
+			return
+		}
 		p, ok := placeholders[r.Kind]
 		if !ok {
 			p = placeholders[docs.KindObject]
 		}
-		m := mark(r)
+		m := e.markOf(r)
 		e.write(m)
 		e.warnings = append(e.warnings,
 			fmt.Sprintf("%s at index %d is printed as %s: %s", p.noun, r.StartIndex, m, p.why))
@@ -732,7 +849,7 @@ func (e *emitter) target(l *docs.Link) string {
 		return l.URL
 	case l.HeadingID != "":
 		if words := e.headings[l.HeadingID]; words != "" {
-			return "#" + slug(words)
+			return "#" + Slug(words)
 		}
 		return "#" + l.HeadingID
 	case l.BookmarkID != "":
@@ -762,7 +879,7 @@ func (e *emitter) plain(rs []docs.Run) {
 			e.write("[^" + e.footnote(r) + "]")
 			continue
 		}
-		e.write(mark(r))
+		e.write(e.markOf(r))
 	}
 }
 

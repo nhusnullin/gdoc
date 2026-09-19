@@ -546,6 +546,12 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 		r.InsertionIDs, r.DeletionIDs = e.TextRun.ids()
 	case e.InlineObjectElement != nil:
 		r.Kind = objectKind(objs[e.InlineObjectElement.InlineObjectID].InlineObjectProperties.EmbeddedObject)
+		// The object id is the run's one identity. A docx export carries the
+		// picture's bytes and nothing joining them to a position, so what pairs
+		// the two is the order the objects stand in, and what names the object
+		// in a warning or a file list is this id.
+		// TestAnInlineObjectCarriesItsObjectID is the pin.
+		r.Detail = &Detail{ID: e.InlineObjectElement.InlineObjectID}
 		r.InsertionIDs, r.DeletionIDs = e.InlineObjectElement.ids()
 	case e.FootnoteReference != nil:
 		r.Kind = KindFootnoteRef

@@ -182,3 +182,34 @@ func TestAPositionedObjectIsCarriedOnItsParagraph(t *testing.T) {
 		t.Errorf("the floating drawing = %+v", draw)
 	}
 }
+
+// TestAnInlineObjectCarriesItsObjectID is the pin for the id an inline picture
+// or drawing is paired with its bytes by. The run carries no label with it, so
+// the placeholder internal/view prints is unchanged.
+func TestAnInlineObjectCarriesItsObjectID(t *testing.T) {
+	d := fixture(t, "objects.json")
+
+	runs := d.Tabs[0].Body[0].Paragraph.Runs
+	want := map[string]string{"kix.img1": KindImage, "kix.draw1": KindDrawing, "kix.obj1": KindObject}
+	got := map[string]string{}
+	for _, r := range runs {
+		if r.Kind != KindImage && r.Kind != KindDrawing && r.Kind != KindObject {
+			continue
+		}
+		if r.Detail == nil {
+			t.Fatalf("the %s run carries no detail, so it names no object", r.Kind)
+		}
+		if r.Detail.Label != "" {
+			t.Errorf("the %s run carries the label %q, and an object shows none", r.Kind, r.Detail.Label)
+		}
+		got[r.Detail.ID] = r.Kind
+	}
+	if len(got) != len(want) {
+		t.Fatalf("object ids = %v, want %v", got, want)
+	}
+	for id, kind := range want {
+		if got[id] != kind {
+			t.Errorf("object %s is %q, want %q", id, got[id], kind)
+		}
+	}
+}

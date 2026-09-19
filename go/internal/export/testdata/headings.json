@@ -1,0 +1,145 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz01234headin",
+  "title": "Headings with awkward words",
+  "revisionId": "ALm37BXadin",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 29,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.riskcontrol"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 29,
+                    "textRun": {
+                      "content": "Risk & Control <ampersands>\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 29,
+              "endIndex": 75,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 29,
+                    "endIndex": 33,
+                    "textRun": {
+                      "content": "See ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 33,
+                    "endIndex": 60,
+                    "textRun": {
+                      "content": "Risk & Control <ampersands>",
+                      "textStyle": {
+                        "link": {
+                          "headingId": "h.riskcontrol"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 60,
+                    "endIndex": 75,
+                    "textRun": {
+                      "content": " for the rule.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 75,
+              "endIndex": 108,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.resume"
+                },
+                "elements": [
+                  {
+                    "startIndex": 75,
+                    "endIndex": 108,
+                    "textRun": {
+                      "content": "R\u00e9sum\u00e9 of \u00c4nderungen: na\u00efve caf\u00e9\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 108,
+              "endIndex": 140,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 108,
+                    "endIndex": 112,
+                    "textRun": {
+                      "content": "See ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 112,
+                    "endIndex": 123,
+                    "textRun": {
+                      "content": "the changes",
+                      "textStyle": {
+                        "link": {
+                          "headingId": "h.resume"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 123,
+                    "endIndex": 140,
+                    "textRun": {
+                      "content": " for what moved.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
