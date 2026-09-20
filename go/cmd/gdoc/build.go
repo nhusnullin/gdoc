@@ -119,9 +119,9 @@ type noteDocx struct {
 }
 
 // noteSource reads the note both commands start from. It is one function because
-// publish reads the bytes for its own reason as well: the block it refuses to
-// republish is in them, and the same bytes are what the re-read after the
-// upload is compared against.
+// publish reads the bytes for its own reason as well: the block it appends its
+// entry to is in them, and the same bytes are what the re-read after the upload
+// is compared against.
 func noteSource(md string) ([]byte, error) {
 	source, err := os.ReadFile(md)
 	if err != nil {

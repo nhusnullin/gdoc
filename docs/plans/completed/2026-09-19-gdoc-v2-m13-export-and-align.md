@@ -131,11 +131,13 @@ wrong stops and says so.
 9. **A colleague on an older binary is refused by name.** The shipped
    decoder runs the strict YAML read before it looks at the schema number, so
    on a schema 2 block it refuses the unknown key `documents` by name and
-   never reaches its schema sentence. It says nothing about updating, because
-   no shipped binary can be taught a new sentence. The daily notice in `help`
-   already says a newer release exists, and that is where the colleague
-   learns to run `gdoc update`. Nothing in the note breaks. The plan's Task 2
-   pins the exact sentence as a literal, and scenario 18 quotes it.
+   never reaches its schema sentence. The sentence, pinned as a literal by the
+   plan's Task 2 and quoted by scenario 18, is
+   `gdoc front matter: [3:3] unknown field "documents"` followed by the four
+   lines of YAML it was reading, the third marked. It says nothing about
+   updating, because no shipped binary can be taught a new sentence. The daily
+   notice in `help` already says a newer release exists, and that is where the
+   colleague learns to run `gdoc update`. Nothing in the note breaks.
 
 10. **Two routes, matched by order.** The Docs read carries the text with
     suggestion and comment ids, link targets and list numbering. The docx
@@ -883,7 +885,7 @@ Every skill runs `gdoc help` first; the scenarios leave that out. A marked file 
 
 **What they do.** Any command with `--md <note>.md`.
 
-**What they see.** One line from the old binary: the `gdoc:` block in `<note>.md` carries a key it does not read, `documents`. The daily notice in `gdoc help` already says a newer release exists.
+**What they see.** The old binary's strict read, naming the key it does not know: `gdoc front matter: [3:3] unknown field "documents"`, then the four lines of YAML it was reading with the third marked. It says nothing about versions. The daily notice in `gdoc help` already says a newer release exists.
 
 **What changed.** Nothing, outside or inside the block.
 

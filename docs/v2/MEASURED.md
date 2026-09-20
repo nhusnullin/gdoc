@@ -348,3 +348,22 @@ and compares the answer against `go/internal/docs/testdata/elements.json`; a
 difference is recorded as its own section here, and the fixture is corrected
 rather than a test loosened. The decision is DECISIONS.md, 2026-09-09, "Seven
 paragraph elements were dropped at decode".
+
+Three things `export` rests on are not measured either. The fixture document
+Task 1 of the M13 plan describes has not been made, so
+`TestLiveExportMeasurements` has not run: it is written, gated on
+`GDOC_LIVE_TEST` with `GDOC_LIVE_EXPORT_DOC_ID`, and it prints its answers
+rather than asserting them, because they are the measurement.
+
+| What | Why it matters | What the test prints |
+|---|---|---|
+| Whether the Docs read and the docx export list a document's pictures in the same order | the pairing between the two routes is order and nothing else, DECISIONS.md 2026-09-19 | every inline and positioned object id per tab in body order, beside every `r:embed` in `word/document.xml` order with its media part name |
+| Whether a PNG that `publish` uploaded comes back from the docx export byte for byte | `Options.MatchByHash` keeps a note's own picture file, so the SVG it was rendered from stays the master. It ships `false` until this holds | the sha256 of the first media file against the sha256 of the uploaded PNG on disk |
+| What the docx export carries for a document's second tab | a tabbed document exports one file per tab, and a picture has to follow its own tab | the count of `w:drawing` in the docx against the count of objects in the first tab and in the second |
+
+Recheck by making the fixture document in the test folder: one inline PNG
+picture, one Google Drawing, one floating picture, and a second tab titled
+`Appendix` with one picture, in that order. A difference is its own section
+here. If the second answer says the bytes are equal, `MatchByHash` is flipped to
+`true` in one commit with that section, and `TestLiveExportHashEquality` turns
+from a print into an assertion.

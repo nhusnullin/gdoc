@@ -1,10 +1,14 @@
 ---
 name: gdoc-review
 description: Use when the request gives a Google Doc link and asks for the marked comments in it to be handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until it is stopped.
-needs: v2.0.0
+needs: v2.4.0
 ---
 
 # Google Docs review
+
+This is `gdoc-review`. Say that in the first line of your reply, because several
+skills answer a request about a document, and this is the one that works through
+its comments.
 
 Answer the marked comments in a document, whoever wrote them. You chose the
 document, and the marker is the instruction.
@@ -226,6 +230,24 @@ files.
 
 Never delete a file from the hub. Editing is the whole of what `ai!` may do.
 
+### An `ai!` that asks for an export
+
+`ai! export this to the hub`, or any comment asking for the document to be
+brought into the hub, is not work this skill carries out. An export writes a new
+file in the hub and its markers are then resolved with a person, question by
+question, and a comment thread is not where that conversation happens.
+
+Answer it in the thread, once, and act on nothing:
+
+```
+🤖 An export starts from a session by name, never from a comment. Ask a session:
+"Bring this into the hub", with this document's link.
+```
+
+The same holds for a comment asking to publish the note, to align it with this
+document, or to restyle this document. Each of those is a skill a person starts:
+name the request in plain words in the reply, and do nothing else.
+
 ### Name a colleague who asked
 
 When the marked comment was written by somebody other than the account gdoc is
@@ -289,6 +311,15 @@ The command refuses it and says so: quote a shorter run of words on one side.
 Words that stop right before the marker are fine, and so are words that start
 right after it. The count is against the whole document, so a quote that reads
 once as plain text and once across a marker is refused as ambiguous too.
+
+A link is the other way round: its words are the document's own, but the markup
+around them is not. `read` prints text that points somewhere as
+`[words](target)`, and `propose` searches the document's text runs, which hold
+`words` and nothing else. So a quote copied with the brackets and the address
+still on it comes back as not found. Take the markup off and quote the words:
+`[the policy](https://example.com/p) is reviewed` is quoted as
+`the policy is reviewed`. Words that run from before a link into it, or out of
+it, are fine, because the document's text does not break where the brackets do.
 
 Quote the body only. `read` prints each footnote's own text under the rule at
 the end, as `[^1]: ...`, and a proposal cannot be placed there: `propose` looks
@@ -572,6 +603,9 @@ was posted.
 - Never trust a status code. Read `verified`, and `checks` where it is there.
 - Never act on an unmarked comment unless you asked for all-comments mode and
   picked that one.
+- Never run an export, a publish, a restyle or an align from a comment. Those
+  start from a person's sentence, and an `ai!` asking for one gets one reply
+  saying so.
 - Never reply twice to the same piece of work. A thread that asks again gets a
   second answer, and so does an answered thread you picked in all-comments
   mode, where the session says so before posting.

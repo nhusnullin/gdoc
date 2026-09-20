@@ -38,10 +38,12 @@ loud and never a silent edit.
 ## Out of scope
 
 The commands below are what is in. Out, permanently or until a decision says
-otherwise: PDF export and any `release` command, tab features of any kind, a
-daemon or watcher, accepting or rejecting suggestions, resolving or reopening
-threads, anchor banking, MCP as transport, the colour marking scheme, service
-accounts, running git.
+otherwise: PDF export and any `release` command, a daemon or watcher, accepting
+or rejecting suggestions, resolving or reopening threads, anchor banking, MCP as
+transport, the colour marking scheme, service accounts, running git. Tab
+features are out for every writer, which refuses a document with more than one
+tab, and `export` is the one reader that reads them, one file per tab. Narrowed
+2026-09-19, DECISIONS.md.
 
 ## The binary
 
@@ -60,7 +62,8 @@ reason as principle 1 requires:
 Everything else is the standard library. A fourth needs its reason written here
 first, and the one open candidate is `sergi/go-diff`.
 
-One command table in `cmd/gdoc/commands.go` describes every command once: the
+One command table in `cmd/gdoc/commands.go`, fifteen rows since 2026-09-19,
+describes every command once: the
 words it takes, its flags with how each one stands in the call, one sentence,
 one example, and the function that runs it. The dispatcher, the usage line in
 every refusal, `help` and `completion` all read that table, so a command cannot
@@ -181,12 +184,13 @@ footer page numbers. After upload it verifies the document exists, records the
 document id, the folder and the publish record in the source file's front
 matter, and reports every file it changed on disk.
 
-**It runs once per document, and there is no republish.** Later hub-to-doc
-changes travel as suggestions, and a document whose review has run its course is
-published again from its note, because the note is the source of truth:
-`publish` refuses a paired note, and its refusal says to take the `gdoc:` block
-out by hand when it names a document that has gone. Anything more is alignment's, which
-is deferred to the backlog. Changed 2026-09-11 and 2026-09-16, DECISIONS.md.
+**It runs more than once, and each run makes a new document.** A paired note
+publishes again: the run appends an entry to the `gdoc:` block, and the old
+document keeps its URL, its threads and its own entry untouched. It goes stale
+the moment the new one exists, which is the one thing the publish skill says
+before it runs. Publishing into the document that is already there is refused,
+because gdoc never replaces a body: that request is a merge, and a merge travels
+as suggestions through `gdoc-align`. Changed 2026-09-19, DECISIONS.md.
 
 ### `restyle`
 
@@ -353,19 +357,96 @@ snapshot was taken. **Whether one was accepted or thrown away is not reported,
 because it is not in the API**: the id is gone either way, so the skill reads
 `read`'s text and decides.
 
-### The diff (what `align` composes)
+### `export`
 
-The binary emits the document's current content in a form the skill can read
-(`read`: headings, paragraphs, tables, pending suggestions inline with their ids,
-comment anchors marked), and it reads the document only. Making it read markdown
-too would add coupling and do nothing for an external document. It records no
-content baseline either: the front matter holds facts, which are the pairing, the
-publish record and gdoc's own proposals. The skill reads the hub markdown from
-disk and composes the comparison. Whether a difference matters is its judgement,
-and Nail can tell it which side is the source of truth. Alignment runs both ways, writes to the hub only with agreement,
-and never deletes from it: content that exists only in the hub is unpublished
-work, not drift. It also works on a document gdoc never published, where the
-person supplies the context instead of a paired note.
+Writes a Google Doc into the hub as Markdown: `gdoc export <url> --out <path>`.
+The reverse direction of `publish`, and the fifteenth command rather than a flag
+on `read`, so `help` and completion carry it and `read` stays a pure read.
+Added 2026-09-19, DECISIONS.md.
+
+It makes two requests and neither can change a document: the Docs read, which
+carries the text with its suggestion and comment ids, its link targets and its
+list numbering, and the docx export, which carries the picture bytes. It opens
+no host the guard does not already open and asks for no grant.
+
+**One file per tab.** The first tab lands at `--out`, each further tab beside it
+as `<stem>-<tab title>.md`, the title lower-cased with every run of characters
+that are neither letters nor digits as one hyphen. It is not the heading id
+rule, which is goldmark's and drops an accented letter. Pictures follow
+their own tab.
+
+**Nothing is overwritten, and no flag could.** A taken path takes the next free
+number, `<stem>.2.md` and then `<stem>.3.md`. Pictures land in `assets/` beside
+the file as `assets/<stem>-<n>.png`, from the next free `n`, and the folder is
+created when it is missing. There is no `--force`. The reply names every file it
+wrote.
+
+**The file holds what the document says, and decides nothing.** The text as
+`read` prints it, with the same escaping and the same markers for a pending
+suggestion and a comment anchor. Beyond `read`: link targets, list numbering,
+pictures as files, and the house prelude taken out and listed with the text each
+piece held, so an edit inside a cover table reaches the envelope rather than the
+note. A prelude it cannot recognise stays in the file under a warning naming
+what stood there. Footnotes come across with a warning, because `publish`
+refuses a note holding one. The front matter of a file `export` creates holds
+the `gdoc:` block and nothing else: a skill adds `title` when it makes the file
+a note.
+
+**The one thing it writes into a file somebody else owns is a date.** When
+`--out` holds a note whose block names this document, that note keeps every
+other byte and gains `exported: {at}` on that document's entry, and the export
+lands beside it carrying `exported: {note: <path>}`, which makes every writer
+refuse the copy in one sentence pointing at the note. Refused at the door,
+before a byte is written: a note at any path the run would land on that names
+other documents, and front matter that does not read.
+
+**The markers travel one way only.** A file holding one may sit in the hub as
+long as a person likes. It cannot become a document: `build` and `publish`
+refuse a marker by line, and so does every writer that takes text from a file,
+`propose` through its `--from` read and `reply` and `annotate` through
+`internal/plaintext`.
+
+### The `gdoc:` block is a list of documents
+
+`schema: 2`, with `documents` holding one entry per document the note has met,
+each carrying its own `published`, `exported`, `folder_id`, `suggestions_seen`
+and `proposals`. A command works on the entry whose id the URL names and refuses
+a URL the list does not hold, naming the ids it does. A proposal and a snapshot
+live under their own document, because a `withdraw` that sent an id from another
+document would reject against the wrong file. `publish` appends an entry and
+`export` stamps one, so `publish` is no longer the block's only writer.
+
+A schema 1 block reads as a one-entry list and is written back byte for byte
+while nothing changes it. The first write that changes anything renders schema
+2, and the reply says so once. A gdoc from before this milestone meets a schema
+2 block with its ordinary strict-read refusal,
+`gdoc front matter: [3:3] unknown field "documents"`, which names the key and
+says nothing about versions: no shipped binary can be taught a new sentence, and
+the daily notice in `help` is where a colleague learns a newer release exists.
+Added 2026-09-19, DECISIONS.md.
+
+### The diff (what the align skill composes)
+
+There is no diff command and no diff dependency. The binary emits both sides and
+the skill composes the comparison. One side is `export`, the document as a
+Markdown file on disk with its markers; the other is the note, which the skill
+reads itself. Nothing in the binary reads markdown for this, because that would
+add coupling and do nothing for an external document, and nothing records a
+content baseline: the block holds dated facts, which are the pairing, the
+publish record, the export date and gdoc's own proposals.
+
+`gdoc-align` is that judgement, built 2026-09-19, and it runs both ways. Into
+the hub it merges with agreement, paragraph by paragraph, and never deletes:
+content that exists only in the note is unpublished work rather than drift. Into
+the document it proposes each change as a native suggestion, and it asks once
+before the first one, because a merge can send twenty where a review sends one.
+It reads the merged whole once more and names every place where the logic broke,
+which is a conflict as much as a paragraph that differs. A stale copy from a run
+that died is never merged from: it says when the copy was made, exports again,
+and deletes the copy only when the fresh body matches it.
+
+`gdoc-export` is the other half, for a document with no note at all, where the
+person supplies the context a paired note would have given.
 
 ## The generator and `house.yaml`
 
@@ -478,12 +559,12 @@ DECISIONS.md.
 
 ## The skills, and how a comment reaches one
 
-Four named workflows, all judgement rather than commands. Three of them are
-skills today, one copy in this repo: symlinked into a checkout, and installed on
-a colleague's machine as the plugin above. They are the review session, the
-publish run and the restyle run. The alignment check is described here and
-is deferred to the backlog, 2026-09-16, DECISIONS.md. Two of the four run on a marked comment, and two Nail invokes by
-name:
+Five named workflows, all judgement rather than commands. Each is a skill, one
+copy in this repo: symlinked into a checkout, and installed on a colleague's
+machine as the plugin above. They are the review session, the publish run, the
+restyle run, the export run and the alignment run, the last two added
+2026-09-19, DECISIONS.md. One of the five runs on a marked comment, and every
+one of them starts from a colleague's own sentence:
 
 - **The review session.** Reads the threads, answers `ai?` from the hub, carries
   out `ai!` against the hub, proposes document changes as suggestions. If it
@@ -491,11 +572,19 @@ name:
   **live**, polling on the `--since` cursor until Nail stops it. A colleague's
   `ai!` acts too, by decision: the marker is the trigger, identity is not a gate,
   and the guard caps a handed-in document at suggest and reply.
-- **The alignment check**, deferred to the backlog on 2026-09-16, not built. Composes the diff, judges what
-  matters, proposes both ways: suggestions into the document, edits into the hub
-  with agreement.
+- **The alignment run**, `gdoc-align`, for a note already paired with a
+  document. Composes the comparison over `export` and the note, judges what
+  matters with the person, and goes both ways: edits into the hub with
+  agreement, suggestions into the document after one question. It checks the
+  merged whole for logic that broke, and it deletes a copy only after a fresh
+  export says the copy holds nothing new.
+- **The export run**, `gdoc-export`, for a document with no note. Runs `gdoc
+  export`, names the file from the document's title, adds `title`, and resolves
+  the markers with the person or leaves them for a later day.
 - **The publish run**, `gdoc-publish`. Nail names a note, and the skill builds
-  it, publishes it into the folder, and reads back what came out.
+  it, publishes it into the folder, and reads back what came out. On a note that
+  already names a document it stops and asks, a new document or a merge through
+  `gdoc-align`.
 - **The restyle run**, `gdoc-restyle`. Nail gives a link, and the skill surveys
   the document before it proposes anything to it.
 
@@ -509,9 +598,9 @@ rule. Added 2026-09-16, DECISIONS.md.
 
 **No skill holds a flag list.** Before the first call of a command in a session
 a skill runs `gdoc help <command>` and reads the words and flags from the binary
-it is about to run. `gdoc-publish` and `gdoc-restyle` do this, and `gdoc-review`
-is the one that still names its flags, until it is converted. One direction
-holds for all three meanwhile:
+it is about to run. `gdoc-publish`, `gdoc-restyle`, `gdoc-export` and `gdoc-align` do this, and
+`gdoc-review` is the one that still names its flags, until it is converted. One
+direction holds for all five meanwhile:
 `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` reads the call lines, the
 ones opening with `gdoc` or `$GDOC`, and fails when one names a command the
 table does not have or a flag that command does not take. A flag named in prose,
@@ -553,15 +642,19 @@ where it cannot.
   only `rejectSuggestion` that carries names the id `withdraw` granted from the
   note's `proposals[]`, which is gdoc's own.
 - Never resolve or reopen a comment thread.
-- Never delete from the hub.
+- Never delete from the hub, **except a copy `export` itself wrote**: the align
+  skill removes the copy it made this run, and a stale one only after a fresh
+  export says that copy holds nothing the document does not. A skill rule,
+  narrowed 2026-09-19, DECISIONS.md.
 - Never run git, in the binary or in the skills.
 - Never prompt, in the binary, and never in the installer either.
 - Never install unasked. `gdoc update` replaces the binary when a person types
   it and at no other moment. The one thing that runs by itself is the check in
   `gdoc help`, once a day, which reads what is published and writes one file of
   gdoc's own.
-- Never export a PDF. Nail downloads it from the browser.
-- Never write to a multi-tab document.
+- Never export a PDF. Nail downloads it from the browser. `export` writes
+  Markdown and PNG files, and never replaces one.
+- Never write to a multi-tab document. `export` reads one, one file per tab.
 - Never write markdown into a comment thread.
 - Never trust a status code where the write matters.
 - Never write a comment or reply that does not open with 🤖.

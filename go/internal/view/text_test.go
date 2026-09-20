@@ -37,12 +37,13 @@ func golden(t *testing.T, name string) string {
 }
 
 // TestGolden is the whole projection, one fixture at a time. Every rule under
-// "The read text" in the plan is visible in one of these four files: headings,
+// "The read text" in the plan is visible in one of these eight files: headings,
 // bullets and their nesting, the pipe table, the joined suggestion spans, the
 // comment anchor, the escaped literal markers, the tab lines, the placeholders
-// and the footnote.
+// and the footnote, and from M13 the link targets, the numbering and the
+// placeholder a floating object prints as.
 func TestGolden(t *testing.T) {
-	for _, name := range []string{"single-tab", "two-tabs", "pre-tabs", "objects", "elements"} {
+	for _, name := range []string{"single-tab", "two-tabs", "pre-tabs", "objects", "elements", "links", "lists", "positioned"} {
 		t.Run(name, func(t *testing.T) {
 			got, _ := Text(fixture(t, name+".json"))
 			if want := golden(t, name+".golden"); got != want {

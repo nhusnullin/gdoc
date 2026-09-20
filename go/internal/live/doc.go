@@ -42,6 +42,16 @@
 //   - GDOC_LIVE_ANCHOR_DOC_ID: the document the anchors test copies.
 //   - GDOC_LIVE_PRELUDE_DOC_ID: the document the prelude acceptance copies.
 //   - GDOC_LIVE_ACCEPTED_DOC_ID: the probe document Nail has accepted by hand.
+//   - GDOC_LIVE_EXPORT_DOC_ID: the document M13's measurement reads both ways.
+//     Nail makes it by hand in the test folder, and it holds, in this order,
+//     one inline PNG picture uploaded from the pictures note under
+//     internal/body/testdata/docs, one Google Drawing, one floating picture,
+//     and a second tab titled Appendix with one picture in it. The
+//     measurement creates nothing and writes nothing to Drive.
+//   - GDOC_LIVE_PUBLISHED_DOC_ID: a document publish made, in the test folder.
+//   - GDOC_LIVE_RESTYLED_DOC_ID: a document restyle styled with --fields, in
+//     the test folder. Those two are read only under GDOC_LIVE_RECORD, for the
+//     two prelude fixtures the export's strip rests on.
 //
 // # GDOC_LIVE_RECORD writes somebody's document into testdata
 //
@@ -49,6 +59,13 @@
 // the docx export into testdata/. Those bytes are a real document's content,
 // so a person redacts them before they are committed. The recording the
 // measured anchors fixture was modelled on is gitignored for that reason.
+//
+// The measurement below records elsewhere, because what it saves is another
+// package's fixture: the read and the export of GDOC_LIVE_EXPORT_DOC_ID go
+// under internal/export/testdata/fixture-measured/, and the reads of
+// GDOC_LIVE_PUBLISHED_DOC_ID and GDOC_LIVE_RESTYLED_DOC_ID go under
+// publish-prelude/ and restyle-prelude/ beside it. The same warning holds:
+// they are somebody's document until a person has read them.
 //
 // # The read test creates nothing
 //
@@ -96,6 +113,35 @@
 //     time and reads each accepted one back to say where the insert really
 //     landed. Measured 2026-09-10, MEASURED.md "A table takes one index of its
 //     own at the end".
+//   - TestLiveExportRoundTrip, M13's, and the one that answers a question no
+//     fixture can. It publishes each of the six notes under
+//     internal/body/testdata/docs, exports the document Drive made of it, and
+//     compares the file that came back with the note it started as. Six
+//     documents, all six trashed. The comparison cannot be equality, because a
+//     docx carries no fence, no emphasis character and no link to a file in the
+//     hub, so it is the drift gate's shape: a named list of differences, each
+//     with the reason it is there, in roundtrip_test.go. Every name that fired
+//     is logged with its count, and a line no name covers fails the run. A name
+//     that has to join the list is a decision Nail writes down with its reason,
+//     never a test somebody loosens.
+//   - TestLiveExportCarriesAProposal, M13's. It publishes the policy note,
+//     proposes one change into the document, exports, and asserts the
+//     suggestion id and the comment id are in the file, so a session merging
+//     that file can see what is proposed and what is not. It withdraws the
+//     proposal through a second policy granted that one id, and trashes the
+//     document.
+//   - TestLiveExportHashEquality, M13's, and a measurement until the binary
+//     makes it a rule. It publishes the pictures note, exports it, and prints
+//     the sha256 of each picture beside the sha256 of the file on this disk it
+//     was uploaded from. It asserts the equality only once cmd/gdoc turns
+//     export.Options.MatchByHash on, which it asks by reading that file: a
+//     constant here would be a second answer that could disagree with the
+//     binary. One document, trashed. This is measurement 2 of
+//     docs/v2/MEASURED.md.
+//   - TestLivePublishAgainAppendsAnEntry, M13's. It publishes one note twice
+//     and reads the block back: two entries, two different documents, both
+//     readable through the Docs API, both trashed. That is scenario 1, the
+//     refusal M13 took out.
 //   - TestLiveAnnotateParagraphAndTable, M11's. It creates a document holding
 //     one sentence and a one-row table of two cells, fills the cells, leaves
 //     one comment on words in the sentence and one on words inside a cell, and
@@ -145,7 +191,20 @@
 // say the anchors survived and the suggestion ids are there; whether the cover
 // reads right is Nail's, in the document. Trash them once you have looked.
 //
-// # One test here asks for no network at all
+// # The export measurement asserts nothing
+//
+// TestLiveExportMeasurements is M13's, and it is the one test here that is a
+// measurement and nothing else. It reads GDOC_LIVE_EXPORT_DOC_ID through the
+// Docs API and through the docx export and prints the two lists of pictures
+// side by side: the object ids in body order per tab against the media parts
+// in word/document.xml order, the sha256 of each media part against the
+// pictures the fixture was uploaded from, and the count of w:drawing against
+// each tab's own count. It fails when a read or an export fails and on
+// nothing else, because the three answers are Google's and a test that
+// asserted them would be deciding what it was sent to find out. Task 13 of
+// M13 writes them into MEASURED.md.
+//
+// # Two tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -153,4 +212,9 @@
 // otherwise be found by Nail in the middle of a live run rather than by the
 // suite. It is the pin, and it is in publish_test.go beside the tests it
 // covers.
+//
+// TestTheMeasurementReadsTheFixtureItPairsAgainst is the same pin for the
+// measurement, in export_measure_test.go: it compares what Drive sends back
+// against the pictures on this disk, so a picture that moved out of
+// internal/body/testdata/docs is found by the suite instead.
 package live

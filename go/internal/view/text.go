@@ -9,6 +9,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
+
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/parser"
 
 	"gdoc/internal/docs"
 )
@@ -94,11 +98,111 @@ func detailLabel(r docs.Run) string {
 	return r.Detail.Member
 }
 
+// Options is what a caller may ask this projection to do differently. The zero
+// value is the read, which is why Text is Project with nothing set.
+//
+// Picture is what a picture object is written as, by object id. A non-empty
+// answer is written into the text exactly as it comes back, so a caller that
+// has the bytes on disk puts its own link there; an empty one leaves the
+// placeholder and its warning where they were. Skip drops a block of a tab's
+// body before it is projected, which is how a caller removes a span it
+// recognised. ChipTargets adds the address a chip points at behind its label.
+//
+// All three are the export's, and none of them is the read's: read prints what
+// the document holds and nothing that is not in it, and a file in the hub
+// carries a picture that has a file beside it and a chip's target a later
+// session has to resolve. TestProjectSkipsAndNamesPictures and
+// TestAChipCarriesItsTargetWhenAskedFor are the pins.
+type Options struct {
+	Picture     func(objectID string) string
+	Skip        func(docs.Block) bool
+	ChipTargets bool
+}
+
 // Text projects the document into the one string the AI reads, and returns the
 // warnings the projection raised: a placeholder printed in place of content,
 // and a comment range it could not place in the text.
 func Text(d *docs.Document) (string, []string) {
-	e := &emitter{seen: map[string]bool{}}
+	return Project(d, Options{})
+}
+
+// Project is Text with the options above. One emitter, so the read and the
+// export cannot drift into two escapings of one document.
+//
+// It walks until the heading lines stop moving, and every walk but the last is
+// thrown away. A link to a heading is written as "#" and goldmark's id for that
+// heading, and goldmark takes the id from the whole line, so the anchor cannot
+// be known until the line is written: a heading holding a hyperlink is
+// "[words](url)" in the file and a heading holding a chip is "[person: Ann]",
+// and goldmark reads both, markup and all. Each walk measures every heading's
+// line, the next writes the document with the anchors those lines give, and a
+// heading whose line the walk never reaches, one inside a table cell, keeps the
+// words headingWords collected.
+// TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
+//
+// The walk repeats because a heading's own line can hold a link to another
+// heading, and writing that link changes the line the first heading is named
+// by. One more walk then names it correctly, and the walk after that is the
+// same document again. A document whose headings link to no heading settles on
+// the second walk, which is the cost this always paid.
+// TestAHeadingLinkInsideAHeadingStillResolves is the pin.
+//
+// The ceiling is there because a cycle of headings linking to each other need
+// never settle, and a document is not worth an unbounded number of walks. The
+// last walk's text is the answer either way: every anchor in it is the id of a
+// line some walk of this document wrote, so the file is readable, and only a
+// link inside that cycle can point at the wrong heading.
+func Project(d *docs.Document, o Options) (string, []string) {
+	words := headingWords(d)
+	_, _, lines := onePass(d, o, words)
+	for i := 0; i < anchorPasses; i++ {
+		text, warnings, next := onePass(d, o, anchors(words, lines))
+		if sameLines(lines, next) {
+			return text, warnings
+		}
+		lines = next
+	}
+	text, warnings, _ := onePass(d, o, anchors(words, lines))
+	return text, warnings
+}
+
+// anchorPasses is how many times Project rewrites the document looking for the
+// heading lines to settle, after the first walk that measures them.
+const anchorPasses = 4
+
+// sameLines says whether two walks wrote every heading to the same line.
+func sameLines(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for id, line := range a {
+		if b[id] != line {
+			return false
+		}
+	}
+	return true
+}
+
+// anchors is the words each heading is named by: the line it projected to
+// where there is one, and the words it holds where there is not. An empty line
+// is no line: the heading printed nothing, so it is not in the file at all and
+// the words are still the better guess.
+func anchors(words, lines map[string]string) map[string]string {
+	out := make(map[string]string, len(words)+len(lines))
+	for id, w := range words {
+		out[id] = w
+	}
+	for id, line := range lines {
+		if line != "" {
+			out[id] = line
+		}
+	}
+	return out
+}
+
+// onePass is one walk of the document, and the heading lines it wrote.
+func onePass(d *docs.Document, o Options, headings map[string]string) (string, []string, map[string]string) {
+	e := &emitter{seen: map[string]bool{}, headings: headings, lines: map[string]string{}, opts: o}
 	for _, tab := range d.Tabs {
 		if d.MultiTab() {
 			e.chunk(fmt.Sprintf("<!-- tab %s: %s -->", tab.ID, tab.Title))
@@ -108,7 +212,7 @@ func Text(d *docs.Document) (string, []string) {
 	}
 	e.unplaced(d.CommentRanges)
 	e.appendFootnotes(d)
-	return strings.Join(e.chunks, "\n\n") + "\n", e.warnings
+	return strings.Join(e.chunks, "\n\n") + "\n", e.warnings, e.lines
 }
 
 // Structure is the tree as the `structure` field of the read: every paragraph
@@ -143,13 +247,41 @@ type note struct{ number, id string }
 // out is the buffer being written to. It is swapped while a table cell is
 // collected, because a cell's text is joined into a row rather than appended to
 // the body, and the markers inside it have to travel with it.
+//
+// held is the document's own last character, written but not yet in out. It is
+// kept back because whether it needs a backslash depends on what comes after it,
+// and what comes after it may be the next run's first character or a marker gdoc
+// is about to write. prev is the last character that did reach out, and prevGdoc
+// says whether gdoc wrote it: a document character on either side of one of
+// gdoc's markers is escaped, because the marker itself cannot carry the
+// backslash.
 type emitter struct {
 	chunks   []string
 	out      *strings.Builder
+	held     rune
+	heldEnc  string
+	prev     rune
+	prevGdoc bool
 	events   []event
 	cur      int
 	seen     map[string]bool
 	order    []note
+	// nums counts a numbered list's items, by list id and nesting level, cols
+	// records the column each of those levels' content starts at, and objects
+	// is the tab being walked's floating objects. All three are the tab's own:
+	// two tabs can name one list id and mean two different lists.
+	nums     map[string]int
+	cols     map[string]int
+	objects  map[string]docs.Object
+	headings map[string]string
+	// lines is the line each heading projected to, by the heading id a link
+	// names, which is what the anchor written for that link is taken from.
+	lines map[string]string
+	opts  Options
+	// inLink says the words being written are a link's. One bracket is markup
+	// there and nowhere else, because the words end at the first one a reader
+	// meets.
+	inLink   bool
 	warnings []string
 }
 
@@ -163,13 +295,81 @@ func (e *emitter) chunk(s string) {
 // capture runs f with a fresh buffer and hands back what it wrote. The event
 // cursor is not reset, so a marker inside a table cell is still emitted in
 // index order across the whole tab.
+//
+// The held character and what sits beside it belong to the buffer, so they are
+// swapped with it and the held one is released before the buffer is handed back:
+// a chunk ends where it ends, and the first character of the next one is not
+// what the last character of this one is escaped against.
 func (e *emitter) capture(f func()) string {
-	old := e.out
+	oldOut, oldHeld, oldEnc, oldPrev, oldGdoc := e.out, e.held, e.heldEnc, e.prev, e.prevGdoc
 	var b strings.Builder
-	e.out = &b
+	e.out, e.held, e.heldEnc, e.prev, e.prevGdoc = &b, 0, "", 0, false
 	f()
-	e.out = old
+	e.release(0)
+	e.out, e.held, e.heldEnc, e.prev, e.prevGdoc = oldOut, oldHeld, oldEnc, oldPrev, oldGdoc
 	return b.String()
+}
+
+// write puts gdoc's own markup into the text: a marker, a placeholder, a link's
+// brackets. The held document character is released first, escaped when it and
+// the first character of s would read as one of gdoc's pairs. The document's
+// character is the one that takes the backslash, because a backslash in front of
+// gdoc's own marker would hand that marker to the document.
+func (e *emitter) write(s string) {
+	if s == "" {
+		return
+	}
+	rs := []rune(s)
+	e.release(rs[0])
+	e.out.WriteString(s)
+	e.prev, e.prevGdoc = rs[len(rs)-1], true
+}
+
+// writeDoc holds one of the document's own characters back until what follows it
+// is known. enc is what the character is written as when nothing after it needs
+// it escaped, which is escapeAt's answer.
+func (e *emitter) writeDoc(r rune, enc string) {
+	e.release(r)
+	if e.inLink && (r == '[' || r == ']') {
+		// Inside a link's words one bracket is markup of its own: the words end
+		// at the first "]" a reader meets, so a "]" the document holds would cut
+		// the link short and leave its target standing in the text as prose.
+		enc = escape(enc)
+	}
+	if e.prevGdoc && isEscapePair(e.prev, r) {
+		// The character sits against the last character of a marker gdoc has
+		// just written, and the two would read as one of gdoc's pairs. This is
+		// the same ambiguity from the other side, and the answer is the same:
+		// the document's character carries the backslash.
+		enc = escape(enc)
+	}
+	e.held, e.heldEnc = r, enc
+}
+
+// release writes the held character, escaping it when it and next would read as
+// one of gdoc's pairs. next is 0 where nothing follows, which is the end of a
+// chunk.
+func (e *emitter) release(next rune) {
+	if e.held == 0 {
+		return
+	}
+	enc := e.heldEnc
+	if isEscapePair(e.held, next) {
+		enc = escape(enc)
+	}
+	e.out.WriteString(enc)
+	e.prev, e.prevGdoc = e.held, false
+	e.held, e.heldEnc = 0, ""
+}
+
+// escape puts the backslash in front of what one character was written as, or
+// leaves it alone when escapeAt has already put one there: a character escaped
+// twice reads as a backslash the document held.
+func escape(enc string) string {
+	if strings.HasPrefix(enc, "\\") {
+		return enc
+	}
+	return "\\" + enc
 }
 
 // startTab arms the comment markers for one tab. A range Places refuses is
@@ -192,6 +392,13 @@ func (e *emitter) capture(f func()) string {
 // On a document whose tab ids are unique the two answers are the same one.
 func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 	e.events, e.cur = nil, 0
+	// The numbering, the columns it lines up with and the floating objects are
+	// the tab's own, for the reason the arming below is: a list id names one
+	// list per tab, and an object id names one object per tab. A column left
+	// behind by an earlier tab would indent this tab's orphan sub-list against
+	// a list that is not in it.
+	e.nums, e.cols, e.objects = map[string]int{}, map[string]int{}, t.Positioned
+	cut := e.cut(t.Body)
 	for _, id := range sortedIDs(d.CommentRanges) {
 		r := d.CommentRanges[id]
 		if r.Tab != t.ID {
@@ -204,6 +411,17 @@ func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 			}
 		}
 		if !t.Places(r) {
+			continue
+		}
+		if overlaps(cut, r) {
+			// The words this range covers are in a block Skip takes out, so
+			// there is nothing in the file for it to mark. Arming it anyway
+			// would emit both markers at the first surviving text, saying a
+			// comment covers words the file does not contain, and an open in
+			// the cut with its close outside it would overstate the span.
+			// Neither is a fact the document holds, so the range is named
+			// instead.
+			e.warnings = append(e.warnings, strippedWarning(id, r))
 			continue
 		}
 		e.events = append(e.events, event{index: r.Start, open: true, id: id})
@@ -221,6 +439,95 @@ func (e *emitter) startTab(d *docs.Document, t docs.Tab) {
 		}
 		return a.id < b.id
 	})
+}
+
+// cutSpan is the character range one block Skip takes out occupies. It is a
+// span rather than a block because what the arming needs to know is whether a
+// comment sits inside the words that are going away.
+type cutSpan struct{ first, last int }
+
+// cut is every span of this tab the caller's Skip drops, tables and contents
+// lists walked into, because blocks asks Skip there too. Nothing is dropped
+// when no Skip was given, which is the read.
+func (e *emitter) cut(bs []docs.Block) []cutSpan {
+	if e.opts.Skip == nil {
+		return nil
+	}
+	var out []cutSpan
+	for _, b := range bs {
+		if e.opts.Skip(b) {
+			if first, last, ok := indexes([]docs.Block{b}); ok {
+				out = append(out, cutSpan{first, last})
+			}
+			continue
+		}
+		switch {
+		case b.Table != nil:
+			for _, row := range b.Table.Rows {
+				for _, c := range row {
+					out = append(out, e.cut(c.Blocks)...)
+				}
+			}
+		case b.TOC != nil:
+			out = append(out, e.cut(b.TOC.Blocks)...)
+		}
+	}
+	return out
+}
+
+// indexes is the lowest and highest character index these blocks reach, tables
+// and contents lists walked into. ok is false where nothing inside them
+// carries an index, which is a block no comment can sit in.
+func indexes(bs []docs.Block) (first, last int, ok bool) {
+	note := func(f, l int) {
+		if !ok || f < first {
+			first = f
+		}
+		if !ok || l > last {
+			last = l
+		}
+		ok = true
+	}
+	for _, b := range bs {
+		switch {
+		case b.Paragraph != nil:
+			note(b.Paragraph.StartIndex, b.Paragraph.EndIndex)
+		case b.Table != nil:
+			note(b.Table.StartIndex, b.Table.StartIndex)
+			for _, row := range b.Table.Rows {
+				for _, c := range row {
+					if f, l, got := indexes(c.Blocks); got {
+						note(f, l)
+					}
+				}
+			}
+		case b.TOC != nil:
+			if f, l, got := indexes(b.TOC.Blocks); got {
+				note(f, l)
+			}
+		}
+	}
+	return first, last, ok
+}
+
+// overlaps says whether r shares a character with any span that is going away.
+// A range that ends where a cut span begins is the first character after it and
+// does not overlap, which is why the ends are exclusive on both sides.
+func overlaps(cut []cutSpan, r docs.Range) bool {
+	for _, c := range cut {
+		if r.Start < c.last && c.first < r.End {
+			return true
+		}
+	}
+	return false
+}
+
+// strippedWarning names a range whose words this projection took out. It is the
+// same shape as unplacedWarning and for the same reason: the file carries no
+// marker for the comment, and a session that cannot see why would go looking
+// for words that are not there.
+func strippedWarning(id string, r docs.Range) string {
+	return fmt.Sprintf("comment %s: its range %d..%d is in a block this projection took out, so it is not marked", id, r.Start, r.End)
 }
 
 // unplaced warns about a range naming a tab the document does not have. A range
@@ -263,13 +570,16 @@ func (e *emitter) drain(upTo int, closesOnly bool) {
 		if ev.index > upTo || (closesOnly && ev.open) {
 			return
 		}
-		e.out.WriteString(ev.marker())
+		e.write(ev.marker())
 		e.cur++
 	}
 }
 
 func (e *emitter) blocks(bs []docs.Block) {
 	for _, b := range bs {
+		if e.opts.Skip != nil && e.opts.Skip(b) {
+			continue
+		}
 		switch {
 		case b.Paragraph != nil:
 			e.paragraph(b.Paragraph)
@@ -281,25 +591,366 @@ func (e *emitter) blocks(bs []docs.Block) {
 
 func (e *emitter) paragraph(p *docs.Paragraph) {
 	text := e.capture(func() { e.runs(p.Runs) })
-	if text == "" {
+	// The prefix is taken even when the text is empty, so an item of a numbered
+	// list that holds no text still counts: the numbers then say what the
+	// document shows rather than closing the gap over an item nobody typed into.
+	prefix := e.prefix(p)
+	// The line, before the prefix, is what a link to this heading is named by.
+	// It is recorded whatever the style, because headingWords names a paragraph
+	// carrying a heading id whether or not it is one of the six levels.
+	if p.HeadingID != "" {
+		e.lines[p.HeadingID] = strings.TrimSpace(text)
+	}
+	if text != "" {
 		// An empty paragraph is the document's blank line, and the chunks are
 		// already separated by one.
-		return
+		e.chunk(prefix + text)
 	}
-	e.chunk(prefix(p) + text)
+	e.floating(p)
 }
 
 // prefix is what a paragraph's style puts in front of its text. A heading wins
 // over a bullet: a numbered list item styled as a heading is a heading, and
-// printing both markers would say it is two things.
-func prefix(p *docs.Paragraph) string {
+// printing both markers would say it is two things. A heading takes no number
+// for the same reason, and does not advance the count.
+//
+// An item is indented to the column its parent's content starts at, which is
+// the column CommonMark nests a sub-list from. The width of the item's own
+// marker is the wrong measure and was the rule until it was measured: a bullet
+// under a numbered item is two spaces against a parent content column of three,
+// which goldmark reads as a second list beside the first rather than inside it,
+// and a sub-list under the tenth item is three spaces against a column of four,
+// which goldmark reads as the eleventh item of the outer list. Neither loses a
+// character, and both change the shape of the document on the way home.
+// TestASubListIndentsToItsParentsColumn and TestASubListUnderAWideMarkerClearsIt
+// are the pins.
+func (e *emitter) prefix(p *docs.Paragraph) string {
+	if p.Bullet != nil {
+		e.enter(p.Bullet)
+	}
 	if n := headingLevel(p.Style); n > 0 {
 		return strings.Repeat("#", n) + " "
 	}
-	if p.Bullet != nil {
-		return strings.Repeat("  ", p.Bullet.NestingLevel) + "- "
+	if p.Bullet == nil {
+		return ""
+	}
+	marker := "- "
+	if p.Bullet.Ordered {
+		marker = strconv.Itoa(e.number(p.Bullet)) + ". "
+	}
+	indent := e.indent(p.Bullet, len(marker))
+	e.setColumn(p.Bullet, indent+len(marker))
+	return strings.Repeat(" ", indent) + marker
+}
+
+// indent is the column this item's marker starts at: the column its parent's
+// content starts at, which setColumn recorded when that parent was written.
+//
+// A list whose first item is already nested has no parent to measure, and the
+// item's own marker width per level is the only guess there is. It is what the
+// projection did for every item before the columns were tracked, so the shape
+// of an orphan sub-list is unchanged. TestASubListWithNoParentFallsBackToItsLevel
+// is the pin.
+func (e *emitter) indent(b *docs.Bullet, width int) int {
+	if b.NestingLevel <= 0 {
+		return 0
+	}
+	if col, ok := e.cols[levelKey(b.ListID, b.NestingLevel-1)]; ok {
+		return col
+	}
+	return b.NestingLevel * width
+}
+
+// setColumn records where this item's content starts, for the items nested
+// under it to line up with.
+func (e *emitter) setColumn(b *docs.Bullet, col int) {
+	if e.cols == nil {
+		e.cols = map[string]int{}
+	}
+	e.cols[countKey(b)] = col
+}
+
+// number is this item's place in its own list at its own level. Counting per
+// list and per level is what the list id is decoded for: two adjacent numbered
+// lists read as one long list otherwise, and the second one's first item then
+// says it is the fourth.
+func (e *emitter) number(b *docs.Bullet) int {
+	if e.nums == nil {
+		e.nums = map[string]int{}
+	}
+	key := countKey(b)
+	e.nums[key]++
+	return e.nums[key]
+}
+
+// enter is the walk going down into a level of a list. Every level below the
+// one it entered starts again, because Docs draws a sub-list from one each
+// time the list goes into it. Carrying the count on would number the second
+// sub-list 3., 4. under an item the document shows as 1., 2., which is a false
+// fact about the document.
+//
+// It happens for every item of a list, whether or not that item takes a number
+// itself. One list id can hold a bulleted level above a numbered one, which is
+// what a Word multilevel list comes back as, and a heading that is also an
+// item takes no number either: if only the numbered items dropped the deeper
+// counts, a sub-list under either of those would carry on from the one before
+// it.
+// The columns go with the counts. A sub-list drawn again under a later item
+// lines up with that item, so a column measured under the one before it is a
+// fact about a list level that has closed.
+func (e *emitter) enter(b *docs.Bullet) {
+	for k := range e.nums {
+		if id, level, ok := splitCount(k); ok && id == b.ListID && level > b.NestingLevel {
+			delete(e.nums, k)
+		}
+	}
+	for k := range e.cols {
+		if id, level, ok := splitCount(k); ok && id == b.ListID && level > b.NestingLevel {
+			delete(e.cols, k)
+		}
+	}
+}
+
+// countKey is the counter one list holds for one nesting level.
+func countKey(b *docs.Bullet) string {
+	return levelKey(b.ListID, b.NestingLevel)
+}
+
+// levelKey is countKey's key for a level named on its own, so an item can ask
+// for the level above its own.
+func levelKey(listID string, level int) string {
+	return listID + "\x00" + strconv.Itoa(level)
+}
+
+// splitCount reads a counter's key back into the list and the level it counts.
+func splitCount(key string) (string, int, bool) {
+	id, rest, ok := strings.Cut(key, "\x00")
+	if !ok {
+		return "", 0, false
+	}
+	level, err := strconv.Atoi(rest)
+	if err != nil {
+		return "", 0, false
+	}
+	return id, level, true
+}
+
+// floating prints one placeholder per object anchored to this paragraph, after
+// the paragraph's own text, and warns about each.
+//
+// The paragraph is the only position the answer gives: a floating object is laid
+// out beside the text rather than in it, so it has no character index a
+// placeholder could go at. The kind is named rather than the word picture,
+// because a floating drawing is not one, and the object id is named because that
+// is what pairs the placeholder with the bytes the docx export carries.
+func (e *emitter) floating(p *docs.Paragraph) {
+	for _, s := range e.floatingOf(p) {
+		e.chunk(s)
+	}
+}
+
+// floatingOf is what this paragraph's floating objects are written as, in
+// order, with the warning for each raised as it is built.
+//
+// It hands the pieces back rather than writing them, because a paragraph inside
+// a table cell carries them too and a chunk of its own there would land the
+// placeholder under the table instead of in the cell. internal/export counts
+// the objects on a cell's paragraphs, so a cell that printed nothing for one
+// would name a file no line of the note points at.
+func (e *emitter) floatingOf(p *docs.Paragraph) []string {
+	var out []string
+	for _, id := range p.Positioned {
+		ph, ok := placeholders[e.objects[id].Kind]
+		if !ok {
+			// An id the tab does not hold, and a kind this read cannot name,
+			// are the same answer: something is there and gdoc cannot say what.
+			ph = placeholders[docs.KindObject]
+		}
+		m := "<!-- " + ph.label + ": floating, " + id + " -->"
+		out = append(out, m)
+		e.warnings = append(e.warnings, fmt.Sprintf(
+			"%s floating beside the paragraph at index %d is printed as %s: %s", ph.noun, p.StartIndex, m, ph.why))
+		// The placeholder stays even when the bytes are here, because the
+		// placeholder is the one record that this picture floats beside the
+		// text rather than sitting in it, and a file on its own says nothing
+		// about that. So does the warning: what was lost is the position.
+		if s := e.pictureOf(e.objects[id].Kind, id); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// picture is what this run is written as when it is a picture and the caller
+// said what its file is called, and nothing otherwise. A drawing is a picture:
+// the docx export carries its bytes like any other object's.
+func (e *emitter) picture(r docs.Run) string {
+	if r.Detail == nil {
+		return ""
+	}
+	return e.pictureOf(r.Kind, r.Detail.ID)
+}
+
+// pictureOf is the same question for an object the tab holds rather than a run:
+// the kind says whether it is a picture at all, and the id is what the caller
+// named its file by.
+func (e *emitter) pictureOf(kind, id string) string {
+	if e.opts.Picture == nil || id == "" {
+		return ""
+	}
+	if kind != docs.KindImage && kind != docs.KindDrawing {
+		return ""
+	}
+	return e.opts.Picture(id)
+}
+
+// markOf is one placeholder with the address behind it, for a projection that
+// was asked for chip targets. The read prints the label alone: the target is in
+// --structure, and a reader of the text is being told somebody is there rather
+// than being handed their address. A file in the hub carries it, because the
+// session merging that file into a note has no second read to go back to.
+func (e *emitter) markOf(r docs.Run) string {
+	m := mark(r)
+	if t := e.chipTarget(r); t != "" {
+		return m + "(" + t + ")"
+	}
+	return m
+}
+
+// chipTarget is where a chip points: the rich link's address, and the person
+// chip's as a mailto. A date chip points nowhere, and neither does anything
+// that is not a chip.
+//
+// A target carrying a bracket, a parenthesis or a space is left out. The form
+// is the link form, a reader takes it up to the first ")", and a target that
+// cuts itself short would leave the rest of it standing in the text as prose.
+func (e *emitter) chipTarget(r docs.Run) string {
+	if !e.opts.ChipTargets || r.Detail == nil {
+		return ""
+	}
+	switch r.Kind {
+	case docs.KindRichLink:
+		return plainTarget(r.Detail.URI)
+	case docs.KindPerson:
+		if r.Detail.Email == "" {
+			return ""
+		}
+		return plainTarget("mailto:" + r.Detail.Email)
 	}
 	return ""
+}
+
+// Destination is a target written so that a reader takes all of it. The bare
+// form ends at the first ")", so a target carrying one, a "(" or a space goes in
+// the angle bracket form instead, and an angle bracket inside that form is
+// escaped, because an unescaped one would end it the same way.
+//
+// It is exported because internal/export writes the same parentheses around a
+// picture's address, and one rule in two places is two chances for one of them
+// to be wrong. A chip's address does not come here: chipTarget drops a target it
+// cannot write bare, because a chip prints a label rather than the words the
+// address belongs to.
+func Destination(target string) string {
+	if !strings.ContainsAny(target, " ()<>") {
+		return target
+	}
+	return "<" + angleBrackets.Replace(target) + ">"
+}
+
+var angleBrackets = strings.NewReplacer("<", `\<`, ">", `\>`)
+
+func plainTarget(s string) string {
+	if s == "" || strings.ContainsAny(s, "()[] \t\n") {
+		return ""
+	}
+	return s
+}
+
+// headingWords is every heading's own words, by the id a link to it names. It is
+// read before the walk starts, so a link to a heading further down the document,
+// or in another tab, resolves to the words rather than to the id.
+func headingWords(d *docs.Document) map[string]string {
+	out := map[string]string{}
+	var walk func(bs []docs.Block)
+	walk = func(bs []docs.Block) {
+		for _, b := range bs {
+			switch {
+			case b.Paragraph != nil:
+				if b.Paragraph.HeadingID == "" {
+					continue
+				}
+				var words strings.Builder
+				for _, r := range b.Paragraph.Runs {
+					if r.Kind == docs.KindText {
+						words.WriteString(r.Text)
+					}
+				}
+				out[b.Paragraph.HeadingID] = strings.TrimSpace(words.String())
+			case b.Table != nil:
+				for _, row := range b.Table.Rows {
+					for _, c := range row {
+						walk(c.Blocks)
+					}
+				}
+			case b.TOC != nil:
+				walk(b.TOC.Blocks)
+			}
+		}
+	}
+	for _, t := range d.Tabs {
+		walk(t.Body)
+	}
+	return out
+}
+
+// Anchor is a heading's words as the id a link to it names. It is goldmark's
+// own heading id rule, asked of goldmark rather than written out again here,
+// because the ids internal/body collects are the ids goldmark made: a second
+// copy of the rule is the copy that drifts, and a link whose target is one
+// character off is a link `publish` prints as plain text.
+//
+// The rule is not Slug's. goldmark keeps ASCII letters and digits, turns each
+// space, hyphen and underscore into one hyphen, and drops everything else,
+// accented letters included. So "Risk & Control" is "risk--control" and
+// "Résumé" is "rsum". Two rules that look alike and are not is why this one is
+// asked rather than copied. TestTheAnchorViewWritesIsTheIDBodyCollects, which
+// asks goldmark for the answer rather than stating one, is the pin, and
+// TestAHeadingLinkRoundTripsToItsSlug is the same rule seen from the file.
+//
+// A fresh generator each call, so the answer is these words' own id and never
+// carries the "-1" goldmark adds to a heading it has already seen. Two headings
+// with the same words share an anchor and a link to the second lands on the
+// first, which is what markdown itself does with them.
+func Anchor(s string) string {
+	return string(parser.NewContext().IDs().Generate([]byte(s), ast.KindHeading))
+}
+
+// Slug is a heading's words as a file name: lower case, every run of
+// characters that are neither letters nor digits one hyphen, and nothing else.
+// It keeps a letter Go calls a letter, so a tab titled "Résumé" is a file
+// called "résumé" rather than a file called nothing.
+//
+// It is exported because internal/export names a further tab's file by its
+// title and a second copy of the rule there would be the one that drifted.
+// TestTabSlugsCollide is the pin.
+//
+// It is not the rule a heading id follows. That rule is goldmark's, and it is
+// Anchor.
+func Slug(s string) string {
+	var b strings.Builder
+	gap := false
+	for _, r := range strings.ToLower(s) {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			gap = true
+			continue
+		}
+		if gap && b.Len() > 0 {
+			b.WriteByte('-')
+		}
+		gap = false
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // headingLevel reads HEADING_1 through HEADING_6. TITLE and SUBTITLE are plain
@@ -353,6 +1004,9 @@ func (e *emitter) table(t *docs.Table) {
 // cell is one table cell on one line. A cell holding two paragraphs, or a table
 // of its own, is flattened with spaces: a newline inside a cell would end the
 // row.
+//
+// A floating object anchored to one of the cell's paragraphs is written here
+// too, after that paragraph's text, for the reason floatingOf gives.
 func (e *emitter) cell(c docs.Cell) string {
 	var parts []string
 	for _, b := range c.Blocks {
@@ -360,6 +1014,7 @@ func (e *emitter) cell(c docs.Cell) string {
 			if s := e.capture(func() { e.runs(b.Paragraph.Runs) }); s != "" {
 				parts = append(parts, s)
 			}
+			parts = append(parts, e.floatingOf(b.Paragraph)...)
 			continue
 		}
 		if b.Table == nil {
@@ -428,35 +1083,127 @@ func (e *emitter) span(rs []docs.Run) {
 }
 
 func (e *emitter) wrap(open, shut string, ids []string, f func()) {
-	e.out.WriteString(open)
+	e.write(open)
 	f()
-	e.out.WriteString(shut + "[s:" + strings.Join(ids, ",") + "]")
+	e.write(shut + "[s:" + strings.Join(ids, ",") + "]")
 }
 
 // body writes runs with their comment markers and their placeholders, tracking
-// the character index as it goes.
+// the character index as it goes. Runs that point at the same target are one
+// link: Docs splits a run wherever the formatting changes, and two forms around
+// one linked phrase would read as two links.
 func (e *emitter) body(rs []docs.Run) {
-	for _, r := range rs {
-		switch r.Kind {
-		case docs.KindText:
-			e.writeText(r.Text, r.StartIndex)
-		case docs.KindFootnoteRef:
-			e.drain(r.StartIndex, false)
-			e.out.WriteString("[^" + e.footnote(r) + "]")
-			e.drain(r.EndIndex, true)
-		default:
-			e.drain(r.StartIndex, false)
-			p, ok := placeholders[r.Kind]
-			if !ok {
-				p = placeholders[docs.KindObject]
-			}
-			m := mark(r)
-			e.out.WriteString(m)
-			e.warnings = append(e.warnings,
-				fmt.Sprintf("%s at index %d is printed as %s: %s", p.noun, r.StartIndex, m, p.why))
-			e.drain(r.EndIndex, true)
+	for i := 0; i < len(rs); {
+		l := textLink(rs[i])
+		if l == nil {
+			e.one(rs[i])
+			i++
+			continue
 		}
+		j := i + 1
+		for j < len(rs) && sameLink(textLink(rs[j]), l) {
+			j++
+		}
+		e.linked(rs[i:j], l)
+		i = j
 	}
+}
+
+// one writes one run: its text with the comment markers that fall inside it, or
+// the placeholder it prints as and the warning that goes with it.
+func (e *emitter) one(r docs.Run) {
+	switch r.Kind {
+	case docs.KindText:
+		e.writeText(r.Text, r.StartIndex)
+	case docs.KindFootnoteRef:
+		e.drain(r.StartIndex, false)
+		e.write("[^" + e.footnote(r) + "]")
+		e.drain(r.EndIndex, true)
+	default:
+		e.drain(r.StartIndex, false)
+		if md := e.picture(r); md != "" {
+			// The picture has a file beside the note, so nothing was lost and
+			// there is nothing to warn about. It is written where it stands: a
+			// picture in a paragraph of its own is a line of its own, which is
+			// where publish puts one, and a picture in the middle of a sentence
+			// stays in the middle of that sentence.
+			e.write(md)
+			e.drain(r.EndIndex, true)
+			return
+		}
+		p, ok := placeholders[r.Kind]
+		if !ok {
+			p = placeholders[docs.KindObject]
+		}
+		m := e.markOf(r)
+		e.write(m)
+		e.warnings = append(e.warnings,
+			fmt.Sprintf("%s at index %d is printed as %s: %s", p.noun, r.StartIndex, m, p.why))
+		e.drain(r.EndIndex, true)
+	}
+}
+
+// linked writes runs that point somewhere as [words](target).
+//
+// The markers that open where the link opens are drained before the bracket, so
+// a comment anchored at the same character does not end up behind it: gdoc's "["
+// against gdoc's "[[" is a pair neither of them can be escaped out of.
+//
+// A link this projection has no target for prints its words alone. A target is
+// where the words point and the words are the document's own either way, so the
+// text stays the document's and nothing is invented for the parentheses.
+func (e *emitter) linked(rs []docs.Run, l *docs.Link) {
+	target := e.target(l)
+	if target == "" {
+		for _, r := range rs {
+			e.one(r)
+		}
+		return
+	}
+	e.drain(rs[0].StartIndex, false)
+	e.write("[")
+	e.inLink = true
+	for _, r := range rs {
+		e.one(r)
+	}
+	e.inLink = false
+	e.write("](" + Destination(target) + ")")
+}
+
+// textLink is the target of a run of the document's own text, or nothing. Only
+// text carries one: a chip has a target of its own, which reaches the structure
+// view, and printing it here would put two targets on one placeholder.
+func textLink(r docs.Run) *docs.Link {
+	if r.Kind != docs.KindText {
+		return nil
+	}
+	return r.Link
+}
+
+func sameLink(a, b *docs.Link) bool { return a != nil && b != nil && *a == *b }
+
+// target is what the parentheses hold: the address of a link out of the
+// document, and "#" with the heading's own words slugged for a link to a heading
+// inside it, which is the form internal/body writes a note's own links in, so a
+// link read out of a document and a link written into one are the same string.
+//
+// A heading the document does not hold, and a bookmark, are named by their id:
+// there are no words to slug, and the id is the one fact there is. A link naming
+// only a tab has no target at all, because a tab is a document rather than a
+// place in this text.
+func (e *emitter) target(l *docs.Link) string {
+	switch {
+	case l.URL != "":
+		return l.URL
+	case l.HeadingID != "":
+		if words := e.headings[l.HeadingID]; words != "" {
+			return "#" + Anchor(words)
+		}
+		return "#" + l.HeadingID
+	case l.BookmarkID != "":
+		return "#" + l.BookmarkID
+	}
+	return ""
 }
 
 // plain writes runs with nothing tracked: no comment markers, no index, and no
@@ -477,10 +1224,10 @@ func (e *emitter) plain(rs []docs.Run) {
 		if r.Kind == docs.KindFootnoteRef {
 			// footnote returns the number the first copy already recorded, so
 			// the note is listed once and both copies name it.
-			e.out.WriteString("[^" + e.footnote(r) + "]")
+			e.write("[^" + e.footnote(r) + "]")
 			continue
 		}
-		e.out.WriteString(mark(r))
+		e.write(e.markOf(r))
 	}
 }
 
@@ -536,7 +1283,13 @@ func (e *emitter) writeText(s string, start int) {
 		if track {
 			e.drain(idx, false)
 		}
-		e.out.WriteString(escapeAt(rs, i))
+		if rs[i] != '\n' {
+			// The newline is where a paragraph ends, and the chunks carry that,
+			// so it is not written. It is not what anything is escaped against
+			// either: a character that is not in the text cannot separate the
+			// two halves of a pair from each other.
+			e.writeDoc(rs[i], escapeAt(rs, i))
+		}
 		idx += utf16Len(rs[i])
 	}
 	if track {
@@ -544,12 +1297,17 @@ func (e *emitter) writeText(s string, start int) {
 	}
 }
 
-// escapeAt is what rune i of rs is written as. It is the whole escaping rule,
-// and it is one function because two callers need it: the document's own text,
-// which is written a rune at a time with the comment markers drained between
-// them, and a chip's label, which is written as a string. Two copies of this
-// would be two rules, and the one that drifted would hand a marker to the wrong
-// side without anybody noticing.
+// escapeAt is what rune i of rs is written as, as far as the window rs shows.
+// It is one function because two callers need it: the document's own text, which
+// is written a rune at a time with the comment markers drained between them, and
+// a chip's label, which is written as a string. Two copies of this would be two
+// rules, and the one that drifted would hand a marker to the wrong side without
+// anybody noticing.
+//
+// What it cannot see is what follows the window: the next run's first character,
+// or a marker gdoc is about to write. The emitter holds the last character back
+// until it knows, and release puts the backslash in then, so this answer is the
+// one for a character the window has something after.
 func escapeAt(rs []rune, i int) string {
 	if rs[i] == '\\' {
 		// The escape character is escaped too, or the encoding cannot be read
@@ -568,10 +1326,6 @@ func escapeAt(rs []rune, i int) string {
 		// never had.
 		return "\\" + string(rs[i])
 	}
-	if rs[i] == '\n' {
-		// The newline is where a paragraph ends, and the chunks carry that.
-		return ""
-	}
 	return string(rs[i])
 }
 
@@ -588,10 +1342,10 @@ func escapeAt(rs []rune, i int) string {
 // file "Q3 plan [draft]". Reading the label in a window that ends with that
 // bracket is what makes the last rune half a pair like any other.
 //
-// A newline becomes a space rather than nothing. escapeAt drops one because the
-// document's own text is written in chunks and the chunking carries the
-// paragraph break; a label has no chunking, so dropping it glues the words
-// either side of it together.
+// A newline becomes a space rather than nothing. The projection drops one in the
+// document's own text because that text is written in chunks and the chunking
+// carries the paragraph break; a label has no chunking, so dropping it glues the
+// words either side of it together.
 func escapeLabel(s string) string {
 	rs := []rune(strings.ReplaceAll(s, "\n", " ") + string(labelShut))
 	var b strings.Builder

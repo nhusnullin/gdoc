@@ -8,9 +8,13 @@ Review a Google Doc from your terminal. Claude Code reads the comments in the
 document, answers the marked ones in the thread they were asked in, and proposes
 document changes as native suggestions you accept or reject in Google Docs.
 
-The markdown note is the source. The Google Doc is a rendering of it. Every
-change gdoc makes to the words of a document you handed it is a suggestion:
-nothing in the binary can edit one directly.
+Neither side is the source by rule. A note in the hub and the document it was
+published to can both move on, and you decide per run which one is right: the
+skill asks, and the `gdoc:` block in the note records only dated facts, when a
+document was published from it and when one was exported into it. What does not
+change is the direction of a write. Every change gdoc makes to the words of a
+document you handed it is a suggestion: nothing in the binary can edit one
+directly.
 
 The credential is your own Google account, approved once in a browser. It holds
 more than the tool needs, because Google's narrow `drive.file` scope only covers
@@ -24,13 +28,19 @@ at all.
 
 ## What it does
 
-One static binary at `go/`, fourteen commands plus `help` and `completion`,
+One static binary at `go/`, fifteen commands plus `help` and `completion`,
 nothing to install beside it. Each command takes arguments, prints one JSON
 object and exits. It holds the credential, it reads a document, it writes
 suggestions, it leaves a comment on words a caller quotes, it builds a
 house-style document and publishes it, it surveys what a document holds before
-anything is done to it, and it can give that document the house style where it
-stands.
+anything is done to it, it can give that document the house style where it
+stands, and it can write a document back into the hub as Markdown.
+
+That last one is the only command that writes more than one file at a time.
+`gdoc export` writes one Markdown file per tab and puts the document's pictures beside it as
+PNG files in an `assets` folder, which it creates when it is missing. It
+replaces nothing: a name that is taken takes the next free number, and there is
+no flag that could overwrite a file. [Exporting](exporting.md) holds the rest.
 
 ```bash
 gdoc auth status   # which token, where it is, whether it has expired

@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -143,21 +142,13 @@ func indented(t *testing.T, raw json.RawMessage) []byte {
 	return pretty.Bytes()
 }
 
-// recordFile saves one answer under testdata/. What it writes is a real
-// document's real content: it is read and redacted by a person before it is
-// committed, and the log line says so rather than leaving it to be discovered
-// in a diff.
+// recordFile saves one answer under this package's testdata/. The writing and
+// the warning are recordAt's, in export_measure_test.go, because the
+// measurement records into the export package's testdata and the two would
+// otherwise be the same eight lines twice.
 func recordFile(t *testing.T, name string, body []byte) {
 	t.Helper()
-	dir := "testdata"
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, body, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("recorded %s: this is a real document's content, so redact it before committing it", path)
+	recordAt(t, "testdata", name, body)
 }
 
 // The write test's own variables and the folder it creates in.
@@ -347,7 +338,7 @@ func replyTo(t *testing.T, ctx context.Context, s *gapi.Session, docID string, r
 func withdrawFrom(t *testing.T, ctx context.Context, p *guard.Policy, s *gapi.Session, docID string, result propose.Result) {
 	t.Helper()
 	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + docID + "\n---\n\n# Live write test\n")
-	recorded, missed, err := propose.Record(note, []propose.Result{result}, time.Now().UTC())
+	recorded, missed, err := propose.Record(note, docID, []propose.Result{result}, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("the proposal could not be recorded in the note: %v", err)
 	}
@@ -358,6 +349,10 @@ func withdrawFrom(t *testing.T, ctx context.Context, p *guard.Policy, s *gapi.Se
 	if err != nil {
 		t.Fatalf("the note propose wrote could not be read back: %v", err)
 	}
+	entry, err := block.Entry(docID)
+	if err != nil {
+		t.Fatalf("the note propose wrote does not name the document: %v", err)
+	}
 	id := result.SuggestionIDs[0]
 
 	// Without the grant the guard refuses the reject before it leaves the
@@ -365,14 +360,14 @@ func withdrawFrom(t *testing.T, ctx context.Context, p *guard.Policy, s *gapi.Se
 	// AllowReject is how the command hands it to the guard. Stated here against
 	// the real guard, on a document gdoc itself created, because this is the
 	// rule that keeps "anyone else's suggestion" true on the wire.
-	if _, err := withdraw.Run(ctx, s, docID, id, block); err == nil || !strings.Contains(err.Error(), "guard refused") {
+	if _, err := withdraw.Run(ctx, s, docID, id, entry); err == nil || !strings.Contains(err.Error(), "guard refused") {
 		t.Fatalf("a reject with no grant must be refused by the guard, got: %v", err)
 	}
-	if !withdraw.Mine(block, id) {
+	if !withdraw.Mine(entry, id) {
 		t.Fatalf("the note does not record %q, so nothing may be granted", id)
 	}
 	p.AllowReject(id)
-	gone, err := withdraw.Run(ctx, s, docID, id, block)
+	gone, err := withdraw.Run(ctx, s, docID, id, entry)
 	for _, w := range gone.Warnings {
 		t.Logf("withdraw warning: %s", w)
 	}
@@ -382,7 +377,7 @@ func withdrawFrom(t *testing.T, ctx context.Context, p *guard.Policy, s *gapi.Se
 	if !gone.Verified {
 		t.Errorf("the withdrawal of %q is not verified: rejected ids %v", id, gone.RejectedSuggestionIDs)
 	}
-	if left := withdraw.Forget(block, id); withdraw.Mine(left, id) {
+	if left, err := withdraw.Forget(block, docID, id).Entry(docID); err != nil || withdraw.Mine(left, id) {
 		t.Errorf("the note still records %q after the withdrawal", id)
 	}
 	t.Logf("withdrawn: %v", gone.RejectedSuggestionIDs)

@@ -60,7 +60,12 @@ three deep, bold, italic, strikeout, `==marked==` text as a highlight, links,
 pictures, tables, horizontal rules and block quotes. A picture is read from the
 note's own directory, or decoded when the markdown carries it as a `data:` URI;
 PNG and JPEG. A picture at an `http` address is refused naming the line, because
-a document built from a link is a document that breaks when the link expires.
+a document built from a link is a document that breaks when the link expires. An
+SVG is refused too, naming the line and the format: nothing in the binary
+renders one, and Google Docs does not import an SVG out of a docx either.
+`/gdoc-publish` knows the way round it. It renders the SVG to a PNG beside the
+note on your own machine, with no installing on a Mac, and repoints that one
+link. The SVG stays where it is and stays the master.
 
 A link whose destination opens with `#` is a jump inside the document rather
 than a link out of it. It lands on the heading it names, so `[see below](#scope)`
@@ -155,10 +160,17 @@ a document rather than leaving a .docx sitting in a folder.
 The folder is the only thing the run can reach. No document is in reach when it
 starts, and the new document's id comes back from the create the tool itself
 made. There is no `--folder-id` default and no fallback to the folder in your
-note: a note that already names a document is refused before anything leaves
-your machine. There is no second-version command, and `restyle --new` is not
-being built. To publish a note again, take the `gdoc:` block out of it by hand
-and run `publish` once more; the refusal message says the same.
+note.
+
+**A note publishes more than once, and each run makes a new document.** The run
+appends an entry to the note's `gdoc:` block. The document you published last
+week keeps its URL, its comments and its own entry: nothing in it changes, and
+nothing in the binary can change it. It goes stale the moment the new one
+exists, which is the one thing `/gdoc-publish` tells you before it runs. There
+is still no way to publish into the document that is already there, because gdoc
+never replaces the body of a document: that request is a merge, and a merge
+travels as suggestions through `/gdoc-align`. `restyle --new` is not being
+built either.
 
 Three things are checked after the upload, and each answers something the other
 two cannot: the document reads back through the Docs API, it has exactly one
@@ -209,42 +221,75 @@ and never runs by itself.
 
 ## The `gdoc:` block
 
-A markdown note paired with a Go-published document carries one key in its front
-matter, and everything else in there stays the author's:
+A markdown note that has met a Google Doc carries one key in its front matter,
+and everything else in there stays the author's. The key holds a list, one entry
+per document the note has been published to or exported from:
 
 ```yaml
 ---
 title: Supplier register policy
 gdoc:
-  schema: 1
-  document_id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd
-  folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr
-  published:
-    at: 2026-09-08T10:14:00Z
-    title: Supplier register policy
-    house: embedded
-  suggestions_seen:
-    at: 2026-09-06T11:00:00Z
-    items:
-      - id: suggest.abc123
-        kind: insertion
-        section: Scope
-        text: "critical "
+  schema: 2
+  documents:
+    - id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd
+      folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr
+      published:
+        at: 2026-09-08T10:14:00Z
+        title: Supplier register policy
+        house: embedded
+      exported:
+        at: 2026-09-19T14:02:00Z
+      suggestions_seen:
+        at: 2026-09-06T11:00:00Z
+        items:
+          - id: suggest.abc123
+            kind: insertion
+            section: Scope
+            text: "critical "
+    - id: 1DeFgHiJkLmNoPqRsTuVwXyZ0123456789abcdef
+      folder_id: 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr
+      published:
+        at: 2026-09-19T09:30:00Z
+        title: Supplier register policy
+        house: embedded
 ---
 ```
 
-The read is strict. An unknown key, a key given twice, a missing `document_id`
-or a `schema` this version does not know is refused naming the key, and the file
-is left alone. The write touches the `gdoc:` lines and nothing else: your keys,
+Every entry holds its own facts, and each fact is dated. Nothing in there says
+which side is right. An entry may carry `published`, `exported` or both, and a
+`tab_id` when the file came from one tab of a document with several. The order
+is the order they were written in, and nothing reads it as "the newest": a
+command works on the entry whose id is in the URL you gave it, and a URL the
+list does not name is refused, naming the ones it does. That is what keeps a
+`withdraw` from sending a suggestion id into the wrong document.
+
+The read is strict. An unknown key, a key given twice, a missing `id` or a
+`schema` this version does not know is refused naming the key, and the file is
+left alone. The write touches the `gdoc:` lines and nothing else: your keys,
 your line endings and the trailing newline come back byte for byte, and the file
 is replaced through a temporary file and a rename, so a failed write cannot
 truncate your note.
 
-`gdoc publish` is the only thing that creates this block. `gdoc suggestions
---md`, `gdoc propose --md` and `gdoc withdraw` update it, and each of them
-refuses a note that does not carry one already. A note whose `gdoc:` key is a
-bare string rather than a block is refused by name: gdoc tells you to rewrite
-the line by hand once, or to publish the note again with `gdoc publish`.
-Building is unaffected, because `gdoc build` skips the `gdoc:` key whatever is
-in it.
+A note published before 2026-09-19 carries `schema: 1` with one `document_id`,
+and it still reads: gdoc takes it as a list of one. While nothing changes it, it
+is written back exactly as it was. The first command that changes anything in it
+writes `schema: 2`, and the reply says so in one line. A colleague still running
+a gdoc from before that date then gets a refusal naming the key it does not
+know, `gdoc front matter: [3:3] unknown field "documents"`, and the fix is `gdoc
+update`.
+
+`gdoc publish` creates this block and appends to it. `gdoc export` stamps
+`exported: {at}` on one entry, and `gdoc suggestions --md`, `gdoc propose --md`
+and `gdoc withdraw` update theirs, each refusing a note that does not carry a
+block already. A note whose `gdoc:` key is a bare string rather than a block is
+refused by name: gdoc tells you to rewrite the line by hand once, or to publish
+the note again with `gdoc publish`. Building is unaffected, because `gdoc build`
+skips the `gdoc:` key whatever is in it.
+
+One field is not a dated fact. A file `gdoc export` wrote beside a note, rather
+than as the note, carries `note:` under `exported`, naming the note it belongs
+to, and every writer refuses that file in one sentence pointing at the note. It
+is there so a stray copy cannot collect proposals. To keep such a copy as a note
+of its own, delete the `note:` line by hand. Nothing in the binary removes it,
+because the binary cannot know you meant to keep the copy.
 

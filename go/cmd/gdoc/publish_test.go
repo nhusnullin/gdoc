@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"gdoc/internal/docs"
 	"gdoc/internal/frontmatter"
@@ -19,6 +20,11 @@ import (
 // from that answer rather than handed in, which is the second of the guard's
 // two doors and the reason a publish opens with no file at all.
 const publishDocID = "1PuBl15h0000000000000000000000000000000"
+
+// otherFolderID is where an earlier publish of the same note put its document.
+// It is not testFolderID, so a test can see that the entry this run appends
+// carries the folder this run was given rather than the one already there.
+const otherFolderID = "1oTh3rF0lD3r0000000000000000000000"
 
 // publishAnswers is a whole publish as the wire sees it: the multipart create,
 // the Docs read-back and the docx export.
@@ -141,20 +147,27 @@ func TestPublishUploadsTheNoteAndPairsIt(t *testing.T) {
 	if block == nil {
 		t.Fatal("the note carries no gdoc: block after a publish")
 	}
-	if block.DocumentID != publishDocID || block.FolderID != testFolderID {
-		t.Errorf("the block records the pairing: %+v", block)
+	if block.Schema != frontmatter.Schema {
+		t.Errorf("schema = %d, want the shape gdoc writes today", block.Schema)
 	}
-	if block.Published == nil {
+	if len(block.Documents) != 1 {
+		t.Fatalf("documents = %d, want the one this run made", len(block.Documents))
+	}
+	e := block.Documents[0]
+	if e.ID != publishDocID || e.FolderID != testFolderID {
+		t.Errorf("the block records the pairing: %+v", e)
+	}
+	if e.Published == nil {
 		t.Fatal("the block carries no publish record")
 	}
-	if block.Published.At.IsZero() {
+	if e.Published.At.IsZero() {
 		t.Error("published.at is when the document was made")
 	}
-	if block.Published.Title != "Supplier Register Policy" {
-		t.Errorf("published.title is what went on the cover: %q", block.Published.Title)
+	if e.Published.Title != "Supplier Register Policy" {
+		t.Errorf("published.title is what went on the cover: %q", e.Published.Title)
 	}
-	if block.Published.House != "embedded" {
-		t.Errorf("published.house is where the style came from: %q", block.Published.House)
+	if e.Published.House != "embedded" {
+		t.Errorf("published.house is where the style came from: %q", e.Published.House)
 	}
 }
 
@@ -209,19 +222,125 @@ func TestPublishOpensWithTheFolderAndNoFile(t *testing.T) {
 	}
 }
 
-// Publish makes a document. A note that already names one is refused before
-// anything leaves the machine, because there is no republish.
-func TestPublishRefusesANoteThatIsAlreadyPaired(t *testing.T) {
+// A note names every document it has been published to. Publishing a note that
+// already names one makes another document and appends another entry, and the
+// entries already in the note come back byte for byte: their facts are that
+// document's history, and this run knows nothing about them.
+func TestPublishAppendsAnEntryToAPairedNote(t *testing.T) {
+	stubWire(t, &fakeWire{answers: publishAnswers(t)})
+	_, md := buildNote(t)
+	pairNote(t, md, frontmatter.Entry{
+		ID:       proposeDocID,
+		FolderID: otherFolderID,
+		Published: &frontmatter.Published{
+			At:    time.Date(2026, 9, 6, 10, 12, 0, 0, time.UTC),
+			Title: "An earlier run",
+			House: "embedded",
+		},
+	})
+	before := entriesText(t, md)
+
+	got, code := runJSON(t, "publish", "--md", md, "--folder-id", testFolderID)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a paired note publishes again: %v (exit %d)", got, code)
+	}
+	data, _ := got["data"].(map[string]any)
+	if data["document_id"] != publishDocID {
+		t.Errorf("document_id is the document this run made: %v", data["document_id"])
+	}
+
+	block := blockIn(t, md)
+	if len(block.Documents) != 2 {
+		t.Fatalf("documents = %d, want the one already there and the one this run made", len(block.Documents))
+	}
+	if block.Documents[0].ID != proposeDocID || block.Documents[1].ID != publishDocID {
+		t.Errorf("the new entry goes after the one already there: %v", block.IDs())
+	}
+	second := block.Documents[1]
+	if second.FolderID != testFolderID {
+		t.Errorf("the new entry names the folder this run was given: %q", second.FolderID)
+	}
+	if second.Published == nil || second.Published.Title != "Supplier Register Policy" {
+		t.Errorf("the new entry carries what this run published: %+v", second.Published)
+	}
+	if after := entriesText(t, md); !strings.HasPrefix(after, before) {
+		t.Errorf("the entry already in the note changed:\nbefore %q\nafter  %q", before, after)
+	}
+}
+
+// A copy gdoc wrote beside somebody else's document carries exported.note. It
+// is not a source: publishing it would make a document out of somebody else's
+// words and record it in a file the author never wrote.
+func TestPublishRefusesACopyThatNamesANote(t *testing.T) {
 	noSession(t)
-	md := copyFixture(t, "paired.md")
+	_, md := buildNote(t)
+	pairNote(t, md, frontmatter.Entry{
+		ID: proposeDocID,
+		Exported: &frontmatter.Exported{
+			At:   time.Date(2026, 9, 19, 8, 0, 0, 0, time.UTC),
+			Note: "notes/supplier-register.md",
+		},
+	})
+	before := mustRead(t, md)
 
 	got, code := runJSON(t, "publish", "--md", md, "--folder-id", testFolderID)
 	if code == 0 || got["ok"] != false {
-		t.Fatalf("a paired note must not be published again: %v (exit %d)", got, code)
+		t.Fatalf("a copy must be refused: %v (exit %d)", got, code)
 	}
-	if msg, _ := got["error"].(string); !strings.Contains(msg, "already") {
-		t.Errorf("the error must say the note is already paired: %q", msg)
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "notes/supplier-register.md") {
+		t.Errorf("the refusal %q does not name the note the copy came from", msg)
 	}
+	if mustRead(t, md) != before {
+		t.Error("a refused run wrote to the copy")
+	}
+}
+
+// pairNote puts one entry in the note's gdoc: block, so a test can start from a
+// note that has already been published.
+func pairNote(t *testing.T, md string, e frontmatter.Entry) {
+	t.Helper()
+	src, err := os.ReadFile(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := frontmatter.Write(src, &frontmatter.Block{
+		Schema:    frontmatter.Schema,
+		Documents: []frontmatter.Entry{e},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(md, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// entriesText is the note's documents: lines as they sit in the file. It is the
+// bytes rather than the decoded block, because what a publish must leave alone
+// is the file: a decoded entry compares equal however the block around it was
+// re-rendered.
+func entriesText(t *testing.T, md string) string {
+	t.Helper()
+	src, err := os.ReadFile(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.SplitAfter(string(src), "\n")
+	for i, line := range lines {
+		if strings.TrimRight(line, "\r\n") != "  documents:" {
+			continue
+		}
+		var out strings.Builder
+		for _, entry := range lines[i+1:] {
+			if !strings.HasPrefix(entry, "    ") {
+				break
+			}
+			out.WriteString(entry)
+		}
+		return out.String()
+	}
+	t.Fatalf("%s carries no documents: key:\n%s", md, src)
+	return ""
 }
 
 func TestPublishArgumentsAreStrict(t *testing.T) {
@@ -268,22 +387,15 @@ func TestPublishRollsBackWhenTheNoteCannotBePaired(t *testing.T) {
 		want  string
 	}{
 		{
-			name: "another run paired it while this one was uploading",
+			// A note may name many documents, so another run appending its own
+			// entry is not what is refused here: an entry for this run's
+			// document is, because writing a second one would leave the note
+			// naming it twice.
+			name: "an entry for this document appeared while this one was uploading",
 			spoil: func(t *testing.T, md string) {
-				src, err := os.ReadFile(md)
-				if err != nil {
-					t.Fatal(err)
-				}
-				out, err := frontmatter.Write(src, &frontmatter.Block{
-					Schema: frontmatter.Schema, DocumentID: proposeDocID})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(md, out, 0o644); err != nil {
-					t.Fatal(err)
-				}
+				pairNote(t, md, frontmatter.Entry{ID: publishDocID})
 			},
-			want: proposeDocID,
+			want: publishDocID,
 		},
 		{
 			name: "the note changed under the render",
@@ -454,7 +566,7 @@ func TestPublishPairsTheNoteEvenWhenARouteDidNotHold(t *testing.T) {
 	if warns := warningText(got); !strings.Contains(warns, "docx") {
 		t.Errorf("the warnings must name the route: %q", warns)
 	}
-	if block := blockIn(t, md); block == nil || block.DocumentID != publishDocID {
+	if block := blockIn(t, md); block == nil || len(block.Documents) != 1 || block.Documents[0].ID != publishDocID {
 		t.Errorf("the pairing is recorded whatever the read-backs said: %+v", block)
 	}
 }
@@ -508,7 +620,10 @@ func TestPublishReportsTheHouseFileItWasGiven(t *testing.T) {
 		t.Errorf("house = %v, want %s", data["house"], style)
 	}
 	block := blockIn(t, md)
-	if block == nil || block.Published == nil || block.Published.House != style {
-		t.Errorf("published.house records the style the document was built from: %+v", block)
+	if block == nil || len(block.Documents) != 1 {
+		t.Fatalf("the note carries no one entry after a publish: %+v", block)
+	}
+	if e := block.Documents[0]; e.Published == nil || e.Published.House != style {
+		t.Errorf("published.house records the style the document was built from: %+v", e)
 	}
 }

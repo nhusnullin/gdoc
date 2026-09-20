@@ -35,3 +35,36 @@ func TestMarkdownLeavesPlainWordsAlone(t *testing.T) {
 		}
 	}
 }
+
+// TestPlaintextRefusesAMarker is decision 3's other direction. gdoc's markers
+// travel out of a document into a file in the hub; none of them may travel back
+// in. A reply or a comment carrying "{+words+}[s:AAA]" puts a suggestion's
+// brackets into a thread as prose, and the thread renders them as typed, which
+// is the same failure the markdown rule exists for.
+func TestPlaintextRefusesAMarker(t *testing.T) {
+	for _, c := range []struct{ body, want string }{
+		{"🤖 the sentence reads {+six months+}[s:AAA] now", "{+"},
+		{"🤖 the words {-annually-}[s:AAA] are gone", "{-"},
+		{"🤖 see [[c:AAA]]the operations team[[/c]]", "[[c:"},
+		{"🤖 that suggestion is [s:AAA]", "[s:"},
+	} {
+		if got := Marker(c.body); got != c.want {
+			t.Errorf("Marker(%q) = %q, want %q", c.body, got, c.want)
+		}
+	}
+}
+
+// TestMarkerLeavesPlainWordsAlone is the half that keeps a reply writable. A
+// reply talking about the markers writes them escaped, the way `read` does, and
+// an ordinary sentence with a bracket in it is nobody's marker.
+func TestMarkerLeavesPlainWordsAlone(t *testing.T) {
+	for _, body := range []string{
+		"🤖 The 2026 register.",
+		`🤖 the export writes \{+words\+} for an insertion`,
+		"🤖 See item [1] of the schedule.",
+	} {
+		if got := Marker(body); got != "" {
+			t.Errorf("Marker(%q) = %q, and there is no marker of gdoc's in it", body, got)
+		}
+	}
+}

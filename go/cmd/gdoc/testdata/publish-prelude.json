@@ -1,0 +1,915 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz012345publish",
+  "title": "The Payments Policy",
+  "revisionId": "ALm37BXlish",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 14,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 14,
+                    "textRun": {
+                      "content": "Altery Group\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 14,
+              "endIndex": 15,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 14,
+                    "endIndex": 15,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 15,
+              "endIndex": 35,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 15,
+                    "endIndex": 35,
+                    "textRun": {
+                      "content": "The Payments Policy\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 35,
+              "endIndex": 48,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 35,
+                    "endIndex": 48,
+                    "textRun": {
+                      "content": "Version: 1.0\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 48,
+              "endIndex": 57,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 48,
+                    "endIndex": 57,
+                    "textRun": {
+                      "content": "May 2025\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 57,
+              "endIndex": 58,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 57,
+                    "endIndex": 58,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 58,
+              "endIndex": 74,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 58,
+                    "endIndex": 74,
+                    "textRun": {
+                      "content": "Version Control\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 74,
+              "endIndex": 130,
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 76,
+                            "endIndex": 91,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 76,
+                                  "endIndex": 91,
+                                  "textRun": {
+                                    "content": "Document Owner\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 91,
+                            "endIndex": 107,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 91,
+                                  "endIndex": 107,
+                                  "textRun": {
+                                    "content": "Nail Khusnullin\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 108,
+                            "endIndex": 120,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 108,
+                                  "endIndex": 120,
+                                  "textRun": {
+                                    "content": "Approved by\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 120,
+                            "endIndex": 130,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 120,
+                                  "endIndex": 130,
+                                  "textRun": {
+                                    "content": "The Board\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 130,
+              "endIndex": 131,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 130,
+                    "endIndex": 131,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 131,
+              "endIndex": 191,
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 133,
+                            "endIndex": 141,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 133,
+                                  "endIndex": 141,
+                                  "textRun": {
+                                    "content": "Version\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 141,
+                            "endIndex": 146,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 141,
+                                  "endIndex": 146,
+                                  "textRun": {
+                                    "content": "Date\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 146,
+                            "endIndex": 153,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 146,
+                                  "endIndex": 153,
+                                  "textRun": {
+                                    "content": "Author\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 153,
+                            "endIndex": 160,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 153,
+                                  "endIndex": 160,
+                                  "textRun": {
+                                    "content": "Change\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 161,
+                            "endIndex": 165,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 161,
+                                  "endIndex": 165,
+                                  "textRun": {
+                                    "content": "1.0\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 165,
+                            "endIndex": 174,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 165,
+                                  "endIndex": 174,
+                                  "textRun": {
+                                    "content": "May 2025\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 174,
+                            "endIndex": 179,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 174,
+                                  "endIndex": 179,
+                                  "textRun": {
+                                    "content": "gdoc\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 179,
+                            "endIndex": 191,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 179,
+                                  "endIndex": 191,
+                                  "textRun": {
+                                    "content": "First issue\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 191,
+              "endIndex": 192,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 191,
+                    "endIndex": 192,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 192,
+              "endIndex": 227,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 192,
+                    "endIndex": 227,
+                    "textRun": {
+                      "content": "New\tNew information has been added\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 227,
+              "endIndex": 272,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 227,
+                    "endIndex": 272,
+                    "textRun": {
+                      "content": "Update\tExisting information has been updated\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 272,
+              "endIndex": 273,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 272,
+                    "endIndex": 273,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 273,
+              "endIndex": 324,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 273,
+                    "endIndex": 324,
+                    "textRun": {
+                      "content": "Document Classification (Highlight as appropriate)\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 324,
+              "endIndex": 355,
+              "table": {
+                "tableRows": [
+                  {
+                    "tableCells": [
+                      {
+                        "content": [
+                          {
+                            "startIndex": 326,
+                            "endIndex": 333,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 326,
+                                  "endIndex": 333,
+                                  "textRun": {
+                                    "content": "Public\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 333,
+                            "endIndex": 342,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 333,
+                                  "endIndex": 342,
+                                  "textRun": {
+                                    "content": "Internal\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "content": [
+                          {
+                            "startIndex": 342,
+                            "endIndex": 355,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 342,
+                                  "endIndex": 355,
+                                  "textRun": {
+                                    "content": "Confidential\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 355,
+              "endIndex": 356,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 355,
+                    "endIndex": 356,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 356,
+              "endIndex": 365,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 356,
+                    "endIndex": 365,
+                    "textRun": {
+                      "content": "Contents\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 365,
+              "endIndex": 404,
+              "tableOfContents": {
+                "content": [
+                  {
+                    "startIndex": 365,
+                    "endIndex": 373,
+                    "paragraph": {
+                      "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT"
+                      },
+                      "elements": [
+                        {
+                          "startIndex": 365,
+                          "endIndex": 373,
+                          "textRun": {
+                            "content": "1-Scope\n",
+                            "textStyle": {
+                              "link": {
+                                "headingId": "h.scope"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 373,
+                    "endIndex": 390,
+                    "paragraph": {
+                      "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT"
+                      },
+                      "elements": [
+                        {
+                          "startIndex": 373,
+                          "endIndex": 390,
+                          "textRun": {
+                            "content": "1.1-Out of scope\n",
+                            "textStyle": {
+                              "link": {
+                                "headingId": "h.outofscope"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 390,
+                    "endIndex": 404,
+                    "paragraph": {
+                      "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT"
+                      },
+                      "elements": [
+                        {
+                          "startIndex": 390,
+                          "endIndex": 404,
+                          "textRun": {
+                            "content": "2-Who decides\n",
+                            "textStyle": {
+                              "link": {
+                                "headingId": "h.whodecides"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 404,
+              "endIndex": 412,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.scope"
+                },
+                "elements": [
+                  {
+                    "startIndex": 404,
+                    "endIndex": 412,
+                    "textRun": {
+                      "content": "1-Scope\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 412,
+              "endIndex": 458,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 412,
+                    "endIndex": 458,
+                    "textRun": {
+                      "content": "The policy covers every payment Altery makes.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 458,
+              "endIndex": 475,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_2",
+                  "headingId": "h.outofscope"
+                },
+                "elements": [
+                  {
+                    "startIndex": 458,
+                    "endIndex": 475,
+                    "textRun": {
+                      "content": "1.1-Out of scope\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 475,
+              "endIndex": 497,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 475,
+                    "endIndex": 497,
+                    "textRun": {
+                      "content": "Cash is out of scope.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 497,
+              "endIndex": 511,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1",
+                  "headingId": "h.whodecides"
+                },
+                "elements": [
+                  {
+                    "startIndex": 497,
+                    "endIndex": 511,
+                    "textRun": {
+                      "content": "2-Who decides\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 511,
+              "endIndex": 545,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 511,
+                    "endIndex": 530,
+                    "textRun": {
+                      "content": "The owner named in ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 530,
+                    "endIndex": 535,
+                    "textRun": {
+                      "content": "Scope",
+                      "textStyle": {
+                        "link": {
+                          "headingId": "h.scope"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 535,
+                    "endIndex": 545,
+                    "textRun": {
+                      "content": " decides.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

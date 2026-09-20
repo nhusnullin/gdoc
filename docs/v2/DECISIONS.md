@@ -14,7 +14,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 
 | Date | Decision | Status |
 |---|---|---|
-| 2026-08-13 | The markdown is the source, the Google Doc is a rendering | holds |
+| 2026-08-13 | The markdown is the source, the Google Doc is a rendering | superseded 2026-09-19 (no side is the source by rule; the person decides per run) |
 | 2026-08-14 | Skills are symlinked into `~/.claude/skills/`, never copied | holds |
 | 2026-08-15 | The client reaches only the files it was given | holds |
 | 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | superseded 2026-09-16 (the secret is injected at build time; the client stays Internal) |
@@ -31,7 +31,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-29 | The Developer Preview arrived, and a third of this file retires | holds |
 | 2026-08-29 | gdoc proposes. It never accepts and never rejects | holds |
 | 2026-08-29 | MCP does not replace the REST client | holds |
-| 2026-08-29 | Tabs are out of scope, and gdoc defends against them | holds |
+| 2026-08-29 | Tabs are out of scope, and gdoc defends against them | superseded 2026-09-19 (the reader half only: `export` writes one file per tab; every writer still refuses a document with more than one) |
 | 2026-08-29 | Amendments from reading the documentation | holds |
 | 2026-08-29 | gdoc can retract its own proposal, and must check that it landed | holds |
 | 2026-08-29 | The house style is a config file. The .docx becomes provenance | holds |
@@ -46,10 +46,10 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds |
 | 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | holds |
 | 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace` | holds |
-| 2026-08-29 | Publish runs once. Everything after travels as suggestions | holds |
+| 2026-08-29 | Publish runs once. Everything after travels as suggestions | superseded 2026-09-19 (a note may be published more than once, and each publish is a new document) |
 | 2026-08-29 | Live review is a session, not a service | holds |
 | 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds |
-| 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | holds |
+| 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | superseded 2026-09-19 (the one-writer clause only: `export` writes the block too, and the block is a list of documents; the v1 refusal holds) |
 | 2026-09-09 | Which styling requests land in place | MEASURED.md |
 | 2026-09-09 | The guard carries `files.copy`, for one source | holds |
 | 2026-09-09 | Seven paragraph elements were dropped at decode | holds |
@@ -71,6 +71,9 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | holds |
 | 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds |
 | 2026-09-18 | Five backlog items closed, and what each decided | holds |
+| 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds |
+| 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
+| 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2367,3 +2370,275 @@ because a cell has no line the author would recognise.
 a `w:anchor` hyperlink and a `w:bookmarkStart` is unmeasured, and if the jump
 does not survive it that is a MEASURED.md row, not a reason to revert the docx
 side, which Word reads.
+
+## 2026-09-19. Export, and the `gdoc:` block as a list of documents.
+
+Nail's decisions, taken in the brainstorm that produced the M13 spec,
+`docs/plans/completed/2026-09-19-gdoc-v2-m13-export-and-align.md`, which holds all
+seventeen of them with the twenty-three scenarios they were read against. This
+entry holds what changed in this file. Serves principle 3 in the first row
+below, because the one new output is the one thing that can never be replaced,
+and principle 2 in the second, because the pairing stays in the note's front
+matter and the pictures land beside it.
+
+| Row | Status change |
+|---|---|
+| The markdown is the source, the Google Doc is a rendering (2026-08-13) | superseded 2026-09-19. No side is the source by rule. The person decides per run |
+| Publish runs once. Everything after travels as suggestions (2026-08-29, restated 2026-09-11 and 2026-09-16) | superseded 2026-09-19. A note may be published more than once, and each publish is a new document |
+| v1's `gdoc: <id>` stays refused. Publish is the only writer of the block (2026-09-08) | superseded 2026-09-19 in its one-writer clause. `export` writes the block too, and the block is a list of documents. The v1 refusal holds |
+| Tabs are out of scope, and gdoc defends against them (2026-08-29) | superseded 2026-09-19 in its reader half. `export` writes one file per tab. Every writer still refuses a document with more than one |
+| gdoc never replaces the body of a document that already exists (2026-08-29) | holds, and is what makes a merge into the same document a set of suggestions rather than a replace |
+| gdoc proposes. It never accepts and never rejects (2026-08-29) | holds. A pending suggestion is exported as a marker and never decided |
+| Export has no `--force`, and a taken name takes the next free number | new, serves principle 3 |
+| Two routes matched by order, and `contentUri` stays out | new, serves principle 1 and the guard |
+
+**No side is the source of truth by rule.** The 2026-08-13 decision said the
+markdown is the source and the document is a rendering of it. That was true
+while a note was published once and every later change travelled as a
+suggestion. It stops being true the moment a document can come back into the
+hub, because then either side may hold the newer words and no rule in the
+binary can say which. So the rule goes and the person takes it: they decide
+per run, and the skill asks. The block records dated facts only, when a
+document was published from the note and when it was exported into it, and no
+field in it says which side was right.
+
+**A note may be published more than once, and each publish is a new document.**
+`publish` used to refuse a paired note and tell the person to take the `gdoc:`
+block out by hand. That refusal was the whole of the answer to "publish this
+again", and it made the note forget the first document. Now `publish` appends
+an entry. The old document keeps its URL, its threads and its own entry
+untouched, and it goes stale, which the skill says once before it runs.
+Publishing into the same document is still refused, because gdoc never replaces
+a body: that request is a merge, and a merge is suggestions through
+`gdoc-align`. `TestPublishAppendsAnEntryToAPairedNote` is the pin.
+
+**The block is a list of documents, and schema 1 still reads.**
+`gdoc: {schema: 2, documents: [...]}`, one entry per document the note has met,
+each holding its own `published`, `exported`, `folder_id`, `suggestions_seen`
+and `proposals`. A proposal lives under the document it was made in, because a
+`withdraw` that sent an id from another document would be a reject against the
+wrong file. Every writer takes the entry the URL names and refuses a URL the
+list does not hold, naming the ids it does. A schema 1 block reads as a
+one-entry list and is written back byte for byte while nothing changes it; the
+first write that changes anything renders schema 2, and the reply says so once.
+`TestWriteAnUnchangedSchemaOneBlockStaysSchemaOne`,
+`TestAChangingWriteRewritesSchemaOneAsTwo`,
+`TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList` and
+`TestWithdrawNeverSendsAnIDFromAnotherDocument` are the pins.
+
+**A colleague on an older binary is refused by name, and told nothing about
+updating.** The shipped read is strict before it looks at the schema number, so
+a gdoc from before this milestone meets a schema 2 block with
+`gdoc front matter: [3:3] unknown field "documents"` and the four lines of YAML
+it was reading, the third marked. It never reaches its schema sentence, and it
+cannot be taught one, because it is already on somebody's machine. The daily
+notice in `help` is where a colleague learns a newer release exists. Nothing in
+the note breaks and nothing is written.
+`TestTheShippedDecoderRefusesADocumentsKeyByName` is the pin.
+
+**Export has no `--force`, and a taken name takes the next free number.**
+Nail struck the flag on 2026-09-19. A flag that replaces a note is a false
+door: the value of an export is that it costs nothing to run again, and the
+cost of one wrong run under `--force` is a person's own writing. So a taken
+path gets `<stem>.2.md`, then `<stem>.3.md`, pictures take the next free number
+under `assets/`, and the reply names every file it wrote. A person who wants
+the old note gone exports to the new file, reads the old one and renames by
+hand. The one thing export writes into a file somebody else owns is the date,
+`exported: {at}` on that document's entry, through the byte-preserving block
+write. `TestNothingCanReplaceAFile` reads this package's own source: the word
+`force` does not appear in it, and the one call to `atomicfile.Replace` is the
+stamp. It rests on `atomicfile.Create`, which ends in a link rather than a
+rename, so a path that appeared between the plan and the write is refused
+rather than replaced: `TestCreateRefusesAPathThatExists`.
+
+**Two routes matched by order, and `contentUri` stays out.** A picture's bytes
+are not in the Docs answer. The `contentUri` it carries is a
+`googleusercontent.com` host the guard does not admit, and admitting one for a
+read of somebody's picture is a wider door than this earns. So the bytes come
+from the docx export, which is a read gdoc already makes for the comment
+witness, through the same grant. Nothing crosses the two routes: the read has
+object ids the export never mentions, and the export has part names the read
+never mentions. So the k-th picture of one is the k-th of the other, and order
+is the whole pairing. When the counts disagree every picture is a placeholder
+and no file is written, because a pairing one place out writes the wrong bytes
+under the right name and nobody reading the note afterwards can see it.
+`TestPicturesPairByOrder`, `TestObjectsAreTheTabsPicturesInBodyOrder` and
+`TestACountMismatchWritesNoPictureAndWarns` are the pins. Keeping the note's own
+picture when the bytes match rests on a published PNG coming back byte for
+byte, which is not measured, so `Options.MatchByHash` ships off and the reply
+says the match was off: `TestTheHashMatchIsOffUntilMeasured`.
+
+**A document with more than one tab exports as one file per tab.** Nail's
+correction on 2026-09-19, reading the scenarios: a tab is a document of its own
+to a reader, so one file each, never one file for both and never a refusal. The
+first tab lands at `--out` and each further tab beside it as
+`<stem>-<tab title>.md`, slugged the way a heading id is, under the same
+numbering rule when a name is taken. Each file's entry names the document and
+its `tab_id`. This narrows the 2026-08-29 tabs decision for one reader and
+leaves it whole for every writer: `propose`, `annotate`, `publish` and the rest
+still refuse a document with more than one tab, until a live measurement says
+what a write into one tab does. `TestTwoTabsGiveTwoProjections` and
+`TestTabSlugsCollide` are the pins.
+
+**A marker never reaches a document, in either direction.** A file export wrote
+carries `{+words+}[s:ID]`, `{-words-}[s:ID]` and `[[c:ID]]words[[/c]]`, and a
+person may keep it in the hub with its markers for as long as they like: there
+is no deadline to resolve them, because the markers are gdoc's own and any
+later session can undo them. What a marked file cannot do is become a document.
+`build` and `publish` refuse a marker by line, `plaintext` refuses one in
+anything `reply` or `annotate` writes into a thread, and `propose` refuses one
+in its `--from` file, which never passes through `plaintext`. One package holds
+the four openers as literals so the four call sites cannot drift apart:
+`TestMarkersNamesEachOpener`, `TestBuildRefusesAMarkerByLine`,
+`TestPlaintextRefusesAMarker` and `TestProposeRefusesAMarkerInTheFile`.
+
+**A backslash makes the one character after it the document's own.** The
+escaping in `internal/view` used to run one text run at a time, so a document
+whose own `[` ended one run and whose `[` opened the next reached the text bare
+and read as gdoc's marker. The fix needed a convention, and the two candidates
+were escaping the first half of the pair or the second. The second cannot spell
+the third case: a run ending in `[` in front of one of gdoc's own comment
+markers would put the backslash in front of the marker, and a reader would then
+take the marker as the document's words and lose it. So the projection holds the
+document's last character back until it knows what follows and escapes the first
+half everywhere. Two runs give `\[[`, and a document character against a marker
+gives `\[[[c:ID]]`. One convention, not two, and the reader's rule is the one
+sentence above, which is the parity `internal/markers` already reads.
+`TestEscapingHoldsAcrossTwoRuns` and `TestUnescapeAfterEscapeIsIdentity` are the
+pins, the second being the reader written out as a test-only inverse. A bracket
+inside a link's words is escaped too, because the link form makes a bracket
+markup where it was not before: `TestABracketInsideALinksWordsIsEscaped`. This
+closed `docs/backlog/escaping-across-run-boundaries.md`, which was a blocker for
+export rather than a backlog item, because a skill that merges an exported file
+into a note has to undo the escaping exactly.
+
+**The house prelude is stripped by position, and never by its words.** A
+document `publish` made carries the cover, the three tables, the legend and the
+contents list, and a document `restyle` made carries the same under gdoc's own
+named range. Export takes them out and lists what it removed with the text each
+piece held, so an edit somebody made inside a cover table is in the envelope
+and the skill can compare it with the note's keys. The named range is the
+answer where there is one. Where there is none the answer is the layout, from
+the start of the body to the end of the contents list, and only when the span
+in front of the first level-one heading holds the three house tables. Nothing
+else is stripped: an edited cover title still matches, because no rule reads a
+word of it, and a heading somebody added inside the cover does not, so the whole
+document stays in the file with a warning naming what stood there. Stripping on
+a guess would take somebody's own front page out of their note, and nothing puts
+it back. `TestARestyledPreludeIsStrippedOverItsNamedRange`,
+`TestAPublishedPreludeIsStrippedByLayout` and `TestAnEditedPreludeStaysAndWarns`
+are the pins.
+
+**`export` is a command, not a flag on `read`.** `read` stays a pure read that
+writes nothing on disk and keeps its short help. The command table grows from
+fourteen rows to fifteen, so `help` and completion follow it, and the entry for
+`export` is where the numbering rule, the `assets` folder and the block are
+written. The path flag is `--out`, which is what `build` already calls a file to
+write, and never `--md`, which means "the paired note" on five commands.
+
+**Two skills, and the asking lives inside them.** `gdoc-export` serves a
+document with no note, because a colleague who says "bring this into the hub"
+has nothing to align. `gdoc-align` serves a paired note, in both directions:
+the document into the note as a merge the person agrees to line by line, and
+the note into the document as suggestions. It reads the merged whole once more
+and names every place where the logic broke, because a merge that takes a
+paragraph from each side can leave a document that contradicts itself, and
+those are conflicts too. A stale copy left by a run that died is never merged
+from: the skill says when it was made, exports again, and deletes the stale copy
+only when the fresh body matches it. There are no slash-command-only rules,
+because a session with `gdoc` on PATH can run any command by hand, so a skill
+that does not fire does not stop the action. It only skips the asking. So the
+asking is in the skills: `gdoc-publish` on a paired note stops and asks, a new
+document or a merge; `gdoc-align` shows the list of paragraphs and asks once
+before its first `propose`. The marker rules are written once, in a file beside
+`gdoc-export`'s SKILL.md, and `gdoc-align` reads the same file. `needs:` becomes
+`v2.4.0` on review, publish, export and align, because a paired note publishes
+and a schema 2 block reads only on the new binary. Restyle takes no note and
+stays at `v2.0.0`.
+
+**An `ai!` comment may not run an export.** Export starts from a session by
+name. The review skill answers such a comment with one reply saying so, which
+keeps the rule that a comment is a prompt into the hub and not a way to write
+files somebody did not ask for.
+
+
+## 2026-09-19. A heading link is goldmark's id. A file name is gdoc's own slug.
+
+Found in review of milestone 13, measured rather than argued.
+
+`export` writes a link to a heading in the same file as `#` and the heading's
+words run through a slug rule. `publish` resolves such a link by looking the
+target up in the ids goldmark gave the note's headings. The two rules were not
+the same rule. `view.Slug` collapsed a run of punctuation to one hyphen and kept
+an accented letter; goldmark writes one hyphen per space, hyphen or underscore,
+drops every other character, and drops a letter that is not ASCII. So
+"Risk & Control" was `risk-control` on the way out and `risk--control` on the
+way back, and "Résumé" was `résumé` and `rsum`. A file exported from a document
+with such a heading published back with that link printed as plain text and a
+warning, which is the round trip `gdoc-align` exists to make.
+
+**The heading id rule is goldmark's, and gdoc asks goldmark for it.**
+`view.Anchor` calls goldmark's own id generator rather than restating what it
+does. A rule restated in two places is one rule until somebody changes one of
+them, and the cost of that drift is a link nobody notices is gone.
+`TestTheAnchorViewWritesIsTheIDBodyCollects` asks goldmark for the answer and
+compares it with `view.Anchor`, so a goldmark that changes its mind fails in
+this repository rather than in somebody's document.
+
+**A tab's file name stays `view.Slug`.** A file name is gdoc's own choice and
+nothing reads it back, so the rule that keeps an accented letter is the better
+one there: a tab titled "Résumé" is a file called `résumé`, not `rsum`. The spec
+said a tab file is slugged the way a heading id is; that sentence is now wrong
+and says instead what the rule is. The two rules are named apart in
+`internal/view`, and neither doc comment claims to be the other.
+
+**Two headings with the same words still share an anchor.** goldmark adds `-1`
+to the second, and there is nothing in a heading's words for `view.Anchor` to
+tell the two apart with. A link to the second lands on the first, which is what
+markdown does with them anyway. It is noted in `view.Anchor` rather than worked
+around.
+
+## 2026-09-19. The projection is measured against goldmark: a sub-list's indent and a heading's anchor.
+
+Found in the second review of milestone 13, measured rather than argued. It is
+the entry above carried one step further: that one found two rules that had to
+be one rule, and this one finds two more, in the same place and for the same
+reason.
+
+A file `export` writes is read back by goldmark. So every rule about what the
+projection writes is a claim about what goldmark reads, and a claim nobody
+measured is a claim that is wrong about a third of the time.
+
+**A sub-list is indented to the column its parent's content starts at.** The
+rule was a width per nesting level, two spaces for a bullet and three for a
+number, taken from the width of the item's own marker. CommonMark nests a
+sub-list from the column the parent's content starts at, which is the parent's
+marker and not the child's. Three ordinary shapes lost their nesting: a bullet
+under a numbered item, two spaces against a column of three, which goldmark
+reads as a second list beside the first; a sub-list under the tenth item or
+later, three spaces against a column of four, which goldmark reads as one more
+item of the outer list and numbers accordingly; and a third level, which
+compounds both. Nothing warned about any of them, because nothing was lost: the
+words were all there and only the shape of the document had changed, which for
+a round trip is the same harm. `TestASubListViewWritesNestsWhenBodyReadsIt`
+puts the file goldmark reads beside the list `view` wrote, in this repository
+rather than in somebody's note.
+
+**A heading's anchor is taken from the line it projects to.** It was taken from
+the heading's text runs. goldmark takes its id from the whole line, and
+milestone 13 is what made the two differ: printing a link's target means a
+heading holding a hyperlink projects as `[words](url)`, and goldmark reads the
+address into the id. So a link to that heading was written `#see-the-policy`
+and the heading was `see-the-policyhttpsecom`, and every link to it in the
+exported file was dead. A chip in a heading is the same shape, and a footnote
+reference too. `view.Project` walks the document twice for this, the first walk
+only to measure the lines, which is one extra walk of a document already in
+memory. `TestAHeadingsAnchorIsTheIDOfTheLineItProjects` is the pin here and
+`TestAProjectedHeadingsAnchorIsTheIDBodyCollects` is the one that asks goldmark.
+
+**A contents list still prints nothing, and now says so.** The milestone 13
+plan decided it and no rule in `internal/view` stated it, which matters because
+that walk is the only one in the package that stops at the element: `cut`,
+`indexes` and `headingWords` all recurse into it, and so do `docs.blocks` and
+`docs.writePlain`. A reader of any of those would take the omission for a gap.
+`TestAContentsListPrintsNothing` is the pin.

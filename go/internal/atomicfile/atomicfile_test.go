@@ -1,7 +1,9 @@
 package atomicfile
 
 import (
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -144,5 +146,83 @@ func TestReplaceFailsWhenTheDirectoryIsNotThere(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err == nil {
 		t.Error("the file was written anyway")
+	}
+}
+
+// A new file is written by a verb that cannot replace one. Export takes the
+// next free name and must never overwrite a note, so the link is what makes
+// "this path was free" and "this path is mine" one step rather than two.
+func TestCreateWritesAFileThatWasNotThere(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "note.md")
+	if err := Create(path, []byte("hello\n")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "hello\n" {
+		t.Errorf("contents = %q, want the bytes it was given", b)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != NewMode {
+		t.Errorf("mode = %v, want %v: a new file gets the mode this package names", got, NewMode)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("the directory holds %d entries, want just the file: a temp file was left behind", len(entries))
+	}
+}
+
+// Replace ends in os.Rename, which always replaces, so export cannot use it
+// for a new file. Create ends in os.Link, which fails when the path is there,
+// so a file that appeared between the free-name check and the write is
+// refused rather than replaced.
+func TestCreateRefusesAPathThatExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "note.md")
+	if err := os.WriteFile(path, []byte("before\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := Create(path, []byte("after\n"))
+	if err == nil {
+		t.Fatal("Create() over a file that exists = nil, want the refusal")
+	}
+	if !errors.Is(err, fs.ErrExist) {
+		t.Errorf("err = %v, want one a caller can read as the path being taken", err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "before\n" {
+		t.Errorf("contents = %q, want the old bytes: a file was replaced", b)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("the directory holds %d entries, want just the file: the refused write left something behind", len(entries))
+	}
+}
+
+// A directory in the path is the same refusal as a file. Nothing about the
+// export knows what is there, only that something is.
+func TestCreateRefusesADirectoryThatExists(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "assets")
+	if err := os.Mkdir(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := Create(path, []byte("x")); err == nil {
+		t.Fatal("Create() over a directory = nil, want the refusal")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("the directory holds %d entries, want just the directory", len(entries))
 	}
 }

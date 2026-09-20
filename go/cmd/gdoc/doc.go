@@ -38,6 +38,9 @@
 //     internal/docx for the witness.
 //   - suggestions <url> [--md]: what is pending, and with a paired note what
 //     stopped being pending. internal/suggestions, internal/frontmatter.
+//   - export <url> --out: the document in the hub as Markdown, one file per
+//     tab, with its pictures beside it. internal/export, over the same two
+//     reads read and comments --witness make.
 //   - restyle <url> --dry-run | --from [--fields]: the survey, the house style
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
 //   - probe --folder: whether Docs honours SUGGEST today. internal/probe.
@@ -61,7 +64,7 @@
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the sixteen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the seventeen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -82,7 +85,7 @@
 // which is the list above rather than every flag run together. The object
 // carries the same thing as a word, because a skill reads the object where a
 // person reads the line. TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative
-// spells the fourteen lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
+// spells the fifteen lines out as a reader sees them, TestTheObjectSaysHowEachFlagStands
 // holds the word beside them, and TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout
 // is the binary's own witness: a flag the table calls required is refused by
 // name when it is missing, and a flag marked wrong in either direction fails
@@ -434,6 +437,99 @@
 // TestAnnotateStopsAtTheFirstEntryThatCannotBeSent is the report keeping one
 // entry per annotation when it stops in the middle.
 //
+// # export reads twice, writes into the hub, and touches nothing in Drive
+//
+// `gdoc export <url> --out <file>` is the fifteenth command, decision 15, and
+// not a flag on read: it writes files on this machine, which no read command
+// does. It makes two requests, the Docs read read makes and the docx export
+// comments --witness makes, through exportBytes, the one place this binary
+// asks Drive for an export. The picture bytes are the reason for the second
+// one: a picture's contentUri in the Docs answer is on a googleusercontent.com
+// host the guard admits nowhere. The policy is the one read opens, one file at
+// LevelSuggest with no grant of any kind, and every write verb is refused on
+// it: TestExportOpensOnlyThePolicyReadOpens in internal/guard and
+// TestExportSendsNothingThatWrites here.
+//
+// --out is the path to write, the flag build uses for the same thing, and not
+// a note the run acts on. A free path takes the file. A path holding a note
+// whose list names this document keeps every byte it has but the date: the
+// note gains exported: {at} on that document's entry, and the copy lands
+// beside it at the next free number carrying exported.note, which is what
+// makes every writer refuse the copy. Any other file is a taken path and
+// nothing more, and the envelope says the path was taken. Two things are
+// refused at the door, before a byte is written: a note at a path this run
+// would land on that names other documents, and front matter that does not
+// read.
+//
+// Nothing an export finds in its way is ever touched, decision 2, so there is
+// no --force and no flag that could grow into one. A taken name takes the next
+// free number, note.2.md and then note.3.md, and a picture lands under
+// assets/ beside the file as <stem>-1.png, <stem>-2.png and so on, past every
+// number already taken there whatever extension wrote it. The folder is
+// created when it is missing and left alone when it is not. Every new file
+// goes through atomicfile.Create, which ends in a link rather than a rename,
+// so a path that appeared while the run was under way is refused instead of
+// replaced.
+//
+// The front matter of a file export creates holds the gdoc: block and nothing
+// else: one entry, the document it came from, exported: {at}, the tab id when
+// the document has more than one tab, and note: when it is a copy beside one.
+// A title is the session's to add when it makes the file a note. A note
+// written before 2026-09-19 is schema 1, and the stamp is a write that changes
+// the block, so it comes back as schema 2 and the reply says so once, through
+// the same rewritten as every other writer.
+//
+// The envelope counts distinct things. pending is the pending suggestions,
+// once per id, because a replace is one change under one id; own is how many
+// of those the note at --out lists under proposals, and it is absent rather
+// than zero when there is no such list to read; threads is the comments the
+// Docs read carried, anchored and unplaced alike. stripped is the house
+// prelude pieces with the text each held, so an edit inside a cover table is
+// in the envelope and the session can compare it with the note's own keys.
+// What the projection could not carry is a warning naming it. Every rule about
+// the file itself is internal/export's, and its package comment names the test
+// for each.
+//
+// # The URL picks the entry, and a note gdoc copied is refused
+//
+// A note names every document it has been published to, under documents: in
+// its gdoc: block, and the URL is what says which entry a run acts on. paired
+// in paired.go is that lookup, and every command taking --md goes through it,
+// so suggestions, propose and withdraw refuse the same things in the same
+// words. annotate takes no --md: it leaves a comment on the words a caller
+// quotes and records nothing.
+//
+// Three refusals. A note whose front matter does not read is frontmatter's own,
+// passed through. A note that does not name this document is the wrong file,
+// and the refusal names every document it does name, because the answer is
+// always to open one of those. A note whose entry carries exported.note is a
+// copy gdoc wrote beside somebody else's document rather than the source of
+// one: there is nothing in it to record, and a snapshot written into it would
+// be read next time as that document's own history.
+//
+// TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList,
+// TestAProposalIsRecordedUnderItsOwnDocument,
+// TestWithdrawNeverSendsAnIDFromAnotherDocument,
+// TestGoneSinceReadsTheSnapshotOfTheDocumentRead and
+// TestEveryWriterRefusesACopyThatNamesANote are the pins.
+//
+// A note published before 2026-09-19 carries schema 1, one document beside the
+// schema. It still reads, and the first run that writes to it rewrites the
+// block as a list. That is a change to somebody's file, so the envelope says so
+// once, and the next run has nothing to say because the block is already a
+// list. TestTheReplySaysOnceWhenTheBlockWasRewritten and
+// TestAReadThatWritesNothingNeverSaysTheBlockWasRewritten are the pins.
+//
+// publish is the writer that has no URL to pick with, because it is the run
+// that makes the document. It appends: a note that already names a document is
+// published again, into a new one, and the entries already there are carried
+// through untouched. Those are other documents' history and this run knows
+// nothing about them. It refuses one note before anything leaves the machine,
+// the copy carrying exported.note, because publish.publishable has to ask that
+// over every entry where paired asks it over one.
+// TestPublishAppendsAnEntryToAPairedNote and
+// TestPublishRefusesACopyThatNamesANote are the pins.
+//
 // # The note is read again just before it is written
 //
 // The pairing is checked before the session opens, and the run then spends
@@ -445,15 +541,18 @@
 //
 // freshNote reads the file again and refuses four things rather than writing
 // them: a file it cannot read again, one whose front matter no longer parses,
-// one whose gdoc: block has gone, and one that now names another document. Each
-// is a warning carrying the reason, and nothing is written into the note.
+// one whose gdoc: block has gone, and one that no longer names this document.
+// Each is a warning carrying the reason, and nothing is written into the note.
+// The refusal opens by saying the note changed while the run was under way,
+// because that is what tells a reader whether to run the command again or to go
+// and look at the file.
 //
 // The block is re-parsed from the fresh bytes too, so a proposal another run
 // recorded in that window survives: writing the block this run read into bytes
 // it did not would keep the author's prose and still drop that entry. notePath
-// therefore keeps the path and the block the pairing check read, and never the
-// bytes it read them from, because a copy held there would only be the stale
-// bytes somebody later wrote back.
+// therefore keeps the path, the document the run is of and the entry the
+// pairing check read, and never the bytes it read them from, because a copy
+// held there would only be the stale bytes somebody later wrote back.
 //
 // TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes and
 // TestWithdrawWritesTheNoteTheVaultHasNow are the pins, with
@@ -464,7 +563,8 @@
 // reached with the proposals already in the document, so it warns instead.
 //
 // publish reads the note again for the opposite reason, and that rule is
-// pair's, in publish.go beside this file: there the block appearing during the
-// upload is what is refused, and the refusal is a rollback that internal/publish
-// only carries out.
+// pair's, in publish.go beside this file: there an entry for the document this
+// run just made appearing during the upload is what is refused, because a
+// second one would name it twice, and the refusal is a rollback that
+// internal/publish only carries out.
 package main

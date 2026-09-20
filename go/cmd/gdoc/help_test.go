@@ -13,7 +13,7 @@ import (
 // table, so a command added without a sentence saying what it is for fails
 // here rather than arriving in the help unannounced.
 var everyCommandName = []string{
-	"auth status", "auth login", "read", "comments", "suggestions", "restyle",
+	"auth status", "auth login", "read", "comments", "suggestions", "export", "restyle",
 	"probe", "reply", "propose", "withdraw", "annotate", "build", "publish",
 	"update", "help", "completion",
 }
@@ -281,6 +281,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "read"}, "Usage: gdoc read <url> [--structure]"},
 		{[]string{"help", "comments"}, "Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]"},
 		{[]string{"help", "suggestions"}, "Usage: gdoc suggestions <url> [--md <file>]"},
+		{[]string{"help", "export"}, "Usage: gdoc export <url> --out <file>"},
 		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},
 		{[]string{"help", "probe"}, "Usage: gdoc probe --folder <folder id>"},
 		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body-file <file>"},

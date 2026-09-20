@@ -136,14 +136,16 @@ func TestLivePublish(t *testing.T) {
 	// every other command reads it.
 	at := time.Now().UTC().Truncate(time.Second)
 	out, err := frontmatter.Write([]byte(publishNoteSource), &frontmatter.Block{
-		Schema:     frontmatter.Schema,
-		DocumentID: rep.DocumentID,
-		FolderID:   folder,
-		Published: &frontmatter.Published{
-			At:    at,
-			Title: doc.title,
-			House: doc.house,
-		},
+		Schema: frontmatter.Schema,
+		Documents: []frontmatter.Entry{{
+			ID:       rep.DocumentID,
+			FolderID: folder,
+			Published: &frontmatter.Published{
+				At:    at,
+				Title: doc.title,
+				House: doc.house,
+			},
+		}},
 	})
 	if err != nil {
 		t.Fatalf("the gdoc: block could not be written into the note: %v", err)
@@ -162,23 +164,27 @@ func TestLivePublish(t *testing.T) {
 	if block == nil {
 		t.Fatal("the note carries no gdoc: block after the pairing was written")
 	}
-	if block.DocumentID != rep.DocumentID {
-		t.Errorf("the note names document %q, and the publish made %q", block.DocumentID, rep.DocumentID)
+	if len(block.Documents) != 1 {
+		t.Fatalf("the note names %d documents, and this publish made one", len(block.Documents))
 	}
-	if block.FolderID != folder {
-		t.Errorf("the note names folder %q, and the document was created in %q", block.FolderID, folder)
+	entry := block.Documents[0]
+	if entry.ID != rep.DocumentID {
+		t.Errorf("the note names document %q, and the publish made %q", entry.ID, rep.DocumentID)
 	}
-	if block.Published == nil {
+	if entry.FolderID != folder {
+		t.Errorf("the note names folder %q, and the document was created in %q", entry.FolderID, folder)
+	}
+	if entry.Published == nil {
 		t.Fatal("the note carries no publish record, so nothing says when the document was made")
 	}
-	if block.Published.Title != doc.title {
-		t.Errorf("the publish record names title %q, and %q went on the cover", block.Published.Title, doc.title)
+	if entry.Published.Title != doc.title {
+		t.Errorf("the publish record names title %q, and %q went on the cover", entry.Published.Title, doc.title)
 	}
-	if block.Published.House != doc.house {
-		t.Errorf("the publish record names house %q, and the run used %q", block.Published.House, doc.house)
+	if entry.Published.House != doc.house {
+		t.Errorf("the publish record names house %q, and the run used %q", entry.Published.House, doc.house)
 	}
-	if !block.Published.At.Equal(at) {
-		t.Errorf("the publish record is dated %s, and the run wrote %s", block.Published.At, at)
+	if !entry.Published.At.Equal(at) {
+		t.Errorf("the publish record is dated %s, and the run wrote %s", entry.Published.At, at)
 	}
 	// The author's own keys survive the write, which is the rule the whole
 	// byte-preserving write exists for. Stated here because this is the one

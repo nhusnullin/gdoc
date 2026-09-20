@@ -58,11 +58,26 @@
 // sentence is a number sign somebody typed. That anchoring is why all three
 // callers ask the rule behind the mark rather than in front of it: reply.Check's
 // own comment holds the argument.
+//
+// # No marker of gdoc's own, for the same reason
+//
+// Marker sits beside Markdown and asks internal/markers the same question about
+// the same thing. A marker says a document holds a pending suggestion or a
+// comment range; written into a thread it is prose, and the brackets and the id
+// arrive as typed. A marker travels out of a document and never back in, which
+// is decision 3 of v2 milestone 13, and reply, annotate and propose each ask
+// this one line after the markdown rule. An escaped marker is the author's own
+// text, so a reply explaining the markers is still writable.
+// TestPlaintextRefusesAMarker and TestMarkerLeavesPlainWordsAlone are the pins,
+// with TestProposeRefusesAMarkerInTheFile in cmd/gdoc for the one route that
+// does not come through here.
 package plaintext
 
 import (
 	"regexp"
 	"strings"
+
+	"gdoc/internal/markers"
 )
 
 // Prefix is what every reply and every comment gdoc writes opens with: the
@@ -89,4 +104,16 @@ var markdown = regexp.MustCompile("(?m)(\\*\\*|`|^[ ]{0,3}#{1,6}[ \t]|\\[[^\\]\n
 // trimmed, or the empty string when there is none.
 func Markdown(body string) string {
 	return strings.TrimSpace(markdown.FindString(body))
+}
+
+// Marker is the first of gdoc's own markers in body, or the empty string when
+// there is none. An escaped one is the author's text and is not one.
+//
+// It is beside Markdown because it is the same rule about the same thing: a
+// thread renders what it is given, so a marker arrives with its brackets and
+// its id as typed. internal/markers holds why every route out of the hub asks,
+// and TestPlaintextRefusesAMarker is the pin.
+func Marker(body string) string {
+	m, _ := markers.Lines(body)
+	return m
 }

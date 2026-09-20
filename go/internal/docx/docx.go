@@ -1,5 +1,6 @@
-// Package docx reads the docx export of a Google Doc, and it exists for one
-// question: is this comment still attached to text?
+// Package docx reads the docx export of a Google Doc. It answers two questions
+// the Docs read cannot: is this comment still attached to text, and what are
+// the bytes of the pictures?
 //
 // Drive answers that question and its answer cannot be trusted. A comment's
 // anchor and its quotedFileContent both survive the text they pointed at being
@@ -53,6 +54,28 @@
 // Refusing to guess is the same answer this tool gives everywhere else it
 // cannot stand behind a fact. A witness pinned on the wrong id points the skill
 // at the wrong sentence.
+//
+// # The pictures are the body's, in the body's order
+//
+// Media is the second read this package is for. The Docs answer says a picture
+// is there and never what it holds: its contentUri is a googleusercontent.com
+// host the guard does not admit, so the bytes come from the export instead.
+//
+// Nothing crosses the two routes. The read has object ids the export never
+// mentions and the export has part names the read never mentions, so the k-th
+// picture in one is the k-th in the other, and order is the whole pairing.
+// That is why Media refuses a picture it cannot resolve rather than skipping
+// it: one skipped picture moves every picture after it one place along, and a
+// caller would then write the wrong bytes under the right name.
+// TestMediaComesInBodyOrder and TestMediaRefusesWhatItCannotResolve are the
+// pins, and internal/export holds the other half of the pairing.
+//
+// Only word/document.xml is read, so the header's logo is not a picture of the
+// body, and only a:blip is read, so a floating picture Word wrote twice, as
+// DrawingML and as a VML fallback, is one picture rather than two.
+// TestOnePartReferencedTwiceIsTwoPictures is the pin on the other direction:
+// one part used twice is two pictures, because what the list says is where
+// each picture stands.
 package docx
 
 import (
@@ -63,6 +86,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"path"
 	"strings"
 )
 
@@ -335,6 +359,196 @@ func isW(n xml.Name, local string) bool {
 func attr(se xml.StartElement, local string) string {
 	for _, a := range se.Attr {
 		if a.Name.Local == local && (a.Name.Space == wNS || a.Name.Space == "") {
+			return a.Value
+		}
+	}
+	return ""
+}
+
+// aNS is the DrawingML namespace, where a picture's reference to its bytes
+// lives, and rNS is the namespace of the attribute that reference is written
+// in. pkgRelNS is the relationship part's own namespace, which is a third one
+// again: a docx names the same idea in three vocabularies.
+const (
+	aNS      = "http://schemas.openxmlformats.org/drawingml/2006/main"
+	rNS      = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+	pkgRelNS = "http://schemas.openxmlformats.org/package/2006/relationships"
+)
+
+// Medium is one picture of the body: the part it came from and its bytes.
+//
+// Name is the part's own name, "word/media/image1.png", so the extension says
+// what the bytes are without reading them. Two pictures of one part are two
+// Media with one Name, because what this list says is where each picture
+// stands rather than which files the package holds.
+type Medium struct {
+	Name  string `json:"name"`
+	Bytes []byte `json:"-"`
+}
+
+// Media is every picture of word/document.xml, in the order the body holds
+// them, with the bytes each points at.
+//
+// The order is the whole answer. Nothing crosses the Docs read and the docx
+// export: the read has object ids the export never mentions, and the export
+// has part names the read never mentions, so the k-th picture in one is the
+// k-th in the other and there is no second way to pair them. internal/export
+// does that pairing and refuses it when the counts disagree.
+//
+// Only word/document.xml is walked, so the header's logo and a footer's
+// picture are not in the list: they are the package's furniture rather than
+// the body's content, and counting them would move every picture after them
+// one place along.
+//
+// Only a:blip is read, and never VML's v:imagedata. Word writes a floating
+// picture twice, as DrawingML inside mc:Choice and as VML inside mc:Fallback,
+// so reading both would count one picture as two. A picture that reaches the
+// body as VML alone is therefore missing from this list, and the count
+// mismatch in internal/export is what catches it: a missing picture is a
+// placeholder, never a wrong file.
+//
+// TestMediaComesInBodyOrder and TestOnePartReferencedTwiceIsTwoPictures are
+// the pins.
+func Media(b []byte) ([]Medium, error) {
+	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+	if err != nil {
+		return nil, fmt.Errorf("the export is not a docx: %w", err)
+	}
+	doc, found, err := part(z, "word/document.xml", MaxExportBytes)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("the export is not a docx: it carries no word/document.xml")
+	}
+	ids, err := blips(doc)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rels, _, err := part(z, "word/_rels/document.xml.rels", MaxExportBytes)
+	if err != nil {
+		return nil, err
+	}
+	targets, err := embedded(rels)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]Medium, 0, len(ids))
+	held := map[string][]byte{}
+	for _, id := range ids {
+		target, ok := targets[id]
+		if !ok {
+			// A picture whose bytes this package does not hold, or does not
+			// name at all. Skipping it would move every picture after it one
+			// place along, and the pairing is by position, so it is refused.
+			return nil, fmt.Errorf("word/document.xml holds a picture at the relationship %s, "+
+				"and word/_rels/document.xml.rels names no part of this file for it", id)
+		}
+		name := mediaPath(target)
+		data, read := held[name]
+		if !read {
+			data, found, err = part(z, name, MaxExportBytes)
+			if err != nil {
+				return nil, err
+			}
+			if !found {
+				return nil, fmt.Errorf("the export names the picture part %s and does not carry it", name)
+			}
+			held[name] = data
+		}
+		out = append(out, Medium{Name: name, Bytes: data})
+	}
+	return out, nil
+}
+
+// blips is the relationship id of every picture of the body, in document
+// order. A picture that names no embedded part is refused rather than skipped,
+// for the reason Media's caller pairs by position.
+func blips(b []byte) ([]string, error) {
+	d := xml.NewDecoder(bytes.NewReader(b))
+	var out []string
+	for {
+		tok, err := d.Token()
+		if err == io.EOF {
+			return out, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("word/document.xml did not parse: %w", err)
+		}
+		se, ok := tok.(xml.StartElement)
+		if !ok || se.Name.Space != aNS || se.Name.Local != "blip" {
+			continue
+		}
+		id := rAttr(se, "embed")
+		if id == "" {
+			return nil, fmt.Errorf("word/document.xml holds a picture with no embedded part behind it, " +
+				"so nothing in this export says what it shows")
+		}
+		out = append(out, id)
+	}
+}
+
+// embedded is the relationship id of every part of this package, by id. A
+// relationship whose target is somewhere else is left out: its bytes are not
+// in the export, so a picture pointing at it has nothing to carry.
+func embedded(b []byte) (map[string]string, error) {
+	if len(b) == 0 {
+		return map[string]string{}, nil
+	}
+	d := xml.NewDecoder(bytes.NewReader(b))
+	out := map[string]string{}
+	for {
+		tok, err := d.Token()
+		if err == io.EOF {
+			return out, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("word/_rels/document.xml.rels did not parse: %w", err)
+		}
+		se, ok := tok.(xml.StartElement)
+		if !ok || se.Name.Space != pkgRelNS || se.Name.Local != "Relationship" {
+			continue
+		}
+		if plain(se, "TargetMode") == "External" {
+			continue
+		}
+		if id, target := plain(se, "Id"), plain(se, "Target"); id != "" && target != "" {
+			out[id] = target
+		}
+	}
+}
+
+// mediaPath is one relationship target as a part name. A target is relative to
+// the part that names it, word/document.xml, so it is resolved against word/;
+// a target opening with a slash is already from the package root.
+func mediaPath(target string) string {
+	if strings.HasPrefix(target, "/") {
+		return strings.TrimPrefix(target, "/")
+	}
+	return path.Join("word", target)
+}
+
+// rAttr reads one attribute of the relationship namespace. The namespace is
+// allowed to be absent as well, for the same reason attr allows it: an
+// unprefixed embed is how a hand-written fixture reads.
+func rAttr(se xml.StartElement, local string) string {
+	for _, a := range se.Attr {
+		if a.Name.Local == local && (a.Name.Space == rNS || a.Name.Space == "") {
+			return a.Value
+		}
+	}
+	return ""
+}
+
+// plain reads one unnamespaced attribute, which is how the relationship part
+// writes every one of its own.
+func plain(se xml.StartElement, local string) string {
+	for _, a := range se.Attr {
+		if a.Name.Local == local && a.Name.Space == "" {
 			return a.Value
 		}
 	}

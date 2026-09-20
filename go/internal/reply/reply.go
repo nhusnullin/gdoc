@@ -148,6 +148,12 @@ func Check(body string) error {
 	if m := plaintext.Markdown(strings.TrimPrefix(body, Prefix)); m != "" {
 		return fmt.Errorf("the reply body carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", m)
 	}
+	// The same rule about the same thing. A review session quoting an exported
+	// file back into the thread it came from would otherwise put the marker
+	// into the document as words.
+	if m := plaintext.Marker(body); m != "" {
+		return fmt.Errorf("the reply body carries %s, one of gdoc's own markers; a marker travels out of a document and never back in, so it would arrive as typed", m)
+	}
 	return nil
 }
 
