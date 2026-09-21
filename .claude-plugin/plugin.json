@@ -1,7 +1,7 @@
 {
   "name": "altery",
   "description": "Review, publish, restyle, export and align Google Docs in the Altery house style, through the gdoc binary.",
-  "version": "v2.3.0",
+  "version": "v2.4.0",
   "author": {
     "name": "Nail Khusnullin"
   },
