@@ -96,13 +96,15 @@ type Thread struct {
 	Witness  string      `json:"witness,omitempty"`
 }
 
-// Reply is one reply, as the skill reads it. ByGdoc is a fact about the text,
-// not about the credential: see Author.
+// Reply is one reply, as the skill reads it. Marker is the thread's rule on
+// the reply's own text, because a marked reply is an instruction too. ByGdoc
+// is a fact about the text, not about the credential: see Author.
 type Reply struct {
 	ID      string `json:"id"`
 	Author  string `json:"author"`
 	Created string `json:"created"`
 	Content string `json:"content"`
+	Marker  string `json:"marker"`
 	ByGdoc  bool   `json:"by_gdoc"`
 }
 
@@ -243,6 +245,7 @@ func replies(raw []RawReply) []Reply {
 			Author:  r.Author.DisplayName,
 			Created: r.CreatedTime,
 			Content: r.Content,
+			Marker:  markerOf(r.Content),
 			ByGdoc:  byGdoc(r.Content),
 		})
 	}

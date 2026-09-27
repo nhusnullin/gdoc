@@ -7,6 +7,7 @@ package body
 // recursion carries the marks down, which is all there is to it.
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/yuin/goldmark/ast"
@@ -117,7 +118,10 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 				Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: m.link})
 		case *ast.Link:
 			next := m
-			next.link = string(typed.Destination)
+			next.link = ""
+			if dest := string(typed.Destination); !isHubPath(dest) {
+				next.link = dest
+			}
 			appendInline(out, typed, source, next)
 		case *ast.AutoLink:
 			label := string(typed.URL(source))
@@ -221,4 +225,18 @@ func plainText(runs []Run) string {
 		b.WriteString(run.Text)
 	}
 	return b.String()
+}
+
+// isHubPath is a link destination that names a place in the hub rather than
+// an address or a heading: no scheme, no host, and no leading "#". A
+// protocol-relative "//host/path" has a host, so it is an address. Every hub note ends
+// with a Related section written this way, and in Drive the path opens
+// nothing, so the run keeps the words and drops the link. A destination that
+// does not parse is left a link, which is what it was before this rule.
+func isHubPath(dest string) bool {
+	if dest == "" || strings.HasPrefix(dest, "#") {
+		return false
+	}
+	u, err := url.Parse(dest)
+	return err == nil && u.Scheme == "" && u.Host == ""
 }

@@ -93,7 +93,9 @@ $GDOC read <url>
 `comments` gives the threads. Each one carries `id`, `author`, `created`,
 `modified`, `content`, `marker` (`ai:`, `ai?`, `ai!` or `none`), `resolved`,
 `quoted`, `range`, and `replies`. Each reply carries `id`, `author`, `created`,
-`content` and `by_gdoc`, which is true when it opens with 🤖.
+`content`, `marker`, read by the same rule as a thread's, and `by_gdoc`, which
+is true when it opens with 🤖. Never narrow a listing on thread markers alone: a
+marked reply is an instruction too.
 
 The envelope carries `cursor` beside the threads: the position of the newest
 activity this read saw, or, on a document nobody has commented on, a position
@@ -168,6 +170,7 @@ needs no confirmation, and this is a statement rather than a question.
 Will answer:      "reviewed annually" (William Mejia, ai?), "term is wrong" (Priya Nair, ai:)
 Will carry out:   "add this to the decision log" (William Mejia, ai!)
 Already answered: 2 threads
+Marked replies:   1 answered thread has an ai! reply since my last one, carried above
 Newer replies:    1 answered thread has an unmarked reply since my last one
 Pending:          3 suggestions in the document, 1 of them mine
 
@@ -175,9 +178,9 @@ Replies are visible to everyone with access to this document, and I cannot
 see who that is. They post under the account gdoc is signed in as.
 ```
 
-Report the unmarked follow-ups every run, even when there are none. "Nothing to
-do" and "somebody wrote something I may not act on" are different answers, and
-the second one loses instructions.
+Report the marked and unmarked follow-ups every run, even when there are
+none. "Nothing to do" and "somebody wrote something I may not act on" are
+different answers, and the second one loses instructions.
 
 ## Step 4: Ground the answer
 
@@ -357,6 +360,7 @@ proposed   "reviewed annually" -> "reviewed every six months"   verified
 proposed   "quarterly" -> "monthly"   NOT verified: docx_anchored failed
 
 files changed in the hub: domains/regulatory/decisions.md, policy.md
+1 marked reply since my last answer, on the thread about vocabulary, carried above
 1 unmarked reply since my last answer, on the thread about scope
 ```
 

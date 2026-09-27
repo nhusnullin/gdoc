@@ -70,11 +70,12 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-18 | The wait polls every two seconds | holds |
 | 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | holds |
 | 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds |
-| 2026-09-18 | Five backlog items closed, and what each decided | holds |
+| 2026-09-18 | Five backlog items closed, and what each decided | superseded 2026-09-27 (the bookmark on every heading only: a heading carries one when a link names it; everything else in the entry holds) |
 | 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds |
 | 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
 | 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
 | 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
+| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2689,3 +2690,35 @@ Tests: `TestEverySkillFrontMatterKeepsToTheAgentSkillsSpec`,
 `TestAColonOrAHashInAnUnquotedValueIsCaught`,
 `TestEverySkillBodyFitsTheSpecBudget`, `TestEveryFileBesideASkillIsNamedByIt`
 and `TestEveryFileBesideASkillNamesOnlyWhatTheBinaryHas`.
+
+## 2026-09-27. A heading carries a bookmark only when a link names it, and a link to another note is its words.
+
+Both are Nail's calls of 2026-09-19, made after seeing the Bridge sales-deck
+note in Drive. They waited in the backlog until now.
+
+**A bookmark goes only on a heading some `#` link names.** The 2026-09-18
+entry put one on every heading "because a note is edited after it is
+published". That does not hold: a later edit goes out through a fresh publish,
+which writes the bookmarks from the note as it then stands. Google Docs keeps a
+bookmark on import and shows it as a flag on the heading, so a note with no
+internal link showed a flag on every heading for nothing. The walk now
+collects the `#` destinations beside the heading ids, and a heading carries
+the pair when both sets hold its id. A dead `#` still warns, because the
+heading ids are still what a link resolves against. There is no way to keep a
+jump and hide the one flag it lands on.
+
+**A link with no scheme, no host and no leading `#` publishes as its words.**
+Every hub note ends with a Related section that links other notes by relative
+path. In Drive that path opens nothing. Related is hub navigation, and a
+colleague reading in Drive needs the note's name, which they can search the hub
+for. So the run keeps the words, with no hyperlink, no relationship and no
+warning, because the note is correct and its author has nothing to fix. A
+folder path is the same rule. Rejected: a warning like a dead `#`, because
+there is nothing to fix; and rewriting the link to the other note's Drive
+document from its `gdoc:` block, because it makes publish order matter and
+needs a rule for a note not yet published.
+
+Tests: `TestOnlyALinkedHeadingCarriesABookmark`,
+`TestANoteWithNoAnchorLinkCarriesNoBookmark`,
+`TestARelativeLinkIsItsWordsAndNoHyperlink` and
+`TestALinkWithASchemeOrAnAnchorIsStillALink`.

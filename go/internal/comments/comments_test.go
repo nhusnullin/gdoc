@@ -207,6 +207,32 @@ func TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot(t *testing.T) {
 	}
 }
 
+// TestAReplyCarriesItsMarker: a marked reply is an instruction like a marked
+// comment, so it carries the same fact, read by the same exact rule, and a
+// session narrowing a listing has a field to keep it by.
+func TestAReplyCarriesItsMarker(t *testing.T) {
+	got := replies([]RawReply{
+		{ID: "r1", Content: "ai! b2b2c is M2, mark in hub, and change here"},
+		{ID: "r2", Content: "ai? which quarter"},
+		{ID: "r3", Content: "thanks, and ai! is not at the front"},
+		{ID: "r4", Content: "🤖 Done."},
+	})
+	want := []string{"ai!", "ai?", MarkerNone, MarkerNone}
+	for i, reply := range got {
+		if reply.Marker != want[i] {
+			t.Errorf("reply %s: marker = %q, want %q", reply.ID, reply.Marker, want[i])
+		}
+	}
+
+	raw, err := json.Marshal(got[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"marker":"ai!"`) {
+		t.Errorf("the reply's JSON carries no marker: %s", raw)
+	}
+}
+
 // document is the Docs half of the join: the ranges, keyed by the Drive comment
 // id. Only AAAA1111 is placed, so the other two threads are the unplaced case.
 func document() *docs.Document {

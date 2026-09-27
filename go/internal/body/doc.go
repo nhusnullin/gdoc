@@ -181,16 +181,35 @@
 // author typed. TestAnEmailAutolinkCarriesTheMailtoScheme and
 // TestAWebAutolinkKeepsItsOwnScheme are the pins.
 //
-// # An anchor link is a jump to a bookmark every heading with words carries
+// # A link to another note is its words and no link
+//
+// A destination with no scheme, no host and no leading "#" is a path in the
+// hub: every note ends with a Related section written that way. Written as
+// a relationship, Word resolves it against the document's own location, and in
+// Drive that file does not exist, so the link opens nothing and nothing says
+// so. Related is hub navigation, and a colleague reading in Drive needs the
+// note's name, which they can search the hub for, not a jump. So the run keeps
+// the words and carries no link, no relationship and no warning, because the
+// note is correct and its author has nothing to fix. A folder is the same
+// path with a slash. Nail's decision of 2026-09-19; rewriting the link to the
+// other note's Drive document was rejected because it makes publish order
+// matter. TestARelativeLinkIsItsWordsAndNoHyperlink is the pin, and
+// TestALinkWithASchemeOrAnAnchorIsStillALink holds the other side of it.
+//
+// # An anchor link is a jump to a bookmark on the heading it names
 //
 // A destination opening with "#" is a place in this document, not an address.
 // Written as a relationship, which is what every other link is, Word resolves
 // it against the document's own location, so "[see below](#scope)" published
 // as a link that opens nothing and said nothing about it. The OOXML form for
 // a jump is w:hyperlink w:anchor with no relationship at all, and it lands on
-// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first: every
-// heading that emits a paragraph carries one, whether or not this note links
-// to it, because a note is edited after it is published.
+// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first. Only a
+// heading some "#" link in the note names carries one. Google Docs keeps a
+// bookmark on import and shows it as a flag on the heading, so a bookmark on
+// every heading is a flag on every heading for nothing, and a later edit to
+// the note goes out through a fresh publish, which writes the bookmarks from
+// the note as it then stands. Nail's call of 2026-09-19. There is no way to
+// keep a jump and hide the one flag it lands on.
 //
 // The name is goldmark's own auto heading id, which parser.WithAutoHeadingID
 // already computes and keeps unique across the file, rewritten by bookmarkName
@@ -203,8 +222,10 @@
 // a name over the ceiling keeps its first 32 characters, so it reads in Word's
 // bookmark list, and takes seven hex digits of the FNV-1a hash of the id as it
 // arrived, so two long headings sharing a prefix keep two names.
-// TestBookmarkNameIsWordSafe pins all four cases and
-// TestEveryHeadingCarriesABookmark pins the pair around the runs.
+// TestBookmarkNameIsWordSafe pins all four cases,
+// TestOnlyALinkedHeadingCarriesABookmark pins the pair around the runs and
+// its absence on a heading nothing names, and
+// TestANoteWithNoAnchorLinkCarriesNoBookmark is the common case.
 //
 // A "#" naming no heading in the note is warned about by line and its words
 // are printed as plain text, which is how a code block is already refused: a

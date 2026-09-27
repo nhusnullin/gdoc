@@ -88,11 +88,13 @@ type renderer struct {
 	// not one of them: it reuses its parent's id.
 	numberedLists int
 
-	// anchors is every heading id a bookmark will be written for, collected
-	// before the walk so a link to a heading further down the note resolves,
-	// and bookmarkID is the w:id the next pair takes, counting from 0 across
-	// the document.
+	// anchors is every heading id a bookmark could be written for, collected
+	// before the walk so a link to a heading further down the note resolves.
+	// linked is every heading id some "#" link in the note names, and only a
+	// heading in both carries a bookmark. bookmarkID is the w:id the next pair
+	// takes, counting from 0 across the document.
 	anchors    map[string]bool
+	linked     map[string]bool
 	bookmarkID int
 
 	// deadAnchors is every line and destination already named on the
@@ -150,7 +152,8 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 
 	r := &renderer{
 		cfg: cfg, base: base, source: source,
-		anchors: headingAnchors(root, source), deadAnchors: map[string]bool{}, curLine: 1,
+		anchors: headingAnchors(root, source), linked: linkedAnchors(root),
+		deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
 		firstHeading: true,
 	}
@@ -405,6 +408,29 @@ func headingAnchors(root ast.Node, source []byte) map[string]bool {
 		if id, ok := heading.AttributeString("id"); ok {
 			if raw, ok := id.([]byte); ok {
 				ids[string(raw)] = true
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+	return ids
+}
+
+// linkedAnchors is every heading id a "#" link in the note names, read before
+// the blocks are walked so a heading above the link that names it still gets
+// its bookmark. A link inside a footnote definition is left out, because the
+// block walk drops the footnote and the link with it.
+func linkedAnchors(root ast.Node) map[string]bool {
+	ids := map[string]bool{}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, dropped := node.(*east.FootnoteList); dropped {
+			return ast.WalkSkipChildren, nil
+		}
+		if link, ok := node.(*ast.Link); ok {
+			if anchor, ok := strings.CutPrefix(string(link.Destination), "#"); ok {
+				ids[anchor] = true
 			}
 		}
 		return ast.WalkContinue, nil
@@ -671,16 +697,17 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 }
 
 // headingBookmark is the name the bookmark on this heading takes, or empty
-// when goldmark handed the heading no id at all. Every heading that reaches a
-// paragraph gets one whether or not this note links to it: the bookmark is
-// what a jump lands on, and a note is edited after it is published.
+// when goldmark handed the heading no id or no "#" link in the note names it.
+// Google Docs shows a bookmark as a flag on its heading, so one nothing jumps
+// to is a flag for nothing, and a later edit to the note goes out through a
+// fresh publish that writes the bookmarks again.
 func (r *renderer) headingBookmark(heading *ast.Heading) string {
 	id, ok := heading.AttributeString("id")
 	if !ok {
 		return ""
 	}
 	raw, ok := id.([]byte)
-	if !ok {
+	if !ok || !r.linked[string(raw)] {
 		return ""
 	}
 	return bookmarkName(string(raw))
