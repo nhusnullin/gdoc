@@ -1,7 +1,9 @@
 ---
 name: gdoc-publish
 description: Use when the request names a note in the hub and a Drive folder and asks for that note in Drive as a Google Doc in the Altery house style. Reads the note's front matter, builds it, uploads it into the one folder the request named, and reads back what came out.
-needs: v2.4.0
+compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive. An SVG picture is rendered to PNG on this machine, by svg2png.js on macOS and by Chrome or librsvg elsewhere.
+metadata:
+  needs: v2.4.0
 ---
 
 # Publish a note as a Google Doc
@@ -32,10 +34,11 @@ Exit 0 means the object says `ok`. Read the object, never the exit code alone.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
-its own front matter names on the `needs` line, or a later one. An older binary
-is one the skill is ahead of: say so, say that `gdoc update` is the command
-that fixes it, and stop there. No `version` at all is a build made from source
-rather than a release, which is not an error: say it once and carry on.
+its own front matter names under `metadata` on its `needs` line, or a later
+one. An older binary is one the skill is ahead of: say so, say that
+`gdoc update` is the command that fixes it, and stop there. No `version` at
+all is a build made from source rather than a release, which is not an error:
+say it once and carry on.
 
 The same object may also carry `update`, which says what is installed and what
 is published: `installed`, `latest_stable`, `latest_nightly` and `checked_at`.

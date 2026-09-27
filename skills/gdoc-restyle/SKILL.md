@@ -1,7 +1,9 @@
 ---
 name: gdoc-restyle
 description: Use when the request gives a link to a Google Doc gdoc did not write and asks for it in the Altery house style where it stands. Surveys what the document holds first, proposes the house cover when the request asks for one, and styles the body in place.
-needs: v2.0.0
+compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
+metadata:
+  needs: v2.0.0
 ---
 
 # Restyle a document where it stands
@@ -29,10 +31,11 @@ Exit 0 means the object says `ok`. Read the object, never the exit code alone.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
-its own front matter names on the `needs` line, or a later one. An older binary
-is one the skill is ahead of: say so, say that `gdoc update` is the command
-that fixes it, and stop there. No `version` at all is a build made from source
-rather than a release, which is not an error: say it once and carry on.
+its own front matter names under `metadata` on its `needs` line, or a later
+one. An older binary is one the skill is ahead of: say so, say that
+`gdoc update` is the command that fixes it, and stop there. No `version` at
+all is a build made from source rather than a release, which is not an error:
+say it once and carry on.
 
 The same object may also carry `update`, which says what is installed and what
 is published: `installed`, `latest_stable`, `latest_nightly` and `checked_at`.
