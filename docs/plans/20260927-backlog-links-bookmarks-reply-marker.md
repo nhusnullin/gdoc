@@ -137,14 +137,14 @@ already tells the session to read the text, so nothing dead-ends
 - Modify: `skills/gdoc-review/SKILL.md`
 - Delete: `docs/backlog/a-marked-reply-carries-no-marker.md`
 
-- [ ] write `TestAReplyCarriesItsMarker`: `ai!` reply gets `ai!`, a sentence
+- [x] write `TestAReplyCarriesItsMarker`: `ai!` reply gets `ai!`, a sentence
   that mentions `ai!` later gets `none`, and the JSON key is `marker`. Watch
   it fail
-- [ ] add `Marker` to `Reply`, set from `markerOf` in `replies()`
-- [ ] name the field in `comments/doc.go` beside `by_gdoc`, with the test
-- [ ] skill: list `marker` in the Step 1 reply fields, and add the marked-reply
+- [x] add `Marker` to `Reply`, set from `markerOf` in `replies()`
+- [x] name the field in `comments/doc.go` beside `by_gdoc`, with the test
+- [x] skill: list `marker` in the Step 1 reply fields, and add the marked-reply
   line to the Step 3 and Step 8 report shapes
-- [ ] `make test`, `make vet`; commit with `git rm` of the item
+- [x] `make test`, `make vet`; commit with `git rm` of the item
 
 ### Task 4: Verify acceptance criteria
 

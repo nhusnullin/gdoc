@@ -23,12 +23,16 @@
 // follow-up changed the question. So a Thread carries every reply, its author,
 // its time and whether it opens with 🤖, and the skill reading the JSON decides
 // what still needs an answer. There is no Handled field, and there must not be.
-// The fields are a marker (ai:, ai?, ai! or none), a resolved flag and a
-// reply's by_gdoc, each a fact with a neutral name.
+// The fields are a marker (ai:, ai?, ai! or none) on a thread and on each
+// reply, a resolved flag and a reply's by_gdoc, each a fact with a neutral
+// name. A reply carries its marker because a marked reply is an instruction
+// like a marked comment, and a session narrowing a long listing keys on the
+// fields it is given: without one, a filter over thread markers drops an ai!
+// reply and the listing still looks complete.
 // TestThreadsCarriesEveryFactAndJudgesNone is the pin, with
 // TestMarkerIsTheFirstTokenAndTheMatchIsExact and
 // TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot over the two facts most
-// easily read loosely.
+// easily read loosely, and TestAReplyCarriesItsMarker over the reply's.
 //
 // Waited is that same rule under the wait. Every field on it is a count, a
 // duration, a list or a flag: Polls, Waited, Threads, Unplaced, Cursor and

@@ -62,8 +62,8 @@ the binary reports what arrived and judges none of it, exactly as in Step 2.
   cursor is past those replies.
 - A thread whose `range` is `null` can be answered and cannot be proposed into.
   Say which when it matters, and answer it in the thread.
-- A thread that was answered before and now carries a new marked comment is new
-  work. Step 2 already says so, and "Two messages at most" is per piece of work.
+- A thread that was answered before and now carries a new marked comment or
+  a reply whose `marker` is not `none` is new work. Step 2 already says so, and "Two messages at most" is per piece of work.
 - An unmarked reply is still reported and never acted on.
 - `--witness` works in a window as it works in a one-shot listing. An empty
   window is not witnessed, so `waited.polls` with no threads carries no witness
@@ -93,6 +93,7 @@ answered   3 threads
 carried    1 thread
 proposed   2 changes, 1 of them NOT verified: docx_anchored failed
 files changed in the hub: domains/regulatory/decisions.md, policy.md
+1 marked reply acted on
 2 unmarked replies reported, acted on none
 1 poll failed and was retried
 ```
