@@ -9,6 +9,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -465,6 +466,29 @@ func skillNeedsProblem(file, src string) string {
 	return ""
 }
 
+// skillNeedsAhead says what is wrong when a skill needs a release above cut,
+// the version plugin.json carries, and says nothing otherwise.
+func skillNeedsAhead(file, src, cut string) string {
+	need, ok := skillNeeds(src)
+	if !ok {
+		return fmt.Sprintf("%s carries no front matter line `needs: vX.Y.Z`", file)
+	}
+	have, ok := parseSkillVersion(cut)
+	if !ok {
+		return fmt.Sprintf("plugin.json carries version %q, which is not vX.Y.Z, so nothing can say whether %s asks for a release that exists", cut, file)
+	}
+	for i := range need {
+		if need[i] != have[i] {
+			if need[i] < have[i] {
+				return ""
+			}
+			return fmt.Sprintf("%s needs v%d.%d.%d and the newest release plugin.json names is %s. No colleague can install that gdoc, so every session stops on the needs line. Run `make tag VERSION=v%d.%d.0` in the same sitting as this merge",
+				file, need[0], need[1], need[2], cut, need[0], need[1])
+		}
+	}
+	return ""
+}
+
 func TestEverySkillNeedsAStableRelease(t *testing.T) {
 	files, err := skillFiles(skillsDir)
 	if err != nil {
@@ -631,5 +655,66 @@ func TestTheMarkerRulesAreOneFileAndAlignNamesIt(t *testing.T) {
 	}
 	if !strings.Contains(string(b), markers) {
 		t.Errorf("skills/gdoc-align/SKILL.md names no %s. It resolves markers, and the rules for them live beside gdoc-export's SKILL.md", markers)
+	}
+}
+
+// A skill reaches a colleague from main through the plugin, and the binary
+// reaches them only as far as the newest release. plugin.json carries the last
+// vX.Y.0 that `make tag` cut, so a needs line above it asks for a gdoc nobody
+// can install: `gdoc update` gets the newest release, still below the floor,
+// and the session stops on the same line again. M13 merged with needs v2.4.0
+// while the newest tag was v2.3.5. This gate turns that into a red build here.
+func TestNoSkillNeedsAReleaseNobodyCut(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "..", ".claude-plugin", "plugin.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var plugin struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(b, &plugin); err != nil {
+		t.Fatalf("reading plugin.json: %v", err)
+	}
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if problem := skillNeedsAhead(file, string(src), plugin.Version); problem != "" {
+			t.Error(problem)
+		}
+	}
+}
+
+func TestANeedsLineAheadOfTheCutReleaseIsCaughtAndNamed(t *testing.T) {
+	// Arrange
+	src := "---\nname: gdoc-export\nneeds: v2.4.0\n---\n\n# A skill\n"
+
+	// Act
+	problem := skillNeedsAhead("skills/gdoc-export/SKILL.md", src, "v2.3.0")
+
+	// Assert
+	if problem == "" {
+		t.Fatalf("want v2.4.0 refused against a cut v2.3.0, got no problem")
+	}
+	for _, want := range []string{"skills/gdoc-export/SKILL.md", "v2.4.0", "v2.3.0", "make tag"} {
+		if !strings.Contains(problem, want) {
+			t.Errorf("the problem does not say %q: %s", want, problem)
+		}
+	}
+	for _, cut := range []string{"v2.4.0", "v2.10.0", "v3.0.0"} {
+		if problem := skillNeedsAhead("skills/gdoc-export/SKILL.md", src, cut); problem != "" {
+			t.Errorf("want v2.4.0 accepted against a cut %s, got %s", cut, problem)
+		}
+	}
+	if problem := skillNeedsAhead("skills/gdoc-export/SKILL.md", src, "2.4"); problem == "" {
+		t.Error("want a plugin version that is not vX.Y.Z refused, got no problem")
 	}
 }
