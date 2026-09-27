@@ -1169,3 +1169,46 @@ func TestAHeadingInsideAFootnoteSetsNoHeadingDepth(t *testing.T) {
 		t.Errorf("the only heading is not numbered 1, so a heading inside a footnote set the depth:\n%s", body)
 	}
 }
+
+// TestARelativeLinkIsItsWordsAndNoHyperlink: a link to another note or folder
+// in the hub names a path Drive does not have, so it publishes as the words
+// the author wrote, with no hyperlink, no relationship and no warning, because
+// nothing is wrong with the note.
+func TestARelativeLinkIsItsWordsAndNoHyperlink(t *testing.T) {
+	for _, markdown := range []string{
+		"See [bybit](2026-08-20-bybit-card-regional-setups.md).\n",
+		"See [bybit](../cards/2026-08-20-bybit-card-regional-setups.md#scope).\n",
+		"See [the flow](202608-eagle-money-flow/).\n",
+	} {
+		out := walk(t, markdown)
+		got := serialise(t, out.Blocks)
+
+		if strings.Contains(got, "w:hyperlink") {
+			t.Errorf("%q: the relative link is still a hyperlink:\n%s", markdown, got)
+		}
+		if !strings.Contains(got, ">See ") {
+			t.Errorf("%q: the sentence around the link is gone:\n%s", markdown, got)
+		}
+		if len(out.Media) != 0 {
+			t.Errorf("%q: the walk recorded %d relationships, want none", markdown, len(out.Media))
+		}
+		if len(out.Warnings) != 0 {
+			t.Errorf("%q: a correct note warns: %q", markdown, out.Warnings)
+		}
+	}
+}
+
+// TestALinkWithASchemeOrAnAnchorIsStillALink: the rule above takes only the
+// scheme-less path, and leaves an address, a mailto and a jump as they were.
+func TestALinkWithASchemeOrAnAnchorIsStillALink(t *testing.T) {
+	for _, markdown := range []string{
+		"See [the policy](https://example.com/p).\n",
+		"Write to [Nail](mailto:nail@altery.com).\n",
+		"See [below](#scope).\n\n## Scope\n",
+	} {
+		got := serialise(t, walk(t, markdown).Blocks)
+		if !strings.Contains(got, "<w:hyperlink") {
+			t.Errorf("%q: the link is no longer a hyperlink:\n%s", markdown, got)
+		}
+	}
+}

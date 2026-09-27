@@ -181,6 +181,21 @@
 // author typed. TestAnEmailAutolinkCarriesTheMailtoScheme and
 // TestAWebAutolinkKeepsItsOwnScheme are the pins.
 //
+// # A link to another note is its words and no link
+//
+// A destination with no scheme and no leading "#" is a path in the hub: every
+// note ends with a Related section written that way. Written as a
+// relationship, Word resolves it against the document's own location, and in
+// Drive that file does not exist, so the link opens nothing and nothing says
+// so. Related is hub navigation, and a colleague reading in Drive needs the
+// note's name, which they can search the hub for, not a jump. So the run keeps
+// the words and carries no link, no relationship and no warning, because the
+// note is correct and its author has nothing to fix. A folder is the same
+// path with a slash. Nail's decision of 2026-09-19; rewriting the link to the
+// other note's Drive document was rejected because it makes publish order
+// matter. TestARelativeLinkIsItsWordsAndNoHyperlink is the pin, and
+// TestALinkWithASchemeOrAnAnchorIsStillALink holds the other side of it.
+//
 // # An anchor link is a jump to a bookmark every heading with words carries
 //
 // A destination opening with "#" is a place in this document, not an address.

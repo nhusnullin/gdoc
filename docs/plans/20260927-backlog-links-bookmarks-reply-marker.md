@@ -90,14 +90,14 @@ already tells the session to read the text, so nothing dead-ends
 - Modify: `go/internal/body/doc.go`
 - Delete: `docs/backlog/relative-link-to-another-note-is-dead.md`
 
-- [ ] write `TestARelativeLinkIsItsWordsAndNoHyperlink`: a note link and a
+- [x] write `TestARelativeLinkIsItsWordsAndNoHyperlink`: a note link and a
   folder link come out as their words, with no `w:hyperlink`, no `Media`
   entry and no warning. Watch it fail
-- [ ] write a guard case: `https:`, `mailto:` and `#` links are unchanged
-- [ ] in `inline.go`, leave `link` empty for a destination with no scheme
+- [x] write a guard case: `https:`, `mailto:` and `#` links are unchanged
+- [x] in `inline.go`, leave `link` empty for a destination with no scheme
   and no leading `#`
-- [ ] state the rule in `body/doc.go`, naming the test
-- [ ] `make test`, `make vet`; commit with `git rm` of the item
+- [x] state the rule in `body/doc.go`, naming the test
+- [x] `make test`, `make vet`; commit with `git rm` of the item
 
 ### Task 2: Only a heading a link names carries a bookmark
 
