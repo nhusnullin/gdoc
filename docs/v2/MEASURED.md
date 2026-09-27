@@ -339,6 +339,40 @@ What this does not say is why the 2026-09-08 run failed. That document, its
 table's shape and the envelope it printed were not kept, so the defect is
 unreproduced rather than absent.
 
+## A block of new paragraphs, proposed in one SUGGEST batch
+
+Measured 2026-09-27 by `TestLiveBlockProposalProbe`
+(`go/internal/live/blockprobe_test.go`), one throwaway document per case in
+the test folder, each set up as five paragraphs with the fourth a real bullet.
+Asked for `docs/backlog/propose-cannot-add-paragraphs.md`. Recheck when a
+block proposal comes back with more than one suggestion id on text it only
+inserted.
+
+| Case | Suggestion ids | What the read-back shows |
+|---|---|---|
+| Heading, body and two list items inserted at the start of the next paragraph, each style stated, one run bold | 1 | insertion, text style, heading style and the new bullets all under the one id. No separate paragraph-style or bullet id |
+| The same block, plus `deleteContentRange` over two whole paragraphs behind it | 1 | the deleted paragraphs carry the same id as the insertion. A replace is one suggestion |
+| Text inserted at a list item's end, before its newline, nothing stated | 1 | every new paragraph is bulleted |
+| The same, plus `deleteParagraphBullets` over the new text | 2 | the new paragraph with a new mark loses its bullet under the insertion id. The last one owns the item's old mark, keeps its bullet on screen, and carries a second id for the bullet change |
+| Whole paragraphs inserted at a list item's start, nothing stated | 1 | every new paragraph is bulleted |
+| The same, plus `deleteParagraphBullets` over the new paragraphs | 1 | no bullets, and nothing beyond the insertion id |
+| A block after the last paragraph, before the body's final newline, a heading style stated | 1 | the anchor paragraph gets a new mark under the insertion id, and the last new paragraph owns the old final mark with no id of its own, because nothing restated it |
+
+What follows for a block proposal:
+
+- **Insert at the start of the paragraph after the anchor, never at the end of
+  the anchor.** Then every new paragraph has a mark of its own, and every style,
+  bullet and bullet removal folds into the one insertion id. Inserting at an
+  end hands the anchor's old mark to the last new paragraph, and a change to
+  that mark is a second suggestion.
+- **Text takes the list membership of the paragraph it lands in front of.**
+  Stating `namedStyleType` does not clear a bullet. `deleteParagraphBullets`
+  over the new paragraphs does, as a suggestion under the same id. This also
+  answers the open question in `docs/backlog/prelude-inherits-a-list-marker.md`.
+- **After the last paragraph there is no paragraph to go in front of.** The one
+  case measured came back with one id because the last new paragraph was not
+  restyled. A restyled last paragraph there was not measured.
+
 ## Not measured yet
 
 The seven paragraph elements `internal/docs` decodes are a fixture built from
