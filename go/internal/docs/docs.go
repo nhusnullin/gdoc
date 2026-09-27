@@ -108,9 +108,13 @@ type Block struct {
 // It is a block rather than dropped because it is the end of the house prelude:
 // a document publish made carries the cover, the tables and this list, and
 // export strips to the end of it. A dropped element is a boundary nothing can
-// name.
+// name. Its span is that boundary as an index, and the marker publish writes
+// over its own cover ends at EndIndex: TestATableOfContentsCarriesItsSpan is
+// the pin.
 type TOC struct {
-	Blocks []Block `json:"blocks"`
+	StartIndex int     `json:"start_index"`
+	EndIndex   int     `json:"end_index"`
+	Blocks     []Block `json:"blocks"`
 }
 
 // Paragraph is a run of text with one named style. Style is the document's own

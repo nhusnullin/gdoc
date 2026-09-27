@@ -1,0 +1,111 @@
+{
+ "documentId": "1PuBl15h3D0000000000000000000000000000000",
+ "title": "Supplier Register Policy",
+ "revisionId": "ALm37BXpublished",
+ "tabs": [
+  {
+   "tabProperties": {
+    "tabId": "t.0",
+    "title": "Supplier Register Policy",
+    "index": 0
+   },
+   "documentTab": {
+    "body": {
+     "content": [
+      {
+       "startIndex": 0,
+       "endIndex": 1,
+       "sectionBreak": {
+        "sectionStyle": {}
+       }
+      },
+      {
+       "startIndex": 1,
+       "endIndex": 15,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "NORMAL_TEXT"
+        },
+        "elements": [
+         {
+          "startIndex": 1,
+          "endIndex": 15,
+          "textRun": {
+           "content": "Altery Group \n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      },
+      {
+       "startIndex": 15,
+       "endIndex": 41,
+       "tableOfContents": {
+        "content": [
+         {
+          "startIndex": 15,
+          "endIndex": 40,
+          "paragraph": {
+           "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+           },
+           "elements": [
+            {
+             "startIndex": 15,
+             "endIndex": 40,
+             "textRun": {
+              "content": "Supplier Register Policy\n",
+              "textStyle": {}
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "startIndex": 41,
+       "endIndex": 66,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "HEADING_1"
+        },
+        "elements": [
+         {
+          "startIndex": 41,
+          "endIndex": 66,
+          "textRun": {
+           "content": "Supplier Register Policy\n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      },
+      {
+       "startIndex": 66,
+       "endIndex": 86,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "NORMAL_TEXT"
+        },
+        "elements": [
+         {
+          "startIndex": 66,
+          "endIndex": 86,
+          "textRun": {
+           "content": "The register holds.\n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

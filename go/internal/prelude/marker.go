@@ -21,6 +21,19 @@ import (
 // wearing this name are refused rather than guessed between.
 const MarkerName = "gdoc:house-prelude"
 
+// PublishedName is the name of the named range publish puts over its own
+// cover, from index 1 to the end of the contents list.
+//
+// It is a second name rather than MarkerName because the two mean different
+// things to a run proposing a cover. A prelude marker is a cover gdoc proposed,
+// and a run may propose replacing it. A published marker is the house cover
+// already, with the contents list inside it, and replacing it would propose
+// deleting that list. So Decide refuses a document carrying one, and a restyle
+// walks past both. DECISIONS.md, 2026-09-26.
+// TestAPublishedCoverIsRefusedByARunThatProposesACover and
+// TestEachMarkerReaderReadsItsOwnName are the pins.
+const PublishedName = "gdoc:house-published"
+
 // Marker is one named range wearing MarkerName, as this run found it.
 //
 // Pending is what a run cannot replace. The prelude is proposed, so between the
@@ -79,6 +92,15 @@ type Decision struct {
 // inference the measurement makes, not a fifth measured row, and Task 10's live
 // run is what confirms it.
 func Decide(d *docs.Document) (Decision, error) {
+	published, err := Published(d)
+	if err != nil {
+		return Decision{}, err
+	}
+	if len(published) > 0 {
+		return Decision{}, fmt.Errorf(
+			"prelude: this document carries %s over [%d,%d), the house cover publish wrote, so it has the house cover already. Proposing one would propose deleting that cover and its contents list: run the restyle without --fields to style the body and leave the cover as it is",
+			PublishedName, published[0].Start, published[0].End)
+	}
 	found, err := Markers(d)
 	if err != nil {
 		return Decision{}, err
@@ -130,14 +152,23 @@ func pendingIn(found []Marker) []string {
 // deleting the whole of either would propose deleting words gdoc never wrote.
 // Two spans that touch are one span: Docs may cut a range at a boundary of its
 // own, and the text is still contiguous.
-func Markers(d *docs.Document) ([]Marker, error) {
+func Markers(d *docs.Document) ([]Marker, error) { return markersNamed(d, MarkerName) }
+
+// Published is every named range wearing PublishedName, read and refused by
+// the same rules as Markers: a restyle walks past what it covers, and a span
+// with the author's words inside it would leave those words unstyled.
+// TestAPublishedMarkerBrokenAcrossTheAuthorsTextIsRefused is the pin.
+func Published(d *docs.Document) ([]Marker, error) { return markersNamed(d, PublishedName) }
+
+// markersNamed is Markers and Published, which differ only in the name.
+func markersNamed(d *docs.Document, name string) ([]Marker, error) {
 	if d == nil {
 		return nil, nil
 	}
 	var out []Marker
 	for _, tab := range d.Tabs {
 		for _, nr := range tab.NamedRanges {
-			if nr.Name != MarkerName {
+			if nr.Name != name {
 				continue
 			}
 			m, err := marker(nr)
@@ -278,9 +309,20 @@ func Propose(cfg *house.Config, f cover.Fields, d *docs.Document) (Result, error
 // 2026-09-10. It is safe on its own terms: a named range adds and removes no
 // character. The guard holds it to exactly this shape, granted for exactly this
 // range, in Policy.AllowMarker.
-func MarkerRequest(start, end int) map[string]any {
+func MarkerRequest(start, end int) map[string]any { return namedRangeRequest(MarkerName, start, end) }
+
+// PublishedRequest is the marker publish writes over its own cover. It needs no
+// grant, because publish writes it on a document the guard's own create made,
+// and it is refused on a handed-in one:
+// TestThePublishedMarkerNeedsNoGrantOnACreatedDocument and
+// TestThePublishedMarkerIsRefusedOnAHandedInDocument are the pins.
+func PublishedRequest(start, end int) map[string]any {
+	return namedRangeRequest(PublishedName, start, end)
+}
+
+func namedRangeRequest(name string, start, end int) map[string]any {
 	return map[string]any{"createNamedRange": map[string]any{
-		"name":  MarkerName,
+		"name":  name,
 		"range": span(start, end),
 	}}
 }

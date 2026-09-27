@@ -76,6 +76,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
 | 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
 | 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
+| 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2722,3 +2723,48 @@ Tests: `TestOnlyALinkedHeadingCarriesABookmark`,
 `TestANoteWithNoAnchorLinkCarriesNoBookmark`,
 `TestARelativeLinkIsItsWordsAndNoHyperlink` and
 `TestALinkWithASchemeOrAnAnchorIsStillALink`.
+
+## 2026-09-27. `publish` marks its own cover, and a restyle never styles a marked span.
+
+Found in real use on 2026-09-25. A note went out with `publish`, and later the
+same document was run through `restyle --from`. The restyle turned the cover
+into body text: "Altery Group " went from 29pt bold and centred to 12pt
+justified, and so did the title. Nail's decision the next day.
+
+The cause is two facts meeting. A restyle reads structure from each
+paragraph's named style and never from its text, and Drive's conversion turns
+the docx cover into NORMAL_TEXT with the look set directly on it. So the walk
+read the cover as body prose. The one thing that makes the walk step around
+gdoc's own words is the `gdoc:house-prelude` named range, and only
+`restyle --fields` wrote one. `publish` wrote none, and a plain `restyle --from`
+did not read one even where it existed: it skipped only what its own phase 1 had
+just proposed.
+
+**`publish` writes a named range called `gdoc:house-published`** over its
+cover, from index 1 to the end of the one contents list. The end is the
+boundary `export` already strips to, so the two commands agree on where
+publish's cover stops. A document with no contents list, or with two, gets no
+marker and a warning, because the boundary would be a guess. The document was
+created by the guard's own create, so it is at the full level and the marker
+needs no new grant. The marker is read back like every other write, and one
+that did not land is a warning rather than a failure: the document is there and
+correct, only unmarked.
+
+**It is a second name rather than the prelude's**, because the two mean
+different things to `restyle --fields`. A prelude marker is a cover gdoc
+proposed and may replace. A published marker is the house cover already, with
+the contents list inside it, and replacing it would propose deleting that list.
+So `restyle --fields` refuses a document carrying one and says to run without
+`--fields`.
+
+**Every restyle skips every span either marker covers**, not only the span its
+own phase 1 wrote. A prelude Nail already accepted was flattened the same way
+before this, which is the same defect on the other route.
+
+What this does not reach is a document published before today. It carries no
+marker, and a restyle still flattens its cover. The `gdoc-restyle` skill is for
+documents gdoc did not write, and it says so.
+
+Serves principle 3: not knowing where gdoc's own cover ends never resolves to
+styling over it, and gdoc knows where it ends only when the document says so.
+

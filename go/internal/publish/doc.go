@@ -72,8 +72,34 @@
 // TestAPublishUploadsVerifiesAndReportsTheDocument,
 // TestAReadBackThatFailedIsReportedRatherThanRaised,
 // TestADocumentWithTwoTabsIsNotVerified, TestAnExportThatIsNotADocxIsNotVerified,
-// TestAnExportThatNeverArrivedIsNotVerified and TestRunSendsTheThreeRequestsInOrder
+// TestAnExportThatNeverArrivedIsNotVerified and TestRunSendsTheRequestsInOrder
 // are the pins.
+//
+// # publish marks its own cover
+//
+// After the read-back, publish writes a named range called
+// gdoc:house-published over its cover, from index 1 to the end of the one
+// contents list, and reads it back. Drive converts the docx cover into
+// NORMAL_TEXT with its look set directly, so a restyle reading named styles
+// would take the cover for body prose and flatten it: that happened on
+// 2026-09-25. The marker is how a restyle knows where gdoc's words end, and it
+// walks past what the marker covers. DECISIONS.md, 2026-09-26.
+//
+// The end is the contents list because that is the boundary export already
+// strips to, so the two commands agree on where publish's cover stops. No
+// contents list, or two, is no boundary, and nothing is written: a marker that
+// ended anywhere else would be a guess about where the note begins.
+//
+// The marker is beside verified rather than inside it. An unmarked document is
+// still the document, correct and readable, so a failed marker is reported in
+// marked and a warning saying what a restyle would do to its cover, and never
+// as a failed publish. The document is at the full level, made by the guard's
+// own create, so the marker needs no grant.
+// TestAPublishMarksItsCoverToTheEndOfTheContentsList,
+// TestADocumentWithNoContentsListIsNotMarked,
+// TestAMarkerTheReadBackDoesNotCarryIsNotMarked and
+// TestAMarkerBatchThatFailedIsAWarningNotAFailure are the pins, with
+// TestThePublishedMarkerNeedsNoGrantOnACreatedDocument in internal/prelude.
 //
 // # The title is two different facts
 //

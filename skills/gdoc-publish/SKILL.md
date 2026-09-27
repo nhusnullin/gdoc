@@ -231,6 +231,9 @@ this order:
   the ones that came back false. `verified: false` is not a failed publish. The
   document exists. A route that did not hold is a route that did not hold, and
   saying the run failed is how a second document gets made.
+- **`marked`.** Whether `publish` put its marker over the cover. It is not one
+  of the checks, and `false` is not a failed publish. Say the warning, which
+  names why, and say that a restyle of this document would restyle its cover.
 - **`files_changed`.** The note whose front matter now records the pairing. If
   it is not there, nothing in the hub changed. When the block was written before
   this milestone, the reply also says it was rewritten to schema 2: say that once,

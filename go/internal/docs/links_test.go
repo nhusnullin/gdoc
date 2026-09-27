@@ -160,6 +160,18 @@ func TestATableOfContentsIsABlock(t *testing.T) {
 	}
 }
 
+// The contents list carries its own span, because it is where publish's cover
+// ends, and the marker publish writes over that cover has to name the index.
+func TestATableOfContentsCarriesItsSpan(t *testing.T) {
+	toc := fixture(t, "toc.json").Tabs[0].Body[1].TOC
+	if toc == nil {
+		t.Fatal("the contents element did not land as a block")
+	}
+	if toc.StartIndex != 14 || toc.EndIndex != 48 {
+		t.Errorf("the contents span = [%d,%d), want [14,48)", toc.StartIndex, toc.EndIndex)
+	}
+}
+
 func TestAPositionedObjectIsCarriedOnItsParagraph(t *testing.T) {
 	tab := fixture(t, "positioned.json").Tabs[0]
 	ps := paragraphs(tab.Body)

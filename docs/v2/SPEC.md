@@ -228,6 +228,11 @@ gdoc's own prelude and replaces it rather than adding a second cover. It is
 written rather than suggested because `createNamedRange` is the one request Docs
 refuses to apply as a suggestion, and it is safe because a named range adds and
 removes no character. `Policy.AllowMarker` is its door: per-run, one range.
+`publish` writes a second marker, `gdoc:house-published`, over its own cover
+from index 1 to the end of the contents list, and every restyle walks past the
+span either marker covers. `restyle --fields` refuses a document carrying the
+published one, whose cover is already the house cover. Changed 2026-09-26,
+DECISIONS.md.
 
 **What gdoc cannot do it reports, with the menu path for each, and it writes no
 checklist into the document.** Writing that page needs `insertText` and
