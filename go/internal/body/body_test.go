@@ -1204,6 +1204,7 @@ func TestALinkWithASchemeOrAnAnchorIsStillALink(t *testing.T) {
 	for _, markdown := range []string{
 		"See [the policy](https://example.com/p).\n",
 		"Write to [Nail](mailto:nail@altery.com).\n",
+		"See [the host](//example.com/p).\n",
 		"See [below](#scope).\n\n## Scope\n",
 	} {
 		got := serialise(t, walk(t, markdown).Blocks)

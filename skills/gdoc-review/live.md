@@ -63,7 +63,8 @@ the binary reports what arrived and judges none of it, exactly as in Step 2.
 - A thread whose `range` is `null` can be answered and cannot be proposed into.
   Say which when it matters, and answer it in the thread.
 - A thread that was answered before and now carries a new marked comment or
-  a reply whose `marker` is not `none` is new work. Step 2 already says so, and "Two messages at most" is per piece of work.
+  a reply whose `marker` is not `none` is new work. Step 2 already says so,
+  and "Two messages at most" is per piece of work.
 - An unmarked reply is still reported and never acted on.
 - `--witness` works in a window as it works in a one-shot listing. An empty
   window is not witnessed, so `waited.polls` with no threads carries no witness

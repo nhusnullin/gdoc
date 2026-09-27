@@ -2707,16 +2707,16 @@ the pair when both sets hold its id. A dead `#` still warns, because the
 heading ids are still what a link resolves against. There is no way to keep a
 jump and hide the one flag it lands on.
 
-**A link with no scheme and no leading `#` publishes as its words.** Every hub
-note ends with a Related section that links other notes by relative path. In
-Drive that path opens nothing. Related is hub navigation, and a colleague
-reading in Drive needs the note's name, which they can search the hub for. So
-the run keeps the words, with no hyperlink, no relationship and no warning,
-because the note is correct and its author has nothing to fix. A folder path
-is the same rule. Rejected: a warning like a dead `#`, because there is
-nothing to fix; and rewriting the link to the other note's Drive document from
-its `gdoc:` block, because it makes publish order matter and needs a rule for a
-note not yet published.
+**A link with no scheme, no host and no leading `#` publishes as its words.**
+Every hub note ends with a Related section that links other notes by relative
+path. In Drive that path opens nothing. Related is hub navigation, and a
+colleague reading in Drive needs the note's name, which they can search the hub
+for. So the run keeps the words, with no hyperlink, no relationship and no
+warning, because the note is correct and its author has nothing to fix. A
+folder path is the same rule. Rejected: a warning like a dead `#`, because
+there is nothing to fix; and rewriting the link to the other note's Drive
+document from its `gdoc:` block, because it makes publish order matter and
+needs a rule for a note not yet published.
 
 Tests: `TestOnlyALinkedHeadingCarriesABookmark`,
 `TestANoteWithNoAnchorLinkCarriesNoBookmark`,

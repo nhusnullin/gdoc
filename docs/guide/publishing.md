@@ -79,7 +79,14 @@ such heading `#heading-1`. Two headings with the same words give the second one
 `-1` too. A `#` link that names no heading in the note is printed as the words
 you wrote, with a warning naming the line and the destination you asked for. A
 heading that is nothing but a picture is a figure rather than a heading, so it
-is nothing to jump to and a link naming it warns the same way.
+is nothing to jump to and a link naming it warns the same way. Only a heading a
+`#` link names carries the jump's landing mark, because Google Docs shows that
+mark as a flag on the heading.
+
+A link to another note or a folder, such as `[bybit](bybit-card.md)` in a
+Related section, is printed as its words with no link. That file is not in
+Drive, so the link would open nothing, and the note's name is what a reader can
+search the hub for.
 
 Code blocks are not rendered. The house style has nothing to render them in, so
 a note carrying one gets a warning naming the line and the block is left out

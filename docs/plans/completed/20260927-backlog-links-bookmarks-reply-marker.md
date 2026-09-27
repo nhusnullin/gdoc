@@ -148,16 +148,24 @@ already tells the session to read the text, so nothing dead-ends
 
 ### Task 4: Verify acceptance criteria
 
-- [ ] each of the three backlog items is gone and its fix is in the same commit
-- [ ] `make test` (raced) and `make vet` pass
-- [ ] `make build`, then publish nothing: `gdoc build` on a note with a
+- [x] each of the three backlog items is gone and its fix is in the same commit
+- [x] `make test` (raced) and `make vet` pass, except
+  `TestTheVersionReachesTheEnvelopeAndTheHelp`, which fails on `origin/main`
+  the same way (⚠️ above)
+- [x] `make build`, then publish nothing: `gdoc build` on a note with a
   relative link and a `#` link, and read `word/document.xml` in the output
 
 ### Task 5: [Final] Update documentation
 
-- [ ] README and `docs/guide/` checked: neither describes bookmarks, note
-  links or reply fields, so nothing changes
-- [ ] move this plan to `docs/plans/completed/`
+- [x] README and `docs/guide/` checked: README says nothing; the guide gains
+  the note-link and bookmark sentences after review
+- ➕ [x] review (a fresh Claude subagent; Codex was out of spend): no
+  correctness bugs. Fixed: a protocol-relative `//host/path` stays a link;
+  `docs/guide/publishing.md` states the note-link and bookmark rules; a
+  `live.md` rewrap. Left as rare: `[x](www.example.com)` and a `%`-broken
+  path, both dead before too; a `#` link inside a figure-only heading still
+  earns its heading a bookmark; no golden note carries a `#` link
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

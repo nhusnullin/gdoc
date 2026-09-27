@@ -228,7 +228,8 @@ func plainText(runs []Run) string {
 }
 
 // isHubPath is a link destination that names a place in the hub rather than
-// an address or a heading: no scheme, and no leading "#". Every hub note ends
+// an address or a heading: no scheme, no host, and no leading "#". A
+// protocol-relative "//host/path" has a host, so it is an address. Every hub note ends
 // with a Related section written this way, and in Drive the path opens
 // nothing, so the run keeps the words and drops the link. A destination that
 // does not parse is left a link, which is what it was before this rule.
@@ -237,5 +238,5 @@ func isHubPath(dest string) bool {
 		return false
 	}
 	u, err := url.Parse(dest)
-	return err == nil && u.Scheme == ""
+	return err == nil && u.Scheme == "" && u.Host == ""
 }

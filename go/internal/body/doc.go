@@ -183,9 +183,9 @@
 //
 // # A link to another note is its words and no link
 //
-// A destination with no scheme and no leading "#" is a path in the hub: every
-// note ends with a Related section written that way. Written as a
-// relationship, Word resolves it against the document's own location, and in
+// A destination with no scheme, no host and no leading "#" is a path in the
+// hub: every note ends with a Related section written that way. Written as
+// a relationship, Word resolves it against the document's own location, and in
 // Drive that file does not exist, so the link opens nothing and nothing says
 // so. Related is hub navigation, and a colleague reading in Drive needs the
 // note's name, which they can search the hub for, not a jump. So the run keeps
