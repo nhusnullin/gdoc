@@ -37,8 +37,8 @@ file.
   fields under "Facts, never verdicts".
 - `skills/gdoc-review/SKILL.md`: Step 1 lists the reply fields, Step 3 and
   Step 8 print the report shapes.
-- No SPEC.md text lists the reply fields or the bookmark rule, so no
-  DECISIONS.md entry is owed.
+- No SPEC.md text lists the reply fields or the bookmark rule. DECISIONS.md
+  2026-09-18 does state the bookmark rule, so Task 2 supersedes it there.
 - None of the six golden notes under `body/testdata/docs/` carries a relative
   link or a `#` link, so every heading in the goldens loses its bookmark.
 
@@ -109,19 +109,24 @@ already tells the session to read the text, so nothing dead-ends
 - Modify: `go/internal/body/testdata/golden/*.xml` (regenerated)
 - Delete: `docs/backlog/bookmark-only-linked-headings.md`
 
-- [ ] replace `TestEveryHeadingCarriesABookmark` with
+- [x] replace `TestEveryHeadingCarriesABookmark` with
   `TestOnlyALinkedHeadingCarriesABookmark`: a linked heading has the pair, an
   unlinked one has none, and ids count from 0 over the bookmarks written.
   Watch it fail
-- [ ] collect the `#` destinations in the pre-walk, and have
+- [x] collect the `#` destinations in the pre-walk, and have
   `headingBookmark` return empty for a heading no link names
-- [ ] check the existing anchor tests still pass: the forward jump, the dead
+- [x] check the existing anchor tests still pass: the forward jump, the dead
   anchor warning, the figure-only heading and the footnote heading
-- [ ] regenerate the goldens with `-update` and read the diff: only bookmark
+- [x] regenerate the goldens with `-update` and read the diff: only bookmark
   pairs go away
-- [ ] rewrite the anchor section of `body/doc.go` and the
+- [x] rewrite the anchor section of `body/doc.go` and the
   `headingBookmark` comment, naming the new test
-- [ ] `make test`, `make vet`; commit with `git rm` of the item
+- [x] `make test`, `make vet`; commit with `git rm` of the item
+- ➕ [x] DECISIONS.md entry and register row: the 2026-09-18 bookmark rule is
+  superseded, and the note-link rule is recorded beside it
+- ⚠️ `TestTheVersionReachesTheEnvelopeAndTheHelp` in `cmd/gdoc` fails on
+  `origin/main` too: it reaches GitHub live and v2.5.0 is published. Not this
+  plan's; flagged separately
 
 ### Task 3: A reply carries its marker
 

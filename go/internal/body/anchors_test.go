@@ -38,20 +38,25 @@ func TestBookmarkNameIsWordSafe(t *testing.T) {
 	}
 }
 
-// TestEveryHeadingCarriesABookmark: the bookmark is what an anchor link lands
-// on, so it goes on every heading whether or not this note links to it.
-func TestEveryHeadingCarriesABookmark(t *testing.T) {
-	out := walk(t, "# Purpose and scope\n\ntext\n\n## Scope\n")
+// TestOnlyALinkedHeadingCarriesABookmark: the bookmark is what an anchor link
+// lands on, and Google Docs shows every bookmark as a flag on its heading, so
+// only a heading some "#" link in the note names carries one. The ids count
+// over the bookmarks written, not over the headings.
+func TestOnlyALinkedHeadingCarriesABookmark(t *testing.T) {
+	out := walk(t, "# Purpose and scope\n\nSee [scope](#scope).\n\n## Background\n\n## Scope\n")
 	got := serialise(t, out.Blocks)
 
 	for _, want := range []string{
-		`<w:bookmarkStart w:id="0" w:name="h_purpose_and_scope"/>`,
+		`<w:bookmarkStart w:id="0" w:name="h_scope"/>`,
 		`<w:bookmarkEnd w:id="0"/>`,
-		`<w:bookmarkStart w:id="1" w:name="h_scope"/>`,
-		`<w:bookmarkEnd w:id="1"/>`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the body carries no %s:\n%s", want, got)
+		}
+	}
+	for _, unlinked := range []string{"h_purpose_and_scope", "h_background"} {
+		if strings.Contains(got, `w:name="`+unlinked+`"`) {
+			t.Errorf("the unlinked heading %s carries a bookmark:\n%s", unlinked, got)
 		}
 	}
 
@@ -61,6 +66,15 @@ func TestEveryHeadingCarriesABookmark(t *testing.T) {
 		if len(starts) != len(ends) {
 			t.Errorf("block %d opens %d bookmarks and closes %d", i, len(starts), len(ends))
 		}
+	}
+}
+
+// TestANoteWithNoAnchorLinkCarriesNoBookmark: the common case, a note with no
+// "#" link at all, publishes with no flag on any heading.
+func TestANoteWithNoAnchorLinkCarriesNoBookmark(t *testing.T) {
+	out := walk(t, "# Purpose\n\nSee [the policy](https://example.com/p).\n\n## Scope\n")
+	if got := serialise(t, out.Blocks); strings.Contains(got, "w:bookmarkStart") {
+		t.Errorf("a note with no anchor link carries a bookmark:\n%s", got)
 	}
 }
 

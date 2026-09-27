@@ -8,14 +8,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="0" w:name="h_edge_cases__awkward_input"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1-Edge Cases &amp; Awkward Input</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="0"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -25,14 +23,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="1" w:name="h_risk__control_ampersands"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.1-Risk &amp; Control </w:t>
     </w:r>
-    <w:bookmarkEnd w:id="1"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -59,14 +55,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="2" w:name="h_rsum_of_nderungen_nave_caf"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.2-Résumé of Änderungen: naïve café</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="2"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -93,14 +87,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="3" w:name="h_overview"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3-Overview</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="3"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -127,14 +119,12 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="4" w:name="h_a_table_with_an_empty_cell_and_c3cdb97"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.1-A table with an empty cell and a very long token</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="4"/>
   </w:p>
   <w:tbl>
     <w:tblPr>
@@ -593,14 +583,12 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="5" w:name="h_a_task_list"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.2-A task list</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="5"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -676,14 +664,12 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="6" w:name="h_strikethrough_and_nesting"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
       <w:t xml:space="preserve">1.3.3-Strikethrough and nesting</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="6"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -851,14 +837,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="7" w:name="h_a_jpeg"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.4-A JPEG</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="7"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -950,14 +934,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="8" w:name="h_overview_1"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">1.5-Overview</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="8"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -984,7 +966,6 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="9" w:name="h_a_heading_with_a_linkhttpsexam_b42df40"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -1006,7 +987,6 @@
       </w:rPr>
       <w:t xml:space="preserve"> in it</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="9"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1033,14 +1013,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="10" w:name="h_42_a_self_numbered_heading_at__c04b38c"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">4.2 A self-numbered heading at an odd depth</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="10"/>
   </w:p>
   <w:p>
     <w:pPr>
@@ -1067,14 +1045,12 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
-    <w:bookmarkStart w:id="11" w:name="h_the_last_section"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
       </w:rPr>
       <w:t xml:space="preserve">4.3-The last section</w:t>
     </w:r>
-    <w:bookmarkEnd w:id="11"/>
   </w:p>
   <w:p>
     <w:pPr>
