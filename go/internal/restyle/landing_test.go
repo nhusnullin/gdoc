@@ -568,3 +568,79 @@ func checkOfKind(t *testing.T, l Landing, kind string) Check {
 	t.Fatalf("no %s check in %+v", kind, l.Checks)
 	return Check{}
 }
+
+// inheritedRead is a paragraph whose run stores only what differs from its
+// named style. Docs keeps no run value equal to the one the run inherits, so a
+// run under a named style that already says Aptos 10.5 carries runStyle and
+// nothing more. headingText is what HEADING_3 states, and NORMAL_TEXT states
+// the font every other style falls back to.
+func inheritedRead(runStyle, headingText string) string {
+	return `{
+  "documentId": "DOC1", "revisionId": "rev2",
+  "tabs": [{"tabProperties": {"tabId": "t.0"}, "documentTab": {
+    "namedStyles": {"styles": [
+      {"namedStyleType": "NORMAL_TEXT", "textStyle": {"weightedFontFamily": {"fontFamily": "Aptos", "weight": 400},
+                                                      "fontSize": {"magnitude": 12, "unit": "PT"}}},
+      {"namedStyleType": "HEADING_3", "textStyle": ` + headingText + `}]},
+    "body": {"content": [
+      {"startIndex": 1, "endIndex": 20, "paragraph": {
+        "paragraphStyle": {"namedStyleType": "HEADING_3"},
+        "elements": [{"startIndex": 1, "endIndex": 20, "textRun": {"content": "The supplier\n",
+          "textStyle": ` + runStyle + `}}]}}
+    ]}}}]
+}`
+}
+
+// Found on 2026-09-25: the request set Calibri and black, the document's named
+// style was already Calibri and black, so Docs stored nothing on the run, and
+// the check reported both as missing on a document that rendered correctly.
+func TestAValueTheRunInheritsFromItsNamedStyleHolds(t *testing.T) {
+	// Arrange
+	read := inheritedRead(`{}`, `{"weightedFontFamily": {"fontFamily": "Aptos"}, "fontSize": {"magnitude": 10.5, "unit": "PT"}}`)
+
+	// Act
+	got, _ := Landed([]byte(read), sentRequests())
+
+	// Assert
+	text := checkOfKind(t, got, "updateTextStyle")
+	if !text.Held {
+		t.Errorf("held = false although HEADING_3 states every field sent and the run inherits it: %+v", text)
+	}
+	if text.Note != "" {
+		t.Errorf("a run that inherits the style is not a run the style did not reach: %q", text.Note)
+	}
+}
+
+// A named style that states only some fields leaves the rest to NORMAL_TEXT,
+// which is where Docs itself falls back to.
+func TestAValueTheRunInheritsFromNormalTextHolds(t *testing.T) {
+	// Arrange
+	read := inheritedRead(`{"fontSize": {"magnitude": 10.5, "unit": "PT"}}`, `{"bold": true}`)
+
+	// Act
+	got, _ := Landed([]byte(read), sentRequests())
+
+	// Assert
+	if text := checkOfKind(t, got, "updateTextStyle"); !text.Held {
+		t.Errorf("held = false although the font comes from NORMAL_TEXT and the size from the run: %+v", text)
+	}
+}
+
+// The other direction: inheritance explains a silent run, it does not excuse
+// one. A run inheriting a different font from its named style did not land.
+func TestAValueTheRunInheritsDifferentlyStillFails(t *testing.T) {
+	// Arrange
+	read := inheritedRead(`{}`, `{"weightedFontFamily": {"fontFamily": "Comic Sans MS"}, "fontSize": {"magnitude": 10.5, "unit": "PT"}}`)
+
+	// Act
+	got, _ := Landed([]byte(read), sentRequests())
+
+	// Assert
+	text := checkOfKind(t, got, "updateTextStyle")
+	if text.Held {
+		t.Errorf("held = true although the run inherits Comic Sans MS and the request sent Aptos: %+v", text)
+	}
+	if strings.Join(text.Missing, ",") != "weightedFontFamily.fontFamily" {
+		t.Errorf("missing = %v, want the font family alone", text.Missing)
+	}
+}

@@ -151,7 +151,7 @@ func (d *styledDoc) check(kind string, r map[string]any) Check {
 		if par == nil {
 			return unanswered(c, "the read back holds no paragraph starting there")
 		}
-		return compareRuns(c, r["textStyle"], par.textRuns())
+		return compareRuns(c, r["textStyle"], d.effectiveRuns(par))
 	case "updateTableCellStyle":
 		start, ok := cellAt(r)
 		c := Check{Kind: kind, Where: fmt.Sprintf("the first cell of the table at %d, which the request styled whole", start)}
@@ -337,12 +337,25 @@ func cellAt(r map[string]any) (start int, ok bool) {
 type styledDoc struct {
 	Style map[string]any `json:"documentStyle"`
 	Body  *styledBody    `json:"body"`
+	Named *styledNamed   `json:"namedStyles"`
 	Tabs  []struct {
 		DocumentTab *struct {
 			Style map[string]any `json:"documentStyle"`
 			Body  *styledBody    `json:"body"`
+			Named *styledNamed   `json:"namedStyles"`
 		} `json:"documentTab"`
 	} `json:"tabs"`
+}
+
+// styledNamed is the document's own named styles, read for their text style
+// alone. Docs stores no run value equal to the one the run inherits, so a run
+// under a named style that already says what the request sent carries nothing,
+// and the check has to read where the value really is.
+type styledNamed struct {
+	Styles []struct {
+		Type      string         `json:"namedStyleType"`
+		TextStyle map[string]any `json:"textStyle"`
+	} `json:"styles"`
 }
 
 type styledBody struct {
@@ -523,11 +536,64 @@ func (p *styledParagraph) textRuns() []styledRun {
 	return out
 }
 
-// styledRun is one text run of a paragraph as the read-back sees it: the words
-// and the style Docs stored on them.
+// effectiveRuns is every text run of a paragraph with the style a reader sees
+// on it: NORMAL_TEXT's text style, then the paragraph's own named style over
+// it, then what Docs stored on the run over both. That is the order Docs
+// itself falls back in, and a field is replaced whole, because Docs stores a
+// field such as weightedFontFamily whole. Stored keeps the run's own style, so
+// a run the style never reached can still be told from one that inherits it.
+//
+// TestAValueTheRunInheritsFromItsNamedStyleHolds,
+// TestAValueTheRunInheritsFromNormalTextHolds and
+// TestAValueTheRunInheritsDifferentlyStillFails.
+func (d *styledDoc) effectiveRuns(p *styledParagraph) []styledRun {
+	named, _ := p.ParagraphStyle["namedStyleType"].(string)
+	base := overlay(d.namedText("NORMAL_TEXT"), d.namedText(named))
+	runs := p.textRuns()
+	out := make([]styledRun, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, styledRun{Content: r.Content, Style: overlay(base, r.Style), Stored: r.Style})
+	}
+	return out
+}
+
+// namedText is the text style one named style states, or nothing when the
+// read back carries no such style.
+func (d *styledDoc) namedText(name string) map[string]any {
+	named := d.Named
+	if len(d.Tabs) > 0 && d.Tabs[0].DocumentTab != nil {
+		named = d.Tabs[0].DocumentTab.Named
+	}
+	if named == nil || name == "" {
+		return nil
+	}
+	for _, st := range named.Styles {
+		if st.Type == name {
+			return st.TextStyle
+		}
+	}
+	return nil
+}
+
+// overlay is a new map holding under's fields with over's on top. Neither
+// argument is changed.
+func overlay(under, over map[string]any) map[string]any {
+	out := make(map[string]any, len(under)+len(over))
+	for k, v := range under {
+		out[k] = v
+	}
+	for k, v := range over {
+		out[k] = v
+	}
+	return out
+}
+
+// styledRun is one text run of a paragraph as the read-back sees it: the words,
+// the style a reader sees on them, and the part of it Docs stored on the run.
 type styledRun struct {
 	Content string
 	Style   map[string]any
+	Stored  map[string]any
 }
 
 // compareRuns asks whether the request reached the paragraph, over every run in
@@ -572,7 +638,7 @@ func compareRuns(c Check, want any, runs []styledRun) Check {
 		missing := missingFields("", want, r.Style)
 		if len(missing) == 0 {
 			held = true
-		} else if len(r.Style) == 0 {
+		} else if len(r.Stored) == 0 {
 			untouched = append(untouched, strconv.Quote(r.Content))
 		}
 		if !haveNear || len(missing) < len(nearest) {
