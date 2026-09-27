@@ -13,6 +13,7 @@ import (
 
 	"gdoc/internal/docs"
 	"gdoc/internal/drive"
+	"gdoc/internal/prelude"
 )
 
 const (
@@ -730,5 +731,47 @@ func TestTwoContentsListsGiveNoCoverEnd(t *testing.T) {
 	}
 	if twoOK {
 		t.Error("two contents lists must give no cover end")
+	}
+}
+
+// A read-back that failed leaves no tab to find a contents list in, so nothing
+// is marked. The warnings still say so, because the restyle risk is the one
+// thing a caller cannot work out from read_back: false alone.
+func TestAReadBackThatFailedStillSaysTheCoverIsUnmarked(t *testing.T) {
+	// Arrange
+	f := script(t, "published-contents.json")
+	f.failAt[1] = errors.New("documents.get answered 500")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Marked {
+		t.Error("Marked is true on a document that was never read back")
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), prelude.PublishedName) {
+		t.Errorf("warnings = %v, want one naming the missing %s marker", rep.Warnings, prelude.PublishedName)
+	}
+}
+
+// A marker batch whose answer was lost may still have landed, so the read-back
+// decides. When it finds the marker, the cover is marked.
+func TestAMarkerBatchSentWithALostAnswerIsDecidedByTheReadBack(t *testing.T) {
+	// Arrange: the fourth call is the marker batch, sent and its answer lost.
+	f := script(t, "published-contents.json")
+	f.failAt[3] = acceptedError{errors.New("the answer is not JSON")}
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rep.Marked {
+		t.Errorf("Marked is false although the read-back carries the marker: %v", rep.Warnings)
 	}
 }

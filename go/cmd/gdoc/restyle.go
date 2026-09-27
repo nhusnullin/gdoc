@@ -400,7 +400,7 @@ func applyRestyle(a *args) emit.Result {
 // markedSpans is every span a gdoc marker covers: publish's cover and any
 // prelude a restyle proposed. A plain restyle walks past all of them, because
 // Drive converts a cover into NORMAL_TEXT and the walk would read it as body
-// prose. DECISIONS.md, 2026-09-26. TestAPlainRestyleWalksPastPublishsCover and
+// prose. DECISIONS.md, 2026-09-27. TestAPlainRestyleWalksPastPublishsCover and
 // TestAPlainRestyleWalksPastAnAcceptedPrelude are the pins.
 func markedSpans(d *docs.Document) ([]restyle.Span, error) {
 	published, err := prelude.Published(d)
@@ -411,9 +411,11 @@ func markedSpans(d *docs.Document) ([]restyle.Span, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out []restyle.Span
-	for _, m := range append(published, proposed...) {
-		out = append(out, restyle.Span{Start: m.Start, End: m.End})
+	out := make([]restyle.Span, 0, len(published)+len(proposed))
+	for _, marks := range [][]prelude.Marker{published, proposed} {
+		for _, m := range marks {
+			out = append(out, restyle.Span{Start: m.Start, End: m.End})
+		}
 	}
 	return out, nil
 }

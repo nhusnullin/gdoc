@@ -231,7 +231,7 @@ removes no character. `Policy.AllowMarker` is its door: per-run, one range.
 `publish` writes a second marker, `gdoc:house-published`, over its own cover
 from index 1 to the end of the contents list, and every restyle walks past the
 span either marker covers. `restyle --fields` refuses a document carrying the
-published one, whose cover is already the house cover. Changed 2026-09-26,
+published one, whose cover is already the house cover. Changed 2026-09-27,
 DECISIONS.md.
 
 **What gdoc cannot do it reports, with the menu path for each, and it writes no

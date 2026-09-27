@@ -29,7 +29,7 @@ const MarkerName = "gdoc:house-prelude"
 // and a run may propose replacing it. A published marker is the house cover
 // already, with the contents list inside it, and replacing it would propose
 // deleting that list. So Decide refuses a document carrying one, and a restyle
-// walks past both. DECISIONS.md, 2026-09-26.
+// walks past both. DECISIONS.md, 2026-09-27.
 // TestAPublishedCoverIsRefusedByARunThatProposesACover and
 // TestEachMarkerReaderReadsItsOwnName are the pins.
 const PublishedName = "gdoc:house-published"

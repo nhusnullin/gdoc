@@ -83,7 +83,7 @@
 // NORMAL_TEXT with its look set directly, so a restyle reading named styles
 // would take the cover for body prose and flatten it: that happened on
 // 2026-09-25. The marker is how a restyle knows where gdoc's words end, and it
-// walks past what the marker covers. DECISIONS.md, 2026-09-26.
+// walks past what the marker covers. DECISIONS.md, 2026-09-27.
 //
 // The end is the contents list because that is the boundary export already
 // strips to, so the two commands agree on where publish's cover stops. No

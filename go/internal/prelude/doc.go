@@ -176,7 +176,7 @@
 // propose deleting the house cover the document already has, contents list and
 // all. So Decide reads Published before Markers and refuses a document carrying
 // one, and the refusal says to run without --fields. A plain restyle walks past
-// both kinds: cmd/gdoc's markedSpans. DECISIONS.md, 2026-09-26.
+// both kinds: cmd/gdoc's markedSpans. DECISIONS.md, 2026-09-27.
 // TestAPublishedCoverIsRefusedByARunThatProposesACover,
 // TestEachMarkerReaderReadsItsOwnName and
 // TestAPublishedMarkerBrokenAcrossTheAuthorsTextIsRefused are the pins.

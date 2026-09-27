@@ -135,11 +135,13 @@ func Run(ctx context.Context, s Session, o Options) (Report, error) {
 	var d *docs.Document
 	d, rep.Checks, rep.Title, rep.Tabs, rep.Warnings = verify(ctx, s, id, o.Title)
 	rep.Verified = rep.Checks.all()
-	if d != nil && rep.Checks.OneTab {
-		var warns []string
-		rep.Marked, warns = mark(ctx, s, id, d.Tabs[0])
-		rep.Warnings = append(rep.Warnings, warns...)
+	if d == nil || !rep.Checks.OneTab {
+		rep.Warnings = append(rep.Warnings, unmarked("the document could not be read back as one tab, so there was no contents list to mark up to"))
+		return rep, nil
 	}
+	var warns []string
+	rep.Marked, warns = mark(ctx, s, id, d.Tabs[0])
+	rep.Warnings = append(rep.Warnings, warns...)
 	return rep, nil
 }
 
