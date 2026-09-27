@@ -588,13 +588,23 @@ one of them starts from a colleague's own sentence:
 - **The restyle run**, `gdoc-restyle`. Nail gives a link, and the skill surveys
   the document before it proposes anything to it.
 
-**A skill names the binary version it needs**, as `needs:` in its own front
-matter. Its setup runs `gdoc help` first and reads `version` from the object,
+**A skill names the binary version it needs**, as `needs:` under `metadata` in
+its own front matter. Its setup runs `gdoc help` first and reads `version` from the object,
 and an older binary stops the skill with one sentence naming `gdoc update`. No
 `version` at all is a build made from source rather than a release, which is not
 an error: the skill says so once and carries on. Skill and binary may drift by a minor
 version without harm, because a skill holds no flag list, which is the next
 rule. Added 2026-09-16, DECISIONS.md.
+
+**A skill keeps to the Agent Skills specification.** Its front matter sets only
+the six top-level keys agentskills.io allows, carries a `compatibility` line,
+and parses as YAML. Its SKILL.md stays under 500 lines and 20,000 characters.
+What only some runs need sits in a file beside it, which SKILL.md names at the
+step that needs it, and whose calls are read against the table like SKILL.md's:
+`TestEverySkillFrontMatterKeepsToTheAgentSkillsSpec`,
+`TestEverySkillBodyFitsTheSpecBudget`, `TestEveryFileBesideASkillIsNamedByIt`
+and `TestEveryFileBesideASkillNamesOnlyWhatTheBinaryHas`. Added 2026-09-27,
+DECISIONS.md.
 
 **No skill holds a flag list.** Before the first call of a command in a session
 a skill runs `gdoc help <command>` and reads the words and flags from the binary

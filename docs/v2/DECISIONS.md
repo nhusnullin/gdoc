@@ -74,6 +74,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds |
 | 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
 | 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
+| 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2642,3 +2643,49 @@ that walk is the only one in the package that stops at the element: `cut`,
 `indexes` and `headingWords` all recurse into it, and so do `docs.blocks` and
 `docs.writePlain`. A reader of any of those would take the omission for a gap.
 `TestAContentsListPrintsNothing` is the pin.
+
+
+## 2026-09-27. The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget.
+
+Domain choice, with portability as the reason. The skills are written in the
+Agent Skills format, which agentskills.io publishes as an open specification,
+and its reference validator, `skills-ref validate`, refused all five: `needs`
+is not one of the six top-level keys it allows. Claude Code ignored the extra
+key, so nothing broke here, but another agent that reads the format refuses the
+skill outright.
+
+**`needs` moves under `metadata`.** The specification's place for a key a
+client wants and the format does not define is a map under `metadata`. The
+value, the rule and every test that reads it are unchanged, because the tests
+read the line and not its indentation. What changed is where the line sits and
+the one sentence in each skill that says where to find it.
+
+**Every skill carries `compatibility`.** It says the gdoc binary has to be on
+PATH and signed in, and that the network has to reach Google. `gdoc-publish`
+also names the SVG renderer. Writing it found the first real bug of the
+change: a `: ` inside an unquoted value is a YAML key, so that front matter did
+not parse. The test now refuses a colon or a hash in an unquoted value.
+
+**A SKILL.md stays under 500 lines and 20,000 characters.** The specification
+asks for 500 lines and 5,000 tokens, because the whole file loads on every run.
+Characters over four stand in for tokens, because a person can check that with
+`wc -c`. `gdoc-review` was 615 lines and about 7,000 tokens. Live mode and the
+detail of proposing moved into `live.md` and `propose.md` beside it. Both are
+needed only on some runs, and SKILL.md says at the step where each applies when
+to read it. Step 7 keeps a five-line short version, so a session deciding
+whether to propose at all does not need the file.
+
+**A file beside a skill is named by it and read like it.** A file no SKILL.md
+names in backticks is never loaded, so the test fails on one. The calls in a
+markdown file beside a skill are read against the command table, the way
+SKILL.md calls are. This includes `markers.md`, which no test read before.
+
+Not done here: sharper descriptions and a trigger evaluation set. A
+description changed without a measurement is a guess. The evaluation set comes
+first, as its own plan.
+
+Tests: `TestEverySkillFrontMatterKeepsToTheAgentSkillsSpec`,
+`TestATopLevelKeyOutsideTheSpecIsCaughtAndMetadataIsNot`,
+`TestAColonOrAHashInAnUnquotedValueIsCaught`,
+`TestEverySkillBodyFitsTheSpecBudget`, `TestEveryFileBesideASkillIsNamedByIt`
+and `TestEveryFileBesideASkillNamesOnlyWhatTheBinaryHas`.
