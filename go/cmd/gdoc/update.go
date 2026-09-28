@@ -15,8 +15,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"gdoc/internal/emit"
@@ -110,7 +112,7 @@ type updateData struct {
 	Previous      string `json:"previous,omitempty"`
 }
 
-func cmdUpdate(ctx context.Context, a *args) emit.Result {
+func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
 	flags := update.Flags{
 		Check:    a.has("--check"),
 		Major:    a.has("--major"),
@@ -127,7 +129,7 @@ func cmdUpdate(ctx context.Context, a *args) emit.Result {
 	if flags.Rollback {
 		return runRollback(path)
 	}
-	return runUpdate(ctx, path, flags)
+	return runUpdate(ctx, path, flags, errOut)
 }
 
 // oneRun refuses the flag pairs that name two runs. --rollback is a file move
@@ -204,9 +206,38 @@ func runRollback(path string) emit.Result {
 	return emit.Result{OK: true, Data: data}
 }
 
-// runUpdate is the whole of a run that looks at GitHub: read the listing,
-// choose a release of each channel, decide, and carry the decision out.
-func runUpdate(ctx context.Context, path string, flags update.Flags) emit.Result {
+// The steps a run narrates on stderr, in the order it takes them. The first
+// two are every run's; the other five are planned only when the decision is
+// to install, so a run with nothing to take never draws a download.
+const (
+	stepRead      = "read releases"
+	stepChoose    = "choose release"
+	stepChecksums = "read checksums"
+	stepDownload  = "download"
+	stepVerify    = "verify checksum"
+	stepReplace   = "replace binary"
+	stepReadBack  = "read back"
+)
+
+// runUpdate is the whole of a run that looks at GitHub, with its steps drawn
+// on errOut for the person who typed it. The object is decided without
+// looking at the drawing, so stdout is what it would be with nobody watching.
+//
+// TestAnUpdateNarratesItsStepsOnStderr,
+// TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne,
+// TestAnUpToDateRunDrawsNoDownload and
+// TestAnUnreachableGitHubIsMarkedOnTheReadStep.
+func runUpdate(ctx context.Context, path string, flags update.Flags, errOut io.Writer) emit.Result {
+	pr := newProgress(errOut, "gdoc update")
+	pr.Plan(stepRead, stepChoose)
+	r := checkAndInstall(ctx, path, flags, pr)
+	pr.Finish(resultLine(r))
+	return r
+}
+
+// checkAndInstall reads the listing, chooses a release of each channel,
+// decides, and carries the decision out.
+func checkAndInstall(ctx context.Context, path string, flags update.Flags, pr *progress) emit.Result {
 	installed, warns := installedVersion()
 	data := updateData{Installed: installed.String(), Path: path}
 
@@ -214,16 +245,20 @@ func runUpdate(ctx context.Context, path string, flags update.Flags) emit.Result
 	p.AllowUpdateFrom(updateRepo)
 	reach := openPlain(p)
 
+	pr.Start(stepRead, "")
 	var entries []update.Entry
 	if err := reach.GetJSON(ctx, releasesURL, &entries); err != nil {
 		// Not a failure. A person on a train typed a command and is owed an
 		// answer, and the answer is that today gdoc cannot say: the binary
 		// they have is still the binary they have.
+		pr.Fail(err)
 		data.Action = string(update.Unreachable)
 		warns = append(warns, fmt.Sprintf("the releases of %s could not be read, so this run cannot say whether there is a newer gdoc: %v", updateRepo, err))
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
+	pr.Done(fmt.Sprintf("%s, %d listed", updateRepo, len(entries)))
 
+	pr.Start(stepChoose, "")
 	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
 	stable, stableErr := update.Choose(entries, update.Stable, platform)
 	nightly, nightlyErr := update.Choose(entries, update.Nightly, platform)
@@ -238,11 +273,17 @@ func runUpdate(ctx context.Context, path string, flags update.Flags) emit.Result
 		asked, aside = nightlyErr, stableErr
 	}
 	if asked != nil {
+		pr.Fail(asked)
 		return emit.Result{OK: false, Error: asked.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	if aside != nil {
 		warns = append(warns, fmt.Sprintf("the other channel has nothing this run could install, which changes nothing about this one: %v", aside))
 	}
+	latest := stable
+	if flags.Channel() == update.Nightly {
+		latest = nightly
+	}
+	pr.Done(chosenDetail(latest, flags.Channel(), platform, installed))
 
 	d := update.Decide(update.State{Installed: installed, Stable: stable.Version, Nightly: nightly.Version}, flags)
 	data.Action = string(d.Action)
@@ -251,6 +292,7 @@ func runUpdate(ctx context.Context, path string, flags update.Flags) emit.Result
 	if !d.Installs() {
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
+	pr.Plan(stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack)
 
 	// Past here something is replaced, so the action stops being true until it
 	// is: a run that fails on the download says what it was taking and claims
@@ -260,7 +302,7 @@ func runUpdate(ctx context.Context, path string, flags update.Flags) emit.Result
 	if nightly.Version == d.To {
 		chosen = nightly
 	}
-	res, err := install(ctx, reach, chosen, path)
+	res, err := install(ctx, reach, chosen, path, pr)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}
@@ -276,18 +318,123 @@ func runUpdate(ctx context.Context, path string, flags update.Flags) emit.Result
 // fetched first: it is the smaller read, and a release that cannot be verified
 // is a release nothing may be replaced from, so there is no sense in
 // downloading megabytes before finding that out.
-func install(ctx context.Context, reach plain, rel update.Release, path string) (update.Result, error) {
+//
+// Each read, the check and the replacement is a step on pr. The check runs as
+// its own step before Apply, which checks again: the second hash is the
+// safety, and the first is there so a person sees which of the two failed.
+// The read back is inside Apply, so a read back that fails is drawn on the
+// replace step, and the read back step is drawn only once there is a hash.
+func install(ctx context.Context, reach plain, rel update.Release, path string, pr *progress) (update.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
-	sums, err := reach.GetBytes(ctx, rel.ChecksumsURL, maxChecksums)
-	if err != nil {
-		return update.Result{}, fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %v", rel.Tag, err)
+	sumsName := update.ChecksumsName(rel.Tag)
+	var sums, archive []byte
+	var res update.Result
+	steps := []struct {
+		name, detail string
+		run          func() (string, error)
+	}{
+		{stepChecksums, sumsName, func() (string, error) {
+			var err error
+			if sums, err = reach.GetBytes(ctx, rel.ChecksumsURL, maxChecksums); err != nil {
+				return "", fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %v", rel.Tag, err)
+			}
+			return "", nil
+		}},
+		{stepDownload, joinDetail(rel.AssetName, humanSize(rel.AssetSize)), func() (string, error) {
+			var err error
+			if archive, err = reach.GetBytes(ctx, rel.AssetURL, maxArchive); err != nil {
+				return "", fmt.Errorf("%s could not be downloaded, so nothing was replaced: %v", rel.AssetName, err)
+			}
+			return "", nil
+		}},
+		{stepVerify, "", func() (string, error) {
+			return "matches " + sumsName, update.Verify(archive, sums, rel.AssetName)
+		}},
+		{stepReplace, tildePath(path), func() (string, error) {
+			var err error
+			res, err = update.Apply(archive, sums, rel.AssetName, zipBinaryName(runtime.GOOS), path)
+			if err != nil || res.Previous == "" {
+				return "", err
+			}
+			return tildePath(path) + ", the old one kept beside it", nil
+		}},
 	}
-	archive, err := reach.GetBytes(ctx, rel.AssetURL, maxArchive)
-	if err != nil {
-		return update.Result{}, fmt.Errorf("%s could not be downloaded, so nothing was replaced: %v", rel.AssetName, err)
+	for _, s := range steps {
+		if err := pr.Do(s.name, s.detail, s.run); err != nil {
+			return update.Result{}, err
+		}
 	}
-	return update.Apply(archive, sums, rel.AssetName, zipBinaryName(runtime.GOOS), path)
+	pr.Start(stepReadBack, "")
+	pr.Done("sha256 " + shortSum(res.Sum))
+	return res, nil
+}
+
+// chosenDetail is the choose step's line: the release, the channel and the
+// platform, and what it would replace.
+func chosenDetail(rel update.Release, ch update.Channel, platform string, installed update.Version) string {
+	from := "from a checkout build"
+	if !installed.IsZero() {
+		from = "from " + installed.String()
+	}
+	return joinDetail(rel.Version.String(), ch.String(), platform, from)
+}
+
+// resultLine is the one line a person reads under the steps, and none for a
+// run that failed: the red cross and its reason are already the last thing on
+// the screen. It restates the object's own fields, so it cannot say more than
+// the object does.
+func resultLine(r emit.Result) string {
+	d, ok := r.Data.(updateData)
+	if !r.OK || !ok {
+		return ""
+	}
+	switch update.Action(d.Action) {
+	case update.Updated:
+		return fmt.Sprintf("gdoc %s installed. gdoc update --rollback goes back.", d.To)
+	case update.MajorAvailable:
+		return fmt.Sprintf("gdoc %s is a major release, so it was not installed. %s installs it.", d.To, d.Run)
+	case update.Unreachable:
+		return "GitHub did not answer, so the gdoc here is unchanged."
+	case update.Checked:
+		if d.To != "" {
+			return fmt.Sprintf("gdoc %s is published. --check installs nothing.", d.To)
+		}
+	}
+	if d.Run != "" {
+		return fmt.Sprintf("Nothing newer to install. A newer nightly is there: %s.", d.Run)
+	}
+	return "Nothing newer to install."
+}
+
+// joinDetail joins the parts of a step's detail that are there.
+func joinDetail(parts ...string) string {
+	kept := make([]string, 0, len(parts))
+	for _, s := range parts {
+		if s != "" {
+			kept = append(kept, s)
+		}
+	}
+	return strings.Join(kept, ", ")
+}
+
+// tildePath is a path under the home directory as a person writes it.
+func tildePath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" || !strings.HasPrefix(path, home+string(os.PathSeparator)) {
+		return path
+	}
+	return "~" + path[len(home):]
+}
+
+// shortSum is enough of a hash for a person to compare by eye. The whole of it
+// is in the object.
+func shortSum(sum string) string {
+	const shown = 12
+	if len(sum) <= shown {
+		return sum
+	}
+	return sum[:shown]
 }
 
 // installedVersion is the running binary's own tag, and the warning for a

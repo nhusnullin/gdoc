@@ -64,8 +64,8 @@ the redesign starts from the incidents and not from a blank page.
    changes nothing Nail runs, and CLAUDE.md's "no reinstall" line is untrue on
    this machine.
 8. **`gdoc update` does part of the job.** It leaves the shell completion
-   stale (`update-leaves-the-completion-stale.md`) and prints nothing while it
-   works (`update-shows-its-progress.md`).
+   stale (`update-leaves-the-completion-stale.md`). It printed nothing while
+   it worked until 2026-09-28, when it gained a step list on stderr.
 
 Earlier incidents with the same shape: the first stable release (v2.0.0,
 2026-09-17) shipped a `restyle --from` that refused its own `--dry-run` file,

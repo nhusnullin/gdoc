@@ -27,5 +27,6 @@ terminal and stays as it is. A test in `go/boundary/` that reads the five
 skills and finds the fenced block would stop one skill drifting from the
 others, the way the `needs` line is already checked across them.
 
-Related: [update-shows-its-progress](update-shows-its-progress.md). A session
-that runs `gdoc update` itself gets the plain-line form of that progress.
+Related: `gdoc update` draws its steps on stderr since 2026-09-28
+(`go/cmd/gdoc/progress.go`). A session that runs it itself gets the plain-line
+form, one line per finished step.

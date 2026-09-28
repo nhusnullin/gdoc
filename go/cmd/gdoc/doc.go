@@ -336,6 +336,39 @@
 // TestTheUpdateObjectIsWhatTheSkillsRead and
 // TestRollbackPutsTheEarlierBinaryBack.
 //
+// # The update draws its steps on stderr
+//
+// A person who types `gdoc update` sees what it is doing while it does it: a
+// list of steps on stderr, one line each, and one line of result under them.
+// Stdout is untouched and still carries the one object:
+// TestAnUpdateNarratesItsStepsOnStderr.
+//
+// When stderr is not a terminal, which is every run a skill starts, each step
+// prints once as a plain line when it ends, with no colour and no escape code:
+// TestAPipedRunPrintsOneLinePerFinishedStep. A terminal is the char device bit
+// on the file's mode and nothing else, so a pipe, a file and a buffer all get
+// the plain lines: TestOnlyACharDeviceIsATerminal. On a terminal the list is
+// drawn in advance and redrawn in place, with a spinner on the running step
+// and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
+// and TestNoColorKeepsTheRedrawAndDropsTheColour.
+//
+// Only what happened is drawn. A failed step carries its reason on the next
+// line and the steps after it are not drawn at all:
+// TestAFailedStepIsMarkedAndTheRestAreNotDrawn and
+// TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne. The download and the
+// steps after it are planned only when the decision is to install:
+// TestAnUpToDateRunDrawsNoDownload. GitHub not answering is drawn as a failed
+// read with its cause, under an ok object:
+// TestAnUnreachableGitHubIsMarkedOnTheReadStep.
+//
+// The narration is by step and not by byte. The download line's size is the
+// asset's size in the listing, because gapi reads a body whole and a byte count
+// would need a reader in the one room that builds a request. A rollback is a
+// local file move and draws nothing.
+//
+// The writer lives in progress.go, beside the one command that uses it. It
+// moves to internal/emit when a second command wants it.
+//
 // # A panic is still one envelope
 //
 // safeDispatch recovers, prints ok: false with what happened, and puts the

@@ -27,27 +27,33 @@ func (c Channel) String() string {
 	return "stable"
 }
 
-// Asset is one file published with a release.
+// Asset is one file published with a release. Size is the listing's word for
+// how many bytes the file is, which lets the command say megabytes before the
+// download has begun. It is printed for a person and checks nothing: the
+// checksum is what a download is judged by.
 type Asset struct {
 	Name string `json:"name"`
+	Size int64  `json:"size"`
 	URL  string `json:"browser_download_url"`
 }
 
-// Entry is one release as api.github.com lists it. Only the four fields gdoc
-// reads are named; the rest of the answer is discarded by encoding/json.
+// Entry is one release as api.github.com lists it. Only the fields gdoc reads
+// are named; the rest of the answer is discarded by encoding/json.
 type Entry struct {
 	Tag    string  `json:"tag_name"`
 	Draft  bool    `json:"draft"`
 	Assets []Asset `json:"assets"`
 }
 
-// Release is a release gdoc could install on one platform: the version, and
-// the two URLs the install needs.
+// Release is a release gdoc could install on one platform: the version, the
+// two URLs the install needs, and the zip's size as the listing gave it, which
+// is zero when the listing gave none.
 type Release struct {
 	Version      Version
 	Tag          string
 	AssetName    string
 	AssetURL     string
+	AssetSize    int64
 	ChecksumsURL string
 }
 
@@ -105,21 +111,22 @@ func Choose(entries []Entry, channel Channel, platform string) (Release, error) 
 func release(e Entry, v Version, platform string) (Release, error) {
 	zip := AssetName(e.Tag, platform)
 	sums := ChecksumsName(e.Tag)
-	found := make(map[string]string, len(e.Assets))
+	found := make(map[string]Asset, len(e.Assets))
 	for _, a := range e.Assets {
-		found[a.Name] = a.URL
+		found[a.Name] = a
 	}
-	if found[zip] == "" {
+	if found[zip].URL == "" {
 		return Release{}, fmt.Errorf("release %s carries no %s, so there is nothing to install on %s", e.Tag, zip, platform)
 	}
-	if found[sums] == "" {
+	if found[sums].URL == "" {
 		return Release{}, fmt.Errorf("release %s carries no %s, so nothing it holds could be verified", e.Tag, sums)
 	}
 	return Release{
 		Version:      v,
 		Tag:          e.Tag,
 		AssetName:    zip,
-		AssetURL:     found[zip],
-		ChecksumsURL: found[sums],
+		AssetURL:     found[zip].URL,
+		AssetSize:    found[zip].Size,
+		ChecksumsURL: found[sums].URL,
 	}, nil
 }
