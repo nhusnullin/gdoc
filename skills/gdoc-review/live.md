@@ -52,6 +52,27 @@ tool's timeout to ten.
 wait with no cursor answers with the whole document, which is Step 1 under
 another name and reads to a session as news.
 
+## Which cursor to keep
+
+Every `comments` answer carries a `cursor`, and it always means the newest
+activity that call saw. It does not mean the newest activity you read. A
+cursor you keep moves the watch past everything before it, and nothing brings
+that span back: a thread whose only news was inside it stays silent until
+somebody touches it again.
+
+- A window's cursor is safe to keep. You just read that window.
+- Mid-session, when you want to look at the threads again, run
+  `$GDOC comments <url> --since "$CURSOR"`, not a bare listing. The answer is a
+  window, so its cursor is one you have read up to.
+- Keep a bare listing's cursor only when you read the whole answer, replies
+  included.
+- Never read a listing through a pipe that narrows it, and then keep its
+  cursor. The pipe drops what you did not read, and the cursor still moves past
+  it. This is the failed-poll rule again: that span is unread, not empty.
+
+When you are not sure, keep the cursor you already had. The worst case is a
+window you read twice, and a thread you already answered carries its 🤖 receipt.
+
 ## What a window contains
 
 Everything with activity after the cursor. That includes gdoc's own replies:
