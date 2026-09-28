@@ -314,13 +314,15 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Create: `go/internal/live/proposeblock_test.go`
 - Modify: `go/internal/live/doc.go`
 
-- [ ] `TestLiveProposeBlock`, under `GDOC_LIVE_WRITE`, in a document it
+- [x] `TestLiveProposeBlock`, under `GDOC_LIVE_WRITE`, in a document it
   creates in the test folder: an `after` block with a heading, body and both
   list kinds, and a replace over two paragraphs, after a list item so the
   bullet clearing is exercised. Both come back `verified: true` with one id.
-  Numbered lists in SUGGEST are unmeasured until this test runs
-- [ ] then `withdraw` each, and the read-back matches the document before
-- [ ] trash what it made, and name every variable in `live/doc.go`
+  Numbered lists in SUGGEST are unmeasured until this test runs. The test is
+  written and compiles; the live run itself needs the real token and is Nail's
+  (skipped here, not automatable)
+- [x] then `withdraw` each, and the read-back matches the document before
+- [x] trash what it made, and name every variable in `live/doc.go`
 
 ### Task 11: Verify acceptance criteria
 
