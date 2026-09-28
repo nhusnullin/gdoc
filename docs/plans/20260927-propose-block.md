@@ -297,15 +297,16 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `skills/gdoc-align/SKILL.md`
 - Modify: every skill's `needs` line that now depends on the block kind
 
-- [ ] review: when the right answer is a new or rewritten section, propose a
+- [x] review: when the right answer is a new or rewritten section, propose a
   block. Before a replace, run `suggestions` and `comments` over the range and
   tell the person what is in it; propose only with their answer
-- [ ] align: a section only the note has is proposed as a block after the
+- [x] align: a section only the note has is proposed as a block after the
   paragraph before it, not left to the person
-- [ ] raise `needs` to the release this milestone will be. The gate from
-  `TestNoSkillNeedsAReleaseNobodyCut` makes CI red until `make tag` runs, so
-  the tag is part of the merge (Post-Completion)
-- [ ] `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` passes
+- [x] raise `needs` to the release this milestone will be: v2.7.0 on
+  gdoc-review and gdoc-align, and `skillWants` says so too. The gate from
+  `TestNoSkillNeedsAReleaseNobodyCut` is red until `make tag VERSION=v2.7.0`
+  runs, as planned, so the tag is part of the merge (Post-Completion)
+- [x] `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` passes
 
 ### Task 10: Live acceptance
 
