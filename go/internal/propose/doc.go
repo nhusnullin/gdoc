@@ -81,6 +81,65 @@
 // TestCheckRefusesEachBadProposalByName, over "no replacement", and
 // TestApplyRefusesADeletionOnlyProposalBeforeAnyWrite are the pins.
 //
+// # A block's content is a subset, and everything outside it is refused by name
+//
+// The second kind of proposal is a block: whole paragraphs, placed after a
+// quoted paragraph or in place of a run of them. Its content arrives as
+// markdown, and ParseContent reads it into the paragraphs the write is built
+// from: a named style, a list membership, and runs carrying marks.
+//
+// The subset is paragraphs, headings one to six, bulleted and numbered lists one
+// level deep, and three marks, which are bold, italic and a link. A wrapped line
+// is one paragraph and the wrap is a space, because a paragraph is a paragraph
+// because of the empty line between two of them. A list item is NORMAL_TEXT with
+// a bullet, because in Docs a bullet is a list membership and never a style.
+// TestContentBecomesTheParagraphsTheBlockWrites,
+// TestContentReadsAHeadingAtItsOwnLevel, TestContentReadsTheMarksASentenceCarries,
+// TestContentReadsBothListKinds, TestContentJoinsAWrappedLineWithASpace and
+// TestParaTextIsTheWordsWithoutTheMarks are the pins.
+//
+// Everything else is a refusal naming the line, never a construct quietly
+// dropped. A block that lost its table is a suggestion nobody can read and
+// nobody can explain, and the words around the hole read as if they were the
+// whole answer. The refusals are a table, a nested list, a picture, a code block,
+// a block quote, HTML in either shape, a horizontal rule, code in a sentence,
+// struck-out words, a task list, a line break inside a paragraph, a heading
+// inside a list item, a list item with more than one paragraph, a paragraph or a
+// heading with no words in it, and content that is empty or nothing but space.
+// Two of them are decisions rather than gaps: a nested list, because nesting a
+// suggested list goes in through leading tabs and that is unmeasured in SUGGEST
+// mode, and a table, because docs/backlog/propose-inside-tables.md is not
+// settled. TestContentRefusesWhatTheSubsetDoesNotHold carries every case.
+//
+// A refusal names the line because content is a file a person wrote and a block
+// is tens of lines long. A horizontal rule is the one construct goldmark builds
+// with no source position at all, so its line is the first line holding anything
+// after the block above it: naming line 1 would send the author to the top of a
+// file whose rule is thirty lines down, which is the wrong end of it.
+// TestARefusedConstructNamesItsLine and
+// TestARuleWithNoSourcePositionStillNamesItsLine are the pins.
+//
+// A link has to be an address a document can open, which means a scheme or a
+// host. A hub path and a "#heading" jump have neither, and in a Google Doc both
+// open nothing, so they are refused rather than written as dead links or
+// silently unlinked. internal/body keeps the words and drops the link instead,
+// because it is publishing a whole note and losing one link is cheaper than
+// losing the publish. Here the content is a few lines a review wrote, so
+// rewriting them costs nothing. An email autolink gets the mailto: scheme
+// goldmark leaves off. TestContentKeepsAnAddressADocumentCanOpen and the two
+// link cases of TestContentRefusesWhatTheSubsetDoesNotHold are the pins.
+//
+// goldmark is configured with the GFM extensions and nothing else. GFM is on so
+// that a table, a struck-out word and a task list are parsed and refused by
+// name: with it off, each one is ordinary text and the table arrives in the
+// document as rows of pipes. The typographer internal/body enables is off, and
+// so are footnotes, because these words are a review's own and a straight quote
+// turned curly is a change gdoc made that nobody asked for.
+//
+// gdoc's own markers are not asked about here. Every route into a document asks,
+// and for the proposals file that is cmd/gdoc, which asks it of every field of
+// every entry rather than of this one string.
+//
 // # A line break is refused on both sides, in one place, for two reasons
 //
 // A quoted carrying one is refused because a paragraph's last text run carries

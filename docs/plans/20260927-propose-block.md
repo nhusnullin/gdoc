@@ -171,14 +171,14 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Create: `go/internal/propose/block.go`, `go/internal/propose/block_test.go`
 - Modify: `go/internal/propose/doc.go`
 
-- [ ] write the failing tests first: a heading, a paragraph with bold, italic
+- [x] write the failing tests first: a heading, a paragraph with bold, italic
   and a link, a bullet list and a numbered list come out as the right
   paragraphs, styles, runs and list kinds
-- [ ] refused by name, each with a test: a table, a nested list, a picture,
+- [x] refused by name, each with a test: a table, a nested list, a picture,
   a code block, a block quote, raw HTML, a thematic break, and empty content.
   gdoc's markers are not checked here: Task 8 extends the existing check
-- [ ] parse with goldmark, the way `internal/body` does. No new module
-- [ ] state the subset and each refusal in `propose/doc.go`, naming the tests
+- [x] parse with goldmark, the way `internal/body` does. No new module
+- [x] state the subset and each refusal in `propose/doc.go`, naming the tests
 
 ### Task 4: Where a block goes
 
