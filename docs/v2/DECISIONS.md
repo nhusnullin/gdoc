@@ -77,6 +77,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
 | 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
 | 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
+| 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2768,3 +2769,89 @@ documents gdoc did not write, and it says so.
 Serves principle 3: not knowing where gdoc's own cover ends never resolves to
 styling over it, and gdoc knows where it ends only when the document says so.
 
+
+## 2026-09-28. `propose` gains a second kind, a block of whole paragraphs.
+
+`propose` changes words inside one paragraph. A review answer that is "rewrite
+this section" or "add a section here" had no route into the document, and on
+2026-09-25 Nail pasted one in by hand. The backlog item was
+`docs/backlog/propose-cannot-add-paragraphs.md`, and this entry closes it.
+
+Google was never the blocker. The house prelude already proposes about seventy
+paragraphs in one SUGGEST batch, and on 2026-09-27
+`TestLiveBlockProposalProbe` measured the block shape in throwaway documents.
+MEASURED.md holds the seven cases under "A block of new paragraphs, proposed in
+one SUGGEST batch", and every decision below rests on a row of that table.
+
+**A proposals file entry is either the words kind or a block.** The block names
+one placement, either `after` with a quote in the anchor paragraph, or the pair
+`replace_from` and `replace_to`, and it carries `content` as markdown. The
+content is a subset: paragraphs, `#` to `######` headings, `-` and `1.` lists
+one level deep, bold, italic and links. An empty `kind` is the words kind, so
+every file written before today still reads. A replace covers whole paragraphs,
+from the start of the first to the end of the last, because a partial paragraph
+means an accept merges a neighbour.
+
+**One id per block.** Measured: the insertion, the paragraph styles, the
+bullets, the bullet removal and the deletion of a replace all come back under
+one suggestion id. So the note's `proposals[]` entry keeps its one `id` and
+`withdraw` is unchanged. A read-back showing more than one id is reported in
+full and is `verified: false`, with a warning that `withdraw` takes back the
+first, which is the one the note records. The reason is the 2026-08-29 rule
+that gdoc can retract its own proposal: a proposal it cannot fully take back is
+not a verified one.
+
+**Insert at the start of the paragraph after the anchor, never at the end of
+the anchor.** Measured: an end insert hands the anchor's old paragraph mark to
+the last new paragraph, and restyling that mark is a second suggestion. At a
+start every new paragraph owns a mark of its own.
+
+**Clear the inherited bullets, and clear the inherited text style.** New text
+takes the list membership of the paragraph it lands in front of, and stating
+`namedStyleType` does not clear it. Every new paragraph that is not a list item
+gets `deleteParagraphBullets`, which folds into the same id. Text inserted at a
+paragraph's start also takes that paragraph's first run style, so a block in
+front of a bold or linked paragraph would arrive bold or linked. One
+`updateTextStyle` covers the whole insert and clears bold, italic, underline,
+strikethrough and the link through its fields mask, before the block's own
+marks are written.
+
+**After the last paragraph there is no paragraph to insert in front of.** The
+text goes in before the body's final newline, as a newline and then the content
+without its trailing newline, so the last new paragraph owns the final mark.
+Two cases are refused there by name. A block whose last paragraph is not plain
+body text, because restyling that final mark is the unmeasured second-id case.
+And a last paragraph that is a list item, because clearing an inherited bullet
+on the mark-owning paragraph is the one measured case that gave two ids. Both
+messages say what would work instead. Either can be widened after a
+measurement, which is Nail's call.
+
+**A replace over somebody's work is refused, and every id is named.** When the
+paragraphs a replace would delete hold a pending suggestion or a comment's
+anchor, the binary refuses and names each suggestion id and each comment id.
+That is a fact and not a judgement: the binary does not decide whether the
+suggestion matters. The skills run `suggestions` and `comments` over the range
+before they ask, and tell the person what is in the way. This serves principle
+3, because deleting a colleague's pending edit is what not knowing would
+otherwise resolve to.
+
+**Out of scope, and refused by name rather than dropped:** tables, because
+`docs/backlog/propose-inside-tables.md` is not settled; nested lists, because
+nesting through leading tabs is unmeasured in SUGGEST mode; pictures; and
+anything goldmark parses that the subset above does not name, which is code
+blocks, block quotes, raw HTML and thematic breaks. Refusing by name is
+principle 3 again: a file gdoc half understands never reaches a document.
+
+The read-backs are the ones every write already has, on routes the write did
+not go out on. The inline suggestions read must show the insertion id on every
+new paragraph, and for a replace a deletion id on every old one. The preview
+read without suggestions must still show the anchor, or the replaced run,
+exactly as it was, and must not hold the block's first line, which is the
+direct-edit catch. The docx export must show the robot comment anchored to
+text. A first line that already appears elsewhere in the document makes the
+preview check answer "no answer" rather than a pass.
+
+Tests: the milestone plan `docs/plans/20260927-propose-block.md` names one per
+rule, from `TestABlockProposalNeedsNoGrant` at the guard to
+`TestLiveProposeBlock` in the live package. `propose/doc.go` names the subset
+and each refusal with the test that pins it.

@@ -309,6 +309,41 @@ at indexes computed from a read, so a concurrent proposer shifts the ground unde
 the other and the API reports 200 either way. Each proposal re-reads before
 computing its indexes and reads back after landing.
 
+**Two kinds in the proposals file.** An entry with no `kind`, or `kind: words`,
+changes words inside one paragraph: `{quoted, replacement, why, assignee?}`, and
+a line break on either side is refused. An entry with `kind: block` adds or
+replaces whole paragraphs. It names exactly one placement, either `after` with a
+quote in the paragraph the block follows, or the pair `replace_from` and
+`replace_to` which covers whole paragraphs from the start of the first to the
+end of the last. It carries `content` as markdown: paragraphs, `#` to `######`
+headings, `-` and `1.` lists one level deep, bold, italic and links. Every quote
+is found exactly once, by the same span walk the words kind uses. A block is one
+SUGGEST batch and comes back with one suggestion id, so `withdraw` takes it back
+whole. Changed 2026-09-28, DECISIONS.md.
+
+**What a block refuses, by name.** Content the subset does not hold: a table, a
+nested list, a picture, a code block, a block quote, raw HTML, a thematic break,
+and empty content. A placement that is not exactly one form, a quote that is not
+there exactly once, a `replace_to` before its `replace_from`, an anchor inside a
+table cell, and a replace whose run reaches the body's last paragraph, because
+Docs cannot delete the final newline. A replace whose paragraphs hold a pending
+suggestion or a comment's anchor, with every suggestion id and comment id named,
+so the deletion never takes a colleague's work with it. An `after` whose next
+element is a table, a contents list or a section break, because there is no
+paragraph start to insert at. And an `after` on the document's last paragraph
+when the block does not end in a plain paragraph, or when that last paragraph is
+a list item, because there the last new paragraph owns the existing final mark.
+
+**Three read-backs for a block**, on routes the write did not go out on: the
+inline suggestions read carries the insertion id on every new paragraph, and a
+deletion id on every replaced one; the preview read without suggestions still
+shows the anchor or the replaced run as it was, without the block's first line,
+which is the direct-edit catch; and the docx export carries the robot comment
+anchored to text. A first line that already appears elsewhere in the document
+makes the preview check answer "no answer" rather than a pass. More than one
+suggestion id is reported in full and is `verified: false`, with a warning that
+`withdraw` takes back the one the note records.
+
 ### `annotate`
 
 Leaves one comment on the exact words a caller quotes, anchored to them, and

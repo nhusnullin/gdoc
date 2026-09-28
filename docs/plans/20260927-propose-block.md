@@ -148,11 +148,11 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `docs/v2/DECISIONS.md` (entry and register row)
 - Modify: `docs/v2/SPEC.md` (the propose section)
 
-- [ ] DECISIONS entry dated the day it is written: the block kind, the
+- [x] DECISIONS entry dated the day it is written: the block kind, the
   decisions above with their measurement, and what is refused by name
-- [ ] SPEC: the proposals file's block entry, the refusals, the read-backs.
+- [x] SPEC: the proposals file's block entry, the refusals, the read-backs.
   "Changed <date>, DECISIONS.md"
-- [ ] `make test` (the docs boundary tests read these files)
+- [x] `make test` (the docs boundary tests read these files)
 
 ### Task 2: The guard carries a block batch at the suggest level
 
