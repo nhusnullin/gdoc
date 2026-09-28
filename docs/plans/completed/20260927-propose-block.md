@@ -351,9 +351,11 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 
 ### Task 12: [Final] Documentation
 
-- [ ] `docs/guide/writing.md`: the block kind and its refusals. No new page
-- [ ] README only if it names what propose can do
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `docs/guide/writing.md`: the block kind and its refusals. No new page
+- [x] README unchanged: its propose row says "propose changes as native
+  suggestions, each with the comment that says why", which the block kind does
+  not make wrong, and the page is one line under its 200 line ceiling
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 
