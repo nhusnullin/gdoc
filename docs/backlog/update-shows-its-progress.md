@@ -40,3 +40,41 @@ The question the design has to answer is whether the progress is a stderr
 concern of `cmd/gdoc/update.go` alone, or a small writer in `internal/emit`
 beside the envelope, so that `auth login` and the daily notice print through
 the same thing. The second is the tidier shape and the bigger change.
+
+## The design, chosen 2026-09-28
+
+Nail asked again on 2026-09-28, because a silent update is not transparent
+about what it is doing, and left the method and the look to the session. The
+answer is a step list on stderr, moderate in style:
+
+```
+gdoc update
+  ✓ read releases        nhusnullin/gdoc, 14 listed
+  ✓ chose v2.6.0         stable, darwin-arm64, from v2.4.0
+  ⠹ downloading          gdoc-darwin-arm64.zip, 6.1 MB
+    verify checksum
+    replace binary       ~/.local/bin/gdoc
+    read back
+```
+
+- One line per step, named in advance, so the person sees the whole path and
+  where the run is on it. A pending step is dim, the running one has a
+  spinner, a done one has a green tick, a failed one a red cross and the
+  reason on the next line. A step that did not apply, such as the download
+  when nothing is newer, is not drawn at all.
+- The spinner and the redraw need a terminal. When stderr is not one, which
+  is every run a skill starts, each step prints once as a plain line when it
+  ends, with no colour and no escape codes. `NO_COLOR` turns the colour off
+  on a terminal as well.
+- The last line is a one-line result for the person: `gdoc v2.6.0 installed.
+  gdoc update --rollback goes back.` Stdout still carries only the object.
+- The size comes from the asset's `size` field in the GitHub listing, so the
+  download line says megabytes without a byte-level reader. `update.Entry`
+  does not decode that field today, so it gains one. The live bar stays out
+  of scope, as above.
+- The writer lives in `cmd/gdoc` beside `update.go` first, as a small type
+  with `Start(step)`, `Done(detail)` and `Fail(err)`. Moving it to
+  `internal/emit` for `auth login` waits until a second command wants it.
+- Tests: a non-terminal run writes the plain lines in order and nothing else,
+  stdout is byte-identical to today's, and a failed download marks its step
+  and leaves the later steps undrawn.
