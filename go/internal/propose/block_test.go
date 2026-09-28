@@ -210,3 +210,45 @@ func TestContentKeepsAnAddressADocumentCanOpen(t *testing.T) {
 		}},
 	})
 }
+
+// TestCheckRefusesABlockFieldWithoutTheBlockKind is the mistake the decoder
+// cannot catch. Both kinds are read into the one type, so a caller that wrote a
+// block and forgot its kind hands over an entry whose block fields are fields
+// the decoder knows.
+//
+// Reading it as the words kind is the wrong answer twice. An entry with no quote
+// is refused for quoting no text, which names nothing the author did wrong, and
+// an entry that quotes words as well would be sent as a words proposal with its
+// content silently dropped. So Check names the field it saw and the kind that
+// field belongs to.
+func TestCheckRefusesABlockFieldWithoutTheBlockKind(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		p    Proposal
+		says string
+	}{
+		{"after and no kind", Proposal{After: "reviewed annually", Content: testContent, Why: testWhy}, "after"},
+		{"replace_from and no kind",
+			Proposal{ReplaceFrom: "reviewed annually", ReplaceTo: "risk matrix", Content: testContent, Why: testWhy},
+			"replace_from"},
+		{"replace_to beside a words proposal",
+			Proposal{Quoted: "reviewed annually", Replacement: "reviewed twice a year", ReplaceTo: "risk matrix", Why: testWhy},
+			"replace_to"},
+		{"content beside a words proposal",
+			Proposal{Quoted: "reviewed annually", Replacement: "reviewed twice a year", Content: testContent, Why: testWhy},
+			"content"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.p.Check()
+			if err == nil {
+				t.Fatal("a block field on an entry naming no kind must be refused")
+			}
+			if !strings.Contains(err.Error(), tc.says) {
+				t.Errorf("the refusal must name the field %q: %v", tc.says, err)
+			}
+			if !strings.Contains(err.Error(), `"block"`) {
+				t.Errorf("the refusal must name the kind the field belongs to: %v", err)
+			}
+		})
+	}
+}

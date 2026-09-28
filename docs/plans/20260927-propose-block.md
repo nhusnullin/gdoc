@@ -278,17 +278,17 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `go/cmd/gdoc/write.go`, its tests, and the command table's help
 - Modify: `go/cmd/gdoc/doc.go` if a rule is stated there
 
-- [ ] write the failing tests first: the proposals file decodes a block entry
+- [x] write the failing tests first: the proposals file decodes a block entry
   strictly, and an unknown field or a block field on an entry with no
   `kind` is refused by name before anything is sent
-- [ ] extend the marker check around `write.go:507` to `after`,
+- [x] extend the marker check around `write.go:507` to `after`,
   `replace_from`, `replace_to` and `content`, and add the block route to the
   route list in `internal/markers/markers.go`
-- [ ] a block and a words proposal in one file run in file order, each with
+- [x] a block and a words proposal in one file run in file order, each with
   its own read
-- [ ] the result and the note's `proposals` entry for a block record the id,
+- [x] the result and the note's `proposals` entry for a block record the id,
   the comment id and the `after` or `replace_from` quote
-- [ ] `gdoc help propose` describes the block entry
+- [x] `gdoc help propose` describes the block entry
 
 ### Task 9: The skills
 

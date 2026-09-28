@@ -28,10 +28,19 @@
 // still reads, and a caller that never heard of a kind sends the kind it meant.
 // A kind that is neither is refused by name, because reading it as the words
 // kind would refuse a misspelled "blcok" for quoting no text, which names
-// nothing the author did wrong. Apply dispatches on the field, so the command
-// walks a file of both kinds without asking which an entry is.
-// TestAnEmptyKindIsStillTheWordsKind, TestApplyDispatchesOnTheKind and the
-// unknown kind case of TestCheckRefusesEachBadBlockByName are the pins.
+// nothing the author did wrong. The other way round is refused by name too: an
+// entry carrying after, replace_from, replace_to or content and naming no kind
+// is a block somebody forgot to mark, so Check says which field it saw and which
+// kind that field belongs to. A caller's decoder cannot hold this, because both
+// kinds are read into the one type and those are fields it knows, and reading it
+// as the words kind would either refuse it for quoting no text or, when it
+// quotes text as well, send it as a words proposal with its content quietly
+// dropped. TestCheckRefusesABlockFieldWithoutTheBlockKind is the pin.
+//
+// Apply dispatches on the field, so the command walks a file of both kinds
+// without asking which an entry is. TestAnEmptyKindIsStillTheWordsKind,
+// TestApplyDispatchesOnTheKind and the unknown kind case of
+// TestCheckRefusesEachBadBlockByName are the pins.
 //
 // The two kinds share everything after the batch has gone out: one read they
 // are built from, one post, and the answer read the same way, because what an
@@ -508,8 +517,16 @@
 // validation refuses one missing either, so a change that landed without one of
 // them in hand cannot be written down at all. Record hands those results back to
 // the caller instead of dropping them, and the caller turns each into a warning
-// naming the quoted words: the change is in the document and withdraw will
-// refuse it for ever. The warning names the route the id would have come from,
+// naming the words the proposal is known by: the change is in the document and
+// withdraw will refuse it for ever.
+//
+// Those words are Result.Quote's, because a block replaced no words. A words
+// proposal is known by its quote, a block by where it went: the after quote, or
+// the first of a replace's two, which is the paragraph the block went in at.
+// There is one field in the note for it, so a replace keeps the first, and the
+// note reads the same for both kinds. TestRecordRemembersABlockByItsPlacement
+// and TestRecordRemembersAReplaceByItsFirstQuote are the pins, with
+// TestProposeRecordsABlocksPlacementInTheNote in cmd/gdoc. The warning names the route the id would have come from,
 // and the two routes are not the same one: the comment id is the batch's own
 // answer, while the suggestion id is read out of the inline read-back
 // afterwards. Blaming the write for a read-back that failed sends somebody to

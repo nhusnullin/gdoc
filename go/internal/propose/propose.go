@@ -93,6 +93,23 @@ func (p Proposal) Check() error {
 // plain deletion never makes, so the write could never verify either. A
 // milestone that wants a deletion-only proposal gives it its own request shape.
 func (p Proposal) checkWords() error {
+	// A block field on an entry naming no kind is refused first, and by name.
+	// The decoder cannot catch it: both kinds are read into the one struct, so
+	// `after` and `content` are fields it knows and an entry that names no kind
+	// carries them quietly. Reading it as the words kind would then refuse it
+	// for quoting no text, which names nothing the author did wrong, and an
+	// entry carrying both a quote and a content would be sent as a words
+	// proposal with its content silently dropped.
+	for _, f := range []struct{ name, text string }{
+		{"after", p.After}, {"replace_from", p.ReplaceFrom},
+		{"replace_to", p.ReplaceTo}, {"content", p.Content},
+	} {
+		if f.text != "" {
+			return fmt.Errorf(
+				"the proposal names %s, which belongs to the block kind, and it names no kind; add %q: %q to propose it as a block, or take the field out",
+				f.name, "kind", KindBlock)
+		}
+	}
 	if p.Quoted == "" {
 		return errors.New("the proposal quotes no text, so there is nothing to replace")
 	}
@@ -230,6 +247,24 @@ type Result struct {
 	Verified           bool     `json:"verified"`
 	Checks             Checks   `json:"checks"`
 	Warnings           []string `json:"warnings,omitempty"`
+}
+
+// Quote is the words this proposal is known by afterwards: what a words
+// proposal replaced, and where a block went. It is what the note records and
+// what a warning names, so a block is never reported as a change to nothing.
+//
+// A replace has two quotes and there is one field for them, so it keeps the
+// first: that is where the block went in, and it is the one a person reading
+// the note is looking for.
+func (r Result) Quote() string {
+	switch {
+	case r.Quoted != "":
+		return r.Quoted
+	case r.After != "":
+		return r.After
+	default:
+		return r.ReplaceFrom
+	}
 }
 
 // Session is what this package needs of a session: the two reads the verify
@@ -577,7 +612,7 @@ func recorded(results []Result, at time.Time) ([]frontmatter.Proposal, []Result)
 			ID:        r.SuggestionIDs[0],
 			CommentID: r.CommentID,
 			At:        at,
-			Quoted:    r.Quoted,
+			Quoted:    r.Quote(),
 		})
 	}
 	return out, missed
