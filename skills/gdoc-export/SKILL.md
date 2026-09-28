@@ -49,20 +49,27 @@ Exit 0 means the object says `ok`. Read the object, never the exit code alone.
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
 its own front matter names under `metadata` on its `needs` line, or a later
-one. An older binary is one the skill is ahead of: say so, say that
-`gdoc update` is the command that fixes it, and stop there. No `version` at
-all is a build made from source rather than a release, which is not an error:
-say it once and carry on.
+one. An older binary is one the skill is ahead of. Say so in one short
+sentence that names the version installed and the version this skill needs,
+give the command as the paragraph after next says, and stop there. No
+`version` at all is a build made from source rather than a release, which is
+not an error: say it once and carry on.
 
 The same object may also carry `update`, which says what is installed and what
 is published: `installed`, `latest_stable`, `latest_nightly` and `checked_at`.
 When `latest_stable` is there and its three numbers are ahead of `version`,
-say once that a newer gdoc is published, name it, and name what installs it:
+say once, in one short sentence, which gdoc is published and which is
+installed. Give the command as the next paragraph says, then carry on with the
+work. This is a remark and never a gate: `needs` is the only version that
+stops a session. No `update` key at all is a build from a checkout, and the
+skill says nothing about it.
+
+The command goes in its own fenced code block tagged `bash`, after the
+sentence, so the person can run it with one click. The block holds one line
+and nothing else: no `$` prompt, no comment, no second command. That line is
 `gdoc update`, or `gdoc update --major` when the first of the three numbers is
 the one that is ahead, because a major release is one a person asks for by
-name. Then carry on with the work. This is a remark and never a gate:
-`needs` is the only version that stops a session. No `update` key at all is a
-build from a checkout, and the skill says nothing about it.
+name. The block is for the person to run. The session never runs it.
 
 One root, `$ROOT`, and it is `$PWD`. It is the hub: the tree the new note is
 written into, and the only place this skill writes at all.

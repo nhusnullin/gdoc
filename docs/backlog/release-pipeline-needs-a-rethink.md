@@ -88,7 +88,7 @@ in CI because the parser accepted what the workflows refused.
 
 ## Related
 
-- `update-notice-is-a-runnable-command.md`: how a session tells a person to
-  update.
+- The version paragraphs in each `skills/*/SKILL.md`: how a session tells a
+  person to update, with the command alone in a `bash` block.
 - `update-reads-one-page-of-releases.md`, `update-check-has-no-off-switch.md`,
   `windows-rollout-checklist.md`: the updater side of the same pipeline.
