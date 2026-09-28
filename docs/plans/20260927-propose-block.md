@@ -326,9 +326,27 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 
 ### Task 11: Verify acceptance criteria
 
-- [ ] every decision above holds and is tested
-- [ ] `make test` (raced), `make vet`, `make build`
-- [ ] `docs/backlog/propose-cannot-add-paragraphs.md` is `git rm`ed in the
+- [x] every decision above holds and is tested. The refuse-and-name replace is
+  the last case of `TestPlaceRefusesWhatItCannotPlaceAndNamesIt`, which reads
+  every suggestion id and comment id back out of the message; one id per block
+  and the unchanged `withdraw` are pinned by
+  `TestApplyBlockReportsMoreThanOneSuggestionAsUnverified` and
+  `TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw`; the insert at
+  the next paragraph's start by
+  `TestAfterPlacesTheBlockAtTheStartOfTheNextParagraph`; the cleared bullets by
+  `TestBlockBatchRemovesBulletsFromItsOwnParagraphsOnly`; the cleared text
+  style by `TestBlockBatchClearsTheMarksTheInsertInherited`; the
+  after-the-last-paragraph shape and its two refusals by
+  `TestAfterTheLastParagraphGoesBeforeTheFinalNewline`,
+  `TestBlockBatchAfterTheLastParagraph` and two cases of the place refusal
+  table; and every out-of-scope construct by
+  `TestContentRefusesWhatTheSubsetDoesNotHold`
+- [x] `make vet` and `make build` are clean. `make test` (raced) is green in
+  every package but one named failure, `TestNoSkillNeedsAReleaseNobodyCut`,
+  which Task 9 planned red: the skills need v2.7.0 and the newest release
+  names v2.6.0, so `make tag VERSION=v2.7.0` at the merge closes it
+  (Post-Completion)
+- [x] `docs/backlog/propose-cannot-add-paragraphs.md` is `git rm`ed in the
   last feature commit
 
 ### Task 12: [Final] Documentation
