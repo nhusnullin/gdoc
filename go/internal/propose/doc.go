@@ -391,6 +391,55 @@
 // TestVerifyReadsThePreviewThroughItsOwnView and
 // TestPreviewURLAsksForThePreviewViewOfEveryTab are the pins.
 //
+// # A block's three read-backs are the same three routes asking its own questions
+//
+// VerifyBlock takes the placement and the paragraphs rather than a proposal,
+// because every question is about what the write did: where the block went, what
+// its paragraphs say, and which old paragraphs a replace marked.
+//
+// suggestions_inline asks both halves, the way the words kind does. Every new
+// paragraph is at the index the write's own layout computed, carrying a suggested
+// insertion that reads as the paragraph was written, and for a replace every
+// paragraph it stands in for carries a suggested deletion on all of its words. An
+// insertion alone would be the block added beside the paragraphs it replaces, a
+// deletion alone would be those paragraphs struck out with nothing in their
+// place, and a paragraph half struck out would cut somebody's sentence in two if
+// it were accepted. The one paragraph that is not wholly inserted is the last one
+// of a block placed after the document's last paragraph: the text went in before
+// the body's final newline, so that newline stays the document's own, which is
+// MEASURED.md row 7 and not a failure. TestVerifyBlockHoldsOnAllThreeRoutes,
+// TestVerifyBlockHoldsForAReplace, TestVerifyBlockHoldsAfterTheLastParagraph,
+// TestVerifyBlockCatchesANewParagraphThatIsNotSuggested and
+// TestVerifyBlockCatchesAReplaceThatDeletedNothing are the pins.
+//
+// preview_without_suggestions asks two questions, and an after block rests on the
+// second. The paragraphs the placement stood on are still in the preview, because
+// a direct edit of a replace takes them out and a suggested deletion leaves them.
+// Then the block's first line is not, because a direct edit of an after block
+// leaves the anchor alone and writes the new paragraphs in as text. That second
+// question is asked by words, like the words kind's, so it can only ever answer
+// false rather than accuse: the line may be there because the block was written
+// as an edit, or because the document already carried that line elsewhere. Those
+// two cannot be told apart from here, so the check is false with a warning naming
+// both readings. Passing instead would report the silent direct edit, which is the
+// one thing this route exists to catch, as a route that held.
+// TestVerifyBlockCatchesADirectEditInThePreview and
+// TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine are the pins.
+//
+// docx_anchored is the words kind's own check, unchanged: the export carries the
+// robot comment and it is attached to text.
+//
+// # One suggestion id is what a verified block means
+//
+// Every request of the block's batch folded into one id when it was measured, so
+// frontmatter.Proposal keeps its one id and withdraw is unchanged. A read-back
+// showing more than one is a block gdoc cannot take back whole, so
+// suggestions_inline is false and Verified with it. Every id is reported anyway,
+// in the order they were met, because the block is in the document either way and
+// those ids are how somebody finishes the job by hand: the first is the one the
+// note records and the one withdraw will take back, and the warning says so.
+// TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw is the pin.
+//
 // # docx_anchored gives no answer when two comments disagree
 //
 // The export carries no Drive comment id, so two proposals in one run with the

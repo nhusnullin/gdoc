@@ -232,19 +232,19 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 **Files:**
 - Modify: `go/internal/propose/verify.go`, `verify_test.go`
 
-- [ ] `VerifyBlock` takes the id, the placement and the parsed paragraphs,
+- [x] `VerifyBlock` takes the id, the placement and the parsed paragraphs,
   not the `Proposal` type, which Task 7 grows
-- [ ] write the failing tests first, over recorded answers:
+- [x] write the failing tests first, over recorded answers:
   - `suggestions_inline`: every new paragraph carries the insertion id, and
     for a replace every old paragraph carries a deletion id
   - `preview_without_suggestions`: the anchor paragraph, or the replaced run,
     reads as before, and the block's first line is absent. This is the
     direct-edit catch
   - `docx_anchored`: unchanged, the robot comment attached to text
-- [ ] a block whose read-back shows more than one suggestion id reports every
+- [x] a block whose read-back shows more than one suggestion id reports every
   one in `SuggestionIDs`, is `verified: false`, and warns that `withdraw`
   takes back only the first, which is the one the note records
-- [ ] the preview check answers "no answer" rather than a pass when the
+- [x] the preview check answers "no answer" rather than a pass when the
   block's first line already appears elsewhere in the document
 
 ### Task 7: The type and the apply sequence

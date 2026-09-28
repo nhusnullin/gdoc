@@ -397,3 +397,219 @@ func TestPreviewURLAsksForThePreviewViewOfEveryTab(t *testing.T) {
 		t.Error("PreviewURL() is the inline read, so the second route reads what the first one did")
 	}
 }
+
+// blockScript is Google after a block's write: one inline read-back, one
+// preview read, and the export. VerifyBlock reads each of them once, so each is
+// a single fixture rather than a queue.
+func blockScript(t *testing.T, inline, preview string, export []byte) *fakeSession {
+	t.Helper()
+	return &fakeSession{
+		inline:  [][]byte{fixture(t, inline)},
+		preview: fixture(t, preview),
+		export:  export,
+		failAt:  map[int]error{},
+	}
+}
+
+// blockExport is the export a block's write leaves behind: the robot comment
+// gdoc wrote, attached to the words of the block's first new paragraph, which
+// is where insertComment anchored it.
+func blockExport(t *testing.T, body, on string) []byte {
+	t.Helper()
+	comments := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:comments xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:comment w:id="0" w:author="Nail Khusnullin" w:date="2026-09-28T09:00:00Z">
+    <w:p><w:r><w:t>` + body + `</w:t></w:r></w:p>
+  </w:comment>
+</w:comments>`
+	document := `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p>
+      <w:commentRangeStart w:id="0"/>
+      <w:r><w:t>` + on + `</w:t></w:r>
+      <w:commentRangeEnd w:id="0"/>
+      <w:r><w:commentReference w:id="0"/></w:r>
+    </w:p>
+  </w:body>
+</w:document>`
+	return zipParts(t, map[string]string{"word/document.xml": document, "word/comments.xml": comments})
+}
+
+// afterPlace is the everyday block placement the read-back tests stand on: the
+// four-paragraph block behind the anchor in block-body.json.
+func afterPlace(t *testing.T) (Placement, []Para) {
+	t.Helper()
+	content := blockContent(t)
+	place, err := PlaceAfter(document(t, "block-body.json"), "reviewed annually", content)
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	return place, content
+}
+
+// replacePlace is the same block standing in for the two paragraphs from the
+// anchor to the risk matrix.
+func replacePlace(t *testing.T) (Placement, []Para) {
+	t.Helper()
+	content := blockContent(t)
+	place, err := PlaceReplace(document(t, "block-body.json"), "reviewed annually", "risk matrix")
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	return place, content
+}
+
+func TestVerifyBlockHoldsOnAllThreeRoutes(t *testing.T) {
+	place, content := afterPlace(t)
+	f := blockScript(t, "block-after-inline.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
+		t.Errorf("checks = %+v, warnings = %v", checks, warns)
+	}
+	if len(ids) != 1 || ids[0] != "suggest.block" {
+		t.Errorf("ids = %v, want the one id every request of the block folded into", ids)
+	}
+	if len(warns) != 0 {
+		t.Errorf("warnings = %v on a run where everything held", warns)
+	}
+}
+
+// TestVerifyBlockHoldsForAReplace is the second half of the inline question. A
+// replace has to be pending on both sides: the new paragraphs carrying an
+// insertion id, and every paragraph it stands in for carrying a deletion id.
+// An insertion alone would be the block added beside the words it replaces.
+func TestVerifyBlockHoldsForAReplace(t *testing.T) {
+	place, content := replacePlace(t)
+	f := blockScript(t, "block-replace-inline.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
+		t.Errorf("checks = %+v, warnings = %v", checks, warns)
+	}
+	if len(ids) != 1 || ids[0] != "suggest.block" {
+		t.Errorf("ids = %v, want the one id the insert and the deletion folded into", ids)
+	}
+}
+
+// TestVerifyBlockHoldsAfterTheLastParagraph reads back the one shape whose last
+// new paragraph is not wholly inserted. MEASURED.md row 7: the text goes in
+// before the body's final newline, so that newline stays the document's own and
+// the block's last paragraph owns it. Expecting an inserted mark there would
+// report the measured shape as a failure.
+func TestVerifyBlockHoldsAfterTheLastParagraph(t *testing.T) {
+	content := plainBlock(t)
+	place, err := PlaceAfter(document(t, "block-body.json"), "operations lead", content)
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	f := blockScript(t, "block-at-end-inline.json", "block-body.json", blockExport(t, Prefix+testWhy, "Limits"))
+
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
+		t.Errorf("checks = %+v, warnings = %v", checks, warns)
+	}
+	if len(ids) != 1 || ids[0] != "suggest.block" {
+		t.Errorf("ids = %v", ids)
+	}
+}
+
+// TestVerifyBlockCatchesANewParagraphThatIsNotSuggested is the inline check's
+// whole point. A paragraph of the block that carries no insertion id is text
+// somebody would find in the document with nothing to accept or reject, which
+// is a direct edit of part of the block.
+func TestVerifyBlockCatchesANewParagraphThatIsNotSuggested(t *testing.T) {
+	place, content := afterPlace(t)
+	f := blockScript(t, "block-after-inline-written.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks.SuggestionsInline {
+		t.Error("suggestions_inline = true where the block's last paragraph carries no insertion id")
+	}
+	if !strings.Contains(strings.Join(warns, " "), "index 129") {
+		t.Errorf("warnings = %v, and one should name the index the paragraph was written at", warns)
+	}
+}
+
+// TestVerifyBlockCatchesAReplaceThatDeletedNothing is the same question on the
+// other side: the new paragraphs are pending and the old ones are untouched, so
+// the document now says both.
+func TestVerifyBlockCatchesAReplaceThatDeletedNothing(t *testing.T) {
+	place, content := replacePlace(t)
+	f := blockScript(t, "block-replace-inline-kept.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks.SuggestionsInline {
+		t.Error("suggestions_inline = true where the replaced paragraphs carry no deletion id")
+	}
+	if !strings.Contains(strings.Join(warns, " "), "suggested deletion") {
+		t.Errorf("warnings = %v, and one should say the paragraph carries no suggested deletion", warns)
+	}
+}
+
+// TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw is the decision
+// that one id is what a verified block means. Every request of the batch folded
+// into one id when it was measured, and the note records one id, so a read-back
+// showing two is a proposal withdraw can only half take back. Both are reported,
+// the first is the one the note will record, and the check is false.
+func TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw(t *testing.T) {
+	place, content := afterPlace(t)
+	f := blockScript(t, "block-after-inline-two-ids.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks.SuggestionsInline {
+		t.Error("suggestions_inline = true on a block that came back as two suggestions")
+	}
+	want := []string{"suggest.block", "suggest.blocktwo"}
+	if strings.Join(ids, ",") != strings.Join(want, ",") {
+		t.Errorf("ids = %v, want %v, the first one being the one the note records", ids, want)
+	}
+	if !strings.Contains(strings.Join(warns, " "), "withdraw") {
+		t.Errorf("warnings = %v, and one should say withdraw takes back the first id only", warns)
+	}
+}
+
+// TestVerifyBlockCatchesADirectEditInThePreview is the route that tells a
+// suggestion from an edit. A replace Google made as a plain edit takes the old
+// paragraphs out, so the preview, which shows the document with every pending
+// suggestion hidden, no longer carries them.
+func TestVerifyBlockCatchesADirectEditInThePreview(t *testing.T) {
+	place, content := replacePlace(t)
+	f := blockScript(t, "block-replace-inline.json", "block-preview-replaced.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks.PreviewWithoutSuggestions {
+		t.Error("preview_without_suggestions = true on a preview that has lost the replaced paragraphs, which is a direct edit")
+	}
+	if !strings.Contains(strings.Join(warns, " "), "direct edit") {
+		t.Errorf("warnings = %v, and one should name the direct edit", warns)
+	}
+}
+
+// TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine is the
+// ambiguity this route has to own. The block's first line being in the preview
+// is what a direct edit looks like, and it is also what a document that already
+// carried that line looks like. The two cannot be told apart from here, so the
+// check is false with a warning naming both readings rather than a pass.
+func TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine(t *testing.T) {
+	place, content := afterPlace(t)
+	f := blockScript(t, "block-after-inline.json", "block-preview-elsewhere.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+
+	if checks.PreviewWithoutSuggestions {
+		t.Error("preview_without_suggestions = true where the preview carries the block's first line")
+	}
+	joined := strings.Join(warns, " ")
+	if !strings.Contains(joined, "no answer") || !strings.Contains(joined, "3.6 Limits") {
+		t.Errorf("warnings = %v, and one should say the route gives no answer and name the line", warns)
+	}
+}
