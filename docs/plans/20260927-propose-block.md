@@ -159,10 +159,10 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 **Files:**
 - Modify: `go/internal/guard/marker_test.go` or a new `block_test.go`
 
-- [ ] write `TestABlockProposalNeedsNoGrant`: a SUGGEST batch of the block
+- [x] write `TestABlockProposalNeedsNoGrant`: a SUGGEST batch of the block
   shape above, `deleteParagraphBullets` included, carries on a document at
   `LevelSuggest`, and the same batch without SUGGEST is refused
-- [ ] no production change is expected. If one is, stop: widening the guard
+- [x] no production change is expected. If one is, stop: widening the guard
   is Nail's decision (CLAUDE.md, "Never")
 
 ### Task 3: The content, read strictly
