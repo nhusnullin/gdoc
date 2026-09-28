@@ -206,6 +206,7 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 		{"a heading with no words", "##\n", "no text"},
 		{"a list item with no words", "- one\n-\n", "no text"},
 		{"a list item with two paragraphs", "- one\n\n  second\n", "more than one paragraph"},
+		{"a numbered list that starts at three", "3. third\n4. fourth\n", "starting at 1"},
 		{"a heading inside a list item", "- # heading\n", "heading"},
 		{"a link that opens nothing", "See [the note](../notes/limits.md)\n", "address"},
 		{"a link to a heading", "See [above](#limits)\n", "address"},

@@ -140,7 +140,7 @@ func PlaceReplace(d *docs.Document, from, to string) (Placement, error) {
 				"the run from %q to %q covers something this read does not index, a section break among them, so the deletion would take that with it; quote a run of paragraphs with nothing between them",
 				from, to)
 		}
-		if what := whatARunIs(tab.Body[at].Paragraph); what != "" {
+		if what := whatAParagraphHolds(tab, tab.Body[at].Paragraph); what != "" {
 			return Placement{}, fmt.Errorf(
 				"the run from %q to %q covers a paragraph holding %s, which no read-back here can see, so the deletion would take that with the words; leave that paragraph out of the run",
 				from, to, what)
@@ -281,6 +281,41 @@ func sorted(set map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// whatAParagraphHolds names the first thing a paragraph carries that is not
+// written text, or the empty string when it carries nothing but words. There
+// are two halves of that: what sits in the text, and what floats beside it.
+//
+// TestPlaceRefusesWhatItCannotPlaceAndNamesIt holds both.
+func whatAParagraphHolds(tab docs.Tab, p *docs.Paragraph) string {
+	if what := whatARunIs(p); what != "" {
+		return what
+	}
+	return whatFloatsOn(tab, p)
+}
+
+// whatFloatsOn names the first floating object anchored to a paragraph, or the
+// empty string when none is.
+//
+// A floating object is anchored to a paragraph rather than held in its runs, so
+// whatARunIs is blind to it and so is every read-back here: written reads text
+// runs only, and idSet.deletionIn asks the same runs whether they carry a
+// deletion id. Docs takes an anchored object with the paragraph it is anchored
+// to all the same, so the run is refused for the reason an inline picture is
+// refused, and in the same words.
+func whatFloatsOn(tab docs.Tab, p *docs.Paragraph) string {
+	for _, id := range p.Positioned {
+		switch tab.Positioned[id].Kind {
+		case docs.KindImage:
+			return "a floating picture"
+		case docs.KindDrawing:
+			return "a floating drawing"
+		default:
+			return "a floating object"
+		}
+	}
+	return ""
 }
 
 // whatARunIs names the first run of a paragraph that is not written text, or the

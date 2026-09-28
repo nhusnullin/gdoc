@@ -164,6 +164,17 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 		}
 		kind := Bulleted
 		if typed.IsOrdered() {
+			// createParagraphBullets carries no start number, so the preset
+			// begins at 1 whatever the author wrote, and "3." would arrive as
+			// "1." with nothing in the three read-backs able to see it: they
+			// read the words, and the number is drawn rather than written.
+			// internal/body carries the same failure as a warning, because a
+			// publish rewrites a whole note. Here the content is a few lines a
+			// review wrote and renumbering them is cheap.
+			if typed.Start != 1 {
+				return w.refuse(node, fmt.Sprintf(
+					"a numbered list beginning at %d is not something a block proposes; a suggested list is numbered from 1, so write the list starting at 1", typed.Start))
+			}
 			kind = Numbered
 		}
 		for item := typed.FirstChild(); item != nil; item = item.NextSibling() {

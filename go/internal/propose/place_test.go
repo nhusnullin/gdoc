@@ -234,6 +234,17 @@ func TestPlaceRefusesWhatItCannotPlaceAndNamesIt(t *testing.T) {
 			says: []string{"a picture", "leave that paragraph out"},
 		},
 		{
+			// A floating object is anchored to a paragraph rather than sitting
+			// in its text, so no run names it and the read-backs are as blind
+			// to it as they are to an inline one. The deletion takes it with
+			// the paragraph it is anchored to, so the run is refused by name.
+			name: "a replace over a paragraph anchoring a floating picture",
+			place: func(t *testing.T) (Placement, error) {
+				return PlaceReplace(document(t, "block-floating-picture.json"), "reviewed annually", "shows the flow")
+			},
+			says: []string{"a floating picture", "leave that paragraph out"},
+		},
+		{
 			name: "a replace over somebody's pending suggestion and comments",
 			place: func(t *testing.T) (Placement, error) {
 				return PlaceReplace(document(t, "block-busy.json"), "register lists", "operations lead")

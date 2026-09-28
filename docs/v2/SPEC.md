@@ -322,8 +322,8 @@ SUGGEST batch and comes back with one suggestion id, so `withdraw` takes it back
 whole. Changed 2026-09-28, DECISIONS.md.
 
 **What a block refuses, by name.** Content the subset does not hold: a table, a
-nested list, a picture, a code block, a block quote, raw HTML, a thematic break,
-and empty content. A character the Docs API strips out of an inserted text, and
+nested list, a numbered list that does not begin at 1, a picture, a code block, a
+block quote, raw HTML, a thematic break, and empty content. A character the Docs API strips out of an inserted text, and
 a line break inside a paragraph, each in whichever spelling it arrives in: the
 character itself, or an entity reference such as `&#12;` that decodes to one.
 gdoc counts what it sends to place everything after it, so a unit the server
@@ -331,7 +331,11 @@ drops moves every later index, and a decoded newline is a paragraph the block
 never proposed. A placement that is not exactly one form, a quote that is not
 there exactly once, a `replace_to` before its `replace_from`, an anchor inside a
 table cell, and a replace whose run reaches the body's last paragraph, because
-Docs cannot delete the final newline. A replace whose paragraphs hold a pending
+Docs cannot delete the final newline. A replace over a paragraph carrying
+anything but words, named: a picture, a drawing, an equation, a footnote mark, a
+break or a chip in its text, or a picture, a drawing or an object floating
+beside it, because the deletion takes any of them and no read-back reads
+anything but text. A replace whose paragraphs hold a pending
 suggestion or a comment's anchor, with every suggestion id and comment id named,
 so the deletion never takes a colleague's work with it. An `after` whose next
 element is a table, a contents list or a section break, because there is no

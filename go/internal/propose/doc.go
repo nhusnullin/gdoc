@@ -154,12 +154,16 @@
 // whole answer. The refusals are a table, a nested list, a picture, a code block,
 // a block quote, HTML in either shape, a horizontal rule, code in a sentence,
 // struck-out words, a task list, a line break inside a paragraph, a heading
-// inside a list item, a list item with more than one paragraph, a paragraph or a
-// heading with no words in it, and content that is empty or nothing but space.
-// Two of them are decisions rather than gaps: a nested list, because nesting a
-// suggested list goes in through leading tabs and that is unmeasured in SUGGEST
-// mode, and a table, because docs/backlog/propose-inside-tables.md is not
-// settled. TestContentRefusesWhatTheSubsetDoesNotHold carries every case. Check
+// inside a list item, a list item with more than one paragraph, a numbered list
+// that does not begin at 1, a paragraph or a heading with no words in it, and
+// content that is empty or nothing but space. Three of them are decisions rather
+// than gaps: a nested list, because nesting a suggested list goes in through
+// leading tabs and that is unmeasured in SUGGEST mode, a table, because
+// docs/backlog/propose-inside-tables.md is not settled, and a numbered list
+// beginning anywhere but 1, because createParagraphBullets carries no start
+// number and the preset counts from 1: an author's "3." would arrive as "1."
+// and no read-back could see it, since all three read words and a list number is
+// drawn. TestContentRefusesWhatTheSubsetDoesNotHold carries every case. Check
 // reads the content too, so every one of these refusals is made of the whole
 // proposals file before the probe document exists and before the first entry
 // lands, and ApplyBlock reads it again before it reads the document, so a block
@@ -298,6 +302,14 @@
 // paragraph start to go in at, and when the paragraph behind it does not begin
 // where the anchor ends. A quote inside a table cell is refused on both routes
 // while docs/backlog/propose-inside-tables.md is unsettled.
+//
+// A run covering a paragraph that carries anything but words is refused by the
+// name of what it carries: a picture, a drawing, an equation, a footnote mark, a
+// break or a chip sitting in its text, and a picture, a drawing or an object
+// floating beside it, anchored to it. The deleteContentRange takes any of them
+// with the paragraph, and none of the three read-backs can see it, because all
+// three read text runs only. That is the words kind's crossing rule one level
+// up.
 //
 // A replace reaching the body's last paragraph is refused because Docs will not
 // delete a document's final newline, so the delete would half happen. Every one

@@ -78,6 +78,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
 | 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
+| 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2878,3 +2879,39 @@ Tests: the milestone plan `docs/plans/completed/20260927-propose-block.md` names
 one per rule, from `TestABlockProposalNeedsNoGrant` at the guard to
 `TestLiveProposeBlock` in the live package. `propose/doc.go` names the subset
 and each refusal with the test that pins it.
+
+
+## 2026-09-28. A block refuses a renumbered list and a paragraph an object floats beside.
+
+Two gaps found reviewing the block proposal on the day it was written. Both are
+the same failure: the document would come out different from what the caller
+wrote, and none of the three read-backs could see the difference, because all
+three read text and neither of these is text.
+
+**A numbered list that does not begin at 1 is refused.**
+`createParagraphBullets` carries no start number, and the preset
+`NUMBERED_DECIMAL_ALPHA_ROMAN` counts from 1. A review answer continuing an
+existing run, written `3.` and `4.`, would arrive as `1.` and `2.`, and the
+prose around it that says "step 3" would then name the wrong line. A list number
+is drawn by Docs rather than written into the text, so the inline read, the
+preview read and the export all pass over it. `internal/body` carries the same
+failure as a warning, because a publish rewrites a whole note and a refusal
+there costs the document. A block is a few lines a review wrote, so here it is
+refused and the message says to write the list from 1.
+
+**A replace is refused over a paragraph a picture, a drawing or an object floats
+beside.** A floating object is anchored to a paragraph rather than held in its
+runs, so the run walk that names an inline picture, an equation, a footnote
+mark, a break or a chip never saw one. `deleteContentRange` takes an anchored
+object with the paragraph it is anchored to, and `written` and
+`idSet.deletionIn` read text runs only, so the proposal would have come back
+`verified: true` with somebody's diagram inside the deletion and nobody told.
+The refusal names the object and says to leave that paragraph out of the run,
+which is what the inline half already said.
+
+Serves principle 3: not knowing what a paragraph carries never resolves to
+deleting it, and a construct gdoc cannot propose faithfully is refused by name
+rather than changed on the way in.
+
+Tests: `TestContentRefusesWhatTheSubsetDoesNotHold` carries the list case, and
+`TestPlaceRefusesWhatItCannotPlaceAndNamesIt` the floating object.

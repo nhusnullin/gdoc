@@ -149,7 +149,9 @@ because what makes two paragraphs is the empty line between them.
 
 Everything else is refused by name, before anything is sent: a table, a nested
 list, a picture, a code block, a block quote, raw HTML, a horizontal rule, and
-content that is empty. There is also a size limit, so a whole document is not a
+content that is empty. A numbered list always starts at `1.`: a suggested list
+is numbered from 1, so a list written from `3.` is refused rather than
+renumbered where nobody would see it. There is also a size limit, so a whole document is not a
 block, and the refusal names it. When the answer needs one of those, say so in a
 reply and leave the shape to the person.
 
@@ -185,7 +187,10 @@ Each of these is refused by name, before anything is sent:
   break, because there is no paragraph start to put the text at;
 - an `after` on the document's own last paragraph when the block does not end
   with a plain paragraph, or when that last paragraph is a list item or a
-  heading.
+  heading;
+- a replace over a paragraph holding a picture, a footnote mark, an equation, a
+  break or a chip, or one a picture or a drawing floats beside, because the
+  deletion would take it and no read-back can see it.
 
 Every one of those says what would work instead. Read it and do that, rather
 than reshaping the quote until something lands.
