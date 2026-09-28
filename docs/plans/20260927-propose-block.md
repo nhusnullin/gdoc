@@ -186,10 +186,10 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `go/internal/propose/span.go` or create `go/internal/propose/place.go`
 - Create: tests beside it, with recorded documents in `testdata/`
 
-- [ ] write the failing tests first: `after` gives the start index of the
+- [x] write the failing tests first: `after` gives the start index of the
   paragraph after the anchor; a replace gives the start of the first and the
   end of the last whole paragraph
-- [ ] refused by name, each with a test: a quote not found exactly once;
+- [x] refused by name, each with a test: a quote not found exactly once;
   `replace_to` before `replace_from`; an anchor inside a table cell; a
   multi-tab document; a replace whose paragraphs hold a pending suggestion or
   a comment range (from `Document.CommentRanges`), naming every suggestion id
@@ -199,7 +199,10 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
   paragraph start to insert at; an `after` on the last paragraph when the
   block does not end with a plain paragraph, or when that last paragraph is a
   list item
-- [ ] no index is stored anywhere: placement is computed from the read that
+- [x] ➕ a replace whose run covers a table, the contents list or a section
+  break is refused too: `deleteContentRange` over one would take it with the
+  paragraphs
+- [x] no index is stored anywhere: placement is computed from the read that
   the write is built from
 
 ### Task 5: The batch

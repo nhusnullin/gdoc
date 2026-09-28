@@ -1,0 +1,165 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000bu",
+  "title": "A register somebody is already working on",
+  "revisionId": "ALm37BXbusy",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 36,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 36,
+                    "textRun": {
+                      "content": "The register lists every supplier.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 36,
+              "endIndex": 102,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 36,
+                    "endIndex": 47,
+                    "textRun": {
+                      "content": "Scores are ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 47,
+                    "endIndex": 68,
+                    "textRun": {
+                      "content": "reviewed each quarter",
+                      "textStyle": {},
+                      "suggestedInsertionIds": [
+                        "sug.INSERTED"
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 68,
+                    "endIndex": 88,
+                    "textRun": {
+                      "content": " and the old wording",
+                      "textStyle": {},
+                      "suggestedDeletionIds": [
+                        "sug.DELETED"
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 88,
+                    "endIndex": 102,
+                    "textRun": {
+                      "content": " by the team.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 102,
+              "endIndex": 141,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 102,
+                    "endIndex": 141,
+                    "textRun": {
+                      "content": "Escalations go to the operations lead.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 141,
+              "endIndex": 175,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 141,
+                    "endIndex": 175,
+                    "textRun": {
+                      "content": "The register is closed each year.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "commentAnchors": {
+          "kix.busyone": {
+            "anchorId": "kix.busyone",
+            "ranges": [
+              {
+                "startIndex": 36,
+                "endIndex": 42
+              }
+            ]
+          },
+          "kix.busytwo": {
+            "anchorId": "kix.busytwo",
+            "ranges": [
+              {
+                "startIndex": 102,
+                "endIndex": 113
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "comments": [
+    {
+      "commentId": "C-SUGGESTED",
+      "anchorId": "kix.busyone",
+      "status": "OPEN"
+    },
+    {
+      "commentId": "C-ESCALATION",
+      "anchorId": "kix.busytwo",
+      "status": "OPEN"
+    }
+  ]
+}

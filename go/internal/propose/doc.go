@@ -140,6 +140,67 @@
 // and for the proposals file that is cmd/gdoc, which asks it of every field of
 // every entry rather than of this one string.
 //
+// # A block goes in at the start of a paragraph, never at the end of one
+//
+// PlaceAfter puts the text at the start of the paragraph behind the anchor, and
+// PlaceReplace at the start of the first paragraph it covers. MEASURED.md's
+// block table is why: an insert at a paragraph's end hands that paragraph's old
+// mark to the last new paragraph, so restyling it is a second suggestion, and a
+// proposal withdraw cannot take back whole is not one this package will make. At
+// a start every new paragraph owns a mark of its own, and the styles, the
+// bullets and the bullet removal all fold into the one insertion id.
+// TestAfterPlacesTheBlockAtTheStartOfTheNextParagraph,
+// TestAfterPlacesABlockBehindAListItem and TestAReplaceCoversWholeParagraphs are
+// the pins.
+//
+// A replace covers whole paragraphs, from the start of the one holding
+// replace_from to the end of the one holding replace_to, paragraph marks
+// included. A partial paragraph would mean an accept merges what is left of it
+// with a neighbour, which is a change nobody proposed.
+// TestAReplaceInsideOneParagraphCoversThatParagraph is the pin for the
+// one-paragraph case, where both quotes land in the same paragraph.
+//
+// A placement is computed from the read the write is built from and is never
+// stored, for the reason every index in this package is never stored.
+// TestAPlacementIsComputedFromTheReadAndNotStored is the pin.
+//
+// # The last paragraph in a document is the one place the block's own shape matters
+//
+// There is no paragraph to go in front of there, so the text goes in before the
+// body's final newline and the block's last paragraph inherits that mark:
+// MEASURED.md row 7, which came back with one id because nothing restated that
+// paragraph. Two cases are refused there by name. A block whose last paragraph
+// is not plain body text, because restyling the final mark is the unmeasured
+// second-id case. And a document whose last paragraph is a list item, because
+// the block would take its bullet and clearing a bullet on the mark-owning
+// paragraph is MEASURED.md row 4, the one measured case that gave two ids. Both
+// messages say what would work instead, and Nail can widen either after a
+// measurement. TestAfterTheLastParagraphGoesBeforeTheFinalNewline and three
+// cases of TestPlaceRefusesWhatItCannotPlaceAndNamesIt are the pins.
+//
+// # A replace never deletes somebody else's work, and never deletes what it cannot see
+//
+// When the paragraphs a replace covers hold a pending suggestion or a comment's
+// anchor, the placement is refused and every suggestion id and comment id is
+// named. That is a fact rather than a judgement: this package does not decide
+// whether a colleague's pending edit matters, it reports that it is there and
+// stops. The skills read the same two facts before they ask, and tell the person
+// what is in the way.
+//
+// The run is refused too when it covers anything but paragraphs, or when two
+// paragraphs in it do not touch, because something this read does not index, a
+// section break among them, sits between them and the deleteContentRange would
+// take it with them. That is the contiguity rule of the words kind, one level
+// up. An after block is refused for the same reason when the element behind the
+// anchor is a table or the contents list Docs generates, because there is no
+// paragraph start to go in at, and when the paragraph behind it does not begin
+// where the anchor ends. A quote inside a table cell is refused on both routes
+// while docs/backlog/propose-inside-tables.md is unsettled.
+//
+// A replace reaching the body's last paragraph is refused because Docs will not
+// delete a document's final newline, so the delete would half happen. Every one
+// of these is a case of TestPlaceRefusesWhatItCannotPlaceAndNamesIt.
+//
 // # A line break is refused on both sides, in one place, for two reasons
 //
 // A quoted carrying one is refused because a paragraph's last text run carries
