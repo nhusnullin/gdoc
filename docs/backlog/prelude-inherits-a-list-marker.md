@@ -28,3 +28,11 @@ Two ways out, and the choice is a design one:
   Cheaper, and it turns a strange-looking cover into a sentence Nail can act on.
 
 Found while writing the cover builder, M7c Task 4.
+
+**Measured 2026-09-27** (`docs/v2/MEASURED.md`, "A block of new paragraphs,
+proposed in one SUGGEST batch"). Whole paragraphs inserted at the start of a
+list item arrive bulleted, which is the prelude's case. `deleteParagraphBullets`
+over them, in the same SUGGEST batch, clears the bullets under the insertion's
+own suggestion id, with no second id. So the first way out is safe, and it is
+one request and a test. The propose block plan (`docs/plans/20260927-propose-block.md`)
+builds the same request and can share it.
