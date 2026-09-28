@@ -227,16 +227,24 @@ const (
 // TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne,
 // TestAnUpToDateRunDrawsNoDownload and
 // TestAnUnreachableGitHubIsMarkedOnTheReadStep.
+//
+// The list settles on every way out, a panic included, so the spinner never
+// draws over the crash text safeDispatch writes: TestAPanicInAnUpdateStopsTheSpinner.
+// A panic gets no result line, because nothing finished.
 func runUpdate(ctx context.Context, path string, flags update.Flags, errOut io.Writer) emit.Result {
-	pr := newProgress(errOut, "gdoc update")
+	pr := openProgress(errOut, "gdoc update")
+	defer pr.settle()
 	pr.Plan(stepRead, stepChoose)
 	r := checkAndInstall(ctx, path, flags, pr)
 	pr.Finish(resultLine(r))
 	return r
 }
 
-// checkAndInstall reads the listing, chooses a release of each channel,
-// decides, and carries the decision out.
+// openProgress is the step list behind a variable, so a test can hand a run
+// the terminal form over a buffer.
+var openProgress = newProgress
+
+// checkAndInstall reads the listing and hands it on to be decided.
 func checkAndInstall(ctx context.Context, path string, flags update.Flags, pr *progress) emit.Result {
 	installed, warns := installedVersion()
 	data := updateData{Installed: installed.String(), Path: path}
@@ -257,7 +265,12 @@ func checkAndInstall(ctx context.Context, path string, flags update.Flags, pr *p
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	pr.Done(fmt.Sprintf("%s, %d listed", updateRepo, len(entries)))
+	return decideUpdate(ctx, reach, entries, flags, installed, data, warns, pr)
+}
 
+// decideUpdate chooses a release of each channel, decides, and hands a
+// decision to install on to installDecided.
+func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flags update.Flags, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
 	pr.Start(stepChoose, "")
 	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
 	stable, stableErr := update.Choose(entries, update.Stable, platform)
@@ -293,16 +306,21 @@ func checkAndInstall(ctx context.Context, path string, flags update.Flags, pr *p
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	pr.Plan(stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack)
-
-	// Past here something is replaced, so the action stops being true until it
-	// is: a run that fails on the download says what it was taking and claims
-	// no action at all.
-	data.Action = ""
 	chosen := stable
 	if nightly.Version == d.To {
 		chosen = nightly
 	}
-	res, err := install(ctx, reach, chosen, path, pr)
+	return installDecided(ctx, reach, chosen, data, warns, pr)
+}
+
+// installDecided carries out a decision to install, and fills in what the
+// file at the path is afterwards.
+func installDecided(ctx context.Context, reach plain, chosen update.Release, data updateData, warns []string, pr *progress) emit.Result {
+	// Past here something is replaced, so the action stops being true until it
+	// is: a run that fails on the download says what it was taking and claims
+	// no action at all.
+	data.Action = ""
+	res, err := install(ctx, reach, chosen, data.Path, pr)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}

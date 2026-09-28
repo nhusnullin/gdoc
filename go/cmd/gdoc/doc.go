@@ -350,7 +350,13 @@
 // the plain lines: TestOnlyACharDeviceIsATerminal. On a terminal the list is
 // drawn in advance and redrawn in place, with a spinner on the running step
 // and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
-// and TestNoColorKeepsTheRedrawAndDropsTheColour.
+// and TestNoColorKeepsTheRedrawAndDropsTheColour. Auto-wrap is off while the
+// list moves and back on when it settles, because a wrapped line would make
+// the redraw move up too few rows in a narrow terminal; a plain list writes
+// neither code: TestALiveListTurnsWrapOffAndBackOn. The list settles on every
+// way out of the run, a panic included, so no redraw lands on the crash text
+// and no result line claims a run that did not finish:
+// TestAPanicInAnUpdateStopsTheSpinner.
 //
 // Only what happened is drawn. A failed step carries its reason on the next
 // line and the steps after it are not drawn at all:

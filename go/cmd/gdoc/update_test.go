@@ -18,12 +18,15 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"gdoc/internal/guard"
 	"gdoc/internal/update"
@@ -722,5 +725,69 @@ func TestAnUnreachableGitHubIsMarkedOnTheReadStep(t *testing.T) {
 		"GitHub did not answer, so the gdoc here is unchanged.\n"
 	if stderr != want {
 		t.Errorf("stderr is\n%s\nand must be\n%s", stderr, want)
+	}
+}
+
+// panickingPlain answers the listing and panics on the first download, which
+// is a bug somewhere under the wire rather than an answer.
+type panickingPlain struct{ stubPlain }
+
+func (p *panickingPlain) GetBytes(context.Context, string, int64) ([]byte, error) {
+	panic("a bug under the download")
+}
+
+// syncBuffer is a buffer the spinner and the test may both touch, so a
+// spinner left running is a wrong answer here rather than a data race.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// A panic part way through a terminal run settles the list on the way out: the
+// spinner stops, auto-wrap is back on, and nothing is drawn after the crash
+// text safeDispatch writes, so no redraw can erase the stack trace.
+func TestAPanicInAnUpdateStopsTheSpinner(t *testing.T) {
+	pl := &panickingPlain{stubPlain{listing: listing("v2.1.0", "v2.0.0")}}
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	old := openProgress
+	openProgress = func(w io.Writer, title string) *progress { return newLiveProgress(w, title, true) }
+	t.Cleanup(func() { openProgress = old })
+
+	var out bytes.Buffer
+	errOut := &syncBuffer{}
+	code := run(context.Background(), []string{"update"}, &out, errOut)
+	if code == 0 {
+		t.Fatalf("a panic is a failure: exit %d", code)
+	}
+	decodeOne(t, &out)
+	settled := errOut.String()
+	time.Sleep(4 * spinInterval)
+	if got := errOut.String(); got != settled {
+		t.Fatalf("something was drawn after the run ended:\n%q", got[len(settled):])
+	}
+	crash := strings.Index(settled, "gdoc crashed")
+	if crash < 0 {
+		t.Fatalf("the crash text must reach stderr: %q", settled)
+	}
+	if strings.Contains(settled[crash:], "\x1b[") {
+		t.Errorf("an escape code follows the crash text: %q", settled[crash:])
+	}
+	if strings.LastIndex(settled[:crash], wrapOn) < strings.LastIndex(settled[:crash], wrapOff) {
+		t.Errorf("auto-wrap must be back on before the crash text: %q", settled[:crash])
+	}
+	if strings.Contains(settled, "installed") {
+		t.Errorf("a panic finished nothing, so there is no result line: %q", settled)
 	}
 }

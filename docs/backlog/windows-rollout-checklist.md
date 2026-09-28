@@ -57,6 +57,10 @@ stays.
 9. Config dir and completion: `internal/config` picks a Windows path, and the
    completion file is written for a shell Windows may not have. Say what a
    colleague actually gets.
+10. The update's live progress: Go does not enable VT processing on a legacy
+    Windows console, so `gdoc update` in a terminal would print raw escape
+    codes there. Check it in step 7, or make `go/cmd/gdoc/progress.go` fall
+    back to plain lines on Windows.
 
 ## What comes out of it
 

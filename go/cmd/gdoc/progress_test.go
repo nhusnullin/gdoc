@@ -132,3 +132,38 @@ func TestSizesAreMegabytes(t *testing.T) {
 		}
 	}
 }
+
+// A terminal narrower than a line would wrap it, and a wrapped line is two
+// rows on the screen and one in the count the next redraw moves up by. So a
+// live list turns auto-wrap off before its first frame and back on when it
+// settles, and a plain list writes neither.
+func TestALiveListTurnsWrapOffAndBackOn(t *testing.T) {
+	var live bytes.Buffer
+	p := newLiveProgress(&live, "gdoc update", true)
+	p.Plan("read releases", "choose release")
+	p.Start("read releases", "")
+	p.Fail(errors.New("offline"))
+	p.Finish("")
+
+	got := live.String()
+	off, on := strings.Index(got, wrapOff), strings.LastIndex(got, wrapOn)
+	if off < 0 || off > strings.Index(got, clearBelow) {
+		t.Errorf("auto-wrap must go off before the first frame: %q", got)
+	}
+	if on < 0 || on < strings.LastIndex(got, wrapOff) || on > strings.LastIndex(got, clearBelow) {
+		t.Errorf("auto-wrap must come back on in the last draw, before its lines: %q", got)
+	}
+	if strings.Count(got, wrapOff) != 1 || strings.Count(got, wrapOn) != 1 {
+		t.Errorf("auto-wrap goes off once and on once: %q", got)
+	}
+
+	var plain bytes.Buffer
+	q := newProgress(&plain, "gdoc update")
+	q.Plan("read releases")
+	q.Start("read releases", "")
+	q.Fail(errors.New("offline"))
+	q.Finish("")
+	if strings.Contains(plain.String(), "\x1b[") {
+		t.Errorf("a plain list writes no escape code: %q", plain.String())
+	}
+}

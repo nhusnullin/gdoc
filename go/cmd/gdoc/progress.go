@@ -32,6 +32,12 @@ const (
 	// clearBelow wipes from the cursor to the end of the screen, so a redraw
 	// that has fewer lines than the one before leaves nothing behind.
 	clearBelow = "\x1b[J"
+	// wrapOff and wrapOn turn the terminal's auto-wrap off for the life of a
+	// moving list and back on when it settles. A wrapped line is two rows on
+	// the screen and one in the count a redraw moves up by, so in a narrow
+	// terminal the list would crawl down the screen.
+	wrapOff = "\x1b[?7l"
+	wrapOn  = "\x1b[?7h"
 )
 
 // nameWidth is how wide a step name is padded, wide enough for the longest
@@ -78,9 +84,12 @@ type progress struct {
 	// the result line is written.
 	settled  bool
 	finished bool
-	stop     chan struct{}
-	stopped  chan struct{}
-	stopOnce sync.Once
+	// unwrapped is set once auto-wrap is turned off, so the last draw knows
+	// to turn it back on.
+	unwrapped bool
+	stop      chan struct{}
+	stopped   chan struct{}
+	stopOnce  sync.Once
 }
 
 // newProgress is the list for w, live when w is a terminal.
@@ -274,10 +283,19 @@ func (p *progress) redraw() {
 // draw moves the cursor back over what was drawn before and writes the list.
 // The last draw leaves out the steps that never ran and adds the reason under
 // a failed one; the reason is never in a moving draw, because it may wrap.
+// The first draw turns auto-wrap off and the last turns it back on before its
+// lines, so the reason wraps as ordinary text once nothing moves any more.
 func (p *progress) draw(last bool) {
 	var b strings.Builder
+	if !last && !p.unwrapped {
+		b.WriteString(wrapOff)
+		p.unwrapped = true
+	}
 	if p.drawn > 0 {
 		fmt.Fprintf(&b, "\x1b[%dA\r", p.drawn)
+	}
+	if last && p.unwrapped {
+		b.WriteString(wrapOn)
 	}
 	b.WriteString(clearBelow)
 	n := 0
