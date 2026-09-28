@@ -203,6 +203,7 @@ func TestThePreludeNeedsNoGrantAtAll(t *testing.T) {
 		`{"deleteContentRange":{"range":{"startIndex":1,"endIndex":9}}}`,
 		`{"updateParagraphStyle":{"paragraphStyle":{"alignment":"CENTER"},"fields":"alignment","range":{"startIndex":1,"endIndex":9}}}`,
 		`{"updateTextStyle":{"textStyle":{"bold":true},"fields":"bold","range":{"startIndex":1,"endIndex":9}}}`,
+		`{"deleteParagraphBullets":{"range":{"startIndex":1,"endIndex":9}}}`,
 	}
 	body := []byte(`{"requests":[` + strings.Join(kinds, ",") + `],"writeControl":{"writeMode":"SUGGEST"}}`)
 	if err := p.Judge("POST", mustURL(t, inPlaceURL), body); err != nil {

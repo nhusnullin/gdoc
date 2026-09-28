@@ -9,6 +9,8 @@ package propose
 import (
 	"encoding/json"
 	"strings"
+
+	"gdoc/internal/docsreq"
 )
 
 // MaxContent is how long a block's content may be, in bytes.
@@ -194,9 +196,7 @@ func BlockBatch(place Placement, content []Para, why, assignee string) []byte {
 		})
 	}
 	for _, s := range plainStretches(content, place.AtEnd) {
-		add("deleteParagraphBullets", map[string]any{
-			"range": spanOf(l.Paras[s.from].Start, l.Paras[s.to].End),
-		})
+		reqs = append(reqs, docsreq.DeleteBullets(l.Paras[s.from].Start, l.Paras[s.to].End))
 	}
 	if place.Replaces() {
 		// The old paragraphs are where the insert left them: it went in at the

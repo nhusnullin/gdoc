@@ -11,9 +11,8 @@ package guard
 // wall in front of somebody's document has moved.
 //
 // It is the block's half of TestThePreludeNeedsNoGrantAtAll, which says the
-// same about the house prelude. The two differ in one request kind:
-// deleteParagraphBullets, which the prelude does not send and every block that
-// lands in front of a list item does.
+// same about the house prelude. Both send deleteParagraphBullets, built by
+// docsreq.DeleteBullets, to take off a list marker the insert inherited.
 
 import (
 	"strings"

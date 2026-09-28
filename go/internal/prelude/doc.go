@@ -278,11 +278,27 @@
 // paragraph mark goes out without a text style over it, and
 // TestTheCoverLinesAreCentredAtTheHouseSizes reads the stated fields themselves.
 //
-// The one look an inserted paragraph inherits and this package cannot state away
-// is a list marker: taking one off needs deleteParagraphBullets, which nothing
-// here sends, so a prelude proposed at the top of a document whose first
-// paragraph is a list item arrives bulleted. That is
-// docs/backlog/prelude-inherits-a-list-marker.md.
+// The one look an inserted paragraph inherits and no style object can state
+// away is a list marker. A paragraph is in a list because it carries a bullet,
+// not because of a property, and text inserted at a list item's start joins
+// that list: a prelude proposed at the top of a document whose first paragraph
+// is a list item would arrive as a bulleted cover. So FrontMatter ends its
+// requests with one deleteParagraphBullets over exactly the range it inserted,
+// after every insert, in the same SUGGEST batch. It names only gdoc's own
+// paragraphs, and on a replace run it stops at the new prelude's end, short of
+// the old one proposed for deletion behind it. MEASURED.md, "A block of new
+// paragraphs, proposed in one SUGGEST batch", is what says the removal folds
+// into the insertion's own suggestion id rather than making a second one. The
+// request is docsreq.DeleteBullets, the one internal/propose sends for a block.
+// TestThePreludeTakesOffTheListMarkerItInherits and
+// TestAReplaceRunTakesTheMarkerOffOnlyTheNewPrelude are the pins, and
+// TestThePreludeBatchCarriesAtTheSuggestLevel has the real policy judge it.
+//
+// The measurement had whole paragraphs and no table. The prelude's range holds
+// three tables, and the reference says the request clears every paragraph the
+// range overlaps. TODO(test): nothing live has proposed the prelude in front of
+// a list item yet. TestLivePreludeIsProposedNotWritten in internal/live, named
+// at a document that opens with a list item, is the run that would say so.
 //
 // One layout, two writers. internal/render writes this template into a docx and
 // this package writes it as requests, both from house.Config, and neither holds
