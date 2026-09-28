@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"gdoc/internal/lastcheck"
 )
 
 // decodeOne insists a stream is exactly one JSON object. It is the output
@@ -361,9 +363,11 @@ func atVersion(t *testing.T, v string) {
 // saying a release that does not exist. The literals here are a tag, so a
 // version stitched together from the table would still have to match them.
 func TestTheVersionReachesTheEnvelopeAndTheHelp(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("GDOC_CONFIG_DIR", dir)
-	atVersion(t, "v2.4.1")
+	// A tagged build's help asks GitHub unless the stamp is fresh. This test is
+	// about the version, not the check, so it reaches nothing: without the
+	// stamp it read the real listing and broke the day a newer gdoc shipped.
+	path := checking(t, "v2.4.1", &refusingPlain{t: t})
+	stampedAt(t, path, 0, lastcheck.Stamp{})
 
 	// Every object, the answers and the refusals both.
 	for _, args := range [][]string{

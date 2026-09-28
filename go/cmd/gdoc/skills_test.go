@@ -633,3 +633,26 @@ func TestTheMarkerRulesAreOneFileAndAlignNamesIt(t *testing.T) {
 		t.Errorf("skills/gdoc-align/SKILL.md names no %s. It resolves markers, and the rules for them live beside gdoc-export's SKILL.md", markers)
 	}
 }
+
+// A cursor means the newest activity the call saw, whether or not the session
+// read it. A window's cursor is earned, because the session just read that
+// window. A bare listing's cursor, or one read through a pipe that dropped the
+// replies, moves the watch past activity nobody read, and nothing brings that
+// span back. On 2026-09-21 that cost an ai! reply eighteen minutes, so the live
+// loop has to say which cursors it keeps.
+func TestTheLiveLoopSaysWhichCursorsItKeeps(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-review", "live.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for _, want := range []string{
+		"## Which cursor to keep",
+		`--since "$CURSOR"`,
+		"through a pipe",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-review/live.md does not say %q. A session that keeps a cursor from a listing it did not read skips activity for good", want)
+		}
+	}
+}
