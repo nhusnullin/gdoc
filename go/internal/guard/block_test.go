@@ -26,16 +26,22 @@ import (
 // list run, the bullet removal over every new paragraph that is not a list
 // item, the deletion of the paragraphs a replace stands in for, and the comment
 // carrying the reason.
+// The indexes are the ones propose's own builder computes for this content
+// inserted at 41, so a reader comparing the two files sees one write:
+// propose/testdata/block-replace-batch.json is the same batch under the
+// builder's own test.
 var blockKinds = []string{
 	`{"insertText":{"location":{"index":41},"text":"3.6 Limits\nBody text with bold.\none\ntwo\n"}}`,
 	`{"updateParagraphStyle":{"paragraphStyle":{"namedStyleType":"HEADING_2"},"fields":"namedStyleType","range":{"startIndex":41,"endIndex":52}}}`,
 	`{"updateParagraphStyle":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},"fields":"namedStyleType","range":{"startIndex":52,"endIndex":73}}}`,
-	`{"updateTextStyle":{"textStyle":{},"fields":"bold,italic,underline,strikethrough,link","range":{"startIndex":41,"endIndex":82}}}`,
-	`{"updateTextStyle":{"textStyle":{"bold":true},"fields":"bold","range":{"startIndex":68,"endIndex":72}}}`,
-	`{"createParagraphBullets":{"range":{"startIndex":73,"endIndex":82},"bulletPreset":"BULLET_DISC_CIRCLE_SQUARE"}}`,
+	`{"updateParagraphStyle":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},"fields":"namedStyleType","range":{"startIndex":73,"endIndex":77}}}`,
+	`{"updateParagraphStyle":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},"fields":"namedStyleType","range":{"startIndex":77,"endIndex":81}}}`,
+	`{"updateTextStyle":{"textStyle":{},"fields":"bold,italic,underline,strikethrough,link","range":{"startIndex":41,"endIndex":81}}}`,
+	`{"updateTextStyle":{"textStyle":{"bold":true},"fields":"bold","range":{"startIndex":67,"endIndex":71}}}`,
+	`{"createParagraphBullets":{"range":{"startIndex":73,"endIndex":81},"bulletPreset":"BULLET_DISC_CIRCLE_SQUARE"}}`,
 	`{"deleteParagraphBullets":{"range":{"startIndex":41,"endIndex":73}}}`,
-	`{"deleteContentRange":{"range":{"startIndex":82,"endIndex":120}}}`,
-	`{"insertComment":{"range":{"startIndex":41,"endIndex":52},"content":"[gdoc] why this section is here"}}`,
+	`{"deleteContentRange":{"range":{"startIndex":81,"endIndex":119}}}`,
+	`{"insertComment":{"range":{"startIndex":41,"endIndex":51},"content":"[gdoc] why this section is here"}}`,
 }
 
 // The whole block batch, on a document handed in and granted nothing.

@@ -269,6 +269,67 @@
 // TestTheGuardRefusesTheSameBatchWithoutSuggestMode asking the same batch of the
 // guard itself.
 //
+// # One batch per block too, and the order of its requests is the measurement
+//
+// BlockBatch writes, in this order: insertText at the placement; one
+// updateParagraphStyle per new paragraph naming namedStyleType; one
+// updateTextStyle clearing the marks the insert inherited; one updateTextStyle
+// per marked run; createParagraphBullets per stretch of list items of one kind;
+// deleteParagraphBullets per stretch of new paragraphs that are not list items;
+// deleteContentRange for a replace; and insertComment. Every index is counted in
+// UTF-16 code units, the way FindSpan counts. TestBlockBatchForAnAfterBlock,
+// TestBlockBatchForAReplace and TestBlockBatchAfterTheLastParagraph hold the
+// three whole batches against golden request lists, because the order is the
+// reason the batch works and a field-by-field test would say nothing about it.
+// TestBlockBatchCountsInUTF16CodeUnits is the unit rule and
+// TestBlockBatchNumbersANumberedList the second bullet preset.
+//
+// A named style is stated on every new paragraph, list items included, because
+// an inserted paragraph takes the named style of the paragraph it landed in: a
+// block in front of somebody's Heading 1 would arrive as headings. It is the
+// rule internal/prelude holds for the same reason.
+//
+// Two requests undo what the insert inherited, and both are measured. The
+// clearing updateTextStyle covers the whole insert and comes before the block's
+// own marks, because text inserted at a paragraph's start takes that paragraph's
+// first run style, so a block in front of a bold linked sentence would arrive
+// bold and linked; a run that really is bold is written bold again after it. Its
+// mask names every mark and its style object is empty, which is how the API is
+// told to put a field back to its default: stating bold false would clear a
+// boolean, but nothing states "no link" except naming the field in the mask and
+// leaving it out of the object. TestBlockBatchClearsTheMarksTheInsertInherited
+// is the pin, over a document whose next paragraph opens bold and linked.
+//
+// deleteParagraphBullets covers every new paragraph that is not a list item, and
+// no paragraph that was already there, because new text takes the list
+// membership of the paragraph it lands in front of and stating a named style does
+// not clear it (MEASURED.md rows 5 and 6). It is one request per stretch rather
+// than one per paragraph, and the stretches stop at the list between them: a
+// request covering that list would take its bullets off too.
+// TestBlockBatchRemovesBulletsFromItsOwnParagraphsOnly is the pin.
+//
+// A replace's deleteContentRange names the old paragraphs at the indexes the
+// insert left them at, which is both ends moved along by the length of the
+// insert, because the insert went in at the start of the first of them.
+//
+// The comment is anchored on the words of the first new paragraph, without its
+// paragraph mark, because a range carrying a mark anchors across into the
+// paragraph behind it. It carries the robot prefix and the reason, and nothing
+// else: TestBlockBatchWritesTheReasonAsPlainTextUnderTheRobot.
+//
+// # A block's content has a ceiling, and it is the guard's rather than Docs'
+//
+// The guard reads a batchUpdate body to judge the requests in it, and a body
+// past its peek arrives there truncated and is refused rather than carried
+// unread. That refusal names the guard and a truncated body, which is nothing a
+// person writing a block can act on, so MaxContent is refused first and says
+// what a block is for. The number is a measurement: the batch grows fastest in
+// requests per byte where the shortest paragraphs alternate with list items,
+// because then each paragraph costs a named style and a bullet request of its
+// own, and that shape at MaxContent builds around half the guard's ceiling.
+// TestALargeBlockStaysUnderThePeek builds that shape and three more at exactly
+// the limit and has the real policy judge each one.
+//
 // # Verified is three read-backs, and Verified false is not a failure
 //
 // Checks carries them as three fields, and each answers something the other two

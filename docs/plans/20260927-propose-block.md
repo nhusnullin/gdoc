@@ -211,19 +211,21 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `go/internal/propose/propose.go` (or `block.go`)
 - Create: tests with golden request bodies
 
-- [ ] write the failing tests first: the batch for an `after` block and for a
+- [x] write the failing tests first: the batch for an `after` block and for a
   replace, request by request, lengths in UTF-16 with a non-BMP character in
   one test
-- [ ] `deleteParagraphBullets` covers every new non-list paragraph, and no
+- [x] `deleteParagraphBullets` covers every new non-list paragraph, and no
   existing paragraph
-- [ ] the clearing `updateTextStyle` covers the whole insert and comes before
+- [x] the clearing `updateTextStyle` covers the whole insert and comes before
   the marks; test it with a next paragraph that opens bold and linked
-- [ ] the after-the-last-paragraph text shape, with its own golden body
-- [ ] write `TestALargeBlockStaysUnderThePeek`: a 60-paragraph block batch from
+- [x] the after-the-last-paragraph text shape, with its own golden body
+- [x] write `TestALargeBlockStaysUnderThePeek`: a 60-paragraph block batch from
   this builder is under the guard's `maxPeek`, and name the content size
   limit as a constant that Task 7's `Check` enforces
-- [ ] the comment is anchored on the first new paragraph, with the robot
+- [x] the comment is anchored on the first new paragraph, with the robot
   prefix and no markdown (`internal/plaintext`)
+- [x] ➕ the guard's `blockKinds` fixture now carries the indexes this builder
+  computes, so its own claim that the two files describe one write is true
 
 ### Task 6: Three read-backs for a block
 

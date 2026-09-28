@@ -1,0 +1,66 @@
+{
+  "requests": [
+    {
+      "insertText": {
+        "location": {
+          "index": 223
+        },
+        "text": "\nLimits\nThe register holds ten suppliers."
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "HEADING_2"
+        },
+        "range": {
+          "endIndex": 231,
+          "startIndex": 224
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 265,
+          "startIndex": 231
+        }
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "bold,italic,underline,strikethrough,link",
+        "range": {
+          "endIndex": 264,
+          "startIndex": 223
+        },
+        "textStyle": {}
+      }
+    },
+    {
+      "deleteParagraphBullets": {
+        "range": {
+          "endIndex": 265,
+          "startIndex": 224
+        }
+      }
+    },
+    {
+      "insertComment": {
+        "content": "🤖 the limits section was missing",
+        "range": {
+          "endIndex": 230,
+          "startIndex": 224
+        }
+      }
+    }
+  ],
+  "writeControl": {
+    "writeMode": "SUGGEST"
+  }
+}
