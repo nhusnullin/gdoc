@@ -3,7 +3,7 @@ name: gdoc-review
 description: Use when the request gives a Google Doc link and asks for the marked comments in it to be handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until it is stopped.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.4.0
+  needs: v2.7.0
 ---
 
 # Google Docs review
@@ -287,16 +287,26 @@ When the right answer is different words in the document, propose them. A
 suggestion is reversible and gdoc can withdraw its own, so this does not need
 asking first.
 
+When the right answer is a new or rewritten section rather than a phrase,
+propose a block: whole new paragraphs, placed after a paragraph you quote or in
+place of a run of paragraphs. Same file, same comment, same read-backs. A block
+that replaces paragraphs is the one proposal that takes somebody's words out, so
+read `$GDOC suggestions <url>` and `$GDOC comments <url>` first, say what falls
+inside the run you would replace, and propose only once the person has answered.
+gdoc refuses a replace over a pending suggestion or a comment's anchor anyway,
+and names every id, but that refusal reaches you and never reaches them.
+
 Before the first proposal of the session, read `propose.md`, beside this file.
 It holds the proposals file, the shapes of quote the command refuses and why,
 the reason line, and how to read `sent`, `verified` and `checks`. It also holds
 how to withdraw a proposal that was wrong.
 
 The short version, for when you are deciding whether to propose at all: quote
-the document's own words, exactly once, inside one paragraph; give the
-replacement and a plain-text reason for the reader; pass the paired note so
-gdoc remembers the suggestion is its own. Never report a proposal as landed
-because the command exited 0.
+the document's own words, exactly once, and inside one paragraph for a words
+proposal; give the replacement, or the block's markdown content, and a
+plain-text reason for the reader; pass the paired note so gdoc remembers the
+suggestion is its own. Never report a proposal as landed because the command
+exited 0.
 
 ## Two messages at most
 
@@ -358,6 +368,7 @@ answered   "reviewed annually"      cited domains/regulatory/cbc-emi.md
 carried    "add to the decision log" edited domains/regulatory/decisions.md
 proposed   "reviewed annually" -> "reviewed every six months"   verified
 proposed   "quarterly" -> "monthly"   NOT verified: docx_anchored failed
+proposed   block of 4 paragraphs after "the six month cycle"   verified
 
 files changed in the hub: domains/regulatory/decisions.md, policy.md
 1 marked reply since my last answer, on the thread about vocabulary, carried above

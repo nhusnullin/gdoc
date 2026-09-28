@@ -1,0 +1,111 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000bo",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXpreviewkept",
+  "body": {
+    "content": [
+      {
+        "startIndex": 0,
+        "endIndex": 1,
+        "sectionBreak": {
+          "sectionStyle": {}
+        }
+      },
+      {
+        "startIndex": 1,
+        "endIndex": 26,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "HEADING_1"
+          },
+          "elements": [
+            {
+              "startIndex": 1,
+              "endIndex": 26,
+              "textRun": {
+                "content": "Supplier register policy\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 26,
+        "endIndex": 93,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 26,
+              "endIndex": 93,
+              "textRun": {
+                "content": "The supplier register is reviewed annually by the operations team.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 93,
+        "endIndex": 181,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 93,
+              "endIndex": 181,
+              "textRun": {
+                "content": "Each supplier is scored against the risk matrix. The scores are published each quarter.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 181,
+        "endIndex": 224,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 181,
+              "endIndex": 224,
+              "textRun": {
+                "content": "Quarterly review of the top ten suppliers.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 224,
+        "endIndex": 263,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 224,
+              "endIndex": 263,
+              "textRun": {
+                "content": "Escalations go to the operations lead.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

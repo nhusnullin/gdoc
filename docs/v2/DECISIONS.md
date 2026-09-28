@@ -77,6 +77,8 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
 | 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
 | 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
+| 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
+| 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2768,3 +2770,148 @@ documents gdoc did not write, and it says so.
 Serves principle 3: not knowing where gdoc's own cover ends never resolves to
 styling over it, and gdoc knows where it ends only when the document says so.
 
+
+## 2026-09-28. `propose` gains a second kind, a block of whole paragraphs.
+
+`propose` changes words inside one paragraph. A review answer that is "rewrite
+this section" or "add a section here" had no route into the document, and on
+2026-09-25 Nail pasted one in by hand. The backlog item was
+`docs/backlog/propose-cannot-add-paragraphs.md`, and this entry closes it.
+
+Google was never the blocker. The house prelude already proposes about seventy
+paragraphs in one SUGGEST batch, and on 2026-09-27
+`TestLiveBlockProposalProbe` measured the block shape in throwaway documents.
+MEASURED.md holds the seven cases under "A block of new paragraphs, proposed in
+one SUGGEST batch", and every decision below rests on a row of that table.
+
+**A proposals file entry is either the words kind or a block.** The block names
+one placement, either `after` with a quote in the anchor paragraph, or the pair
+`replace_from` and `replace_to`, and it carries `content` as markdown. The
+content is a subset: paragraphs, `#` to `######` headings, `-` and `1.` lists
+one level deep, bold, italic and links. An empty `kind` is the words kind, so
+every file written before today still reads. A replace covers whole paragraphs,
+from the start of the first to the end of the last, because a partial paragraph
+means an accept merges a neighbour.
+
+**One id per block.** Measured: the insertion, the paragraph styles, the
+bullets, the bullet removal and the deletion of a replace all come back under
+one suggestion id. So the note's `proposals[]` entry keeps its one `id` and
+`withdraw` is unchanged. A read-back showing more than one id is reported in
+full and is `verified: false`, with a warning that `withdraw` takes back the
+first, which is the one the note records. The reason is the 2026-08-29 rule
+that gdoc can retract its own proposal: a proposal it cannot fully take back is
+not a verified one.
+
+**Insert at the start of the paragraph after the anchor, never at the end of
+the anchor.** Measured: an end insert hands the anchor's old paragraph mark to
+the last new paragraph, and restyling that mark is a second suggestion. At a
+start every new paragraph owns a mark of its own.
+
+**Clear the inherited bullets, and clear the inherited text style.** New text
+takes the list membership of the paragraph it lands in front of, and stating
+`namedStyleType` does not clear it. Every new paragraph that is not a list item
+gets `deleteParagraphBullets`, which folds into the same id. Text inserted at a
+paragraph's start also takes that paragraph's first run style, so a block in
+front of a bold or linked paragraph would arrive bold or linked. One
+`updateTextStyle` covers the whole insert and clears bold, italic, underline,
+strikethrough and the link through its fields mask, before the block's own
+marks are written.
+
+**After the last paragraph there is no paragraph to insert in front of.** The
+text goes in before the body's final newline, as a newline and then the content
+without its trailing newline, so the last new paragraph owns the final mark.
+Nothing in the batch restates that mark, which is what row 7 measured, so
+three cases are refused there by name. A block whose last paragraph is not
+plain body text, because restyling that final mark is the unmeasured second-id
+case. A last paragraph that is a list item, because clearing an inherited
+bullet on the mark-owning paragraph is the one measured case that gave two ids.
+And a last paragraph carrying any other named style, because the block's own
+last paragraph would then arrive as a heading, and restating the mark to stop
+that is the same unmeasured case. Every message says what would work instead.
+Any of them can be widened after a measurement, which is Nail's call.
+
+**A replace over somebody's work is refused, and every id is named.** When the
+paragraphs a replace would delete hold a pending suggestion or a comment's
+anchor, the binary refuses and names each suggestion id and each comment id.
+That is a fact and not a judgement: the binary does not decide whether the
+suggestion matters. The skills run `suggestions` and `comments` over the range
+before they ask, and tell the person what is in the way. This serves principle
+3, because deleting a colleague's pending edit is what not knowing would
+otherwise resolve to.
+
+**Out of scope, and refused by name rather than dropped:** tables, because
+`docs/backlog/propose-inside-tables.md` is not settled; nested lists, because
+nesting through leading tabs is unmeasured in SUGGEST mode; pictures; and
+anything goldmark parses that the subset above does not name, which is code
+blocks, block quotes, raw HTML and thematic breaks. Refusing by name is
+principle 3 again: a file gdoc half understands never reaches a document.
+
+The read-backs are the ones every write already has, on routes the write did
+not go out on. The inline suggestions read must show the insertion id on every
+new paragraph, and for a replace a deletion id on every old one. The preview
+read without suggestions must still show the anchor, or the replaced run,
+exactly as it was, and must not hold the block's first new line, which is the
+direct-edit catch. The docx export must show the robot comment anchored to
+text. A line that already appears elsewhere in the document makes the preview
+check answer "no answer" rather than a pass.
+
+The first new line is the block's own first line for an `after` block, and for
+a replace the first line the replaced paragraphs did not already carry. A
+replace is asked the question too, because the first question asks by
+substring: a direct edit whose new paragraphs carry the old ones inside them
+leaves every replaced paragraph findable in the preview, and the route would
+pass on the silent direct edit it exists to catch. It is the same shape the
+words kind asks its own second question for. Asking instead about a line the
+replaced run already carried would fail the commonest block there is, a section
+rewritten under its own heading. A skipped line costs the check nothing,
+because a direct edit writes the whole block and any line of it answers for all
+of them.
+
+A block with no new line left to ask about holds on the first question alone
+only when its content drops a paragraph the placement stood on, which is the
+replace that only shortens: a direct edit of that one takes the dropped
+paragraph out. A replace that says every old paragraph again, a list conversion
+or a reorder, and an after block, whose anchor a direct edit leaves alone, give
+the first question nothing to catch, so both answer "no answer" rather than
+passing.
+
+Tests: the milestone plan `docs/plans/completed/20260927-propose-block.md` names
+one per rule, from `TestABlockProposalNeedsNoGrant` at the guard to
+`TestLiveProposeBlock` in the live package. `propose/doc.go` names the subset
+and each refusal with the test that pins it.
+
+
+## 2026-09-28. A block refuses a renumbered list and a paragraph an object floats beside.
+
+Two gaps found reviewing the block proposal on the day it was written. Both are
+the same failure: the document would come out different from what the caller
+wrote, and none of the three read-backs could see the difference, because all
+three read text and neither of these is text.
+
+**A numbered list that does not begin at 1 is refused.**
+`createParagraphBullets` carries no start number, and the preset
+`NUMBERED_DECIMAL_ALPHA_ROMAN` counts from 1. A review answer continuing an
+existing run, written `3.` and `4.`, would arrive as `1.` and `2.`, and the
+prose around it that says "step 3" would then name the wrong line. A list number
+is drawn by Docs rather than written into the text, so the inline read, the
+preview read and the export all pass over it. `internal/body` carries the same
+failure as a warning, because a publish rewrites a whole note and a refusal
+there costs the document. A block is a few lines a review wrote, so here it is
+refused and the message says to write the list from 1.
+
+**A replace is refused over a paragraph a picture, a drawing or an object floats
+beside.** A floating object is anchored to a paragraph rather than held in its
+runs, so the run walk that names an inline picture, an equation, a footnote
+mark, a break or a chip never saw one. `deleteContentRange` takes an anchored
+object with the paragraph it is anchored to, and `written` and
+`idSet.deletionIn` read text runs only, so the proposal would have come back
+`verified: true` with somebody's diagram inside the deletion and nobody told.
+The refusal names the object and says to leave that paragraph out of the run,
+which is what the inline half already said.
+
+Serves principle 3: not knowing what a paragraph carries never resolves to
+deleting it, and a construct gdoc cannot propose faithfully is refused by name
+rather than changed on the way in.
+
+Tests: `TestContentRefusesWhatTheSubsetDoesNotHold` carries the list case, and
+`TestPlaceRefusesWhatItCannotPlaceAndNamesIt` the floating object.

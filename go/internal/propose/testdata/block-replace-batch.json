@@ -1,0 +1,120 @@
+{
+  "requests": [
+    {
+      "insertText": {
+        "location": {
+          "index": 26
+        },
+        "text": "3.6 Limits\nBody text with bold.\none\ntwo\n"
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "HEADING_2"
+        },
+        "range": {
+          "endIndex": 37,
+          "startIndex": 26
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 58,
+          "startIndex": 37
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 62,
+          "startIndex": 58
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 66,
+          "startIndex": 62
+        }
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "bold,italic,underline,strikethrough,link",
+        "range": {
+          "endIndex": 66,
+          "startIndex": 26
+        },
+        "textStyle": {}
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "bold",
+        "range": {
+          "endIndex": 56,
+          "startIndex": 52
+        },
+        "textStyle": {
+          "bold": true
+        }
+      }
+    },
+    {
+      "createParagraphBullets": {
+        "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE",
+        "range": {
+          "endIndex": 66,
+          "startIndex": 58
+        }
+      }
+    },
+    {
+      "deleteParagraphBullets": {
+        "range": {
+          "endIndex": 58,
+          "startIndex": 26
+        }
+      }
+    },
+    {
+      "deleteContentRange": {
+        "range": {
+          "endIndex": 182,
+          "startIndex": 66
+        }
+      }
+    },
+    {
+      "insertComment": {
+        "assigneeEmailAddress": "nail@altery.com",
+        "content": "🤖 the limits section was missing",
+        "range": {
+          "endIndex": 36,
+          "startIndex": 26
+        }
+      }
+    }
+  ],
+  "writeControl": {
+    "writeMode": "SUGGEST"
+  }
+}

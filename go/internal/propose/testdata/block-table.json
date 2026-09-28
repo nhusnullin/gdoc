@@ -1,0 +1,206 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000ta",
+  "title": "A register with a table",
+  "revisionId": "ALm37BXtable",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 32,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 32,
+                    "textRun": {
+                      "content": "The controls are listed below.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 32,
+              "endIndex": 79,
+              "table": {
+                "rows": 2,
+                "columns": 2,
+                "tableRows": [
+                  {
+                    "startIndex": 33,
+                    "endIndex": 49,
+                    "tableCells": [
+                      {
+                        "startIndex": 34,
+                        "endIndex": 42,
+                        "content": [
+                          {
+                            "startIndex": 34,
+                            "endIndex": 42,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 34,
+                                  "endIndex": 42,
+                                  "textRun": {
+                                    "content": "Control\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "startIndex": 42,
+                        "endIndex": 48,
+                        "content": [
+                          {
+                            "startIndex": 42,
+                            "endIndex": 48,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 42,
+                                  "endIndex": 48,
+                                  "textRun": {
+                                    "content": "Owner\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "startIndex": 49,
+                    "endIndex": 78,
+                    "tableCells": [
+                      {
+                        "startIndex": 50,
+                        "endIndex": 66,
+                        "content": [
+                          {
+                            "startIndex": 50,
+                            "endIndex": 66,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 50,
+                                  "endIndex": 66,
+                                  "textRun": {
+                                    "content": "Register review\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "startIndex": 66,
+                        "endIndex": 77,
+                        "content": [
+                          {
+                            "startIndex": 66,
+                            "endIndex": 77,
+                            "paragraph": {
+                              "paragraphStyle": {
+                                "namedStyleType": "NORMAL_TEXT"
+                              },
+                              "elements": [
+                                {
+                                  "startIndex": 66,
+                                  "endIndex": 77,
+                                  "textRun": {
+                                    "content": "Operations\n",
+                                    "textStyle": {}
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 79,
+              "endIndex": 118,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 79,
+                    "endIndex": 118,
+                    "textRun": {
+                      "content": "Escalations go to the operations lead.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 118,
+              "endIndex": 151,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 118,
+                    "endIndex": 151,
+                    "textRun": {
+                      "content": "The table is reviewed each year.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

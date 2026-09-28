@@ -296,6 +296,12 @@ func TestCheckRefusesEachBadProposalByName(t *testing.T) {
 		// the precondition it was written against.
 		{"replacement with a newline", Proposal{Quoted: "a", Replacement: "b\nc", Why: "d"}, "line break"},
 		{"replacement with a carriage return", Proposal{Quoted: "a", Replacement: "b\rc", Why: "d"}, "line break"},
+		// Batch anchors the comment on the words it inserted, counted from the
+		// replacement's own length. A character Docs strips out of an insert is
+		// one the count has and the document does not, so the anchor reaches
+		// past the replacement into words nobody proposed to change.
+		{"replacement with a private-use character", Proposal{Quoted: "a", Replacement: "b\uf8ffc", Why: "d"}, "U+F8FF"},
+		{"replacement with a control character", Proposal{Quoted: "a", Replacement: "b\u001fc", Why: "d"}, "U+001F"},
 		{"no reason", Proposal{Quoted: "a", Replacement: "b"}, "no reason"},
 		{"markdown reason", Proposal{Quoted: "a", Replacement: "b", Why: "use **six months**"}, "markdown"},
 		{"backtick reason", Proposal{Quoted: "a", Replacement: "b", Why: "the `annually` wording"}, "markdown"},
@@ -587,5 +593,62 @@ func TestRecordRefusesADocumentTheNoteDoesNotName(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), testDocID) {
 		t.Errorf("the refusal %q does not name what the note does hold", err)
+	}
+}
+
+// TestRecordRemembersABlockByItsPlacement is the note's one quote field over a
+// proposal that replaced no words. A block is known afterwards by where it went,
+// so the after quote is what the note keeps and what a later run shows.
+func TestRecordRemembersABlockByItsPlacement(t *testing.T) {
+	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + testDocID + "\n---\n\n# Scope\n")
+	at := time.Date(2026, 9, 28, 9, 0, 0, 0, time.UTC)
+	res := Result{
+		After:         "reviewed annually",
+		SuggestionIDs: []string{"suggest.block"},
+		CommentID:     "AAAC",
+	}
+
+	out, missed, err := Record(note, testDocID, []Result{res}, at)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(missed) != 0 {
+		t.Fatalf("missed = %+v, and this result carries both ids", missed)
+	}
+	b, err := frontmatter.Read(out)
+	if err != nil {
+		t.Fatalf("the note it wrote does not read back: %v", err)
+	}
+	if len(b.Documents[0].Proposals) != 1 {
+		t.Fatalf("proposals = %+v", b.Documents[0].Proposals)
+	}
+	p := b.Documents[0].Proposals[0]
+	if p.ID != "suggest.block" || p.CommentID != "AAAC" || p.Quoted != "reviewed annually" {
+		t.Errorf("proposals[0] = %+v, want the block's own ids and the words it was placed by", p)
+	}
+}
+
+// TestRecordRemembersAReplaceByItsFirstQuote is the other placement form. A
+// replace names two quotes and the note has one field, so it keeps the first:
+// that is the paragraph the block went in at.
+func TestRecordRemembersAReplaceByItsFirstQuote(t *testing.T) {
+	note := []byte("---\ngdoc:\n  schema: 1\n  document_id: " + testDocID + "\n---\n")
+	res := Result{
+		ReplaceFrom:   "reviewed annually",
+		ReplaceTo:     "risk matrix",
+		SuggestionIDs: []string{"suggest.block"},
+		CommentID:     "AAAC",
+	}
+
+	out, _, err := Record(note, testDocID, []Result{res}, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b, err := frontmatter.Read(out)
+	if err != nil {
+		t.Fatalf("the note it wrote does not read back: %v", err)
+	}
+	if got := b.Documents[0].Proposals[0].Quoted; got != "reviewed annually" {
+		t.Errorf("quoted = %q, want the replace's first quote", got)
 	}
 }

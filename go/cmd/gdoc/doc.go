@@ -45,7 +45,8 @@
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
 //   - probe --folder: whether Docs honours SUGGEST today. internal/probe.
 //   - reply <url> <comment id> --body-file: one robot reply. internal/reply.
-//   - propose <url> --from --folder [--md]: a change as a suggestion.
+//   - propose <url> --from --folder [--md]: a change as a suggestion, either
+//     words inside one paragraph or a block of new paragraphs.
 //     internal/propose.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
 //     internal/withdraw.
@@ -400,6 +401,43 @@
 // here. TestAnInterruptedWaitIsAnAnswerAndNotAFailure covers the answer.
 // dispatch still takes a context, because a test hands a wait one that is
 // already done.
+//
+// # The proposals file holds both kinds, and a block field needs the block kind
+//
+// One list, read strictly, and every entry checked before the probe runs and
+// before the first write: all of them are in hand, and a third entry refused
+// after the first two have landed is a run that half happened in somebody's
+// document. An entry is either the words kind, which names quoted and
+// replacement, or the block kind, which names kind: block, content, and either
+// after or the pair replace_from and replace_to. The words kind names no kind at
+// all, so a file written before the block existed still reads, and the loop that
+// walks the list asks nothing about which kind an entry is: internal/propose's
+// Apply dispatches, each entry gets its own read, and
+// TestProposeRunsABothKindsFileInFileOrder is the mixed file end to end.
+//
+// The decoder refuses a field it does not know, which is where a misspelled
+// `contents` stops: TestProposeRefusesAnUnknownFieldInABlockEntry. It cannot
+// hold the block's own fields against an entry naming no kind, because both
+// kinds are read into the one type and those are fields it knows. Check refuses
+// them by name instead, and that matters twice over: an entry naming after and
+// no kind would otherwise be refused for quoting no text, which names nothing
+// the author did wrong, and an entry naming a quote and a content would be sent
+// as a words proposal with its content quietly dropped.
+// TestProposeRefusesABlockFieldWithNoKind is the pin.
+//
+// The marker rule is asked here rather than in internal/plaintext, because these
+// fields are document text and document text never goes through a thread. Six
+// fields carry it: the words kind's quote and replacement, and the block's two
+// placement quotes and its content. TestProposeRefusesAMarkerInTheFile and
+// TestProposeRefusesAMarkerInABlockField are the two halves, and
+// internal/markers holds the reason a marker travels out and never back in.
+//
+// The envelope reports the placement each kind was asked for and leaves the
+// other kind's fields out, so a skill reading an answer knows which entry of its
+// own file it is about: TestProposeReadsABlockEntry. The note records one quote
+// per proposal, and for a block it is where the block went, the after quote or
+// the first of a replace's two: TestProposeRecordsABlocksPlacementInTheNote and
+// TestProposeRecordsAReplacesFirstQuoteInTheNote.
 //
 // # annotate takes no folder and no note
 //

@@ -168,9 +168,17 @@ func readBody(path string) (string, error) {
 // been applied, and gdoc cannot tell. The envelope's own error names it on that
 // path, so read the error beside the flag rather than the flag alone, and read
 // the document before proposing the same words again.
+// Each kind reports the placement it was asked for and leaves the other kind's
+// fields out: a words proposal names quoted and replacement, a block names
+// after, or replace_from and replace_to. They are the words the file asked for
+// rather than an index, so a skill reading the report back can tell which entry
+// of its own file an answer is about.
 type proposalReport struct {
-	Quoted             string         `json:"quoted"`
-	Replacement        string         `json:"replacement"`
+	Quoted             string         `json:"quoted,omitempty"`
+	Replacement        string         `json:"replacement,omitempty"`
+	After              string         `json:"after,omitempty"`
+	ReplaceFrom        string         `json:"replace_from,omitempty"`
+	ReplaceTo          string         `json:"replace_to,omitempty"`
 	Sent               bool           `json:"sent"`
 	SuggestionIDs      []string       `json:"suggestion_ids,omitempty"`
 	CommentID          string         `json:"comment_id,omitempty"`
@@ -281,7 +289,7 @@ func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note
 		}
 		results = append(results, res)
 		data.Proposals[i] = sent(res)
-		warns = append(warns, about(one.Quoted, res.Warnings)...)
+		warns = append(warns, about(res.Quote(), res.Warnings)...)
 	}
 	data.FilesChanged, warns = record(note, results, warns)
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
@@ -291,7 +299,13 @@ func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note
 func notSent(proposals []propose.Proposal) []proposalReport {
 	out := make([]proposalReport, 0, len(proposals))
 	for _, p := range proposals {
-		out = append(out, proposalReport{Quoted: p.Quoted, Replacement: p.Replacement})
+		out = append(out, proposalReport{
+			Quoted:      p.Quoted,
+			Replacement: p.Replacement,
+			After:       p.After,
+			ReplaceFrom: p.ReplaceFrom,
+			ReplaceTo:   p.ReplaceTo,
+		})
 	}
 	return out
 }
@@ -301,6 +315,9 @@ func sent(r propose.Result) proposalReport {
 	return proposalReport{
 		Quoted:             r.Quoted,
 		Replacement:        r.Replacement,
+		After:              r.After,
+		ReplaceFrom:        r.ReplaceFrom,
+		ReplaceTo:          r.ReplaceTo,
 		Sent:               true,
 		SuggestionIDs:      r.SuggestionIDs,
 		CommentID:          r.CommentID,
@@ -313,6 +330,10 @@ func sent(r propose.Result) proposalReport {
 // about names which proposal a warning belongs to. The envelope carries one
 // list, and a run with two proposals in it would otherwise report a route that
 // did not hold without saying which change it was about.
+//
+// The words are Result.Quote's: what a words proposal replaced, and where a
+// block went. A block names no quoted text at all, so reading that field alone
+// would label every one of its warnings with an empty string.
 func about(quoted string, warns []string) []string {
 	out := make([]string, 0, len(warns))
 	for _, w := range warns {
@@ -357,7 +378,7 @@ func record(note *notePath, results []propose.Result, warns []string) ([]string,
 		// verification warning to work out.
 		warns = append(warns, fmt.Sprintf(
 			"the proposal %q was written into the document and %s does not record it, because %s; gdoc cannot withdraw it later",
-			m.Quoted, note.path, missingID(m)))
+			m.Quote(), note.path, missingID(m)))
 	}
 	if len(missed) == len(results) {
 		// Nothing was added, so nothing is written and the note is not named as
@@ -465,6 +486,12 @@ func readNote(path, docID string) (*notePath, error) {
 // `why` is caught a few lines down, because Check refuses their empty values;
 // `assignee` is optional, so a dropped one landed a comment with nobody
 // assigned, reported verified: true, and warned about nothing.
+//
+// Both kinds are read into the one type, so a file of both kinds is one list.
+// The decoder cannot hold the block's own fields against an entry naming no
+// kind, because they are fields it knows: Check does that, by name, and the
+// tests for it are TestProposeRefusesAnUnknownFieldInABlockEntry and
+// TestProposeRefusesABlockFieldWithNoKind.
 func readProposals(path string) ([]propose.Proposal, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -497,12 +524,16 @@ func readProposals(path string) ([]propose.Proposal, error) {
 		// The quote and the replacement are document text, and document text
 		// never passes through internal/plaintext: Check asks that package
 		// about the reason alone, because the reason is what goes into a
-		// thread. So the marker rule is asked here, over the two fields that
-		// go into the document itself. A skill proposing from a note it has
-		// just exported, with the markers unresolved, is what this refuses:
-		// TestProposeRefusesAMarkerInTheFile.
+		// thread. So the marker rule is asked here, over every field that goes
+		// into the document itself: the words kind's two, and the block's two
+		// placement quotes and its content. A skill proposing from a note it
+		// has just exported, with the markers unresolved, is what this refuses:
+		// TestProposeRefusesAMarkerInTheFile and
+		// TestProposeRefusesAMarkerInABlockField.
 		for _, f := range []struct{ name, text string }{
 			{"quoted", p.Quoted}, {"replacement", p.Replacement},
+			{"after", p.After}, {"replace_from", p.ReplaceFrom},
+			{"replace_to", p.ReplaceTo}, {"content", p.Content},
 		} {
 			if m, ok := markers.Find(f.text); ok {
 				return nil, fmt.Errorf("%s proposals[%d]: the %s carries %s, one of gdoc's own markers; a marker travels out of a document and never back in, so resolve the markers in the note before proposing from it", path, i, f.name, m)

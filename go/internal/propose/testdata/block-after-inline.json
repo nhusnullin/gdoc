@@ -1,0 +1,238 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000bo",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXafterinline",
+  "body": {
+    "content": [
+      {
+        "startIndex": 0,
+        "endIndex": 1,
+        "sectionBreak": {
+          "sectionStyle": {}
+        }
+      },
+      {
+        "startIndex": 1,
+        "endIndex": 26,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "HEADING_1"
+          },
+          "elements": [
+            {
+              "startIndex": 1,
+              "endIndex": 26,
+              "textRun": {
+                "content": "Supplier register policy\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 26,
+        "endIndex": 93,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 26,
+              "endIndex": 93,
+              "textRun": {
+                "content": "The supplier register is reviewed annually by the operations team.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 93,
+        "endIndex": 104,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "HEADING_2"
+          },
+          "elements": [
+            {
+              "startIndex": 93,
+              "endIndex": 104,
+              "textRun": {
+                "content": "3.6 Limits\n",
+                "textStyle": {},
+                "suggestedInsertionIds": [
+                  "suggest.block"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 104,
+        "endIndex": 125,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 104,
+              "endIndex": 119,
+              "textRun": {
+                "content": "Body text with ",
+                "textStyle": {},
+                "suggestedInsertionIds": [
+                  "suggest.block"
+                ]
+              }
+            },
+            {
+              "startIndex": 119,
+              "endIndex": 123,
+              "textRun": {
+                "content": "bold",
+                "textStyle": {
+                  "bold": true
+                },
+                "suggestedInsertionIds": [
+                  "suggest.block"
+                ]
+              }
+            },
+            {
+              "startIndex": 123,
+              "endIndex": 125,
+              "textRun": {
+                "content": ".\n",
+                "textStyle": {},
+                "suggestedInsertionIds": [
+                  "suggest.block"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 125,
+        "endIndex": 129,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 125,
+              "endIndex": 129,
+              "textRun": {
+                "content": "one\n",
+                "textStyle": {},
+                "suggestedInsertionIds": [
+                  "suggest.block"
+                ]
+              }
+            }
+          ],
+          "bullet": {
+            "listId": "kix.listone",
+            "nestingLevel": 0,
+            "textStyle": {}
+          }
+        }
+      },
+      {
+        "startIndex": 129,
+        "endIndex": 133,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 129,
+              "endIndex": 133,
+              "textRun": {
+                "content": "two\n",
+                "textStyle": {},
+                "suggestedInsertionIds": [
+                  "suggest.block"
+                ]
+              }
+            }
+          ],
+          "bullet": {
+            "listId": "kix.listone",
+            "nestingLevel": 0,
+            "textStyle": {}
+          }
+        }
+      },
+      {
+        "startIndex": 133,
+        "endIndex": 182,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 133,
+              "endIndex": 182,
+              "textRun": {
+                "content": "Each supplier is scored against the risk matrix.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 182,
+        "endIndex": 225,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 182,
+              "endIndex": 225,
+              "textRun": {
+                "content": "Quarterly review of the top ten suppliers.\n",
+                "textStyle": {}
+              }
+            }
+          ],
+          "bullet": {
+            "listId": "kix.listone",
+            "nestingLevel": 0,
+            "textStyle": {}
+          }
+        }
+      },
+      {
+        "startIndex": 225,
+        "endIndex": 264,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 225,
+              "endIndex": 264,
+              "textRun": {
+                "content": "Escalations go to the operations lead.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000to",
+  "title": "A document with a contents list",
+  "revisionId": "ALm37BXtoc",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 12,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "TITLE"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 12,
+                    "textRun": {
+                      "content": "The policy\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 12,
+              "endIndex": 31,
+              "tableOfContents": {
+                "content": [
+                  {
+                    "startIndex": 12,
+                    "endIndex": 20,
+                    "paragraph": {
+                      "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT"
+                      },
+                      "elements": [
+                        {
+                          "startIndex": 12,
+                          "endIndex": 20,
+                          "textRun": {
+                            "content": "1-Scope\n",
+                            "textStyle": {}
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 20,
+                    "endIndex": 31,
+                    "paragraph": {
+                      "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT"
+                      },
+                      "elements": [
+                        {
+                          "startIndex": 20,
+                          "endIndex": 31,
+                          "textRun": {
+                            "content": "2-Controls\n",
+                            "textStyle": {}
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 31,
+              "endIndex": 60,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 31,
+                    "endIndex": 60,
+                    "textRun": {
+                      "content": "Scope is the whole register.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

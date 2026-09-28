@@ -544,11 +544,11 @@ var skillWants = []struct {
 	folder string
 	needs  string
 }{
-	{"gdoc-align", "v2.4.0"},
+	{"gdoc-align", "v2.7.0"},
 	{"gdoc-export", "v2.4.0"},
 	{"gdoc-publish", "v2.4.0"},
 	{"gdoc-restyle", "v2.0.0"},
-	{"gdoc-review", "v2.4.0"},
+	{"gdoc-review", "v2.7.0"},
 }
 
 // skillFrontMatterValue is what the front matter says after this key, or the
@@ -738,6 +738,67 @@ func TestTheLiveLoopSaysWhichCursorsItKeeps(t *testing.T) {
 	} {
 		if !strings.Contains(src, want) {
 			t.Errorf("skills/gdoc-review/live.md does not say %q. A session that keeps a cursor from a listing it did not read skips activity for good", want)
+		}
+	}
+}
+
+// A block replaces whole paragraphs, and the binary refuses a replace whose
+// paragraphs hold somebody else's pending suggestion or a comment's anchor. The
+// skill has to ask the same two questions before it writes the file, because a
+// refusal at the terminal tells the operator what is in the way one paragraph
+// at a time, and the person whose work it is never hears the question at all.
+func TestTheReviewSkillChecksARangeBeforeItProposesABlockOverIt(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-review", "propose.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for _, want := range []string{
+		`"kind": "block"`,
+		`"after"`,
+		`"replace_from"`,
+		`"content"`,
+		"$GDOC suggestions <url>",
+		"$GDOC comments <url>",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-review/propose.md does not say %q. A session that cannot see the block entry, or what is in the range it would delete, proposes over somebody's work", want)
+		}
+	}
+}
+
+// Step 7 is what a session reads when it is deciding whether to propose at all,
+// and before this milestone the only shape it knew was words inside one
+// paragraph. A session that still believes that answers "add a section" in the
+// thread instead of proposing it.
+func TestStep7SaysABlockIsTheOtherKindOfProposal(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-review", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for _, want := range []string{"block", "new or rewritten section"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-review/SKILL.md does not say %q in Step 7. The block kind is how a new section reaches a document", want)
+		}
+	}
+}
+
+// A section only the note holds had no route into the document, so gdoc-align
+// reported it and left it to the person to paste. It is a block now, placed
+// after the paragraph in front of it.
+func TestAlignProposesASectionOnlyTheNoteHolds(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-align", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for _, want := range []string{
+		`"kind": "block"`,
+		"only the note holds",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-align/SKILL.md does not say %q. A section the note has and the document does not is proposed as a block, not left to be pasted by hand", want)
 		}
 	}
 }

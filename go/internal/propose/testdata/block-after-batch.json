@@ -1,0 +1,111 @@
+{
+  "requests": [
+    {
+      "insertText": {
+        "location": {
+          "index": 93
+        },
+        "text": "3.6 Limits\nBody text with bold.\none\ntwo\n"
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "HEADING_2"
+        },
+        "range": {
+          "endIndex": 104,
+          "startIndex": 93
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 125,
+          "startIndex": 104
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 129,
+          "startIndex": 125
+        }
+      }
+    },
+    {
+      "updateParagraphStyle": {
+        "fields": "namedStyleType",
+        "paragraphStyle": {
+          "namedStyleType": "NORMAL_TEXT"
+        },
+        "range": {
+          "endIndex": 133,
+          "startIndex": 129
+        }
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "bold,italic,underline,strikethrough,link",
+        "range": {
+          "endIndex": 133,
+          "startIndex": 93
+        },
+        "textStyle": {}
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "bold",
+        "range": {
+          "endIndex": 123,
+          "startIndex": 119
+        },
+        "textStyle": {
+          "bold": true
+        }
+      }
+    },
+    {
+      "createParagraphBullets": {
+        "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE",
+        "range": {
+          "endIndex": 133,
+          "startIndex": 125
+        }
+      }
+    },
+    {
+      "deleteParagraphBullets": {
+        "range": {
+          "endIndex": 125,
+          "startIndex": 93
+        }
+      }
+    },
+    {
+      "insertComment": {
+        "content": "🤖 the limits section was missing",
+        "range": {
+          "endIndex": 103,
+          "startIndex": 93
+        }
+      }
+    }
+  ],
+  "writeControl": {
+    "writeMode": "SUGGEST"
+  }
+}

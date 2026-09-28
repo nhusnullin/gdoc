@@ -50,8 +50,9 @@ text: a Docs thread renders markdown literally, so asterisks and backticks
 arrive as typed. Both are refused naming what was found.
 
 **`propose`** writes a change as a native suggestion with a comment beside it
-saying why. It reads the file `--from` names, a list of
-`{quoted, replacement, why, assignee?}`:
+saying why. It reads the file `--from` names, a list of entries of two kinds.
+The first changes words inside one paragraph, `{quoted, replacement, why,
+assignee?}`:
 
 ```json
 [{
@@ -74,12 +75,82 @@ ambiguous rather than placed on the plain one. Each proposal is one
 ground under the second, and a document with more than one tab stops the run
 before anything is sent.
 
-`replacement` may not be empty, and it may not carry a line break: a proposal
-replaces words with words inside one paragraph, and there is neither a
-deletion-only shape nor one that adds a paragraph. `why` becomes the comment, so it must be plain text
-and must not carry the `🤖 ` prefix itself, which gdoc adds. Every proposal in
-the file is checked before the first one is sent, so a bad entry stops the run
-with nothing written.
+`replacement` may not be empty, and it may not carry a line break: that entry
+replaces words with words inside one paragraph, and there is no deletion-only
+shape. Whole paragraphs are the other kind, below. `why` becomes the comment, so
+it must be plain text and must not carry the `🤖 ` prefix itself, which gdoc adds.
+Every proposal in the file is checked before the first one is sent, so a bad
+entry stops the run with nothing written.
+
+**A block adds or replaces whole paragraphs.** An entry with `kind: block`
+carries `content` as markdown and says where it goes, either `after` a quote in
+the paragraph it follows, or the pair `replace_from` and `replace_to`:
+
+```json
+[{
+  "kind": "block",
+  "after": "the operations team reviews it",
+  "content": "## 3.6 Limits\n\nEach limit is **per account**.\n\n- daily\n- monthly\n",
+  "why": "the section above promises limits and the document has none"
+}, {
+  "kind": "block",
+  "replace_from": "Onboarding is manual",
+  "replace_to": "which takes four days",
+  "content": "Onboarding is automated, and takes one hour.\n",
+  "why": "rewriting the paragraph, not words inside it"
+}]
+```
+
+An entry with no `kind` is the words kind, so a proposals file written before
+blocks existed still reads. Exactly one placement form is named, and each quote
+is found exactly once by the same walk `quoted` uses. A replace covers whole
+paragraphs, from the start of the first to the end of the last, so accepting it
+can never merge a neighbour. The new text goes in at the start of the paragraph
+after the anchor, never at the end of the anchor, and a block comes back with one
+suggestion id, so `withdraw` takes it back whole.
+
+`content` is a markdown subset: paragraphs, `#` to `######` headings, `-` and
+`1.` lists one level deep, bold, italic and links. It is 8 KiB at most, because a
+batch past that is a body the guard cannot read, and a caller told about the
+guard's peek has nothing to act on. Everything else is refused by name: a table,
+a nested list, a numbered list that does not begin at `1.`, a picture, a code
+block, a block quote, raw HTML, a thematic break and empty content. A suggested
+list is always numbered from 1, so a list written from `3.` is refused rather
+than renumbered where nobody would see it. Three characters are refused in whichever spelling they
+arrive in, written or as an entity reference such as `&#12;`: one the Docs API
+strips out of an inserted text, because gdoc counts what it sends to place
+everything after it, a line break inside a paragraph, because Docs would make a
+paragraph of it that the block never proposed, and a tab, because Docs removes a
+leading one from a list item and that moves every index behind it. An empty line
+is still how the next paragraph starts.
+
+The placement refusals are the other half, and each says what would work:
+
+| Refused | Because |
+|---|---|
+| a quote that is not there exactly once | the same rule `quoted` has: quote more of the sentence |
+| `replace_to` before `replace_from` | the run would read backwards |
+| an anchor inside a table cell | proposing inside a table is not settled |
+| a replace whose paragraphs hold a pending suggestion or a comment's anchor | the deletion would take a colleague's work with it, so every suggestion id and comment id is named |
+| a replace reaching the body's last paragraph | Docs cannot delete the final newline |
+| an `after` or a replace running into a table, the contents list or a section break | there is no paragraph start to insert at, and a deletion would take the table with it |
+| a replace over a paragraph holding a picture, a footnote mark, an equation, a page break or a chip, or one a picture or a drawing floats beside | the deletion would take it, and no read-back can see it: leave that paragraph out of the run |
+| an `after` on the last paragraph when the block does not end in a plain paragraph, or when that paragraph is a list item or a heading | there the last new paragraph owns the existing final mark, and restyling it is a second suggestion |
+
+The read-backs are the words kind's three, asking the block's question. The
+inline read wants the insertion id on every new paragraph, and a deletion id on
+every replaced one. The preview read wants the anchor or the replaced run still
+reading as it was, and the block's first new line nowhere in that reading: that
+is the direct-edit catch, and when that line already appears elsewhere in the
+document the check answers "no answer" rather than passing. The first new line
+is the block's own first line after an `after`, and for a replace the first line
+the replaced paragraphs did not already carry, so a rewritten section keeping
+its own heading still verifies. A block that says nothing new at all, a list
+conversion or a reorder, leaves the check no line to ask about, so it answers
+"no answer" as well. The docx export wants the robot comment
+anchored to text. More than one suggestion id is reported in full and is
+`verified: false`, with a warning that `withdraw` takes back only the one the
+note records.
 
 **`verified` is the read-back, never the status code.** After the batch,
 `propose` reads the document three more ways, and `checks` says which held:
@@ -109,9 +180,10 @@ leave the note. The 🤖 comment stays where it is, because deleting a comment i
 a write the guard does not carry.
 
 With `--md`, `propose` records what it wrote into the note's `gdoc:` block:
-the suggestion id, the comment id, the time and the words that were replaced.
-That record is the permission to withdraw later, so a run without `--md` still
-lands the suggestion and simply forgets it.
+the suggestion id, the comment id, the time and the words that were replaced,
+which for a block is its `after` or `replace_from` quote. That record is the
+permission to withdraw later, so a run without `--md` still lands the suggestion
+and simply forgets it.
 
 The list is not a complete record on its own. A proposal gdoc does not have both
 ids for cannot be written down at all, because an entry missing either fails the

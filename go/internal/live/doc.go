@@ -152,6 +152,33 @@
 //     insertComment with no deleteContentRange beside it is what tells the
 //     suspects apart. Measured 2026-09-18: both comments verified, in the cell
 //     as in the paragraph.
+//   - TestLiveBlockProposalProbe, M14's, and the measurement the block kind was
+//     designed from. One throwaway document per case, each set up with a direct
+//     write and then asked in SUGGEST mode: a block of new paragraphs after a
+//     plain paragraph, the same after and before a list item with and without
+//     deleteParagraphBullets, a block after the document's last paragraph, and
+//     a replace of two whole paragraphs. Like the other probes it asserts
+//     almost nothing. Measured 2026-09-27, MEASURED.md "A block of new
+//     paragraphs, proposed in one SUGGEST batch".
+//   - TestLiveProposeBlock, M14's acceptance. It creates a document of five
+//     paragraphs with a list item among them, proposes one block after a
+//     paragraph, one in place of two paragraphs that open with that list item
+//     and one after the document's own last paragraph, and asserts each landed
+//     as exactly one pending suggestion with all three read-backs holding. The
+//     count propose reports is the insertion and deletion ids it reads, so the
+//     end-of-document case, the one block that shares a paragraph mark with the
+//     document, is asked again across every key Docs records a suggestion
+//     under: a style change on that mark would be a second id there and not
+//     here.
+//     Then it withdraws all three through a note propose.Record wrote, each
+//     under its own AllowReject, and compares the text projection with the one
+//     it read before the first proposal: character for character what it was.
+//     It is the first run to send a numbered list, the inherited bullet's
+//     clearing and the end-of-document placement through the production writer
+//     rather than through a hand-written batch. Neither it nor the probe
+//     above names a variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and
+//     GDOC_LIVE_FOLDER_ID with its default are the whole of what they read, and
+//     every document they touch is one they made.
 //
 // Copied, and the original never written to:
 //

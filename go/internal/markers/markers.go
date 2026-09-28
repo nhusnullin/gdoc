@@ -26,7 +26,10 @@
 //   - internal/plaintext, so `reply` and `annotate` refuse one in a thread,
 //     beside the markdown refusal: TestPlaintextRefusesAMarker.
 //   - cmd/gdoc's read of `propose --from`, because document text never passes
-//     through plaintext: TestProposeRefusesAMarkerInTheFile.
+//     through plaintext: TestProposeRefusesAMarkerInTheFile. A words proposal
+//     has two such fields, the quote and the replacement, and a block proposal
+//     has four, its two placement quotes and its content:
+//     TestProposeRefusesAMarkerInABlockField.
 //
 // The rule is written once, here, because three copies of it are three rules
 // and the one that drifts opens the door it was written to shut.

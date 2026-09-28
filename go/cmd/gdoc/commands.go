@@ -253,7 +253,7 @@ func commands() []command {
 			name:  "propose",
 			words: []string{"<url>"},
 			flags: []flag{
-				{"--from", kindFile, needRequired, "the file holding the changes to propose"},
+				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to)"},
 				{"--folder", kindFolderID, needRequired, "the Drive folder the working copy is created in"},
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
 			},

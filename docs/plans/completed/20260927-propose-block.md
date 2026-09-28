@@ -148,21 +148,21 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `docs/v2/DECISIONS.md` (entry and register row)
 - Modify: `docs/v2/SPEC.md` (the propose section)
 
-- [ ] DECISIONS entry dated the day it is written: the block kind, the
+- [x] DECISIONS entry dated the day it is written: the block kind, the
   decisions above with their measurement, and what is refused by name
-- [ ] SPEC: the proposals file's block entry, the refusals, the read-backs.
+- [x] SPEC: the proposals file's block entry, the refusals, the read-backs.
   "Changed <date>, DECISIONS.md"
-- [ ] `make test` (the docs boundary tests read these files)
+- [x] `make test` (the docs boundary tests read these files)
 
 ### Task 2: The guard carries a block batch at the suggest level
 
 **Files:**
 - Modify: `go/internal/guard/marker_test.go` or a new `block_test.go`
 
-- [ ] write `TestABlockProposalNeedsNoGrant`: a SUGGEST batch of the block
+- [x] write `TestABlockProposalNeedsNoGrant`: a SUGGEST batch of the block
   shape above, `deleteParagraphBullets` included, carries on a document at
   `LevelSuggest`, and the same batch without SUGGEST is refused
-- [ ] no production change is expected. If one is, stop: widening the guard
+- [x] no production change is expected. If one is, stop: widening the guard
   is Nail's decision (CLAUDE.md, "Never")
 
 ### Task 3: The content, read strictly
@@ -171,14 +171,14 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Create: `go/internal/propose/block.go`, `go/internal/propose/block_test.go`
 - Modify: `go/internal/propose/doc.go`
 
-- [ ] write the failing tests first: a heading, a paragraph with bold, italic
+- [x] write the failing tests first: a heading, a paragraph with bold, italic
   and a link, a bullet list and a numbered list come out as the right
   paragraphs, styles, runs and list kinds
-- [ ] refused by name, each with a test: a table, a nested list, a picture,
+- [x] refused by name, each with a test: a table, a nested list, a picture,
   a code block, a block quote, raw HTML, a thematic break, and empty content.
   gdoc's markers are not checked here: Task 8 extends the existing check
-- [ ] parse with goldmark, the way `internal/body` does. No new module
-- [ ] state the subset and each refusal in `propose/doc.go`, naming the tests
+- [x] parse with goldmark, the way `internal/body` does. No new module
+- [x] state the subset and each refusal in `propose/doc.go`, naming the tests
 
 ### Task 4: Where a block goes
 
@@ -186,10 +186,10 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `go/internal/propose/span.go` or create `go/internal/propose/place.go`
 - Create: tests beside it, with recorded documents in `testdata/`
 
-- [ ] write the failing tests first: `after` gives the start index of the
+- [x] write the failing tests first: `after` gives the start index of the
   paragraph after the anchor; a replace gives the start of the first and the
   end of the last whole paragraph
-- [ ] refused by name, each with a test: a quote not found exactly once;
+- [x] refused by name, each with a test: a quote not found exactly once;
   `replace_to` before `replace_from`; an anchor inside a table cell; a
   multi-tab document; a replace whose paragraphs hold a pending suggestion or
   a comment range (from `Document.CommentRanges`), naming every suggestion id
@@ -199,7 +199,10 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
   paragraph start to insert at; an `after` on the last paragraph when the
   block does not end with a plain paragraph, or when that last paragraph is a
   list item
-- [ ] no index is stored anywhere: placement is computed from the read that
+- [x] ➕ a replace whose run covers a table, the contents list or a section
+  break is refused too: `deleteContentRange` over one would take it with the
+  paragraphs
+- [x] no index is stored anywhere: placement is computed from the read that
   the write is built from
 
 ### Task 5: The batch
@@ -208,60 +211,66 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `go/internal/propose/propose.go` (or `block.go`)
 - Create: tests with golden request bodies
 
-- [ ] write the failing tests first: the batch for an `after` block and for a
+- [x] write the failing tests first: the batch for an `after` block and for a
   replace, request by request, lengths in UTF-16 with a non-BMP character in
   one test
-- [ ] `deleteParagraphBullets` covers every new non-list paragraph, and no
+- [x] `deleteParagraphBullets` covers every new non-list paragraph, and no
   existing paragraph
-- [ ] the clearing `updateTextStyle` covers the whole insert and comes before
+- [x] the clearing `updateTextStyle` covers the whole insert and comes before
   the marks; test it with a next paragraph that opens bold and linked
-- [ ] the after-the-last-paragraph text shape, with its own golden body
-- [ ] write `TestALargeBlockStaysUnderThePeek`: a 60-paragraph block batch from
+- [x] the after-the-last-paragraph text shape, with its own golden body
+- [x] write `TestALargeBlockStaysUnderThePeek`: a 60-paragraph block batch from
   this builder is under the guard's `maxPeek`, and name the content size
   limit as a constant that Task 7's `Check` enforces
-- [ ] the comment is anchored on the first new paragraph, with the robot
+- [x] the comment is anchored on the first new paragraph, with the robot
   prefix and no markdown (`internal/plaintext`)
+- [x] ➕ the guard's `blockKinds` fixture now carries the indexes this builder
+  computes, so its own claim that the two files describe one write is true
 
 ### Task 6: Three read-backs for a block
 
 **Files:**
 - Modify: `go/internal/propose/verify.go`, `verify_test.go`
 
-- [ ] `VerifyBlock` takes the id, the placement and the parsed paragraphs,
+- [x] `VerifyBlock` takes the id, the placement and the parsed paragraphs,
   not the `Proposal` type, which Task 7 grows
-- [ ] write the failing tests first, over recorded answers:
+- [x] write the failing tests first, over recorded answers:
   - `suggestions_inline`: every new paragraph carries the insertion id, and
     for a replace every old paragraph carries a deletion id
   - `preview_without_suggestions`: the anchor paragraph, or the replaced run,
     reads as before, and the block's first line is absent. This is the
     direct-edit catch
   - `docx_anchored`: unchanged, the robot comment attached to text
-- [ ] a block whose read-back shows more than one suggestion id reports every
+- [x] a block whose read-back shows more than one suggestion id reports every
   one in `SuggestionIDs`, is `verified: false`, and warns that `withdraw`
   takes back only the first, which is the one the note records
-- [ ] the preview check answers "no answer" rather than a pass when the
+- [x] the preview check answers "no answer" rather than a pass when the
   block's first line already appears elsewhere in the document
 
 ### Task 7: The type and the apply sequence
 
 **Files:**
-- Modify: `go/internal/propose/propose.go`, `propose_test.go`
+- Modify: `go/internal/propose/propose.go`, `doc.go`
+- Create: `go/internal/propose/blockapply.go`, `blockapply_test.go`
 
-- [ ] `Proposal` grows `Kind` (empty or `"block"`), `After`, `ReplaceFrom`,
+- [x] `Proposal` grows `Kind` (empty or `"block"`), `After`, `ReplaceFrom`,
   `ReplaceTo` and `Content`. An empty `Kind` is the words kind, so every
   existing proposals file still reads
-- [ ] `Result` grows the fields a block reports: `after` or `replace_from`
+- [x] `Result` grows the fields a block reports: `after` or `replace_from`
   and `replace_to`, beside `suggestion_ids`, `comment_id` and the checks.
   `quoted` and `replacement` stay empty for a block
-- [ ] write the failing tests first, over a fake session: `ApplyBlock` reads,
+- [x] write the failing tests first, over a fake session: `ApplyBlock` reads,
   places, builds, posts once and calls `VerifyBlock`, the way `Apply` does. A refusal
   before the post sends nothing; everything after the post is reported, not
   raised; a lost answer is `verified: false` with the warning `Apply` gives
-- [ ] `Apply` dispatches on `Kind`, so the command has one call
-- [ ] `Check` for a block: exactly one placement form, content present, why
+- [x] `Apply` dispatches on `Kind`, so the command has one call
+- [x] `Check` for a block: exactly one placement form, content present, why
   present, content under Task 5's size limit, so the guard's "cannot be read"
   refusal is never what a person sees. This is the only place the placement
   form is checked. The words kind's `Check` is unchanged
+- [x] ➕ a block carrying `quoted` or `replacement` is refused by name too:
+  those belong to the words kind, and a block that carried them would have
+  them silently ignored while its real placement came from somewhere else
 
 ### Task 8: The command and the note
 
@@ -269,17 +278,17 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `go/cmd/gdoc/write.go`, its tests, and the command table's help
 - Modify: `go/cmd/gdoc/doc.go` if a rule is stated there
 
-- [ ] write the failing tests first: the proposals file decodes a block entry
+- [x] write the failing tests first: the proposals file decodes a block entry
   strictly, and an unknown field or a block field on an entry with no
   `kind` is refused by name before anything is sent
-- [ ] extend the marker check around `write.go:507` to `after`,
+- [x] extend the marker check around `write.go:507` to `after`,
   `replace_from`, `replace_to` and `content`, and add the block route to the
   route list in `internal/markers/markers.go`
-- [ ] a block and a words proposal in one file run in file order, each with
+- [x] a block and a words proposal in one file run in file order, each with
   its own read
-- [ ] the result and the note's `proposals` entry for a block record the id,
+- [x] the result and the note's `proposals` entry for a block record the id,
   the comment id and the `after` or `replace_from` quote
-- [ ] `gdoc help propose` describes the block entry
+- [x] `gdoc help propose` describes the block entry
 
 ### Task 9: The skills
 
@@ -288,15 +297,16 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Modify: `skills/gdoc-align/SKILL.md`
 - Modify: every skill's `needs` line that now depends on the block kind
 
-- [ ] review: when the right answer is a new or rewritten section, propose a
+- [x] review: when the right answer is a new or rewritten section, propose a
   block. Before a replace, run `suggestions` and `comments` over the range and
   tell the person what is in it; propose only with their answer
-- [ ] align: a section only the note has is proposed as a block after the
+- [x] align: a section only the note has is proposed as a block after the
   paragraph before it, not left to the person
-- [ ] raise `needs` to the release this milestone will be. The gate from
-  `TestNoSkillNeedsAReleaseNobodyCut` makes CI red until `make tag` runs, so
-  the tag is part of the merge (Post-Completion)
-- [ ] `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` passes
+- [x] raise `needs` to the release this milestone will be: v2.7.0 on
+  gdoc-review and gdoc-align, and `skillWants` says so too. The gate from
+  `TestNoSkillNeedsAReleaseNobodyCut` is red until `make tag VERSION=v2.7.0`
+  runs, as planned, so the tag is part of the merge (Post-Completion)
+- [x] `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` passes
 
 ### Task 10: Live acceptance
 
@@ -304,26 +314,48 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 - Create: `go/internal/live/proposeblock_test.go`
 - Modify: `go/internal/live/doc.go`
 
-- [ ] `TestLiveProposeBlock`, under `GDOC_LIVE_WRITE`, in a document it
+- [x] `TestLiveProposeBlock`, under `GDOC_LIVE_WRITE`, in a document it
   creates in the test folder: an `after` block with a heading, body and both
   list kinds, and a replace over two paragraphs, after a list item so the
   bullet clearing is exercised. Both come back `verified: true` with one id.
-  Numbered lists in SUGGEST are unmeasured until this test runs
-- [ ] then `withdraw` each, and the read-back matches the document before
-- [ ] trash what it made, and name every variable in `live/doc.go`
+  Numbered lists in SUGGEST are unmeasured until this test runs. The test is
+  written and compiles; the live run itself needs the real token and is Nail's
+  (skipped here, not automatable)
+- [x] then `withdraw` each, and the read-back matches the document before
+- [x] trash what it made, and name every variable in `live/doc.go`
 
 ### Task 11: Verify acceptance criteria
 
-- [ ] every decision above holds and is tested
-- [ ] `make test` (raced), `make vet`, `make build`
-- [ ] `docs/backlog/propose-cannot-add-paragraphs.md` is `git rm`ed in the
+- [x] every decision above holds and is tested. The refuse-and-name replace is
+  the last case of `TestPlaceRefusesWhatItCannotPlaceAndNamesIt`, which reads
+  every suggestion id and comment id back out of the message; one id per block
+  and the unchanged `withdraw` are pinned by
+  `TestApplyBlockReportsMoreThanOneSuggestionAsUnverified` and
+  `TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw`; the insert at
+  the next paragraph's start by
+  `TestAfterPlacesTheBlockAtTheStartOfTheNextParagraph`; the cleared bullets by
+  `TestBlockBatchRemovesBulletsFromItsOwnParagraphsOnly`; the cleared text
+  style by `TestBlockBatchClearsTheMarksTheInsertInherited`; the
+  after-the-last-paragraph shape and its two refusals by
+  `TestAfterTheLastParagraphGoesBeforeTheFinalNewline`,
+  `TestBlockBatchAfterTheLastParagraph` and two cases of the place refusal
+  table; and every out-of-scope construct by
+  `TestContentRefusesWhatTheSubsetDoesNotHold`
+- [x] `make vet` and `make build` are clean. `make test` (raced) is green in
+  every package but one named failure, `TestNoSkillNeedsAReleaseNobodyCut`,
+  which Task 9 planned red: the skills need v2.7.0 and the newest release
+  names v2.6.0, so `make tag VERSION=v2.7.0` at the merge closes it
+  (Post-Completion)
+- [x] `docs/backlog/propose-cannot-add-paragraphs.md` is `git rm`ed in the
   last feature commit
 
 ### Task 12: [Final] Documentation
 
-- [ ] `docs/guide/writing.md`: the block kind and its refusals. No new page
-- [ ] README only if it names what propose can do
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `docs/guide/writing.md`: the block kind and its refusals. No new page
+- [x] README unchanged: its propose row says "propose changes as native
+  suggestions, each with the comment that says why", which the block kind does
+  not make wrong, and the page is one line under its 200 line ceiling
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

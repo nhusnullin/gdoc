@@ -3,7 +3,7 @@ name: gdoc-align
 description: Use when a note in the hub and a Google Doc are paired and the request asks for the two brought back together, in either direction. Exports the document, shows the differences, merges what you agree to, and proposes the note's own changes into the document as suggestions.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.4.0
+  needs: v2.7.0
 ---
 
 # Align a note and its document
@@ -213,6 +213,27 @@ Compose the difference between the note's body and what `read` printed: one entr
 per paragraph the document should take. Each entry is the exact words to replace,
 the replacement, and the reason in reader language.
 
+A section only the note holds is proposed as a block, not left for the person to
+paste. Quote the last words of the paragraph it should follow in the document,
+and give the section's own markdown:
+
+```json
+{
+  "kind": "block",
+  "after": "the last words of the paragraph it goes behind",
+  "content": "## 3.6 Limits\n\nThe note's own words for this section.\n",
+  "why": "The note has this section and the document does not."
+}
+```
+
+A section both sides hold, where the note's version is a rewrite rather than a
+changed phrase, is a block too: `replace_from` and `replace_to` quote the first
+and the last paragraph of the run the document would lose. That run is
+somebody's paragraphs, so name it in the question below, with what
+`$GDOC suggestions <url>` and `$GDOC comments <url>` say is inside it.
+`/gdoc-review`'s `propose.md` holds the block entry in full, what `content` may
+hold, and every placement the command refuses.
+
 **Then stop and ask, once.** Print the list of paragraphs you would change, with
 the first words of each, and wait. A merge can send twenty suggestions where a
 review sends one, and twenty suggestions in somebody's document is a thing they
@@ -246,7 +267,9 @@ unchanged: `quoted` must appear exactly once, no line breaks in either field, no
 empty replacement, the quote must not run across a footnote mark or a picture, no
 markdown in `why`, and no 🤖 in `why` because gdoc puts it there. A paragraph the
 note lost arrives as a suggested deletion, which is a replace whose words say the
-paragraph is proposed for removal: there is no deletion-only shape.
+paragraph is proposed for removal: there is no deletion-only shape. A block is
+the same: its `content` may not be empty, so a run of paragraphs the note lost
+is proposed as the shorter text that stands in for it, never as nothing.
 
 Read `verified` and the three checks per proposal, and say which route did not
 hold for which proposal. `sent: false` is a proposal gdoc got no answer for: read
@@ -334,6 +357,7 @@ markers    4 suggestions resolved with you, 3 were gdoc's own and kept
 conflicts  1 paragraph both sides changed, resolved with you
 logic      1 break: "reporting period" is annual in section 2 and six-monthly in 4
 proposed   3 suggestions, 2 verified, 1 NOT verified: docx_anchored failed
+           1 of them a block: the note's section 3.6, after "the six month cycle"
 copies     <note>.2.md deleted
 ```
 

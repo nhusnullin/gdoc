@@ -1,0 +1,154 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000bo",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXpreviewelsewhere",
+  "body": {
+    "content": [
+      {
+        "startIndex": 0,
+        "endIndex": 1,
+        "sectionBreak": {
+          "sectionStyle": {}
+        }
+      },
+      {
+        "startIndex": 1,
+        "endIndex": 26,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "HEADING_1"
+          },
+          "elements": [
+            {
+              "startIndex": 1,
+              "endIndex": 26,
+              "textRun": {
+                "content": "Supplier register policy\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 26,
+        "endIndex": 93,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 26,
+              "endIndex": 93,
+              "textRun": {
+                "content": "The supplier register is reviewed annually by the operations team.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 93,
+        "endIndex": 142,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 93,
+              "endIndex": 142,
+              "textRun": {
+                "content": "Each supplier is scored against the risk matrix.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 142,
+        "endIndex": 185,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 142,
+              "endIndex": 185,
+              "textRun": {
+                "content": "Quarterly review of the top ten suppliers.\n",
+                "textStyle": {}
+              }
+            }
+          ],
+          "bullet": {
+            "listId": "kix.listone",
+            "nestingLevel": 0,
+            "textStyle": {}
+          }
+        }
+      },
+      {
+        "startIndex": 185,
+        "endIndex": 196,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "HEADING_2"
+          },
+          "elements": [
+            {
+              "startIndex": 185,
+              "endIndex": 196,
+              "textRun": {
+                "content": "3.6 Limits\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 196,
+        "endIndex": 237,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 196,
+              "endIndex": 237,
+              "textRun": {
+                "content": "The register is capped at ten suppliers.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      },
+      {
+        "startIndex": 237,
+        "endIndex": 276,
+        "paragraph": {
+          "paragraphStyle": {
+            "namedStyleType": "NORMAL_TEXT"
+          },
+          "elements": [
+            {
+              "startIndex": 237,
+              "endIndex": 276,
+              "textRun": {
+                "content": "Escalations go to the operations lead.\n",
+                "textStyle": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
