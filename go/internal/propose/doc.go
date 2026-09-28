@@ -19,6 +19,39 @@
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
 //
+// # There are two kinds, and the words kind names no kind at all
+//
+// A proposal is either the words kind, which replaces words inside one
+// paragraph, or the block kind, which adds paragraphs after a quoted one or in
+// place of a run of whole ones. The block names Kind "block"; the words kind
+// names nothing, so every proposals file written before the block kind existed
+// still reads, and a caller that never heard of a kind sends the kind it meant.
+// A kind that is neither is refused by name, because reading it as the words
+// kind would refuse a misspelled "blcok" for quoting no text, which names
+// nothing the author did wrong. Apply dispatches on the field, so the command
+// walks a file of both kinds without asking which an entry is.
+// TestAnEmptyKindIsStillTheWordsKind, TestApplyDispatchesOnTheKind and the
+// unknown kind case of TestCheckRefusesEachBadBlockByName are the pins.
+//
+// The two kinds share everything after the batch has gone out: one read they
+// are built from, one post, and the answer read the same way, because what an
+// answer means does not depend on which requests were in the body. They part
+// company over what they place, what they build and what they ask the three
+// read-backs. TestApplyBlockReadsPlacesWritesOnceAndVerifies and
+// TestApplyBlockReportsALostAnswerRatherThanRaising are the block's half.
+//
+// # A block names exactly one placement form, and Check is where that is asked
+//
+// After a quoted paragraph, or in place of the run from replace_from to
+// replace_to, and never both, never half a replace, and never neither.
+// PlaceAfter and PlaceReplace each take the quotes they need, so a block naming
+// neither form would reach one of them as an empty quote and be refused in
+// words about a quote that is not in the document. A block carrying quoted or
+// replacement is refused too: those belong to the words kind, and a block that
+// carried them would have them silently ignored while the placement it really
+// used came from somewhere else. TestCheckRefusesEachBadBlockByName and
+// TestCheckAcceptsABlockInEitherPlacementForm are the pins.
+//
 // # A proposal names text, never an index
 //
 // The caller hands over the exact words to replace, Apply reads the document
@@ -109,7 +142,10 @@
 // Two of them are decisions rather than gaps: a nested list, because nesting a
 // suggested list goes in through leading tabs and that is unmeasured in SUGGEST
 // mode, and a table, because docs/backlog/propose-inside-tables.md is not
-// settled. TestContentRefusesWhatTheSubsetDoesNotHold carries every case.
+// settled. TestContentRefusesWhatTheSubsetDoesNotHold carries every case, and
+// ApplyBlock reads the content before it reads the document, so a block gdoc
+// cannot read costs no request at all:
+// TestApplyBlockRefusesContentItCannotReadBeforeAnyRequest is that pin.
 //
 // A refusal names the line because content is a file a person wrote and a block
 // is tens of lines long. A horizontal rule is the one construct goldmark builds
@@ -252,6 +288,12 @@
 // own the mark differently. TestCheckRefusesEachBadProposalByName carries the
 // near misses.
 //
+// The reason is the one rule both kinds ask, because both kinds write it into a
+// thread as Prefix + Why. Everything else Check asks is the kind's own: the
+// words kind's quote and replacement, and the block's placement form, its
+// content and that content's ceiling. TestCheckRefusesEachBadBlockByName is the
+// block's half of this rule, over the same reason cases.
+//
 // # One batch per proposal, three requests inside it
 //
 // deleteContentRange over the quoted span, insertText at its start, and
@@ -328,7 +370,9 @@
 // because then each paragraph costs a named style and a bullet request of its
 // own, and that shape at MaxContent builds around half the guard's ceiling.
 // TestALargeBlockStaysUnderThePeek builds that shape and three more at exactly
-// the limit and has the real policy judge each one.
+// the limit and has the real policy judge each one, and the content over the
+// ceiling case of TestCheckRefusesEachBadBlockByName is the refusal that keeps
+// the guard's words off the screen.
 //
 // # Verified is three read-backs, and Verified false is not a failure
 //

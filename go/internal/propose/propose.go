@@ -1,8 +1,9 @@
 // This file is the proposal itself: Proposal and its shape rule, the one write
-// Apply makes, the batch of three requests it is made of, and Record, which
-// writes what landed into the note. span.go finds the words in the document,
-// verify.go reads the document back three ways, and doc.go holds the package
-// comment.
+// Apply makes for the words kind, the batch of three requests it is made of,
+// and Record, which writes what landed into the note. blockapply.go holds the
+// block kind's own shape rule and its write, span.go finds the words in the
+// document, verify.go reads the document back three ways, and doc.go holds the
+// package comment.
 
 package propose
 
@@ -30,15 +31,35 @@ const Prefix = plaintext.Prefix
 // plaintext.Robot for why the check is not the prefix.
 const Robot = plaintext.Robot
 
-// Proposal is one change, as the skill hands it over: the words to replace, the
-// words to put there, why, and optionally who should answer for it.
+// The two kinds of proposal. The words kind names no kind at all, so every
+// proposals file written before the block kind existed still reads: a caller
+// that never heard of a kind sends the zero value, and the zero value is the
+// kind it meant.
+const (
+	KindWords = ""
+	KindBlock = "block"
+)
+
+// Proposal is one change, as the skill hands it over.
 //
-// Quoted is text, never an index. An index computed from an earlier read is the
-// hazard the whole API has, so the placement is made of words and looked up in
-// a document that has just come back.
+// It is one of two kinds. The words kind names no Kind and carries Quoted and
+// Replacement: words inside one paragraph, replaced by words. The block kind
+// names Kind "block" and carries Content, a markdown subset block.go reads,
+// placed either After a quoted paragraph or in place of the run of whole
+// paragraphs from ReplaceFrom to ReplaceTo. Both carry Why, and optionally who
+// should answer for it.
+//
+// Every placement is text, never an index. An index computed from an earlier
+// read is the hazard the whole API has, so a proposal is made of words and
+// looked up in a document that has just come back.
 type Proposal struct {
-	Quoted      string `json:"quoted"`
-	Replacement string `json:"replacement"`
+	Kind        string `json:"kind,omitempty"`
+	Quoted      string `json:"quoted,omitempty"`
+	Replacement string `json:"replacement,omitempty"`
+	After       string `json:"after,omitempty"`
+	ReplaceFrom string `json:"replace_from,omitempty"`
+	ReplaceTo   string `json:"replace_to,omitempty"`
+	Content     string `json:"content,omitempty"`
 	Why         string `json:"why"`
 	Assignee    string `json:"assignee,omitempty"`
 }
@@ -48,12 +69,30 @@ type Proposal struct {
 // in the file before the first one leaves the machine: a third entry refused
 // after the first two have landed is a run that half happened.
 //
+// Each kind has its own rule and they share the reason, which is the one thing
+// both write into a thread. A kind that is neither is refused by name rather
+// than read as the words kind: dispatching a misspelled "blcok" down the words
+// path would refuse it for quoting no text, which names nothing the author did
+// wrong.
+func (p Proposal) Check() error {
+	switch p.Kind {
+	case KindWords:
+		return p.checkWords()
+	case KindBlock:
+		return p.checkBlock()
+	default:
+		return fmt.Errorf("the proposal names the kind %q, and the kinds are the words kind, which names no kind at all, and %q", p.Kind, KindBlock)
+	}
+}
+
+// checkWords is the words kind's own shape rule.
+//
 // A replacement of nothing is refused rather than sent. The batch would carry
 // an insertText with no text and a comment anchored on a range of length zero,
 // which is a body Docs rejects, and inlineHolds looks for an insertion that a
 // plain deletion never makes, so the write could never verify either. A
 // milestone that wants a deletion-only proposal gives it its own request shape.
-func (p Proposal) Check() error {
+func (p Proposal) checkWords() error {
 	if p.Quoted == "" {
 		return errors.New("the proposal quotes no text, so there is nothing to replace")
 	}
@@ -93,6 +132,13 @@ func (p Proposal) Check() error {
 	if strings.ContainsAny(p.Replacement, "\n\r") {
 		return fmt.Errorf("the replacement %q carries a line break; a proposal replaces words with words inside one paragraph, and a change that adds a paragraph is not a shape this write has", p.Replacement)
 	}
+	return p.checkWhy()
+}
+
+// checkWhy is the rule both kinds share, because both write the reason into a
+// comment thread as Prefix + Why and nothing downstream would catch what it
+// refuses.
+func (p Proposal) checkWhy() error {
 	// Both tests read the reason with its surrounding space taken off, which is
 	// the same shape reply.Check reads a body in. A reason of nothing but spaces
 	// is a comment that is a bare signature, and sameWords normalises whitespace
@@ -168,9 +214,16 @@ func (c Checks) all() bool {
 // probe.Report carry theirs, and for the same reason: everything that goes
 // wrong after the batch is a fact about a change that is already in the
 // document, and a caller told the run failed is a caller that writes it again.
+// Each kind reports the placement it was asked for, and the other kind's
+// fields stay empty: a words proposal names Quoted and Replacement, a block
+// names After, or ReplaceFrom and ReplaceTo. Everything below them is the same
+// question for both, because the write and the three read-backs are.
 type Result struct {
-	Quoted             string   `json:"quoted"`
-	Replacement        string   `json:"replacement"`
+	Quoted             string   `json:"quoted,omitempty"`
+	Replacement        string   `json:"replacement,omitempty"`
+	After              string   `json:"after,omitempty"`
+	ReplaceFrom        string   `json:"replace_from,omitempty"`
+	ReplaceTo          string   `json:"replace_to,omitempty"`
 	SuggestionIDs      []string `json:"suggestion_ids,omitempty"`
 	CommentID          string   `json:"comment_id,omitempty"`
 	CommentUpdateState string   `json:"comment_update_state,omitempty"`
@@ -189,7 +242,21 @@ type Session interface {
 	PostJSON(ctx context.Context, rawURL string, body any, into any) error
 }
 
-// Apply places one proposal: read, find, write once, verify three ways.
+// Apply places one proposal, by whichever kind it is: read, find, write once,
+// verify three ways.
+//
+// The dispatch is here so the command has one call. A proposals file holds both
+// kinds in one list, and the loop that walks it asks nothing about which kind
+// an entry is.
+func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
+	if p.Kind == KindBlock {
+		return ApplyBlock(ctx, s, docID, p)
+	}
+	return applyWords(ctx, s, docID, p)
+}
+
+// applyWords is the words kind's own sequence: read, find the quote, write
+// once, verify three ways.
 //
 // The read comes first and the write is built from it, so no index outlives the
 // answer it was computed in. Two proposals are two calls, each with its own
@@ -197,39 +264,72 @@ type Session interface {
 //
 // It fails only before the write. After the batch has gone out the change
 // exists, and everything from there is reported rather than raised.
-func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
+func applyWords(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
 	out := Result{Quoted: p.Quoted, Replacement: p.Replacement}
 	if err := p.Check(); err != nil {
 		return out, err
 	}
-	d, err := docs.Fetch(ctx, s, docID)
+	d, err := readOneTab(ctx, s, docID)
 	if err != nil {
-		return out, fmt.Errorf("the document could not be read before proposing: %w", err)
-	}
-	if d.MultiTab() {
-		// The write names one range, and a range means nothing without saying
-		// which tab it is in. Refusing is the honest answer until a milestone
-		// decides how a proposal names a tab.
-		return out, fmt.Errorf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))
+		return out, err
 	}
 	r, err := FindSpan(d, p.Quoted)
 	if err != nil {
 		return out, err
 	}
+	if err := send(ctx, s, docID, Batch(r, p), &out); err != nil {
+		return out, err
+	}
 
+	checks, ids, warns := Verify(ctx, s, docID, r, p, Prefix+p.Why)
+	out.Checks = checks
+	out.SuggestionIDs = ids
+	out.Warnings = append(out.Warnings, warns...)
+	out.Verified = checks.all() && out.CommentUpdateState == stateAllSaved
+	return out, nil
+}
+
+// readOneTab is the read every proposal is built from, and the one shape of
+// document a proposal is written into.
+//
+// The write names one range, and a range means nothing without saying which tab
+// it is in. Refusing is the honest answer until a milestone decides how a
+// proposal names a tab. FindSpan refuses the same document a moment later, and
+// this says it before the probe rather than after it.
+func readOneTab(ctx context.Context, s Session, docID string) (*docs.Document, error) {
+	d, err := docs.Fetch(ctx, s, docID)
+	if err != nil {
+		return nil, fmt.Errorf("the document could not be read before proposing: %w", err)
+	}
+	if d.MultiTab() {
+		return nil, fmt.Errorf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))
+	}
+	return d, nil
+}
+
+// send posts the one batch a proposal makes and reads the answer into the
+// result. Both kinds go through it, because what an answer means does not
+// depend on which requests were in the body.
+//
+// It returns an error only when nothing was written. Everything after the
+// server has taken the batch is a warning on the result: the change is in the
+// document by then, and a caller told the run failed is a caller that writes it
+// again.
+func send(ctx context.Context, s Session, docID string, body []byte, out *Result) error {
 	var answer BatchAnswer
 	answerRead := true
 	var sentErr error
-	if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(Batch(r, p)), &answer); err != nil {
+	if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(body), &answer); err != nil {
 		if !sentAnyway(err) {
-			return out, fmt.Errorf("the proposal could not be written: %w", err)
+			return fmt.Errorf("the proposal could not be written: %w", err)
 		}
 		// Docs took the batch and the answer could not be read. Raising here
 		// would report a change that is in the document as one that never left
-		// the machine, and the read-backs below are exactly what says which it
-		// was. The comment id is usually lost with the answer, so Record cannot
-		// remember this one, and the warning below says so when it really is
-		// missing rather than whenever this path was taken.
+		// the machine, and the read-backs the caller makes next are exactly
+		// what says which it was. The comment id is usually lost with the
+		// answer, so Record cannot remember this one, and the warning below
+		// says so when it really is missing rather than whenever this path was
+		// taken.
 		answerRead = false
 		sentErr = err
 	}
@@ -265,13 +365,7 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 			"the write answered commentUpdateState %q rather than %q, so the change may be in the document without the comment that explains it",
 			out.CommentUpdateState, stateAllSaved))
 	}
-
-	checks, ids, warns := Verify(ctx, s, docID, r, p, Prefix+p.Why)
-	out.Checks = checks
-	out.SuggestionIDs = ids
-	out.Warnings = append(out.Warnings, warns...)
-	out.Verified = checks.all() && out.CommentUpdateState == stateAllSaved
-	return out, nil
+	return nil
 }
 
 // sentAnyway says whether the write reached Docs in spite of the error. The

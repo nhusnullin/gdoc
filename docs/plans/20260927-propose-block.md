@@ -250,23 +250,27 @@ indexes; `insertComment` over the first new paragraph. All lengths in UTF-16.
 ### Task 7: The type and the apply sequence
 
 **Files:**
-- Modify: `go/internal/propose/propose.go`, `propose_test.go`
+- Modify: `go/internal/propose/propose.go`, `doc.go`
+- Create: `go/internal/propose/blockapply.go`, `blockapply_test.go`
 
-- [ ] `Proposal` grows `Kind` (empty or `"block"`), `After`, `ReplaceFrom`,
+- [x] `Proposal` grows `Kind` (empty or `"block"`), `After`, `ReplaceFrom`,
   `ReplaceTo` and `Content`. An empty `Kind` is the words kind, so every
   existing proposals file still reads
-- [ ] `Result` grows the fields a block reports: `after` or `replace_from`
+- [x] `Result` grows the fields a block reports: `after` or `replace_from`
   and `replace_to`, beside `suggestion_ids`, `comment_id` and the checks.
   `quoted` and `replacement` stay empty for a block
-- [ ] write the failing tests first, over a fake session: `ApplyBlock` reads,
+- [x] write the failing tests first, over a fake session: `ApplyBlock` reads,
   places, builds, posts once and calls `VerifyBlock`, the way `Apply` does. A refusal
   before the post sends nothing; everything after the post is reported, not
   raised; a lost answer is `verified: false` with the warning `Apply` gives
-- [ ] `Apply` dispatches on `Kind`, so the command has one call
-- [ ] `Check` for a block: exactly one placement form, content present, why
+- [x] `Apply` dispatches on `Kind`, so the command has one call
+- [x] `Check` for a block: exactly one placement form, content present, why
   present, content under Task 5's size limit, so the guard's "cannot be read"
   refusal is never what a person sees. This is the only place the placement
   form is checked. The words kind's `Check` is unchanged
+- [x] ➕ a block carrying `quoted` or `replacement` is refused by name too:
+  those belong to the words kind, and a block that carried them would have
+  them silently ignored while its real placement came from somewhere else
 
 ### Task 8: The command and the note
 
