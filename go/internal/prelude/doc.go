@@ -282,23 +282,34 @@
 // away is a list marker. A paragraph is in a list because it carries a bullet,
 // not because of a property, and text inserted at a list item's start joins
 // that list: a prelude proposed at the top of a document whose first paragraph
-// is a list item would arrive as a bulleted cover. So FrontMatter ends its
-// requests with one deleteParagraphBullets over exactly the range it inserted,
-// after every insert, in the same SUGGEST batch. It names only gdoc's own
-// paragraphs, and on a replace run it stops at the new prelude's end, short of
-// the old one proposed for deletion behind it. MEASURED.md, "A block of new
+// is a list item would arrive as a bulleted cover. So when, and only when, the
+// paragraph the prelude is inserted in front of carries a bullet, Propose ends
+// the batch with one deleteParagraphBullets over exactly the range the prelude
+// inserted, after every insert, in the same SUGGEST batch. It names only gdoc's
+// own paragraphs, and on a replace run it stops at the new prelude's end, short
+// of the old one proposed for deletion behind it. MEASURED.md, "A block of new
 // paragraphs, proposed in one SUGGEST batch", is what says the removal folds
 // into the insertion's own suggestion id rather than making a second one. The
 // request is docsreq.DeleteBullets, the one internal/propose sends for a block.
-// TestThePreludeTakesOffTheListMarkerItInherits and
-// TestAReplaceRunTakesTheMarkerOffOnlyTheNewPrelude are the pins, and
-// TestThePreludeBatchCarriesAtTheSuggestLevel has the real policy judge it.
 //
-// The measurement had whole paragraphs and no table. The prelude's range holds
-// three tables, and the reference says the request clears every paragraph the
-// range overlaps. TODO(test): nothing live has proposed the prelude in front of
-// a list item yet. TestLivePreludeIsProposedNotWritten in internal/live, named
-// at a document that opens with a list item, is the run that would say so.
+// Only in front of a list item, because the measurement had whole paragraphs
+// and no table, and the prelude's range holds three tables. The reference says
+// the request clears every paragraph the range overlaps, but a request Docs
+// refused would take the whole prelude batch with it. Sent every time, it would
+// put every prelude at that risk, including the common one in front of a title
+// or a heading, which has nothing to clear. So the common case stays the batch
+// that was measured live, request for request, and only the case that was
+// already wrong takes the unmeasured request. FrontMatter never sends it: the
+// decision needs the document, and Propose is what has it.
+//
+// TestAPreludeInFrontOfAListItemTakesOffTheMarker and
+// TestAReplaceRunInFrontOfAListItemClearsOnlyTheNewPrelude pin the removal,
+// TestAPreludeInFrontOfAPlainParagraphSendsTheMeasuredBatch pins its absence,
+// and TestThePreludeBatchCarriesAtTheSuggestLevel has the real policy judge it.
+// TODO(test): nothing live has proposed the prelude, tables and all, in front
+// of a list item yet. TestLivePreludeIsProposedNotWritten in internal/live,
+// named at a document that opens with a list item, is the run that would say
+// whether Docs takes the range.
 //
 // One layout, two writers. internal/render writes this template into a docx and
 // this package writes it as requests, both from house.Config, and neither holds

@@ -7,6 +7,7 @@ import (
 
 	"gdoc/internal/cover"
 	"gdoc/internal/docs"
+	"gdoc/internal/docsreq"
 	"gdoc/internal/house"
 )
 
@@ -274,8 +275,9 @@ func ids(found []Marker) []string {
 }
 
 // Propose is the whole of what one run sends in SUGGEST mode: the front matter,
-// and on a second run the suggested deletion of the prelude the run before it
-// left, in front of it.
+// on a second run the suggested deletion of the prelude the run before it
+// left, in front of it, and in front of a list item the bullet removal behind
+// it.
 //
 // The deletion comes first and the insert lands at its start, which is the
 // order internal/propose sends a replacement in. A deleteContentRange in
@@ -291,15 +293,50 @@ func Propose(cfg *house.Config, f cover.Fields, d *docs.Document) (Result, error
 	if err != nil {
 		return Result{}, err
 	}
-	if dec.Replaces == nil {
-		return res, nil
+	var requests []map[string]any
+	if dec.Replaces != nil {
+		requests = append(requests, map[string]any{"deleteContentRange": map[string]any{
+			"range": span(dec.Replaces.Start, dec.Replaces.End),
+		}})
 	}
-	del := map[string]any{"deleteContentRange": map[string]any{
-		"range": span(dec.Replaces.Start, dec.Replaces.End),
-	}}
-	res.Requests = append([]map[string]any{del}, res.Requests...)
+	requests = append(requests, res.Requests...)
+	if landsInList(d, dec) {
+		// Last, over exactly what the inserts wrote, and only here: doc.go
+		// says why the common case must stay the batch that was measured.
+		requests = append(requests, docsreq.DeleteBullets(res.Start, res.End))
+	}
+	res.Requests = requests
 	res.Replaces = dec.Replaces
 	return res, nil
+}
+
+// landsInList says whether the paragraph the prelude is inserted in front of
+// is a list item. Text inserted at a list item's start joins its list, so only
+// then does the prelude arrive bulleted.
+//
+// The tab is the marker's on a replace run and the first one otherwise, which
+// is the one a restyle reads: it refuses a document with more than one. Only
+// the body's own paragraphs are read, because the prelude goes in at the start
+// of one of them and never inside a table.
+func landsInList(d *docs.Document, dec Decision) bool {
+	if d == nil || len(d.Tabs) == 0 {
+		return false
+	}
+	tab := d.Tabs[0]
+	if dec.Replaces != nil {
+		for _, t := range d.Tabs {
+			if t.ID == dec.Replaces.Tab {
+				tab = t
+			}
+		}
+	}
+	for _, b := range tab.Body {
+		p := b.Paragraph
+		if p != nil && p.StartIndex <= dec.Start && dec.Start < p.EndIndex {
+			return p.Bullet != nil
+		}
+	}
+	return false
 }
 
 // MarkerRequest is the createNamedRange that marks what this run proposed.

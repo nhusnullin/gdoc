@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gdoc/internal/cover"
-	"gdoc/internal/docsreq"
 	"gdoc/internal/house"
 )
 
@@ -48,11 +47,8 @@ func FrontMatter(cfg *house.Config, f cover.Fields, start int) (Result, error) {
 	if b.err != nil {
 		return Result{}, fmt.Errorf("prelude: %w", b.err)
 	}
-	// Last, over exactly what the inserts above wrote: a prelude proposed in
-	// front of a list item would otherwise arrive bulleted. doc.go says why.
-	requests := append(b.requests, docsreq.DeleteBullets(start, b.at))
 	return Result{
-		Requests:   requests,
+		Requests:   b.requests,
 		Start:      start,
 		End:        b.at,
 		Paragraphs: b.count,

@@ -12,7 +12,9 @@ package guard
 //
 // It is the block's half of TestThePreludeNeedsNoGrantAtAll, which says the
 // same about the house prelude. Both send deleteParagraphBullets, built by
-// docsreq.DeleteBullets, to take off a list marker the insert inherited.
+// docsreq.DeleteBullets, to take off a list marker the insert inherited: a
+// block for every new paragraph that is not a list item, and the prelude only
+// when it lands in front of one.
 
 import (
 	"strings"

@@ -3,9 +3,11 @@ package prelude
 import (
 	"encoding/json"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"gdoc/internal/cover"
+	"gdoc/internal/docs"
 	"gdoc/internal/guard"
 )
 
@@ -36,32 +38,31 @@ func lastInsert(requests []map[string]any) int {
 	return last
 }
 
-// A prelude proposed in front of a list item arrives bulleted, because every
-// paragraph inserted at a list item's start joins its list. One
-// deleteParagraphBullets over exactly what the prelude inserted takes that off,
-// under the insertion's own suggestion id (MEASURED.md, "A block of new
-// paragraphs, proposed in one SUGGEST batch"). It goes after every insert,
-// because a range names characters that must already be there.
-func TestThePreludeTakesOffTheListMarkerItInherits(t *testing.T) {
-	// Arrange
-	cfg := testConfig(t)
-
-	// Act
-	got, err := FrontMatter(cfg, testFields(), 1)
-	if err != nil {
-		t.Fatalf("FrontMatter() = %v", err)
+// openingWith is a document with no prelude whose first paragraph is the
+// author's own, a list item or not.
+func openingWith(listItem bool) *docs.Document {
+	para := &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 1, EndIndex: 12, Runs: []docs.Run{
+		{Kind: docs.KindText, Text: "First item\n", StartIndex: 1, EndIndex: 12},
+	}}
+	if listItem {
+		para.Bullet = &docs.Bullet{ListID: "kix.list1"}
 	}
+	return &docs.Document{ID: "DOC1", Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: para}}}}}
+}
 
-	// Assert
+// assertOneRemovalOverThePrelude says the requests carry exactly one bullet
+// removal, over exactly the new prelude, and last.
+func assertOneRemovalOverThePrelude(t *testing.T, got Result) {
+	t.Helper()
 	spans, at := bulletRemovals(got.Requests)
 	if len(spans) != 1 {
-		t.Fatalf("the front matter carries %d deleteParagraphBullets, want exactly 1", len(spans))
+		t.Fatalf("the batch carries %d deleteParagraphBullets, want exactly 1", len(spans))
 	}
 	if spans[0] != [2]int{got.Start, got.End} {
-		t.Errorf("the bullets come off %v, want exactly the prelude's own range %v", spans[0], [2]int{got.Start, got.End})
+		t.Errorf("the bullets come off %v, want exactly the new prelude's range %v", spans[0], [2]int{got.Start, got.End})
 	}
-	if at[0] < lastInsert(got.Requests) {
-		t.Errorf("deleteParagraphBullets is request %d, before the last insert at %d", at[0], lastInsert(got.Requests))
+	if at[0] != len(got.Requests)-1 || at[0] < lastInsert(got.Requests) {
+		t.Errorf("deleteParagraphBullets is request %d of %d, want it last, behind every insert", at[0], len(got.Requests))
 	}
 	body := got.Requests[at[0]]["deleteParagraphBullets"].(map[string]any)
 	if len(body) != 1 {
@@ -69,13 +70,33 @@ func TestThePreludeTakesOffTheListMarkerItInherits(t *testing.T) {
 	}
 }
 
-// On a second run the old prelude is proposed for deletion behind the new one,
-// and that text is not the new prelude's to touch: the removal names the new
-// prelude's range and stops at its end.
-func TestAReplaceRunTakesTheMarkerOffOnlyTheNewPrelude(t *testing.T) {
+// A prelude proposed in front of a list item would arrive bulleted, because
+// every paragraph inserted at a list item's start joins its list. One
+// deleteParagraphBullets over exactly what the prelude inserted takes that off,
+// under the insertion's own suggestion id (MEASURED.md, "A block of new
+// paragraphs, proposed in one SUGGEST batch").
+func TestAPreludeInFrontOfAListItemTakesOffTheMarker(t *testing.T) {
 	// Arrange
 	cfg := testConfig(t)
+
+	// Act
+	got, err := Propose(cfg, testFields(), openingWith(true))
+	if err != nil {
+		t.Fatalf("Propose() = %v", err)
+	}
+
+	// Assert
+	assertOneRemovalOverThePrelude(t, got)
+}
+
+// On a replace run the old prelude is proposed for deletion behind the new one,
+// and that text is not the new prelude's to touch: the removal names the new
+// prelude's range and stops at its end.
+func TestAReplaceRunInFrontOfAListItemClearsOnlyTheNewPrelude(t *testing.T) {
+	// Arrange: the paragraph the new prelude lands in front of is a list item.
+	cfg := testConfig(t)
 	d := markedDocument(1, 964, false)
+	d.Tabs[0].Body[0].Paragraph.Bullet = &docs.Bullet{ListID: "kix.list1"}
 
 	// Act
 	got, err := Propose(cfg, cover.Fields{Title: "A Policy"}, d)
@@ -84,13 +105,49 @@ func TestAReplaceRunTakesTheMarkerOffOnlyTheNewPrelude(t *testing.T) {
 	}
 
 	// Assert
-	spans, _ := bulletRemovals(got.Requests)
-	if len(spans) != 1 {
-		t.Fatalf("a replace run carries %d deleteParagraphBullets, want exactly 1", len(spans))
+	if got.Replaces == nil {
+		t.Fatal("the document carries a settled marker, so this run replaces it")
 	}
-	if spans[0] != [2]int{got.Start, got.End} {
-		t.Errorf("the bullets come off %v, want the new prelude's range %v and not the old one behind it", spans[0], [2]int{got.Start, got.End})
+	assertOneRemovalOverThePrelude(t, got)
+}
+
+// The common case stays the batch that was measured. A prelude in front of
+// anything that is not a list item sends no bullet removal, and its requests
+// are the front matter's own, request for request.
+func TestAPreludeInFrontOfAPlainParagraphSendsTheMeasuredBatch(t *testing.T) {
+	// Arrange
+	cfg := testConfig(t)
+	want, err := FrontMatter(cfg, testFields(), 1)
+	if err != nil {
+		t.Fatalf("FrontMatter() = %v", err)
 	}
+	cases := map[string]*docs.Document{
+		"a plain first paragraph": openingWith(false),
+		"an empty body":           {ID: "DOC1", Tabs: []docs.Tab{{ID: "t.0"}}},
+	}
+	for name, d := range cases {
+		t.Run(name, func(t *testing.T) {
+			// Act
+			got, err := Propose(cfg, testFields(), d)
+			if err != nil {
+				t.Fatalf("Propose() = %v", err)
+			}
+
+			// Assert
+			if spans, _ := bulletRemovals(got.Requests); len(spans) != 0 {
+				t.Fatalf("the batch carries deleteParagraphBullets over %v in front of a paragraph with no bullet", spans)
+			}
+			if !reflect.DeepEqual(got.Requests, want.Requests) {
+				t.Error("the requests differ from the front matter's own, and in front of a plain paragraph they are that and nothing else")
+			}
+		})
+	}
+
+	t.Run("and the front matter itself sends none", func(t *testing.T) {
+		if spans, _ := bulletRemovals(want.Requests); len(spans) != 0 {
+			t.Fatalf("FrontMatter carries deleteParagraphBullets over %v; the decision is Propose's, which has the document", spans)
+		}
+	})
 }
 
 // The prelude goes out on the policy propose uses, a handed-in document at the
@@ -100,9 +157,9 @@ func TestAReplaceRunTakesTheMarkerOffOnlyTheNewPrelude(t *testing.T) {
 func TestThePreludeBatchCarriesAtTheSuggestLevel(t *testing.T) {
 	// Arrange
 	cfg := testConfig(t)
-	res, err := FrontMatter(cfg, testFields(), 1)
+	res, err := Propose(cfg, testFields(), openingWith(true))
 	if err != nil {
-		t.Fatalf("FrontMatter() = %v", err)
+		t.Fatalf("Propose() = %v", err)
 	}
 	p := guard.NewPolicy()
 	p.AllowFile("DOC1", guard.LevelSuggest)
@@ -112,24 +169,24 @@ func TestThePreludeBatchCarriesAtTheSuggestLevel(t *testing.T) {
 	}
 	spans, idx := bulletRemovals(res.Requests)
 	if len(spans) != 1 {
-		t.Fatalf("the front matter carries %d deleteParagraphBullets, want exactly 1", len(spans))
+		t.Fatalf("the prelude carries %d deleteParagraphBullets, want exactly 1", len(spans))
 	}
-	suggest := func(reqs []map[string]any) []byte {
-		body, err := json.Marshal(map[string]any{
-			"requests":     reqs,
-			"writeControl": map[string]any{"writeMode": "SUGGEST"},
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return body
+	suggest, err := json.Marshal(map[string]any{
+		"requests":     []map[string]any{res.Requests[idx[0]]},
+		"writeControl": map[string]any{"writeMode": "SUGGEST"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	direct, err := json.Marshal(map[string]any{"requests": []map[string]any{res.Requests[idx[0]]}})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Act, Assert
-	if err := p.Judge("POST", at, suggest([]map[string]any{res.Requests[idx[0]]})); err != nil {
+	if err := p.Judge("POST", at, suggest); err != nil {
 		t.Fatalf("the guard refused the bullet removal in a SUGGEST batch: %v", err)
 	}
-	direct, _ := json.Marshal(map[string]any{"requests": []map[string]any{res.Requests[idx[0]]}})
 	if p.Judge("POST", at, direct) == nil {
 		t.Fatal("without SUGGEST the removal is a direct edit of somebody's document and must be refused")
 	}
