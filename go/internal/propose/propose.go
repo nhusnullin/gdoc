@@ -17,6 +17,7 @@ import (
 	"unicode/utf16"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/docsreq"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/plaintext"
 )
@@ -148,6 +149,17 @@ func (p Proposal) checkWords() error {
 	// as holding on exactly the silent direct edit it exists to name.
 	if strings.ContainsAny(p.Replacement, "\n\r") {
 		return fmt.Errorf("the replacement %q carries a line break; a proposal replaces words with words inside one paragraph, and a change that adds a paragraph is not a shape this write has", p.Replacement)
+	}
+	// The replacement is inserted text, and Batch counts it to anchor the
+	// comment on the words it wrote. A character Docs strips is a character
+	// the count has and the document does not, so the anchor reaches one place
+	// past the replacement into words nobody proposed to change.
+	// docsreq.Strippable says which they are, and internal/cover refuses them
+	// in a fields file for the same reason.
+	if r, found := docsreq.Strippable(p.Replacement); found {
+		return fmt.Errorf(
+			"the replacement %q carries U+%04X, which the Docs API strips out of an inserted text: "+
+				"gdoc counts the characters it sends to place everything after them, so take it out and write the proposal again", p.Replacement, r)
 	}
 	return p.checkWhy()
 }

@@ -42,6 +42,14 @@ const MaxContent = 8 << 10
 // is empty, which is how the Docs API is told to put a field back to its
 // default: stating bold false would clear a boolean, but nothing states "no
 // link" except leaving the field out of an object whose mask names it.
+//
+// It is the marks the content can carry, and not the face, the size or the
+// colour, which are inherited too and are not put right by clearing them: a
+// restyled document carries those directly on every paragraph, so a block
+// cleared back to the document's defaults would be the one paragraph that
+// matches nothing around it. docs/backlog/a-block-inherits-the-look-of-what-it-
+// lands-in-front-of.md holds what would settle that, and it is a measurement
+// and a decision rather than a wider mask.
 const clearedMarks = "bold,italic,underline,strikethrough,link"
 
 // bulletPresets is the preset each list kind takes. The two kinds are two
@@ -79,6 +87,8 @@ type blockLayout struct {
 // paragraph owns the body's old final mark, which is why its span reaches one
 // unit past the text. MEASURED.md row 7 is the measurement, and that row came
 // back with one suggestion id because nothing restated that paragraph.
+// BlockBatch restates nothing on it either, and PlaceAfter refuses an anchor
+// whose style or bullet the block would then be stuck with.
 //
 // The caller has content that ParseContent read, so there is at least one
 // paragraph and each one has words in it.
@@ -114,13 +124,16 @@ func layOutBlock(place Placement, content []Para) blockLayout {
 //     one suggestion id;
 //   - updateParagraphStyle per new paragraph, because an inserted paragraph
 //     takes the named style of the paragraph it landed in and a list item in
-//     front of somebody's Heading 1 would be a heading;
+//     front of somebody's Heading 1 would be a heading. After the document's
+//     last paragraph the block's own last one is left out, because it owns the
+//     body's old final mark and MEASURED.md row 7 restated nothing there;
 //   - one updateTextStyle clearing what the insert inherited, before the block's
 //     own marks, so a run that really is bold is written bold again after it;
 //   - updateTextStyle per marked run;
 //   - createParagraphBullets per stretch of list items of one kind;
 //   - deleteParagraphBullets per stretch of new paragraphs that are not list
-//     items, because stating a named style does not clear an inherited bullet;
+//     items, because stating a named style does not clear an inherited bullet,
+//     and with the same last paragraph left out at the end of a document;
 //   - deleteContentRange for a replace, at the indexes the insert left the old
 //     paragraphs at;
 //   - insertComment on the words of the first new paragraph.
@@ -141,6 +154,14 @@ func BlockBatch(place Placement, content []Para, why, assignee string) []byte {
 		"text":     l.Text,
 	})
 	for i, p := range content {
+		if place.AtEnd && i == len(content)-1 {
+			// That paragraph owns the body's old final mark, and MEASURED.md
+			// row 7 came back with one suggestion id because nothing restated
+			// it. PlaceAfter has already refused an anchor that is not plain
+			// body text, so the style this paragraph inherits from that mark is
+			// the style the block asked for.
+			continue
+		}
 		add("updateParagraphStyle", map[string]any{
 			"range":          spanOf(l.Paras[i].Start, l.Paras[i].End),
 			"paragraphStyle": map[string]any{"namedStyleType": p.Style},
@@ -172,7 +193,7 @@ func BlockBatch(place Placement, content []Para, why, assignee string) []byte {
 			"bulletPreset": bulletPresets[content[s.from].List],
 		})
 	}
-	for _, s := range plainStretches(content) {
+	for _, s := range plainStretches(content, place.AtEnd) {
 		add("deleteParagraphBullets", map[string]any{
 			"range": spanOf(l.Paras[s.from].Start, l.Paras[s.to].End),
 		})
@@ -271,15 +292,26 @@ func listStretches(content []Para) []stretch {
 // one per paragraph, and they are separate stretches because a paragraph behind
 // a list is not beside the heading in front of it, and a request covering the
 // list between them would take its bullets off too.
-func plainStretches(content []Para) []stretch {
+//
+// atEnd leaves the block's last paragraph out, because there it owns the body's
+// old final mark and the batch restates nothing on that mark: MEASURED.md row 7,
+// and the same reason the named style is left off it. PlaceAfter has already
+// refused an anchor carrying a bullet, so the mark has none to clear. The last
+// paragraph is always in a plain stretch there, because PlaceAfter refuses a
+// block whose own last paragraph is a list item.
+func plainStretches(content []Para, atEnd bool) []stretch {
+	last := len(content)
+	if atEnd {
+		last--
+	}
 	var out []stretch
-	for i := 0; i < len(content); {
+	for i := 0; i < last; {
 		if content[i].List != NotAList {
 			i++
 			continue
 		}
 		j := i
-		for j < len(content) && content[j].List == NotAList {
+		for j < last && content[j].List == NotAList {
 			j++
 		}
 		out = append(out, stretch{from: i, to: j - 1})

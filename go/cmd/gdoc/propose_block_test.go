@@ -216,6 +216,46 @@ func TestProposeRefusesAMarkerInABlockField(t *testing.T) {
 	}
 }
 
+// TestProposeRefusesBlockContentBeforeAnythingIsSent is the same promise the
+// marker rule keeps, over the markdown subset. A block whose content holds a
+// table, a nested list or a link a document cannot open is refused by name from
+// the file alone, so a second entry that gdoc cannot read never lets the first
+// one land: the probe document is not created, and nothing is posted.
+//
+// The block here is the second of two entries, because that is the shape the
+// promise is about. A run that stopped on it after the first one had landed is
+// the run that half happened in somebody's document.
+func TestProposeRefusesBlockContentBeforeAnythingIsSent(t *testing.T) {
+	for _, tc := range []struct{ name, content, says string }{
+		{"a table", "| a | b |\\n| --- | --- |\\n| 1 | 2 |\\n", "table"},
+		{"a nested list", "- one\\n  - deeper\\n", "nested"},
+		{"a link the document cannot open", "See [the limits](#limits).\\n", "address"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := stubWire(t, &fakeWire{answers: blockAnswers(t)})
+			from := tempFile(t, "proposals.json",
+				`[{"quoted":"reviewed annually","replacement":"reviewed every six months","why":"the policy says twice a year"},`+
+					`{"kind":"block","after":"reviewed annually","content":"`+tc.content+`","why":"`+blockWhy+`"}]`)
+
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+
+			if code == 0 || got["ok"] != false {
+				t.Fatalf("content the block cannot read must stop the run: %v (exit %d)", got, code)
+			}
+			msg, _ := got["error"].(string)
+			if !strings.Contains(msg, tc.says) {
+				t.Errorf("the error must say %q: %q", tc.says, msg)
+			}
+			if !strings.Contains(msg, "proposals[1]") {
+				t.Errorf("the error must name the entry it is about: %q", msg)
+			}
+			if len(f.calls) != 0 {
+				t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+			}
+		})
+	}
+}
+
 // TestProposeRunsABothKindsFileInFileOrder is the mixed file. One list holds
 // both kinds, the loop asks nothing about which an entry is, and each entry gets
 // its own read: the block moves every index behind it, so the words proposal

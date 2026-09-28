@@ -87,6 +87,62 @@ func TestContentReadsTheMarksASentenceCarries(t *testing.T) {
 	})
 }
 
+// TestContentResolvesEntitiesAndBackslashEscapes is what markdown says the
+// words are, rather than what the author had to type to get them. goldmark
+// leaves an entity reference and a backslash escape in the source segment and
+// resolves them in its HTML renderer, so a run taken from the segment raw lands
+// in somebody's document as "&amp;" and "snake\_case". Every read-back compares
+// against the same undecoded text, so nothing downstream would catch it.
+func TestContentResolvesEntitiesAndBackslashEscapes(t *testing.T) {
+	checkParas(t, "R&amp;D costs\\* are capped, snake\\_case and a &#8212; dash.\n", []Para{
+		{Style: NormalStyle, Runs: []Run{
+			{Text: "R&D costs* are capped, snake_case and a — dash."},
+		}},
+	})
+	// A link destination is a source segment too, and one opened as written
+	// would go somewhere nobody asked for.
+	checkParas(t, "See [the register](https://example.com/r?a=1&amp;b=2).\n", []Para{
+		{Style: NormalStyle, Runs: []Run{
+			{Text: "See "},
+			{Text: "the register", Link: "https://example.com/r?a=1&b=2"},
+			{Text: "."},
+		}},
+	})
+	// An escaped entity is the five characters the author wrote, and not the
+	// one the entity stands for. The escape is resolved where it is met, so
+	// what follows it is words rather than the start of a reference: this is
+	// the pass goldmark's own text writer makes, and CommonMark says the same.
+	checkParas(t, "Write it as \\&amp; in HTML, and \\&#35; for a hash.\n", []Para{
+		{Style: NormalStyle, Runs: []Run{
+			{Text: "Write it as &amp; in HTML, and &#35; for a hash."},
+		}},
+	})
+	// An ampersand that begins no reference is an ampersand.
+	checkParas(t, "Tools & methods, R&D, and a stray &notareference; here.\n", []Para{
+		{Style: NormalStyle, Runs: []Run{
+			{Text: "Tools & methods, R&D, and a stray &notareference; here."},
+		}},
+	})
+	// An ampersand somebody wrote does not reach forward to the next ";" and
+	// take what is between as its own. "R&D" and "P&L" are words people write,
+	// and goldmark's resolvers read every "&" in whatever they are handed, so a
+	// pass that handed them the whole span up to the next ";" would resolve the
+	// entity at the far end of it and hand the escape in the middle back
+	// undecoded.
+	checkParas(t, "R&D costs\\* are &lt; 5% of P&L, and snake\\_case &amp; more.\n", []Para{
+		{Style: NormalStyle, Runs: []Run{
+			{Text: "R&D costs* are < 5% of P&L, and snake_case & more."},
+		}},
+	})
+	// The same reach over an escaped entity: CommonMark says the five
+	// characters stay, and a nearby ampersand does not change that.
+	checkParas(t, "AT&T writes \\&amp; in full.\n", []Para{
+		{Style: NormalStyle, Runs: []Run{
+			{Text: "AT&T writes &amp; in full."},
+		}},
+	})
+}
+
 // A numbered list is its own list kind, because the two take different bullet
 // presets in the batch Task 5 builds.
 func TestContentReadsBothListKinds(t *testing.T) {
@@ -153,6 +209,11 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 		{"a heading inside a list item", "- # heading\n", "heading"},
 		{"a link that opens nothing", "See [the note](../notes/limits.md)\n", "address"},
 		{"a link to a heading", "See [above](#limits)\n", "address"},
+		{"a private-use character", "The \uf8ff key is on the left.\n", "U+F8FF"},
+		{"a control character", "A form feed \u000c hides here.\n", "U+000C"},
+		{"a newline written as a reference", "One line&#10;and another.\n", "line break"},
+		{"a soft break written as a reference", "One line&#11;and another.\n", "line break"},
+		{"a private-use character written as a reference", "The &#xF8FF; key.\n", "U+F8FF"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

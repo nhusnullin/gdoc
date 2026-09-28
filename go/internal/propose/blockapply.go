@@ -22,9 +22,15 @@ import (
 // would reach one of them as an empty quote and be refused in words about a
 // quote that is not in the document, which names nothing the author did wrong.
 //
-// The content is checked for its shape here and read for its meaning in
-// ApplyBlock, because ParseContent needs no document either: both run before the
-// probe and before the first write.
+// The content is read here as well as in ApplyBlock, because ParseContent needs
+// no document either. Every refusal the markdown subset has, a table, a nested
+// list, a picture, a relative link and the rest, is therefore made of the whole
+// file before the probe document is created and before the first entry leaves
+// the machine, which is what Check exists for: a third entry refused after the
+// first two have landed is a run that half happened in somebody's document.
+// ApplyBlock reads it again because it needs the paragraphs rather than the
+// answer, and eight kilobytes parsed twice costs nothing.
+// TestProposeRefusesBlockContentBeforeAnythingIsSent is the pin.
 func (p Proposal) checkBlock() error {
 	if err := p.checkPlacement(); err != nil {
 		return err
@@ -44,6 +50,11 @@ func (p Proposal) checkBlock() error {
 		return fmt.Errorf(
 			"the block's content is %d bytes, and a block proposes a section rather than a document; keep it under %d bytes, or publish the note as its own document",
 			len(p.Content), MaxContent)
+	}
+	// The size is asked first, because a refusal naming the ceiling says more
+	// about a note pasted in whole than the first construct in it would.
+	if _, err := ParseContent(p.Content); err != nil {
+		return err
 	}
 	return p.checkWhy()
 }

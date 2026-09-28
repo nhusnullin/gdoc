@@ -184,7 +184,8 @@ Each of these is refused by name, before anything is sent:
 - an `after` whose next element is a table, the contents list or a section
   break, because there is no paragraph start to put the text at;
 - an `after` on the document's own last paragraph when the block does not end
-  with a plain paragraph, or when that last paragraph is a list item.
+  with a plain paragraph, or when that last paragraph is a list item or a
+  heading.
 
 Every one of those says what would work instead. Read it and do that, rather
 than reshaping the quote until something lands.
@@ -211,8 +212,13 @@ Read `verified` and `checks` per proposal:
 For a block those three read the same document three ways: every new paragraph
 carries the insertion id, and a replace's old paragraphs carry a deletion id;
 the anchor paragraph, or the replaced run, still reads to a reader as it did,
-and the block's first line is nowhere in that reading; and the 🤖 comment is
-attached to the first new paragraph.
+and the block's first new line is nowhere in that reading; and the 🤖 comment is
+attached to the first new paragraph. For a replace the first new line is the
+first one the replaced paragraphs did not already carry, so a section rewritten
+under its own heading verifies. A block whose every line is already in the words
+it stands on, a list conversion or a reorder, leaves that question nothing to
+ask, and the preview check answers "no answer": say so rather than calling it a
+suggestion.
 
 `verified: true` is all three checks and a write that answered
 `commentUpdateState: ALL_SAVED`. Anything less means the write happened and

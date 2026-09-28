@@ -177,12 +177,21 @@ func paragraphHolding(tab docs.Tab, span docs.Range, quoted string) (int, error)
 		"the quoted text %q is inside a table, and a block is not proposed inside one; propose the paragraphs around the table, and change a cell's words with a words proposal", quoted)
 }
 
-// endCanCarryTheBlock is the two refusals the last position in a document has.
+// endCanCarryTheBlock is the three refusals the last position in a document has.
 //
 // There is no paragraph to go in front of there, so the text goes in before the
-// body's final newline and the block's last paragraph inherits that mark. Both
-// refusals are about that one mark, and both name what would work instead.
-// Either can be widened once somebody measures it, which is Nail's call.
+// body's final newline and the block's last paragraph inherits that mark. All
+// three refusals are about that one mark, and each names what would work
+// instead. Any of them can be widened once somebody measures it, which is
+// Nail's call.
+//
+// The mark keeps whatever the anchor states, and the batch restates nothing on
+// it, so the block's own last paragraph has to want exactly what the anchor
+// already has: plain body text, and no bullet. Those are the first two. The
+// third is the anchor's own named style, and it is the same rule read from the
+// document's side: after a heading the mark is a heading, and a block ending in
+// body text would either arrive as a heading or need that mark restated, which
+// is the unmeasured second-id case.
 func endCanCarryTheBlock(anchor *docs.Paragraph, content []Para) error {
 	if len(content) == 0 {
 		return fmt.Errorf("the block carries no paragraphs, and a block proposes paragraphs")
@@ -194,6 +203,13 @@ func endCanCarryTheBlock(anchor *docs.Paragraph, content []Para) error {
 	if anchor.Bullet != nil {
 		return fmt.Errorf(
 			"the document's last paragraph is a list item, so the block would take its bullet, and clearing that bullet on the paragraph that owns the final mark is the measured case that came back with two suggestion ids; place the block after an earlier paragraph, or add a plain paragraph at the end of the document first")
+	}
+	// An unstated style is the document saying nothing, which reads as body
+	// text, so it is left alone rather than refused.
+	if anchor.Style != "" && anchor.Style != NormalStyle {
+		return fmt.Errorf(
+			"the document's last paragraph is %s, so the block's last paragraph would own the document's final mark and arrive in that style, and restyling that mark is a second suggestion this milestone did not measure; place the block after an earlier paragraph, or add a plain paragraph at the end of the document first",
+			anchor.Style)
 	}
 	return nil
 }

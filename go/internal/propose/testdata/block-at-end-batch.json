@@ -21,18 +21,6 @@
       }
     },
     {
-      "updateParagraphStyle": {
-        "fields": "namedStyleType",
-        "paragraphStyle": {
-          "namedStyleType": "NORMAL_TEXT"
-        },
-        "range": {
-          "endIndex": 265,
-          "startIndex": 231
-        }
-      }
-    },
-    {
       "updateTextStyle": {
         "fields": "bold,italic,underline,strikethrough,link",
         "range": {
@@ -45,7 +33,7 @@
     {
       "deleteParagraphBullets": {
         "range": {
-          "endIndex": 265,
+          "endIndex": 231,
           "startIndex": 224
         }
       }

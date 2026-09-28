@@ -87,6 +87,35 @@ func TestBlockBatchAfterTheLastParagraph(t *testing.T) {
 	checkGolden(t, "block-at-end-batch.json", BlockBatch(place, content, testWhy, ""))
 }
 
+// TestBlockBatchAfterTheLastParagraphRestatesNothingOnTheFinalMark is the rest
+// of MEASURED.md row 7. That row came back with one suggestion id because
+// nothing restated the paragraph owning the body's old final mark, and a
+// restated one there was not measured. The block's last paragraph owns that
+// mark, so no request of this batch may reach it: the placement has already
+// refused an anchor that is not plain body text, which is what makes the
+// inherited style and the missing bullet the ones the block wanted.
+func TestBlockBatchAfterTheLastParagraphRestatesNothingOnTheFinalMark(t *testing.T) {
+	content := plainBlock(t)
+	place, err := PlaceAfter(document(t, "block-body.json"), "operations lead", content)
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	// The final mark is the last unit of the block's last paragraph.
+	l := layOutBlock(place, content)
+	mark := l.Paras[len(l.Paras)-1].End - 1
+	for _, r := range requestsOf(t, BlockBatch(place, content, testWhy, "")) {
+		for _, kind := range []string{"updateParagraphStyle", "deleteParagraphBullets", "createParagraphBullets"} {
+			if _, ok := r[kind]; !ok {
+				continue
+			}
+			at := rangeIn(t, r, kind)
+			if at[0] <= mark && mark < at[1] {
+				t.Errorf("the %s covering %v reaches the body's old final mark at %d, which MEASURED.md row 7 never restated", kind, at, mark)
+			}
+		}
+	}
+}
+
 // TestBlockBatchCountsInUTF16CodeUnits is the hazard every index in this
 // package has. A run behind an emoji is two units further on than its bytes
 // say, and a mark written at the wrong offset lands on the wrong words.

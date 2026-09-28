@@ -162,14 +162,20 @@
 //     paragraphs, proposed in one SUGGEST batch".
 //   - TestLiveProposeBlock, M14's acceptance. It creates a document of five
 //     paragraphs with a list item among them, proposes one block after a
-//     paragraph and one in place of two paragraphs that open with that list
-//     item, and asserts each landed as exactly one pending suggestion with all
-//     three read-backs holding. Then it withdraws both through a note
-//     propose.Record wrote, each under its own AllowReject, and compares the
-//     text projection with the one it read before the first proposal:
-//     character for character what it was. It is the first run to send a
-//     numbered list and the inherited bullet's clearing through the production
-//     writer rather than through a hand-written batch. Neither it nor the probe
+//     paragraph, one in place of two paragraphs that open with that list item
+//     and one after the document's own last paragraph, and asserts each landed
+//     as exactly one pending suggestion with all three read-backs holding. The
+//     count propose reports is the insertion and deletion ids it reads, so the
+//     end-of-document case, the one block that shares a paragraph mark with the
+//     document, is asked again across every key Docs records a suggestion
+//     under: a style change on that mark would be a second id there and not
+//     here.
+//     Then it withdraws all three through a note propose.Record wrote, each
+//     under its own AllowReject, and compares the text projection with the one
+//     it read before the first proposal: character for character what it was.
+//     It is the first run to send a numbered list, the inherited bullet's
+//     clearing and the end-of-document placement through the production writer
+//     rather than through a hand-written batch. Neither it nor the probe
 //     above names a variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and
 //     GDOC_LIVE_FOLDER_ID with its default are the whole of what they read, and
 //     every document they touch is one they made.

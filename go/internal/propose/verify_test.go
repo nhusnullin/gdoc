@@ -594,6 +594,114 @@ func TestVerifyBlockCatchesADirectEditInThePreview(t *testing.T) {
 	}
 }
 
+// TestVerifyBlockHoldsForAReplaceThatKeepsItsFirstLine is the shape a rewritten
+// section has: the replace covers a run of paragraphs and the content opens with
+// the same line the run opened with. The question is asked about the first line
+// the old run did not carry, so keeping the run's opening line does not fail the
+// block, and the line behind it is the one that answers.
+func TestVerifyBlockHoldsForAReplaceThatKeepsItsFirstLine(t *testing.T) {
+	place, _ := replacePlace(t)
+	kept, err := ParseContent("The supplier register is reviewed annually by the operations team.\n\nAnd a new sentence behind it.\n")
+	if err != nil {
+		t.Fatalf("parsing the content: %v", err)
+	}
+	// The preview is the document as it stood: both replaced paragraphs are
+	// still there, because a suggested deletion leaves the words alone.
+	holds, why := blockPreviewHolds(document(t, "block-body.json"), place, kept)
+
+	if !holds {
+		t.Errorf("preview_without_suggestions = false on a replace whose content keeps the run's first line: %s", why)
+	}
+}
+
+// TestVerifyBlockGivesNoAnswerWhenAReplaceKeepsEveryOldParagraph is the shape
+// the first question cannot answer on its own. Carries asks by substring, so a
+// direct edit whose new paragraphs carry every replaced one inside them leaves
+// all of them findable in the preview, and the first question holds over the
+// silent direct edit this route exists to catch. The second question is what
+// answers there: the line the old paragraphs did not carry is in the preview
+// too, which a suggestion would have hidden.
+func TestVerifyBlockGivesNoAnswerWhenAReplaceKeepsEveryOldParagraph(t *testing.T) {
+	place, _ := replacePlace(t)
+	kept, err := ParseContent("The supplier register is reviewed annually by the operations team.\n\n" +
+		"Each supplier is scored against the risk matrix. The scores are published each quarter.\n")
+	if err != nil {
+		t.Fatalf("parsing the content: %v", err)
+	}
+
+	holds, why := blockPreviewHolds(document(t, "block-preview-edited-containing.json"), place, kept)
+
+	if holds {
+		t.Error("preview_without_suggestions = true on a preview carrying the replace's own new line, which is a direct edit")
+	}
+	if !strings.Contains(why, "no answer") || !strings.Contains(why, "published each quarter") {
+		t.Errorf("the warning is %q, and it should say the route gives no answer and name the line", why)
+	}
+}
+
+// TestVerifyBlockGivesNoAnswerWhenAReplaceOnlyReshapes is the replace with no
+// line to ask about that the first question cannot answer for either: the
+// content says every paragraph it stands on again, as a list, so a direct edit
+// leaves all of them findable in the preview. Nothing distinguishes the edit
+// from the suggestion here, and passing would report the one thing this route
+// exists to catch as a route that held.
+func TestVerifyBlockGivesNoAnswerWhenAReplaceOnlyReshapes(t *testing.T) {
+	place, _ := replacePlace(t)
+	listed, err := ParseContent("- The supplier register is reviewed annually by the operations team.\n" +
+		"- Each supplier is scored against the risk matrix.\n")
+	if err != nil {
+		t.Fatalf("parsing the content: %v", err)
+	}
+
+	holds, why := blockPreviewHolds(document(t, "block-body.json"), place, listed)
+
+	if holds {
+		t.Error("preview_without_suggestions = true on a replace that says every old paragraph again, where a direct edit reads the same way")
+	}
+	if !strings.Contains(why, "no answer") {
+		t.Errorf("the warning is %q, and it should say the route gives no answer", why)
+	}
+}
+
+// TestVerifyBlockGivesNoAnswerWhenAnAfterBlockSaysNothingNew is the same gap on
+// the other placement. An after block takes no paragraph out, so the first
+// question holds after a direct edit too, and a block whose every line is
+// inside its own anchor leaves the second question nothing to ask about.
+func TestVerifyBlockGivesNoAnswerWhenAnAfterBlockSaysNothingNew(t *testing.T) {
+	place, _ := afterPlace(t)
+	inside, err := ParseContent("## The supplier register\n\nreviewed annually by the operations team\n")
+	if err != nil {
+		t.Fatalf("parsing the content: %v", err)
+	}
+
+	holds, why := blockPreviewHolds(document(t, "block-body.json"), place, inside)
+
+	if holds {
+		t.Error("preview_without_suggestions = true on an after block whose every line is inside its anchor, where a direct edit reads the same way")
+	}
+	if !strings.Contains(why, "no answer") {
+		t.Errorf("the warning is %q, and it should say the route gives no answer", why)
+	}
+}
+
+// TestVerifyBlockHoldsWhenAReplaceOnlyShortens is the replace whose content
+// says nothing its own old paragraphs did not say already. There is no new
+// line to ask about, and that is not a failure: a direct edit of it takes the
+// old paragraphs out, which is the first question's own answer.
+func TestVerifyBlockHoldsWhenAReplaceOnlyShortens(t *testing.T) {
+	place, _ := replacePlace(t)
+	shorter, err := ParseContent("The supplier register is reviewed annually by the operations team.\n")
+	if err != nil {
+		t.Fatalf("parsing the content: %v", err)
+	}
+
+	holds, why := blockPreviewHolds(document(t, "block-body.json"), place, shorter)
+
+	if !holds {
+		t.Errorf("preview_without_suggestions = false on a replace that only shortens: %s", why)
+	}
+}
+
 // TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine is the
 // ambiguity this route has to own. The block's first line being in the preview
 // is what a direct edit looks like, and it is also what a document that already

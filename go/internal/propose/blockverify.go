@@ -147,12 +147,36 @@ func blockInlineHolds(d *docs.Document, place Placement, content []Para) (bool, 
 // suggestion from a direct edit: the document with every pending suggestion
 // hidden still reads the way it read before the write.
 //
-// Two questions, and the second is the one an after block rests on. The
-// paragraphs the placement stood on have to still be there, because a direct
-// edit of a replace takes them out, and a suggested deletion leaves them.
-// Then the block's first line must not be there, because a direct edit of an
-// after block leaves the anchor alone and puts the new paragraphs in as written
-// text.
+// Two questions. The paragraphs the placement stood on have to still be there,
+// because a direct edit of a replace takes them out and a suggested deletion
+// leaves them. Then the block's first new line must not be there, because the
+// preview hides an insertion and shows a direct edit's written text.
+//
+// The first question cannot answer on its own, and Carries says why: it asks by
+// substring, so a replace whose content carries the old paragraphs inside it
+// answers the first question after a direct edit too. It is the shape verify.go
+// asks the words kind's second question for, one file over, and the reason is
+// the same one: reporting preview_without_suggestions on a silent direct edit
+// is the one mistake this route exists to prevent.
+//
+// The line the second question asks about is the first one the placement was
+// not already standing on. For an after block that is the block's own first
+// line, unless the anchor already carries it. For a replace it is the first
+// line the old paragraphs do not already carry, and that is what keeps the
+// commonest block there is verifiable: a section rewritten under its own
+// heading opens with a line the replace itself covers, and asking about that
+// line would fail every one of them. A skipped line costs the check nothing:
+// a direct edit writes the whole block, so any line of it answers for all of
+// them.
+//
+// A block with no line left to ask about is where the first question has to
+// hold alone, and it does that only when the content drops a paragraph the
+// placement stood on: a direct edit puts the content in place of those
+// paragraphs, so one the content does not say again is one the preview would
+// have lost. That is the replace that only shortens. A replace that says every
+// old paragraph again, a list conversion or a reorder, leaves the first
+// question nothing to catch, and an after block leaves it nothing ever, since
+// a direct edit there leaves the anchor where it is. Both give no answer.
 //
 // The second question is asked by words, like the words kind's, and that is why
 // it can only ever be a false answer rather than an accusation: the line may be
@@ -168,15 +192,87 @@ func blockPreviewHolds(d *docs.Document, place Placement, content []Para) (bool,
 				"the preview view no longer carries the paragraph %q, which is what a direct edit looks like rather than a suggestion", p)
 		}
 	}
-	if first := content[0].Text(); Carries(d, place.Tab, first) {
+	first := firstNewLine(place, content)
+	if first == "" {
+		if dropsAParagraph(place, content) {
+			return true, ""
+		}
+		return false, "the block says nothing the paragraphs it stands on did not say already, and drops none of them, so this route gives no answer: a direct edit of it would leave the same words in the preview view that a suggestion leaves"
+	}
+	if Carries(d, place.Tab, first) {
 		return false, fmt.Sprintf(
-			"the preview view carries the block's first line %q, so this route gives no answer: the block may have been written as a direct edit rather than a suggestion, or the document may have carried that line before the write", first)
+			"the preview view carries the block's first new line %q, so this route gives no answer: the block may have been written as a direct edit rather than a suggestion, or the document may have carried that line before the write", first)
 	}
 	return true, ""
 }
 
+// firstNewLine is the block's first line the placement was not already standing
+// on, and the empty string when the content says nothing the paragraphs it
+// stands on said already. What that empty string means is blockPreviewHolds's
+// own answer, and it is not always a pass.
+//
+// An empty line is skipped because Carries finds one in any document at all.
+func firstNewLine(place Placement, content []Para) string {
+	for _, p := range content {
+		text := p.Text()
+		if text == "" || alreadyStoodOn(place.Paragraphs, text) {
+			continue
+		}
+		return text
+	}
+	return ""
+}
+
+// dropsAParagraph says whether the placement stood on a paragraph the block's
+// own content does not say again, which is what the first question needs to
+// catch a direct edit on its own. An after block drops nothing by definition:
+// it takes no paragraph out, so a direct edit of one leaves every paragraph the
+// placement stood on exactly where it was.
+func dropsAParagraph(place Placement, content []Para) bool {
+	if !place.Replaces() {
+		return false
+	}
+	for _, old := range place.Paragraphs {
+		saidAgain := false
+		for _, p := range content {
+			if strings.Contains(p.Text(), old) {
+				saidAgain = true
+				break
+			}
+		}
+		if !saidAgain {
+			return true
+		}
+	}
+	return false
+}
+
+// alreadyStoodOn says whether one of the paragraphs the placement covered
+// carries this line already. It is the substring question Carries asks, asked
+// of the old paragraphs rather than of the preview.
+func alreadyStoodOn(paragraphs []string, text string) bool {
+	for _, p := range paragraphs {
+		if strings.Contains(p, text) {
+			return true
+		}
+	}
+	return false
+}
+
 // idSet is the suggestion ids a read-back carried, in the order they were met
 // and without repeats.
+//
+// The ids are an insertion's and a deletion's, and those two are the whole set
+// because of what the batch does rather than because of what this reads. Every
+// styling request the batch sends lands inside text the same batch inserted,
+// which is why MEASURED.md rows 1 to 6 folded each of them into the insertion's
+// own id: a paragraph that does not exist outside the suggestion cannot carry a
+// style change of its own. The one request that touches a paragraph the document
+// already had is a replace's deleteContentRange, and that makes a deletion id.
+// The one paragraph a block ever shares with the document is the final mark at
+// the end of a document, and the batch restates nothing on that. Widen the batch
+// past those and this walk has to widen too, because internal/docs decodes only
+// these two families of id.
 //
 // The order is what makes the first one the first one: the note records one id,
 // and it is the id of the block's own first paragraph, so a block that came back

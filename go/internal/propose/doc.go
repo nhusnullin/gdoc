@@ -123,6 +123,14 @@
 // TestCheckRefusesEachBadProposalByName, over "no replacement", and
 // TestApplyRefusesADeletionOnlyProposalBeforeAnyWrite are the pins.
 //
+// A replacement carrying a character Docs strips out of an inserted text is
+// refused there too. Batch anchors the comment on the words it inserted,
+// counted from the replacement's own length, so a unit the server drops leaves
+// the anchor reaching past the replacement into words nobody proposed to
+// change. It is docsreq.Strippable's set, the block kind's rule read on the
+// words kind's one index. The two strippable cases of
+// TestCheckRefusesEachBadProposalByName are the pin.
+//
 // # A block's content is a subset, and everything outside it is refused by name
 //
 // The second kind of proposal is a block: whole paragraphs, placed after a
@@ -151,10 +159,13 @@
 // Two of them are decisions rather than gaps: a nested list, because nesting a
 // suggested list goes in through leading tabs and that is unmeasured in SUGGEST
 // mode, and a table, because docs/backlog/propose-inside-tables.md is not
-// settled. TestContentRefusesWhatTheSubsetDoesNotHold carries every case, and
-// ApplyBlock reads the content before it reads the document, so a block gdoc
-// cannot read costs no request at all:
-// TestApplyBlockRefusesContentItCannotReadBeforeAnyRequest is that pin.
+// settled. TestContentRefusesWhatTheSubsetDoesNotHold carries every case. Check
+// reads the content too, so every one of these refusals is made of the whole
+// proposals file before the probe document exists and before the first entry
+// lands, and ApplyBlock reads it again before it reads the document, so a block
+// gdoc cannot read costs no request at all:
+// TestApplyBlockRefusesContentItCannotReadBeforeAnyRequest and
+// TestProposeRefusesBlockContentBeforeAnythingIsSent in cmd/gdoc are the pins.
 //
 // A refusal names the line because content is a file a person wrote and a block
 // is tens of lines long. A horizontal rule is the one construct goldmark builds
@@ -173,6 +184,44 @@
 // rewriting them costs nothing. An email autolink gets the mailto: scheme
 // goldmark leaves off. TestContentKeepsAnAddressADocumentCanOpen and the two
 // link cases of TestContentRefusesWhatTheSubsetDoesNotHold are the pins.
+//
+// A run carries the words markdown says it carries, rather than the ones the
+// author had to type. goldmark leaves an entity reference and a backslash escape
+// in the source segment and resolves both in its HTML renderer, so a run taken
+// raw would put "R&amp;D" and "snake\_case" into somebody's document, and every
+// read-back would hold, because each one compares against that same text. A
+// link's destination is a source segment too, and is read the same way, so a
+// query string written with &amp; opens the address the author meant.
+// internal/body does the entity half of the words one file over, for the same
+// reason. TestContentResolvesEntitiesAndBackslashEscapes is the pin.
+//
+// The decoding is one left-to-right pass, and not the order util.URLEscape
+// chains goldmark's three resolvers in. Chained, the backslash comes off
+// "\&amp;" and the five characters behind it are then read as an entity, so an
+// author who escaped an entity on purpose gets one ampersand. CommonMark says
+// an escaped character is literal and never the start of a reference, and
+// goldmark's own text writer makes this same single pass. A reference is read
+// by its shape where it begins, and only then handed to the resolvers, because
+// both of them read every "&" in whatever they are given: handed the span up to
+// the next ";", the "&" of "R&D" would resolve an entity further along the line
+// and hand back the escape between them undecoded. The escaped-entity cases of
+// TestContentResolvesEntitiesAndBackslashEscapes are the pin.
+//
+// A decoded character the document cannot take is refused, and two kinds are.
+// A character the Docs API strips out of an inserted text is the first:
+// docsreq.Strippable names them, and BlockBatch counts every index it sends
+// from the length of this text, so a unit the server drops moves each of them
+// one place and the deleteContentRange of a replace ends inside a paragraph
+// nobody quoted. A line break is the second: Docs makes a paragraph of a
+// newline and a soft break of a vertical tab, so one written as "&#10;" would
+// arrive as a paragraph the block never proposed, styled and bulleted as part
+// of the one in front of it. Both are refused where the markdown spelling of
+// the same thing is, because a decoded character is as invisible in the file as
+// a pasted one. The three decoded-character cases and the two raw ones of
+// TestContentRefusesWhatTheSubsetDoesNotHold and
+// TestStrippableNamesTheCharactersTheAPIRemoves in internal/docsreq are the
+// pins. internal/cover refuses the same set in a fields file, for the same
+// reason and through the same function.
 //
 // goldmark is configured with the GFM extensions and nothing else. GFM is on so
 // that a table, a struck-out word and a task list are parsed and refused by
@@ -214,13 +263,21 @@
 // There is no paragraph to go in front of there, so the text goes in before the
 // body's final newline and the block's last paragraph inherits that mark:
 // MEASURED.md row 7, which came back with one id because nothing restated that
-// paragraph. Two cases are refused there by name. A block whose last paragraph
-// is not plain body text, because restyling the final mark is the unmeasured
-// second-id case. And a document whose last paragraph is a list item, because
-// the block would take its bullet and clearing a bullet on the mark-owning
-// paragraph is MEASURED.md row 4, the one measured case that gave two ids. Both
-// messages say what would work instead, and Nail can widen either after a
-// measurement. TestAfterTheLastParagraphGoesBeforeTheFinalNewline and three
+// paragraph. BlockBatch restates nothing on it either, neither the named style
+// nor the bullet removal, which is what keeps this shape the measured one:
+// TestBlockBatchAfterTheLastParagraphRestatesNothingOnTheFinalMark is the pin.
+//
+// That leaves the block's last paragraph taking whatever the mark already
+// carries, so three cases are refused there by name. A block whose last
+// paragraph is not plain body text, because restyling the final mark is the
+// unmeasured second-id case. A document whose last paragraph is a list item,
+// because the block would take its bullet and clearing a bullet on the
+// mark-owning paragraph is MEASURED.md row 4, the one measured case that gave
+// two ids. And a document whose last paragraph carries any other named style,
+// because the block's plain last paragraph would arrive as that style, and
+// restating the mark to stop it is the unmeasured case again. Every message
+// says what would work instead, and Nail can widen any of them after a
+// measurement. TestAfterTheLastParagraphGoesBeforeTheFinalNewline and four
 // cases of TestPlaceRefusesWhatItCannotPlaceAndNamesIt are the pins.
 //
 // # A replace never deletes somebody else's work, and never deletes what it cannot see
@@ -300,8 +357,9 @@
 // The reason is the one rule both kinds ask, because both kinds write it into a
 // thread as Prefix + Why. Everything else Check asks is the kind's own: the
 // words kind's quote and replacement, and the block's placement form, its
-// content and that content's ceiling. TestCheckRefusesEachBadBlockByName is the
-// block's half of this rule, over the same reason cases.
+// content read through ParseContent, and that content's ceiling.
+// TestCheckRefusesEachBadBlockByName is the block's half of this rule, over the
+// same reason cases.
 //
 // # One batch per proposal, three requests inside it
 //
@@ -465,19 +523,44 @@
 // TestVerifyBlockCatchesANewParagraphThatIsNotSuggested and
 // TestVerifyBlockCatchesAReplaceThatDeletedNothing are the pins.
 //
-// preview_without_suggestions asks two questions, and an after block rests on the
-// second. The paragraphs the placement stood on are still in the preview, because
-// a direct edit of a replace takes them out and a suggested deletion leaves them.
-// Then the block's first line is not, because a direct edit of an after block
-// leaves the anchor alone and writes the new paragraphs in as text. That second
-// question is asked by words, like the words kind's, so it can only ever answer
-// false rather than accuse: the line may be there because the block was written
-// as an edit, or because the document already carried that line elsewhere. Those
-// two cannot be told apart from here, so the check is false with a warning naming
-// both readings. Passing instead would report the silent direct edit, which is the
-// one thing this route exists to catch, as a route that held.
-// TestVerifyBlockCatchesADirectEditInThePreview and
-// TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine are the pins.
+// preview_without_suggestions asks two questions. The paragraphs the placement
+// stood on are still in the preview, because a direct edit of a replace takes
+// them out and a suggested deletion leaves them. Then the block's first new line
+// is not, because the preview hides an insertion and shows a direct edit's
+// written text. That second question is asked by words, like the words kind's,
+// so it can only ever answer false rather than accuse: the line may be there
+// because the block was written as an edit, or because the document already
+// carried that line elsewhere. Those two cannot be told apart from here, so the
+// check is false with a warning naming both readings. Passing instead would
+// report the silent direct edit, which is the one thing this route exists to
+// catch, as a route that held.
+//
+// The first question cannot answer alone, because Carries asks by substring: a
+// replace whose new content carries the old paragraphs inside it answers it
+// after a direct edit too. It is the shape the words kind asks its own second
+// question for, one file over, and the reason is the same. So the line the
+// second question asks about is the block's first line the placement was not
+// already standing on: its own first line for an after block unless the anchor
+// carries it, and for a replace the first line the old paragraphs do not
+// already carry. That is what keeps the commonest block there is verifiable, a
+// section rewritten under its own heading, whose opening line is one the
+// replace itself covers. Skipping a line costs nothing, because a direct edit
+// writes the whole block and any line of it answers for all of them.
+//
+// A block with no line left to ask about is where the first question has to
+// hold alone, and it can do that only when the content drops a paragraph the
+// placement stood on: that is the replace that only shortens, and a direct edit
+// of it takes the dropped paragraph out. A replace that says every old
+// paragraph again, a list conversion or a reorder, gives the first question
+// nothing to catch, and an after block gives it nothing ever, because a direct
+// edit there leaves the anchor where it was. Both answer no answer rather than
+// passing. TestVerifyBlockCatchesADirectEditInThePreview,
+// TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine,
+// TestVerifyBlockGivesNoAnswerWhenAReplaceKeepsEveryOldParagraph,
+// TestVerifyBlockGivesNoAnswerWhenAReplaceOnlyReshapes,
+// TestVerifyBlockGivesNoAnswerWhenAnAfterBlockSaysNothingNew,
+// TestVerifyBlockHoldsWhenAReplaceOnlyShortens and
+// TestVerifyBlockHoldsForAReplaceThatKeepsItsFirstLine are the pins.
 //
 // docx_anchored is the words kind's own check, unchanged: the export carries the
 // robot comment and it is attached to text.
@@ -492,6 +575,14 @@
 // those ids are how somebody finishes the job by hand: the first is the one the
 // note records and the one withdraw will take back, and the warning says so.
 // TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw is the pin.
+//
+// The ids this reads are an insertion's and a deletion's, which is what the
+// batch can make and what internal/docs decodes. A style change on a paragraph
+// the document already had would be an id under a key neither reads, and the
+// one paragraph a block ever shares is the final mark at the end of a document,
+// which the batch restates nothing on. TestLiveProposeBlock asks that case
+// again with the probe's wider walk, across every suggested key, because on a
+// live run it is Google's answer rather than gdoc's request that decides it.
 //
 // # docx_anchored gives no answer when two comments disagree
 //

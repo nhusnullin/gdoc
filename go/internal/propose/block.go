@@ -8,6 +8,7 @@
 package propose
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -18,6 +19,9 @@ import (
 	"github.com/yuin/goldmark/extension"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
+
+	"gdoc/internal/docsreq"
 )
 
 // NormalStyle is the named style a paragraph of body text takes, and the style
@@ -215,6 +219,113 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 	}
 }
 
+// maxReference is the longest an entity reference can be, in bytes, counted
+// from its "&" to its ";". The longest name HTML5 has is the thirty-one
+// characters of "CounterClockwiseContourIntegral", and a numeric reference is
+// shorter than that. A "&" whose name runs past this many bytes without a ";"
+// is an ampersand somebody wrote, and it is left alone.
+const maxReference = 33
+
+// decodeText is one text segment as markdown says it reads, rather than as the
+// author had to type it.
+//
+// goldmark leaves a backslash escape and an entity reference in the source and
+// resolves both in its HTML renderer, because there they are already correct.
+// Written into a Docs insertText they are not: "R&amp;D" would arrive as five
+// characters nobody wrote, and "snake\_case" would keep its backslash. Every
+// read-back compares against this same text, so nothing downstream would catch
+// it.
+//
+// It is one left-to-right pass rather than the order goldmark's util.URLEscape
+// chains the three resolvers in, which unescapes the whole segment first and
+// reads the references out of what is left. Chained that way the backslash
+// comes off "\&amp;" and the five characters behind it are then read as an
+// entity, so an author who escaped an entity on purpose gets one ampersand.
+// CommonMark says an escaped character is literal and never the start of a
+// reference, and goldmark's own text writer makes the single pass this one
+// makes. A link's destination is read through here too, because the spec reads
+// an escape the same way on both sides of the brackets.
+//
+// internal/body does the entity half for the same reason, one file over. The
+// escape half is this package's alone: body renders through goldmark's own
+// walker for the marks, and this one reads the segments itself.
+func decodeText(segment []byte) string {
+	var b strings.Builder
+	for at := 0; at < len(segment); {
+		c := segment[at]
+		switch {
+		case c == '\\' && at+1 < len(segment) && util.IsPunct(segment[at+1]):
+			b.WriteByte(segment[at+1])
+			at += 2
+		case c == '&':
+			decoded, width := reference(segment[at:])
+			if width == 0 {
+				b.WriteByte(c)
+				at++
+				continue
+			}
+			b.Write(decoded)
+			at += width
+		default:
+			b.WriteByte(c)
+			at++
+		}
+	}
+	return b.String()
+}
+
+// reference is the entity or numeric character reference at the front of s and
+// how many bytes of s it took, or no bytes at all when what is there is not
+// one.
+//
+// The shape is read here and the meaning is goldmark's: referenceWidth says
+// where the reference at the front ends, and the two resolvers say whether
+// that is a reference the spec knows. The shape has to be read first, because
+// both resolvers scan whatever they are handed for every "&" in it rather than
+// the one at its front. Handed the whole span up to the next ";", they would
+// resolve a reference further along it and hand back the bytes in between as
+// they stand, escapes and all, which is the single left-to-right pass gone: in
+// "R&D costs\* are &lt; 5%" the "&" of "R&D" would swallow the backslash and
+// the "&lt;" behind it.
+func reference(s []byte) ([]byte, int) {
+	width := referenceWidth(s)
+	if width == 0 {
+		return nil, 0
+	}
+	token := s[:width]
+	decoded := util.ResolveEntityNames(util.ResolveNumericReferences(token))
+	if bytes.Equal(decoded, token) {
+		return nil, 0
+	}
+	return decoded, len(token)
+}
+
+// referenceWidth is how many bytes the reference shape at the front of s takes,
+// its "&" and its ";" counted, and none when what is at the front is not that
+// shape. It reads the shape the spec allows and nothing about the meaning: a
+// name that is one HTML5 has, and a code point that is one a character can be,
+// are the resolvers' own answers.
+func referenceWidth(s []byte) int {
+	if len(s) == 0 || s[0] != '&' {
+		return 0
+	}
+	at, inside := 1, util.IsAlphaNumeric
+	if at < len(s) && s[at] == '#' {
+		at, inside = at+1, util.IsNumeric
+		if at < len(s) && (s[at] == 'x' || s[at] == 'X') {
+			at, inside = at+1, util.IsHexDecimal
+		}
+	}
+	start := at
+	for at < len(s) && at < maxReference && inside(s[at]) {
+		at++
+	}
+	if at == start || at >= len(s) || at >= maxReference || s[at] != ';' {
+		return 0
+	}
+	return at + 1
+}
+
 // marks is what an inline node hands down to the text inside it.
 type marks struct {
 	bold   bool
@@ -224,19 +335,48 @@ type marks struct {
 
 // runs flattens a paragraph's inline tree into runs, one stretch per set of
 // marks, and refuses every inline construct the subset does not carry.
+//
+// Two characters are refused here rather than written, and both are decoded
+// ones: a reference or an escape puts into a run what the author could not type
+// into it, so "&#12;" is five characters in the file and a form feed in the
+// document.
+//
+// A character the Docs API strips out of an inserted text is the first.
+// docsreq.Strippable says which they are and what they cost, and BlockBatch is
+// the caller that pays it: every index it names is counted from the length of
+// this text, so a unit the server drops puts each of them one place out.
+//
+// A line break is the second. Docs makes a paragraph of a newline and a soft
+// break of a vertical tab, so one written this way would arrive as a paragraph
+// the block never proposed, styled and counted as part of the one in front of
+// it. appendRuns refuses the markdown spelling of the same thing a few lines
+// up, and this is that rule held over the spelling it cannot see.
 func (w *blockWalk) runs(node ast.Node) ([]Run, error) {
 	var out []Run
 	if err := w.appendRuns(&out, node, marks{}); err != nil {
 		return nil, err
 	}
-	return mergeRuns(out), nil
+	out = mergeRuns(out)
+	for _, r := range out {
+		if at := strings.IndexAny(r.Text, "\n\r\v"); at >= 0 {
+			return nil, w.refuseAt(w.inlineLine(node), fmt.Sprintf(
+				"the words carry U+%04X, a line break: a line break inside a paragraph is not something a block proposes, and an empty line makes the next paragraph",
+				[]rune(r.Text[at:])[0]))
+		}
+		if bad, found := docsreq.Strippable(r.Text); found {
+			return nil, w.refuseAt(w.inlineLine(node), fmt.Sprintf(
+				"the words carry U+%04X, which the Docs API strips out of an inserted text: "+
+					"gdoc counts the characters it sends to place everything after them, so take it out and write the block again", bad))
+		}
+	}
+	return out, nil
 }
 
 func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks) error {
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 		switch typed := child.(type) {
 		case *ast.Text:
-			*out = append(*out, Run{Text: string(typed.Segment.Value(w.source)),
+			*out = append(*out, Run{Text: decodeText(typed.Segment.Value(w.source)),
 				Bold: m.bold, Italic: m.italic, Link: m.link})
 			// A wrapped line is a space: a paragraph is a paragraph because of
 			// the empty line between two of them.
@@ -264,7 +404,12 @@ func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks) error {
 				return err
 			}
 		case *ast.Link:
-			dest := string(typed.Destination)
+			// The destination is a source segment like the words are, so it
+			// carries the same entity references and backslash escapes, and a
+			// link written raw would open an address nobody typed. It is read
+			// by the same pass, because CommonMark reads an escape the same way
+			// inside a destination as it does in the words.
+			dest := decodeText(typed.Destination)
 			if !isAddress(dest) {
 				return w.refuseAt(w.inlineLine(typed), fmt.Sprintf(
 					"the link to %q is not an address a document can open; write the full address, or drop the link and keep the words", dest))

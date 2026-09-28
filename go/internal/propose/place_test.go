@@ -192,6 +192,13 @@ func TestPlaceRefusesWhatItCannotPlaceAndNamesIt(t *testing.T) {
 			says: []string{"list item", "bullet"},
 		},
 		{
+			name: "a last paragraph that is itself a heading",
+			place: func(t *testing.T) (Placement, error) {
+				return PlaceAfter(document(t, "block-last-is-heading.json"), "operations lead", plainBlock(t))
+			},
+			says: []string{"HEADING_2", "final mark"},
+		},
+		{
 			name: "a replace whose quotes are the wrong way round",
 			place: func(t *testing.T) (Placement, error) {
 				return PlaceReplace(document(t, "block-body.json"), "risk matrix", "reviewed annually")

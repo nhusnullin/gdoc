@@ -9,20 +9,28 @@ package live
 // on a real document. It is here rather than in live_test.go because that file
 // is M3's and M4's and is already over 700 lines.
 //
-// Two things nothing else has measured run through it. A numbered list in
+// Three things nothing else has measured run through it. A numbered list in
 // SUGGEST mode was never sent before this test, and the bullet the new text
 // inherits is cleared here rather than in a hand-written batch: the replace
 // begins at a list item, so the paragraphs going in front of it arrive
-// bulleted unless deleteParagraphBullets holds.
+// bulleted unless deleteParagraphBullets holds. The third is the end of the
+// document, where the block's last paragraph owns the body's existing final
+// mark: MEASURED.md row 7 sent that as a hand-written batch, and this is the
+// production batch, which restates nothing on that mark.
 //
 // Everything is asserted rather than logged. The unit tests already cover a
 // route that did not hold, and what this run is for is Google agreeing with
-// all three, twice, and the document coming back the way it started once both
-// proposals are withdrawn.
+// all three, three times, and the document coming back the way it started once
+// every proposal is withdrawn. The end-of-document case is asked one question
+// more: every suggestion id the document gained, under every key Docs records
+// one under, because the mark that block shares with the document is the one
+// place a second id could come from and propose's own walk does not read those
+// keys.
 
 import (
 	"context"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -83,12 +91,28 @@ const (
 		"- It opens with a paragraph rather than with a list item.\n" +
 		"- It says the same thing in fewer words.\n"
 	blockReplaceWhy = "The two paragraphs it stands in for say the same thing twice, and one of them is a list item for no reason."
+
+	// The block after the document's own last paragraph: the one placement
+	// whose last new paragraph owns the body's existing final mark rather
+	// than a mark of its own. MEASURED.md row 7 measured that shape with a
+	// hand-written batch; this sends it through the production writer, whose
+	// batch restates nothing on that mark and whose placement refuses an
+	// anchor that is a list item or a heading. The content ends in a plain
+	// paragraph because the placement requires it, and its first line is
+	// nowhere else in the document, which is what the preview read-back needs
+	// to answer at all.
+	blockAtEndQuoted  = "nothing in this test touches"
+	blockAtEndContent = "Whoever keeps the register answers for what is in it.\n" +
+		"\n" +
+		"That is the **one** sentence this document never says anywhere.\n"
+	blockAtEndWhy = "The document names no owner for the register, and the last paragraph is where a reader looks for one."
 )
 
-// TestLiveProposeBlock proposes a block after a paragraph and a block in place
-// of two paragraphs, asserts both landed as one pending suggestion with all
-// three read-backs holding, withdraws each, and reads the document back
-// character for character what it was before.
+// TestLiveProposeBlock proposes a block after a paragraph, a block in place of
+// two paragraphs and a block after the document's own last paragraph, asserts
+// each landed as one pending suggestion with all three read-backs holding,
+// withdraws them, and reads the document back character for character what it
+// was before.
 //
 // Every document it touches is one it created. The policy has one door open,
 // AllowCreateIn on the folder, so the subject document is reachable only
@@ -146,16 +170,33 @@ func TestLiveProposeBlock(t *testing.T) {
 		Why:         blockReplaceWhy,
 	})
 
-	// The replace goes back first. Nothing requires that order, and it is the
-	// one a person would take: the last change made is the first one undone.
-	withdrawBlocks(t, ctx, p, s, docID, []propose.Result{replace, after})
+	// The end of the document is the one placement whose last new paragraph
+	// owns a mark the document already had, and that is the mark a second
+	// suggestion id would come from. propose's own walk cannot see one: it
+	// reads the insertion and deletion ids on the runs, and a style change on
+	// that mark is recorded under a suggested key of its own. So this one
+	// proposal is measured with the probe's wider walk, across every key,
+	// which is the question this case exists to ask.
+	idsBefore := blockSuggestionIDs(t, ctx, s, docID, "before the block after the last paragraph")
+	atEnd := proposeBlock(t, ctx, s, docID, "the block after the last paragraph", propose.Proposal{
+		Kind:    propose.KindBlock,
+		After:   blockAtEndQuoted,
+		Content: blockAtEndContent,
+		Why:     blockAtEndWhy,
+	})
+	blockAddedOneID(t, "the block after the last paragraph", idsBefore,
+		blockSuggestionIDs(t, ctx, s, docID, "after the block after the last paragraph"), atEnd)
 
-	if got := blockBodyText(t, ctx, s, docID, "after both withdrawals"); got != before {
-		t.Errorf("the document does not read as it did before the two blocks were proposed:\nbefore %q\nafter  %q", before, got)
+	// They go back in the order a person would take: the last change made is
+	// the first one undone.
+	withdrawBlocks(t, ctx, p, s, docID, []propose.Result{atEnd, replace, after})
+
+	if got := blockBodyText(t, ctx, s, docID, "after all three withdrawals"); got != before {
+		t.Errorf("the document does not read as it did before the three blocks were proposed:\nbefore %q\nafter  %q", before, got)
 	}
 }
 
-// blockSubject makes the document the two proposals are written into: the five
+// blockSubject makes the document the three proposals are written into: the five
 // paragraphs above, the third of them a real list item, and the trash that runs
 // whatever happens next.
 //
@@ -263,7 +304,53 @@ func proposeBlock(t *testing.T, ctx context.Context, s *gapi.Session, docID, nam
 	return result
 }
 
-// withdrawBlocks takes both proposals back, through the same provenance the
+// blockSuggestionIDs is every distinct suggestion id the document carries,
+// under every key Docs records one under rather than the two propose reads.
+// collectIDs is the block probe's own walk, and it is borrowed here rather
+// than written again.
+func blockSuggestionIDs(t *testing.T, ctx context.Context, s *gapi.Session, docID, when string) map[string]bool {
+	t.Helper()
+	d, err := readInline(ctx, s, docID)
+	if err != nil {
+		t.Fatalf("the document %q could not be read raw %s: %v", docID, when, err)
+	}
+	found := map[string][]string{}
+	collectIDs(d, found)
+	out := map[string]bool{}
+	for _, ids := range found {
+		for _, id := range ids {
+			out[id] = true
+		}
+	}
+	t.Logf("%s: %s", when, fmtIDs(found))
+	return out
+}
+
+// blockAddedOneID says one proposal left exactly one suggestion id behind,
+// counted across every suggested key, and that it is the id the note records.
+//
+// One id is the promise the note rests on, and the count propose reports
+// answers it only for the ids it reads. A suggested style change on a mark the
+// document already had would be a second id this comparison sees and that one
+// does not.
+func blockAddedOneID(t *testing.T, name string, before, after map[string]bool, result propose.Result) {
+	t.Helper()
+	var added []string
+	for id := range after {
+		if !before[id] {
+			added = append(added, id)
+		}
+	}
+	sort.Strings(added)
+	if len(added) != 1 {
+		t.Fatalf("%s left %d suggestion ids behind across every suggested key (%v), and a block is one: a second id is a block withdraw cannot take back whole", name, len(added), added)
+	}
+	if len(result.SuggestionIDs) == 0 || added[0] != result.SuggestionIDs[0] {
+		t.Errorf("%s left the id %q behind and the note records %v", name, added[0], result.SuggestionIDs)
+	}
+}
+
+// withdrawBlocks takes every proposal back, through the same provenance the
 // command uses: each id is recorded into a note's front matter by propose.Record
 // and read back by frontmatter.Read, so the run proves the memory as well as the
 // write. A note that never named an id is a withdrawal the package refuses, and

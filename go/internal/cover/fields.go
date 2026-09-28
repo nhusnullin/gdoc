@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"gdoc/internal/docsreq"
 )
 
 // fieldsFileWhere names the file ReadFields looked for a title in, so the one
@@ -188,13 +190,8 @@ func fieldsRevisions(rows []revisionRow) ([]Revision, error) {
 }
 
 // checkStrippable refuses a value carrying a character the Docs API removes
-// from an insert, naming the key it is in.
-//
-// InsertTextRequest says which ones in its own words: "Some control characters
-// (U+0000-U+0008, U+000C-U+001F) and characters from the Unicode Basic
-// Multilingual Plane Private Use Area (U+E000-U+F8FF) will be stripped out of
-// the inserted text." U+0009, the tab, is not among them, which is why the
-// house legend can write one.
+// from an insert, naming the key it is in. Which characters those are, and the
+// API's own words for them, are docsreq.Strippable.
 //
 // It is refused here rather than left to the writer because of what a stripped
 // character costs. internal/prelude computes every index it names itself, from
@@ -275,13 +272,13 @@ func checkStrippableRow(where string, row revisionRow) error {
 }
 
 // strippable is one value, and the refusal names the key and the code point.
+// Which characters those are is docsreq's, because internal/propose asks the
+// same question of a proposal and one copy of the set is one place to fix.
 func strippable(key, written string) error {
-	for _, r := range written {
-		if (r <= 0x08) || (r >= 0x0C && r <= 0x1F) || (r >= 0xE000 && r <= 0xF8FF) {
-			return fmt.Errorf(
-				"%s carries U+%04X, which the Docs API strips out of an inserted text: "+
-					"gdoc counts the characters it sends to place everything after them, so take it out and run this again", key, r)
-		}
+	if r, found := docsreq.Strippable(written); found {
+		return fmt.Errorf(
+			"%s carries U+%04X, which the Docs API strips out of an inserted text: "+
+				"gdoc counts the characters it sends to place everything after them, so take it out and run this again", key, r)
 	}
 	return nil
 }

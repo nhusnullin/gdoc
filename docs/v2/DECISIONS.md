@@ -2819,12 +2819,15 @@ marks are written.
 **After the last paragraph there is no paragraph to insert in front of.** The
 text goes in before the body's final newline, as a newline and then the content
 without its trailing newline, so the last new paragraph owns the final mark.
-Two cases are refused there by name. A block whose last paragraph is not plain
-body text, because restyling that final mark is the unmeasured second-id case.
-And a last paragraph that is a list item, because clearing an inherited bullet
-on the mark-owning paragraph is the one measured case that gave two ids. Both
-messages say what would work instead. Either can be widened after a
-measurement, which is Nail's call.
+Nothing in the batch restates that mark, which is what row 7 measured, so
+three cases are refused there by name. A block whose last paragraph is not
+plain body text, because restyling that final mark is the unmeasured second-id
+case. A last paragraph that is a list item, because clearing an inherited
+bullet on the mark-owning paragraph is the one measured case that gave two ids.
+And a last paragraph carrying any other named style, because the block's own
+last paragraph would then arrive as a heading, and restating the mark to stop
+that is the same unmeasured case. Every message says what would work instead.
+Any of them can be widened after a measurement, which is Nail's call.
 
 **A replace over somebody's work is refused, and every id is named.** When the
 paragraphs a replace would delete hold a pending suggestion or a comment's
@@ -2846,12 +2849,32 @@ The read-backs are the ones every write already has, on routes the write did
 not go out on. The inline suggestions read must show the insertion id on every
 new paragraph, and for a replace a deletion id on every old one. The preview
 read without suggestions must still show the anchor, or the replaced run,
-exactly as it was, and must not hold the block's first line, which is the
+exactly as it was, and must not hold the block's first new line, which is the
 direct-edit catch. The docx export must show the robot comment anchored to
-text. A first line that already appears elsewhere in the document makes the
-preview check answer "no answer" rather than a pass.
+text. A line that already appears elsewhere in the document makes the preview
+check answer "no answer" rather than a pass.
 
-Tests: the milestone plan `docs/plans/20260927-propose-block.md` names one per
-rule, from `TestABlockProposalNeedsNoGrant` at the guard to
+The first new line is the block's own first line for an `after` block, and for
+a replace the first line the replaced paragraphs did not already carry. A
+replace is asked the question too, because the first question asks by
+substring: a direct edit whose new paragraphs carry the old ones inside them
+leaves every replaced paragraph findable in the preview, and the route would
+pass on the silent direct edit it exists to catch. It is the same shape the
+words kind asks its own second question for. Asking instead about a line the
+replaced run already carried would fail the commonest block there is, a section
+rewritten under its own heading. A skipped line costs the check nothing,
+because a direct edit writes the whole block and any line of it answers for all
+of them.
+
+A block with no new line left to ask about holds on the first question alone
+only when its content drops a paragraph the placement stood on, which is the
+replace that only shortens: a direct edit of that one takes the dropped
+paragraph out. A replace that says every old paragraph again, a list conversion
+or a reorder, and an after block, whose anchor a direct edit leaves alone, give
+the first question nothing to catch, so both answer "no answer" rather than
+passing.
+
+Tests: the milestone plan `docs/plans/completed/20260927-propose-block.md` names
+one per rule, from `TestABlockProposalNeedsNoGrant` at the guard to
 `TestLiveProposeBlock` in the live package. `propose/doc.go` names the subset
 and each refusal with the test that pins it.

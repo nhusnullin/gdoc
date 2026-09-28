@@ -114,7 +114,12 @@ suggestion id, so `withdraw` takes it back whole.
 batch past that is a body the guard cannot read, and a caller told about the
 guard's peek has nothing to act on. Everything else is refused by name: a table,
 a nested list, a picture, a code block, a block quote, raw HTML, a thematic break
-and empty content.
+and empty content. Two characters are refused in whichever spelling they arrive
+in, written or as an entity reference such as `&#12;`: one the Docs API strips
+out of an inserted text, because gdoc counts what it sends to place everything
+after it, and a line break inside a paragraph, because Docs would make a
+paragraph of it that the block never proposed. An empty line is still how the
+next paragraph starts.
 
 The placement refusals are the other half, and each says what would work:
 
@@ -126,14 +131,19 @@ The placement refusals are the other half, and each says what would work:
 | a replace whose paragraphs hold a pending suggestion or a comment's anchor | the deletion would take a colleague's work with it, so every suggestion id and comment id is named |
 | a replace reaching the body's last paragraph | Docs cannot delete the final newline |
 | an `after` or a replace running into a table, the contents list or a section break | there is no paragraph start to insert at, and a deletion would take the table with it |
-| an `after` on the last paragraph when the block does not end in a plain paragraph, or when that paragraph is a list item | there the last new paragraph owns the existing final mark, and restyling it is a second suggestion |
+| an `after` on the last paragraph when the block does not end in a plain paragraph, or when that paragraph is a list item or a heading | there the last new paragraph owns the existing final mark, and restyling it is a second suggestion |
 
 The read-backs are the words kind's three, asking the block's question. The
 inline read wants the insertion id on every new paragraph, and a deletion id on
 every replaced one. The preview read wants the anchor or the replaced run still
-reading as it was, without the block's first line: that is the direct-edit catch,
-and when the first line already appears elsewhere in the document the check
-answers "no answer" rather than passing. The docx export wants the robot comment
+reading as it was, and the block's first new line nowhere in that reading: that
+is the direct-edit catch, and when that line already appears elsewhere in the
+document the check answers "no answer" rather than passing. The first new line
+is the block's own first line after an `after`, and for a replace the first line
+the replaced paragraphs did not already carry, so a rewritten section keeping
+its own heading still verifies. A block that says nothing new at all, a list
+conversion or a reorder, leaves the check no line to ask about, so it answers
+"no answer" as well. The docx export wants the robot comment
 anchored to text. More than one suggestion id is reported in full and is
 `verified: false`, with a warning that `withdraw` takes back only the one the
 note records.

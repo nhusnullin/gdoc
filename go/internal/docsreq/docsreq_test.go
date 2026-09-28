@@ -106,3 +106,30 @@ func TestAMaskNamesExactlyWhatTheFieldsSet(t *testing.T) {
 		t.Errorf("the object sets %d values and the mask names 2", len(f.Set))
 	}
 }
+
+// TestStrippableNamesTheCharactersTheAPIRemoves states each boundary as a
+// literal rather than reading the constant it checks, the way a house-style
+// test does: a set that moves has to be read against the API's own sentence
+// again, not against whatever the code now says.
+func TestStrippableNamesTheCharactersTheAPIRemoves(t *testing.T) {
+	removed := []rune{0x0000, 0x0008, 0x000C, 0x001F, 0xE000, 0xF8FF}
+	for _, r := range removed {
+		if got, found := Strippable("before" + string(r) + "after"); !found || got != r {
+			t.Errorf("Strippable() over U+%04X = U+%04X, %v, want that character and true", r, got, found)
+		}
+	}
+	// The tab, the newline and the vertical tab are not in the API's list, and
+	// U+F900 is the first code point past the private use area.
+	kept := []rune{0x0009, 0x000A, 0x000B, 0x0020, 0xF900, '£', '😀'}
+	for _, r := range kept {
+		if got, found := Strippable("before" + string(r) + "after"); found {
+			t.Errorf("Strippable() over U+%04X = U+%04X, true, and the API keeps that character", r, got)
+		}
+	}
+	if _, found := Strippable(""); found {
+		t.Error("Strippable() found a character in nothing at all")
+	}
+	if got, _ := Strippable("one \u0001 two \u0002"); got != 0x0001 {
+		t.Errorf("Strippable() = U+%04X, want the first one it met", got)
+	}
+}

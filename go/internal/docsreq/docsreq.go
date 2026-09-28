@@ -109,3 +109,30 @@ func (f *Fields) Mask() string { return strings.Join(f.names, ",") }
 // Empty says whether nothing was stated. A request setting nothing is a
 // request that resets nothing, and it is not worth sending.
 func (f *Fields) Empty() bool { return len(f.names) == 0 }
+
+// Strippable is the first character the Docs API removes from an inserted
+// text, and whether the string carries one at all.
+//
+// InsertTextRequest says which ones in its own words: "Some control characters
+// (U+0000-U+0008, U+000C-U+001F) and characters from the Unicode Basic
+// Multilingual Plane Private Use Area (U+E000-U+F8FF) will be stripped out of
+// the inserted text." U+0009, the tab, is not among them, which is why the
+// house legend can write one.
+//
+// It is a shape of a request rather than one caller's rule, because every
+// caller that inserts text computes what comes after it from the length of
+// what it is about to send. A unit Docs drops puts each of those one place
+// out. The loud outcome is Docs refusing the whole batch for an index that is
+// inside no paragraph, which is what a missing table unit did to the prelude
+// on 2026-09-10. The quiet one is worse: where the wrong index is still valid,
+// the text lands one short, and a range built behind it marks a character
+// somebody else wrote. internal/cover asks this of a fields file and
+// internal/propose of a proposal, and both refuse rather than send.
+func Strippable(s string) (rune, bool) {
+	for _, r := range s {
+		if r <= 0x08 || (r >= 0x0C && r <= 0x1F) || (r >= 0xE000 && r <= 0xF8FF) {
+			return r, true
+		}
+	}
+	return 0, false
+}

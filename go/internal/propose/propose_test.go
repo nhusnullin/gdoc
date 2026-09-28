@@ -296,6 +296,12 @@ func TestCheckRefusesEachBadProposalByName(t *testing.T) {
 		// the precondition it was written against.
 		{"replacement with a newline", Proposal{Quoted: "a", Replacement: "b\nc", Why: "d"}, "line break"},
 		{"replacement with a carriage return", Proposal{Quoted: "a", Replacement: "b\rc", Why: "d"}, "line break"},
+		// Batch anchors the comment on the words it inserted, counted from the
+		// replacement's own length. A character Docs strips out of an insert is
+		// one the count has and the document does not, so the anchor reaches
+		// past the replacement into words nobody proposed to change.
+		{"replacement with a private-use character", Proposal{Quoted: "a", Replacement: "b\uf8ffc", Why: "d"}, "U+F8FF"},
+		{"replacement with a control character", Proposal{Quoted: "a", Replacement: "b\u001fc", Why: "d"}, "U+001F"},
 		{"no reason", Proposal{Quoted: "a", Replacement: "b"}, "no reason"},
 		{"markdown reason", Proposal{Quoted: "a", Replacement: "b", Why: "use **six months**"}, "markdown"},
 		{"backtick reason", Proposal{Quoted: "a", Replacement: "b", Why: "the `annually` wording"}, "markdown"},
