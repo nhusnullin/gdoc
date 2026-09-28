@@ -71,14 +71,18 @@ func (c Checks) all() bool { return c.ReadBack && c.OneTab && c.DocxExport }
 // document is found by the name Drive gave it, so that is the fact worth
 // reporting, and the two disagreeing is a warning naming both.
 type Report struct {
-	DocumentID string   `json:"document_id,omitempty"`
-	FolderID   string   `json:"folder_id"`
-	URL        string   `json:"url,omitempty"`
-	Title      string   `json:"title,omitempty"`
-	Tabs       int      `json:"tabs,omitempty"`
-	Verified   bool     `json:"verified"`
-	Checks     Checks   `json:"checks"`
-	Warnings   []string `json:"warnings,omitempty"`
+	DocumentID string `json:"document_id,omitempty"`
+	FolderID   string `json:"folder_id"`
+	URL        string `json:"url,omitempty"`
+	Title      string `json:"title,omitempty"`
+	Tabs       int    `json:"tabs,omitempty"`
+	Verified   bool   `json:"verified"`
+	Checks     Checks `json:"checks"`
+	// Marked says the marker over the cover was written and read back. It is
+	// beside Verified rather than inside it, because an unmarked document is
+	// still the document: mark.go says what it costs.
+	Marked   bool     `json:"marked"`
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // Session is what this package needs of a session: the multipart write the
@@ -91,6 +95,7 @@ type Session interface {
 	GetBytes(ctx context.Context, rawURL string, limit int64) ([]byte, error)
 	PatchJSON(ctx context.Context, rawURL string, body any, into any) error
 	PostMultipart(ctx context.Context, rawURL string, meta any, part []byte, partType string, into any) error
+	PostJSON(ctx context.Context, rawURL string, body any, into any) error
 }
 
 // UploadURL is files.create on the upload route, in the one body shape the
@@ -127,8 +132,16 @@ func Run(ctx context.Context, s Session, o Options) (Report, error) {
 	rep.DocumentID = id
 	rep.URL = DocumentURL(id)
 
-	rep.Checks, rep.Title, rep.Tabs, rep.Warnings = verify(ctx, s, id, o.Title)
+	var d *docs.Document
+	d, rep.Checks, rep.Title, rep.Tabs, rep.Warnings = verify(ctx, s, id, o.Title)
 	rep.Verified = rep.Checks.all()
+	if d == nil || !rep.Checks.OneTab {
+		rep.Warnings = append(rep.Warnings, unmarked("the document could not be read back as one tab, so there was no contents list to mark up to"))
+		return rep, nil
+	}
+	var warns []string
+	rep.Marked, warns = mark(ctx, s, id, d.Tabs[0])
+	rep.Warnings = append(rep.Warnings, warns...)
 	return rep, nil
 }
 
@@ -177,7 +190,7 @@ func create(ctx context.Context, s Session, o Options) (string, error) {
 // verify reads the new document back two ways and reports what each said. It
 // raises nothing: every failure here is a fact about a document that exists,
 // and the caller decides what to tell Nail.
-func verify(ctx context.Context, s Session, id, asked string) (Checks, string, int, []string) {
+func verify(ctx context.Context, s Session, id, asked string) (*docs.Document, Checks, string, int, []string) {
 	var c Checks
 	var title string
 	var tabs int
@@ -217,7 +230,7 @@ func verify(ctx context.Context, s Session, id, asked string) (Checks, string, i
 			c.DocxExport = true
 		}
 	}
-	return c, title, tabs, warns
+	return d, c, title, tabs, warns
 }
 
 // Rollback takes back a document this run published, because the pairing could

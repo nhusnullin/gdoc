@@ -494,7 +494,7 @@ func TestTheStylingSkipsTheSpanThePreludeOccupies(t *testing.T) {
 	whole := TabRequests(tab, cfg)
 
 	// Act: the fixture's first paragraph stands in for the prelude.
-	skipped := TabRequestsExcept(tab, cfg, &Span{Start: 1, End: 40})
+	skipped := TabRequestsExcept(tab, cfg, Span{Start: 1, End: 40})
 
 	// Assert
 	if skipped.Skipped == 0 {
@@ -517,6 +517,36 @@ func TestTheStylingSkipsTheSpanThePreludeOccupies(t *testing.T) {
 	}
 }
 
+// A document can carry two of gdoc's spans at once: publish's cover and a
+// prelude a restyle proposed, or a replaced prelude and its replacement. Each
+// is left alone, and the author's words between them are still styled.
+func TestTheStylingSkipsEverySpanItIsGiven(t *testing.T) {
+	// Arrange
+	tab := fixtureTab(t)
+	cfg := embeddedHouse(t)
+	one := TabRequestsExcept(tab, cfg, Span{Start: 1, End: 40})
+	last := lastParagraph(t, tab)
+
+	// Act
+	two := TabRequestsExcept(tab, cfg, Span{Start: 1, End: 40}, Span{Start: last.StartIndex, End: last.EndIndex})
+
+	// Assert
+	if two.Skipped != one.Skipped+1 {
+		t.Errorf("skipped = %d, want %d: the first span's and the last paragraph", two.Skipped, one.Skipped+1)
+	}
+	for _, req := range two.Requests {
+		for kind, body := range req {
+			b, ok := body.(map[string]any)
+			if !ok {
+				continue
+			}
+			if start := at(b); start == last.StartIndex {
+				t.Errorf("a %s names index %d, which is inside the second span", kind, start)
+			}
+		}
+	}
+}
+
 // No span is the M7b run, and it must be exactly what it was: a styling-only
 // restyle skips nothing and says so.
 func TestNoSpanSkipsNothing(t *testing.T) {
@@ -526,7 +556,19 @@ func TestNoSpanSkipsNothing(t *testing.T) {
 	if plan.Skipped != 0 {
 		t.Errorf("skipped = %d, want nothing left alone on a run with no prelude", plan.Skipped)
 	}
-	if len(plan.Requests) != len(TabRequestsExcept(tab, cfg, nil).Requests) {
+	if len(plan.Requests) != len(TabRequestsExcept(tab, cfg).Requests) {
 		t.Error("TabRequests and TabRequestsExcept with no span must build the same plan")
 	}
+}
+
+// lastParagraph is the last top-level paragraph of a tab.
+func lastParagraph(t *testing.T, tab docs.Tab) *docs.Paragraph {
+	t.Helper()
+	for i := len(tab.Body) - 1; i >= 0; i-- {
+		if p := tab.Body[i].Paragraph; p != nil {
+			return p
+		}
+	}
+	t.Fatal("the fixture holds no top-level paragraph")
+	return nil
 }

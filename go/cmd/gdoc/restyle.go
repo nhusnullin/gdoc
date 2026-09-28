@@ -379,6 +379,14 @@ func applyRestyle(a *args) emit.Result {
 		return proposeThenStyle(ctx, r, *saved, cfg, *fields, d, data)
 	}
 
+	// gdoc's own covers, read before the grant. A marker gdoc cannot read as
+	// one span refuses the run rather than being styled over, because not
+	// knowing where gdoc's words end must never resolve to restyling them.
+	marked, err := markedSpans(d)
+	if err != nil {
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(), Error: err.Error()}
+	}
+
 	// This is the line. It upgrades one document, for this run, from suggest to
 	// direct edit, and it is the widest thing gdoc can be asked to do. Three
 	// things hold it in: the id is the one the caller named and the survey
@@ -386,7 +394,30 @@ func applyRestyle(a *args) emit.Result {
 	// the guard carries only the four styling request kinds at that level, none
 	// of which can change a character. The grant dies with the process.
 	p.GrantInPlace(docID)
-	return styleDocument(ctx, r, *saved, cfg, d.Tabs[0], d.RevisionID, nil, data)
+	return styleDocument(ctx, r, *saved, cfg, d.Tabs[0], d.RevisionID, nil, marked, data)
+}
+
+// markedSpans is every span a gdoc marker covers: publish's cover and any
+// prelude a restyle proposed. A plain restyle walks past all of them, because
+// Drive converts a cover into NORMAL_TEXT and the walk would read it as body
+// prose. DECISIONS.md, 2026-09-27. TestAPlainRestyleWalksPastPublishsCover and
+// TestAPlainRestyleWalksPastAnAcceptedPrelude are the pins.
+func markedSpans(d *docs.Document) ([]restyle.Span, error) {
+	published, err := prelude.Published(d)
+	if err != nil {
+		return nil, err
+	}
+	proposed, err := prelude.Markers(d)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]restyle.Span, 0, len(published)+len(proposed))
+	for _, marks := range [][]prelude.Marker{published, proposed} {
+		for _, m := range marks {
+			out = append(out, restyle.Span{Start: m.Start, End: m.End})
+		}
+	}
+	return out, nil
 }
 
 // proposeThenStyle is the two-phase run: the prelude proposed, the marker
@@ -612,7 +643,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 			skip:   restyle.Span{Start: skipStart, End: skipEnd},
 			before: prelude.AuthorText(d),
 			data:   pre,
-		}, data, append(r.warnings(), warns...)...)
+		}, nil, data, append(r.warnings(), warns...)...)
 }
 
 // acceptOrRejectFirst is the recovery every path between phase 1 landing and
@@ -660,14 +691,16 @@ func dropWarning(warns []string, drop string) []string {
 // styleDocument is phase 2, and on a run with no --fields it is the whole
 // command: the plan, the batches, and the read-back over both phases.
 //
-// one is phase 1, nil on a run that proposed no prelude.
+// one is phase 1, nil on a run that proposed no prelude. marked is the spans
+// gdoc's markers cover on a plain run; a two-phase run has them in one.skip,
+// because Decide refuses publish's marker and phase 1 replaces the other.
 func styleDocument(ctx context.Context, r *reach, saved restyle.Report, cfg *house.Config,
-	tab docs.Tab, revisionID string, one *phaseOne, data restyleData, warns ...string) emit.Result {
-	var skip *restyle.Span
+	tab docs.Tab, revisionID string, one *phaseOne, marked []restyle.Span, data restyleData, warns ...string) emit.Result {
+	skip := marked
 	if one != nil {
-		skip = &one.skip
+		skip = append(skip, one.skip)
 	}
-	plan := restyle.TabRequestsExcept(tab, cfg, skip)
+	plan := restyle.TabRequestsExcept(tab, cfg, skip...)
 	// The page first, because it names no range and a reader comparing a batch
 	// against a log should find the document's own geometry at the top of it.
 	requests := append([]map[string]any{restyle.PageRequest(cfg)}, plan.Requests...)

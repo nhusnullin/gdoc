@@ -13,6 +13,7 @@ import (
 
 	"gdoc/internal/docs"
 	"gdoc/internal/drive"
+	"gdoc/internal/prelude"
 )
 
 const (
@@ -41,6 +42,7 @@ type fakeSession struct {
 	calls   []call
 	create  []byte        // the files.create answer
 	read    []byte        // the documents.get answer
+	marked  []byte        // the documents.get answer once a batchUpdate went out, nil for read
 	export  []byte        // the docx export
 	trashed []byte        // the files.get?fields=trashed answer
 	failAt  map[int]error // fail the nth call, counted from zero
@@ -58,9 +60,32 @@ func (f *fakeSession) GetJSON(_ context.Context, rawURL string, into any) error 
 	switch {
 	case strings.Contains(rawURL, "fields=trashed"):
 		return decodeInto(f.trashed, into)
+	case f.marked != nil && f.sentBatch():
+		return decodeInto(f.marked, into)
 	default:
 		return decodeInto(f.read, into)
 	}
+}
+
+// sentBatch says whether a batchUpdate was asked for before this read.
+func (f *fakeSession) sentBatch() bool {
+	for _, c := range f.calls {
+		if strings.HasSuffix(c.url, ":batchUpdate") {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *fakeSession) PostJSON(_ context.Context, rawURL string, body any, into any) error {
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	if err := f.record(call{method: "POST", url: rawURL, body: raw}); err != nil {
+		return err
+	}
+	return decodeInto(nil, into)
 }
 
 func (f *fakeSession) GetBytes(_ context.Context, rawURL string, _ int64) ([]byte, error) {
@@ -118,6 +143,7 @@ func script(t *testing.T, read string) *fakeSession {
 	return &fakeSession{
 		create:  []byte(`{"id":"` + testDocID + `"}`),
 		read:    fixture(t, read),
+		marked:  fixture(t, "published-marked.json"),
 		export:  aDocx(t),
 		trashed: fixture(t, "trashed.json"),
 		failAt:  map[int]error{},
@@ -159,7 +185,7 @@ type acceptedError struct{ error }
 func (acceptedError) Sent() bool { return true }
 
 func TestAPublishUploadsVerifiesAndReportsTheDocument(t *testing.T) {
-	f := script(t, "published.json")
+	f := script(t, "published-contents.json")
 
 	rep, err := Run(context.Background(), f, options())
 
@@ -187,6 +213,9 @@ func TestAPublishUploadsVerifiesAndReportsTheDocument(t *testing.T) {
 	want := Checks{ReadBack: true, OneTab: true, DocxExport: true}
 	if rep.Checks != want {
 		t.Errorf("Checks = %+v, want %+v", rep.Checks, want)
+	}
+	if !rep.Marked {
+		t.Error("Marked is false on a run whose marker read back")
 	}
 	if len(rep.Warnings) != 0 {
 		t.Errorf("a run where every step answered carried warnings: %v", rep.Warnings)
@@ -429,8 +458,8 @@ func TestAnExportThatNeverArrivedIsNotVerified(t *testing.T) {
 	}
 }
 
-func TestRunSendsTheThreeRequestsInOrder(t *testing.T) {
-	f := script(t, "published.json")
+func TestRunSendsTheRequestsInOrder(t *testing.T) {
+	f := script(t, "published-contents.json")
 
 	if _, err := Run(context.Background(), f, options()); err != nil {
 		t.Fatal(err)
@@ -440,9 +469,11 @@ func TestRunSendsTheThreeRequestsInOrder(t *testing.T) {
 		{method: "POST", url: UploadURL()},
 		{method: "GET", url: docs.URL(testDocID)},
 		{method: "GET", url: "https://www.googleapis.com/drive/v3/files/" + testDocID + "/export?mimeType=application%2Fvnd.openxmlformats-officedocument.wordprocessingml.document"},
+		{method: "POST", url: "https://docs.googleapis.com/v1/documents/" + testDocID + ":batchUpdate"},
+		{method: "GET", url: docs.URL(testDocID)},
 	}
 	if len(f.calls) != len(want) {
-		t.Fatalf("the fake saw %d requests, want %d: the upload, the read-back and the export", len(f.calls), len(want))
+		t.Fatalf("the fake saw %d requests, want %d: the upload, the read-back, the export, the marker and its read-back", len(f.calls), len(want))
 	}
 	for i, w := range want {
 		if f.calls[i].method != w.method || f.calls[i].url != w.url {
@@ -569,5 +600,178 @@ func TestTheReportCarriesTheIDARollbackIsMadeFrom(t *testing.T) {
 	}
 	if f.calls[len(f.calls)-1].url != drive.TrashedURL(testDocID) {
 		t.Errorf("the last request was %q, and a rollback ends on the read that confirms it", f.calls[len(f.calls)-1].url)
+	}
+}
+
+// publish marks its own cover, from index 1 to the end of the one contents
+// list, so a restyle later walks past it. The request is the prelude
+// package's, because the guard and the restyle read that one shape.
+func TestAPublishMarksItsCoverToTheEndOfTheContentsList(t *testing.T) {
+	// Arrange
+	f := script(t, "published-contents.json")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batch []call
+	for _, c := range f.calls {
+		if strings.HasSuffix(c.url, ":batchUpdate") {
+			batch = append(batch, c)
+		}
+	}
+	if len(batch) != 1 {
+		t.Fatalf("the run sent %d batches, want the one marker", len(batch))
+	}
+	want := `{"requests":[{"createNamedRange":{"name":"gdoc:house-published","range":{"endIndex":41,"startIndex":1}}}]}`
+	if string(batch[0].body) != want {
+		t.Errorf("the marker batch = %s, want %s", batch[0].body, want)
+	}
+	if !rep.Marked {
+		t.Errorf("Marked is false on a marker that read back: %v", rep.Warnings)
+	}
+}
+
+// No contents list is no boundary, and a marker ending anywhere else would be
+// a guess about where the note's body starts. So nothing is written, and the
+// warning says what a restyle will then do to the cover.
+func TestADocumentWithNoContentsListIsNotMarked(t *testing.T) {
+	// Arrange
+	f := script(t, "published.json")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.sentBatch() {
+		t.Error("the run sent a marker on a document with no contents list")
+	}
+	if rep.Marked {
+		t.Error("Marked is true on a run that wrote no marker")
+	}
+	if !rep.Verified {
+		t.Errorf("an unmarked document is still the document: Verified = false, %v", rep.Warnings)
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), "contents list") {
+		t.Errorf("warnings = %v, want one naming the missing contents list", rep.Warnings)
+	}
+}
+
+// Nothing trusts a success. A marker batch Docs answered and the read-back does
+// not carry is a document with no marker, and the report says so.
+func TestAMarkerTheReadBackDoesNotCarryIsNotMarked(t *testing.T) {
+	// Arrange
+	f := script(t, "published-contents.json")
+	f.marked = fixture(t, "published-contents.json")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Marked {
+		t.Error("Marked is true on a marker the read-back does not carry")
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), "gdoc:house-published") {
+		t.Errorf("warnings = %v, want one naming the marker", rep.Warnings)
+	}
+}
+
+// A marker batch that failed leaves the document there and correct, only
+// unmarked. It is a warning, never a failed publish: the caller's next move is
+// pairing the note, and an error would lose the id.
+func TestAMarkerBatchThatFailedIsAWarningNotAFailure(t *testing.T) {
+	// Arrange: the fourth call is the marker batch.
+	f := script(t, "published-contents.json")
+	f.failAt[3] = errors.New("503 backend error")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Run() = %v, want the document reported", err)
+	}
+	if rep.DocumentID != testDocID {
+		t.Errorf("DocumentID = %q, want the document that was made", rep.DocumentID)
+	}
+	if rep.Marked {
+		t.Error("Marked is true on a marker batch that failed")
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), "503") {
+		t.Errorf("warnings = %v, want one carrying what went wrong", rep.Warnings)
+	}
+}
+
+// Two contents lists are two candidate boundaries, and picking one is a guess
+// about where gdoc's own cover ends. So there is no boundary, and no marker.
+func TestTwoContentsListsGiveNoCoverEnd(t *testing.T) {
+	// Arrange
+	one := docs.Tab{Body: []docs.Block{{TOC: &docs.TOC{StartIndex: 40, EndIndex: 90}}}}
+	two := docs.Tab{Body: []docs.Block{
+		{TOC: &docs.TOC{StartIndex: 40, EndIndex: 90}},
+		{TOC: &docs.TOC{StartIndex: 200, EndIndex: 260}},
+	}}
+
+	// Act
+	end, ok := coverEnd(one)
+	_, twoOK := coverEnd(two)
+
+	// Assert
+	if !ok || end != 90 {
+		t.Errorf("one contents list ends the cover at its end: got %d, %v", end, ok)
+	}
+	if twoOK {
+		t.Error("two contents lists must give no cover end")
+	}
+}
+
+// A read-back that failed leaves no tab to find a contents list in, so nothing
+// is marked. The warnings still say so, because the restyle risk is the one
+// thing a caller cannot work out from read_back: false alone.
+func TestAReadBackThatFailedStillSaysTheCoverIsUnmarked(t *testing.T) {
+	// Arrange
+	f := script(t, "published-contents.json")
+	f.failAt[1] = errors.New("documents.get answered 500")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Marked {
+		t.Error("Marked is true on a document that was never read back")
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), prelude.PublishedName) {
+		t.Errorf("warnings = %v, want one naming the missing %s marker", rep.Warnings, prelude.PublishedName)
+	}
+}
+
+// A marker batch whose answer was lost may still have landed, so the read-back
+// decides. When it finds the marker, the cover is marked.
+func TestAMarkerBatchSentWithALostAnswerIsDecidedByTheReadBack(t *testing.T) {
+	// Arrange: the fourth call is the marker batch, sent and its answer lost.
+	f := script(t, "published-contents.json")
+	f.failAt[3] = acceptedError{errors.New("the answer is not JSON")}
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rep.Marked {
+		t.Errorf("Marked is false although the read-back carries the marker: %v", rep.Warnings)
 	}
 }

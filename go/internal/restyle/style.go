@@ -83,10 +83,10 @@ type Plan struct {
 	// this run proposed deleting. It is zero on a run that named no span,
 	// which is every M7b restyle.
 	Skipped int
-	// skip is that span, held for the walk. It is not printed: what a caller
-	// reports is how much was left alone, and the range itself is the marker's,
+	// skip is those spans, held for the walk. They are not printed: what a
+	// caller reports is how much was left alone, and each range is a marker's,
 	// which internal/prelude already names.
-	skip *Span
+	skip spans
 }
 
 // Span is a half-open range of one tab's text, [Start, End).
@@ -110,11 +110,21 @@ type Span struct {
 // Nail is being asked to accept. Nothing gdoc proposes can produce one: every
 // paragraph the prelude inserts ends in a newline of its own, so the prelude's
 // last paragraph closes where the author's first begins.
-func (s *Span) covers(start, end int) bool {
-	if s == nil {
-		return false
-	}
+func (s Span) covers(start, end int) bool {
 	return start < s.End && end > s.Start
+}
+
+// spans is every span a walk leaves alone.
+type spans []Span
+
+// covers reports whether a block lying in [start, end) overlaps any of them.
+func (ss spans) covers(start, end int) bool {
+	for _, s := range ss {
+		if s.covers(start, end) {
+			return true
+		}
+	}
+	return false
 }
 
 // houseStyleKey maps a Docs named style to the key house.yaml states it under.
@@ -149,10 +159,15 @@ var houseStyleKey = map[string]string{
 // restyled and whose running head is not comes back saying nothing about it.
 // docs/backlog/restyle-skips-footnotes-headers-and-footers.md is the way out.
 func TabRequests(t docs.Tab, cfg *house.Config) Plan {
-	return TabRequestsExcept(t, cfg, nil)
+	return TabRequestsExcept(t, cfg)
 }
 
-// TabRequestsExcept is TabRequests over everything but one span.
+// TabRequestsExcept is TabRequests over everything but the spans it is given.
+//
+// There can be more than one. A plain restyle walks past every marker the
+// document carries, which is publish's cover and any prelude a restyle
+// proposed, and a document can hold both kinds.
+// TestTheStylingSkipsEverySpanItIsGiven is the pin.
 //
 // The span is gdoc's own words, and on a replace run it is two preludes rather
 // than one: the one the phase before this one proposed, and the one an earlier
@@ -170,9 +185,9 @@ func TabRequests(t docs.Tab, cfg *house.Config) Plan {
 // the styling phase walks past all of it, and reports how many blocks it left
 // alone.
 //
-// A nil span is TabRequests, unchanged, which is every restyle that proposed no
-// prelude.
-func TabRequestsExcept(t docs.Tab, cfg *house.Config, skip *Span) Plan {
+// No span is TabRequests, unchanged, which is a restyle of a document gdoc
+// has not marked.
+func TabRequestsExcept(t docs.Tab, cfg *house.Config, skip ...Span) Plan {
 	p := &Plan{skip: skip}
 	unknown := map[string]bool{}
 	p.walk(t.Body, cfg, unknown, false)

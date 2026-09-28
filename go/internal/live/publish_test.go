@@ -125,6 +125,11 @@ func TestLivePublish(t *testing.T) {
 	if !rep.Verified {
 		t.Errorf("the publish is not verified: checks %+v", rep.Checks)
 	}
+	// Drive's own conversion is what puts the contents list where publish's
+	// cover ends, so only a live run proves the marker lands on it.
+	if !rep.Marked {
+		t.Errorf("the cover carries no marker, so a restyle would flatten it: %v", rep.Warnings)
+	}
 	if rep.Title != doc.title {
 		t.Errorf("the document came back titled %q, and the title that went on the cover is %q", rep.Title, doc.title)
 	}

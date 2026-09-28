@@ -8,7 +8,11 @@ metadata:
 
 # Restyle a document where it stands
 
-You name a document somebody else wrote. gdoc gives it the house look without
+You name a document somebody else wrote. A document `publish` made is already
+in the house style. If the survey shows no `gdoc:house-published` marker and you
+know `publish` made the document, say so and stop: that document was published
+before gdoc marked its covers, and a restyle would turn its cover into body
+text. gdoc gives it the house look without
 moving a character of the text: the page geometry, each paragraph's spacing and
 indent, each run's face, size and colour, and each table cell's padding and
 borders. When you ask for the house cover as well, the cover and the three
@@ -120,8 +124,10 @@ a restyle has to keep:
   and stop: a style request names a range, and a range means nothing without
   saying which tab it is in.
 - **Named ranges.** Labels Docs keeps in step with its own edits. A marker
-  gdoc wrote is one of these, and it means gdoc has proposed a prelude into
-  this document before.
+  gdoc wrote is one of these. `gdoc:house-prelude` means gdoc has proposed a
+  prelude into this document before. `gdoc:house-published` means `publish`
+  made this document: it already has the house cover, the apply leaves that
+  cover alone, and `--fields` is refused, so do not offer the cover.
 - **Every warning.** An element the read could not name is one, and a document
   holding one holds something no count here speaks for.
 

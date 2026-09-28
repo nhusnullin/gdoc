@@ -282,6 +282,15 @@
 // TestATablesCellsTakeThePaddingAndTheBorders and
 // TestTheCellCheckReadsTheTableTheRequestNamed are the pins.
 //
+// gdoc's own covers are left alone. A cover reads as NORMAL_TEXT, because
+// Drive converts publish's docx cover that way and a prelude states its look on
+// NORMAL_TEXT paragraphs, so a walk reading named styles would give it the body
+// look. TabRequestsExcept takes every span to walk past, and cmd/gdoc hands it
+// what each gdoc marker covers: publish's gdoc:house-published and a restyle's
+// gdoc:house-prelude. A cover published before 2026-09-26 carries no marker and
+// is still flattened; the skill says so. TestTheStylingSkipsEverySpanItIsGiven
+// is the pin here, with TestAPlainRestyleWalksPastPublishsCover in cmd/gdoc.
+//
 // # The read-back is two halves, and it runs on a failed run too
 //
 // Preserve compares the survey with a fresh survey: thread counts and

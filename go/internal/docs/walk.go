@@ -463,7 +463,7 @@ func blocks(content []rawElement, b body) []Block {
 		case el.TableOfContents != nil:
 			// The contents list holds paragraphs, each linking to the heading
 			// it names, so it is walked like any other body.
-			out = append(out, Block{TOC: &TOC{Blocks: blocks(el.TableOfContents.Content, b)}})
+			out = append(out, Block{TOC: &TOC{StartIndex: el.StartIndex, EndIndex: el.EndIndex, Blocks: blocks(el.TableOfContents.Content, b)}})
 		}
 	}
 	return out

@@ -1910,3 +1910,108 @@ func TestAnUnmarkedPreludeSaysSoOnEveryPathThatLeavesOne(t *testing.T) {
 		})
 	}
 }
+
+// publishedDocument is a document publish made, carrying its own marker over
+// the cover: [1,7), with the author's own paragraph behind it.
+func publishedDocument(revisionID string) string {
+	return strings.ReplaceAll(markedDocument(revisionID), "gdoc:house-prelude", prelude.PublishedName)
+}
+
+// plainWire is a plain restyle over one document: the fresh read, the styling
+// batch, and the read-back's reads, which see the same document.
+func plainWire(t *testing.T, doc string) *fakeWire {
+	t.Helper()
+	return &fakeWire{answers: []*answer{
+		{method: "GET", match: "docs.googleapis.com", json: doc},
+		{method: "POST", match: ":batchUpdate",
+			json: `{"documentId":"` + fixtureDocID + `","writeControl":{"requiredRevisionId":"ALm37BXafterTheBatch"}}`},
+		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
+		{method: "GET", match: "/export?", bytes: witnessExport(t)},
+	}}
+}
+
+// assertStyledOnlyTheAuthorsWords says the one styling batch named nothing in
+// [1,7), the marked cover, and did reach the author's paragraph behind it.
+func assertStyledOnlyTheAuthorsWords(t *testing.T, f *fakeWire, data map[string]any) {
+	t.Helper()
+	batches := batchesSent(t, f)
+	if len(batches) != 1 {
+		t.Fatalf("the run sent %d batches, want the one styling batch", len(batches))
+	}
+	var reached bool
+	for _, r := range styledRanges(t, batches[0]) {
+		if r[0] < 7 && r[1] > 1 {
+			t.Errorf("the styling named [%d,%d), which is inside the marked cover at [1,7)", r[0], r[1])
+		}
+		if r[0] >= 7 {
+			reached = true
+		}
+	}
+	if !reached {
+		t.Errorf("the styling named nothing behind the cover: ranges %v", styledRanges(t, batches[0]))
+	}
+	planned, _ := data["planned"].(map[string]any)
+	if planned["skipped"] != float64(1) {
+		t.Errorf("planned.skipped = %v, want 1: the marked cover", planned["skipped"])
+	}
+}
+
+// The defect this was written for, 2026-09-25: a restyle of a document publish
+// made gave its cover the house body look, because Drive converts the cover
+// into NORMAL_TEXT. publish marks its cover, and a plain restyle walks past it.
+func TestAPlainRestyleWalksPastPublishsCover(t *testing.T) {
+	// Arrange
+	f := stubWire(t, plainWire(t, publishedDocument("ALm37BXmarked")))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXmarked", 1))
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from over a published document: %v (exit %d)", got, code)
+	}
+	assertStyledOnlyTheAuthorsWords(t, f, dataOf(t, got))
+}
+
+// The same defect by the other route: a prelude a restyle proposed and Nail
+// accepted is gdoc's cover too, and a plain run used to flatten it, because
+// only the run that had just proposed it walked past it.
+func TestAPlainRestyleWalksPastAnAcceptedPrelude(t *testing.T) {
+	// Arrange
+	f := stubWire(t, plainWire(t, markedDocument("ALm37BXmarked")))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXmarked", 1))
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from)
+
+	// Assert
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("restyle --from over a marked prelude: %v (exit %d)", got, code)
+	}
+	assertStyledOnlyTheAuthorsWords(t, f, dataOf(t, got))
+}
+
+// A published document has the house cover already. Proposing one would
+// propose deleting it and its contents list, so the run is refused before
+// anything is written, and told to run without --fields.
+func TestRestyleWithFieldsRefusesAPublishedDocument(t *testing.T) {
+	// Arrange
+	f := stubWire(t, plainWire(t, publishedDocument("ALm37BXmarked")))
+	from := tempFile(t, "survey.json", surveyOf(t, fixtureDocID, "ALm37BXmarked", 1))
+	fields := tempFile(t, "fields.json", fieldsFile)
+
+	// Act
+	got, code := runJSON(t, "restyle", fixtureDocID, "--from", from, "--fields", fields)
+
+	// Assert
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("restyle --fields over a published document: %v (exit %d), want a refusal", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, prelude.PublishedName) || !strings.Contains(msg, "--fields") {
+		t.Errorf("error = %q, want it to name the marker and say to run without --fields", msg)
+	}
+	if w := f.writes(); len(w) != 0 {
+		t.Errorf("the refused run wrote %d times", len(w))
+	}
+}

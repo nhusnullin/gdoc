@@ -168,6 +168,19 @@
 // TestAMarkerInASegmentIsRefused and TestAMarkerCutIntoTwoTouchingSpansIsOnePrelude
 // are the pins.
 //
+// # publish's cover carries a marker of its own, and Decide refuses it
+//
+// publish writes gdoc:house-published over the cover it made, which is
+// PublishedName beside MarkerName. It is a second name because a run proposing
+// a cover would replace a prelude marker, and replacing publish's cover would
+// propose deleting the house cover the document already has, contents list and
+// all. So Decide reads Published before Markers and refuses a document carrying
+// one, and the refusal says to run without --fields. A plain restyle walks past
+// both kinds: cmd/gdoc's markedSpans. DECISIONS.md, 2026-09-27.
+// TestAPublishedCoverIsRefusedByARunThatProposesACover,
+// TestEachMarkerReaderReadsItsOwnName and
+// TestAPublishedMarkerBrokenAcrossTheAuthorsTextIsRefused are the pins.
+//
 // # The marker goes out in a batch of its own, ahead of the styling
 //
 // A styling batch that does not land still leaves a prelude Nail can accept, and
