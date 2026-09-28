@@ -1,0 +1,130 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000pi",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXpic",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "inlineObjects": {
+          "kix.objone": {
+            "inlineObjectProperties": {
+              "embeddedObject": {
+                "imageProperties": {
+                  "contentUri": "https://lh3.googleusercontent.com/one"
+                }
+              }
+            }
+          }
+        },
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 26,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 26,
+                    "textRun": {
+                      "content": "Supplier register policy\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 26,
+              "endIndex": 93,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 26,
+                    "endIndex": 93,
+                    "textRun": {
+                      "content": "The supplier register is reviewed annually by the operations team.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 93,
+              "endIndex": 121,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 93,
+                    "endIndex": 110,
+                    "textRun": {
+                      "content": "See the diagram: ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 110,
+                    "endIndex": 111,
+                    "inlineObjectElement": {
+                      "inlineObjectId": "kix.objone",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 111,
+                    "endIndex": 121,
+                    "textRun": {
+                      "content": "Figure 1.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 121,
+              "endIndex": 160,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 121,
+                    "endIndex": 160,
+                    "textRun": {
+                      "content": "Escalations go to the operations lead.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -309,8 +309,8 @@ at indexes computed from a read, so a concurrent proposer shifts the ground unde
 the other and the API reports 200 either way. Each proposal re-reads before
 computing its indexes and reads back after landing.
 
-**Two kinds in the proposals file.** An entry with no `kind`, or `kind: words`,
-changes words inside one paragraph: `{quoted, replacement, why, assignee?}`, and
+**Two kinds in the proposals file.** An entry with no `kind` changes words
+inside one paragraph: `{quoted, replacement, why, assignee?}`, and
 a line break on either side is refused. An entry with `kind: block` adds or
 replaces whole paragraphs. It names exactly one placement, either `after` with a
 quote in the paragraph the block follows, or the pair `replace_from` and

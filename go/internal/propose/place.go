@@ -140,6 +140,11 @@ func PlaceReplace(d *docs.Document, from, to string) (Placement, error) {
 				"the run from %q to %q covers something this read does not index, a section break among them, so the deletion would take that with it; quote a run of paragraphs with nothing between them",
 				from, to)
 		}
+		if what := whatARunIs(tab.Body[at].Paragraph); what != "" {
+			return Placement{}, fmt.Errorf(
+				"the run from %q to %q covers a paragraph holding %s, which no read-back here can see, so the deletion would take that with the words; leave that paragraph out of the run",
+				from, to, what)
+		}
 	}
 
 	start := tab.Body[first].Paragraph.StartIndex
@@ -276,6 +281,57 @@ func sorted(set map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// whatARunIs names the first run of a paragraph that is not written text, or the
+// empty string when every run is.
+//
+// A replace deletes whole paragraphs by their own start and end, so an inline
+// picture, an equation, a footnote mark, a page break or a chip sitting inside
+// one of them is inside the deleteContentRange whether the caller meant it or
+// not. None of the three read-backs can see it either, by construction: written
+// and idSet.deletionIn both read text runs only, so the preview check compares
+// words that never mentioned it and the inline check never asks whether it
+// carries a deletion id. The hazard is the words kind's crossing rule one level
+// up, where FindSpan refuses a quote running across the same content for the
+// same reason, so a paragraph holding any of it is refused by name rather than
+// deleted unseen.
+//
+// TestPlaceRefusesWhatItCannotPlaceAndNamesIt holds the picture case.
+func whatARunIs(p *docs.Paragraph) string {
+	for _, r := range p.Runs {
+		switch r.Kind {
+		case docs.KindText:
+			continue
+		case docs.KindImage:
+			return "a picture"
+		case docs.KindDrawing:
+			return "a drawing"
+		case docs.KindEquation:
+			return "an equation"
+		case docs.KindFootnoteRef:
+			return "a footnote mark"
+		case docs.KindPageBreak:
+			return "a page break"
+		case docs.KindColumnBreak:
+			return "a column break"
+		case docs.KindHorizontalRule:
+			return "a horizontal rule"
+		case docs.KindAutoText:
+			return "a field Docs fills in"
+		case docs.KindPerson:
+			return "a person chip"
+		case docs.KindDate:
+			return "a date chip"
+		case docs.KindRichLink:
+			return "a link chip"
+		case docs.KindObject:
+			return "an embedded object"
+		default:
+			return "content this read does not name"
+		}
+	}
+	return ""
 }
 
 // whatItIs names a body element in the words a person reading the refusal would

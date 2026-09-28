@@ -114,12 +114,13 @@ suggestion id, so `withdraw` takes it back whole.
 batch past that is a body the guard cannot read, and a caller told about the
 guard's peek has nothing to act on. Everything else is refused by name: a table,
 a nested list, a picture, a code block, a block quote, raw HTML, a thematic break
-and empty content. Two characters are refused in whichever spelling they arrive
-in, written or as an entity reference such as `&#12;`: one the Docs API strips
-out of an inserted text, because gdoc counts what it sends to place everything
-after it, and a line break inside a paragraph, because Docs would make a
-paragraph of it that the block never proposed. An empty line is still how the
-next paragraph starts.
+and empty content. Three characters are refused in whichever spelling they
+arrive in, written or as an entity reference such as `&#12;`: one the Docs API
+strips out of an inserted text, because gdoc counts what it sends to place
+everything after it, a line break inside a paragraph, because Docs would make a
+paragraph of it that the block never proposed, and a tab, because Docs removes a
+leading one from a list item and that moves every index behind it. An empty line
+is still how the next paragraph starts.
 
 The placement refusals are the other half, and each says what would work:
 
@@ -131,6 +132,7 @@ The placement refusals are the other half, and each says what would work:
 | a replace whose paragraphs hold a pending suggestion or a comment's anchor | the deletion would take a colleague's work with it, so every suggestion id and comment id is named |
 | a replace reaching the body's last paragraph | Docs cannot delete the final newline |
 | an `after` or a replace running into a table, the contents list or a section break | there is no paragraph start to insert at, and a deletion would take the table with it |
+| a replace over a paragraph holding a picture, a footnote mark, an equation, a page break or a chip | the deletion would take it, and no read-back can see it: leave that paragraph out of the run |
 | an `after` on the last paragraph when the block does not end in a plain paragraph, or when that paragraph is a list item or a heading | there the last new paragraph owns the existing final mark, and restyling it is a second suggestion |
 
 The read-backs are the words kind's three, asking the block's question. The

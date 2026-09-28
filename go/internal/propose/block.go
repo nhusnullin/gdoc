@@ -336,10 +336,10 @@ type marks struct {
 // runs flattens a paragraph's inline tree into runs, one stretch per set of
 // marks, and refuses every inline construct the subset does not carry.
 //
-// Two characters are refused here rather than written, and both are decoded
-// ones: a reference or an escape puts into a run what the author could not type
-// into it, so "&#12;" is five characters in the file and a form feed in the
-// document.
+// Three characters are refused here rather than written, and a reference or an
+// escape is how each of them reaches a run: it puts into one what the author
+// could not type into it, so "&#12;" is five characters in the file and a form
+// feed in the document.
 //
 // A character the Docs API strips out of an inserted text is the first.
 // docsreq.Strippable says which they are and what they cost, and BlockBatch is
@@ -351,6 +351,15 @@ type marks struct {
 // the block never proposed, styled and counted as part of the one in front of
 // it. appendRuns refuses the markdown spelling of the same thing a few lines
 // up, and this is that rule held over the spelling it cannot see.
+//
+// A tab is the third, and it costs what a stripped character costs. It is not in
+// docsreq.Strippable's set because the API keeps it in an inserted text, but
+// createParagraphBullets removes a leading one to read the nesting level from
+// it, and the API's own words for that are that it "may change the indices of
+// parts of the text". BlockBatch sends createParagraphBullets before the
+// deleteContentRange of a replace and before the comment anchor, so one tab at
+// the start of a list item moves both one place out: the deletion would leave a
+// character of the run it replaces and take one of the paragraph behind it.
 func (w *blockWalk) runs(node ast.Node) ([]Run, error) {
 	var out []Run
 	if err := w.appendRuns(&out, node, marks{}); err != nil {
@@ -367,6 +376,11 @@ func (w *blockWalk) runs(node ast.Node) ([]Run, error) {
 			return nil, w.refuseAt(w.inlineLine(node), fmt.Sprintf(
 				"the words carry U+%04X, which the Docs API strips out of an inserted text: "+
 					"gdoc counts the characters it sends to place everything after them, so take it out and write the block again", bad))
+		}
+		if strings.ContainsRune(r.Text, '\t') {
+			return nil, w.refuseAt(w.inlineLine(node), fmt.Sprintf(
+				"the words carry U+%04X, a tab, which the Docs API removes from the start of a list item: "+
+					"gdoc counts the characters it sends to place everything after them, so take it out and write the block again", '\t'))
 		}
 	}
 	return out, nil

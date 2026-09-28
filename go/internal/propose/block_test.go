@@ -214,6 +214,8 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 		{"a newline written as a reference", "One line&#10;and another.\n", "line break"},
 		{"a soft break written as a reference", "One line&#11;and another.\n", "line break"},
 		{"a private-use character written as a reference", "The &#xF8FF; key.\n", "U+F8FF"},
+		{"a tab written as a reference", "One&#9;two.\n", "U+0009"},
+		{"a tab at the start of a list item", "- &Tab;one\n- two\n", "U+0009"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

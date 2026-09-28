@@ -227,6 +227,13 @@ func TestPlaceRefusesWhatItCannotPlaceAndNamesIt(t *testing.T) {
 			says: []string{"does not index", "section break"},
 		},
 		{
+			name: "a replace over a paragraph holding a picture",
+			place: func(t *testing.T) (Placement, error) {
+				return PlaceReplace(document(t, "block-inline-picture.json"), "reviewed annually", "Figure 1")
+			},
+			says: []string{"a picture", "leave that paragraph out"},
+		},
+		{
 			name: "a replace over somebody's pending suggestion and comments",
 			place: func(t *testing.T) (Placement, error) {
 				return PlaceReplace(document(t, "block-busy.json"), "register lists", "operations lead")

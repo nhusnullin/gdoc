@@ -217,7 +217,7 @@ A section only the note holds is proposed as a block, not left for the person to
 paste. Quote the last words of the paragraph it should follow in the document,
 and give the section's own markdown:
 
-```bash
+```json
 {
   "kind": "block",
   "after": "the last words of the paragraph it goes behind",
