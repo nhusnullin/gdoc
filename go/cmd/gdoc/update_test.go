@@ -18,12 +18,15 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"gdoc/internal/guard"
 	"gdoc/internal/update"
@@ -79,7 +82,9 @@ func assetURL(tag, name string) string {
 }
 
 // listing is the releases answer, as api.github.com writes it, carrying the
-// two assets the release workflow publishes for this machine's platform.
+// two assets the release workflow publishes for this machine's platform. The
+// zip's size is the listing's word for it, as GitHub's is, and it is what the
+// download line prints.
 func listing(tags ...string) string {
 	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
 	entries := make([]string, 0, len(tags))
@@ -87,7 +92,7 @@ func listing(tags ...string) string {
 		zipName := update.AssetName(tag, platform)
 		sumsName := update.ChecksumsName(tag)
 		entries = append(entries, fmt.Sprintf(
-			`{"tag_name":%q,"draft":false,"assets":[{"name":%q,"browser_download_url":%q},{"name":%q,"browser_download_url":%q}]}`,
+			`{"tag_name":%q,"draft":false,"assets":[{"name":%q,"size":6100000,"browser_download_url":%q},{"name":%q,"size":180,"browser_download_url":%q}]}`,
 			tag, zipName, assetURL(tag, zipName), sumsName, assetURL(tag, sumsName)))
 	}
 	return "[" + strings.Join(entries, ",") + "]"
@@ -613,5 +618,176 @@ func TestTheZipBinaryNameFollowsThePlatform(t *testing.T) {
 		if got := zipBinaryName(goos); got != want {
 			t.Errorf("on %s the zip holds %q, and the updater looks for %q", goos, want, got)
 		}
+	}
+}
+
+// runUpdateCapturing is runJSON with stderr kept: the object off stdout, and
+// the words a person reads off stderr, which a bytes.Buffer is not a terminal
+// for, so they are the plain lines.
+func runUpdateCapturing(t *testing.T, args ...string) (map[string]any, string, string, int) {
+	t.Helper()
+	var out, errOut bytes.Buffer
+	code := run(context.Background(), args, &out, &errOut)
+	raw := out.String()
+	return decodeOne(t, strings.NewReader(raw)), raw, errOut.String(), code
+}
+
+// A run that installs narrates each step on stderr, once each and in order,
+// and stdout is still the one object with none of those words in it.
+func TestAnUpdateNarratesItsStepsOnStderr(t *testing.T) {
+	pl := &stubPlain{
+		listing: listing("v2.1.2", "v2.1.0", "v2.0.0"),
+		files:   merged(published(t, "v2.1.0", []byte("new")), published(t, "v2.1.2", []byte("nightly"))),
+	}
+	path := installedAt(t, "v2.0.0", []byte("old"), pl)
+	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
+
+	got, stdout, stderr, code := runUpdateCapturing(t, "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	want := "gdoc update\n" +
+		"  ✓ read releases        nhusnullin/gdoc, 3 listed\n" +
+		"  ✓ choose release       v2.1.0, stable, " + platform + ", from v2.0.0\n" +
+		"  ✓ read checksums       SHA256SUMS-v2.1.0\n" +
+		"  ✓ download             " + update.AssetName("v2.1.0", platform) + ", 6.1 MB\n" +
+		"  ✓ verify checksum      matches SHA256SUMS-v2.1.0\n" +
+		"  ✓ replace binary       " + path + ", the old one kept beside it\n" +
+		"  ✓ read back            sha256 " + hexSum([]byte("new"))[:12] + "\n" +
+		"gdoc v2.1.0 installed. gdoc update --rollback goes back.\n"
+	if stderr != want {
+		t.Errorf("stderr is\n%s\nand must be\n%s", stderr, want)
+	}
+	if strings.Count(stdout, "\n") != 1 || strings.Contains(stdout, "✓") || strings.Contains(stdout, "gdoc update\n") {
+		t.Errorf("stdout carries the one object and nothing a person reads: %q", stdout)
+	}
+}
+
+// A download that does not arrive marks its own step with the reason, and the
+// steps after it never ran, so none of them is drawn.
+func TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne(t *testing.T) {
+	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
+	asset := update.AssetName("v2.1.0", platform)
+	files := published(t, "v2.1.0", []byte("new"))
+	delete(files, assetURL("v2.1.0", asset))
+	pl := &stubPlain{listing: listing("v2.1.0", "v2.0.0"), files: files}
+	path := installedAt(t, "v2.0.0", []byte("old"), pl)
+
+	got, _, stderr, code := runUpdateCapturing(t, "update")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a download that did not arrive must fail: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	wantTail := "  ✓ read checksums       SHA256SUMS-v2.1.0\n" +
+		"  ✗ download             " + asset + ", 6.1 MB\n" +
+		"    " + msg + "\n"
+	if !strings.HasSuffix(stderr, wantTail) {
+		t.Errorf("stderr must end on the failed download and its reason:\n%s\nwant it to end\n%s", stderr, wantTail)
+	}
+	for _, later := range []string{"verify checksum", "replace binary", "read back", "installed"} {
+		if strings.Contains(stderr, later) {
+			t.Errorf("%q never ran, so it is not drawn:\n%s", later, stderr)
+		}
+	}
+	nothingMoved(t, path, "old")
+}
+
+// A run with nothing to take draws the two steps it made and no download.
+func TestAnUpToDateRunDrawsNoDownload(t *testing.T) {
+	pl := &stubPlain{listing: listing("v2.1.2", "v2.1.0")}
+	installedAt(t, "v2.1.0", []byte("old"), pl)
+
+	_, _, stderr, code := runUpdateCapturing(t, "update")
+	if code != 0 {
+		t.Fatalf("an up-to-date binary is an answer: exit %d", code)
+	}
+	if strings.Count(stderr, "  ✓ ") != 2 || strings.Contains(stderr, "download") {
+		t.Errorf("up to date reads and chooses and draws nothing else:\n%s", stderr)
+	}
+	if !strings.HasSuffix(stderr, "Nothing newer to install. A newer nightly is there: gdoc update --nightly.\n") {
+		t.Errorf("the last line names the nightly behind it:\n%s", stderr)
+	}
+}
+
+// GitHub not answering marks the read with its cause, and the run is still an
+// answer that says nothing changed.
+func TestAnUnreachableGitHubIsMarkedOnTheReadStep(t *testing.T) {
+	pl := &stubPlain{listErr: fmt.Errorf("connect: connection refused")}
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+
+	_, _, stderr, code := runUpdateCapturing(t, "update")
+	if code != 0 {
+		t.Fatalf("unreachable is an answer: exit %d", code)
+	}
+	want := "gdoc update\n" +
+		"  ✗ read releases\n" +
+		"    connect: connection refused\n" +
+		"GitHub did not answer, so the gdoc here is unchanged.\n"
+	if stderr != want {
+		t.Errorf("stderr is\n%s\nand must be\n%s", stderr, want)
+	}
+}
+
+// panickingPlain answers the listing and panics on the first download, which
+// is a bug somewhere under the wire rather than an answer.
+type panickingPlain struct{ stubPlain }
+
+func (p *panickingPlain) GetBytes(context.Context, string, int64) ([]byte, error) {
+	panic("a bug under the download")
+}
+
+// syncBuffer is a buffer the spinner and the test may both touch, so a
+// spinner left running is a wrong answer here rather than a data race.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// A panic part way through a terminal run settles the list on the way out: the
+// spinner stops, auto-wrap is back on, and nothing is drawn after the crash
+// text safeDispatch writes, so no redraw can erase the stack trace.
+func TestAPanicInAnUpdateStopsTheSpinner(t *testing.T) {
+	pl := &panickingPlain{stubPlain{listing: listing("v2.1.0", "v2.0.0")}}
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	old := openProgress
+	openProgress = func(w io.Writer, title string) *progress { return newLiveProgress(w, title, true) }
+	t.Cleanup(func() { openProgress = old })
+
+	var out bytes.Buffer
+	errOut := &syncBuffer{}
+	code := run(context.Background(), []string{"update"}, &out, errOut)
+	if code == 0 {
+		t.Fatalf("a panic is a failure: exit %d", code)
+	}
+	decodeOne(t, &out)
+	settled := errOut.String()
+	time.Sleep(4 * spinInterval)
+	if got := errOut.String(); got != settled {
+		t.Fatalf("something was drawn after the run ended:\n%q", got[len(settled):])
+	}
+	crash := strings.Index(settled, "gdoc crashed")
+	if crash < 0 {
+		t.Fatalf("the crash text must reach stderr: %q", settled)
+	}
+	if strings.Contains(settled[crash:], "\x1b[") {
+		t.Errorf("an escape code follows the crash text: %q", settled[crash:])
+	}
+	if strings.LastIndex(settled[:crash], wrapOn) < strings.LastIndex(settled[:crash], wrapOff) {
+		t.Errorf("auto-wrap must be back on before the crash text: %q", settled[:crash])
+	}
+	if strings.Contains(settled, "installed") {
+		t.Errorf("a panic finished nothing, so there is no result line: %q", settled)
 	}
 }

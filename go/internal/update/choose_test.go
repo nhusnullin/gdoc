@@ -133,3 +133,22 @@ func TestThePlatformIsTheGoPairTheBuildNames(t *testing.T) {
 		t.Errorf("Platform = %q, want windows-amd64", got)
 	}
 }
+
+// The zip's size is the listing's own word for it, carried onto the release so
+// the download line can say megabytes without counting a byte as it comes.
+func TestChooseCarriesTheSizeTheListingGives(t *testing.T) {
+	var entries []Entry
+	listing := `[{"tag_name":"v2.1.0","assets":[` +
+		`{"name":"gdoc-v2.1.0-darwin-arm64.zip","size":6100000,"browser_download_url":"https://github.com/nhusnullin/gdoc/releases/download/v2.1.0/gdoc-v2.1.0-darwin-arm64.zip"},` +
+		`{"name":"SHA256SUMS-v2.1.0","size":180,"browser_download_url":"https://github.com/nhusnullin/gdoc/releases/download/v2.1.0/SHA256SUMS-v2.1.0"}]}]`
+	if err := json.Unmarshal([]byte(listing), &entries); err != nil {
+		t.Fatal(err)
+	}
+	rel, err := Choose(entries, Stable, "darwin-arm64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rel.AssetSize != 6100000 {
+		t.Errorf("the zip is 6100000 bytes by the listing, and the release says %d", rel.AssetSize)
+	}
+}

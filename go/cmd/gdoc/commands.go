@@ -326,8 +326,8 @@ func commands() []command {
 			},
 			summary: "Replace this gdoc with the newest release, or say what one would take.",
 			example: "gdoc update",
-			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdUpdate(ctx, a)
+			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
+				return cmdUpdate(ctx, a, errOut)
 			},
 		},
 		{

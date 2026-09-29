@@ -338,6 +338,45 @@
 // TestTheUpdateObjectIsWhatTheSkillsRead and
 // TestRollbackPutsTheEarlierBinaryBack.
 //
+// # The update draws its steps on stderr
+//
+// A person who types `gdoc update` sees what it is doing while it does it: a
+// list of steps on stderr, one line each, and one line of result under them.
+// Stdout is untouched and still carries the one object:
+// TestAnUpdateNarratesItsStepsOnStderr.
+//
+// When stderr is not a terminal, which is every run a skill starts, each step
+// prints once as a plain line when it ends, with no colour and no escape code:
+// TestAPipedRunPrintsOneLinePerFinishedStep. A terminal is the char device bit
+// on the file's mode and nothing else, so a pipe, a file and a buffer all get
+// the plain lines: TestOnlyACharDeviceIsATerminal. On a terminal the list is
+// drawn in advance and redrawn in place, with a spinner on the running step
+// and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
+// and TestNoColorKeepsTheRedrawAndDropsTheColour. Auto-wrap is off while the
+// list moves and back on when it settles, because a wrapped line would make
+// the redraw move up too few rows in a narrow terminal; a plain list writes
+// neither code: TestALiveListTurnsWrapOffAndBackOn. The list settles on every
+// way out of the run, a panic included, so no redraw lands on the crash text
+// and no result line claims a run that did not finish:
+// TestAPanicInAnUpdateStopsTheSpinner.
+//
+// Only what happened is drawn. A failed step carries its reason on the next
+// line and the steps after it are not drawn at all:
+// TestAFailedStepIsMarkedAndTheRestAreNotDrawn and
+// TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne. The download and the
+// steps after it are planned only when the decision is to install:
+// TestAnUpToDateRunDrawsNoDownload. GitHub not answering is drawn as a failed
+// read with its cause, under an ok object:
+// TestAnUnreachableGitHubIsMarkedOnTheReadStep.
+//
+// The narration is by step and not by byte. The download line's size is the
+// asset's size in the listing, because gapi reads a body whole and a byte count
+// would need a reader in the one room that builds a request. A rollback is a
+// local file move and draws nothing.
+//
+// The writer lives in progress.go, beside the one command that uses it. It
+// moves to internal/emit when a second command wants it.
+//
 // # A panic is still one envelope
 //
 // safeDispatch recovers, prints ok: false with what happened, and puts the
