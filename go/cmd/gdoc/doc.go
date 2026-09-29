@@ -294,7 +294,9 @@
 // TestReadNeverReachesTheCheck runs a read with a month-old stamp and a reach
 // that fails the test if it is called, and TestNoSkillRunsUpdateOnItsOwn says
 // no skill runs the updater either. A skill may say there is a newer gdoc,
-// because saying is not running.
+// because saying is not running. It hands the person the command alone in a
+// bash block for them to run, which go/boundary's
+// TestEverySkillGivesTheUpdateAsARunnableBlock holds across the five skills.
 //
 // The check judges nothing. The object under `update` carries `installed`,
 // `latest_stable`, `latest_nightly`, `checked_at` and `error`, and the one

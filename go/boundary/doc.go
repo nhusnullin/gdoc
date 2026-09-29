@@ -240,4 +240,20 @@
 // makes about a file it did not write. It prints the line to add and greps for
 // it; a mention of .zshrc outside a printf, a grep or a comment is the script
 // editing somebody's shell configuration.
+//
+// # A skill hands a person the update as a command they can run
+//
+// When help says a newer gdoc is published, or a skill needs a newer one than
+// is installed, the session tells the person. A command named inside a
+// sentence is text to read and type again. A command alone in a fenced bash
+// block is a row the desktop app gives a Run button, so every skill asks for
+// that block: one line, no prompt, gdoc update or gdoc update --major, and the
+// session never runs it. Five copies of one paragraph drift the way two copies
+// of one list do.
+//
+// TestEverySkillGivesTheUpdateAsARunnableBlock reads the three version
+// paragraphs of each skill, asks for the phrases that make the block, and
+// asks that all five say it in the same words.
+// TestAnUpdateNoticeWithTheCommandInProseIsCaught feeds it the old wording,
+// the command inside a sentence, and wants it refused.
 package boundary
