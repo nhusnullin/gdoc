@@ -368,7 +368,8 @@ What follows for a block proposal:
 - **Text takes the list membership of the paragraph it lands in front of.**
   Stating `namedStyleType` does not clear a bullet. `deleteParagraphBullets`
   over the new paragraphs does, as a suggestion under the same id. This also
-  answers the open question in `docs/backlog/prelude-inherits-a-list-marker.md`.
+  answered the open question a backlog item held about the house prelude,
+  which now sends the same request over its own range (`go/internal/prelude/doc.go`).
 - **After the last paragraph there is no paragraph to go in front of.** The one
   case measured came back with one id because the last new paragraph was not
   restyled. A restyled last paragraph there was not measured.

@@ -110,6 +110,23 @@ func (f *Fields) Mask() string { return strings.Join(f.names, ",") }
 // request that resets nothing, and it is not worth sending.
 func (f *Fields) Empty() bool { return len(f.names) == 0 }
 
+// DeleteBullets is the one request that takes a list marker off the paragraphs
+// a range overlaps.
+//
+// A list marker is not a paragraph property, so no style object states it
+// away: text inserted at a list item's start joins that list, and stating a
+// named style over it leaves the bullet on. Two builders need it for that one
+// reason, internal/propose for a block and internal/prelude for the house
+// template, and both send it in the SUGGEST batch that made the paragraphs, over
+// only what that batch inserted. There it folds into the insertion's own
+// suggestion id (MEASURED.md, "A block of new paragraphs, proposed in one
+// SUGGEST batch"). TestDeleteBulletsIsTheRequestAndItsRange pins the shape.
+func DeleteBullets(start, end int) map[string]any {
+	return map[string]any{"deleteParagraphBullets": map[string]any{
+		"range": map[string]any{"startIndex": start, "endIndex": end},
+	}}
+}
+
 // Strippable is the first character the Docs API removes from an inserted
 // text, and whether the string carries one at all.
 //

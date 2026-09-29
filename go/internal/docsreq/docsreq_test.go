@@ -133,3 +133,15 @@ func TestStrippableNamesTheCharactersTheAPIRemoves(t *testing.T) {
 		t.Errorf("Strippable() = U+%04X, want the first one it met", got)
 	}
 }
+
+// The bullet removal is the request and its range and nothing else. Two
+// builders send it, and a second field is one somebody has to measure first.
+func TestDeleteBulletsIsTheRequestAndItsRange(t *testing.T) {
+	got := DeleteBullets(41, 73)
+	want := map[string]any{"deleteParagraphBullets": map[string]any{
+		"range": map[string]any{"startIndex": 41, "endIndex": 73},
+	}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("DeleteBullets(41, 73) = %v, want %v", got, want)
+	}
+}
