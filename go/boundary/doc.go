@@ -149,6 +149,33 @@
 // map that is not there is the same silence as a map full of dead rows, and the
 // map is the one thing in that file a reader uses to decide where to go next.
 //
+// # No real company domain in the tree
+//
+// A default, an example or a fixture carrying a real company's domain is a
+// line that reads as somebody's address, and most of the twenty lines this
+// rule took out carried a real person's work address beside it. RFC 2606
+// reserves example.com, example.org and example.net so nobody has to borrow
+// one. TestNoCompanyDomainInTheTree is the pin, and it holds the domain as a
+// SHA-256 and never as text, because a test naming the domain would be the
+// first file to break the rule it states.
+//
+// The scan reads the .gitignore files itself rather than asking git, since
+// nothing under go/ runs a program, and what git ignores is not the tree: the
+// review logs under .revmux/tasks/ quote the lines they read, so a scan that
+// read them would fail on a finding about the rule. Four shapes are read, and
+// a pattern outside them, a negation, a ** or a bracket filepath.Match
+// refuses, fails by name:
+// TestTheDomainScanRefusesAPatternItCannotRead. A pattern quietly
+// misunderstood would widen what the scan never looks at, and a passing test
+// would say nothing about it.
+//
+// The scanner is watched finding something before it is trusted to find
+// nothing. TestTheDomainScanFindsAPlantedHost plants a host in a temp tree and
+// asks for that host, and TestTheDomainScanSkipsWhatGitIgnores plants it under
+// three .gitignore files shaped like the real ones and then in one file no
+// pattern names. Both use example.net, so no test here names the firm's
+// domain, whole or in parts.
+//
 // # A make target that writes into bin/ makes bin/ first
 //
 // bin/ is ignored and nothing tracks it, so a fresh clone does not have one. A

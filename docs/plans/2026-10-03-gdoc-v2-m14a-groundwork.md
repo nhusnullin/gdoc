@@ -393,26 +393,26 @@ directly; every later fixture depends on it.
   `docs/plans/completed/2026-09-18-gdoc-v2-m11-annotate.md`
 - Modify: `go/boundary/doc.go`
 
-- [ ] Test first, `TestTheDomainScanFindsAPlantedHost`: the canary of
+- [x] Test first, `TestTheDomainScanFindsAPlantedHost`: the canary of
       Technical Details. Watch it fail: no scanner yet.
-- [ ] Test, `TestTheDomainScanSkipsWhatGitIgnores`: a temp tree with three
+- [x] Test, `TestTheDomainScanSkipsWhatGitIgnores`: a temp tree with three
       `.gitignore` files shaped like the real ones, `example.net` planted only
       under ignored paths (`bin/`, `.ralphex/progress/`, `.revmux/tasks/`, a
       `*.pyc`), passes; the same host in a file no pattern names fails.
-- [ ] Test, `TestTheDomainScanRefusesAPatternItCannotRead`: a `.gitignore`
+- [x] Test, `TestTheDomainScanRefusesAPatternItCannotRead`: a `.gitignore`
       holding `!keep` or `a/**/b` fails naming the line.
-- [ ] Test, `TestNoCompanyDomainInTheTree`: the scan over the real tree with
+- [x] Test, `TestNoCompanyDomainInTheTree`: the scan over the real tree with
       the firm's hash. Watch it fail on the twenty lines.
-- [ ] Replace each line as the spec's table says: `x@example.com` and
+- [x] Replace each line as the spec's table says: `x@example.com` and
       `person@example.com` in the tests, the golden at
       `block-replace-batch.json:108` edited by hand (no update flag is added),
       "a sign-in from the firm's Google Workspace" in DECISIONS.md, "a firm
       Workspace account" in the M9 plan, `x@example.com` in the M11 plan. Each
       test checks what it checked.
-- [ ] `go/boundary/doc.go`: one paragraph on the domain rule, naming the four
+- [x] `go/boundary/doc.go`: one paragraph on the domain rule, naming the four
       tests.
-- [ ] `cd go && go test -race ./...` passes; `make vet` passes.
-- [ ] `git commit -m "test(boundary): no company domain in the tree, and the examples use example.com"`
+- [x] `cd go && go test -race ./...` passes; `make vet` passes.
+- [x] `git commit -m "test(boundary): no company domain in the tree, and the examples use example.com"`
 
 ### Task 2: run 1's DECISIONS.md entry
 

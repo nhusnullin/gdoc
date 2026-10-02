@@ -1876,8 +1876,9 @@ repository this entry first named is not needed: the GitHub Releases of
 `nhusnullin/gdoc` are the store, colleagues download from them with no
 credential, and the updater fetches from them. The assessment that preceded
 it stands: the zip carries no secret beyond the Internal OAuth client, which
-only an `altery.com` sign-in can use, and no document; what is public is the
-Altery logo, the template's shape inside the binary, and the skills' wording.
+only a sign-in from the firm's Google Workspace can use, and no document; what
+is public is the Altery logo, the template's shape inside the binary, and the
+skills' wording.
 
 **Versions are `x.y.z`, and the number is the channel.** Nail tags `x.y.0` by
 hand. A nightly job tags `x.y.(z+1)` when main has moved since the last tag.

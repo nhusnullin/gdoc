@@ -154,7 +154,7 @@ func TestAnnotateNeedsAQuoteWithItsBodyFile(t *testing.T) {
 func TestAnnotateRefusesAnUnknownKeyInTheFile(t *testing.T) {
 	f := stubWire(t, &fakeWire{})
 	from := tempFile(t, "annotations.json",
-		`[{"quoted":"reviewed annually","why":"The 2026 register says quarterly.","assignedTo":"x@altery.com"}]`)
+		`[{"quoted":"reviewed annually","why":"The 2026 register says quarterly.","assignedTo":"x@example.com"}]`)
 
 	got, code := runJSON(t, "annotate", annotateDocID, "--from", from)
 	if code == 0 || got["ok"] != false {

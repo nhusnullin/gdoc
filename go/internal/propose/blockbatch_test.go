@@ -69,7 +69,7 @@ func TestBlockBatchForAReplace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	checkGolden(t, "block-replace-batch.json", BlockBatch(place, content, testWhy, "nail@altery.com"))
+	checkGolden(t, "block-replace-batch.json", BlockBatch(place, content, testWhy, "person@example.com"))
 }
 
 // TestBlockBatchAfterTheLastParagraph is the shape MEASURED.md row 7 pins. The

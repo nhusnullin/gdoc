@@ -84,11 +84,11 @@ func TestBatchCountsTheReplacementInUTF16CodeUnits(t *testing.T) {
 
 func TestBatchCarriesTheAssigneeWhenThereIsOne(t *testing.T) {
 	p := testProposal
-	p.Assignee = "nail@altery.com"
+	p.Assignee = "person@example.com"
 	body := decodeBatch(t, Batch(span(26, 43), p))
 
 	com := body["requests"].([]any)[2].(map[string]any)["insertComment"].(map[string]any)
-	if com["assigneeEmailAddress"] != "nail@altery.com" {
+	if com["assigneeEmailAddress"] != "person@example.com" {
 		t.Errorf("assigneeEmailAddress = %v", com["assigneeEmailAddress"])
 	}
 }

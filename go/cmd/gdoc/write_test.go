@@ -820,7 +820,7 @@ func TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun(t *testing.T) {
 func TestProposeRefusesAnUnknownKeyInTheProposalsFile(t *testing.T) {
 	f := stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
 	from := tempFile(t, "proposals.json",
-		`[{"quoted":"a","replacement":"b","why":"c","assigned_to":"nail@altery.com"}]`)
+		`[{"quoted":"a","replacement":"b","why":"c","assigned_to":"person@example.com"}]`)
 
 	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
 	if code == 0 || got["ok"] != false {
