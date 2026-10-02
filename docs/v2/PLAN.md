@@ -77,7 +77,7 @@ is cut where the measurements fall.
 
 | Step | Holds | Release |
 |---|---|---|
-| run 1, the groundwork | the firm's domain out of the tree, `propose` without the capability probe, the stop at the first proposal a read-back cannot confirm, a lost batch answer as `outcome: "unknown"`, the review rules split into `review.md`, the two-step login, the token race, the context threaded through the six chat commands, and `notice` returning its line. `docs/plans/2026-10-03-gdoc-v2-m14a-groundwork.md` | v2.8.0, alone |
+| run 1, the groundwork | the firm's domain out of the tree, `propose` without the capability probe, the stop at the first proposal a read-back cannot confirm, a lost batch answer as `outcome: "unknown"`, the review rules split into `review.md`, the two-step login, the token race, the context threaded through the six chat commands, and `notice` returning its line. `docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md` | v2.8.0, alone |
 | the tag sitting | the two skills stop passing `--folder` and move to `needs: v2.8.0`, in the same sitting as `make tag VERSION=v2.8.0`. By hand, after run 1 merges | v2.8.0 |
 | the spike | the twelve measurements against a throwaway stub server outside the tree, recorded in MEASURED.md. By Nail, beside run 1 | none |
 | run 2 and later | `internal/mcp`, `gdoc mcp`, the tools, the labelled text, the holds, the extension and `update --desktop`, from a plan written with the measured values | v2.9.0 |

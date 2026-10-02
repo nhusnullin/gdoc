@@ -774,10 +774,14 @@ Serves decision 13 (the split). Scenario 13.
 
 ### Task 13: Update documentation
 
-- [ ] Move this plan to `docs/plans/completed/`. The spec stays in
+- [x] Move this plan to `docs/plans/completed/`. The spec stays in
       `docs/plans/` until the last run.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(v2): M14 run 1, completed"`
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(v2): M14 run 1, completed"`
+- ➕ The four pointers at this plan moved with it: the spec's status line,
+      the two DECISIONS.md entries for run 1, and PLAN.md's run 1 row. Nothing
+      measures a path inside a document, so a stale one is only found by a
+      reader.
 
 ## Post-Completion
 

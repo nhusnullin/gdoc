@@ -2924,8 +2924,8 @@ Tests: `TestContentRefusesWhatTheSubsetDoesNotHold` carries the list case, and
 Nail's decisions, taken in the brainstorm that produced the M14 specification,
 `docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, as its decisions 11, 15, 17 and 19.
 This entry holds only what run 1 of that milestone builds, the task list at
-`docs/plans/2026-10-03-gdoc-v2-m14a-groundwork.md`. It is written before that
-code, because a change to SPEC.md is an entry here first.
+`docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md`. It is written
+before that code, because a change to SPEC.md is an entry here first.
 
 **`propose` runs no capability probe.** Until today every proposal created a
 throwaway document in a folder the caller named, proposed one word into it, read
@@ -3025,8 +3025,8 @@ in MEASURED.md, so no row here records a decision a measurement may still
 overturn.
 
 Tests: the run 1 plan,
-`docs/plans/2026-10-03-gdoc-v2-m14a-groundwork.md`, names one test per rule
-above, from `TestNoCompanyDomainInTheTree` in the boundary package to
+`docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md`, names one test
+per rule above, from `TestNoCompanyDomainInTheTree` in the boundary package to
 `TestALostAnswerIsOutcomeUnknownAndStops` in `cmd/gdoc`. `cmd/gdoc/doc.go`,
 `propose/doc.go`, `probe/doc.go` and the package comment of `gapi` each name
 the tests for the rules they state.
