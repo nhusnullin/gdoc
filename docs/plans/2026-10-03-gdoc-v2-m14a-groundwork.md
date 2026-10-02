@@ -726,15 +726,51 @@ Serves decision 13 (the split). Scenario 13.
 
 ### Task 12: Verify acceptance criteria
 
-- [ ] `make test`, `make vet` and `make dist` pass. No `make build`: see
+- [x] `make test`, `make vet` and `make dist` pass. No `make build`: see
       Development Approach.
-- [ ] Every Validation Command above gives the answer it states; record the
+- [x] Every Validation Command above gives the answer it states; record the
       counts here as ➕ notes.
-- [ ] Scenarios 10, 11 and 15 (the binary's half) are served by Tasks 3 to 5,
+- [x] Scenarios 10, 11 and 15 (the binary's half) are served by Tasks 3 to 5,
       read against the spec; scenario 2's sign-in half by Tasks 7 and 8.
-- [ ] `git diff main...HEAD -- go/internal/guard/` is empty.
-- [ ] `ls go/internal/mcp 2>/dev/null` prints nothing: no server code landed.
-- [ ] Nothing to commit unless a ➕ note was added.
+- [x] `git diff main...HEAD -- go/internal/guard/` is empty.
+- [x] `ls go/internal/mcp 2>/dev/null` prints nothing: no server code landed.
+- [x] Nothing to commit unless a ➕ note was added.
+- ➕ The counts, run 2026-10-03 on this branch. `make test`: all 36 packages
+      ok under `-race`. `make vet`: `go vet` silent and `gofmt -l` empty.
+      `make dist`: the three binaries written, CGO off.
+      `git grep -i -c 'altery\.com'`: nothing.
+      `help propose` prints
+      `propose <url> --from <file> [--md <file>] [--folder <folder id>]` and
+      the flag's line reads "ignored: propose no longer creates a working
+      copy, and the flag will be removed in a later release".
+      `git diff main...HEAD --stat -- skills/`: two files, both under
+      `skills/gdoc-review/`, `SKILL.md` and the new `review.md`.
+      `grep -c 'needs: v2.7.0'`: 1 and 1.
+      `wc -c skills/gdoc-review/SKILL.md`: 14832, well under 20000.
+      `context.Background` in `read.go` and `annotate.go`: nothing; in
+      `write.go` only `write.go:90` in `cmdProbe` and `write.go:644` in
+      `cmdWithdraw`.
+      `wc -l CLAUDE.md`: 269.
+      `git diff main...HEAD -- go/internal/guard/`: 0 lines.
+      `ls go/internal/mcp`: nothing.
+- ➕ The scenarios read against the spec. Scenario 10, a proposal from chat
+      with nothing created in Drive: `TestProposeRunsNoProbe` and
+      `TestTheFolderFlagIsAcceptedAndIgnored`. Scenario 11, Google editing
+      instead of suggesting: `TestAFalseInlineCheckStopsTheRun`,
+      `TestAFalseDocxCheckAloneDoesNotStop`, `TestAStoppedRunRecordsWhatWasSent`
+      and `TestTheStopNeverClaimsADirectEdit`; the stop error is the
+      scenario's own words, "gdoc could not confirm that proposal %d (%q)
+      landed as a suggestion, so nothing after it was sent. Look at it in the
+      browser before proposing again". Scenario 11's lost-answer sibling:
+      `TestALostAnswerIsOutcomeUnknownAndStops`, `TestSendNamesALostAnswer`,
+      `TestAFiveHundredAfterTheWriteIsMarkedUnknown` and
+      `TestNothingBeforeTheWriteIsMarkedUnknown`. Scenario 15, propose in
+      Claude Code with no folder and an old skill still passing one: the same
+      two as scenario 10, the warning at `write.go:238`. Scenario 2's sign-in
+      half: `TestStartLoginReturnsTheLinkAtOnce`, `TestWaitExchangesAndSaves`,
+      `TestThePageSaysSignedInOnlyAfterTheSave`,
+      `TestARefreshAfterANewerLoginSavesNothing` and
+      `TestALoginBetweenTheRefreshAndTheSaveWins`. No hole.
 
 ### Task 13: Update documentation
 
