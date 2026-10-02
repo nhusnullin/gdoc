@@ -675,18 +675,18 @@ Serves decision 13 (the split). Scenario 13.
 - Modify: `go/cmd/gdoc/notice.go`, `go/cmd/gdoc/help.go`
 - Modify: `go/cmd/gdoc/notice_test.go`
 
-- [ ] Test first, `TestNoticeReturnsTheLine`: with a stale stamp and a newer
+- [x] Test first, `TestNoticeReturnsTheLine`: with a stale stamp and a newer
       release, `notice` returns the line
       ``gdoc v2.9.0 is published and this is v2.8.0. `gdoc update` installs it.``
       as one literal in the test.
-- [ ] Test, `TestHelpPrintsTheNoticeLineAndABlankLine`: `help` writes that
+- [x] Test, `TestHelpPrintsTheNoticeLineAndABlankLine`: `help` writes that
       line and one blank line to stderr, and nothing else of the notice.
-- [ ] `TestAStaleStampMakesHelpAskOnce`, `TestAFreshStampMakesNoRequest`,
+- [x] `TestAStaleStampMakesHelpAskOnce`, `TestAFreshStampMakesNoRequest`,
       `TestACheckoutBuildNeverChecks`, `TestTheCheckIsBoundedByTwoSeconds` and
       `TestReadNeverReachesTheCheck` stay green.
-- [ ] Implement as Technical Details.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "refactor(cmd): notice returns its line and help writes it"`
+- [x] Implement as Technical Details.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "refactor(cmd): notice returns its line and help writes it"`
 
 ### Task 11: the documents
 

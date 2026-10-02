@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"runtime"
 	"time"
 
@@ -45,22 +44,25 @@ type updateFacts struct {
 	Error         string `json:"error,omitempty"`
 }
 
-// notice is the whole of the check: the facts for the object, the warnings for
-// the envelope, and at most one line on errOut for the person reading.
+// notice is the whole of the check: the facts for the object, the one line a
+// person reads, and the warnings for the envelope. It writes nothing. Whoever
+// asked decides whether the line reaches a stream, which is what lets a caller
+// that has no stream to print to still have the facts.
 //
 // A checkout build returns nothing, which is what keeps `make build` binaries
 // and the whole test suite off the network.
 //
-// TestAStaleStampMakesHelpAskOnce, TestAFreshStampMakesNoRequest,
-// TestACheckoutBuildNeverChecks and TestReadNeverReachesTheCheck.
-func notice(ctx context.Context, errOut io.Writer) (*updateFacts, []string) {
+// TestNoticeReturnsTheLine, TestAStaleStampMakesHelpAskOnce,
+// TestAFreshStampMakesNoRequest, TestACheckoutBuildNeverChecks and
+// TestReadNeverReachesTheCheck.
+func notice(ctx context.Context) (*updateFacts, string, []string) {
 	installed := releaseVersion()
 	if installed == "" {
-		return nil, nil
+		return nil, "", nil
 	}
 	path, err := config.LastCheckPath()
 	if err != nil {
-		return nil, []string{fmt.Sprintf("gdoc cannot say where it keeps the record of the last release check, so it did not ask whether there is a newer one: %v", err)}
+		return nil, "", []string{fmt.Sprintf("gdoc cannot say where it keeps the record of the last release check, so it did not ask whether there is a newer one: %v", err)}
 	}
 
 	var warns []string
@@ -80,16 +82,13 @@ func notice(ctx context.Context, errOut io.Writer) (*updateFacts, []string) {
 		}
 	}
 
-	if line := noticeLine(installed, stamp); line != "" {
-		fmt.Fprint(errOut, line+"\n\n")
-	}
 	return &updateFacts{
 		Installed:     installed,
 		LatestStable:  stamp.LatestStable,
 		LatestNightly: stamp.LatestNightly,
 		CheckedAt:     checkedAt(stamp),
 		Error:         stamp.Error,
-	}, warns
+	}, noticeLine(installed, stamp), warns
 }
 
 // ask is the read itself: the fifth grant for one run, one GET on the releases
@@ -161,7 +160,8 @@ func joinCauses(causes []string) string {
 // A version that does not parse is no line at all. This binary names a release
 // or it named nothing, and guessing at half a comparison is worse than silence.
 //
-// TestAStaleStampMakesHelpAskOnce and TestTheLineNamesMajorForAMajor.
+// TestNoticeReturnsTheLine, TestAStaleStampMakesHelpAskOnce and
+// TestTheLineNamesMajorForAMajor.
 func noticeLine(installed string, s lastcheck.Stamp) string {
 	here, err := update.Parse(installed)
 	if err != nil {

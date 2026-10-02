@@ -389,3 +389,47 @@ func TestReadNeverReachesTheCheck(t *testing.T) {
 		t.Errorf("read touched the stamp: %+v", before)
 	}
 }
+
+// notice hands its line back rather than writing it, so a caller that is not
+// help can have the facts without a stream to print to. The line is one
+// literal here, because a test that builds it from the same format string the
+// code uses proves nothing about what a person reads.
+func TestNoticeReturnsTheLine(t *testing.T) {
+	pl := &checkPlain{listing: listing("v2.9.0")}
+	checking(t, "v2.8.0", pl)
+
+	facts, line, warns := notice(context.Background())
+	if len(warns) != 0 {
+		t.Errorf("the check answered, so there is no warning: %v", warns)
+	}
+	if facts == nil || facts.Installed != "v2.8.0" || facts.LatestStable != "v2.9.0" {
+		t.Errorf("the facts come back beside the line: %+v", facts)
+	}
+	want := "gdoc v2.9.0 is published and this is v2.8.0. `gdoc update` installs it."
+	if line != want {
+		t.Errorf("the line is returned whole and with no newline:\nwant %q\n got %q", want, line)
+	}
+}
+
+// help is what turns that line into words on stderr: the line, one blank line,
+// and then the help itself. Nothing else of the notice reaches either stream.
+func TestHelpPrintsTheNoticeLineAndABlankLine(t *testing.T) {
+	pl := &checkPlain{listing: listing("v2.9.0")}
+	checking(t, "v2.8.0", pl)
+
+	_, prose, code := runHelp(t, "help")
+	if code != 0 {
+		t.Fatalf("help is an answer: exit %d", code)
+	}
+	line := "gdoc v2.9.0 is published and this is v2.8.0. `gdoc update` installs it."
+	if !strings.HasPrefix(prose, line+"\n\n") {
+		t.Fatalf("the words open with the line and one blank line:\nwant prefix %q\n got %q", line+"\n\n", prose)
+	}
+	rest := strings.TrimPrefix(prose, line+"\n\n")
+	if !strings.HasPrefix(rest, "gdoc v2.8.0\n\n") {
+		t.Errorf("the help's own heading follows the blank line at once: %q", rest)
+	}
+	if strings.Contains(rest, "is published") {
+		t.Errorf("the notice is one line and this run wrote it twice: %q", prose)
+	}
+}
