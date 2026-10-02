@@ -37,7 +37,7 @@
 // keeps going, so valid JSON of the wrong shape reaches the caller with fields
 // in hand. The gate is the decoded field, never the path that was taken.
 //
-// # What is not marked is three cases, not two
+// # What is not marked as sent is three cases, and the third has its own mark
 //
 // A guard refusal never left the machine, and a 4xx is Docs rejecting the
 // request whole. A caller is right to treat both as a change that did not
@@ -45,15 +45,25 @@
 // TestAMultipartCreateTheGuardRefusesIsNotMarkedAsSent pin the refusal,
 // TestAFailedStatusIsNotMarkedAsSent pins the 4xx.
 //
-// A 5xx or a dropped connection is the third, and it is not marked either. gdoc
-// cannot tell it apart: the request was written and may have been applied.
-// Nothing claims otherwise in either direction, so a caller that sees a
-// transport failure or a 5xx reads the document before sending the same write
-// again. Widening the mark to cover it would make every one of those a
-// reported-not-raised failure, and that is a decision for Nail rather than a
-// refactor. TODO(test): no test pins the 5xx case. It takes the same path a
-// 4xx takes, so a change to statusError moves both at once and only the 4xx
-// would fail.
+// A 5xx or a connection that dropped after the request went out is the third,
+// and it is not sent, because nothing said Docs took it. It is marked unknown
+// instead: the bytes were written and whether they were applied is not knowable
+// from this side. unknownError is the mark, and Unknown reports it, asked by
+// behaviour the way Sent is.
+//
+// Which side of the write a failure fell on comes from net/http/httptrace. The
+// transport calls WroteRequest once the request bytes are out, so a guard
+// refusal, a connection that was never made and a handshake that never finished
+// never reach it and stay unmarked. A 5xx needs no hook: the request was written
+// to get that answer. TestAFiveHundredAfterTheWriteIsMarkedUnknown,
+// TestADropAfterTheWriteIsMarkedUnknown and
+// TestNothingBeforeTheWriteIsMarkedUnknown are the three pins, and the last of
+// them runs the dial and the handshake through a real transport, so what it
+// holds is the transport's own behaviour rather than a fake's.
+//
+// Unknown is a fact and not advice. Nothing here says the write should be made
+// again; the one honest next step is to read the document, and the writer
+// package says so in its own words.
 package gapi
 
 import (
@@ -66,8 +76,10 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptrace"
 	"net/textproto"
 	"net/url"
+	"sync/atomic"
 
 	"gdoc/internal/auth"
 	"gdoc/internal/guard"
@@ -91,6 +103,30 @@ func (e sentError) Sent() bool { return true }
 
 // sent wraps err as having happened after a 2xx answer.
 func sent(err error) error { return sentError{err: err} }
+
+// unknownError marks a failure where the request was written and no answer
+// saying what became of it ever arrived. It is the one case gdoc cannot decide:
+// the bytes went out, and whether Docs applied them is not knowable from this
+// side.
+//
+// It is a separate mark rather than a widening of sentError, because the two say
+// different things. Sent says Docs took the request, which a caller may act on.
+// Unknown says nobody knows, and the only honest next step is to read the
+// document.
+//
+// It is a method rather than an exported sentinel for the same reason sentError
+// is: a writer package asks by behaviour, and an exported sentinel here would
+// bring net/http into that room through the side door.
+type unknownError struct{ err error }
+
+func (e unknownError) Error() string { return e.err.Error() }
+func (e unknownError) Unwrap() error { return e.err }
+
+// Unknown says the request was written and its answer was lost.
+func (e unknownError) Unknown() bool { return true }
+
+// unknown wraps err as having happened after the request bytes were out.
+func unknown(err error) error { return unknownError{err: err} }
 
 // maxErrorBody caps what is read from a failed request. The body is never
 // printed, only Google's error.message is, so this is a bound on the parse.
@@ -353,7 +389,15 @@ func (s *Session) send(ctx context.Context, rawURL string, build requestFor, lim
 		}
 	}
 	if status < 200 || status > 299 {
-		return nil, statusError(rawURL, status, body)
+		err := statusError(rawURL, status, body)
+		if status >= 500 {
+			// A 500 is Google answering that something went wrong on its side,
+			// and the request was written to get that answer. Whether the batch
+			// was applied before it failed is not knowable from here.
+			// TestAFiveHundredAfterTheWriteIsMarkedUnknown is the pin.
+			return nil, unknown(err)
+		}
+		return nil, err
 	}
 	return body, nil
 }
@@ -362,6 +406,24 @@ func (s *Session) send(ctx context.Context, rawURL string, build requestFor, lim
 // which is what a guard refusal is, comes back as the error; a status the
 // caller has to decide about does not.
 func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, rawURL string) ([]byte, int, error) {
+	// The hook is the one fact that tells a request that never left from a
+	// request whose answer was lost. http.Transport calls WroteRequest once the
+	// bytes are out, so a guard refusal, a connection that was never made and a
+	// handshake that never finished never reach it.
+	//
+	// It is attached before build, because the request carries the context and
+	// httptrace reads the trace off the request's own context. wrote is atomic
+	// because the hook runs on the transport's write goroutine.
+	// TestADropAfterTheWriteIsMarkedUnknown and
+	// TestNothingBeforeTheWriteIsMarkedUnknown are the pins.
+	var wrote atomic.Bool
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			if info.Err == nil {
+				wrote.Store(true)
+			}
+		},
+	})
 	req, err := build(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -372,6 +434,9 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		if wrote.Load() {
+			return nil, 0, unknown(unwrapRequestError(err))
+		}
 		return nil, 0, unwrapRequestError(err)
 	}
 	defer resp.Body.Close()
@@ -402,13 +467,14 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 
 // mark wraps err as sent when the server had answered 2xx before it happened.
 //
-// It is the most this package can say, and not the whole of what can go wrong.
-// An unmarked failure is one of three: a guard refusal, where nothing left the
-// machine; a 4xx, where Docs rejected the batch whole; and a 5xx or a dropped
-// connection, where the request was written and gdoc cannot tell whether it was
-// applied. The third is not a claim this makes either way, so a caller reading
-// a transport failure or a 5xx should look at the document before sending the
-// same write again.
+// It is the most this package can say about a 2xx, and not the whole of what can
+// go wrong. A failure this leaves alone is one of three: a guard refusal, where
+// nothing left the machine; a 4xx, where Docs rejected the batch whole; and a
+// 5xx or a dropped connection, where the request was written and gdoc cannot
+// tell whether it was applied. The first two are a change that did not happen.
+// The third carries the unknown mark instead, which send and attempt put on it,
+// and a caller reading it looks at the document before sending the same write
+// again.
 func mark(ok bool, err error) error {
 	if !ok {
 		return err

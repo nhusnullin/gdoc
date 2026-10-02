@@ -524,23 +524,23 @@ Serves decision 11. Scenario 11.
   `cmd/gdoc` tests use
 - Create: `go/cmd/gdoc/propose_unknown_test.go`
 
-- [ ] Test first, in `gapi`, `TestAFiveHundredAfterTheWriteIsMarkedUnknown`
+- [x] Test first, in `gapi`, `TestAFiveHundredAfterTheWriteIsMarkedUnknown`
       and `TestADropAfterTheWriteIsMarkedUnknown`. Watch them fail.
-- [ ] Test, `TestNothingBeforeTheWriteIsMarkedUnknown`: a guard refusal, a
+- [x] Test, `TestNothingBeforeTheWriteIsMarkedUnknown`: a guard refusal, a
       dial failure, a TLS handshake failure and a 4xx are not `Unknown()`.
-- [ ] Test, in `propose`, `TestSendNamesALostAnswer`, on a words proposal and
+- [x] Test, in `propose`, `TestSendNamesALostAnswer`, on a words proposal and
       on a block.
-- [ ] Test, in `cmd/gdoc`, `TestALostAnswerIsOutcomeUnknownAndStops`: the
+- [x] Test, in `cmd/gdoc`, `TestALostAnswerIsOutcomeUnknownAndStops`: the
       entry is `sent: false, outcome: "unknown"`, every later entry has no
       `outcome`, the run stops, the error is the literal, and the fake sees
       exactly one write.
-- [ ] Implement as Technical Details, the trace hook in the fakes included.
-- [ ] The package comment of `gapi`: the section on what is not marked says
+- [x] Implement as Technical Details, the trace hook in the fakes included.
+- [x] The package comment of `gapi`: the section on what is not marked says
       which case is now marked and how; its `TODO(test)` closes with the
       tests' names. `propose/doc.go` and `cmd/gdoc/doc.go`: the lost answer,
       naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(propose): a batch whose answer was lost is outcome unknown, and stops the run"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(propose): a batch whose answer was lost is outcome unknown, and stops the run"`
 
 ### Task 6: the review rules move into review.md
 

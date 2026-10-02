@@ -517,6 +517,30 @@
 // down, because a proposal gdoc has forgotten is one it will refuse to withdraw.
 // The 2026-10-02 entry in docs/v2/DECISIONS.md holds the decision.
 //
+// # A batch whose answer was lost is outcome unknown, and stops the run
+//
+// A batch that went out and answered nothing is the one case gdoc cannot decide.
+// internal/gapi marks it, from the moment the request bytes left, and
+// internal/propose raises it with Outcome unknown rather than running read-backs
+// on a change it cannot say is there.
+//
+// The entry stays sent: false, because that field means gdoc got no answer saying
+// the batch landed, and this is exactly that. outcome: "unknown" beside it is what
+// stops it from reading as a change that never left the machine, and it appears on
+// that one entry: on any other it would say nobody knows about a proposal that
+// never went out. The run stops, nothing behind it is sent, nothing is retried,
+// and the envelope says the proposal may or may not be in the document and to read
+// the suggestions before proposing it again.
+//
+// The sentence is the whole of the advice. No field says a proposal should be sent
+// again: whether it is there is a question the document answers, and asking it is a
+// person's job. TestALostAnswerIsOutcomeUnknownAndStops is the pin, with
+// TestSendNamesALostAnswer in internal/propose and
+// TestAFiveHundredAfterTheWriteIsMarkedUnknown,
+// TestADropAfterTheWriteIsMarkedUnknown and
+// TestNothingBeforeTheWriteIsMarkedUnknown in internal/gapi. The 2026-10-02 entry
+// in docs/v2/DECISIONS.md holds the decision.
+//
 // # propose takes a folder it ignores, and annotate takes no note
 //
 // --folder bought the capability probe the throwaway document it measured on.

@@ -164,11 +164,15 @@ func readBody(path string) (string, error) {
 // file, and each one answers `sent` for itself.
 //
 // That is what the field means, and it is narrower than "it never left the
-// machine". A guard refusal and a 4xx never changed the document, and a 5xx or
-// a dropped connection is the third case: the request was written and may have
-// been applied, and gdoc cannot tell. The envelope's own error names it on that
-// path, so read the error beside the flag rather than the flag alone, and read
-// the document before proposing the same words again.
+// machine". A guard refusal and a 4xx never changed the document. A 5xx or a
+// dropped connection after the request went out is the third case, and Outcome
+// is the field that says so: it is "unknown" on that one entry, and absent
+// everywhere else. The envelope's own error names it too, and both say the same
+// thing, which is that the document has to be read before the same words are
+// proposed again. TestALostAnswerIsOutcomeUnknownAndStops is the pin.
+//
+// Outcome is a fact about the answer. Nothing here says the proposal should be
+// sent again: that is a judgement, and it belongs to whoever reads the document.
 // Each kind reports the placement it was asked for and leaves the other kind's
 // fields out: a words proposal names quoted and replacement, a block names
 // after, or replace_from and replace_to. They are the words the file asked for
@@ -181,6 +185,7 @@ type proposalReport struct {
 	ReplaceFrom        string         `json:"replace_from,omitempty"`
 	ReplaceTo          string         `json:"replace_to,omitempty"`
 	Sent               bool           `json:"sent"`
+	Outcome            string         `json:"outcome,omitempty"`
 	SuggestionIDs      []string       `json:"suggestion_ids,omitempty"`
 	CommentID          string         `json:"comment_id,omitempty"`
 	CommentUpdateState string         `json:"comment_update_state,omitempty"`
@@ -277,6 +282,17 @@ func runPropose(r *reach, proposals []propose.Proposal, note *notePath, seed ...
 		res, err := propose.Apply(ctx, r.session, r.id, one)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
+			if res.Outcome == propose.OutcomeUnknown {
+				// The batch went out and nothing came back. The entry stays
+				// `sent: false`, which is what that field means, and the outcome
+				// beside it is what stops it from reading as a change that never
+				// left. Nothing is retried, and nothing behind it is sent.
+				data.Proposals[i].Outcome = res.Outcome
+				return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+					Error: fmt.Sprintf(
+						"proposal %d (%q) was written and its answer was lost, so it may or may not be in the document. Read the suggestions before proposing it again",
+						i+1, res.Quote())}
+			}
 			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
 		}
 		results = append(results, res)

@@ -659,7 +659,18 @@
 // imported sentinel would bring it back through the side door. Apply runs the
 // read-backs on that path and reports the proposal with the comment id unknown,
 // or with whatever the answer still carried. internal/gapi's own comment holds
-// the rule and the three cases it does not cover.
+// the rule and the cases it covers.
+//
+// A write whose answer was lost is neither of those two. internal/gapi marks it
+// apart, because the request went out and nothing came back saying what became
+// of it, and answerLost asks for that mark by behaviour the way sentAnyway asks
+// for the other one. On that path send raises, the read-backs do not run, and the
+// Result carries Outcome OutcomeUnknown: the one route that could say whether the
+// proposal is there is the document itself, and reading it is a person's job
+// rather than a field's. Nothing here says the proposal should be sent again.
+// TestSendNamesALostAnswer and TestAnAnswerDocsTookIsStillNotUnknown are the
+// pins, with TestALostAnswerIsOutcomeUnknownAndStops in cmd/gdoc, which is where
+// the run stops.
 //
 // The note is read again just before it is written, because the run spends
 // seconds to tens of seconds on the network between the pairing check and the
