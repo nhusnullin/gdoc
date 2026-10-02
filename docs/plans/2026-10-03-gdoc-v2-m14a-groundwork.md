@@ -645,27 +645,27 @@ Scenarios 7, 10.
   `go/cmd/gdoc/annotate.go`, `go/cmd/gdoc/doc.go`
 - Create: `go/cmd/gdoc/context_test.go`
 
-- [ ] Test first, `TestACancelledContextCancelsTheRead`: `read`,
+- [x] Test first, `TestACancelledContextCancelsTheRead`: `read`,
       `suggestions` and `comments` handed a done context send no request and
       fail naming the cancellation.
-- [ ] Test, `TestProposeStopsBetweenProposalsWhenTimeRunsOut`: the context
+- [x] Test, `TestProposeStopsBetweenProposalsWhenTimeRunsOut`: the context
       ends during proposal 1's read-backs; proposal 1 finishes all three
       read-backs, proposals 2 and 3 are `sent: false`, the error is the
       literal of Technical Details.
-- [ ] Test, `TestAReadBackIsNeverCutByTheDeadline`: a context that ends
+- [x] Test, `TestAReadBackIsNeverCutByTheDeadline`: a context that ends
       between the write and the first read-back still yields all three
       read-backs.
-- [ ] Test, `TestAnnotateStopsBetweenItemsWhenTimeRunsOut`: the same for
+- [x] Test, `TestAnnotateStopsBetweenItemsWhenTimeRunsOut`: the same for
       `annotate`.
-- [ ] Test, `TestReplyNeverCutsItsReadBack`: a done context sends no reply; a
+- [x] Test, `TestReplyNeverCutsItsReadBack`: a done context sends no reply; a
       context that ends after the post still yields the read-back.
-- [ ] Implement as Technical Details: the table entries pass `ctx`;
+- [x] Implement as Technical Details: the table entries pass `ctx`;
       `cmdRead`, `cmdSuggestions`, `cmdReply`, `cmdPropose` and
       `cmdAnnotate` take it. `cmdProbe` and `cmdWithdraw` keep
       `context.Background()`: neither is a chat tool.
-- [ ] `cmd/gdoc/doc.go`: the deadline rule, naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): the chat commands take their context, and no write is cut from its read-back"`
+- [x] `cmd/gdoc/doc.go`: the deadline rule, naming the tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): the chat commands take their context, and no write is cut from its read-back"`
 
 ### Task 10: notice returns its line
 

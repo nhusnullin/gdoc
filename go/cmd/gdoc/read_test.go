@@ -37,7 +37,10 @@ type fakeSession struct {
 	policy   *guard.Policy
 }
 
-func (f *fakeSession) GetJSON(_ context.Context, rawURL string, into any) error {
+func (f *fakeSession) GetJSON(ctx context.Context, rawURL string, into any) error {
+	if err := stopped(ctx); err != nil {
+		return err
+	}
 	f.urls = append(f.urls, rawURL)
 	if f.err != nil {
 		return f.err
@@ -50,7 +53,10 @@ func (f *fakeSession) GetJSON(_ context.Context, rawURL string, into any) error 
 	return fmt.Errorf("the fake session has no answer for %s", rawURL)
 }
 
-func (f *fakeSession) GetBytes(_ context.Context, rawURL string, _ int64) ([]byte, error) {
+func (f *fakeSession) GetBytes(ctx context.Context, rawURL string, _ int64) ([]byte, error) {
+	if err := stopped(ctx); err != nil {
+		return nil, err
+	}
 	f.urls = append(f.urls, rawURL)
 	if f.err != nil {
 		return nil, f.err

@@ -444,6 +444,34 @@
 // dispatch still takes a context, because a test hands a wait one that is
 // already done.
 //
+// # The chat commands take the context they are handed, and no write is cut from its read-back
+//
+// read, comments, suggestions, reply, propose and annotate run on the context
+// dispatch hands them. A caller that stops the call stops the reads: a cancelled
+// context reaches the session, nothing is written, and the envelope fails naming
+// the cancellation rather than blaming Google for a read that was never made.
+// TestACancelledContextCancelsTheRead is the pin, and the fake session answers
+// a done context the way net/http does, so a command that dropped it would not
+// pass.
+//
+// Inside one write the context decides nothing. propose and annotate read
+// ctx.Err() before each item and hand the item itself
+// context.WithoutCancel(ctx), so a proposal or a comment that went out is read
+// back through every route whatever the caller's clock says: a suggestion in
+// somebody's document that gdoc did not read back is a change nobody can
+// account for. reply is the same rule with one item, read before the post.
+//
+// What a deadline costs is the items that were not reached. They stay
+// sent: false, and the sentence says how far the run got, so the next call sends
+// the rest rather than the file again. TestProposeStopsBetweenProposalsWhenTimeRunsOut,
+// TestAReadBackIsNeverCutByTheDeadline,
+// TestAnnotateStopsBetweenItemsWhenTimeRunsOut and
+// TestReplyNeverCutsItsReadBack are the four pins.
+//
+// probe and withdraw keep context.Background(). Neither is a chat tool: the
+// probe is a command somebody types to ask what Docs does today, and a withdraw
+// is one retraction that has a note to rewrite behind it.
+//
 // # The proposals file holds both kinds, and a block field needs the block kind
 //
 // One list, read strictly, and every entry checked before the first write: all

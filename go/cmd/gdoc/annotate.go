@@ -57,7 +57,7 @@ type annotateData struct {
 	Annotations []annotationReport `json:"annotations"`
 }
 
-func cmdAnnotate(a *args) emit.Result {
+func cmdAnnotate(ctx context.Context, a *args) emit.Result {
 	list, err := annotationsFor(a)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -66,7 +66,7 @@ func cmdAnnotate(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	return runAnnotate(r, list)
+	return runAnnotate(ctx, r, list)
 }
 
 // annotationsFor turns the flags into the list this run will place, and refuses
@@ -169,13 +169,22 @@ func readAnnotations(path string) ([]annotate.Annotation, error) {
 // shortened: each entry answers `sent` for itself, so a stop in the middle says
 // what landed and what never left rather than leaving the skill to match the
 // envelope back against the file it wrote.
-func runAnnotate(r *reach, list []annotate.Annotation) emit.Result {
-	ctx := context.Background()
+func runAnnotate(ctx context.Context, r *reach, list []annotate.Annotation) emit.Result {
 	var warns []string
 	data := annotateData{DocumentID: r.id, Annotations: notPlaced(list)}
 
 	for i, one := range list {
-		res, err := annotate.Apply(ctx, r.session, r.id, one)
+		// propose's rule, on this writer: the caller's time is read between
+		// items and nowhere inside one, and a comment that went out is read
+		// back through both routes whatever the clock says.
+		// TestAnnotateStopsBetweenItemsWhenTimeRunsOut is the pin.
+		if ctx.Err() != nil {
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf(
+					"the time for this call ran out after %d of %d; nothing after that was sent. Call again with the rest",
+					i, len(list))}
+		}
+		res, err := annotate.Apply(context.WithoutCancel(ctx), r.session, r.id, one)
 		if err != nil {
 			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
 		}

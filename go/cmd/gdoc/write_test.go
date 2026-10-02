@@ -95,7 +95,24 @@ func (f *fakeWire) find(method, rawURL string) (*answer, error) {
 	return nil, fmt.Errorf("the fake wire has no answer for %s %s", method, rawURL)
 }
 
-func (f *fakeWire) GetJSON(_ context.Context, rawURL string, into any) error {
+// stopped stands in for the one thing a real transport does with a context
+// before anything else: a request on a context that is already done is never
+// written, and the error is the cancellation rather than anything the server
+// said. net/http answers that way, gapi hands the error straight back, and a
+// fake that ignored the context would let a command drop it and still pass.
+// TestACancelledContextCancelsTheRead and TestReplyNeverCutsItsReadBack are the
+// pins.
+func stopped(ctx context.Context) error {
+	if ctx == nil {
+		return nil
+	}
+	return ctx.Err()
+}
+
+func (f *fakeWire) GetJSON(ctx context.Context, rawURL string, into any) error {
+	if err := stopped(ctx); err != nil {
+		return err
+	}
 	f.calls = append(f.calls, wireCall{Method: "GET", URL: rawURL})
 	a, err := f.find("GET", rawURL)
 	if err != nil {
@@ -108,6 +125,9 @@ func (f *fakeWire) GetJSON(_ context.Context, rawURL string, into any) error {
 }
 
 func (f *fakeWire) GetBytes(ctx context.Context, rawURL string, _ int64) ([]byte, error) {
+	if err := stopped(ctx); err != nil {
+		return nil, err
+	}
 	f.calls = append(f.calls, wireCall{Method: "GET", URL: rawURL})
 	f.bytesCtx = ctx
 	f.bytesAt = time.Now()
@@ -129,7 +149,10 @@ func (f *fakeWire) PatchJSON(ctx context.Context, rawURL string, body any, into 
 	return f.write(ctx, "PATCH", rawURL, body, into)
 }
 
-func (f *fakeWire) write(_ context.Context, method, rawURL string, body any, into any) error {
+func (f *fakeWire) write(ctx context.Context, method, rawURL string, body any, into any) error {
+	if err := stopped(ctx); err != nil {
+		return err
+	}
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -152,7 +175,10 @@ func (f *fakeWire) write(_ context.Context, method, rawURL string, body any, int
 // test reads it the way it reads every other write, and the file part is kept
 // beside it: what a publish uploaded is the half of the contract this package
 // owns.
-func (f *fakeWire) PostMultipart(_ context.Context, rawURL string, meta any, part []byte, partType string, into any) error {
+func (f *fakeWire) PostMultipart(ctx context.Context, rawURL string, meta any, part []byte, partType string, into any) error {
+	if err := stopped(ctx); err != nil {
+		return err
+	}
 	raw, err := json.Marshal(meta)
 	if err != nil {
 		return err

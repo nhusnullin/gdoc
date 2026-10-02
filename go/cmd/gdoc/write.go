@@ -108,7 +108,7 @@ type replyData struct {
 	Verified   bool   `json:"verified"`
 }
 
-func cmdReply(a *args) emit.Result {
+func cmdReply(ctx context.Context, a *args) emit.Result {
 	path, err := required(a, "--body-file")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -131,7 +131,16 @@ func cmdReply(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	res, err := reply.Post(context.Background(), r.session, r.id, commentID, body)
+	// The caller's time is read here and nowhere after here. A call that is
+	// already over posts nothing, and a call that runs out as the reply goes
+	// out still reads the thread back: a reply in somebody's document reported
+	// as unverified is a reply nobody can find again. TestReplyNeverCutsItsReadBack
+	// is the pin.
+	if ctx.Err() != nil {
+		return emit.Result{OK: false, Warnings: r.warnings(),
+			Error: "the time for this call ran out before the reply was sent, so nothing was written. Call again"}
+	}
+	res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, commentID, body)
 	data := replyData{
 		DocumentID: r.id,
 		CommentID:  commentID,
@@ -202,7 +211,7 @@ type proposeData struct {
 	FilesChanged []string         `json:"files_changed,omitempty"`
 }
 
-func cmdPropose(a *args) emit.Result {
+func cmdPropose(ctx context.Context, a *args) emit.Result {
 	from, err := required(a, "--from")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -246,12 +255,11 @@ func cmdPropose(a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	r := &reach{id: docID, session: s}
-	return runPropose(r, proposals, note, warns...)
+	return runPropose(ctx, r, proposals, note, warns...)
 }
 
 // runPropose is the run itself: read, then one proposal at a time.
-func runPropose(r *reach, proposals []propose.Proposal, note *notePath, seed ...string) emit.Result {
-	ctx := context.Background()
+func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, seed ...string) emit.Result {
 	warns := append([]string{}, seed...)
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
@@ -279,7 +287,23 @@ func runPropose(r *reach, proposals []propose.Proposal, note *notePath, seed ...
 	// left rather than shortening the list.
 	results := make([]propose.Result, 0, len(proposals))
 	for i, one := range proposals {
-		res, err := propose.Apply(ctx, r.session, r.id, one)
+		// The caller's time is read between proposals and nowhere inside one.
+		// What a deadline costs is the proposals that were not reached, and the
+		// sentence says how far the run got so the next call sends the rest
+		// rather than the file. TestProposeStopsBetweenProposalsWhenTimeRunsOut
+		// is the pin.
+		if ctx.Err() != nil {
+			data.FilesChanged, warns = record(note, results, warns)
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf(
+					"the time for this call ran out after %d of %d; nothing after that was sent. Call again with the rest",
+					i, len(proposals))}
+		}
+		// WithoutCancel, so a proposal that went out is read back through all
+		// three routes whatever the caller's clock says: a suggestion in
+		// somebody's document that gdoc did not read back is a change nobody
+		// can account for. TestAReadBackIsNeverCutByTheDeadline is the pin.
+		res, err := propose.Apply(context.WithoutCancel(ctx), r.session, r.id, one)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			if res.Outcome == propose.OutcomeUnknown {
