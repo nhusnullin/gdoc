@@ -64,6 +64,31 @@
 // Unknown is a fact and not advice. Nothing here says the write should be made
 // again; the one honest next step is to read the document, and the writer
 // package says so in its own words.
+//
+// # A refresh never writes an old login over a newer one
+//
+// A session remembers the refresh token the file held when it took its token,
+// and a refresh reads the file again twice: once before the exchange and once
+// before the save. Both ask whether the file still carries that refresh token.
+// When it does not, somebody signed in again, and the file's token wins: the
+// session takes it, refreshes it only if it too has expired, and saves nothing.
+// TestARefreshAfterANewerLoginSavesNothing,
+// TestARefreshAfterANewerExpiredLoginRefreshesThatOne and
+// TestALoginBetweenTheRefreshAndTheSaveWins are the three pins, one per point
+// at which the login can land.
+//
+// This matters because a session lives longer than one command now. A chat
+// session opened before a re-login would otherwise refresh the signed-out
+// account an hour later and write it back over the new one, and the next
+// command would read it.
+//
+// Two things hold the rule from overreaching. Nothing locks: Google omits the
+// refresh token on a refresh and auth.Refresh keeps the old one, so two
+// refreshes of one login both save a working token, which
+// TestTwoRefreshesOfOneLoginBothSave pins. And a refresh refuses to save a
+// token carrying no refresh token at all, since that save turns an expired
+// access token into a login nobody can renew:
+// TestARefreshNeverWritesAnEmptyRefreshToken.
 package gapi
 
 import (
@@ -143,11 +168,17 @@ const MaxJSONBody = 64 << 20
 // It is not safe for concurrent use. A command reads in one goroutine, and
 // making it safe would mean guarding the token a refresh replaces.
 type Session struct {
-	policy    *guard.Policy
-	client    *http.Client
-	token     auth.Token
+	policy *guard.Policy
+	client *http.Client
+	token  auth.Token
+	// loaded is the refresh token the file held when this session took the
+	// token it is using. It is how a refresh tells its own login from a newer
+	// one: a refresh token the file no longer carries belongs to an account
+	// somebody has already signed out of.
+	loaded    string
 	warnings  []string
 	refreshed bool // the refresh is said once, however many requests follow it
+	adopted   bool // so is the newer login
 }
 
 // Open loads the token and builds the guard's client from p. A base of nil
@@ -158,7 +189,7 @@ func Open(p *guard.Policy, base http.RoundTripper) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{policy: p, client: guard.NewClient(p, base), token: tok}, nil
+	return &Session{policy: p, client: guard.NewClient(p, base), token: tok, loaded: tok.RefreshToken}, nil
 }
 
 // Warnings is the policy's warnings followed by the session's own, in that
@@ -486,14 +517,47 @@ func mark(ok bool, err error) error {
 // refresh that fails names the failure and saves nothing: a half-written token
 // is worse than an expired one.
 //
+// It reads the token file twice, once before the exchange and once before the
+// save, because a login can land at any point in between. Both reads ask one
+// question: does the file still carry the refresh token this session is using?
+// When it does not, somebody signed in again, the file's token wins, and this
+// refresh saves nothing. Without that, a session opened an hour before a
+// re-login would write the signed-out account back over the new one.
+//
 // It carries the caller's context, because a refresh is one more request inside
 // whatever the caller is bounded by. A poll inside `comments --wait` runs on
 // that call's deadline, and a refresh that ignored it would be the one request
 // in a poll that neither the deadline nor a Ctrl-C could reach.
 func (s *Session) refresh(ctx context.Context) error {
+	newer, err := s.newerLogin()
+	if err != nil {
+		return err
+	}
+	if newer != nil {
+		s.adopt(*newer)
+		// A newer login that is still live needs no request at all.
+		if !newer.Expired() {
+			return nil
+		}
+	}
 	tok, err := s.token.Refresh(ctx, s.client)
 	if err != nil {
 		return fmt.Errorf("the access token could not be refreshed: %w", err)
+	}
+	// Google omits the refresh token on a refresh and auth.Refresh keeps the
+	// old one, so an empty one here means the token this session holds could
+	// not have been refreshed again either. Saving it would turn one expired
+	// access token into a login nobody can renew.
+	if tok.RefreshToken == "" {
+		return errors.New("the refreshed token carries no refresh token, so it was not saved. Run: gdoc auth login")
+	}
+	newer, err = s.newerLogin()
+	if err != nil {
+		return err
+	}
+	if newer != nil {
+		s.adopt(*newer)
+		return nil
 	}
 	if err := auth.Save(tok); err != nil {
 		return fmt.Errorf("the refreshed token could not be saved: %w", err)
@@ -504,6 +568,35 @@ func (s *Session) refresh(ctx context.Context) error {
 		s.warnings = append(s.warnings, "the access token was refreshed and saved")
 	}
 	return nil
+}
+
+// newerLogin reads the token file and returns its token when the file no longer
+// carries the refresh token this session is using. A nil token means the file
+// still holds this session's own login, which is the ordinary case.
+//
+// A file that cannot be read is the error, and the refresh stops on it. At this
+// point the session is about to write a credential, and a file it could not
+// read is a file it cannot say is not somebody's newer login.
+func (s *Session) newerLogin() (*auth.Token, error) {
+	tok, err := auth.Load()
+	if err != nil {
+		return nil, fmt.Errorf("the token file could not be read before refreshing: %w", err)
+	}
+	if tok.RefreshToken == s.loaded {
+		return nil, nil
+	}
+	return &tok, nil
+}
+
+// adopt takes the file's token as this session's own and says so once. Nothing
+// is saved: the file is already what it is being set to.
+func (s *Session) adopt(tok auth.Token) {
+	s.token = tok
+	s.loaded = tok.RefreshToken
+	if !s.adopted {
+		s.adopted = true
+		s.warnings = append(s.warnings, "a newer sign-in was found in the token file and used, and nothing was saved")
+	}
 }
 
 // statusError carries the status and the server's own message, and never the

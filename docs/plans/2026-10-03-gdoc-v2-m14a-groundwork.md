@@ -618,22 +618,22 @@ Serves the spec's "The token" paragraph. Scenario 2.
 - Modify: `go/internal/gapi/session.go` (the code and the package comment)
 - Create: `go/internal/gapi/refresh_test.go`
 
-- [ ] Test first, `TestARefreshAfterANewerLoginSavesNothing`: the session
+- [x] Test first, `TestARefreshAfterANewerLoginSavesNothing`: the session
       loads token A; the file is replaced by a valid token B with another
       refresh token; the session's next request carries B's access token, B
       stays in the file byte for byte, and no refresh request is sent.
-- [ ] Test, `TestARefreshAfterANewerExpiredLoginRefreshesThatOne`: B is
+- [x] Test, `TestARefreshAfterANewerExpiredLoginRefreshesThatOne`: B is
       expired; the refresh is of B's refresh token, never A's.
-- [ ] Test, `TestALoginBetweenTheRefreshAndTheSaveWins`: the file changes
+- [x] Test, `TestALoginBetweenTheRefreshAndTheSaveWins`: the file changes
       between the refresh answer and the save; nothing is saved.
-- [ ] Test, `TestARefreshNeverWritesAnEmptyRefreshToken`.
-- [ ] Test, `TestTwoRefreshesOfOneLoginBothSave`: the ordinary path is
+- [x] Test, `TestARefreshNeverWritesAnEmptyRefreshToken`.
+- [x] Test, `TestTwoRefreshesOfOneLoginBothSave`: the ordinary path is
       unchanged.
-- [ ] Implement as Technical Details.
-- [ ] The rule in the package comment at the top of `session.go`, naming the
+- [x] Implement as Technical Details.
+- [x] The rule in the package comment at the top of `session.go`, naming the
       tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "fix(gapi): a refresh looks at the token file first and never saves over a newer login"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "fix(gapi): a refresh looks at the token file first and never saves over a newer login"`
 
 ### Task 9: the six chat commands take the context they are handed
 
