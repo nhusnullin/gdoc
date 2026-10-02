@@ -32,10 +32,17 @@ import (
 // the probe. The guard's and the prelude's package comments are here because
 // CLAUDE.md sends a reader to both to learn what makes a write trustworthy, and
 // both stated the probe as the bar in front of the read-back.
+//
+// docs/v2/BLOCKED-BY-API.md is here because it is where the rule was first
+// written down, and because CLAUDE.md's task map sends a reader to it to learn
+// what Google does: the measurement row for a SUGGEST write closed with the
+// rule in its noun form, "probe on every propose run", which the two verb
+// patterns read straight past.
 var probeClaimScanned = []string{
 	"CLAUDE.md",
 	"README.md",
 	"docs/guide",
+	"docs/v2/BLOCKED-BY-API.md",
 	"go/cmd/gdoc/doc.go",
 	"go/internal/propose/doc.go",
 	"go/internal/guard/doc.go",
@@ -57,6 +64,10 @@ var probeClaimScanned = []string{
 var probeClaims = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\b(propose|proposal|the command|the writer)\b[^.;:!?]{0,80}\bruns?\s+(the\s+|its\s+|a\s+)?(capability\s+)?(internal/)?probe\b`),
 	regexp.MustCompile(`(?i)\bprobe\b[^.;:!?]{0,80}\b(propose|the command|the writer)\s+runs\b`),
+	// The third is the claim with no verb in it at all, as a thing done on
+	// every run: "probe on every propose run", "a probe before each proposal".
+	// The two above both need "runs", so they read past it.
+	regexp.MustCompile(`(?i)\bprobe\b[^.;:!?]{0,40}\b(on|before)\s+(every|each)\b[^.;:!?]{0,40}\brun\b`),
 }
 
 func TestNoDocumentSaysAProposalRunsTheProbe(t *testing.T) {
@@ -97,6 +108,8 @@ func TestTheProbeClaimScanFindsAPlantedSentence(t *testing.T) {
 		{"a live test running it itself", "The probe first, because an unenrolled project makes every assertion below meaningless.", false},
 		{"the stop", "That stop is the bound on no command running the capability probe any more.", false},
 		{"package paths on both sides", "internal/propose runs internal/probe before every proposal, because writeMode is a field gdoc supplies.", true},
+		{"the claim with no verb", "The rule stands unchanged: probe on every `propose` run, read back after every write.", true},
+		{"the probe command before each of its own writes", "`gdoc probe` reads the document back before each of the two writes it makes.", false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

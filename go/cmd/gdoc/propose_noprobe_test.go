@@ -1,9 +1,13 @@
 package main
 
 import (
+	"errors"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"gdoc/internal/guard"
 )
 
 // This file is the probe leaving `propose`. Suggestions are generally available,
@@ -107,4 +111,46 @@ func TestProposeStillRefusesAMalformedFolder(t *testing.T) {
 	if len(f.calls) != 0 {
 		t.Errorf("nothing may be sent for an argument that was refused: %v", f.calls)
 	}
+}
+
+// TestTheFolderWarningSurvivesEveryRefusalAfterIt is the warning's whole point.
+// It is the one signal telling a v2.7 caller to stop passing the flag, and a
+// caller whose note is mispaired or whose token is gone is exactly the caller
+// running an old script. A refusal that drops the warning says nothing about the
+// flag, and the next run repeats it.
+func TestTheFolderWarningSurvivesEveryRefusalAfterIt(t *testing.T) {
+	from := tempFile(t, "proposals.json", oneProposal)
+
+	// The note is read before the session is opened, so this is the first
+	// refusal standing between the warning and the envelope.
+	t.Run("the note cannot be read", func(t *testing.T) {
+		stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
+		missing := filepath.Join(t.TempDir(), "not-here.md")
+
+		got, code := runJSON(t, "propose", proposeDocID, "--from", from,
+			"--folder", testFolderID, "--md", missing)
+		if code == 0 || got["ok"] != false {
+			t.Fatalf("a note that is not there is a refusal: %v (exit %d)", got, code)
+		}
+		if !hasWarning(warningsOf(t, got), "--folder is ignored") {
+			t.Errorf("warnings = %v, want the flag still said to do nothing", warningsOf(t, got))
+		}
+	})
+
+	// And the session is the second.
+	t.Run("the session cannot be opened", func(t *testing.T) {
+		old := openSession
+		openSession = func(*guard.Policy) (session, error) {
+			return nil, errors.New("no token was found. Run: gdoc auth login")
+		}
+		t.Cleanup(func() { openSession = old })
+
+		got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+		if code == 0 || got["ok"] != false {
+			t.Fatalf("a session that will not open is a refusal: %v (exit %d)", got, code)
+		}
+		if !hasWarning(warningsOf(t, got), "--folder is ignored") {
+			t.Errorf("warnings = %v, want the flag still said to do nothing", warningsOf(t, got))
+		}
+	})
 }

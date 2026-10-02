@@ -352,3 +352,32 @@ func TestAnAdoptedExpiredLoginSaysOnlyOneThingAboutTheSave(t *testing.T) {
 		t.Errorf("saved access token = %q, want FRESH", saved.AccessToken)
 	}
 }
+
+// TestATokenFileWithNoRefreshTokenIsRefusedRatherThanAdopted is why newerLogin
+// compares the two refresh tokens and nothing else. An empty one in the file
+// would compare unequal to the one this session holds and so read as somebody's
+// newer sign-in, except that auth.Load refuses a token missing a field it needs
+// before the comparison is ever made. The refresh stops, names the field and
+// names the fix, and claims no sign-in it did not see.
+func TestATokenFileWithNoRefreshTokenIsRefusedRatherThanAdopted(t *testing.T) {
+	path := tokenFile(t, time.Now().Add(-time.Hour))
+	w := &refreshWire{access: []string{"FRESH"}}
+	s := openOver(t, w) // the session holds OLD, expired, with R1
+
+	// Hand-edited, or written by something that dropped the field.
+	writeToken(t, path, aLogin("B", "", time.Now().Add(-time.Hour)))
+
+	err := s.GetJSON(context.Background(), docURL(), &struct{}{})
+	if err == nil {
+		t.Fatal("a token file gdoc cannot vouch for is not a file it refreshes over")
+	}
+	if !strings.Contains(err.Error(), "refresh_token") || !strings.Contains(err.Error(), "gdoc auth login") {
+		t.Errorf("err = %v, want the missing field and the fix both named", err)
+	}
+	if posts := w.tokenPosts(); len(posts) != 0 {
+		t.Errorf("sent %d refreshes, want none: the file was never vouched for", len(posts))
+	}
+	if saidNewerLogin(s.Warnings()) {
+		t.Errorf("Warnings() = %v, want no sign-in claimed for a file with none in it", s.Warnings())
+	}
+}

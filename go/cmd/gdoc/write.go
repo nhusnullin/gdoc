@@ -241,9 +241,13 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	// The note is checked before the session is opened. A note paired with
 	// another document would be handed this document's provenance, and
 	// provenance is the permission withdraw reads.
+	// Every refusal from here on carries warns. The flag's warning is the one
+	// signal telling a v2.7 caller to stop sending it, and the caller whose note
+	// is mispaired or whose token is gone is the caller running an old script.
+	// TestTheFolderWarningSurvivesEveryRefusalAfterIt is the pin.
 	note, err := pairedNote(a, docID)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
 	}
 
 	// One policy, one door: the document at LevelSuggest. The probe's create
@@ -253,7 +257,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	p.AllowFile(docID, guard.LevelSuggest)
 	s, err := openSession(p)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
 	}
 	r := &reach{id: docID, session: s}
 	return runPropose(ctx, r, proposals, note, warns...)
