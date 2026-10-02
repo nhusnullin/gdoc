@@ -44,7 +44,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-29 | The product is three things, and it matters which does what | holds |
 | 2026-08-29 | Everything gdoc writes opens with 🤖 | holds |
 | 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds |
-| 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | holds |
+| 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | superseded 2026-10-02 (suggestions are generally available; a silent edit is still loud, through the read-back and the stop) |
 | 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace` | holds |
 | 2026-08-29 | Publish runs once. Everything after travels as suggestions | superseded 2026-09-19 (a note may be published more than once, and each publish is a new document) |
 | 2026-08-29 | Live review is a session, not a service | holds |
@@ -79,6 +79,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
+| 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2916,3 +2917,116 @@ rather than changed on the way in.
 
 Tests: `TestContentRefusesWhatTheSubsetDoesNotHold` carries the list case, and
 `TestPlaceRefusesWhatItCannotPlaceAndNamesIt` the floating object.
+
+
+## 2026-10-02. propose without the probe, and no company domain in the repository.
+
+Nail's decisions, taken in the brainstorm that produced the M14 specification,
+`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, as its decisions 11, 15, 17 and 19.
+This entry holds only what run 1 of that milestone builds, the task list at
+`docs/plans/2026-10-03-gdoc-v2-m14a-groundwork.md`. It is written before that
+code, because a change to SPEC.md is an entry here first.
+
+**`propose` runs no capability probe.** Until today every proposal created a
+throwaway document in a folder the caller named, proposed one word into it, read
+the answer back, and trashed the document, to learn whether
+`writeMode: SUGGEST` is honoured by this Cloud project. Suggestions left the
+Developer Preview and are generally available, so the probe now pays a created
+document, a create grant and a required flag on every call to answer a question
+whose answer no longer changes. The probe goes. `gdoc probe --folder` stays as a
+manual command, unchanged, and it is the only route that creates a working copy.
+
+**`--folder` is accepted and ignored for one release.** A skill or script
+written for v2.7 keeps working: the flag is still parsed as a folder id, so a
+malformed value is refused exactly as before, and the run carries one warning
+saying the flag is ignored because `propose` no longer creates a working copy,
+and that it will be removed in a later release. No create door is opened on the
+policy. Removing the flag is `docs/backlog/remove-the-ignored-folder-flag-from-propose.md`,
+for a release after the skills that passed it have been replaced.
+
+**The run stops at the first proposal a read-back cannot confirm.** The three
+read-backs stay as they are. After each proposal the loop reads
+`suggestions_inline` and `preview_without_suggestions`. When either is false,
+that proposal is reported in full with its checks, every later proposal is
+`sent: false`, nothing after it reaches the wire, and the envelope is
+`ok: false`. The preview read is the one that tells a suggestion from a direct
+edit, and a read-back that could not be made counts as false, because not
+knowing never resolves toward sending more. The error says gdoc could not
+confirm the proposal landed as a suggestion and asks for a look in the browser.
+It never says "direct edit": a block that came back split fails the same check
+and is a false alarm of the safe kind. `docx_anchored` false on its own does not
+stop the run, as today.
+
+**A batch whose answer was lost is `outcome: "unknown"`, and stops the run the
+same way.** When the request was written and then the connection dropped or the
+server answered 500 or above, gdoc does not know whether the batch landed. That
+proposal is reported `sent: false` with `outcome: "unknown"`, the run stops, and
+the error says the proposal was written, that its answer was lost, that it may
+or may not be in the document, and to read the suggestions before proposing it
+again. Nothing is retried. `sent` stays a plain bool on every entry, because its
+documented meaning is already "gdoc got no answer saying it landed", which is
+exactly this case; `outcome` appears on that one entry and nowhere else. A guard
+refusal, a dial failure and a TLS handshake failure are not marked, because the
+request never went out, and a 4xx is Docs refusing the whole batch.
+
+Serves principle 1: a colleague proposing a review answer no longer leaves a
+throwaway document behind in a folder, and no longer has to name a folder to
+propose at all. Strains principle 3 in one bounded place, which Nail accepted on
+2026-10-02: on a day when Google stops honouring `writeMode: SUGGEST`, one
+proposal per call reaches the document as a direct edit before a read-back sees
+it. The bound is the stop. One unconfirmed proposal, named, with the run halted
+and the caller sent to the browser, is the cost; the probe's cost was a document
+on every call for the rest of the tool's life.
+
+**What was rejected.** Keeping the probe until Google's rollout ends, about
+2026-10-15, which Codex argued for in the review of 2026-10-02: the rollout's
+end is a date nobody here controls, and the read-back is the check that actually
+catches a silent edit, probe or no probe. A lock across calls, so that one stop
+blocks proposing for the rest of the day, raised by the security reader: it
+turns a bad minute into a bad day, it needs state on disk that nothing else in
+gdoc keeps, and the person who gets the stop error is already being told to look
+at the document. The bound is per call.
+
+**No real company domain in the repository.** Decision 17's first half. No
+firm's domain appears anywhere in the tree, as a default, an example, a test
+fixture or a line of documentation. Examples use `example.com`, `example.org`
+and `example.net`, which RFC 2606 reserves for exactly this. A boundary test
+walks every file git does not ignore and fails on any line holding the firm's
+host, and it holds that host as a SHA-256 of the string, so the test itself does
+not name it, whole or in parts. A `.gitignore` pattern the scan cannot read
+fails the test by name, so a new ignore line cannot quietly widen what the scan
+misses.
+
+**Run 1 is released alone as v2.8.0, and `gdoc mcp` ships in v2.9.0.** Nail's
+call of 2026-10-03, which moves the number decision 19 gave. Colleagues stop
+making a throwaway document on every proposal now, rather than waiting for the
+chat server. Everything else decision 19 says holds for v2.9.0: it is a minor
+release, nothing a v2.7 caller sends breaks, and an existing user runs
+`gdoc update` and then `gdoc update --desktop`, in that order. The skills keep
+passing `--folder` through run 1 and are changed in the sitting that cuts the
+tag, because `TestNoSkillNeedsAReleaseNobodyCut` refuses a `needs` line above
+the version in `.claude-plugin/plugin.json`, and only `make tag` moves that
+file.
+
+**One line was edited inside the 2026-09-16 entry, and this says why.** An entry
+here is never edited after the day it is written. The exception is the entry
+"The release: `x.y.z` with a nightly, an updater on demand with one read-only
+guard door, skills as a Claude Code plugin", whose assessment of what the public
+zip carries named the firm's Google Workspace by domain. It now says "a sign-in
+from the firm's Google Workspace", which says the same thing. The rule that no
+company domain is in the repository has no value if the file recording it is
+the exception, and the edit changes no decision.
+
+**The server's rows are not here.** The M14 specification asks for one entry
+with eighteen rows. The rows about `gdoc mcp` itself, the holds, the ledger, the
+trusted domains setting and the narrowed stdin and stdout invariants are written
+in a second entry, after the twelve measurements in Claude Desktop are recorded
+in MEASURED.md, so no row here records a decision a measurement may still
+overturn.
+
+Tests: the run 1 plan,
+`docs/plans/2026-10-03-gdoc-v2-m14a-groundwork.md`, names one test per rule
+above, from `TestNoCompanyDomainInTheTree` in the boundary package to
+`TestALostAnswerIsOutcomeUnknownAndStops` in `cmd/gdoc`. `cmd/gdoc/doc.go`,
+`propose/doc.go`, `probe/doc.go` and the package comment of `gapi` each name
+the tests for the rules they state.

@@ -422,17 +422,17 @@ Task 3 changes SPEC.md.
 **Files:**
 - Modify: `docs/v2/DECISIONS.md`
 
-- [ ] An entry dated 2026-10-02, "propose without the probe, and no company
+- [x] An entry dated 2026-10-02, "propose without the probe, and no company
       domain in the repository", in the file's own shape: what was decided,
       the principle served, what was rejected (keeping the probe until the
       rollout ends, about 2026-10-15; a lock after a stop), and Nail's
       acceptance of one unconfirmed proposal per call.
-- [ ] In the entry: the stop rule; a lost answer as `sent: false` with
+- [x] In the entry: the stop rule; a lost answer as `sent: false` with
       `outcome: "unknown"`, and why `sent` stays; run 1 released alone as
       v2.8.0 and `gdoc mcp` as v2.9.0, Nail's call of 2026-10-03; and the
       one-line edit Task 1 made inside the 2026-09-16 entry, with the reason,
       since an entry is otherwise never edited.
-- [ ] Register rows: the row "gdoc never replaces the body of a document that
+- [x] Register rows: the row "gdoc never replaces the body of a document that
       already exists" (2026-08-29) keeps `holds`, and the entry says its
       closing paragraph, "Never send `writeMode: SUGGEST` and trust the 200",
       is superseded 2026-10-02 in its method only. The row "The preview may
@@ -441,11 +441,11 @@ Task 3 changes SPEC.md.
       through the read-back and the stop)`. The row "Never trust a success.
       Verify with a second, independent probe" is unchanged. A new row for
       this entry, `holds`.
-- [ ] A sentence saying the server's rows follow in a second entry after the
+- [x] A sentence saying the server's rows follow in a second entry after the
       spike.
-- [ ] `cd go && go test -race ./boundary/` passes (the docs tests read this
+- [x] `cd go && go test -race ./boundary/` passes (the docs tests read this
       file).
-- [ ] `git commit -m "docs(decisions): propose without the probe, and no company domain in the repository"`
+- [x] `git commit -m "docs(decisions): propose without the probe, and no company domain in the repository"`
 
 ### Task 3: propose runs no probe, and the folder is ignored
 
