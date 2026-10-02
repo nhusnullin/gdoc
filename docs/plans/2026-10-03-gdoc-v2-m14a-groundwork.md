@@ -493,22 +493,22 @@ Serves decision 11. Scenario 11.
 - Modify: `go/cmd/gdoc/write.go`, `go/cmd/gdoc/doc.go`, `go/internal/propose/doc.go`
 - Create: `go/cmd/gdoc/propose_stop_test.go`
 
-- [ ] Test first, `TestAFalseInlineCheckStopsTheRun`,
+- [x] Test first, `TestAFalseInlineCheckStopsTheRun`,
       `TestAFalsePreviewCheckStopsTheRun` and
       `TestAReadBackThatFailedStopsTheRun`: three proposals, the first fails
       the named check; the first is `sent: true` with its checks, the other
       two `sent: false`, nothing after the first reaches the wire, `ok: false`,
       and the error is the literal of Technical Details. Watch them fail.
-- [ ] Test, `TestTheStopNeverClaimsADirectEdit`: the error holds no "direct
+- [x] Test, `TestTheStopNeverClaimsADirectEdit`: the error holds no "direct
       edit" for any of the three.
-- [ ] Test, `TestAFalseDocxCheckAloneDoesNotStop`: `docx_anchored: false`
+- [x] Test, `TestAFalseDocxCheckAloneDoesNotStop`: `docx_anchored: false`
       with the other two true sends all three.
-- [ ] Test, `TestAStoppedRunRecordsWhatWasSent`: with `--md`, the note records
+- [x] Test, `TestAStoppedRunRecordsWhatWasSent`: with `--md`, the note records
       the first proposal and nothing else.
-- [ ] Implement the stop in the loop.
-- [ ] The stop rule in both doc.go files, naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(propose): stop at the first proposal either read-back cannot confirm"`
+- [x] Implement the stop in the loop.
+- [x] The stop rule in both doc.go files, naming the tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(propose): stop at the first proposal either read-back cannot confirm"`
 
 ### Task 5: a lost batch answer is outcome unknown, and stops the run
 

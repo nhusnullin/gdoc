@@ -472,7 +472,14 @@
 // answer could not be read leaves no state to report, and the warning there
 // names the lost answer rather than blaming a route. preview_without_suggestions
 // is the route that would catch the silent direct edit, which is why it is one
-// of the three rather than a nicety. TestVerifyHoldsOnAllThreeRoutes,
+// of the three rather than a nicety.
+//
+// Not a failure here, and a stop one room up: cmd/gdoc reads the two routes that
+// read the document itself, suggestions_inline and preview_without_suggestions,
+// and ends the run at the first proposal where either is false. This package
+// still reports rather than raises, because the change is in the document and the
+// caller decides. The rule is under "Three rules this package rests on and does
+// not hold" below. TestVerifyHoldsOnAllThreeRoutes,
 // TestApplyVerifiesTheHappyPathThreeWays,
 // TestApplyReportsAPartialFailureFromTheCommentUpdateState,
 // TestApplyReportsABatchWhoseAnswerCouldNotBeRead,
@@ -643,7 +650,7 @@
 // TestProposeSaysSoWhenTheNoteCannotRememberAProposal and
 // TestProposeReportsEveryProposalWhenOneOfThemCannotBeSent in cmd/gdoc.
 //
-// # Two rules this package rests on and does not hold
+// # Three rules this package rests on and does not hold
 //
 // A write whose answer could not be read is not a write that never happened.
 // internal/gapi marks the failures raised after the server answered 2xx, and
@@ -658,4 +665,18 @@
 // seconds to tens of seconds on the network between the pairing check and the
 // write, and these notes live in a synced vault. That rule is cmd/gdoc's, in its
 // package comment, under "The note is read again just before it is written".
+//
+// Where a run of several proposals stops is cmd/gdoc's too. Apply places one
+// proposal and answers for it, and nothing here knows there is a list. The
+// command ends the run at the first proposal whose suggestions_inline or
+// preview_without_suggestions is false, and docx_anchored alone never ends it:
+// that route answers whether the comment is attached, and a comment that did not
+// arrive is an explanation lost rather than a change that went in as an edit. It
+// is the bound on no command running the capability probe any more, because a day
+// when Docs ignores SUGGEST then costs one change rather than a file of them. The
+// rule is in cmd/gdoc's package comment under "propose stops at the first
+// proposal the read-backs cannot confirm", and its pins are there:
+// TestAFalseInlineCheckStopsTheRun, TestAFalsePreviewCheckStopsTheRun,
+// TestAReadBackThatFailedStopsTheRun, TestAFalseDocxCheckAloneDoesNotStop,
+// TestTheStopNeverClaimsADirectEdit and TestAStoppedRunRecordsWhatWasSent.
 package propose

@@ -481,6 +481,42 @@
 // the first of a replace's two: TestProposeRecordsABlocksPlacementInTheNote and
 // TestProposeRecordsAReplacesFirstQuoteInTheNote.
 //
+// # propose stops at the first proposal the read-backs cannot confirm
+//
+// Two of the three read-backs read the document itself: suggestions_inline says
+// the replacement is in there carrying a suggestion id, and
+// preview_without_suggestions says the quoted words are still there with pending
+// suggestions hidden, which is the only route that tells a suggestion from an
+// edit. When either is false the run ends. The proposal that failed is reported
+// sent: true with its checks, the note records it, every proposal behind it stays
+// sent: false, and the envelope fails with a sentence naming the proposal, its
+// words and where to open the document.
+//
+// That stop is the bound on no command running the capability probe any more.
+// Nothing asks Google up front whether SUGGEST is honoured today, so the run
+// finds out from the first proposal's read-backs, and a day when it is not
+// honoured costs one change rather than a file of them. A read-back that could
+// not be made counts as false among the two, because internal/propose's Verify
+// leaves a route false when its read fails: not knowing is not a reason to send
+// the rest. TestAFalseInlineCheckStopsTheRun,
+// TestAFalsePreviewCheckStopsTheRun and TestAReadBackThatFailedStopsTheRun are
+// the three pins.
+//
+// docx_anchored is not asked. It answers whether the comment is attached to the
+// words, and a comment the export does not carry is an explanation lost rather
+// than a change that went in as an edit: the suggestion is still a suggestion, so
+// the rest of the file is sent and the loss is a warning.
+// TestAFalseDocxCheckAloneDoesNotStop is the pin.
+//
+// The sentence never says the document was edited. gdoc knows a read-back did not
+// confirm a suggestion and nothing more, and a run that claims an edit sends a
+// colleague looking for damage that may not be there. The preview's own warning
+// may name the shape it saw, because that is what it saw.
+// TestTheStopNeverClaimsADirectEdit holds the error itself, and
+// TestAStoppedRunRecordsWhatWasSent holds the note: what was sent is written
+// down, because a proposal gdoc has forgotten is one it will refuse to withdraw.
+// The 2026-10-02 entry in docs/v2/DECISIONS.md holds the decision.
+//
 // # propose takes a folder it ignores, and annotate takes no note
 //
 // --folder bought the capability probe the throwaway document it measured on.

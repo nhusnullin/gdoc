@@ -27,6 +27,7 @@ import (
 	"gdoc/internal/markers"
 	"gdoc/internal/probe"
 	"gdoc/internal/propose"
+	"gdoc/internal/publish"
 	"gdoc/internal/reply"
 	"gdoc/internal/withdraw"
 )
@@ -267,9 +268,10 @@ func runPropose(r *reach, proposals []propose.Proposal, note *notePath, seed ...
 
 	// One proposal at a time, each after its own fresh read, because the first
 	// one moves the ground under the second. The run stops at the first one that
-	// cannot be sent, and the report still carries one entry per proposal in the
-	// file: each entry answers `sent` for itself, so a stop in the middle names
-	// what landed and what never left rather than shortening the list.
+	// cannot be sent, and at the first one the read-backs cannot confirm, and the
+	// report still carries one entry per proposal in the file: each entry answers
+	// `sent` for itself, so a stop in the middle names what landed and what never
+	// left rather than shortening the list.
 	results := make([]propose.Result, 0, len(proposals))
 	for i, one := range proposals {
 		res, err := propose.Apply(ctx, r.session, r.id, one)
@@ -280,6 +282,13 @@ func runPropose(r *reach, proposals []propose.Proposal, note *notePath, seed ...
 		results = append(results, res)
 		data.Proposals[i] = sent(res)
 		warns = append(warns, about(res.Quote(), res.Warnings)...)
+		if !confirmed(res.Checks) {
+			data.FilesChanged, warns = record(note, results, warns)
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf(
+					"gdoc could not confirm that proposal %d (%q) landed as a suggestion, so nothing after it was sent. Look at it in the browser before proposing again: %s",
+					i+1, res.Quote(), publish.DocumentURL(r.id))}
+		}
 	}
 	data.FilesChanged, warns = record(note, results, warns)
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
@@ -315,6 +324,24 @@ func sent(r propose.Result) proposalReport {
 		Verified:           r.Verified,
 		Checks:             r.Checks,
 	}
+}
+
+// confirmed is whether the two routes that read the document itself both said
+// the change is in there as a suggestion. It is the bound on there being no
+// probe: nothing asks Google up front whether SUGGEST is honoured today, so the
+// run finds out from the first proposal's read-backs and stops there.
+//
+// The export is not asked. It answers a different question, whether the comment
+// is attached to the words, and a comment that did not arrive is an explanation
+// lost rather than a change that went in as an edit: the suggestion is still a
+// suggestion. TestAFalseInlineCheckStopsTheRun,
+// TestAFalsePreviewCheckStopsTheRun, TestAReadBackThatFailedStopsTheRun and
+// TestAFalseDocxCheckAloneDoesNotStop are the four pins.
+//
+// A read-back that could not be made is false, because Verify leaves a route
+// false when its read fails: not knowing is not a reason to send the rest.
+func confirmed(c propose.Checks) bool {
+	return c.SuggestionsInline && c.PreviewWithoutSuggestions
 }
 
 // about names which proposal a warning belongs to. The envelope carries one
