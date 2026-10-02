@@ -19,9 +19,10 @@ package live
 //     the M7c probes are written by. The answer goes into the backlog item by
 //     hand, after a run.
 //
-// Neither case runs the capability probe, because annotate does not: a batch
-// holding nothing but an insertComment cannot change a character whatever
-// Docs does with the write mode. That bend is DECISIONS.md, 2026-09-18.
+// Neither case runs the capability probe: a batch holding nothing but an
+// insertComment cannot change a character whatever Docs does with the write
+// mode. That bend is DECISIONS.md, 2026-09-18, and the 2026-10-02 entry beside
+// it took the probe out of every writer.
 
 import (
 	"context"

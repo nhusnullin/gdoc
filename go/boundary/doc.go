@@ -149,6 +149,23 @@
 // map that is not there is the same silence as a map full of dead rows, and the
 // map is the one thing in that file a reader uses to decide where to go next.
 //
+// # No document says a proposal runs the capability probe
+//
+// Until 2026-10-02 every proposal made a throwaway document first and asked
+// Google whether a suggestion was honoured that day. No command does that now,
+// and the claim was written into the pages a colleague reads, into the command's
+// own reasons and into the live tests. probe_test.go asks all of them on every
+// commit: TestNoDocumentSaysAProposalRunsTheProbe is the pin, and
+// TestTheProbeClaimScanFindsAPlantedSentence watches the scanner find a planted
+// one in both word orders before it is trusted to find nothing.
+//
+// The scan refuses one claim rather than the word, because gdoc probe is still a
+// command a person types and the live tests still run it as their own
+// precondition. What it looks for is a proposal, a proposal file or the command
+// said to run the probe, inside one sentence, either word order. A denial
+// standing in its own sentence passes, which is what lets the paragraph that
+// states the rule live in the same file as the rule.
+//
 // # No real company domain in the tree
 //
 // A default, an example or a fixture carrying a real company's domain is a

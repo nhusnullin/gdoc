@@ -19,7 +19,7 @@ proposed template with.
 ```bash
 gdoc probe --folder <folder url or id>
 gdoc reply <url> <comment id> --body-file reply.txt
-gdoc propose <url> --from proposals.json --folder <probe folder> [--md note.md]
+gdoc propose <url> --from proposals.json [--md note.md]
 gdoc withdraw <url> <suggestion id> --md note.md
 gdoc annotate <url> --from annotations.json
 gdoc annotate <url> --quote "reviewed annually" --body-file why.txt
@@ -40,8 +40,16 @@ behind is named rather than lost.
 The probe exists because the field that makes a write a suggestion is not in the
 public Docs discovery document, and one morning that call returned 200 and
 edited the document for real. `docs/v2/BLOCKED-BY-API.md` records both
-measurements. So `propose` runs the probe every time, on a document of its own,
-and sends nothing when the answer is no.
+measurements.
+
+No command asks that question for you any more. `propose` used to make a
+throwaway document before every run, and since suggestions became generally
+available that cost a document a day and answered nothing new. The read-backs
+are the answer instead: `propose` stops at the first proposal its inline or
+preview read cannot confirm, so a day when SUGGEST is not honoured costs one
+change rather than a file of them. `probe` stays as a command you type when you
+want the question asked directly. `--folder` stays on `propose` for one release,
+accepted, warned about and ignored.
 
 **`reply`** posts one reply into a comment thread and reads the thread back to
 see it there. The body must open with `🤖 ` and nothing before it, which is how
@@ -162,11 +170,27 @@ note records.
 | `docx_anchored` | the docx export carries the 🤖 comment, attached to text |
 
 All three, plus a write that answered `commentUpdateState: ALL_SAVED`, is
-`verified: true`. Anything less is still `ok: true` with `verified: false` and a
-warning naming what did not hold, because the write happened and hiding that
-would be worse. A batch Docs accepted whose answer could not be read is the case
-where every check holds and `verified` is false, and the warning there names the
-lost answer. The skill reads `verified` and decides what to say.
+`verified: true`. Anything less is still `verified: false` with a warning naming
+what did not hold, because the write happened and hiding that would be worse.
+The skill reads `verified` and decides what to say.
+
+**Two of those checks stop the run.** When `suggestions_inline` or
+`preview_without_suggestions` is false, or could not be read at all, `propose`
+sends nothing more. The proposal that failed is reported `sent: true` with its
+checks, the note records it, every proposal behind it stays `sent: false`, and
+the envelope is `ok: false` with a sentence naming the proposal, its words and
+the document to open. The sentence never says the document was edited: gdoc
+knows a read-back did not confirm a suggestion and nothing more.
+`docx_anchored` on its own does not stop anything. It answers whether the
+comment is attached to the words, so a comment the export does not carry is an
+explanation lost rather than a change that went in as an edit.
+
+**A batch that answered nothing stops the run too.** If the request bytes left
+and no answer came back, the entry carries `outcome: "unknown"` beside
+`sent: false`, no read-back is run, and the envelope says the proposal may or
+may not be in the document and to read the suggestions before proposing it
+again. Nothing is retried. No field says a proposal should be sent again:
+whether it is there is a question the document answers.
 
 **`withdraw`** retracts one of gdoc's own pending proposals. It needs `--md`,
 and the reason is the whole rule: the note's `proposals` list is the only record
@@ -215,9 +239,9 @@ thread renders markdown literally. Every entry is checked before the first one
 is sent, and a run stops at the first entry that cannot be sent, with
 `ok: false` and every annotation still reported with `sent` answered for itself.
 
-`annotate` needs no folder and no note. There is no probe, because the batch
-holds one `insertComment` and nothing beside it, so no character can move even
-if Google ignored the write mode. There is no note either, because a comment
+`annotate` needs no folder and no note. It never took a folder, because the
+batch holds one `insertComment` and nothing beside it, so no character can move
+even if Google ignored the write mode. There is no note either, because a comment
 cannot be withdrawn: a wrong one is removed by a person in the document, since
 deleting a comment is a write the guard does not carry.
 

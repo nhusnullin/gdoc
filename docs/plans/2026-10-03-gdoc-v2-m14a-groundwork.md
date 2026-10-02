@@ -698,16 +698,31 @@ Serves decision 13 (the split). Scenario 13.
 - Modify: `docs/plans/2026-10-02-gdoc-v2-m14-chat.md` (the status line and
   decision 19's number)
 
-- [ ] `grep -rn -i 'probe' CLAUDE.md README.md docs/guide/ go/cmd/gdoc/doc.go go/internal/live/`:
+- [x] `grep -rn -i 'probe' CLAUDE.md README.md docs/guide/ go/cmd/gdoc/doc.go go/internal/live/`:
       every sentence still saying a proposal runs the probe is fixed,
       `proposeblock_test.go:139-141` included.
-- [ ] `docs/v2/PLAN.md`: M14 split into run 1 (v2.8.0), the tag sitting, the
+- [x] `docs/v2/PLAN.md`: M14 split into run 1 (v2.8.0), the tag sitting, the
       spike, and run 2 (v2.9.0).
-- [ ] The spec: a status line under its title naming this plan and the
+- [x] The spec: a status line under its title naming this plan and the
       version split, and decision 19's number changed to v2.9.0 with the date
       of Nail's call.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs: M14 run 1, propose without the probe"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs: M14 run 1, propose without the probe"`
+- ➕ Test first, `TestNoDocumentSaysAProposalRunsTheProbe` in a new
+      `go/boundary/probe_test.go`: the claim is read out of CLAUDE.md,
+      README.md, `docs/guide/`, `cmd/gdoc/doc.go`, `propose/doc.go` and
+      `internal/live/`, in both word orders, inside one sentence. It named
+      `writing.md:43`, `live_test.go:207` and `proposeblock_test.go:139` before
+      the fix, and `TestTheProbeClaimScanFindsAPlantedSentence` watches the
+      scanner find a planted claim before it is trusted to find nothing. A
+      sentence rule nobody measures decays, which is the rule the four docs
+      guards already rest on. `go/boundary/doc.go` carries the paragraph.
+- ➕ Two more stale paragraphs in `docs/guide/writing.md`, found while fixing
+      the probe one: the `verified` section still said anything less than all
+      three checks is `ok: true`, and said a lost batch answer is a case where
+      every check holds. Tasks 4 and 5 changed both. The page now holds the
+      stop and the `outcome: "unknown"` entry, and the `propose` usage line
+      no longer passes `--folder`.
 
 ### Task 12: Verify acceptance criteria
 

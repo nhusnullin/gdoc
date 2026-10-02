@@ -142,7 +142,7 @@ help <command>` prints the words, the flags and an example.
 | `comments <url>` | list the threads with their ranges, replies and the next cursor, or wait for new ones |
 | `suggestions <url>` | list the suggestions pending in the document |
 | `restyle <url>` | survey a document against the house style, or apply it where the document stands |
-| `probe` | create a throwaway document and say whether Docs honours a suggestion today |
+| `probe` | create a throwaway document and say whether Docs honours a suggestion today, asked by hand |
 | `reply <url> <comment id>` | write one reply into a thread, under the robot prefix |
 | `propose <url>` | propose changes as native suggestions, each with the comment that says why |
 | `withdraw <url> <suggestion id>` | take back one pending suggestion gdoc proposed itself |
