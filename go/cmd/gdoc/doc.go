@@ -43,9 +43,10 @@
 //     reads read and comments --witness make.
 //   - restyle <url> --dry-run | --from [--fields]: the survey, the house style
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
-//   - probe --folder: whether Docs honours SUGGEST today. internal/probe.
+//   - probe --folder: whether Docs honours SUGGEST today, asked by hand.
+//     internal/probe.
 //   - reply <url> <comment id> --body-file: one robot reply. internal/reply.
-//   - propose <url> --from --folder [--md]: a change as a suggestion, either
+//   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
 //     internal/propose.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
@@ -445,8 +446,8 @@
 //
 // # The proposals file holds both kinds, and a block field needs the block kind
 //
-// One list, read strictly, and every entry checked before the probe runs and
-// before the first write: all of them are in hand, and a third entry refused
+// One list, read strictly, and every entry checked before the first write: all
+// of them are in hand, and a third entry refused
 // after the first two have landed is a run that half happened in somebody's
 // document. An entry is either the words kind, which names quoted and
 // replacement, or the block kind, which names kind: block, content, and either
@@ -480,22 +481,30 @@
 // the first of a replace's two: TestProposeRecordsABlocksPlacementInTheNote and
 // TestProposeRecordsAReplacesFirstQuoteInTheNote.
 //
-// # annotate takes no folder and no note
+// # propose takes a folder it ignores, and annotate takes no note
 //
-// The writers before it each carry something annotate does not, and in both
-// cases what is missing is a question this command cannot ask wrongly.
+// --folder bought the capability probe the throwaway document it measured on.
+// No command runs that probe any more: suggestions are generally available, and
+// the three read-backs plus the stop are what catch a SUGGEST Google did not
+// honour. The 2026-10-02 entry in docs/v2/DECISIONS.md holds the decision, and
+// gdoc probe --folder stays as a command a person runs by hand.
 //
-// No folder, so no probe. propose creates a throwaway document every run to
-// find out whether Docs honours SUGGEST today, because a SUGGEST that is
-// quietly ignored turns a proposal into a direct edit of somebody's prose. The
-// batch annotate sends holds one insertComment and nothing else, and no
-// insertComment can move a character whatever the write mode does. So the probe
-// has no question to answer here, and running it would litter a folder asking
-// it. PRINCIPLES.md says the probe runs every time, and this is the second
-// writer it does not run for, restyle's phase 1 being the first: that file's
-// 2026-09-18 amendment note names both, docs/v2/DECISIONS.md holds the bend
-// under the same date, and internal/annotate's Batch holds the shape the
-// reasoning rests on.
+// The flag is kept for one release so a skill or script written for v2.7 keeps
+// working. It is still read as a folder id, so a caller who pointed it at a
+// document hears about it rather than having the mistake dropped, the run
+// carries one warning saying the flag is ignored and is going, and the policy
+// opens no create door at all. TestTheFolderFlagIsAcceptedAndIgnored,
+// TestProposeStillRefusesAMalformedFolder and TestProposeRunsNoProbe are the
+// pins, and docs/backlog/remove-the-ignored-folder-flag-from-propose.md holds
+// the removal.
+//
+// annotate takes no folder either, and never did: the batch it sends holds one
+// insertComment and nothing else, and no insertComment can move a character
+// whatever the write mode does, so the question the probe asked never had a
+// bearing on it. PRINCIPLES.md's 2026-09-18 amendment names annotate and
+// restyle's phase 1 as the two writers that skipped it, and its 2026-10-02
+// amendment says no writer runs it now. internal/annotate's Batch holds the
+// shape the reasoning rests on.
 //
 // No note, so no provenance. The note exists so withdraw can recognise gdoc's
 // own pending suggestions later, and a comment is not a suggestion: it is in
@@ -612,8 +621,8 @@
 // # The note is read again just before it is written
 //
 // The pairing is checked before the session opens, and the run then spends
-// seconds to tens of seconds on the network: a probe plus a read, a write and
-// three read-backs per proposal for propose, and two whole-document reads plus
+// seconds to tens of seconds on the network: a read, a write and three
+// read-backs per proposal for propose, and two whole-document reads plus
 // a batchUpdate for withdraw. These notes live in a synced vault, so writing
 // back the bytes the run started with would throw away whatever landed in that
 // window.

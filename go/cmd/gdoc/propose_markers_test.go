@@ -30,7 +30,7 @@ func TestProposeRefusesAMarkerInTheFile(t *testing.T) {
 			f := stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
 			from := tempFile(t, "proposals.json", tc.file)
 
-			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 			if code == 0 || got["ok"] != false {
 				t.Fatalf("a proposal carrying a marker must stop the run: %v (exit %d)", got, code)
 			}
@@ -42,7 +42,7 @@ func TestProposeRefusesAMarkerInTheFile(t *testing.T) {
 				t.Errorf("the error must call it a marker: %q", msg)
 			}
 			if len(f.calls) != 0 {
-				t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+				t.Errorf("nothing may reach Google: %v", f.calls)
 			}
 		})
 	}
@@ -56,7 +56,7 @@ func TestProposeAcceptsAnEscapedMarkerInTheFile(t *testing.T) {
 	from := tempFile(t, "proposals.json",
 		`[{"quoted":"a","replacement":"the export writes \\{+words\\+} for an insertion","why":"c"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if msg, _ := got["error"].(string); strings.Contains(msg, "marker") {
 		t.Fatalf("an escaped marker is the author's own text: %q (exit %d)", msg, code)
 	}

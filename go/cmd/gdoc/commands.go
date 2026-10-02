@@ -254,11 +254,11 @@ func commands() []command {
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to)"},
-				{"--folder", kindFolderID, needRequired, "the Drive folder the working copy is created in"},
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
+				{"--folder", kindFolderID, needOptional, "ignored: propose no longer creates a working copy, and the flag will be removed in a later release"},
 			},
 			summary: "Propose changes as native suggestions, each with the comment that says why.",
-			example: "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --folder 1AbC... --md note.md",
+			example: "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --md note.md",
 			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdPropose(a)
 			},

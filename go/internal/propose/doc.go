@@ -6,10 +6,12 @@
 // batchUpdate on a handed-in document without it, and that refusal is about
 // gdoc's own words: what Google did with them is a different question, and one
 // morning the answer was a silent direct edit. BLOCKED-BY-API.md holds both
-// measurements. So the run does not stop at a 200, and internal/probe asks the
-// question on a throwaway document before this package sends anything: a probe
-// that comes back not enrolled means propose writes nothing at all.
-// TestProposeSendsNothingWhenTheProbeSaysNotEnrolled in cmd/gdoc is the pin.
+// measurements. So the run does not stop at a 200: the three read-backs below
+// are what answer it, and cmd/gdoc stops the run at the first proposal they
+// cannot confirm. Until M14 a capability probe asked the same question on a
+// throwaway document before every proposal; suggestions are generally available
+// now, and the 2026-10-02 entry in docs/v2/DECISIONS.md holds why the probe
+// went and what the read-backs carry in its place.
 //
 // Nothing here decides whether a change is worth proposing, or what to say in
 // the comment. The words arrive written and the placement arrives quoted, in a
@@ -115,7 +117,8 @@
 //
 // # A proposal replaces words with words
 //
-// An empty replacement is refused in Proposal.Check, before the probe. The batch
+// An empty replacement is refused in Proposal.Check, before anything is sent.
+// The batch
 // would carry an insertText with no text and a comment anchored on a range of
 // length zero, which Docs rejects, and inlineHolds looks for an insertion a
 // plain deletion never makes, so the write could never verify either. A
@@ -165,8 +168,8 @@
 // and no read-back could see it, since all three read words and a list number is
 // drawn. TestContentRefusesWhatTheSubsetDoesNotHold carries every case. Check
 // reads the content too, so every one of these refusals is made of the whole
-// proposals file before the probe document exists and before the first entry
-// lands, and ApplyBlock reads it again before it reads the document, so a block
+// proposals file before the first entry lands, and ApplyBlock reads it again
+// before it reads the document, so a block
 // gdoc cannot read costs no request at all:
 // TestApplyBlockRefusesContentItCannotReadBeforeAnyRequest and
 // TestProposeRefusesBlockContentBeforeAnythingIsSent in cmd/gdoc are the pins.
@@ -349,14 +352,13 @@
 // Proposal.Check answers from the proposal alone, so the caller asks it of every
 // entry in the file before anything leaves the machine: a third entry refused
 // after the first two have landed is a run that half happened in somebody's
-// document, with a probe document created and trashed on the way. Reading that
-// file is cmd/gdoc's, and it reads it strictly, the way it reads every other
+// document. Reading that file is cmd/gdoc's, and it reads it strictly, the way it reads every other
 // input: an unknown key is refused by name, and so is a second list behind the
 // first. A misspelled quoted, replacement or why is caught here because their
 // empty values are refused, but assignee is optional, so a dropped one would
 // land a comment with nobody assigned and warn about nothing.
 // TestApplyRefusesAQuoteItCannotPlaceBeforeAnyWrite is the pin here;
-// TestProposeRefusesABadProposalBeforeTheProbe,
+// TestProposeRefusesABadProposalBeforeAnythingIsSent,
 // TestProposeRefusesAnUnknownKeyInTheProposalsFile and
 // TestProposeRefusesAnEmptyProposalList in cmd/gdoc are the other half.
 //
@@ -380,8 +382,8 @@
 // applies the requests in order with consistent indexes, so the comment lands on
 // the span the insert made. Two proposals are two batches, each after its own
 // fresh read, because the first moves the ground under the second. A document
-// with more than one tab stops the run before anything is sent, the probe
-// included: a range means nothing without saying which tab it is in.
+// with more than one tab stops the run before anything is sent: a range means
+// nothing without saying which tab it is in.
 // TestBatchSendsThreeRequestsInOrderUnderSuggestMode,
 // TestApplyReadsTheDocumentItselfThenWritesOnce,
 // TestBatchCarriesTheAssigneeWhenThereIsOne and
@@ -593,8 +595,8 @@
 // the document already had would be an id under a key neither reads, and the
 // one paragraph a block ever shares is the final mark at the end of a document,
 // which the batch restates nothing on. TestLiveProposeBlock asks that case
-// again with the probe's wider walk, across every suggested key, because on a
-// live run it is Google's answer rather than gdoc's request that decides it.
+// again with a wider walk, across every suggested key, because on a live run it
+// is Google's answer rather than gdoc's request that decides it.
 //
 // # docx_anchored gives no answer when two comments disagree
 //

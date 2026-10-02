@@ -159,8 +159,8 @@ func readBody(path string) (string, error) {
 }
 
 // proposalReport is one proposal as the envelope carries it. Sent is the fact
-// the skill reads first: a run stopped by the probe reports every proposal, and
-// each one says gdoc got no answer saying it landed.
+// the skill reads first: a run stopped part way reports every proposal in the
+// file, and each one answers `sent` for itself.
 //
 // That is what the field means, and it is narrower than "it never left the
 // machine". A guard refusal and a 4xx never changed the document, and a 5xx or
@@ -192,17 +192,12 @@ type proposeData struct {
 	DocumentID   string           `json:"document_id"`
 	Tabs         int              `json:"tabs"`
 	MultiTab     bool             `json:"multi_tab"`
-	Probe        *probeData       `json:"probe,omitempty"`
 	Proposals    []proposalReport `json:"proposals"`
 	FilesChanged []string         `json:"files_changed,omitempty"`
 }
 
 func cmdPropose(a *args) emit.Result {
 	from, err := required(a, "--from")
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
-	folder, err := required(a, "--folder")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -214,9 +209,18 @@ func cmdPropose(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	probeFolder, err := folderID(folder)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+	// --folder bought the probe its throwaway document, and there is no probe.
+	// The flag is still read as a folder id, so a caller who pointed it at a
+	// document hears about it rather than having the mistake quietly dropped,
+	// and the run says the flag does nothing.
+	// TestTheFolderFlagIsAcceptedAndIgnored and
+	// TestProposeStillRefusesAMalformedFolder are the pins.
+	var warns []string
+	if a.has("--folder") {
+		if _, err := folderID(a.flags["--folder"]); err != nil {
+			return emit.Result{OK: false, Error: err.Error()}
+		}
+		warns = append(warns, "--folder is ignored: propose no longer creates a working copy, and the flag will be removed in a later release")
 	}
 	// The note is checked before the session is opened. A note paired with
 	// another document would be handed this document's provenance, and
@@ -226,28 +230,27 @@ func cmdPropose(a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
-	// One policy, two doors: the document at LevelSuggest, and the probe's
-	// folder as the one place a create may land. The probe document itself is
-	// learned from the create the guard carried.
+	// One policy, one door: the document at LevelSuggest. The probe's create
+	// door went with the probe, and nothing here creates anything.
+	// TestProposeRunsNoProbe is the pin.
 	p := guard.NewPolicy()
 	p.AllowFile(docID, guard.LevelSuggest)
-	p.AllowCreateIn(probeFolder)
 	s, err := openSession(p)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	r := &reach{id: docID, session: s}
-	return runPropose(r, probeFolder, proposals, note)
+	return runPropose(r, proposals, note, warns...)
 }
 
-// runPropose is the run itself: read, probe, then one proposal at a time.
-func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note *notePath) emit.Result {
+// runPropose is the run itself: read, then one proposal at a time.
+func runPropose(r *reach, proposals []propose.Proposal, note *notePath, seed ...string) emit.Result {
 	ctx := context.Background()
-	var warns []string
+	warns := append([]string{}, seed...)
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(warns...)}
 	}
 	data := proposeData{
 		DocumentID: r.id,
@@ -257,22 +260,9 @@ func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note
 	}
 	if d.MultiTab() {
 		// A proposal names one range, and a range means nothing without saying
-		// which tab it is in. Nothing is sent, the probe included.
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(),
+		// which tab it is in. Nothing is sent.
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
 			Error: fmt.Sprintf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))}
-	}
-
-	report, err := probe.Run(ctx, r.session, probeFolder)
-	shown := probeReport(report)
-	data.Probe = &shown
-	warns = append(warns, report.Warnings...)
-	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
-			Error: fmt.Sprintf("the capability probe could not be run, so whether SUGGEST is honoured today is unknown and nothing was proposed: %v", err)}
-	}
-	if !report.Enrolled {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
-			Error: "the probe document came back with the suggested word as plain text, so SUGGEST is not honoured for this project today and nothing was proposed"}
 	}
 
 	// One proposal at a time, each after its own fresh read, because the first

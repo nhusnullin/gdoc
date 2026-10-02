@@ -1,12 +1,13 @@
 // Package probe asks Google, on a document gdoc made for the purpose, whether
 // a suggestion written today is honoured as a suggestion.
 //
-// The reason it exists is in docs/v2/BLOCKED-BY-API.md. writeMode is absent
-// from the public Docs discovery document, and one morning a batchUpdate
-// carrying SUGGEST answered 200 and made a direct edit instead. The guard
-// refuses a write on a handed-in document unless the body says SUGGEST, but the
-// guard reads gdoc's own words: what the server did with them is a different
-// question, and only a read-back answers it.
+// The reason it exists is in docs/v2/BLOCKED-BY-API.md. writeMode is listed in
+// the public Docs discovery document now, labelled Developer Preview while the
+// rollout lands, and it was absent from it when this package was written: one
+// morning a batchUpdate carrying SUGGEST answered 200 and made a direct edit
+// instead. The guard refuses a write on a handed-in document unless the body
+// says SUGGEST, but the guard reads gdoc's own words: what the server did with
+// them is a different question, and only a read-back answers it.
 //
 // So the probe is that read-back, made where being wrong costs nothing. It
 // creates a throwaway document in the folder the command was given, writes one
@@ -18,14 +19,23 @@
 // TestRunReportsNotEnrolledWhenTheWordCameBackAsPlainText over the two answers.
 //
 // Nothing here decides anything. Enrolled is a fact about what Google answered,
-// and what to do about a false one is the caller's. internal/propose is the one
-// caller today, and it sends nothing at all when the answer is false:
-// TestProposeSendsNothingWhenTheProbeSaysNotEnrolled in cmd/gdoc is that pin.
+// and what to do about a false one is the caller's.
+//
+// # It is a manual command only, since M14
+//
+// gdoc probe --folder is the one caller. propose ran this package before every
+// proposal until M14; suggestions are generally available, so that call paid a
+// created document, a create grant and a required flag on every run to answer a
+// question whose answer no longer changes. The read-backs propose already made
+// are what catch a SUGGEST Google did not honour, and cmd/gdoc stops the run at
+// the first proposal they cannot confirm. The 2026-10-02 entry in
+// docs/v2/DECISIONS.md holds the decision, and TestProposeRunsNoProbe in
+// cmd/gdoc is the pin that nothing here runs inside a proposal.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
 //
-// # It runs every time, and nothing caches the answer
+// # Nothing caches the answer
 //
 // The binary is one-shot and holds no hidden state, so there is nowhere to put
 // a cached verdict, and an asserted "already probed" handed in from outside
@@ -34,14 +44,13 @@
 // TODO(test): no test pins this rule yet. It holds because Run takes no cache
 // and the process ends after one command.
 //
-// # It never touches the document being reviewed
+// # It never touches a document somebody handed gdoc
 //
-// The policy the caller opens for a proposal has two doors: the document at
-// LevelSuggest, and the probe's folder as the one place a create may land. This
-// package is given only the folder, and the probe document's id is learned from
-// the create the guard itself carried, which is the second door. So no
-// handed-in document is reachable from here, and the probe cannot write into
-// the document somebody is reviewing.
+// The policy its command opens has one door: the folder as the one place a
+// create may land. This package is given only the folder, and the probe
+// document's id is learned from the create the guard itself carried, which is
+// the second door of the reachable set. So no handed-in document is reachable
+// from here, and the probe cannot write into a document somebody is reviewing.
 // TestTheProbeDocumentIsNeverHandedIn is the pin, with
 // TestTheCreateNamesExactlyTheFolderAndAsksForADocument and
 // TestTheGuardCarriesEveryOneOfTheProbesRequests beside it.
@@ -81,7 +90,8 @@
 // # The first production caller of AllowCreateIn
 //
 // The guard's create door was kept at M2 on the strength of publish needing it
-// at M6. This package is what reached it first, at M3. The door itself, and
+// at M6. This package is what reached it first, at M3, through propose until
+// M14 and through its own command after. The door itself, and
 // what a create is judged on, are internal/guard's, in its package comment
 // under "Two doors into the set, and five grants beside it".
 //

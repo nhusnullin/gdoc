@@ -275,23 +275,23 @@ func exportWithComment(t *testing.T, anchored bool) []byte {
 	return buf.Bytes()
 }
 
-// proposeAnswers is the probe followed by one proposal: the read before, the
-// batch, and the three read-backs the verification is made of.
+// proposeAnswers is one proposal: the read before, the batch, and the three
+// read-backs the verification is made of. No probe, since M14: the read-backs
+// are what catch a SUGGEST Google did not honour.
 func proposeAnswers(t *testing.T, anchored bool) []*answer {
 	t.Helper()
-	out := probeAnswers(t, "probe-enrolled.json")
-	return append(out,
+	return []*answer{
 		// Three reads of the inline view, in order: the command's own, which is
 		// where the tab count comes from, the one Apply makes before it writes,
 		// and the read-back. Same URL, so each is spent before the next is
 		// reached, and the preview below is a different URL again.
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-after.json"), once: true},
-		&answer{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json")},
-		&answer{method: "GET", match: "PREVIEW_WITHOUT_SUGGESTIONS", json: readFixture(t, "propose-preview.json")},
-		&answer{method: "GET", match: "/export?", bytes: exportWithComment(t, anchored)},
-	)
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-after.json"), once: true},
+		{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json")},
+		{method: "GET", match: "PREVIEW_WITHOUT_SUGGESTIONS", json: readFixture(t, "propose-preview.json")},
+		{method: "GET", match: "/export?", bytes: exportWithComment(t, anchored)},
+	}
 }
 
 const oneProposal = `[{"quoted":"reviewed annually","replacement":"reviewed every six months",` +
@@ -439,14 +439,11 @@ func TestProposeWritesTheSuggestionAndVerifiesIt(t *testing.T) {
 	stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
 	from := tempFile(t, "proposals.json", oneProposal)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("propose: %v (exit %d)", got, code)
 	}
 	data := dataOf(t, got)
-	if probe, _ := data["probe"].(map[string]any); probe == nil || probe["enrolled"] != true {
-		t.Fatalf("the probe's verdict rides with the run: %v", data["probe"])
-	}
 	list, _ := data["proposals"].([]any)
 	if len(list) != 1 {
 		t.Fatalf("proposals = %v", data["proposals"])
@@ -467,40 +464,6 @@ func TestProposeWritesTheSuggestionAndVerifiesIt(t *testing.T) {
 	}
 }
 
-// The probe is the loudness the whole milestone rests on. A project Google no
-// longer honours SUGGEST for must stop the run before anything is written into
-// the document being reviewed.
-func TestProposeSendsNothingWhenTheProbeSaysNotEnrolled(t *testing.T) {
-	// The probe reads back plain text where the suggested word should be, which
-	// is Google answering that SUGGEST was not honoured.
-	answers := append(probeAnswers(t, "propose-before.json"),
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json")})
-	f := stubWire(t, &fakeWire{answers: answers})
-	from := tempFile(t, "proposals.json", oneProposal)
-
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
-	if code == 0 || got["ok"] != false {
-		t.Fatalf("a project that is not enrolled must stop the run: %v (exit %d)", got, code)
-	}
-	msg, _ := got["error"].(string)
-	if !strings.Contains(msg, "SUGGEST") {
-		t.Errorf("the error must name what Google did not honour: %q", msg)
-	}
-	data := dataOf(t, got)
-	list, _ := data["proposals"].([]any)
-	if len(list) != 1 {
-		t.Fatalf("every proposal is still reported: %v", data["proposals"])
-	}
-	if one, _ := list[0].(map[string]any); one["sent"] != false {
-		t.Errorf("proposal = %v, want sent false", one)
-	}
-	for _, c := range f.writes() {
-		if strings.Contains(c.URL, proposeDocID) {
-			t.Errorf("nothing may be written into the document being reviewed: %v", c)
-		}
-	}
-}
-
 // A proposal that landed and could not be confirmed is still gdoc's, so its
 // provenance is written down: without it withdraw would refuse to take back
 // gdoc's own work.
@@ -510,7 +473,7 @@ func TestProposeRecordsProvenanceForAnAcceptedButUnverifiedProposal(t *testing.T
 	note := copyFixture(t, "propose-note.md")
 	before := readFixture(t, "propose-note.md")
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a change that landed is not a failed run: %v (exit %d)", got, code)
 	}
@@ -558,7 +521,7 @@ func TestProposeRefusesANoteThatNamesAnotherDocument(t *testing.T) {
 	from := tempFile(t, "proposals.json", oneProposal)
 	note := copyFixture(t, "other-document.md")
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("a note paired elsewhere must be refused: %v (exit %d)", got, code)
 	}
@@ -570,33 +533,29 @@ func TestProposeRefusesANoteThatNamesAnotherDocument(t *testing.T) {
 	}
 }
 
-func TestProposeNeedsProposalsAndAFolder(t *testing.T) {
-	stubWire(t, &fakeWire{})
-	from := tempFile(t, "proposals.json", oneProposal)
+// --from is the one flag propose cannot run without, since M14 took the probe
+// and the folder it needed away.
+func TestProposeNeedsProposals(t *testing.T) {
+	f := stubWire(t, &fakeWire{})
 
-	for _, tc := range []struct {
-		args []string
-		want string
-	}{
-		{[]string{"propose", proposeDocID, "--folder", testFolderID}, "--from"},
-		{[]string{"propose", proposeDocID, "--from", from}, "--folder"},
-	} {
-		got, code := runJSON(t, tc.args...)
-		if code == 0 || got["ok"] != false {
-			t.Fatalf("%v must fail: %v", tc.args, got)
-		}
-		if msg, _ := got["error"].(string); !strings.Contains(msg, tc.want) {
-			t.Errorf("the error must name %s: %q", tc.want, msg)
-		}
+	got, code := runJSON(t, "propose", proposeDocID)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("propose without --from must fail: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "--from") {
+		t.Errorf("the error must name the flag that is missing: %q", msg)
+	}
+	if len(f.calls) != 0 {
+		t.Errorf("nothing may be sent for an argument that was refused: %v", f.calls)
 	}
 }
 
-// TestProposeRefusesABadProposalBeforeTheProbe is the shape rule at the door.
-// Every proposal is in hand before anything leaves the machine, so an entry the
-// run would refuse in the middle is refused now: a third proposal turned down
-// after the first two have landed is a run that half happened in somebody's
-// document, and it has created and trashed a probe document on the way.
-func TestProposeRefusesABadProposalBeforeTheProbe(t *testing.T) {
+// TestProposeRefusesABadProposalBeforeAnythingIsSent is the shape rule at the
+// door. Every proposal is in hand before anything leaves the machine, so an
+// entry the run would refuse in the middle is refused now: a third proposal
+// turned down after the first two have landed is a run that half happened in
+// somebody's document.
+func TestProposeRefusesABadProposalBeforeAnythingIsSent(t *testing.T) {
 	for _, tc := range []struct{ name, file, says string }{
 		{"the second carries no reason",
 			`[{"quoted":"a","replacement":"b","why":"c"},{"quoted":"d","replacement":"e"}]`,
@@ -612,7 +571,7 @@ func TestProposeRefusesABadProposalBeforeTheProbe(t *testing.T) {
 			f := stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
 			from := tempFile(t, "proposals.json", tc.file)
 
-			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 			if code == 0 || got["ok"] != false {
 				t.Fatalf("a proposal that cannot be written must stop the run: %v (exit %d)", got, code)
 			}
@@ -620,7 +579,7 @@ func TestProposeRefusesABadProposalBeforeTheProbe(t *testing.T) {
 				t.Errorf("the error must say %q: %q", tc.says, msg)
 			}
 			if len(f.calls) != 0 {
-				t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+				t.Errorf("nothing may reach Google: %v", f.calls)
 			}
 		})
 	}
@@ -646,7 +605,7 @@ func TestProposeReportsEveryProposalWhenOneOfThemCannotBeSent(t *testing.T) {
 		`[{"quoted":"reviewed annually","replacement":"reviewed every six months","why":"the policy says twice a year"},`+
 			`{"quoted":"reviewed monthly","replacement":"reviewed weekly","why":"the policy says twice a year"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("a proposal that could not be placed must fail the run: %v (exit %d)", got, code)
 	}
@@ -692,7 +651,7 @@ func TestProposeSaysSoWhenTheNoteCannotRememberAProposal(t *testing.T) {
 	note := copyFixture(t, "propose-note.md")
 	before := readFixture(t, "propose-note.md")
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a change that landed is not a failed run: %v (exit %d)", got, code)
 	}
@@ -724,8 +683,8 @@ func TestProposeSaysSoWhenTheNoteCannotRememberAProposal(t *testing.T) {
 
 // TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes is the read-again rule.
 // The note is read at the start to check the pairing, and the run then spends
-// seconds to tens of seconds on the network: the probe, a read and a write per
-// proposal, three read-backs each. These notes live in a synced vault, so an
+// seconds to tens of seconds on the network: a read and a write per proposal,
+// three read-backs each. These notes live in a synced vault, so an
 // edit can land in that window, and writing the bytes the run started with would
 // throw it away.
 func TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes(t *testing.T) {
@@ -749,7 +708,7 @@ func TestProposeWritesTheNoteAsItStandsWhenTheRunFinishes(t *testing.T) {
 	stubWire(t, &fakeWire{answers: answers})
 	from := tempFile(t, "proposals.json", oneProposal)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("propose: %v (exit %d)", got, code)
 	}
@@ -789,7 +748,7 @@ func TestProposeWarnsWhenTheNoteStopsNamingThisDocumentMidRun(t *testing.T) {
 	from := tempFile(t, "proposals.json", oneProposal)
 
 	// Act
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 
 	// Assert: the proposals were written, so the run is ok and the note's
 	// refusal is a warning naming which of the four it was.
@@ -822,7 +781,7 @@ func TestProposeRefusesAnUnknownKeyInTheProposalsFile(t *testing.T) {
 	from := tempFile(t, "proposals.json",
 		`[{"quoted":"a","replacement":"b","why":"c","assigned_to":"person@example.com"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("a key gdoc does not understand must stop the run: %v (exit %d)", got, code)
 	}
@@ -830,7 +789,7 @@ func TestProposeRefusesAnUnknownKeyInTheProposalsFile(t *testing.T) {
 		t.Errorf("the error must name the key: %q", msg)
 	}
 	if len(f.calls) != 0 {
-		t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+		t.Errorf("nothing may reach Google: %v", f.calls)
 	}
 }
 
@@ -838,12 +797,12 @@ func TestProposeRefusesAnEmptyProposalList(t *testing.T) {
 	f := stubWire(t, &fakeWire{})
 	from := tempFile(t, "proposals.json", "[]")
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("an empty list is nothing to propose: %v (exit %d)", got, code)
 	}
 	if len(f.calls) != 0 {
-		t.Errorf("no probe document may be created for a run with nothing to do: %v", f.calls)
+		t.Errorf("nothing may be sent for a run with nothing to do: %v", f.calls)
 	}
 }
 

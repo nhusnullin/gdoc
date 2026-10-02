@@ -460,30 +460,30 @@ Serves decisions 11 and 19. Scenarios 10, 15.
 - Modify: `go/internal/propose/doc.go`, `go/internal/probe/doc.go`
 - Modify: `docs/v2/SPEC.md`, `PRINCIPLES.md`
 
-- [ ] Test first, `TestProposeRunsNoProbe`: a propose against the fakes sends
+- [x] Test first, `TestProposeRunsNoProbe`: a propose against the fakes sends
       no create, no trash and no request to any document but the target.
       Watch it fail on today's probe.
-- [ ] Test, `TestTheFolderFlagIsAcceptedAndIgnored`: with `--folder` the run
+- [x] Test, `TestTheFolderFlagIsAcceptedAndIgnored`: with `--folder` the run
       carries the one warning, opens no create door on the policy, and sends
       the same requests as without it; a malformed folder id is still refused.
-- [ ] Implement as Technical Details. `proposeAnswers` loses its probe
+- [x] Implement as Technical Details. `proposeAnswers` loses its probe
       answers; every test that used it keeps checking what it checked about
       the proposal. Tests of the probe's own behaviour move to `gdoc probe`;
       tests of the coupling go.
-- [ ] `--folder` in the table: `needOptional`, after `--md`, its sentence
+- [x] `--folder` in the table: `needOptional`, after `--md`, its sentence
       "ignored: propose no longer creates a working copy; removed in a later
       release". The example drops it. The usage-line test spells the new line.
-- [ ] `propose/doc.go` and `cmd/gdoc/doc.go`: the probe paragraph goes, and the
+- [x] `propose/doc.go` and `cmd/gdoc/doc.go`: the probe paragraph goes, and the
       folder rule names its test. `probe/doc.go` loses the sentence that
       `writeMode` is absent from the discovery document, says it is listed
       there now, labelled Developer Preview while the rollout lands, and that
       `gdoc probe` is a manual command only.
-- [ ] SPEC.md: the probe paragraphs at `:147`, `:159-160`, `:301`, `:376` and
+- [x] SPEC.md: the probe paragraphs at `:147`, `:159-160`, `:301`, `:376` and
       `:750` say the probe no longer runs before a proposal and the read-back
       stop does instead. PRINCIPLES.md: an amendment dated 2026-10-02 under the
       2026-09-18 one, saying the same in two sentences.
-- [ ] `cd go && go test -race ./...` passes; `make vet` passes.
-- [ ] `git commit -m "feat(propose): no capability probe, and --folder accepted and ignored"`
+- [x] `cd go && go test -race ./...` passes; `make vet` passes.
+- [x] `git commit -m "feat(propose): no capability probe, and --folder accepted and ignored"`
 
 ### Task 4: propose stops at the first proposal a read-back cannot confirm
 

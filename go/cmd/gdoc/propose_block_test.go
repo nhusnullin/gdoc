@@ -24,23 +24,22 @@ const blockWhy = "the policy says nothing about limits"
 const oneBlock = `[{"kind":"block","after":"reviewed annually","content":"` + blockContent + `",` +
 	`"why":"` + blockWhy + `"}]`
 
-// blockAnswers is the probe followed by one block proposal: the command's own
-// read, the read ApplyBlock places from, the batch, and the three read-backs.
+// blockAnswers is one block proposal: the command's own read, the read
+// ApplyBlock places from, the batch, and the three read-backs.
 //
 // The two reads before the write are the same URL and the same fixture, and the
 // third is the document with the block pending in it. One fixture for all three
 // would verify the document as it stood before the write.
 func blockAnswers(t *testing.T) []*answer {
 	t.Helper()
-	out := probeAnswers(t, "probe-enrolled.json")
-	return append(out,
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-after.json"), once: true},
-		&answer{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json"), once: true},
-		&answer{method: "GET", match: "PREVIEW_WITHOUT_SUGGESTIONS", json: readFixture(t, "block-before.json"), once: true},
-		&answer{method: "GET", match: "/export?", bytes: exportWithBlockComment(t, "\U0001F916 "+blockWhy, "3.6 Limits"), once: true},
-	)
+	return []*answer{
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-after.json"), once: true},
+		{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json"), once: true},
+		{method: "GET", match: "PREVIEW_WITHOUT_SUGGESTIONS", json: readFixture(t, "block-before.json"), once: true},
+		{method: "GET", match: "/export?", bytes: exportWithBlockComment(t, "\U0001F916 "+blockWhy, "3.6 Limits"), once: true},
+	}
 }
 
 // exportWithBlockComment is the docx a verified block is confirmed against: the
@@ -88,7 +87,7 @@ func TestProposeReadsABlockEntry(t *testing.T) {
 	stubWire(t, &fakeWire{answers: blockAnswers(t)})
 	from := tempFile(t, "proposals.json", oneBlock)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a block proposal must run: %v (exit %d)", got, code)
 	}
@@ -120,7 +119,7 @@ func TestProposeRefusesAnUnknownFieldInABlockEntry(t *testing.T) {
 	from := tempFile(t, "proposals.json",
 		`[{"kind":"block","after":"reviewed annually","contents":"## 3.6 Limits\n","why":"c"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("an unknown field must stop the run: %v (exit %d)", got, code)
 	}
@@ -128,7 +127,7 @@ func TestProposeRefusesAnUnknownFieldInABlockEntry(t *testing.T) {
 		t.Errorf("the error must name the field it did not know: %q", msg)
 	}
 	if len(f.calls) != 0 {
-		t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+		t.Errorf("nothing may reach Google: %v", f.calls)
 	}
 }
 
@@ -152,7 +151,7 @@ func TestProposeRefusesABlockFieldWithNoKind(t *testing.T) {
 			f := stubWire(t, &fakeWire{answers: blockAnswers(t)})
 			from := tempFile(t, "proposals.json", tc.file)
 
-			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 			if code == 0 || got["ok"] != false {
 				t.Fatalf("a block field on an entry with no kind must stop the run: %v (exit %d)", got, code)
 			}
@@ -198,7 +197,7 @@ func TestProposeRefusesAMarkerInABlockField(t *testing.T) {
 			f := stubWire(t, &fakeWire{answers: blockAnswers(t)})
 			from := tempFile(t, "proposals.json", tc.file)
 
-			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 			if code == 0 || got["ok"] != false {
 				t.Fatalf("a marker in a block field must stop the run: %v (exit %d)", got, code)
 			}
@@ -210,7 +209,7 @@ func TestProposeRefusesAMarkerInABlockField(t *testing.T) {
 				t.Errorf("the error must call it a marker: %q", msg)
 			}
 			if len(f.calls) != 0 {
-				t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+				t.Errorf("nothing may reach Google: %v", f.calls)
 			}
 		})
 	}
@@ -220,7 +219,7 @@ func TestProposeRefusesAMarkerInABlockField(t *testing.T) {
 // marker rule keeps, over the markdown subset. A block whose content holds a
 // table, a nested list or a link a document cannot open is refused by name from
 // the file alone, so a second entry that gdoc cannot read never lets the first
-// one land: the probe document is not created, and nothing is posted.
+// one land: nothing is posted at all.
 //
 // The block here is the second of two entries, because that is the shape the
 // promise is about. A run that stopped on it after the first one had landed is
@@ -237,7 +236,7 @@ func TestProposeRefusesBlockContentBeforeAnythingIsSent(t *testing.T) {
 				`[{"quoted":"reviewed annually","replacement":"reviewed every six months","why":"the policy says twice a year"},`+
 					`{"kind":"block","after":"reviewed annually","content":"`+tc.content+`","why":"`+blockWhy+`"}]`)
 
-			got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+			got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 
 			if code == 0 || got["ok"] != false {
 				t.Fatalf("content the block cannot read must stop the run: %v (exit %d)", got, code)
@@ -250,7 +249,7 @@ func TestProposeRefusesBlockContentBeforeAnythingIsSent(t *testing.T) {
 				t.Errorf("the error must name the entry it is about: %q", msg)
 			}
 			if len(f.calls) != 0 {
-				t.Errorf("nothing may reach Google, the probe document included: %v", f.calls)
+				t.Errorf("nothing may reach Google: %v", f.calls)
 			}
 		})
 	}
@@ -274,7 +273,7 @@ func TestProposeRunsABothKindsFileInFileOrder(t *testing.T) {
 			`{"quoted":"reviewed annually","replacement":"reviewed every six months",`+
 			`"why":"the policy says twice a year"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a file of both kinds must run: %v (exit %d)", got, code)
 	}
@@ -294,8 +293,7 @@ func TestProposeRunsABothKindsFileInFileOrder(t *testing.T) {
 		t.Errorf("both must come back verified: %v, %v", first, second)
 	}
 	// One batch per proposal, in the file's order: the block's own insertText
-	// first, then the words kind's deleteContentRange. The probe's writes go to
-	// its own document and are left out.
+	// first, then the words kind's deleteContentRange.
 	var batches [][]byte
 	for _, c := range f.writes() {
 		if strings.Contains(c.URL, proposeDocID+":batchUpdate") {
@@ -321,7 +319,7 @@ func TestProposeRecordsABlocksPlacementInTheNote(t *testing.T) {
 	note := copyFixture(t, "propose-note.md")
 	from := tempFile(t, "proposals.json", oneBlock)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("propose --md: %v (exit %d)", got, code)
 	}
@@ -341,22 +339,21 @@ func TestProposeRecordsABlocksPlacementInTheNote(t *testing.T) {
 // replace names two quotes and the note has one field for them, so it keeps the
 // first: that is where the block went in, and it is what a later run shows.
 func TestProposeRecordsAReplacesFirstQuoteInTheNote(t *testing.T) {
-	answers := probeAnswers(t, "probe-enrolled.json")
-	answers = append(answers,
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
-		&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-replace-after.json"), once: true},
-		&answer{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json"), once: true},
-		&answer{method: "GET", match: "PREVIEW_WITHOUT_SUGGESTIONS", json: readFixture(t, "block-before.json"), once: true},
-		&answer{method: "GET", match: "/export?", bytes: exportWithBlockComment(t, "\U0001F916 "+blockWhy, "3.6 Limits"), once: true},
-	)
+	answers := []*answer{
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-replace-after.json"), once: true},
+		{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json"), once: true},
+		{method: "GET", match: "PREVIEW_WITHOUT_SUGGESTIONS", json: readFixture(t, "block-before.json"), once: true},
+		{method: "GET", match: "/export?", bytes: exportWithBlockComment(t, "\U0001F916 "+blockWhy, "3.6 Limits"), once: true},
+	}
 	stubWire(t, &fakeWire{answers: answers})
 	note := copyFixture(t, "propose-note.md")
 	from := tempFile(t, "proposals.json",
 		`[{"kind":"block","replace_from":"reviewed annually","replace_to":"risk matrix",`+
 			`"content":"`+blockContent+`","why":"`+blockWhy+`"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a replace must run: %v (exit %d)", got, code)
 	}
