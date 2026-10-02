@@ -552,31 +552,31 @@ because the skill is live the moment it is saved.
 - Modify: `skills/gdoc-review/SKILL.md`
 - Create: `go/cmd/gdoc/skills_review_test.go`
 
-- [ ] Test first, `TestTheReviewCoreCarriesNoCall`: `review.md` gives zero
+- [x] Test first, `TestTheReviewCoreCarriesNoCall`: `review.md` gives zero
       calls through the parser `TestProseAboutGdocIsNotReadAsACall`
       exercises, holds no fenced block, and no `--flag` token. Plain English
       that names a command word, like "reply" or "read", passes. Watch it
       fail: the file does not exist.
-- [ ] Test, `TestTheReviewSkillNamesItsCore`: `SKILL.md` names `review.md` and
+- [x] Test, `TestTheReviewSkillNamesItsCore`: `SKILL.md` names `review.md` and
       tells the session to read it before the first thread.
-- [ ] Test, `TestEveryReviewRuleLandedOnce`: the rule text of "Before acting
+- [x] Test, `TestEveryReviewRuleLandedOnce`: the rule text of "Before acting
       on an old marked comment again", "Two messages at most", "When to stop
       and ask", "If the request is for all the comments" and "Never", and the
       rules of "Step 2: Decide which threads still need an answer", is in
       `review.md` and no longer in `SKILL.md`.
-- [ ] Test, `TestTheReviewStepsKeepTheirNumbers`: `SKILL.md` still has the
+- [x] Test, `TestTheReviewStepsKeepTheirNumbers`: `SKILL.md` still has the
       headings Step 1 to Step 8 in order, because `live.md` and `propose.md`
       point at Step 3, Step 7 and Step 8. A step whose rules moved keeps its
       heading and one line pointing at its section of `review.md`.
-- [ ] Move the rules, reworded only where a sentence named a shell call. No
+- [x] Move the rules, reworded only where a sentence named a shell call. No
       rule is added, dropped or changed in meaning: the two guards, the
       annotate flow and the chat header are run 2's, written with the
       measured values. `TestStep7SaysABlockIsTheOtherKindOfProposal` stays
       green.
-- [ ] `SKILL.md` keeps setup, the calls and live mode, and is well under the
+- [x] `SKILL.md` keeps setup, the calls and live mode, and is well under the
       20,000-character budget.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "refactor(skills): the review rules in review.md, the calls in SKILL.md"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "refactor(skills): the review rules in review.md, the calls in SKILL.md"`
 
 ### Task 7: the login in two steps, and "Signed in" only after the save
 
