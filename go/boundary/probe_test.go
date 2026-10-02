@@ -29,13 +29,17 @@ import (
 // probeClaimScanned are the files and trees the claim was written into: the
 // file every session loads, the colleague's pages, the command's reasons, the
 // writer's own, and the live tests, which are the one place left that calls
-// the probe.
+// the probe. The guard's and the prelude's package comments are here because
+// CLAUDE.md sends a reader to both to learn what makes a write trustworthy, and
+// both stated the probe as the bar in front of the read-back.
 var probeClaimScanned = []string{
 	"CLAUDE.md",
 	"README.md",
 	"docs/guide",
 	"go/cmd/gdoc/doc.go",
 	"go/internal/propose/doc.go",
+	"go/internal/guard/doc.go",
+	"go/internal/prelude/doc.go",
 	"go/internal/live",
 }
 
@@ -46,8 +50,12 @@ var probeClaimScanned = []string{
 // such as "No command runs that probe any more", is not one of these: that one
 // says "that probe" rather than "the probe", and it is the sentence this guard
 // exists to keep true.
+//
+// The package path counts as the name, because the claim in internal/prelude was
+// written "internal/propose runs internal/probe before every proposal" and the
+// first pattern read past it.
 var probeClaims = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\b(propose|proposal|the command|the writer)\b[^.;:!?]{0,80}\bruns?\s+(the\s+|its\s+|a\s+)?(capability\s+)?probe\b`),
+	regexp.MustCompile(`(?i)\b(propose|proposal|the command|the writer)\b[^.;:!?]{0,80}\bruns?\s+(the\s+|its\s+|a\s+)?(capability\s+)?(internal/)?probe\b`),
 	regexp.MustCompile(`(?i)\bprobe\b[^.;:!?]{0,80}\b(propose|the command|the writer)\s+runs\b`),
 }
 
@@ -88,6 +96,7 @@ func TestTheProbeClaimScanFindsAPlantedSentence(t *testing.T) {
 		{"the probe command itself", "`probe` creates a throwaway document and says whether Docs honours a suggestion today.", false},
 		{"a live test running it itself", "The probe first, because an unenrolled project makes every assertion below meaningless.", false},
 		{"the stop", "That stop is the bound on no command running the capability probe any more.", false},
+		{"package paths on both sides", "internal/propose runs internal/probe before every proposal, because writeMode is a field gdoc supplies.", true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

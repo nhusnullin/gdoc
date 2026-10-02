@@ -32,9 +32,10 @@ import (
 	"gdoc/internal/withdraw"
 )
 
-// probeData is what `gdoc probe` prints, and what rides inside a propose run.
-// The report's own warnings are hoisted onto the envelope instead, where every
-// other warning in this binary lives.
+// probeData is what `gdoc probe` prints, and nothing else: propose stopped
+// running the probe on 2026-10-02 and carries no probe object. The report's own
+// warnings are hoisted onto the envelope instead, where every other warning in
+// this binary lives.
 type probeData struct {
 	Enrolled        bool     `json:"enrolled"`
 	ProbeDocumentID string   `json:"probe_document_id,omitempty"`
@@ -409,8 +410,8 @@ func about(quoted string, warns []string) []string {
 // route it would have come from.
 //
 // The note is read again here rather than reused from the pairing check. Between
-// the two sits the probe, a read and a write per proposal and three read-backs
-// each, which is seconds to tens of seconds; these notes live in a synced vault,
+// the two sits a read and a write per proposal and three read-backs each, which
+// is seconds to tens of seconds; these notes live in a synced vault,
 // and writing the bytes this run started with would throw away whatever landed
 // in that window. A note that has stopped naming this document is left alone and
 // said so, because the proposals belong to a pairing it no longer records.
@@ -535,8 +536,8 @@ func readNote(path, docID string) (*notePath, error) {
 }
 
 // readProposals reads the list the skill wrote. An empty list is refused rather
-// than run: a probe document would be created and trashed for a run with
-// nothing to propose.
+// than run: a session is opened and a document read for a run with nothing to
+// propose.
 //
 // The read is strict, for the reason parseArgsN refuses an unknown flag and
 // frontmatter reads with yaml.Strict(). A misspelled `quoted`, `replacement` or
@@ -570,10 +571,10 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)
 	}
-	// Every proposal is checked here, before the probe and before the first
-	// write, for the reason the empty list is refused here: all of them are in
-	// hand, and a third entry refused after the first two have landed is a run
-	// that half happened in somebody's document.
+	// Every proposal is checked here, before the session is opened and before
+	// the first write, for the reason the empty list is refused here: all of
+	// them are in hand, and a third entry refused after the first two have
+	// landed is a run that half happened in somebody's document.
 	for i, p := range out {
 		if err := p.Check(); err != nil {
 			return nil, fmt.Errorf("%s proposals[%d]: %w", path, i, err)

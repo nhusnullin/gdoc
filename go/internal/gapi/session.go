@@ -483,7 +483,7 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 	// is not JSON, and both name something the server did not do.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, read+1))
 	if err != nil {
-		return nil, 0, mark(ok, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err))
+		return nil, 0, mark(resp.StatusCode, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err))
 	}
 	if int64(len(body)) > read {
 		if !ok {
@@ -496,21 +496,25 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 	return body, resp.StatusCode, nil
 }
 
-// mark wraps err as sent when the server had answered 2xx before it happened.
+// mark wraps err by what the status the server answered says about the
+// request's fate: a 2xx is sent, a 5xx is unknown, and a 4xx is left alone.
 //
-// It is the most this package can say about a 2xx, and not the whole of what can
-// go wrong. A failure this leaves alone is one of three: a guard refusal, where
-// nothing left the machine; a 4xx, where Docs rejected the batch whole; and a
-// 5xx or a dropped connection, where the request was written and gdoc cannot
-// tell whether it was applied. The first two are a change that did not happen.
-// The third carries the unknown mark instead, which send and attempt put on it,
-// and a caller reading it looks at the document before sending the same write
-// again.
-func mark(ok bool, err error) error {
-	if !ok {
-		return err
+// It takes the status rather than a bool because the three answers are three
+// different things, and a 5xx whose body then fails to read is the case a bool
+// flattened: the request was written and the answer that would have said what
+// became of it never finished arriving. A failure this leaves alone is one of
+// two: a guard refusal, where nothing left the machine, and a 4xx, where Docs
+// rejected the batch whole. Both are a change that did not happen. A caller
+// reading the unknown mark looks at the document before sending the same write
+// again. TestAFiveHundredWhoseBodyFailsIsStillUnknown is the pin.
+func mark(status int, err error) error {
+	switch {
+	case status >= 200 && status <= 299:
+		return sent(err)
+	case status >= 500:
+		return unknown(err)
 	}
-	return sent(err)
+	return err
 }
 
 // refresh exchanges the refresh token, saves the result and says so once. A
@@ -563,6 +567,15 @@ func (s *Session) refresh(ctx context.Context) error {
 		return fmt.Errorf("the refreshed token could not be saved: %w", err)
 	}
 	s.token = tok
+	// loaded follows the save, because the file now holds what was just
+	// written. Google omits the refresh token on most refreshes and the old one
+	// is kept, so this is usually the same string; on the refresh where Google
+	// rotates it, leaving loaded behind would make the session's next
+	// newerLogin read its own save as somebody else's sign-in, warn about a
+	// newer sign-in that never happened, and then refuse to refresh a token it
+	// believes is another account's.
+	// TestARotatedRefreshTokenIsNotASecondLogin is the pin.
+	s.loaded = tok.RefreshToken
 	if !s.refreshed {
 		s.refreshed = true
 		s.warnings = append(s.warnings, "the access token was refreshed and saved")
@@ -588,14 +601,22 @@ func (s *Session) newerLogin() (*auth.Token, error) {
 	return &tok, nil
 }
 
-// adopt takes the file's token as this session's own and says so once. Nothing
-// is saved: the file is already what it is being set to.
+// adopt takes the file's token as this session's own and says so once. The
+// adoption itself writes nothing: the file is already what it is being set to.
+//
+// The warning says what happened and not what was saved, because what follows
+// decides that. A newer login that is still live ends the refresh and nothing is
+// written, and a newer login that is itself expired is refreshed and saved,
+// where the refresh's own warning says so. One sentence claiming nothing was
+// saved would be false on the second path, and the two warnings would sit on the
+// same envelope contradicting each other.
+// TestAnAdoptedExpiredLoginSaysOnlyOneThingAboutTheSave is the pin.
 func (s *Session) adopt(tok auth.Token) {
 	s.token = tok
 	s.loaded = tok.RefreshToken
 	if !s.adopted {
 		s.adopted = true
-		s.warnings = append(s.warnings, "a newer sign-in was found in the token file and used, and nothing was saved")
+		s.warnings = append(s.warnings, "a newer sign-in was found in the token file and used")
 	}
 }
 

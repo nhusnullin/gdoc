@@ -150,3 +150,61 @@ func TestNothingBeforeTheWriteIsMarkedUnknown(t *testing.T) {
 		})
 	}
 }
+
+// failingBody is a response body that answers one read with an error, which is
+// the connection going away while the server's own error body streams.
+type failingBody struct{}
+
+func (failingBody) Read([]byte) (int, error) { return 0, errors.New("read: connection reset by peer") }
+func (failingBody) Close() error             { return nil }
+
+// TestAFiveHundredWhoseBodyFailsIsStillUnknown is the 500 above read one step
+// later: the status arrived, so the request was written, and the body carrying
+// Google's own message did not finish. The status is the fact that matters, and a
+// read that failed after it is no reason to report the batch as never sent.
+func TestAFiveHundredWhoseBodyFailsIsStillUnknown(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	cut := rtFunc(func(r *http.Request) (*http.Response, error) {
+		if tr := httptrace.ContextClientTrace(r.Context()); tr != nil && tr.WroteRequest != nil {
+			tr.WroteRequest(httptrace.WroteRequestInfo{})
+		}
+		return &http.Response{StatusCode: 500, Request: r, Header: http.Header{}, Body: failingBody{}}, nil
+	})
+	s := openOver(t, cut)
+
+	err := s.PostJSON(context.Background(), batchURL(), suggestBatch(), &struct{}{})
+	if err == nil {
+		t.Fatal("a 500 with an unreadable body came back as success")
+	}
+	if !wasUnknown(err) {
+		t.Errorf("error %q is not marked unknown, and the request was written before Docs failed", err)
+	}
+	if wasSent(err) {
+		t.Errorf("error %q is marked sent, and nothing in a 500 says the batch was applied", err)
+	}
+}
+
+// TestAFourHundredWhoseBodyFailsIsNotUnknown is the other half. Docs rejecting
+// the batch whole is a change that did not happen, and a body that failed to
+// read afterwards does not turn it into one that may be in the document.
+func TestAFourHundredWhoseBodyFailsIsNotUnknown(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	cut := rtFunc(func(r *http.Request) (*http.Response, error) {
+		if tr := httptrace.ContextClientTrace(r.Context()); tr != nil && tr.WroteRequest != nil {
+			tr.WroteRequest(httptrace.WroteRequestInfo{})
+		}
+		return &http.Response{StatusCode: 400, Request: r, Header: http.Header{}, Body: failingBody{}}, nil
+	})
+	s := openOver(t, cut)
+
+	err := s.PostJSON(context.Background(), batchURL(), suggestBatch(), &struct{}{})
+	if err == nil {
+		t.Fatal("a 400 with an unreadable body came back as success")
+	}
+	if wasUnknown(err) {
+		t.Errorf("error %q is marked unknown, and a 400 is Docs refusing the batch whole", err)
+	}
+	if wasSent(err) {
+		t.Errorf("error %q is marked sent, and a 400 is a change that did not happen", err)
+	}
+}

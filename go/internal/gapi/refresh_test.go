@@ -26,6 +26,7 @@ type refreshWire struct {
 	forms   []url.Values
 	bearers []string
 	access  []string // the access token each refresh answers with, in order
+	rotated []string // the refresh token each answer carries, in order; "" for none
 	doc     []int    // the status each read answers, in order; 200 past the end
 	onPost  func()   // runs after the form is recorded and before the answer
 }
@@ -45,7 +46,13 @@ func (w *refreshWire) RoundTrip(r *http.Request) (*http.Response, error) {
 		if n < len(w.access) {
 			tok = w.access[n]
 		}
-		return reply(r, 200, `{"access_token":"`+tok+`","expires_in":3600}`), nil
+		// Google omits the refresh token on most refreshes and rotates it on
+		// some, and the two are different answers to the session.
+		rotated := ""
+		if n < len(w.rotated) {
+			rotated = `,"refresh_token":"` + w.rotated[n] + `"`
+		}
+		return reply(r, 200, `{"access_token":"`+tok+`","expires_in":3600`+rotated+`}`), nil
 	}
 	w.mu.Lock()
 	w.bearers = append(w.bearers, r.Header.Get("Authorization"))
@@ -270,5 +277,78 @@ func TestTwoRefreshesOfOneLoginBothSave(t *testing.T) {
 	}
 	if saidNewerLogin(s.Warnings()) {
 		t.Errorf("Warnings() = %v, want no newer sign-in on the ordinary path", s.Warnings())
+	}
+}
+
+// TestARotatedRefreshTokenIsNotASecondLogin is the save the session has to
+// recognise as its own. Google usually omits the refresh token on a refresh and
+// sometimes rotates it, and a session that remembered only the string the file
+// held when it opened would read its own rotated save as somebody signing in
+// again: it would warn about a newer sign-in that never happened, and then
+// refuse to refresh a token it believed belonged to another account.
+func TestARotatedRefreshTokenIsNotASecondLogin(t *testing.T) {
+	path := tokenFile(t, time.Now().Add(-time.Hour)) // the session holds R1, expired
+	w := &refreshWire{
+		access:  []string{"NEW1", "NEW2"},
+		rotated: []string{"R2"}, // the first refresh rotates, the second does not
+		doc:     []int{http.StatusUnauthorized},
+	}
+	s := openOver(t, w)
+
+	if err := s.GetJSON(context.Background(), docURL(), &struct{}{}); err != nil {
+		t.Fatalf("GetJSON: %v", err)
+	}
+
+	posts := w.tokenPosts()
+	if len(posts) != 2 {
+		t.Fatalf("sent %d refreshes, want 2: the expired token then the 401: %v", len(posts), posts)
+	}
+	if got := posts[0].Get("refresh_token"); got != "R1" {
+		t.Errorf("refresh 1 sent %q, want R1", got)
+	}
+	if got := posts[1].Get("refresh_token"); got != "R2" {
+		t.Errorf("refresh 2 sent %q, want R2, the rotated token this session saved itself", got)
+	}
+	if got := w.reads(); len(got) != 2 || got[0] != "Bearer NEW1" || got[1] != "Bearer NEW2" {
+		t.Errorf("the reads carried %v, want NEW1 then NEW2", got)
+	}
+	saved := savedToken(t, path)
+	if saved.AccessToken != "NEW2" || saved.RefreshToken != "R2" {
+		t.Errorf("saved token = %q/%q, want NEW2/R2", saved.AccessToken, saved.RefreshToken)
+	}
+	if saidNewerLogin(s.Warnings()) {
+		t.Errorf("Warnings() = %v, want no newer sign-in: the rotation was this session's own save", s.Warnings())
+	}
+}
+
+// TestAnAdoptedExpiredLoginSaysOnlyOneThingAboutTheSave is the envelope read by
+// a person. Adopting the file's token writes nothing, and refreshing an adopted
+// token that is itself expired does write, so one run reaches both sentences. Two
+// warnings disagreeing about whether the token file was written is the envelope
+// saying it does not know what it just did.
+func TestAnAdoptedExpiredLoginSaysOnlyOneThingAboutTheSave(t *testing.T) {
+	path := tokenFile(t, time.Now().Add(-time.Hour))
+	w := &refreshWire{access: []string{"FRESH"}}
+	s := openOver(t, w)
+
+	writeToken(t, path, aLogin("B", "R2", time.Now().Add(-time.Hour)))
+
+	if err := s.GetJSON(context.Background(), docURL(), &struct{}{}); err != nil {
+		t.Fatalf("GetJSON: %v", err)
+	}
+
+	if !saidNewerLogin(s.Warnings()) {
+		t.Errorf("Warnings() = %v, want the newer sign-in said", s.Warnings())
+	}
+	if !hasWarning(s.Warnings(), "refreshed and saved") {
+		t.Errorf("Warnings() = %v, want the save said: the adopted token was refreshed and written", s.Warnings())
+	}
+	for _, warn := range s.Warnings() {
+		if strings.Contains(warn, "nothing was saved") {
+			t.Errorf("Warnings() = %v, want nothing denying a save: %q, and the file was written", s.Warnings(), warn)
+		}
+	}
+	if saved := savedToken(t, path); saved.AccessToken != "FRESH" {
+		t.Errorf("saved access token = %q, want FRESH", saved.AccessToken)
 	}
 }
