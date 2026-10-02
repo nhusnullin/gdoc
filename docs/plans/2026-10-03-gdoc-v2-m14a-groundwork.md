@@ -588,27 +588,27 @@ Serves decision 4 (the parts that are not the tool). Scenario 2.
 - Create: `go/internal/auth/twostep_test.go`, `go/internal/auth/loopback/finish_test.go`
 - Modify: `go/cmd/gdoc/main.go` (only if `login` needs the new names)
 
-- [ ] Test first, `TestStartLoginReturnsTheLinkAtOnce`: `StartLogin` returns a
+- [x] Test first, `TestStartLoginReturnsTheLinkAtOnce`: `StartLogin` returns a
       URL naming the listener's address and the state, without waiting.
-- [ ] Test, `TestWaitExchangesAndSaves`: a fake callback with a code, a fake
+- [x] Test, `TestWaitExchangesAndSaves`: a fake callback with a code, a fake
       token endpoint; `Wait` saves the token.
-- [ ] Test, `TestThePageSaysSignedInOnlyAfterTheSave`: the browser's response
+- [x] Test, `TestThePageSaysSignedInOnlyAfterTheSave`: the browser's response
       is not written until `Finish`; `Finish(nil)` writes "Signed in"; a save
       that failed writes "Sign-in failed" and the reason.
-- [ ] Test, `TestTheBrowserIsAnsweredOnEveryPath`: an exchange that fails, a
+- [x] Test, `TestTheBrowserIsAnsweredOnEveryPath`: an exchange that fails, a
       save that fails and a context that ends each give the browser a page,
       and a `Close` straight after `Finish` never drops it.
-- [ ] Test, `TestAFinishThatNeverComesStillAnswersTheBrowser`: past
+- [x] Test, `TestAFinishThatNeverComesStillAnswersTheBrowser`: past
       `finishWait`, the page says gdoc could not confirm the sign-in.
-- [ ] Test, `TestASecondCallbackWhileOneIsHeldChangesNothing`.
-- [ ] Test, `TestCloseIsSafeTwice`.
-- [ ] Implement as Technical Details; `Login` is the two in a row and prints
+- [x] Test, `TestASecondCallbackWhileOneIsHeldChangesNothing`.
+- [x] Test, `TestCloseIsSafeTwice`.
+- [x] Implement as Technical Details; `Login` is the two in a row and prints
       exactly what it printed. The CLI's `auth login` tests stay as they are
       and green.
-- [ ] `auth/doc.go`: the two steps and the saved-then-signed-in page, naming
+- [x] `auth/doc.go`: the two steps and the saved-then-signed-in page, naming
       the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(auth): start and wait as two calls, and the browser hears signed in only after the save"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(auth): start and wait as two calls, and the browser hears signed in only after the save"`
 
 ### Task 8: a refresh never writes an old login over a newer one
 

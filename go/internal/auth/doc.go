@@ -17,6 +17,32 @@
 // a token written by the Python tool this binary replaces needs no migration
 // and no second browser trip. TestLoadReadsTheAuthorizedUserShape is the pin.
 //
+// # The login is two calls, and the browser hears "signed in" only after the save
+//
+// StartLogin opens the loopback listener, builds the authorization URL and
+// returns at once. Pending.Wait waits for the callback, exchanges the code,
+// saves the token and then tells the browser what happened. Login is the two
+// in a row, which is all the CLI needs; the split is for a front door that
+// hands the link out in one message and finishes the trip in another, with the
+// listener alive in between. TestStartLoginReturnsTheLinkAtOnce and
+// TestWaitExchangesAndSaves are the pins.
+//
+// The callback no longer writes the page itself. It holds the browser's
+// request open and loopback.Finish writes the sentence, so "Signed in" is
+// printed only once Save has returned, and a login that broke says why in the
+// tab the person is actually looking at. Every path past the callback answers
+// the browser, through a defer: the exchange failing, the save failing and the
+// context ending included. TestThePageSaysSignedInOnlyAfterTheSave and
+// TestTheBrowserIsAnsweredOnEveryPath are the pins, and
+// TestFinishWritesThePageAndNothingBeforeItDoes in internal/auth/loopback
+// holds the half below it.
+//
+// A build with no client secret is refused in StartLogin, before a listener is
+// opened or a link handed out, so a chat tool that asked for a link hears the
+// refusal instead of getting one that cannot work.
+// TestStartLoginRefusesABuildWithNoClientSecret and
+// TestLoginRefusesABuildWithNoClientSecret are the pins.
+//
 // # The login asks for the read/write Docs scope
 //
 // loginScopes is the full Drive scope plus documents, which is read/write.
