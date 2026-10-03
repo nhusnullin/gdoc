@@ -697,33 +697,63 @@ Serves decision 4 with MEASURED 3. Scenarios 2, 3.
   "outside files" refusal. Without the grant, and for any other `about`
   request, that refusal is unchanged.
 - Modify: `go/internal/gapi/` (one method that reads `about`)
+- ➕ Create: `go/internal/gapi/account.go`, `go/internal/gapi/account_test.go`
+  (`Session.Account`, rather than a method on `cmd/gdoc`'s `session`
+  interface, which would have made every command stub in the suite implement
+  a read no command makes)
+- ➕ Modify: `go/cmd/gdoc/mcp.go`, `go/cmd/gdoc/mcp_test.go`,
+  `go/cmd/gdoc/mcpwords_test.go` (`mcpTools` takes the session's
+  `*mcpLogin`), `go/internal/config/config_test.go`, `CLAUDE.md`
 
-- [ ] ⚠️ Before any code: this task widens the guard by one read. Decision 4
+➕ Three decisions this task took, each narrower than the thing it serves:
+
+- The states are `waiting`, `signed in` and `expired`. The specification lists
+  a fourth, `failed`. A listener that gave up and one that broke are both
+  `expired` with the reason in `error`, because what the person does about
+  either is the same, which is ask for a fresh link. Telling them apart would
+  mean a sentinel error out of `internal/auth/loopback` for no different
+  answer.
+- The account read reaches `cmd/gdoc` through one seam, `accountOf`, which
+  builds the policy, grants it and opens the session. It is the only caller of
+  `guard.AllowAccountRead` in the binary. The wire itself, the URL, the field
+  mask and the guard's judgement of them, is held in `internal/gapi` by
+  `TestTheAccountReadNamesTheUserAndIsJudgedByTheGuard` against a fake
+  transport and a real policy.
+- `CLAUDE.md`'s grant invariant gained `AllowAccountRead` here rather than in
+  Task 23: the sentence lists the grants, and leaving it out for fifteen tasks
+  would make the one document every session reads untrue. One line, no new
+  paragraph; it stands at 271.
+
+- [x] ⚠️ Before any code: this task widens the guard by one read. Decision 4
       asks for it and Task 1 records it. If the DECISIONS row is missing, stop.
-- [ ] Test first, `TestLoginAnswersTheLinkAtOnce` and
+      (The row is there: "The signed-in account costs the guard one read".)
+- [x] Test first, `TestLoginAnswersTheLinkAtOnce` and
       `TestLoginTwiceInOneProcessGivesOneLinkAndOnePort`.
-- [ ] Test, `TestASecondProcessReusesTheWaitingListener`: a lock file with a
+- [x] Test, `TestASecondProcessReusesTheWaitingListener`: a lock file with a
       live pid and a fresh `started` makes `login` answer `waiting` with that
       url and open no listener.
-- [ ] Test, `TestAStaleLockIsRemoved`: a dead pid, or older than three
+- [x] Test, `TestAStaleLockIsRemoved`: a dead pid, or older than three
       minutes.
-- [ ] Test, `TestTheStateMovesFromWaitingToSignedInOrExpired`, also when the
+- [x] Test, `TestTheStateMovesFromWaitingToSignedInOrExpired`, also when the
       sign-in finished in the other process.
-- [ ] Test, `TestTheSignedInAnswerNamesTheAccount`, through the `about` read
-      against a fake.
-- [ ] Test, `TestAPanicInTheListenerDoesNotEndTheServer`.
-- [ ] Test, `TestStdinClosingClosesAWaitingListenerAndItsLock`.
-- [ ] Test, in `guard`, `TestTheAboutReadIsAdmittedWithItsFieldsAndNothingElse`:
+- [x] Test, `TestTheSignedInAnswerNamesTheAccount`, through the `about` read
+      against a fake. ➕ And
+      `TestASignedInAnswerWhoseAccountReadFailedStillSaysSignedIn`: the token
+      is the fact, and the account that could not be read is a warning.
+- [x] Test, `TestAPanicInTheListenerDoesNotEndTheServer`.
+- [x] Test, `TestStdinClosingClosesAWaitingListenerAndItsLock`.
+- [x] Test, in `guard`, `TestTheAboutReadIsAdmittedWithItsFieldsAndNothingElse`:
       with `AllowAccountRead`, a GET of `drive/v3/about` with
       `fields=user(emailAddress,displayName)` and no other parameter passes;
       any other `fields`, any other path under `about`, and any write are
       refused with today's sentence. Without the grant, every `about` request
-      is refused as today.
-- [ ] Test, `TestTheAccountGrantDiesWithThePolicy`.
-- [ ] Implement as Technical Details.
-- [ ] `guard/doc.go` and `auth/doc.go`: the read and the lock, naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): login from chat, one listener across processes, and the account named"`
+      is refused as today
+      (`TestWithoutTheAccountGrantTheAboutReadIsRefusedAsBefore`).
+- [x] Test, `TestTheAccountGrantDiesWithThePolicy`.
+- [x] Implement as Technical Details.
+- [x] `guard/doc.go` and `auth/doc.go`: the read and the lock, naming the tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): login from chat, one listener across processes, and the account named"`
 
 ### Task 9: guide, its code, and the embedded review core
 

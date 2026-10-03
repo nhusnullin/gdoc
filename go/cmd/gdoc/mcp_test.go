@@ -191,16 +191,17 @@ func TestStdoutCarriesOnlyJSONRPC(t *testing.T) {
 	}
 }
 
-// guide and login answer that they are not built, as a tool error the model can
-// read, rather than being absent. An absent tool is a client that shows nothing
-// and a person who hears nothing. Tasks 8 and 9 wire them.
+// guide answers that it is not built, as a tool error the model can read,
+// rather than being absent. An absent tool is a client that shows nothing and a
+// person who hears nothing. Task 9 wires it; login is wired, and mcplogin_test
+// holds it.
 //
-// The six table commands are wired, so the list is the eight and the two stubs
-// are named here rather than being every tool there is.
-func TestTheGuideAndLoginStubsSayTheyAreNotBuiltYet(t *testing.T) {
-	stubs := map[string]bool{"guide": true, "login": true}
+// The six table commands are wired too, so the stub is named here rather than
+// being every tool there is.
+func TestTheGuideStubSaysItIsNotBuiltYet(t *testing.T) {
+	stubs := map[string]bool{"guide": true}
 	found := 0
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard)) {
 		if !stubs[tool.Name] {
 			continue
 		}
@@ -214,7 +215,7 @@ func TestTheGuideAndLoginStubsSayTheyAreNotBuiltYet(t *testing.T) {
 		}
 	}
 	if found != len(stubs) {
-		t.Errorf("%d of the two stubs are in the list", found)
+		t.Errorf("%d of the %d stubs are in the list", found, len(stubs))
 	}
 }
 
@@ -222,7 +223,7 @@ func TestTheGuideAndLoginStubsSayTheyAreNotBuiltYet(t *testing.T) {
 // specification's own order, which is the order a review runs in.
 func TestTheSixTableCommandsAreOffered(t *testing.T) {
 	var names []string
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard)) {
 		names = append(names, tool.Name)
 	}
 	want := []string{"read", "comments", "suggestions", "reply", "annotate", "propose", "login", "guide"}

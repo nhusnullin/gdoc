@@ -107,10 +107,12 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestNothingAtLevelInPlaceCanChangeACharacter` and
   `TestGrantInPlaceLeavesACreatedDocumentAtFull`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
-  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom` and
+  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`,
+  `AllowAccountRead`, whose one caller is `gdoc mcp`'s `login`, and
   `GrantInPlace` are per-run, and nothing writes one down:
-  `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes` and
-  `TestAGrantedMarkerCarriesAndNothingElseDoes`.
+  `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`,
+  `TestAGrantedMarkerCarriesAndNothingElseDoes` and
+  `TestTheAccountGrantDiesWithThePolicy`.
 - **Nothing trusts a success.** Every write is read back through a route it did
   not go out on, and `verified: false` is reported rather than raised, because
   the write happened: `TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote`.

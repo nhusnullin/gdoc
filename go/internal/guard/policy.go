@@ -61,6 +61,7 @@ type Policy struct {
 	updateFrom string          // owner/name whose releases an update may read; empty means no GitHub at all
 	rejects    map[string]bool // suggestion ids a rejectSuggestion may name; empty means none
 	marker     *marker         // the one named range a createNamedRange may make; nil means none
+	account    bool            // the one Drive read that names no file may go out; false means it may not
 	warnings   []string        // things the guard could not do quietly, for the command to report
 }
 
@@ -717,7 +718,68 @@ func filesCopy(path string) (string, bool) {
 	return id, true
 }
 
+// aboutPath and accountFields are the one Drive read that names no file: who
+// the token signs in as. Both are literals here, and gapi spells the same two
+// in its own file, because a judge that reads the caller's constant is a judge
+// that follows the caller wherever it moves.
+const (
+	aboutPath     = "/drive/v3/about"
+	accountFields = "user(emailAddress,displayName)"
+)
+
+// AllowAccountRead opens that one read for this run. It is the seventh grant of
+// the shape the six before it have: one object, one request, dying with the
+// process, and nothing writes it down.
+//
+// Nail's decision, 2026-10-03, DECISIONS.md. The login tool of gdoc mcp answers
+// with the Google account signing in worked for, so a swapped account is seen
+// in the chat rather than found out later by what a write did. Nothing gdoc
+// reads today returns it, so the wire moves by one read, under the scopes the
+// token already carries.
+//
+// It is as narrow as that answer: GET, one path, one field mask spelled exactly,
+// no other parameter. Anything else about `about` is not judged here at all, so
+// it falls through to the refusal every Drive path outside /drive/v3/files has
+// always had, which is what keeps this a widening rather than a hole:
+// TestTheAboutReadIsAdmittedWithItsFieldsAndNothingElse and
+// TestWithoutTheAccountGrantTheAboutReadIsRefusedAsBefore.
+//
+// It is not a door into the reachable set. The answer carries no file id, so
+// nothing can be learned from it, and a run that reads the account and was
+// handed no document still reaches no document:
+// TestTheAccountGrantDiesWithThePolicy.
+func (p *Policy) AllowAccountRead() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.account = true
+}
+
+// mayReadAccount reports whether this run was granted the account read.
+func (p *Policy) mayReadAccount() bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.account
+}
+
+// isAccountRead reports whether this request is the account read, spelled
+// exactly as AllowAccountRead opened it. A false here is not a refusal: it is
+// this rule saying nothing, and the Drive rules below then say what they said
+// before the grant existed.
+func (p *Policy) isAccountRead(method string, u *url.URL) bool {
+	if method != "GET" || u.Path != aboutPath || !p.mayReadAccount() {
+		return false
+	}
+	vals, err := url.ParseQuery(u.RawQuery)
+	if err != nil || len(vals) != 1 || len(vals["fields"]) != 1 {
+		return false
+	}
+	return vals["fields"][0] == accountFields
+}
+
 func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
+	if p.isAccountRead(method, u) {
+		return nil
+	}
 	path := strings.TrimPrefix(u.Path, "/upload")
 	rest, ok := strings.CutPrefix(path, "/drive/v3/files")
 	if !ok {

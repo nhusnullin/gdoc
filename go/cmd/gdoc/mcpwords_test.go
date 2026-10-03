@@ -51,7 +51,7 @@ var writeTools = []string{"reply", "annotate", "propose"}
 
 func sessionTools(t *testing.T) []mcp.Tool {
 	t.Helper()
-	return mcpTools(mcpOptions{}, io.Discard)
+	return mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard))
 }
 
 func TestEachToolTitleIsTheLiteral(t *testing.T) {

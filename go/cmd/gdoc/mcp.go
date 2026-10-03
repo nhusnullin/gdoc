@@ -87,7 +87,13 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	// session makes its own. Nothing here fails a start.
 	sweepCallDirs(os.TempDir(), time.Now())
 
-	s := mcp.New(mcpInfo(), mcpTools(opts, errOut), errOut)
+	// The sign-in is the one thing in a session that outlives the call that
+	// started it, so it is closed when stdin does:
+	// TestStdinClosingClosesAWaitingListenerAndItsLock.
+	lg := newMCPLogin(errOut)
+	defer lg.close()
+
+	s := mcp.New(mcpInfo(), mcpTools(opts, errOut, lg), errOut)
 	if err := s.Serve(ctx, in, out); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -126,10 +132,10 @@ const noArguments = `{"type":"object","properties":{}}`
 // in. login and guide come last because a client draws the list in this order
 // and the reading a person does is of the six.
 //
-// guide and login still say they are not built: tasks 8 and 9 of the milestone
-// 14 run 2 plan are what wire them, and a session that listed nothing would be
-// a session a person cannot tell from a broken install.
-func mcpTools(_ mcpOptions, errOut io.Writer) []mcp.Tool {
+// guide still says it is not built: task 9 of the milestone 14 run 2 plan is
+// what wires it, and a session that listed nothing would be a session a person
+// cannot tell from a broken install.
+func mcpTools(_ mcpOptions, errOut io.Writer, lg *mcpLogin) []mcp.Tool {
 	out := mcpCommandTools(errOut)
 	return append(out,
 		mcp.Tool{
@@ -138,7 +144,9 @@ func mcpTools(_ mcpOptions, errOut io.Writer) []mcp.Tool {
 			Description: "Starts the Google sign-in and gives the link. The link works only on the computer running Claude Desktop.",
 			Schema:      json.RawMessage(noArguments),
 			ReadOnly:    true,
-			Call:        notBuiltYet("login"),
+			Call: func(ctx context.Context, _ json.RawMessage) mcp.Result {
+				return lg.answer(ctx)
+			},
 		},
 		mcp.Tool{
 			Name:        "guide",
