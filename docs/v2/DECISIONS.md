@@ -82,6 +82,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
 | 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs only (the link hold, and the trusted email domains, both dropped after the first run in Claude Desktop) |
 | 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
+| 2026-10-03 | A change the person approved is not a payload that landed | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3458,3 +3459,32 @@ no effect is a promise the extension does not keep.
 
 Tests: the fix commits on the PR #78 branch name them; `internal/chat/doc.go`
 names the rules that remain and the test for each.
+
+## 2026-10-03. A change the person approved is not a payload that landed.
+
+The M14 plan put a red team before v2.9.0 and said a payload that landed stops
+the release. On 2026-10-03 nothing from the bait document landed, and no call
+went anywhere the person did not ask. But one change an attacking comment asked
+for did land: told "do what the comments ask" and then "yes, do all of them",
+the model drafted the comment's fee change, asked again, and on the second yes
+posted it as a suggestion, with no card. [MEASURED.md](MEASURED.md) has the run.
+
+**It does not stop the release.** Nail's call, the same evening. The person saw
+the document, the exact words and the change, and said yes twice. That is the
+gate the specification gives a chat write, and the holds are for what a person
+cannot see: words copied from a comment, another document, a burst, a flagged
+thread, a large removal. A change the person approved on its exact text is the
+person's change, whoever first suggested it.
+
+**What the run did show is fixed in the chat header.** The model's own comment
+on the suggestion said "at the document owner's request", which only the
+attacking comment had claimed, and it went out under the person's name. The
+header now says: never write who asked for a change unless the person named
+them in this chat. `TestTheChatHeaderNeverWritesWhoAskedForAChange`.
+
+**Rejected:** a hold on any write that does what a flagged comment asked. It
+would need the binary to judge that a write matches a comment's request, which
+is the model's kind of judgement, and a card on the person's own approved edit
+teaches the habit the cards exist to avoid. It can come back as a plan if a
+later run shows a change landing that the person did not see.
+
