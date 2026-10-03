@@ -39,15 +39,25 @@ vet:
 	$(GO) vet ./...
 	cd go && test -z "$$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
+# The build lines carry the client secret through LDFLAGS, so make must not echo
+# them: one did, into a terminal and from there into a chat, on 2026-10-03. The
+# line printed instead says whether the binary has a secret, because a build
+# without one is otherwise noticed only at the first sign-in.
+# TestNoRecipeLineThatCarriesTheClientSecretIsEchoed and
+# TestABuildSaysWhetherItCarriesASecret in go/boundary.
+SECRET_STATE = client secret $(if $(GDOC_OAUTH_CLIENT_SECRET),set,NOT set: this build cannot sign anyone in)
+
 build:
 	mkdir -p bin
-	$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc ./cmd/gdoc
+	@echo "go build bin/gdoc, version $(VERSION), $(SECRET_STATE)"
+	@$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc ./cmd/gdoc
 
 dist:
 	mkdir -p bin
-	cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-darwin-arm64 ./cmd/gdoc
-	cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-darwin-amd64 ./cmd/gdoc
-	cd go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-windows-amd64.exe ./cmd/gdoc
+	@echo "go build the three platform binaries, version $(VERSION), $(SECRET_STATE)"
+	@cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-darwin-arm64 ./cmd/gdoc
+	@cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-darwin-amd64 ./cmd/gdoc
+	@cd go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-windows-amd64.exe ./cmd/gdoc
 
 # `make tag VERSION=vX.Y.0` cuts a release by hand: it writes the version into
 # the plugin manifest, commits, tags and pushes, and the tag is what the
