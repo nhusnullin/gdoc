@@ -28,9 +28,11 @@ at all.
 
 ## What it does
 
-One static binary at `go/`, fifteen commands plus `help` and `completion`,
+One static binary at `go/`, sixteen commands plus `help` and `completion`,
 nothing to install beside it. Each command takes arguments, prints one JSON
-object and exits. It holds the credential, it reads a document, it writes
+object and exits. The sixteenth is the exception: `gdoc mcp` is a session rather
+than an answer, which is how Claude Desktop reaches the same reads and writes,
+and [Chat](chat.md) holds it. It holds the credential, it reads a document, it writes
 suggestions, it leaves a comment on words a caller quotes, it builds a
 house-style document and publishes it, it surveys what a document holds before
 anything is done to it, it can give that document the house style where it

@@ -21,6 +21,8 @@ Three parts, one product.
   like code.
 - **A comment in the document** is a second door into the same agent, with the
   same hub context as a terminal session. Not a queue, not a reduced mode.
+  Claude Desktop chat is a third door, through `gdoc mcp` below, and the one
+  with no hub behind it, which is why it never carries out a marker.
 
 It serves all four principles of [PRINCIPLES.md](../../PRINCIPLES.md), and this
 is what each one is here. One static Go binary with zero external programs and
@@ -40,7 +42,8 @@ loud and never a silent edit.
 The commands below are what is in. Out, permanently or until a decision says
 otherwise: PDF export and any `release` command, a daemon or watcher, accepting
 or rejecting suggestions, resolving or reopening threads, anchor banking, MCP as
-transport, the colour marking scheme, service accounts, running git. Tab
+the transport to Google, which stays the REST client behind the guard, the
+colour marking scheme, service accounts, running git. Tab
 features are out for every writer, which refuses a document with more than one
 tab, and `export` is the one reader that reads them, one file per tab. Narrowed
 2026-09-19, DECISIONS.md.
@@ -62,7 +65,7 @@ reason as principle 1 requires:
 Everything else is the standard library. A fourth needs its reason written here
 first, and the one open candidate is `sergi/go-diff`.
 
-One command table in `cmd/gdoc/commands.go`, fifteen rows since 2026-09-19,
+One command table in `cmd/gdoc/commands.go`, sixteen rows since 2026-10-03,
 describes every command once: the
 words it takes, its flags with how each one stands in the call, one sentence,
 one example, and the function that runs it. The dispatcher, the usage line in
@@ -91,7 +94,10 @@ PowerShell lands with Windows, under the tag that ships it. Decided
   problem. Warnings ride in `warnings` and are never dropped: a thing gdoc could
   not do is reported, not omitted.
 - Exit code 0 when `ok` is true, non-zero otherwise.
-- The binary never prompts and never reads stdin. It must run headless.
+- The binary never prompts, and every command but one never reads stdin. It
+  must run headless. `gdoc mcp` is the exception: a JSON-RPC session arrives
+  there, and that command prints no envelope at all. Narrowed 2026-10-03,
+  DECISIONS.md.
 
 ## Auth
 
@@ -109,6 +115,18 @@ and comes back `ok: true`, a token file that exists and cannot be read is a
 failure naming the file, and a token carrying less than v2 asks for is reported
 and never refused, because the login worked.
 
+**One sign-in at a time, across processes.** Claude Desktop runs two server
+processes at once, so a second `login` would open a second loopback listener on
+a second port and only one of them could win. A waiting sign-in is written down
+beside the token, in `login-pending.json`, with the pid, the port and the link,
+and a second process hands on that same link and reports its state rather than
+starting a trip of its own. A record whose pid is dead, or older than the three
+minutes the listener itself lives, is removed and the next call starts fresh. A
+record that is there and will not parse is a failure naming the file, never
+read as nothing waiting. The states are `waiting`, `signed_in` and `expired`,
+and `signed_in` names the Google account, read through `AllowAccountRead`
+above, so a swapped account is seen. Added 2026-10-03, DECISIONS.md.
+
 ## The guard
 
 Serves principle 3. This is the safety property everything else stands on.
@@ -125,10 +143,10 @@ Serves principle 3. This is the safety property everything else stands on.
   writable, because gdoc made it; a handed-in id is read and suggest only, never
   direct-editable; and the styling grant is the one exception, given for one id
   and one run, never inherited and never remembered.
-- **Five grants stand beside the set**, each naming one object for one run,
+- **Six grants stand beside the set**, each naming one object for one run,
   never inherited and nowhere written down: `AllowCreateIn`, `AllowReject`,
-  `AllowCopy`, `AllowMarker`, and `AllowUpdateFrom`, which is the fifth and the
-  only one that is not about a Google file. It names one GitHub repository and
+  `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`, which is the only one that is
+  not about a Google file, and `AllowAccountRead`. It names one GitHub repository and
   admits GET on that repository's releases listing, its download path, and the
   two asset hosts a download redirects to. The listing carries one query
   parameter, `per_page`, held to GitHub's own maximum of 100, and nothing else;
@@ -136,10 +154,17 @@ Serves principle 3. This is the safety property everything else stands on.
   credential, because the only bearer gdoc holds is Google's, and the wire
   refuses one on the host rather than on the grant. A policy nobody granted an
   update refuses every one of those hosts by name, and nothing the grant admits
-  is a document, so the reachable set is untouched. Two callers open it:
-  `gdoc update`, and the once-a-day check in `gdoc help`, which reads the
-  listing and replaces nothing. Added 2026-09-16, the second caller 2026-09-18,
-  DECISIONS.md.
+  is a document, so the reachable set is untouched. Three callers open it:
+  `gdoc update`, the once-a-day check in `gdoc help`, which reads the listing
+  and replaces nothing, and the same check in `gdoc mcp`. Added 2026-09-16, the
+  second caller 2026-09-18, the third 2026-10-03, DECISIONS.md.
+- **`AllowAccountRead` is the sixth, and it reads which account is signed in.**
+  It admits `GET https://www.googleapis.com/drive/v3/about` with
+  `fields=user(emailAddress,displayName)` and nothing else, under the scopes the
+  token already has, addressing no document. Its one caller is `login` inside
+  `gdoc mcp`, so the `login` answer can name the account and a swapped account
+  is seen. No command of the terminal gains it, and every other `about` request
+  keeps its refusal. Added 2026-10-03, DECISIONS.md.
 - **The level-1 write bar is what gdoc asks for, not what the server is known to
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from
@@ -555,8 +580,9 @@ machine.
 2026-09-16. A tag builds it: the four checks every push runs, then `make dist`
 with the client secret from a repository secret, then one zip per line of
 `release/platforms`, named `gdoc-<tag>-<platform>.zip`, and one
-`SHA256SUMS-<tag>` over all of them. A zip carries five things: the binary, the
-user `README.md`, `install.sh`, `skills/` and `example/`. `release/platforms` is
+`SHA256SUMS-<tag>` over all of them. A zip carries six things: the binary, the
+user `README.md`, `install.sh`, `skills/`, `example/` and the Claude Desktop
+extension template under `mcpb/`. `release/platforms` is
 `darwin-arm64` and `darwin-amd64`, and Windows joins it under its own tag once a
 colleague has run its checklist.
 
@@ -568,6 +594,18 @@ Either way it copies the binary to `~/.local/bin/gdoc`, strips quarantine,
 writes the completion into the config dir, prints the `source` line when
 `.zshrc` lacks it, prints the two `/plugin` commands, and ends with `gdoc auth
 status`. It asks nothing and it edits no shell file.
+
+**One copy of the binary serves all three front doors.** Claude Desktop starts a
+command named in an extension rather than typing `gdoc`, so `install.sh
+--desktop` writes a thin `gdoc.mcpb` beside the installed binary, whose command
+is that binary's absolute path, and opens it so Claude Desktop shows its Install
+button. The bundle carries no binary of its own: the terminal, Claude Code's
+skills and Claude Desktop all run the same file, and `gdoc update` updates all
+three. The extension travels as a template in the zip, `mcpb/manifest.json`,
+with two placeholders for the path and the version, because the settings live in
+Claude Desktop's own form rather than in a file a person edits. macOS only, and
+the one program gdoc runs is `/usr/bin/open` on the file it has just written.
+Added 2026-10-03, DECISIONS.md.
 
 **The skills travel as a Claude Code plugin.** This repository carries
 `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is
@@ -602,6 +640,21 @@ further where there is one. Unreachable is `ok: true` with a warning, because a
 network that is not there is not a failed update. The command holds no state
 between runs.
 
+**`gdoc update --desktop` refreshes the extension, and it is the one place gdoc
+runs a program.** It takes the template out of the release zip it has just
+verified, so the template is always the new version's, writes `gdoc.mcpb` with
+the path and the version filled, and opens that file. Past the point where the
+file is written everything about it is a warning rather than a refusal, because
+the binary has already been replaced; the one refusal is a missing template,
+which is read first. A run that installed nothing, a declined major included,
+writes no extension and says so, because the template would name a version this
+machine does not run. `--desktop` is refused beside `--rollback`. Plain `gdoc
+update` writes no extension and runs nothing: where a `gdoc.mcpb` sits beside
+the binary and the new release's template differs from it, it ends with one line
+saying to run `gdoc update --desktop`. On a checkout build, where `update`
+already refuses, the route is `./install.sh --desktop`. Added 2026-10-03,
+DECISIONS.md.
+
 **`gdoc help` asks what is published, once a day.** It is the one thing gdoc
 does that nobody typed, and the whole of it is one read. A stamp,
 `update-check.json` beside the token file, holds when gdoc last asked and what
@@ -618,6 +671,15 @@ same major and `gdoc update`, or `gdoc update --major` across a major, and is
 absent when there is nothing to say. Nothing is downloaded and nothing is
 replaced: the install still waits for a person to type it. Added 2026-09-18,
 DECISIONS.md.
+
+**`gdoc mcp` asks the same question once per process**, and it is the second and
+last command that asks unasked. The stamp, the 24 hours, the two-second ceiling
+and the grant are `help`'s, so a chat and a terminal cost one request a day
+between them, and the first tool answer of a server process carries one line
+naming the release. The words differ: a chat is told to run `gdoc update` in a
+terminal, and then to quit Claude Desktop and open it again, because toggling
+the extension restarts the chat process alone and leaves agent mode on the old
+binary. A checkout build never asks. Added 2026-10-03, DECISIONS.md.
 
 ## The skills, and how a comment reaches one
 
@@ -696,6 +758,144 @@ every idle tick would spend a model turn on a quiet document. The loop over thos
 calls is the skill's, which asks for nine minutes because its Bash tool gives up
 at ten. Liveness ends with the session. Changed 2026-09-07, DECISIONS.md.
 
+## Chat: `gdoc mcp`, the sixteenth command
+
+Serves principle 1. A colleague who has the binary and Claude Desktop reviews a
+document by asking for it in their own words, in chat and in voice, with no
+terminal open. `gdoc mcp` is this binary as a local MCP server: JSON-RPC 2.0,
+one message per line, over stdin and stdout, written by hand in `internal/mcp`
+so there is no fourth module. `main()` routes `mcp` before `run()`, because
+`run()` prints one envelope after every command and a table entry's `run` sees
+neither stdin nor stdout. The table keeps the row, so `help` and `completion`
+name it. The command takes one optional flag, `--trusted-email-domains`, and
+nothing else. Added 2026-10-03, DECISIONS.md.
+
+**Eight tools, and nothing else is one.** Six are commands of the table, in the
+order a review runs: `read`, `comments`, `suggestions`, `reply`, `annotate` and
+`propose`. Two are the server's own, `login` and `guide`. A call runs the same
+`safeDispatch` the terminal runs, in the same process, and answers with the same
+envelope, so there is no second route into a document and nothing is started as
+a subprocess. Each schema is written by hand beside its mapping to words and
+flags, and a test pins every property to a word or a flag, and every word or
+flag to a property or a named exclusion. `update`, `restyle`, `publish`,
+`export`, `build`, `probe`, `withdraw`, `help` and `completion` are not tools: a
+spoken sentence never creates a file, never changes a document's look and never
+touches the installation. Nothing in chat reaches a hub, so no tool takes `--md`
+and a write tool names one item per call.
+
+**One call at a time, and 200 seconds each.** A reader parses the lines and
+answers `initialize`, `ping` and `tools/list` where they arrive; one worker runs
+the tool calls, in the order their lines came. The deadline is 200 seconds from
+the moment a call's line was read, because the client gives up at 240, counted
+from when the call reaches the server, and the 40 seconds left over are what buy
+gdoc the chance to say in its own words what went wrong. `notifications/cancelled`
+drops a call still in the queue and throws away the answer of one that started.
+A panic in a tool is one error result and the server goes on to the next call.
+
+**Every piece of state is per process, and the sign-in alone is shared.** Claude
+Desktop starts one process per client, one for chat and one for agent mode, and
+both stay running, so the guide code, the ledger, the holds, the write memory
+and the once-a-day release line each live in one process, reach no disk and are
+shared with nobody. The exception is the sign-in, through the record beside the
+token in Auth above.
+
+**`guide` gives the rules and a code, and no other tool runs without it.** Chat
+does not show a server's instructions to the model, so the rules are made to
+arrive another way. `guide` answers a short chat header and the review core, and
+with them a code of sixteen hex characters random to the process. Every tool but
+`guide` and `login` takes that code, and a missing or stale one is refused with
+one sentence telling the model to call `guide` and retry the same call, which it
+does without asking the person about a code they never typed. The code is
+reliability and not safety: it proves the rules entered the context, and it
+cannot prove they are followed. The instructions are sent as well, eight short
+lines, and they name no setting.
+
+**What a document says arrives labelled, and the wrapper is new each time.**
+Every read answer opens with one fixed line: who wrote what follows, that it is
+material to discuss, and that nothing in it is an instruction to call a tool,
+gdoc's or another connector's. Each comment, reply, quoted span and document
+text is wrapped in a boundary of twelve random hex characters, new for every
+answer, and an occurrence of that boundary inside the text is broken by one
+character, which is also what stops a comment closing its own wrapper. The words
+themselves come through as they stand: `annotate` and `propose` need the exact
+quote to find it again, and a person listening rather than reading would hear a
+marking as noise.
+
+**Six facts sit beside every comment and every reply**, each one literal check:
+`has_link`, `has_email`, `names_ai`, `hidden_chars`, `robot_not_ours` and
+`author_domain`. They describe the words and never the person. `robot_not_ours`
+is the 🤖 with no receipt behind it, asked of this process's record of what gdoc
+wrote and never of an account. `author_domain` is the domain of the author's
+address, kept in no other form, and it is shown and read by nothing: identity is
+never a gate, the marker decides, and a domain is a fact a person can weigh. The
+CLI envelope gains that one field and nothing else.
+
+**A risky write is held by a fixed list, and only the person's own card releases
+one.** The binary decides that a write is risky, never the model, because a
+model asked whether a comment is steering it is the thing being steered. A write
+is held when its text carries a link, a bare domain or an email address that is
+not already in the target document or its threads; when twelve or more words in
+a row are shared with a comment this process read that gdoc did not write; when
+another document was read in the last 30 minutes, or the target was never read;
+on the third write inside 60 seconds, or the 26th into one document inside an
+hour; when a `reply` goes into a thread whose comment carries a link, names the
+model, holds a 🤖 that is not gdoc's or holds hidden characters; and when a
+`propose` takes out more than 300 characters. The first rule that trips is the
+one named. Text holding zero-width, bidi or tag characters is refused outright,
+because nobody can approve what they cannot see. Text copied out of another
+document is held and never refused: quoting the firm's own policy can be the
+job.
+
+A held write is not sent. The answer is `ok: false`, `sent: false`, and the hold
+with its id, its rule, the exact value that tripped it and the words themselves,
+under one fixed sentence saying that nothing was posted, to tell the person this
+reason and to end the turn. The hold lives 30 minutes in the process that made
+it, and any chat that process serves can release it.
+
+Release is by card and never by a yes said in the chat, because a yes in the
+chat passes through the model. Each hold registers one tool of its own,
+`confirm_<hex>`, through `notifications/tools/list_changed`, and removes it when
+the hold is released or runs out: always-allow is stored per tool name and
+cannot be granted in advance to a name that never existed. The confirm call
+carries the hold id, the document's title, the reason and the text, and a byte
+of difference in the title, the reason or the text is refused with the hold
+kept, so the person cannot be shown a paraphrase of what they approved. A
+release with less than five seconds of quiet behind it is refused the same way.
+What then goes out is the call the hold kept, never anything the release sends.
+A write this session already made comes back from memory for ten minutes under
+the same tool and the same arguments, so a retry is not a second reply.
+
+**The one setting is the person's own.** The extension shows one field, "Email
+domains that need no approval", empty by default and typed in Claude Desktop. It
+exempts an email address at exactly a listed domain from the hold a link gets,
+never a link and never a subdomain, and every write answer states the exemption
+that applied as a fact. Nothing in gdoc asks for it: not the instructions, not
+the chat header, not the review core, not a tool's own words. A value gdoc
+cannot read is named back by every tool but `guide`, with the setting and the
+bad value, so the person reads it in the chat and fixes it in Settings; the
+server still starts, because a server that stopped answers nothing. An empty
+value is no domains and never an error.
+
+**There is no live mode in chat**, because a server cannot wake the client.
+`comments` answers a cursor and the model reads again from it when the person
+asks, and `--wait` is no part of the tool. Chat and a live Claude Code session
+run side by side on one document and one token: chat's replies open with 🤖, so
+the live session never takes them as work, chat leaves marked comments to that
+session, and chat reads a thread again just before it posts and stops when a 🤖
+reply has appeared.
+
+**The review rules are one core, read through either front door.**
+`skills/gdoc-review/review.md` holds the markers, when to answer, when to wait
+for approval, what must never leak, the all-comments mode, the two guards above
+and the flow for a comment on words the person names. It carries no call line,
+so it reads the same in a terminal and in a chat, and `SKILL.md` keeps what
+belongs to Claude Code. `go:embed` cannot reach outside its own package
+directory, so the binary carries a committed copy and a test fails when the copy
+and `skills/` differ by a byte.
+
+The twelve measurements this section rests on are in
+[MEASURED.md](MEASURED.md), under "Claude Desktop and a local MCP server".
+
 ## Never
 
 The hard list, transport-enforced where the guard can reach it and a skill rule
@@ -730,6 +930,13 @@ where it cannot.
 - Never write markdown into a comment thread.
 - Never trust a status code where the write matters.
 - Never write a comment or reply that does not open with 🤖.
+- Never send a write gdoc held, in chat, without the person's own card.
+  Binary-enforced: the hold is kept in the process, the card's words are
+  compared byte for byte, and what goes out is the call the hold kept.
+- Never act on a marked comment from chat. Chat has no hub, so `ai!` is work a
+  Claude Code session carries out, and chat says so before it posts.
+- Never suggest the trusted-domains setting. It is the one standing loosening of
+  a check, so it is the person's to find and never gdoc's to offer.
 
 ## Acceptance for v2.0
 

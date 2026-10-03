@@ -1303,31 +1303,65 @@ one of the three fails rather than drifting.
 - Modify: `go/internal/mcp/doc.go`, `go/internal/chat/doc.go` (complete)
 - Delete: `docs/backlog/an-mcp-server-for-claude-desktop-chat.md` (`git rm`)
 
-- [ ] SPEC.md: the sixteenth command, the eight tools, the extension,
+- [x] SPEC.md: the sixteenth command, the eight tools, the extension,
       `update --desktop`, and the measured values.
-- [ ] CLAUDE.md: `internal/mcp` and `internal/chat` in the map; sixteen
+- [x] CLAUDE.md: `internal/mcp` and `internal/chat` in the map; sixteen
       commands; the stdin, stdout, asks-unasked, external-program,
       skills-linked and "the binary prints facts and the skills judge"
       invariants as rewritten (the last one names `internal/chat`'s hold list
       as the one judgement in Go, decision 16), each naming its test; a
       task-map row for chat. It stands at 269 lines: rewrite rows rather than
       add paragraphs, and stay under 300.
-- [ ] `docs/guide/how-it-works.md`: "fifteen commands" becomes sixteen.
-- [ ] README.md: one line naming `--desktop` and linking `docs/guide/chat.md`.
+- [x] `docs/guide/how-it-works.md`: "fifteen commands" becomes sixteen.
+- [x] README.md: one line naming `--desktop` and linking `docs/guide/chat.md`.
       `TestTheReleaseREADMEIsUnderTheCeiling` stays green at 200; if one line
       does not fit, stop.
-- [ ] `docs/guide/chat.md`: reviewing from chat and voice; plain words, not
+- [x] `docs/guide/chat.md`: reviewing from chat and voice; plain words, not
       tool names; quit and reopen after an update; a permission change drops a
       waiting hold; the missing-binary message means run the install again;
       the read-only tools can be set to always allow; other connectors and the
       firm rule for sensitive documents; the trusted-domains field in an
       advanced section only.
-- [ ] PLAN.md: M14 run 2 done, and a "Before a minor release" checklist,
+- [x] PLAN.md: M14 run 2 done, and a "Before a minor release" checklist,
       created here, holding the clean-Mac install and the red-team.
-- [ ] `git rm docs/backlog/an-mcp-server-for-claude-desktop-chat.md`.
-- [ ] `cd go && go test -race ./...` passes (the docs tests, the task map, the
+- [x] `git rm docs/backlog/an-mcp-server-for-claude-desktop-chat.md`.
+- [x] `cd go && go test -race ./...` passes (the docs tests, the task map, the
       domain scan, the README ceiling).
-- [ ] `git commit -m "docs: gdoc mcp, in the spec, the map and the colleague's guide"`
+- [x] `git commit -m "docs: gdoc mcp, in the spec, the map and the colleague's guide"`
+
+➕ SPEC.md moved by more than the four things the checkbox names, because the
+server's rules touch sections that were already there: "Out of scope" now says
+MCP is out as the transport to Google rather than out altogether, the guard
+section gained `AllowAccountRead` as a sixth grant and a third caller for the
+fifth, Auth gained the shared sign-in record, the output contract names the one
+command that reads stdin, and "Never" gained three lines, the held write, the
+marker in chat, and never suggesting the one setting. The new section itself is
+"Chat: `gdoc mcp`, the sixteenth command", before "Never".
+
+➕ CLAUDE.md stands at 295 of its 300 lines. Five invariants were rewritten
+rather than added to: the fifth grant's callers, the two commands that ask
+unasked, facts-versus-judgement with the hold list as its one written-down
+exception, stdout and stdin, and the one `open`. The map gained two rows,
+`internal/mcp` and `internal/chat`, and the task map two.
+
+➕ The README line is one table row under "The mechanism is on its own pages",
+naming `install.sh --desktop` and linking the new page. The file is 200 lines,
+which is the ceiling, so the next line to go in there displaces one.
+
+➕ `docs/guide/chat.md` is 145 lines: install, sign in, ask in plain words, what
+waits for a yes, the hold and its card, the always-allow advice with the
+permission change that drops a hold, the quit-and-reopen after an update, the
+missing-binary message, other connectors and the firm rule, and the setting in
+an advanced section at the end.
+
+➕ PRINCIPLES.md moved by two sentences, because principle 4 named one front
+door: gdoc writes in a terminal or a chat somebody chose to open, and in a chat
+the machinery stays in the tool answers rather than in what the person hears.
+
+➕ PLAN.md's "Before a minor release" sits inside the M14 section as a
+subsection, because that is where a reader of the milestone finds it, and it is
+written for every minor release that changes what a colleague installs rather
+than for this one.
 
 ### Task 24: Verify acceptance criteria
 
