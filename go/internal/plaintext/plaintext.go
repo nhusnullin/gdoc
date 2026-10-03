@@ -36,6 +36,17 @@
 // reading the whole prefix answers no on each of them and lets a second mark
 // through, and a doubled mark is a lie about who wrote the words.
 //
+// OpensWithRobot is that check, and it lives here for the same reason the
+// pattern does: every reader of the mark asks this package rather than writing
+// the prefix test out again. internal/comments asks it of a reply,
+// internal/chat asks it of the robot_not_ours fact, and cmd/gdoc asks it of a
+// thread's opening comment, so the day the mark changes there is one line to
+// change. Two tests hold that between them:
+// TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText pins the answers, and
+// TestTheRobotMarkIsReadInOnePlace in go/boundary reads the tree and fails on
+// a prefix check written out again anywhere but the three writers that refuse
+// or require the mark on a caller's own input.
+//
 // # The two writers own the mark differently
 //
 // A reply body arrives with the mark already on it, so reply.Check requires it
@@ -91,6 +102,23 @@ const Prefix = Robot + " "
 // front of it. A check that reads the whole prefix answers no on each of them,
 // and a doubled mark is a lie about who wrote the words.
 const Robot = "🤖"
+
+// OpensWithRobot answers whether a text opens with the mark, which is the only
+// record of authorship a thread itself carries. It is not a receipt: anybody
+// can type the character, and what says gdoc wrote a thread entry is the id in
+// internal/chat's own record of what this process wrote. Leading whitespace is
+// stepped over, because a reply that starts on its second line is still a reply
+// that opens with the mark.
+//
+// It is here rather than in each reader because the mark is this package's, and
+// a check written out again is a rule that drifts when the mark changes.
+// internal/comments asks it of a reply, internal/chat asks it of the
+// robot_not_ours fact, and cmd/gdoc asks it of a thread's opening comment:
+// TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText for the answers, and
+// TestTheRobotMarkIsReadInOnePlace in go/boundary for the one place.
+func OpensWithRobot(text string) bool {
+	return strings.HasPrefix(strings.TrimLeft(text, " \t\r\n"), Robot)
+}
 
 // markdown is what Docs renders literally: bold, code, a heading and a
 // bracketed link. Hyphen bullets are deliberately absent: they read as a list in

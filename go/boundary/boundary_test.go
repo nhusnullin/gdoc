@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -323,6 +324,226 @@ func TestMcpImportsNoNetHTTP(t *testing.T) {
 	if allowed["internal/mcp"] {
 		t.Error("internal/mcp is on the net/http allowlist; take it off, the server has no wire of its own")
 	}
+}
+
+// markWriters are the three files that may test a text against the robot mark
+// with a prefix check of their own, because each is refusing or requiring the
+// mark on a caller's own input rather than reading who wrote a thread entry.
+// internal/propose and internal/annotate refuse a comment the caller opened
+// with the mark; internal/reply requires it on the body it was handed.
+var markWriters = map[string]bool{
+	"internal/propose/propose.go":   true,
+	"internal/annotate/annotate.go": true,
+	"internal/reply/reply.go":       true,
+}
+
+// markReaders are the package directories that ask who wrote a thread entry.
+// Each one asks internal/plaintext, so the day the mark changes there is one
+// line to change rather than three answers to one question.
+var markReaders = map[string]bool{
+	"internal/comments": true,
+	"internal/chat":     true,
+	"cmd/gdoc":          true,
+}
+
+// TestTheRobotMarkIsReadInOnePlace holds the rule internal/plaintext's doc.go
+// states: every reader of the mark asks that package rather than writing the
+// prefix test out again. The mark is the only record of authorship a thread
+// itself carries, so three copies of the check would be three answers to one
+// question the day the mark changes.
+//
+// It fails in both directions. A prefix check against the mark anywhere but the
+// three writers above fails, and a listed reader that stops calling
+// plaintext.OpensWithRobot fails too, because then the rule has moved and this
+// test is guarding nothing.
+//
+// What counts as naming the mark is the value and never the name, because the
+// copy this rule took out of internal/comments was a lowercase robot constant
+// of its own: a test matching the names Robot and Prefix would let that same
+// line back in, and would fail on an unrelated prefix somebody happens to call
+// Prefix. So every constant in the tree whose value is the mark is found first,
+// and a bare "🤖" in the call is the mark as much as a constant is.
+func TestTheRobotMarkIsReadInOnePlace(t *testing.T) {
+	const owner = "internal/plaintext"
+	marks, err := markConstants("..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	asks := map[string]bool{}
+	err = walkGo("..", func(rel, path string, f *ast.File) error {
+		where := filepath.ToSlash(filepath.Join(rel, filepath.Base(path)))
+		if strings.HasSuffix(path, "_test.go") || rel == owner {
+			return nil
+		}
+		imports := importedPackages(f)
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := sel.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if pkg.Name == "plaintext" && sel.Sel.Name == "OpensWithRobot" {
+				asks[rel] = true
+				return true
+			}
+			if pkg.Name != "strings" || !prefixChecks[sel.Sel.Name] || len(call.Args) != 2 {
+				return true
+			}
+			if !marks.names(call.Args[1], rel, imports) || markWriters[where] {
+				return true
+			}
+			t.Errorf("%s tests a text against the robot mark itself; ask plaintext.OpensWithRobot, "+
+				"or add the file to markWriters with the reason", where)
+			return true
+		})
+		return nil
+	}, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for reader := range markReaders {
+		if !asks[reader] {
+			t.Errorf("%s no longer calls plaintext.OpensWithRobot; the one check moved and this test did not", reader)
+		}
+	}
+	for where := range markWriters {
+		if _, serr := os.Stat(filepath.Join("..", where)); serr != nil {
+			t.Errorf("markWriters names %s, which is not there: %v", where, serr)
+		}
+	}
+}
+
+// robotMark is the mark, written out. It is a literal rather than
+// plaintext.Robot read back, because what this test asks is which files hold a
+// copy of this character, and a test reading the constant would follow it
+// wherever somebody moved it.
+const robotMark = "🤖"
+
+// prefixChecks are the strings functions that test or take a prefix off a
+// text. All three are the same question about the mark asked a different way,
+// so all three are the question internal/plaintext owns.
+var prefixChecks = map[string]bool{"HasPrefix": true, "CutPrefix": true, "TrimPrefix": true}
+
+// marks is every constant in the tree whose value is the mark: local by package
+// directory, so a file can name its package's own constant, and qualified by
+// package name, so a file can name another package's exported one.
+type marks struct {
+	local     map[string]bool // "internal/propose.Robot"
+	qualified map[string]bool // "plaintext.Robot"
+}
+
+// names answers whether an expression is the mark, from the package directory it
+// is written in and that file's imports. A string literal carrying the mark is
+// one, a constant whose value is the mark is one, and anything else is not,
+// whatever it is called.
+func (m marks) names(arg ast.Expr, dir string, imports map[string]string) bool {
+	switch v := arg.(type) {
+	case *ast.ParenExpr:
+		return m.names(v.X, dir, imports)
+	case *ast.BinaryExpr:
+		return m.names(v.X, dir, imports) || m.names(v.Y, dir, imports)
+	case *ast.BasicLit:
+		if v.Kind != token.STRING {
+			return false
+		}
+		text, err := strconv.Unquote(v.Value)
+		return err == nil && strings.Contains(text, robotMark)
+	case *ast.Ident:
+		return m.local[dir+"."+v.Name]
+	case *ast.SelectorExpr:
+		q, ok := v.X.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		pkg := q.Name
+		if named, ok := imports[q.Name]; ok {
+			pkg = named
+		}
+		return m.qualified[pkg+"."+v.Sel.Name]
+	}
+	return false
+}
+
+// markConstants finds every constant and variable in the tree whose value is
+// the mark, following one constant to another until nothing new is found: the
+// writers hold `const Robot = plaintext.Robot` and `const Prefix = Robot + " "`,
+// and both of those are the mark.
+func markConstants(root string) (marks, error) {
+	type spec struct {
+		dir, pkg, name string
+		imports        map[string]string
+		value          ast.Expr
+	}
+	var specs []spec
+	found := marks{local: map[string]bool{}, qualified: map[string]bool{}}
+	err := walkGo(root, func(rel, path string, f *ast.File) error {
+		if strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		imports := importedPackages(f)
+		for _, decl := range f.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
+				continue
+			}
+			for _, s := range gen.Specs {
+				value, ok := s.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				for at, name := range value.Names {
+					if at >= len(value.Values) {
+						continue
+					}
+					specs = append(specs, spec{
+						dir: rel, pkg: f.Name.Name, name: name.Name,
+						imports: imports, value: value.Values[at],
+					})
+				}
+			}
+		}
+		return nil
+	}, parser.SkipObjectResolution)
+	if err != nil {
+		return marks{}, err
+	}
+	for again := true; again; {
+		again = false
+		for _, s := range specs {
+			key := s.dir + "." + s.name
+			if found.local[key] || !found.names(s.value, s.dir, s.imports) {
+				continue
+			}
+			found.local[key] = true
+			found.qualified[s.pkg+"."+s.name] = true
+			again = true
+		}
+	}
+	return found, nil
+}
+
+// importedPackages maps the name a file uses for each import onto the package's
+// own name, which in this tree is the last element of its path. An import with
+// an alias is under the alias, so a file that renames a package is still read.
+func importedPackages(f *ast.File) map[string]string {
+	out := map[string]string{}
+	for _, imp := range f.Imports {
+		p := strings.Trim(imp.Path.Value, `"`)
+		name := path.Base(p)
+		if imp.Name != nil {
+			out[imp.Name.Name] = name
+			continue
+		}
+		out[name] = name
+	}
+	return out
 }
 
 // desktopFile is the one file under go/ that may start another program: the

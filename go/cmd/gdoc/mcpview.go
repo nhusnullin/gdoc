@@ -11,7 +11,7 @@
 // its own quotation and speak as the person.
 //
 // Nothing here decides anything. The facts are chat's six literal checks, and
-// the holds that read some of them are tasks 14 to 16. The record of what this
+// the holds that read some of them are internal/chat's. The record of what this
 // process wrote is handed in rather than kept here: it is the session's ledger,
 // and robot_not_ours is the one fact that asks it.
 

@@ -16,8 +16,8 @@
 // tells the model to say the reason and stop:
 // TestTheHeldAnswerNamesTheRuleTheValueAndTheText.
 //
-// And it keeps the hold for thirty minutes, so the confirm tool of the next task
-// has something to release: TestAHoldLivesThirtyMinutes.
+// And it keeps the hold for thirty minutes, so the confirm tool in
+// mcprelease.go has something to release: TestAHoldLivesThirtyMinutes.
 
 package main
 
@@ -30,8 +30,10 @@ import (
 	"time"
 
 	"gdoc/internal/chat"
+	"gdoc/internal/docs"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
+	"gdoc/internal/propose"
 )
 
 // mcpHoldLife is how long a hold stays releasable in the process that made it.
@@ -293,7 +295,7 @@ func mcpWriteOf(c mcpCommand, args json.RawMessage, target mcpTarget, led *chat.
 	// What a propose takes out is counted here, because the count is about the
 	// document and the item together, and the rule is about the number alone.
 	if c.tool == "propose" {
-		w.Removed = mcpRemoved(item, led.Text(w.DocID))
+		w.Removed = mcpRemoved(item, target.doc)
 	}
 	return w, nil
 }
@@ -331,14 +333,31 @@ func mcpItemWords(item mcpItem) string {
 //
 // A words change takes out the words it quotes, whatever it puts back: a
 // paragraph rewritten in full is a paragraph the person should read before it
-// goes. A block change takes out the run from the first words it names to the
-// last, measured in this session's own read of the document.
+// goes.
 //
-// Where those words are not in that read, the count is the length of what the
-// call named, which is the least it can be. Nothing is lost by the
-// understatement: the command underneath refuses a quote it cannot find in the
-// document exactly once.
-func mcpRemoved(item mcpItem, text string) int {
+// A block change takes out whole paragraphs, from the start of the one holding
+// replace_from to the end of the one holding replace_to. So the count runs to
+// the ends of those paragraphs and not to the ends of the quotes: a call
+// quoting six words at each end of two long paragraphs takes both paragraphs
+// out, and counting the quotes would put a four-hundred-character deletion
+// under the line.
+//
+// It is asked of the document the pin read rather than of the text projection
+// of it, through the same propose.PlaceReplace the command underneath will
+// place the change with, because the projection is not the document's
+// characters: a link prints there as [words](target) and commented text inside
+// [[c:ID]] markers, and skills/gdoc-review/propose.md tells the model to quote
+// the bare words. Those words are in the document and not in its projection, so
+// a search of the projection would miss a quote the command then finds and
+// count a multi-paragraph deletion as a few dozen characters.
+//
+// The number is the delete range Docs is given, in the UTF-16 units a Docs
+// index counts. Where PlaceReplace refuses the pair, the count is the length of
+// what the call named, which is the least it can be, and nothing is lost by the
+// understatement: that same refusal is what the command answers with, so
+// nothing is written either way.
+// TestABlockReplaceIsCountedInWholeParagraphs.
+func mcpRemoved(item mcpItem, d *docs.Document) int {
 	if item.Quoted != "" {
 		return len([]rune(item.Quoted))
 	}
@@ -349,13 +368,9 @@ func mcpRemoved(item mcpItem, text string) int {
 	if last == "" {
 		last = item.ReplaceFrom
 	}
-	start := strings.Index(text, item.ReplaceFrom)
-	if start < 0 {
+	place, err := propose.PlaceReplace(d, item.ReplaceFrom, last)
+	if err != nil {
 		return len([]rune(item.ReplaceFrom))
 	}
-	end := strings.Index(text[start:], last)
-	if end < 0 {
-		return len([]rune(item.ReplaceFrom))
-	}
-	return len([]rune(text[start : start+end+len(last)]))
+	return place.Delete.End - place.Delete.Start
 }

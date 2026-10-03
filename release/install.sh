@@ -353,11 +353,13 @@ if [ "$desktop" -eq 1 ]; then
     esac
 
     # The path goes into JSON as a string and into sed as a replacement, so the
-    # three characters that would break either are refused by name rather than
-    # written into a manifest Claude Desktop cannot read.
+    # four characters that would break either are refused by name rather than
+    # written into a manifest Claude Desktop cannot read. The ampersand is sed's
+    # own: in a replacement it stands for the text that matched, so a path
+    # holding one would be written with @BIN@ pasted back into it.
     case "$installed" in
-        *'"'*|*'\'*|*'|'*)
-            fail "$installed carries a quote, a backslash or a pipe, and a manifest naming it could not be written.
+        *'"'*|*'\'*|*'|'*|*'&'*)
+            fail "$installed carries a quote, a backslash, a pipe or an ampersand, and a manifest naming it could not be written.
   Install into a path without those, or drop --desktop."
             ;;
     esac

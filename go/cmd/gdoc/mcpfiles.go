@@ -10,14 +10,14 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
+
+	"gdoc/internal/auth"
 )
 
 // mcpTempGlob matches every call directory of every gdoc process, this one's
@@ -96,24 +96,14 @@ func (c *callFiles) name(text string) string {
 	return text
 }
 
-// livePID says whether a process with this id is running. It is the signal
-// nobody receives: kill with signal 0 answers whether the process exists
-// without touching it. A process owned by somebody else answers EPERM, which
-// is still a process that exists.
+// livePID says whether a process with this id is running. The question is
+// auth.ProcessAlive's, which the login lock asks too: one rule about EPERM and
+// one about Windows, because a sweep that called a live process dead would take
+// that process's own call directory away while it was reading from it.
 //
 // It is behind a variable so the sweep can be shown a dead process without a
 // test having to find a process id nobody is using.
-var livePID = func(pid int) bool {
-	if pid <= 0 {
-		return false
-	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	err = p.Signal(syscall.Signal(0))
-	return err == nil || errors.Is(err, syscall.EPERM)
-}
+var livePID = auth.ProcessAlive
 
 // sweepCallDirs takes away the call directories nobody is using: the ones whose
 // process is gone, and the ones too old to be a call whatever process made

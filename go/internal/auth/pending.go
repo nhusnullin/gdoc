@@ -82,7 +82,7 @@ func ReadLoginLock(now time.Time) (*LoginLock, error) {
 	if err := json.Unmarshal(b, &l); err != nil {
 		return nil, fmt.Errorf("the waiting sign-in at %s cannot be parsed: %w", path, err)
 	}
-	if l.URL == "" || !pidAlive(l.PID) || now.Sub(l.Started) >= loginLockLife {
+	if l.URL == "" || !ProcessAlive(l.PID) || now.Sub(l.Started) >= loginLockLife {
 		return nil, nil
 	}
 	return &l, nil
@@ -122,14 +122,22 @@ func SignedInSince(t time.Time) bool {
 	return err == nil
 }
 
-// pidAlive reports whether a process with this id is still there.
+// ProcessAlive reports whether a process with this id is still there.
 //
 // Signal 0 is the POSIX question "is this process reachable", and it is the
-// only portable way to ask. On Windows there is no such signal, and
-// os.FindProcess has already asked: it opens the process and fails when there
-// is none, so the answer is the one it gave. TestALockWhoseProcessIsGoneIsNotLive
-// is the pin on the platforms CI runs.
-func pidAlive(pid int) bool {
+// only portable way to ask. A process owned by somebody else answers EPERM,
+// which is still a process that exists. On Windows there is no such signal,
+// and os.FindProcess has already asked: it opens the process and fails when
+// there is none, so the answer is the one it gave.
+// TestALockWhoseProcessIsGoneIsNotLive is the pin on the platforms CI runs.
+//
+// It is exported because two rooms ask it, this lock and cmd/gdoc's sweep of
+// the call directories a chat left behind, and two readings of one question
+// would disagree about EPERM and about Windows: one of them would then take a
+// live process's work away. TestTheSweepAsksTheSameLivenessRuleAsTheLock in
+// cmd/gdoc is the pin on that, and TestLivePIDKnowsThisProcess measures this
+// rule against the one process every test has at hand.
+func ProcessAlive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}
@@ -140,5 +148,6 @@ func pidAlive(pid int) bool {
 	if runtime.GOOS == "windows" {
 		return true
 	}
-	return p.Signal(syscall.Signal(0)) == nil
+	err = p.Signal(syscall.Signal(0))
+	return err == nil || errors.Is(err, syscall.EPERM)
 }

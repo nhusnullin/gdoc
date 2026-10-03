@@ -111,9 +111,13 @@ type updateData struct {
 	SHA256        string `json:"sha256,omitempty"`
 	Previous      string `json:"previous,omitempty"`
 	Extension     string `json:"extension,omitempty"`
-	// ExtensionOpened is the extension handed to Claude Desktop. It is absent
-	// rather than false off macOS, where there is nothing to hand it to, so a
-	// reader can tell "not opened" from "nobody to open it".
+	// ExtensionOpened is true where the extension was handed to Claude Desktop,
+	// and absent otherwise: omitempty on a bool never prints false. It is read
+	// beside Extension, which is how a skill tells the two silences apart. An
+	// extension named with this absent was written and not opened, which is
+	// every platform but macOS. Both absent is a run that did not finish the
+	// extension step: it wrote none, or it wrote one and the open failed, and
+	// the warnings say which.
 	ExtensionOpened bool `json:"extension_opened,omitempty"`
 }
 

@@ -119,6 +119,7 @@ func TestAWriteReadsItsTargetFreshAndRecordsIt(t *testing.T) {
 	stubNow(t, ledgerClock)
 
 	ch := callChat(t)
+	looked(ch, fixtureDocID)
 	args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 		`"comment_id":"AAAA1111","thread_quote":"` + chatQuote + `","body":"` + chatBody + `"}`
 	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, ch.code, args), nilWriter{}, ch)

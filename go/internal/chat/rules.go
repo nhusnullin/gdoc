@@ -154,28 +154,150 @@ var linkRunPattern = regexp.MustCompile(`(?i)(?:` +
 // A link is checked before an address, because an address at a domain the person
 // listed as trusted is exempt and a link never is:
 // TestATrustedDomainsAddressIsNotHeldAndALinkStillIs.
+//
+// What the document already carries is read as whole links and whole addresses
+// rather than as one long string the write is searched inside. A substring
+// search answers yes to every prefix of what is there, so a document holding
+// example.com would let a write carrying example.co through, which is the one
+// shape this rule exists to stop:
+// TestALinkThatIsOnlyThePrefixOfAKnownOneIsHeld.
 func linkRule(w Write, l *Ledger, trusted []string, _ time.Time) (string, string, string) {
-	known := strings.ToLower(documentWords(l, w.DocID))
+	known := documentWords(l, w.DocID)
+	knownLinks := linksIn(known)
+	knownAddresses := addressesIn(known)
 
 	// The addresses come out before the links are looked for, so one address is
 	// one finding and not two, the same order facts.go reads them in.
 	withoutEmails := emailPattern.ReplaceAllString(w.Text, " ")
 	for _, link := range linkRunPattern.FindAllString(withoutEmails, -1) {
 		link = trimEdge(link)
-		if link == "" || strings.Contains(known, strings.ToLower(link)) {
+		if link == "" || knownLink(knownLinks, strings.ToLower(link)) {
 			continue
 		}
 		return RuleLink, link, fmt.Sprintf(
 			"the text holds a link this document and its comments do not already carry: %q", link)
 	}
 	for _, address := range emailPattern.FindAllString(w.Text, -1) {
-		if isTrusted(address, trusted) || strings.Contains(known, strings.ToLower(address)) {
+		if isTrusted(address, trusted) || knownAddresses[strings.ToLower(address)] {
 			continue
 		}
 		return RuleLink, address, fmt.Sprintf(
 			"the text holds an email address this document and its comments do not already carry: %q", address)
 	}
 	return "", "", ""
+}
+
+// projectionMarkers takes internal/view's own markers out of a document's text,
+// one space each, before a link is looked for in it.
+//
+// What the ledger holds is the text projection, not the document's characters:
+// a link is printed as [words](target), and text under a comment is wrapped in
+// [[c:ID]] and [[/c]]. The link run pattern stops at whitespace and at nothing
+// else, so a URL Docs auto-linked, which prints as its own words and its own
+// target, would otherwise come out as one run with "](" in the middle of it,
+// and a URL under a comment would come out carrying "[[/c". Neither is a link,
+// so a write repeating a link the document plainly carries would be held:
+// TestALinkInTheProjectionsOwnMarkupIsStillTheDocumentsLink.
+//
+// The markers are separators rather than deletions, so two links printed beside
+// each other stay two. Nothing here is undone: this text is read for links and
+// then dropped.
+var projectionMarkers = strings.NewReplacer(
+	"](", " ", "[[", " ", "]]", " ", "{+", " ", "+}", " ", "{-", " ", "-}", " ")
+
+// linksIn is every link a text carries, lowercased and trimmed the way a link
+// in a write is trimmed, with each link's host beside it.
+//
+// The host is in the set because a document holding https://example.net/login
+// does carry the domain example.net, and a write naming the bare domain is
+// naming something the person has read. A longer link at that host is not in
+// the set, because a path nobody has seen is somewhere nobody has been:
+// TestABareDomainOfAKnownLinkPassesAndAnotherPathDoesNot.
+//
+// The host goes in with its www. taken off as well, because a document holding
+// www.example.net carries the host example.net and a write naming it is naming
+// that same place: TestTheSpellingsOfAKnownHostAllPass.
+func linksIn(text string) map[string]bool {
+	out := map[string]bool{}
+	withoutEmails := emailPattern.ReplaceAllString(projectionMarkers.Replace(text), " ")
+	for _, link := range linkRunPattern.FindAllString(withoutEmails, -1) {
+		link = strings.ToLower(trimEdge(link))
+		if link == "" {
+			continue
+		}
+		out[link] = true
+		if host := hostOf(link); host != "" {
+			out[host] = true
+			out[bareHost(host)] = true
+		}
+	}
+	return out
+}
+
+// knownLink answers whether the session has already read this link. The lookup
+// is exact, because the set holds whole links and a link that is only the
+// prefix of a known one is not known, with one widening: a link that is no more
+// than a host is known when that host is known.
+//
+// "https://example.net", "example.net", "example.net/" and "www.example.net"
+// are four spellings of one place, and a document carrying
+// https://example.net/login carries all four. A link with a path of its own is
+// never widened, which is the half
+// TestABareDomainOfAKnownLinkPassesAndAnotherPathDoesNot pins:
+// TestTheSpellingsOfAKnownHostAllPass.
+func knownLink(known map[string]bool, link string) bool {
+	if known[link] {
+		return true
+	}
+	host := hostOf(link)
+	if host == "" || strings.TrimSuffix(afterScheme(link), "/") != host {
+		return false
+	}
+	return known[host] || known[bareHost(host)]
+}
+
+// bareHost is a host with a leading www. taken off, where a host is left under
+// it. The www is a spelling rather than a place: a document carrying
+// www.example.net and a write naming example.net name the same host, and
+// holding the write would be a card about nothing.
+//
+// The label under it has to carry a dot of its own, so www.com stays www.com
+// rather than becoming the suffix com, which no host is.
+func bareHost(host string) string {
+	rest, cut := strings.CutPrefix(host, "www.")
+	if !cut || !strings.Contains(rest, ".") {
+		return host
+	}
+	return rest
+}
+
+// hostOf is the host a link points at: what stands after the scheme and before
+// the path, the query or the fragment. It is not a parse of a URL, because the
+// question is only whether two texts name the same host.
+func hostOf(link string) string {
+	link = afterScheme(link)
+	if at := strings.IndexAny(link, "/?#"); at >= 0 {
+		link = link[:at]
+	}
+	return strings.ToLower(strings.Trim(link, "."))
+}
+
+// afterScheme is a link with its scheme taken off, or the link itself where it
+// carries none.
+func afterScheme(link string) string {
+	if at := strings.Index(link, "://"); at >= 0 {
+		return link[at+len("://"):]
+	}
+	return link
+}
+
+// addressesIn is every email address a text carries, lowercased, as a set.
+func addressesIn(text string) map[string]bool {
+	out := map[string]bool{}
+	for _, address := range emailPattern.FindAllString(text, -1) {
+		out[strings.ToLower(address)] = true
+	}
+	return out
 }
 
 // trimEdge takes the sentence's own punctuation off the end of a link, so a link
@@ -224,11 +346,15 @@ func documentWords(l *Ledger, docID string) string {
 // TestTheDictatedRuleTripsOnTwelveWordsInARow.
 //
 // gdoc's own replies are left out, because a session quoting what it said
-// earlier in the same thread is the ordinary way a review reads.
+// earlier in the same thread is the ordinary way a review reads. Its own means
+// the mark and the receipt together: the ledger has to hold the id as one this
+// process wrote. The mark alone is a character anybody can type, so skipping
+// every marked remark would hand the attack a one-emoji way past the rule:
+// TestAMarkedRemarkThisProcessDidNotWriteIsStillAStrangers.
 func dictatedRule(w Write, l *Ledger, _ []string, _ time.Time) (string, string, string) {
 	var strangers []string
 	for _, said := range l.Remarks(w.DocID) {
-		if said.ByGdoc {
+		if said.ByGdoc && l.Wrote(said.ID) {
 			continue
 		}
 		strangers = append(strangers, said.Text)
@@ -242,7 +368,8 @@ func dictatedRule(w Write, l *Ledger, _ []string, _ time.Time) (string, string, 
 }
 
 // focusRule holds a write made while the session's attention was somewhere else,
-// or into a document it has never read.
+// or into a document the model has never read. The write's own read of its
+// target is not the model reading it: everRead holds that line.
 //
 // A write into a document nobody looked at is a write nobody can check, and a
 // write made minutes after reading somebody else's document is where text
@@ -309,9 +436,14 @@ func resetPoint(l *Ledger, docID string) time.Time {
 
 // everRead answers whether this session read the document at all, which is a
 // question about the whole session and not about the Focus window.
+//
+// A write's own read of its target does not count. That read is the binary's,
+// made to check the title and to give the other rules the document's words,
+// and no part of it reached the chat: counting it would answer this question
+// yes for every write, which is the rule never firing at all.
 func everRead(l *Ledger, docID string) bool {
 	for _, r := range l.Reads() {
-		if r.DocID == docID {
+		if r.DocID == docID && !r.ForWrite {
 			return true
 		}
 	}

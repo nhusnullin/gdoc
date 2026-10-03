@@ -72,8 +72,8 @@
 //
 // They describe the words and never the person. has_link reads an address out
 // of the text before it looks for a host, so one address is one fact and not
-// two, which is what lets task 18 exempt a trusted domain without letting a
-// link escape. A bare host is read only where its last label is one of
+// two, which is what lets the one setting exempt a trusted domain without
+// letting a link escape. A bare host is read only where its last label is one of
 // linkTLDs, because a dot between two words is usually a sentence ending and a
 // fact firing on ordinary prose is a hold the person learns to wave through.
 //
@@ -83,8 +83,9 @@
 // TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote. author_domain is carried
 // and read by nothing: TestAuthorDomainIsCarriedAndDecidesNothing.
 //
-// HasHiddenChars is exported because task 14 refuses such text outright rather
-// than holding it, and two readings of the same rune tables would drift:
+// HasHiddenChars is one function the fact and the refusal share, because two
+// readings of the same rune tables would drift: Rules refuses such text
+// outright rather than holding it, and FactsOf reports it beside a comment.
 // TestHasHiddenCharsIsTheSameCheckTheFactReports.
 //
 // # The ledger of what this process read and wrote
@@ -105,13 +106,18 @@
 // does not take away what a text read fetched,
 // TestAReadKeepsTheDocumentsBodyText. A write reads its target on the call and
 // that read is kept too, so the rules always have the target's own words:
-// TestAWriteReadsItsTargetFreshAndRecordsIt in cmd/gdoc.
+// TestAWriteReadsItsTargetFreshAndRecordsIt in cmd/gdoc. It is marked ForWrite,
+// because it is the binary reading and not the model looking: nobody in the
+// chat saw a word of it, so the Focus rule's "has this session read the target"
+// steps over it,
+// TestAWriteIntoAnUnreadTargetIsHeldThoughItsOwnPinReadIt in cmd/gdoc.
 //
 // The ids of what gdoc wrote are kept beside the writes, and they are what
 // robot_not_ours asks: TestRobotNotOursUsesTheLedger, and
 // TestAReplyThisSessionWroteIsNotRobotNotOurs in cmd/gdoc through the answer a
-// model reads. A *Ledger is the OwnReplies the facts were written against, and
-// the stub is gone.
+// model reads. A *Ledger is the OwnReplies the facts are asked of, and it is
+// what the Dictated rule asks too: the mark on a remark says gdoc's words, and
+// only the receipt says this process wrote them.
 //
 // It is per process and nothing reaches disk, which is the rule a grant lives by
 // as well: TestTheLedgerIsPerProcessAndWritesNothingToDisk, which reads the
@@ -142,15 +148,29 @@
 //     stranger's comment and another document:
 //     TestTheLinkRuleTripsOnWhatIsNotAlreadyThere. An address at a domain the
 //     person listed as trusted is exempt and a link never is:
-//     TestATrustedDomainsAddressIsNotHeldAndALinkStillIs.
+//     TestATrustedDomainsAddressIsNotHeldAndALinkStillIs. Seen means the whole
+//     link and not a prefix of one, so a document holding example.com says
+//     nothing about example.co,
+//     TestALinkThatIsOnlyThePrefixOfAKnownOneIsHeld, and what the session saw
+//     is read as the text projection it is, markers and all, so a link Docs
+//     auto-linked is the document's link:
+//     TestALinkInTheProjectionsOwnMarkupIsStillTheDocumentsLink. A link that is
+//     no more than a host is the one widening: every spelling of a host the
+//     document carries passes, the scheme, the trailing slash and the www among
+//     them, because they are one place:
+//     TestTheSpellingsOfAKnownHostAllPass.
 //   - Dictated: twelve words in a row shared with a comment gdoc did not write.
 //     This is the attack the whole design is for, a stranger typing the reply
 //     they want and the model posting it under the firm's name. Twelve is long
 //     enough that an agreement of phrasing is not it:
-//     TestTheDictatedRuleTripsOnTwelveWordsInARow.
-//   - Focus: another document was read in the last thirty minutes, or this
-//     session never read the target. A write into a document nobody looked at is
-//     a write nobody can check:
+//     TestTheDictatedRuleTripsOnTwelveWordsInARow. Written by gdoc means the
+//     mark and the receipt together, the id in this process's own record of
+//     what it wrote: the mark alone is a character a stranger can type in front
+//     of the words they want posted,
+//     TestAMarkedRemarkThisProcessDidNotWriteIsStillAStrangers.
+//   - Focus: another document was read in the last thirty minutes, or the model
+//     never read the target, the write's own read of it not counting. A write
+//     into a document nobody looked at is a write nobody can check:
 //     TestTheFocusRuleTripsOnAnotherDocumentOrAnUnreadTarget. Copied text is
 //     held and never refused, on Nail's call of 2026-10-03, because quoting the
 //     firm's own policy can be the job, and the reason names the document and

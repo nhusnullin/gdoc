@@ -727,8 +727,8 @@ const (
 	accountFields = "user(emailAddress,displayName)"
 )
 
-// AllowAccountRead opens that one read for this run. It is the seventh grant of
-// the shape the six before it have: one object, one request, dying with the
+// AllowAccountRead opens that one read for this run. It is the sixth grant of
+// the shape the five before it have: one object, one request, dying with the
 // process, and nothing writes it down.
 //
 // Nail's decision, 2026-10-03, DECISIONS.md. The login tool of gdoc mcp answers

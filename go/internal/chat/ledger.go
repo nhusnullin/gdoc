@@ -29,12 +29,21 @@ type Remark struct {
 // is, and a read that fetched no comments leaves Remarks empty, which is what a
 // text read is. The ledger joins them: Text and Remarks answer for the document
 // and not for one read of it.
+//
+// ForWrite marks the read a write makes of its own target before it goes out.
+// Its words are the ones the Link and Dictated rules ask about, so it is kept
+// like any other read, but it is the binary reading and never the model
+// looking: nobody in the chat saw a word of it. The Focus rule's question
+// "has this session read the target" therefore steps over it, or a write into
+// a document the model never opened would answer that question with its own
+// read: TestAWriteIntoAnUnreadTargetIsHeldThoughItsOwnPinReadIt.
 type Read struct {
-	DocID   string
-	Title   string
-	At      time.Time
-	Text    string
-	Remarks []Remark
+	DocID    string
+	Title    string
+	At       time.Time
+	Text     string
+	Remarks  []Remark
+	ForWrite bool
 }
 
 // Written is one write this process made: which document, which tool, and when.

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/plaintext"
 )
 
 // pageSize is the largest page Drive's comments.list serves. Fewer, larger
@@ -44,10 +45,7 @@ const fieldMask = "nextPageToken,comments(id," + authorMask + ",createdTime,modi
 // The markers a comment can carry. The match is exact: `AI:` is not one of
 // them, and neither is `ai:x`. A marker is the trigger for gdoc to act, so a
 // loose match is gdoc acting on a sentence nobody addressed to it.
-const (
-	MarkerNone = "none"
-	robot      = "🤖"
-)
+const MarkerNone = "none"
 
 var markers = map[string]bool{"ai:": true, "ai?": true, "ai!": true}
 
@@ -290,10 +288,6 @@ func markerOf(content string) string {
 	return MarkerNone
 }
 
-// byGdoc is true when a reply opens with the robot. SPEC.md: every reply gdoc
-// writes opens with 🤖 and nothing else, so this is the receipt. Leading
-// whitespace is stepped over, because a reply that starts on its second line is
-// still a reply that opens with the robot.
 // domainOf is the domain of an address, lowercased, and nothing else of it. An
 // address with no at sign, nothing after it or nothing before it is no domain
 // at all rather than a guess: TestAnAuthorWithNoAddressHasNoDomain.
@@ -305,6 +299,13 @@ func domainOf(address string) string {
 	return strings.ToLower(address[at+1:])
 }
 
+// byGdoc is true when a reply opens with the robot. SPEC.md: every reply gdoc
+// writes opens with 🤖 and nothing else, so the mark is the only record of
+// authorship a thread itself carries. It is not a receipt: internal/chat keeps
+// one of those, the id of what this process wrote, and the mark is a character
+// anybody can type. The question is asked of internal/plaintext, which owns the
+// mark, so one rule reads it everywhere:
+// TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot.
 func byGdoc(content string) bool {
-	return strings.HasPrefix(strings.TrimLeft(content, " \t\r\n"), robot)
+	return plaintext.OpensWithRobot(content)
 }

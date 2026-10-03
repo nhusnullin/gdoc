@@ -503,8 +503,8 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 // comment and reply with gdoc's own marked as gdoc's.
 //
 // A refused read is not recorded, because nothing came back to record. What is
-// kept is used by nothing here: the ledger is read by the hold rules of tasks 14
-// to 17, and a fact about a document is never a judgement about it.
+// kept is used by nothing here: the ledger is read by the hold rules in
+// internal/chat, and a fact about a document is never a judgement about it.
 func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time) {
 	if !r.OK {
 		return
@@ -525,13 +525,14 @@ func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time) {
 
 // mcpRemarks is a comment listing as the ledger keeps it: every thread and every
 // reply, flattened, each saying which thread it sits in and whether gdoc wrote
-// it. ByGdoc is the robot prefix on the text, which internal/comments reads, and
-// never the account: identity is never a gate.
+// it. ByGdoc is the robot prefix on the text, asked of plaintext the way
+// internal/comments asks it of a reply, and never the account: identity is
+// never a gate.
 func mcpRemarks(threads []comments.Thread) []chat.Remark {
 	out := make([]chat.Remark, 0, len(threads))
 	for _, t := range threads {
 		out = append(out, chat.Remark{ID: t.ID, ThreadID: t.ID, Text: t.Content,
-			ByGdoc: strings.HasPrefix(strings.TrimLeft(t.Content, " \t\r\n"), plaintext.Robot)})
+			ByGdoc: plaintext.OpensWithRobot(t.Content)})
 		for _, reply := range t.Replies {
 			out = append(out, chat.Remark{ID: reply.ID, ThreadID: t.ID, Text: reply.Content,
 				ByGdoc: reply.ByGdoc})
@@ -617,9 +618,11 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 	}
 	// The read happened, so it is recorded, whatever the title turns out to say.
 	// The document's own words are what the Link rule asks about, and a write
-	// refused by its title still read them.
+	// refused by its title still read them. It is marked as the write's own: the
+	// binary read the document, the chat did not, so the Focus rule still asks
+	// whether the model ever looked at it.
 	text, _ := view.Text(d)
-	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Text: text})
+	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Text: text, ForWrite: true})
 	if strings.TrimSpace(title) != strings.TrimSpace(d.Title) {
 		return nil, fmt.Errorf("%s must be the document's own title, which is %q, and this call said %q. "+
 			"Read the document and say its title to the person before writing into it",
@@ -628,7 +631,7 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 	// The document answered for itself, so what the rules and the card say about
 	// this write is the document's own id and its own title, never the words the
 	// call named them with.
-	at := &mcpTarget{docID: d.ID, title: d.Title}
+	at := &mcpTarget{docID: d.ID, title: d.Title, doc: d}
 	if !slices.Contains(c.checks, quoteProp) {
 		return at, nil
 	}
@@ -639,10 +642,18 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 }
 
 // mcpTarget is what a write's own read of its document came back with: the id
-// the url resolved to, and the title the document itself carries.
+// the url resolved to, the title the document itself carries, and the read
+// itself.
+//
+// The document is here because one rule asks about the document's characters
+// rather than about the text projection of them: what a block propose takes out
+// is measured through propose.PlaceReplace, which is what the command
+// underneath places it with. mcphold.go holds why the projection cannot answer
+// that question.
 type mcpTarget struct {
 	docID string
 	title string
+	doc   *docs.Document
 }
 
 // mcpPinThread is the second half of the pin, for the one tool that writes into
@@ -665,7 +676,8 @@ func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[str
 	// words of the thread it goes into, and this is the only read of them the
 	// call makes.
 	threads, _ := comments.Threads(raws, d)
-	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Remarks: mcpRemarks(threads)})
+	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(),
+		Remarks: mcpRemarks(threads), ForWrite: true})
 	for _, raw := range raws {
 		if raw.ID != id {
 			continue

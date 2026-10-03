@@ -85,6 +85,33 @@
 // syscall/js is refused beside os/exec, since it reaches a host that can run
 // anything. TestNothingRunsAnExternalProgram is the pin.
 //
+// # The robot mark is read in one place
+//
+// The mark is the only record of authorship a thread itself carries, so the
+// check that reads it is internal/plaintext's and nobody else's. Three readers
+// ask it: internal/comments of a reply, internal/chat of the robot_not_ours
+// fact, and cmd/gdoc of a thread's opening comment. A fourth copy, written as a
+// prefix test of its own, would be a second answer to one question the day the
+// mark changes.
+//
+// Three files are named in markWriters and may test the mark themselves,
+// because each is refusing or requiring it on a caller's own input rather than
+// reading who wrote a thread entry: internal/propose and internal/annotate
+// refuse a comment that opens with the mark, and internal/reply requires it.
+// TestTheRobotMarkIsReadInOnePlace is the pin, and it fails in both
+// directions: a prefix check anywhere else fails, and a listed reader that
+// stops asking plaintext fails too.
+//
+// The mark is matched by its value and never by the name in front of it. The
+// copy taken out of internal/comments in M14 was a lowercase robot constant of
+// that file's own, so a test reading the names Robot and Prefix would have let
+// that line straight back in, and it would have failed on an unrelated prefix
+// somebody happens to call Prefix. The test finds every constant in the tree
+// whose value is the mark, following one constant to another, and a bare "🤖"
+// written into the call is the mark as much as a constant is. All three strings
+// functions that ask about a prefix are the same question: HasPrefix, CutPrefix
+// and TrimPrefix.
+//
 // # Three modules, named in allowedModules, and the rest refused
 //
 // allowedModules names what go.mod may require, each against its reason. Every

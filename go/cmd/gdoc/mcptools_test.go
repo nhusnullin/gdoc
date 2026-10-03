@@ -340,6 +340,11 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 	for _, one := range []struct {
 		tool string
 		args string
+		// doc is the document a write goes into, so the session can be told the
+		// model read it first: a write into a document this session never read
+		// is held by the Focus rule, which is a rule of its own and not what
+		// this test is about. A read tool leaves it empty.
+		doc string
 		// cli is the line, with @FILE@ standing where the path of the file the
 		// tool wrote goes, so the two lines are the same line.
 		cli  []string
@@ -378,6 +383,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			tool: "reply", args: `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 				`"comment_id":"AAAA1111","thread_quote":"` + chatQuote + `",` +
 				`"body":"` + chatBody + `"}`,
+			doc:  fixtureDocID,
 			cli:  []string{"reply", fixtureDocID, "AAAA1111", "--body-file=@FILE@"},
 			body: chatBody, ok: true, items: 1,
 			wire: func(t *testing.T, _ bool) {
@@ -392,6 +398,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			tool: "annotate",
 			args: `{"url":"` + annotateDocID + `","title":"` + chatTitle + `",` +
 				`"annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
+			doc:  annotateDocID,
 			cli:  []string{"annotate", annotateDocID, "--from=@FILE@"},
 			body: `[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]`, ok: true, items: 1,
 			wire: func(t *testing.T, _ bool) { stubWire(t, &fakeWire{answers: annotateAnswers(t)}) },
@@ -399,6 +406,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 		{
 			tool: "propose", args: `{"url":"` + proposeDocID + `","title":"` + chatTitle + `",` +
 				`"proposals":` + oneProposal + `}`,
+			doc:  proposeDocID,
 			cli:  []string{"propose", proposeDocID, "--from=@FILE@"},
 			body: oneProposal, ok: true, items: 1,
 			wire: func(t *testing.T, chat bool) {
@@ -428,7 +436,11 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 
 			one.wire(t, true)
 			guideCode := callCode(t)
-			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, chatWith(guideCode))
+			ch := chatWith(guideCode)
+			if one.doc != "" {
+				looked(ch, one.doc)
+			}
+			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, ch)
 			if len(res.Texts) != one.items {
 				t.Fatalf("the answer carries %d text items, want %d: %v", len(res.Texts), one.items, res.Texts)
 			}

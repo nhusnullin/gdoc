@@ -82,9 +82,9 @@
 //     one live. TestASecondAllowMarkerReplacesTheFirst and
 //     TestARefusedSecondMarkerGrantTakesTheFirstBack are the pins.
 //   - AllowUpdateFrom names the one GitHub repository whose releases a run may
-//     read, and it is the only grant that is not about a Google file. gdoc
-//     runs on a colleague's machine now, so gdoc update has to ask what the
-//     latest release is and fetch it. The door is as narrow as that job: GET,
+//     read, and it is the only grant that reaches a host that is not Google's.
+//     gdoc runs on a colleague's machine now, so gdoc update has to ask what
+//     the latest release is and fetch it. The door is as narrow as that job: GET,
 //     the hosts named in policy.go, one repository's releases listing and its
 //     download path, no query the guard did not decide about, and no
 //     credential. The listing carries per_page and nothing else, held to

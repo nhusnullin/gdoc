@@ -89,6 +89,7 @@ func TestTheWriteAnswerNamesTheExemption(t *testing.T) {
 	stubClock(t, trustedClock)
 
 	ch := callChat(t)
+	looked(ch, fixtureDocID)
 	ch.trusted = []string{"example.com"}
 	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"),
 		withCode(t, ch.code, trustedReplyArgs()), nilWriter{}, ch)

@@ -123,8 +123,8 @@ and a second process hands on that same link and reports its state rather than
 starting a trip of its own. A record whose pid is dead, or older than the three
 minutes the listener itself lives, is removed and the next call starts fresh. A
 record that is there and will not parse is a failure naming the file, never
-read as nothing waiting. The states are `waiting`, `signed_in` and `expired`,
-and `signed_in` names the Google account, read through `AllowAccountRead`
+read as nothing waiting. The states are `waiting`, `signed in` and `expired`,
+and `signed in` names the Google account, read through `AllowAccountRead`
 above, so a swapped account is seen. Added 2026-10-03, DECISIONS.md.
 
 ## The guard
@@ -145,19 +145,20 @@ Serves principle 3. This is the safety property everything else stands on.
   and one run, never inherited and never remembered.
 - **Six grants stand beside the set**, each naming one object for one run,
   never inherited and nowhere written down: `AllowCreateIn`, `AllowReject`,
-  `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`, which is the only one that is
-  not about a Google file, and `AllowAccountRead`. It names one GitHub repository and
-  admits GET on that repository's releases listing, its download path, and the
-  two asset hosts a download redirects to. The listing carries one query
-  parameter, `per_page`, held to GitHub's own maximum of 100, and nothing else;
-  the download path carries none. No request to any of those hosts carries a
-  credential, because the only bearer gdoc holds is Google's, and the wire
-  refuses one on the host rather than on the grant. A policy nobody granted an
-  update refuses every one of those hosts by name, and nothing the grant admits
-  is a document, so the reachable set is untouched. Three callers open it:
-  `gdoc update`, the once-a-day check in `gdoc help`, which reads the listing
-  and replaces nothing, and the same check in `gdoc mcp`. Added 2026-09-16, the
-  second caller 2026-09-18, the third 2026-10-03, DECISIONS.md.
+  `AllowCopy`, `AllowMarker`, `AllowUpdateFrom` and `AllowAccountRead`.
+  `AllowUpdateFrom` is the fifth, and the only one that reaches a host that is
+  not Google's. It names one GitHub repository and admits GET on that
+  repository's releases listing, its download path, and the two asset hosts a
+  download redirects to. The listing carries one query parameter, `per_page`,
+  held to GitHub's own maximum of 100, and nothing else; the download path
+  carries none. No request to any of those hosts carries a credential, because
+  the only bearer gdoc holds is Google's, and the wire refuses one on the host
+  rather than on the grant. A policy nobody granted an update refuses every one
+  of those hosts by name, and nothing the grant admits is a document, so the
+  reachable set is untouched. Three callers open it: `gdoc update`, the
+  once-a-day check in `gdoc help`, which reads the listing and replaces
+  nothing, and the same check in `gdoc mcp`. Added 2026-09-16, the second
+  caller 2026-09-18, the third 2026-10-03, DECISIONS.md.
 - **`AllowAccountRead` is the sixth, and it reads which account is signed in.**
   It admits `GET https://www.googleapis.com/drive/v3/about` with
   `fields=user(emailAddress,displayName)` and nothing else, under the scopes the

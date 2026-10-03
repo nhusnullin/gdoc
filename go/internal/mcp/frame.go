@@ -15,7 +15,7 @@ import (
 // TestALineAtTheCeilingIsReadAndOneOverItIsNot states the literal.
 const maxLine = 4 << 20
 
-// The JSON-RPC codes. Only these five are ever answered.
+// The JSON-RPC codes. Only these four are ever answered.
 const (
 	codeParse          = -32700
 	codeInvalidRequest = -32600

@@ -137,9 +137,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestLoginPrintsTheURLToStderrNotStdout` and `TestAPanicIsStillOneEnvelope`.
   `mcp` is the one command that prints no envelope: it writes JSON-RPC lines
   there and nothing else, `TestStdoutCarriesOnlyJSONRPC`.
-- **The binary never prompts and no command reads stdin.** `mcp` reads its
-  protocol there, and only `main` names the real stdin and stdout, so every
-  other room is handed a reader and a writer:
+- **The binary never prompts, and every command but `mcp` leaves stdin alone.**
+  `mcp` reads its protocol there, and only `main` names the real stdin and
+  stdout, so every other room is handed a reader and a writer:
   `TestOnlyMainNamesStdinAndStdout`. It still refuses what it did not
   understand rather than ignoring it: `TestTrailingArgumentsAreRefused` and
   `TestUnknownCommandFailsAndNamesItself`.

@@ -106,8 +106,10 @@ Leave the write tools asking. The card is the check.
 ## After a gdoc update
 
 Run `gdoc update` in a terminal, then `gdoc update --desktop`, then quit Claude
-Desktop and open it again. Claude says this itself, once per chat, when your
-gdoc is behind.
+Desktop and open it again. When your gdoc is behind, Claude says `gdoc update`
+and the quitting itself, once each time Claude Desktop starts, in the first
+chat that calls a gdoc tool. It does not name `gdoc update --desktop`, so take
+that step from this page.
 
 Quitting matters. Claude Desktop runs the extension twice, once for chat and
 once for agent mode, and turning the extension off and on again only restarts

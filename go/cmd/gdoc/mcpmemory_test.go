@@ -13,6 +13,7 @@ var memoryClock = time.Date(2026, 10, 3, 13, 0, 0, 0, time.UTC)
 // makes the same call twice.
 type writeCall struct {
 	tool string
+	doc  string
 	args string
 	wire func(t *testing.T) *fakeWire
 }
@@ -22,7 +23,7 @@ type writeCall struct {
 func writeCalls() []writeCall {
 	return []writeCall{
 		{
-			tool: "reply", args: chatWriteArgs(chatTitle)["reply"],
+			tool: "reply", doc: fixtureDocID, args: chatWriteArgs(chatTitle)["reply"],
 			wire: func(t *testing.T) *fakeWire {
 				return stubWire(t, &fakeWire{answers: append(pinAnswers(t), &answer{
 					method: "POST", match: "/comments/AAAA1111/replies",
@@ -32,6 +33,7 @@ func writeCalls() []writeCall {
 		},
 		{
 			tool: "annotate",
+			doc:  annotateDocID,
 			args: `{"url":"` + annotateDocID + `","title":"` + chatTitle + `",` +
 				`"annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
 			wire: func(t *testing.T) *fakeWire {
@@ -40,6 +42,7 @@ func writeCalls() []writeCall {
 		},
 		{
 			tool: "propose",
+			doc:  proposeDocID,
 			args: `{"url":"` + proposeDocID + `","title":"` + chatTitle + `","proposals":` + oneProposal + `}`,
 			wire: func(t *testing.T) *fakeWire {
 				// The pin's read is one more of the same at the front: propose
@@ -66,6 +69,7 @@ func TestTheSameWriteInsideTenMinutesGetsTheKeptAnswer(t *testing.T) {
 			clock := stubClock(t, memoryClock)
 
 			ch := callChat(t)
+			looked(ch, one.doc)
 			first := mcpRun(context.Background(), mcpToolNamed(t, one.tool),
 				withCode(t, ch.code, one.args), nilWriter{}, ch)
 			if env := envelopeOf(t, first.Texts); !env.OK {
@@ -118,6 +122,7 @@ func TestAfterTenMinutesItIsANewWrite(t *testing.T) {
 	clock := stubClock(t, memoryClock)
 
 	ch := callChat(t)
+	looked(ch, fixtureDocID)
 	args := withCode(t, ch.code, chatWriteArgs(chatTitle)["reply"])
 	if env := envelopeOf(t, mcpRun(context.Background(), mcpToolNamed(t, "reply"), args, nilWriter{}, ch).Texts); !env.OK {
 		t.Fatalf("the first reply was refused: %s", env.Error)
@@ -146,6 +151,7 @@ func TestADifferentArgumentIsADifferentWrite(t *testing.T) {
 	clock := stubClock(t, memoryClock)
 
 	ch := callChat(t)
+	looked(ch, fixtureDocID)
 	reply := func(body string) {
 		t.Helper()
 		args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +

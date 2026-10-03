@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"gdoc/internal/chat"
 )
 
 // The title every fixture under testdata carries, written out here as a literal
@@ -48,6 +50,19 @@ func pinAnswers(t *testing.T) []*answer {
 		{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
 		{method: "GET", match: "/comments?", json: pinThread},
 	}
+}
+
+// looked is the read the model made of the target before it wrote into it,
+// which is the shape of every ordinary review: read the document, read its
+// comments, then reply. The Focus rule asks for exactly that, and the write's
+// own pin read is not it, so a test about anything other than that rule says in
+// one line that the model looked.
+//
+// It carries no text of its own, which is the shape a suggestions read has, so
+// a test asking what the write's own read brought back still measures that read
+// and not this one.
+func looked(ch *mcpChat, docID string) {
+	ch.ledger.RecordRead(chat.Read{DocID: docID, Title: chatTitle, At: now()})
 }
 
 // chatWriteArgs is one call of each write tool, with every argument right.
@@ -151,7 +166,9 @@ func TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses(t *testing.T) {
 		args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 			`"comment_id":"AAAA1111","thread_quote":` + mustJSON(t, good) + `,"body":"` + chatBody + `"}`
 		code := callCode(t)
-		res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, chatWith(code))
+		ch := chatWith(code)
+		looked(ch, fixtureDocID)
+		res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, ch)
 		env := envelopeOf(t, res.Texts)
 		if !env.OK {
 			t.Errorf("thread_quote %q names the thread and was refused: %q", good, env.Error)

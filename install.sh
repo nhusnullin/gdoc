@@ -282,6 +282,18 @@ fi
 
 desktop_opened=0
 if [ "$desktop" -eq 1 ]; then
+    # This checkout's path goes into JSON as a string and into sed as a
+    # replacement, and a checkout sits wherever somebody cloned it. The four
+    # characters that would break either are refused by name, the ampersand
+    # among them: in a sed replacement it stands for the text that matched, so a
+    # path holding one would be written with @BIN@ pasted back into it.
+    case "$GO_BIN" in
+        *'"'*|*'\'*|*'|'*|*'&'*)
+            fail "$GO_BIN carries a quote, a backslash, a pipe or an ampersand, and a manifest naming it could not be written.
+  Move the checkout to a path without those, or drop --desktop."
+            ;;
+    esac
+
     mcpb_work="$(mktemp -d)"
     sed -e "s|@BIN@|$GO_BIN|g" -e "s|@VERSION@|$DEV_VERSION|g" \
         "$TEMPLATE" > "$mcpb_work/manifest.json"

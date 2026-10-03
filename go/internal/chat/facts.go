@@ -16,7 +16,7 @@ import (
 // Every field is a check on the text and nothing else, so the person hears a
 // fact about the item in front of them rather than a judgement: "this comment
 // has a link and addresses the AI". Nothing here says whether a comment is
-// handled, trustworthy or worth acting on. The hold rules of Task 14 read
+// handled, trustworthy or worth acting on. The hold rules in rules.go read
 // HasLink, NamesAI, HiddenChars and RobotNotOurs; nothing reads AuthorDomain.
 //
 // TestEachFactHasOneCheck holds every check against a fixture that trips it and
@@ -101,8 +101,9 @@ var bareHostPattern = regexp.MustCompile(`(?i)\b[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?
 // FactsOf reads one comment or reply.
 func FactsOf(c Comment, own OwnReplies) Facts {
 	// The addresses come out before the links are looked for, so an address is
-	// one fact and not two. It matters at Task 18: the person can list a domain
-	// whose addresses need no approval, and a link never escapes that way.
+	// one fact and not two. It is what lets the one setting exempt a domain: the
+	// person lists the addresses that need no approval, and a link never escapes
+	// that way.
 	withoutEmails := emailPattern.ReplaceAllString(c.Text, " ")
 	return Facts{
 		HasLink:      urlPattern.MatchString(withoutEmails) || bareHostPattern.MatchString(withoutEmails),
@@ -118,8 +119,9 @@ func FactsOf(c Comment, own OwnReplies) Facts {
 // cannot see: the zero-width characters, the bidi controls and the tags are one
 // Unicode category between them, Cf, and the tag block is in it.
 //
-// It is exported because Task 14 refuses such text outright rather than holding
-// it, and two readings of the same rune tables would drift:
+// It is one function because two readings of the same rune tables would drift,
+// and two rooms ask it: FactsOf reports it beside a comment, and Rules refuses
+// such text outright rather than holding it.
 // TestHasHiddenCharsIsTheSameCheckTheFactReports. Variation selectors are not
 // here, and that is on purpose: they are how an emoji is written, and 🤖 is the
 // one mark gdoc signs with.
@@ -135,12 +137,13 @@ func HasHiddenChars(text string) bool {
 // robotNotOurs is the mark without the receipt: text opening with the robot that
 // this process did not write.
 //
-// Leading whitespace is stepped over, the way comments.ByGdoc steps over it, so
-// a reply starting on its second line is still a reply that opens with the mark.
-// The question is never asked of the account: identity is never a gate, and the
-// mark is the only record of authorship there is.
+// The mark is read by plaintext.OpensWithRobot, the one check every reader of
+// the mark asks, so a reply starting on its second line is still a reply that
+// opens with it and no second copy of the rule can drift. The question is never
+// asked of the account: identity is never a gate, and the mark is the only
+// record of authorship there is.
 func robotNotOurs(id, text string, own OwnReplies) bool {
-	if !strings.HasPrefix(strings.TrimLeft(text, " \t\r\n"), plaintext.Robot) {
+	if !plaintext.OpensWithRobot(text) {
 		return false
 	}
 	return own == nil || !own.Wrote(id)

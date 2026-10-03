@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
+
+	"gdoc/internal/auth"
 )
 
 // The sweep at a start takes away what nobody is using and leaves what somebody
@@ -80,6 +83,18 @@ func TestLivePIDKnowsThisProcess(t *testing.T) {
 	}
 	if livePID(0) || livePID(-1) {
 		t.Error("no process has id 0 or a negative id")
+	}
+}
+
+// The sweep and the login lock ask one liveness rule, not two. Two readings
+// would disagree about EPERM, a process somebody else owns, and about Windows,
+// where there is no signal 0 to send: either disagreement ends with the sweep
+// taking a live process's call directory away while it is reading from it.
+func TestTheSweepAsksTheSameLivenessRuleAsTheLock(t *testing.T) {
+	saved := livePID
+	t.Cleanup(func() { livePID = saved })
+	if reflect.ValueOf(saved).Pointer() != reflect.ValueOf(auth.ProcessAlive).Pointer() {
+		t.Error("livePID is not auth.ProcessAlive, so the sweep and the login lock judge a process by two rules")
 	}
 }
 
