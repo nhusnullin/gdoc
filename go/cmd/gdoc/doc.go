@@ -188,6 +188,40 @@
 // TestAuthStatusFailsOnAnUnreadableToken and
 // TestAFailingStatusStillCarriesItsWarnings are the pins.
 //
+// # auth status names the account, and nothing else reads it
+//
+// The report also carries account and account_name, read live through
+// accountOf, the one room that grants guard.AllowAccountRead. That makes
+// `gdoc auth status` the grant's second caller and the binary's whole widening
+// in M15: no new grant, no new host and no new request kind.
+// TestAuthStatusNamesTheAccountItReadsLive is the pin, and
+// TestOnlyAccountOfCallsAllowAccountRead with TestAccountOfHasTwoCallers in
+// go/boundary hold that the callers are two.
+//
+// Three reports ask nothing. No report, no token, and a token missing a scope
+// gdoc asks for: the read would be refused by the scope that is missing, and
+// the warning that already says to sign in again is the answer.
+// TestNoTokenMakesNoAccountRequest and TestAMissingScopeMakesNoAccountRequest.
+//
+// The read is bounded by accountCeiling, five seconds, because a person typed
+// the command and is waiting at a prompt. A read that fails or never comes back
+// is a warning and never a failure: the token is the fact, and whose it is was
+// what could not be read. TestTheAccountCeilingIsFiveSeconds,
+// TestAuthStatusOfflineStillAnswersWithoutTheAccount and
+// TestAnAccountReadThatHangsStopsAtTheCeiling.
+//
+// auth login does not ask. It just made a browser trip, and the object a skill
+// reads after a login is the object it read before:
+// TestAuthLoginCarriesNoAccount.
+//
+// On a terminal the same facts are a panel on stderr: the state in words,
+// signed in, signed out or scopes missing, then the account, the file, the
+// scopes, what is missing, the client and the mode. No minutes, because when a
+// token expires is a field for a program. The object stays on stdout, because
+// for this command the object is the answer, and a pipe reads no screen at all.
+// TestTheStatusScreenSaysTheStateAndTheAccount and
+// TestAuthStatusOnAPipeWritesNoStderr.
+//
 // # auth login prints the URL to stderr, and waits on one line
 //
 // The login is the browser trip in its two halves, auth.StartLogin and

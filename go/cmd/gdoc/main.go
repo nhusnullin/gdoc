@@ -13,9 +13,11 @@ import (
 	"os"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"gdoc/internal/auth"
 	"gdoc/internal/emit"
+	"gdoc/internal/gapi"
 	"gdoc/internal/panel"
 	"gdoc/internal/tty"
 )
@@ -223,34 +225,103 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	return c.run(ctx, a, errOut)
 }
 
-// statusData is the auth report with the version beside it. `gdoc auth status`
-// is the command a person runs to ask what they have, so the build is one of
-// the facts it reports, not only a field of the envelope around it.
+// statusData is the auth report with the version beside it, and the account
+// the token signs in as. `gdoc auth status` is the command a person runs to ask
+// what they have, so the build is one of the facts it reports, not only a
+// field of the envelope around it, and so is whose account it is.
 type statusData struct {
 	*auth.StatusReport
-	Version string `json:"version,omitempty"`
+	Account     string `json:"account,omitempty"`
+	AccountName string `json:"account_name,omitempty"`
+	Version     string `json:"version,omitempty"`
 }
+
+// accountCeiling is how long `gdoc auth status` waits for the account read. A
+// person typed the command and is waiting at a prompt, and the read is one
+// small GET: long enough for a slow network, short enough that a read nobody
+// answers is still an answer. It is a var so a test can hand it a hung read
+// and finish: TestTheAccountCeilingIsFiveSeconds and
+// TestAnAccountReadThatHangsStopsAtTheCeiling.
+var accountCeiling = 5 * time.Second
+
+// accountUnread is what the reader is told when the token is there and who it
+// belongs to is not. The same sentence the MCP login tool uses, because it is
+// the same fact.
+const accountUnread = "the token is there and which Google account it belongs to could not be read: "
 
 // statusReport is the report as it goes out. A nil report stays nil rather
 // than becoming an object holding nothing but a version: a config dir gdoc
 // cannot locate has no facts to report, and that is what the error says.
-func statusReport(r *auth.StatusReport) any {
+func statusReport(r *auth.StatusReport, acc gapi.Account) any {
 	if r == nil {
 		return r
 	}
-	return statusData{StatusReport: r, Version: releaseVersion()}
+	return statusData{StatusReport: r, Account: acc.Email, AccountName: acc.Name, Version: releaseVersion()}
 }
 
-func authStatus() emit.Result {
+// authStatus is the report. withAccount is whether it also names the account,
+// which `gdoc auth status` asks for and `gdoc auth login` does not: a login
+// just made a browser trip, and the object a skill reads after one is the
+// object it read before. TestAuthLoginCarriesNoAccount.
+func authStatus(ctx context.Context, withAccount bool) emit.Result {
 	report, err := auth.Status()
+	warnings := statusWarnings(report)
 	if err != nil {
 		// The report goes out beside the error, warnings included: the caller
 		// still learns which file was being read and what else is in the way,
 		// and the error names what was wrong with it. The run that fails is the
 		// one where the extra fact is worth most.
-		return emit.Result{OK: false, Error: err.Error(), Data: statusReport(report), Warnings: statusWarnings(report)}
+		return emit.Result{OK: false, Error: err.Error(), Data: statusReport(report, gapi.Account{}), Warnings: warnings}
 	}
-	return emit.Result{OK: true, Data: statusReport(report), Warnings: statusWarnings(report)}
+	acc, unread := accountFor(ctx, report, withAccount)
+	if unread != "" {
+		warnings = append(warnings, unread)
+	}
+	return emit.Result{OK: true, Data: statusReport(report, acc), Warnings: warnings}
+}
+
+// accountFor is who the token signs in as, and the warning where that could
+// not be read. It is the second caller of accountOf in this binary, and the
+// guard moved by that caller rather than by a request:
+// TestAccountOfHasTwoCallers.
+//
+// Three reports are not asked at all. A report that is not there has no token
+// to read with; neither has one saying there is no token; and a token missing a
+// scope gdoc asks for would have the read refused by the scope, so the warning
+// that already says to sign in again is the whole answer:
+// TestNoTokenMakesNoAccountRequest and TestAMissingScopeMakesNoAccountRequest.
+//
+// A read that fails is a warning and never a failure. The token is the fact,
+// and whose it is was what could not be read:
+// TestAuthStatusOfflineStillAnswersWithoutTheAccount.
+func accountFor(ctx context.Context, r *auth.StatusReport, withAccount bool) (gapi.Account, string) {
+	if !withAccount || r == nil || !r.TokenPresent || len(r.MissingScopes) > 0 {
+		return gapi.Account{}, ""
+	}
+	ctx, cancel := context.WithTimeout(ctx, accountCeiling)
+	defer cancel()
+	acc, err := accountOf(ctx)
+	if err != nil {
+		return gapi.Account{}, accountUnread + err.Error()
+	}
+	return acc, ""
+}
+
+// cmdAuthStatus is the report and the panel a person reads it from. The object
+// goes out as it always did, because for this command the object is the
+// answer: the panel is the same facts for the reader who typed the command.
+// TestTheStatusScreenSaysTheStateAndTheAccount and
+// TestAuthStatusOnAPipeWritesNoStderr.
+//
+// A failing status draws none: the report is then a file that could not be
+// read rather than a state somebody is in, and the error on stdout is what
+// says so.
+func cmdAuthStatus(ctx context.Context, errOut io.Writer) emit.Result {
+	r := authStatus(ctx, true)
+	if d, ok := r.Data.(statusData); ok && r.OK {
+		writeStatusScreen(errOut, d)
+	}
+	return r
 }
 
 // statusWarnings says what the report cannot say in a field: a fact that is
@@ -273,9 +344,9 @@ func statusWarnings(r *auth.StatusReport) []string {
 
 // authLogin prints the authorization URL to errOut and waits for the browser to
 // come back to the loopback listener.
-func authLogin(errOut io.Writer) emit.Result {
+func authLogin(ctx context.Context, errOut io.Writer) emit.Result {
 	if err := login(errOut); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	return authStatus()
+	return authStatus(ctx, false)
 }

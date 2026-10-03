@@ -163,8 +163,8 @@ func commands() []command {
 			group:   groupAccount,
 			summary: "Say whether gdoc has a token, when it expires, and what it may reach.",
 			example: "gdoc auth status",
-			run: func(_ context.Context, _ *args, _ io.Writer) emit.Result {
-				return authStatus()
+			run: func(ctx context.Context, _ *args, errOut io.Writer) emit.Result {
+				return cmdAuthStatus(ctx, errOut)
 			},
 		},
 		{
@@ -172,8 +172,8 @@ func commands() []command {
 			group:   groupAccount,
 			summary: "Print the Google sign-in URL and wait for the browser to come back.",
 			example: "gdoc auth login",
-			run: func(_ context.Context, _ *args, errOut io.Writer) emit.Result {
-				return authLogin(errOut)
+			run: func(ctx context.Context, _ *args, errOut io.Writer) emit.Result {
+				return authLogin(ctx, errOut)
 			},
 		},
 		{

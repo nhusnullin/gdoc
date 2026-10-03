@@ -526,36 +526,55 @@ Before any rendering code changes.
 - Create: `go/cmd/gdoc/main_setup_test.go` (the `TestMain`),
   `go/cmd/gdoc/statusaccount_test.go`, `go/boundary/account_test.go`
 
-- [ ] `TestMain` in `cmd/gdoc` replaces `accountOf` with a fake that answers
+- [x] `TestMain` in `cmd/gdoc` replaces `accountOf` with a fake that answers
       `name@example.com`, `Example Person`, before any test runs, so no test
       reaches the network.
-- [ ] `authStatus(ctx, withAccount bool)`. The `auth status` command passes
+- [x] `authStatus(ctx, withAccount bool)`. The `auth status` command passes
       true; `authLogin` passes false, so `auth login`'s object is unchanged.
-- [ ] With `withAccount`, a token present and no missing scope, it calls
+- [x] With `withAccount`, a token present and no missing scope, it calls
       `accountOf` under `accountCeiling`, a variable of five seconds pinned by
       a literal in `TestTheAccountCeilingIsFiveSeconds`. The answer goes into
       the data as `account` and `account_name`.
-- [ ] `TestAuthStatusNamesTheAccountItReadsLive`.
-- [ ] `TestNoTokenMakesNoAccountRequest` and
+- [x] `TestAuthStatusNamesTheAccountItReadsLive`.
+- [x] `TestNoTokenMakesNoAccountRequest` and
       `TestAMissingScopeMakesNoAccountRequest`.
-- [ ] `TestAuthStatusOfflineStillAnswersWithoutTheAccount`: a fake that fails
+- [x] `TestAuthStatusOfflineStillAnswersWithoutTheAccount`: a fake that fails
       gives `ok: true`, no `account`, and one warning naming the reason.
-- [ ] `TestAnAccountReadThatHangsStopsAtTheCeiling`: a fake that blocks on
+- [x] `TestAnAccountReadThatHangsStopsAtTheCeiling`: a fake that blocks on
       `ctx.Done()`, the ceiling set short by the test.
-- [ ] `TestAuthLoginCarriesNoAccount`.
-- [ ] On a terminal: a panel saying signed in, signed out or scopes missing,
+- [x] `TestAuthLoginCarriesNoAccount`.
+- [x] On a terminal: a panel saying signed in, signed out or scopes missing,
       and the account, with the object below it as today. On a pipe, stderr
       stays empty: `TestAuthStatusOnAPipeWritesNoStderr`.
-- [ ] `TestOnlyAccountOfCallsAllowAccountRead` and
+- [x] `TestOnlyAccountOfCallsAllowAccountRead` and
       `TestAccountOfHasTwoCallers` read the syntax tree of every non-test
       file: one call of `AllowAccountRead`, inside `accountOf`; and two
       callers of `accountOf`, the MCP login tool in `mcplogin.go` and
       `authStatus` in `main.go`.
-- [ ] The comments that say the MCP login is the only caller, on `accountOf`
+- [x] The comments that say the MCP login is the only caller, on `accountOf`
       and on `gapi.Account`, name both. The guard's `doc.go` names both.
       `cmd/gdoc/doc.go`, "auth status is a report", gains the account and the
       ceiling, with the tests named.
-- [ ] `git commit -m "feat(auth): status names the account it signs in as"`
+- [x] `git commit -m "feat(auth): status names the account it signs in as"`
+
+- ➕ The panel is drawn in a new file, `go/cmd/gdoc/statusscreen.go`, beside
+  `helpscreen.go` and `loginscreen.go` rather than in `main.go`: a screen is
+  what one room in this package knows, and `main.go` holds the auth commands
+  and the rule in `run()`. `main.go` gained `cmdAuthStatus`, which calls
+  `authStatus(ctx, true)` and hands the data to that room, so the panel is
+  drawn out of the object that was printed and cannot say something else.
+- ➕ The panel's rows go through `helpscreen.go`'s own `pairRows`, so the width
+  rule is one rule: two columns from 80, the value indented under its key
+  below that. The column is 16, which is where the pictures draw it.
+- ➕ `statusData` carries `account` and `account_name`, and `statusReport` now
+  takes a `gapi.Account`, so the one room that builds the data is the one room
+  that names the account. The read sits behind `accountFor`, which is the
+  second caller `TestAccountOfHasTwoCallers` counts.
+- ➕ `go/boundary/doc.go` gained the section for the two new tests, because a
+  rule in this repository names the test that pins it. Not in the file list
+  above.
+- ➕ `main_test.go` needed no edit: no test there compares a whole object, and
+  the account fields are added rather than changed.
 
 ### Task 13: the documents
 

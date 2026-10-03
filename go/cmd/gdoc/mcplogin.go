@@ -73,6 +73,11 @@ var startLogin = func() (loginTrip, string, error) {
 // caller of guard.AllowAccountRead in this binary: the policy is built here,
 // for this read, and dies with it, so no other command and no other tool gains
 // that reach. Decision 4 with the DECISIONS.md entry of 2026-10-03.
+//
+// It has two readers, and no third: this file's login tool, and accountFor in
+// main.go, which is `gdoc auth status` naming the account on a terminal. M15
+// moved the guard by that one caller rather than by a request, which is what
+// TestOnlyAccountOfCallsAllowAccountRead and TestAccountOfHasTwoCallers hold.
 var accountOf = func(ctx context.Context) (gapi.Account, error) {
 	p := guard.NewPolicy()
 	p.AllowAccountRead()

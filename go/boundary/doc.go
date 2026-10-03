@@ -105,6 +105,22 @@
 // internal/tty holding none, which would mean the codes moved and this test did
 // not.
 //
+// # The account read is granted in one room and asked by two
+//
+// guard.AllowAccountRead opens the one Drive read that names no file: who the
+// token signs in as. What bounds it is the room rather than the request, so the
+// grant is built in accountOf in cmd/gdoc and nowhere else, for one read, and
+// dies with the call. TestOnlyAccountOfCallsAllowAccountRead is the pin, and it
+// counts to one.
+//
+// The read itself has two callers, and that is the whole of what M15 widened:
+// the login tool of gdoc mcp, which answers with the account so a swapped
+// account is seen in a chat, and `gdoc auth status`, which names it on a
+// terminal so a person at a prompt reads the same fact.
+// TestAccountOfHasTwoCallers names both files, so a third caller is noticed
+// here rather than in review. A call written for a third room is a reach
+// somebody has to decide on, which is a DECISIONS.md entry and not a refactor.
+//
 // # The robot mark is read in one place
 //
 // The mark is the only record of authorship a thread itself carries, so the
