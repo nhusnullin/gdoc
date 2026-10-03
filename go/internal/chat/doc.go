@@ -170,9 +170,10 @@
 //   - Burst: the third write in sixty seconds, or the twenty-sixth into one
 //     document in an hour. A review goes at the speed of a person reading:
 //     TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth.
-//   - Flagged thread: a reply under a comment carrying has_link, names_ai,
-//     robot_not_ours or hidden_chars, each of which is a comment written at the
-//     model rather than at a colleague:
+//   - Flagged thread: a reply under a comment carrying has_link, names_ai or
+//     hidden_chars, each of which is a comment written at the model rather than
+//     at a colleague. robot_not_ours is shown and flags nothing, because the
+//     record of gdoc's own writes dies with the process:
 //     TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread.
 //   - Large removal: a propose taking out more than three hundred characters,
 //     which is no longer a correction:

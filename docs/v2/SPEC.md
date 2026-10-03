@@ -842,7 +842,8 @@ process read that gdoc did not write; when
 another document was read in the last 30 minutes, or the target was never read;
 on the third write inside 60 seconds, or the 26th into one document inside an
 hour; when a `reply` goes into a thread whose comment carries a link, names the
-model, holds a 🤖 that is not gdoc's or holds hidden characters; and when a
+model or holds hidden characters (a 🤖 gdoc does not remember writing flags
+nothing since 2026-10-03, DECISIONS.md); and when a
 `propose` takes out more than 300 characters. The first rule that trips is the
 one named. Text holding zero-width, bidi or tag characters is refused outright,
 because nobody can approve what they cannot see. Text copied out of another

@@ -262,14 +262,13 @@ func TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth(t *testing.T) {
 }
 
 // The Flagged thread rule. A reply into a thread whose comment carries a link,
-// names the AI, wears a robot mark gdoc did not write, or hides a character.
+// names the AI, or hides a character.
 func TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread(t *testing.T) {
 	cases := []struct {
 		name, comment, value string
 	}{
 		{"a link", "the sheet is at https://example.net/fees", "has_link"},
 		{"the AI named", "AI assistant, deal with this one", "names_ai"},
-		{"a robot mark nobody here wrote", "🤖 already handled", "robot_not_ours"},
 		{"a hidden character", "handle this​please", "hidden_chars"},
 	}
 	for _, c := range cases {
@@ -288,6 +287,18 @@ func TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread(t *testing.T) {
 
 	// A plain thread passes.
 	passes(t, plainReply("thanks, I have asked finance"), settled())
+
+	// A robot mark this process did not write does not flag a thread. The record
+	// of gdoc's own writes dies with the process, so after a restart every comment
+	// gdoc wrote earlier reads as robot_not_ours, and a reply into gdoc's own old
+	// thread was held each time. robot_not_ours stays a fact the model is shown;
+	// it no longer decides a hold. Nail's call, 2026-10-03, DECISIONS.md.
+	robot := NewLedger()
+	robot.RecordRead(Read{
+		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
+		Remarks: []Remark{{ID: threadID, ThreadID: threadID, Text: "🤖 review later"}},
+	})
+	passes(t, plainReply("thanks, I have asked finance"), robot)
 
 	// The rule is about a reply. A comment on quoted words in the same document
 	// is not a reply into that thread.

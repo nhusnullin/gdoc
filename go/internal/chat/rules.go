@@ -312,22 +312,27 @@ func burstRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 	return "", "", ""
 }
 
-// flaggedFacts is the four facts on a thread's comment that make a reply into it
-// a write the person approves, in the order the reason names them. A link, the
-// AI addressed, a robot mark with no receipt behind it, a character nobody can
-// see: each is a comment written at the model rather than at a colleague.
+// flaggedFacts is the three facts on a thread's comment that make a reply into
+// it a write the person approves, in the order the reason names them. A link,
+// the AI addressed, a character nobody can see: each is a comment written at the
+// model rather than at a colleague.
+//
+// robot_not_ours is not one of them, though the model is still shown it. The
+// record of gdoc's own writes lives in the process, so after a restart every
+// comment gdoc wrote before reads as robot_not_ours, and a reply into gdoc's own
+// old thread was held every time. Nail's call, 2026-10-03, DECISIONS.md, "What
+// the first run in Claude Desktop changed".
 var flaggedFacts = []struct {
 	name string
 	of   func(Facts) bool
 }{
 	{"has_link", func(f Facts) bool { return f.HasLink }},
 	{"names_ai", func(f Facts) bool { return f.NamesAI }},
-	{"robot_not_ours", func(f Facts) bool { return f.RobotNotOurs }},
 	{"hidden_chars", func(f Facts) bool { return f.HiddenChars }},
 }
 
 // flaggedThreadRule holds a reply going under a comment that carries one of
-// those four facts: TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread.
+// those three facts: TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread.
 //
 // It is about a reply and nothing else. annotate and propose put words on the
 // document rather than under a stranger's, so the thread is not what they

@@ -3438,6 +3438,19 @@ reach the extension. The specification already said chat ships and voice waits
 on Anthropic, so no code changes. Claude's call from what the run measured, left
 to Nail to overturn.
 
+**A robot mark gdoc does not remember no longer flags a thread.** The retest
+after the fixes held every reply into the thread gdoc itself had started before
+Claude Desktop restarted. The record of what gdoc wrote lives in the process, so
+the new process read gdoc's own "🤖 review later" as a robot mark somebody else
+typed, `robot_not_ours`, and the Flagged thread rule held the reply. Nail chose,
+of three ways, to keep the fact and drop it from the rule: a thread is flagged
+for a link, for naming the AI, or for hidden characters. Rejected: deciding
+"ours" by Drive's `author.me`, which would let whose account wrote a comment
+decide a hold, against "identity is never a gate"; and writing gdoc's own
+comment ids to a file, a new file for one fact. A person who types 🤖 to look
+like gdoc mostly fools a Claude Code live session, which skips a thread with a
+🤖 reply, and that protection does not rest on this rule.
+
 **What was rejected.** Narrowing the link hold to a query, a fragment, a long
 path, a file-sharing host or an email address: Nail preferred one rule fewer.
 Keeping the trusted-domains field for a hold that may come back: a setting with
