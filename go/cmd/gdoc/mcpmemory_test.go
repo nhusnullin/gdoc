@@ -176,8 +176,17 @@ func TestADifferentArgumentIsADifferentWrite(t *testing.T) {
 }
 
 // A held write is not an answer, so nothing is kept and the same call is judged
-// again. The person has not seen the card yet, and a session that answered the
-// second call out of its memory would hold a write nobody could release.
+// again. The person has not seen the card yet, and the rules are about the
+// session as it stands rather than about the moment the call first arrived.
+//
+// It is measured by changing what the rules would say between the two calls: the
+// first is held because nobody in this chat has read the target, the read the
+// person then asks for settles that, and the same call again goes out. A session
+// that had kept the held answer would hand it back and send nothing.
+//
+// What the second call must not do either is make a second card: that is
+// TestARetriedHeldWriteKeepsOneHold, where nothing between the two calls
+// changed.
 func TestAHeldAnswerIsNotKept(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	signedIn(t)
@@ -185,22 +194,24 @@ func TestAHeldAnswerIsNotKept(t *testing.T) {
 	stubClock(t, memoryClock)
 
 	ch := callChat(t)
-	strangerAsked(ch)
-	args := withCode(t, ch.code, heldWriteArgs()["reply"])
+	args := withCode(t, ch.code, chatWriteArgs(chatTitle)["reply"])
 
 	first := heldEnvelopeOf(t, mcpRun(context.Background(), mcpToolNamed(t, "reply"), args, nilWriter{}, ch).Texts)
-	again := heldEnvelopeOf(t, mcpRun(context.Background(), mcpToolNamed(t, "reply"), args, nilWriter{}, ch).Texts)
-
-	if first.Data.Held.ID == "" || again.Data.Held.ID == "" {
-		t.Fatalf("one of the two calls was not held: %+v and %+v", first.Data.Held, again.Data.Held)
-	}
-	if again.Data.Held.ID == first.Data.Held.ID {
-		t.Error("the second call answered with the first call's hold instead of being judged again")
-	}
-	if again.Data.Held.Rule != "Dictated" {
-		t.Errorf("the second call was held by %q, want the rule the first tripped", again.Data.Held.Rule)
+	if first.Data.Held.Rule != "Focus" {
+		t.Fatalf("a reply into a document nobody read was not held by Focus: %+v", first.Data.Held)
 	}
 	if sent := f.writes(); len(sent) != 0 {
-		t.Errorf("a held write asked twice sent %v", sent)
+		t.Fatalf("the held write sent %v", sent)
+	}
+
+	// The read the rule was waiting for.
+	looked(ch, fixtureDocID)
+
+	env := envelopeOf(t, mcpRun(context.Background(), mcpToolNamed(t, "reply"), args, nilWriter{}, ch).Texts)
+	if !env.OK {
+		t.Fatalf("the same call, judged again against a session that has read the document: %s", env.Error)
+	}
+	if sent := f.writes(); len(sent) != 1 {
+		t.Errorf("the second call sent %d writes, want the one it was judged clear for: %v", len(sent), sent)
 	}
 }

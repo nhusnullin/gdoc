@@ -90,13 +90,21 @@ while [ $# -gt 0 ]; do
 done
 
 # What --desktop needs, judged before anything is built, so a run that cannot
-# write the extension has changed nothing.
+# write the extension has changed nothing. Every one of the three is asked here
+# and nowhere else: a check further down runs after the binary is built and the
+# links are moved, which is the outcome this block exists to prevent.
 if [ "$desktop" -eq 1 ]; then
     [ -f "$TEMPLATE" ] || fail "$TEMPLATE is missing, and --desktop fills it. Check out this repository again."
     command -v zip >/dev/null 2>&1 || fail "zip is not on PATH, and the Claude Desktop extension is a zip."
+    # This checkout's path goes into JSON as a string and into sed as a
+    # replacement, and a checkout sits wherever somebody cloned it. The four
+    # characters that would break either are refused by name, the ampersand
+    # among them: in a sed replacement it stands for the text that matched, so a
+    # path holding one would be written with @BIN@ pasted back into it.
     case "$GO_BIN" in
-        *'"'*|*'\'*|*'|'*)
-            fail "$GO_BIN carries a quote, a backslash or a pipe, and a manifest naming it could not be written."
+        *'"'*|*'\'*|*'|'*|*'&'*)
+            fail "$GO_BIN carries a quote, a backslash, a pipe or an ampersand, and a manifest naming it could not be written.
+  Move the checkout to a path without those, or drop --desktop."
             ;;
     esac
 fi
@@ -282,18 +290,8 @@ fi
 
 desktop_opened=0
 if [ "$desktop" -eq 1 ]; then
-    # This checkout's path goes into JSON as a string and into sed as a
-    # replacement, and a checkout sits wherever somebody cloned it. The four
-    # characters that would break either are refused by name, the ampersand
-    # among them: in a sed replacement it stands for the text that matched, so a
-    # path holding one would be written with @BIN@ pasted back into it.
-    case "$GO_BIN" in
-        *'"'*|*'\'*|*'|'*|*'&'*)
-            fail "$GO_BIN carries a quote, a backslash, a pipe or an ampersand, and a manifest naming it could not be written.
-  Move the checkout to a path without those, or drop --desktop."
-            ;;
-    esac
-
+    # The path this names was judged before the build, where a refusal still
+    # costs nothing.
     mcpb_work="$(mktemp -d)"
     sed -e "s|@BIN@|$GO_BIN|g" -e "s|@VERSION@|$DEV_VERSION|g" \
         "$TEMPLATE" > "$mcpb_work/manifest.json"

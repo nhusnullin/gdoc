@@ -289,6 +289,21 @@ if [ "$desktop" -eq 1 ]; then
   That file is packed into every release from v2.9.0 on. Install a newer release, or drop --desktop."
     command -v zip >/dev/null 2>&1 || fail "zip is not on PATH, and the Claude Desktop extension is a zip.
   Install zip, or drop --desktop."
+    # The path goes into JSON as a string and into sed as a replacement, so the
+    # four characters that would break either are refused by name rather than
+    # written into a manifest Claude Desktop cannot read. The ampersand is sed's
+    # own: in a replacement it stands for the text that matched, so a path
+    # holding one would be written with @BIN@ pasted back into it.
+    #
+    # It is asked here, with the other two, rather than beside the sed that
+    # needs it: there the binary has already been replaced, which is the one
+    # thing this block exists to stop.
+    case "$BIN_DIR/gdoc" in
+        *'"'*|*'\'*|*'|'*|*'&'*)
+            fail "$BIN_DIR/gdoc carries a quote, a backslash, a pipe or an ampersand, and a manifest naming it could not be written.
+  Install into a path without those, or drop --desktop."
+            ;;
+    esac
 fi
 
 # --------------------------------------------------------------------------
@@ -352,18 +367,8 @@ if [ "$desktop" -eq 1 ]; then
         ''|unknown|dev) mcpb_version="$DEV_VERSION" ;;
     esac
 
-    # The path goes into JSON as a string and into sed as a replacement, so the
-    # four characters that would break either are refused by name rather than
-    # written into a manifest Claude Desktop cannot read. The ampersand is sed's
-    # own: in a replacement it stands for the text that matched, so a path
-    # holding one would be written with @BIN@ pasted back into it.
-    case "$installed" in
-        *'"'*|*'\'*|*'|'*|*'&'*)
-            fail "$installed carries a quote, a backslash, a pipe or an ampersand, and a manifest naming it could not be written.
-  Install into a path without those, or drop --desktop."
-            ;;
-    esac
-
+    # The path this names was judged before anything was replaced, where a
+    # refusal still leaves the gdoc already on this machine where it was.
     mcpb_work="$(mktemp -d)"
     sed -e "s|@BIN@|$installed|g" -e "s|@VERSION@|$mcpb_version|g" \
         "$template" > "$mcpb_work/manifest.json"

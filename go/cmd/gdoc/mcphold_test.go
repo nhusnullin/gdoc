@@ -303,6 +303,76 @@ func TestAHoldLivesThirtyMinutes(t *testing.T) {
 	}
 }
 
+// A write this session is already holding is held once.
+//
+// The same tool with the same arguments again is a model retrying a call the
+// rules stopped, and the held answer is not remembered, so the rules judge it
+// again. A second hold for it would be a second card for one write: the write
+// memory covers the first ten minutes, so releasing the second card after that
+// would post the same words twice. The retry gets the hold that is already
+// open, and the client is told the list moved once.
+func TestARetriedHeldWriteKeepsOneHold(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	signedIn(t)
+	stubWire(t, replyWire(t))
+	stubNow(t, holdClock)
+
+	ch := callChat(t)
+	w := watchConfirms(t, ch)
+	first := heldReply(t, ch)
+	again := heldReply(t, ch)
+
+	if again.Data.Held.ID != first.Data.Held.ID {
+		t.Errorf("the retry was held under %q, want the open hold %q",
+			again.Data.Held.ID, first.Data.Held.ID)
+	}
+	if again.Data.Held.Reason != first.Data.Held.Reason || again.Data.Held.Text != first.Data.Held.Text {
+		t.Errorf("the retry's card is not the open one's: %+v", again.Data.Held)
+	}
+	if got := w.confirms(); len(got) != 1 {
+		t.Fatalf("one write registered %d confirm tools: %v", len(got), got)
+	}
+	if w.changes() != 1 {
+		t.Errorf("the retry told the client the list moved %d times, want once in all", w.changes())
+	}
+}
+
+// A write whose one item carries no words is refused where it is read, rather
+// than judged and held.
+//
+// The command underneath refuses an annotation with nothing said in it, so
+// nothing is lost by refusing it here. What is gained is that no card is made of
+// it: a hold whose text is empty registers a confirm tool whose text argument
+// cannot be sent back, because an empty text is refused, so the person would be
+// shown a card nothing can release for half an hour.
+func TestAWriteWithNoWordsIsRefusedRatherThanHeld(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	signedIn(t)
+	stubWire(t, &fakeWire{answers: pinAnswers(t)})
+	stubNow(t, holdClock)
+
+	ch := callChat(t)
+	w := watchConfirms(t, ch)
+	args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
+		`"annotations":[{"quoted":"reviewed annually","why":""}]}`
+	res := mcpRun(context.Background(), mcpToolNamed(t, "annotate"),
+		withCode(t, ch.code, args), nilWriter{}, ch)
+
+	env := heldEnvelopeOf(t, res.Texts)
+	if env.OK {
+		t.Fatalf("an annotation saying nothing was accepted: %s", res.Texts[0])
+	}
+	if env.Data.Held.ID != "" {
+		t.Errorf("a write with no words was held: %+v", env.Data.Held)
+	}
+	if !strings.Contains(env.Error, "annotations") {
+		t.Errorf("the refusal must name the property it read: %q", env.Error)
+	}
+	if got := w.confirms(); len(got) != 0 {
+		t.Errorf("a refused write registered a card: %v", got)
+	}
+}
+
 // What a block replace takes out is whole paragraphs, so that is what the Large
 // removal rule is given. A call quoting a handful of words at each end of two
 // long paragraphs deletes both of them, and a count that stopped at the quotes

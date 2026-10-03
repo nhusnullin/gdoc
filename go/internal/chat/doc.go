@@ -245,7 +245,11 @@
 // What is kept is the answer the command gave, whatever it said, because a write
 // that failed on the wire may still have reached the document. A held write is
 // never kept, because the person has not answered the card yet and the call has
-// to be judged against the document as it stands: TestAHeldAnswerIsNotKept.
+// to be judged against the document as it stands: TestAHeldAnswerIsNotKept. So a
+// held call sent again is judged again, and the hold it finds is the one already
+// open rather than a second card for one write: cmd/gdoc asks WriteKey, which is
+// this memory's own reading of the same write, and
+// TestARetriedHeldWriteKeepsOneHold there is the pin.
 //
 // It is per process and nothing reaches disk, and every method is safe on a nil
 // Memory: TestTheMemoryIsPerProcessAndWritesNothingToDisk and

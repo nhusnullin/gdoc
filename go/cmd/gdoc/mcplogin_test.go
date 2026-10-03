@@ -151,6 +151,25 @@ func loginUntil(t *testing.T, m *mcpLogin, state string) loginAnswer {
 	}
 }
 
+// loginSettled calls login until it reports something other than waiting, and
+// answers that. It is loginUntil for a test about which state a trip settles
+// into rather than about reaching one: a later call would read the token on its
+// own, so only the first answer after the trip ended says anything.
+func loginSettled(t *testing.T, m *mcpLogin) loginAnswer {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		got := callLogin(t, m)
+		if got.Data.State != "waiting" {
+			return got
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("login never settled; it says %+v", got)
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+}
+
 // lockOnDisk is the waiting sign-in as the file holds it, or nil.
 func lockOnDisk(t *testing.T) *auth.LoginLock {
 	t.Helper()
@@ -374,6 +393,81 @@ func TestTheStateMovesFromWaitingToSignedInOrExpired(t *testing.T) {
 			t.Errorf("%d listeners were opened for a sign-in that had already finished", n)
 		}
 	})
+}
+
+// A listener that gave up does not make a signed-in person signed out.
+//
+// The person can finish the sign-in anywhere: a terminal running gdoc auth
+// login writes the same token file this listener was waiting for. So a trip
+// that timed out asks the token the same question the waiting answer asks, and
+// a token newer than this trip started is this sign-in finishing. Without that
+// the next call tells a model the sign-in did not finish and to ask for a fresh
+// link, and the call after it says signed in.
+func TestATimedOutListenerSeesATokenThatArrivedMeanwhile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	stubAccount(t, gapi.Account{Email: "someone@example.com", Name: "Someone"}, nil)
+	tr := &trips{url: testAuthURL, wait: func(context.Context) error {
+		return errors.New("no login callback arrived within the timeout")
+	}}
+	tr.stub(t)
+	m := newMCPLogin(io.Discard)
+	t.Cleanup(m.close)
+
+	if got := callLogin(t, m); got.Data.State != "waiting" {
+		t.Fatalf("the first call is the link: %+v", got)
+	}
+	// Signed in somewhere else while this listener was still open.
+	writeTokenFile(t, dir, signedInToken)
+
+	// The first answer after the listener gave up is the one a chat reads, so
+	// it is the one measured: a later call would find the token on its own.
+	got := loginSettled(t, m)
+	if !got.OK || got.Data.State != "signed in" {
+		t.Fatalf("a token newer than the trip is that sign-in finishing: %+v", got)
+	}
+	if got.Data.Account != "someone@example.com" {
+		t.Errorf("the answer must name the account: %+v", got)
+	}
+}
+
+// A sign-in that finished elsewhere ends this process's listener too.
+//
+// The answer is the same either way, but the port and the lock are not: a
+// listener left waiting holds the loopback port for three more minutes, and the
+// link it handed out would still exchange a code and write a token over the one
+// that just arrived.
+func TestASignInFinishedElsewhereClosesThisListenerAndItsLock(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	stubAccount(t, gapi.Account{Email: "someone@example.com", Name: "Someone"}, nil)
+	// No wait function: the listener waits until somebody closes it.
+	tr := &trips{url: testAuthURL}
+	tr.stub(t)
+	m := newMCPLogin(io.Discard)
+	t.Cleanup(m.close)
+
+	if got := callLogin(t, m); got.Data.State != "waiting" {
+		t.Fatalf("the first call is the link: %+v", got)
+	}
+	writeTokenFile(t, dir, signedInToken)
+
+	got := callLogin(t, m)
+	if !got.OK || got.Data.State != "signed in" {
+		t.Fatalf("a token newer than the trip is that sign-in finishing: %+v", got)
+	}
+	if tr.trip().closes() == 0 {
+		t.Error("the listener waiting on a finished sign-in kept its port")
+	}
+	if lock := lockOnDisk(t); lock != nil {
+		t.Errorf("the finished sign-in left its lock behind: %+v", *lock)
+	}
+	if next := callLogin(t, m); !next.OK || next.Data.State != "signed in" {
+		t.Errorf("the call after it says %+v", next)
+	}
+	if n := tr.count(); n != 1 {
+		t.Errorf("%d listeners were opened, want one", n)
+	}
 }
 
 // Signed in already, nothing waiting: the answer is the account, read through

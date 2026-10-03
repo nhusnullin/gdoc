@@ -67,7 +67,7 @@ func (m *Memory[T]) Recall(tool string, args json.RawMessage, now time.Time) (T,
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.forget(now)
-	one, ok := m.kept[writeKey(tool, args)]
+	one, ok := m.kept[WriteKey(tool, args)]
 	if !ok {
 		return zero, false
 	}
@@ -88,7 +88,7 @@ func (m *Memory[T]) Keep(tool string, args json.RawMessage, answer T, now time.T
 		m.kept = map[string]remembered[T]{}
 	}
 	m.forget(now)
-	m.kept[writeKey(tool, args)] = remembered[T]{answer: answer, at: now}
+	m.kept[WriteKey(tool, args)] = remembered[T]{answer: answer, at: now}
 }
 
 // forget drops every answer older than memoryLife. It runs under the lock, on
@@ -102,7 +102,8 @@ func (m *Memory[T]) forget(now time.Time) {
 	}
 }
 
-// writeKey is the tool and its arguments as one short string.
+// WriteKey is the tool and its arguments as one short string: the identity of
+// one write, which is what "the same write twice" is asked against.
 //
 // The arguments are canonicalised before they are hashed, by decoding and
 // encoding them again, which sorts the properties and drops the spacing. So the
@@ -113,7 +114,13 @@ func (m *Memory[T]) forget(now time.Time) {
 //
 // It is a hash and not the arguments themselves because a propose carries
 // paragraphs, and a session holding ten minutes of them would hold them twice.
-func writeKey(tool string, args json.RawMessage) string {
+//
+// It is exported because two rooms ask the same question of it, this memory and
+// cmd/gdoc's record of the holds a session is keeping, and two readings of
+// "the same write" would disagree about the order of the properties: one of them
+// would then make a second card for a write the other had already held.
+// TestARetriedHeldWriteKeepsOneHold in cmd/gdoc is the pin on that use.
+func WriteKey(tool string, args json.RawMessage) string {
 	canon := []byte(args)
 	var shape any
 	if err := json.Unmarshal(args, &shape); err == nil {

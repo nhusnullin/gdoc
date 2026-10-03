@@ -157,14 +157,29 @@ func (m *mcpLogin) ownTrip(ctx context.Context) (mcp.Result, bool) {
 		if err == nil {
 			return m.signedIn(ctx), true
 		}
+		// A listener that gave up is asked the same question a waiting one is,
+		// because the person can finish the sign-in anywhere: a terminal
+		// running gdoc auth login writes the token this one was waiting for.
+		// Without this, the answer tells a model who is signed in that the
+		// sign-in did not finish, and the call after it says signed in:
+		// TestATimedOutListenerSeesATokenThatArrivedMeanwhile.
+		if auth.SignedInSince(started) {
+			return m.signedIn(ctx), true
+		}
 		return mcpEnvelope(emit.Result{OK: false,
 			Error: "the sign-in did not finish: " + err.Error() + ". Call login again for a fresh link",
 			Data:  mcpLoginData{State: loginExpired, Note: mcpLoginGone},
 		}), true
 	}
 	// The other process may have finished the sign-in while this listener was
-	// still waiting, and a token newer than this trip started is that.
+	// still waiting, and a token newer than this trip started is that. The
+	// listener ends here, port and record together: one left waiting holds the
+	// loopback port for the rest of its three minutes, and the link it handed
+	// out would still exchange a code and write a token over the one that just
+	// arrived.
+	// TestASignInFinishedElsewhereClosesThisListenerAndItsLock.
 	if auth.SignedInSince(started) {
+		m.close()
 		return m.signedIn(ctx), true
 	}
 	return waitingEnvelope(url, "", nil), true

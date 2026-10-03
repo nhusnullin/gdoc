@@ -213,6 +213,22 @@ else
     ok "a release with no template refuses --desktop and installs nothing"
 fi
 
+# A path the manifest cannot name refuses --desktop, and refuses it before the
+# binary is replaced. The ampersand is the one of the four a person meets by
+# accident, because sed reads it in a replacement as the text that matched.
+odd="$work/home&3"
+mkdir -p "$odd"
+if ( cd "$cwd" && HOME="$odd" GDOC_DESKTOP_OPEN="$work/opener" \
+        bash "$stage/install.sh" --desktop ) > "$work/oddpath.log" 2>&1; then
+    fail "a path carrying an ampersand installed the extension anyway"
+elif [ -e "$odd/.local/bin/gdoc" ]; then
+    fail "a path the manifest cannot name replaced the binary before it refused: $(cat "$work/oddpath.log")"
+elif ! grep -q "ampersand" "$work/oddpath.log"; then
+    fail "the refusal does not name the character: $(cat "$work/oddpath.log")"
+else
+    ok "a path carrying an ampersand refuses --desktop and installs nothing"
+fi
+
 # --------------------------------------------------------------------------
 # The root installer, from a checkout
 # --------------------------------------------------------------------------

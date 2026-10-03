@@ -17,7 +17,11 @@
 // TestTheHeldAnswerNamesTheRuleTheValueAndTheText.
 //
 // And it keeps the hold for thirty minutes, so the confirm tool in
-// mcprelease.go has something to release: TestAHoldLivesThirtyMinutes.
+// mcprelease.go has something to release: TestAHoldLivesThirtyMinutes. One write
+// is one hold there: a call the rules stopped and a model sent again finds the
+// card already open rather than a second one, because two cards for one write
+// could both be released once the write memory's ten minutes have passed:
+// TestARetriedHeldWriteKeepsOneHold.
 
 package main
 
@@ -89,17 +93,36 @@ func (h *mcpHolds) listIn(l mcpLister, confirm func(chat.Hold) mcp.Tool) {
 	h.lister, h.confirm = l, confirm
 }
 
-// keep puts one hold in the session's record, under the id its answer named, and
-// registers the one tool that can release it.
-func (h *mcpHolds) keep(held chat.Hold) {
+// keep puts one hold in the session's record, under the id its answer named,
+// registers the one tool that can release it, and answers the hold to report.
+//
+// A write this session is already holding is held once. The held answer is not
+// remembered, on purpose, so the same call again is judged again; and a second
+// hold for it would be a second card for one write, which the write memory
+// covers for its ten minutes and not for the thirty a hold lives. Past that the
+// person could approve the same words twice. So the hold already open is
+// answered instead, under the id and the words the card in front of them
+// carries: TestARetriedHeldWriteKeepsOneHold.
+//
+// The same write is chat.WriteKey's reading of it, which is the write memory's
+// own, so the two cannot disagree about the order of the properties.
+func (h *mcpHolds) keep(held chat.Hold) chat.Hold {
+	key := chat.WriteKey(held.Tool, held.Args)
 	h.mu.Lock()
+	for _, open := range h.byID {
+		if chat.WriteKey(open.Tool, open.Args) == key {
+			h.mu.Unlock()
+			return open
+		}
+	}
 	h.byID[held.ID] = held
 	lister, confirm := h.lister, h.confirm
 	h.mu.Unlock()
 	if lister == nil || confirm == nil {
-		return
+		return held
 	}
 	lister.Add(confirm(held))
+	return held
 }
 
 // hold is the hold with this id as it stands now, or nothing: an id this session
@@ -176,8 +199,9 @@ func mcpJudge(c mcpCommand, args json.RawMessage, target mcpTarget, ch *mcpChat)
 	// The call as it arrived, so a release posts exactly what was held rather
 	// than whatever the model sends with the release.
 	held.Args = args
-	ch.holds.keep(*held)
-	return mcpHeldAnswer(*held), true
+	// And the answer is the hold the session kept, which is this one unless the
+	// same write is already held: keep says which.
+	return mcpHeldAnswer(ch.holds.keep(*held)), true
 }
 
 // holdData is what a held write answers with: nothing was sent, and the facts a
@@ -309,6 +333,15 @@ func mcpWriteOf(c mcpCommand, args json.RawMessage, target mcpTarget, led *chat.
 		return chat.Write{}, err
 	}
 	w.Text = mcpItemWords(item)
+	// An item with nothing said in it is refused here rather than judged. The
+	// command underneath refuses it too, so nothing is lost; what is gained is
+	// that no card is made of it. A hold whose text is empty registers a confirm
+	// tool whose text argument cannot be sent back, because an empty text is
+	// refused, so the person would be shown a card nothing can release:
+	// TestAWriteWithNoWordsIsRefusedRatherThanHeld.
+	if strings.TrimSpace(w.Text) == "" {
+		return chat.Write{}, fmt.Errorf("the one item of %s says nothing, so there is nothing to write", f.prop)
+	}
 	// What a propose takes out is counted here, because the count is about the
 	// document and the item together, and the rule is about the number alone.
 	if c.tool == "propose" {
