@@ -41,9 +41,10 @@ type Comment struct {
 
 // OwnReplies is this process's record of what gdoc wrote into a document.
 //
-// It is an interface so the facts can be written before the ledger that answers
-// them is (Task 13 of the milestone 14 run 2 plan). A nil OwnReplies is a
-// process that has written nothing, which is the honest state of one that has
+// Ledger is what answers it in a session. It stays an interface because the
+// facts ask one question of the record and nothing else, so a test holds the
+// checks with a map and the session hands in its own ledger. A nil OwnReplies is
+// a process that has written nothing, which is the honest state of one that has
 // just started: every robot mark it then sees is somebody else's.
 type OwnReplies interface {
 	// Wrote answers whether this process wrote the comment or reply with this id.

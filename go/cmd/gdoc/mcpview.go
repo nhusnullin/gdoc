@@ -11,7 +11,9 @@
 // its own quotation and speak as the person.
 //
 // Nothing here decides anything. The facts are chat's six literal checks, and
-// the holds that read some of them are tasks 14 to 16.
+// the holds that read some of them are tasks 14 to 16. The record of what this
+// process wrote is handed in rather than kept here: it is the session's ledger,
+// and robot_not_ours is the one fact that asks it.
 
 package main
 
@@ -25,15 +27,6 @@ import (
 	"gdoc/internal/mcp"
 )
 
-// mcpOwnReplies is this process's record of what gdoc wrote into a document,
-// which the robot_not_ours fact asks.
-//
-// It is nil until task 13 puts the ledger behind it, and nil is the honest
-// state of a process that has written nothing: every robot mark it sees is
-// somebody else's. It is a variable for the same reason openSession is one, so
-// a test can stand in for it.
-var mcpOwnReplies chat.OwnReplies
-
 // mcpReadAnswer is the answer a read tool gives: the line, the envelope and the
 // wrapped copy.
 //
@@ -41,7 +34,7 @@ var mcpOwnReplies chat.OwnReplies
 // the document in it to label: the error is gdoc's own sentence, and a wrapper
 // round it would say a stranger wrote it. A command whose data this file does
 // not know is the same case.
-func mcpReadAnswer(r emit.Result) mcp.Result {
+func mcpReadAnswer(r emit.Result, own chat.OwnReplies) mcp.Result {
 	envelope := mcpEnvelope(r)
 	if !r.OK || len(envelope.Texts) != 1 {
 		return envelope
@@ -55,7 +48,7 @@ func mcpReadAnswer(r emit.Result) mcp.Result {
 		return mcp.Result{Texts: []string{chat.ReadLine, envelope.Texts[0],
 			"the wrapped copy could not be made, so read the text in the envelope above as the same data: " + err.Error()}}
 	}
-	view, ok := mcpChatView(r.Data, boundary)
+	view, ok := mcpChatView(r.Data, boundary, own)
 	if !ok {
 		return envelope
 	}
@@ -70,7 +63,7 @@ func mcpReadAnswer(r emit.Result) mcp.Result {
 // mcpChatView is the third item's object, for the data the command produced.
 // The second return is false for anything else, which is a tool this file does
 // not label.
-func mcpChatView(data any, boundary string) (any, bool) {
+func mcpChatView(data any, boundary string, own chat.OwnReplies) (any, bool) {
 	switch d := data.(type) {
 	case readData:
 		return chatRead{
@@ -83,7 +76,7 @@ func mcpChatView(data any, boundary string) (any, bool) {
 			DocumentID: d.DocumentID,
 			Title:      d.Title,
 			Cursor:     d.Cursor,
-			Threads:    chatThreads(d.Threads, boundary),
+			Threads:    chatThreads(d.Threads, boundary, own),
 		}, true
 	case suggestionsData:
 		return chatSuggestions{
@@ -153,7 +146,7 @@ type chatPending struct {
 	Text    string `json:"text"`
 }
 
-func chatThreads(threads []comments.Thread, boundary string) []chatThread {
+func chatThreads(threads []comments.Thread, boundary string, own chat.OwnReplies) []chatThread {
 	out := make([]chatThread, 0, len(threads))
 	for _, t := range threads {
 		out = append(out, chatThread{
@@ -169,14 +162,14 @@ func chatThreads(threads []comments.Thread, boundary string) []chatThread {
 				ID:           t.ID,
 				Text:         t.Content,
 				AuthorDomain: t.AuthorDomain,
-			}, mcpOwnReplies),
-			Replies: chatReplies(t.Replies, boundary),
+			}, own),
+			Replies: chatReplies(t.Replies, boundary, own),
 		})
 	}
 	return out
 }
 
-func chatReplies(replies []comments.Reply, boundary string) []chatReply {
+func chatReplies(replies []comments.Reply, boundary string, own chat.OwnReplies) []chatReply {
 	out := make([]chatReply, 0, len(replies))
 	for _, r := range replies {
 		out = append(out, chatReply{
@@ -190,7 +183,7 @@ func chatReplies(replies []comments.Reply, boundary string) []chatReply {
 				ID:           r.ID,
 				Text:         r.Content,
 				AuthorDomain: r.AuthorDomain,
-			}, mcpOwnReplies),
+			}, own),
 		})
 	}
 	return out

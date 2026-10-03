@@ -425,7 +425,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 
 			one.wire(t, true)
 			guideCode := callCode(t)
-			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, guideCode)
+			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, chatWith(guideCode))
 			if len(res.Texts) != one.items {
 				t.Fatalf("the answer carries %d text items, want %d: %v", len(res.Texts), one.items, res.Texts)
 			}
@@ -530,10 +530,10 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
 	}})
 	code := callCode(t)
-	mcpRun(context.Background(), reply, withCode(t, code, oneReply), nilWriter{}, code)
+	mcpRun(context.Background(), reply, withCode(t, code, oneReply), nilWriter{}, chatWith(code))
 	stubWire(t, &fakeWire{})
 	mcpRun(context.Background(), reply, withCode(t, code,
-		strings.Replace(oneReply, `"🤖 yes"`, `"not the robot"`, 1)), nilWriter{}, code)
+		strings.Replace(oneReply, `"🤖 yes"`, `"not the robot"`, 1)), nilWriter{}, chatWith(code))
 	if after := countCallDirs(t); after != before {
 		t.Errorf("%d call directories before and %d after, so a call left one behind", before, after)
 	}
@@ -603,9 +603,9 @@ func TestAGrantFromOneCallIsAbsentFromTheNext(t *testing.T) {
 
 	code := callCode(t)
 	first := stubSession(t, docsAndComments(t))
-	mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, code)
+	mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, chatWith(code))
 	second := stubSession(t, docsAndComments(t))
-	mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+otherDocID+`"}`), nilWriter{}, code)
+	mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+otherDocID+`"}`), nilWriter{}, chatWith(code))
 
 	if first.policy == nil || second.policy == nil {
 		t.Fatal("both calls open a policy")

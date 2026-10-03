@@ -73,7 +73,7 @@ func TestAWrongTitleIsRefused(t *testing.T) {
 			f := stubWire(t, &fakeWire{answers: pinAnswers(t)})
 
 			code := callCode(t)
-			res := mcpRun(context.Background(), mcpToolNamed(t, tool), withCode(t, code, args), nilWriter{}, code)
+			res := mcpRun(context.Background(), mcpToolNamed(t, tool), withCode(t, code, args), nilWriter{}, chatWith(code))
 			env := envelopeOf(t, res.Texts)
 			if env.OK {
 				t.Fatalf("%s answered ok for a call naming another document: %q", tool, env.Error)
@@ -103,7 +103,7 @@ func TestAWrongTitleIsRefused(t *testing.T) {
 			stubWire(t, &fakeWire{answers: pinAnswers(t)})
 
 			code := callCode(t)
-			res := mcpRun(context.Background(), mcpToolNamed(t, tool), withCode(t, code, args), nilWriter{}, code)
+			res := mcpRun(context.Background(), mcpToolNamed(t, tool), withCode(t, code, args), nilWriter{}, chatWith(code))
 			env := envelopeOf(t, res.Texts)
 			if strings.Contains(env.Error, titleRefusal) {
 				t.Errorf("%s names the document's own title and was refused by it: %q", tool, env.Error)
@@ -118,7 +118,7 @@ func TestAWrongTitleIsRefused(t *testing.T) {
 	stubWire(t, &fakeWire{answers: pinAnswers(t)})
 	code := callCode(t)
 	res := mcpRun(context.Background(), mcpToolNamed(t, "annotate"), withCode(t, code,
-		`{"url":"`+fixtureDocID+`","annotations":[{"quoted":"reviewed annually","why":"b"}]}`), nilWriter{}, code)
+		`{"url":"`+fixtureDocID+`","annotations":[{"quoted":"reviewed annually","why":"b"}]}`), nilWriter{}, chatWith(code))
 	if env := envelopeOf(t, res.Texts); env.OK || !strings.Contains(env.Error, "title") {
 		t.Errorf("a write with no title must be refused naming it: %v %q", env.OK, env.Error)
 	}
@@ -146,7 +146,7 @@ func TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses(t *testing.T) {
 		args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 			`"comment_id":"AAAA1111","thread_quote":` + mustJSON(t, good) + `,"body":"` + chatBody + `"}`
 		code := callCode(t)
-		res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, code)
+		res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, chatWith(code))
 		env := envelopeOf(t, res.Texts)
 		if !env.OK {
 			t.Errorf("thread_quote %q names the thread and was refused: %q", good, env.Error)
@@ -164,7 +164,7 @@ func TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses(t *testing.T) {
 	args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 		`"comment_id":"AAAA1111","thread_quote":"ai? which register is this","body":"` + chatBody + `"}`
 	code := callCode(t)
-	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, code)
+	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, chatWith(code))
 	env := envelopeOf(t, res.Texts)
 	if env.OK {
 		t.Fatal("a thread_quote naming other words must be refused")
@@ -186,7 +186,7 @@ func TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses(t *testing.T) {
 	args = `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 		`"comment_id":"ZZZZ9999","thread_quote":"` + chatQuote + `","body":"` + chatBody + `"}`
 	code = callCode(t)
-	res = mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, code)
+	res = mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, chatWith(code))
 	if env := envelopeOf(t, res.Texts); env.OK || !strings.Contains(env.Error, "comment_id") {
 		t.Errorf("a comment_id the document does not carry must be refused naming it: %v %q", env.OK, env.Error)
 	}

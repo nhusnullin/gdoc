@@ -6,8 +6,10 @@ import (
 	"testing"
 )
 
-// wrote is the record of what this process wrote, as Task 13's ledger will
-// answer it. A stub here, so the facts can land before the ledger does.
+// wrote is the record of what this process wrote, as a map: the one question
+// OwnReplies asks, answered here with a literal so a test about the checks is
+// about the checks. A session hands in its Ledger instead, which
+// TestRobotNotOursUsesTheLedger holds.
 type wrote map[string]bool
 
 func (w wrote) Wrote(id string) bool { return w[id] }

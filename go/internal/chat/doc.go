@@ -87,9 +87,44 @@
 // than holding it, and two readings of the same rune tables would drift:
 // TestHasHiddenCharsIsTheSameCheckTheFactReports.
 //
+// # The ledger of what this process read and wrote
+//
+// Every hold rule is a question about this session rather than about the call in
+// front of it: whether a link in a write was already in the document, whether a
+// run of words came out of a comment a stranger left, whether the model has been
+// reading another document, how many writes have gone into this one in the last
+// minute. Ledger is what answers them.
+//
+// A read is kept with the document, its title, the instant and what the tool
+// fetched, and a write with the document, the tool and the instant:
+// TestEveryReadIsRecordedWithItsTitleTimeAndOthersTexts,
+// TestEveryWriteAndOwnReplyIsRecorded, and
+// TestEachReadToolRecordsItsReadInTheLedger in cmd/gdoc over all three read
+// tools. A text read and a comment listing fetch different things, so the ledger
+// answers for the document and not for one read of it: a listing carrying no text
+// does not take away what a text read fetched,
+// TestAReadKeepsTheDocumentsBodyText. A write reads its target on the call and
+// that read is kept too, so the rules always have the target's own words:
+// TestAWriteReadsItsTargetFreshAndRecordsIt in cmd/gdoc.
+//
+// The ids of what gdoc wrote are kept beside the writes, and they are what
+// robot_not_ours asks: TestRobotNotOursUsesTheLedger, and
+// TestAReplyThisSessionWroteIsNotRobotNotOurs in cmd/gdoc through the answer a
+// model reads. A *Ledger is the OwnReplies the facts were written against, and
+// the stub is gone.
+//
+// It is per process and nothing reaches disk, which is the rule a grant lives by
+// as well: TestTheLedgerIsPerProcessAndWritesNothingToDisk, which reads the
+// file's own imports. Two goroutines may record at once, because the login
+// listener answers beside the worker:
+// TestTheLedgerTakesTwoRecordersAtOnce. Every method is safe on a nil Ledger,
+// which is a process that has recorded nothing.
+//
+// Nothing here judges. The ledger is read by the hold rules and by nothing else,
+// and no answer a model reads carries a word of it.
+//
 // # What is not here yet
 //
-// The ledger, the hold rules, the confirm tools, the write memory and the
-// trusted domains are tasks 13 to 18 of
-// docs/plans/2026-10-03-gdoc-v2-m14b-server.md.
+// The hold rules, the confirm tools, the write memory and the trusted domains are
+// tasks 14 to 18 of docs/plans/2026-10-03-gdoc-v2-m14b-server.md.
 package chat

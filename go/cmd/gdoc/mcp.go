@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"gdoc/internal/chat"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
 )
@@ -94,16 +93,17 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	lg := newMCPLogin(errOut)
 	defer lg.close()
 
-	// The code guide hands out, made once for this session. A session that
-	// could not make one is a session where every tool but guide and login
-	// refuses, so it is said here rather than call by call.
-	code, err := chat.NewCode()
+	// What this session keeps across its calls: the code guide hands out, and
+	// the ledger of what it read and wrote. A session that could not make a code
+	// is a session where every tool but guide and login refuses, so it is said
+	// here rather than call by call.
+	ch, err := newMCPChat()
 	if err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
 	}
 
-	s := mcp.New(mcpInfo(), mcpTools(opts, errOut, lg, code), errOut)
+	s := mcp.New(mcpInfo(), mcpTools(opts, errOut, lg, ch), errOut)
 	if err := s.Serve(ctx, in, out); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -156,8 +156,8 @@ const noArguments = `{"type":"object","properties":{}}`
 //
 // Every tool but login and guide takes the session's code, and guide is the
 // only place it is given out: TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode.
-func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, code *chat.Code) []mcp.Tool {
-	out := mcpCommandTools(errOut, code)
+func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
+	out := mcpCommandTools(errOut, ch)
 	return append(out,
 		mcp.Tool{
 			Name:        "login",
@@ -169,7 +169,7 @@ func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, code *chat.Code) 
 				return lg.answer(ctx)
 			},
 		},
-		mcpGuideTool(opts, code))
+		mcpGuideTool(opts, ch.code))
 }
 
 // cmdMCP is the table entry's run, and it refuses. mcp is routed in main

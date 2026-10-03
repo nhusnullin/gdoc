@@ -44,7 +44,7 @@ func readAnswer(t *testing.T, tool string) []string {
 	stubSession(t, docsAndComments(t))
 	code := callCode(t)
 	res := mcpRun(context.Background(), mcpToolNamed(t, tool),
-		withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, code)
+		withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, chatWith(code))
 	if res.IsError {
 		t.Fatalf("%s answered an error: %v", tool, res.Texts)
 	}

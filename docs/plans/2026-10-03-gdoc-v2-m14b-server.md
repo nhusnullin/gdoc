@@ -899,17 +899,33 @@ Serves decision 16 (the ledger row).
 **Files:**
 - Create: `go/internal/chat/ledger.go`, `go/internal/chat/ledger_test.go`
 - Modify: `go/cmd/gdoc/mcptools.go`
+- ➕ Create: `go/cmd/gdoc/mcpledger_test.go`, because the wiring tests belong
+      beside the wiring and `mcptools_test.go` is over 800 lines
+- ➕ Modify: `go/cmd/gdoc/mcp.go`, `go/cmd/gdoc/mcpview.go`,
+      `go/internal/chat/doc.go`, `go/internal/chat/facts.go`
 
-- [ ] Test first, `TestEveryReadIsRecordedWithItsTitleTimeAndOthersTexts`.
-- [ ] Test, `TestEveryWriteAndOwnReplyIsRecorded`.
-- [ ] Test, `TestTheLedgerIsPerProcessAndWritesNothingToDisk`.
-- [ ] Test, `TestRobotNotOursUsesTheLedger`: the ledger replaces Task 11's
+- [x] Test first, `TestEveryReadIsRecordedWithItsTitleTimeAndOthersTexts`.
+- [x] Test, `TestEveryWriteAndOwnReplyIsRecorded`.
+- [x] Test, `TestTheLedgerIsPerProcessAndWritesNothingToDisk`.
+- [x] Test, `TestRobotNotOursUsesTheLedger`: the ledger replaces Task 11's
       `OwnReplies` stub.
-- [ ] Test, `TestAReadKeepsTheDocumentsBodyText` and
+- [x] Test, `TestAReadKeepsTheDocumentsBodyText` and
       `TestAWriteReadsItsTargetFreshAndRecordsIt`.
-- [ ] Implement.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): a per-process ledger of reads and writes, used only to hold or refuse"`
+- [x] Implement.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): a per-process ledger of reads and writes, used only to hold or refuse"`
+- ➕ `mcpChat` is what a session keeps across its calls, the code and the
+      ledger together, and it is what `mcpRun` takes: tasks 15 to 18 add to that
+      struct rather than to every signature again.
+- ➕ The `mcpOwnReplies` package variable of Task 11 is gone. The record is
+      handed through `mcpReadAnswer` as a `chat.OwnReplies`, which is the
+      session's ledger, and `TestAReplyThisSessionWroteIsNotRobotNotOurs` holds
+      it through the answer a model reads.
+- ➕ `TestEachReadToolRecordsItsReadInTheLedger` and
+      `TestAReadKeepsTheWordsItsOwnToolFetched` hold the wiring: every one of
+      the three read tools records, and which words each keeps.
+- ➕ `TestTheLedgerTakesTwoRecordersAtOnce`, because the login listener answers
+      beside the worker and the race flag is the assertion.
 
 ### Task 14: the hold rules
 

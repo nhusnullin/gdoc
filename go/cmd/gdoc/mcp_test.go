@@ -195,7 +195,7 @@ func TestStdoutCarriesOnlyJSONRPC(t *testing.T) {
 // specification's own order, which is the order a review runs in.
 func TestTheSixTableCommandsAreOffered(t *testing.T) {
 	var names []string
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), callCode(t)) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), callChat(t)) {
 		names = append(names, tool.Name)
 	}
 	want := []string{"read", "comments", "suggestions", "reply", "annotate", "propose", "login", "guide"}

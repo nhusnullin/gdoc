@@ -29,9 +29,13 @@
 // the title and the thread's opening words; fileBody holds one item and no field
 // the card does not draw.
 //
-// Nothing else here decides anything about a document. The ledger and the holds
-// are tasks 13 to 18 of the milestone 14 run 2 plan, and they wrap these calls
-// rather than changing them.
+// Every read a tool makes goes into the session's ledger, the write tool's own
+// read of its target included, and so does every write that happened and the id
+// of what it wrote: mcpRecordRead and mcpRecordWrite. Nothing here reads the
+// ledger back. It is there for the hold rules, which are tasks 14 to 18 of the
+// milestone 14 run 2 plan and wrap these calls rather than changing them.
+//
+// Nothing else here decides anything about a document.
 
 package main
 
@@ -45,6 +49,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"gdoc/internal/auth"
 	"gdoc/internal/chat"
@@ -52,7 +57,31 @@ import (
 	"gdoc/internal/docs"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
+	"gdoc/internal/plaintext"
+	"gdoc/internal/view"
 )
+
+// mcpChat is what one session keeps across its calls: the code guide hands out,
+// and the ledger of what this process read and wrote.
+//
+// Both are made when the session starts and die with it, and neither reaches
+// disk. They travel together because every call needs both: the code before it
+// does anything, and the ledger because what it read and wrote is what the hold
+// rules of tasks 14 to 17 ask about.
+type mcpChat struct {
+	code   *chat.Code
+	ledger *chat.Ledger
+}
+
+// newMCPChat is one session's own. The error is the random source failing, which
+// a session cannot start without.
+func newMCPChat() (*mcpChat, error) {
+	code, err := chat.NewCode()
+	if err != nil {
+		return nil, err
+	}
+	return &mcpChat{code: code, ledger: chat.NewLedger()}, nil
+}
 
 // mcpNotSignedIn is what a Google tool answers when there is no token file.
 //
@@ -264,7 +293,7 @@ func mcpCommands() []mcpCommand {
 
 // mcpCommandTools is the six as internal/mcp sees them. Each Call builds the
 // line, runs the command and hands back the envelope.
-func mcpCommandTools(errOut io.Writer, code *chat.Code) []mcp.Tool {
+func mcpCommandTools(errOut io.Writer, ch *mcpChat) []mcp.Tool {
 	list := mcpCommands()
 	out := make([]mcp.Tool, 0, len(list))
 	for _, c := range list {
@@ -276,7 +305,7 @@ func mcpCommandTools(errOut io.Writer, code *chat.Code) []mcp.Tool {
 			Schema:      json.RawMessage(c.schema),
 			ReadOnly:    c.readOnly,
 			Call: func(ctx context.Context, args json.RawMessage) mcp.Result {
-				return mcpRun(ctx, c, args, errOut, code)
+				return mcpRun(ctx, c, args, errOut, ch)
 			},
 		})
 	}
@@ -328,12 +357,12 @@ func mcpCode(code *chat.Code, args json.RawMessage) error {
 // The directory is removed on every path out, the panic one included, because
 // safeDispatch turns a panic into an envelope and the deferred remove runs
 // either way.
-func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.Writer, code *chat.Code) mcp.Result {
+func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.Writer, ch *mcpChat) mcp.Result {
 	// Before anything else: a call without this session's code is a call made
 	// before the rules arrived, and the answer is the one sentence that fixes
 	// it. It is asked first because it costs nothing and because it is true
 	// whether or not anybody is signed in.
-	if err := mcpCode(code, args); err != nil {
+	if err := mcpCode(ch.code, args); err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
 	}
 
@@ -354,8 +383,9 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 	}
 	// Then the document itself, for a write. The call names its target twice,
 	// and the second naming is the one a person agreed to: mcpPin reads the
-	// document and refuses a call that drifted onto another one.
-	if err := mcpPin(ctx, c, args); err != nil {
+	// document and refuses a call that drifted onto another one. The read it
+	// makes goes into the ledger, because the rules want the target's own words.
+	if err := mcpPin(ctx, c, args, ch.ledger); err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
 	}
 
@@ -368,9 +398,80 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 	// wrapped: mcpview.go holds what that is and why. A write answers with the
 	// envelope alone, because what it carries is what gdoc did.
 	if c.readOnly {
-		return mcpReadAnswer(r)
+		mcpRecordRead(ch.ledger, r, now())
+		return mcpReadAnswer(r, ch.ledger)
 	}
+	mcpRecordWrite(ch.ledger, c.tool, r, now())
 	return mcpEnvelope(r)
+}
+
+// mcpRecordRead keeps what a read tool brought back: the document, its title,
+// the instant, the document's own words where the tool fetched them, and every
+// comment and reply with gdoc's own marked as gdoc's.
+//
+// A refused read is not recorded, because nothing came back to record. What is
+// kept is used by nothing here: the ledger is read by the hold rules of tasks 14
+// to 17, and a fact about a document is never a judgement about it.
+func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time) {
+	if !r.OK {
+		return
+	}
+	switch d := r.Data.(type) {
+	case readData:
+		led.RecordRead(chat.Read{DocID: d.DocumentID, Title: d.Title, At: at, Text: d.Text})
+	case commentsData:
+		led.RecordRead(chat.Read{DocID: d.DocumentID, Title: d.Title, At: at,
+			Remarks: mcpRemarks(d.Threads)})
+	case suggestionsData:
+		// A suggestion is nobody's comment and the listing carries no title, so
+		// what this read says is that the model looked at this document now,
+		// which is what the Focus rule asks.
+		led.RecordRead(chat.Read{DocID: d.DocumentID, At: at})
+	}
+}
+
+// mcpRemarks is a comment listing as the ledger keeps it: every thread and every
+// reply, flattened, each saying which thread it sits in and whether gdoc wrote
+// it. ByGdoc is the robot prefix on the text, which internal/comments reads, and
+// never the account: identity is never a gate.
+func mcpRemarks(threads []comments.Thread) []chat.Remark {
+	out := make([]chat.Remark, 0, len(threads))
+	for _, t := range threads {
+		out = append(out, chat.Remark{ID: t.ID, ThreadID: t.ID, Text: t.Content,
+			ByGdoc: strings.HasPrefix(strings.TrimLeft(t.Content, " \t\r\n"), plaintext.Robot)})
+		for _, reply := range t.Replies {
+			out = append(out, chat.Remark{ID: reply.ID, ThreadID: t.ID, Text: reply.Content,
+				ByGdoc: reply.ByGdoc})
+		}
+	}
+	return out
+}
+
+// mcpRecordWrite keeps the write a tool made and the ids of what it wrote.
+//
+// Only a write that happened is recorded: a refused call wrote nothing, and
+// counting it would hold the next call for a burst that never reached a
+// document. The ids are how a reply gdoc wrote is told from a robot mark
+// somebody else left, which is the one thing the marker cannot say by itself.
+func mcpRecordWrite(led *chat.Ledger, tool string, r emit.Result, at time.Time) {
+	if !r.OK {
+		return
+	}
+	switch d := r.Data.(type) {
+	case replyData:
+		led.RecordWrite(chat.Written{DocID: d.DocumentID, Tool: tool, At: at})
+		led.RecordOwn(d.ReplyID)
+	case annotateData:
+		led.RecordWrite(chat.Written{DocID: d.DocumentID, Tool: tool, At: at})
+		for _, one := range d.Annotations {
+			led.RecordOwn(one.CommentID)
+		}
+	case proposeData:
+		led.RecordWrite(chat.Written{DocID: d.DocumentID, Tool: tool, At: at})
+		for _, one := range d.Proposals {
+			led.RecordOwn(one.CommentID)
+		}
+	}
 }
 
 // mcpPin is the read a write makes of the document it is about to write into,
@@ -394,7 +495,7 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 // A read tool pins nothing: it writes nothing, and asking it to name the title
 // of a document a person has only just pasted a link to would refuse the one
 // call that finds out what the title is.
-func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage) error {
+func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.Ledger) error {
 	if !slices.Contains(c.checks, titleProp) {
 		return nil
 	}
@@ -420,6 +521,11 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage) error {
 	if err != nil {
 		return err
 	}
+	// The read happened, so it is recorded, whatever the title turns out to say.
+	// The document's own words are what the Link rule asks about, and a write
+	// refused by its title still read them.
+	text, _ := view.Text(d)
+	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Text: text})
 	if strings.TrimSpace(title) != strings.TrimSpace(d.Title) {
 		return fmt.Errorf("%s must be the document's own title, which is %q, and this call said %q. "+
 			"Read the document and say its title to the person before writing into it",
@@ -428,13 +534,13 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage) error {
 	if !slices.Contains(c.checks, quoteProp) {
 		return nil
 	}
-	return mcpPinThread(ctx, r, d, given)
+	return mcpPinThread(ctx, r, d, given, led)
 }
 
 // mcpPinThread is the second half of the pin, for the one tool that writes into
 // a thread rather than into the document's own words: the thread named by id
 // has to be the thread named by its opening words.
-func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[string]json.RawMessage) error {
+func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[string]json.RawMessage, led *chat.Ledger) error {
 	quote, err := mcpRequired(given, quoteProp)
 	if err != nil {
 		return err
@@ -447,6 +553,11 @@ func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[str
 	if err != nil {
 		return err
 	}
+	// The listing is recorded as its own read: a reply is judged against the
+	// words of the thread it goes into, and this is the only read of them the
+	// call makes.
+	threads, _ := comments.Threads(raws, d)
+	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Remarks: mcpRemarks(threads)})
 	for _, raw := range raws {
 		if raw.ID != id {
 			continue

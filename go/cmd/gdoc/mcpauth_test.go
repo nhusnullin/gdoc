@@ -108,7 +108,7 @@ func TestNoTokenMakesEveryGoogleToolAnswerTheLoginHint(t *testing.T) {
 			o.stub(t)
 
 			code := callCode(t)
-			res := mcpRun(context.Background(), c, withCode(t, code, args[c.tool]), nilWriter{}, code)
+			res := mcpRun(context.Background(), c, withCode(t, code, args[c.tool]), nilWriter{}, chatWith(code))
 			env := envelopeOf(t, res.Texts)
 			if env.OK {
 				t.Errorf("%s answered ok with nobody signed in", c.tool)
@@ -147,7 +147,7 @@ func TestABrokenTokenFileIsNamedNotTreatedAsSignedOut(t *testing.T) {
 		}
 	}
 	code := callCode(t)
-	res := mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, code)
+	res := mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, chatWith(code))
 	env := envelopeOf(t, res.Texts)
 	if env.OK {
 		t.Error("a token file nothing can read answered ok")

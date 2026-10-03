@@ -23,6 +23,19 @@ func callCode(t *testing.T) *chat.Code {
 	return code
 }
 
+// chatWith is one session's chat state, for a test that already has the code:
+// that code, and a ledger of its own.
+func chatWith(code *chat.Code) *mcpChat {
+	return &mcpChat{code: code, ledger: chat.NewLedger()}
+}
+
+// callChat is a whole session of a test's own: a code standing for the one guide
+// handed out, and an empty ledger.
+func callChat(t *testing.T) *mcpChat {
+	t.Helper()
+	return chatWith(callCode(t))
+}
+
 // withCode puts the code into an arguments object a test wrote as a literal,
 // which is how a model sends one: the code beside the rest.
 func withCode(t *testing.T, code *chat.Code, args string) json.RawMessage {
@@ -84,7 +97,7 @@ func TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode(t *testing.T) {
 				string(withCode(t, stale, args[c.tool])),
 				strings.Replace(args[c.tool], "{", `{"code":7,`, 1),
 			} {
-				res := mcpRun(context.Background(), c, json.RawMessage(bad), nilWriter{}, code)
+				res := mcpRun(context.Background(), c, json.RawMessage(bad), nilWriter{}, chatWith(code))
 				env := envelopeOf(t, res.Texts)
 				if env.OK {
 					t.Errorf("%s answered ok for %s", c.tool, bad)
@@ -104,7 +117,7 @@ func TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode(t *testing.T) {
 
 	// The two that need no code, so the rules can arrive before anything else
 	// does and a person with no token can still sign in.
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), code) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name != "guide" {
 			continue
 		}
@@ -124,7 +137,7 @@ func TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode(t *testing.T) {
 // schemaOf is one tool's schema as the client reads it.
 func schemaOf(t *testing.T, name string, code *chat.Code) string {
 	t.Helper()
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), code) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name == name {
 			return string(tool.Schema)
 		}
@@ -215,7 +228,7 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	code := callCode(t)
 
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), code) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name != "guide" {
 			continue
 		}
@@ -244,7 +257,7 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 
 	// The setting this process was started with is read from the running
 	// server, never from the repository.
-	for _, tool := range mcpTools(mcpOptions{trustedDomains: "example.com"}, io.Discard, newMCPLogin(io.Discard), code) {
+	for _, tool := range mcpTools(mcpOptions{trustedDomains: "example.com"}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name != "guide" {
 			continue
 		}
@@ -281,7 +294,7 @@ func TestTheEmbeddedCoreIsTheSkillsCore(t *testing.T) {
 func TestTheChatHeaderNamesOnlyToolsThatExist(t *testing.T) {
 	code := callCode(t)
 	tools := map[string]bool{}
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), code) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		tools[tool.Name] = true
 	}
 	// The words in the header that are backticked and are no tool: the one
