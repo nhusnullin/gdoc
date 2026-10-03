@@ -497,8 +497,26 @@
 // and no result line claims a run that did not finish:
 // TestAPanicInAnUpdateStopsTheSpinner.
 //
+// The terminal list is a box internal/panel draws, titled update and labelled
+// with the gdoc that is running and the one the run is taking once it has
+// chosen one: TestTheUpdateScreensAreTheirRecordedBytes records the six ways
+// a run ends, and TestTheTopBorderNamesTheVersionsOfTheRun the label. A step
+// name sits in the left cell behind its mark, and what is known about it in
+// the right one. The marks are the palette's roles, with a muted ring for a
+// step nothing has reached yet: TestTheStepMarksAreTheirRolesOnATerminal,
+// and the ring is the terminal's alone, because a plain line is written when
+// its step ends: TestThePendingRingIsTheTerminalsAlone. Anything too wide for
+// its cell is wrapped into lines that fit, a word with no space in it cut
+// where the line ends and nothing shortened:
+// TestALongReasonWrapsInsideTheBoxAndIsNeverShortened. Under the box a
+// terminal reads the run and, where one was written, the Claude Desktop
+// extension on a line of its own, and a pipe reads the one line it always
+// read: TestTheExtensionIsItsOwnLineOnATerminalAndOneLineOnAPipe, with
+// TestAFailedRunHasNoLineUnderTheBox on the run that says nothing.
+//
 // Only what happened is drawn. A failed step carries its reason on the next
-// line and the steps after it are not drawn at all:
+// plain line, and in the cell its detail was in on a terminal, and the steps
+// after it are not drawn at all:
 // TestAFailedStepIsMarkedAndTheRestAreNotDrawn and
 // TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne. The download and the
 // steps after it are planned only when the decision is to install:

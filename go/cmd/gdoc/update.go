@@ -274,11 +274,11 @@ const (
 // draws over the crash text safeDispatch writes: TestAPanicInAnUpdateStopsTheSpinner.
 // A panic gets no result line, because nothing finished.
 func runUpdate(ctx context.Context, path string, flags update.Flags, desktop bool, errOut io.Writer) emit.Result {
-	pr := openProgress(errOut, "gdoc update")
+	pr := openProgress(errOut, "update")
 	defer pr.settle()
 	pr.Plan(stepRead, stepChoose)
 	r := checkAndInstall(ctx, path, flags, desktop, pr)
-	pr.Finish(resultLine(r))
+	pr.Finish(resultLines(r, pr.live)...)
 	return r
 }
 
@@ -290,6 +290,7 @@ var openProgress = newProgress
 func checkAndInstall(ctx context.Context, path string, flags update.Flags, desktop bool, pr *progress) emit.Result {
 	installed, warns := installedVersion()
 	data := updateData{Installed: installed.String(), Path: path}
+	pr.Label(takingLabel(installed, update.Version{}))
 
 	p := guard.NewPolicy()
 	p.AllowUpdateFrom(updateRepo)
@@ -344,6 +345,9 @@ func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flag
 	pr.Done(chosenDetail(latest, flags.Channel(), platform, installed))
 
 	d := update.Decide(update.State{Installed: installed, Stable: stable.Version, Nightly: nightly.Version}, flags)
+	if d.Installs() {
+		pr.Label(takingLabel(installed, d.To))
+	}
 	data.Action = string(d.Action)
 	data.To = d.To.String()
 	data.Run = d.Run
@@ -624,10 +628,49 @@ func chosenDetail(rel update.Release, ch update.Channel, platform string, instal
 	return joinDetail(rel.Version.String(), ch.String(), platform, from)
 }
 
-// resultLine is the one line a person reads under the steps, and none for a
-// run that failed: the red cross and its reason are already the last thing on
-// the screen. It restates the object's own fields, so it cannot say more than
-// the object does.
+// resultLines is what a person reads under the steps. A run that failed gives
+// none: the red cross and its reason are already the last thing on the screen.
+//
+// A terminal reads the run and the extension on two lines, because the
+// extension is a second thing to go and do and a sentence somebody has to act
+// on is not a tail of another one. A pipe reads the one line it always read,
+// which the frozen goldens hold: TestTheExtensionIsItsOwnLineOnATerminal
+// AndOneLineOnAPipe.
+func resultLines(r emit.Result, live bool) []string {
+	if !live {
+		if line := resultLine(r); line != "" {
+			return []string{line}
+		}
+		return nil
+	}
+	d, ok := r.Data.(updateData)
+	if !r.OK || !ok {
+		return nil
+	}
+	lines := []string{actionLine(d)}
+	if ext := extensionLine(d); ext != "" {
+		lines = append(lines, ext)
+	}
+	return lines
+}
+
+// takingLabel is the words at the right end of the step box's top border: the
+// gdoc that is running, and after a release is chosen the one the run is
+// taking. A checkout build names no version, so it labels nothing, and a run
+// with nothing to take names the one version there is.
+func takingLabel(installed, to update.Version) string {
+	switch {
+	case installed.IsZero():
+		return to.String()
+	case to.IsZero() || update.Compare(to, installed) == 0:
+		return installed.String()
+	}
+	return installed.String() + " › " + to.String()
+}
+
+// resultLine is the one line a pipe reads under the steps, and none for a
+// run that failed. It restates the object's own fields, so it cannot say more
+// than the object does.
 func resultLine(r emit.Result) string {
 	d, ok := r.Data.(updateData)
 	if !r.OK || !ok {

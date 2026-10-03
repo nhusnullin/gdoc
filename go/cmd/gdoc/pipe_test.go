@@ -157,7 +157,7 @@ func TestAnUnknownCommandOnAPipeIsTodaysTextByteForByte(t *testing.T) {
 // that is still running has printed nothing yet either.
 func TestUpdateStepsOnAPipeAreTodaysLinesByteForByte(t *testing.T) {
 	var buf bytes.Buffer
-	p := newProgress(&buf, "gdoc update")
+	p := newProgress(&buf, "update")
 	p.Plan(stepRead, stepChoose, stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack)
 	p.Start(stepRead, "")
 	p.Done("nhusnullin/gdoc, 3 listed")
@@ -179,7 +179,7 @@ func TestUpdateStepsOnAPipeAreTodaysLinesByteForByte(t *testing.T) {
 // steps after it are never drawn, and a failed run prints no result line.
 func TestUpdateFailureOnAPipeIsTodaysLinesByteForByte(t *testing.T) {
 	var buf bytes.Buffer
-	p := newProgress(&buf, "gdoc update")
+	p := newProgress(&buf, "update")
 	p.Plan(stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack)
 	p.Start(stepChecksums, "SHA256SUMS-"+frozenStable)
 	p.Done("")

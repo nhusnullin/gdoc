@@ -451,19 +451,29 @@ Before any rendering code changes.
 - Modify: `go/cmd/gdoc/progress.go`, `go/cmd/gdoc/update.go`
 - Create: `go/cmd/gdoc/updatescreen_test.go`
 
-- [ ] On a terminal, the live list is drawn inside a box titled `update`,
+- [x] On a terminal, the live list is drawn inside a box titled `update`,
       with `vX › vY` on the right once the release is chosen. The pending mark
       becomes `○` on a terminal only. Spinner, `✓` and `✗` as today, in the
       palette's roles.
-- [ ] A line longer than the box wraps through `panel.Wrap` into explicit
+- [x] A line longer than the box wraps through `panel.Wrap` into explicit
       lines, and the redraw counts the lines it wrote. The `…` cut is gone.
       A failure reason wraps the same way, never shortened.
-- [ ] On a terminal, `actionLine` and `extensionLine` are two lines under the
+- [x] On a terminal, `actionLine` and `extensionLine` are two lines under the
       box. On a pipe `resultLine` stays one line, as Task 3 froze it.
-- [ ] Goldens: running, installed, nothing newer, GitHub did not answer,
+- [x] Goldens: running, installed, nothing newer, GitHub did not answer,
       failed at verify checksum, and installed with the extension line.
-- [ ] Task 3's pipe goldens for `update` still pass.
-- [ ] `git commit -m "feat(update): the step list inside a box"`
+- [x] Task 3's pipe goldens for `update` still pass.
+- [x] `git commit -m "feat(update): the step list inside a box"`
+- ⚠️ The pictures draw the result line inside the box, under a middle rule
+  with a `✓` or a `!` in front of it (`panels-round-two.html`,
+  `updateScreen`). This task followed the plan's own line above instead: the
+  result is one or two plain lines under the box, which is what the pipe
+  prints too, and the step marks already say how the run ended. Changing it
+  back is a new golden, not a code change.
+- ➕ `newProgress` takes the command's name, `update`, rather than the heading
+  `gdoc update`: the name titles the box on a terminal and the plain heading
+  is still `gdoc update`, byte for byte. The four test call sites moved with
+  it; no golden did.
 
 ### Task 11: auth login waits on one line
 

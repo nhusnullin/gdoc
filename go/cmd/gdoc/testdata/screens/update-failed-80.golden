@@ -1,0 +1,12 @@
+┌─ update ───────────────┬────────────────────────────────── v2.9.0 › v2.10.0 ─┐
+│ ✓ read releases        │ nhusnullin/gdoc, 30 listed                          │
+│ ✓ choose release       │ v2.10.0, stable, darwin-arm64, from v2.9.0          │
+│ ✓ read checksums       │ SHA256SUMS-v2.10.0                                  │
+│ ✓ download             │ gdoc-darwin-arm64.zip, 6.1 MB                       │
+│ ✗ verify checksum      │ gdoc-darwin-arm64.zip hashes to                     │
+│                        │ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa │
+│                        │ aaaaaaaaaaaaa and the release said                  │
+│                        │ bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb │
+│                        │ bbbbbbbbbbbbb, so it is not the file the release    │
+│                        │ published                                           │
+└────────────────────────┴─────────────────────────────────────────────────────┘

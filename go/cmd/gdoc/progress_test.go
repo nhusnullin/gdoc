@@ -42,7 +42,7 @@ func stubTerminal(t *testing.T, answer bool) {
 // and nothing else: no escape code, no pending step, no spinner frame.
 func TestAPipedRunPrintsOneLinePerFinishedStep(t *testing.T) {
 	var buf bytes.Buffer
-	p := newProgress(&buf, "gdoc update")
+	p := newProgress(&buf, "update")
 	p.Plan("read releases", "choose release", "download")
 	p.Start("read releases", "")
 	p.Done("nhusnullin/gdoc, 3 listed")
@@ -66,7 +66,7 @@ func TestAPipedRunPrintsOneLinePerFinishedStep(t *testing.T) {
 // after it never ran, so they are not drawn at all.
 func TestAFailedStepIsMarkedAndTheRestAreNotDrawn(t *testing.T) {
 	var buf bytes.Buffer
-	p := newProgress(&buf, "gdoc update")
+	p := newProgress(&buf, "update")
 	p.Plan("read checksums", "download", "verify checksum", "replace binary")
 	p.Start("read checksums", "SHA256SUMS-v2.1.0")
 	p.Done("")
@@ -120,7 +120,7 @@ func TestOnlyATerminalDriverMakesATerminal(t *testing.T) {
 	for _, answer := range []bool{true, false} {
 		stubTerminal(t, answer)
 		var buf bytes.Buffer
-		p := newProgress(&buf, "gdoc update")
+		p := newProgress(&buf, "update")
 		p.Plan("read releases")
 		p.Start("read releases", "")
 		p.Done("")
@@ -132,17 +132,19 @@ func TestOnlyATerminalDriverMakesATerminal(t *testing.T) {
 }
 
 // On a terminal the block is redrawn in place and coloured: a green tick for a
-// done step, and the cursor moved back over what was drawn before.
+// done step, and the cursor moved back over what was drawn before. A box of
+// two steps is four rows, the two rules included, so four is what the next
+// draw moves back over.
 func TestATerminalRunRedrawsInPlaceAndColours(t *testing.T) {
 	var buf bytes.Buffer
-	p := newLiveProgress(&buf, "gdoc update", sixteen)
+	p := newLiveProgress(&buf, "update", sixteen)
 	p.Plan("read releases", "choose release")
 	p.Start("read releases", "")
 	p.Done("nhusnullin/gdoc, 3 listed")
 	p.Finish("done.")
 
 	got := buf.String()
-	for _, want := range []string{litGreen + "✓" + litReset, "\x1b[2A", "read releases", "done.\n"} {
+	for _, want := range []string{litGreen + "✓" + litReset, "\x1b[4A", "read releases", "done.\n"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("a terminal run must write %q: %q", want, got)
 		}
@@ -160,7 +162,7 @@ func TestNoColorKeepsTheRedrawAndDropsTheColour(t *testing.T) {
 		t.Fatalf("NO_COLOR is set, so there is no colour, and the depth is %v", depth)
 	}
 	var buf bytes.Buffer
-	p := newLiveProgress(&buf, "gdoc update", tty.NewStyle(depth))
+	p := newLiveProgress(&buf, "update", tty.NewStyle(depth))
 	p.Plan("read releases")
 	p.Start("read releases", "")
 	p.Fail(errors.New("offline"))
@@ -172,7 +174,7 @@ func TestNoColorKeepsTheRedrawAndDropsTheColour(t *testing.T) {
 			t.Errorf("NO_COLOR is set and %q was written: %q", colour, got)
 		}
 	}
-	if !strings.Contains(got, "✗ read releases") || !strings.Contains(got, "    offline\n") {
+	if !strings.Contains(got, "✗ read releases") || !strings.Contains(got, "│ offline") {
 		t.Errorf("the failure and its reason must still be drawn: %q", got)
 	}
 }
@@ -191,7 +193,7 @@ func TestSizesAreMegabytes(t *testing.T) {
 // settles, and a plain list writes neither.
 func TestALiveListTurnsWrapOffAndBackOn(t *testing.T) {
 	var live bytes.Buffer
-	p := newLiveProgress(&live, "gdoc update", sixteen)
+	p := newLiveProgress(&live, "update", sixteen)
 	p.Plan("read releases", "choose release")
 	p.Start("read releases", "")
 	p.Fail(errors.New("offline"))
@@ -210,7 +212,7 @@ func TestALiveListTurnsWrapOffAndBackOn(t *testing.T) {
 	}
 
 	var plain bytes.Buffer
-	q := newProgress(&plain, "gdoc update")
+	q := newProgress(&plain, "update")
 	q.Plan("read releases")
 	q.Start("read releases", "")
 	q.Fail(errors.New("offline"))
