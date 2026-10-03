@@ -19,10 +19,11 @@ import (
 
 // The template as a release carries it, short enough to read in one line and
 // carrying both placeholders. The real one is release/mcpb/manifest.json, and
-// manifest_test.go is what judges that file.
+// manifest_test.go is what judges that file. The old one is the extension
+// before 2026-10-03, which still carried the setting it no longer has.
 const (
-	newTemplate = `{"name":"gdoc","version":"@VERSION@","server":{"mcp_config":{"command":"@BIN@","args":["mcp","--trusted-email-domains=${user_config.trusted_email_domains}"]}}}`
-	oldTemplate = `{"name":"gdoc","version":"@VERSION@","server":{"mcp_config":{"command":"@BIN@","args":["mcp"]}}}`
+	newTemplate = `{"name":"gdoc","version":"@VERSION@","server":{"mcp_config":{"command":"@BIN@","args":["mcp"]}}}`
+	oldTemplate = `{"name":"gdoc","version":"@VERSION@","server":{"mcp_config":{"command":"@BIN@","args":["mcp","--trusted-email-domains=${user_config.trusted_email_domains}"]}}}`
 )
 
 // opened is what the one program gdoc may run was handed, call by call. A test

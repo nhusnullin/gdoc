@@ -75,8 +75,7 @@ and the work waits for a Claude Code session.
 ## When gdoc holds a write
 
 Some writes are stopped by gdoc itself, before anything is sent. A write is held
-when the words carry a link or an email address the document does not already
-hold, when they repeat a stranger's comment almost exactly, when the document
+when the words repeat a stranger's comment almost exactly, when the document
 was never read in this chat, when writes are coming fast, when the thread it
 would go into looks written at the AI, or when a suggestion would remove a long
 passage.
@@ -133,15 +132,3 @@ and a comment written to steer an AI is aimed at all of them.
 So the firm rule for a sensitive document is: review it in a chat with the other
 connectors turned off. Claude names what else is on when a review starts. It
 cannot turn anything off, and you can.
-
-## Advanced: email domains that need no approval
-
-The extension has one setting, "Email domains that need no approval". Leave it
-empty. Empty is the normal state and nothing in gdoc asks you to fill it.
-
-What it does, if you ever want it: an email address at one of the domains you
-list stops being a reason to hold a write. Write whole domains, separated by
-commas, like `example.com, example.org`. A subdomain of a listed domain is not
-covered, and a link is held whatever its domain. Every write answer says which
-address the exemption applied to, so the loosening is never silent. A value gdoc
-cannot read is named back in the chat, and no write goes out until it is fixed.

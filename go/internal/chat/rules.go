@@ -91,15 +91,15 @@ type Hold struct {
 // Every question it asks is about this session rather than about the call in
 // front of it, which is why it takes the ledger. The clock is handed in, so the
 // one clock a session reads is the one cmd/gdoc reads.
-func Rules(w Write, l *Ledger, trusted []string, now time.Time) (*Hold, error) {
+func Rules(w Write, l *Ledger, now time.Time) (*Hold, error) {
 	if HasHiddenChars(w.Text) {
 		return nil, ErrHiddenChars
 	}
 
-	for _, rule := range []func(Write, *Ledger, []string, time.Time) (string, string, string){
+	for _, rule := range []func(Write, *Ledger, time.Time) (string, string, string){
 		dictatedRule, focusRule, burstRule, flaggedThreadRule, largeRemovalRule,
 	} {
-		name, value, reason := rule(w, l, trusted, now)
+		name, value, reason := rule(w, l, now)
 		if name == "" {
 			continue
 		}
@@ -140,7 +140,7 @@ func newHoldID() (string, error) {
 // process wrote. The mark alone is a character anybody can type, so skipping
 // every marked remark would hand the attack a one-emoji way past the rule:
 // TestAMarkedRemarkThisProcessDidNotWriteIsStillAStrangers.
-func dictatedRule(w Write, l *Ledger, _ []string, _ time.Time) (string, string, string) {
+func dictatedRule(w Write, l *Ledger, _ time.Time) (string, string, string) {
 	var strangers []string
 	for _, said := range l.Remarks(w.DocID) {
 		if said.ByGdoc && l.Wrote(said.ID) {
@@ -171,7 +171,7 @@ func dictatedRule(w Write, l *Ledger, _ []string, _ time.Time) (string, string, 
 // A write that went into the target resets the window to the target. A held
 // write sends nothing and so records nothing, which is what makes the reset mean
 // a write the person released.
-func focusRule(w Write, l *Ledger, _ []string, now time.Time) (string, string, string) {
+func focusRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 	since := resetPoint(l, w.DocID)
 	var elsewhere *Read
 	for _, r := range l.Reads() {
@@ -256,7 +256,7 @@ func documentWordsOf(l *Ledger, r Read) []string {
 // because the two failures look different: a few writes in seconds, and a
 // patient one grinding through a document all hour:
 // TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth.
-func burstRule(w Write, l *Ledger, _ []string, now time.Time) (string, string, string) {
+func burstRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 	writes := l.Writes()
 
 	recent := 0
@@ -303,7 +303,7 @@ var flaggedFacts = []struct {
 // It is about a reply and nothing else. annotate and propose put words on the
 // document rather than under a stranger's, so the thread is not what they
 // answer.
-func flaggedThreadRule(w Write, l *Ledger, _ []string, _ time.Time) (string, string, string) {
+func flaggedThreadRule(w Write, l *Ledger, _ time.Time) (string, string, string) {
 	if w.Tool != "reply" {
 		return "", "", ""
 	}
@@ -353,7 +353,7 @@ func threadOpener(l *Ledger, docID, threadID string) (Remark, bool) {
 // that changes a document at all. Taking out three hundred characters is no
 // longer a correction, and the person should read what goes:
 // TestTheLargeRemovalRuleTripsOverThreeHundredCharacters.
-func largeRemovalRule(w Write, _ *Ledger, _ []string, _ time.Time) (string, string, string) {
+func largeRemovalRule(w Write, _ *Ledger, _ time.Time) (string, string, string) {
 	if w.Tool != "propose" || w.Removed <= largestRemoval {
 		return "", "", ""
 	}

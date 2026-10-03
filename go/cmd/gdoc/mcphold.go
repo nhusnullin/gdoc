@@ -166,9 +166,7 @@ func mcpJudge(c mcpCommand, args json.RawMessage, target mcpTarget, ch *mcpChat)
 	if err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()}), true
 	}
-	// The trusted domains are this session's own, from the one setting the line
-	// carried: an address at one of them is not held, and a link never escapes.
-	held, err := chat.Rules(w, ch.ledger, ch.trusted, now())
+	held, err := chat.Rules(w, ch.ledger, now())
 	if err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()}), true
 	}

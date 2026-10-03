@@ -72,8 +72,7 @@
 //
 // They describe the words and never the person. has_link reads an address out
 // of the text before it looks for a host, so one address is one fact and not
-// two, which is what lets the one setting exempt a trusted domain without
-// letting a link escape. A bare host is read only where its last label is one of
+// two. A bare host is read only where its last label is one of
 // linkTLDs, because a dot between two words is usually a sentence ending and a
 // fact firing on ordinary prose is a hold the person learns to wave through.
 //
@@ -246,32 +245,4 @@
 // It is per process and nothing reaches disk, and every method is safe on a nil
 // Memory: TestTheMemoryIsPerProcessAndWritesNothingToDisk and
 // TestTheMemoryTakesTwoCallersAtOnce.
-//
-// # The person's own trusted email domains
-//
-// Trusted reads the one setting a person may type into Claude Desktop, "Email
-// domains that need no approval", into the list Rules takes. Whole lowercased
-// domains, separated by commas or spaces, the same domain twice counted once:
-// TestTrustedTakesCommasAndSpacesAndLowercases. An empty value is no domains and
-// no error, which is what the extension sends when nobody typed anything:
-// TestAnEmptySettingExemptsNothing.
-//
-// It names an address at exactly a listed domain, not at a subdomain and not at
-// a look-alike: TestAListedDomainExemptsAnEmailAtExactlyThatDomain. It is the one written-down loosening of a
-// check in gdoc, which is why Exempted exists: the addresses a write carried at a
-// listed domain, so cmd/gdoc states the loosening in the write's own answer:
-// TestExemptedNamesEachAddressAtAListedDomainOnce and
-// TestTheWriteAnswerNamesTheExemption in cmd/gdoc.
-//
-// A value gdoc could not read is refused by name, with the setting named beside
-// it, rather than read as best it can: a domain read wrongly is a card that never
-// appears. TestAMalformedDomainIsRefusedAndNamed, and
-// TestAMalformedValueMakesEveryToolButGuideNameIt in cmd/gdoc, where the session
-// still starts and every tool but guide answers the reason.
-//
-// Nothing in gdoc suggests the field. It is decision 17 of the specification: an
-// advanced setting for a person who went looking for it, and what the binary says
-// about it is a fact and never an offer. TestNothingSuggestsTheSetting in
-// cmd/gdoc reads the server instructions, the chat header, the embedded review
-// core and every tool's title and description.
 package chat

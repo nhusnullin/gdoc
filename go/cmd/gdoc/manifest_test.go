@@ -49,13 +49,7 @@ type mcpbManifest struct {
 	Compatibility struct {
 		Platforms []string `json:"platforms"`
 	} `json:"compatibility"`
-	UserConfig map[string]struct {
-		Type        string  `json:"type"`
-		Title       string  `json:"title"`
-		Description string  `json:"description"`
-		Required    *bool   `json:"required"`
-		Default     *string `json:"default"`
-	} `json:"user_config"`
+	UserConfig json.RawMessage `json:"user_config"`
 }
 
 // readManifest is the template as bytes and as the shape above.
@@ -116,11 +110,9 @@ func TestTheManifestTemplateParses(t *testing.T) {
 	if m.Server.MCPConfig.Command != "@BIN@" {
 		t.Errorf("server.mcp_config.command is %q, want the placeholder %q", m.Server.MCPConfig.Command, "@BIN@")
 	}
-	// The word mcp and the one flag, in that order. The flag is joined to its
-	// value, because Claude Desktop fills the field whether the person typed
-	// anything in it or not and an empty value has to reach the parser as one
-	// argument.
-	want := []string{"mcp", "--trusted-email-domains=${user_config.trusted_email_domains}"}
+	// The word mcp and nothing after it, because mcp takes no words and no
+	// flags: TestMcpTakesNoWordsAndNoFlags.
+	want := []string{"mcp"}
 	if strings.Join(m.Server.MCPConfig.Args, " ") != strings.Join(want, " ") {
 		t.Errorf("server.mcp_config.args is %v, want %v", m.Server.MCPConfig.Args, want)
 	}
@@ -157,33 +149,16 @@ func TestTheManifestListsTheToolsToolsListLists(t *testing.T) {
 	}
 }
 
-// TestTheManifestHasOneOptionalSettingWithAnEmptyDefault holds the one field
-// the extension shows. It is not required and its default is empty, so a person
-// installs the extension by pressing install and never reads it: decision 17.
-// A required field would make every colleague decide something about addresses
-// before they have reviewed a document.
-func TestTheManifestHasOneOptionalSettingWithAnEmptyDefault(t *testing.T) {
-	_, m := readManifest(t)
-	if len(m.UserConfig) != 1 {
-		t.Fatalf("the manifest shows %d settings, want 1", len(m.UserConfig))
+// TestTheManifestDeclaresNoSettings holds that the extension has none. The one
+// field it had, the trusted email domains, went with the link hold on
+// 2026-10-03, and a setting with no effect is a promise the extension does not
+// keep. A person installs it by pressing install and reads nothing.
+func TestTheManifestDeclaresNoSettings(t *testing.T) {
+	raw, m := readManifest(t)
+	if m.UserConfig != nil {
+		t.Errorf("the manifest declares user_config %s, want none", m.UserConfig)
 	}
-	field, ok := m.UserConfig["trusted_email_domains"]
-	if !ok {
-		t.Fatalf("the manifest's one setting is not trusted_email_domains: %v", m.UserConfig)
-	}
-	if field.Type != "string" {
-		t.Errorf("the setting's type is %q, want %q", field.Type, "string")
-	}
-	if field.Required == nil || *field.Required {
-		t.Error("the setting is required or says nothing about it; it is optional, and said so out loud")
-	}
-	if field.Default == nil || *field.Default != "" {
-		t.Errorf("the setting's default is %v, want the empty string written out", field.Default)
-	}
-	if field.Title != "Email domains that need no approval" {
-		t.Errorf("the setting's title is %q", field.Title)
-	}
-	if field.Description != "Advanced and optional. Leave empty." {
-		t.Errorf("the setting's description is %q", field.Description)
+	if strings.Contains(raw, "user_config") {
+		t.Error("the manifest names user_config, and the extension has no settings to fill")
 	}
 }

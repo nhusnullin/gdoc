@@ -11,10 +11,7 @@
     "entry_point": "@BIN@",
     "mcp_config": {
       "command": "@BIN@",
-      "args": [
-        "mcp",
-        "--trusted-email-domains=${user_config.trusted_email_domains}"
-      ]
+      "args": ["mcp"]
     }
   },
   "tools": [
@@ -53,14 +50,5 @@
   ],
   "compatibility": {
     "platforms": ["darwin"]
-  },
-  "user_config": {
-    "trusted_email_domains": {
-      "type": "string",
-      "title": "Email domains that need no approval",
-      "description": "Advanced and optional. Leave empty.",
-      "required": false,
-      "default": ""
-    }
   }
 }

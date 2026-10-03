@@ -13,9 +13,9 @@
 // reading this file's syntax tree rather than by trusting this comment:
 // go/boundary's TestOnlyDesktopRunsAProgram.
 //
-// The settings live in Claude Desktop's own form, which is why the template
-// travels in the release and is filled here rather than being a file a person
-// edits.
+// The extension has no settings. What differs from one machine to the next is
+// the binary's path and the release, which is why the template travels in the
+// release and is filled here rather than being a file a person edits.
 
 package main
 

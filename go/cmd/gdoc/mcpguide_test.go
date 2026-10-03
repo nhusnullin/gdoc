@@ -223,9 +223,9 @@ func TestToolsListListsExactlyTheEightToolsWithTheirHints(t *testing.T) {
 	}
 }
 
-// guide answers the header, the core and the code, and it says which email
-// domains this process is running with. Nothing is signed in here: the rules
-// arrive before the sign-in does.
+// guide answers the header, the core and the code, and nothing else: the
+// extension has no settings, so there is no setting for guide to report.
+// Nothing is signed in here: the rules arrive before the sign-in does.
 func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	code := callCode(t)
@@ -234,16 +234,22 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 		if tool.Name != "guide" {
 			continue
 		}
-		data := guideData(t, tool.Call(context.Background(), nil).Texts)
+		texts := tool.Call(context.Background(), nil).Texts
+		data := guideData(t, texts)
 
 		if data.Code != code.Value() {
 			t.Errorf("guide answered the code %q, and the session's is %q", data.Code, code.Value())
 		}
-		if len(data.TrustedEmailDomains) != 0 {
-			t.Errorf("this session trusts no email domain and guide says %v", data.TrustedEmailDomains)
+		var raw struct {
+			Data map[string]json.RawMessage `json:"data"`
 		}
-		if data.TrustedEmailDomainsProblem != "" {
-			t.Errorf("an empty setting is no problem and guide says %q", data.TrustedEmailDomainsProblem)
+		if err := json.Unmarshal([]byte(texts[0]), &raw); err != nil {
+			t.Fatalf("the guide answer is not an envelope: %v", err)
+		}
+		for key := range raw.Data {
+			if key != "code" && key != "text" {
+				t.Errorf("guide answers %q beside the code and the text: %s", key, texts[0])
+			}
 		}
 		// The header, by a sentence of its own, and the core, by a heading of
 		// its own, in that order: the header is what tells the model to read on.
@@ -257,22 +263,6 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 		}
 		if strings.Index(data.Text, headerSays) > strings.Index(data.Text, coreSays) {
 			t.Error("the core comes before the header, and the header is what says to read on")
-		}
-	}
-
-	// The setting this process was started with is read from the running
-	// server, never from the repository.
-	started, err := newMCPChat("Example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, tool := range mcpTools(io.Discard, newMCPLogin(io.Discard), started) {
-		if tool.Name != "guide" {
-			continue
-		}
-		data := guideData(t, tool.Call(context.Background(), nil).Texts)
-		if len(data.TrustedEmailDomains) != 1 || data.TrustedEmailDomains[0] != "example.com" {
-			t.Errorf("guide says the domains are %v, and the session was started with Example.com", data.TrustedEmailDomains)
 		}
 	}
 }
@@ -350,11 +340,5 @@ func TestTheInstructionsAreShortAndSayCallGuideFirst(t *testing.T) {
 	}
 	if !strings.Contains(mcpInstructions, "login") {
 		t.Errorf("the instructions do not name login: %q", mcpInstructions)
-	}
-	// The setting is named nowhere, deliberately: decision 17.
-	for _, word := range []string{"trusted", "domain"} {
-		if strings.Contains(strings.ToLower(mcpInstructions), word) {
-			t.Errorf("the instructions say %q, and nothing gdoc says suggests that setting", word)
-		}
 	}
 }

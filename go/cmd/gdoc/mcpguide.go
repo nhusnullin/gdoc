@@ -31,23 +31,12 @@ var mcpReviewCore string
 
 // mcpGuideData is what guide answers with.
 //
-// The code is the one every other tool but login needs. The trusted email
-// domains are the setting this process is running with, read from the running
-// server and never from the repository: a person who typed one into Claude
-// Desktop can see here that gdoc took it. It is a fact and nothing suggests
-// setting it, which is decision 17 of the milestone 14 specification and what
-// TestNothingSuggestsTheSetting holds.
+// The code is the one every other tool but login needs, and the text is the
+// rules. There is nothing else: the extension has no settings to report.
+// TestGuideAnswersTheHeaderAndTheCore.
 type mcpGuideData struct {
 	Code string `json:"code"`
-	// TrustedEmailDomains is the setting as this session parsed it: whole
-	// lowercased domains, and an empty list where the field was empty, which is
-	// the ordinary case.
-	TrustedEmailDomains []string `json:"trusted_email_domains"`
-	// TrustedEmailDomainsProblem is why a value was not read, where it was not.
-	// guide is the one tool that still answers then, so it is the one place the
-	// person can read it from: TestAMalformedValueMakesEveryToolButGuideNameIt.
-	TrustedEmailDomainsProblem string `json:"trusted_email_domains_problem,omitempty"`
-	Text                       string `json:"text"`
+	Text string `json:"text"`
 }
 
 // mcpGuideTool is the one tool a session starts with. It reaches nothing: no
@@ -70,15 +59,9 @@ func mcpGuideTool(ch *mcpChat) mcp.Tool {
 // answers with: the header and the core as one text, so the model reads them in
 // the order they are written.
 func mcpGuideAnswer(ch *mcpChat) mcp.Result {
-	problem := ""
-	if ch.trustedErr != nil {
-		problem = ch.trustedErr.Error()
-	}
 	return mcpEnvelope(emit.Result{OK: true, Data: mcpGuideData{
-		Code:                       ch.code.Value(),
-		TrustedEmailDomains:        ch.trusted,
-		TrustedEmailDomainsProblem: problem,
-		Text:                       mcpGuideText(),
+		Code: ch.code.Value(),
+		Text: mcpGuideText(),
 	}})
 }
 

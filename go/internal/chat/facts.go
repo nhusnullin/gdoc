@@ -101,9 +101,7 @@ var bareHostPattern = regexp.MustCompile(`(?i)\b[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?
 // FactsOf reads one comment or reply.
 func FactsOf(c Comment, own OwnReplies) Facts {
 	// The addresses come out before the links are looked for, so an address is
-	// one fact and not two. It is what lets the one setting exempt a domain: the
-	// person lists the addresses that need no approval, and a link never escapes
-	// that way.
+	// one fact and not two.
 	withoutEmails := emailPattern.ReplaceAllString(c.Text, " ")
 	return Facts{
 		HasLink:      urlPattern.MatchString(withoutEmails) || bareHostPattern.MatchString(withoutEmails),

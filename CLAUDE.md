@@ -23,7 +23,7 @@ Two rules about the documents themselves:
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
 | `go/cmd/gdoc/` | the entry point, the sixteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit. `mcp*.go` is the one command that is a session instead, and `desktop.go` the Claude Desktop extension |
 | `go/internal/mcp/` | the Model Context Protocol over stdio, by hand: the framing, the four methods, the tools, the deadline. It knows no command |
-| `go/internal/chat/` | what a chat adds to a command: the guide code, the labels and facts on a read, the ledger of this process, the hold rules, the card, the write memory, the trusted domains |
+| `go/internal/chat/` | what a chat adds to a command: the guide code, the labels and facts on a read, the ledger of this process, the hold rules, the card, the write memory |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |

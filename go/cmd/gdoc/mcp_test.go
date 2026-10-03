@@ -33,14 +33,16 @@ func TestMcpIsRoutedBeforeRun(t *testing.T) {
 		return 7
 	}
 
+	// What follows the word reaches serveMCP as it was given, because serveMCP
+	// is what refuses it: TestMcpTakesNoWordsAndNoFlags.
 	var out, errOut bytes.Buffer
-	code := route(context.Background(), []string{"mcp", "--trusted-email-domains=example.com"},
+	code := route(context.Background(), []string{"mcp", "serve"},
 		strings.NewReader("a line\n"), &out, &errOut)
 
 	if code != 7 {
 		t.Errorf("the exit code is the session's own: got %d, want 7", code)
 	}
-	if want := []string{"--trusted-email-domains=example.com"}; !equalWords(got, want) || len(got) != len(want) {
+	if want := []string{"serve"}; !equalWords(got, want) || len(got) != len(want) {
 		t.Errorf("serveMCP was handed %v, want %v", got, want)
 	}
 	if read != "a line\n" {
@@ -70,66 +72,37 @@ func TestMcpIsRoutedBeforeRun(t *testing.T) {
 	}
 }
 
-// mcp takes one flag and no words. Claude Desktop fills the flag from the
-// extension's one setting, and the setting is empty by default, so what it
-// really sends is --trusted-email-domains= with nothing after it
-// (docs/v2/MEASURED.md, measurement 1). parseArgsN refuses an empty joined
-// value, by design and for every other command, so mcp reads its own line.
+// mcp takes no words and no flags. The Claude Desktop extension has no settings
+// since 2026-10-03, so its line is the word mcp and nothing after it, and
+// --trusted-email-domains, the flag it used to carry, is refused like any other.
 //
-// Everything else on that line is refused on stderr with exit 1 and nothing on
+// Everything after the word is refused on stderr with exit 1 and nothing on
 // stdout: a server that started anyway would be a session built on a line
 // nobody meant.
-func TestMcpTakesOnlyTheTrustedDomainsFlag(t *testing.T) {
-	for _, args := range [][]string{
-		{},
-		{"--trusted-email-domains="},
-		{"--trusted-email-domains=example.com,example.org"},
-		{"--trusted-email-domains", "example.com"},
-	} {
-		if _, err := parseMCPArgs(args); err != nil {
-			t.Errorf("%v is a line mcp takes, and it was refused: %v", args, err)
-		}
-	}
-
-	if got, err := parseMCPArgs([]string{"--trusted-email-domains="}); err != nil || got.trustedDomains != "" {
-		t.Errorf("an empty setting is no domains: got %q, %v", got.trustedDomains, err)
-	}
-	if got, err := parseMCPArgs([]string{"--trusted-email-domains=example.com"}); err != nil || got.trustedDomains != "example.com" {
-		t.Errorf("the value is read as given: got %q, %v", got.trustedDomains, err)
-	}
-
+func TestMcpTakesNoWordsAndNoFlags(t *testing.T) {
 	for _, bad := range []struct {
 		args []string
 		says string
 	}{
 		{[]string{"serve"}, "serve"},
-		{[]string{"--trusted-email-domains=example.com", "extra"}, "extra"},
 		{[]string{"--stdio"}, "--stdio"},
-		{[]string{"--trusted-email-domains"}, "needs a value"},
-		{[]string{"--trusted-email-domains=a", "--trusted-email-domains=b"}, "twice"},
+		{[]string{"--trusted-email-domains="}, "--trusted-email-domains="},
+		{[]string{"--trusted-email-domains=example.com"}, "--trusted-email-domains=example.com"},
+		{[]string{"--trusted-email-domains", "example.com"}, "--trusted-email-domains"},
 	} {
-		_, err := parseMCPArgs(bad.args)
-		if err == nil {
-			t.Errorf("%v must be refused", bad.args)
-			continue
-		}
-		if !strings.Contains(err.Error(), bad.says) {
-			t.Errorf("%v must be refused naming %q: %q", bad.args, bad.says, err.Error())
-		}
-	}
-
-	// The whole refusal, through the one entry point: words on stderr, exit 1,
-	// and stdout untouched, because a client reads stdout as protocol.
-	var out, errOut bytes.Buffer
-	code := serveMCP(context.Background(), strings.NewReader(""), &out, &errOut, []string{"serve"})
-	if code != 1 {
-		t.Errorf("a line mcp cannot read exits 1: got %d", code)
-	}
-	if out.Len() != 0 {
-		t.Errorf("nothing reaches stdout on a refusal: %q", out.String())
-	}
-	if !strings.Contains(errOut.String(), "serve") {
-		t.Errorf("the refusal names what it refused: %q", errOut.String())
+		t.Run(strings.Join(bad.args, " "), func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			code := serveMCP(context.Background(), strings.NewReader(""), &out, &errOut, bad.args)
+			if code != 1 {
+				t.Errorf("%v must be refused with exit 1: got %d", bad.args, code)
+			}
+			if out.Len() != 0 {
+				t.Errorf("nothing reaches stdout on a refusal: %q", out.String())
+			}
+			if !strings.Contains(errOut.String(), bad.says) {
+				t.Errorf("the refusal must name %q: %q", bad.says, errOut.String())
+			}
+		})
 	}
 }
 
@@ -232,7 +205,7 @@ func TestHelpAndCompletionNameMcp(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("gdoc help mcp: exit %d", code)
 	}
-	const usage = "Usage: gdoc mcp [--trusted-email-domains <text>]"
+	const usage = "Usage: gdoc mcp"
 	if !strings.Contains(prose, usage+"\n") {
 		t.Errorf("gdoc help mcp must print\n  %s\nand printed\n%s", usage, prose)
 	}

@@ -68,7 +68,7 @@
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
 //     that carries no credential, gapi.Plain.
-//   - mcp [--trusted-email-domains]: this binary as a stdio server for Claude
+//   - mcp: this binary as a stdio server for Claude
 //     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
 //     the wiring. The one command route sends past run. It offers eight tools,
 //     the six of the table that chat reviews with and guide and login, and
@@ -99,16 +99,10 @@
 //     TestTheConfirmSchemaListsHoldTitleReasonText,
 //     TestAByteDifferentTitleReasonOrTextIsRefused,
 //     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
-//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The one flag the line takes
-//     is the extension's own field, the email domains an address may sit at
-//     without a card: it exempts an address at exactly a listed domain and never
-//     a link, a write it applied to states the exemption beside its envelope, and
-//     a value gdoc could not read starts the session anyway, with the reason on
-//     the log and every tool but guide answering it:
-//     TestTheWriteAnswerNamesTheExemption and
-//     TestAMalformedValueMakesEveryToolButGuideNameIt. Nothing gdoc says suggests
-//     that field: TestNothingSuggestsTheSetting. The review core it
-//     serves is a committed copy of the skill's, held equal by
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes no words and
+//     no flags, because the extension has no settings, and anything after the
+//     word is refused on stderr with exit 1: TestMcpTakesNoWordsAndNoFlags. The
+//     review core it serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
@@ -472,9 +466,9 @@
 // nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
 // TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
 //
-// The settings stay in Claude Desktop's own form, where a person sees which
-// options exist, which is why the template travels in the release and is filled
-// here rather than being a file somebody edits.
+// The extension has no settings. What differs from one machine to the next is
+// the binary's path and the release, which is why the template travels in the
+// release and is filled here rather than being a file somebody edits.
 //
 // # The update draws its steps on stderr
 //

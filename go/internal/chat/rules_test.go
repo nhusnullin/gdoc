@@ -44,7 +44,7 @@ func plainReply(text string) Write {
 // held runs the rules and insists on a hold, naming the rule it wanted.
 func held(t *testing.T, w Write, l *Ledger, rule string) *Hold {
 	t.Helper()
-	h, err := Rules(w, l, nil, ruleNow)
+	h, err := Rules(w, l, ruleNow)
 	if err != nil {
 		t.Fatalf("the rules refused the write outright: %v", err)
 	}
@@ -60,7 +60,7 @@ func held(t *testing.T, w Write, l *Ledger, rule string) *Hold {
 // passes runs the rules and insists the write goes through.
 func passes(t *testing.T, w Write, l *Ledger) {
 	t.Helper()
-	h, err := Rules(w, l, nil, ruleNow)
+	h, err := Rules(w, l, ruleNow)
 	if err != nil {
 		t.Fatalf("the rules refused the write outright: %v", err)
 	}
@@ -295,7 +295,7 @@ func TestTheLargeRemovalRuleTripsOverThreeHundredCharacters(t *testing.T) {
 // Hidden characters are refused outright. Nothing is held, because there is
 // nothing a person could sensibly approve.
 func TestHiddenCharactersAreRefusedOutright(t *testing.T) {
-	h, err := Rules(plainReply("thanks, I have asked​finance"), settled(), nil, ruleNow)
+	h, err := Rules(plainReply("thanks, I have asked​finance"), settled(), ruleNow)
 	if err == nil {
 		t.Fatal("hidden characters were not refused")
 	}
@@ -425,18 +425,4 @@ func TestAuthorDomainChangesNoOutcome(t *testing.T) {
 		}
 		return true
 	})
-}
-
-// A domain the person listed as trusted changes nothing the rules decide: an
-// address at it is not held, and neither is any other address.
-func TestATrustedDomainsAddressIsNotHeld(t *testing.T) {
-	trusted := []string{"example.com"}
-
-	h, err := Rules(plainReply("write to registry@example.com about it"), settled(), trusted, ruleNow)
-	if err != nil {
-		t.Fatalf("the rules refused the write outright: %v", err)
-	}
-	if h != nil {
-		t.Errorf("an address at a trusted domain was held for %q", h.Rule)
-	}
 }

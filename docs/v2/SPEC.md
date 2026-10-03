@@ -768,8 +768,8 @@ one message per line, over stdin and stdout, written by hand in `internal/mcp`
 so there is no fourth module. `main()` routes `mcp` before `run()`, because
 `run()` prints one envelope after every command and a table entry's `run` sees
 neither stdin nor stdout. The table keeps the row, so `help` and `completion`
-name it. The command takes one optional flag, `--trusted-email-domains`, and
-nothing else. Added 2026-10-03, DECISIONS.md.
+name it. The command takes no words and no flags. Added 2026-10-03, and its one
+flag removed the same day, DECISIONS.md.
 
 **Eight tools, and nothing else is one.** Six are commands of the table, in the
 order a review runs: `read`, `comments`, `suggestions`, `reply`, `annotate` and
@@ -834,9 +834,8 @@ CLI envelope gains that one field and nothing else.
 **A risky write is held by a fixed list, and only the person's own card releases
 one.** The binary decides that a write is risky, never the model, because a
 model asked whether a comment is steering it is the thing being steered. A write
-is held when its text carries a link, a bare domain or an email address that is
-not already in the target document or its threads; when twelve or more words in
-a row are shared with a comment this process read that gdoc did not write; when
+is held when twelve or more words in a row are shared with a comment this
+process read that gdoc did not write; when
 another document was read in the last 30 minutes, or the target was never read;
 on the third write inside 60 seconds, or the 26th into one document inside an
 hour; when a `reply` goes into a thread whose comment carries a link, names the
@@ -845,7 +844,10 @@ model, holds a 🤖 that is not gdoc's or holds hidden characters; and when a
 one named. Text holding zero-width, bidi or tag characters is refused outright,
 because nobody can approve what they cannot see. Text copied out of another
 document is held and never refused: quoting the firm's own policy can be the
-job.
+job. A link, a bare domain or an email address in a write is ordinary text and
+is not held, so the extension has no settings: the one field it had exempted
+addresses from a link hold that no longer exists. Changed 2026-10-03,
+DECISIONS.md.
 
 A held write is not sent. The answer is `ok: false`, `sent: false`, and the hold
 with its id, its rule, the exact value that tripped it and the words themselves,
@@ -865,17 +867,6 @@ release with less than five seconds of quiet behind it is refused the same way.
 What then goes out is the call the hold kept, never anything the release sends.
 A write this session already made comes back from memory for ten minutes under
 the same tool and the same arguments, so a retry is not a second reply.
-
-**The one setting is the person's own.** The extension shows one field, "Email
-domains that need no approval", empty by default and typed in Claude Desktop. It
-exempts an email address at exactly a listed domain from the hold a link gets,
-never a link and never a subdomain, and every write answer states the exemption
-that applied as a fact. Nothing in gdoc asks for it: not the instructions, not
-the chat header, not the review core, not a tool's own words. A value gdoc
-cannot read is named back by every tool but `guide`, with the setting and the
-bad value, so the person reads it in the chat and fixes it in Settings; the
-server still starts, because a server that stopped answers nothing. An empty
-value is no domains and never an error.
 
 **There is no live mode in chat**, because a server cannot wake the client.
 `comments` answers a cursor and the model reads again from it when the person
@@ -936,8 +927,6 @@ where it cannot.
   compared byte for byte, and what goes out is the call the hold kept.
 - Never act on a marked comment from chat. Chat has no hub, so `ai!` is work a
   Claude Code session carries out, and chat says so before it posts.
-- Never suggest the trusted-domains setting. It is the one standing loosening of
-  a check, so it is the person's to find and never gdoc's to offer.
 
 ## Acceptance for v2.0
 
