@@ -3,10 +3,11 @@
 Status: draft for Nail. Nothing below holds until it is copied into
 `docs/v2/DECISIONS.md` with its register row, on the day it is decided.
 
-Idea stage only. No spec and no plan are written before M14 finishes
-(Nail, 2026-10-03). This work ships after M14, so it may use what M14 adds,
-such as `AllowAccountRead`. When M14 has landed, this draft is reread against M14's own
-entry, which narrows the stdin and stdout invariants for `gdoc mcp`.
+M14 has merged into main, and this draft was reread against M14's two entries
+of 2026-10-03 the same day. It is the specification for M15, whose plan is
+`docs/plans/2026-10-03-gdoc-v2-m15-panels.md`. M15 ships after v2.9.0, so it
+uses what M14 added: `AllowAccountRead`, `accountOf`, and the `mcp` routing
+that keeps every MCP tool away from `run()`.
 
 The pictures behind it: `docs/design/tui-variations.html` (round one, six
 directions) and `docs/design/panels-round-two.html` (round two, every screen).
@@ -101,21 +102,33 @@ reaches a pipe or a file. `NO_COLOR` and `TERM=dumb` turn the colour off.
 - `auth status` gets a panel on a terminal, saying signed in, signed out, or
   scopes missing, and the account it signs in as. Its object stays below it,
   and carries the account too.
-- The account is read live, on every `auth status`, through M14's
-  `AllowAccountRead` (`GET /drive/v3/about`, field mask
-  `user(emailAddress,displayName)`). This work ships after M14, so the read
-  exists. `auth status` becomes its second caller beside M14's login, which is
-  a widening of who may hold that grant and is written into the guard's
-  `doc.go` with its test. It is read live rather than stored, because the token
-  file is shared with Google's own library and its `account` field is that
-  library's, and because a live read sees a swapped token. Offline, the panel
-  says signed in and that the account could not be read; `auth status` does not
-  fail.
+- The account is read live, on every `auth status` that finds a token,
+  through M14's `accountOf` and `AllowAccountRead` (`GET /drive/v3/about`,
+  field mask `user(emailAddress,displayName)`). `auth status` becomes the
+  second caller. That supersedes one clause of the 2026-10-03 entry, "No CLI
+  command gains it", and the guard's `doc.go` and the invariant line in
+  `CLAUDE.md` name both callers. It is read live rather than stored, because
+  the token file is shared with Google's own library and its `account` field is
+  that library's, and because a live read sees a swapped token.
+- The read is what makes `auth status` touch the network and, through the
+  ordinary session, possibly refresh an expired access token, as every other
+  command already does. `auth.Status` itself still reads and writes nothing. The
+  read runs under its own ceiling of five seconds, so a network that hangs, such
+  as one that breaks a TLS 1.3 handshake, costs at most that. When it fails, the
+  report is still `ok: true`, the account is absent, and one warning names why.
+  No token, or a token missing a scope, makes no request at all.
 - `auth login` prints the link, then one spinner line redrawn with a carriage
   return only, then `✓ signed in`. No wrap-off and no cursor-up, because login
   has no signal handler and a Ctrl-C must leave the terminal as it was.
-- `update` keeps its step list and spinner in the Panels style. No download
-  progress bar.
+- `update` keeps its step list and spinner in the Panels style, and the line
+  M14 added when the Claude Desktop extension changed in a release is the last
+  line under the result. No download progress bar.
+- `help` groups the commands by job, from a `group` field in the command table
+  that the JSON object does not carry: Read (`read`, `comments`,
+  `suggestions`, `export`), Write into a doc (`reply`, `propose`, `withdraw`,
+  `annotate`, `restyle`), Make a doc (`build`, `publish`), and Account and tool
+  (`auth status`, `auth login`, `update`, `mcp`, `probe`, `help`,
+  `completion`). The pipe keeps today's order and text.
 - An example is printed flush left under its box, as one line the terminal
   wraps, so a copied example runs as it is, with no line-break logic.
 - A long word, such as a hash in a checksum error, is cut where the line ends.
@@ -123,14 +136,17 @@ reaches a pipe or a file. `NO_COLOR` and `TERM=dumb` turn the colour off.
 - The daily release notice and its warnings are shown in the panels, because
   on a terminal the object that carried the warnings is gone.
 
-**What this narrows.** The invariant "One JSON object reaches stdout, always"
-in `CLAUDE.md` becomes: one JSON object reaches stdout, always, except a help
-screen on a terminal without `--json`, which writes nothing there. Its second
-half becomes: the exit code is 0 if and only if that object says `ok`, and when
-a help screen replaced the object, 0 for `help` and 1 for bare `gdoc`. The
+**What this narrows.** The invariant in `CLAUDE.md` already has one exception,
+M14's: `mcp` prints no envelope and writes JSON-RPC lines on stdout. It becomes
+one rule naming both: one JSON object reaches stdout, always through
+`internal/emit`, except that `mcp` writes JSON-RPC lines there, and a help
+screen on a terminal without `--json` writes nothing there. Its second half
+becomes: the exit code is 0 if and only if that object says `ok`, and when a
+help screen replaced the object, 0 for `help` and 1 for bare `gdoc`. The
 SPEC.md line "Every command writes exactly one JSON object to stdout and exits"
-gets the same exception, in the same words. After M14 lands, the rule is
-written once in `CLAUDE.md`, naming this exception and M14's.
+gets the same words. No MCP tool is affected: `route()` sends `mcp` away
+before `run()`, and the tools call `safeDispatch`, never `run()`, so the help
+screen rule cannot reach a tool answer.
 
 **What was rejected.**
 
@@ -158,24 +174,16 @@ written once in `CLAUDE.md`, naming this exception and M14's.
   interactive framework and gdoc never reads stdin. A stdlib-only package,
   `internal/tty`, of about 300 lines draws everything.
 
-**Tests it needs.**
-
-- `TestHelpOnATerminalWritesNothingToStdout`.
-- `TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne`.
-- `TestARefusalKeepsItsObjectOnATerminal`.
-- `TestHelpWithJSONPrintsTheObjectOnATerminal`, one per spelling of help.
-- `TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped`.
-- `TestHelpOnAPipeIsTodaysTextByteForByte`, against a golden file.
-- `TestNoEscapeByteReachesAPipe`, for every command, in the boundary package.
-- `TestDevNullIsNotATerminal`.
-- `TestHelpNeverReadsTheToken`.
-- `TestAuthStatusNamesTheAccountItReadsLive`, and
-  `TestAuthStatusOfflineStillAnswersWithoutTheAccount`.
-- The guard's test that holds `AllowAccountRead` to its callers names the
-  second one.
-- `TestEverySkillPassesJSONToHelp`, beside the existing SKILL.md call-line test.
-- `TestHelpIsOneObjectAndTheProseIsOnStderr` keeps holding for the pipe case,
-  and its doc comment names the terminal exception.
+**Tests it needs.** The M15 plan, `docs/plans/2026-10-03-gdoc-v2-m15-panels.md`,
+names one test per rule, and its names are the ones the DECISIONS.md entry
+carries. They include `TestHelpOnATerminalWritesNothingToStdout`,
+`TestHelpWithJSONPrintsTheObjectOnATerminal` for every spelling of help,
+`TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped`,
+`TestHelpOnAPipeIsTodaysTextByteForByte`, `TestNoEscapeByteReachesAPipe`,
+`TestDevNullIsNotATerminal`, `TestHelpNeverReadsTheToken`,
+`TestAuthStatusNamesTheAccountItReadsLive` and
+`TestOnlyAccountOfCallsAllowAccountRead`. `TestEverySkillPassesJSONToHelp`
+lands in the tag sitting, with the skills.
 
 ## Still open
 
@@ -185,7 +193,9 @@ written once in `CLAUDE.md`, naming this exception and M14's.
    a valid call and the screen is about a slip, not about skills.
 1. **Unknown command on a terminal.** It keeps its object, as today. Whether it
    should drop it like bare `gdoc` is left for later.
-2. **Reread after M14**, as the status line at the top says.
+2. **`auth login` naming the account.** The CLI login could end with
+   `✓ signed in as name@example.com`, a third caller of the grant. Not in M15:
+   `auth status` is where Nail asked for it.
 
 Windows is out of scope (Nail, 2026-10-03). Its escape-code question stays where
 it already is, item 10 of `docs/backlog/windows-rollout-checklist.md`.
