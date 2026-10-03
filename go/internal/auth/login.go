@@ -242,6 +242,20 @@ func Login(c *http.Client, w io.Writer) error {
 		return err
 	}
 	defer p.Close()
-	fmt.Fprintf(w, "Open this link in your browser to sign in:\n%s\n", p.URL)
+	fmt.Fprint(w, LinkLine(p.URL))
 	return p.Wait(context.Background())
 }
+
+// LinkAsk is the sentence that goes with the link, and LinkLine the sentence
+// and the link together: the two lines every login has printed, and the two a
+// pipe and a log still read. cmd/gdoc draws the sentence inside a box on a
+// terminal and prints LinkLine itself everywhere else, which is why both are
+// exported from here rather than written out twice.
+//
+// Nothing about a terminal lives in this package: no colour, no box and no
+// escape byte. TestTheLinkLineIsTodays states both as the literal they are and
+// TestLoginPrintsThroughTheLinkLine holds that Login goes through them.
+const LinkAsk = "Open this link in your browser to sign in:"
+
+// LinkLine is LinkAsk, the link under it, and a newline after each.
+func LinkLine(url string) string { return LinkAsk + "\n" + url + "\n" }

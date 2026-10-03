@@ -22,10 +22,20 @@
 // StartLogin opens the loopback listener, builds the authorization URL and
 // returns at once. Pending.Wait waits for the callback, exchanges the code,
 // saves the token and then tells the browser what happened. Login is the two
-// in a row, which is all the CLI needs; the split is for a front door that
-// hands the link out in one message and finishes the trip in another, with the
-// listener alive in between. TestStartLoginReturnsTheLinkAtOnce and
-// TestWaitExchangesAndSaves are the pins.
+// in a row; the split is for a front door that hands the link out in one
+// message and finishes the trip in another, with the listener alive in
+// between. Both front doors now take the split: the MCP login tool because a
+// chat answer cannot wait for a browser, and the CLI because the line a person
+// watches while they wait belongs to cmd/gdoc. TestStartLoginReturnsTheLinkAtOnce
+// and TestWaitExchangesAndSaves are the pins.
+//
+// The words that go with the link are here and not there: LinkAsk is the
+// sentence and LinkLine is the sentence with the link under it, which is what
+// Login prints and what cmd/gdoc prints wherever it draws no box. So the two
+// routes cannot drift, and this package still holds no terminal code at all:
+// no colour, no box and no escape byte. TestTheLinkLineIsTodays states both as
+// the literal they are and TestLoginPrintsThroughTheLinkLine holds that Login
+// goes through them.
 //
 // The callback no longer writes the page itself. It holds the browser's
 // request open and loopback.Finish writes the sentence, so "Signed in" is

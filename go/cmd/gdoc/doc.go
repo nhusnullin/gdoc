@@ -188,14 +188,32 @@
 // TestAuthStatusFailsOnAnUnreadableToken and
 // TestAFailingStatusStillCarriesItsWarnings are the pins.
 //
-// # auth login prints the URL to stderr
+// # auth login prints the URL to stderr, and waits on one line
 //
-// Login prints the authorization URL to stderr, waits for the browser to come
-// back to the loopback listener, saves the token, then reports what auth status
-// would. The URL is a human word and human words have one place to go, and it
-// is not stdout. TestLoginPrintsTheURLToStderrNotStdout is the pin, and
-// TestAFailedLoginIsOneFailingEnvelope is the other half: a login that did not
-// happen is still one object.
+// The login is the browser trip in its two halves, auth.StartLogin and
+// Pending.Wait, which is what the MCP login tool already called: the listener
+// and the code exchange belong to internal/auth, and the stream a person reads
+// belongs here. The link goes to stderr, the browser is waited for, the token
+// is saved, and the run then reports what auth status would. The URL is a
+// human word and human words have one place to go, and it is not stdout.
+// TestLoginPrintsTheURLToStderrNotStdout is the pin,
+// TestAFailedLoginIsOneFailingEnvelope is the other half, because a login that
+// did not happen is still one object, and TestTheLoginClosesItsListenerEitherWay
+// holds the port freed whichever way the wait ended.
+//
+// On a pipe, on a file and in a window with no room for a box, the two lines
+// are auth.LinkLine's own, byte for byte, because a skill and a log read them:
+// TestThePipeLoginLineIsTodays and TestANarrowWindowGetsTheLoginLineAndNoBox.
+//
+// On a terminal the sentence sits in a box labelled with the host the link
+// goes to, the link is one line of its own under the box so that a copy gets
+// all of it, and the wait is one line that rewrites itself and ends as a tick
+// and "signed in" or as a cross and the error the object carries:
+// TestTheLoginScreensAreTheirRecordedBytes. Nothing moves the cursor and
+// nothing turns auto-wrap off, because a login traps no signal: a Ctrl-C can
+// land anywhere in those three minutes and has to leave the terminal as it
+// found it. TestTheLoginSpinnerMovesNoCursorButCarriageReturn reads the bytes
+// for both.
 //
 // # The binary never prompts, and help is an answer
 //

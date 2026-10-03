@@ -482,24 +482,39 @@ Before any rendering code changes.
 - Create: `go/cmd/gdoc/loginscreen.go`, `go/cmd/gdoc/loginscreen_test.go`,
   a test in `go/internal/auth/` for `LinkLine`
 
-- [ ] Test first: `auth.LinkLine(url string) string` returns exactly
+- [x] Test first: `auth.LinkLine(url string) string` returns exactly
       `"Open this link in your browser to sign in:\n" + url + "\n"`, pinned by
       that literal in `TestTheLinkLineIsTodays`. `auth.Login` prints through
       it, and its six tests pass unchanged.
-- [ ] The CLI `login` variable calls `auth.StartLogin` and `Pending.Wait`
+- [x] The CLI `login` variable calls `auth.StartLogin` and `Pending.Wait`
       itself, as `mcplogin.go` already does, so `cmd/gdoc` owns the stream.
       `auth.Login` stays for its own tests and callers.
-- [ ] On a pipe, `cmd/gdoc` prints `auth.LinkLine(url)` and nothing else:
+- [x] On a pipe, `cmd/gdoc` prints `auth.LinkLine(url)` and nothing else:
       `TestThePipeLoginLineIsTodays`.
-- [ ] On a terminal: the link in a box, then one spinner line
+- [x] On a terminal: the link in a box, then one spinner line
       `waiting for the browser` redrawn with `\r` only, then `✓ signed in`
       followed by `tty`'s clear-to-end-of-line, so no spinner text is left.
       `TestTheLoginSpinnerMovesNoCursorButCarriageReturn` reads the bytes and
       finds no cursor-up and no wrap-off.
-- [ ] A failed wait ends the spinner line with `✗` and the error, and the
+- [x] A failed wait ends the spinner line with `✗` and the error, and the
       object says why, as today.
-- [ ] The shared login lock of M14 is untouched: its tests pass unchanged.
-- [ ] `git commit -m "feat(login): one waiting line, then signed in"`
+- [x] The shared login lock of M14 is untouched: its tests pass unchanged.
+- [x] `git commit -m "feat(login): one waiting line, then signed in"`
+
+- ➕ The spinner line says `waiting for the browser to come back`, which is
+  the sentence the pictures draw (`panels-round-two.html`, `loginScreen`).
+  This task's own line above quotes the first three words of it; the pictures
+  own what a screen says, so the full sentence is what is drawn.
+- ➕ The CLI login calls `startLogin`, the variable `mcplogin.go` already
+  holds, rather than a second one of its own: one room in the package starts a
+  browser trip, and `cmd/gdoc/mcp*.go` stayed untouched. `auth.Login` keeps
+  its own tests and now has no caller in the binary.
+- ➕ `auth.LinkAsk` is exported beside `LinkLine`, because the box draws the
+  sentence without the link under it. `internal/auth` gained no terminal code:
+  a constant and a one-line function, no colour and no escape byte.
+- ➕ Two goldens, `login-80.golden` and `login-failed-80.golden`, record the
+  whole of what a terminal reads, carriage returns included. `spinEvery` is a
+  variable so a recording is one frame.
 
 ### Task 12: auth status names the account
 

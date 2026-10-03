@@ -16,7 +16,6 @@ import (
 
 	"gdoc/internal/auth"
 	"gdoc/internal/emit"
-	"gdoc/internal/guard"
 	"gdoc/internal/panel"
 	"gdoc/internal/tty"
 )
@@ -49,8 +48,23 @@ func releaseVersion() string {
 // login is the login flow behind a variable so a test can stand in for the
 // browser trip. The client is the guard's, so even the token exchange passes a
 // policy that could refuse it.
+//
+// It is the trip in its two halves, startLogin and Wait, which is what the MCP
+// login tool already calls: the listener and the exchange belong to
+// internal/auth, and the stream a person reads belongs here. auth.Login is the
+// same two halves in one call, and nothing in this binary takes it now.
+// loginscreen.go draws what goes on that stream.
+//
+// The wait has no context of its own, as it never had: nothing above a login
+// can cancel a run already waiting on a browser, and internal/auth's own
+// three-minute ceiling is what bounds it.
 var login = func(errOut io.Writer) error {
-	return auth.Login(guard.NewClient(guard.NewPolicy(), nil), errOut)
+	trip, link, err := startLogin()
+	if err != nil {
+		return err
+	}
+	defer trip.Close()
+	return waitForBrowser(context.Background(), errOut, trip, link)
 }
 
 func main() {

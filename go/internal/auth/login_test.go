@@ -312,3 +312,46 @@ type refuseAll struct{}
 func (refuseAll) RoundTrip(r *http.Request) (*http.Response, error) {
 	return nil, fmt.Errorf("unexpected request to %s", r.URL)
 }
+
+// The two lines a login prints are the two lines it has always printed, and
+// they are stated here as the literal they are: a pipe reads them, and
+// cmd/gdoc draws the same sentence inside a box on a terminal. A change to
+// either byte is a change to what a skill's log holds.
+func TestTheLinkLineIsTodays(t *testing.T) {
+	const url = "https://accounts.google.com/o/oauth2/auth?client_id=not-real&state=abc"
+	want := "Open this link in your browser to sign in:\n" + url + "\n"
+	if got := LinkLine(url); got != want {
+		t.Errorf("the link line is\n%q\nand it must be\n%q", got, want)
+	}
+	if LinkAsk+"\n" != "Open this link in your browser to sign in:\n" {
+		t.Errorf("the sentence a terminal draws in a box is %q", LinkAsk)
+	}
+}
+
+// Login prints through LinkLine, so the two routes cannot drift: what the
+// browser trip writes and what a box is drawn from are one string.
+func TestLoginPrintsThroughTheLinkLine(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	rt := &formRT{}
+	w := chanWriter{lines: make(chan string, 4)}
+	done := make(chan error, 1)
+	go func() { done <- Login(&http.Client{Transport: rt}, w) }()
+
+	printed := <-w.lines
+	u := urlFrom(t, printed)
+	if printed != LinkLine(u.String()) {
+		t.Errorf("Login wrote %q, and LinkLine of the same URL is %q", printed, LinkLine(u.String()))
+	}
+
+	// The trip is finished rather than left open: a listener nobody answers
+	// holds its port for the three minutes the test does not wait.
+	q := u.Query()
+	resp, err := http.Get(callbackWith(t, q.Get("redirect_uri"), url.Values{"code": {"CODE9"}, "state": {q.Get("state")}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
