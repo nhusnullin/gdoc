@@ -12,7 +12,7 @@
 // It knows no command, no document and no wire. It imports no net/http, runs
 // nothing and writes nothing to disk. cmd/gdoc is what joins it to a command.
 // docs/v2/DECISIONS.md holds the 2026-10-03 decisions, and
-// docs/plans/2026-10-02-gdoc-v2-m14-chat.md the specification.
+// docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md the specification.
 //
 // # The guide code
 //

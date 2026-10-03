@@ -7,7 +7,7 @@
 // document, no grant and no hold. It imports no net/http and builds no client:
 // TestMcpImportsNoNetHTTP in go/boundary holds that, in both directions.
 // docs/v2/DECISIONS.md holds the 2026-10-03 decision this package implements,
-// and docs/plans/2026-10-02-gdoc-v2-m14-chat.md the specification.
+// and docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md the specification.
 //
 // Nothing here is a dependency. There is a Go SDK for this protocol and gdoc
 // has three modules, each named in go/boundary with its reason. Four methods

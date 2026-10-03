@@ -2923,8 +2923,9 @@ Tests: `TestContentRefusesWhatTheSubsetDoesNotHold` carries the list case, and
 ## 2026-10-02. propose without the probe, and no company domain in the repository.
 
 Nail's decisions, taken in the brainstorm that produced the M14 specification,
-`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, as its decisions 11, 15, 17 and 19.
-This entry holds only what run 1 of that milestone builds, the task list at
+`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`, as its decisions 11,
+15, 17 and 19. This entry holds only what run 1 of that milestone builds, the
+task list at
 `docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md`. It is written
 before that code, because a change to SPEC.md is an entry here first.
 
@@ -3036,11 +3037,12 @@ the tests for the rules they state.
 ## 2026-10-03. `gdoc mcp`: gdoc in Claude Desktop chat, as measured.
 
 Nail's decisions of 2026-10-02 and 2026-10-03, as the M14 specification
-`docs/plans/2026-10-02-gdoc-v2-m14-chat.md` states them in its nineteen. The
-entry above took the four that run 1 built and said the server's rows would wait
+`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md` states them in its
+nineteen. The entry above took the four that run 1 built and said the server's
+rows would wait
 for the measurements. This entry takes the rest. It is written before the server
 code, because a change to SPEC.md is an entry here first. The task list is
-`docs/plans/2026-10-03-gdoc-v2-m14b-server.md`, released as v2.9.0.
+`docs/plans/completed/2026-10-03-gdoc-v2-m14b-server.md`, released as v2.9.0.
 
 Between the specification and this entry sit twelve measurements, taken on
 2026-10-03 against a stub server in Claude Desktop and written into
@@ -3365,8 +3367,9 @@ external program" is narrowed to the one `open` above. "Identity is never a gate
 holds. CLAUDE.md's invariant list is rewritten in the last task of the run, each
 line naming the test that holds it.
 
-Tests: the run 2 plan, `docs/plans/2026-10-03-gdoc-v2-m14b-server.md`, names the
-tests for every rule above, from `TestInitializeAnswersEachSupportedVersion` in
+Tests: the run 2 plan,
+`docs/plans/completed/2026-10-03-gdoc-v2-m14b-server.md`, names the tests for
+every rule above, from `TestInitializeAnswersEachSupportedVersion` in
 `internal/mcp` to `TestOnlyDesktopRunsAProgram` in `go/boundary`.
 `internal/mcp/doc.go`, `internal/chat/doc.go`, `cmd/gdoc/doc.go`,
 `internal/guard/doc.go` and `internal/auth/doc.go` each name the tests for the

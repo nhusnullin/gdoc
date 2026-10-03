@@ -382,8 +382,8 @@ thin `.mcpb` whose command is the stub's absolute path. It logged every line
 Claude Desktop sent and every answer, and offered four tools: a read, a write,
 a sleep and a held write that registers a one-time `confirm_<id>` tool. These
 are the twelve measurements the M14 specification
-(`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`) puts before any server code.
-Recheck before run 2 ships if Claude Desktop has been updated since, and
+(`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`) puts before any server
+code. Recheck before run 2 ships if Claude Desktop has been updated since, and
 whenever a release note mentions extensions, tool permissions or voice.
 
 | # | Question | Answer |

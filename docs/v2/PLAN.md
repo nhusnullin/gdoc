@@ -67,8 +67,9 @@ Built. The release waits on the two by-hand gates below. In flight since
 2026-10-03. gdoc becomes a local MCP server inside the same
 binary, so a person reviews a Google Doc from Claude Desktop chat and from
 voice mode, not only from a Claude Code terminal. The specification is
-`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, with the nineteen decisions Nail
-took on 2026-10-02 and 2026-10-03 and the seventeen scenarios that are the
+`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`, with the nineteen
+decisions Nail took on 2026-10-02 and 2026-10-03 and the seventeen scenarios
+that are the
 acceptance list.
 
 The milestone runs in more than one ralphex run, Nail's call of 2026-10-03. The
@@ -81,7 +82,7 @@ is cut where the measurements fall.
 | run 1, the groundwork | the firm's domain out of the tree, `propose` without the capability probe, the stop at the first proposal a read-back cannot confirm, a lost batch answer as `outcome: "unknown"`, the review rules split into `review.md`, the two-step login, the token race, the context threaded through the six chat commands, and `notice` returning its line. `docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md` | v2.8.0, alone |
 | the tag sitting | the two skills stop passing `--folder` and move to `needs: v2.8.0`, in the same sitting as `make tag VERSION=v2.8.0`. By hand, after run 1 merges | v2.8.0 |
 | the spike | the twelve measurements against a throwaway stub server outside the tree, recorded in MEASURED.md. By Nail, beside run 1 | none |
-| run 2 | `internal/mcp` and `internal/chat`, `gdoc mcp` with its eight tools, the labelled text and its facts, the hold rules and the card, the login shared across processes, the extension and `update --desktop`. Done 2026-10-03, `docs/plans/2026-10-03-gdoc-v2-m14b-server.md` | v2.9.0, after the gates below |
+| run 2 | `internal/mcp` and `internal/chat`, `gdoc mcp` with its eight tools, the labelled text and its facts, the hold rules and the card, the login shared across processes, the extension and `update --desktop`. Done 2026-10-03, `docs/plans/completed/2026-10-03-gdoc-v2-m14b-server.md` | v2.9.0, after the gates below |
 
 ### Before a minor release
 

@@ -1,7 +1,7 @@
 # gdoc v2 Milestone 14, run 2: the server, plan
 
 2026-10-03. The second task list for the specification at
-`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, after run 1
+`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`, after run 1
 (`docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md`, released as
 v2.8.0) and the spike (`docs/v2/MEASURED.md`, "Claude Desktop and a local MCP
 server"). This file is all of `gdoc mcp`, one commit per task, for ralphex. It
@@ -1414,12 +1414,19 @@ was left without one, so this task added no ➕ task:
 
 ### Task 25: Update documentation
 
-- [ ] Move this plan and the spec to `docs/plans/completed/`, and fix every
+- [x] Move this plan and the spec to `docs/plans/completed/`, and fix every
       link to the spec's old path: `grep -rn '2026-10-02-gdoc-v2-m14-chat'`
       over `docs/` and `go/` prints only `completed/` paths afterwards
       (`MEASURED.md`, `PLAN.md`, `DECISIONS.md`, the run 1 plan).
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs(v2): M14 run 2, completed"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs(v2): M14 run 2, completed"`
+
+➕ Both files moved with `git mv`, so the history follows them. Nine links
+were rewritten across six files: the run 1 plan (two), `DECISIONS.md` (four),
+`MEASURED.md`, `PLAN.md`, and this plan's own opening line, plus the package
+comments of `internal/chat` and `internal/mcp`. The grep now prints only
+`completed/` paths and the one line that is the checkbox above, which is the
+search itself and not a link. `docs/plans/` holds nothing but `completed/`.
 
 ## Post-Completion
 
