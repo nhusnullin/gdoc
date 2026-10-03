@@ -762,8 +762,9 @@ at ten. Liveness ends with the session. Changed 2026-09-07, DECISIONS.md.
 ## Chat: `gdoc mcp`, the sixteenth command
 
 Serves principle 1. A colleague who has the binary and Claude Desktop reviews a
-document by asking for it in their own words, in chat and in voice, with no
-terminal open. `gdoc mcp` is this binary as a local MCP server: JSON-RPC 2.0,
+document by asking for it in their own words in a Claude Desktop chat, typed or
+dictated, with no terminal open. Live voice mode does not reach a local
+extension (MEASURED.md, "gdoc mcp in Claude Desktop, the first run"). `gdoc mcp` is this binary as a local MCP server: JSON-RPC 2.0,
 one message per line, over stdin and stdout, written by hand in `internal/mcp`
 so there is no fourth module. `main()` routes `mcp` before `run()`, because
 `run()` prints one envelope after every command and a table entry's `run` sees

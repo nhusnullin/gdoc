@@ -1,7 +1,7 @@
 # Reviewing a Google Doc from Claude Desktop chat
 
 This page is for a colleague who wants to review a document without opening a
-terminal. You ask in the chat, or out loud in voice mode, and Claude reads the
+terminal. You ask in the chat, typed or dictated, and Claude reads the
 document and its comments, answers in the thread, and suggests edits you accept
 or reject in Google Docs. It is the same gdoc the terminal runs, and the same
 rule holds: it never changes a word you wrote.
@@ -52,10 +52,18 @@ Do not name a tool. Say what you want, with the link:
 - "Suggest changing 'as soon as possible' to 'within five working days'."
 - "Any new comments since you last looked?"
 
-Voice works on a Mac. Speech recognition turns a tool's name into other words,
-so a sentence like "call the comments tool" often reaches nothing. "What are the
-comments on this document" works. Say Google Doc, comments, reply, suggest, and
-let Claude pick the tool.
+Live voice mode does not reach gdoc. In a voice conversation Claude finds the
+connectors that run on Anthropic's side, such as Google Drive, and never an
+extension installed on your Mac. Anthropic's help page says desktop extensions
+are not available on the web or on a phone, and on a Mac voice mode made no call
+to gdoc either. To talk instead of typing, use the microphone in the message
+box: it turns what you say into text in an ordinary chat, and gdoc works there.
+Say it in plain words, Google Doc, comments, reply, suggest, and let Claude pick
+the tool.
+
+If Claude says a gdoc tool is not available, start a new chat. A long chat can
+lose a tool, and a new one finds it again. Do not let Claude do the job through
+Google Drive or another connector instead: those skip every check gdoc makes.
 
 Claude does not watch a document in the background here. There is no live mode
 in chat: ask again and it reads from where it left off.

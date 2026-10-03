@@ -3414,6 +3414,15 @@ the card, and a red word on the step that protects them reads as a fault in the
 tool. Every other `ok: false` still sets `isError`. Claude's call while Nail was
 collecting findings, left to him to overturn.
 
+**Chat is typed or dictated, and voice mode is not promised.** The
+specification wrote of reviewing "in chat and in voice". On the first run, live
+voice mode made no call to gdoc in two conversations, and found only the
+connectors that run on Anthropic's side; the one local call measurement 8
+counted during the spike came from dictation into a typed chat. SPEC.md and the
+colleague's guide now say chat, typed or dictated, and that voice mode does not
+reach the extension. The specification already said chat ships and voice waits
+on Anthropic, so no code changes.
+
 **What was rejected.** Narrowing the link hold to a query, a fragment, a long
 path, a file-sharing host or an email address: Nail preferred one rule fewer.
 Keeping the trusted-domains field for a hold that may come back: a setting with
