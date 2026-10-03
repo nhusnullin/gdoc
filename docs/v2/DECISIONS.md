@@ -80,7 +80,8 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
 | 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
-| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | holds |
+| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs only (the link hold, and the trusted email domains, both dropped after the first run in Claude Desktop) |
+| 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, and a hold is not an error | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3374,3 +3375,49 @@ every rule above, from `TestInitializeAnswersEachSupportedVersion` in
 `internal/mcp/doc.go`, `internal/chat/doc.go`, `cmd/gdoc/doc.go`,
 `internal/guard/doc.go` and `internal/auth/doc.go` each name the tests for the
 rules they state.
+
+## 2026-10-03. What the first run in Claude Desktop changed: no link hold, no trusted domains, and a hold is not an error.
+
+Nail ran PR #78 in Claude Desktop on 2026-10-03, on `bank-durability-test` in
+the Drive test folder: a read, a comment, a reply, and a reply with a link that
+was held and released by its card. Three decisions came out of it, his calls of
+the same day, and this entry records them before the code changes. The facts the
+run measured are in [MEASURED.md](MEASURED.md).
+
+**The link hold is dropped.** The entry above held a chat write whose text
+carried a link, a bare domain or an email address not already in the target
+document or its threads. Nail asked why a link is risky when the danger is
+reading a comment as an instruction. The hold was the backstop for a model that
+was steered anyway: a link can carry data out in its address, and a reply goes
+out under the person's name and is emailed to the thread at once. Asked to keep
+it, narrow it to the shapes that can carry data, or drop it, Nail dropped it. A
+link or an address in a chat write now posts after the person's yes on a draft
+that shows it, like any other text. The other five rules stay: dictated text,
+focus on another document, a burst of writes, a flagged thread, and a large
+removal; so does the outright refusal of hidden characters. Serves principle 4:
+a person reviewing their own document says what to write, and a card on every
+ordinary link teaches "approve without reading", which is the habit the cards
+exist to avoid.
+
+**The trusted email domains setting goes with it.** Decision 17 made it the
+person's own setting, exempting addresses at their own domains from the link
+hold, and it had no other job. With the hold gone it would be a field that does
+nothing, so the extension loses its one `user_config` field, `gdoc mcp` loses
+`--trusted-email-domains`, and `guide` stops reporting it. The extension has no
+settings.
+
+**A held write is not an error.** A held answer stays `ok: false` with `sent:
+false` and `held`, so a caller reading the envelope learns exactly what it
+learned before. What changes is the MCP result's `isError`, which Claude Desktop
+paints as "failed" in red. A hold is not a failure: the person's next step is
+the card, and a red word on the step that protects them reads as a fault in the
+tool. Every other `ok: false` still sets `isError`. Claude's call while Nail was
+collecting findings, left to him to overturn.
+
+**What was rejected.** Narrowing the link hold to a query, a fragment, a long
+path, a file-sharing host or an email address: Nail preferred one rule fewer.
+Keeping the trusted-domains field for a hold that may come back: a setting with
+no effect is a promise the extension does not keep.
+
+Tests: the fix commits on the PR #78 branch name them; `internal/chat/doc.go`
+names the rules that remain and the test for each.
