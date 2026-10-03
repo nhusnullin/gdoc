@@ -393,3 +393,31 @@ func TestANarrowWindowOpensWithTheWordsBareGdocRefusesWith(t *testing.T) {
 		t.Errorf("the plain text must open with %q: %q", needsCommand, errOut.String())
 	}
 }
+
+// A usage too long for its box carries on over as many lines as it needs, and
+// every line after the first is indented two columns. The second line was
+// indented and the third was not, so a three-line usage read as a second
+// command somebody could type.
+func TestEveryCarriedUsageLineIsIndented(t *testing.T) {
+	var c command
+	for _, each := range commands() {
+		if each.name == "annotate" {
+			c = each
+		}
+	}
+	if c.name == "" {
+		t.Fatal("annotate is the command whose usage carries over three lines, and commands() has no such name")
+	}
+
+	p := panel.New(tty.Style{}, 50)
+	rows := usageRows(p, tty.Style{}, c)
+	if len(rows) < 3 {
+		t.Fatalf("annotate at fifty columns must take three lines, and it took %d", len(rows))
+	}
+	lines := p.Box("Usage", "", rows)
+	for i, line := range lines[2 : len(lines)-1] {
+		if !strings.HasPrefix(line, "│   ") {
+			t.Errorf("the usage line carried onto row %d is not indented: %q", i+2, line)
+		}
+	}
+}

@@ -379,8 +379,9 @@ func markedRows(p panel.Panel, style tty.Style, mark, text string) []panel.Row {
 
 // usageRows is the line a person types, broken only between its parts: a flag
 // keeps its placeholder and an optional part keeps its brackets, because a
-// usage line split inside one of those teaches a call the binary refuses. A
-// second line is indented two columns, so it reads as the first one carried on.
+// usage line split inside one of those teaches a call the binary refuses.
+// Every line after the first is indented two columns, so each reads as the one
+// above it carried on: TestEveryCarriedUsageLineIsIndented.
 func usageRows(p panel.Panel, style tty.Style, c command) []panel.Row {
 	parts := append([]string{"gdoc", c.name}, c.words...)
 	parts = append(parts, usageFlags(c)...)
@@ -388,21 +389,19 @@ func usageRows(p panel.Panel, style tty.Style, c command) []panel.Row {
 	var rows []panel.Row
 	var line []string
 	width := p.TextWidth()
-	taken := 0
+	// taken counts the columns the line already holds, the indent among them,
+	// so the indent is paid for once and not twice.
+	taken, indent := 0, ""
 	for _, part := range parts {
 		if len(line) > 0 && taken+1+len(part) > width {
-			rows = append(rows, panel.Line(paintUsage(style, line)))
-			line, taken, width = nil, 2, p.TextWidth()-2
+			rows = append(rows, panel.Line(indent+paintUsage(style, line)))
+			line, taken, indent = nil, 2, "  "
 		}
-		if taken > 0 && len(line) > 0 {
+		if len(line) > 0 {
 			taken++
 		}
 		line = append(line, part)
 		taken += len(part)
-	}
-	indent := ""
-	if len(rows) > 0 {
-		indent = "  "
 	}
 	return append(rows, panel.Line(indent+paintUsage(style, line)))
 }

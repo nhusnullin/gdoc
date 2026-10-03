@@ -88,9 +88,9 @@ var (
 // it with NewStyle and hand it to internal/panel, which knows the boxes and
 // not the colours.
 //
-// The zero Style is NoColour, which writes nothing: TestAStyleNobodySetWrites
-// Nothing. That is on purpose, so a Style somebody forgot to build is the safe
-// one rather than the wrong one.
+// The zero Style is NoColour, which writes nothing, and that is on purpose: a
+// Style somebody forgot to build is the safe one rather than the wrong one.
+// TestAStyleNobodySetWritesNothing.
 type Style struct {
 	depth Depth
 }

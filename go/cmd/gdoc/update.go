@@ -634,8 +634,8 @@ func chosenDetail(rel update.Release, ch update.Channel, platform string, instal
 // A terminal reads the run and the extension on two lines, because the
 // extension is a second thing to go and do and a sentence somebody has to act
 // on is not a tail of another one. A pipe reads the one line it always read,
-// which the frozen goldens hold: TestTheExtensionIsItsOwnLineOnATerminal
-// AndOneLineOnAPipe.
+// which the frozen goldens hold:
+// TestTheExtensionIsItsOwnLineOnATerminalAndOneLineOnAPipe.
 func resultLines(r emit.Result, live bool) []string {
 	if !live {
 		if line := resultLine(r); line != "" {
