@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"sync"
+	"time"
 )
 
 // Tool is one tool the server offers. Schema is the inputSchema, written by
@@ -44,11 +46,19 @@ type Info struct {
 // what version negotiation is.
 var versions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
 
+// callDeadline is how long one tool call may take, counted from the moment its
+// line was read. Claude Desktop gives up on a call after 240 seconds
+// (docs/v2/MEASURED.md, measurement 5), so a call that is going to lose has
+// 40 seconds left to say so in words the person can read.
+// TestEveryCallGetsADeadlineFromTheMomentItsLineWasRead states the literal.
+const callDeadline = 200 * time.Second
+
 // Server is one stdio session. It knows tools as names and functions, and
 // nothing about documents, commands or the wire.
 type Server struct {
 	info Info
 	log  io.Writer
+	now  func() time.Time
 
 	toolsMu sync.Mutex
 	tools   []Tool
@@ -56,19 +66,28 @@ type Server struct {
 	outMu sync.Mutex
 	out   io.Writer
 
-	qMu    sync.Mutex
-	qCond  *sync.Cond
-	queue  []*call
-	closed bool
+	qMu     sync.Mutex
+	qCond   *sync.Cond
+	queue   []*call
+	running *call
+	closed  bool
 }
 
 // call is one tools/call waiting for the worker. The tool is resolved when the
 // line is read, so an unknown name is refused at once rather than behind
-// whatever is running.
+// whatever is running, and readAt is that same moment, which is where the
+// deadline counts from.
+//
+// cancel and cancelled are written and read under qMu, so a cancellation that
+// arrives while the worker is picking the call up finds one or the other.
 type call struct {
-	id   json.RawMessage
-	tool Tool
-	args json.RawMessage
+	id     json.RawMessage
+	tool   Tool
+	args   json.RawMessage
+	readAt time.Time
+
+	cancel    context.CancelFunc
+	cancelled bool
 }
 
 // New makes a server over the tools given, in their order. An empty version is
@@ -78,7 +97,7 @@ func New(info Info, tools []Tool, log io.Writer) *Server {
 	if info.Version == "" {
 		info.Version = "dev"
 	}
-	s := &Server{info: info, log: log, tools: append([]Tool(nil), tools...)}
+	s := &Server{info: info, log: log, now: time.Now, tools: append([]Tool(nil), tools...)}
 	s.qCond = sync.NewCond(&s.qMu)
 	return s
 }
@@ -181,8 +200,16 @@ func (s *Server) work(ctx context.Context) {
 		}
 		c := s.queue[0]
 		s.queue = s.queue[1:]
+		callCtx, cancel := context.WithDeadline(ctx, c.readAt.Add(callDeadline))
+		c.cancel, s.running = cancel, c
 		s.qMu.Unlock()
-		s.answerCall(ctx, c)
+
+		s.answerCall(callCtx, c)
+		cancel()
+
+		s.qMu.Lock()
+		s.running = nil
+		s.qMu.Unlock()
 	}
 }
 
@@ -196,7 +223,11 @@ func (s *Server) handle(line []byte) {
 	}
 	if !m.hasID {
 		// A notification is never answered, known or unknown. There is nothing
-		// to answer it to.
+		// to answer it to. One of them is still acted on: a cancellation takes
+		// a call back.
+		if m.method == "notifications/cancelled" {
+			s.cancelCall(m.params)
+		}
 		return
 	}
 	switch m.method {
@@ -359,18 +390,87 @@ func (s *Server) startCall(m message) {
 	if s.closed {
 		return
 	}
-	s.queue = append(s.queue, &call{id: m.id, tool: *found, args: p.Arguments})
+	s.queue = append(s.queue, &call{id: m.id, tool: *found, args: p.Arguments, readAt: s.now()})
 	s.qCond.Signal()
 }
 
-// answerCall runs one tool and answers with what it said.
+// cancelParams is what a notifications/cancelled carries. requestId is raw, so
+// it is compared against the id the client sent as the same bytes.
+type cancelParams struct {
+	RequestID json.RawMessage `json:"requestId"`
+	Reason    string          `json:"reason"`
+}
+
+// cancelCall takes one call back. A call still in the queue is dropped and
+// never answered: the client has stopped waiting for it, and running it would
+// write into a document nobody is listening about any more. A call that has
+// started has its context cancelled, and the answer it eventually gives is
+// thrown away. A requestId that matches nothing changes nothing, because a
+// cancellation that arrives after the answer is the ordinary race.
+func (s *Server) cancelCall(params json.RawMessage) {
+	var p cancelParams
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &p); err != nil {
+			s.logf("mcp: the params of a notifications/cancelled would not decode: %v", err)
+			return
+		}
+	}
+	want := compactID(p.RequestID)
+	if len(want) == 0 {
+		s.logf("mcp: a notifications/cancelled named no requestId")
+		return
+	}
+
+	s.qMu.Lock()
+	defer s.qMu.Unlock()
+	for i, c := range s.queue {
+		if bytes.Equal(compactID(c.id), want) {
+			s.queue = append(s.queue[:i:i], s.queue[i+1:]...)
+			s.logf("mcp: the call %s was cancelled before it started and is dropped", want)
+			return
+		}
+	}
+	if s.running != nil && bytes.Equal(compactID(s.running.id), want) {
+		s.running.cancelled = true
+		s.running.cancel()
+		s.logf("mcp: the call %s was cancelled while it ran, and its answer is discarded", want)
+	}
+}
+
+// answerCall runs one tool and answers with what it said, unless the client
+// took the call back while it ran.
 func (s *Server) answerCall(ctx context.Context, c *call) {
-	res := c.tool.Call(ctx, c.args)
+	res := s.callTool(ctx, c)
+
+	s.qMu.Lock()
+	cancelled := c.cancelled
+	s.qMu.Unlock()
+	if cancelled {
+		return
+	}
+
 	items := make([]content, 0, len(res.Texts))
 	for _, text := range res.Texts {
 		items = append(items, content{Type: "text", Text: text})
 	}
 	s.answerResult(c.id, s.encode(callResult{Content: items, IsError: res.IsError}))
+}
+
+// callTool runs one tool and turns a panic into a result the model can read.
+// Without this the goroutine takes the process down, the session dies mid
+// sentence and the person is told nothing. The trace goes to the log, where it
+// is readable without reaching stdout.
+func (s *Server) callTool(ctx context.Context, c *call) (res Result) {
+	defer func() {
+		if p := recover(); p != nil {
+			s.logf("mcp: the tool %s panicked: %v\n%s", c.tool.Name, p, debug.Stack())
+			res = Result{
+				Texts:   []string{fmt.Sprintf("the gdoc tool %s failed: %v", c.tool.Name, p)},
+				IsError: true,
+			}
+		}
+	}()
+	return c.tool.Call(ctx, c.args)
 }
 
 func (s *Server) answerResult(id json.RawMessage, result json.RawMessage) {

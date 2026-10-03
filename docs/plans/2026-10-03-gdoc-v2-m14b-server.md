@@ -480,18 +480,18 @@ Serves the spec's "Deadlines" paragraph with MEASURED 5.
 - Modify: `go/internal/mcp/mcp.go`, `go/internal/mcp/doc.go`
 - Create: `go/internal/mcp/deadline_test.go`
 
-- [ ] Test first, `TestEveryCallGetsADeadlineFromTheMomentItsLineWasRead`:
+- [x] Test first, `TestEveryCallGetsADeadlineFromTheMomentItsLineWasRead`:
       with a fake clock, the context's deadline is the read time plus
       `200 * time.Second`, stated as a literal.
-- [ ] Test, `TestCallsRunOneAtATimeInArrivalOrder`, and
+- [x] Test, `TestCallsRunOneAtATimeInArrivalOrder`, and
       `TestPingIsAnsweredWhileACallRuns`.
-- [ ] Test, `TestACancelledCallThatHasNotStartedIsDropped`.
-- [ ] Test, `TestACancelledCallThatStartedHasItsAnswerDiscarded`.
-- [ ] Test, `TestAPanicInAToolIsAnErrorResultAndTheServerKeepsRunning`.
-- [ ] Implement `callDeadline`, the queue, the cancels, the recover.
-- [ ] `doc.go` names the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(mcp): a 200-second deadline per call, cancellation, and a panic is one answer"`
+- [x] Test, `TestACancelledCallThatHasNotStartedIsDropped`.
+- [x] Test, `TestACancelledCallThatStartedHasItsAnswerDiscarded`.
+- [x] Test, `TestAPanicInAToolIsAnErrorResultAndTheServerKeepsRunning`.
+- [x] Implement `callDeadline`, the queue, the cancels, the recover.
+- [x] `doc.go` names the tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(mcp): a 200-second deadline per call, cancellation, and a panic is one answer"`
 
 ### Task 4: gdoc mcp, routed before the envelope
 

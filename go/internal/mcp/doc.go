@@ -91,6 +91,44 @@
 // was asked for, and the end of stdin is not a reason to pretend it never
 // came.
 //
+// A ping is answered while a call runs, which is how a client that is waiting
+// can tell the server is alive rather than wedged:
+// TestPingIsAnsweredWhileACallRuns. The calls themselves run in the order
+// their lines arrived, one at a time:
+// TestCallsRunOneAtATimeInArrivalOrder.
+//
+// # The deadline
+//
+// Each tool call runs under a context whose deadline is callDeadline from the
+// moment its line was read, not from the moment the worker picked it up, so a
+// call that waited behind two others cannot run past what the client is still
+// waiting for: TestEveryCallGetsADeadlineFromTheMomentItsLineWasRead states
+// the 200-second literal. Claude Desktop gives up on a call after 240 seconds
+// (docs/v2/MEASURED.md, measurement 5), which leaves a losing call 40 seconds
+// to say so in words the person can read.
+//
+// # Cancellation
+//
+// notifications/cancelled takes one call back, matched on the requestId as the
+// same bytes as the id it was sent with, whitespace aside. A call still in the
+// queue is dropped and never answered or run: the client has stopped waiting,
+// and running it would write into a document nobody is listening about any
+// more (TestACancelledCallThatHasNotStartedIsDropped). A call that has started
+// has its context cancelled and the answer it eventually gives is thrown away
+// (TestACancelledCallThatStartedHasItsAnswerDiscarded), because a command that
+// takes its context already stops between items and never cuts a read-back. A
+// requestId that matches nothing changes nothing: a cancellation that arrives
+// after the answer is the ordinary race.
+//
+// # A panic in a tool
+//
+// A panic is one result with isError true, naming the tool and the panic, and
+// the server goes on to the next call:
+// TestAPanicInAToolIsAnErrorResultAndTheServerKeepsRunning. Without that the
+// goroutine takes the process down, the session dies mid sentence and the
+// person is told nothing. The trace goes to the log, never to stdout, which is
+// the same bargain safeDispatch makes in cmd/gdoc for the terminal.
+//
 // # The errors
 //
 // An unknown tool is invalid params, -32602, answered in the reader rather
@@ -131,7 +169,4 @@
 // cmd/gdoc/main.go names the real ones, which is what lets every test above
 // run a whole session against strings in memory. The log is a writer too, and
 // never stdout: stdout carries JSON-RPC and nothing else.
-//
-// TODO(test): the deadline per call, cancellation and the recover around a
-// tool are the next task's, and the rules above say nothing about them yet.
 package mcp

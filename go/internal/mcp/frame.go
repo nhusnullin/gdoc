@@ -120,3 +120,18 @@ func parseMessage(line []byte) (message, *rpcError) {
 	}
 	return m, nil
 }
+
+// compactID is one id as bytes that can be compared. The id is echoed byte for
+// byte, but a requestId in a cancellation is written by the client a second
+// time, so the whitespace inside it is not the same whitespace.
+func compactID(id json.RawMessage) []byte {
+	trimmed := bytes.TrimSpace(id)
+	if len(trimmed) == 0 {
+		return nil
+	}
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, trimmed); err != nil {
+		return trimmed
+	}
+	return buf.Bytes()
+}
