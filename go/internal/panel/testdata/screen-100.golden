@@ -1,0 +1,9 @@
+┌─ gdoc ────────────────────────────────────────────────────────────────────────────────── v2.9.0 ─┐
+│ Usage: gdoc <command> [flags]                                                                    │
+├─ Read ─────────────┬─────────────────────────────────────────────────────────────────────────────┤
+│ read               │ a document as text, one tab or all of them, with the suggestions marked     │
+│ comments           │ the threads, their quotes and who wrote them                                │
+├─ Write into a doc ─┼─────────────────────────────────────────────────────────────────────────────┤
+│ propose            │ a change to quoted words as a native suggestion, with a comment beside it   │
+│ reply              │ one robot reply into a thread nobody has closed                             │
+└────────────────────┴─────────────────────────────────────────────────────────────────────────────┘

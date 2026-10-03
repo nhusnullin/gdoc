@@ -334,18 +334,18 @@ Before any rendering code changes.
   `go/internal/panel/wrap.go`, `go/internal/panel/panel_test.go`,
   `go/internal/panel/testdata/*.golden`
 
-- [ ] `Layout(width) Kind`: `TwoColumns` at 80 and over, drawn at
+- [x] `Layout(width) Kind`: `TwoColumns` at 80 and over, drawn at
       `min(width, 100)`; `Stacked` from 50 to 79; `Plain` under 50. A test per
       band edge: 49, 50, 79, 80, 100, 160.
-- [ ] `Box(title, right string, rows)`: a title in the top border, an
+- [x] `Box(title, right string, rows)`: a title in the top border, an
       optional right label, `├─ name ─┤` separators, a column joint `┬ ┼ ┴`
       for two columns.
-- [ ] `Wrap(s, width)`: breaks at spaces; a word longer than the line starts a
+- [x] `Wrap(s, width)`: breaks at spaces; a word longer than the line starts a
       new line and is cut there, with no `…`: `TestAHashIsCutNotShortened`.
-- [ ] Goldens with no colour at 100, 80, 60 and 44, and one per depth (16,
+- [x] Goldens with no colour at 100, 80, 60 and 44, and one per depth (16,
       256, truecolor) at 80. `TestNoLineIsWiderThanItsBox` walks every golden
       with `tty.VisibleWidth`.
-- [ ] `git commit -m "feat(panel): titled boxes, two columns or stacked, by width"`
+- [x] `git commit -m "feat(panel): titled boxes, two columns or stacked, by width"`
 
 ### Task 8: the rule in run()
 
