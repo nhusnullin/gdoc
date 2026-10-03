@@ -212,32 +212,39 @@ type holdFacts struct {
 // The reason and the fixed sentence are in the error field as well as in the
 // facts, because the error is the field every other refusal arrives in and a
 // model that reads only that one is still told what to say.
+//
+// This is the one answer that says ok: false and is not an MCP error. Claude
+// Desktop shows isError as "failed" in red, and a hold is not a failure: the
+// person's next step is the card, and a red word on the step that protects them
+// reads as a fault in the tool. DECISIONS.md, 2026-10-03, "What the first run
+// in Claude Desktop changed", and
+// TestTheHeldAnswerNamesTheRuleTheValueAndTheText.
 func mcpHeldAnswer(held chat.Hold) mcp.Result {
-	return mcpHoldEnvelope(held, held.Reason)
+	res := mcpHoldEnvelope(held, held.Reason)
+	res.IsError = false
+	return res
 }
 
 // mcpKeptAnswer is a release that released nothing: the same facts the hold
 // answered with, and why this call did not send it. The hold is still there, so
 // the answer is the card's own words again rather than a bare refusal.
+//
+// It stays an MCP error, the way every other ok: false is, because both of
+// Release's refusals are the model's to put right. A card whose words differ is
+// put right by sending the held words back:
+// TestAByteDifferentTitleReasonOrTextIsRefused. An approval that came less than
+// the quiet gap after the last call is put right by ending the turn, so the
+// person can approve again in a moment: TestTheQuietGapIsFiveSeconds. The person
+// already chose in both; what went wrong is the call.
 func mcpKeptAnswer(held chat.Hold, why string) mcp.Result {
 	return mcpHoldEnvelope(held, why)
 }
 
 // mcpHoldEnvelope is the envelope both of those are: nothing sent, the facts a
-// card is built from, and one sentence saying why, ending in the fixed one.
-//
-// The envelope says ok: false, as every answer that sent nothing does, but the
-// MCP result is not an error. Claude Desktop shows isError as "failed" in red,
-// and a hold is not a failure: the person's next step is the card. DECISIONS.md,
-// 2026-10-03, "What the first run in Claude Desktop changed", and
-// TestTheHeldAnswerNamesTheRuleTheValueAndTheText.
+// card is built from, and one sentence saying why, ending in the fixed one. It
+// is an error like any other ok: false, and mcpHeldAnswer is the one caller that
+// takes that back.
 func mcpHoldEnvelope(held chat.Hold, why string) mcp.Result {
-	res := mcpHeldEnvelope(held, why)
-	res.IsError = false
-	return res
-}
-
-func mcpHeldEnvelope(held chat.Hold, why string) mcp.Result {
 	return mcpEnvelope(emit.Result{
 		OK:    false,
 		Error: why + ". " + mcpHeldSentence,

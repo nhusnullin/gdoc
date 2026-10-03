@@ -204,6 +204,27 @@ func TestTheFocusRuleTripsOnAnotherDocumentOrAnUnreadTarget(t *testing.T) {
 	passes(t, plainReply("thanks, I have asked finance"), released)
 }
 
+// A write's own read of another document is not attention elsewhere. A write
+// refused by its title, or aimed at an id a model lifted out of a comment,
+// leaves a pin read of that document behind. Counting it would hold every write
+// into the target for the next thirty minutes, naming a document nobody in the
+// chat ever saw and quoting words out of it.
+func TestAPinReadOfAnotherDocumentIsNotAttentionElsewhere(t *testing.T) {
+	const otherTitle = "Partner bank pricing sheet"
+	const otherText = "The partner bank charges nineteen basis points on every card payment it settles for us."
+
+	pinned := settled()
+	pinned.RecordRead(Read{DocID: "D2", Title: otherTitle, At: ruleNow.Add(-10 * time.Minute),
+		Text: otherText, ForWrite: true})
+	passes(t, plainReply("thanks, I have asked finance"), pinned)
+
+	// The model looking at that document is the hold, and the one read says
+	// which of the two happened.
+	looked := settled()
+	looked.RecordRead(Read{DocID: "D2", Title: otherTitle, At: ruleNow.Add(-10 * time.Minute), Text: otherText})
+	held(t, plainReply("thanks, I have asked finance"), looked, "Focus")
+}
+
 // The Burst rule. The third write in sixty seconds, and the twenty-sixth to one
 // document in an hour.
 func TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth(t *testing.T) {

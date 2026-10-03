@@ -288,6 +288,13 @@ func TestAByteDifferentTitleReasonOrTextIsRefused(t *testing.T) {
 			if !strings.Contains(env.Error, field) {
 				t.Errorf("the refusal does not name %s: %q", field, env.Error)
 			}
+			// A refused release is an error, the way every ok: false but the
+			// hold itself is: the person already chose, and the call that came
+			// back with other words is the model's to put right. DECISIONS.md,
+			// 2026-10-03, "A held write is not an error".
+			if !res.IsError {
+				t.Errorf("a release refused on its %s is not marked isError", field)
+			}
 			if sent := f.writes(); len(sent) != 0 {
 				t.Errorf("a refused release sent %v", sent)
 			}

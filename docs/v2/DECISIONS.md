@@ -81,7 +81,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
 | 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
 | 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs only (the link hold, and the trusted email domains, both dropped after the first run in Claude Desktop) |
-| 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, and a hold is not an error | holds |
+| 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3376,13 +3376,15 @@ every rule above, from `TestInitializeAnswersEachSupportedVersion` in
 `internal/guard/doc.go` and `internal/auth/doc.go` each name the tests for the
 rules they state.
 
-## 2026-10-03. What the first run in Claude Desktop changed: no link hold, no trusted domains, and a hold is not an error.
+## 2026-10-03. What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode.
 
 Nail ran PR #78 in Claude Desktop on 2026-10-03, on `bank-durability-test` in
 the Drive test folder: a read, a comment, a reply, and a reply with a link that
-was held and released by its card. Three decisions came out of it, his calls of
-the same day, and this entry records them before the code changes. The facts the
-run measured are in [MEASURED.md](MEASURED.md).
+was held and released by its card. Five decisions came out of it, all on the
+day of the run. This entry recorded the first three before the code changes.
+The two after them were added while the fixes went in. Each paragraph names
+whose call it was. The facts the run measured are in
+[MEASURED.md](MEASURED.md).
 
 **The link hold is dropped.** The entry above held a chat write whose text
 carried a link, a bare domain or an email address not already in the target
@@ -3404,7 +3406,7 @@ person's own setting, exempting addresses at their own domains from the link
 hold, and it had no other job. With the hold gone it would be a field that does
 nothing, so the extension loses its one `user_config` field, `gdoc mcp` loses
 `--trusted-email-domains`, and `guide` stops reporting it. The extension has no
-settings.
+settings. Nail's call, with the hold the field served.
 
 **A held write is not an error.** A held answer stays `ok: false` with `sent:
 false` and `held`, so a caller reading the envelope learns exactly what it
@@ -3414,6 +3416,18 @@ the card, and a red word on the step that protects them reads as a fault in the
 tool. Every other `ok: false` still sets `isError`. Claude's call while Nail was
 collecting findings, left to him to overturn.
 
+**An unknown author domain is absent, not empty.** Drive returned no author
+address on any comment of the first run, the signed-in person's own included, so
+`author_domain` was an empty string beside every comment and reply, and an empty
+value is something a model reads as a kind of account. The field is now omitted
+where Drive gave no address, in the comments envelope and in the chat facts, so
+an absent key says only that Google did not say. Saying which commenters are
+from outside the firm waits on a read Drive does not give:
+`docs/backlog/say-which-commenters-are-from-outside-the-firm.md`. SPEC.md keeps
+its six facts; one of them may not be there. Claude's call while Nail was
+collecting findings, the fix already on the branch when this paragraph was
+written, and left to him to overturn.
+
 **Chat is typed or dictated, and voice mode is not promised.** The
 specification wrote of reviewing "in chat and in voice". On the first run, live
 voice mode made no call to gdoc in two conversations, and found only the
@@ -3421,7 +3435,8 @@ connectors that run on Anthropic's side; the one local call measurement 8
 counted during the spike came from dictation into a typed chat. SPEC.md and the
 colleague's guide now say chat, typed or dictated, and that voice mode does not
 reach the extension. The specification already said chat ships and voice waits
-on Anthropic, so no code changes.
+on Anthropic, so no code changes. Claude's call from what the run measured, left
+to Nail to overturn.
 
 **What was rejected.** Narrowing the link hold to a query, a fragment, a long
 path, a file-sharing host or an email address: Nail preferred one rule fewer.

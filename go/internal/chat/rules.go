@@ -157,8 +157,12 @@ func dictatedRule(w Write, l *Ledger, _ time.Time) (string, string, string) {
 }
 
 // focusRule holds a write made while the session's attention was somewhere else,
-// or into a document the model has never read. The write's own read of its
-// target is not the model reading it: everRead holds that line.
+// or into a document the model has never read. A write's own read of its target
+// is not the model reading it, in either half of the rule: everRead steps over
+// such a read, and so does the search for a document read elsewhere. A refused
+// write leaves that read behind, and counting it would hold every later write
+// with the name of a document nobody in the chat ever saw:
+// TestAPinReadOfAnotherDocumentIsNotAttentionElsewhere.
 //
 // A write into a document nobody looked at is a write nobody can check, and a
 // write made minutes after reading somebody else's document is where text
@@ -176,7 +180,7 @@ func focusRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 	var elsewhere *Read
 	for _, r := range l.Reads() {
 		read := r
-		if read.DocID == w.DocID || read.DocID == "" {
+		if read.DocID == w.DocID || read.DocID == "" || read.ForWrite {
 			continue
 		}
 		if read.At.Before(since) || !read.At.After(now.Add(-focusWindow)) {

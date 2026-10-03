@@ -563,8 +563,8 @@ func mcpRecordWrite(led *chat.Ledger, tool string, r emit.Result, at time.Time) 
 // The read is fresh every time. A title kept from an earlier call would agree
 // with a document that has since been renamed, and the whole value of the check
 // is that it is the document's own answer now. It is also the read the hold
-// rules want, because the document's own text is what says whether a link in the
-// write was already in it.
+// rules want: what one proposal takes out is measured against the document as it
+// stands, and a reply is judged against the words of the thread it goes into.
 //
 // A read tool pins nothing: it writes nothing, and asking it to name the title
 // of a document a person has only just pasted a link to would refuse the one
@@ -597,9 +597,12 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 		return nil, err
 	}
 	// The read happened, so it is recorded, whatever the title turns out to say:
-	// a write refused by its title still read the document's words. It is marked
-	// as the write's own: the binary read the document, the chat did not, so the
-	// Focus rule still asks whether the model ever looked at it.
+	// a write refused by its title still read the document's words, and the
+	// ledger holds them as this session's freshest copy of that document. It is
+	// marked as the write's own, because the binary read the document and the
+	// chat did not: the Focus rule steps over it in both its questions, whether
+	// the model ever looked at the target and whether it was reading something
+	// else.
 	text, _ := view.Text(d)
 	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Text: text, ForWrite: true})
 	if strings.TrimSpace(title) != strings.TrimSpace(d.Title) {
@@ -705,6 +708,9 @@ var mcpStraightQuotes = strings.NewReplacer(
 // mcpEnvelope is the envelope as one text content item, exactly as emit writes
 // it to stdout, version included. ok: false is the tool saying the model should
 // read the error and tell the person, which is what isError means.
+//
+// A held write is the one answer that says ok: false and is not an error, and
+// mcpHeldAnswer is where that is taken back and why.
 func mcpEnvelope(r emit.Result) mcp.Result {
 	r.Version = releaseVersion()
 	var buf bytes.Buffer

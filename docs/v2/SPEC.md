@@ -829,8 +829,10 @@ marking as noise.
 is the 🤖 with no receipt behind it, asked of this process's record of what gdoc
 wrote and never of an account. `author_domain` is the domain of the author's
 address, kept in no other form, and it is shown and read by nothing: identity is
-never a gate, the marker decides, and a domain is a fact a person can weigh. The
-CLI envelope gains that one field and nothing else.
+never a gate, the marker decides, and a domain is a fact a person can weigh. It
+is absent where Drive gave no address, never an empty string a model could read
+as a kind of account, and on 2026-10-03 Drive gave none on any comment. The CLI
+envelope gains that one field and nothing else.
 
 **A risky write is held by a fixed list, and only the person's own card releases
 one.** The binary decides that a write is risky, never the model, because a

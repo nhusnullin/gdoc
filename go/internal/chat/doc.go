@@ -108,9 +108,12 @@
 // that read is kept too, so the rules always have the target's own words:
 // TestAWriteReadsItsTargetFreshAndRecordsIt in cmd/gdoc. It is marked ForWrite,
 // because it is the binary reading and not the model looking: nobody in the
-// chat saw a word of it, so the Focus rule's "has this session read the target"
-// steps over it,
-// TestAWriteIntoAnUnreadTargetIsHeldThoughItsOwnPinReadIt in cmd/gdoc.
+// chat saw a word of it, so both halves of the Focus rule step over it. "Has
+// this session read the target" does,
+// TestAWriteIntoAnUnreadTargetIsHeldThoughItsOwnPinReadIt in cmd/gdoc, and so
+// does "was another document read", or a write refused by its title would leave
+// a document behind that holds every later one:
+// TestAPinReadOfAnotherDocumentIsNotAttentionElsewhere.
 //
 // The ids of what gdoc wrote are kept beside the writes, and they are what
 // robot_not_ours asks: TestRobotNotOursUsesTheLedger, and

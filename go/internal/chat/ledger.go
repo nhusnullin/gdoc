@@ -31,12 +31,15 @@ type Remark struct {
 // and not for one read of it.
 //
 // ForWrite marks the read a write makes of its own target before it goes out.
-// Its words are the ones the Link and Dictated rules ask about, so it is kept
-// like any other read, but it is the binary reading and never the model
-// looking: nobody in the chat saw a word of it. The Focus rule's question
-// "has this session read the target" therefore steps over it, or a write into
-// a document the model never opened would answer that question with its own
-// read: TestAWriteIntoAnUnreadTargetIsHeldThoughItsOwnPinReadIt.
+// Its remarks are the ones the Dictated rule asks about, so it is kept like any
+// other read, but it is the binary reading and never the model looking: nobody
+// in the chat saw a word of it. Both halves of the Focus rule therefore step
+// over it. "Has this session read the target" does, or a write into a document
+// the model never opened would answer that question with its own read:
+// TestAWriteIntoAnUnreadTargetIsHeldThoughItsOwnPinReadIt. "Was another
+// document read" does too, or a refused write would leave a document behind
+// that holds every later one:
+// TestAPinReadOfAnotherDocumentIsNotAttentionElsewhere.
 type Read struct {
 	DocID    string
 	Title    string
@@ -58,11 +61,10 @@ type Written struct {
 // Ledger is this process's record of what it read and what it wrote.
 //
 // It exists because every hold rule is a question about this session and not
-// about the document: whether a link in a write was already in the document the
-// write is for, whether a run of words came out of a comment a stranger left,
-// whether the model has been reading another document, how many writes have gone
-// into this one in the last minute. None of those can be answered by the call in
-// front of it.
+// about the document: whether a run of words came out of a comment a stranger
+// left, whether the model has been reading another document, how many writes
+// have gone into this one in the last minute, how much of the document one
+// proposal takes out. None of those can be answered by the call in front of it.
 //
 // It is per process and nothing is written to disk:
 // TestTheLedgerIsPerProcessAndWritesNothingToDisk. A session that ends takes its
