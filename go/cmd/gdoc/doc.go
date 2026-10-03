@@ -313,18 +313,31 @@
 // test files too. The script is checked structurally here, and a person types
 // Tab at it once per milestone.
 //
-// # The update runs when it is typed; help asks once a day
+// # The update runs when it is typed; help and mcp ask once a day
 //
 // `gdoc update` is the one command that writes over the binary a person is
 // running, and that is why nothing starts it but a person typing it. Nothing
 // installs unasked, ever.
 //
 // Asking what is published is a smaller thing than installing it, and `gdoc
-// help` does it by itself, at most once in 24 hours. Help is the one place: it
-// is the first call of every skill session, it already carries the version,
-// and no document is open in front of it. A colleague who never reads the
-// releases page hears about a release from the tool itself, in the session
-// they already opened.
+// help` does it by itself, at most once in 24 hours. Help is the first call of
+// every skill session, it already carries the version, and no document is open
+// in front of it. A colleague who never reads the releases page hears about a
+// release from the tool itself, in the session they already opened.
+//
+// `gdoc mcp` is the second command that asks unasked, and the last. A chat has
+// no help in it: the session is started by Claude Desktop and the person never
+// types a command at all, so the first tool answer of the process carries the
+// line instead, once, and no answer after it does. It is the same stamp, the
+// same 24 hours, the same two-second ceiling and the same grant, so a chat and
+// a terminal cost one request a day between them. The words differ: a chat is
+// told to run `gdoc update` in a terminal and then quit Claude Desktop and
+// open it again, because a new binary only reaches the session started after
+// it: TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine,
+// TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess,
+// TestACheckoutBuildNeverAsksFromMcp, TestTheMcpCheckIsBoundedByTwoSeconds,
+// TestTheMcpCheckOpensThePolicyTheUpdateOpens and
+// TestTheLineSaysQuitAndOpenAgainNeverToggle.
 //
 // What keeps that bounded is that nothing moves. The check reads one listing,
 // writes one file of gdoc's own, replaces no binary and touches no document.
@@ -340,7 +353,7 @@
 // TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
 //
 // No other command checks. There is no check before a build and none on the
-// way to reading somebody's document. A build is a person waiting for a docx
+// way to reading somebody's document from the terminal. A build is a person waiting for a docx
 // with no network at all, and a review session is somebody's document open in
 // front of them; a background fetch in either is a second thing happening that
 // nobody asked for, and on a slow connection it is the command taking longer

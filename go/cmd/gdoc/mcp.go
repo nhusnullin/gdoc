@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"gdoc/internal/chat"
@@ -178,6 +179,7 @@ const noArguments = `{"type":"object","properties":{}}`
 // one setting holds a value gdoc could not read:
 // TestAMalformedValueMakesEveryToolButGuideNameIt.
 func mcpTools(errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
+	nt := &mcpNotice{}
 	out := mcpCommandTools(errOut, ch)
 	out = append(out,
 		mcp.Tool{
@@ -192,9 +194,65 @@ func mcpTools(errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
 		},
 		mcpGuideTool(ch))
 	for i := range out {
-		out[i] = mcpTimed(ch, mcpSettingChecked(ch, out[i]))
+		out[i] = mcpTimed(ch, mcpNoticed(nt, errOut, mcpSettingChecked(ch, out[i])))
 	}
 	return out
+}
+
+// mcpNotice is the one release check a session makes, whichever tool is called
+// first. mcp is the second command that asks GitHub what is published without
+// being told to, and like help it asks under the same stamp, the same 24 hours,
+// the same two-second ceiling and the same grant.
+//
+// Once is once in the process, not once per tool: a person hears about a new
+// gdoc when their chat first does something and not again, however many calls
+// follow. Both processes Claude Desktop starts ask, which costs one request a
+// day between them because the stamp is shared.
+type mcpNotice struct{ once sync.Once }
+
+// first is the line for the first tool answer of this process, and the empty
+// string for every answer after it. The check runs inside that call, so what it
+// costs is bounded by its own two seconds and by the call's deadline.
+//
+// A warning reaches the log and nothing else. A chat that cannot reach GitHub
+// has nothing to tell the person: they asked about a document.
+//
+// TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine,
+// TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess,
+// TestACheckoutBuildNeverAsksFromMcp, TestTheMcpCheckIsBoundedByTwoSeconds and
+// TestTheMcpCheckOpensThePolicyTheUpdateOpens.
+func (n *mcpNotice) first(ctx context.Context, errOut io.Writer) string {
+	var line string
+	n.once.Do(func() {
+		facts, _, warns := notice(ctx)
+		for _, warn := range warns {
+			fmt.Fprintln(errOut, warn)
+		}
+		line = mcpNoticeLine(facts)
+	})
+	return line
+}
+
+// mcpNoticed wraps one tool so the first answer of the process carries the
+// release line as one more text item, where there is one to carry.
+//
+// The check runs before the tool rather than after it, so a call that used its
+// whole deadline does not leave the check a cancelled context to be stamped as
+// a failure with: a stamped failure costs the day's check.
+func mcpNoticed(n *mcpNotice, errOut io.Writer, t mcp.Tool) mcp.Tool {
+	call := t.Call
+	t.Call = func(ctx context.Context, args json.RawMessage) mcp.Result {
+		line := n.first(ctx, errOut)
+		res := call(ctx, args)
+		if line == "" {
+			return res
+		}
+		texts := make([]string, 0, len(res.Texts)+1)
+		texts = append(texts, res.Texts...)
+		texts = append(texts, line)
+		return mcp.Result{Texts: texts, IsError: res.IsError}
+	}
+	return t
 }
 
 // cmdMCP is the table entry's run, and it refuses. mcp is routed in main

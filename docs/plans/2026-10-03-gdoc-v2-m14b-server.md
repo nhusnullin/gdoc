@@ -1114,18 +1114,27 @@ Serves decision 13 with MEASURED 2. Scenario 13.
 - Modify: `go/cmd/gdoc/mcp.go`
 - Create: `go/cmd/gdoc/mcpnotice_test.go`
 
-- [ ] Test first, `TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine`,
+- [x] Test first, `TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine`,
       the line stated as the literal of Technical Details.
-- [ ] Test, `TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess`.
-- [ ] Test, `TestACheckoutBuildNeverAsksFromMcp`.
-- [ ] Test, `TestTheMcpCheckIsBoundedByTwoSeconds` and
+- [x] Test, `TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess`.
+- [x] Test, `TestACheckoutBuildNeverAsksFromMcp`.
+- [x] Test, `TestTheMcpCheckIsBoundedByTwoSeconds` and
       `TestTheMcpCheckOpensThePolicyTheUpdateOpens`.
-- [ ] Test, `TestTheLineSaysQuitAndOpenAgainNeverToggle`.
-- [ ] `TestReadNeverReachesTheCheck` stays as it is for the CLI.
-- [ ] Implement.
-- [ ] `cmd/gdoc/doc.go`: `mcp` is the second command that asks unasked.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): gdoc mcp says once per process when a newer gdoc is out"`
+- [x] Test, `TestTheLineSaysQuitAndOpenAgainNeverToggle`.
+- [x] `TestReadNeverReachesTheCheck` stays as it is for the CLI.
+- [x] Implement.
+- [x] `cmd/gdoc/doc.go`: `mcp` is the second command that asks unasked.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): gdoc mcp says once per process when a newer gdoc is out"`
+
+**Files, as built:** also `go/cmd/gdoc/notice.go`, which gains the chat's own
+line beside help's and the one `update.Decide` call both are built from, so the
+two cannot disagree and `TestNothingChecksForUpdatesUnasked` keeps `mcp.go` out
+of `internal/update`.
+
+- ➕ `TestTheLineSaysQuitAndOpenAgainNeverToggle` states a second literal: a
+      major release names the flag that installs it, the way help's line does,
+      because `gdoc update` alone would not take it.
 
 ### Task 20: the server keeps running through a bad call
 
