@@ -798,20 +798,20 @@ Serves decisions 7 and 9. Scenarios 7, 9.
 - Modify: `skills/gdoc-review/review.md`, `go/cmd/gdoc/review.md` (the copy)
 - Modify: `go/cmd/gdoc/skills_review_test.go`
 
-- [ ] Test first, `TestTheCoreReadsTheThreadAgainBeforePosting`: the rule
+- [x] Test first, `TestTheCoreReadsTheThreadAgainBeforePosting`: the rule
       that the thread is read again just before a reply, and the reply is not
       posted when a 🤖 reply this session did not write appeared since it last
       read the thread. A session's own acknowledgment never stops its own
       receipt: the skills are linked, so this wording is live in Claude Code
       the moment it is saved, and live mode posts both.
-- [ ] Test, `TestTheCoreLeavesMarkedCommentsToALiveSession`.
-- [ ] Test, `TestTheCoreHasTheAnnotateFlow`: find the exact words, read back
+- [x] Test, `TestTheCoreLeavesMarkedCommentsToALiveSession`.
+- [x] Test, `TestTheCoreHasTheAnnotateFlow`: find the exact words, read back
       the quote and the comment, post after a yes, ask for more words when the
       quote occurs twice.
-- [ ] Write the three rules into `review.md`, with no call line, and copy it.
+- [x] Write the three rules into `review.md`, with no call line, and copy it.
       `TestTheReviewCoreCarriesNoCall` and the byte-identity test stay green.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(skills): the review core reads a thread again before posting, and comments on named words"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(skills): the review core reads a thread again before posting, and comments on named words"`
 
 ### Task 11: read answers arrive labelled, with facts
 
