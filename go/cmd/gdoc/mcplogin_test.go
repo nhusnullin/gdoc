@@ -96,9 +96,9 @@ func stubAccount(t *testing.T, acc gapi.Account, err error) *int {
 	t.Helper()
 	reads := 0
 	old := accountOf
-	accountOf = func(context.Context) (gapi.Account, error) {
+	accountOf = func(context.Context) (gapi.Account, []string, error) {
 		reads++
-		return acc, err
+		return acc, nil, err
 	}
 	t.Cleanup(func() { accountOf = old })
 	return &reads
@@ -393,6 +393,30 @@ func TestTheStateMovesFromWaitingToSignedInOrExpired(t *testing.T) {
 			t.Errorf("%d listeners were opened for a sign-in that had already finished", n)
 		}
 	})
+}
+
+// The login tool answers with the account read's own warnings too. The read
+// goes out through an ordinary session, which can refresh an expired access
+// token and rewrite the token file first, and the chat reading the answer is
+// told that for the same reason a terminal is.
+func TestTheLoginToolCarriesTheAccountReadsWarnings(t *testing.T) {
+	const refreshed = "the access token was refreshed and saved"
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	stubAccountWarnings(t, gapi.Account{Email: "someone@example.com"}, []string{refreshed}, nil)
+	tr := &trips{url: testAuthURL}
+	tr.stub(t)
+	m := newMCPLogin(io.Discard)
+	t.Cleanup(m.close)
+	writeTokenFile(t, dir, signedInToken)
+
+	got := callLogin(t, m)
+	if !got.OK || got.Data.State != "signed in" {
+		t.Fatalf("a token that is there is a sign-in that finished: %+v", got)
+	}
+	if !hasWarning(got.Warnings, refreshed) {
+		t.Errorf("the read's own warning must reach the answer: %v", got.Warnings)
+	}
 }
 
 // A listener that gave up does not make a signed-in person signed out.

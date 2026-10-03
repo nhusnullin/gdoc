@@ -165,9 +165,9 @@ func TestAnAccountReadThatHangsStopsAtTheCeiling(t *testing.T) {
 	accountCeiling = 10 * time.Millisecond
 	t.Cleanup(func() { accountCeiling = old })
 	oldRead := accountOf
-	accountOf = func(ctx context.Context) (gapi.Account, error) {
+	accountOf = func(ctx context.Context) (gapi.Account, []string, error) {
 		<-ctx.Done()
-		return gapi.Account{}, ctx.Err()
+		return gapi.Account{}, nil, ctx.Err()
 	}
 	t.Cleanup(func() { accountOf = oldRead })
 
@@ -294,4 +294,58 @@ func TestAuthStatusOnAPipeWritesNoStderr(t *testing.T) {
 	if got := decodeOne(t, &out); got["ok"] != true {
 		t.Fatalf("envelope: %v", got)
 	}
+}
+
+// The session that names the account is an ordinary session, so it may refresh
+// an expired access token and save it on the way. That is a fact the reader is
+// told, as every other command in this binary tells it: the object says the
+// token was expired when the file was read, and the warning says what the read
+// then did to it.
+func TestTheAccountReadsWarningsReachTheObject(t *testing.T) {
+	const refreshed = "the access token was refreshed and saved"
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	tokenWithScopes(t, dir, driveScope)
+	stubAccountWarnings(t, gapi.Account{Email: "someone@example.com"}, []string{refreshed}, nil)
+
+	got, code := runJSON(t, "auth", "status")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("status is a report and must answer: %v (exit %d)", got, code)
+	}
+	if !hasWarning(warningsOf(t, got), refreshed) {
+		t.Errorf("the account read's own warning must reach the object: %v", got["warnings"])
+	}
+}
+
+// A read that failed still says what the session did before it failed: the
+// refresh happened, the file was rewritten, and the warning naming the failure
+// does not replace the warning naming that.
+func TestAFailedAccountReadStillCarriesTheSessionsWarnings(t *testing.T) {
+	const refreshed = "the access token was refreshed and saved"
+	const reason = "the account read failed"
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	tokenWithScopes(t, dir, driveScope)
+	stubAccountWarnings(t, gapi.Account{}, []string{refreshed}, errors.New(reason))
+
+	got, code := runJSON(t, "auth", "status")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a token that is there is still a token: %v (exit %d)", got, code)
+	}
+	warnings := warningsOf(t, got)
+	if !hasWarning(warnings, refreshed) || !hasWarning(warnings, reason) {
+		t.Errorf("both facts are warnings, and these are %v", warnings)
+	}
+}
+
+// stubAccountWarnings stands in for the read with an account, the warnings the
+// session came back with, and the error, which is every way the real one can
+// answer.
+func stubAccountWarnings(t *testing.T, acc gapi.Account, warnings []string, err error) {
+	t.Helper()
+	old := accountOf
+	accountOf = func(context.Context) (gapi.Account, []string, error) {
+		return acc, warnings, err
+	}
+	t.Cleanup(func() { accountOf = old })
 }

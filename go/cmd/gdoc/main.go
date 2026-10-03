@@ -284,17 +284,21 @@ func authStatus(ctx context.Context, withAccount bool) emit.Result {
 		// one where the extra fact is worth most.
 		return emit.Result{OK: false, Error: err.Error(), Data: statusReport(report, gapi.Account{}), Warnings: warnings}
 	}
-	acc, unread := accountFor(ctx, report, withAccount)
-	if unread != "" {
-		warnings = append(warnings, unread)
-	}
+	acc, read := accountFor(ctx, report, withAccount)
+	warnings = append(warnings, read...)
 	return emit.Result{OK: true, Data: statusReport(report, acc), Warnings: warnings}
 }
 
-// accountFor is who the token signs in as, and the warning where that could
-// not be read. It is the second caller of accountOf in this binary, and the
-// guard moved by that caller rather than by a request:
-// TestAccountOfHasTwoCallers.
+// accountFor is who the token signs in as, and the warnings that read came
+// with: the session's own, and the one that says it could not be read. It is
+// the second caller of accountOf in this binary, and the guard moved by that
+// caller rather than by a request: TestAccountOfHasTwoCallers.
+//
+// The session's warnings are the reason this hands back a list. The read goes
+// out through an ordinary session, which refreshes an expired access token and
+// saves it first, and `expired: true` in the report is then what the file said
+// when auth.Status read it rather than what it says now. The warning is where
+// a reader is told that: TestTheAccountReadsWarningsReachTheObject.
 //
 // Three reports are not asked at all. A report that is not there has no token
 // to read with; neither has one saying there is no token; and a token missing a
@@ -305,17 +309,18 @@ func authStatus(ctx context.Context, withAccount bool) emit.Result {
 // A read that fails is a warning and never a failure. The token is the fact,
 // and whose it is was what could not be read:
 // TestAuthStatusOfflineStillAnswersWithoutTheAccount.
-func accountFor(ctx context.Context, r *auth.StatusReport, withAccount bool) (gapi.Account, string) {
+func accountFor(ctx context.Context, r *auth.StatusReport, withAccount bool) (gapi.Account, []string) {
 	if !withAccount || r == nil || !r.TokenPresent || len(r.MissingScopes) > 0 {
-		return gapi.Account{}, ""
+		return gapi.Account{}, nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, accountCeiling)
 	defer cancel()
-	acc, err := accountOf(ctx)
+	acc, read, err := accountOf(ctx)
+	warnings := append([]string{}, read...)
 	if err != nil {
-		return gapi.Account{}, accountUnread + err.Error()
+		return gapi.Account{}, append(warnings, accountUnread+err.Error())
 	}
-	return acc, ""
+	return acc, warnings
 }
 
 // cmdAuthStatus is the report and the panel a person reads it from. The object

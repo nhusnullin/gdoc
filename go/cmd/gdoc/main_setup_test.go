@@ -25,8 +25,8 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	accountOf = func(context.Context) (gapi.Account, error) {
-		return gapi.Account{Email: testAccountEmail, Name: testAccountName}, nil
+	accountOf = func(context.Context) (gapi.Account, []string, error) {
+		return gapi.Account{Email: testAccountEmail, Name: testAccountName}, nil, nil
 	}
 	os.Exit(m.Run())
 }

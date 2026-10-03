@@ -80,14 +80,23 @@ var startLogin = func() (loginTrip, string, error) {
 // is not a terminal's: the object carries the account too, so a skill reading
 // a pipe is told the same thing. TestOnlyAccountOfCallsAllowAccountRead and
 // TestAccountOfHasTwoCallers hold the count.
-var accountOf = func(ctx context.Context) (gapi.Account, error) {
+//
+// The session's warnings come back beside the account, failed read included,
+// because this is an ordinary session: it can refresh an expired access token
+// and rewrite the token file before the request goes out, and a caller that
+// dropped that warning would be the one command in the binary whose object
+// does not say the file changed under it.
+// TestTheAccountReadsWarningsReachTheObject and
+// TestAFailedAccountReadStillCarriesTheSessionsWarnings.
+var accountOf = func(ctx context.Context) (gapi.Account, []string, error) {
 	p := guard.NewPolicy()
 	p.AllowAccountRead()
 	s, err := gapi.Open(p, nil)
 	if err != nil {
-		return gapi.Account{}, err
+		return gapi.Account{}, nil, err
 	}
-	return s.Account(ctx)
+	acc, err := s.Account(ctx)
+	return acc, s.Warnings(), err
 }
 
 // mcpLoginData is what the login tool answers with. The state is a fact and so
@@ -300,8 +309,8 @@ func (m *mcpLogin) close() {
 // to is what could not be read, so that is a warning.
 func (m *mcpLogin) signedIn(ctx context.Context) mcp.Result {
 	data := mcpLoginData{State: loginSignedIn, Note: mcpLoginHere}
-	var warnings []string
-	acc, err := accountOf(ctx)
+	acc, read, err := accountOf(ctx)
+	warnings := append([]string{}, read...)
 	if err != nil {
 		warnings = append(warnings, "the token is there and which Google account it belongs to could not be read: "+err.Error())
 	} else {

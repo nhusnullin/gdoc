@@ -217,6 +217,15 @@
 // TestAuthStatusOfflineStillAnswersWithoutTheAccount and
 // TestAnAccountReadThatHangsStopsAtTheCeiling.
 //
+// The read's own warnings go out with the report. It goes through an ordinary
+// session, which refreshes an expired access token and saves it before the
+// request leaves, so `expired: true` is what the file said when auth.Status
+// read it and the warning is what says the read then rewrote it. A read that
+// failed carries them too, because the refresh had already happened.
+// TestTheAccountReadsWarningsReachTheObject,
+// TestAFailedAccountReadStillCarriesTheSessionsWarnings and
+// TestTheLoginToolCarriesTheAccountReadsWarnings for the chat's own answer.
+//
 // auth login does not ask. It just made a browser trip, and the object a skill
 // reads after a login is the object it read before:
 // TestAuthLoginCarriesNoAccount.
