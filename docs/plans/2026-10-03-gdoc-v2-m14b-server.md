@@ -381,11 +381,11 @@ Serves every decision. Written before the code it records.
 **Files:**
 - Modify: `docs/v2/DECISIONS.md`
 
-- [ ] An entry dated 2026-10-03, "`gdoc mcp`: gdoc in Claude Desktop chat, as
+- [x] An entry dated 2026-10-03, "`gdoc mcp`: gdoc in Claude Desktop chat, as
       measured", in the file's own shape. It records the spec's decisions as
       taken on 2026-10-02 and 2026-10-03, and every row of this plan's
       Decisions table with the measurement behind it.
-- [ ] Register rows, as the spec's DECISIONS section lists them, those run 1
+- [x] Register rows, as the spec's DECISIONS section lists them, those run 1
       did not already write: the 2026-09-16 "what was rejected: an MCP server
       inside the binary" paragraph superseded; "MCP does not replace the REST
       client" holds; "The binary never reads stdin" narrowed; "One JSON object
@@ -401,8 +401,23 @@ Serves every decision. Written before the code it records.
       and "Identity is never a gate" holds, with `author_domain` shown and
       never checked. Where a row's wording differs from
       the register, the register wins and a ➕ note here says which.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(decisions): gdoc mcp, as the spike measured it"`
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(decisions): gdoc mcp, as the spike measured it"`
+- ➕ Three notes where the register won over the spec's wording. The register's
+      status cell takes `holds`, `rejected`, `superseded YYYY-MM-DD (what
+      replaced it)` or `MEASURED.md`, and nothing else, so the spec's
+      "narrowed" and "holds; this is MCP on the near side" cannot be status
+      cells. (1) The 2026-09-18 release-notice row reads
+      `superseded 2026-10-03 (the one-command clause only: ...)`, which is the
+      shape the 2026-09-16 release row already uses for a part-supersede.
+      (2) "MCP does not replace the REST client" and "Skills are symlinked"
+      keep `holds` with no note in the cell; the entry says why each still
+      holds. (3) "The binary never reads stdin", "One JSON object reaches
+      stdout", "Nothing under `go/` runs an external program" and "Identity is
+      never a gate" are CLAUDE.md invariants, not entries in this file, so
+      they have no row to change: the entry carries a paragraph naming all
+      four and what happens to each, and Task 23 rewrites the invariant lines
+      themselves.
 
 ### Task 2: internal/mcp, the protocol
 
