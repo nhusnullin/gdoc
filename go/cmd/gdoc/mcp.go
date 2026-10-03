@@ -127,8 +127,8 @@ func mcpTools(errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
 	out = append(out,
 		mcp.Tool{
 			Name:        "login",
-			Title:       "Sign in to Google for gdoc",
-			Description: "Starts the Google sign-in and gives the link. The link works only on the computer running Claude Desktop.",
+			Title:       "Which Google account gdoc is signed in as",
+			Description: "Says which Google account gdoc is signed in as. When nobody is signed in, starts the Google sign-in and gives the link, which works only on the computer running Claude Desktop.",
 			Schema:      json.RawMessage(noArguments),
 			ReadOnly:    true,
 			Call: func(ctx context.Context, _ json.RawMessage) mcp.Result {

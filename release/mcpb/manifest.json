@@ -41,7 +41,7 @@
     },
     {
       "name": "login",
-      "description": "Starts the Google sign-in and gives the link. The link works only on the computer running Claude Desktop."
+      "description": "Says which Google account gdoc is signed in as. When nobody is signed in, starts the Google sign-in and gives the link, which works only on the computer running Claude Desktop."
     },
     {
       "name": "guide",

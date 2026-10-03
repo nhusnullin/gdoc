@@ -24,7 +24,7 @@ var titles = map[string]string{
 	"reply":       "Reply to a comment in a Google Doc",
 	"annotate":    "Comment on words in a Google Doc",
 	"propose":     "Suggest an edit in a Google Doc",
-	"login":       "Sign in to Google for gdoc",
+	"login":       "Which Google account gdoc is signed in as",
 	"guide":       "How to review a Google Doc with gdoc",
 }
 
@@ -34,7 +34,7 @@ var titles = map[string]string{
 // than from here; login and guide are no command of the terminal and have no
 // entry, so their openings are literals.
 var descriptionOpeners = map[string]string{
-	"login": "Starts the Google sign-in and gives the link",
+	"login": "Says which Google account gdoc is signed in as",
 	"guide": "Call this first",
 }
 
