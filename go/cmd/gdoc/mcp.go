@@ -36,13 +36,18 @@ func checkMCPArgs(args []string) error {
 // exit code. It is behind a variable so a test can watch main's routing
 // without starting a server, the way login and openSession are.
 //
-// The log goes to errOut. Nothing in a session writes to stdout but the
+// The log goes to errOut, through one locked writer, because a session logs
+// from more than one goroutine. Nothing in a session writes to stdout but the
 // protocol: TestStdoutCarriesOnlyJSONRPC.
 var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, args []string) int {
 	if err := checkMCPArgs(args); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
 	}
+	// One log, written by the worker, by the protocol's reader and by the
+	// sign-in listener, so it is wrapped once here and every one of them is
+	// handed the wrapper: TestOneLogWriterTakesOneLineAtATime.
+	errOut = lockedLog(errOut)
 	// A directory left by a process that died is taken away before this
 	// session makes its own. Nothing here fails a start.
 	sweepCallDirs(os.TempDir(), time.Now())

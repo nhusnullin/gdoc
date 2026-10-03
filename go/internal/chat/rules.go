@@ -172,36 +172,51 @@ func dictatedRule(w Write, l *Ledger, _ time.Time) (string, string, string) {
 // TestTheFocusRuleTripsOnAnotherDocumentOrAnUnreadTarget and
 // TestTextCopiedFromAnotherDocumentIsHeldNotRefused.
 //
-// A write that went into the target resets the window to the target. A held
-// write sends nothing and so records nothing, which is what makes the reset mean
-// a write the person released.
+// A write that went into the target resets the attention half of the window to
+// the target. A held write sends nothing and so records nothing, which is what
+// makes the reset mean a write the person released.
+//
+// The reset is about attention and never about words. One released write says
+// the person agreed to a write into this document; it does not say another
+// document's words may cross into it afterwards. So the copied run is looked for
+// over every document read in the window, reset or no reset, and it is the half
+// that answers first: TestCopiedWordsAreHeldAfterAWriteIntoTheTarget.
 func focusRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 	since := resetPoint(l, w.DocID)
-	var elsewhere *Read
+	var attention, source *Read
+	var copied string
 	for _, r := range l.Reads() {
 		read := r
 		if read.DocID == w.DocID || read.DocID == "" || read.ForWrite {
 			continue
 		}
-		if read.At.Before(since) || !read.At.After(now.Add(-focusWindow)) {
+		if !read.At.After(now.Add(-focusWindow)) {
 			continue
 		}
-		if elsewhere == nil || read.At.After(elsewhere.At) {
-			elsewhere = &read
+		if !read.At.Before(since) && (attention == nil || read.At.After(attention.At)) {
+			attention = &read
+		}
+		// The newest document whose words this text repeats, so a session that
+		// read several names the same one every run.
+		if source != nil && !read.At.After(source.At) {
+			continue
+		}
+		if run := sharedRun(w.Text, documentWordsOf(l, read), copiedRunInReason); run != "" {
+			source, copied = &read, run
 		}
 	}
-	if elsewhere != nil {
-		title := elsewhere.Title
-		if title == "" {
-			title = elsewhere.DocID
-		}
-		reason := fmt.Sprintf(
+	if source != nil {
+		title := readTitle(*source)
+		return RuleFocus, title, fmt.Sprintf(
+			"another document was read in this session in the last %d minutes: %q"+
+				", and this text shares a run of words with it: %q",
+			int(focusWindow/time.Minute), title, copied)
+	}
+	if attention != nil {
+		title := readTitle(*attention)
+		return RuleFocus, title, fmt.Sprintf(
 			"another document was read in this session in the last %d minutes: %q",
 			int(focusWindow/time.Minute), title)
-		if run := sharedRun(w.Text, documentWordsOf(l, *elsewhere), copiedRunInReason); run != "" {
-			reason += fmt.Sprintf(", and this text shares a run of words with it: %q", run)
-		}
-		return RuleFocus, title, reason
 	}
 
 	if !everRead(l, w.DocID) {
@@ -215,8 +230,18 @@ func focusRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 	return "", "", ""
 }
 
-// resetPoint is the instant the Focus window starts at: the newest write this
-// session made into the target document, or the zero time where it made none.
+// readTitle is the name a read is known by on a card: the title the document
+// came back with, or its id where the read carried no title.
+func readTitle(r Read) string {
+	if r.Title == "" {
+		return r.DocID
+	}
+	return r.Title
+}
+
+// resetPoint is the instant the Focus window's attention half starts at: the
+// newest write this session made into the target document, or the zero time
+// where it made none.
 func resetPoint(l *Ledger, docID string) time.Time {
 	var at time.Time
 	for _, written := range l.Writes() {

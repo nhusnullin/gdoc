@@ -279,8 +279,8 @@ func TestAStaleLockIsRemoved(t *testing.T) {
 		name string
 		lock auth.LoginLock
 	}{
-		{"the process is gone", auth.LoginLock{PID: 99999998, URL: "https://accounts.google.com/stale", Started: time.Now()}},
-		{"older than three minutes", auth.LoginLock{PID: os.Getpid(), URL: "https://accounts.google.com/stale", Started: time.Now().Add(-4 * time.Minute)}},
+		{"the process is gone", auth.LoginLock{PID: 99999998, URL: testAuthURL, Started: time.Now()}},
+		{"older than three minutes", auth.LoginLock{PID: os.Getpid(), URL: testAuthURL, Started: time.Now().Add(-4 * time.Minute)}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())

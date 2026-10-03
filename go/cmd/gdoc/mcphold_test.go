@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -499,5 +500,63 @@ func TestBothKindsOfRemovalAreCountedInUTF16Units(t *testing.T) {
 	}
 	if got := mcpRemoved(mcpItem{Quoted: quoted}, d); got != units {
 		t.Errorf("a words change counted %d, want the %d UTF-16 units Docs deletes", got, units)
+	}
+}
+
+// A hold goes when the write it held lands another way.
+//
+// A held write the model sends again, after doing what the reason asked, goes
+// out with no card at all. The hold is then a card for a write that already
+// happened. The write memory answers a retry of it for ten minutes, and a hold
+// lives thirty, so past the ten the person pressing that card would post the
+// same words a second time.
+func TestAHoldGoesWhenTheWriteItHeldLands(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	signedIn(t)
+	f := stubWire(t, &fakeWire{answers: append(pinAnswers(t), &answer{
+		method: "POST", match: "/comments/AAAA1111/replies",
+		json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + chatBody + `"}`,
+	})})
+	clock := stubClock(t, holdClock)
+
+	ch := callChat(t)
+	w := watchConfirms(t, ch)
+
+	// Held, because this session has not read the document it writes into.
+	args := chatWriteArgs(chatTitle)["reply"]
+	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"),
+		withCode(t, ch.code, args), nilWriter{}, ch)
+	env := heldEnvelopeOf(t, res.Texts)
+	if env.Data.Held.Rule != chat.RuleFocus {
+		t.Fatalf("the write was held for %q, want Focus: %s", env.Data.Held.Rule, res.Texts[0])
+	}
+	id := env.Data.Held.ID
+
+	// The model does what the reason asked, reads the document, and makes the
+	// same call again. Nothing holds it this time.
+	clock.pass(time.Minute)
+	looked(ch, fixtureDocID)
+	again := mcpRun(context.Background(), mcpToolNamed(t, "reply"),
+		withCode(t, ch.code, args), nilWriter{}, ch)
+	if sent := envelopeOf(t, again.Texts); !sent.OK {
+		t.Fatalf("the write was refused the second time: %s", sent.Error)
+	}
+	if len(f.writes()) != 1 {
+		t.Fatalf("the second call sent %d requests, want the one write: %v", len(f.writes()), f.writes())
+	}
+
+	// So the card is off the list, and pressing it past the write memory's ten
+	// minutes posts nothing.
+	if len(w.confirms()) != 0 {
+		t.Errorf("the card outlived the write it held: %v", w.confirms())
+	}
+	clock.pass(11 * time.Minute)
+	pressed := mcpConfirmTool(chat.Hold{ID: id}, io.Discard, ch).
+		Call(context.Background(), confirmArgs(t, env, nil))
+	if e := envelopeOf(t, pressed.Texts); e.OK {
+		t.Error("the card sent the same write a second time")
+	}
+	if len(f.writes()) != 1 {
+		t.Errorf("pressing the card sent %v", f.writes())
 	}
 }

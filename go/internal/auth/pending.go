@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -59,7 +60,8 @@ func WriteLoginLock(l LoginLock) error {
 
 // ReadLoginLock is the sign-in another process is waiting on, or nil when
 // nothing live is written down. Three things make a lock dead: no process
-// behind its pid, an age over loginLockLife, and no link in it to hand on.
+// behind its pid, an age over loginLockLife, and a link that is not Google's own
+// sign-in page.
 //
 // Nothing written down is nil and no error: a machine where nobody is signing
 // in is the ordinary case. A file that is there and will not parse is an error
@@ -82,10 +84,22 @@ func ReadLoginLock(now time.Time) (*LoginLock, error) {
 	if err := json.Unmarshal(b, &l); err != nil {
 		return nil, fmt.Errorf("the waiting sign-in at %s cannot be parsed: %w", path, err)
 	}
-	if l.URL == "" || !ProcessAlive(l.PID) || now.Sub(l.Started) >= loginLockLife {
+	if !isLoginURL(l.URL) || !ProcessAlive(l.PID) || now.Sub(l.Started) >= loginLockLife {
 		return nil, nil
 	}
 	return &l, nil
+}
+
+// isLoginURL answers whether a link out of the lock is the page login.go builds.
+//
+// The lock is written by another process and the link in it is handed to a
+// person with the words open this in your browser, so it is the one value here
+// that crosses a boundary into somebody's hands. Anything running as this user
+// can write that file, and a link this binary would never have made reads as a
+// dead lock: the caller opens its own listener and hands out its own link.
+// TestALockWhoseLinkIsNotGooglesSignInIsNotLive.
+func isLoginURL(raw string) bool {
+	return strings.HasPrefix(raw, authEndpoint+"?")
 }
 
 // RemoveLoginLock takes the record away. A lock that is not there is not an

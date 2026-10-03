@@ -68,7 +68,7 @@ func TestNoLoginLockIsNoErrorAndNoLock(t *testing.T) {
 // died with the process that opened it.
 func TestALockWhoseProcessIsGoneIsNotLive(t *testing.T) {
 	configDir(t)
-	if err := WriteLoginLock(LoginLock{PID: deadPID, URL: "https://accounts.google.com/x", Started: time.Now()}); err != nil {
+	if err := WriteLoginLock(LoginLock{PID: deadPID, URL: authEndpoint + "?client_id=x", Started: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := ReadLoginLock(time.Now())
@@ -88,7 +88,7 @@ func TestALockOlderThanThreeMinutesIsNotLive(t *testing.T) {
 	now := time.Now()
 	write := func(age time.Duration) {
 		t.Helper()
-		if err := WriteLoginLock(LoginLock{PID: os.Getpid(), URL: "https://accounts.google.com/x", Started: now.Add(-age)}); err != nil {
+		if err := WriteLoginLock(LoginLock{PID: os.Getpid(), URL: authEndpoint + "?client_id=x", Started: now.Add(-age)}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -149,7 +149,7 @@ func TestRemovingALockThatIsNotThereIsNoError(t *testing.T) {
 	if err := RemoveLoginLock(); err != nil {
 		t.Fatalf("removing nothing failed: %v", err)
 	}
-	if err := WriteLoginLock(LoginLock{PID: os.Getpid(), URL: "https://accounts.google.com/x", Started: time.Now()}); err != nil {
+	if err := WriteLoginLock(LoginLock{PID: os.Getpid(), URL: authEndpoint + "?client_id=x", Started: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 	if err := RemoveLoginLock(); err != nil {
@@ -201,5 +201,54 @@ func writeTokenFixture(t *testing.T) {
 	}
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A lock whose link is not Google's own sign-in page is a dead lock.
+//
+// The lock is a file another process wrote, and what this process does with the
+// link in it is hand it to a person and tell them to open it in a browser.
+// Anything running as this user can write that file, so the one value crossing
+// that boundary is checked against the page login.go itself builds, and a link
+// that is not it reads as nothing waiting: the caller opens its own listener and
+// hands out its own link.
+func TestALockWhoseLinkIsNotGooglesSignInIsNotLive(t *testing.T) {
+	for _, link := range []string{
+		"https://evil.example/google-signin",
+		"http://accounts.google.com/o/oauth2/auth?client_id=x",
+		"https://accounts.google.com.evil.example/o/oauth2/auth?client_id=x",
+		"https://accounts.google.com/o/oauth2/other?client_id=x",
+		"https://accounts.google.com/o/oauth2/auth.evil?client_id=x",
+		"javascript:alert(1)",
+		"",
+	} {
+		t.Run(link, func(t *testing.T) {
+			configDir(t)
+			if err := WriteLoginLock(LoginLock{
+				PID: os.Getpid(), URL: link, Started: time.Now()}); err != nil {
+				t.Fatal(err)
+			}
+			got, err := ReadLoginLock(time.Now())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != nil {
+				t.Fatalf("a lock carrying %q read as live, so that link would be handed to a person", link)
+			}
+		})
+	}
+
+	// The page this binary sends people to is live.
+	configDir(t)
+	if err := WriteLoginLock(LoginLock{
+		PID: os.Getpid(), URL: authEndpoint + "?client_id=x&state=y", Started: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadLoginLock(time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil {
+		t.Fatal("the sign-in page this binary builds read as nothing waiting")
 	}
 }

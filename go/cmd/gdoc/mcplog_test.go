@@ -9,8 +9,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"gdoc/internal/mcp"
 )
@@ -65,5 +69,55 @@ func TestACallWithNoEnvelopeStillLogsOneLine(t *testing.T) {
 	got := loggedCall(t, "guide", "plain words, not an envelope")
 	if !strings.HasPrefix(got, "gdoc mcp: guide answered with no envelope") {
 		t.Errorf("the line is %q", got)
+	}
+}
+
+// overlapWriter notices a second write starting before the first has finished.
+// It holds a write open for a moment, so two goroutines with no lock between
+// them overlap rather than happening to miss each other.
+type overlapWriter struct {
+	busy       atomic.Bool
+	overlapped atomic.Bool
+	lines      atomic.Int64
+}
+
+func (w *overlapWriter) Write(p []byte) (int, error) {
+	if !w.busy.CompareAndSwap(false, true) {
+		w.overlapped.Store(true)
+		return len(p), nil
+	}
+	time.Sleep(time.Millisecond)
+	w.lines.Add(1)
+	w.busy.Store(false)
+	return len(p), nil
+}
+
+// One session has three loggers in it and one log, so the writer they share
+// takes one line at a time.
+//
+// The worker logs a tool call, the protocol's reader logs a cancellation it
+// could not read, and the sign-in listener logs from a goroutine that outlives
+// the call that started it. serveMCP wraps errOut in this one writer and hands
+// that to all three.
+func TestOneLogWriterTakesOneLineAtATime(t *testing.T) {
+	const loggers = 8
+	seen := &overlapWriter{}
+	log := lockedLog(seen)
+
+	var wg sync.WaitGroup
+	for i := 0; i < loggers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			fmt.Fprintf(log, "gdoc mcp: line %d\n", i)
+		}(i)
+	}
+	wg.Wait()
+
+	if seen.overlapped.Load() {
+		t.Error("two lines were written at once, so the log shows halves of both")
+	}
+	if got := seen.lines.Load(); got != loggers {
+		t.Errorf("the log took %d lines, want the %d written", got, loggers)
 	}
 }

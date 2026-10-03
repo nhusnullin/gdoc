@@ -21,7 +21,10 @@
 // is one hold there: a call the rules stopped and a model sent again finds the
 // card already open rather than a second one, because two cards for one write
 // could both be released once the write memory's ten minutes have passed:
-// TestARetriedHeldWriteKeepsOneHold.
+// TestARetriedHeldWriteKeepsOneHold. And one write is at most one hold: a write
+// that reaches the document another way takes its card with it, so nobody
+// presses a card for a reply that is already posted:
+// TestAHoldGoesWhenTheWriteItHeldLands.
 
 package main
 
@@ -158,6 +161,40 @@ func (h *mcpHolds) sweep(now time.Time) {
 		return
 	}
 	// Sorted, so two expiring together leave in the same order every run.
+	slices.Sort(gone)
+	for _, id := range gone {
+		lister.Remove(mcpConfirmPrefix + id)
+	}
+}
+
+// landed drops the hold for a write that reached the document another way, and
+// takes its confirm tool off the list.
+//
+// A held write the model sends again, after doing what the reason asked, goes
+// out with no card at all. The card left behind is then a card for a write that
+// already happened: the write memory answers a retry of it for ten minutes, and
+// a hold lives thirty, so past the ten the person pressing it would post the
+// same words a second time: TestAHoldGoesWhenTheWriteItHeldLands.
+//
+// The same write is chat.WriteKey's reading of it, the write memory's own, so
+// the hold and the answer kept for that call cannot disagree about which call
+// they are for.
+func (h *mcpHolds) landed(tool string, args json.RawMessage) {
+	key := chat.WriteKey(tool, args)
+	h.mu.Lock()
+	var gone []string
+	for id, open := range h.byID {
+		if chat.WriteKey(open.Tool, open.Args) == key {
+			delete(h.byID, id)
+			gone = append(gone, id)
+		}
+	}
+	lister := h.lister
+	h.mu.Unlock()
+	if lister == nil {
+		return
+	}
+	// Sorted, so two leaving together leave in the same order every run.
 	slices.Sort(gone)
 	for _, id := range gone {
 		lister.Remove(mcpConfirmPrefix + id)

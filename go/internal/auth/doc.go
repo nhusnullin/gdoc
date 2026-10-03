@@ -58,12 +58,16 @@
 // PKCE verifier never leaves the process that made it. Three things make a
 // lock dead, and all three read as nothing waiting: no process behind its pid,
 // an age over loginLockLife, which is the three minutes the listener itself
-// waits, and no link in it to hand on. A file that is there and will not parse
+// waits, and a link that is not the sign-in page login.go builds. That last one
+// is a check on a value crossing a boundary: the file is another process's and
+// the link in it is handed to a person to open, so anything this binary would
+// never have made reads as a dead lock. A file that is there and will not parse
 // is an error rather than silence, because not knowing must not resolve to
 // "nobody is signing in": the caller starts its own trip either way, and it
 // does that knowing what it found. TestALoginLockIsWrittenAndReadBack,
 // TestALockWhoseProcessIsGoneIsNotLive, TestALockOlderThanThreeMinutesIsNotLive,
-// TestALockWithNoLinkIsNotLive and TestAnUnreadableLockIsNamed are the pins.
+// TestALockWithNoLinkIsNotLive, TestALockWhoseLinkIsNotGooglesSignInIsNotLive
+// and TestAnUnreadableLockIsNamed are the pins.
 //
 // SignedInSince is the other half: a process holding no listener sees that the
 // sign-in finished somewhere else by the token file being newer than the

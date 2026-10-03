@@ -11,6 +11,8 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -579,5 +581,55 @@ func TestStdinClosingEndsServe(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("Serve did not end five seconds after stdin closed")
+	}
+}
+
+// overlapWriter is a writer that notices a second write starting before the
+// first has finished. It holds the write open for a moment, so two goroutines
+// writing without a lock between them overlap rather than happening to miss
+// each other.
+type overlapWriter struct {
+	busy       atomic.Bool
+	overlapped atomic.Bool
+	lines      atomic.Int64
+}
+
+func (w *overlapWriter) Write(p []byte) (int, error) {
+	if !w.busy.CompareAndSwap(false, true) {
+		w.overlapped.Store(true)
+		return len(p), nil
+	}
+	time.Sleep(time.Millisecond)
+	w.lines.Add(1)
+	w.busy.Store(false)
+	return len(p), nil
+}
+
+// Two goroutines logging at once write two lines, never two halves of two.
+//
+// A session logs from both sides: the reader says a cancellation would not
+// decode while the worker says a tool panicked. os.Stderr takes one Fprintf as
+// one write, which is why a real session has never shown this, but Serve takes
+// any writer and every test here hands it a buffer.
+func TestTwoGoroutinesLoggingDoNotOverlap(t *testing.T) {
+	const loggers = 8
+	w := &overlapWriter{}
+	s := New(Info{Name: "gdoc", Version: "v1.2.3"}, nil, w)
+
+	var wg sync.WaitGroup
+	for i := 0; i < loggers; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			s.logf("mcp: the tool %d panicked", i)
+		}(i)
+	}
+	wg.Wait()
+
+	if w.overlapped.Load() {
+		t.Error("two log lines were written at once, so a reader sees halves of both")
+	}
+	if got := w.lines.Load(); got != loggers {
+		t.Errorf("the log took %d lines, want the %d written", got, loggers)
 	}
 }

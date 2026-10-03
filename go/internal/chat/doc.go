@@ -161,8 +161,12 @@
 //     held and never refused, on Nail's call of 2026-10-03, because quoting the
 //     firm's own policy can be the job, and the reason names the document and
 //     the run of words: TestTextCopiedFromAnotherDocumentIsHeldNotRefused. A
-//     write that went into the target resets the window, and a held write
-//     records nothing, so the reset means a write the person released.
+//     write that went into the target resets the attention half of the window,
+//     and a held write records nothing, so the reset means a write the person
+//     released. It resets that half alone: a released write is not an agreement
+//     that another document's words may cross into this one, so the copied run
+//     is looked for over the whole window and answers first,
+//     TestCopiedWordsAreHeldAfterAWriteIntoTheTarget.
 //   - Burst: the third write in sixty seconds, or the twenty-sixth into one
 //     document in an hour. A review goes at the speed of a person reading:
 //     TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth.

@@ -470,6 +470,10 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 		return mcpReadAnswer(r, ch.ledger)
 	}
 	mcpRecordWrite(ch.ledger, c.tool, r, now())
+	// A card for this write is a card for a write that has happened, so it goes
+	// with it. On the release route the hold went before the send, and this
+	// finds nothing: TestAHoldGoesWhenTheWriteItHeldLands.
+	ch.holds.landed(c.tool, args)
 	// And the answer is remembered, whatever it says. A write that failed on
 	// the wire may still have reached the document, and the only answer that is
 	// true for a retry of it is this one. A held write never gets here, because

@@ -57,8 +57,10 @@ const callDeadline = 200 * time.Second
 // nothing about documents, commands or the wire.
 type Server struct {
 	info Info
-	log  io.Writer
 	now  func() time.Time
+
+	logMu sync.Mutex
+	log   io.Writer
 
 	toolsMu sync.Mutex
 	tools   []Tool
@@ -522,7 +524,15 @@ func (s *Server) encode(v any) json.RawMessage {
 
 // logf writes one line to the log, where there is one. The log is never
 // stdout: stdout carries JSON-RPC and nothing else.
+//
+// Behind a lock, like the output writer beside it, because both sides of a
+// session log: the reader says a cancellation would not decode while the worker
+// says a tool panicked. os.Stderr takes one Fprintf as one write, so a real
+// session has never shown it, and any other writer would see halves of two
+// lines: TestTwoGoroutinesLoggingDoNotOverlap.
 func (s *Server) logf(format string, args ...any) {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
 	if s.log == nil {
 		return
 	}

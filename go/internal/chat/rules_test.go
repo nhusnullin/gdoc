@@ -447,3 +447,31 @@ func TestAuthorDomainChangesNoOutcome(t *testing.T) {
 		return true
 	})
 }
+
+// The reset the Focus rule keeps is about attention and never about words. One
+// write into the target says the person approved a write there. It does not say
+// another document's words may cross into it afterwards, so the copied run is
+// looked for over every document read in the window, reset or no reset.
+func TestCopiedWordsAreHeldAfterAWriteIntoTheTarget(t *testing.T) {
+	const otherTitle = "Partner bank pricing sheet"
+	const copied = "the standard fee for a same day transfer is forty basis points of the amount"
+
+	l := settled()
+	l.RecordRead(Read{DocID: "D2", Title: otherTitle, At: ruleNow.Add(-10 * time.Minute),
+		Text: "Schedule 2. " + copied + "."})
+	l.RecordWrite(Written{DocID: targetID, Tool: "reply", At: ruleNow.Add(-9 * time.Minute)})
+
+	// A reply in the session's own words passes: the write into the target
+	// settled the attention half, which is what the reset is for.
+	passes(t, plainReply("thanks, I have asked finance"), l)
+
+	// The same session repeating the other document's words is held.
+	run := strings.Join(strings.Fields(copied)[:12], " ")
+	h := held(t, plainReply("As agreed, "+copied+"."), l, "Focus")
+	if h.Value != otherTitle {
+		t.Errorf("the hold names %q, want the document the words came from %q", h.Value, otherTitle)
+	}
+	if !strings.Contains(h.Reason, run) {
+		t.Errorf("the reason is %q, want it to name the copied words %q", h.Reason, run)
+	}
+}

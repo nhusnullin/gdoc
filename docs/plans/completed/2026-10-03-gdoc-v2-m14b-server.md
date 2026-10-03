@@ -8,6 +8,27 @@ server"). This file is all of `gdoc mcp`, one commit per task, for ralphex. It
 is released as v2.9.0, after the red-team and the clean-Mac install in
 Post-Completion, never before.
 
+## What the run dropped after these tasks were written
+
+Read this before any checkbox below. Two pieces of this plan were built, then
+taken out again on 2026-10-03 after the first run in Claude Desktop, and the
+task text under them was never rewritten: it still reads as built.
+
+- **The Link rule is gone** (commit `386298b`). A link, a bare domain or an email
+  address in a write is ordinary text and is held by nothing. Every row in Task
+  14 about it, and the scenario table's rows 16 and 17, describe a rule that is
+  no longer in `internal/chat`.
+- **Task 18, the trusted email domains, is gone with it** (commit `78310c6`),
+  because the field exempted addresses from that one rule. `gdoc mcp` takes no
+  words and no flags, so the usage line in Task 10 is wrong, the manifest passes
+  no `--trusted-email-domains`, and the files and tests Task 18 names,
+  `go/internal/chat/trusted.go`, `go/cmd/gdoc/mcptrusted.go` and the five tests
+  about a trusted address, do not exist.
+
+Both removals are written up in `docs/v2/DECISIONS.md`, 2026-10-03, and
+`docs/v2/SPEC.md` carries the rule list as it stands. Where this file and those
+two disagree, those two are right.
+
 The spec holds the nineteen decisions, the shapes and the seventeen scenarios.
 This plan repeats none of them. Where the spike answered differently from what
 the spec assumed, this plan follows the measurement and Nail's calls of

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"sync"
 	"time"
 
 	"gdoc/internal/mcp"
@@ -70,4 +71,25 @@ func mcpLogLine(name string, texts []string) string {
 		return line
 	}
 	return "gdoc mcp: " + name + " answered with no envelope"
+}
+
+// syncLog is the one log writer a session's goroutines share.
+//
+// Three of them write to it: the worker that runs a tool, the protocol's reader,
+// and the sign-in listener, which outlives the call that started it. os.Stderr
+// takes one Fprintf as one write, so a real session has never shown halves of
+// two lines, and every writer a test hands in would:
+// TestOneLogWriterTakesOneLineAtATime.
+type syncLog struct {
+	mu sync.Mutex
+	to io.Writer
+}
+
+// lockedLog is one writer wrapped so that one line reaches it at a time.
+func lockedLog(to io.Writer) io.Writer { return &syncLog{to: to} }
+
+func (s *syncLog) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.to.Write(p)
 }
