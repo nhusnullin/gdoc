@@ -93,7 +93,7 @@ def parse_tasks(plan):
 
 
 def commits(repo, branch):
-    out = sh("git", "log", f"main..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
+    out = sh("git", "log", "--reverse", f"main..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
     return [tuple(l.split("|", 2)) for l in out.splitlines()]
 
 
