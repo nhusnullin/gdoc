@@ -267,24 +267,24 @@ Before any rendering code changes.
   `go/internal/tty/terminal_darwin.go`, `go/internal/tty/terminal_other.go`,
   `go/internal/tty/terminal_test.go`
 
-- [ ] `terminal.go` holds `var isatty func(fd uintptr) bool` and
+- [x] `terminal.go` holds `var isatty func(fd uintptr) bool` and
       `func IsTerminal(w io.Writer) bool`, which is true only for an
       `*os.File` for which `isatty(f.Fd())` is true. `IsTerminal` always
       calls the variable.
-- [ ] `terminal_darwin.go` sets the variable's default to the `TIOCGETA`
+- [x] `terminal_darwin.go` sets the variable's default to the `TIOCGETA`
       ioctl through `syscall.Syscall(syscall.SYS_IOCTL, ...)`.
       `terminal_other.go` (`//go:build !darwin`) sets it to a function that
       answers false. Neither returns from `IsTerminal` directly.
-- [ ] `TestABufferIsNotATerminal`, `TestAPipeIsNotATerminal`,
+- [x] `TestABufferIsNotATerminal`, `TestAPipeIsNotATerminal`,
       `TestDevNullIsNotATerminal` (opens `os.DevNull`, real ioctl on darwin,
       the stub elsewhere), `TestTheIoctlAnswerIsTheAnswer` (variable stubbed).
-- [ ] `Colour(env func(string) string) Depth`: none when `NO_COLOR` is set
+- [x] `Colour(env func(string) string) Depth`: none when `NO_COLOR` is set
       and not empty, or `TERM=dumb`; truecolor for `COLORTERM` `truecolor` or
       `24bit`; 256 for a `TERM` ending `-256color`; else 16. A test per row.
-- [ ] `Width(w io.Writer, env) int`: `TIOCGWINSZ` through a second variable
+- [x] `Width(w io.Writer, env) int`: `TIOCGWINSZ` through a second variable
       on darwin, then a positive `COLUMNS`, then 80. A test per row.
-- [ ] `doc.go` names every test above.
-- [ ] `git commit -m "feat(tty): one answer to whether a stream is a terminal"`
+- [x] `doc.go` names every test above.
+- [x] `git commit -m "feat(tty): one answer to whether a stream is a terminal"`
 
 ### Task 5: internal/tty, the palette and the escape codes
 
