@@ -9,6 +9,12 @@
 // tool answer and a terminal answer are the same envelope:
 // TestTheSameAnswerAsTheCLI.
 //
+// Every tool here reads the token file before it builds a line, so a call made
+// by somebody who has never signed in answers that rather than a failure from
+// the wire: TestNoTokenMakesEveryGoogleToolAnswerTheLoginHint, and
+// TestABrokenTokenFileIsNamedNotTreatedAsSignedOut for the file that is there
+// and cannot be read.
+//
 // Nothing here decides anything about a document. The chat checks, the guide
 // code and the holds are tasks 9 to 18 of the milestone 14 run 2 plan, and they
 // wrap these calls rather than changing them.
@@ -19,13 +25,40 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 
+	"gdoc/internal/auth"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
 )
+
+// mcpNotSignedIn is what a Google tool answers when there is no token file.
+//
+// A chat has no terminal in it, so the sentence names the one thing that can
+// fix this from where the model is standing, and never a command somebody
+// would have to type somewhere else: TestNoTokenMakesEveryGoogleToolAnswerTheLoginHint.
+const mcpNotSignedIn = "nobody is signed in to Google on this computer, so gdoc sent nothing. " +
+	"Call the login tool, give the person the link it answers with, " +
+	"and make this call again once they say they have signed in."
+
+// mcpSignedIn is the token read every Google tool makes before it builds a
+// line. It reports the refusal the answer carries, or nil.
+//
+// An absent file is the only thing that means signed out. A file that is there
+// and cannot be read is named as it is: telling the person to sign in again
+// would have them answer a browser prompt for a file gdoc never looked past,
+// and the login that followed would write over whatever is in it:
+// TestABrokenTokenFileIsNamedNotTreatedAsSignedOut.
+func mcpSignedIn() error {
+	_, err := auth.Load()
+	if errors.Is(err, auth.ErrNoToken) {
+		return errors.New(mcpNotSignedIn)
+	}
+	return err
+}
 
 // mcpArg is one schema property and the flag it fills.
 //
@@ -220,6 +253,14 @@ func (c mcpCommand) description() string {
 // safeDispatch turns a panic into an envelope and the deferred remove runs
 // either way.
 func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.Writer) mcp.Result {
+	// Before the arguments are even read: a call nobody is signed in for
+	// cannot reach Google, and the answer a model can act on is the token's,
+	// not whatever the command would have said about a document it never
+	// opened.
+	if err := mcpSignedIn(); err != nil {
+		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
+	}
+
 	files := &callFiles{}
 	defer files.remove()
 

@@ -661,16 +661,23 @@ Serves decision 4. Scenario 2.
 **Files:**
 - Modify: `go/cmd/gdoc/mcptools.go`
 - Create: `go/cmd/gdoc/mcpauth_test.go`
+- ➕ Modify: `go/cmd/gdoc/mcptools_test.go`
 
-- [ ] Test first, `TestNoTokenMakesEveryGoogleToolAnswerTheLoginHint`: with
+➕ No seam over `auth.Load` was added. The check reads the real token file in
+the config directory the test already sets, and `signedIn(t)` in
+`mcpauth_test.go` writes one there. So Task 5's three tests, which call
+`mcpRun` with an empty config directory, each gained that one line, and the
+path a tool really takes is the path every test takes.
+
+- [x] Test first, `TestNoTokenMakesEveryGoogleToolAnswerTheLoginHint`: with
       `auth.ErrNoToken`, each of the six answers `ok: false`, says the person
       is not signed in and that Claude should call `login`, and nothing is
       dispatched.
-- [ ] Test, `TestABrokenTokenFileIsNamedNotTreatedAsSignedOut`.
-- [ ] Implement the `auth.Load` check before dispatch. When Task 9 adds the
+- [x] Test, `TestABrokenTokenFileIsNamedNotTreatedAsSignedOut`.
+- [x] Implement the `auth.Load` check before dispatch. When Task 9 adds the
       code, it updates this task's tests to pass one.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): a Google tool with no token answers that the person should sign in"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): a Google tool with no token answers that the person should sign in"`
 
 ### Task 8: login, shared across processes, and the account named
 

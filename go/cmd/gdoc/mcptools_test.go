@@ -374,6 +374,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 	} {
 		t.Run(one.tool+"/"+boolWord(one.ok), func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+			signedIn(t)
 
 			one.wire(t)
 			res := mcpRun(context.Background(), byName[one.tool], json.RawMessage(one.args), nilWriter{})
@@ -435,6 +436,7 @@ func (nilWriter) Write(p []byte) (int, error) { return len(p), nil }
 // is: after an answer, after a refusal and after a panic.
 func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	signedIn(t)
 
 	var reply mcpCommand
 	for _, c := range mcpCommands() {
@@ -535,6 +537,7 @@ func countCallDirs(t *testing.T) int {
 // dies with the process, read a call at a time.
 func TestAGrantFromOneCallIsAbsentFromTheNext(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	signedIn(t)
 
 	var read mcpCommand
 	for _, c := range mcpCommands() {
