@@ -210,9 +210,38 @@
 // becomes one tool with one name, and where a released call goes out as the
 // arguments the hold kept.
 //
+// # The same write twice
+//
+// Memory keeps the answer each write of this session gave for ten minutes,
+// under the tool and a hash of the call's arguments, and the same call again
+// inside that window gets that answer and writes nothing:
+// TestAKeptAnswerIsRecalledForTheSameCall, and
+// TestTheSameWriteInsideTenMinutesGetsTheKeptAnswer in cmd/gdoc, where the fake
+// wire sees one write. Ten minutes and then it is a new write:
+// TestNothingIsRecalledAfterTenMinutes and TestAfterTenMinutesItIsANewWrite.
+//
+// It is there because a retry is indistinguishable from a second write: the same
+// tool, the same arguments, arriving again, which is what a client that gave up
+// on a call sends. Asking the document would not settle it, since a reply posted
+// twice is two replies and both are there.
+//
+// The arguments are canonicalised before they are hashed, so the same call
+// written in another order is the same write:
+// TestArgumentsInAnotherOrderAreTheSameWrite. One argument different is another
+// write: TestADifferentArgumentIsADifferentWrite.
+//
+// What is kept is the answer the command gave, whatever it said, because a write
+// that failed on the wire may still have reached the document. A held write is
+// never kept, because the person has not answered the card yet and the call has
+// to be judged against the document as it stands: TestAHeldAnswerIsNotKept.
+//
+// It is per process and nothing reaches disk, and every method is safe on a nil
+// Memory: TestTheMemoryIsPerProcessAndWritesNothingToDisk and
+// TestTheMemoryTakesTwoCallersAtOnce.
+//
 // # What is not here yet
 //
-// The write memory and the trusted-domains setting are tasks 17 and 18 of
+// The trusted-domains setting is task 18 of
 // docs/plans/2026-10-03-gdoc-v2-m14b-server.md. Rules already takes the trusted
 // list; nothing parses the person's setting into it yet.
 package chat

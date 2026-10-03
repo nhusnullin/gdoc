@@ -1045,15 +1045,21 @@ Serves the spec's "The same write twice".
 - Create: `go/internal/chat/memory.go`, `go/internal/chat/memory_test.go`
 - Modify: `go/cmd/gdoc/mcptools.go`
 
-- [ ] Test first, `TestTheSameWriteInsideTenMinutesGetsTheKeptAnswer`: the
+- [x] Test first, `TestTheSameWriteInsideTenMinutesGetsTheKeptAnswer`: the
       fake wire sees one write.
-- [ ] Test, `TestAfterTenMinutesItIsANewWrite`.
-- [ ] Test, `TestADifferentArgumentIsADifferentWrite`.
-- [ ] Test, `TestAHeldAnswerIsNotKept`: a held write asked again is judged
+- [x] Test, `TestAfterTenMinutesItIsANewWrite`.
+- [x] Test, `TestADifferentArgumentIsADifferentWrite`.
+- [x] Test, `TestAHeldAnswerIsNotKept`: a held write asked again is judged
       again.
-- [ ] Implement.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): a retry of the same write inside ten minutes gets the kept answer"`
+- [x] Implement.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): a retry of the same write inside ten minutes gets the kept answer"`
+
+**Files, as built:** also `go/cmd/gdoc/mcpmemory_test.go` (new: the four named
+tests are about what the fake wire saw, so they live beside the other cmd/gdoc
+mcp tests, and `go/internal/chat/memory_test.go` holds the unit tests of Memory
+itself), `go/cmd/gdoc/mcpguide_test.go` (the session helper every mcp test uses
+builds the memory too) and the two doc.go files.
 
 ### Task 18: trusted email domains
 

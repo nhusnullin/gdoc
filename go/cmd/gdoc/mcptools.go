@@ -36,6 +36,12 @@
 // write between its own read of the document and the command that would send
 // it: a write a rule holds is answered there and never reaches safeDispatch.
 //
+// A write tool's call is also remembered with the answer it gave, so the same
+// call again inside ten minutes gets that answer and reaches no wire:
+// TestTheSameWriteInsideTenMinutesGetsTheKeptAnswer. That is what a client retry
+// after a timeout is, and internal/chat's Memory holds why the first answer is
+// the only true one for it.
+//
 // Nothing else here decides anything about a document.
 
 package main
@@ -64,17 +70,20 @@ import (
 )
 
 // mcpChat is what one session keeps across its calls: the code guide hands out,
-// the ledger of what this process read and wrote, and the writes it is holding.
+// the ledger of what this process read and wrote, the writes it is holding, and
+// the answer each write it made gave.
 //
-// All three are made when the session starts and die with it, and none reaches
-// disk. They travel together because a call needs all three: the code before it
+// All four are made when the session starts and die with it, and none reaches
+// disk. They travel together because a call needs all four: the code before it
 // does anything, the ledger because what this session read and wrote is what the
-// hold rules ask about, and the holds because a write stopped for the person is
-// released from the process that stopped it and from no other.
+// hold rules ask about, the holds because a write stopped for the person is
+// released from the process that stopped it and from no other, and the memory
+// because a retry of a write is a call this session has already answered.
 type mcpChat struct {
 	code   *chat.Code
 	ledger *chat.Ledger
 	holds  *mcpHolds
+	memory *chat.Memory[mcp.Result]
 
 	mu sync.Mutex
 	// last is when the session's most recent tool call ended. It is what the
@@ -107,7 +116,8 @@ func newMCPChat() (*mcpChat, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds()}, nil
+	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
+		memory: chat.NewMemory[mcp.Result]()}, nil
 }
 
 // mcpNotSignedIn is what a Google tool answers when there is no token file.
@@ -412,6 +422,17 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 // safeDispatch turns a panic into an envelope and the deferred remove runs
 // either way.
 func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.Writer, ch *mcpChat, judge bool) mcp.Result {
+	// Before anything, for a write: a call this session already made and
+	// answered is answered again and made no second time. A client that gave up
+	// on a call and sent it again cannot know whether the first one reached the
+	// document, and nothing below this line runs, so the wire sees one write:
+	// TestTheSameWriteInsideTenMinutesGetsTheKeptAnswer.
+	if !c.readOnly {
+		if kept, ok := ch.memory.Recall(c.tool, args, now()); ok {
+			return kept
+		}
+	}
+
 	files := &callFiles{}
 	defer files.remove()
 
@@ -449,7 +470,13 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 		return mcpReadAnswer(r, ch.ledger)
 	}
 	mcpRecordWrite(ch.ledger, c.tool, r, now())
-	return mcpEnvelope(r)
+	// And the answer is remembered, whatever it says. A write that failed on
+	// the wire may still have reached the document, and the only answer that is
+	// true for a retry of it is this one. A held write never gets here, because
+	// it was answered above: TestAHeldAnswerIsNotKept.
+	out := mcpEnvelope(r)
+	ch.memory.Keep(c.tool, args, out, now())
+	return out
 }
 
 // mcpRecordRead keeps what a read tool brought back: the document, its title,
