@@ -88,12 +88,18 @@ PowerShell lands with Windows, under the tag that ships it. Decided
 
 ### Output contract
 
-- Every command writes exactly one JSON object to stdout and exits. Human prose
-  never mixes into stdout.
+- Every command writes exactly one JSON object to stdout and exits, except that
+  `gdoc mcp` writes JSON-RPC lines there, and a help screen on a terminal
+  without `--json` writes nothing there: `help` when it answers and bare `gdoc`
+  draw Panels on stderr instead, and `--json` prints the object wherever stdout
+  goes. Every other result keeps its object, refusals and the panic envelope
+  included. Narrowed 2026-10-03, DECISIONS.md. Human prose never mixes into
+  stdout.
 - The object always carries `ok`, and on failure an `error` that names the
   problem. Warnings ride in `warnings` and are never dropped: a thing gdoc could
   not do is reported, not omitted.
-- Exit code 0 when `ok` is true, non-zero otherwise.
+- Exit code 0 when `ok` is true, non-zero otherwise, and when a help screen
+  replaced the object, 0 for `help` and 1 for bare `gdoc`.
 - The binary never prompts, and every command but one never reads stdin. It
   must run headless. `gdoc mcp` is the exception: a JSON-RPC session arrives
   there, and that command prints no envelope at all. Narrowed 2026-10-03,

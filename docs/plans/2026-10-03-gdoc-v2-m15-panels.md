@@ -188,17 +188,17 @@ Serves every decision. Written before the code it records.
 **Files:**
 - Modify: `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`, `CLAUDE.md`
 
-- [ ] An entry dated the day this task runs, "On a terminal, a help screen is
+- [x] An entry dated the day this task runs, "On a terminal, a help screen is
       for the person: Panels on stderr and nothing on stdout, and `--json`
       always prints the object", from the spec's entry, in the file's own
       shape, with its register row `holds`. Its test list is this plan's
       test names.
-- [ ] The 2026-10-03 "`gdoc mcp`" row: its status cell names the one clause
+- [x] The 2026-10-03 "`gdoc mcp`" row: its status cell names the one clause
       superseded, "No CLI command gains it" (`AllowAccountRead`), in the
       part-supersede shape the register already uses.
-- [ ] `SPEC.md`: the line "Every command writes exactly one JSON object to
+- [x] `SPEC.md`: the line "Every command writes exactly one JSON object to
       stdout and exits" gains the help-screen exception in the entry's words.
-- [ ] `CLAUDE.md`, staying under 300 lines:
+- [x] `CLAUDE.md`, staying under 300 lines:
   - The stdout invariant is one sentence naming `mcp` and the help screen,
     replacing the two sentences it has now.
   - The grant line names `auth status` beside the MCP login as callers of
@@ -208,8 +208,8 @@ Serves every decision. Written before the code it records.
     drawn on it".
   - If the file passes 299 lines, shorten the `go/internal/export/` row, which
     is the longest, rather than any invariant.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(decisions): help on a terminal is for the person"`
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(decisions): help on a terminal is for the person"`
 
 ### Task 2: `--json` on help, in every spelling
 
