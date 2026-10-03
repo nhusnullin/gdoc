@@ -185,6 +185,7 @@ func TestAHeldAnswerIsNotKept(t *testing.T) {
 	stubClock(t, memoryClock)
 
 	ch := callChat(t)
+	strangerAsked(ch)
 	args := withCode(t, ch.code, heldWriteArgs()["reply"])
 
 	first := heldEnvelopeOf(t, mcpRun(context.Background(), mcpToolNamed(t, "reply"), args, nilWriter{}, ch).Texts)
@@ -196,7 +197,7 @@ func TestAHeldAnswerIsNotKept(t *testing.T) {
 	if again.Data.Held.ID == first.Data.Held.ID {
 		t.Error("the second call answered with the first call's hold instead of being judged again")
 	}
-	if again.Data.Held.Rule != "Link" {
+	if again.Data.Held.Rule != "Dictated" {
 		t.Errorf("the second call was held by %q, want the rule the first tripped", again.Data.Held.Rule)
 	}
 	if sent := f.writes(); len(sent) != 0 {

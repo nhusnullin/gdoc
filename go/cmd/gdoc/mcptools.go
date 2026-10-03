@@ -616,11 +616,10 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 	if err != nil {
 		return nil, err
 	}
-	// The read happened, so it is recorded, whatever the title turns out to say.
-	// The document's own words are what the Link rule asks about, and a write
-	// refused by its title still read them. It is marked as the write's own: the
-	// binary read the document, the chat did not, so the Focus rule still asks
-	// whether the model ever looked at it.
+	// The read happened, so it is recorded, whatever the title turns out to say:
+	// a write refused by its title still read the document's words. It is marked
+	// as the write's own: the binary read the document, the chat did not, so the
+	// Focus rule still asks whether the model ever looked at it.
 	text, _ := view.Text(d)
 	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Text: text, ForWrite: true})
 	if strings.TrimSpace(title) != strings.TrimSpace(d.Title) {

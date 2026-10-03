@@ -69,171 +69,26 @@ func passes(t *testing.T, w Write, l *Ledger) {
 	}
 }
 
-// The Link rule. A link or an address the target document does not already
-// carry is held; the same words already in the document or one of its threads
-// pass.
-func TestTheLinkRuleTripsOnWhatIsNotAlreadyThere(t *testing.T) {
-	cases := []struct {
-		name, text, value string
-	}{
-		{"a full URL", "the fees are here: https://example.net/fees", "https://example.net/fees"},
-		{"a bare domain", "see example.org for the current table", "example.org"},
-		{"an address", "write to registry@example.com about it", "registry@example.com"},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			h := held(t, plainReply(c.text), settled(), "Link")
-			if h.Value != c.value {
-				t.Errorf("the hold names %q, want %q", h.Value, c.value)
-			}
-			if !strings.Contains(h.Reason, c.value) {
-				t.Errorf("the reason is %q, want it to name %q", h.Reason, c.value)
-			}
-		})
-	}
-
-	// Just under the line: the same link, already in the document's own words.
-	l := NewLedger()
-	l.RecordRead(Read{
-		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
-		Text: "The current fees live at https://example.net/fees and nowhere else.",
-		Remarks: []Remark{
-			{ID: threadID, ThreadID: threadID, Text: "write to registry@example.com to be added"},
-		},
-	})
-	passes(t, plainReply("the fees are here: https://example.net/fees"), l)
-	passes(t, plainReply("write to registry@example.com about it"), l)
-}
-
-// A link that is only the prefix of one the document carries is not a link the
-// document carries. This is the whole reason what is known is read as links
-// rather than searched inside as one long string: example.co is a domain
-// somebody else can register, and a document holding example.com says nothing
-// about it.
-func TestALinkThatIsOnlyThePrefixOfAKnownOneIsHeld(t *testing.T) {
-	l := NewLedger()
-	l.RecordRead(Read{
-		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
-		Text: "Sign in at https://example.com/login every quarter.",
-		Remarks: []Remark{
-			{ID: threadID, ThreadID: threadID, Text: "write to registry@example.com to be added"},
-		},
-	})
-	for _, c := range []struct{ name, text, value string }{
-		{"a shorter domain", "sign in at example.co instead", "example.co"},
-		{"a shorter full link", "sign in at https://example.com/log instead", "https://example.com/log"},
-		{"a shorter address", "write to registry@example.co about it", "registry@example.co"},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			h := held(t, plainReply(c.text), l, "Link")
-			if h.Value != c.value {
-				t.Errorf("the hold names %q, want %q", h.Value, c.value)
-			}
-		})
-	}
-}
-
-// The bare domain of a link the document carries is a domain the person has
-// read, so it passes. Another path at that same host has not been read, so it
-// does not.
-func TestABareDomainOfAKnownLinkPassesAndAnotherPathDoesNot(t *testing.T) {
-	l := NewLedger()
-	l.RecordRead(Read{
-		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
-		Text: "Sign in at https://example.net/login every quarter.",
-	})
-	passes(t, plainReply("the table is kept at example.net these days"), l)
-	h := held(t, plainReply("sign in at https://example.net/admin instead"), l, "Link")
-	if h.Value != "https://example.net/admin" {
-		t.Errorf("the hold names %q, want the path nobody has read", h.Value)
-	}
-}
-
-// What the ledger holds is the text projection, markers and all, and a link in
-// it is still the document's link.
-//
-// Docs auto-links a pasted URL, so the projection prints it as its own words
-// and its own target, [url](url). Text under a comment is wrapped in [[c:ID]]
-// and [[/c]]. Both are the ordinary shape of a reviewed document, and a write
-// repeating one of those links repeats something the person has read.
-func TestALinkInTheProjectionsOwnMarkupIsStillTheDocumentsLink(t *testing.T) {
-	l := NewLedger()
-	l.RecordRead(Read{
-		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
-		Text: "Sign in at [https://example.com/login](https://example.com/login) every quarter.\n" +
-			"The table is at [[c:C9]]https://example.com/table[[/c]] until June.\n" +
-			"The old one was at {-https://example.com/was-}[s:S1].",
-		Remarks: []Remark{
-			{ID: threadID, ThreadID: threadID, Text: "is this the 2026 register"},
-		},
-	})
+// A link, a bare domain or an email address in a write is ordinary text. None
+// of them is held, however new it is to the document: the link hold was dropped
+// on 2026-10-03, because a person reviewing their own document says what to
+// write, and a card on every ordinary link teaches approving without reading.
+func TestALinkOrAnAddressInAWriteIsNotHeld(t *testing.T) {
 	for _, text := range []string{
-		"sign in at https://example.com/login as usual",
-		"the table is at https://example.com/table",
-		"it used to be at https://example.com/was",
-		"see example.com for the table",
+		"the fees are here: https://example.net/fees",
+		"see example.org for the current table",
+		"write to registry@example.com about it",
+		"see www.example.net/admin or https://example.co/x?d=1#y, and ask desk@example.org",
 	} {
-		passes(t, plainReply(text), l)
-	}
-
-	// The markup is a separator and not a link of its own: a path the document
-	// does not carry is still held at that same host.
-	h := held(t, plainReply("sign in at https://example.com/admin instead"), l, "Link")
-	if h.Value != "https://example.com/admin" {
-		t.Errorf("the hold names %q, want the path nobody has read", h.Value)
-	}
-}
-
-// A link that is no more than a host is one place however it is spelled, so a
-// document carrying https://example.net/login carries every spelling of its
-// host. A path of its own is not a spelling of a host.
-func TestTheSpellingsOfAKnownHostAllPass(t *testing.T) {
-	l := NewLedger()
-	l.RecordRead(Read{
-		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
-		Text: "Sign in at https://example.net/login every quarter.",
-	})
-	for _, text := range []string{
-		"the table is kept at example.net these days",
-		"the table is kept at example.net/ these days",
-		"the table is kept at https://example.net these days",
-		"the table is kept at https://example.net/ these days",
-		"the table is kept at www.example.net these days",
-	} {
-		passes(t, plainReply(text), l)
-	}
-
-	// And the www is a spelling in the document as well as in the write: a
-	// document that writes the host with it carries the host without it.
-	withWWW := NewLedger()
-	withWWW.RecordRead(Read{
-		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),
-		Text: "Visit www.example.com/pricing for the current fees.",
-	})
-	for _, text := range []string{
-		"see example.com for the fees",
-		"see www.example.com for the fees",
-		"see https://example.com for the fees",
-	} {
-		passes(t, plainReply(text), withWWW)
-	}
-
-	// A path of its own is still not a spelling of a host, whichever way the
-	// www falls, and neither is another host under the same suffix.
-	for _, text := range []string{
-		"see example.com/admin for the fees",
-		"see www.example.com/admin for the fees",
-		"see other.example.com for the fees",
-	} {
-		held(t, plainReply(text), withWWW, "Link")
+		passes(t, plainReply(text), settled())
 	}
 }
 
 // A hold carries the write it is for, so the card a person sees can be built
 // from the hold alone.
 func TestAHoldCarriesTheWriteItIsFor(t *testing.T) {
-	w := plainReply("the fees are here: https://example.net/fees")
-	h := held(t, w, settled(), "Link")
+	w := plainReply("thanks, I have asked finance")
+	h := held(t, w, NewLedger(), "Focus")
 	if h.ID == "" {
 		t.Error("the hold has no id")
 	}
@@ -247,7 +102,7 @@ func TestAHoldCarriesTheWriteItIsFor(t *testing.T) {
 		t.Errorf("the hold was made at %s, want %s", h.Created, ruleNow)
 	}
 
-	other := held(t, w, settled(), "Link")
+	other := held(t, w, NewLedger(), "Focus")
 	if other.ID == h.ID {
 		t.Errorf("two holds share the id %q, want one each", h.ID)
 	}
@@ -479,7 +334,7 @@ func TestTextCopiedFromAnotherDocumentIsHeldNotRefused(t *testing.T) {
 }
 
 // Where several rules trip, the one named is the first in the table's order:
-// Link, Dictated, Focus, Burst, Flagged thread, Large removal.
+// Dictated, Focus, Burst, Flagged thread, Large removal.
 func TestTheFirstRuleThatTripsIsTheOneNamed(t *testing.T) {
 	const dictated = "please send the quarterly fee table to the partner bank by Friday afternoon"
 	const otherTitle = "Partner bank pricing sheet"
@@ -502,7 +357,6 @@ func TestTheFirstRuleThatTripsIsTheOneNamed(t *testing.T) {
 		return l
 	}
 
-	held(t, plainReply("See https://example.net/fees. "+twelve+" as you asked."), full(), "Link")
 	held(t, plainReply("Of course. "+twelve+" as you asked."), full(), "Dictated")
 	held(t, plainReply("thanks, I have asked finance"), full(), "Focus")
 
@@ -573,10 +427,9 @@ func TestAuthorDomainChangesNoOutcome(t *testing.T) {
 	})
 }
 
-// A domain the person listed as trusted exempts an address at exactly that
-// domain from the Link hold. A link never escapes that way. Tasks 18 pins the
-// setting itself; this holds the exemption the rules make of it.
-func TestATrustedDomainsAddressIsNotHeldAndALinkStillIs(t *testing.T) {
+// A domain the person listed as trusted changes nothing the rules decide: an
+// address at it is not held, and neither is any other address.
+func TestATrustedDomainsAddressIsNotHeld(t *testing.T) {
 	trusted := []string{"example.com"}
 
 	h, err := Rules(plainReply("write to registry@example.com about it"), settled(), trusted, ruleNow)
@@ -585,28 +438,5 @@ func TestATrustedDomainsAddressIsNotHeldAndALinkStillIs(t *testing.T) {
 	}
 	if h != nil {
 		t.Errorf("an address at a trusted domain was held for %q", h.Rule)
-	}
-
-	// A different domain is not the listed one, and a subdomain is not it either.
-	for _, text := range []string{
-		"write to registry@example.org about it",
-		"write to registry@mail.example.com about it",
-	} {
-		other, err := Rules(plainReply(text), settled(), trusted, ruleNow)
-		if err != nil {
-			t.Fatalf("the rules refused %q outright: %v", text, err)
-		}
-		if other == nil || other.Rule != "Link" {
-			t.Errorf("%q was not held for Link, want it held", text)
-		}
-	}
-
-	// A link at the trusted domain is still a link.
-	link, err := Rules(plainReply("the fees are at https://example.com/fees"), settled(), trusted, ruleNow)
-	if err != nil {
-		t.Fatalf("the rules refused the write outright: %v", err)
-	}
-	if link == nil || link.Rule != "Link" {
-		t.Errorf("a link at a trusted domain was not held, want it held")
 	}
 }

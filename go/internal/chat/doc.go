@@ -91,10 +91,9 @@
 // # The ledger of what this process read and wrote
 //
 // Every hold rule is a question about this session rather than about the call in
-// front of it: whether a link in a write was already in the document, whether a
-// run of words came out of a comment a stranger left, whether the model has been
-// reading another document, how many writes have gone into this one in the last
-// minute. Ledger is what answers them.
+// front of it: whether a run of words came out of a comment a stranger left,
+// whether the model has been reading another document, how many writes have gone
+// into this one in the last minute. Ledger is what answers them.
 //
 // A read is kept with the document, its title, the instant and what the tool
 // fetched, and a write with the document, the tool and the instant:
@@ -129,7 +128,7 @@
 // Nothing here judges. The ledger is read by the hold rules and by nothing else,
 // and no answer a model reads carries a word of it.
 //
-// # The six hold rules, decided here and never by the model
+// # The five hold rules, decided here and never by the model
 //
 // Rules runs over one Write and answers a Hold or nothing. The binary decides
 // that a write is risky, by a fixed list, and the person releases it. That is a
@@ -139,26 +138,9 @@
 // being steered.
 //
 // The first rule that trips is the one named, in this order, because a card
-// naming six reasons is a card nobody reads:
+// naming five reasons is a card nobody reads:
 // TestTheFirstRuleThatTripsIsTheOneNamed.
 //
-//   - Link: the text carries a link or an email address this session has not
-//     seen in the target document or its comments. A link in a write the
-//     document never held came from somewhere, and the only somewheres are a
-//     stranger's comment and another document:
-//     TestTheLinkRuleTripsOnWhatIsNotAlreadyThere. An address at a domain the
-//     person listed as trusted is exempt and a link never is:
-//     TestATrustedDomainsAddressIsNotHeldAndALinkStillIs. Seen means the whole
-//     link and not a prefix of one, so a document holding example.com says
-//     nothing about example.co,
-//     TestALinkThatIsOnlyThePrefixOfAKnownOneIsHeld, and what the session saw
-//     is read as the text projection it is, markers and all, so a link Docs
-//     auto-linked is the document's link:
-//     TestALinkInTheProjectionsOwnMarkupIsStillTheDocumentsLink. A link that is
-//     no more than a host is the one widening: every spelling of a host the
-//     document carries passes, the scheme, the trailing slash and the www among
-//     them, because they are one place:
-//     TestTheSpellingsOfAKnownHostAllPass.
 //   - Dictated: twelve words in a row shared with a comment gdoc did not write.
 //     This is the attack the whole design is for, a stranger typing the reply
 //     they want and the model posting it under the firm's name. Twelve is long
@@ -187,6 +169,12 @@
 //   - Large removal: a propose taking out more than three hundred characters,
 //     which is no longer a correction:
 //     TestTheLargeRemovalRuleTripsOverThreeHundredCharacters.
+//
+// A link, a bare domain or an email address in a write is ordinary text and
+// is not held, however new it is to the document. The link hold was dropped on
+// Nail's call of 2026-10-03: a card on every ordinary link teaches approving
+// without reading, which is the habit the cards exist to avoid.
+// TestALinkOrAnAddressInAWriteIsNotHeld.
 //
 // Text carrying a hidden character is refused outright rather than held, because
 // there is nothing a person could sensibly approve: they cannot see what they
@@ -268,10 +256,8 @@
 // no error, which is what the extension sends when nobody typed anything:
 // TestAnEmptySettingExemptsNothing.
 //
-// It exempts an address at exactly a listed domain, not at a subdomain and not at
-// a look-alike, and it never exempts a link:
-// TestAListedDomainExemptsAnEmailAtExactlyThatDomain and
-// TestALinkAtAListedDomainIsStillHeld. It is the one written-down loosening of a
+// It names an address at exactly a listed domain, not at a subdomain and not at
+// a look-alike: TestAListedDomainExemptsAnEmailAtExactlyThatDomain. It is the one written-down loosening of a
 // check in gdoc, which is why Exempted exists: the addresses a write carried at a
 // listed domain, so cmd/gdoc states the loosening in the write's own answer:
 // TestExemptedNamesEachAddressAtAListedDomainOnce and

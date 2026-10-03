@@ -102,9 +102,6 @@ func whyNotADomain(domain string) string {
 // nobody has to go looking for. The addresses come back as they were written,
 // because that is what the document will carry:
 // TestExemptedNamesEachAddressAtAListedDomainOnce.
-//
-// It is the same reading the Link rule does, through the same isTrusted, so the
-// fact and the rule cannot say different things about one address.
 func Exempted(text string, trusted []string) []string {
 	if len(trusted) == 0 {
 		return nil
@@ -123,4 +120,21 @@ func Exempted(text string, trusted []string) []string {
 		out = append(out, address)
 	}
 	return out
+}
+
+// isTrusted answers whether an address sits at exactly one of the listed
+// domains. A subdomain of a listed domain is not it: the person listed what they
+// meant, and "mail.example.com" is not "example.com".
+func isTrusted(address string, trusted []string) bool {
+	at := strings.LastIndex(address, "@")
+	if at < 0 {
+		return false
+	}
+	domain := strings.ToLower(address[at+1:])
+	for _, d := range trusted {
+		if domain == strings.ToLower(d) {
+			return true
+		}
+	}
+	return false
 }

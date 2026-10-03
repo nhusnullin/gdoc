@@ -45,8 +45,8 @@ func TestEachReadToolRecordsItsReadInTheLedger(t *testing.T) {
 
 // The text read keeps the document's own words, and the comments read keeps every
 // comment and reply with gdoc's own marked as gdoc's. Which read carries which is
-// the point: the Link rule asks what the document already says, and the Dictated
-// rule asks what a stranger wrote in it.
+// the point: the Focus rule names a run copied out of what a document says, and
+// the Dictated rule asks what a stranger wrote in it.
 func TestAReadKeepsTheWordsItsOwnToolFetched(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	signedIn(t)
@@ -106,9 +106,9 @@ func TestAReadKeepsTheWordsItsOwnToolFetched(t *testing.T) {
 	}
 }
 
-// A write reads its target on the call, and that read is recorded: the Link rule
-// asks whether a link in the write was already in the document, and a write whose
-// target was never read would have nothing to ask.
+// A write reads its target on the call, and that read is recorded: the Dictated
+// rule asks whether the write repeats a comment in the thread it goes into, and a
+// write whose target was never read would have nothing to ask.
 func TestAWriteReadsItsTargetFreshAndRecordsIt(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	signedIn(t)

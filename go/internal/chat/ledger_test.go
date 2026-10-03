@@ -186,8 +186,8 @@ func TestRobotNotOursUsesTheLedger(t *testing.T) {
 }
 
 // A read keeps the document's own words, and a later read that fetched none does
-// not take them away: the Link rule asks what the document already says, and the
-// comments read that follows a text read carries no text.
+// not take them away: the Focus rule names the run a write copies out of what a
+// document says, and the comments read that follows a text read carries no text.
 func TestAReadKeepsTheDocumentsBodyText(t *testing.T) {
 	const body = "The supplier register is reviewed annually.\nSee example.net for the list."
 	l := NewLedger()

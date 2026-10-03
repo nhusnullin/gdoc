@@ -246,9 +246,9 @@ func sessionWire(t *testing.T) *fakeWire {
 	return &fakeWire{answers: []*answer{
 		{method: "GET", match: panicDocID, before: func() { panic("the fake wire failed in a way nothing expected") }},
 		{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
-		{method: "GET", match: "/comments?", json: pinThread},
+		{method: "GET", match: "/comments?", json: strangerThreads},
 		{method: "POST", match: "/comments/AAAA1111/replies", once: true,
-			json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"🤖 the 2026 register is at ` + heldLink + `"}`},
+			json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldBody + `"}`},
 	}}
 }
 
@@ -357,12 +357,12 @@ func TestASessionAgainstFakesRunsEveryTool(t *testing.T) {
 		}
 	}
 
-	// A write whose words carry a link nobody put in the document. It is held,
-	// and the hold registers one card.
+	// A write repeating twelve words of a stranger's comment, which the comments
+	// read above carried. It is held, and the hold registers one card.
 	clock.pass(time.Second)
 	held := d.call("reply", argsWithCode(t, code, heldWriteArgs()["reply"]))
 	if !held.IsError {
-		t.Fatalf("a reply carrying a link is held: %v", held.texts())
+		t.Fatalf("a reply repeating a stranger's comment is held: %v", held.texts())
 	}
 	env := heldEnvelopeOf(t, held.texts())
 	if env.Data.Held.ID == "" {
@@ -396,14 +396,13 @@ func TestASessionAgainstFakesRunsEveryTool(t *testing.T) {
 		t.Errorf("the card outlived the release: %s", after.Result)
 	}
 
-	// The other two writes, each carrying the same link nobody put in the
-	// document. Both are held, so the session has called every tool it offers and
+	// The other two writes, each repeating the same stranger's words. Both are held, so the session has called every tool it offers and
 	// the wire has still seen one write.
 	for _, tool := range []string{"annotate", "propose"} {
 		clock.pass(time.Minute)
 		got := d.call(tool, argsWithCode(t, code, heldWriteArgs()[tool]))
 		if !got.IsError {
-			t.Fatalf("a %s carrying a link is held: %v", tool, got.texts())
+			t.Fatalf("a %s repeating a stranger's comment is held: %v", tool, got.texts())
 		}
 		if one := heldEnvelopeOf(t, got.texts()); one.Data.Held.ID == "" {
 			t.Errorf("the %s answer names no hold: %s", tool, got.texts()[0])

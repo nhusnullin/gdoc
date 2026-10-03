@@ -1,4 +1,4 @@
-// The hold rules: the six questions the binary asks of a chat write before it
+// The hold rules: the five questions the binary asks of a chat write before it
 // goes out, and the one text it refuses outright.
 
 package chat
@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -19,7 +18,6 @@ import (
 // what a test names. They are words rather than codes because the sentence a
 // model repeats to the person is built around them.
 const (
-	RuleLink          = "Link"
 	RuleDictated      = "Dictated"
 	RuleFocus         = "Focus"
 	RuleBurst         = "Burst"
@@ -31,9 +29,8 @@ const (
 //
 // They are not tuned. They are the specification's values, chosen so that the
 // ordinary shape of a review, read a document, reply to a few comments, passes
-// without a card, and the shapes that cost something, a link nobody put in the
-// document, a stranger's words repeated back, a burst of writes, stop for the
-// person.
+// without a card, and the shapes that cost something, a stranger's words
+// repeated back, a burst of writes, stop for the person.
 const (
 	dictatedRun       = 12               // words in a row shared with a stranger's comment
 	focusWindow       = 30 * time.Minute // how long another document stays in view
@@ -89,7 +86,7 @@ type Hold struct {
 //
 // It answers a hold or nothing, and an error only where the text is refused
 // outright. The first rule that trips is the one named, because a card naming
-// six reasons is a card nobody reads: TestTheFirstRuleThatTripsIsTheOneNamed.
+// five reasons is a card nobody reads: TestTheFirstRuleThatTripsIsTheOneNamed.
 //
 // Every question it asks is about this session rather than about the call in
 // front of it, which is why it takes the ledger. The clock is handed in, so the
@@ -100,7 +97,7 @@ func Rules(w Write, l *Ledger, trusted []string, now time.Time) (*Hold, error) {
 	}
 
 	for _, rule := range []func(Write, *Ledger, []string, time.Time) (string, string, string){
-		linkRule, dictatedRule, focusRule, burstRule, flaggedThreadRule, largeRemovalRule,
+		dictatedRule, focusRule, burstRule, flaggedThreadRule, largeRemovalRule,
 	} {
 		name, value, reason := rule(w, l, trusted, now)
 		if name == "" {
@@ -126,214 +123,6 @@ func newHoldID() (string, error) {
 		return "", fmt.Errorf("the hold id could not be made, so this write is neither sent nor held: %w", err)
 	}
 	return hex.EncodeToString(b), nil
-}
-
-// linkRunPattern pulls a link out of a text as a whole, where facts.go only asks
-// whether one is there. The two have to agree, so the alternatives are the same
-// three shapes plus the path each can carry: a scheme, a host under www, any
-// host with a path on it, and a bare host whose last label is one of linkTLDs.
-//
-// Go's regexp tries the alternatives in order, so the longest shape is written
-// first and a bare host is the last thing tried.
-var linkRunPattern = regexp.MustCompile(`(?i)(?:` +
-	`[a-z][a-z0-9+.\-]*://[^\s<>"']+` +
-	`|www\.[a-z0-9][^\s<>"']*` +
-	`|[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9\-]+)*\.[a-z]{2,}/[^\s<>"']*` +
-	`|\b[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9\-]+)*\.(?:` + strings.Join(linkTLDs, "|") + `)\b` +
-	`)`)
-
-// linkRule holds a write whose words carry a link or an address the target
-// document does not already carry.
-//
-// The point is not that links are dangerous. It is that a link in a write the
-// document has never seen came from somewhere, and the only places it can have
-// come from are a comment a stranger wrote and another document. Either way the
-// person should see it before the firm's name is under it:
-// TestTheLinkRuleTripsOnWhatIsNotAlreadyThere.
-//
-// A link is checked before an address, because an address at a domain the person
-// listed as trusted is exempt and a link never is:
-// TestATrustedDomainsAddressIsNotHeldAndALinkStillIs.
-//
-// What the document already carries is read as whole links and whole addresses
-// rather than as one long string the write is searched inside. A substring
-// search answers yes to every prefix of what is there, so a document holding
-// example.com would let a write carrying example.co through, which is the one
-// shape this rule exists to stop:
-// TestALinkThatIsOnlyThePrefixOfAKnownOneIsHeld.
-func linkRule(w Write, l *Ledger, trusted []string, _ time.Time) (string, string, string) {
-	known := documentWords(l, w.DocID)
-	knownLinks := linksIn(known)
-	knownAddresses := addressesIn(known)
-
-	// The addresses come out before the links are looked for, so one address is
-	// one finding and not two, the same order facts.go reads them in.
-	withoutEmails := emailPattern.ReplaceAllString(w.Text, " ")
-	for _, link := range linkRunPattern.FindAllString(withoutEmails, -1) {
-		link = trimEdge(link)
-		if link == "" || knownLink(knownLinks, strings.ToLower(link)) {
-			continue
-		}
-		return RuleLink, link, fmt.Sprintf(
-			"the text holds a link this document and its comments do not already carry: %q", link)
-	}
-	for _, address := range emailPattern.FindAllString(w.Text, -1) {
-		if isTrusted(address, trusted) || knownAddresses[strings.ToLower(address)] {
-			continue
-		}
-		return RuleLink, address, fmt.Sprintf(
-			"the text holds an email address this document and its comments do not already carry: %q", address)
-	}
-	return "", "", ""
-}
-
-// projectionMarkers takes internal/view's own markers out of a document's text,
-// one space each, before a link is looked for in it.
-//
-// What the ledger holds is the text projection, not the document's characters:
-// a link is printed as [words](target), and text under a comment is wrapped in
-// [[c:ID]] and [[/c]]. The link run pattern stops at whitespace and at nothing
-// else, so a URL Docs auto-linked, which prints as its own words and its own
-// target, would otherwise come out as one run with "](" in the middle of it,
-// and a URL under a comment would come out carrying "[[/c". Neither is a link,
-// so a write repeating a link the document plainly carries would be held:
-// TestALinkInTheProjectionsOwnMarkupIsStillTheDocumentsLink.
-//
-// The markers are separators rather than deletions, so two links printed beside
-// each other stay two. Nothing here is undone: this text is read for links and
-// then dropped.
-var projectionMarkers = strings.NewReplacer(
-	"](", " ", "[[", " ", "]]", " ", "{+", " ", "+}", " ", "{-", " ", "-}", " ")
-
-// linksIn is every link a text carries, lowercased and trimmed the way a link
-// in a write is trimmed, with each link's host beside it.
-//
-// The host is in the set because a document holding https://example.net/login
-// does carry the domain example.net, and a write naming the bare domain is
-// naming something the person has read. A longer link at that host is not in
-// the set, because a path nobody has seen is somewhere nobody has been:
-// TestABareDomainOfAKnownLinkPassesAndAnotherPathDoesNot.
-//
-// The host goes in with its www. taken off as well, because a document holding
-// www.example.net carries the host example.net and a write naming it is naming
-// that same place: TestTheSpellingsOfAKnownHostAllPass.
-func linksIn(text string) map[string]bool {
-	out := map[string]bool{}
-	withoutEmails := emailPattern.ReplaceAllString(projectionMarkers.Replace(text), " ")
-	for _, link := range linkRunPattern.FindAllString(withoutEmails, -1) {
-		link = strings.ToLower(trimEdge(link))
-		if link == "" {
-			continue
-		}
-		out[link] = true
-		if host := hostOf(link); host != "" {
-			out[host] = true
-			out[bareHost(host)] = true
-		}
-	}
-	return out
-}
-
-// knownLink answers whether the session has already read this link. The lookup
-// is exact, because the set holds whole links and a link that is only the
-// prefix of a known one is not known, with one widening: a link that is no more
-// than a host is known when that host is known.
-//
-// "https://example.net", "example.net", "example.net/" and "www.example.net"
-// are four spellings of one place, and a document carrying
-// https://example.net/login carries all four. A link with a path of its own is
-// never widened, which is the half
-// TestABareDomainOfAKnownLinkPassesAndAnotherPathDoesNot pins:
-// TestTheSpellingsOfAKnownHostAllPass.
-func knownLink(known map[string]bool, link string) bool {
-	if known[link] {
-		return true
-	}
-	host := hostOf(link)
-	if host == "" || strings.TrimSuffix(afterScheme(link), "/") != host {
-		return false
-	}
-	return known[host] || known[bareHost(host)]
-}
-
-// bareHost is a host with a leading www. taken off, where a host is left under
-// it. The www is a spelling rather than a place: a document carrying
-// www.example.net and a write naming example.net name the same host, and
-// holding the write would be a card about nothing.
-//
-// The label under it has to carry a dot of its own, so www.com stays www.com
-// rather than becoming the suffix com, which no host is.
-func bareHost(host string) string {
-	rest, cut := strings.CutPrefix(host, "www.")
-	if !cut || !strings.Contains(rest, ".") {
-		return host
-	}
-	return rest
-}
-
-// hostOf is the host a link points at: what stands after the scheme and before
-// the path, the query or the fragment. It is not a parse of a URL, because the
-// question is only whether two texts name the same host.
-func hostOf(link string) string {
-	link = afterScheme(link)
-	if at := strings.IndexAny(link, "/?#"); at >= 0 {
-		link = link[:at]
-	}
-	return strings.ToLower(strings.Trim(link, "."))
-}
-
-// afterScheme is a link with its scheme taken off, or the link itself where it
-// carries none.
-func afterScheme(link string) string {
-	if at := strings.Index(link, "://"); at >= 0 {
-		return link[at+len("://"):]
-	}
-	return link
-}
-
-// addressesIn is every email address a text carries, lowercased, as a set.
-func addressesIn(text string) map[string]bool {
-	out := map[string]bool{}
-	for _, address := range emailPattern.FindAllString(text, -1) {
-		out[strings.ToLower(address)] = true
-	}
-	return out
-}
-
-// trimEdge takes the sentence's own punctuation off the end of a link, so a link
-// at the end of a sentence is the link and not the link plus a full stop.
-func trimEdge(link string) string {
-	return strings.TrimRight(link, `.,;:!?)]}"'`)
-}
-
-// isTrusted answers whether an address sits at exactly one of the listed
-// domains. A subdomain of a listed domain is not it: the person listed what they
-// meant, and "mail.example.com" is not "example.com".
-func isTrusted(address string, trusted []string) bool {
-	at := strings.LastIndex(address, "@")
-	if at < 0 {
-		return false
-	}
-	domain := strings.ToLower(address[at+1:])
-	for _, d := range trusted {
-		if domain == strings.ToLower(d) {
-			return true
-		}
-	}
-	return false
-}
-
-// documentWords is everything this session has seen of one document: its own
-// words and every comment and reply in it. It is the haystack the Link rule asks
-// whether a link is already in.
-func documentWords(l *Ledger, docID string) string {
-	var b strings.Builder
-	b.WriteString(l.Text(docID))
-	for _, said := range l.Remarks(docID) {
-		b.WriteString("\n")
-		b.WriteString(said.Text)
-	}
-	return b.String()
 }
 
 // dictatedRule holds a write that repeats a run of words out of a comment gdoc

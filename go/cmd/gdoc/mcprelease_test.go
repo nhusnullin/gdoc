@@ -94,10 +94,10 @@ func (w *confirmWatcher) changes() int {
 }
 
 // heldReply is one held write in a session a test owns: the reply whose words
-// carry a link nobody put in the document. It answers the facts a card is built
-// from.
+// repeat a stranger's comment. It answers the facts a card is built from.
 func heldReply(t *testing.T, ch *mcpChat) heldEnvelope {
 	t.Helper()
+	strangerAsked(ch)
 	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"),
 		withCode(t, ch.code, heldWriteArgs()["reply"]), nilWriter{}, ch)
 	env := heldEnvelopeOf(t, res.Texts)
@@ -113,7 +113,7 @@ func replyWire(t *testing.T) *fakeWire {
 	t.Helper()
 	return &fakeWire{answers: append(pinAnswers(t), &answer{
 		method: "POST", match: "/comments/AAAA1111/replies",
-		json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"🤖 the 2026 register is at ` + heldLink + `"}`,
+		json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldBody + `"}`,
 	})}
 }
 
@@ -264,8 +264,8 @@ func TestTheConfirmSchemaListsHoldTitleReasonText(t *testing.T) {
 func TestAByteDifferentTitleReasonOrTextIsRefused(t *testing.T) {
 	for field, value := range map[string]string{
 		"title":  chatTitle + ".",
-		"reason": "the text holds a link, which is fine",
-		"text":   "🤖 the 2026 register is at " + heldLink + " ",
+		"reason": "the text shares words with a comment, which is fine",
+		"text":   heldBody + " ",
 	} {
 		t.Run(field, func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())

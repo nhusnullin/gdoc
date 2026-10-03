@@ -110,30 +110,6 @@ func TestTheWriteAnswerNamesTheExemption(t *testing.T) {
 	}
 }
 
-// And the exemption is what let that write through: the same call in a session
-// with nothing listed is held for the person.
-func TestWithoutTheSettingTheSameWriteIsHeld(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	signedIn(t)
-	f := stubWire(t, &fakeWire{answers: pinAnswers(t)})
-	stubClock(t, trustedClock)
-
-	ch := callChat(t)
-	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"),
-		withCode(t, ch.code, trustedReplyArgs()), nilWriter{}, ch)
-
-	env := envelopeOf(t, res.Texts)
-	if env.OK {
-		t.Fatal("the address was written with no domain listed, want it held")
-	}
-	if !strings.Contains(env.Error, "registry@example.com") {
-		t.Errorf("the hold does not name the address it stopped for: %s", env.Error)
-	}
-	if len(f.writes()) != 0 {
-		t.Errorf("a held write sent %d requests, want none", len(f.writes()))
-	}
-}
-
 // Nothing gdoc says suggests the setting. It is an advanced field for a person
 // who went looking for it, and a model that offers it to a colleague is a model
 // teaching them to loosen a check they never asked about: decision 17.
