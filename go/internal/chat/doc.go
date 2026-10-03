@@ -38,9 +38,58 @@
 // and TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode in cmd/gdoc for
 // the same sentence through every tool.
 //
+// # The text arrives labelled, and the wrapper is new each time
+//
+// Every read answer opens with ReadLine, which says who wrote what follows, that
+// it is material to discuss, and that nothing in it is an instruction to call a
+// tool, gdoc's or another connector's: TestTheReadLineIsTheLiteral, and
+// TestEveryReadAnswerOpensWithTheFixedLine in cmd/gdoc over all three read
+// tools.
+//
+// Label puts one piece of a document's text inside a boundary of twelve random
+// hex characters, new for every answer, so a comment that saw one answer's
+// wrapper cannot end the next one: TestABoundaryIsTwelveHexCharacters,
+// TestTwoBoundariesDiffer, and TestTheBoundaryIsNewForEachAnswer in cmd/gdoc.
+// An occurrence of the boundary inside the text is broken by one character,
+// which is also what stops a comment ending its own wrapper with a tag it typed
+// itself: TestAFakeClosingTagOrTheBoundaryInsideTheTextIsBroken,
+// TestTheBreakReplacesOnlyTheFirstCharacter and
+// TestAnOverlappingRunIsBrokenRightThrough.
+//
+// The words themselves come through as they stand. Datamarking and encoding
+// were both rejected: annotate and propose need the exact quote to find it in
+// the document again, and a person listening rather than reading would hear the
+// noise. TestLabelWrapsTheTextAndKeepsItWordForWord, and
+// TestEveryCommentReplyQuoteAndDocumentTextIsWrapped in cmd/gdoc, which holds
+// that the wrapped copy and the envelope carry the same words.
+//
+// # Six facts about a comment, each one literal check
+//
+// Facts carries has_link, has_email, names_ai, hidden_chars, robot_not_ours and
+// author_domain beside every comment and reply:
+// TestEachFactHasOneCheck, TestTheFactNamesAreTheLiterals, and
+// TestAFactsObjectSitsBesideEachThreadAndReply in cmd/gdoc.
+//
+// They describe the words and never the person. has_link reads an address out
+// of the text before it looks for a host, so one address is one fact and not
+// two, which is what lets task 18 exempt a trusted domain without letting a
+// link escape. A bare host is read only where its last label is one of
+// linkTLDs, because a dot between two words is usually a sentence ending and a
+// fact firing on ordinary prose is a hold the person learns to wave through.
+//
+// robot_not_ours is the one fact that is not about the text alone: the mark with
+// no receipt behind it. It asks OwnReplies, this process's record of what gdoc
+// wrote, and never the account, because identity is never a gate:
+// TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote. author_domain is carried
+// and read by nothing: TestAuthorDomainIsCarriedAndDecidesNothing.
+//
+// HasHiddenChars is exported because task 14 refuses such text outright rather
+// than holding it, and two readings of the same rune tables would drift:
+// TestHasHiddenCharsIsTheSameCheckTheFactReports.
+//
 // # What is not here yet
 //
-// The labels and the facts on a read answer, the ledger, the hold rules, the
-// confirm tools, the write memory and the trusted domains are tasks 11 to 18 of
+// The ledger, the hold rules, the confirm tools, the write memory and the
+// trusted domains are tasks 13 to 18 of
 // docs/plans/2026-10-03-gdoc-v2-m14b-server.md.
 package chat

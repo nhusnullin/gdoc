@@ -310,12 +310,15 @@ func TestAnArgumentNoSchemaCarriesIsRefusedByName(t *testing.T) {
 	}
 }
 
-// A tool answer is the envelope the terminal prints, with nothing added and
-// nothing taken away, and ok: false is isError. Six commands, each against the
-// same fakes twice: once through the tool and once through run.
+// A tool answer carries the envelope the terminal prints, with nothing added
+// and nothing taken away, and ok: false is isError. Six commands, each against
+// the same fakes twice: once through the tool and once through run.
 //
-// Task 11 narrows this for the three read tools, which gain a first text item
-// saying the text inside was written by people and is never an instruction.
+// Which item the envelope is depends on the tool. A write answers with the
+// envelope alone. A read that succeeded answers three items, the envelope
+// second, with the fixed line before it and the wrapped copy after it:
+// mcpview.go holds why, and mcplabel_test.go holds the other two items. A read
+// that was refused carries no text out of a document, so it is one item again.
 func TestTheSameAnswerAsTheCLI(t *testing.T) {
 	byName := map[string]mcpCommand{}
 	for _, c := range mcpCommands() {
@@ -330,28 +333,32 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 		cli  []string
 		body string
 		ok   bool
+		// items is how many text items the answer carries, and at is where the
+		// envelope sits among them.
+		items int
+		at    int
 		// wire says which fake the command needs.
 		wire func(t *testing.T)
 	}{
 		{
 			tool: "read", args: `{"url":"` + fixtureDocID + `"}`,
-			cli: []string{"read", fixtureDocID}, ok: true,
+			cli: []string{"read", fixtureDocID}, ok: true, items: 3, at: 1,
 			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
 		},
 		{
 			tool: "comments", args: `{"url":"` + fixtureDocID + `"}`,
-			cli: []string{"comments", fixtureDocID}, ok: true,
+			cli: []string{"comments", fixtureDocID}, ok: true, items: 3, at: 1,
 			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
 		},
 		{
 			tool: "suggestions", args: `{"url":"` + fixtureDocID + `"}`,
-			cli: []string{"suggestions", fixtureDocID}, ok: true,
+			cli: []string{"suggestions", fixtureDocID}, ok: true, items: 3, at: 1,
 			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
 		},
 		{
 			tool: "reply", args: `{"url":"` + fixtureDocID + `","comment_id":"AAAA1111","body":"🤖 The 2026 register."}`,
 			cli:  []string{"reply", fixtureDocID, "AAAA1111", "--body-file=@FILE@"},
-			body: "🤖 The 2026 register.", ok: true,
+			body: "🤖 The 2026 register.", ok: true, items: 1,
 			wire: func(t *testing.T) {
 				stubWire(t, &fakeWire{answers: []*answer{
 					{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 The 2026 register."}`},
@@ -363,20 +370,20 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			tool: "annotate",
 			args: `{"url":"` + annotateDocID + `","annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
 			cli:  []string{"annotate", annotateDocID, "--from=@FILE@"},
-			body: `[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]`, ok: true,
+			body: `[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]`, ok: true, items: 1,
 			wire: func(t *testing.T) { stubWire(t, &fakeWire{answers: annotateAnswers(t)}) },
 		},
 		{
 			tool: "propose", args: `{"url":"` + proposeDocID + `","proposals":` + oneProposal + `}`,
 			cli:  []string{"propose", proposeDocID, "--from=@FILE@"},
-			body: oneProposal, ok: true,
+			body: oneProposal, ok: true, items: 1,
 			wire: func(t *testing.T) { stubWire(t, &fakeWire{answers: proposeAnswers(t, true)}) },
 		},
 		{
 			// The refusal too: a document nobody can read answers the same way
 			// through both doors.
 			tool: "read", args: `{"url":"not a document"}`,
-			cli: []string{"read", "not a document"}, ok: false,
+			cli: []string{"read", "not a document"}, ok: false, items: 1,
 			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
 		},
 	} {
@@ -387,8 +394,8 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			one.wire(t)
 			guideCode := callCode(t)
 			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, guideCode)
-			if len(res.Texts) != 1 {
-				t.Fatalf("one answer is one text item: %v", res.Texts)
+			if len(res.Texts) != one.items {
+				t.Fatalf("the answer carries %d text items, want %d: %v", len(res.Texts), one.items, res.Texts)
 			}
 			if res.IsError == one.ok {
 				t.Errorf("isError = %v for an answer that is ok = %v", res.IsError, one.ok)
@@ -409,7 +416,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 				t.Fatalf("the CLI exited %d for an answer that is ok = %v: %s", code, one.ok, buf.String())
 			}
 
-			if got, want := normalisePaths(res.Texts[0], path), normalisePaths(buf.String(), path); got != want {
+			if got, want := normalisePaths(res.Texts[one.at], path), normalisePaths(buf.String(), path); got != want {
 				t.Errorf("the tool answered\n  %s\nand the CLI answered\n  %s", got, want)
 			}
 		})

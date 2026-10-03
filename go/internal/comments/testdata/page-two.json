@@ -2,7 +2,7 @@
   "comments": [
     {
       "id": "CCCC3333",
-      "author": {"displayName": "Nail Khusnullin", "me": true},
+      "author": {"displayName": "Nail Khusnullin", "emailAddress": "nail@example.com", "me": true},
       "createdTime": "2026-09-05T08:00:00Z",
       "modifiedTime": "2026-09-05T08:10:00Z",
       "content": "AI: the match is exact, so this is not a marker",

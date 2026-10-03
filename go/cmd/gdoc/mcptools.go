@@ -20,9 +20,12 @@
 // The code fills nothing on the line. It is the one argument here that is a
 // check this server makes rather than something a command takes.
 //
-// Nothing here decides anything about a document. The labels, the facts, the
-// ledger and the holds are tasks 11 to 18 of the milestone 14 run 2 plan, and
-// they wrap these calls rather than changing them.
+// A read tool's answer is labelled and wrapped on the way out, which mcpview.go
+// holds. A write tool's is the envelope alone.
+//
+// Nothing here decides anything about a document. The ledger and the holds are
+// tasks 13 to 18 of the milestone 14 run 2 plan, and they wrap these calls
+// rather than changing them.
 
 package main
 
@@ -313,6 +316,12 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 	r.Error = files.name(r.Error)
 	for i := range r.Warnings {
 		r.Warnings[i] = files.name(r.Warnings[i])
+	}
+	// A read brings a stranger's words back, so its answer is labelled and
+	// wrapped: mcpview.go holds what that is and why. A write answers with the
+	// envelope alone, because what it carries is what gdoc did.
+	if c.readOnly {
+		return mcpReadAnswer(r)
 	}
 	return mcpEnvelope(r)
 }

@@ -42,6 +42,20 @@
 // to stop looking are the skill's, exactly as they are for a one-shot listing.
 // A field named news, idle, stale or should_retry there is the same defect.
 //
+// # The author's domain is kept and the address is not
+//
+// The listing asks for the author's address, and a Thread and a Reply carry
+// author_domain: the part after the at sign, lowercased, empty where Drive gave
+// no address. It is there because a chat answer says in one line that a document
+// has commenters from outside the company, and a display name does not say that.
+//
+// The address itself is read and dropped. Nothing in this tree reads the domain
+// either: identity is never a gate, and no hold, no filter and no marker asks
+// it. TestTheAuthorDomainIsKeptAndTheAddressIsNot holds both halves,
+// TestAnAuthorWithNoAddressHasNoDomain the empty cases, and
+// TestTheFieldMaskNamesTheAddressOnlyInsideTheAuthorGroup holds that the read
+// widened by one field and no more.
+//
 // # A poll reads the listing first and the document second
 //
 // Both reads are needed either way, so the order is free, and what it decides

@@ -833,24 +833,35 @@ thread and reply. The spec's "the envelope after it is the CLI's, unchanged" is
 the second item; its "every comment wrapped" is the third. The wrapped copy is
 what the guide tells Claude to read.
 
-- [ ] Test first, `TestEveryReadAnswerOpensWithTheFixedLine` for `read`,
+- [x] Test first, `TestEveryReadAnswerOpensWithTheFixedLine` for `read`,
       `comments` and `suggestions`, the line stated as a literal.
-- [ ] Test, `TestEveryCommentReplyQuoteAndDocumentTextIsWrapped` in the chat
+- [x] Test, `TestEveryCommentReplyQuoteAndDocumentTextIsWrapped` in the chat
       view.
-- [ ] Test, `TestTheBoundaryIsNewForEachAnswer`.
-- [ ] Test, `TestAFakeClosingTagOrTheBoundaryInsideTheTextIsBroken`.
-- [ ] Test, one per fact, each with a literal fixture that trips it and one
+- [x] Test, `TestTheBoundaryIsNewForEachAnswer`.
+- [x] Test, `TestAFakeClosingTagOrTheBoundaryInsideTheTextIsBroken`.
+- [x] Test, one per fact, each with a literal fixture that trips it and one
       that does not: `has_link`, `has_email`, `names_ai`, `hidden_chars`,
       `robot_not_ours` (through an `OwnReplies` stub), `author_domain`.
-- [ ] Test, in `comments`, `TestTheAuthorDomainIsKeptAndTheAddressIsNot`, and
-      that the field mask names `emailAddress` once.
-- [ ] Narrow `TestTheSameAnswerAsTheCLI` for the three read tools to the
+- [x] Test, in `comments`, `TestTheAuthorDomainIsKeptAndTheAddressIsNot`, and
+      that the field mask names `emailAddress` once. ⚠️ a listing names an
+      author twice, on the comment and on the reply, so the field is written
+      once in `authorMask` and that constant is used twice:
+      `TestTheFieldMaskNamesTheAddressOnlyInsideTheAuthorGroup` holds both
+      counts and that nothing else was added.
+- [x] Narrow `TestTheSameAnswerAsTheCLI` for the three read tools to the
       second text item.
-- [ ] Test, `TestTheCLIEnvelopeGainsOnlyAuthorDomain`: `gdoc comments` from
+- [x] Test, `TestTheCLIEnvelopeGainsOnlyAuthorDomain`: `gdoc comments` from
       the terminal prints what it printed before this task plus that field.
-- [ ] Implement.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): what a document says arrives wrapped and labelled, with facts beside each comment"`
+- [x] Implement.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): what a document says arrives wrapped and labelled, with facts beside each comment"`
+- ➕ `go/cmd/gdoc/chatheader.md` gains the three parts of a read answer and the
+      six fact names, because the wrapped copy is what the guide tells Claude to
+      read. `TestTheChatHeaderNamesOnlyToolsThatExist` gains the six names to
+      its not-a-tool list.
+- ➕ The comment fixtures gain `emailAddress`, and
+      `go/cmd/gdoc/testdata/comments.xml` gains the second commenter's name, so
+      the docx witness still matches on the author it agrees with.
 
 ### Task 12: write arguments that pin the target
 
