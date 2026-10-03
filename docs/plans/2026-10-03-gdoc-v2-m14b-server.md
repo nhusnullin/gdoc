@@ -500,37 +500,49 @@ Serves decision 1. Scenarios 1, 14.
 **Files:**
 - Modify: `go/cmd/gdoc/main.go`, `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/doc.go`
 - Create: `go/cmd/gdoc/mcp.go`, `go/cmd/gdoc/mcp_test.go`
-- Modify: `go/cmd/gdoc/help_test.go`, `go/cmd/gdoc/completion_test.go` (the
-  sixteenth line)
+- Modify: `go/cmd/gdoc/help_test.go`, `go/cmd/gdoc/main_test.go` (the
+  eighteenth name in each literal list)
+- Create: `go/boundary/stdio_test.go`
+- Modify: `go/cmd/gdoc/commands_test.go`
 
-- [ ] Test first, `TestMcpIsRoutedBeforeRun`: `main`'s routing helper sends
+➕ `completion_test.go` needed no change: both script tests walk the table, so
+the new entry is offered and checked without a line of their own.
+
+➕ `commands_test.go` gained `parsesItsOwnLine`, naming `mcp` and why.
+`TestEveryFlagIsReadTheWayItsKindSays` reads a command's own source for
+`a.flags["--flag"]`, which mcp has none of: it parses its own line, because
+`parseArgsN` refuses the empty joined value Claude Desktop sends. The witness
+for that one flag is that this package names it, and
+`TestMcpTakesOnlyTheTrustedDomainsFlag` holds the reading.
+
+- [x] Test first, `TestMcpIsRoutedBeforeRun`: `main`'s routing helper sends
       `mcp` to `serveMCP(ctx, in, out, errOut, args)` and never prints an
       envelope. `gdoc mcp --help` and `gdoc mcp -h` are not routed there: they
       reach `dispatch` and print the help like every other command.
-- [ ] Test, `TestMcpTakesOnlyTheTrustedDomainsFlag`: a word or another flag
+- [x] Test, `TestMcpTakesOnlyTheTrustedDomainsFlag`: a word or another flag
       is refused on stderr with exit 1 and nothing on stdout;
       `--trusted-email-domains=` with nothing after it is accepted as no
       domains, which is what Claude Desktop sends by default (MEASURED 1).
       `mcp` parses its own one flag rather than through `parseArgsN`, which
       refuses an empty joined value (`read.go:241`).
-- [ ] Test, `TestOnlyMainNamesStdinAndStdout`: walks the syntax tree of the
+- [x] Test, `TestOnlyMainNamesStdinAndStdout`: walks the syntax tree of the
       non-test files under `go/`, so a comment does not count, and closes the
       `TODO(test)` in `cmd/gdoc/doc.go`.
-- [ ] Test, `TestHelpAndCompletionNameMcp`, with the usage line
+- [x] Test, `TestHelpAndCompletionNameMcp`, with the usage line
       `mcp [--trusted-email-domains <text>]`.
-- [ ] Test, `TestStdoutCarriesOnlyJSONRPC`: a session through `serveMCP`
+- [x] Test, `TestStdoutCarriesOnlyJSONRPC`: a session through `serveMCP`
       against fakes leaves stdout holding only lines that parse as JSON-RPC.
       Later tasks add their tools to this session.
-- [ ] Implement: the table entry (its `run` refuses, because a `mcp` reaching
+- [x] Implement: the table entry (its `run` refuses, because a `mcp` reaching
       `dispatch` without `--help` means the routing failed), the routing in
       `main()`, and `serveMCP` building the server with `guide` and `login`
       stubs that answer "not yet".
-- [ ] `cmd/gdoc/doc.go`: `mcp` in the command list and the two narrowed
+- [x] `cmd/gdoc/doc.go`: `mcp` in the command list and the two narrowed
       invariants, each naming its test, in a few lines that point at
       `internal/mcp/doc.go` and `internal/chat/doc.go`, where the long rules
       live, so `doc.go` stays under 800 lines.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): gdoc mcp, routed before the envelope, and only main names stdin and stdout"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): gdoc mcp, routed before the envelope, and only main names stdin and stdout"`
 
 ### Task 5: the six table tools, their schemas and their argv
 

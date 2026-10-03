@@ -19,6 +19,14 @@
 // test helper in both directions: a helper that accepts a trailing byte would
 // pass every other test in this package over output no skill can read.
 //
+// Every command but one. mcp is a protocol session rather than an answer, and
+// route in main.go sends it to serveMCP before run is reached, so no envelope
+// is printed around it: TestMcpIsRoutedBeforeRun. What reaches stdout there is
+// one JSON-RPC message per line and nothing else, which is the same promise in
+// the shape a client can read: TestStdoutCarriesOnlyJSONRPC. The protocol's own
+// rules are in internal/mcp/doc.go, and what chat adds to a command is in
+// internal/chat/doc.go.
+//
 // # The commands, and the one table that describes them
 //
 // commands.go holds the table, and dispatch matches what is in it and nothing
@@ -60,13 +68,16 @@
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
 //     that carries no credential, gapi.Plain.
+//   - mcp [--trusted-email-domains]: this binary as a stdio server for Claude
+//     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
+//     the wiring. The one command route sends past run.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
 //     to a file. completion.go, with the template beside it.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the seventeen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the eighteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -188,9 +199,15 @@
 // the pins, and TestHelpTakesWordsAndNoFlags holds that help itself is parsed
 // as strictly as everything else.
 //
-// TODO(test): no test pins that the binary never reads stdin. Nothing in the
-// tree names os.Stdin today, so the rule holds by absence rather than by a
-// check somebody would see fail.
+// The binary never prompts, and the one command that reads stdin reads a
+// protocol. Every command takes its facts as arguments and answers, so nothing
+// waits on a pipe nobody filled. mcp reads stdin because a JSON-RPC session is
+// a stream, and it still asks no question: what it reads is messages from a
+// client, never words from a person. One room names the real streams, and
+// hands every other room a reader and a writer, so internal/mcp runs a whole
+// session against strings in memory. TestOnlyMainNamesStdinAndStdout in
+// go/boundary is the pin, and it reads the syntax tree, so this paragraph is
+// prose rather than a second room.
 //
 // # Completion is a file, and the reason is the output contract
 //

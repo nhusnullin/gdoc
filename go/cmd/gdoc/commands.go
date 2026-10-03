@@ -331,6 +331,17 @@ func commands() []command {
 			},
 		},
 		{
+			name: "mcp",
+			flags: []flag{
+				{mcpFlag, kindText, needOptional, "email domains that need no approval, comma separated. Advanced and optional: leave it empty"},
+			},
+			summary: "Serve gdoc to Claude Desktop over stdin and stdout, as a protocol session rather than one object.",
+			example: "gdoc mcp",
+			run: func(_ context.Context, _ *args, _ io.Writer) emit.Result {
+				return cmdMCP()
+			},
+		},
+		{
 			name:     "help",
 			words:    []string{"<command>"},
 			anyWords: true,

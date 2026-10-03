@@ -102,6 +102,17 @@ func TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes(t *testing.T) {
 	}
 }
 
+// parsesItsOwnLine names the commands whose arguments their own code reads
+// rather than parseArgsN, and there is exactly one. mcp is served before the
+// envelope, over stdin and stdout, and Claude Desktop fills its one flag from
+// a setting that is empty by default, so the line it really gets is
+// --trusted-email-domains= with nothing after it. parseArgsN refuses an empty
+// joined value, naming the flag, which is right for every other command and
+// would stop this one from ever starting. The flag is still in the table, so
+// help prints it and Tab offers it, and TestMcpTakesOnlyTheTrustedDomainsFlag
+// is what holds the reading.
+var parsesItsOwnLine = map[string]bool{"mcp": true}
+
 // The kind a flag carries decides two things a reader will trust: what help
 // prints after the flag name, and whether the parser takes the next word as its
 // value. Both follow from the table, so the table saying <file> where the
@@ -110,11 +121,24 @@ func TestEachCommandParsesWithTheFlagSetItsTableEntryDescribes(t *testing.T) {
 // The command's own reading is the witness. A flag that carries a value is
 // read for the value, through a.flags or required. A flag that carries none is
 // read for its presence and nothing else.
+//
+// One command parses its own line, so its flag is read somewhere else and the
+// witness is a different one: parsesItsOwnLine says which, and why.
 func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 	source := productionSource(t)
 
 	for _, c := range commands() {
 		for _, f := range c.flags {
+			if parsesItsOwnLine[c.name] {
+				// The witness is that this package reads the flag at all, by
+				// the name the table gives it, wherever its own parser keeps
+				// it. The reading itself is pinned by the command's own test,
+				// named beside parsesItsOwnLine.
+				if !strings.Contains(source, `"`+f.name+`"`) {
+					t.Errorf("%s %s is in the table and this package names it nowhere", c.name, f.name)
+				}
+				continue
+			}
 			presence := strings.Contains(source, `a.has("`+f.name+`")`)
 			value := strings.Contains(source, `a.flags["`+f.name+`"]`) ||
 				strings.Contains(source, `required(a, "`+f.name+`")`)
