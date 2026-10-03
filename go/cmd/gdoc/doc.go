@@ -249,7 +249,9 @@
 // TestLoginPrintsTheURLToStderrNotStdout is the pin,
 // TestAFailedLoginIsOneFailingEnvelope is the other half, because a login that
 // did not happen is still one object, and TestTheLoginClosesItsListenerEitherWay
-// holds the port freed whichever way the wait ended.
+// holds the port freed whichever way the wait ended. A build with no client
+// secret is refused before the link line, with nothing on stderr at all:
+// TestLoginRefusesABuildWithNoClientSecret runs the real login, unstubbed.
 //
 // On a pipe, on a file and in a window with no room for a box, the two lines
 // are auth.LinkLine's own, byte for byte, because a skill and a log read them:

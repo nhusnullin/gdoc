@@ -3536,9 +3536,10 @@ other result still prints its object, refusals included.
   it is printed under `NO_COLOR` and `TERM=dumb` too, because there the object
   is also gone. It is never on a pipe or in a file, both of which get the
   object, and never on bare `gdoc`, where `--json` is not a valid call. A
-  window under fifty columns draws no box and still drops the object, so the
-  line is there too, under today's plain text, and over that text go the two
-  things the box would have carried: the warnings, and the words bare `gdoc`
+  window under fifty columns draws no box. Where both streams are a terminal
+  it still drops the object, so the line is there too, under today's plain
+  text. Over that text go the two things the box would have carried, wherever
+  stderr is a terminal that narrow: the warnings, and the words bare `gdoc`
   refuses with.
 
 **What "terminal" means.** The terminal driver answers for the file
@@ -3684,7 +3685,9 @@ pipe: `TestHelpOnAPipeIsTodaysTextByteForByte`, `TestNoEscapeByteReachesAPipe`,
 `TestAHashIsCutNotShortened`, `TestEveryCommandHasAGroup`,
 `TestTheGroupIsNotInTheObject`, `TestHelpNeverReadsTheToken`. Login:
 `TestTheLinkLineIsTodays`,
-`TestTheLoginSpinnerMovesNoCursorButCarriageReturn`. The account:
+`TestTheLoginSpinnerMovesNoCursorButCarriageReturn`,
+`TestLoginRefusesABuildWithNoClientSecret`, which moved to `cmd/gdoc` with the
+login itself when `auth.Login` went. The account:
 `TestAuthStatusNamesTheAccountItReadsLive`, `TestNoTokenMakesNoAccountRequest`,
 `TestAMissingScopeMakesNoAccountRequest`,
 `TestAuthStatusOfflineStillAnswersWithoutTheAccount`,

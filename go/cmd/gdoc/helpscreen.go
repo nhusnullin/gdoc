@@ -94,24 +94,22 @@ func screenAt(w io.Writer, json bool) (panel.Panel, tty.Style, bool) {
 	return panel.New(style, width), style, true
 }
 
-// plainOnATerminal is the third of those three answers on its own: there is no
-// screen, and a person is reading all the same, which leaves only the window
-// being too narrow for a box. It asks screenAt rather than the width rule
-// again, so the band is decided in one place. Both callers ask it only after
-// screenAt said no, so that inner ask repeats an answer they already hold. It
-// is asked all the same, so the answer is right wherever the function is
-// called from.
+// plainOnATerminal is the third of those three answers on its own, and it is
+// asked only where screenAt has just said there is no screen. Of the three
+// reasons screenAt gives, this rules out the first two: no caller asked for the
+// object by name, and a terminal driver owns the stream. What is left is the
+// window being too narrow for a box, so the band is still decided in screenAt
+// alone, and this asks nothing screenAt already answered.
 //
 // It is the one case where the plain text is what a person reads rather than
 // what a skill parses. So the plain text carries the two things the box
 // carries for the same reason: the warnings, and the words bare gdoc refuses
 // with. Whether the object is dropped under them is run()'s question and not
-// this one: run() asks both streams, so a window this narrow whose stdout is
-// a pipe prints the object as well, which is what the wide band does with a
-// piped stdout too.
+// this one: run() drops it only where stdout and stderr are both a terminal,
+// so a window this narrow whose stdout is a pipe prints the object as well,
+// which is what the wide band does with a piped stdout too.
 func plainOnATerminal(w io.Writer, json bool) bool {
-	_, _, drawn := screenAt(w, json)
-	return !drawn && !json && isTerminal(w)
+	return !json && isTerminal(w)
 }
 
 // writeHelp is the words of a help: the screen where there is one, and today's

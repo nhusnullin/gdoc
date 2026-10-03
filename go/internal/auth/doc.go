@@ -52,7 +52,10 @@
 // opened or a link handed out, so a chat tool that asked for a link hears the
 // refusal instead of getting one that cannot work.
 // TestStartLoginRefusesABuildWithNoClientSecret is the pin, and it holds that
-// no pending login comes back either, so there is nothing to print.
+// no pending login comes back either, so there is nothing to print. The CLI
+// prints nothing before it asks: cmd/gdoc's
+// TestLoginRefusesABuildWithNoClientSecret runs the real login and finds
+// stderr empty.
 //
 // # One waiting sign-in, written down beside the token
 //

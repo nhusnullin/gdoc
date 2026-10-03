@@ -298,27 +298,6 @@ func init() {
 	}
 }
 
-// A build without the secret cannot sign anyone in, and the whole trip stops
-// at its first half, because a login that fails at the code exchange minutes
-// later would blame Google for a build problem. There is no link to print,
-// since StartLogin hands back no pending login at all:
-// TestStartLoginRefusesABuildWithNoClientSecret holds that half.
-func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
-	saved := BundledClientSecret
-	BundledClientSecret = ""
-	t.Cleanup(func() { BundledClientSecret = saved })
-
-	err := login(&http.Client{Transport: refuseAll{}}, io.Discard)
-	if err == nil {
-		t.Fatal("a build with no client secret must refuse to log in")
-	}
-	for _, want := range []string{"client secret", "GDOC_OAUTH_CLIENT_SECRET"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("the refusal must say %q: %q", want, err)
-		}
-	}
-}
-
 // refuseAll fails any request, so a test can prove nothing left the machine.
 type refuseAll struct{}
 
