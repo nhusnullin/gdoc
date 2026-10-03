@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"strings"
 	"testing"
@@ -147,5 +148,39 @@ func TestTheSpokenWordsFindTheTools(t *testing.T) {
 		if !found {
 			t.Errorf("a person saying %q finds no tool by its title or its description", word)
 		}
+	}
+}
+
+// The reply card says what internal/reply refuses a body without: the words
+// open with the mark, and gdoc does not put it there. The card said the
+// opposite once, and a model that believed it spent the person's one approval
+// on a write the command then refused for a missing emoji.
+//
+// The mark is the literal here. internal/reply/doc.go, "The mark is required,
+// and this writer does not add it", is the rule this pins, and
+// TestReplyRefusesABodyWithoutTheRobot is the refusal itself.
+func TestTheReplyCardAsksForTheMarkItself(t *testing.T) {
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	for _, tool := range sessionTools(t) {
+		if tool.Name != "reply" {
+			continue
+		}
+		if err := json.Unmarshal(tool.Schema, &schema); err != nil {
+			t.Fatalf("the reply schema is not JSON: %v", err)
+		}
+	}
+	body, ok := schema.Properties["body"]
+	if !ok {
+		t.Fatal("the reply tool takes no body, so this test holds nothing")
+	}
+	if !strings.Contains(body.Description, "🤖 ") {
+		t.Errorf("the reply body is described %q, and does not ask for the mark", body.Description)
+	}
+	if !strings.Contains(body.Description, "gdoc does not add it") {
+		t.Errorf("the reply body is described %q, and does not say gdoc leaves the mark to the caller", body.Description)
 	}
 }

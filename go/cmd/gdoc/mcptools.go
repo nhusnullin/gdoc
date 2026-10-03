@@ -296,7 +296,7 @@ func mcpCommands() []mcpCommand {
 			schema: objectTop + codeArg + `,` + urlArg + `,` + titleArg + `,` +
 				`"comment_id":{"type":"string","description":"The id of the thread to reply in, as the comments answer gives it."},` +
 				quoteArg + `,` +
-				`"body":{"type":"string","description":"The words of the reply. gdoc opens it with the robot prefix, and markdown is refused."}` +
+				`"body":{"type":"string","description":"The words of the reply. Open them with ` + plaintext.Prefix + `(the robot and one space): gdoc does not add it, and a reply without it is refused. Markdown is refused as well."}` +
 				`},"required":["code","url","title","comment_id","thread_quote","body"],"additionalProperties":false}`,
 		},
 		{

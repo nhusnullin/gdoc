@@ -132,8 +132,9 @@ func TestEveryCommentReplyQuoteAndDocumentTextIsWrapped(t *testing.T) {
 		if want := chat.Label(envelope.Data.Text, b); view.Text != want {
 			t.Errorf("the document text is\n  %q\nwant\n  %q", view.Text, want)
 		}
-		if view.DocumentID != envelope.Data.DocumentID || view.Title != envelope.Data.Title {
-			t.Errorf("the wrapped copy names document %q titled %q", view.DocumentID, view.Title)
+		if want := chat.Label(envelope.Data.Title, b); view.DocumentID != envelope.Data.DocumentID || view.Title != want {
+			t.Errorf("the wrapped copy names document %q titled %q, want %q titled %q",
+				view.DocumentID, view.Title, envelope.Data.DocumentID, want)
 		}
 	})
 
@@ -191,6 +192,69 @@ func TestEveryCommentReplyQuoteAndDocumentTextIsWrapped(t *testing.T) {
 			}
 		}
 	})
+}
+
+// bareFields are the keys of the wrapped copy whose value gdoc made itself or
+// read off a structure: an id, a cursor, a date, the marker a thread opens
+// with, the kind of a suggestion, and the domain of an address. Nobody writes
+// them as a sentence, so nothing in them can read as a sentence gdoc wrote.
+//
+// Everything else is somebody's words and belongs inside the wrapper. The list
+// is here rather than in the walk so that a field added to the view is wrapped
+// or added here on purpose, and never both forgotten.
+var bareFields = map[string]bool{
+	"document_id":   true,
+	"cursor":        true,
+	"id":            true,
+	"created":       true,
+	"modified":      true,
+	"marker":        true,
+	"kind":          true,
+	"author_domain": true,
+}
+
+// Nothing a person wrote reaches the wrapped copy outside a wrapper: not a
+// title, not an author's display name, not the heading a suggestion sits
+// under. The walk is over the JSON itself rather than over the structs, so a
+// string field added later fails here until somebody wraps it or names it in
+// bareFields. mcpview.go says the same thing in prose.
+func TestNoForeignTextEscapesTheWrapper(t *testing.T) {
+	for _, tool := range readTools {
+		t.Run(tool, func(t *testing.T) {
+			text := readAnswer(t, tool)[2]
+			b := boundaryOf(t, text)
+			var view any
+			if err := json.Unmarshal([]byte(text), &view); err != nil {
+				t.Fatalf("the wrapped copy is not JSON: %v", err)
+			}
+			seen := 0
+			var walk func(where string, v any)
+			walk = func(where string, v any) {
+				switch n := v.(type) {
+				case map[string]any:
+					for k, inner := range n {
+						walk(k, inner)
+					}
+				case []any:
+					for _, inner := range n {
+						walk(where, inner)
+					}
+				case string:
+					if bareFields[where] {
+						return
+					}
+					seen++
+					if n != chat.Label(strings.TrimSuffix(strings.TrimPrefix(n, "<<doc-text "+b+">>"), "<<end "+b+">>"), b) {
+						t.Errorf("%s is outside the wrapper:\n  %q", where, n)
+					}
+				}
+			}
+			walk("", view)
+			if seen == 0 {
+				t.Fatal("no wrapped field was read, so this test holds nothing")
+			}
+		})
+	}
 }
 
 // A boundary a comment saw in one answer must not close the next one.

@@ -10,6 +10,16 @@
 // of text anybody else wrote is inside a wrapper there, so a comment cannot end
 // its own quotation and speak as the person.
 //
+// A document's title, an author's display name and the heading a suggestion
+// sits under are text somebody else wrote as much as a comment is, so they are
+// wrapped with the rest. A display name is free text anybody who can comment
+// chooses, and a heading is the document's own words: left bare they would
+// read as gdoc's own fields, which is the one thing the wrapper is for. What
+// stays bare is what gdoc made or read off a structure: the ids, the cursor,
+// the dates, the marker, the kind and the facts.
+// TestNoForeignTextEscapesTheWrapper holds the line, so a field added later is
+// either wrapped or named there.
+//
 // Nothing here decides anything. The facts are chat's six literal checks, and
 // the holds that read some of them are internal/chat's. The record of what this
 // process wrote is handed in rather than kept here: it is the session's ledger,
@@ -68,13 +78,13 @@ func mcpChatView(data any, boundary string, own chat.OwnReplies) (any, bool) {
 	case readData:
 		return chatRead{
 			DocumentID: d.DocumentID,
-			Title:      d.Title,
+			Title:      chat.Label(d.Title, boundary),
 			Text:       chat.Label(d.Text, boundary),
 		}, true
 	case commentsData:
 		return chatComments{
 			DocumentID: d.DocumentID,
-			Title:      d.Title,
+			Title:      chat.Label(d.Title, boundary),
 			Cursor:     d.Cursor,
 			Threads:    chatThreads(d.Threads, boundary, own),
 		}, true
@@ -151,7 +161,7 @@ func chatThreads(threads []comments.Thread, boundary string, own chat.OwnReplies
 	for _, t := range threads {
 		out = append(out, chatThread{
 			ID:       t.ID,
-			Author:   t.Author,
+			Author:   chat.Label(t.Author, boundary),
 			Created:  t.Created,
 			Modified: t.Modified,
 			Marker:   t.Marker,
@@ -174,7 +184,7 @@ func chatReplies(replies []comments.Reply, boundary string, own chat.OwnReplies)
 	for _, r := range replies {
 		out = append(out, chatReply{
 			ID:      r.ID,
-			Author:  r.Author,
+			Author:  chat.Label(r.Author, boundary),
 			Created: r.Created,
 			Marker:  r.Marker,
 			ByGdoc:  r.ByGdoc,
@@ -195,7 +205,7 @@ func chatPendingList(d suggestionsData, boundary string) []chatPending {
 		out = append(out, chatPending{
 			ID:      p.ID,
 			Kind:    p.Kind,
-			Section: p.Section,
+			Section: chat.Label(p.Section, boundary),
 			Text:    chat.Label(p.Text, boundary),
 		})
 	}
