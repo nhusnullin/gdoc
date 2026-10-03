@@ -1,0 +1,1183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panels, round two</title>
+<meta name="description" content="The Panels direction for gdoc made buildable: every screen and state, one width rule, one palette for dark and light terminals, and the two open questions about stdout.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#F5F4F0; --ink:#17171B; --muted:#5E5E67; --faint:#8C8C95; --card:#FFFFFF;
+  --border:#E2E0DA; --accent:#2F63C8; --chip:#ECEAE4; --good:#1E7A44; --bad:#B4232F;
+  --shadow:0 1px 2px rgba(20,20,30,.06),0 16px 36px -18px rgba(20,20,30,.28);
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --ts:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0D0D10; --ink:#ECECF1; --muted:#A0A0AB; --faint:#74747F; --card:#16161B;
+    --border:#2A2A31; --accent:#8AAAF5; --chip:#202027; --good:#6FD39A; --bad:#FF8A93;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 20px 44px -20px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0D0D10; --ink:#ECECF1; --muted:#A0A0AB; --faint:#74747F; --card:#16161B;
+  --border:#2A2A31; --accent:#8AAAF5; --chip:#202027; --good:#6FD39A; --bad:#FF8A93;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 20px 44px -20px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--page);color:var(--ink);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+code{font:500 .88em var(--mono);background:var(--chip);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+.wrap{max-width:1460px;margin:0 auto;padding:0 16px}
+@media (min-width:760px){.wrap{padding:0 40px}}
+
+/* hero */
+.hero{padding-top:56px;padding-bottom:28px}
+.kicker{font:600 12px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hero h1{font:700 clamp(32px,6vw,60px)/1.03 var(--mono);letter-spacing:-.03em;margin:14px 0 18px}
+.hero h1 span{color:var(--accent)}
+.lede{max-width:780px;font-size:18px;color:var(--muted);margin:0}
+.lede b{color:var(--ink);font-weight:600}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:14px;margin-top:30px}
+.fact{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px}
+.fact h3{font:700 13px/1.25 var(--mono);margin:0 0 6px}
+.fact p{margin:0;font-size:14px;color:var(--muted)}
+.check{display:inline-flex;gap:8px;align-items:center;margin-top:18px;font:600 13px/1.3 var(--mono);padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.check.ok{color:var(--good)} .check.bad{color:var(--bad)}
+
+/* picks */
+.picks{margin-top:26px;background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:14px;padding:18px 20px;max-width:980px}
+.picks h2{font:700 16px/1.3 var(--mono);margin:0 0 4px}
+.picks p{margin:0 0 10px;font-size:15px;color:var(--muted)}
+.picks ol{margin:0;padding-left:0;list-style:none;display:grid;gap:8px}
+.picks li{display:grid;grid-template-columns:62px 1fr;gap:10px;font-size:15px;align-items:baseline}
+.picks li b.l{font:700 13px/1.4 var(--mono);color:var(--accent)}
+.answer{font:700 14px/1.4 var(--mono);background:var(--chip);border-radius:8px;padding:8px 12px;display:inline-block;margin-top:12px}
+
+/* team decisions */
+.dec-wrap{overflow-x:auto;margin-top:14px;border:1px solid var(--border);border-radius:10px}
+table.dec{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+.dec th,.dec td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.dec th{font:700 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.dec td:first-child{font:700 12.5px/1.4 var(--mono);white-space:nowrap}
+.dec td:last-child{white-space:nowrap;color:var(--muted);font-size:13px}
+.dec tr:last-child td{border-bottom:0}
+.badge-team,.badge-nail{display:inline-block;font:700 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:6px 9px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+.badge-team{border:1.5px solid var(--accent);color:var(--accent)}
+.badge-nail{background:var(--good);color:var(--page);border:1.5px solid var(--good)}
+.badge-rej{display:inline-block;font:700 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:6px 9px;border-radius:999px;white-space:nowrap;vertical-align:middle;border:1.5px dashed var(--bad);color:var(--bad)}
+.var.rejected .frame{opacity:.55;filter:grayscale(.6)}
+.decided{max-width:900px;margin:0 0 26px;padding:16px 18px;border:1px solid var(--border);border-left:4px solid var(--good);border-radius:0 12px 12px 0;background:var(--card);font-size:15px}
+.decided p{margin:6px 0}.decided ul{margin:6px 0 0;padding-left:20px}.decided li{margin:4px 0}
+.shead h2 .badge-team,.shead h2 .badge-nail{margin-left:10px;letter-spacing:.05em}
+/* stream tags are review hints, hidden until asked for */
+body:not(.streams) .gt{display:none}
+body:not(.streams) .r.ann{display:none}
+body:not(.streams) .scr{padding-left:14px}
+nav.top button.streams{flex:none;margin-left:auto;font:600 13px/1 var(--sans);padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);cursor:pointer;white-space:nowrap}
+nav.top button.streams[aria-pressed="true"]{background:var(--ink);color:var(--page);border-color:var(--ink)}
+
+/* engineer's verdict slot */
+.eng-verdict{margin-top:22px;max-width:980px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px}
+.eng-verdict:empty{background:transparent;border-style:dashed;min-height:96px;display:grid;place-items:center;padding:16px}
+.eng-verdict:empty::before{content:"The engineer's verdict goes here";font:500 13px/1 var(--mono);color:var(--faint)}
+.eng-verdict h2,.eng-verdict h3{font:700 17px/1.3 var(--mono);margin:0 0 10px}
+.eng-verdict h4{font:700 14px/1.3 var(--mono);margin:16px 0 6px}
+.eng-verdict p{margin:8px 0;font-size:15px}
+.eng-verdict ul,.eng-verdict ol{margin:10px 0 0;padding-left:20px}
+.eng-verdict li{margin:5px 0;font-size:15px}
+.eng-verdict li::marker{color:var(--accent)}
+.eng-verdict strong,.eng-verdict b{font-weight:650}
+.eng-verdict table{display:block;overflow-x:auto;border-collapse:collapse;margin:10px 0;font-size:14px}
+.eng-verdict th,.eng-verdict td{border:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top;min-width:120px}
+.eng-verdict th{font:700 12px/1.3 var(--mono)}
+
+/* nav */
+nav.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--page) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+nav.top .wrap{display:flex;gap:8px;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:none}
+nav.top .wrap::-webkit-scrollbar{display:none}
+nav.top a{flex:none;text-decoration:none;font:500 13px/1 var(--sans);padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
+nav.top a i{font:700 11px/1 var(--mono);font-style:normal;color:var(--accent)}
+nav.top a:hover{border-color:var(--accent)}
+
+/* sections */
+section.block{padding:60px 0 54px;border-top:1px solid var(--border)}
+.shead{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:start;margin-bottom:22px}
+.num{font:700 clamp(48px,7vw,84px)/.85 var(--mono);letter-spacing:-.05em;color:var(--accent)}
+.shead h2{font:700 clamp(24px,3.2vw,34px)/1.12 var(--mono);letter-spacing:-.02em;margin:4px 0 8px}
+.pitch{font-size:18px;margin:0 0 6px;max-width:840px}
+.meta{font-size:15px;color:var(--muted);margin:0;max-width:840px}
+@media (max-width:640px){.shead{grid-template-columns:1fr}}
+.rec{max-width:900px;margin:0 0 28px;padding:14px 18px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 12px 12px 0;font-size:15px}
+.rec b{font-weight:650}
+.rec p{margin:6px 0}
+.rec ul{margin:6px 0 0;padding-left:20px}
+.rec li{margin:4px 0}
+
+/* variants */
+.var{margin:0 0 42px}
+.vhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:6px}
+.lbl{font:700 13px/1 var(--mono);padding:6px 9px;border-radius:7px;background:var(--accent);color:var(--page)}
+.vhead h3{font:700 17px/1.3 var(--mono);margin:0}
+.vcap{max-width:900px;margin:0 0 14px;font-size:15px;color:var(--muted)}
+.vcap b{color:var(--ink);font-weight:600}
+.new{display:inline-block;font:700 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:var(--accent);color:var(--page);margin-right:4px;vertical-align:1px}
+.wins{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+/* two 80-column windows side by side need about 1310px at 12px; smaller type keeps them paired on smaller screens */
+@media (min-width:1340px) and (max-width:1499px){.wins:not(.one) .scr{--ts:11px}}
+@media (min-width:1200px) and (max-width:1339px){.wins:not(.one) .scr{--ts:10px}}
+.opinion{max-width:900px;margin:8px 0 0;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:15px}
+.opinion b{font-weight:650}
+
+/* terminal windows */
+figure.win{margin:0;min-width:0;max-width:100%;flex:none}
+.frame{border-radius:10px;overflow:hidden;box-shadow:var(--shadow);border:1px solid rgba(127,127,127,.25);width:fit-content;max-width:100%}
+.chrome{display:flex;align-items:center;gap:10px;height:30px;padding:0 12px;font:11.5px/1 var(--mono)}
+.m-dark .chrome{background:#23242E;color:#9EA3B8;border-bottom:1px solid #0F1016}
+.m-light .chrome{background:#E7E7EA;color:#60616B;border-bottom:1px solid #D2D2D6}
+.dots{display:flex;gap:6px;flex:none}
+.dots i{width:10px;height:10px;border-radius:50%;background:#FF5F57}
+.dots i:nth-child(2){background:#FEBC2E}.dots i:nth-child(3){background:#28C840}
+.wt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{flex:none;font:700 9.5px/1 var(--mono);letter-spacing:.05em;padding:4px 6px;border-radius:5px;background:rgba(127,127,127,.2);text-transform:uppercase}
+.scr{--rh:calc(var(--ts) * 1.22);background:var(--bg);color:var(--fg);font:var(--ts)/var(--rh) var(--mono);overflow-x:auto;padding:8px 14px 12px 0}
+.r{display:flex;height:var(--rh);white-space:pre}
+.gt{flex:none;width:50px;margin-right:12px;padding-right:7px;text-align:right;font:600 8.5px/var(--rh) var(--mono);letter-spacing:.04em;user-select:none;-webkit-user-select:none;background:var(--gut);color:#8D90A0}
+.gt-err{color:#D6336C;box-shadow:inset -2px 0 0 #D6336C66}
+.gt-out{color:#0CA678;box-shadow:inset -2px 0 0 #0CA67866}
+.gt-exit{color:#B07A00}
+.ln{flex:none;font-size:var(--ts);min-width:calc(var(--w) * 1ch + 2px);
+  background-image:linear-gradient(90deg,transparent calc(var(--w) * 1ch),var(--guide) calc(var(--w) * 1ch),var(--guide) calc(var(--w) * 1ch + 1px),transparent calc(var(--w) * 1ch + 1px))}
+.m-dark{--guide:rgba(255,120,120,.45)} .m-light{--guide:rgba(210,40,60,.4)}
+.ruler .ln{color:var(--grey);opacity:.75}
+.ruler .gt{color:#8D90A0}
+.ann .ln{color:#B07A00;font-style:italic}
+.ln .g{display:inline-block;width:1ch;text-align:center}
+.ln .g.bk{vertical-align:top;height:var(--rh);-webkit-text-fill-color:transparent}
+.bk-full{background:currentColor}
+.k-chip,.k-c1,.k-c2,.k-cok,.k-cerr,.k-bar,.k-bar2{display:inline-block;vertical-align:top;height:var(--rh)}
+.k-fg{color:var(--fg)} .k-grey,.k-pr{color:var(--grey)} .k-a1{color:var(--a1)} .k-a2{color:var(--a2)}
+.k-ok{color:var(--ok)} .k-err{color:var(--err)} .k-b{font-weight:700}
+.k-u{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.k-c1{background:var(--c1b);color:var(--c1f)} .k-c2{background:var(--c2b);color:var(--c2f)}
+.k-cok{background:var(--cokb);color:var(--cokf)} .k-cerr{background:var(--cerrb);color:var(--cerrf)}
+.k-bar{background:var(--barb);color:var(--barf)} .k-bar2{background:var(--barb);color:var(--bar2f)}
+.m-plain .k-b{font-weight:400}
+figure.win.over .frame{outline:3px solid #E5484D}
+figcaption{margin-top:8px;font:600 11.5px/1.4 var(--mono);color:var(--muted)}
+@media (max-width:640px){:root{--ts:10px}.gt{width:40px;margin-right:8px;font-size:7.5px}}
+
+/* palette table */
+.ptab-wrap{overflow-x:auto;margin:0 0 30px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+table.ptab{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+.ptab th,.ptab td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+.ptab th{font:700 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--card)}
+.ptab td:first-child{min-width:190px}
+.ptab td.code{font:500 12px/1.4 var(--mono);white-space:nowrap}
+.ptab td.smp{font:700 12px/1 var(--mono);white-space:nowrap;padding:0}
+.smp span{display:block;padding:10px 10px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid rgba(127,127,127,.35)}
+.ptab tr:last-child td{border-bottom:0}
+.cr{font:500 11px/1 var(--mono);color:var(--muted)}
+
+footer.end{border-top:1px solid var(--border);padding:36px 0 60px;color:var(--muted);font-size:14px}
+footer.end p{max-width:900px;margin:6px 0}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<header class="wrap hero">
+  <div class="kicker">gdoc v2.8.0 &middot; Panels, round two &middot; stderr only</div>
+  <h1>Panels, made<br><span>buildable.</span></h1>
+  <p class="lede">You picked direction 4. This page draws every screen and every state of it, at the widths a terminal really has, in one palette that reads on <b>dark and light</b> terminals. It also shows what reaches <b>stdout</b> under each screen, because on a terminal that line is on the same screen.</p>
+  <div class="facts">
+    <div class="fact"><h3>stderr only</h3><p>Panels is drawn on stderr, and only when stderr is a terminal. A pipe, a file, <code>NO_COLOR</code> and <code>TERM=dumb</code> get today's plain text, byte for byte.</p></div>
+    <div class="fact"><h3>stdout, shown honestly</h3><p>The JSON a person really sees sits under each screen. <b>Show streams</b>, in the bar above the sections, tags each line <b style="color:#D6336C">stderr</b>, <b style="color:#0CA678">stdout</b> or <b>$</b>. The tags are review hints; a terminal never shows them.</p></div>
+    <div class="fact"><h3>Real width</h3><p>A ruler sits on top of every window and a red line marks its last column. A script checks that no line passes it.</p></div>
+    <div class="fact"><h3>No new modules</h3><p>Box drawing, one block element, the braille spinner and <code>✓ ✗ ● ○ ▸ ›</code>. No Nerd Font, no emoji, no Lip Gloss.</p></div>
+  </div>
+  <div class="check" data-check>Checking widths…</div>
+
+  <div class="picks">
+    <h2>Team decisions</h2>
+    <p>Nail decided 5b, 6b and no status bar. The designer and the engineer recommend the rest. To change one, answer with its label.</p>
+    <div class="answer">1 rule, 2 no bar, 3, 4A, 5b, 6b, R5, R6, R7, R8, R9, R10</div>
+    <div class="dec-wrap"><table class="dec"><thead><tr><th>Item</th><th>Pick</th><th>Why</th><th>Proposed by</th></tr></thead><tbody><tr><td>Streams</td><td>Tags hidden behind one <b>Show streams</b> toggle</td><td>They are review hints, and a terminal never shows them</td><td>both</td></tr><tr><td>1</td><td>One rule, three layouts by width: two columns from 80 (drawn at 100 when wider), stacked 50 to 79, plain below 50</td><td>Two columns is the shorter layout down to 80</td><td>designer</td></tr><tr><td>2</td><td>No status bar</td><td>The version is in the top border, the channel is in the version, signed in belongs to <code>auth status</code>, and help stays free of the token file</td><td>engineer, <b>Nail's pick: no bar, nothing on help</b></td></tr><tr><td>3</td><td>Every screen as drawn in section 3</td><td>Each screen applies the picks in this table</td><td>both</td></tr><tr><td>4A</td><td>One palette for dark and light terminals</td><td>gdoc cannot detect the background</td><td>designer</td></tr><tr><td>5b</td><td>Bare <code>gdoc</code> on a terminal: no object, no hint, exit 1</td><td>It is a help screen, and the exit code still says it failed</td><td>designer, <b>Nail's pick</b></td></tr><tr><td>6b</td><td>One hint line on stderr, the last line of the help</td><td>stdout stays the object or nothing, with no escape code</td><td><b>Nail's pick</b>, placement both</td></tr><tr><td>R3</td><td>Dropped with the bar. Help shows no sign-in state</td><td>Signed in, signed out and scopes missing live in <code>auth status</code>, and after M14 the account too</td><td>engineer, <b>Nail's pick: no bar, nothing on help</b></td></tr><tr><td>R5</td><td><code>auth status</code>: a panel on a terminal, the object below it, nothing on stderr on a pipe</td><td>A person reads the panel; the object is still the answer</td><td>both</td></tr><tr><td>R6</td><td>Unknown command: no panel, only the object, as today</td><td>A typo does not need a screen, and the words would show twice</td><td>engineer</td></tr><tr><td>R7</td><td>Download: spinner only, progress bar to the backlog</td><td>A bar needs a counting reader for a read of about two seconds</td><td>designer</td></tr><tr><td>R8</td><td>Login: waiting is one spinner line redrawn with <code>\r</code>, which ends as <code>✓ signed in</code></td><td>Login traps no signal, so Ctrl-C must leave the terminal clean</td><td>both</td></tr><tr><td>R9</td><td>Examples: flush left under the box, one line the terminal wraps</td><td>A copy works in every shell, Windows included</td><td>engineer</td></tr><tr><td>R10</td><td>Long hashes in a reason: wrap inside the word, never shorten</td><td>The reason is the object's error string, and the two must match</td><td>designer</td></tr></tbody></table></div>
+  </div>
+
+  <div class="eng-verdict"><h3>Question A: how much safety does <code>--json</code> buy?</h3>
+
+<p>Short answer: yes, it is the safety net, and you need it on <code>help</code> only. No check can tell a person at a terminal from an agent behind a pseudo-terminal. A pseudo-terminal is a terminal by definition, so isatty says yes for both. Only the caller can say which it is.</p>
+
+<h4>Who calls <code>gdoc help</code>, and what they get</h4>
+
+<table>
+<tr><th>Caller</th><th>Is stdout a terminal?</th><th>Without <code>--json</code></th><th>With <code>--json</code></th></tr>
+<tr><td>Claude Code Bash tool, and every skill run through it</td><td>No. Both streams are pipes (measured).</td><td>Object on stdout, plain prose on stderr. Same as today.</td><td>Same.</td></tr>
+<tr><td>Scripts, <code>gdoc help | jq</code>, <code>$(gdoc help)</code>, <code>&gt; file</code>, <code>&gt; /dev/null</code></td><td>No. A pipe, a regular file, or a character device that is not a tty.</td><td>Object. Same as today. With <code>$(...)</code> the Panels view still shows on the terminal, which is fine.</td><td>Same.</td></tr>
+<tr><td>Most CI (GitHub Actions, GitLab)</td><td>No.</td><td>Object.</td><td>Object.</td></tr>
+<tr><td>CI or containers that allocate a PTY (Buildkite by default, <code>docker run -t</code>)</td><td>Yes.</td><td>Panels, empty stdout, exit 0. A script that parses stdout fails on empty input.</td><td>Object.</td></tr>
+<tr><td>Claude desktop <code>run_in_terminal</code> (types into a visible tab)</td><td>Yes.</td><td>Panels on screen, no object. The model reads the screen, so it sees the version heading but not <code>update</code> or the flag table as data.</td><td>Object, after the plain prose.</td></tr>
+<tr><td>PTY agents: tmux send-keys and capture-pane, <code>script</code>, expect or pexpect, IDE agent terminals (VS Code, Cursor), Codex exec when it asks for a tty</td><td>Yes. stdout and stderr are the same tty, merged into one stream.</td><td>Panels with escape codes, no object. Quiet failure, see below.</td><td>Object, inside the merged stream, exactly as these agents see it today.</td></tr>
+<tr><td>A person typing <code>gdoc help</code></td><td>Yes.</td><td>Panels. This is the point of the change.</td><td>Object plus plain prose. Today's view.</td></tr>
+<tr><td><code>gdoc mcp</code> (M14)</td><td>Not reached.</td><td colspan="2"><code>help</code> is not one of the eight tools on the m14b branch. A tool call returns its envelope inside JSON-RPC, never on the process stdout. <code>gdoc mcp --help</code> typed by a person is plain help on a terminal and gets Panels.</td></tr>
+</table>
+
+<h4>How loudly it breaks without the flag</h4>
+
+<p>Quietly. That is the reason to keep the flag. Every SKILL.md says the same thing about the first call: no <code>version</code> means a build from source, so say it once and carry on (for example <code>skills/gdoc-review/SKILL.md:41-43</code>). A PTY agent that gets no object will most likely read "no version" and carry on. The <code>needs</code> gate is then skipped without a word. The flag table is still readable as prose, so most later calls would still work. The one real loss is the version gate, and it is lost in silence. That is uncertainty resolving to "act anyway".</p>
+
+<p>A script behind a PTY fails loudly: <code>jq</code> on empty input errors. That case is rare and the error is visible.</p>
+
+<h4>What <code>--json</code> costs</h4>
+
+<ul>
+<li>One flag in help's table entry. It then shows in help's own usage line and in the completion scripts. <code>TestHelpTakesWordsAndNoFlags</code> (<code>help_test.go:249</code>) changes, and its rule "nothing is accepted and ignored" still holds.</li>
+<li>An older binary refuses <code>help --json</code>, so the skills change in the sitting that cuts the tag, and their <code>needs</code> line names that release. This is the order the 2026-10-02 entry used for <code>--folder</code> (<code>docs/v2/DECISIONS.md:3004-3009</code>). The failure is loud: exit 1 and an error naming the flag. The refusal object still carries <code>version</code>, because <code>run()</code> sets it on every object (<code>main.go:72</code>). So a skill that reads the version from a refusal too still stops with the right sentence.</li>
+<li>No test ties a flag a skill uses to the release that added it. <code>TestNoSkillNeedsAReleaseNobodyCut</code> only caps <code>needs</code>. Forgetting the bump would give a confusing refusal on a colleague's older binary. It is a one-line manual step, worth naming in the plan.</li>
+<li>Tokens: seven characters on two or three calls per session. Nothing.</li>
+<li>One new test beside the call-line test, which must read the inline prose mentions too, such as "Run <code>$GDOC help export</code>".</li>
+</ul>
+
+<h4>The options, from least to most safety</h4>
+
+<ol>
+<li><b>No flag, isatty only.</b> Safe for Claude Code, scripts and most CI. Quiet failure for PTY agents and the desktop terminal tool. Not safe enough, because the failure skips the version gate without a word.</li>
+<li><b><code>--json</code> on <code>help</code> only, skills pass it.</b> Closes the gap for every skill caller, whatever its harness. Costs one flag and one release-ordering step. This is the minimum that is safe.</li>
+<li><b><code>--json</code> on every command as a no-op except help.</b> Reject. It is a flag accepted and ignored on fifteen commands, which the strict parser exists to prevent. It adds a line to every help entry and every completion. It buys nothing, because no other command drops its object.</li>
+<li><b>An env var such as <code>GDOC_JSON=1</code>.</b> It has one real strength: an older binary ignores it and prints the object anyway, so there is no release-ordering cost. Its weaknesses: a misspelt name is ignored in silence, which is the opposite of how gdoc treats input; it is ambient state a person can leave set and forget; and Claude Code does not keep env vars between Bash calls, so a skill still writes it on every line. Not now. Add it later if a third-party agent needs to opt in without editing skills.</li>
+<li><b>Other heuristics.</b>
+  <ul>
+  <li>"Also print the object when stdin is not a terminal." Adds nothing. Under every PTY agent stdin is the same tty. Under Claude Code stdout is already a pipe. It also has gdoc look at stdin, a stream it promises never to touch, and M14 is narrowing that rule already. Reject.</li>
+  <li>"Print the object when <code>TERM=dumb</code>." Harmless, and right for Emacs shells and some harnesses. It is partial: tmux and IDE terminals set a real TERM. Optional, never a substitute for the flag.</li>
+  <li>Detecting an agent by env (<code>CLAUDECODE</code>, <code>CI</code>). The draft already rejects it, and it is right to: it is a rule about identity.</li>
+  </ul>
+</li>
+</ol>
+
+<h4>Recommendation</h4>
+
+<p>Option 2, with three small additions that make it safe rather than nearly safe.</p>
+
+<ol>
+<li><b>Drop the object only when help answered.</b> On a terminal without <code>--json</code>, stdout is empty only for <code>ok: true</code>. A refusal (<code>gdoc help sing</code>) and the panic envelope still print their object. There is no Panels view for a refusal, so dropping its object would print nothing and exit 1. This also keeps the invariant easy to state: an empty stdout always means exit 0.</li>
+<li><b><code>--json</code> also means plain stderr.</b> With the flag, stderr gets today's plain prose, even on a terminal. A PTY agent then gets exactly today's bytes, object and prose, with no escape codes in its stream. The draft styles stderr by the stderr check alone (<code>decision-draft-help-on-a-terminal.md:45-47</code>), which would put Panels escapes into a PTY agent's capture.</li>
+<li><b>Fix the skill wording.</b> "No object at all" is a failed call, not a build from source. Read <code>version</code> from the object whether it says <code>ok</code> or not.</li>
+</ol>
+
+<h3>Question B: bare <code>gdoc</code> on a terminal</h3>
+
+<p><b>Recommendation: keep the object. Change nothing for bare <code>gdoc</code>.</b></p>
+
+<ul>
+<li>It is a failure, and every failure should stay an object. A failing run with empty stdout is close to the crash shape that <code>doc.go:384-385</code> calls "the one shape no caller can read". Only the exit code would differ. The rule "drop only on <code>ok: true</code>" from Question A keeps it out.</li>
+<li>"Exit 0 iff the object says ok" has nothing to check when there is no object. With the rule above, the only empty stdout is a successful help, so the invariant reads cleanly: empty stdout means help answered on a terminal, and the exit is 0.</li>
+<li>A script that calls bare <code>gdoc</code> by mistake has stdout on a pipe. It gets the object either way, so this choice does not affect scripts.</li>
+<li>The pins stay as they are. <code>TestNoArgumentsFails</code> and <code>TestBareGdocStillFailsAndPrintsTheHelpToStderr</code> (<code>help_test.go:226</code>) run on buffers, which are never terminals, so they pass under any terminal rule. Keeping the object means their doc comments need no exception either.</li>
+<li>The cost is one JSON line under the help, for a person who typed a command that does nothing. It is about 200 characters. That is acceptable for a mistake. Making bare <code>gdoc</code> the same as <code>gdoc help</code> with exit 0 would reverse the M7d reasoning. That is a separate decision, and I would not take it.</li>
+</ul>
+
+<p>On consistency: <code>gdoc</code> and <code>gdoc help</code> now end differently on a terminal. That is correct. One is a question that was answered, the other is a mistake.</p>
+
+<h3>M14</h3>
+
+<p>M14 narrows "one object reaches stdout" to "every CLI command", with <code>gdoc mcp</code> writing JSON-RPC instead, and routes <code>mcp</code> in <code>main()</code> before <code>run()</code>. This idea adds a second exception inside <code>run()</code>. Write the CLAUDE.md line once, naming both exceptions, after M14 lands.</p>
+
+<h3>Corrections to the draft</h3>
+
+<ol>
+<li><b>The object is about 7.4 KB, not 700 characters.</b> <code>decision-draft-help-on-a-terminal.md:19</code>. A checkout build's <code>gdoc help</code> writes 7,369 bytes to stdout. <code>gdoc help publish</code> writes 534. The real number makes the case stronger.</li>
+<li><b>Help cannot see stdout.</b> Lines 31-34 say help "decides by what stdout is". <code>cmdHelp</code> gets only <code>errOut</code> (<code>help.go:64</code>). <code>run()</code> owns stdout and prints every result through <code>emit.Print</code> (<code>main.go:67-78</code>). The drop has to happen in <code>run()</code>, the same choke point the panic envelope depends on. The decision should name that place.</li>
+<li><b>Refusals are not covered.</b> Lines 31-34 and 48-50 say what a terminal gets when help answers. They do not say what <code>gdoc help sing</code> gets. As written, a refusal on a terminal would print no Panels, no object, and exit 1. Add: only <code>ok: true</code> drops the object.</li>
+<li><b>The <code>--help</code> alias skips the parser.</b> Lines 39-42 add <code>--json</code> to <code>help</code>. But <code>--help</code> and <code>-h</code> are answered before the parser runs (<code>main.go:111-113</code>), and <code>helpWords</code> drops everything except the command it found (<code>help.go:257-262</code>). So <code>gdoc read --help --json</code> would ignore <code>--json</code> in silence and fall back to the terminal check. <code>gdoc --help --json</code> would be refused as unknown command "--json". The alias path must read <code>--json</code> too, with a test.</li>
+<li><b>Styling should not follow the stderr check alone.</b> Lines 45-47. With <code>--json</code>, stderr should stay plain. Otherwise a PTY agent that passes the flag still gets escape codes in its stream.</li>
+<li><b>Two definitions of "terminal".</b> Lines 35-38 choose isatty for help. <code>progress.go:113-125</code> keeps the character-device bit, pinned by <code>TestOnlyACharDeviceIsATerminal</code> and stated at <code>doc.go:351-353</code>. One package should not hold two answers. Move <code>progress.go</code> to the same check in the same change: today <code>gdoc update 2&gt;/dev/null</code> draws a live list into <code>/dev/null</code>.</li>
+<li><b>Platforms.</b> Lines 36-37 name darwin and linux. <code>make dist</code> ships darwin arm64, darwin amd64 and windows amd64 (<code>Makefile:48-50</code>). Linux matters only because CI builds and tests there. Say that, so nobody thinks linux ships.</li>
+<li><b>The exit-code invariant needs the exception too.</b> Lines 55-59 amend "one object reaches stdout". They do not amend "the exit code is 0 iff that object says ok" in <code>CLAUDE.md</code> and <code>doc.go:13-14</code>. With no object, that sentence has nothing to check. Suggested wording: "An empty stdout means help answered on a terminal, and exits 0."</li>
+<li><b>Warnings would vanish.</b> The notice's warnings ride in the object (<code>help.go:69-77</code>), for example an unreachable GitHub. On a terminal without the object, nobody sees them. The Panels view should print them.</li>
+<li><b>Release order is loud, not silent.</b> Lines 94-97 say a skill passing <code>--json</code> to an older gdoc "fails". True, and the refusal still carries <code>version</code>, so the <code>needs</code> gate still works if the skill reads it from a refusal. Worth saying, because it makes open question 3 smaller than it looks.</li>
+<li><b>Tests.</b> The list at lines 78-86 misses three: a refusal on a terminal still prints its object; <code>&lt;command&gt; --help --json</code> prints the object; <code>--json</code> keeps stderr plain on a terminal. CI has no tty, so the terminal tests need an injected terminal check. The real isatty is then pinned only by <code>TestDevNullIsNotATerminal</code> and the pipe cases. Say so in the decision.</li>
+</ol></div>
+</header>
+
+<nav class="top" aria-label="Sections">
+  <div class="wrap">
+    <a href="#width"><i>1</i>Width</a>
+    <a href="#bar"><i>2</i>No status bar</a>
+    <a href="#screens"><i>3</i>Every screen</a>
+    <a href="#colour"><i>4</i>Colour</a>
+    <a href="#bare"><i>5</i>Bare gdoc</a>
+    <a href="#stdout"><i>6</i>Help stdout</a>
+    <button type="button" class="streams" data-streams aria-pressed="false">Show streams</button>
+  </div>
+</nav>
+
+<main>
+
+<section class="block" id="width">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">1</div>
+      <div>
+        <h2>Width <span class="badge-team">Team recommends: this rule</span></h2>
+        <p class="pitch">One rule, which picks one of three layouts by the terminal's width. The windows show <code>gdoc help</code> in each band.</p>
+        <p class="meta">gdoc reads the width once, from stderr, through <code>TIOCGWINSZ</code> on macOS and Linux and the console call on Windows. <code>COLUMNS</code> overrides it. If neither answers, it assumes 80. The output is static, so a resize after the run does not reflow it, the same as any CLI.</p>
+      </div>
+    </div>
+    <div class="rec">
+      <p><b>The rule the team recommends.</b> Draw at <code>min(width, 100)</code>. Use two columns at 80 and wider. Stack from 50 to 79. Below 50, print the plain text, because two borders and two pads cost 4 columns and the words wrap into slivers.</p>
+      <ul>
+        <li><b>Why cap at 100.</b> A wider box adds only empty border. Lines past 100 characters are slow to read.</li>
+        <li><b>Why two columns at 80.</b> The description column is 55 wide, so most commands take two rows. Stacked at 80 takes two or three rows per command too, plus a row for the name. Two columns is the shorter of the two.</li>
+        <li><b>Why the left column is 18 wide.</b> The group titles sit in the left part of each rule, and "Write into a doc" needs 16 plus its padding. Command names need only 11.</li>
+      </ul>
+    </div>
+    <div data-host="width"></div>
+  </div>
+</section>
+
+<section class="block" id="bar">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">2</div>
+      <div>
+        <h2>Status bar <span class="badge-nail">Nail's pick: no bar</span></h2>
+        <p class="pitch">Decided: no status bar, and nothing about sign-in on <code>help</code>.</p>
+      </div>
+    </div>
+    <div class="decided">
+      <p><b>Why.</b> Everything the bar carried is already said somewhere better.</p>
+      <ul>
+        <li>The version is in the top border of every help box.</li>
+        <li>The channel is in the version: a stable release ends in .0.</li>
+        <li>Signed in, signed out and scopes missing belong to <code>auth status</code>. After M14 the account goes there too.</li>
+        <li>Help stays free of the token file, so it reads only the release stamp, as today.</li>
+        <li>On <code>update</code> the step marks and the result line already say how a run ended. On <code>auth login</code> a final <code>✓ signed in</code> line does it.</li>
+      </ul>
+    </div>
+    <div data-host="bar"></div>
+  </div>
+</section>
+
+<section class="block" id="screens">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">3</div>
+      <div>
+        <h2>Every screen <span class="badge-team">Team recommends 3</span></h2>
+        <p class="pitch">Each screen at 80 columns, on a dark profile and a light profile, with the team decisions applied.</p>
+        <p class="meta">The dark profile is Tokyo Night. The light one is a plain white profile. The text colour is each terminal's own; gdoc never sets it. Screens that animate (3.5, 3.10) run live here.</p>
+      </div>
+    </div>
+    <div data-host="screens"></div>
+  </div>
+</section>
+
+<section class="block" id="colour">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">4</div>
+      <div>
+        <h2>Colour <span class="badge-team">Team recommends 4A</span></h2>
+        <p class="pitch">One palette, because gdoc cannot know the background.</p>
+        <p class="meta">Asking the terminal for its background (OSC 11) means reading its reply from stdin, and gdoc never reads stdin. <code>COLORFGBG</code> is set by few terminals. So the palette must read on both. Depth comes from the environment: <code>COLORTERM=truecolor</code> or <code>24bit</code> gives truecolor, a <code>TERM</code> ending in <code>-256color</code> gives 256, anything else gives 16.</p>
+      </div>
+    </div>
+    <div class="rec">
+      <p><b>4A: one palette for both backgrounds.</b> Round one used Tokyo Night's own colours. Its text colour <code>#C0CAF5</code> is about 1.5:1 on white, so it vanished on a light terminal. Round two keeps the hues and changes two things.</p>
+      <ul>
+        <li><b>Text is never coloured.</b> Command names, descriptions and JSON use the terminal's own foreground (SGR 39), which the person already tuned for their background.</li>
+        <li><b>Accents sit at middle brightness.</b> Each one is at least 3.4:1 on white and 3.9:1 on Tokyo Night. That is enough for bold titles, glyphs and short labels, which is all they colour.</li>
+      </ul>
+    </div>
+    <div data-host="palette"></div>
+    <div data-host="colour"></div>
+  </div>
+</section>
+
+<section class="block" id="bare">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">5</div>
+      <div>
+        <h2>Bare <code style="font:inherit;background:none;padding:0">gdoc</code> <span class="badge-nail">Nail's pick 5b</span></h2>
+        <p class="pitch">Today bare <code>gdoc</code> prints the help to stderr, an <code>ok:false</code> object to stdout, and exits 1.</p>
+        <p class="meta">Bare <code>gdoc</code> does not run the release check, so it never shows the notice. Both options keep the plain text and the object exactly as today on a pipe.</p>
+      </div>
+    </div>
+    <div data-host="bare"></div>
+    <div class="opinion"><b>Nail's pick: 5b.</b> The rule: on a terminal without <code>--json</code>, a help screen replaces the object. Help screens are <code>help</code> when it answers and bare <code>gdoc</code>. Every other result still prints its object, refusals included. Bare <code>gdoc</code> shows no hint line, because <code>gdoc --json</code> is not a valid call. Exit 1 tells a script it failed. The screen shows only the help.</div>
+  </div>
+</section>
+
+<section class="block" id="stdout">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">6</div>
+      <div>
+        <h2>Help's stdout on a terminal <span class="badge-nail">Nail's pick 6b</span></h2>
+        <p class="pitch">What appears under <code>gdoc help publish</code> when you type it.</p>
+        <p class="meta">In all three, a pipe still gets the object, and <code>--json</code> prints it anywhere.</p>
+      </div>
+    </div>
+    <div data-host="stdout"></div>
+    <div class="opinion"><b>Nail's pick: 6b, drawn on stderr.</b> The hint is the last line of the help: <code>Add --json to print the JSON object a skill reads.</code> It is dim when colour is on. It shows whenever help dropped the object, including <code>NO_COLOR</code> or <code>TERM=dumb</code> on a terminal, where it is plain. It never shows on a pipe, where the object is printed, and never on bare <code>gdoc</code>. stdout stays the object or nothing, and no escape code reaches it.</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <p>Every window is drawn in this page from gdoc's real words: the command table, the update step names and result lines, the notice line and the login sentence. Hashes, sizes, paths and the sign-in URL are placeholders of the real length.</p>
+    <p>The JSON lines are what <code>emit.Print</code> writes, in Go's field order, wrapped where an 80-column terminal wraps them.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= gdoc's real words ================= */
+var V = "v2.8.0", NEXT = "v2.9.0";
+var SPIN = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
+var ORDER = ["auth status","auth login","read","comments","suggestions","export","restyle","probe","reply","propose","withdraw","annotate","build","publish","update","help","completion"];
+var DESC = {
+  "auth status":"Say whether gdoc has a token, when it expires, and what it may reach.",
+  "auth login":"Print the Google sign-in URL and wait for the browser to come back.",
+  "read":"Print the document as text, with the ids a comment or a suggestion is named by.",
+  "comments":"List the comment threads with their ranges, their replies and the next cursor.",
+  "suggestions":"List the suggestions pending in the document.",
+  "export":"Write the document into the hub as Markdown, one file per tab, with its pictures beside it.",
+  "restyle":"Survey a document against the house style, or apply that style where the document stands.",
+  "probe":"Create a throwaway document and say whether Docs honours a suggestion today.",
+  "reply":"Write one reply into a comment thread, under the robot prefix.",
+  "propose":"Propose changes as native suggestions, each with the comment that says why.",
+  "withdraw":"Take back one pending suggestion, and only one gdoc proposed itself.",
+  "annotate":"Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
+  "build":"Build the note as a house-style docx on this machine, with no network at all.",
+  "publish":"Build the note as a house-style document and upload it into one folder.",
+  "update":"Replace this gdoc with the newest release, or say what one would take.",
+  "help":"Print every command gdoc takes, or the words and flags of one.",
+  "completion":"Write the completion script for one shell, and say the line that turns it on."
+};
+var GROUPS = [
+  {name:"Read", cmds:["read","comments","suggestions","export"]},
+  {name:"Write into a doc", cmds:["reply","propose","withdraw","annotate","restyle"]},
+  {name:"Make a doc", cmds:["build","publish"]},
+  {name:"Account and tool", cmds:["auth status","auth login","update","probe","help","completion"]}
+];
+var CMD = {
+  publish:{
+    usage:"gdoc publish --md <file> --folder-id <folder id> [--house <file>]",
+    flags:[["--md <file>","the note to publish"],["--folder-id <folder id>","the Drive folder the document is created in"],["--house <file>","a house style file other than the one inside gdoc"]],
+    ex:"gdoc publish --md note.md --folder-id 1AbC..."
+  },
+  comments:{
+    usage:"gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]",
+    flags:[["--since <cursor>","only what is newer than this cursor, which an earlier run printed"],["--witness","export the document and say which threads the export still shows"],["--wait <duration>","wait this long for something new before answering, written as 9m or 90s"]],
+    ex:"gdoc comments https://docs.google.com/document/d/1AbC.../edit --since <cursor> --wait 9m"
+  }
+};
+var NOTICE_RAW = "gdoc v2.9.0 is published and this is v2.8.0. `gdoc update` installs it.";
+var NOTICE = NOTICE_RAW.replace(/`/g,"");
+var FOOT = "Run gdoc help <command> for the words and flags one takes.";
+var HINT = "Add --json to print the JSON object a skill reads.";
+var USAGE_ALL = "gdoc <command> [words] [flags]";
+var LOGIN = "Open this link in your browser to sign in:";
+var WAIT = "waiting for the browser to come back";
+var URL = "https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=000000000000-example.apps.googleusercontent.com&code_challenge=Q3v8kLm2Nf7Rp1Ws9Yb4Hc6Jd0Ge5Ua8Zi2Ko7Tx&code_challenge_method=S256&prompt=consent&redirect_uri=http%3A%2F%2F127.0.0.1%3A53682%2F&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdocuments&state=k2Jf8sLq0Zx4";
+var BAD = "frobnicate";
+var COMMANDS_LINE = "Commands: " + ORDER.join(", ");
+var HASH_GOT  = "71c2e04b9d1f6a83c5e7b20f4d9a1c6e8b3f5a7d2c4e6f8a0b1c3d5e7f9a2b4c";
+var HASH_WANT = "3f9a0c7e12b4d6f8a1c3e5b7d9f2a4c6e8b0d2f4a6c8e1b3d5f7a9c2e4b6d8f0";
+var ZIP = "gdoc-v2.9.0-darwin-arm64.zip";
+var BIN = "/Users/name/.local/bin/gdoc";
+var DIAL = 'Get "https://api.github.com/repos/nhusnullin/gdoc/releases": dial tcp: lookup api.github.com: no such host';
+
+var STEPS = [
+  {n:"read releases",   run:"",                             done:"nhusnullin/gdoc, 23 listed"},
+  {n:"choose release",  run:"",                             done:"v2.9.0, stable, darwin-arm64, from v2.8.0"},
+  {n:"read checksums",  run:"SHA256SUMS-v2.9.0",            done:"SHA256SUMS-v2.9.0"},
+  {n:"download",        run:ZIP + ", 6.1 MB",               done:ZIP + ", 6.1 MB"},
+  {n:"verify checksum", run:"",                             done:"matches SHA256SUMS-v2.9.0"},
+  {n:"replace binary",  run:"~/.local/bin/gdoc",            done:"~/.local/bin/gdoc, the old one kept beside it"},
+  {n:"read back",       run:"",                             done:"sha256 " + HASH_WANT.slice(0,12)}
+];
+
+/* the objects emit.Print writes, in Go's field order */
+var OBJ = {
+  bare: {ok:false, error:"gdoc needs a command. " + COMMANDS_LINE, version:V},
+  unknown: {ok:false, error:'unknown command "' + BAD + '". ' + COMMANDS_LINE, version:V},
+  helpPublish: {ok:true, data:{commands:[{name:"publish", words:[], flags:[
+      {name:"--md", value:"<file>", need:"required", summary:"the note to publish"},
+      {name:"--folder-id", value:"<folder id>", need:"required", summary:"the Drive folder the document is created in"},
+      {name:"--house", value:"<file>", need:"optional", summary:"a house style file other than the one inside gdoc"}],
+      summary:DESC.publish, example:CMD.publish.ex}],
+      update:{installed:V, latest_stable:V, latest_nightly:"v2.8.3", checked_at:"2026-10-03T08:12:21Z"}}, version:V},
+  installed: {ok:true, data:{installed:V, latest_stable:NEXT, latest_nightly:"v2.9.2", action:"updated", to:NEXT, path:BIN, verified:true, sha256:HASH_WANT, previous:BIN + ".previous"}, version:V},
+  uptodate: {ok:true, data:{installed:V, latest_stable:V, latest_nightly:"v2.7.4", action:"up_to_date", path:BIN, verified:false}, version:V},
+  offline: {ok:true, data:{installed:V, action:"unreachable", path:BIN, verified:false}, warnings:["the releases of nhusnullin/gdoc could not be read, so this run cannot say whether there is a newer gdoc: " + DIAL], version:V},
+  failed: {ok:false, data:{installed:V, latest_stable:NEXT, latest_nightly:"v2.9.2", to:NEXT, path:BIN, verified:false}, error:ZIP + " hashes to " + HASH_GOT + " and the release said " + HASH_WANT + ", so it is not the file the release published", version:V},
+  status: {ok:true, data:{auth_mode:"oauth", token_path:"/Users/name/.config/gdoc-agent/oauth-token.json", client_source:"bundled", token_present:true, expired:false, scopes:["https://www.googleapis.com/auth/drive","https://www.googleapis.com/auth/documents"], version:V}, version:V}
+};
+
+/* ================= line toolkit ================= */
+function S(t, c){ return {t:String(t), c:c || ""}; }
+function clen(s){ return Array.from(s).length; }
+function len(l){ return l.reduce(function(n, s){ return n + clen(s.t); }, 0); }
+function sp(n){ return S(" ".repeat(Math.max(0, n))); }
+function pad(s, n){ return s + " ".repeat(Math.max(0, n - clen(s))); }
+function fill(l, w, c){ var n = w - len(l); return n > 0 ? l.concat([S(" ".repeat(n), c || "")]) : l; }
+function strip(l){ return l.map(function(s){ return S(s.t); }); }
+/* word wrap; a word longer than the width is cut, the way the reason with two hashes must be */
+function wrap(text, w){
+  var out = [], cur = "";
+  text.split(" ").forEach(function(wd){
+    while (clen(wd) > w) {
+      var room = cur ? w - clen(cur) - 1 : w;
+      if (room < 8) { if (cur) { out.push(cur); cur = ""; } room = w; }
+      var head = Array.from(wd).slice(0, room).join("");
+      out.push(cur ? cur + " " + head : head); cur = "";
+      wd = Array.from(wd).slice(room).join("");
+    }
+    if (!cur) cur = wd;
+    else if (clen(cur) + 1 + clen(wd) <= w) cur += " " + wd;
+    else { out.push(cur); cur = wd; }
+  });
+  if (cur) out.push(cur);
+  return out;
+}
+/* wrap, keeping some phrases on one line */
+function wrapKeep(text, w, keep){
+  keep.forEach(function(k){ text = text.split(k).join(k.replace(/ /g, "\u00A0")); });
+  return wrap(text, w).map(function(l){ return l.replace(/\u00A0/g, " "); });
+}
+/* what a terminal does with a line longer than itself */
+function hard(s, w){ var a = Array.from(s), out = []; for (var i = 0; i < a.length; i += w) out.push(a.slice(i, i + w).join("")); return out.length ? out : [""]; }
+var CODES = ["gdoc update --rollback","gdoc help <command>","gdoc update"];
+function hl(text, base, code){
+  var out = [], i = 0;
+  while (i < text.length) {
+    var at = text.length, hit = null;
+    CODES.forEach(function(c){ var j = text.indexOf(c, i); if (j >= 0 && j < at) { at = j; hit = c; } });
+    if (!hit) { out.push(S(text.slice(i), base)); break; }
+    if (at > i) out.push(S(text.slice(i, at), base));
+    out.push(S(hit, code));
+    i = at + hit.length;
+  }
+  return out;
+}
+/* one usage unit as coloured segments: flags amber, placeholders blue, brackets grey */
+function unitSegs(u, cmdWords){
+  var out = [], re = /(--[\w-]+)|(<[^>]+>)|([\[\]|])|(\s+)|([^\s\[\]<|]+)/g, m;
+  while ((m = re.exec(u))) {
+    if (m[1]) out.push(S(m[1], "a2"));
+    else if (m[2]) out.push(S(m[2], "a1"));
+    else if (m[3]) out.push(S(m[3], "grey"));
+    else if (m[4]) out.push(S(m[4]));
+    else out.push(S(m[5], cmdWords.indexOf(m[5]) >= 0 ? "b" : ""));
+  }
+  return out;
+}
+/* a usage line wrapped at w without breaking inside a bracket, a flag and its value */
+function usageLines(str, w, cmdWords){
+  var units = str.match(/\[[^\]]*\]|--[\w-]+(?: <[^>]+>)?|<[^>]+>|\S+/g), lines = [], cur = [], n = 0;
+  units.forEach(function(u){
+    var ul = clen(u);
+    if (cur.length && n + 1 + ul > w) { lines.push(cur); cur = [sp(2)]; n = 2; }
+    if (n > 0 && !(cur.length === 1 && n === 2)) { cur.push(sp(1)); n++; }
+    cur = cur.concat(unitSegs(u, cmdWords)); n += ul;
+  });
+  lines.push(cur);
+  return lines;
+}
+function flagSegs(f){ var i = f.indexOf(" "); return i < 0 ? [S(f, "a2")] : [S(f.slice(0, i), "a2"), S(f.slice(i), "a1")]; }
+
+/* ================= panel primitives ================= */
+function cellsOf(segs){ var out = []; segs.forEach(function(s){ Array.from(s.t).forEach(function(ch){ out.push({ch:ch, c:s.c}); }); }); return out; }
+function segsOf(cells){
+  var out = [];
+  cells.forEach(function(x){ var l = out[out.length - 1]; if (l && l.c === x.c) l.t += x.ch; else out.push(S(x.ch, x.c)); });
+  return out;
+}
+/* a rule: corner, runs of ─, an optional column joint at j, a title on the left and a label on the right */
+function ruleLine(W, l, r, o){
+  o = o || {};
+  var cells = [{ch:l, c:"grey"}], i;
+  for (i = 1; i < W - 1; i++) cells.push({ch:"─", c:"grey"});
+  cells.push({ch:r, c:"grey"});
+  if (o.j) cells[o.j] = {ch:o.jc, c:"grey"};
+  if (o.title) {
+    var t = cellsOf([sp(1)].concat(o.title, [sp(1)]));
+    if (o.j && 2 + t.length > o.j) console.warn("title runs into the joint", o.title);
+    t.forEach(function(x, k){ cells[2 + k] = x; });
+  }
+  if (o.right) {
+    var rr = cellsOf([sp(1)].concat(o.right, [sp(1)])), at = W - 2 - rr.length;
+    rr.forEach(function(x, k){ cells[at + k] = x; });
+  }
+  return segsOf(cells);
+}
+function row1(W, segs){ return [S("│", "grey"), sp(1)].concat(fill(segs, W - 4), [sp(1), S("│", "grey")]); }
+function row2(W, j, a, b){ return [S("│", "grey"), sp(1)].concat(fill(a, j - 3), [sp(1), S("│", "grey"), sp(1)], fill(b, W - j - 4), [sp(1), S("│", "grey")]); }
+
+/* the status bar Nail rejected, kept only for the one picture in section 2 */
+function bar(W){
+  return fill([S(" gdoc " + V + " ", "c1 b"), S(" stable ", "c2 b")], W, "bar");
+}
+
+/* ================= tagged lines ================= */
+function you(cmd){ return {g:"you", l: cmd === null ? [S("~/hub $", "pr")] : [S("~/hub $ ", "pr"), S(cmd)]}; }
+function E(l){ return {g:"err", l:l}; }
+function O(l){ return {g:"out", l:l}; }
+function X(code){ return {g:"exit", l:[S("exit code " + code)]}; }
+function errAll(L){ return L.map(E); }
+function jsonOut(obj, cols){ return hard(JSON.stringify(obj), cols).map(function(p){ return O([S(p)]); }); }
+function plainErr(lines, cols){ var out = []; lines.forEach(function(s){ hard(s, cols).forEach(function(p){ out.push(E([S(p)])); }); }); return out; }
+
+/* ================= help ================= */
+function layoutFor(cols){ return cols >= 80 ? "two" : cols >= 50 ? "stack" : "plain"; }
+function drawW(cols){ return Math.min(cols, 100); }
+function headerRows(W, o){
+  var L = [ruleLine(W, "┌", "┐", {title:[S("gdoc", "a1 b"), S(" " + V, "grey")], right:[S("17 commands", "grey")]}),
+           row1(W, [S("Usage", "a2 b"), sp(2)].concat(unitSegs(USAGE_ALL, ["gdoc"]).map(function(s){ return s.t === "gdoc" ? S("gdoc") : s; })))];
+  if (o.notice) {
+    wrapKeep(NOTICE, W - 6, ["gdoc update"]).forEach(function(t, i){
+      L.push(row1(W, [S(i ? "  " : "▸ ", "a2 b")].concat(hl(t, "", "a1 b"))));
+    });
+  }
+  return L;
+}
+function helpTwo(W, o){
+  var j = 21, dw = W - j - 4, L = headerRows(W, o);
+  GROUPS.forEach(function(g, i){
+    L.push(ruleLine(W, "├", "┤", {j:j, jc: i ? "┼" : "┬", title:[S(g.name, "a2 b")]}));
+    g.cmds.forEach(function(c){ wrap(DESC[c], dw).forEach(function(d, k){ L.push(row2(W, j, k ? [] : [S(c, "b")], [S(d)])); }); });
+  });
+  L.push(ruleLine(W, "└", "┘", {j:j, jc:"┴"}));
+  L.push(hl(FOOT, "grey", "a1"));
+  return L;
+}
+function helpStack(W, o){
+  var L = headerRows(W, o), dw = W - 6;
+  GROUPS.forEach(function(g){
+    L.push(ruleLine(W, "├", "┤", {title:[S(g.name, "a2 b")]}));
+    g.cmds.forEach(function(c){
+      L.push(row1(W, [S(c, "b")]));
+      wrap(DESC[c], dw).forEach(function(d){ L.push(row1(W, [sp(2), S(d)])); });
+    });
+  });
+  L.push(ruleLine(W, "└", "┘"));
+  wrap(FOOT, W).forEach(function(t){ L.push(hl(t, "grey", "a1")); });
+  return L;
+}
+function todayHelp(notice){
+  var L = [];
+  if (notice) L.push(NOTICE_RAW, "");
+  L.push("gdoc " + V, "", "Usage: " + USAGE_ALL, "");
+  ORDER.forEach(function(c){ L.push("  " + pad(c, 11) + "  " + DESC[c]); });
+  L.push("", FOOT);
+  return L;
+}
+/* today's helpOne, byte for byte */
+function todayHelpOne(name){
+  var d = CMD[name], fw = Math.max.apply(null, d.flags.map(function(f){ return clen(f[0]); }));
+  var L = ["gdoc " + V, "", "Usage: " + d.usage, "  " + DESC[name], ""];
+  d.flags.forEach(function(f){ L.push("  " + pad(f[0], fw) + "  " + f[1]); });
+  L.push("", "  Example: " + d.ex);
+  return L;
+}
+/* 6b: the hint replaces the object on a terminal. Not when the object is printed, and not on bare gdoc */
+function hintLines(o, cols){ return (o.json || o.bare || o.noHint) ? [] : hard(HINT, cols || 80).map(function(p){ return E([S(p, "grey")]); }); }
+/* o: notice, prompt, json, exit, layout, bare, noHint. The hint is the last line of a help screen */
+function helpScreen(cols, o){
+  var W = drawW(cols), lay = o.layout || layoutFor(cols);
+  var out = [you(o.prompt || "gdoc help")];
+  if (lay === "plain") return out.concat(plainErr(todayHelp(o.notice), cols), hintLines(o, cols), [you(null)]);
+  var body = lay === "two" ? helpTwo(W, o) : helpStack(W, o);
+  out = out.concat(errAll(body), hintLines(o, cols));
+  if (o.json) out = out.concat(jsonOut(o.json, cols));
+  out.push(you(null));
+  if (o.exit !== undefined) out.push(X(o.exit));
+  return out;
+}
+
+/* help for one command */
+function helpOne(W, name, cols){
+  var d = CMD[name], fw = Math.max.apply(null, d.flags.map(function(f){ return clen(f[0]); })), j = fw + 3, dw = W - j - 4;
+  var L = [ruleLine(W, "┌", "┐", {title:[S(name, "a1 b")], right:[S("gdoc " + V, "grey")]})];
+  wrap(DESC[name], W - 4).forEach(function(t){ L.push(row1(W, [S(t)])); });
+  L.push(ruleLine(W, "├", "┤", {title:[S("Usage", "a2 b")]}));
+  usageLines(d.usage, W - 4, name.split(" ")).forEach(function(l){ L.push(row1(W, l)); });
+  L.push(ruleLine(W, "├", "┤", {j:j, jc:"┬", title:[S("Flags", "a2 b")]}));
+  d.flags.forEach(function(f){ wrap(f[1], dw).forEach(function(t, k){ L.push(row2(W, j, k ? [] : flagSegs(f[0]), [S(t)])); }); });
+  /* the example sits under the box, flush left, one line the terminal wraps, so a copy works in any shell */
+  L.push(ruleLine(W, "└", "┘", {j:j, jc:"┴", title:[S("Example", "a2 b")]}));
+  hard(d.ex, cols || W).forEach(function(p){ L.push([S(p)]); });
+  return L;
+}
+function helpOneScreen(cols, name, o){
+  o = o || {};
+  var W = drawW(cols);
+  var out = [you("gdoc help " + name)];
+  out = out.concat(errAll(helpOne(W, name, cols)), hintLines(o, cols));
+  if (o.rejectedBar) out.push(E(bar(W)));
+  if (o.json) out = out.concat(jsonOut(o.json, cols));
+  out.push(you(null));
+  return out;
+}
+
+/* ================= update ================= */
+function upd(kind, t){
+  function mk(s, st, extra){
+    var x = {name:s.n, detail: st === "done" ? s.done : (st === "run" ? s.run : ""), st:st};
+    for (var k in (extra || {})) x[k] = extra[k];
+    return x;
+  }
+  var R = {steps:[], result:null, rk:null, to:NEXT};
+  if (kind === "run") {
+    R.steps = STEPS.map(function(s, i){ return i < 3 ? mk(s, "done") : i === 3 ? mk(s, "run", {prog:t}) : mk(s, "pend"); });
+  } else if (kind === "done") {
+    R.steps = STEPS.map(function(s){ return mk(s, "done"); });
+    R.result = "gdoc v2.9.0 installed. gdoc update --rollback goes back."; R.rk = "ok"; R.obj = OBJ.installed;
+  } else if (kind === "fail") {
+    R.steps = STEPS.slice(0, 5).map(function(s, i){ return i < 4 ? mk(s, "done") : mk(s, "fail", {reason:OBJ.failed.error}); });
+    R.obj = OBJ.failed;
+  } else if (kind === "offline") {
+    R.steps = [mk(STEPS[0], "fail", {reason:DIAL})];
+    R.result = "GitHub did not answer, so the gdoc here is unchanged."; R.rk = "warn"; R.to = null; R.obj = OBJ.offline;
+  } else if (kind === "uptodate") {
+    R.steps = [mk(STEPS[0], "done"), mk(STEPS[1], "done", {detail:"v2.8.0, stable, darwin-arm64, from v2.8.0"})];
+    R.result = "Nothing newer to install."; R.rk = "ok"; R.to = null; R.obj = OBJ.uptodate;
+  }
+  return R;
+}
+function updateScreen(cols, kind, o){
+  var W = drawW(cols), u = upd(kind, o.t), j = 22, dw = W - j - 4;
+  var L = [ruleLine(W, "┌", "┐", {j:j, jc:"┬", title:[S("update", "a1 b")], right:[S(u.to ? V + " › " + u.to : V, "grey")]})];
+  u.steps.forEach(function(s){
+    var g = s.st === "run" ? [SPIN[o.frame % 10], "a1 b"] : {done:["✓", "ok b"], pend:["○", "grey"], fail:["✗", "err b"]}[s.st];
+    var nc = {done:"", run:"b", pend:"grey", fail:"err b"}[s.st];
+    var a = [S(g[0], g[1]), sp(1), S(s.name, nc)];
+    if (s.st === "fail") {
+      wrap(s.reason, dw).forEach(function(r, k){ L.push(row2(W, j, k ? [] : a, [S(r, "err")])); });
+      return;
+    }
+    L.push(row2(W, j, a, [S(s.detail, s.st === "pend" ? "grey" : "")]));
+  });
+  if (u.result) {
+    L.push(ruleLine(W, "├", "┤", {j:j, jc:"┴"}));
+    var mark = u.rk === "warn" ? S("!", "a2 b") : S("✓", "ok b");
+    wrap(u.result, W - 6).forEach(function(t, k){ L.push(row1(W, [k ? sp(1) : mark, sp(1)].concat(hl(t, "", "a1 b")))); });
+    L.push(ruleLine(W, "└", "┘"));
+  } else L.push(ruleLine(W, "└", "┘", {j:j, jc:"┴"}));
+  var out = [you("gdoc update")].concat(errAll(L));
+  if (kind === "run") return out;
+  out = out.concat(jsonOut(u.obj, cols));
+  out.push(you(null));
+  if (kind === "fail") out.push(X(1));
+  return out;
+}
+
+/* ================= auth ================= */
+function loginScreen(cols, state, o){
+  var W = drawW(cols);
+  var out = [you("gdoc auth login"),
+    E(ruleLine(W, "┌", "┐", {title:[S("auth login", "a1 b")], right:[S("accounts.google.com", "grey")]})),
+    E(row1(W, [S(LOGIN)])),
+    E(ruleLine(W, "└", "┘"))];
+  hard(URL, cols).forEach(function(p){ out.push(E([S(p, "a1 u")])); });
+  if (state === "wait") {
+    /* one short line, redrawn with \r only: no wrap-off, no cursor-up, the link is never redrawn */
+    out.push(E([S(SPIN[o.frame % 10], "a1 b"), sp(1), S(WAIT, "grey")]));
+    return out;
+  }
+  out.push(E([S("✓", "ok b"), sp(1), S("signed in")]));
+  out = out.concat(jsonOut(OBJ.status, cols));
+  out.push(you(null));
+  return out;
+}
+var STATUS = {
+  "in":     {row:[S("✓ ", "ok b"), S("signed in")], scopes:"drive, documents", obj:OBJ.status},
+  "out":    {row:[S("✗ ", "err b"), S("signed out")], obj:{ok:true, data:{auth_mode:"oauth", token_path:"/Users/name/.config/gdoc-agent/oauth-token.json", client_source:"bundled", token_present:false, version:V}, version:V}},
+  "scopes": {row:[S("! ", "a2 b"), S("scopes missing")], scopes:"documents", missing:"drive",
+             obj:{ok:true, data:{auth_mode:"oauth", token_path:"/Users/name/.config/gdoc-agent/oauth-token.json", client_source:"bundled", token_present:true, expired:false, scopes:["https://www.googleapis.com/auth/documents"], missing_scopes:["https://www.googleapis.com/auth/drive"], version:V},
+                  warnings:["the token does not carry every scope gdoc asks for, so those calls will be refused: https://www.googleapis.com/auth/drive. Run: gdoc auth login"], version:V}}
+};
+/* the panel says what the report says, in words: signed in, signed out or scopes missing. No minutes */
+function statusScreen(cols, o){
+  o = o || {};
+  var W = drawW(cols), j = 16, st = STATUS[o.state || "in"];
+  var rows = [["status", st.row]];
+  if (o.m14 && o.state !== "out") rows.push(["account", [S("name@example.com")]]);
+  rows.push(["file", [S("~/.config/gdoc-agent/oauth-token.json")]]);
+  if (st.scopes) rows.push(["scopes", [S(st.scopes)]]);
+  if (st.missing) rows.push(["missing", [S(st.missing, "a2")]]);
+  rows.push(["client", [S("bundled")]], ["mode", [S("oauth")]]);
+  var L = [ruleLine(W, "┌", "┐", {j:j, jc:"┬", title:[S("auth status", "a1 b")], right:[S("gdoc " + V, "grey")]})];
+  rows.forEach(function(r){ L.push(row2(W, j, [S(r[0], "a2")], r[1])); });
+  L.push(ruleLine(W, "└", "┘", {j:j, jc:"┴"}));
+  return [you("gdoc auth status")].concat(errAll(L), jsonOut(st.obj, cols), [you(null)]);
+}
+
+/* ================= errors ================= */
+function unknownScreen(cols){
+  /* R6: today's behaviour. No panel: a typo does not need a screen */
+  return [you("gdoc " + BAD)].concat(jsonOut(OBJ.unknown, cols), [you(null), X(1)]);
+}
+function bareScreen(cols, keepObject){
+  return helpScreen(cols, {prompt:"gdoc", notice:false, bare:true, json: keepObject ? OBJ.bare : null, exit:1,
+  });
+}
+
+/* ================= themes ================= */
+var PAL = {a1:"#3E7BEA", a2:"#B87708", ok:"#2F9E57", err:"#D9434F", grey:"#7C8296",
+  c1b:"#2F63C8", c1f:"#FFFFFF", c2b:"#B87708", c2f:"#15161E", cokb:"#2F9E57", cokf:"#15161E",
+  cerrb:"#D9434F", cerrf:"#FFFFFF", barb:"#3B4252", barf:"#E5E9F0", bar2f:"#B0B7C6"};
+var PROFILE = {
+  dark:  {bg:"#1A1B26", fg:"#C0CAF5", gut:"#15161F", name:"dark, Tokyo Night",
+          ansi:{red:"#F7768E", green:"#9ECE6A", yellow:"#E0AF68", blue:"#7AA2F7"}},
+  light: {bg:"#FFFFFF", fg:"#1E1E1E", gut:"#F3F3F1", name:"light, white",
+          ansi:{red:"#990000", green:"#00A600", yellow:"#999900", blue:"#0000B2"}}
+};
+function hex2rgb(h){ h = h.replace("#", ""); return [0, 2, 4].map(function(i){ return parseInt(h.slice(i, i + 2), 16); }); }
+function rgb2hex(a){ return "#" + a.map(function(v){ return Math.round(v).toString(16).padStart(2, "0"); }).join("").toUpperCase(); }
+function mix(a, b, f){ var A = hex2rgb(a), B = hex2rgb(b); return rgb2hex(A.map(function(v, i){ return v * f + B[i] * (1 - f); })); }
+function lab(rgb){
+  var v = rgb.map(function(x){ x /= 255; return x > 0.04045 ? Math.pow((x + 0.055) / 1.055, 2.4) : x / 12.92; });
+  var X = (v[0] * 0.4124 + v[1] * 0.3576 + v[2] * 0.1805) / 0.95047, Y = v[0] * 0.2126 + v[1] * 0.7152 + v[2] * 0.0722, Z = (v[0] * 0.0193 + v[1] * 0.1192 + v[2] * 0.9505) / 1.08883;
+  var f = function(t){ return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; };
+  return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
+}
+function xtermHex(i){
+  var lv = [0, 95, 135, 175, 215, 255], r, g, b;
+  if (i < 232) { var n = i - 16; r = lv[Math.floor(n / 36)]; g = lv[Math.floor(n / 6) % 6]; b = lv[n % 6]; }
+  else { r = g = b = 8 + (i - 232) * 10; }
+  return rgb2hex([r, g, b]);
+}
+function xterm256(hex){
+  var c = lab(hex2rgb(hex)), best = 16, bd = 1e9;
+  for (var i = 16; i < 256; i++) {
+    var k = lab(hex2rgb(xtermHex(i)));
+    var d = (c[0] - k[0]) * (c[0] - k[0]) + (c[1] - k[1]) * (c[1] - k[1]) + (c[2] - k[2]) * (c[2] - k[2]);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function lum(h){ return hex2rgb(h).map(function(x){ x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }).reduce(function(a, v, i){ return a + v * [0.2126, 0.7152, 0.0722][i]; }, 0); }
+function contrast(a, b){ var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+
+function themeVars(mode, depth){
+  var T = PROFILE[mode], v = {bg:T.bg, fg:T.fg, gut:T.gut};
+  if (depth === "plain") {
+    ["a1", "a2", "ok", "err", "grey"].forEach(function(k){ v[k] = T.fg; });
+    ["c1", "c2", "cok", "cerr"].forEach(function(k){ v[k + "b"] = "transparent"; v[k + "f"] = T.fg; });
+    v.barb = "transparent"; v.barf = T.fg; v.bar2f = T.fg;
+  } else if (depth === "16") {
+    var A = T.ansi, faint = mix(T.fg, T.bg, 0.55);
+    v.a1 = A.blue; v.a2 = A.yellow; v.ok = A.green; v.err = A.red; v.grey = faint;
+    v.c1b = A.blue; v.c1f = T.bg; v.c2b = A.yellow; v.c2f = T.bg; v.cokb = A.green; v.cokf = T.bg; v.cerrb = A.red; v.cerrf = T.bg;
+    v.barb = "transparent"; v.barf = T.fg; v.bar2f = faint;
+  } else {
+    Object.keys(PAL).forEach(function(k){ v[k] = depth === "256" ? xtermHex(xterm256(PAL[k])) : PAL[k]; });
+  }
+  return v;
+}
+(function themeCSS(){
+  var css = "";
+  ["dark", "light"].forEach(function(m){
+    ["tc", "256", "16", "plain"].forEach(function(d){
+      var v = themeVars(m, d);
+      css += ".p-" + m + "-" + d + "{" + Object.keys(v).map(function(k){ return "--" + k + ":" + v[k]; }).join(";") + "}";
+    });
+  });
+  var el = document.createElement("style"); el.textContent = css; document.head.appendChild(el);
+})();
+
+/* ================= render ================= */
+function esc(s){ return s.replace(/[&<>"]/g, function(c){ return {"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;"}[c]; }); }
+function cells(s){
+  var out = "", run = "", chars = Array.from(s), i = 0;
+  while (i < chars.length) {
+    var ch = chars[i], cp = ch.codePointAt(0);
+    if (cp >= 0x20 && cp < 0x7f) { run += ch; i++; continue; }
+    out += esc(run); run = "";
+    if (ch === "█") {
+      var j = i; while (j < chars.length && chars[j] === ch) j++;
+      out += '<span class="g bk bk-full" style="width:' + (j - i) + 'ch">' + ch.repeat(j - i) + "</span>";
+      i = j; continue;
+    }
+    out += '<span class="g">' + esc(ch) + "</span>"; i++;
+  }
+  return out + esc(run);
+}
+function lineHTML(l){
+  return l.map(function(s){
+    var inner = cells(s.t);
+    if (!s.c) return inner;
+    return '<span class="' + s.c.split(" ").map(function(x){ return "k-" + x; }).join(" ") + '">' + inner + "</span>";
+  }).join("");
+}
+function rulerText(cols){
+  var a = [];
+  for (var i = 1; i <= cols; i++) a.push(i % 5 === 0 ? "+" : "·");
+  for (var k = 10; k <= cols; k += 10) { var s = String(k); for (var c = 0; c < s.length; c++) a[k - s.length + c] = s[c]; }
+  return a.join("");
+}
+var GT = {you:"$", err:"stderr", out:"stdout", exit:"exit"};
+function rowsHTML(tagged){
+  return tagged.map(function(r){
+    return '<div class="r' + (r.g === "exit" ? " ann" : "") + '"><span class="gt gt-' + r.g + '">' + GT[r.g] + '</span><span class="ln">' + lineHTML(r.l) + "</span></div>";
+  }).join("");
+}
+
+var ALL = [], live = [], state = {frame:2, t:0.38};
+var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* spec: {cols, mode, depth, title, fn(o), anim, plain} */
+function makeWin(spec){
+  var mode = spec.mode || "dark", depth = spec.depth || "tc";
+  var fig = document.createElement("figure");
+  fig.className = "win m-" + mode + " p-" + mode + "-" + depth + (depth === "plain" ? " m-plain" : "");
+  var depthName = {tc:"truecolor", "256":"256 colours", "16":"16 colours", plain:"no colour"}[depth];
+  fig.innerHTML = '<div class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="wt"></span><span class="badge"></span></div>' +
+    '<div class="scr" style="--w:' + spec.cols + '"><div class="r ruler"><span class="gt">cols</span><span class="ln">' + cells(rulerText(spec.cols)) + '</span></div><div class="body"></div></div></div>' +
+    '<figcaption></figcaption>';
+  fig.querySelector(".wt").textContent = spec.title;
+  fig.querySelector(".badge").textContent = spec.cols + " cols";
+  fig.querySelector("figcaption").textContent = PROFILE[mode].name + " profile · " + depthName;
+  var body = fig.querySelector(".body");
+  var tagged = spec.fn({frame:state.frame, t:state.t});
+  if (depth === "plain") tagged = tagged.map(function(r){ return {g:r.g, l:strip(r.l)}; });
+  body.innerHTML = rowsHTML(tagged);
+  var widest = Math.max.apply(null, tagged.map(function(r){ return r.g === "exit" ? 0 : len(r.l); }));
+  var rec = {fig:fig, title:spec.title, cols:spec.cols, widest:widest, rows:tagged.filter(function(r){ return r.g === "err" || r.g === "out"; }).length};
+  if (widest > spec.cols) { fig.classList.add("over"); console.warn("over", spec.cols, "columns:", spec.title, widest); }
+  ALL.push(rec);
+  if (spec.anim) live.push({body:body, fn:spec.fn, depth:depth, vis:true, fig:fig, rec:rec});
+  return {fig:fig, rec:rec};
+}
+
+/* a labelled variant: windows side by side */
+function addVariant(host, v){
+  var el = document.createElement("div");
+  el.className = "var" + (v.rejected ? " rejected" : ""); el.id = "v-" + v.id.replace(/\W/g, "");
+  var badge = v.rejected ? '<span class="badge-rej">Rejected</span>' : v.nail ? '<span class="badge-nail">Nail\'s pick</span>' : v.pick ? '<span class="badge-team">Team recommends</span>' : "";
+  el.innerHTML = '<div class="vhead"><span class="lbl"></span><h3></h3>' + badge + '</div><p class="vcap"></p><div class="wins' + (v.one ? " one" : "") + '"></div>';
+  el.querySelector(".lbl").textContent = v.id;
+  el.querySelector("h3").textContent = v.h;
+  var wins = el.querySelector(".wins"), recs = [];
+  v.wins.forEach(function(w){ var m = makeWin(w); wins.appendChild(m.fig); recs.push(m.rec); });
+  var cap = v.cap.replace(/\{rows\}/g, recs[0] ? recs[0].rows : "");
+  el.querySelector(".vcap").innerHTML = cap;
+  host.appendChild(el);
+}
+function pair(cols, title, fn, anim){
+  return [{cols:cols, mode:"dark", depth:"tc", title:title, fn:fn, anim:anim},
+          {cols:cols, mode:"light", depth:"tc", title:title, fn:fn, anim:anim}];
+}
+function H(name){ return document.querySelector('[data-host="' + name + '"]'); }
+
+/* ================= 1. width ================= */
+(function(){
+  var host = H("width");
+  addVariant(host, {id:"100+", h:"100 columns and wider: two columns, drawn at 100", one:true,
+    cap:"The description column is 75 wide, so most commands take one row. A wider terminal still gets a 100-column box. <b>{rows} rows</b>, the hint line included.",
+    wins:[{cols:100, title:"gdoc help", fn:function(){ return helpScreen(100, {notice:true}); }}]});
+  addVariant(host, {id:"80-99", h:"80 to 99 columns: two columns", one:true,
+    cap:"The description column is 55 wide, so most commands take two rows. <b>{rows} rows</b>, taller than a 24-row window. That is fine: help scrolls like any long output.",
+    wins:[{cols:80, title:"gdoc help", fn:function(){ return helpScreen(80, {notice:true}); }}]});
+  addVariant(host, {id:"50-79", h:"50 to 79 columns: stacked", one:true,
+    cap:"At 60 the two columns would leave 35 for the description, so each command would take three rows. Stacked, the name gets its own row and the description runs under it at 54. <b>{rows} rows</b>. The notice wraps, and \"gdoc update\" is kept on one line.",
+    wins:[{cols:60, title:"gdoc help", fn:function(){ return helpScreen(60, {notice:true}); }}]});
+  addVariant(host, {id:"under 50", h:"Under 50 columns: plain text", one:true,
+    cap:"Two borders and two pads would cost 4 columns, and the words would wrap into slivers. So gdoc prints today's text and lets the terminal wrap it. Colour is still on, so the hint is dim.",
+    wins:[{cols:44, title:"gdoc help", fn:function(){ return helpScreen(44, {notice:true}); }}]});
+  addVariant(host, {id:"check", h:"The check behind the rule: stacked at 80", one:true,
+    cap:"Not a layout gdoc uses. Stacked at 80 is <b>{rows} rows</b>, taller than two columns at the same width. So two columns wins down to 80.",
+    wins:[{cols:80, title:"gdoc help, stacked", fn:function(){ return helpScreen(80, {notice:true, layout:"stack"}); }}]});
+})();
+
+/* ================= 2. status bar, rejected ================= */
+(function(){
+  var host = H("bar");
+  addVariant(host, {id:"2A", rejected:true, h:"What was considered: a bar on the last line",
+    cap:"Kept only as a record. Version and channel in chips on the last line. Rejected: both are already in the top border.",
+    wins:[{cols:80, title:"gdoc help publish · rejected", fn:function(){ return helpOneScreen(80, "publish", {rejectedBar:true}); }}]});
+})();
+
+/* ================= 3. every screen ================= */
+(function(){
+  var host = H("screens");
+  var list = [
+    {id:"3.1", h:"gdoc help, with the release notice", cap:"The notice line shows on every help while the last check says a newer gdoc is published. The check runs once a day. stdout gets nothing; the dim last line says how to get the object (6b).", fn:function(){ return helpScreen(80, {notice:true}); }},
+    {id:"3.2", h:"gdoc help, without the notice", cap:"The header box loses one row. Nothing else moves.", fn:function(){ return helpScreen(80, {notice:false}); }},
+    {id:"3.3", h:"gdoc help publish", cap:"A command with flags. The flag column is as wide as the longest flag, so the joint moves per command. Required flags stand bare in the usage line and optional ones in brackets, as today. The example sits under the box, flush left.", fn:function(){ return helpOneScreen(80, "publish"); }},
+    {id:"3.4", h:"gdoc help comments", cap:"A command with a word (<code>&lt;url&gt;</code>, blue like every placeholder) and three optional flags. The example is 88 characters. It is printed flush left under the box, with no border and no backslash, as one line the terminal wraps. So a copy works in every shell, Windows included, the same as the login link.", fn:function(){ return helpOneScreen(80, "comments"); }},
+    {id:"3.5", h:"gdoc update, running", anim:true, cap:"The spinner and the pending steps redraw in place, as today's list does. No progress bar: it needs a counting reader around the download, so it is on the backlog. No JSON yet: the object is written when the run ends.", fn:function(o){ return updateScreen(80, "run", o); }},
+    {id:"3.6", h:"gdoc update, installed", cap:"The result line is today's <code>resultLine</code>, and it says how the run ended.", fn:function(o){ return updateScreen(80, "done", o); }},
+    {id:"3.7", h:"gdoc update, nothing newer", cap:"Only the two steps every run takes. No download is ever drawn.", fn:function(o){ return updateScreen(80, "uptodate", o); }},
+    {id:"3.8", h:"gdoc update, GitHub did not answer", cap:"The read step fails with Go's own error, then today's result line. The run still answers <code>ok:true</code>, so the mark is an amber <code>!</code>, not a red cross, and the exit code is 0.", fn:function(o){ return updateScreen(80, "offline", o); }},
+    {id:"3.9", h:"gdoc update, failed at verify checksum", cap:"As today, nothing after the failed step is drawn and there is no result line. The reason is gdoc's real sentence with two 64-character hashes, so the wrap has to cut inside a word. The same sentence is the object's <code>error</code>.", fn:function(o){ return updateScreen(80, "fail", o); }},
+    {id:"3.10", h:"gdoc auth login, waiting", anim:true, cap:"The link stays outside any border, flush left, as one line the terminal wraps, so a click or a copy gets all of it. <span class=\"new\">New</span>one spinner line under the link, redrawn with a carriage return only. There is no wrap-off and no cursor-up, so the link is never redrawn. Login traps no signal, so Ctrl-C leaves this line as it is and the terminal clean.", fn:function(o){ return loginScreen(80, "wait", o); }},
+    {id:"3.11", h:"gdoc auth login, signed in", cap:"On success, a carriage return turns the spinner line into <code>✓ signed in</code>. stdout gets the same object as <code>auth status</code>, as today. <span class=\"new\">New</span>the signed-in line.", fn:function(o){ return loginScreen(80, "done", o); }},
+    {id:"3.12", h:"gdoc auth status", cap:"<span class=\"new\">New</span>a panel on stderr, on a terminal only. On a pipe stderr stays empty, as today. The first row says signed in, signed out or scopes missing, from the report's own fields. No expiry minutes. The object stays below, because for this command the object is the answer.", fn:function(){ return statusScreen(80); }},
+    {id:"3.13", h:"unknown command, no panel", cap:"Today's behaviour, kept: no panel, only the object, exit 1. A typo does not need a screen, and a panel would show the same words twice. <b>Open follow-up:</b> drop the object on a terminal, like 5b?", fn:function(){ return unknownScreen(80); }},
+    {id:"3.14", h:"bare gdoc", cap:"Nail's pick 5b: the help, no object, no hint. Only the exit code says it failed (turn on Show streams to see it). There is no hint because <code>gdoc --json</code> is not a valid call.", fn:function(){ return bareScreen(80, false); }},
+    {id:"3.15", h:"NO_COLOR=1 gdoc help", plain:true, cap:"<code>NO_COLOR</code> turns Panels off entirely: no boxes, today's text byte for byte. The longest line is 106 columns, so the terminal wraps it. stdout is still a terminal, so help writes no object, and the hint line follows the text, not dim.", fn:function(){ return [you("NO_COLOR=1 gdoc help")].concat(plainErr(todayHelp(true), 80), [E([S(HINT)])], [you(null)]); }},
+    {id:"3.16", h:"gdoc help publish 2>&1 | cat", plain:true, cap:"Both streams into a pipe. stderr is today's text, and stdout is not a terminal, so the object follows it and there is no hint. A skill gets exactly these bytes, with the two streams kept apart.", fn:function(){
+      return [you("gdoc help publish 2>&1 | cat")].concat(plainErr(todayHelpOne("publish"), 80), jsonOut(OBJ.helpPublish, 80), [you(null)]);
+    }}
+  ];
+  list.splice(list.findIndex(function(x){ return x.id === "3.12"; }) + 1, 0,
+    {id:"3.12b", h:"gdoc auth status, the other states", three:true,
+     cap:"Signed out, scopes missing, and signed in after M14 with the account. The account row shows only if the login wrote it beside the token. With scopes missing, the object carries today's warning.",
+     wins:[{cols:80, mode:"dark", depth:"tc", title:"gdoc auth status · signed out", fn:function(){ return statusScreen(80, {state:"out"}); }},
+           {cols:80, mode:"light", depth:"tc", title:"gdoc auth status · scopes missing", fn:function(){ return statusScreen(80, {state:"scopes"}); }},
+           {cols:80, mode:"dark", depth:"tc", title:"gdoc auth status · after M14", fn:function(){ return statusScreen(80, {m14:true}); }}]});
+  list.forEach(function(s){
+    if (s.wins) { addVariant(host, {id:s.id, h:s.h, cap:s.cap, wins:s.wins}); return; }
+    var wins = pair(80, s.h, s.fn, s.anim);
+    if (s.plain) wins.forEach(function(w){ w.depth = "plain"; });
+    addVariant(host, {id:s.id, h:s.h, cap:s.cap, wins:wins});
+  });
+})();
+
+/* ================= 4. colour ================= */
+(function(){
+  var host = H("palette");
+  var roles = [
+    {k:"fg", role:"Text, names, JSON", hex:null, n16:"default (SGR 39)", why:"never set"},
+    {k:"a1", role:"Title, placeholders, spinner", hex:PAL.a1, n16:"blue (34)"},
+    {k:"a2", role:"Section titles, flags, notice mark", hex:PAL.a2, n16:"yellow (33)"},
+    {k:"ok", role:"Done ✓", hex:PAL.ok, n16:"green (32)"},
+    {k:"err", role:"Failed ✗, error title", hex:PAL.err, n16:"red (31)"},
+    {k:"grey", role:"Borders, prompt, muted words, the hint", hex:PAL.grey, n16:"faint (SGR 2)"}
+  ];
+  var sample = {fg:"gdoc help", a1:"gdoc v2.8.0", a2:"--folder-id", ok:"✓ download", err:"✗ verify", grey:"│ ─ ┼ ~/hub $", c1:" gdoc v2.8.0 ", c2:" stable ", cok:" ✓ installed ", cerr:" ✗ verify checksum "};
+  var depths = ["tc", "256", "16"];
+  var h = '<div class="ptab-wrap"><table class="ptab"><thead><tr><th>Role</th><th>Truecolor</th><th>256</th><th>16</th><th>On black / white</th>';
+  depths.forEach(function(d){ h += "<th>Dark · " + {tc:"24-bit", "256":"256", "16":"16"}[d] + "</th>"; });
+  depths.forEach(function(d){ h += "<th>Light · " + {tc:"24-bit", "256":"256", "16":"16"}[d] + "</th>"; });
+  h += "</tr></thead><tbody>";
+  roles.forEach(function(r){
+    var idx = r.hex ? xterm256(r.hex) : null;
+    h += "<tr><td>" + esc(r.role) + "</td>";
+    h += '<td class="code">' + (r.hex ? '<span class="sw" style="background:' + r.hex + '"></span>' + r.hex + (r.fgx ? '<br><span class="cr">text ' + r.fgx + "</span>" : "") : "terminal's own") + "</td>";
+    h += '<td class="code">' + (r.hex ? '<span class="sw" style="background:' + xtermHex(idx) + '"></span>' + idx : "none") + "</td>";
+    h += '<td class="code">' + esc(r.n16) + "</td>";
+    var crs = "";
+    if (r.hex && !r.fgx) crs = contrast(r.hex, "#000000").toFixed(1) + " / " + contrast(r.hex, "#FFFFFF").toFixed(1);
+    else if (r.fgx) crs = "text on chip " + contrast(r.hex, r.fgx).toFixed(1);
+    else crs = "set by the user";
+    h += '<td class="code cr">' + crs + "</td>";
+    ["dark", "light"].forEach(function(m){
+      depths.forEach(function(d){
+        var v = themeVars(m, d);
+        var st = "background:" + v.bg + ";";
+        var inner;
+        if (r.fgx || r.k === "bar") {
+          var bg = r.k === "bar" ? v.barb : v[r.k + "b"], fg = r.k === "bar" ? v.bar2f : v[r.k + "f"];
+          inner = '<span style="' + st + '"><b style="background:' + bg + ";color:" + fg + ';white-space:pre;padding:2px 0">' + esc(sample[r.k]) + "</b></span>";
+        } else {
+          inner = '<span style="' + st + "color:" + (r.k === "fg" ? v.fg : v[r.k]) + '">' + esc(sample[r.k]) + "</span>";
+        }
+        h += '<td class="smp">' + inner + "</td>";
+      });
+    });
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+  host.innerHTML = h;
+
+  var chost = H("colour");
+  ["tc", "256", "16"].forEach(function(d, i){
+    var name = {tc:"Truecolor", "256":"256 colours", "16":"16 colours"}[d];
+    var cap = {
+      tc:"What most terminals on a Mac get today: iTerm2, Ghostty, kitty, WezTerm and VS Code set <code>COLORTERM=truecolor</code>.",
+      "256":"Apple Terminal sets <code>TERM=xterm-256color</code> and no <code>COLORTERM</code>, so it lands here. Each colour is the nearest xterm 256 colour by Lab distance. The shift is small.",
+      "16":"Old or bare terminals, tmux without its colour setting, Linux consoles. The colours are the theme's own: Tokyo Night on the left, the white profile's basic ANSI on the right. Its yellow is 3.0:1 on white, the weakest point of this palette."
+    }[d];
+    addVariant(chost, {id:"4." + (i + 1), h:name + ": gdoc update, failed at verify checksum", cap:cap,
+      wins:[{cols:80, mode:"dark", depth:d, title:"gdoc update", fn:function(o){ return updateScreen(80, "fail", o); }},
+            {cols:80, mode:"light", depth:d, title:"gdoc update", fn:function(o){ return updateScreen(80, "fail", o); }}]});
+  });
+})();
+
+/* ================= 5. bare gdoc ================= */
+(function(){
+  var host = H("bare");
+  addVariant(host, {id:"5a", h:"Keep the object on a terminal",
+    cap:"Today's rule, drawn in Panels: the help, then the <code>ok:false</code> object, three rows of it at 80 columns.",
+    wins:[{cols:80, title:"gdoc", fn:function(){ return bareScreen(80, true); }}]});
+  addVariant(host, {id:"5b", nail:true, h:"Drop the object on a terminal",
+    cap:"The same help, nothing on stdout and no hint line. Exit code 1, as today. On a pipe, the object is still written.",
+    wins:[{cols:80, title:"gdoc", fn:function(){ return bareScreen(80, false); }}]});
+})();
+
+/* ================= 6. help stdout ================= */
+(function(){
+  var host = H("stdout");
+  addVariant(host, {id:"6a", h:"Nothing", one:false,
+    cap:"The draft decision as written: no object and no hint. The prompt comes right back under the box.",
+    wins:[{cols:80, title:"gdoc help publish", fn:function(){ return helpOneScreen(80, "publish", {noHint:true}); }}]});
+  addVariant(host, {id:"6b", nail:true, h:"One hint line, on stderr", one:false,
+    cap:"The hint is the last line of the help, dim, on stderr. Nothing on stdout, so stdout stays the object or nothing and never carries an escape code.",
+    wins:[{cols:80, title:"gdoc help publish", fn:function(){ return helpOneScreen(80, "publish"); }}]});
+  addVariant(host, {id:"6c", h:"Today: the full object", one:false,
+    cap:"The object for one command is 671 characters, so 9 rows at 80 columns. For bare <code>gdoc help</code> it carries all 17 commands with their flags and runs to dozens of rows under the help.",
+    wins:[{cols:80, title:"gdoc help publish", fn:function(){ return helpOneScreen(80, "publish", {json:OBJ.helpPublish}); }}]});
+})();
+
+/* ================= width check ================= */
+(function(){
+  var over = ALL.filter(function(r){ return r.widest > r.cols; });
+  var el = document.querySelector("[data-check]");
+  if (!over.length) { el.classList.add("ok"); el.textContent = "✓ Width check: all " + ALL.length + " windows fit their stated width"; }
+  else { el.classList.add("bad"); el.textContent = "✗ Width check: " + over.length + " windows pass their width: " + over.map(function(r){ return r.title + " (" + r.widest + "/" + r.cols + ")"; }).join(", "); }
+  window.__widthCheck = {windows:ALL.length, over:over.map(function(r){ return {title:r.title, widest:r.widest, cols:r.cols}; })};
+})();
+
+/* ================= stream tags toggle ================= */
+(function(){
+  var btn = document.querySelector("[data-streams]"), KEY = "gdoc-panels-streams";
+  function set(on){ document.body.classList.toggle("streams", on); btn.setAttribute("aria-pressed", String(on)); }
+  var on = false;
+  try { on = window.localStorage.getItem(KEY) === "1"; } catch (e) { on = false; }
+  set(on);
+  btn.addEventListener("click", function(){
+    var next = !document.body.classList.contains("streams");
+    set(next);
+    try { window.localStorage.setItem(KEY, next ? "1" : "0"); } catch (e) { /* no storage: the toggle still works for this visit */ }
+  });
+})();
+
+/* ================= motion ================= */
+if (!reduce && live.length) {
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ live.forEach(function(w){ if (w.fig === e.target) w.vis = e.isIntersecting; }); }); });
+    live.forEach(function(w){ io.observe(w.fig); });
+  }
+  var t0 = performance.now();
+  setInterval(function(){
+    state.frame++;
+    state.t = ((performance.now() - t0) % 5200) / 5200;
+    live.forEach(function(w){
+      if (!w.vis) return;
+      var tagged = w.fn({frame:state.frame, t:state.t});
+      w.body.innerHTML = rowsHTML(tagged);
+    });
+  }, 80);
+}
+})();
+</script>
+</body>
+</html>

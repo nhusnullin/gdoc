@@ -1,0 +1,1249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gdoc terminal directions</title>
+<meta name="description" content="Six visual directions for what gdoc prints to a person on stderr, drawn at 80 columns from gdoc's real wording.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#F5F4F0; --ink:#17171B; --muted:#63636C; --faint:#8C8C95; --card:#FFFFFF; --card2:#FBFAF7;
+  --border:#E2E0DA; --accent:#3B5BDB; --chip:#ECEAE4;
+  --shadow:0 1px 2px rgba(20,20,30,.06),0 18px 40px -18px rgba(20,20,30,.28);
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --ts:13px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0D0D10; --ink:#ECECF1; --muted:#A0A0AB; --faint:#74747F; --card:#16161B; --card2:#121216;
+    --border:#28282F; --accent:#91A7FF; --chip:#202027;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 22px 48px -20px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0D0D10; --ink:#ECECF1; --muted:#A0A0AB; --faint:#74747F; --card:#16161B; --card2:#121216;
+  --border:#28282F; --accent:#91A7FF; --chip:#202027;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 22px 48px -20px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--page);color:var(--ink);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1460px;margin:0 auto;padding:0 16px}
+@media (min-width:760px){.wrap{padding:0 40px}}
+
+/* hero */
+.hero{padding-top:64px;padding-bottom:40px}
+.kicker{font:600 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.hero h1{font:700 clamp(34px,6vw,64px)/1.02 var(--mono);letter-spacing:-.03em;margin:14px 0 18px}
+.hero h1 span{color:var(--accent)}
+.lede{max-width:760px;font-size:18px;color:var(--muted);margin:0}
+.lede b{color:var(--ink);font-weight:600}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px;margin-top:36px}
+.fact{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.fact h3{font:700 13px/1.2 var(--mono);margin:0 0 6px;letter-spacing:.02em}
+.fact p{margin:0;font-size:14px;color:var(--muted)}
+.fact code,.lede code,.cap code,.note code{font:500 .88em var(--mono);background:var(--chip);padding:1px 5px;border-radius:5px}
+
+/* nav */
+nav.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--page) 86%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--border)}
+nav.top .wrap{display:flex;gap:8px;align-items:center;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:none}
+nav.top .wrap::-webkit-scrollbar{display:none}
+nav.top a{flex:none;text-decoration:none;font:500 13px/1 var(--sans);padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);display:inline-flex;gap:8px;align-items:center;white-space:nowrap}
+nav.top a i{font:700 11px/1 var(--mono);font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--chip);color:var(--muted)}
+nav.top a:hover{border-color:var(--accent)}
+nav.top a.cmp{background:var(--ink);color:var(--page);border-color:var(--ink)}
+nav.top a.cmp i{background:transparent;color:inherit;width:auto}
+
+/* sections */
+section.block{padding:72px 0 64px;border-top:1px solid var(--border)}
+.shead{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:start;margin-bottom:28px}
+.num{font:700 clamp(54px,8vw,96px)/.85 var(--mono);letter-spacing:-.05em;color:var(--accent)}
+.shead h2{font:700 clamp(26px,3.4vw,38px)/1.1 var(--mono);letter-spacing:-.02em;margin:4px 0 8px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.pick{font:700 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 10px;border-radius:999px;border:1.5px solid var(--accent);color:var(--accent);white-space:nowrap}
+.pitch{font-size:19px;margin:0 0 6px;max-width:820px}
+.meta{font-size:14px;color:var(--muted);margin:0}
+.meta b{color:var(--ink);font-weight:600}
+.note{max-width:820px;margin:14px 0 0;padding:12px 16px;border-left:3px solid var(--accent);background:var(--card);border-radius:0 10px 10px 0;font-size:15px}
+.note b{font-weight:600}
+@media (max-width:640px){.shead{grid-template-columns:1fr}}
+
+/* palette */
+.pal{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 34px}
+.sw{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:8px;width:146px;font-size:12px}
+.chip{height:40px;border-radius:7px;display:grid;grid-template-columns:3fr 1fr;overflow:hidden;border:1px solid rgba(127,127,127,.25)}
+.sw .role{font-weight:600;margin:7px 2px 2px;font-size:12.5px}
+.sw .codes{font:11px/1.5 var(--mono);color:var(--muted);margin:0 2px}
+.sw .codes b{color:var(--ink);font-weight:600}
+.pal-key{font-size:12px;color:var(--faint);margin:-24px 0 30px}
+
+/* windows */
+.wins{display:flex;flex-wrap:wrap;gap:34px 26px;align-items:flex-start}
+figure.win{margin:0;width:fit-content;max-width:100%}
+.frame{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid rgba(127,127,127,.22)}
+.chrome{display:flex;align-items:center;gap:12px;height:32px;padding:0 12px;background:#26262B;color:#9C9CA6;font:12px/1 var(--sans);border-bottom:1px solid rgba(0,0,0,.4)}
+.m-light .chrome{background:#E9E9EC;color:#6B6B74;border-bottom-color:#D4D4D8}
+.dots{display:flex;gap:7px;flex:none}
+.dots i{width:11px;height:11px;border-radius:50%;background:#FF5F57}
+.dots i:nth-child(2){background:#FEBC2E}.dots i:nth-child(3){background:#28C840}
+.wt{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);font-size:11.5px}
+.cols{flex:none;font:600 10px/1 var(--mono);letter-spacing:.06em;padding:4px 6px;border-radius:5px;background:rgba(127,127,127,.18)}
+.screen{position:relative;font:var(--ts)/1.3 var(--mono);width:calc(80ch + 34px);max-width:100%;overflow-x:auto;padding:14px 16px 16px;background:var(--bg);color:var(--fg)}
+.screen pre{margin:0;font:inherit;width:max-content;min-width:calc(80ch + 1px);
+  background-image:linear-gradient(90deg,transparent calc(80ch),var(--guide,rgba(127,127,127,.28)) calc(80ch),var(--guide,rgba(127,127,127,.28)) calc(80ch + 1px),transparent calc(80ch + 1px));
+  background-attachment:local}
+.screen pre .g{display:inline-block;width:1ch;text-align:center}
+/* block elements fill the whole cell, the way a terminal draws them */
+.screen pre .g.bk{vertical-align:top;height:1.3em;-webkit-text-fill-color:transparent;text-shadow:none}
+.bk-full{background:currentColor}
+.bk-up{background:linear-gradient(currentColor 50%,transparent 50%)}
+.bk-lo{background:linear-gradient(transparent 50%,currentColor 50%)}
+.bk-l{background:linear-gradient(90deg,currentColor 50%,transparent 50%)}
+.bk-r{background:linear-gradient(90deg,transparent 50%,currentColor 50%)}
+.cap{width:0;min-width:100%;margin-top:12px;font-size:13.5px;color:var(--muted);line-height:1.45}
+.cap b{color:var(--ink);font-weight:600;display:block;font-family:var(--mono);font-size:12.5px;margin-bottom:2px}
+.cap .new{display:inline-block;font:700 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:var(--accent);color:var(--page);margin-right:6px;vertical-align:1px}
+.win.over .frame{outline:3px solid #E5484D}
+@media (max-width:640px){:root{--ts:11px}}
+
+/* compare */
+.cmp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,600px),1fr));gap:34px 26px;align-items:start}
+.cmp-grid .screen{--ts:12px}
+@media (max-width:640px){.cmp-grid .screen{--ts:10.5px}}
+.cmp-grid .cap b{font-size:14px}
+.cmp-grid .cap a{color:var(--accent);text-decoration:none;font-weight:600}
+
+/* engineering notes slot */
+.eng-notes{margin-top:40px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;max-width:980px}
+.eng-notes:empty{background:transparent;border-style:dashed;min-height:84px;display:grid;place-items:center;padding:16px}
+.eng-notes:empty::before{content:"Engineering notes for this direction go here";font:500 13px/1 var(--mono);color:var(--faint)}
+.eng-notes h3,.eng-notes h4{font:700 15px/1.3 var(--mono);margin:0 0 10px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.eng-notes p{margin:6px 0;font-size:15px}
+.eng-notes ul{margin:10px 0 0;padding-left:20px}
+.eng-notes li{margin:5px 0;font-size:15px}
+.eng-notes li::marker{color:var(--accent)}
+.eng-notes code{font:500 .86em var(--mono);background:var(--chip);padding:1px 5px;border-radius:5px}
+.eng-notes .cost,.eng-notes .score,.eng-notes [data-cost]{display:inline-flex;align-items:center;gap:6px;font:700 12px/1 var(--mono);padding:6px 10px;border-radius:999px;background:var(--chip);color:var(--ink)}
+.eng-notes strong,.eng-notes b{font-weight:650}
+
+/* phosphor */
+.toggle{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin:4px 0 0}
+.toggle button{font:600 12px/1 var(--mono);padding:8px 12px;border:0;background:var(--card);color:var(--muted);cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--ink);color:var(--page)}
+.t-phosphor .screen{text-shadow:0 0 1px currentColor,0 0 7px color-mix(in srgb,currentColor 55%,transparent);background:radial-gradient(ellipse at 50% 45%,color-mix(in srgb,var(--fg) 7%,var(--bg)) 0%,var(--bg) 70%)}
+.t-phosphor .screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(0,0,0,.28) 0 1px,transparent 1px 3px);box-shadow:inset 0 0 70px rgba(0,0,0,.75);animation:flicker 5s infinite steps(1)}
+@keyframes flicker{0%,100%{opacity:1}47%{opacity:.86}48%{opacity:1}}
+.k-blink{animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.t-phosphor .screen::after,.k-blink{animation:none}}
+
+footer.end{border-top:1px solid var(--border);padding:40px 0 64px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<header class="wrap hero">
+  <div class="kicker">gdoc v2.8.0 &middot; design study &middot; stderr only</div>
+  <h1>gdoc, in the<br><span>terminal.</span></h1>
+  <p class="lede">Six ways the binary could look to the person who typed it. Every window is drawn at <b>80 columns</b> with gdoc's real words. Pick one by its number and borrow parts from the others, for example <b>"3, but with the timeline progress"</b>.</p>
+  <div class="facts">
+    <div class="fact"><h3>stderr only</h3><p>Everything drawn here goes to stderr. stdout still carries exactly one JSON object, untouched, so the skills read what they read today. The windows leave that object out.</p></div>
+    <div class="fact"><h3>80 columns, honestly</h3><p>Each window is 80 columns wide and a faint line marks column 80. Today's help runs to <b data-fill="maxcols">106</b> columns, so every direction wraps the long descriptions.</p></div>
+    <div class="fact"><h3>Plain when piped</h3><p>Each direction shows its <code>NO_COLOR</code> and pipe version. With colour off, the six land on nearly the same page. That is on purpose.</p></div>
+    <div class="fact"><h3>Fonts people already have</h3><p>Box drawing, block elements, braille and <code>✓ ✗ ● ○ ▸ ›</code>. No Nerd Font glyphs, no emoji. Colours are truecolor with a 256 and a 16 colour fallback.</p></div>
+  </div>
+</header>
+
+<nav class="top" aria-label="Directions">
+  <div class="wrap">
+    <a href="#today"><i>0</i>Today</a>
+    <a href="#compare" class="cmp"><i>&#9638;</i>Compare all six</a>
+    <a href="#quiet-pro"><i>1</i>Quiet Pro</a>
+    <a href="#charm"><i>2</i>Charm</a>
+    <a href="#altery-house"><i>3</i>Altery House</a>
+    <a href="#panels"><i>4</i>Panels</a>
+    <a href="#phosphor"><i>5</i>Phosphor</a>
+    <a href="#timeline"><i>6</i>Timeline</a>
+    <a href="#foundation"><i>&#9881;</i>Build notes</a>
+  </div>
+</nav>
+
+<main>
+
+<section class="block" id="today">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num" style="color:var(--faint)">0</div>
+      <div>
+        <h2>Today</h2>
+        <p class="pitch">The baseline: what <code style="font:inherit">gdoc help</code> prints now, plain and without colour.</p>
+        <p class="meta">The words are good. The layout is one flat list of seventeen, and the longest line passes column 80, so a standard terminal wraps it into the next row.</p>
+      </div>
+    </div>
+    <div class="wins" data-dir="today"></div>
+  </div>
+</section>
+
+<section class="block" id="compare">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num" style="color:var(--faint)">&#9638;</div>
+      <div>
+        <h2>Compare</h2>
+        <p class="pitch">The same <code style="font:inherit">gdoc help</code>, six ways, side by side.</p>
+        <p class="meta">Each window is still 80 columns, shown smaller. Open a direction for its full set of screens.</p>
+      </div>
+    </div>
+    <div class="cmp-grid" data-compare></div>
+  </div>
+</section>
+
+<section class="block" id="quiet-pro">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">1</div>
+      <div>
+        <h2>Quiet Pro <span class="pick">Pick 1</span></h2>
+        <p class="pitch">Say less and line it up well. One blue accent does all the pointing.</p>
+        <p class="meta"><b>Inspired by</b> GitHub CLI, Vercel CLI, Stripe CLI.</p>
+        <p class="note"><b>Designer's view.</b> The safe pick, and it will still look right in five years. The grouping by job does most of the work, not the colour. Green and red appear only on a step's outcome.</p>
+      </div>
+    </div>
+    <div class="pal" data-pal="quiet-pro"></div>
+    <div class="wins" data-dir="quiet-pro"></div>
+    <div class="eng-notes" data-direction="quiet-pro"><h4>Engineering notes</h4>
+<p class="cost">Build cost <b>2</b>/5: four SGR codes (bold, dim, one accent, reset) and a regrouped help list. No width or depth detection is needed.</p>
+<ul>
+<li>To build: a <code>group</code> field on each row of the one command table in <code>go/cmd/gdoc/commands.go</code>, and <code>helpList</code> in <code>go/cmd/gdoc/help.go:152-167</code> walking groups. The group stays out of the JSON from <code>helpEntries</code> (<code>help.go:101-122</code>), so no skill contract changes.</li>
+<li>One accent from the 16 ANSI colours (for example cyan, the spinner colour at <code>progress.go:30</code>) works on every terminal, light or dark, because the user's theme picks the shade. Truecolor is optional, not needed.</li>
+<li>Degrades well. Dim (SGR 2) is ignored by some terminals and the text just stays normal. At 80 columns it soft-wraps exactly as today, because nothing is boxed.</li>
+<li>Piped and skill runs stay plain: <code>cmdHelp</code> writes to <code>errOut</code> (<code>help.go:64-79</code>), and tests pass a <code>bytes.Buffer</code>, which is never a terminal (<code>progress.go:113-125</code>). <code>TestHelpIsOneObjectAndTheProseIsOnStderr</code> (<code>help_test.go:66</code>) checks substrings only, so regrouping does not break it.</li>
+<li>No rule collision. Fewest new words on screen of the six, which fits principle 4.</li>
+</ul>
+<p>Needs: TTY check and NO_COLOR only (both exist today). No width, no colour depth, no new state.</p></div>
+  </div>
+</section>
+
+<section class="block" id="charm">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">2</div>
+      <div>
+        <h2>Charm <span class="pick">Pick 2</span></h2>
+        <p class="pitch">Pastel pills, rounded cards and room to breathe. Friendly, a little playful, still exact.</p>
+        <p class="meta"><b>Inspired by</b> Lip Gloss, Glow, Gum and Fang from Charm.</p>
+        <p class="note"><b>Designer's view.</b> The warmest of the six. Pills and padding cost rows: help grows to about 60 lines. It suits colleagues who are not engineers and run gdoc through a skill once a week.</p>
+      </div>
+    </div>
+    <div class="pal" data-pal="charm"></div>
+    <div class="wins" data-dir="charm"></div>
+    <div class="eng-notes" data-direction="charm"><h4>Engineering notes</h4>
+<p class="cost">Build cost <b>3</b>/5: a box renderer with hard word wrap, three palettes per colour (truecolor, 256, 16), and golden tests for each.</p>
+<ul>
+<li>To build: Lip Gloss is out (allowlist at <code>go/boundary/boundary_test.go:369-388</code>), so boxes, padding and pills are hand-rolled: a display-width function that skips escape codes, a word wrapper, and a border drawer. Roughly 200 lines on top of the foundation.</li>
+<li>Width is required. Command summaries run 60 to 90 characters, so inside a padded box at 80 columns most wrap to two lines. A box that soft-wraps instead breaks its right border, so the wrap must be ours.</li>
+<li>Light backgrounds fail. Pastels near 0.6 luminance (a typical pink or lavender) give about 1.6:1 contrast on white, which is unreadable, and the binary cannot learn the background (see foundation). Pills with a pastel background and dark text survive both; pastel text does not.</li>
+<li>On a 16-colour terminal pastels collapse to the theme's bright magenta and cyan, which reads loud, the opposite of the intent. Pills become blocks of the theme's colour.</li>
+<li>Windows: legacy console fonts may lack the rounded arcs (U+256D to U+2570) and show boxes or question marks. Windows is built by <code>make dist</code> (<code>Makefile:50</code>) but not yet released (<code>release/platforms:8-14</code>).</li>
+</ul>
+<p>Needs: width detection, colour depth detection. No new state.</p></div>
+  </div>
+</section>
+
+<section class="block" id="altery-house">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">3</div>
+      <div>
+        <h2>Altery House <span class="pick">Pick 3</span></h2>
+        <p class="pitch">gdoc looks like the documents it makes: navy, teal, orange and peach, straight from the house style.</p>
+        <p class="meta"><b>Inspired by</b> <code>go/internal/house/house.yaml</code>: the navy headings, the teal third level, the orange running head, the grey header rule and the peach and blue-grey table fills.</p>
+        <p class="note"><b>Designer's view.</b> The branded pick. The navy banner is loud, so it appears only on <code>help</code>. Other commands get a one-line band. Help groups are numbered like the house headings, and the flag table copies the house table header.</p>
+      </div>
+    </div>
+    <div class="pal" data-pal="altery-house"></div>
+    <div class="wins" data-dir="altery-house"></div>
+    <div class="eng-notes" data-direction="altery-house"><h4>Engineering notes</h4>
+<p class="cost">Build cost <b>3</b>/5: brand hex needs depth detection and a 256 and 16 fallback, and the navy fails on dark terminals, so it needs a second, terminal-only palette.</p>
+<ul>
+<li>The colours exist: <code>go/internal/house/house.yaml:19-27</code> (navy <code>#22265F</code>, teal <code>#549F99</code>, orange <code>#FF771C</code>). Teal and orange read on both backgrounds (about 6.8:1 and 7.9:1 on black, 3.1:1 and 2.7:1 on white, so bold only on white). Navy is about 1.4:1 on black: invisible on a dark terminal. So "brand colours from house.yaml" holds for two of three, and navy needs a lighter terminal tint that house.yaml does not carry.</li>
+<li>Reading the colours from <code>internal/house</code> at run time ties help to the docx style file. A house-style test must state its value as a literal (CLAUDE.md invariant, <code>TestHeadingNumberingIsTheLiteralFormat</code>), so the terminal palette tests repeat the hex values rather than read the constants.</li>
+<li>The notice line is easy to style: it is one string written in one place (<code>help.go:70-72</code>). A filled callout block needs width to pad the background to an even edge. A left bar (one coloured glyph per line) needs no width and drops the cost to 2.</li>
+<li>The wordmark banner adds lines to every help and to bare <code>gdoc</code> (<code>main.go:104</code>). Principle 4: "if the reader does not need it, remove it". One coloured line that keeps the version (the reason <code>versionHeading</code> exists, <code>help.go:142-150</code>) passes; a multi-line banner is hard to defend.</li>
+<li>On 16 colours the brand is gone: teal becomes the theme's cyan and orange the theme's yellow or red.</li>
+</ul>
+<p>Needs: colour depth detection; width only for a filled callout. No new state.</p></div>
+  </div>
+</section>
+
+<section class="block" id="panels">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">4</div>
+      <div>
+        <h2>Panels <span class="pick">Pick 4</span></h2>
+        <p class="pitch">Everything in a titled box, help as a two-column table, and a status bar on the last line.</p>
+        <p class="meta"><b>Inspired by</b> k9s, btop, lazygit. Tokyo Night colours.</p>
+        <p class="note"><b>Designer's view.</b> The most dashboard-like. A table keeps long descriptions tidy at 80 columns. It stays static, because gdoc never reads stdin. The account in the status bar needs <code>help</code> to read the token file, which it does not do today.</p>
+      </div>
+    </div>
+    <div class="pal" data-pal="panels"></div>
+    <div class="wins" data-dir="panels"></div>
+    <div class="eng-notes" data-direction="panels"><h4>Engineering notes</h4>
+<p class="cost">Build cost <b>5</b>/5: a small layout engine, a pinned status bar, and an account name the binary cannot know without a network call or a new OAuth scope.</p>
+<ul>
+<li>Hard blocker for the status bar's account. The token file carries no account: <code>Account</code> is a pass-through field gdoc never writes (<code>go/internal/auth/auth.go:59-76</code>), and the token on this machine has no such key. gdoc asks only for the Drive and Docs scopes (<code>go/internal/auth/login.go:43-44</code>), so there is no id_token or email. Getting it means <code>drive.about.get</code>, which the guard refuses (<code>go/internal/guard/doc.go:460-461</code>), or a new <code>openid email</code> scope and a fresh consent for every user. Either one is a DECISIONS.md entry. A network call during help also breaks "help is the one command that asks unasked, once in 24 hours" (CLAUDE.md invariants).</li>
+<li>Version and channel are free: <code>releaseVersion</code> (<code>main.go:40-45</code>) and <code>Version.IsStable</code> (<code>go/internal/update/version.go:105</code>), since the channel is the patch number. Token present or expired is free too, from <code>auth.Status</code>, a local file read.</li>
+<li>A bar pinned to the bottom row needs the row count (ioctl again) and a scroll region or the alternate screen. The alternate screen erases help on exit, which defeats help. A scroll region leaves the terminal broken if gdoc is killed mid-run.</li>
+<li>Two-column help does not fit 80 columns: about 38 columns per side against 60 to 90 character summaries means three lines each, or truncation that drops words a skill author relies on. It must fall back to one column below roughly 120 columns.</li>
+<li>Box drawing on every line breaks the moment one line is too long, so every string (paths, error reasons from <code>progress.go:329</code>) must go through our own wrap and width code.</li>
+</ul>
+<p>Needs: width and height detection, colour depth detection, and state the binary does not have (the account name).</p></div>
+  </div>
+</section>
+
+<section class="block" id="phosphor">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">5</div>
+      <div>
+        <h2>Phosphor <span class="pick">Pick 5</span></h2>
+        <p class="pitch">An amber CRT. A block-letter banner, boot-log progress and uppercase labels.</p>
+        <p class="meta"><b>Inspired by</b> the VT220, the systemd boot log, BBS banners. The scanlines and glow exist only in this preview; a real terminal draws flat colour.</p>
+        <p class="note"><b>Designer's view.</b> The fun one. Memorable in a demo and tiring every day. Best as an opt-in theme, not the default. Failure uses reverse video instead of red, so it stays one colour.</p>
+        <div class="toggle" role="group" aria-label="Phosphor colour"><button type="button" data-phos="amber" aria-pressed="true">Amber</button><button type="button" data-phos="green" aria-pressed="false">Green</button></div>
+      </div>
+    </div>
+    <div class="pal" data-pal="phosphor"></div>
+    <div class="wins" data-dir="phosphor"></div>
+    <div class="eng-notes" data-direction="phosphor"><h4>Engineering notes</h4>
+<p class="cost">Build cost <b>2</b>/5: two colours and a fixed ASCII banner are cheap; the cost is in what it breaks, not in the code.</p>
+<ul>
+<li>To build: an embedded block-letter banner (pure ASCII, so it survives every Windows font), uppercase labels in <code>helpList</code> and <code>helpOne</code> (<code>help.go:152-195</code>), and amber or green from the foundation's SGR helpers.</li>
+<li>Light backgrounds fail. Amber and bright yellow on white are near 1:1. The binary cannot detect the background. The workaround, painting a black background (SGR 40), needs width to pad every line to the edge and overrides the user's theme.</li>
+<li>Amber is not one of the 16 ANSI colours. On a 16-colour terminal it becomes the theme's yellow, which varies from mustard to lemon. True amber needs 256 or truecolor.</li>
+<li>Principle 4 collision: a five or six line banner on every <code>gdoc help</code> and on every bare <code>gdoc</code> (<code>main.go:104</code>) carries no information. Uppercase labels also read slower than mixed case.</li>
+<li>The banner must stay off non-terminal stderr. Help is the first call of every skill session (<code>notice.go:3-6</code>), and those runs must stay plain (<code>cmd/gdoc/doc.go:349-351</code>).</li>
+</ul>
+<p>Needs: colour depth detection for true amber; width only if it paints its own background. No new state.</p></div>
+  </div>
+</section>
+
+<section class="block" id="timeline">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">6</div>
+      <div>
+        <h2>Timeline <span class="pick">Pick 6</span></h2>
+        <p class="pitch">Progress reads top to bottom like a deploy log, with durations on the right. Help reads like a tree.</p>
+        <p class="meta"><b>Inspired by</b> Vercel and Railway deploy logs, <code>tree</code>, the Tailwind slate scale.</p>
+        <p class="note"><b>Designer's view.</b> The strongest <code>update</code> of the six: a vertical line and a time per step make a slow download feel calm. The tree shows the four groups at a glance. Calm colours that survive a light profile.</p>
+      </div>
+    </div>
+    <div class="pal" data-pal="timeline"></div>
+    <div class="wins" data-dir="timeline"></div>
+    <div class="eng-notes" data-direction="timeline"><h4>Engineering notes</h4>
+<p class="cost">Build cost <b>3</b>/5: progress.go already has the step model; the work is connector rows in the redraw, a clock per step, right-aligned durations, and a tree printer for help.</p>
+<ul>
+<li>Builds on what exists. <code>progress.go</code> already has pending, running, done and failed states and an in-place redraw (<code>progress.go:57-71</code>, <code>288-313</code>). The timeline is a different <code>stepLines</code>, plus connector rows that the redraw counts in <code>p.drawn</code>, or the cursor moves up too few rows.</li>
+<li>Durations need a start time per step (new, small) behind an injectable clock, or the tests are not deterministic. Keep durations on the terminal path only: <code>TestAnUpdateNarratesItsStepsOnStderr</code> (<code>update_test.go:637</code>) pins the plain lines byte for byte.</li>
+<li>Right alignment needs real width. Today the live width is a hardcoded 78 (<code>progress.go:47-50</code>). Without width, durations sit at a fixed column, which is still fine at 80 columns.</li>
+<li>Today only <code>gdoc update</code> draws progress (<code>update.go:235-245</code>). The value grows only if propose, publish or restyle adopt the step list too, which is separate work.</li>
+<li>Help as a tree (├ ╰ glyphs, all width 1) is cheap with groups from <code>quiet-pro</code>; flags as leaves make the full help two to three times longer, so keep flags for <code>gdoc help &lt;command&gt;</code>.</li>
+</ul>
+<p>Needs: width detection (for right alignment), a clock per step. No colour depth detection beyond the 16 colours used today.</p></div>
+  </div>
+</section>
+
+<section class="block" id="foundation">
+  <div class="wrap">
+    <div class="shead">
+      <div class="num">&#9881;</div>
+      <div>
+        <h2>What every direction sits on</h2>
+        <p class="pitch">The senior engineer's view: the shared base, its size, and the six ranked by value for cost.</p>
+      </div>
+    </div>
+    <div class="eng-notes" data-direction="foundation"><h4>Hard facts every direction sits under</h4>
+<ul>
+<li>Three modules only: etree, go-yaml, goldmark (<code>go/go.mod:5-10</code>), each named in <code>allowedModules</code> (<code>go/boundary/boundary_test.go:369-388</code>). <code>TestNoThirdPartyDependencies</code> (<code>:392</code>) fails on a fourth, including a go.sum entry. <code>TestAllowedModulesAreReallyRequired</code> (<code>:412</code>) fails the other way. SPEC.md says "Everything else is the standard library" (<code>docs/v2/SPEC.md:62-63</code>). So Lip Gloss, Bubble Tea, termenv, x/term, fatih/color and golang.org/x/sys are all out without a DECISIONS.md entry and a SPEC reason. x/sys is not in go.mod or go.sum.</li>
+<li>stdout is one JSON object (<code>main.go:64-78</code>). All human words go to stderr: help (<code>help.go:71-73</code>), the login link (<code>auth/login.go:245</code>, pinned by <code>TestLoginPrintsTheURLToStderrNotStdout</code>, <code>login_test.go:27</code>), and the update steps (<code>TestAnUpdateNarratesItsStepsOnStderr</code>, <code>update_test.go:637</code>). No direction needs to change that.</li>
+<li>Non-terminal stderr stays plain, NO_COLOR honoured: <code>cmd/gdoc/doc.go:349-358</code> and <code>progress.go:113-131</code>, pinned by <code>TestAPipedRunPrintsOneLinePerFinishedStep</code> and <code>TestNoColorKeepsTheRedrawAndDropsTheColour</code>.</li>
+<li>No external programs: <code>TestNothingRunsAnExternalProgram</code> (<code>boundary_test.go:308-321</code>) bans <code>os/exec</code> and <code>syscall/js</code>. So no <code>tput</code> or <code>stty</code>. Plain <code>syscall</code> and <code>unsafe</code> are not banned, and <code>cmd/gdoc/read.go:20</code> already imports <code>syscall</code>.</li>
+</ul>
+<h4>Width without x/term</h4>
+<ul>
+<li>darwin and linux: <code>syscall.Syscall(syscall.SYS_IOCTL, fd, syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&amp;ws)))</code>. Both constants are in the stdlib for darwin and linux. On darwin this goes through libc's <code>syscall()</code>, which Apple marks deprecated but still ships. About 20 lines in a <code>//go:build darwin || linux</code> file. Linux matters because CI runs on ubuntu (<code>.github/workflows/go.yml:12</code>).</li>
+<li>Windows: <code>syscall.NewLazyDLL("kernel32.dll")</code> and <code>GetConsoleScreenBufferInfo</code>, about 30 lines in a <code>_windows.go</code> file. CI cross-builds it on every push (<code>go.yml:27-28</code>, <code>Makefile:50</code>), so a compile error is caught.</li>
+<li><code>COLUMNS</code> is a weak fallback: bash and zsh set it but do not export it, so a child process usually sees it empty. Use it as an override (handy in tests), then ioctl, then 80.</li>
+<li>Existing gap, worth a backlog item: on Windows, <code>isTerminal</code> is true for a console, and <code>progress.go</code> already writes ANSI codes there without setting <code>ENABLE_VIRTUAL_TERMINAL_PROCESSING</code>. Windows Terminal copes; the classic console prints raw escapes. The foundation should set that mode once, through the same lazy kernel32 load, and fall back to plain if it fails. This belongs on <code>docs/backlog/windows-rollout-checklist.md</code>.</li>
+</ul>
+<h4>Colour depth and background</h4>
+<ul>
+<li>Depth: <code>COLORTERM</code> is <code>truecolor</code> or <code>24bit</code> gives 24-bit; <code>TERM</code> ending <code>-256color</code> gives 256; else 16. <code>TERM=dumb</code> gives none. All env reads, no I/O.</li>
+<li>Background: the OSC 11 query needs a reply read from the terminal, and the binary never reads stdin (CLAUDE.md invariants). <code>COLORFGBG</code> is set by a few terminals only, not by Apple Terminal. So treat the background as unknown. Palettes must use mid-luminance colours that read on both (teal and orange qualify, navy and pastels do not), or stay with the 16 ANSI colours, which the user's theme already tuned for their background.</li>
+</ul>
+<h4>The shared foundation</h4>
+<p>One new package, <code>go/internal/tty</code>, stdlib only. Inside: a <code>Profile</code> (is a terminal, colour on or off, depth, width) from one <code>Detect(w io.Writer)</code>; <code>isTerminal</code> and <code>wantsColour</code> moved out of <code>progress.go</code>; SGR helpers (bold, dim, fg, bg, reset) that return the bare string when colour is off; hex to 256 and hex to 16 fallback; a visible-width function that skips escape codes; a word wrap; the two width files and a fallback file for other platforms. About 250 to 300 lines of code and a similar amount of tests.</p>
+<ul>
+<li>It needs <code>doc.go</code> with exactly one <code>Package tty</code> comment that names a test per rule (CLAUDE.md, <code>TestEveryPackageHasExactlyOnePackageComment</code>). The build-tagged files open with a file comment separated by a blank line from <code>package</code>.</li>
+<li>New rows in CLAUDE.md's two tables, kept under 300 lines (<code>TestCLAUDEmdIsUnderTheCeiling</code>, <code>TestTheTaskMapNamesFilesThatExist</code>).</li>
+<li>Tests: a pipe and a buffer are plain; NO_COLOR and <code>TERM=dumb</code> turn colour off; depth from COLORTERM and TERM, as literals; hex to 256 and 16 against literal codes; width from COLUMNS, then 80; wrap never exceeds the width; visible width ignores escapes.</li>
+<li>Two boundary siblings in <code>go/boundary</code>: no <code>\x1b[</code> literal outside <code>internal/tty</code> (like <code>TestNetHTTPStaysInItsRooms</code>), and every command's human text written into a buffer carries no 0x1b byte. The existing progress tests (<code>TestOnlyACharDeviceIsATerminal</code>, <code>TestATerminalRunRedrawsInPlaceAndColours</code>) move or gain siblings in the new package.</li>
+<li>Any milestone plan for this carries the Principles block. Principle 4 is the one most of these directions strain.</li>
+</ul>
+<h4>Ranking by value for cost</h4>
+<ol>
+<li><b>quiet-pro</b> (2): grouped help is the biggest readability gain, and it is safe on every terminal and background.</li>
+<li><b>timeline</b> (3): grows the progress code that exists. Worth it once a second command draws steps.</li>
+<li><b>altery-house</b> (3): brand recognition, but navy fails on dark terminals and the banner fights principle 4. A teal accent on top of quiet-pro gets most of the value for less.</li>
+<li><b>phosphor</b> (2): cheap code, little value, fails on light backgrounds, banner fights principle 4.</li>
+<li><b>charm</b> (3): looks best in a screenshot, fails on light backgrounds and on 16 colours, and needs the full wrap and box engine.</li>
+<li><b>panels</b> (5): highest cost, worst at 80 columns, and the account in the status bar is a hard blocker without a new scope or a guard change.</li>
+</ol>
+<p>A reasonable pick: quiet-pro for help, the timeline marks for progress, and teal from house.yaml as the one accent.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    Every window is generated in this page from one table of gdoc's real help text, so the alignment is computed, not typed. Swatches show truecolor on the left and the nearest xterm 256 colour on the right.
+  </div>
+</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- gdoc's real words ---------- */
+var W = 80;
+var V = "v2.8.0";
+var SPIN = ["⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"];
+var ORDER = ["auth status","auth login","read","comments","suggestions","export","restyle","probe","reply","propose","withdraw","annotate","build","publish","update","help","completion"];
+var DESC = {
+  "auth status":"Say whether gdoc has a token, when it expires, and what it may reach.",
+  "auth login":"Print the Google sign-in URL and wait for the browser to come back.",
+  "read":"Print the document as text, with the ids a comment or a suggestion is named by.",
+  "comments":"List the comment threads with their ranges, their replies and the next cursor.",
+  "suggestions":"List the suggestions pending in the document.",
+  "export":"Write the document into the hub as Markdown, one file per tab, with its pictures beside it.",
+  "restyle":"Survey a document against the house style, or apply that style where the document stands.",
+  "probe":"Create a throwaway document and say whether Docs honours a suggestion today.",
+  "reply":"Write one reply into a comment thread, under the robot prefix.",
+  "propose":"Propose changes as native suggestions, each with the comment that says why.",
+  "withdraw":"Take back one pending suggestion, and only one gdoc proposed itself.",
+  "annotate":"Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
+  "build":"Build the note as a house-style docx on this machine, with no network at all.",
+  "publish":"Build the note as a house-style document and upload it into one folder.",
+  "update":"Replace this gdoc with the newest release, or say what one would take.",
+  "help":"Print every command gdoc takes, or the words and flags of one.",
+  "completion":"Write the completion script for one shell, and say the line that turns it on."
+};
+var GROUPS = [
+  {name:"Read", cmds:["read","comments","suggestions","export"]},
+  {name:"Write into a doc", cmds:["reply","propose","withdraw","annotate","restyle"]},
+  {name:"Make a doc", cmds:["build","publish"]},
+  {name:"Account and tool", cmds:["auth status","auth login","update","probe","help","completion"]}
+];
+var NOTICE_RAW = "gdoc v2.9.0 is published and this is v2.8.0. `gdoc update` installs it.";
+var NOTICE = NOTICE_RAW.replace(/`/g,"");
+var FOOT = "Run gdoc help <command> for the words and flags one takes.";
+var PUB_USAGE = "gdoc publish --md <file> --folder-id <folder id> [--house <file>]";
+var PUB_FLAGS = [["--md <file>","the note to publish"],["--folder-id <folder id>","the Drive folder the document is created in"],["--house <file>","a house style file other than the one inside gdoc"]];
+var PUB_EX = "gdoc publish --md note.md --folder-id 1AbC...";
+var LOGIN = "Open this link in your browser to sign in:";
+var WAIT = "waiting for the browser to come back";
+var URL = "https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=000000000000-example.apps.googleusercontent.com&code_challenge=Q3v8kLm2Nf7Rp1Ws9Yb4Hc6Jd0Ge5Ua8Zi2Ko7Tx&code_challenge_method=S256&prompt=consent&redirect_uri=http%3A%2F%2F127.0.0.1%3A53682%2F&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdocuments&state=k2Jf8sLq0Zx4";
+var UNKNOWN = 'unknown command "frobnicate".';
+
+var STEPS = [
+  {n:"read releases",   run:"",                                    done:"nhusnullin/gdoc, 23 listed",                    d:0.4},
+  {n:"choose release",  run:"",                                    done:"v2.9.0, stable, darwin-arm64, from v2.8.0",     d:0.0},
+  {n:"read checksums",  run:"SHA256SUMS-v2.9.0",                   done:"SHA256SUMS-v2.9.0",                             d:0.2},
+  {n:"download",        run:"gdoc-v2.9.0-darwin-arm64.zip, 6.1 MB", done:"gdoc-v2.9.0-darwin-arm64.zip, 6.1 MB",          d:1.8},
+  {n:"verify checksum", run:"",                                    done:"matches SHA256SUMS-v2.9.0",                     d:0.0},
+  {n:"replace binary",  run:"~/.local/bin/gdoc",                   done:"~/.local/bin/gdoc, the old one kept beside it", d:0.1},
+  {n:"read back",       run:"",                                    done:"sha256 3f9a0c7e12b4",                           d:0.0}
+];
+
+function upd(kind, t){
+  if (t === undefined) t = 0.38;
+  function mk(s, st, extra){
+    var o = {name:s.n, detail: st === "done" ? s.done : (st === "run" ? s.run : ""), st:st, dur:s.d};
+    for (var k in (extra||{})) o[k] = extra[k];
+    return o;
+  }
+  var R = {steps:[], result:null, rk:null, to:"v2.9.0"};
+  if (kind === "run") {
+    R.steps = STEPS.map(function(s,i){ return i < 3 ? mk(s,"done") : i === 3 ? mk(s,"run",{prog:t, dur:t*1.8}) : mk(s,"pend"); });
+  } else if (kind === "done") {
+    R.steps = STEPS.map(function(s){ return mk(s,"done"); });
+    R.result = "gdoc v2.9.0 installed. gdoc update --rollback goes back."; R.rk = "ok";
+  } else if (kind === "fail") {
+    R.steps = STEPS.slice(0,5).map(function(s,i){ return i < 4 ? mk(s,"done") : mk(s,"fail",{reason:"checksum mismatch: want 3f9a…, got 71c2…"}); });
+    R.rk = "fail";
+  } else if (kind === "offline") {
+    R.steps = [mk(STEPS[0],"fail",{reason:"dial tcp: lookup api.github.com: no such host", dur:2.0})];
+    R.result = "GitHub did not answer, so the gdoc here is unchanged."; R.rk = "warn"; R.to = null;
+  } else if (kind === "uptodate") {
+    R.steps = [mk(STEPS[0],"done"), mk(STEPS[1],"done",{detail:"v2.8.0, stable, darwin-arm64, from v2.8.0"})];
+    R.result = "Nothing newer to install."; R.rk = "same"; R.to = null;
+  }
+  R.total = R.steps.reduce(function(a,s){ return a + (s.dur||0); }, 0);
+  return R;
+}
+
+/* ---------- line toolkit ---------- */
+function S(t, c, st){ return {t:String(t), c:c||"", st:st||""}; }
+function clen(s){ return Array.from(s).length; }
+function len(l){ return l.reduce(function(n,s){ return n + clen(s.t); }, 0); }
+function sp(n){ return S(" ".repeat(Math.max(0,n))); }
+function rp(s,n){ return s + " ".repeat(Math.max(0, n - clen(s))); }
+function fill(l, w, c){ var n = w - len(l); return n > 0 ? l.concat([S(" ".repeat(n), c||"")]) : l; }
+function spread(l, r, w, c){ return fill(l, (w||W) - len(r), c).concat(r); }
+function bgify(segs, bg){ return segs.map(function(s){ return S(s.t, (s.c ? s.c + " " : "") + bg, s.st); }); }
+function strip(L){ return L.map(function(l){ return l.map(function(s){ return S(s.t); }); }); }
+function wrap(text, w){
+  var words = text.split(" "), out = [], cur = "";
+  words.forEach(function(wd){
+    if (!cur) cur = wd;
+    else if (clen(cur) + 1 + clen(wd) <= w) cur += " " + wd;
+    else { out.push(cur); cur = wd; }
+  });
+  if (cur) out.push(cur);
+  return out;
+}
+var CODES = ["gdoc update --rollback","gdoc help <command>","gdoc update"];
+function hl(text, base, code){
+  var out = [], i = 0;
+  while (i < text.length) {
+    var at = text.length, hit = null;
+    CODES.forEach(function(c){ var j = text.indexOf(c, i); if (j >= 0 && j < at) { at = j; hit = c; } });
+    if (!hit) { out.push(S(text.slice(i), base)); break; }
+    if (at > i) out.push(S(text.slice(i, at), base));
+    out.push(S(hit, code));
+    i = at + hit.length;
+  }
+  return out;
+}
+function flow(items, width, ic, sep, sc, firstCut){
+  var lines = [], cur = [], n = 0, lim = width - (firstCut||0);
+  items.forEach(function(it, i){
+    var s = i < items.length - 1 ? sep : "";
+    var need = clen(it) + clen(s.replace(/\s+$/,""));
+    if (cur.length && n + need > lim) {
+      var last = cur[cur.length-1]; cur[cur.length-1] = S(last.t.replace(/\s+$/,""), last.c);
+      lines.push(cur); cur = []; n = 0; lim = width;
+    }
+    cur.push(S(it, ic)); n += clen(it);
+    if (s) { cur.push(S(s, sc)); n += clen(s); }
+  });
+  if (cur.length) lines.push(cur);
+  return lines;
+}
+function entries(cmds, o){
+  var pw = o.prefix ? o.pw : o.indent;
+  var dw = (o.width||W) - pw - o.nameW - o.gap;
+  var out = [];
+  cmds.forEach(function(c, ci){
+    var lastC = ci === cmds.length - 1;
+    wrap(DESC[c], dw).forEach(function(d, i){
+      var pre = o.prefix ? o.prefix(lastC, i === 0) : [sp(o.indent)];
+      out.push(pre.concat([i === 0 ? S(rp(c, o.nameW), o.nc) : sp(o.nameW), sp(o.gap), S(d, o.dc)]));
+    });
+  });
+  return out;
+}
+function usage(str, cc, fc, ac){
+  var out = [], re = /(--[\w-]+)|(<[^>]+>)|([\[\]])|(\s+)|([^\s\[\]<]+)/g, m;
+  while ((m = re.exec(str))) {
+    if (m[1]) out.push(S(m[1], fc));
+    else if (m[2]) out.push(S(m[2], ac));
+    else if (m[3]) out.push(S(m[3], ac));
+    else if (m[4]) out.push(S(m[4]));
+    else out.push(S(m[5], cc));
+  }
+  return out;
+}
+function flagSegs(f, fc, ac, w){
+  var i = f.indexOf(" "), l = [S(f.slice(0,i), fc), S(f.slice(i), ac)];
+  return w ? fill(l, w) : l;
+}
+function urlLines(cls){ var out = []; for (var i = 0; i < URL.length; i += W) out.push([S(URL.slice(i, i+W), cls)]); return out; }
+function P(cmd){ return [S("~/hub","dim"), S(" $ ","dim"), S(cmd,"fg")]; }
+function pct(t){ return (Math.round(t*100) + "%").padStart(4, " "); }
+function bytes(t){ return (6.1*t).toFixed(1) + " / 6.1 MB"; }
+function dur(x){ return x.toFixed(1) + "s"; }
+function hex2rgb(h){ h = h.replace("#",""); return [0,2,4].map(function(i){ return parseInt(h.slice(i,i+2),16); }); }
+function lerp(a, b, f){ var A = hex2rgb(a), B = hex2rgb(b); return "rgb(" + A.map(function(v,i){ return Math.round(v + (B[i]-v)*f); }).join(",") + ")"; }
+function gradBar(n, t, c1, c2){
+  /* a terminal draws k truecolor cells of █; the preview paints the same run as one gradient */
+  var k = Math.round(n*t), out = [];
+  if (k) out.push(S(" ".repeat(k), "", "background:linear-gradient(90deg," + c1 + "," + lerp(c1, c2, n > 1 ? (k-1)/(n-1) : 0) + ")"));
+  out.push(S("░".repeat(n-k), "dim"));
+  return out;
+}
+function solidBar(n, t, ch, fc, ech, ec){ var k = Math.round(n*t); return [S(ch.repeat(k), fc), S(ech.repeat(n-k), ec)]; }
+
+var ROUND = {tl:"╭",tr:"╮",bl:"╰",br:"╯",h:"─",v:"│"};
+function box(content, o){
+  var ch = o.ch || ROUND, ind = o.ind || 0, px = o.px === undefined ? 1 : o.px, bc = o.bc || "line";
+  var inner = o.w - 2, cw = inner - 2*px;
+  var top = [sp(ind), S(ch.tl, bc)], used = 0;
+  if (o.title) { top.push(S(ch.h + " ", bc)); top = top.concat(o.title); top.push(S(" ", bc)); used = 3 + len(o.title); }
+  top.push(S(ch.h.repeat(inner - used), bc)); top.push(S(ch.tr, bc));
+  var out = [top];
+  content.forEach(function(l){
+    out.push([sp(ind), S(ch.v, bc), S(" ".repeat(px))].concat(fill(l, cw), [S(" ".repeat(px)), S(ch.v, bc)]));
+  });
+  out.push([sp(ind), S(ch.bl + ch.h.repeat(inner) + ch.br, bc)]);
+  return out;
+}
+
+/* panel rules for the Panels direction: runs of ─ with an optional junction and titles */
+function prule(l, m, r, w1, w2, tl, tr, bc){
+  bc = bc || "line";
+  var a = tl ? [S("─ ", bc)].concat(tl, [S(" " + "─".repeat(w1 - 3 - len(tl)), bc)]) : [S("─".repeat(w1), bc)];
+  var b = tr ? [S("─".repeat(w2 - 3 - len(tr)) + " ", bc)].concat(tr, [S(" ─", bc)]) : [S("─".repeat(w2), bc)];
+  return [S(l, bc)].concat(a, m ? [S(m, bc)] : [], b, [S(r, bc)]);
+}
+function prow1(segs){ return [S("│ ","line")].concat(fill(segs, 76), [S(" │","line")]); }
+function prow2(c1, w1, c2, w2){ return [S("│ ","line")].concat(fill(c1, w1), [S(" │ ","line")], fill(c2, w2), [S(" │","line")]); }
+
+function glyph(st, frame, set){ return st === "run" ? SPIN[frame % 10] : set[st]; }
+
+/* ---------- 1. Quiet Pro ---------- */
+var QP = {
+  help: function(o){
+    var L = [P(o.prompt || "gdoc help")];
+    L.push(o.plain ? [S(NOTICE_RAW)] : [S("● ","a1")].concat(hl(NOTICE,"mid","a1")));
+    L.push([], [S("gdoc","fg b"), S(" " + V,"dim")], [], [S("USAGE","fg b")], [sp(2), S("gdoc ","fg"), S("<command> [words] [flags]","a1")]);
+    GROUPS.forEach(function(g){
+      L.push([], [S(g.name.toUpperCase(),"fg b")]);
+      L = L.concat(entries(g.cmds, {indent:2, nameW:12, gap:2, nc:"fg b", dc:"dim"}));
+    });
+    L.push([], hl(FOOT,"dim","a1"));
+    return o.plain ? strip(L) : L;
+  },
+  publish: function(){
+    var L = [P("gdoc help publish"), [S("gdoc","fg b"), S(" " + V,"dim")], [], [S(DESC.publish,"fg")], [], [S("USAGE","fg b")],
+      [sp(2)].concat(usage(PUB_USAGE,"fg b","a1","dim")), [], [S("FLAGS","fg b")]];
+    PUB_FLAGS.forEach(function(f){ L.push([sp(2)].concat(flagSegs(f[0],"a1","dim",23), [sp(2), S(f[1],"mid")])); });
+    L.push([], [S("EXAMPLE","fg b")], [sp(2), S("$ ","dim"), S(PUB_EX,"fg")]);
+    return L;
+  },
+  update: function(kind, o){
+    var u = upd(kind, o.t), L = [P("gdoc update"), [S("gdoc update","fg b")]];
+    var G = {done:["✓","ok"], pend:["·","dim"], fail:["✗","err"]};
+    u.steps.forEach(function(s){
+      var g = s.st === "run" ? [SPIN[o.frame%10],"a1"] : G[s.st];
+      var nc = {done:"fg", run:"fg b", pend:"dim", fail:"err b"}[s.st];
+      var line = [sp(2), S(g[0], g[1]), sp(1), S(rp(s.name,17), nc), S(s.detail,"dim")];
+      if (s.st === "run") line.push(S("  " + pct(s.prog).trim(),"a1"));
+      L.push(line);
+      if (s.st === "fail") wrap(s.reason, 74).forEach(function(r){ L.push([sp(4), S(r,"err")]); });
+    });
+    if (u.result) { L.push([]); L.push(u.rk === "ok" ? hl(u.result,"fg b","a1") : [S(u.result,"fg")]); }
+    return L;
+  },
+  login: function(o){
+    return [P("gdoc auth login"), [S(LOGIN,"fg")]].concat(urlLines("a1 u"), [[], [S(SPIN[o.frame%10],"a1"), S(" Waiting for the browser to come back","dim")]]);
+  },
+  error: function(){
+    var L = [P("gdoc frobnicate"), [S("✗ ","err"), S(UNKNOWN,"fg b")]];
+    flow(ORDER, 76, "mid", ", ", "dim", 10).forEach(function(l, i){ L.push([sp(2)].concat(i === 0 ? [S("Commands: ","dim")] : [], l)); });
+    L.push([], [sp(2)].concat(hl(FOOT,"dim","a1")));
+    return L;
+  },
+  plain: function(){ return QP.help({plain:true, prompt:"gdoc help 2>&1 | cat"}); },
+  extra: {title:"gdoc comment", cap:"<span class=\"new\">New</span>A near miss names the closest command. It still refuses and still exits non-zero.", fn:function(){
+    return [P("gdoc comment"), [S("✗ ","err"), S('unknown command "comment".',"fg b")], [sp(2), S("Did you mean ","dim"), S("comments","a1 b"), S("?","dim")], [], [sp(2)].concat(hl(FOOT,"dim","a1"))];
+  }}
+};
+
+/* ---------- 2. Charm ---------- */
+function pill(t, c){ return S(" " + t + " ", "bg-" + c + " on b"); }
+function code3(segs, ind, w){
+  ind = ind || 2; w = w || 76;
+  var blank = [sp(ind), S(" ".repeat(w), "bg-code")];
+  return [blank, [sp(ind)].concat(fill(bgify([sp(2)].concat(segs), "bg-code"), w, "bg-code")), blank];
+}
+var PILLC = ["a3","a1","a2","a3"];
+var CH = {
+  help: function(o){
+    if (o.plain) return plainHelp("upper");
+    var L = [P("gdoc help"), [], [sp(2), pill("gdoc","a1"), sp(1), S(V,"a2")], []];
+    L = L.concat(box([hl(NOTICE,"fg","a1 b")], {w:76, ind:2, bc:"a3", px:2, title:[pill("NEW","a3")]}));
+    L.push([], [sp(2), pill("USAGE","a2")], []);
+    L = L.concat(code3([S("gdoc ","fg"), S("<command> [words] [flags]","a1")]));
+    GROUPS.forEach(function(g, i){
+      L.push([], [sp(2), pill(g.name, PILLC[i])], []);
+      L = L.concat(entries(g.cmds, {indent:4, nameW:12, gap:2, nc:"a1", dc:"mid", width:78}));
+    });
+    L.push([], [sp(2)].concat(hl(FOOT,"dim","a1")), []);
+    return L;
+  },
+  publish: function(){
+    var L = [P("gdoc help publish"), [], [sp(2), pill("gdoc","a1"), pill("publish","a2"), sp(1), S(V,"dim")], [], [sp(2), S(DESC.publish,"fg")], [], [sp(2), pill("USAGE","a2")], []];
+    L = L.concat(code3(usage(PUB_USAGE,"fg","a1","a2")));
+    L.push([], [sp(2), pill("FLAGS","a2")], []);
+    PUB_FLAGS.forEach(function(f){ L.push([sp(4)].concat(flagSegs(f[0],"a1","a2",23), [sp(2), S(f[1],"mid")])); });
+    L.push([], [sp(2), pill("EXAMPLE","a2")], []);
+    L = L.concat(code3([S("$ ","dim"), S(PUB_EX,"fg")]));
+    L.push([]);
+    return L;
+  },
+  update: function(kind, o){
+    var u = upd(kind, o.t), L = [P("gdoc update"), [], [sp(2), pill("gdoc update","a1")], []];
+    u.steps.forEach(function(s){
+      var g = s.st === "run" ? [SPIN[o.frame%10],"a1"] : {done:["✓","a3"], pend:["○","dim"], fail:["✗","err"]}[s.st];
+      var nc = {done:"fg", run:"a1 b", pend:"dim", fail:"err b"}[s.st];
+      L.push([sp(2), S(g[0], g[1]), sp(1), S(rp(s.name,17), nc), S(s.detail, s.st === "pend" ? "dim" : "mid")]);
+      if (s.st === "run") L.push([sp(21)].concat(gradBar(36, s.prog, "#FF87D7", "#AF87FF"), [sp(2), S(bytes(s.prog),"dim")]));
+      if (s.st === "fail") { L.push([]); L = L.concat(box(wrap(s.reason, 66).map(function(r){ return [S(r,"fg")]; }), {w:Math.min(76, clen(s.reason) + 8), ind:2, bc:"err", px:3})); }
+    });
+    if (u.result) {
+      var parts = u.result.split(". "), first = parts[0] + (parts.length > 1 ? "." : ""), rest = parts.slice(1).join(". ");
+      var mark = u.rk === "warn" ? ["!","a2"] : ["✓","a3"];
+      var content = [[], [S(mark[0] + " ", mark[1] + " b"), S(first,"fg b")]];
+      if (rest) content.push([sp(2)].concat(hl(rest,"mid","a1")));
+      content.push([]);
+      L.push([]);
+      L = L.concat(box(content, {w: Math.max(clen(first), clen(rest)) + 12, ind:2, bc: u.rk === "warn" ? "a2" : "a3", px:3}));
+    }
+    return L;
+  },
+  login: function(o){
+    return [P("gdoc auth login"), [], [sp(2), pill("auth login","a2")], [], [sp(2), S(LOGIN,"fg")], []].concat(urlLines("a1 u"), [[], [sp(2), S(SPIN[o.frame%10],"a1"), sp(1), S(WAIT,"dim")]]);
+  },
+  error: function(){
+    var L = [P("gdoc frobnicate"), [], [sp(2), pill("ERROR","err"), sp(1), S(UNKNOWN,"fg")], [], [sp(4), S("Commands","a2 b")]];
+    flow(ORDER, 74, "a1", " · ", "dim").forEach(function(l){ L.push([sp(4)].concat(l)); });
+    L.push([], [sp(2)].concat(hl(FOOT,"dim","a1")), []);
+    return L;
+  },
+  plain: function(){ return plainHelp("upper"); }
+};
+
+/* ---------- 3. Altery House ---------- */
+function aBand(segs, right){ return spread(bgify(segs,"bg-navy"), bgify(right,"bg-navy"), W, "bg-navy"); }
+function aStripe(){ return [S("▀".repeat(W),"a2")]; }
+function aCompact(title, right){ return [aBand([S(" ALTERY ","fgw b"), S("│","a1"), S(" " + title,"fgw")], [S(right + " ","a4")]), aStripe()]; }
+function aCall(segs, bg, bar){ return fill([S("▌", bar + " " + bg), S(" ", bg)].concat(bgify(segs, bg)), W, bg); }
+var AL = {
+  help: function(o){
+    if (o.plain) return plainHelp("numbered");
+    var L = [P("gdoc help"),
+      aBand([], []),
+      aBand([sp(3), S("A L T E R Y","fgw b"), sp(3), S("│","a1"), sp(3), S("gdoc","fgw b")], [S(V,"a3"), sp(3)]),
+      aBand([], []),
+      aStripe(),
+      aCall([], "bg-a3", "a2"), aCall(hl(NOTICE,"ink","ink b"), "bg-a3", "a2"), aCall([], "bg-a3", "a2"),
+      [], [sp(2), S("Usage","a1 b"), sp(3), S("gdoc ","fgw"), S("<command> [words] [flags]","a3")]];
+    GROUPS.forEach(function(g, i){
+      L.push([], [sp(2), S(String(i+1),"a2 b"), sp(2), S(g.name,"a1 b")], [sp(2), S("─".repeat(76),"grey")]);
+      L = L.concat(entries(g.cmds, {indent:5, nameW:12, gap:2, nc:"fgw b", dc:"a4"}));
+    });
+    L.push([], [sp(2), S("─".repeat(76),"grey")], [sp(2)].concat(hl(FOOT,"a4","a2 b")));
+    return L;
+  },
+  publish: function(){
+    var L = [P("gdoc help publish")].concat(aCompact("gdoc publish", V));
+    L.push([], [sp(2), S(DESC.publish,"fgw")], [], [sp(2), S("Usage","a1 b")], [sp(2)].concat(usage(PUB_USAGE,"fgw b","a3","a4")), [], [sp(2), S("Flags","a1 b")]);
+    var c1 = 23, c2 = 49;
+    L.push([sp(1), S("┌" + "─".repeat(c1+2) + "┬" + "─".repeat(c2+2) + "┐","grey")]);
+    L.push([sp(1), S("│","grey"), S(" " + rp("Flag",c1) + " ","bg-a4 ink b"), S("│","grey"), S(" " + rp("What it does",c2) + " ","bg-a4 ink b"), S("│","grey")]);
+    L.push([sp(1), S("├" + "─".repeat(c1+2) + "┼" + "─".repeat(c2+2) + "┤","grey")]);
+    PUB_FLAGS.forEach(function(f){ L.push([sp(1), S("│ ","grey")].concat(flagSegs(f[0],"a3 b","a4",c1), [S(" │ ","grey"), S(rp(f[1],c2),"fgw"), S(" │","grey")])); });
+    L.push([sp(1), S("└" + "─".repeat(c1+2) + "┴" + "─".repeat(c2+2) + "┘","grey")]);
+    L.push([], [sp(2), S("Example","a1 b")], [sp(2)].concat(fill(bgify([S(" $ ","a4"), S(PUB_EX,"fgw")],"bg-navy"), 76, "bg-navy")));
+    return L;
+  },
+  update: function(kind, o){
+    var u = upd(kind, o.t);
+    var L = [P("gdoc update")].concat(aCompact("gdoc update", u.to ? V + " › " + u.to : V), [[]]);
+    u.steps.forEach(function(s){
+      var g = s.st === "run" ? [SPIN[o.frame%10],"a2 b"] : {done:["✓","a1 b"], pend:["○","dimx"], fail:["✗","err b"]}[s.st];
+      var nc = {done:"fgw", run:"fgw b", pend:"dimx", fail:"err b"}[s.st];
+      L.push([sp(2), S(g[0], g[1]), sp(1), S(rp(s.name,17), nc), S(s.detail, s.st === "pend" ? "dimx" : "a4")]);
+      if (s.st === "run") L.push([sp(21)].concat(solidBar(36, s.prog, "█","a1","█","navy"), [sp(2), S(pct(s.prog).trim(),"a2 b"), sp(2), S(bytes(s.prog),"a4")]));
+    });
+    var last = u.steps[u.steps.length-1];
+    if (last.st === "fail") { L.push([]); L.push(aCall([S("✗ ","fgw b"), S(last.reason,"fgw")], "bg-err", "fgw")); }
+    if (u.result) {
+      if (last.st !== "fail") L.push([]);
+      var bg = u.rk === "warn" ? "bg-a3" : "bg-a1";
+      L.push(aCall(hl(u.result,"ink b","ink b"), bg, u.rk === "warn" ? "a2" : "ink"));
+    }
+    return L;
+  },
+  login: function(o){
+    return [P("gdoc auth login")].concat(aCompact("gdoc auth login", V), [[], [sp(2), S(LOGIN,"fgw")], []], urlLines("a1 u"), [[], [sp(2), S(SPIN[o.frame%10],"a2 b"), sp(1), S(WAIT,"a4")]]);
+  },
+  error: function(){
+    var L = [P("gdoc frobnicate"), aCall([S(UNKNOWN,"fgw b")], "bg-err", "fgw"), [], [sp(2), S("Commands","a1 b")]];
+    flow(ORDER, 76, "fgw", ", ", "a4").forEach(function(l){ L.push([sp(2)].concat(l)); });
+    L.push([], [sp(2)].concat(hl(FOOT,"a4","a2 b")));
+    return L;
+  },
+  plain: function(){ return plainHelp("numbered"); }
+};
+
+/* ---------- 4. Panels ---------- */
+function pStatus(left, right){
+  left = left || [S(" gdoc " + V + " ","bg-a1 on b"), S(" stable ","bg-a2 on b"), S(" name@example.com ","bg-bar fg"), S(" token 52 min ","bg-bar dim")];
+  right = right || [S(" gdoc help <command> ","bg-bar dim")];
+  return spread(left, right, W, "bg-bar");
+}
+var PN = {
+  help: function(o){
+    if (o.plain) return plainHelp("upper");
+    var L = [P("gdoc help"),
+      prule("┌", null, "┐", 39, 39, [S("gdoc","a1 b"), S(" " + V,"dim")], [S("release","a2")]),
+      prow1([S("Usage","a2 b"), sp(2), S("gdoc ","fg"), S("<command> [words] [flags]","a1")]),
+      prow1([S("▸ ","a2")].concat(hl(NOTICE,"a2","a2 b"))),
+      prule("└", null, "┘", 39, 39)];
+    GROUPS.forEach(function(g, i){
+      L.push(prule(i === 0 ? "┌" : "├", i === 0 ? "┬" : "┼", i === 0 ? "┐" : "┤", 20, 57, [S(g.name,"a2 b")], i === 0 ? [S("17 commands","dim")] : null));
+      g.cmds.forEach(function(c){ wrap(DESC[c], 55).forEach(function(d, j){ L.push(prow2(j === 0 ? [S(c,"fg b")] : [], 18, [S(d,"mid")], 55)); }); });
+    });
+    L.push(prule("└", "┴", "┘", 20, 57), hl(FOOT,"dim","a1"), pStatus());
+    return L;
+  },
+  publish: function(){
+    var L = [P("gdoc help publish"),
+      prule("┌", null, "┐", 39, 39, [S("publish","a1 b")], [S("gdoc " + V,"dim")]),
+      prow1([S(DESC.publish,"fg")]),
+      prule("├", null, "┤", 39, 39, [S("Usage","a2 b")]),
+      prow1(usage(PUB_USAGE,"fg b","a1","dim")),
+      prule("├", "┬", "┤", 25, 52, [S("Flags","a2 b")])];
+    PUB_FLAGS.forEach(function(f){ L.push(prow2(flagSegs(f[0],"a1","dim"), 23, [S(f[1],"mid")], 50)); });
+    L.push(prule("├", "┴", "┤", 25, 52, [S("Example","a2 b")]), prow1([S("$ ","dim"), S(PUB_EX,"fg")]), prule("└", null, "┘", 39, 39), pStatus());
+    return L;
+  },
+  update: function(kind, o){
+    var u = upd(kind, o.t);
+    var L = [P("gdoc update"), prule("┌", "┬", "┐", 21, 56, [S("update","a1 b")], [S(u.to ? V + " › " + u.to : V,"dim")])];
+    u.steps.forEach(function(s){
+      var g = s.st === "run" ? [SPIN[o.frame%10],"a1"] : {done:["✓","ok"], pend:["○","dim"], fail:["✗","err"]}[s.st];
+      var nc = {done:"fg", run:"a1 b", pend:"dim", fail:"err b"}[s.st];
+      if (s.st === "fail") {
+        wrap(s.reason, 54).forEach(function(r, j){ L.push(prow2(j === 0 ? [S(g[0], g[1]), sp(1), S(s.name, nc)] : [], 19, [S(r,"err")], 54)); });
+        return;
+      }
+      L.push(prow2([S(g[0], g[1]), sp(1), S(s.name, nc)], 19, [S(s.detail,"mid")], 54));
+      if (s.st === "run") L.push(prow2([], 19, solidBar(28, s.prog, "█","a1","░","line").concat([S(" " + pct(s.prog),"a1 b"), sp(2), S(bytes(s.prog),"dim")]), 54));
+    });
+    if (u.result) {
+      L.push(prule("├", "┴", "┤", 21, 56), prow1([S(u.rk === "warn" ? "!" : "✓", u.rk === "warn" ? "a2 b" : "ok b"), sp(1)].concat(hl(u.result,"fg","a1"))), prule("└", null, "┘", 39, 39));
+    } else L.push(prule("└", "┴", "┘", 21, 56));
+    var right = {
+      run:[S(" " + SPIN[o.frame%10] + " download ","bg-a1 on b")],
+      done:[S(" ✓ installed ","bg-ok on b")],
+      fail:[S(" ✗ verify checksum ","bg-err on b")],
+      offline:[S(" ✗ read releases ","bg-err on b")],
+      uptodate:[S(" ✓ up to date ","bg-ok on b")]
+    }[kind];
+    L.push(pStatus([S(" gdoc " + V + " ","bg-a1 on b"), S(" stable ","bg-a2 on b"), S(" darwin-arm64 ","bg-bar fg")], right));
+    return L;
+  },
+  login: function(o){
+    return [P("gdoc auth login"),
+      prule("┌", null, "┐", 39, 39, [S("auth login","a1 b")], [S("accounts.google.com","dim")]),
+      prow1([S(LOGIN,"fg")]),
+      prule("└", null, "┘", 39, 39)].concat(urlLines("a1 u"), [[],
+      pStatus([S(" gdoc " + V + " ","bg-a1 on b"), S(" stable ","bg-a2 on b")], [S(" " + SPIN[o.frame%10] + " " + WAIT + " ","bg-a1 on b")])]);
+  },
+  error: function(){
+    var L = [P("gdoc frobnicate"), prule("┌", null, "┐", 39, 39, [S("error","err b")]), prow1([S(UNKNOWN,"fg b")]), prow1([]), prow1([S("Commands","a2 b")])];
+    flow(ORDER, 76, "fg", ", ", "dim").forEach(function(l){ L.push(prow1(l)); });
+    L.push(prule("└", null, "┘", 39, 39), hl(FOOT,"dim","a1"));
+    return L;
+  },
+  plain: function(){ return plainHelp("upper"); }
+};
+
+/* ---------- 5. Phosphor ---------- */
+var LETTERS = {
+  G:[" ██████╗ ","██╔════╝ ","██║  ███╗","██║   ██║","╚██████╔╝"," ╚═════╝ "],
+  D:["██████╗ ","██╔══██╗","██║  ██║","██║  ██║","██████╔╝","╚═════╝ "],
+  O:[" ██████╗ ","██╔═══██╗","██║   ██║","██║   ██║","╚██████╔╝"," ╚═════╝ "],
+  C:[" ██████╗","██╔════╝","██║     ","██║     ","╚██████╗"," ╚═════╝"]
+};
+function banner(){ return [0,1,2,3,4,5].map(function(r){ return ["G","D","O","C"].map(function(k){ return LETTERS[k][r]; }).join(""); }); }
+function phHead(label){ var t = "[ " + label + " ]"; return [S(t,"hi b"), sp(1), S("─".repeat(W - clen(t) - 1),"dim")]; }
+function phTag(st, frame){
+  if (st === "done") return [S("[","dim"), S("  OK  ","hi b"), S("]","dim")];
+  if (st === "run") return [S("[","dim"), S("  " + SPIN[frame%10] + "   ","hi"), S("]","dim")];
+  if (st === "fail") return [S("[","dim"), S("FAILED","bg-fg on b"), S("]","dim")];
+  return [S("[      ]","dim")];
+}
+var CURSOR = [S("$ ","dim"), S("█","fg blink")];
+var PH = {
+  help: function(o){
+    if (o.plain) return plainHelp("bracket");
+    var B = banner();
+    var info = [[], [S("VERSION   ","dim"), S(V,"hi")], [S("COMMANDS  ","dim"), S("17","hi")], [S("CHANNEL   ","dim"), S("stable","hi")], [], []];
+    var L = [P("gdoc help"), []];
+    B.forEach(function(row, i){ L.push([sp(1), S(row,"hi"), sp(5)].concat(info[i])); });
+    L.push([], [S(" NOTICE ","bg-fg on b"), sp(1), S(NOTICE_RAW,"hi")], [], [S("USAGE","hi b"), sp(3), S("gdoc <command> [words] [flags]","fg")]);
+    GROUPS.forEach(function(g){
+      L.push([], phHead(g.name.toUpperCase()));
+      L = L.concat(entries(g.cmds, {pw:3, nameW:12, gap:2, nc:"hi", dc:"fg", prefix:function(lc, first){ return first ? [sp(1), S(">","dim"), sp(1)] : [sp(3)]; }}));
+    });
+    L.push([], [S(FOOT,"dim")], [], CURSOR);
+    return L;
+  },
+  publish: function(){
+    var L = [P("gdoc help publish"), [S("gdoc " + V,"dim")], [], phHead("PUBLISH"), [S(DESC.publish,"fg")], [], [S("USAGE","hi b")], [sp(2), S(PUB_USAGE,"hi")], [], [S("FLAGS","hi b")]];
+    PUB_FLAGS.forEach(function(f){ L.push([sp(2), S(rp(f[0],23),"hi"), sp(2), S(f[1],"fg")]); });
+    L.push([], [S("EXAMPLE","hi b")], [sp(2), S("$ " + PUB_EX,"fg")], [], CURSOR);
+    return L;
+  },
+  update: function(kind, o){
+    var u = upd(kind, o.t), L = [P("gdoc update"), phHead("GDOC UPDATE"), []];
+    u.steps.forEach(function(s){
+      var nc = {done:"fg", run:"hi b", pend:"dim", fail:"hi b"}[s.st];
+      L.push(phTag(s.st, o.frame).concat([sp(1), S(rp(s.name,17), nc), S(s.detail, s.st === "pend" ? "dim" : "fg")]));
+      if (s.st === "run") L.push([sp(26), S("[","dim")].concat(solidBar(30, s.prog, "▓","hi","░","dim"), [S("]","dim"), S(" " + pct(s.prog),"hi")]));
+      if (s.st === "fail") wrap(s.reason, 71).forEach(function(r){ L.push([sp(9), S(r,"hi")]); });
+    });
+    if (u.result) L.push([], [S(">> ","dim"), S(u.result,"hi b")]);
+    if (kind !== "run") L.push([], CURSOR);
+    return L;
+  },
+  login: function(o){
+    return [P("gdoc auth login"), phHead("AUTH LOGIN"), [S(LOGIN,"fg")]].concat(urlLines("hi u"), [[], [S("[","dim"), S("  " + SPIN[o.frame%10] + "   ","hi"), S("]","dim"), sp(1), S(WAIT,"fg")]]);
+  },
+  error: function(){
+    var L = [P("gdoc frobnicate"), [S(" ERR ","bg-fg on b"), sp(1), S(UNKNOWN,"hi b")], [], phHead("COMMANDS")];
+    flow(ORDER, 78, "fg", ", ", "dim").forEach(function(l){ L.push([sp(2)].concat(l)); });
+    L.push([], [S(FOOT,"dim")], [], CURSOR);
+    return L;
+  },
+  plain: function(){ return plainHelp("bracket"); }
+};
+
+/* ---------- 6. Timeline ---------- */
+var TL = {
+  help: function(o){
+    var L = [P(o.prompt || "gdoc help")];
+    L.push(o.plain ? [S(NOTICE_RAW)] : [S("●","a1"), sp(1)].concat(hl(NOTICE,"mid","a1 b")));
+    L.push([], [S("gdoc","fg b"), S(" " + V,"dim")], [S("│","line"), sp(2), S("usage ","dim"), S("gdoc ","fg"), S("<command> [words] [flags]","a1")]);
+    GROUPS.forEach(function(g, gi){
+      var lastG = gi === GROUPS.length - 1, gc = lastG ? "   " : "│  ";
+      L.push([S("│","line")], [S(lastG ? "╰─ " : "├─ ","line"), S(g.name,"a1 b")]);
+      L = L.concat(entries(g.cmds, {pw:6, nameW:12, gap:1, nc:"fg", dc:"mid", prefix:function(lc, first){
+        return [S(gc,"line"), S(first ? (lc ? "╰─ " : "├─ ") : (lc ? "   " : "│  "),"line")];
+      }}));
+    });
+    L.push([], hl(FOOT,"dim","a1"));
+    return o.plain ? strip(L) : L;
+  },
+  publish: function(){
+    var L = [P("gdoc help publish"), [S("gdoc publish","fg b"), S(" " + V,"dim")], [S("│","line"), sp(2), S(DESC.publish,"mid")], [S("│","line")],
+      [S("├─ ","line"), S("usage","a1 b")], [S("│","line"), sp(2)].concat(usage(PUB_USAGE,"fg","a1","dim")), [S("│","line")], [S("├─ ","line"), S("flags","a1 b")]];
+    PUB_FLAGS.forEach(function(f, i){
+      var last = i === PUB_FLAGS.length - 1;
+      wrap(f[1], 49).forEach(function(d, j){
+        L.push([S("│  ","line"), S(j === 0 ? (last ? "╰─ " : "├─ ") : (last ? "   " : "│  "),"line")].concat(j === 0 ? flagSegs(f[0],"a1","dim",23) : [sp(23)], [sp(2), S(d,"mid")]));
+      });
+    });
+    L.push([S("│","line")], [S("╰─ ","line"), S("example","a1 b")], [sp(3), S("$ ","dim"), S(PUB_EX,"fg")]);
+    return L;
+  },
+  update: function(kind, o){
+    var u = upd(kind, o.t);
+    var L = [P("gdoc update"), spread([S("gdoc update","fg b")], [S(u.to ? V + " › " + u.to : V,"dim")]), []];
+    u.steps.forEach(function(s, i){
+      var g = s.st === "run" ? [SPIN[o.frame%10],"a1 b"] : {done:["●","ok"], pend:["○","dim"], fail:["✗","err b"]}[s.st];
+      var nc = {done:"fg", run:"fg b", pend:"dim", fail:"err b"}[s.st];
+      var left = [sp(2), S(g[0], g[1]), sp(2), S(rp(s.name,17), nc), S(s.detail,"mid")];
+      L.push(s.st === "pend" ? left : spread(left, [S(dur(s.dur), s.st === "run" ? "a1" : "dim")]));
+      var last = i === u.steps.length - 1;
+      if (s.st === "run") L.push([sp(2), S("┃","a1"), sp(19)].concat(solidBar(30, s.prog, "━","a1","─","line"), [S(" " + pct(s.prog),"a1"), sp(2), S(bytes(s.prog),"dim")]));
+      else if (s.st === "fail") wrap(s.reason, 73).forEach(function(r, j){ L.push([sp(2), S(u.result ? "┃  " : (j === 0 ? "╰─ " : "   "),"err"), S(r,"err")]); });
+      else if (!last) L.push([sp(2), S(s.st === "done" ? "┃" : "╎", s.st === "done" ? "ok" : "line")]);
+    });
+    if (u.result) {
+      var bad = u.rk === "warn", cc = bad ? "err" : "ok";
+      if (!bad) L.push([sp(2), S("┃", cc)]);
+      var endLine = [sp(2), S("╰─ ", cc)].concat(hl(u.result,"fg b","a1 b"));
+      L.push(bad ? endLine : spread(endLine, [S(dur(u.total),"dim")]));
+    }
+    return L;
+  },
+  login: function(o){
+    var secs = 14 + Math.floor(o.frame / 12) % 40;
+    return [P("gdoc auth login"), [sp(2), S("●","ok"), sp(2), S("auth login","fg b")], [sp(2), S("┃","ok"), sp(2), S(LOGIN,"fg")], [sp(2), S("┃","ok")]]
+      .concat(urlLines("a1 u"), [[sp(2), S("┃","a1")], spread([sp(2), S(SPIN[o.frame%10],"a1 b"), sp(2), S(WAIT,"mid")], [S("0:" + String(secs).padStart(2,"0"),"a1")])]);
+  },
+  error: function(){
+    var L = [P("gdoc frobnicate"), [sp(2), S("✗","err b"), sp(2), S(UNKNOWN,"fg b")]];
+    flow(ORDER, 75, "fg", ", ", "dim", 10).forEach(function(l, i){ L.push(i === 0 ? [sp(2), S("╰─ ","err"), S("Commands: ","mid")].concat(l) : [sp(5)].concat(l)); });
+    L.push([], hl(FOOT,"dim","a1"));
+    return L;
+  },
+  plain: function(){ return TL.help({plain:true, prompt:"gdoc help 2>&1 | cat"}); }
+};
+
+/* ---------- plain help shared by the boxed directions ---------- */
+function plainHelp(kind){
+  var L = [P("gdoc help 2>&1 | cat"), [S(NOTICE_RAW)], [], [S("gdoc " + V)], []];
+  if (kind === "upper") {
+    L.push([S("USAGE")], [S("  gdoc <command> [words] [flags]")]);
+    GROUPS.forEach(function(g){ L.push([], [S(g.name.toUpperCase())]); L = L.concat(entries(g.cmds, {indent:2, nameW:12, gap:2})); });
+  } else if (kind === "numbered") {
+    L.push([S("  Usage   gdoc <command> [words] [flags]")]);
+    GROUPS.forEach(function(g, i){ L.push([], [S("  " + (i+1) + "  " + g.name)]); L = L.concat(entries(g.cmds, {indent:5, nameW:12, gap:2})); });
+  } else if (kind === "bracket") {
+    L.push([S("USAGE   gdoc <command> [words] [flags]")]);
+    GROUPS.forEach(function(g){ L.push([], [S("[ " + g.name.toUpperCase() + " ]")]); L = L.concat(entries(g.cmds, {pw:3, nameW:12, gap:2, prefix:function(lc, f){ return [S(f ? " > " : "   ")]; }})); });
+  }
+  L.push([], [S(FOOT)]);
+  return strip(L);
+}
+
+/* ---------- today, exactly ---------- */
+function today(){
+  var L = [P("gdoc help"), [S(NOTICE_RAW)], [], [S("gdoc " + V)], [], [S("Usage: gdoc <command> [words] [flags]")], []];
+  ORDER.forEach(function(c){ L.push([S("  " + rp(c, 11) + "  " + DESC[c])]); });
+  L.push([], [S(FOOT)]);
+  return strip(L);
+}
+
+/* ---------- directions, palettes, themes ---------- */
+var REN = {"quiet-pro":QP, "charm":CH, "altery-house":AL, "panels":PN, "phosphor":PH, "timeline":TL};
+var NAMES = {"quiet-pro":"Quiet Pro", "charm":"Charm", "altery-house":"Altery House", "panels":"Panels", "phosphor":"Phosphor", "timeline":"Timeline"};
+var ORDER_DIRS = ["quiet-pro","charm","altery-house","panels","phosphor","timeline"];
+
+var THEMES = {
+  "quiet-pro": {
+    dark:  {bg:"#0D1117", fg:"#E6EDF3", mid:"#C9D1D9", dim:"#8B949E", a1:"#58A6FF", ok:"#3FB950", err:"#F85149", line:"#30363D", code:"#161B22", on:"#0D1117"},
+    light: {bg:"#FFFFFF", fg:"#1F2328", mid:"#424A53", dim:"#6E7781", a1:"#0969DA", ok:"#1A7F37", err:"#CF222E", line:"#D0D7DE", code:"#F6F8FA", on:"#FFFFFF"}
+  },
+  "charm": {
+    dark:  {bg:"#17141F", fg:"#EEEAF6", mid:"#BDB5D0", dim:"#7E7891", a1:"#FF87D7", a2:"#AF87FF", a3:"#6CF0C2", err:"#FF6B8B", line:"#3A3350", code:"#262036", on:"#17141F"}
+  },
+  "altery-house": {
+    dark:  {bg:"#101218", fg:"#E9EEF0", fgw:"#F3F8F9", dim:"#A0A0A0", dimx:"#666666", a1:"#549F99", a2:"#FF771C", a3:"#F5D1AE", a4:"#BDCDD2", navy:"#22265F", ink:"#0F1340", grey:"#A0A0A0", err:"#FF0000", on:"#0F1340"}
+  },
+  "panels": {
+    dark:  {bg:"#1A1B26", fg:"#C0CAF5", mid:"#A9B1D6", dim:"#565F89", line:"#4E5679", a1:"#7AA2F7", a2:"#E0AF68", ok:"#9ECE6A", err:"#F7768E", bar:"#24283B", on:"#1A1B26"}
+  },
+  "phosphor": {
+    dark:  {bg:"#0C0800", fg:"#FFB000", hi:"#FFD27A", dim:"#8A5A00", on:"#0C0800"},
+    green: {bg:"#020A04", fg:"#33FF66", hi:"#B6FFC8", dim:"#13802F", on:"#020A04"}
+  },
+  "timeline": {
+    dark:  {bg:"#0B1120", fg:"#E2E8F0", mid:"#94A3B8", dim:"#64748B", line:"#475569", a1:"#38BDF8", ok:"#34D399", err:"#FB7185", on:"#0B1120"},
+    light: {bg:"#F8FAFC", fg:"#0F172A", mid:"#475569", dim:"#94A3B8", line:"#B4C0D0", a1:"#0284C7", ok:"#059669", err:"#E11D48", on:"#FFFFFF"}
+  }
+};
+
+var PAL = {
+  "quiet-pro": [["Text","#E6EDF3","white"],["Muted","#8B949E","bright black"],["Accent","#58A6FF","bright blue"],["Accent, light","#0969DA","blue"],["Done","#3FB950","green"],["Failed","#F85149","bright red"]],
+  "charm": [["Pink","#FF87D7","bright magenta"],["Violet","#AF87FF","magenta"],["Mint","#6CF0C2","bright cyan"],["Text","#EEEAF6","white"],["Soft text","#BDB5D0","white"],["Muted","#7E7891","bright black"],["Code block","#262036","black"],["Error","#FF6B8B","bright red"]],
+  "altery-house": [["Navy","#22265F","blue"],["Teal","#549F99","cyan"],["Running head orange","#FF771C","yellow"],["Peach fill","#F5D1AE","bright yellow"],["Blue-grey fill","#BDCDD2","white"],["Legend navy","#0F1340","black"],["Rule grey","#A0A0A0","bright black"],["Placeholder red","#FF0000","bright red"]],
+  "panels": [["Title","#7AA2F7","bright blue"],["Key","#E0AF68","yellow"],["Text","#C0CAF5","white"],["Soft text","#A9B1D6","white"],["Border","#4E5679","bright black"],["Muted","#565F89","bright black"],["Done","#9ECE6A","green"],["Failed","#F7768E","bright red"],["Status bar","#24283B","black"]],
+  "phosphor": [["Amber","#FFB000","yellow"],["Amber bright","#FFD27A","bright yellow"],["Amber dim","#8A5A00","yellow, dim"],["Tube black","#0C0800","black"],["Green","#33FF66","bright green"],["Green bright","#B6FFC8","bright white"],["Green dim","#13802F","green"]],
+  "timeline": [["Slate 200","#E2E8F0","white"],["Slate 400","#94A3B8","white"],["Slate 500","#64748B","bright black"],["Slate 600","#475569","bright black"],["Sky 400","#38BDF8","bright cyan"],["Emerald 400","#34D399","bright green"],["Rose 400","#FB7185","bright red"],["Sky 600, light","#0284C7","cyan"],["Emerald 600, light","#059669","green"],["Rose 600, light","#E11D48","red"]]
+};
+
+/* nearest xterm 256 colour by CIE Lab distance, so a navy does not round to a grey */
+function lab(rgb){
+  var v = rgb.map(function(x){ x /= 255; return x > 0.04045 ? Math.pow((x + 0.055) / 1.055, 2.4) : x / 12.92; });
+  var X = (v[0]*0.4124 + v[1]*0.3576 + v[2]*0.1805) / 0.95047, Y = v[0]*0.2126 + v[1]*0.7152 + v[2]*0.0722, Z = (v[0]*0.0193 + v[1]*0.1192 + v[2]*0.9505) / 1.08883;
+  var f = function(t){ return t > 0.008856 ? Math.cbrt(t) : 7.787*t + 16/116; };
+  return [116*f(Y) - 16, 500*(f(X) - f(Y)), 200*(f(Y) - f(Z))];
+}
+function xterm256(hex){
+  var c = lab(hex2rgb(hex)), best = 16, bd = 1e9;
+  for (var i = 16; i < 256; i++) {
+    var k = lab(hex2rgb(xtermHex(i)));
+    var d = (c[0]-k[0])*(c[0]-k[0]) + (c[1]-k[1])*(c[1]-k[1]) + (c[2]-k[2])*(c[2]-k[2]);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+function xtermHex(i){
+  var lv = [0,95,135,175,215,255], r, g, b;
+  if (i < 232) { var n = i - 16; r = lv[Math.floor(n/36)]; g = lv[Math.floor(n/6)%6]; b = lv[n%6]; }
+  else { r = g = b = 8 + (i-232)*10; }
+  return "#" + [r,g,b].map(function(v){ return v.toString(16).padStart(2,"0"); }).join("").toUpperCase();
+}
+
+var TOKENS = ["fg","fgw","mid","dim","dimx","hi","line","a1","a2","a3","a4","ok","err","navy","ink","grey","bar","code","on"];
+(function themeCSS(){
+  var css = "";
+  TOKENS.forEach(function(t){ css += ".k-" + t + "{color:var(--" + t + ")}.k-bg-" + t + "{background:var(--" + t + ")}"; });
+  css += ".k-on{color:var(--on)}.k-b{font-weight:700}.k-u{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}";
+  function vars(o){ return Object.keys(o).map(function(k){ return "--" + k + ":" + o[k]; }).join(";"); }
+  ORDER_DIRS.forEach(function(d){
+    var T = THEMES[d];
+    css += ".t-" + d + ".m-dark{" + vars(T.dark) + "}";
+    if (T.light) css += ".t-" + d + ".m-light{" + vars(T.light) + ";--guide:rgba(0,0,0,.14)}";
+  });
+  css += "body[data-phos=green] .t-phosphor.m-dark{" + vars(THEMES.phosphor.green) + "}";
+  css += ".m-plain{--bg:#151518;--fg:#D9D9DE}";
+  var el = document.createElement("style"); el.textContent = css; document.head.appendChild(el);
+})();
+
+/* ---------- render ---------- */
+function esc(s){ return s.replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+var BK = {"█":"bk-full","▀":"bk-up","▄":"bk-lo","▌":"bk-l","▐":"bk-r"};
+function cells(s){
+  var out = "", run = "", chars = Array.from(s), i = 0;
+  while (i < chars.length) {
+    var ch = chars[i], cp = ch.codePointAt(0);
+    if (cp >= 0x20 && cp < 0x7f) { run += ch; i++; continue; }
+    out += esc(run); run = "";
+    if (BK[ch]) {
+      var j = i; while (j < chars.length && chars[j] === ch) j++;
+      out += '<span class="g bk ' + BK[ch] + '" style="width:' + (j - i) + 'ch">' + esc(ch.repeat(j - i)) + "</span>";
+      i = j; continue;
+    }
+    out += '<span class="g">' + esc(ch) + "</span>"; i++;
+  }
+  return out + esc(run);
+}
+function segHTML(s, drop){
+  var inner = cells(s.t);
+  var toks = s.c ? s.c.split(" ").filter(function(x){ return x && x !== drop; }) : [];
+  if (!toks.length && !s.st) return inner;
+  var cls = toks.map(function(x){ return "k-" + x; }).join(" ");
+  return "<span" + (cls ? ' class="' + cls + '"' : "") + (s.st ? ' style="' + s.st + '"' : "") + ">" + inner + "</span>";
+}
+function bgOf(s){ var m = (s.c || "").match(/(?:^| )(bg-[\w]+)/); return m ? m[1] : ""; }
+/* runs that share a background are wrapped once, so no seam shows between spans */
+function toHTML(L){
+  return L.map(function(l){
+    var html = "", i = 0;
+    while (i < l.length) {
+      var bg = bgOf(l[i]);
+      if (!bg) { html += segHTML(l[i]); i++; continue; }
+      var j = i, part = "";
+      while (j < l.length && bgOf(l[j]) === bg) { part += segHTML(l[j], bg); j++; }
+      html += '<span class="k-' + bg + '">' + part + "</span>";
+      i = j;
+    }
+    return html;
+  }).join("\n");
+}
+
+function screensFor(d){
+  var R = REN[d];
+  var list = [{title:"gdoc help", cap:"Help, with the once-a-day release notice on top.", fn:function(o){ return R.help(o); }}];
+  if (d === "quiet-pro" || d === "timeline") list.push({title:"gdoc help", mode:"light", cap:"The same help on a light terminal profile.", fn:function(o){ return R.help(o); }});
+  list.push(
+    {title:"gdoc help publish", cap:"Help for one command.", fn:function(o){ return R.publish(o); }},
+    {title:"gdoc update", cap:"Update, mid-run. The spinner and the download run live in this page. <span class=\"new\">New</span>a progress readout on the download.", fn:function(o){ return R.update("run", o); }, anim:true}
+  );
+  if (d === "quiet-pro" || d === "timeline") list.push({title:"gdoc update", mode:"light", cap:"Mid-run on a light profile.", fn:function(o){ return R.update("run", o); }, anim:true});
+  list.push(
+    {title:"gdoc update", cap:"Update, installed.", fn:function(o){ return R.update("done", o); }},
+    {title:"gdoc update", cap:"Update, the checksum does not match. As today, nothing after the failed step is drawn and there is no result line.", fn:function(o){ return R.update("fail", o); }},
+    {title:"gdoc update, twice", cap:"The other two endings: GitHub did not answer, and nothing newer to install.", fn:function(o){ return R.update("offline", o).concat([[]], R.update("uptodate", o)); }},
+    {title:"gdoc auth login", cap:"Sign-in. The URL stays on its own line, flush left and outside any border, so a click or a copy gets all of it. <span class=\"new\">New</span>the waiting line.", fn:function(o){ return R.login(o); }, anim:true},
+    {title:"gdoc frobnicate", cap:"An unknown command. Same words, split into the refusal and the list.", fn:function(o){ return R.error(o); }},
+    {title:"gdoc help 2>&1 | cat", mode:"plain", cap:"NO_COLOR or a pipe: no escape codes and no boxes. Same words, same groups.", fn:function(o){ return R.plain(o); }}
+  );
+  if (R.extra) list.push({title:R.extra.title, cap:R.extra.cap, fn:R.extra.fn});
+  if (d === "panels") list[0].cap += " <span class=\"new\">New</span>the status bar: version, channel, account and token time.";
+  return list;
+}
+
+var live = [];
+var state = {frame:2, t:0.38};
+var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function makeWin(d, spec, opts){
+  opts = opts || {};
+  var mode = spec.mode || "dark";
+  var fig = document.createElement("figure");
+  fig.className = "win t-" + d + " m-" + mode;
+  fig.innerHTML = '<div class="frame"><div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="wt"></span><span class="cols">80 COLS</span></div><div class="screen"><pre></pre></div></div><figcaption class="cap"></figcaption>';
+  fig.querySelector(".wt").textContent = spec.title + (mode === "light" ? "  ·  light profile" : "");
+  fig.querySelector(".cap").innerHTML = (opts.head ? "<b>" + opts.head + "</b>" : "") + spec.cap;
+  var pre = fig.querySelector("pre");
+  var lines = spec.fn({frame:state.frame, t:state.t});
+  pre.innerHTML = toHTML(lines);
+  var widest = Math.max.apply(null, lines.map(len));
+  if (widest > W && !spec.allowWide) { fig.classList.add("over"); console.warn("over 80 columns:", d, spec.title, widest); }
+  if (spec.anim) live.push({pre:pre, fn:spec.fn, vis:true, fig:fig});
+  return fig;
+}
+
+/* today */
+(function(){
+  var host = document.querySelector('[data-dir="today"]');
+  var lines = today();
+  var widest = Math.max.apply(null, lines.slice(1).map(len));
+  document.querySelectorAll('[data-fill="maxcols"]').forEach(function(el){ el.textContent = widest; });
+  host.appendChild(makeWin("today", {title:"gdoc help", mode:"plain", allowWide:true, cap:"Today's output, word for word. The longest line is " + widest + " columns; the faint line is column 80, and a standard terminal wraps everything past it.", fn:function(){ return lines; }}));
+})();
+
+/* compare */
+(function(){
+  var host = document.querySelector("[data-compare]");
+  ORDER_DIRS.forEach(function(d, i){
+    host.appendChild(makeWin(d, {title:"gdoc help", cap:"", fn:function(o){ return REN[d].help(o); }}, {head:(i+1) + "  " + NAMES[d] + ' &nbsp;<a href="#' + d + '">open</a>'}));
+  });
+})();
+
+/* palettes */
+document.querySelectorAll("[data-pal]").forEach(function(host){
+  var d = host.getAttribute("data-pal");
+  PAL[d].forEach(function(p){
+    var idx = xterm256(p[1]);
+    var el = document.createElement("div");
+    el.className = "sw";
+    el.innerHTML = '<div class="chip"><span style="background:' + p[1] + '"></span><span style="background:' + xtermHex(idx) + '" title="xterm ' + idx + '"></span></div>' +
+      '<div class="role"></div><div class="codes"><b>' + p[1] + '</b><br>256 &middot; ' + idx + '<br>16 &middot; ' + p[2] + "</div>";
+    el.querySelector(".role").textContent = p[0];
+    host.appendChild(el);
+  });
+  var key = document.createElement("p");
+  key.className = "pal-key";
+  key.textContent = "Each chip: truecolor on the left, the nearest xterm 256 colour on the right. The 16 colour name is the fallback a basic terminal gets.";
+  host.after(key);
+});
+
+/* directions */
+ORDER_DIRS.forEach(function(d){
+  var host = document.querySelector('.wins[data-dir="' + d + '"]');
+  screensFor(d).forEach(function(spec){ host.appendChild(makeWin(d, spec)); });
+});
+
+/* phosphor toggle */
+document.querySelectorAll("[data-phos]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var v = b.getAttribute("data-phos");
+    if (v === "green") document.body.setAttribute("data-phos","green"); else document.body.removeAttribute("data-phos");
+    document.querySelectorAll("[data-phos]").forEach(function(x){ x.setAttribute("aria-pressed", String(x === b)); });
+  });
+});
+
+/* motion */
+if (!reduce && live.length) {
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ live.forEach(function(w){ if (w.fig === e.target) w.vis = e.isIntersecting; }); }); });
+    live.forEach(function(w){ io.observe(w.fig); });
+  }
+  var t0 = performance.now();
+  setInterval(function(){
+    state.frame++;
+    state.t = ((performance.now() - t0) % 5200) / 5200;
+    live.forEach(function(w){ if (w.vis) w.pre.innerHTML = toHTML(w.fn({frame:state.frame, t:state.t})); });
+  }, 80);
+}
+})();
+</script>
+</body>
+</html>
