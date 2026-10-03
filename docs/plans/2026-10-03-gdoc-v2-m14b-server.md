@@ -629,16 +629,30 @@ Serves decision 2 and MEASURED 8.
 - Modify: `go/cmd/gdoc/mcptools.go`
 - Create: `go/cmd/gdoc/mcpwords_test.go`
 
-- [ ] Test first, `TestEachToolTitleIsTheLiteral`: the table of Technical
+➕ The summary is read from the command's own table entry rather than written
+again in `mcpCommands`, so a tool card and `gdoc help` cannot drift. The
+`summary` field of `mcpCommand` is gone and a `tail` field took its place: what
+the description says after the summary. A write tool's tail is `mcpWriteLines`,
+the four lines as one constant.
+
+➕ `TestEachDescriptionOpensWithItsEntrysSummary` also holds the rest of the
+table, the words `read` and `comments` say after their summary, as literals in
+`descriptionCarries`. The task list named no test for them and the table names
+the words, so they are pinned in the test that is about the description.
+
+➕ `TestEachWriteDescriptionCarriesTheFourLines` holds the other direction
+too: a read tool's description carries none of the four lines.
+
+- [x] Test first, `TestEachToolTitleIsTheLiteral`: the table of Technical
       Details, word for word.
-- [ ] Test, `TestEachDescriptionOpensWithItsEntrysSummary`.
-- [ ] Test, `TestEachWriteDescriptionCarriesTheFourLines`.
-- [ ] Test, `TestTheSpokenWordsFindTheTools`: each of "Google Doc",
+- [x] Test, `TestEachDescriptionOpensWithItsEntrysSummary`.
+- [x] Test, `TestEachWriteDescriptionCarriesTheFourLines`.
+- [x] Test, `TestTheSpokenWordsFindTheTools`: each of "Google Doc",
       "comments", "review", "reply" and "suggest" appears in at least one
       title or description.
-- [ ] Implement.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): tool titles and descriptions in the words a person says"`
+- [x] Implement.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): tool titles and descriptions in the words a person says"`
 
 ### Task 7: no token, no call
 
