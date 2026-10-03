@@ -765,30 +765,30 @@ Serves decisions 9 and 10 with MEASURED 4.
 - Create: `go/cmd/gdoc/review.md` (the committed copy), `go/cmd/gdoc/chatheader.md`,
   `go/cmd/gdoc/mcpguide.go`, `go/cmd/gdoc/mcpguide_test.go`
 
-- [ ] Test first, `TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode`
+- [x] Test first, `TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode`
       with the literal retry sentence. The `confirm_<id>` tools of Task 16
       take no code: their arguments are the hold's four, and the card is the
       check.
-- [ ] Test, `TestToolsListListsExactlyTheEightToolsWithTheirHints`, through
+- [x] Test, `TestToolsListListsExactlyTheEightToolsWithTheirHints`, through
       `serveMCP`, with no hold.
-- [ ] Test, `TestACodeFromAnotherProcessIsStale`.
-- [ ] Test, `TestGuideAnswersTheHeaderAndTheCore`, and that the answer
+- [x] Test, `TestACodeFromAnotherProcessIsStale`.
+- [x] Test, `TestGuideAnswersTheHeaderAndTheCore`, and that the answer
       reports the trusted domains this process runs with (empty here).
-- [ ] Test, `TestTheEmbeddedCoreIsTheSkillsCore`: byte-identical to
+- [x] Test, `TestTheEmbeddedCoreIsTheSkillsCore`: byte-identical to
       `skills/gdoc-review/review.md`.
-- [ ] Test, `TestTheChatHeaderNamesOnlyToolsThatExist`.
-- [ ] Test, `TestTheInstructionsAreShortAndSayCallGuideFirst`: at most ten
+- [x] Test, `TestTheChatHeaderNamesOnlyToolsThatExist`.
+- [x] Test, `TestTheInstructionsAreShortAndSayCallGuideFirst`: at most ten
       lines, naming `guide` and `login`.
-- [ ] Implement the code in `internal/chat`, the `code` property on every
+- [x] Implement the code in `internal/chat`, the `code` property on every
       tool's schema but `guide` and `login`, the check before dispatch, and
       the instructions text. Add `code` to Task 5's property exclusion list,
       and pass a code in the tests of Tasks 5 and 7.
-- [ ] The chat header: tools instead of a shell, short spoken lists, no live
+- [x] The chat header: tools instead of a shell, short spoken lists, no live
       mode, the two answers to an `ai!` (decision 6), `ai!` and `ai?` are
       labels in chat (decision 16), and the work that stays in Claude Code
       (decision 3).
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): guide gives the rules and a code, and no other tool runs without it"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): guide gives the rules and a code, and no other tool runs without it"`
 
 ### Task 10: the review core learns the side-by-side guards and the annotate flow
 

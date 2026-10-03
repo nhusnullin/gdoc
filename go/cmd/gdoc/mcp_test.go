@@ -191,39 +191,11 @@ func TestStdoutCarriesOnlyJSONRPC(t *testing.T) {
 	}
 }
 
-// guide answers that it is not built, as a tool error the model can read,
-// rather than being absent. An absent tool is a client that shows nothing and a
-// person who hears nothing. Task 9 wires it; login is wired, and mcplogin_test
-// holds it.
-//
-// The six table commands are wired too, so the stub is named here rather than
-// being every tool there is.
-func TestTheGuideStubSaysItIsNotBuiltYet(t *testing.T) {
-	stubs := map[string]bool{"guide": true}
-	found := 0
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard)) {
-		if !stubs[tool.Name] {
-			continue
-		}
-		found++
-		res := tool.Call(context.Background(), nil)
-		if !res.IsError {
-			t.Errorf("%s is a stub today and must say so as an error: %v", tool.Name, res)
-		}
-		if len(res.Texts) != 1 || !strings.Contains(res.Texts[0], "not") {
-			t.Errorf("%s must answer in words: %v", tool.Name, res.Texts)
-		}
-	}
-	if found != len(stubs) {
-		t.Errorf("%d of the %d stubs are in the list", found, len(stubs))
-	}
-}
-
 // The session offers the six table commands beside the two of its own, in the
 // specification's own order, which is the order a review runs in.
 func TestTheSixTableCommandsAreOffered(t *testing.T) {
 	var names []string
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard)) {
+	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), callCode(t)) {
 		names = append(names, tool.Name)
 	}
 	want := []string{"read", "comments", "suggestions", "reply", "annotate", "propose", "login", "guide"}

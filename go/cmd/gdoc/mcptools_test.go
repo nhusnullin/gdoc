@@ -28,10 +28,18 @@ var flagsNeverOffered = map[string][]string{
 	"propose":     {"--md", "--folder"},
 }
 
-// propertiesThatMapToNoFlag is empty today. Task 9 of the milestone 14 run 2
-// plan adds code, and task 12 adds title and thread_quote: each is a check the
-// server makes and no command of the terminal has.
-var propertiesThatMapToNoFlag = map[string][]string{}
+// propertiesThatMapToNoFlag are the properties that fill nothing on the line,
+// because they are a check this server makes and no command of the terminal has.
+// code is the guide code, read before the line is built. Task 12 adds title and
+// thread_quote.
+var propertiesThatMapToNoFlag = map[string][]string{
+	"read":        {"code"},
+	"comments":    {"code"},
+	"suggestions": {"code"},
+	"reply":       {"code"},
+	"annotate":    {"code"},
+	"propose":     {"code"},
+}
 
 // schemaProperties is the property names of a tool's schema, in the order the
 // schema writes them, which is the order a card draws them.
@@ -377,7 +385,8 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			signedIn(t)
 
 			one.wire(t)
-			res := mcpRun(context.Background(), byName[one.tool], json.RawMessage(one.args), nilWriter{})
+			guideCode := callCode(t)
+			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, guideCode)
 			if len(res.Texts) != 1 {
 				t.Fatalf("one answer is one text item: %v", res.Texts)
 			}
@@ -477,9 +486,10 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 		{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 yes"}`},
 		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
 	}})
-	mcpRun(context.Background(), reply, json.RawMessage(`{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"🤖 yes"}`), nilWriter{})
+	code := callCode(t)
+	mcpRun(context.Background(), reply, withCode(t, code, `{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"🤖 yes"}`), nilWriter{}, code)
 	stubWire(t, &fakeWire{})
-	mcpRun(context.Background(), reply, json.RawMessage(`{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"not the robot"}`), nilWriter{})
+	mcpRun(context.Background(), reply, withCode(t, code, `{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"not the robot"}`), nilWriter{}, code)
 	if after := countCallDirs(t); after != before {
 		t.Errorf("%d call directories before and %d after, so a call left one behind", before, after)
 	}
@@ -547,10 +557,11 @@ func TestAGrantFromOneCallIsAbsentFromTheNext(t *testing.T) {
 	}
 	const otherDocID = "1OtHeRdOcUmEnT0000000000000000000000000000"
 
+	code := callCode(t)
 	first := stubSession(t, docsAndComments(t))
-	mcpRun(context.Background(), read, json.RawMessage(`{"url":"`+fixtureDocID+`"}`), nilWriter{})
+	mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+fixtureDocID+`"}`), nilWriter{}, code)
 	second := stubSession(t, docsAndComments(t))
-	mcpRun(context.Background(), read, json.RawMessage(`{"url":"`+otherDocID+`"}`), nilWriter{})
+	mcpRun(context.Background(), read, withCode(t, code, `{"url":"`+otherDocID+`"}`), nilWriter{}, code)
 
 	if first.policy == nil || second.policy == nil {
 		t.Fatal("both calls open a policy")

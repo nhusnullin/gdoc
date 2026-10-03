@@ -70,7 +70,13 @@
 //     that carries no credential, gapi.Plain.
 //   - mcp [--trusted-email-domains]: this binary as a stdio server for Claude
 //     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
-//     the wiring. The one command route sends past run.
+//     the wiring. The one command route sends past run. It offers eight tools,
+//     the six of the table that chat reviews with and guide and login, and
+//     every one of the six takes the code guide hands out and refuses the call
+//     without it: TestToolsListListsExactlyTheEightToolsWithTheirHints and
+//     TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode. The review core
+//     it serves is a committed copy of the skill's, held equal by
+//     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
 //     to a file. completion.go, with the template beside it.
