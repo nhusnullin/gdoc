@@ -1,12 +1,13 @@
-# DRAFT: decision entry, not yet in DECISIONS.md
+# gdoc v2 Milestone 15: Panels, what a person sees in a terminal, specification
 
-Status: draft for Nail. Nothing below holds until it is copied into
-`docs/v2/DECISIONS.md` with its register row, on the day it is decided.
+Status: taken. The entry below is in `docs/v2/DECISIONS.md`, dated 2026-10-03,
+with its register row. This file is kept as M15's specification, beside the
+plan that built it.
 
-M14 has merged into main, and this draft was reread against M14's two entries
-of 2026-10-03 the same day. It is the specification for M15, whose plan is
-`docs/plans/2026-10-03-gdoc-v2-m15-panels.md`. M15 ships after v2.9.0, so it
-uses what M14 added: `AllowAccountRead`, `accountOf`, and the `mcp` routing
+M14 has merged into main, and this specification was reread against M14's two
+entries of 2026-10-03 the same day. The plan that built it is
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels.md`. M15 ships after
+v2.9.0, so it uses what M14 added: `AllowAccountRead`, `accountOf`, and the `mcp` routing
 that keeps every MCP tool away from `run()`.
 
 The pictures behind it: `docs/design/tui-variations.html` (round one, six
@@ -174,8 +175,8 @@ screen rule cannot reach a tool answer.
   interactive framework and gdoc never reads stdin. A stdlib-only package,
   `internal/tty`, of about 300 lines draws everything.
 
-**Tests it needs.** The M15 plan, `docs/plans/2026-10-03-gdoc-v2-m15-panels.md`,
-names one test per rule, and its names are the ones the DECISIONS.md entry
+**Tests it needs.** The M15 plan,
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels.md`, names one test per rule, and its names are the ones the DECISIONS.md entry
 carries. They include `TestHelpOnATerminalWritesNothingToStdout`,
 `TestHelpWithJSONPrintsTheObjectOnATerminal` for every spelling of help,
 `TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped`,

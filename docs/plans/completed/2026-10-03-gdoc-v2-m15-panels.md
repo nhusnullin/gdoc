@@ -1,9 +1,10 @@
 # gdoc v2 Milestone 15: Panels, what a person sees in a terminal, plan
 
-2026-10-03. The task list for the specification at
-`docs/design/decision-draft-help-on-a-terminal.md`, which Nail took in the TUI
-brainstorm of 2026-10-03 and which was reread against M14 the same day. The
-pictures are `docs/design/panels-round-two.html`: every screen this plan builds
+2026-10-03. The task list for the specification beside it,
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels-spec.md`, which Nail took
+in the TUI brainstorm of 2026-10-03 and which was reread against M14 the same
+day. The pictures are
+`docs/design/panels-round-two.html`: every screen this plan builds
 is drawn there at its widths, dark and light. One commit per task, for ralphex.
 v2.9.0 shipped M14 on 2026-10-03; this run is released as v2.10.0, after
 Nail's acceptance in Post-Completion.
@@ -582,14 +583,40 @@ Before any rendering code changes.
 - Modify: `go/cmd/gdoc/doc.go`, `docs/guide/` pages that show help or login
   output, `docs/v2/PLAN.md`, `README.md` if it shows help output
 
-- [ ] `cmd/gdoc/doc.go`: the help-screen rule, `--json`, the hint and the bare
+- [x] `cmd/gdoc/doc.go`: the help-screen rule, `--json`, the hint and the bare
       `gdoc` screen, each with its test named.
-- [ ] The guide pages show the new screens where they showed the old.
-- [ ] `PLAN.md`: M15 under Done, with this plan's path.
-- [ ] Move this plan to `docs/plans/completed/`, and the spec beside it as
+- [x] The guide pages show the new screens where they showed the old.
+- [x] `PLAN.md`: M15 under Done, with this plan's path.
+- [x] Move this plan to `docs/plans/completed/`, and the spec beside it as
       `2026-10-03-gdoc-v2-m15-panels-spec.md`; fix every link to both.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "docs(v2): M15, completed"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "docs(v2): M15, completed"`
+
+- ➕ `cmd/gdoc/doc.go` got one section, "On a terminal a help screen replaces
+  the object", and one paragraph in "One JSON object, and the exit code says
+  which" that names the narrowing and points at it. The other sections the
+  earlier tasks wrote, `auth status`, `auth login` and the update steps, already
+  named their tests and were left alone.
+- ➕ Two guide pages, not a list of them: `from-a-checkout.md`, where
+  "Help and completion" now says what a terminal draws and what `--json` is for,
+  and `how-it-works.md`, where `auth status` names the account under its
+  five-second ceiling and both auth commands draw a panel on a terminal. No
+  other page shows help, login or update output.
+- ➕ `README.md` shows no help output, so it was not in the list, but its
+  "Build your own skill on the binary" section told a skill author that
+  `gdoc help <command>` prints the words and the flags. It now says to pass
+  `--json`. The page is at the 200-line ceiling
+  `TestTheReleaseREADMEIsUnderTheCeiling` holds, so the sentence was written to
+  fit the three lines that were there.
+- ➕ The spec's own head said "DRAFT: decision entry, not yet in
+  DECISIONS.md", which Task 1 made false. Moving it into `completed/` as M15's
+  specification would have kept a file beside a finished milestone saying
+  nothing in it holds, so the head now says the entry is in DECISIONS.md, dated
+  2026-10-03.
+- ➕ `docs/design/panels-round-two.html` names the spec twice, in its
+  critique of it. Both now name the moved file. The pictures themselves stay in
+  `docs/design/`: the plan moves the plan and the spec, and nothing else links
+  to them by the old name.
 
 ### Task 14: verify acceptance
 

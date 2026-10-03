@@ -73,7 +73,16 @@ bin/gdoc completion zsh --out ~/.gdoc-completion.zsh
 
 `help` prints the command table: the words each command takes, every flag with
 a sentence saying what it is for, and one example. `--help` and `-h` mean the
-same thing anywhere on the line. `completion` renders that same table as a
+same thing anywhere on the line.
+
+In a terminal `help` draws that table as a screen: boxes on stderr, the
+commands grouped by the job they do, and nothing on stdout. Add `--json` and
+you get the JSON object a skill reads instead, with stderr left plain. A pipe,
+a file and a window under fifty columns get today's plain text and the object,
+unchanged. Bare `gdoc` draws the same screen, opening with `gdoc needs a
+command.`, and still exits 1.
+
+`completion` renders that same table as a
 shell script and writes it to the file you name, for `zsh` or for `bash`. An
 existing file is refused without `--force`, so the path above is not the
 `bin/gdoc.zsh` that `install.sh` owns. Both read the one table the parser

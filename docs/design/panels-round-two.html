@@ -268,7 +268,7 @@ footer.end p{max-width:900px;margin:6px 0}
 
 <ol>
 <li><b>Drop the object only when help answered.</b> On a terminal without <code>--json</code>, stdout is empty only for <code>ok: true</code>. A refusal (<code>gdoc help sing</code>) and the panic envelope still print their object. There is no Panels view for a refusal, so dropping its object would print nothing and exit 1. This also keeps the invariant easy to state: an empty stdout always means exit 0.</li>
-<li><b><code>--json</code> also means plain stderr.</b> With the flag, stderr gets today's plain prose, even on a terminal. A PTY agent then gets exactly today's bytes, object and prose, with no escape codes in its stream. The draft styles stderr by the stderr check alone (<code>decision-draft-help-on-a-terminal.md:45-47</code>), which would put Panels escapes into a PTY agent's capture.</li>
+<li><b><code>--json</code> also means plain stderr.</b> With the flag, stderr gets today's plain prose, even on a terminal. A PTY agent then gets exactly today's bytes, object and prose, with no escape codes in its stream. The draft styles stderr by the stderr check alone (<code>2026-10-03-gdoc-v2-m15-panels-spec.md:45-47</code>), which would put Panels escapes into a PTY agent's capture.</li>
 <li><b>Fix the skill wording.</b> "No object at all" is a failed call, not a build from source. Read <code>version</code> from the object whether it says <code>ok</code> or not.</li>
 </ol>
 
@@ -293,7 +293,7 @@ footer.end p{max-width:900px;margin:6px 0}
 <h3>Corrections to the draft</h3>
 
 <ol>
-<li><b>The object is about 7.4 KB, not 700 characters.</b> <code>decision-draft-help-on-a-terminal.md:19</code>. A checkout build's <code>gdoc help</code> writes 7,369 bytes to stdout. <code>gdoc help publish</code> writes 534. The real number makes the case stronger.</li>
+<li><b>The object is about 7.4 KB, not 700 characters.</b> <code>2026-10-03-gdoc-v2-m15-panels-spec.md:19</code>. A checkout build's <code>gdoc help</code> writes 7,369 bytes to stdout. <code>gdoc help publish</code> writes 534. The real number makes the case stronger.</li>
 <li><b>Help cannot see stdout.</b> Lines 31-34 say help "decides by what stdout is". <code>cmdHelp</code> gets only <code>errOut</code> (<code>help.go:64</code>). <code>run()</code> owns stdout and prints every result through <code>emit.Print</code> (<code>main.go:67-78</code>). The drop has to happen in <code>run()</code>, the same choke point the panic envelope depends on. The decision should name that place.</li>
 <li><b>Refusals are not covered.</b> Lines 31-34 and 48-50 say what a terminal gets when help answers. They do not say what <code>gdoc help sing</code> gets. As written, a refusal on a terminal would print no Panels, no object, and exit 1. Add: only <code>ok: true</code> drops the object.</li>
 <li><b>The <code>--help</code> alias skips the parser.</b> Lines 39-42 add <code>--json</code> to <code>help</code>. But <code>--help</code> and <code>-h</code> are answered before the parser runs (<code>main.go:111-113</code>), and <code>helpWords</code> drops everything except the command it found (<code>help.go:257-262</code>). So <code>gdoc read --help --json</code> would ignore <code>--json</code> in silence and fall back to the terminal check. <code>gdoc --help --json</code> would be refused as unknown command "--json". The alias path must read <code>--json</code> too, with a test.</li>

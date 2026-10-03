@@ -27,6 +27,13 @@
 // rules are in internal/mcp/doc.go, and what chat adds to a command is in
 // internal/chat/doc.go.
 //
+// And one narrowing. A help screen on a terminal without --json writes nothing
+// to stdout, because the reader of that screen is a person and the object under
+// it is 7.5 KB they did not ask for. Every other result keeps its object,
+// refusals and the panic envelope included, and a pipe gets the object in every
+// case. The rule and its tests are in "On a terminal a help screen replaces the
+// object" below.
+//
 // # The commands, and the one table that describes them
 //
 // commands.go holds the table, and dispatch matches what is in it and nothing
@@ -294,6 +301,76 @@
 // session against strings in memory. TestOnlyMainNamesStdinAndStdout in
 // go/boundary is the pin, and it reads the syntax tree, so this paragraph is
 // prose rather than a second room.
+//
+// # On a terminal a help screen replaces the object
+//
+// A person who types gdoc help reads the help and then, today, 7.5 KB of JSON
+// wrapped under it. So on a terminal without --json a help screen is the whole
+// answer: the words go to stderr, stdout gets nothing, and the exit code is the
+// one the object would have carried. Two results have such a screen, help when
+// it answers and bare gdoc, and no third.
+//
+// The decision is run's, because run is the room that holds stdout. A result
+// carries emit.Result.Screen, a marker with the tag json:"-" that no object can
+// show: TestScreenNeverReachesTheObject in internal/emit. A successful cmdHelp
+// sets it and the bare branch of dispatch sets it, and nothing else does, so a
+// panic has no marker and its envelope is printed wherever stdout goes.
+// TestHelpOnATerminalWritesNothingToStdout,
+// TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne,
+// TestARefusalKeepsItsObjectOnATerminal over gdoc help sing,
+// TestAPanicKeepsItsEnvelopeOnATerminal and
+// TestEveryOtherCommandKeepsItsObjectOnATerminal are the pins.
+//
+// --json is how a program asks for the object anyway. It prints the object
+// wherever stdout goes and leaves stderr plain, so a skill driving a terminal
+// reads exactly the bytes it read before. It survives every spelling, because
+// helpWords strips it before the table is matched and hands cmdHelp the answer:
+// TestEverySpellingOfHelpKeepsJSON and
+// TestHelpWithJSONPrintsTheObjectOnATerminal. gdoc --json alone is still an
+// unknown command, because a flag names no command: TestJSONAloneIsStillUnknown.
+// Any other flag on help is refused by name:
+// TestHelpTakesWordsAndOnlyTheJSONFlag.
+//
+// The hint is the last line of a screen that dropped its object, dim, and it
+// says to add --json. It is written by run, never where the object was printed,
+// and never on bare gdoc, which failed: that person was reaching for a command
+// and the refusal already says what to type. The ok field is what parts the
+// two: TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped.
+//
+// What the screens hold is helpscreen.go's, and the command table is still the
+// only description of a command. gdoc help draws the version box with the usage
+// line, the release notice and any warning the dropped object would have
+// carried, then the commands grouped by the four jobs a command does, then the
+// line saying where the detail is. The group is a field on the table entry and
+// reaches no object: TestEveryCommandHasAGroup, TestTheGroupIsNotInTheObject and
+// TestEveryCommandIsOnTheGroupedScreen, with
+// TestAWarningIsDrawnWhereTheObjectWouldHaveCarriedIt over the warning rows.
+// gdoc help <command> draws that command's box, its flags as two columns, and
+// its example on one line under the box:
+// TestTheExampleIsOneLineUnderTheBox. Bare gdoc opens with gdoc needs a
+// command., the words its object carries:
+// TestBareGdocOpensWithTheWordsItRefusesWith. The three screens are recorded at
+// four widths and in colour by TestTheHelpScreensAreTheirRecordedBytes, no line
+// leaves its box in TestNoLineOfAScreenIsWiderThanItsBox, and NO_COLOR or
+// TERM=dumb keeps the boxes and drops every escape byte:
+// TestNoColourOnATerminalDrawsTheBoxesWithNoEscapeByte.
+//
+// A help screen reads no token. There is no line saying whether anyone is
+// signed in, because then every help would be a read of the token file, and
+// help is a question about the tool rather than about an account. auth status is
+// the command that answers that one. TestHelpNeverReadsTheToken reads the
+// syntax tree of help.go, helpscreen.go and notice.go and finds no reference to
+// internal/auth.
+//
+// Everything that is not a terminal reads today's text, byte for byte: a pipe,
+// a file, a run with --json, a window under fifty columns, which is the plain
+// band of internal/panel's width rule, and every platform but darwin, which
+// answers that no stream is a terminal. The goldens in testdata/pipe hold it,
+// through TestHelpOnAPipeIsTodaysTextByteForByte,
+// TestBareGdocOnAPipeIsTodaysTextByteForByte and
+// TestAnUnknownCommandOnAPipeIsTodaysTextByteForByte, and
+// TestNoEscapeByteReachesAPipe runs every command in the table through run with
+// buffers and finds no escape byte on either stream.
 //
 // # Completion is a file, and the reason is the output contract
 //

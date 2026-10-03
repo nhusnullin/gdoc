@@ -3497,8 +3497,10 @@ Nail's decision, taken in the TUI brainstorm of 2026-10-03, where he chose the
 reader's attention: a person who types `gdoc help` reads a screen built for
 them, not a 7.5 KB JSON line wrapped under it. Serves 1 as well: no new module,
 the styling and the terminal check are standard library only. The task list is
-`docs/plans/2026-10-03-gdoc-v2-m15-panels.md`, released as v2.10.0, and the
-pictures are `docs/design/panels-round-two.html`.
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels.md`, released as v2.10.0,
+its specification is beside it as
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels-spec.md`, and the pictures
+are `docs/design/panels-round-two.html`.
 
 **What was true before.** Every command printed exactly one JSON object on
 stdout, always, and the words a person reads went to stderr. The 2026-09-16
