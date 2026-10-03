@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"gdoc/internal/chat"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
 )
@@ -104,6 +105,11 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	}
 
 	s := mcp.New(mcpInfo(), mcpTools(opts, errOut, lg, ch), errOut)
+	// Where a held write's one confirm tool is registered, and taken away when
+	// it is released or its thirty minutes run out. The server is made after the
+	// tools are, so it is told here rather than handed in.
+	ch.holds.listIn(s, func(held chat.Hold) mcp.Tool { return mcpConfirmTool(held, errOut, ch) })
+
 	if err := s.Serve(ctx, in, out); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -156,9 +162,13 @@ const noArguments = `{"type":"object","properties":{}}`
 //
 // Every tool but login and guide takes the session's code, and guide is the
 // only place it is given out: TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode.
+// Every tool also goes through mcpTimed, which sweeps the holds this session is
+// keeping and records the instant the call ended: the quiet gap a release needs
+// behind it is measured from that instant, and a card whose thirty minutes ran
+// out leaves the list on the next call rather than waiting to be pressed.
 func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
 	out := mcpCommandTools(errOut, ch)
-	return append(out,
+	out = append(out,
 		mcp.Tool{
 			Name:        "login",
 			Title:       "Sign in to Google for gdoc",
@@ -170,6 +180,10 @@ func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mc
 			},
 		},
 		mcpGuideTool(opts, ch.code))
+	for i := range out {
+		out[i] = mcpTimed(ch, out[i])
+	}
+	return out
 }
 
 // cmdMCP is the table entry's run, and it refuses. mcp is routed in main

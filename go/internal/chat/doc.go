@@ -181,9 +181,38 @@
 // it: the ledger carries no author, and rules.go never names the fact:
 // TestAuthorDomainChangesNoOutcome.
 //
+// # Only the person releases a hold
+//
+// A hold is answered by a card, never by a yes said in the chat, because a yes
+// said in the chat passes through the model. Release is what judges the one call
+// that would send a held write, and it asks two things.
+//
+// The words are the hold's own. Card carries the hold id, the document's title,
+// the reason and the text, and all four are compared byte for byte, so the
+// person cannot be shown a paraphrase of why the write was stopped:
+// TestTheCardsWordsArePinnedToTheByte, and
+// TestAByteDifferentTitleReasonOrTextIsRefused in cmd/gdoc through the tool
+// itself. The field that differs is named, because the words to send are in the
+// held answer and which one is wrong is a fact about the call.
+//
+// And the turn ended. quietGap is five seconds of silence behind the call,
+// measured from the session's last tool call or from the hold itself, whichever
+// is later: TestTheQuietGapIsFiveSeconds and
+// TestTheGapIsMeasuredFromTheLastCallOrTheHoldItself. The number is measurement
+// 11 of docs/v2/MEASURED.md: the two people measured took 95 and 121 seconds
+// over the card, so five seconds costs an honest release nothing, and the one
+// shape it does cost is a model releasing its own write inside the turn that was
+// held, which is what both runs of that measurement showed it doing.
+//
+// Both refusals keep the hold, because both are answerable: one by sending the
+// card's own words, and the other by waiting. Nothing here registers a tool,
+// keeps a hold or sends a write: cmd/gdoc's mcprelease.go is where a hold
+// becomes one tool with one name, and where a released call goes out as the
+// arguments the hold kept.
+//
 // # What is not here yet
 //
-// The confirm tools, the write memory and the trusted-domains setting are tasks
-// 16 to 18 of docs/plans/2026-10-03-gdoc-v2-m14b-server.md. Rules already takes
-// the trusted list; nothing parses the person's setting into it yet.
+// The write memory and the trusted-domains setting are tasks 17 and 18 of
+// docs/plans/2026-10-03-gdoc-v2-m14b-server.md. Rules already takes the trusted
+// list; nothing parses the person's setting into it yet.
 package chat

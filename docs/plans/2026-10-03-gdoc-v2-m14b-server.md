@@ -1018,17 +1018,24 @@ and 11.
 - Modify: `go/cmd/gdoc/mcptools.go`
 - Create: `go/cmd/gdoc/mcprelease_test.go`
 
-- [ ] Test first, `TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease`,
+- [x] Test first, `TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease`,
       and on expiry, each sending `tools/list_changed`.
-- [ ] Test, `TestTheConfirmSchemaListsHoldTitleReasonText`, in that order.
-- [ ] Test, `TestAByteDifferentTitleReasonOrTextIsRefused`, the hold kept.
-- [ ] Test, `TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept`: a tool
+- [x] Test, `TestTheConfirmSchemaListsHoldTitleReasonText`, in that order.
+- [x] Test, `TestAByteDifferentTitleReasonOrTextIsRefused`, the hold kept.
+- [x] Test, `TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept`: a tool
       call 4 seconds before the release refuses it; 5 seconds passes.
-- [ ] Test, `TestAReleasedHoldPostsExactlyTheHeldTextOnce`, including after
+- [x] Test, `TestAReleasedHoldPostsExactlyTheHeldTextOnce`, including after
       the hold's document was read again.
-- [ ] Implement `quietGap = 5 * time.Second` and the release path.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): a one-time confirm tool per hold, the card's words pinned to the byte"`
+- [x] Implement `quietGap = 5 * time.Second` and the release path.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): a one-time confirm tool per hold, the card's words pinned to the byte"`
+
+**Files, as built:** also `go/cmd/gdoc/mcprelease.go` (new: mcptools.go stands at
+over 800 lines, so the release path is its own file), `go/cmd/gdoc/mcphold.go`
+(the holds register and remove the confirm tool, and the held answer carries the
+reason as its own field, because a release sends it back byte for byte),
+`go/cmd/gdoc/mcp.go` (the server is told where a confirm tool is listed) and the
+two doc.go files.
 
 ### Task 17: the same write twice is written once
 

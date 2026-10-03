@@ -49,6 +49,14 @@ const mcpHoldLife = 30 * time.Minute
 // again. This one says what happened and what to do about it, and nothing else.
 const mcpHeldSentence = "Nothing was posted; tell the person this reason and end your turn."
 
+// mcpLister is the little of a server a hold needs: one tool registered, one
+// taken away, each told to the client as a list that moved. internal/mcp's
+// Server is what fills it, and a test watches what it was asked for.
+type mcpLister interface {
+	Add(mcp.Tool)
+	Remove(string)
+}
+
 // mcpHolds is every hold one session is keeping.
 //
 // Per process and in memory, like the ledger beside it, and guarded because the
@@ -57,6 +65,13 @@ const mcpHeldSentence = "Nothing was posted; tell the person this reason and end
 type mcpHolds struct {
 	mu   sync.Mutex
 	byID map[string]chat.Hold
+
+	// lister is where a hold's confirm tool goes, and confirm is what builds
+	// one. Both are set once the session has a server to tell, because the
+	// tools are built before the server is. A session that wired neither keeps
+	// its holds and registers nothing.
+	lister  mcpLister
+	confirm func(chat.Hold) mcp.Tool
 }
 
 // newMCPHolds is one session's own.
@@ -64,31 +79,77 @@ func newMCPHolds() *mcpHolds {
 	return &mcpHolds{byID: map[string]chat.Hold{}}
 }
 
-// keep puts one hold in the session's record, under the id its answer named.
-func (h *mcpHolds) keep(held chat.Hold) {
+// listIn is where this session's confirm tools are listed. serveMCP calls it
+// once, with the server it is about to run.
+func (h *mcpHolds) listIn(l mcpLister, confirm func(chat.Hold) mcp.Tool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.lister, h.confirm = l, confirm
+}
+
+// keep puts one hold in the session's record, under the id its answer named, and
+// registers the one tool that can release it.
+func (h *mcpHolds) keep(held chat.Hold) {
+	h.mu.Lock()
 	h.byID[held.ID] = held
+	lister, confirm := h.lister, h.confirm
+	h.mu.Unlock()
+	if lister == nil || confirm == nil {
+		return
+	}
+	lister.Add(confirm(held))
 }
 
 // hold is the hold with this id as it stands now, or nothing: an id this session
 // never held, and one it held more than mcpHoldLife ago, answer the same way.
-//
-// Every expired hold is dropped on the way past, so a session that ran all day
-// keeps the holds somebody may still answer and nothing else.
 func (h *mcpHolds) hold(id string, now time.Time) *chat.Hold {
+	h.sweep(now)
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for other, held := range h.byID {
-		if !held.Created.After(now.Add(-mcpHoldLife)) {
-			delete(h.byID, other)
-		}
-	}
 	held, ok := h.byID[id]
 	if !ok {
 		return nil
 	}
 	return &held
+}
+
+// sweep drops every hold older than mcpHoldLife and takes its tool off the list.
+// It runs at the start of every tool call and whenever a hold is looked up, so a
+// card nobody answered leaves the client in its own time rather than waiting for
+// somebody to press it: TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease.
+func (h *mcpHolds) sweep(now time.Time) {
+	h.mu.Lock()
+	var gone []string
+	for id, held := range h.byID {
+		if !held.Created.After(now.Add(-mcpHoldLife)) {
+			delete(h.byID, id)
+			gone = append(gone, id)
+		}
+	}
+	lister := h.lister
+	h.mu.Unlock()
+	if lister == nil {
+		return
+	}
+	// Sorted, so two expiring together leave in the same order every run.
+	slices.Sort(gone)
+	for _, id := range gone {
+		lister.Remove(mcpConfirmPrefix + id)
+	}
+}
+
+// release takes one hold out and its tool off the list, which is what makes a
+// confirm tool one-time: a second call of the same card finds no hold.
+func (h *mcpHolds) release(id string) {
+	h.mu.Lock()
+	_, ok := h.byID[id]
+	delete(h.byID, id)
+	lister := h.lister
+	h.mu.Unlock()
+	if !ok || lister == nil {
+		return
+	}
+	lister.Remove(mcpConfirmPrefix + id)
 }
 
 // mcpJudge is every hold rule over one call, before the command that would send
@@ -131,12 +192,17 @@ type holdData struct {
 	Held holdFacts `json:"held"`
 }
 
+// holdFacts carries the reason as its own field as well as inside the error,
+// because the reason is one of the four words a release has to send back byte for
+// byte, and reading it out of a sentence is not something a model should have to
+// do: mcprelease.go, and TestAByteDifferentTitleReasonOrTextIsRefused.
 type holdFacts struct {
 	ID       string `json:"id"`
 	Tool     string `json:"tool"`
 	Document string `json:"document"`
 	Rule     string `json:"rule"`
 	Value    string `json:"value"`
+	Reason   string `json:"reason"`
 	Text     string `json:"text"`
 	Say      string `json:"say"`
 }
@@ -147,15 +213,29 @@ type holdFacts struct {
 // facts, because the error is the field every other refusal arrives in and a
 // model that reads only that one is still told what to say.
 func mcpHeldAnswer(held chat.Hold) mcp.Result {
+	return mcpHoldEnvelope(held, held.Reason)
+}
+
+// mcpKeptAnswer is a release that released nothing: the same facts the hold
+// answered with, and why this call did not send it. The hold is still there, so
+// the answer is the card's own words again rather than a bare refusal.
+func mcpKeptAnswer(held chat.Hold, why string) mcp.Result {
+	return mcpHoldEnvelope(held, why)
+}
+
+// mcpHoldEnvelope is the envelope both of those are: nothing sent, the facts a
+// card is built from, and one sentence saying why, ending in the fixed one.
+func mcpHoldEnvelope(held chat.Hold, why string) mcp.Result {
 	return mcpEnvelope(emit.Result{
 		OK:    false,
-		Error: held.Reason + ". " + mcpHeldSentence,
+		Error: why + ". " + mcpHeldSentence,
 		Data: holdData{Sent: false, Held: holdFacts{
 			ID:       held.ID,
 			Tool:     held.Tool,
 			Document: held.Title,
 			Rule:     held.Rule,
 			Value:    held.Value,
+			Reason:   held.Reason,
 			Text:     held.Text,
 			Say:      mcpHeldSentence,
 		}},

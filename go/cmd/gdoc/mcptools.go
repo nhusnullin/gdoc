@@ -50,6 +50,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"gdoc/internal/auth"
@@ -74,6 +75,29 @@ type mcpChat struct {
 	code   *chat.Code
 	ledger *chat.Ledger
 	holds  *mcpHolds
+
+	mu sync.Mutex
+	// last is when the session's most recent tool call ended. It is what the
+	// quiet gap behind a release is measured from, and nothing else reads it.
+	last time.Time
+}
+
+// touch records that a tool call of this session has just ended. mcpTimed is its
+// one caller, around every tool the session offers.
+func (ch *mcpChat) touch(at time.Time) {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	if at.After(ch.last) {
+		ch.last = at
+	}
+}
+
+// lastCall is when this session last did anything, or the zero time in a session
+// that has not finished a call yet.
+func (ch *mcpChat) lastCall() time.Time {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+	return ch.last
 }
 
 // newMCPChat is one session's own. The error is the random source failing, which
@@ -353,13 +377,8 @@ func mcpCode(code *chat.Code, args json.RawMessage) error {
 	return code.Check(got)
 }
 
-// mcpRun is one tool call: the arguments turned into a command line, the files
-// the command reads written under it, the command run in this process, and the
-// envelope the terminal would have printed as one text item.
-//
-// The directory is removed on every path out, the panic one included, because
-// safeDispatch turns a panic into an envelope and the deferred remove runs
-// either way.
+// mcpRun is one tool call: the two checks every call of this server answers
+// first, and then the call itself.
 func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.Writer, ch *mcpChat) mcp.Result {
 	// Before anything else: a call without this session's code is a call made
 	// before the rules arrived, and the answer is the one sentence that fixes
@@ -376,7 +395,23 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 	if err := mcpSignedIn(); err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
 	}
+	return mcpSend(ctx, c, args, errOut, ch, true)
+}
 
+// mcpSend is the call itself: the arguments turned into a command line, the
+// files the command reads written under it, the document pinned, the hold rules
+// asked where they are to be asked, the command run in this process, and the
+// envelope the terminal would have printed as one text item.
+//
+// judge is false on one route only, the release of a held write: the rules were
+// asked of that call already and the person answered them, so asking again would
+// hold the write the approval was for. mcprelease.go is that route, and nothing
+// else may pass false.
+//
+// The directory is removed on every path out, the panic one included, because
+// safeDispatch turns a panic into an envelope and the deferred remove runs
+// either way.
+func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.Writer, ch *mcpChat, judge bool) mcp.Result {
 	files := &callFiles{}
 	defer files.remove()
 
@@ -395,7 +430,7 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 	// And then the rules, over the write that read is for. A write a rule holds
 	// is not sent: nothing below this line runs for it, so the wire sees
 	// nothing. mcphold.go holds what the answer carries.
-	if target != nil {
+	if judge && target != nil {
 		if res, stop := mcpJudge(c, args, *target, ch); stop {
 			return res
 		}

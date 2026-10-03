@@ -87,7 +87,19 @@
 //     hold's id, rule, value and words, with one fixed sentence that says to
 //     tell the person and stop. The hold stays in that process for 30 minutes:
 //     TestAHeldWriteSendsNothing, TestTheHeldAnswerNamesTheRuleTheValueAndTheText
-//     and TestAHoldLivesThirtyMinutes. The review core it
+//     and TestAHoldLivesThirtyMinutes. What sends a held write is the one tool
+//     that hold registers, confirm_ and its id, which the client draws as a card
+//     and the person approves: it goes when the write goes or when the thirty
+//     minutes run out, its card carries the hold, the title, the reason and the
+//     text in that order, a byte of difference in any of them is refused with the
+//     hold kept, a release with less than five seconds of quiet behind it is
+//     refused the same way, and what goes out is the call the hold kept rather
+//     than anything the release sends:
+//     TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease,
+//     TestTheConfirmSchemaListsHoldTitleReasonText,
+//     TestAByteDifferentTitleReasonOrTextIsRefused,
+//     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The review core it
 //     serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.

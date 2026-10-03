@@ -45,6 +45,7 @@ type heldEnvelope struct {
 			Document string `json:"document"`
 			Rule     string `json:"rule"`
 			Value    string `json:"value"`
+			Reason   string `json:"reason"`
 			Text     string `json:"text"`
 			Say      string `json:"say"`
 		} `json:"held"`
