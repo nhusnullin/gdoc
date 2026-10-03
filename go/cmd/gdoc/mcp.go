@@ -67,7 +67,7 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	// Where a held write's one confirm tool is registered, and taken away when
 	// it is released or its thirty minutes run out. The server is made after the
 	// tools are, so it is told here rather than handed in.
-	ch.holds.listIn(s, func(held chat.Hold) mcp.Tool { return mcpConfirmTool(held, errOut, ch) })
+	ch.holds.listIn(s, func(held chat.Hold) mcp.Tool { return mcpLogged(errOut, mcpConfirmTool(held, errOut, ch)) })
 
 	if err := s.Serve(ctx, in, out); err != nil {
 		fmt.Fprintln(errOut, err)
@@ -137,7 +137,7 @@ func mcpTools(errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
 		},
 		mcpGuideTool(ch))
 	for i := range out {
-		out[i] = mcpTimed(ch, mcpNoticed(nt, errOut, out[i]))
+		out[i] = mcpLogged(errOut, mcpTimed(ch, mcpNoticed(nt, errOut, out[i])))
 	}
 	return out
 }
