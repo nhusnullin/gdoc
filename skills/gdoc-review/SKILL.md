@@ -3,7 +3,7 @@ name: gdoc-review
 description: Use when the request gives a Google Doc link and asks for the marked comments in it to be handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until it is stopped.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.7.0
+  needs: v2.8.0
 ---
 
 # Google Docs review

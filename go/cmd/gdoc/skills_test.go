@@ -544,11 +544,11 @@ var skillWants = []struct {
 	folder string
 	needs  string
 }{
-	{"gdoc-align", "v2.7.0"},
+	{"gdoc-align", "v2.8.0"},
 	{"gdoc-export", "v2.4.0"},
 	{"gdoc-publish", "v2.4.0"},
 	{"gdoc-restyle", "v2.0.0"},
-	{"gdoc-review", "v2.7.0"},
+	{"gdoc-review", "v2.8.0"},
 }
 
 // skillFrontMatterValue is what the front matter says after this key, or the

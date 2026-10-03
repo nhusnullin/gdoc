@@ -24,7 +24,6 @@ cat > /tmp/proposals.json <<'EOF'
 EOF
 $GDOC propose <url> \
   --from /tmp/proposals.json \
-  --folder 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr \
   --md <paired note>
 ```
 
@@ -90,10 +89,18 @@ the third case, and gdoc cannot tell it apart: the request was written and may
 have been applied. The envelope's `error` names which one it was, so read it
 beside the flag, and read the document before proposing the same words again.
 
-`--folder` is the Drive test folder. The command creates a throwaway document
-there on every run, asks Google whether suggestions are honoured today, and
-trashes it. `enrolled: false` means nothing was proposed, and the reason is
-Google rather than the document: report it and stop proposing in that session.
+`outcome: "unknown"` on an entry is that third case named: the batch was written
+and its answer was lost, so the change may or may not be in the document. The
+run stops there and nothing after it is sent. Read `suggestions` before
+proposing anything again, and never send the same proposal twice on a guess.
+The same holds after a Bash timeout cut a propose run short.
+
+After each proposal the run reads the document back. When it could not confirm
+that a proposal landed as a suggestion, the envelope is `ok: false`, that
+proposal is the last one with `sent: true`, and the error says gdoc could not
+confirm it. Tell the person in those words, ask them to look at it in the
+browser, and propose nothing more in this session until they have. Never call
+it a direct edit: a block that came back split reads the same way.
 
 `--md` is the paired note. It records which suggestions are gdoc's own, and that
 record is the only permission to withdraw one later. Pass it whenever the

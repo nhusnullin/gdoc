@@ -3,7 +3,7 @@ name: gdoc-align
 description: Use when a note in the hub and a Google Doc are paired and the request asks for the two brought back together, in either direction. Exports the document, shows the differences, merges what you agree to, and proposes the note's own changes into the document as suggestions.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.7.0
+  needs: v2.8.0
 ---
 
 # Align a note and its document
@@ -260,14 +260,11 @@ Then, once the person has agreed:
 ```bash
 $GDOC propose <url> \
   --from /tmp/proposals.json \
-  --folder 1w0SresizE9Kr810VZRJwX4JtDBF4OqNr \
   --md <note>.md
 ```
 
 `--md` is the note, and it is what records the proposals so they can be withdrawn
-later. Pass it every time. `--folder` is the Drive test folder, where the command
-creates a throwaway document to ask whether suggestions are honoured today and
-trashes it; the request may name a different one, and then that is the folder.
+later. Pass it every time.
 
 The rules for the proposals file are `/gdoc-review`'s Step 7 and they hold here
 unchanged: `quoted` must appear exactly once, no line breaks in either field, no
@@ -283,8 +280,15 @@ hold for which proposal. `sent: false` is a proposal gdoc got no answer for: rea
 the `error` beside it, and read the document before proposing the same words
 again.
 
-`enrolled: false` means Google is not honouring suggestions today. Nothing was
-proposed. Report it and stop proposing in this session.
+`outcome: "unknown"` means the batch was written and its answer was lost, so the
+change may or may not be in the document. The run stops there. Read
+`suggestions` before proposing anything again, and do the same after a Bash
+timeout cut a propose run short.
+
+When the error says gdoc could not confirm a proposal landed as a suggestion,
+nothing after it was sent. Say so in those words, ask the person to look at it
+in the browser, and propose nothing more in this session until they have. Never
+call it a direct edit.
 
 ## Step 4: Both moved
 
