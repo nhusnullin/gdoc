@@ -1179,13 +1179,13 @@ Serves decisions 12 and 14 with MEASURED 1. Scenarios 1, 14.
 - Modify: `go/boundary/release_test.go`
 - Modify: `docs/guide/from-a-checkout.md`
 
-- [ ] Test first, `TestTheManifestTemplateParses`, with `@BIN@` exactly
+- [x] Test first, `TestTheManifestTemplateParses`, with `@BIN@` exactly
       twice and `@VERSION@` once, and `description` and `author` present.
-- [ ] Test, `TestTheManifestListsTheToolsToolsListLists`.
-- [ ] Test, `TestTheManifestHasOneOptionalSettingWithAnEmptyDefault`.
-- [ ] Test, `TestTheReleaseZipCarriesTheTemplate`: `release.yml` copies
+- [x] Test, `TestTheManifestListsTheToolsToolsListLists`.
+- [x] Test, `TestTheManifestHasOneOptionalSettingWithAnEmptyDefault`.
+- [x] Test, `TestTheReleaseZipCarriesTheTemplate`: `release.yml` copies
       `release/mcpb/manifest.json` to `mcpb/manifest.json` in each stage.
-- [ ] `release/test-desktop.sh`, written first and watched failing. It copies
+- [x] `release/test-desktop.sh`, written first and watched failing. It copies
       `release/install.sh` and a stage (a fake `gdoc` that prints a version,
       `mcpb/manifest.json`) into a temp directory, sets `HOME` to a temp
       directory, `cd`s there, and runs the installer with `--desktop` and
@@ -1198,18 +1198,32 @@ Serves decisions 12 and 14 with MEASURED 1. Scenarios 1, 14.
       compares extracted manifests, never zip bytes, since a zip stores
       times. On Linux the `open` step prints that it was skipped, so CI checks
       the files and a Mac checks the command too.
-- [ ] `release/install.sh --desktop`: after the binary is installed, fill the
+- [x] `release/install.sh --desktop`: after the binary is installed, fill the
       template, zip `manifest.json` into `gdoc.mcpb` beside the binary, and
       run `${GDOC_DESKTOP_OPEN:-/usr/bin/open}` on it on macOS; elsewhere,
       write the file and say how to install it. Refuse `--desktop` when the
       zip has no `mcpb/manifest.json`, or when `zip` is not on the path.
-- [ ] Root `install.sh --desktop`: the same, with `bin/gdoc`'s absolute path,
+- [x] Root `install.sh --desktop`: the same, with `bin/gdoc`'s absolute path,
       so `make build` then a quit and reopen of Claude Desktop runs the new
       build (decision 14).
-- [ ] `go.yml` runs `sh release/test-desktop.sh`.
-- [ ] `from-a-checkout.md`: the `--desktop` line and the quit-and-reopen.
-- [ ] `cd go && go test -race ./...` passes; `sh release/test-desktop.sh` passes.
-- [ ] `git commit -m "feat(release): --desktop writes gdoc.mcpb beside the binary and opens it, from the release and from a checkout"`
+- [x] `go.yml` runs `sh release/test-desktop.sh`.
+- [x] `from-a-checkout.md`: the `--desktop` line and the quit-and-reopen.
+- [x] `cd go && go test -race ./...` passes; `sh release/test-desktop.sh` passes.
+- [x] `git commit -m "feat(release): --desktop writes gdoc.mcpb beside the binary and opens it, from the release and from a checkout"`
+
+➕ The shell test hands the installers a recording opener rather than
+`GDOC_DESKTOP_OPEN=echo`: a script that writes its arguments to a file. `echo`
+only prints, and the installer's own summary prints the same path, so a check
+reading the log could not tell the open from the summary. The file says the
+command was exactly `<the one .mcpb>` and nothing else, which is what the
+assertion is for.
+
+➕ The root `install.sh` had no argument parsing at all, so `--desktop` meant
+adding a `usage`, a flag loop and an unknown-argument refusal to it, the way
+`release/install.sh` already refuses by name.
+
+➕ The root installer writes `bin/gdoc.mcpb`, beside the binary the manifest
+names. `bin/` is not in git, so nothing new is committable.
 
 ### Task 22: gdoc update --desktop, and the one program gdoc runs
 

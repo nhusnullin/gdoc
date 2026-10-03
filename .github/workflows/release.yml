@@ -92,9 +92,10 @@ jobs:
       #
       # The zip is flat: the binary as `gdoc`, the installer, the repository's
       # README (one file, so GitHub and the zip say the same thing), the
-      # example note and the three skills. install.sh unpacks it into a temp
-      # directory and installs what it finds beside itself, so a folder level
-      # here would be a folder it cannot see past.
+      # example note, the five skills and the extension template under mcpb/.
+      # install.sh unpacks it into a temp directory and installs what it finds
+      # beside itself, so a folder level over the installer would be a folder it
+      # cannot see past.
       - name: pack
         run: |
           mkdir -p dist
@@ -118,6 +119,12 @@ jobs:
             cp README.md "$stage/README.md"
             cp -R release/example "$stage/example"
             cp -R skills "$stage/skills"
+            # The Claude Desktop extension's manifest template, at the one path
+            # both installers and `gdoc update --desktop` look for it at. It
+            # travels inside the zip because a colleague's machine can no more
+            # read this repository than it can read release/platforms.
+            mkdir -p "$stage/mcpb"
+            cp release/mcpb/manifest.json "$stage/mcpb/manifest.json"
 
             asset="gdoc-$TAG-$platform.zip"
             ( cd "$stage" && zip -qr "$GITHUB_WORKSPACE/dist/$asset" . )

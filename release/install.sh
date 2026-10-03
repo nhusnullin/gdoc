@@ -16,6 +16,7 @@
 #   --tag <tag>       install that release rather than the newest stable
 #   --skills global   copy the five skills into ~/.claude/skills
 #   --skills local    copy them into ./.claude/skills
+#   --desktop         write the Claude Desktop extension and open it
 #
 # Skills normally arrive as a Claude Code plugin, which Claude Code updates when
 # a person asks it to:
@@ -27,6 +28,11 @@
 # copies rather than links, and it marks what it wrote with a .gdoc-installed
 # file: a folder carrying that file is this script's to replace, and a folder
 # without one is somebody's own work and is refused by name.
+#
+# --desktop is for Claude Desktop, which is chat rather than a terminal. It fills
+# the manifest template the zip carries with this binary's own path, zips it as
+# gdoc.mcpb beside the binary, and opens it, which is how Claude Desktop installs
+# an extension. Without the flag nothing about Claude Desktop is touched.
 #
 # ~/.zshrc is never edited. The summary prints the line to add and a person adds
 # it. ~/.config/gdoc-agent gets the completion file this run renders and nothing
@@ -48,6 +54,16 @@ DOWNLOAD="https://github.com/$REPO_SLUG/releases/download"
 BIN_DIR="$HOME/.local/bin"
 CONFIG_DIR="$HOME/.config/gdoc-agent"
 COMPLETION="$CONFIG_DIR/completion.zsh"
+
+# The extension template inside the zip, and the file --desktop writes from it.
+# The same two names the release workflow packs and `gdoc update --desktop`
+# looks for, so all three are one path.
+TEMPLATE_IN_ZIP="mcpb/manifest.json"
+MCPB_NAME="gdoc.mcpb"
+# What a checkout build, which names no release, calls itself in the manifest.
+# A manifest version field cannot be empty, so there is a number for the case
+# where there is no number.
+DEV_VERSION="0.0.0-dev"
 
 # Every skill the release zip carries. The plugin ships the same five folders,
 # and a boundary test compares this array with skills/ on every commit.
@@ -73,14 +89,16 @@ warn() {
 
 usage() {
     cat >&2 <<'USAGE'
-Usage: install.sh [--tag <tag>] [--skills global|local]
+Usage: install.sh [--tag <tag>] [--skills global|local] [--desktop]
 
   --tag <tag>       install that release rather than the newest stable
   --skills global   copy the five skills into ~/.claude/skills
   --skills local    copy them into ./.claude/skills
+  --desktop         write the Claude Desktop extension and open it
 
-With no flags it installs the binary into ~/.local/bin and touches no skill
-folder, because the plugin is how a colleague gets the skills.
+With no flags it installs the binary into ~/.local/bin, touches no skill
+folder, because the plugin is how a colleague gets the skills, and says
+nothing to Claude Desktop.
 USAGE
 }
 
@@ -94,6 +112,7 @@ USAGE
 
 tag=""
 skills_where=""
+desktop=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -109,6 +128,10 @@ while [ $# -gt 0 ]; do
                 *) fail "--skills takes global or local, and this run said '$2'" ;;
             esac
             shift 2
+            ;;
+        --desktop)
+            desktop=1
+            shift
             ;;
         -h|--help)
             usage
@@ -251,6 +274,24 @@ fi
 [ -x "$src/gdoc" ] || fail "$src holds no gdoc binary, so there is nothing here to install"
 
 # --------------------------------------------------------------------------
+# What --desktop needs, judged before anything is replaced
+# --------------------------------------------------------------------------
+#
+# A run that asked for the extension and cannot write one stops here, with the
+# gdoc already on this machine exactly where it was. The alternative is a person
+# who asked for Claude Desktop, got a new binary and a warning they scrolled
+# past, and is left wondering why their chat has no gdoc in it.
+
+template=""
+if [ "$desktop" -eq 1 ]; then
+    template="$src/$TEMPLATE_IN_ZIP"
+    [ -f "$template" ] || fail "$src holds no $TEMPLATE_IN_ZIP, so this release cannot write the Claude Desktop extension.
+  That file is packed into every release from v2.9.0 on. Install a newer release, or drop --desktop."
+    command -v zip >/dev/null 2>&1 || fail "zip is not on PATH, and the Claude Desktop extension is a zip.
+  Install zip, or drop --desktop."
+fi
+
+# --------------------------------------------------------------------------
 # One command on PATH
 # --------------------------------------------------------------------------
 #
@@ -285,6 +326,65 @@ fi
 
 version="$("$installed" help 2>/dev/null | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' || true)"
 [ -n "$version" ] || version="unknown"
+
+# --------------------------------------------------------------------------
+# The Claude Desktop extension, when the run asked for it
+# --------------------------------------------------------------------------
+#
+# A .mcpb is a zip holding a manifest, and the manifest names the command Claude
+# Desktop starts. It names the installed path rather than a name on PATH, because
+# Claude Desktop is not a shell and has no PATH of this person's.
+#
+# Written into a temp directory and moved over, so a second run leaves one entry
+# in the file rather than adding a second copy of the manifest to the zip that is
+# already there.
+
+mcpb=""
+desktop_opened=0
+if [ "$desktop" -eq 1 ]; then
+    mcpb="$BIN_DIR/$MCPB_NAME"
+
+    # The tag without its v, which is what a manifest version is. A binary that
+    # could not say its version, and a checkout build, both become the dev
+    # number rather than the word unknown, which no version field accepts.
+    mcpb_version="${version#v}"
+    case "$mcpb_version" in
+        ''|unknown|dev) mcpb_version="$DEV_VERSION" ;;
+    esac
+
+    # The path goes into JSON as a string and into sed as a replacement, so the
+    # three characters that would break either are refused by name rather than
+    # written into a manifest Claude Desktop cannot read.
+    case "$installed" in
+        *'"'*|*'\'*|*'|'*)
+            fail "$installed carries a quote, a backslash or a pipe, and a manifest naming it could not be written.
+  Install into a path without those, or drop --desktop."
+            ;;
+    esac
+
+    mcpb_work="$(mktemp -d)"
+    sed -e "s|@BIN@|$installed|g" -e "s|@VERSION@|$mcpb_version|g" \
+        "$template" > "$mcpb_work/manifest.json"
+    ( cd "$mcpb_work" && zip -q "$mcpb_work/$MCPB_NAME" manifest.json ) ||
+        fail "zip wrote no $MCPB_NAME, so nothing was written to $mcpb"
+    mv "$mcpb_work/$MCPB_NAME" "$mcpb"
+    rm -rf "$mcpb_work"
+
+    # Opening a .mcpb is how Claude Desktop installs one, and open is the macOS
+    # way to hand a file to the application that owns it. GDOC_DESKTOP_OPEN is
+    # the seam release/test-desktop.sh runs this under.
+    if [ "$(uname -s)" = "Darwin" ]; then
+        opener="${GDOC_DESKTOP_OPEN:-/usr/bin/open}"
+        if reason="$("$opener" "$mcpb" 2>&1)"; then
+            desktop_opened=1
+        else
+            warn "$opener did not open $mcpb: $reason
+  Open that file yourself, and Claude Desktop will offer to install it."
+        fi
+    else
+        printf 'install: %s is written. Claude Desktop runs on macOS, so copy that file there and open it.\n' "$mcpb" >&2
+    fi
+fi
 
 case ":$PATH:" in
     *":$BIN_DIR:"*) ;;
@@ -383,6 +483,19 @@ if [ "$completion_written" -eq 1 ]; then
     fi
 else
     printf '  complete not written, see the warning above\n'
+fi
+
+printf '\n  claude desktop\n'
+if [ "$desktop" -eq 1 ]; then
+    printf '    extension %s\n' "$mcpb"
+    if [ "$desktop_opened" -eq 1 ]; then
+        printf '    opened. Claude Desktop asks to install it, then quit it and open it again.\n'
+    else
+        printf '    open that file to install it, then quit Claude Desktop and open it again.\n'
+    fi
+    printf '    after a gdoc update, run: gdoc update --desktop\n'
+else
+    printf '    not touched. For gdoc in Claude Desktop, re-run this with --desktop.\n'
 fi
 
 printf '\n  skills\n'

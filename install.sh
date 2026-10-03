@@ -13,6 +13,14 @@
 # longer takes. Nothing else here replaces a file. .zshrc is never edited: the
 # summary prints the one line to add and a person adds it.
 #
+# One flag, and a run without it is the run this script has always been:
+#
+#   --desktop   write bin/gdoc.mcpb, the Claude Desktop extension, and open it
+#
+# The extension names bin/gdoc's own path, the same path ~/.local/bin/gdoc links
+# to, so `make build` is the whole upgrade: quit Claude Desktop, open it again,
+# and the chat is running the build you just made.
+#
 # This script never touches ~/.config/gdoc-agent/. Your token and your config
 # are yours: nothing here creates, rewrites or removes a file in that folder.
 # Signing in is `gdoc auth login`, and it is the only thing that writes there.
@@ -24,6 +32,13 @@ SKILLS_DIR="$HOME/.claude/skills"
 BIN_DIR="$HOME/.local/bin"
 GO_BIN="$REPO/bin/gdoc"
 COMPLETION="$REPO/bin/gdoc.zsh"
+# The Claude Desktop extension: the template this repository owns, and the file
+# --desktop writes from it, beside the binary it names. bin/ is not in git, so
+# the written extension is nobody's to commit.
+TEMPLATE="$REPO/release/mcpb/manifest.json"
+MCPB="$REPO/bin/gdoc.mcpb"
+# A checkout names no release, and a manifest version field cannot be empty.
+DEV_VERSION="0.0.0-dev"
 # Every skill this repo owns. The link block below runs once per name, so a
 # sixth skill is one word here and nothing else. A boundary test compares this
 # array with skills/ on every commit, in both directions.
@@ -37,6 +52,54 @@ fail() {
 warn() {
     printf 'install: warning: %s\n' "$1" >&2
 }
+
+usage() {
+    cat >&2 <<'USAGE'
+Usage: ./install.sh [--desktop]
+
+  --desktop   write bin/gdoc.mcpb, the Claude Desktop extension, and open it
+
+With no flags it builds the binary, links it and links the skills, and says
+nothing to Claude Desktop.
+USAGE
+}
+
+# --------------------------------------------------------------------------
+# The arguments
+# --------------------------------------------------------------------------
+#
+# Refused by name rather than ignored, the way the binary refuses what it did
+# not understand.
+
+desktop=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --desktop)
+            desktop=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            fail "'$1' is not an argument this script takes"
+            ;;
+    esac
+done
+
+# What --desktop needs, judged before anything is built, so a run that cannot
+# write the extension has changed nothing.
+if [ "$desktop" -eq 1 ]; then
+    [ -f "$TEMPLATE" ] || fail "$TEMPLATE is missing, and --desktop fills it. Check out this repository again."
+    command -v zip >/dev/null 2>&1 || fail "zip is not on PATH, and the Claude Desktop extension is a zip."
+    case "$GO_BIN" in
+        *'"'*|*'\'*|*'|'*)
+            fail "$GO_BIN carries a quote, a backslash or a pipe, and a manifest naming it could not be written."
+            ;;
+    esac
+fi
 
 # --------------------------------------------------------------------------
 # The binary
@@ -208,6 +271,40 @@ else
 fi
 
 # --------------------------------------------------------------------------
+# The Claude Desktop extension, when the run asked for it
+# --------------------------------------------------------------------------
+#
+# A .mcpb is a zip holding a manifest, and the manifest names the command Claude
+# Desktop starts. Here that command is this checkout's own bin/gdoc, which is
+# the point of the flag: the extension follows the build rather than a copy of
+# it. Written into a temp directory and moved over, so a second run leaves one
+# entry in the zip rather than two.
+
+desktop_opened=0
+if [ "$desktop" -eq 1 ]; then
+    mcpb_work="$(mktemp -d)"
+    sed -e "s|@BIN@|$GO_BIN|g" -e "s|@VERSION@|$DEV_VERSION|g" \
+        "$TEMPLATE" > "$mcpb_work/manifest.json"
+    ( cd "$mcpb_work" && zip -q "$mcpb_work/gdoc.mcpb" manifest.json ) ||
+        fail "zip wrote no gdoc.mcpb, so nothing was written to $MCPB"
+    mv "$mcpb_work/gdoc.mcpb" "$MCPB"
+    rm -rf "$mcpb_work"
+
+    # Opening a .mcpb is how Claude Desktop installs one. GDOC_DESKTOP_OPEN is
+    # the seam release/test-desktop.sh runs this under.
+    if [ "$(uname -s)" = "Darwin" ]; then
+        opener="${GDOC_DESKTOP_OPEN:-/usr/bin/open}"
+        if reason="$("$opener" "$MCPB" 2>&1)"; then
+            desktop_opened=1
+        else
+            warn "$opener did not open $MCPB: $reason"
+        fi
+    else
+        printf 'install: %s is written. Claude Desktop runs on macOS, so open it there.\n' "$MCPB" >&2
+    fi
+fi
+
+# --------------------------------------------------------------------------
 # What is installed
 # --------------------------------------------------------------------------
 
@@ -243,6 +340,19 @@ elif [ -f "$COMPLETION" ]; then
 else
     printf '  complete not written, see the warning above\n'
 fi
+printf '\n  claude desktop\n'
+if [ "$desktop" -eq 1 ]; then
+    printf '    extension %s -> %s\n' "$MCPB" "$GO_BIN"
+    if [ "$desktop_opened" -eq 1 ]; then
+        printf '    opened. Install it, then quit Claude Desktop and open it again.\n'
+    else
+        printf '    open that file to install it, then quit Claude Desktop and open it again.\n'
+    fi
+    printf '    it names bin/gdoc, so after make build quit Claude Desktop and open it again.\n'
+else
+    printf '    not touched. For gdoc in Claude Desktop, re-run this with --desktop.\n'
+fi
+
 printf '\n  skills (linked, so edits are live with no reinstall)\n'
 for skill in "${SKILLS[@]}"; do
     printf '    %-12s -> %s\n' "$skill" "$(readlink "$SKILLS_DIR/$skill")"
