@@ -3513,23 +3513,33 @@ object and never the prose.
 object. Help screens are two: `help` when it answers, and bare `gdoc`. Every
 other result still prints its object, refusals included.
 
-- The decision is made in `run()` (`main.go`), which holds stdout. A result
-  carries an internal marker, `emit.Result.Screen`, set only by a successful
-  `cmdHelp` and by the bare branch of `dispatch`. `run()` drops the object only
-  when the marker is set, stdout is a terminal, and `--json` was not given. A
-  panic has no marker, so its envelope is always printed.
+- The decision is made in `run()` (`main.go`), which holds both streams. A
+  result carries an internal marker, `emit.Result.Screen`, set only by a
+  successful `cmdHelp` and by the bare branch of `dispatch`. `run()` drops the
+  object only when the marker is set, `--json` was not given, and both stdout
+  and stderr are a terminal. Stderr is asked because the words the object
+  duplicates went there: a run with stdout on a terminal and stderr redirected
+  wrote them into somebody's file, where the reader of the terminal cannot see
+  them, so the object is the only answer left and it is printed. A panic has no
+  marker, so its envelope is always printed.
 - `help` that answers: Panels on stderr, nothing on stdout, exit 0.
 - Bare `gdoc`: Panels on stderr, nothing on stdout, exit 1. No skill calls bare
-  `gdoc`, and `gdoc --json` stays an unknown command, so bare `gdoc` has no way
-  to print its object on a terminal. Nothing needs one.
+  `gdoc`, and `gdoc --json` stays an unknown command, so bare `gdoc`'s object
+  reaches a terminal only where stderr is redirected, under the rule above.
+  Nothing needs it there.
 - A refusal, such as `gdoc help sing` or an unknown command, keeps its
   `ok: false` object on a terminal, as today.
-- The last line of a help screen that dropped its object is one dim line:
-  `Add --json to print the JSON object a skill reads.` It is printed on stderr,
+- The last line of a help screen that dropped its object is a dim line,
+  wrapped to the window: `Add --json to print the JSON object a skill reads.`
+  Under fifty columns it takes two lines. It is printed on stderr,
   so stdout stays the object or nothing. It is dim only when colour is on, and
   it is printed under `NO_COLOR` and `TERM=dumb` too, because there the object
-  is also gone. It is never on a pipe, which gets the object, and never on bare
-  `gdoc`, where `--json` is not a valid call.
+  is also gone. It is never on a pipe or in a file, both of which get the
+  object, and never on bare `gdoc`, where `--json` is not a valid call. A
+  window under fifty columns draws no box and still drops the object, so the
+  line is there too, under today's plain text, and over that text go the two
+  things the box would have carried: the warnings, and the words bare `gdoc`
+  refuses with.
 
 **What "terminal" means.** The terminal driver answers for the file
 descriptor: the `isatty` question, asked with the `TIOCGETA` ioctl on darwin.
@@ -3567,8 +3577,10 @@ ever reaches a pipe or a file. `NO_COLOR` and `TERM=dumb` turn the colour off.
   darwin, then `COLUMNS`, then 80.
 - Colour: one palette for dark and light terminals, because gdoc cannot ask
   which one it is without reading stdin. Text keeps the terminal's own colour;
-  only accents are coloured, at mid brightness. On a 16-colour terminal, chips
-  become reverse video.
+  only accents are coloured, at mid brightness. On a 16-colour terminal the
+  codes name the terminal's own colours, so the theme's blue is this blue.
+  There is no chip role: the chip belonged to the status bar of variant 2A,
+  which this entry rejects, so nothing draws one and `internal/tty` holds none.
 - `help` groups the commands by job, from a `group` field in the command table
   that the JSON object does not carry: Read, Write into a doc, Make a doc, and
   Account and tool. The pipe keeps today's order and text.
@@ -3600,7 +3612,9 @@ ever reaches a pipe or a file. `NO_COLOR` and `TERM=dumb` turn the colour off.
   has no signal handler and a Ctrl-C must leave the terminal as it was.
 - `update` keeps its step list and spinner in the Panels style, and the line
   M14 added when the Claude Desktop extension changed in a release is its own
-  line under the result. No download progress bar.
+  line under the result. No download progress bar. The step list reads the same
+  width rule the screens read, so a window under fifty columns gets the plain
+  lines a pipe gets rather than a box whose detail cell is one column wide.
 - The daily release notice and its warnings are shown in the panels, because
   on a terminal the object that carried the warnings is gone.
 
@@ -3661,7 +3675,7 @@ pipe: `TestHelpOnAPipeIsTodaysTextByteForByte`, `TestNoEscapeByteReachesAPipe`,
 `TestABufferIsNotATerminal`, `TestAPipeIsNotATerminal`,
 `TestDevNullIsNotATerminal`, `TestTheIoctlAnswerIsTheAnswer`,
 `TestOnlyATerminalDriverMakesATerminal`. The drawing:
-`TestNoColourWritesNoEscapeByte`, `TestAChipIsReverseVideoOnSixteen`,
+`TestNoColourWritesNoEscapeByte`,
 `TestVisibleWidthSkipsEscapes`, `TestNoLineIsWiderThanItsBox`,
 `TestAHashIsCutNotShortened`, `TestEveryCommandHasAGroup`,
 `TestTheGroupIsNotInTheObject`, `TestHelpNeverReadsTheToken`. Login:

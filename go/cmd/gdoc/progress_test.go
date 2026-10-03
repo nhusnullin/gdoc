@@ -89,9 +89,11 @@ func TestAFailedStepIsMarkedAndTheRestAreNotDrawn(t *testing.T) {
 // owns. So each of the four gets the plain lines, and the character-device bit
 // the old check read, which /dev/null has too, decides nothing any more.
 //
-// The variable is the whole of the decision made here: stub it and newProgress
-// builds the other list, with no stream of any kind involved.
+// The variable is the whole of the decision made here, at a width that leaves
+// room for a box: stub it and newProgress builds the other list, with no
+// stream of any kind involved.
 func TestOnlyATerminalDriverMakesATerminal(t *testing.T) {
+	t.Setenv("COLUMNS", "80")
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)
@@ -219,5 +221,28 @@ func TestALiveListTurnsWrapOffAndBackOn(t *testing.T) {
 	q.Finish("")
 	if strings.Contains(plain.String(), "\x1b[") {
 		t.Errorf("a plain list writes no escape code: %q", plain.String())
+	}
+}
+
+// The width rule decides too, and not only the driver: a window with no room
+// for a box gets the plain lines, because the detail cell there is a sliver
+// and a step's words would be drawn one character to a row.
+func TestANarrowWindowGetsThePlainStepLines(t *testing.T) {
+	stubTerminal(t, true)
+	t.Setenv("COLUMNS", "30")
+
+	var buf bytes.Buffer
+	p := newProgress(&buf, "update")
+	if p.live {
+		t.Fatal("thirty columns is the plain band, and the list drew itself live")
+	}
+	p.Plan("read releases")
+	p.Start("read releases", "")
+	p.Done("nhusnullin/gdoc, 30 listed")
+	p.Finish("")
+
+	want := "gdoc update\n  \u2713 read releases        nhusnullin/gdoc, 30 listed\n"
+	if got := buf.String(); got != want {
+		t.Errorf("a narrow window reads\n%q\nand must read\n%q", got, want)
 	}
 }

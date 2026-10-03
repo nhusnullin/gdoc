@@ -77,10 +77,13 @@ same thing anywhere on the line.
 
 In a terminal `help` draws that table as a screen: boxes on stderr, the
 commands grouped by the job they do, and nothing on stdout. Add `--json` and
-you get the JSON object a skill reads instead, with stderr left plain. A pipe,
-a file and a window under fifty columns get today's plain text and the object,
-unchanged. Bare `gdoc` draws the same screen, opening with `gdoc needs a
-command.`, and still exits 1.
+you get the JSON object a skill reads instead, with stderr left plain. A pipe
+and a file get today's plain text and the object, unchanged. A window under
+fifty columns has no room for a box, so it gets that plain text, with any
+warnings marked above it and a short dim hint under it saying how to ask for
+the object. Bare `gdoc` draws the same screen, opening with
+`gdoc needs a command.`, and still exits 1. In a window that narrow those same
+words open the plain text.
 
 `completion` renders that same table as a
 shell script and writes it to the file you name, for `zsh` or for `bash`. An

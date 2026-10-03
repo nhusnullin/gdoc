@@ -168,10 +168,12 @@ Serves principle 3. This is the safety property everything else stands on.
 - **`AllowAccountRead` is the sixth, and it reads which account is signed in.**
   It admits `GET https://www.googleapis.com/drive/v3/about` with
   `fields=user(emailAddress,displayName)` and nothing else, under the scopes the
-  token already has, addressing no document. Its one caller is `login` inside
-  `gdoc mcp`, so the `login` answer can name the account and a swapped account
-  is seen. No command of the terminal gains it, and every other `about` request
-  keeps its refusal. Added 2026-10-03, DECISIONS.md.
+  token already has, addressing no document. Two readers open it, both through
+  `accountOf`: `login` inside `gdoc mcp`, so the `login` answer can name the
+  account and a swapped account is seen, and `gdoc auth status`, on every run
+  that finds a token with every scope. No other command gains it, and every
+  other `about` request keeps its refusal. Added 2026-10-03, the second reader
+  in M15, DECISIONS.md.
 - **The level-1 write bar is what gdoc asks for, not what the server is known to
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from

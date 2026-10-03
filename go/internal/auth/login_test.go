@@ -4,10 +4,11 @@ package auth
 // what the whole flow leaves on disk.
 
 import (
-	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -17,6 +18,20 @@ import (
 
 	"gdoc/internal/guard"
 )
+
+// login is StartLogin, the link on w and Wait, in a row. It is the test's own
+// and not the package's: no room in the tree wants the trip as one call, since
+// cmd/gdoc draws a waiting line between the two halves, and the tests below
+// want the whole flow from the URL to the saved token.
+func login(c *http.Client, w io.Writer) error {
+	p, err := StartLogin(c)
+	if err != nil {
+		return err
+	}
+	defer p.Close()
+	fmt.Fprint(w, LinkLine(p.URL))
+	return p.Wait(context.Background())
+}
 
 // MissingScopes has to know that one scope can stand for another. The Docs API
 // accepts the full Drive scope, so a token holding drive is not missing the
@@ -104,7 +119,7 @@ func TestLoginRoundTrip(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -141,7 +156,7 @@ func TestAStrayCallbackDoesNotEndTheLogin(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -180,7 +195,7 @@ func TestLoginReportsARefusedSignIn(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -219,7 +234,7 @@ func TestARefreshlessExchangeDoesNotOverwriteAGoodToken(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
 	resp, err := http.Get(callbackWith(t, q.Get("redirect_uri"),
@@ -252,7 +267,7 @@ func TestLoginThroughTheGuardsOwnClient(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -283,16 +298,17 @@ func init() {
 	}
 }
 
-// A build without the secret cannot sign anyone in, and it says so before
-// opening a listener or printing a URL, because a login that fails at the
-// code exchange minutes later would blame Google for a build problem.
+// A build without the secret cannot sign anyone in, and the whole trip stops
+// at its first half, because a login that fails at the code exchange minutes
+// later would blame Google for a build problem. There is no link to print,
+// since StartLogin hands back no pending login at all:
+// TestStartLoginRefusesABuildWithNoClientSecret holds that half.
 func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
 	saved := BundledClientSecret
 	BundledClientSecret = ""
 	t.Cleanup(func() { BundledClientSecret = saved })
 
-	var w bytes.Buffer
-	err := Login(&http.Client{Transport: refuseAll{}}, &w)
+	err := login(&http.Client{Transport: refuseAll{}}, io.Discard)
 	if err == nil {
 		t.Fatal("a build with no client secret must refuse to log in")
 	}
@@ -300,9 +316,6 @@ func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal must say %q: %q", want, err)
 		}
-	}
-	if w.Len() != 0 {
-		t.Errorf("nothing must be printed before the refusal: %q", w.String())
 	}
 }
 
@@ -325,33 +338,5 @@ func TestTheLinkLineIsTodays(t *testing.T) {
 	}
 	if LinkAsk+"\n" != "Open this link in your browser to sign in:\n" {
 		t.Errorf("the sentence a terminal draws in a box is %q", LinkAsk)
-	}
-}
-
-// Login prints through LinkLine, so the two routes cannot drift: what the
-// browser trip writes and what a box is drawn from are one string.
-func TestLoginPrintsThroughTheLinkLine(t *testing.T) {
-	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
-	rt := &formRT{}
-	w := chanWriter{lines: make(chan string, 4)}
-	done := make(chan error, 1)
-	go func() { done <- Login(&http.Client{Transport: rt}, w) }()
-
-	printed := <-w.lines
-	u := urlFrom(t, printed)
-	if printed != LinkLine(u.String()) {
-		t.Errorf("Login wrote %q, and LinkLine of the same URL is %q", printed, LinkLine(u.String()))
-	}
-
-	// The trip is finished rather than left open: a listener nobody answers
-	// holds its port for the three minutes the test does not wait.
-	q := u.Query()
-	resp, err := http.Get(callbackWith(t, q.Get("redirect_uri"), url.Values{"code": {"CODE9"}, "state": {q.Get("state")}}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if err := <-done; err != nil {
-		t.Fatal(err)
 	}
 }

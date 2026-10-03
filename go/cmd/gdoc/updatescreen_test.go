@@ -10,6 +10,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"io"
 	"strings"
@@ -330,4 +332,60 @@ func lastScreen(s string) string {
 		return s
 	}
 	return s[at+len(tty.ClearBelow):]
+}
+
+// The label on a real run is the run's own, which the half above cannot see:
+// its helper hands the list the words itself. This one runs the command
+// through the live list over a buffer and reads the top border of the frame a
+// person is left with, so deleting either Label call in update.go fails here.
+// It reads that one line rather than the whole frame, because the versions are
+// in the choose row too, and a frame-wide match would pass with no label at
+// all. The first call is the only one an unreachable run and an up-to-date run
+// reach, and the second is what a run that installs ends with.
+func TestTheBorderOfARunCarriesTheVersionsTheRunChose(t *testing.T) {
+	for _, c := range []struct {
+		name        string
+		installed   string
+		unreachable bool
+		want        string
+		absent      string
+	}{
+		{name: "a run that installs", installed: "v2.0.0", want: "v2.0.0 › v2.1.0"},
+		{name: "a run already on the newest", installed: "v2.1.0", want: "v2.1.0", absent: "›"},
+		{name: "a run that could not read the listing", installed: "v2.0.0", unreachable: true, want: "v2.0.0", absent: "›"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			pl := &stubPlain{listing: listing("v2.1.0", "v2.0.0"), files: published(t, "v2.1.0", []byte("new"))}
+			if c.unreachable {
+				pl = &stubPlain{listErr: errors.New("connect: connection refused")}
+			}
+			installedAt(t, c.installed, []byte("old"), pl)
+			t.Setenv("COLUMNS", "80")
+			was := openProgress
+			openProgress = func(w io.Writer, name string) *progress {
+				return newLiveProgress(w, name, tty.NewStyle(tty.NoColour))
+			}
+			t.Cleanup(func() { openProgress = was })
+
+			var out bytes.Buffer
+			errOut := &syncBuffer{}
+			if code := run(context.Background(), []string{"update"}, &out, errOut); code != 0 {
+				t.Fatalf("the update must answer, and this run exited %d: %s", code, out.String())
+			}
+			border := topBorder(lastScreen(errOut.String()))
+			if want := c.want + " ─┐"; !strings.HasSuffix(border, want) {
+				t.Errorf("the top border must end with %q: %q", want, border)
+			}
+			if c.absent != "" && strings.Contains(border, c.absent) {
+				t.Errorf("a run that takes nothing names one version, and the border carries %q: %q", c.absent, border)
+			}
+		})
+	}
+}
+
+// topBorder is the first line of a frame, which is the box's top border and
+// the only line the label is written on.
+func topBorder(frame string) string {
+	line, _, _ := strings.Cut(frame, "\n")
+	return line
 }

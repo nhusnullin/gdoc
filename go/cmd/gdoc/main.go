@@ -53,9 +53,9 @@ func releaseVersion() string {
 //
 // It is the trip in its two halves, startLogin and Wait, which is what the MCP
 // login tool already calls: the listener and the exchange belong to
-// internal/auth, and the stream a person reads belongs here. auth.Login is the
-// same two halves in one call, and nothing in this binary takes it now.
-// loginscreen.go draws what goes on that stream.
+// internal/auth, and the stream a person reads belongs here. internal/auth
+// offers no call that is both halves, because the waiting line goes between
+// them. loginscreen.go draws what goes on that stream.
 //
 // The wait has no context of its own, as it never had: nothing above a login
 // can cancel a run already waiting on a browser, and internal/auth's own
@@ -108,8 +108,10 @@ func route(ctx context.Context, args []string, in io.Reader, out, errOut io.Writ
 // not one. TestOnlyATerminalDriverMakesATerminal holds that this variable is
 // the whole of the decision made here.
 //
-// Two rooms ask it: run(), for whether a screen replaces the object, and the
-// step list in progress.go, for whether to redraw in place.
+// Three rooms ask it: run(), for whether a screen replaces the object, which
+// it asks of both streams; helpscreen.go, for whether a screen is drawn at all
+// and whether a window with no room for one is still a person's; and the step
+// list in progress.go, for whether to redraw in place.
 var isTerminal = tty.IsTerminal
 
 // jsonHint is the last line of a help screen that dropped its object, so the
@@ -130,9 +132,15 @@ const jsonHint = "Add --json to print the JSON object a skill reads."
 // as the last line a person sees. Everything else keeps its object wherever
 // stdout goes, refusals and the panic envelope included, and a pipe gets the
 // object in every case, because a pipe is a skill.
+//
+// Both streams are asked, because the words went to errOut: a run with stdout
+// on a terminal and stderr redirected wrote those words into somebody's file,
+// where nobody reading the terminal can see them, so there the object is the
+// only answer there is and it is printed.
 // TestHelpOnATerminalWritesNothingToStdout,
 // TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne,
-// TestEveryOtherCommandKeepsItsObjectOnATerminal and
+// TestEveryOtherCommandKeepsItsObjectOnATerminal,
+// TestAScreenWhoseWordsWentToAFileKeepsItsObject and
 // TestNoEscapeByteReachesAPipe.
 func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	r := safeDispatch(ctx, args, errOut)
@@ -140,7 +148,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	// the answers, the refusals and the panic envelope alike. A report of
 	// something odd names the build that did it without anyone being asked.
 	r.Version = releaseVersion()
-	if r.Screen && isTerminal(out) {
+	if r.Screen && isTerminal(out) && isTerminal(errOut) {
 		writeJSONHint(r, errOut)
 		return emit.ExitCode(r)
 	}
@@ -158,7 +166,10 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 // is what parts the two.
 //
 // It wraps rather than running off the window, because the one thing the line
-// has to do is be readable at the width the reader has.
+// has to do is be readable at the width the reader has. It paints with the
+// depth the environment says, and it may: run() asks whether errOut is a
+// terminal before it drops an object, so this line is never written into a
+// pipe or a file.
 func writeJSONHint(r emit.Result, errOut io.Writer) {
 	if !r.OK {
 		return

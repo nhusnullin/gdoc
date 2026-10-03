@@ -1,3 +1,5 @@
+gdoc needs a command.
+
 gdoc v2.9.0
 
 Usage: gdoc <command> [words] [flags]

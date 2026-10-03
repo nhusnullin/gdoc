@@ -82,12 +82,6 @@ var (
 	// paintFail is #D9434F, the red of a step that failed and of an error
 	// title.
 	paintFail = paint{"38;2;217;67;79", "38;5;203", "31"}
-	// paintChip is #2F63C8 behind #FFFFFF: a label with its own background,
-	// which is the version in a top border and the channel beside it. At
-	// sixteen there is no pair of colours that reads on both backgrounds, so
-	// the chip asks the terminal to swap its own two:
-	// TestAChipIsReverseVideoOnSixteen.
-	paintChip = paint{"48;2;47;99;200;38;2;255;255;255", "48;5;26;38;5;231", "7"}
 )
 
 // Style writes one role's colour around a piece of text, at one depth. Build
@@ -103,9 +97,6 @@ type Style struct {
 
 // NewStyle is the Style for a depth Colour answered with.
 func NewStyle(d Depth) Style { return Style{depth: d} }
-
-// Depth is the depth this Style paints at.
-func (s Style) Depth() Depth { return s.depth }
 
 // paint wraps text in one role's sequence, or hands it straight back at
 // NoColour: TestNoColourWritesNoEscapeByte. Every coloured answer ends with the
@@ -146,10 +137,6 @@ func (s Style) Fail(text string) string { return s.paint(paintFail, text) }
 // Warn is the release notice mark, which shares the yellow of a key because it
 // is the same weight of attention.
 func (s Style) Warn(text string) string { return s.paint(paintKey, text) }
-
-// Chip is a short label with its own background: the version in a top border,
-// the channel beside it, an installed or failed tag.
-func (s Style) Chip(text string) string { return s.paint(paintChip, text) }
 
 // VisibleWidth is how many columns s takes on a terminal: every rune outside
 // an escape sequence counts as one, which makes the box-drawing and braille a

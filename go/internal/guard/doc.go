@@ -107,7 +107,8 @@
 //     found out later by what a write did, and nothing gdoc read before this
 //     returned it. Its one caller is accountOf in cmd/gdoc, which builds a
 //     policy for that read alone, and which two rooms read: that login tool,
-//     and `gdoc auth status`, which names the account on a terminal from M15.
+//     and `gdoc auth status`, which from M15 names the account on every run
+//     that finds a token with every scope.
 //     TestOnlyAccountOfCallsAllowAccountRead and TestAccountOfHasTwoCallers in
 //     go/boundary hold both halves. Anything else about `about`, another mask, a
 //     deeper path, any method but GET, is not judged by this rule at all, so it

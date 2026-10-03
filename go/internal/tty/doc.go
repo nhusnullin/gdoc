@@ -54,7 +54,7 @@
 // which is no-color.org's own wording: TestAnEmptyNoColourIsNotSet. Then
 // COLORTERM naming truecolor or 24bit: TestColortermNamesTrueColour. Then a
 // TERM ending -256color: TestATermEndingTwoFiftySixColourIsTwoFiftySix. Then
-// Sixteen, the floor, where a chip becomes reverse video:
+// Sixteen, the floor, where the codes name the terminal's own colours:
 // TestEverythingElseIsSixteen.
 //
 // NoColour is the zero value on purpose, so a Depth nobody set writes no
@@ -76,10 +76,12 @@
 // # One palette, by role and by depth
 //
 // Style writes colour around text. Its methods are roles and not colours:
-// Title, Key, Border, Dim, OK, Fail, Warn and Chip. A caller says what a piece
-// of text is for and this package says what that looks like at the depth
-// Colour answered with, so internal/panel draws boxes without naming a
-// colour.
+// Title, Key, Border, Dim, OK, Fail and Warn. A caller says what a piece of
+// text is for and this package says what that looks like at the depth Colour
+// answered with, so internal/panel draws boxes without naming a colour. There
+// is a role for each thing a screen draws and no role beside them: the chip of
+// the rejected status bar (variant 2A of docs/design/panels-round-two.html) is
+// not here, because nothing draws one.
 //
 // Text itself has no role. A command name, a description and a JSON line keep
 // the terminal's own foreground, which the person already tuned for their
@@ -97,11 +99,6 @@
 // zero Depth: TestAStyleNobodySetWritesNothing. Every coloured role closes
 // with the reset, so nothing leaks onto the shell prompt under the screen:
 // TestEveryRoleEndsWithTheReset.
-//
-// Chip is the role that is a background rather than a foreground: a version in
-// a top border, a channel beside it. At sixteen colours no pair of colours
-// reads on both backgrounds, so a chip asks the terminal to swap its own two:
-// TestAChipIsReverseVideoOnSixteen.
 //
 // # Every escape code is here
 //

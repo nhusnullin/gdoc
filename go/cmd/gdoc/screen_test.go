@@ -248,3 +248,35 @@ func lastLine(s string) string {
 	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
 	return lines[len(lines)-1]
 }
+
+// A screen is dropped only where its words reached a reader. With stdout on a
+// terminal and stderr redirected, which is `gdoc help 2>help.txt`, the words
+// went into somebody's file: the person at the terminal would otherwise read
+// nothing at all, so the object is printed, and no escape byte follows the
+// help into the file.
+func TestAScreenWhoseWordsWentToAFileKeepsItsObject(t *testing.T) {
+	for _, args := range [][]string{{"help"}, nil} {
+		t.Run(strings.Join(append([]string{"gdoc"}, args...), " "), func(t *testing.T) {
+			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+			t.Setenv("NO_COLOR", "")
+			t.Setenv("COLORTERM", "truecolor")
+
+			var out, errOut bytes.Buffer
+			terminals(t, &out)
+			run(context.Background(), args, &out, &errOut)
+
+			if decodeOne(t, &out) == nil {
+				t.Fatal("the words went to a file, so the object is the whole answer and must be printed")
+			}
+			if strings.ContainsRune(errOut.String(), 0x1b) {
+				t.Errorf("no escape byte may reach a file: %q", errOut.String())
+			}
+			if strings.Contains(errOut.String(), jsonHint) {
+				t.Errorf("the object was printed, so nothing is hinted at: %q", errOut.String())
+			}
+			if !strings.Contains(errOut.String(), "gdoc <command> [words] [flags]") {
+				t.Errorf("the file still gets today's plain text: %q", errOut.String())
+			}
+		})
+	}
+}

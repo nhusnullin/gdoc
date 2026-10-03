@@ -21,21 +21,22 @@
 //
 // StartLogin opens the loopback listener, builds the authorization URL and
 // returns at once. Pending.Wait waits for the callback, exchanges the code,
-// saves the token and then tells the browser what happened. Login is the two
-// in a row; the split is for a front door that hands the link out in one
-// message and finishes the trip in another, with the listener alive in
-// between. Both front doors now take the split: the MCP login tool because a
-// chat answer cannot wait for a browser, and the CLI because the line a person
-// watches while they wait belongs to cmd/gdoc. TestStartLoginReturnsTheLinkAtOnce
-// and TestWaitExchangesAndSaves are the pins.
+// saves the token and then tells the browser what happened. The split is for a
+// front door that hands the link out in one message and finishes the trip in
+// another, with the listener alive in between. Both front doors take it: the
+// MCP login tool because a chat answer cannot wait for a browser, and the CLI
+// because the line a person watches while they wait belongs to cmd/gdoc. So
+// the two halves are the whole of what this package offers, and there is no
+// third call that is both: TestStartLoginReturnsTheLinkAtOnce and
+// TestWaitExchangesAndSaves are the pins.
 //
 // The words that go with the link are here and not there: LinkAsk is the
 // sentence and LinkLine is the sentence with the link under it, which is what
-// Login prints and what cmd/gdoc prints wherever it draws no box. So the two
-// routes cannot drift, and this package still holds no terminal code at all:
-// no colour, no box and no escape byte. TestTheLinkLineIsTodays states both as
-// the literal they are and TestLoginPrintsThroughTheLinkLine holds that Login
-// goes through them.
+// cmd/gdoc draws in a box on a terminal and prints as it always did wherever
+// it draws none. So the two routes cannot drift, and this package still holds
+// no terminal code at all: no colour, no box and no escape byte.
+// TestTheLinkLineIsTodays states both as the literal they are and cmd/gdoc's
+// TestThePipeLoginLineIsTodays holds the route a person takes.
 //
 // The callback no longer writes the page itself. It holds the browser's
 // request open and loopback.Finish writes the sentence, so "Signed in" is
@@ -50,8 +51,8 @@
 // A build with no client secret is refused in StartLogin, before a listener is
 // opened or a link handed out, so a chat tool that asked for a link hears the
 // refusal instead of getting one that cannot work.
-// TestStartLoginRefusesABuildWithNoClientSecret and
-// TestLoginRefusesABuildWithNoClientSecret are the pins.
+// TestStartLoginRefusesABuildWithNoClientSecret is the pin, and it holds that
+// no pending login comes back either, so there is nothing to print.
 //
 // # One waiting sign-in, written down beside the token
 //
@@ -187,8 +188,9 @@
 //
 // A build without the secret can refresh a token it already holds, because
 // the token file carries the secret it was issued with, but it cannot sign
-// anyone in, and Login refuses before it opens a listener or prints a URL.
-// TestLoginRefusesABuildWithNoClientSecret is the pin, and
+// anyone in, and StartLogin refuses before it opens a listener, so no link is
+// ever handed out to print.
+// TestStartLoginRefusesABuildWithNoClientSecret is the pin, and
 // TestNoGoogleClientSecretInTheTree in go/boundary holds the other half: no
 // file in the tree carries a string shaped like a Google client secret.
 //
@@ -207,7 +209,7 @@
 // clientFileName names oauth-client.json in the config dir. The Python tool
 // this binary replaces lets that file override the bundled client, which is a
 // quota override rather than a setup step: one shared client shares one Google
-// rate limit. Login here does not read it. Status says so instead, and
+// rate limit. The login here does not read it. Status says so instead, and
 // cmd/gdoc's package comment holds what it reports. Saying the client came from
 // a file would name a client no token was ever issued to.
 // TestStatusSaysAClientFileIsNotUsedYet is the pin.

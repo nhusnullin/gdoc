@@ -8,9 +8,14 @@
 // what a command is.
 //
 // Every screen goes to stderr, and only where stderr is a terminal wide enough
-// for a box. A pipe, a file, a window under fifty columns and a caller that
-// asked for the object by name each get today's plain text, byte for byte,
-// which the goldens in testdata/pipe hold.
+// for a box. A pipe, a file and a caller that asked for the object by name
+// each get today's plain text, byte for byte, which the goldens in
+// testdata/pipe hold. A window under fifty columns gets that same text, and
+// over it the two things the box would have carried for the one reason the box
+// carries them: the warnings, and the words bare gdoc refuses with. Where
+// stdout is a terminal too the object is dropped there as well, so nothing
+// else is left to say them. A narrow window whose stdout is a pipe keeps its
+// object, as the wide band does.
 
 package main
 
@@ -89,6 +94,26 @@ func screenAt(w io.Writer, json bool) (panel.Panel, tty.Style, bool) {
 	return panel.New(style, width), style, true
 }
 
+// plainOnATerminal is the third of those three answers on its own: there is no
+// screen, and a person is reading all the same, which leaves only the window
+// being too narrow for a box. It asks screenAt rather than the width rule
+// again, so the band is decided in one place. Both callers ask it only after
+// screenAt said no, so that inner ask repeats an answer they already hold. It
+// is asked all the same, so the answer is right wherever the function is
+// called from.
+//
+// It is the one case where the plain text is what a person reads rather than
+// what a skill parses. So the plain text carries the two things the box
+// carries for the same reason: the warnings, and the words bare gdoc refuses
+// with. Whether the object is dropped under them is run()'s question and not
+// this one: run() asks both streams, so a window this narrow whose stdout is
+// a pipe prints the object as well, which is what the wide band does with a
+// piped stdout too.
+func plainOnATerminal(w io.Writer, json bool) bool {
+	_, _, drawn := screenAt(w, json)
+	return !drawn && !json && isTerminal(w)
+}
+
 // writeHelp is the words of a help: the screen where there is one, and today's
 // text everywhere else. The notice line opens the plain text as it always did,
 // and inside a screen it is a row of the top box instead, because on a
@@ -99,22 +124,53 @@ func screenAt(w io.Writer, json bool) (panel.Panel, tty.Style, bool) {
 func writeHelp(errOut io.Writer, matched []command, all bool, line string, warns []string, json bool) {
 	p, style, ok := screenAt(errOut, json)
 	if !ok {
-		if line != "" {
-			fmt.Fprint(errOut, line+"\n\n")
-		}
+		writePlainHead(errOut, line, warns, json)
 		fmt.Fprint(errOut, helpProse(matched, all))
 		return
 	}
 	writeLines(errOut, helpScreen(p, style, matched, all, line, warns))
 }
 
+// writePlainHead opens the plain text: the notice line as it always opened it,
+// and under it, where a person is the reader, every warning the object
+// carries, because that object is either dropped or on a pipe nobody is
+// watching. A pipe and a file get the bytes they always got, because there the
+// object is what is read and it carries them itself:
+// TestANarrowWindowKeepsTheWarningsTheObjectWouldHaveCarried and
+// TestHelpOnAPipeIsTodaysTextByteForByte.
+func writePlainHead(errOut io.Writer, line string, warns []string, json bool) {
+	var marked []string
+	if plainOnATerminal(errOut, json) {
+		marked = warns
+	}
+	if line == "" && len(marked) == 0 {
+		return
+	}
+	if line != "" {
+		fmt.Fprint(errOut, line+"\n")
+	}
+	for _, w := range marked {
+		fmt.Fprint(errOut, warnMark+" "+w+"\n")
+	}
+	fmt.Fprint(errOut, "\n")
+}
+
 // writeBareHelp is the second help screen: the words of the refusal, and the
 // whole help under them. Bare gdoc asks GitHub nothing, so it carries no
-// notice line, and it takes no flags, so there is never an object to keep.
+// notice line, and it takes no flags, so no caller can ask for its object by
+// name.
+//
+// A window with no room for a box opens with those same words, because where
+// both streams are a terminal the object that carried them is gone, and a help
+// page nobody asked for with no reason over it reads like a fault in the tool:
+// TestANarrowWindowOpensWithTheWordsBareGdocRefusesWith.
 func writeBareHelp(errOut io.Writer) {
 	table := commands()
 	p, style, ok := screenAt(errOut, false)
 	if !ok {
+		if plainOnATerminal(errOut, false) {
+			fmt.Fprint(errOut, needsCommand+"\n\n")
+		}
 		fmt.Fprint(errOut, helpProse(table, true))
 		return
 	}

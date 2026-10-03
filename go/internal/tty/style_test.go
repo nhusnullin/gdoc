@@ -22,7 +22,6 @@ var roleCalls = []roleCall{
 	{"OK", func(s Style, text string) string { return s.OK(text) }},
 	{"Fail", func(s Style, text string) string { return s.Fail(text) }},
 	{"Warn", func(s Style, text string) string { return s.Warn(text) }},
-	{"Chip", func(s Style, text string) string { return s.Chip(text) }},
 }
 
 // TestNoColourWritesNoEscapeByte is the row a pipe, a file and every
@@ -59,7 +58,6 @@ func TestTrueColourIsTheHexOfPaletteFourA(t *testing.T) {
 		{"Dim", s.Dim("the hint"), "\x1b[38;2;124;130;150mthe hint\x1b[0m"},
 		{"OK", s.OK("✓ download"), "\x1b[38;2;47;158;87m✓ download\x1b[0m"},
 		{"Fail", s.Fail("✗ verify"), "\x1b[38;2;217;67;79m✗ verify\x1b[0m"},
-		{"Chip", s.Chip(" stable "), "\x1b[48;2;47;99;200;38;2;255;255;255m stable \x1b[0m"},
 	} {
 		if c.got != c.want {
 			t.Errorf("%s at truecolor wrote %q, want %q", c.name, c.got, c.want)
@@ -84,7 +82,6 @@ func TestTwoFiftySixIsTheNearestIndex(t *testing.T) {
 		{"Dim", s.Dim("the hint"), "\x1b[38;5;244mthe hint\x1b[0m"},
 		{"OK", s.OK("✓ download"), "\x1b[38;5;71m✓ download\x1b[0m"},
 		{"Fail", s.Fail("✗ verify"), "\x1b[38;5;203m✗ verify\x1b[0m"},
-		{"Chip", s.Chip(" stable "), "\x1b[48;5;26;38;5;231m stable \x1b[0m"},
 	} {
 		if c.got != c.want {
 			t.Errorf("%s at 256 colours wrote %q, want %q", c.name, c.got, c.want)
@@ -115,16 +112,6 @@ func TestSixteenIsTheBasicAnsiCode(t *testing.T) {
 		if c.got != c.want {
 			t.Errorf("%s at 16 colours wrote %q, want %q", c.name, c.got, c.want)
 		}
-	}
-}
-
-// TestAChipIsReverseVideoOnSixteen is why Chip is a role and not a background
-// colour. At sixteen there is no pair of colours that reads on both
-// backgrounds, so the chip asks the terminal to swap its own two.
-func TestAChipIsReverseVideoOnSixteen(t *testing.T) {
-	got := NewStyle(Sixteen).Chip(" stable ")
-	if want := "\x1b[7m stable \x1b[0m"; got != want {
-		t.Errorf("a chip at 16 colours wrote %q, want reverse video %q", got, want)
 	}
 }
 

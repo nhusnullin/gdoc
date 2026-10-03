@@ -64,7 +64,7 @@ type helpFlag struct {
 // nothing about what this function answers: the object is the same object, and
 // the words are the same words, drawn as a screen or printed as today's text
 // by writeHelp in helpscreen.go. What it changes is Screen on the answer, which
-// is run()'s leave to drop the object where stdout is a terminal. A caller
+// is run()'s leave to drop the object where both streams are a terminal. A caller
 // that asked for the object by name gets it wherever stdout goes, and words
 // that name no command are a refusal rather than a screen, because the object
 // is the only record of what was wrong with them.

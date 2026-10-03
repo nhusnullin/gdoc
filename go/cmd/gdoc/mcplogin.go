@@ -71,13 +71,15 @@ var startLogin = func() (loginTrip, string, error) {
 
 // accountOf reads the Google account the token signs in as. It is the one
 // caller of guard.AllowAccountRead in this binary: the policy is built here,
-// for this read, and dies with it, so no other command and no other tool gains
-// that reach. Decision 4 with the DECISIONS.md entry of 2026-10-03.
+// for this read, and dies with it, so no room but this function's own callers
+// gains that reach. Decision 4 with the DECISIONS.md entry of 2026-10-03, and
+// the M15 entry, which moved the guard by one caller rather than by a request.
 //
-// It has two readers, and no third: this file's login tool, and accountFor in
-// main.go, which is `gdoc auth status` naming the account on a terminal. M15
-// moved the guard by that one caller rather than by a request, which is what
-// TestOnlyAccountOfCallsAllowAccountRead and TestAccountOfHasTwoCallers hold.
+// Those callers are two, and no third: this file's login tool, and accountFor
+// in main.go, which is `gdoc auth status` naming the account. The status read
+// is not a terminal's: the object carries the account too, so a skill reading
+// a pipe is told the same thing. TestOnlyAccountOfCallsAllowAccountRead and
+// TestAccountOfHasTwoCallers hold the count.
 var accountOf = func(ctx context.Context) (gapi.Account, error) {
 	p := guard.NewPolicy()
 	p.AllowAccountRead()

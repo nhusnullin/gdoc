@@ -3,14 +3,15 @@
 // It lives here beside update.go rather than in internal/emit, because update
 // is the one command that wants it. It moves when a second command does.
 //
-// Two shapes, chosen by what stderr is. On a terminal the whole list is drawn
-// in advance inside a box and redrawn in place: a pending step a dim ring, the
-// running one a spinner, a done one a green tick, a failed one a red cross
-// with its reason in the cell its detail was in. Anywhere else, which is every
-// run a skill starts, each step prints once as a plain line when it ends, with
-// no colour and no escape code. NO_COLOR turns the colour off on a terminal as
-// well. Nothing here touches stdout, which carries the one object and nothing
-// else.
+// Two shapes, chosen by what stderr is and how wide it is. On a terminal with
+// room for a box the whole list is drawn in advance inside one and redrawn in
+// place: a pending step a dim ring, the running one a spinner, a done one a
+// green tick, a failed one a red cross with its reason in the cell its detail
+// was in. Anywhere else, which is every run a skill starts and every window
+// under fifty columns, each step prints once as a plain line when it ends,
+// with no colour and no escape code. NO_COLOR turns the colour off on a
+// terminal as well. Nothing here touches stdout, which carries the one object
+// and nothing else.
 //
 // Whether stderr is a terminal, how much colour it takes, and every escape
 // code written below come from internal/tty, which is the one room that holds
@@ -97,13 +98,20 @@ type progress struct {
 }
 
 // newProgress is the list for the command called name on w, live when w is a
-// terminal, coloured as much as the environment says that terminal takes.
+// terminal with room for a box, coloured as much as the environment says that
+// terminal takes.
+//
+// The width rule is asked here for the reason helpscreen.go asks it: under
+// fifty columns a box costs four of them and the detail cell is left a sliver,
+// so a step's words would be drawn one character to a row. A window that
+// narrow gets the plain lines instead, which the terminal wraps itself:
+// TestANarrowWindowGetsThePlainStepLines.
 //
 // A plain list opens with the command line a person would have typed, which
 // is what it always opened with. A live one opens with nothing: its box is
 // titled with the name instead, and the box is drawn on the first Plan.
 func newProgress(w io.Writer, name string) *progress {
-	if isTerminal(w) {
+	if isTerminal(w) && panel.Layout(tty.Width(w, os.Getenv)) != panel.Plain {
 		return newLiveProgress(w, name, tty.NewStyle(tty.Colour(os.Getenv)))
 	}
 	p := &progress{out: w, name: name}
@@ -403,15 +411,6 @@ func (p *progress) running() int {
 		}
 	}
 	return -1
-}
-
-// cut shortens s to n characters, marking the cut.
-func cut(s string, n int) string {
-	r := []rune(s)
-	if len(r) <= n {
-		return s
-	}
-	return string(r[:n-1]) + "…"
 }
 
 // humanSize is a byte count as a person reads it, and empty for a count the

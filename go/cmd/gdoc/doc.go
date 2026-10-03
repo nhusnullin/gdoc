@@ -363,14 +363,24 @@
 // internal/auth.
 //
 // Everything that is not a terminal reads today's text, byte for byte: a pipe,
-// a file, a run with --json, a window under fifty columns, which is the plain
-// band of internal/panel's width rule, and every platform but darwin, which
-// answers that no stream is a terminal. The goldens in testdata/pipe hold it,
-// through TestHelpOnAPipeIsTodaysTextByteForByte,
+// a file, a run with --json, and every platform but darwin, which answers that
+// no stream is a terminal. The goldens in testdata/pipe hold it, through
+// TestHelpOnAPipeIsTodaysTextByteForByte,
 // TestBareGdocOnAPipeIsTodaysTextByteForByte and
 // TestAnUnknownCommandOnAPipeIsTodaysTextByteForByte, and
 // TestNoEscapeByteReachesAPipe runs every command in the table through run with
 // buffers and finds no escape byte on either stream.
+//
+// A window under fifty columns, which is the plain band of internal/panel's
+// width rule, reads that same text with three things over or under it, because
+// there a person is reading rather than a skill: the warnings, the words bare
+// gdoc refuses with, and the hint line. The goldens in testdata/screens hold
+// what a person reads at forty-four columns. The first two go wherever stderr
+// is a terminal that narrow. The hint is the line that takes the object's
+// place, so it is written where the object is dropped, and the object is
+// dropped only when both streams are a terminal: a run whose words went into a
+// redirected stderr still prints it:
+// TestAScreenWhoseWordsWentToAFileKeepsItsObject.
 //
 // # Completion is a file, and the reason is the output contract
 //
@@ -618,7 +628,10 @@
 // TestNoEscapeLiteralOutsideTTY holds. On a terminal the list is
 // drawn in advance and redrawn in place, with a spinner on the running step
 // and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
-// and TestNoColorKeepsTheRedrawAndDropsTheColour. Auto-wrap is off while the
+// and TestNoColorKeepsTheRedrawAndDropsTheColour. A window under fifty columns
+// is the plain band of internal/panel's width rule here as everywhere, so it
+// reads the plain lines rather than a box whose detail cell is one column
+// wide: TestANarrowWindowGetsThePlainStepLines. Auto-wrap is off while the
 // list moves and back on when it settles, because a wrapped line would make
 // the redraw move up too few rows in a narrow terminal; a plain list writes
 // neither code: TestALiveListTurnsWrapOffAndBackOn. The list settles on every
@@ -629,9 +642,11 @@
 // The terminal list is a box internal/panel draws, titled update and labelled
 // with the gdoc that is running and the one the run is taking once it has
 // chosen one: TestTheUpdateScreensAreTheirRecordedBytes records the six ways
-// a run ends, and TestTheTopBorderNamesTheVersionsOfTheRun the label. A step
-// name sits in the left cell behind its mark, and what is known about it in
-// the right one. The marks are the palette's roles, with a muted ring for a
+// a run ends, TestTheTopBorderNamesTheVersionsOfTheRun the words the label is
+// made of, and TestTheBorderOfARunCarriesTheVersionsTheRunChose the two calls
+// in update.go that hand them over, which it holds by reading the top border
+// alone, because the versions are in the choose row too. A step name sits in
+// the left cell behind its mark, and what is known about it in the right one. The marks are the palette's roles, with a muted ring for a
 // step nothing has reached yet: TestTheStepMarksAreTheirRolesOnATerminal,
 // and the ring is the terminal's alone, because a plain line is written when
 // its step ends: TestThePendingRingIsTheTerminalsAlone. Anything too wide for

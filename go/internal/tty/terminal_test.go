@@ -151,8 +151,8 @@ func TestATermEndingTwoFiftySixColourIsTwoFiftySix(t *testing.T) {
 }
 
 // TestEverythingElseIsSixteen is the last row, and it is the one a plain
-// terminal and an empty environment both land on. Sixteen colours is where the
-// chip becomes reverse video, which is Task 5's rule.
+// terminal and an empty environment both land on. Sixteen is the floor, where
+// the codes name the terminal's own colours.
 func TestEverythingElseIsSixteen(t *testing.T) {
 	for _, row := range []struct {
 		what string

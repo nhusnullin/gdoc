@@ -313,3 +313,83 @@ func screenWidthOf(t *testing.T, name string) int {
 	t.Fatalf("%s does not name its width", name)
 	return 0
 }
+
+// A window with no room for a box still drops the object on a terminal, so
+// the warnings that object carried are printed over the plain text. A warning
+// nobody reads is a warning nobody was given.
+//
+// A pipe is the other half: there the object is printed and carries them
+// itself, so the bytes a skill's log holds do not move.
+func TestANarrowWindowKeepsTheWarningsTheObjectWouldHaveCarried(t *testing.T) {
+	const cause = "connect: connection refused"
+	narrowCheck := func(t *testing.T) {
+		t.Helper()
+		pl := &checkPlain{err: fmt.Errorf("the request to %s failed: %s", releasesURL, cause)}
+		path := checking(t, frozenVersion, pl)
+		stampedAt(t, path, 25*time.Hour, lastcheck.Stamp{
+			LatestStable:  frozenStable,
+			LatestNightly: frozenNightly,
+		})
+		t.Setenv("COLUMNS", "44")
+		t.Setenv("TERM", "xterm")
+		t.Setenv("NO_COLOR", "1")
+	}
+
+	t.Run("a terminal too narrow for a box", func(t *testing.T) {
+		narrowCheck(t)
+
+		var out, errOut bytes.Buffer
+		terminals(t, &out, &errOut)
+		if code := run(context.Background(), []string{"help"}, &out, &errOut); code != 0 {
+			t.Fatalf("help is an answer and must exit 0, and this run exited %d", code)
+		}
+		if out.Len() != 0 {
+			t.Errorf("a person is reading, so the object is dropped here too: %q", out.String())
+		}
+		if !strings.Contains(errOut.String(), warnMark+" the releases of") || !strings.Contains(errOut.String(), cause) {
+			t.Errorf("the warning the dropped object carried must be on the screen: %q", errOut.String())
+		}
+		if last := lastLine(errOut.String()); !strings.HasSuffix(last, "reads.") {
+			t.Errorf("the hint is still the last line, and the last line is %q", last)
+		}
+	})
+
+	t.Run("a pipe at the same width", func(t *testing.T) {
+		narrowCheck(t)
+
+		var out, errOut bytes.Buffer
+		terminals(t)
+		if code := run(context.Background(), []string{"help"}, &out, &errOut); code != 0 {
+			t.Fatalf("help is an answer and must exit 0, and this run exited %d", code)
+		}
+		if !hasWarning(warningsOf(t, decodeOne(t, &out)), cause) {
+			t.Error("the object a skill reads must carry the warning")
+		}
+		if strings.Contains(errOut.String(), warnMark+" ") {
+			t.Errorf("a pipe gets the bytes it always got, and this run added a warning line: %q", errOut.String())
+		}
+	})
+}
+
+// Bare gdoc in that same window opens with the words it refuses with, as its
+// screen does, because the object carrying them is dropped there as well: a
+// help page nobody asked for with no reason over it reads like a fault in the
+// tool. bare-44.golden holds the bytes.
+func TestANarrowWindowOpensWithTheWordsBareGdocRefusesWith(t *testing.T) {
+	freezing(t)
+	t.Setenv("COLUMNS", "44")
+	t.Setenv("TERM", "xterm")
+	t.Setenv("NO_COLOR", "1")
+
+	var out, errOut bytes.Buffer
+	terminals(t, &out, &errOut)
+	if code := run(context.Background(), nil, &out, &errOut); code != 1 {
+		t.Fatalf("bare gdoc named no command, so it exits 1, and this run exited %d", code)
+	}
+	if out.Len() != 0 {
+		t.Errorf("a person is reading, so the object is dropped here too: %q", out.String())
+	}
+	if !strings.HasPrefix(errOut.String(), needsCommand+"\n") {
+		t.Errorf("the plain text must open with %q: %q", needsCommand, errOut.String())
+	}
+}
