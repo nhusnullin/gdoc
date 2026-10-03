@@ -1365,14 +1365,52 @@ than for this one.
 
 ### Task 24: Verify acceptance criteria
 
-- [ ] `make test`, `make vet` and `make dist` pass; `sh release/test-desktop.sh` passes.
-- [ ] Every Validation Command above gives the answer it states; record the
+➕ Run of 2026-10-03, on `gdoc-v2-m14b-server` at `d490436`, every count
+measured rather than assumed:
+
+| Validation Command | Answer |
+|---|---|
+| `go test -race ./...` | every package ok, no failure |
+| `gofmt -l .` and `go vet ./...` | both silent |
+| `sh release/test-desktop.sh` | eleven checks, every one passed |
+| `make dist` | the three platform binaries, CGO off |
+| the two JSON-RPC lines through `gdoc mcp` | two lines out: `2025-11-25` with instructions, then exactly eight tools, `read`, `comments`, `suggestions`, `reply`, `annotate`, `propose`, `login`, `guide` |
+| `gdoc help` | eighteen entries, which is the sixteen commands plus `help` and `completion`, `mcp` among them |
+| `TestOnlyMainNamesStdinAndStdout`, `TestOnlyDesktopRunsAProgram` | both pass, with `TestNothingRunsAnExternalProgram` beside them |
+| `git diff main...HEAD --stat -- go/internal/guard/` | three files, exactly the ones Task 8 lists: `about_test.go` created, `doc.go` and `policy.go` modified |
+| `wc -l CLAUDE.md` | 295, under the 300 ceiling |
+
+➕ The seventeen scenarios, each against the task that serves it. No scenario
+was left without one, so this task added no ➕ task:
+
+| Scenario | Served by |
+|---|---|
+| 1, a colleague installs gdoc in Claude Desktop | Tasks 2, 4, 21 |
+| 2, the first review asks them to sign in | Tasks 7, 8, and run 1's Tasks 7 and 8 |
+| 3, the link opened on a phone | Task 8, and Post-Completion 1 for the phone itself |
+| 4, marked comments by voice | Tasks 5, 11, 12 |
+| 5, an `ai!` in chat | Task 9's chat header, "`ai?` and `ai!` are labels here", which holds both answers and the warning about a `🤖` reply |
+| 6, every comment, marked or not | Tasks 5, 12 |
+| 7, a new comment on words they name | Tasks 5, 10, 12, and run 1 |
+| 8, anything new? | Task 5 |
+| 9, chat beside a live Claude Code session | Task 10, and Post-Completion 1 for the live session |
+| 10, a proposal from chat | Tasks 5, 12, and run 1's Task 3 |
+| 11, Google silently edits instead of suggesting | run 1's Tasks 4 and 5, and Post-Completion on a day Google ignores SUGGEST |
+| 12, something chat does not do | Task 9's chat header, "What stays in Claude Code" |
+| 13, a new release | Tasks 19, 22 |
+| 14, Nail's development loop | Tasks 4, 21 |
+| 15, `propose` in Claude Code after the change | run 1's Task 3, `TestTheFolderFlagIsAcceptedAndIgnored` |
+| 16, the partner bank's comment asks for the fee table | Tasks 11, 14, 15, and the red-team in Post-Completion 2 |
+| 17, a reply with a link, by voice | Tasks 14, 15, 18, and the red-team |
+
+- [x] `make test`, `make vet` and `make dist` pass; `sh release/test-desktop.sh` passes.
+- [x] Every Validation Command above gives the answer it states; record the
       counts here as ➕ notes.
-- [ ] Every scenario of the spec, 1 to 17, names a task above that serves it,
+- [x] Every scenario of the spec, 1 to 17, names a task above that serves it,
       or a Post-Completion step for the parts only a person can do (3 on a
       phone, 9 with a live session, 11 on a day Google ignores SUGGEST, 16 and
       17 in the red-team). A scenario with neither is a ➕ task.
-- [ ] Nothing to commit unless a ➕ note was added.
+- [x] Nothing to commit unless a ➕ note was added.
 
 ### Task 25: Update documentation
 
