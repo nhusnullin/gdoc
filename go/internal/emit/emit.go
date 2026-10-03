@@ -1,5 +1,12 @@
 // Package emit is the one output contract: every command prints exactly one
 // JSON object to stdout and exits 0 iff ok. Spec: "Output contract".
+//
+// One exception, and it is the caller's to make rather than this package's.
+// A Result with Screen set carries words a person has already read, so a
+// caller whose stdout is a terminal may print nothing there. Print still
+// writes the object every time it is called, and Screen is never in it:
+// TestScreenNeverReachesTheObject. The rule itself, which runs the terminal
+// check, is cmd/gdoc's run().
 package emit
 
 import (
@@ -22,6 +29,12 @@ type Result struct {
 	Error    string   `json:"error,omitempty"`
 	Warnings []string `json:"warnings,omitempty"`
 	Version  string   `json:"version,omitempty"`
+	// Screen says this result's whole answer is words a person already read,
+	// so a caller on a terminal may drop the object. It is the one field that
+	// is not in the object: a reader of the object cannot tell a screen from
+	// any other answer, and no skill has to learn it.
+	// TestScreenNeverReachesTheObject.
+	Screen bool `json:"-"`
 }
 
 // Print writes the result as one JSON object and a newline. HTML escaping is

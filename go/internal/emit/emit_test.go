@@ -141,3 +141,25 @@ func TestTheVersionIsPrintedWhenSetAndAbsentWhenNot(t *testing.T) {
 		t.Errorf("an unset version is absent: %s", got)
 	}
 }
+
+// Screen is the caller's own note about a result and never a field of the
+// object. A reader of the object cannot tell a screen from any other answer,
+// which is the point: no skill has to learn a field about what a person saw.
+func TestScreenNeverReachesTheObject(t *testing.T) {
+	var screen, plain bytes.Buffer
+	if err := Print(&screen, Result{OK: true, Screen: true, Version: "v2.10.0"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Print(&plain, Result{OK: true, Version: "v2.10.0"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(screen.String()); got != `{"ok":true,"version":"v2.10.0"}` {
+		t.Errorf("a screen prints the object it would have printed anyway: %s", got)
+	}
+	if screen.String() != plain.String() {
+		t.Errorf("Screen changes no byte of the object:\n%s\n%s", screen.String(), plain.String())
+	}
+	if ExitCode(Result{OK: true, Screen: true}) != 0 || ExitCode(Result{OK: false, Screen: true}) != 1 {
+		t.Error("Screen changes no exit code: it stays 0 if and only if the result says ok")
+	}
+}

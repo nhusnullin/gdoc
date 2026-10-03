@@ -63,6 +63,13 @@ func helpNames(t *testing.T, got map[string]any) []string {
 // Help is an answer, so it is one object on stdout and exit 0, and the words a
 // person reads go where the login URL already goes. The output contract does
 // not bend for the one command a person runs to learn the others.
+//
+// This is the pipe, which both streams here are: a skill, a log and a file
+// each read the object. The one narrowing is a terminal, where the screen is
+// the whole answer and the object is dropped:
+// TestHelpOnATerminalWritesNothingToStdout, and
+// TestHelpWithJSONPrintsTheObjectOnATerminal for the caller that asks for the
+// object there by name.
 func TestHelpIsOneObjectAndTheProseIsOnStderr(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 

@@ -17,6 +17,8 @@ import (
 	"gdoc/internal/auth"
 	"gdoc/internal/emit"
 	"gdoc/internal/guard"
+	"gdoc/internal/panel"
+	"gdoc/internal/tty"
 )
 
 // version is the release this binary was built from. The linker sets it from
@@ -83,20 +85,72 @@ func route(ctx context.Context, args []string, in io.Reader, out, errOut io.Writ
 	return run(ctx, args, out, errOut)
 }
 
+// isTerminal is internal/tty's question, through one variable so a test can
+// answer it per writer and stdout and stderr can be a terminal apart.
+// tty.IsTerminal is the only definition of a terminal in the tree: it is the
+// terminal driver's answer and not the file's mode, which is why /dev/null is
+// not one. TestOnlyATerminalDriverMakesATerminal holds that this variable is
+// the whole of the decision made here.
+//
+// Two rooms ask it: run(), for whether a screen replaces the object, and the
+// step list in progress.go, for whether to redraw in place.
+var isTerminal = tty.IsTerminal
+
+// jsonHint is the last line of a help screen that dropped its object, so the
+// one person who wanted that object is told, once, how to ask for it. It is
+// never written where the object was printed, and never on bare gdoc, which
+// already says what to type:
+// TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped.
+const jsonHint = "Add --json to print the JSON object a skill reads."
+
 // run turns arguments into one JSON object on out and an exit code. Human
 // words, the login URL included, go to errOut: stdout carries the object and
 // nothing else.
+//
+// The one narrowing is the help screen. A result that says Screen is a result
+// whose whole answer is words already written to errOut, and where out is a
+// terminal those words are what the reader asked for: the object under them
+// is 7.5 KB nobody reads. So it is not printed, and the hint takes its place
+// as the last line a person sees. Everything else keeps its object wherever
+// stdout goes, refusals and the panic envelope included, and a pipe gets the
+// object in every case, because a pipe is a skill.
+// TestHelpOnATerminalWritesNothingToStdout,
+// TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne,
+// TestEveryOtherCommandKeepsItsObjectOnATerminal and
+// TestNoEscapeByteReachesAPipe.
 func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	r := safeDispatch(ctx, args, errOut)
 	// The version is set here and nowhere else, so every object carries it:
 	// the answers, the refusals and the panic envelope alike. A report of
 	// something odd names the build that did it without anyone being asked.
 	r.Version = releaseVersion()
+	if r.Screen && isTerminal(out) {
+		writeJSONHint(r, errOut)
+		return emit.ExitCode(r)
+	}
 	if err := emit.Print(out, r); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
 	}
 	return emit.ExitCode(r)
+}
+
+// writeJSONHint is the line under a screen that dropped its object, and it is
+// written for help and not for bare gdoc. Bare gdoc is the one screen that
+// failed: the person who typed it was reaching for a command, not for an
+// object, and the refusal already tells them what to do next. So the ok field
+// is what parts the two.
+//
+// It wraps rather than running off the window, because the one thing the line
+// has to do is be readable at the width the reader has.
+func writeJSONHint(r emit.Result, errOut io.Writer) {
+	if !r.OK {
+		return
+	}
+	style := tty.NewStyle(tty.Colour(os.Getenv))
+	for _, line := range panel.Wrap(jsonHint, tty.Width(errOut, os.Getenv)) {
+		fmt.Fprintln(errOut, style.Dim(line))
+	}
 }
 
 // safeDispatch turns a panic into the envelope. Without it a crash prints a Go
@@ -122,9 +176,12 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	// command ""` names nothing and reads like a fault in the tool. The run did
 	// no work, so it still fails and still exits 1. What is new is that the
 	// person who typed it reads the whole help, on the stream words go to.
+	//
+	// It is the second help screen, so on a terminal the object goes the way
+	// help's does. The hint does not follow it: see writeJSONHint.
 	if len(args) == 0 {
 		fmt.Fprint(errOut, helpProse(commands(), true))
-		return emit.Result{OK: false, Error: "gdoc needs a command. " + usageLine()}
+		return emit.Result{OK: false, Error: "gdoc needs a command. " + usageLine(), Screen: true}
 	}
 	// --help and -h are the same question wherever they stand on the line, and
 	// they are answered before the table is walked and before the parser runs.

@@ -80,13 +80,6 @@ type progress struct {
 	stopOnce  sync.Once
 }
 
-// isTerminal is internal/tty's question, through one variable so a test can
-// answer it per writer. tty.IsTerminal is the only definition of a terminal in
-// the tree: it is the terminal driver's answer and not the file's mode, which
-// is why /dev/null is not one. TestOnlyATerminalDriverMakesATerminal holds
-// that this variable is the whole of the decision made here.
-var isTerminal = tty.IsTerminal
-
 // newProgress is the list for w, live when w is a terminal, coloured as much
 // as the environment says that terminal takes.
 func newProgress(w io.Writer, title string) *progress {

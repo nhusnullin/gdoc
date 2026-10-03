@@ -354,18 +354,18 @@ Before any rendering code changes.
   `go/cmd/gdoc/help.go`
 - Create: `go/cmd/gdoc/screen_test.go`
 
-- [ ] `emit.Result` gains `Screen bool` with the tag `json:"-"`. `emit`'s
+- [x] `emit.Result` gains `Screen bool` with the tag `json:"-"`. `emit`'s
       package comment names the exception. `TestScreenNeverReachesTheObject`
       in `emit`.
-- [ ] `cmdHelp` sets `Screen` only on success and only when `json` is false.
+- [x] `cmdHelp` sets `Screen` only on success and only when `json` is false.
       The bare branch of `dispatch` sets it. Nothing else does.
-- [ ] `cmd/gdoc` holds one `var isTerminal = tty.IsTerminal`. A test stubs it
+- [x] `cmd/gdoc` holds one `var isTerminal = tty.IsTerminal`. A test stubs it
       per writer, so stdout and stderr answer apart.
-- [ ] `run()`: when `r.Screen` and `isTerminal(out)`, it prints no object.
+- [x] `run()`: when `r.Screen` and `isTerminal(out)`, it prints no object.
       Then, for `help` and not for bare `gdoc`, it writes the hint as the last
       line on `errOut`: `Add --json to print the JSON object a skill reads.`,
       dim when colour is on. The exit code stays `emit.ExitCode(r)`.
-- [ ] Tests, stubbing `isTerminal`:
+- [x] Tests, stubbing `isTerminal`:
       `TestHelpOnATerminalWritesNothingToStdout` (exit 0),
       `TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne`,
       `TestHelpWithJSONPrintsTheObjectOnATerminal` (one subtest per spelling
@@ -375,13 +375,18 @@ Before any rendering code changes.
       `TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped` (stdout a
       terminal: hint; stdout a pipe and stderr a terminal: no hint; bare:
       no hint).
-- [ ] `TestNoEscapeByteReachesAPipe`: every command in the table run through
+- [x] `TestNoEscapeByteReachesAPipe`: every command in the table run through
       `run()` with buffers, help and bare `gdoc` included, writes no `0x1b`
       on either stream.
-- [ ] `TestHelpIsOneObjectAndTheProseIsOnStderr` still passes; its doc
+- [x] `TestHelpIsOneObjectAndTheProseIsOnStderr` still passes; its doc
       comment names the terminal exception.
-- [ ] The MCP tests pass untouched: `go test ./cmd/gdoc -run 'Mcp|MCP'`.
-- [ ] `git commit -m "feat(cmd): on a terminal a help screen replaces the object"`
+- [x] The MCP tests pass untouched: `go test ./cmd/gdoc -run 'Mcp|MCP'`.
+- ➕ `TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped` has the terminal
+      case twice, once under `NO_COLOR` and once at truecolor, so the dim is
+      pinned as the bytes a terminal gets. `isTerminal` moved out of
+      `progress.go` into `main.go`, because `run()` is now the room that asks
+      it first; the variable, its name and its test are unchanged.
+- [x] `git commit -m "feat(cmd): on a terminal a help screen replaces the object"`
 
 ### Task 9: help and bare gdoc as Panels
 

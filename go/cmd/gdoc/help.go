@@ -62,8 +62,14 @@ type helpFlag struct {
 //
 // json is whether the caller asked for the object in so many words. It changes
 // nothing about what this function answers: the object is the same object, and
-// the words are the same words. It travels with the answer so run() knows a
-// terminal was told to print the object anyway. See doc.go for the screen rule.
+// the words are the same words. What it changes is Screen on the answer, which
+// is run()'s leave to drop the object where stdout is a terminal. A caller
+// that asked for the object by name gets it wherever stdout goes, and words
+// that name no command are a refusal rather than a screen, because the object
+// is the only record of what was wrong with them.
+// TestHelpOnATerminalWritesNothingToStdout,
+// TestHelpWithJSONPrintsTheObjectOnATerminal and
+// TestARefusalKeepsItsObjectOnATerminal.
 //
 // TestHelpPrintsTheNoticeLineAndABlankLine.
 func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) emit.Result {
@@ -80,6 +86,7 @@ func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) e
 		OK:       true,
 		Data:     helpReport{Commands: helpEntries(matched), Update: facts},
 		Warnings: warns,
+		Screen:   !json,
 	}
 }
 
