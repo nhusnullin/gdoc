@@ -934,7 +934,7 @@ Serves decision 16, "Risky writes are held". Scenarios 16, 17.
 **Files:**
 - Create: `go/internal/chat/rules.go`, `go/internal/chat/rules_test.go`
 
-- [ ] Test first, one per rule, each tripping alone and passing just under its
+- [x] Test first, one per rule, each tripping alone and passing just under its
       threshold, values as literals: Link (a URL, a bare domain, an email
       address not already in the document or its threads); Dictated (12 words
       in a row shared with a comment gdoc did not write; 11 pass); Focus
@@ -944,16 +944,31 @@ Serves decision 16, "Risky writes are held". Scenarios 16, 17.
       into a thread whose comment has `has_link`, `names_ai`,
       `robot_not_ours` or `hidden_chars`); Large removal (a `propose` removing
       more than 300 characters; 300 passes).
-- [ ] Test, `TestHiddenCharactersAreRefusedOutright`.
-- [ ] Test, `TestTextCopiedFromAnotherDocumentIsHeldNotRefused`, the reason
+- [x] Test, `TestHiddenCharactersAreRefusedOutright`.
+- [x] Test, `TestTextCopiedFromAnotherDocumentIsHeldNotRefused`, the reason
       naming the other document and the run of words.
-- [ ] Test, `TestTheFirstRuleThatTripsIsTheOneNamed`, in the table's order.
-- [ ] Test, `TestAuthorDomainChangesNoOutcome`: the same write, with every
+- [x] Test, `TestTheFirstRuleThatTripsIsTheOneNamed`, in the table's order.
+- [x] Test, `TestAuthorDomainChangesNoOutcome`: the same write, with every
       `author_domain` changed, gets the same answer.
-- [ ] Implement as Technical Details.
-- [ ] `chat/doc.go`: each rule and its test.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): the six hold rules, decided by the binary and never by the model"`
+- [x] Implement as Technical Details.
+- [x] `chat/doc.go`: each rule and its test.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): the six hold rules, decided by the binary and never by the model"`
+- ➕ `Rules` already honours the `trusted` list its signature takes, so the
+      Link rule's one loosening lands with the rule rather than two tasks later;
+      `TestATrustedDomainsAddressIsNotHeldAndALinkStillIs` pins the exemption and
+      that a link never escapes it. Task 18 still owns `Trusted(raw string)`, the
+      flag and the wiring.
+- ➕ `TestAHoldCarriesTheWriteItIsFor`, because a card is built from the hold
+      alone: the id, the tool, the document, the title, the words and the
+      instant, and two holds never share an id.
+- ➕ The Focus reset is any write this session recorded into the target. A held
+      write sends nothing and so records nothing, which is what makes a recorded
+      write a write the person released.
+- ➕ `linkRunPattern` pulls a link out as a whole, where `facts.go` only asks
+      whether one is there, because the hold names the exact value. Its
+      alternatives are the same three shapes `urlPattern` and `bareHostPattern`
+      read, so the fact and the rule cannot disagree.
 
 ### Task 15: a held write is not sent
 

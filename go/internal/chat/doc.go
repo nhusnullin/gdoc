@@ -123,8 +123,67 @@
 // Nothing here judges. The ledger is read by the hold rules and by nothing else,
 // and no answer a model reads carries a word of it.
 //
+// # The six hold rules, decided here and never by the model
+//
+// Rules runs over one Write and answers a Hold or nothing. The binary decides
+// that a write is risky, by a fixed list, and the person releases it. That is a
+// judgement in Go, which the invariant "the binary prints facts and the skills
+// judge" otherwise forbids: decision 16 of the specification accepted it,
+// because a model asked to judge whether a comment is steering it is the thing
+// being steered.
+//
+// The first rule that trips is the one named, in this order, because a card
+// naming six reasons is a card nobody reads:
+// TestTheFirstRuleThatTripsIsTheOneNamed.
+//
+//   - Link: the text carries a link or an email address this session has not
+//     seen in the target document or its comments. A link in a write the
+//     document never held came from somewhere, and the only somewheres are a
+//     stranger's comment and another document:
+//     TestTheLinkRuleTripsOnWhatIsNotAlreadyThere. An address at a domain the
+//     person listed as trusted is exempt and a link never is:
+//     TestATrustedDomainsAddressIsNotHeldAndALinkStillIs.
+//   - Dictated: twelve words in a row shared with a comment gdoc did not write.
+//     This is the attack the whole design is for, a stranger typing the reply
+//     they want and the model posting it under the firm's name. Twelve is long
+//     enough that an agreement of phrasing is not it:
+//     TestTheDictatedRuleTripsOnTwelveWordsInARow.
+//   - Focus: another document was read in the last thirty minutes, or this
+//     session never read the target. A write into a document nobody looked at is
+//     a write nobody can check:
+//     TestTheFocusRuleTripsOnAnotherDocumentOrAnUnreadTarget. Copied text is
+//     held and never refused, on Nail's call of 2026-10-03, because quoting the
+//     firm's own policy can be the job, and the reason names the document and
+//     the run of words: TestTextCopiedFromAnotherDocumentIsHeldNotRefused. A
+//     write that went into the target resets the window, and a held write
+//     records nothing, so the reset means a write the person released.
+//   - Burst: the third write in sixty seconds, or the twenty-sixth into one
+//     document in an hour. A review goes at the speed of a person reading:
+//     TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth.
+//   - Flagged thread: a reply under a comment carrying has_link, names_ai,
+//     robot_not_ours or hidden_chars, each of which is a comment written at the
+//     model rather than at a colleague:
+//     TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread.
+//   - Large removal: a propose taking out more than three hundred characters,
+//     which is no longer a correction:
+//     TestTheLargeRemovalRuleTripsOverThreeHundredCharacters.
+//
+// Text carrying a hidden character is refused outright rather than held, because
+// there is nothing a person could sensibly approve: they cannot see what they
+// would be approving. ErrHiddenChars is that refusal:
+// TestHiddenCharactersAreRefusedOutright.
+//
+// Every rule asks about this session rather than about the call in front of it,
+// which is why Rules takes the ledger, and the clock is handed in, so the one
+// clock a session reads is cmd/gdoc's. A Hold carries everything the card is
+// built from, the rule, the exact value, and the words themselves:
+// TestAHoldCarriesTheWriteItIsFor. Whose account wrote a comment reaches none of
+// it: the ledger carries no author, and rules.go never names the fact:
+// TestAuthorDomainChangesNoOutcome.
+//
 // # What is not here yet
 //
-// The hold rules, the confirm tools, the write memory and the trusted domains are
-// tasks 14 to 18 of docs/plans/2026-10-03-gdoc-v2-m14b-server.md.
+// The confirm tools, the write memory and the trusted-domains setting are tasks
+// 16 to 18 of docs/plans/2026-10-03-gdoc-v2-m14b-server.md. Rules already takes
+// the trusted list; nothing parses the person's setting into it yet.
 package chat
