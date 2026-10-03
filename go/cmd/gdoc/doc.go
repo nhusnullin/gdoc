@@ -81,7 +81,13 @@
 //     document is refused with nothing sent, which is TestAWrongTitleIsRefused
 //     and TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses. One item per
 //     write call, and no field in it the card does not draw:
-//     TestASecondItemIsRefused and TestAssigneeIsRefused. The review core it
+//     TestASecondItemIsRefused and TestAssigneeIsRefused. Every chat write is
+//     then judged by internal/chat's hold rules before anything is sent, and a
+//     held write reaches no wire: the answer is ok false, sent false, and the
+//     hold's id, rule, value and words, with one fixed sentence that says to
+//     tell the person and stop. The hold stays in that process for 30 minutes:
+//     TestAHeldWriteSendsNothing, TestTheHeldAnswerNamesTheRuleTheValueAndTheText
+//     and TestAHoldLivesThirtyMinutes. The review core it
 //     serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.

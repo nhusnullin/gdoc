@@ -372,16 +372,19 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			wire: func(t *testing.T, _ bool) { stubSession(t, docsAndComments(t)) },
 		},
 		{
+			// The thread is pinThread's, whose comment carries no link and says
+			// nothing to a model, because a reply into one that does is held
+			// before it is sent: mcphold_test.go holds that half.
 			tool: "reply", args: `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
-				`"comment_id":"AAAA1111","thread_quote":"ai? which register does this",` +
-				`"body":"🤖 The 2026 register."}`,
+				`"comment_id":"AAAA1111","thread_quote":"` + chatQuote + `",` +
+				`"body":"` + chatBody + `"}`,
 			cli:  []string{"reply", fixtureDocID, "AAAA1111", "--body-file=@FILE@"},
-			body: "🤖 The 2026 register.", ok: true, items: 1,
+			body: chatBody, ok: true, items: 1,
 			wire: func(t *testing.T, _ bool) {
 				stubWire(t, &fakeWire{answers: []*answer{
-					{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 The 2026 register."}`},
+					{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"` + chatBody + `"}`},
 					{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
-					{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
+					{method: "GET", match: "/comments?", json: pinThread},
 				}})
 			},
 		},

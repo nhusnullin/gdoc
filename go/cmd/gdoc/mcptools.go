@@ -32,8 +32,9 @@
 // Every read a tool makes goes into the session's ledger, the write tool's own
 // read of its target included, and so does every write that happened and the id
 // of what it wrote: mcpRecordRead and mcpRecordWrite. Nothing here reads the
-// ledger back. It is there for the hold rules, which are tasks 14 to 18 of the
-// milestone 14 run 2 plan and wrap these calls rather than changing them.
+// ledger back. What reads it is the hold rules, which mcphold.go asks of every
+// write between its own read of the document and the command that would send
+// it: a write a rule holds is answered there and never reaches safeDispatch.
 //
 // Nothing else here decides anything about a document.
 
@@ -62,15 +63,17 @@ import (
 )
 
 // mcpChat is what one session keeps across its calls: the code guide hands out,
-// and the ledger of what this process read and wrote.
+// the ledger of what this process read and wrote, and the writes it is holding.
 //
-// Both are made when the session starts and die with it, and neither reaches
-// disk. They travel together because every call needs both: the code before it
-// does anything, and the ledger because what it read and wrote is what the hold
-// rules of tasks 14 to 17 ask about.
+// All three are made when the session starts and die with it, and none reaches
+// disk. They travel together because a call needs all three: the code before it
+// does anything, the ledger because what this session read and wrote is what the
+// hold rules ask about, and the holds because a write stopped for the person is
+// released from the process that stopped it and from no other.
 type mcpChat struct {
 	code   *chat.Code
 	ledger *chat.Ledger
+	holds  *mcpHolds
 }
 
 // newMCPChat is one session's own. The error is the random source failing, which
@@ -80,7 +83,7 @@ func newMCPChat() (*mcpChat, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &mcpChat{code: code, ledger: chat.NewLedger()}, nil
+	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds()}, nil
 }
 
 // mcpNotSignedIn is what a Google tool answers when there is no token file.
@@ -385,8 +388,17 @@ func mcpRun(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.W
 	// and the second naming is the one a person agreed to: mcpPin reads the
 	// document and refuses a call that drifted onto another one. The read it
 	// makes goes into the ledger, because the rules want the target's own words.
-	if err := mcpPin(ctx, c, args, ch.ledger); err != nil {
+	target, err := mcpPin(ctx, c, args, ch.ledger)
+	if err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
+	}
+	// And then the rules, over the write that read is for. A write a rule holds
+	// is not sent: nothing below this line runs for it, so the wire sees
+	// nothing. mcphold.go holds what the answer carries.
+	if target != nil {
+		if res, stop := mcpJudge(c, args, *target, ch); stop {
+			return res
+		}
 	}
 
 	r := safeDispatch(ctx, argv, errOut)
@@ -494,32 +506,33 @@ func mcpRecordWrite(led *chat.Ledger, tool string, r emit.Result, at time.Time) 
 //
 // A read tool pins nothing: it writes nothing, and asking it to name the title
 // of a document a person has only just pasted a link to would refuse the one
-// call that finds out what the title is.
-func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.Ledger) error {
+// call that finds out what the title is. It is handed back nothing, and the
+// rules are asked nothing about it.
+func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.Ledger) (*mcpTarget, error) {
 	if !slices.Contains(c.checks, titleProp) {
-		return nil
+		return nil, nil
 	}
 	given, err := mcpArguments(args)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// The arguments first, so a call missing one of them is refused before a
 	// document is opened for it.
 	title, err := mcpRequired(given, titleProp)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	target, err := mcpWord(given, urlProp)
+	named, err := mcpWord(given, urlProp)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	r, err := open(target)
+	r, err := open(named)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// The read happened, so it is recorded, whatever the title turns out to say.
 	// The document's own words are what the Link rule asks about, and a write
@@ -527,14 +540,28 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 	text, _ := view.Text(d)
 	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(), Text: text})
 	if strings.TrimSpace(title) != strings.TrimSpace(d.Title) {
-		return fmt.Errorf("%s must be the document's own title, which is %q, and this call said %q. "+
+		return nil, fmt.Errorf("%s must be the document's own title, which is %q, and this call said %q. "+
 			"Read the document and say its title to the person before writing into it",
 			titleProp, d.Title, title)
 	}
+	// The document answered for itself, so what the rules and the card say about
+	// this write is the document's own id and its own title, never the words the
+	// call named them with.
+	at := &mcpTarget{docID: d.ID, title: d.Title}
 	if !slices.Contains(c.checks, quoteProp) {
-		return nil
+		return at, nil
 	}
-	return mcpPinThread(ctx, r, d, given, led)
+	if err := mcpPinThread(ctx, r, d, given, led); err != nil {
+		return nil, err
+	}
+	return at, nil
+}
+
+// mcpTarget is what a write's own read of its document came back with: the id
+// the url resolved to, and the title the document itself carries.
+type mcpTarget struct {
+	docID string
+	title string
 }
 
 // mcpPinThread is the second half of the pin, for the one tool that writes into

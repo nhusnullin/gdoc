@@ -19,10 +19,15 @@ const chatTitle = "Supplier register policy"
 //
 // The robot reply is already in it, because the listing is also the read-back
 // reply makes of the thread it posted into.
+//
+// The comment it opens with is an ordinary one, with no link in it and nothing
+// that addresses a model, because a reply into a thread carrying either is held
+// for the person: mcphold_test.go. A test about the arguments of a write is not
+// a test about the rules over it.
 const pinThread = `{"comments":[{"id":"AAAA1111",` +
 	`"author":{"displayName":"Ada Lovelace","emailAddress":"ada.lovelace@example.org","me":false},` +
 	`"createdTime":"2026-09-06T10:00:00Z","modifiedTime":"2026-09-06T10:30:00Z",` +
-	`"content":"ai? whose  ‘register’  is this","resolved":false,` +
+	`"content":"so whose  ‘register’  is this","resolved":false,` +
 	`"quotedFileContent":{"value":"the operations team"},` +
 	`"replies":[{"id":"R1",` +
 	`"author":{"displayName":"Nail Khusnullin","emailAddress":"nail@example.com","me":true},` +
@@ -30,7 +35,7 @@ const pinThread = `{"comments":[{"id":"AAAA1111",` +
 
 // chatQuote is the opening words as a model would write them: straight quotes,
 // one space between words.
-const chatQuote = `ai? whose 'register' is this`
+const chatQuote = `so whose 'register' is this`
 
 const chatBody = "🤖 the 2026 register"
 
@@ -132,9 +137,9 @@ func TestAWrongTitleIsRefused(t *testing.T) {
 func TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses(t *testing.T) {
 	for _, good := range []string{
 		chatQuote,
-		`ai?  whose ‘register’ is this`,
-		"ai? whose\t'register'\nis this",
-		`ai? whose 'register' is this document of ours`,
+		`so  whose ‘register’ is this`,
+		"so whose\t'register'\nis this",
+		`so whose 'register' is this document of ours`,
 	} {
 		t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 		signedIn(t)
@@ -162,7 +167,7 @@ func TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses(t *testing.T) {
 	signedIn(t)
 	f := stubWire(t, &fakeWire{answers: pinAnswers(t)})
 	args := `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
-		`"comment_id":"AAAA1111","thread_quote":"ai? which register is this","body":"` + chatBody + `"}`
+		`"comment_id":"AAAA1111","thread_quote":"so which register is this","body":"` + chatBody + `"}`
 	code := callCode(t)
 	res := mcpRun(context.Background(), mcpToolNamed(t, "reply"), withCode(t, code, args), nilWriter{}, chatWith(code))
 	env := envelopeOf(t, res.Texts)

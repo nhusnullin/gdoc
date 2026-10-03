@@ -24,9 +24,9 @@ func callCode(t *testing.T) *chat.Code {
 }
 
 // chatWith is one session's chat state, for a test that already has the code:
-// that code, and a ledger of its own.
+// that code, a ledger of its own, and nothing held yet.
 func chatWith(code *chat.Code) *mcpChat {
-	return &mcpChat{code: code, ledger: chat.NewLedger()}
+	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds()}
 }
 
 // callChat is a whole session of a test's own: a code standing for the one guide

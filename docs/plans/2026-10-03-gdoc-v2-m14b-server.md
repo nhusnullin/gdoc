@@ -977,17 +977,36 @@ Serves decision 16. Scenarios 16, 17.
 **Files:**
 - Modify: `go/cmd/gdoc/mcptools.go`
 - Create: `go/cmd/gdoc/mcphold_test.go`
+- ➕ Create: `go/cmd/gdoc/mcphold.go`, because `mcptools.go` is already over 800
+      lines and the hold wiring is its own room: task 16's release path lands
+      beside it rather than inside the argv file
+- ➕ Modify: `go/cmd/gdoc/doc.go`, `go/cmd/gdoc/mcpguide_test.go`,
+      `go/cmd/gdoc/mcptools_test.go`, `go/cmd/gdoc/mcpwriteargs_test.go`
 
-- [ ] Test first, `TestAHeldWriteSendsNothing`: the fake wire sees no write.
-- [ ] Test, `TestTheHeldAnswerNamesTheRuleTheValueAndTheText`: `ok: false`,
+- [x] Test first, `TestAHeldWriteSendsNothing`: the fake wire sees no write.
+- [x] Test, `TestTheHeldAnswerNamesTheRuleTheValueAndTheText`: `ok: false`,
       `sent: false`, `held` with the hold id, the rule, the exact value, the
       text, and the fixed sentence: nothing was posted; tell the person this
       reason and end your turn.
-- [ ] Test, `TestAHoldLivesThirtyMinutes`.
-- [ ] Implement: rules run before dispatch for `reply`, `annotate` and
+- [x] Test, `TestAHoldLivesThirtyMinutes`.
+- [x] Implement: rules run before dispatch for `reply`, `annotate` and
       `propose`.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): a risky chat write is held, and the answer says why and what"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): a risky chat write is held, and the answer says why and what"`
+- ➕ `mcpPin` now hands back an `mcpTarget`, the document's own id and title, so
+      the write a rule judges is built from the document's answer and never from
+      the words the call named it with. A read tool is handed nothing and is
+      judged by nothing.
+- ➕ `mcpChat` gains `holds`, the holds this session is keeping, kept 30 minutes
+      and dropped on the way past. Task 16 releases from it.
+- ➕ The pin fixtures lost their `ai?` opener: a reply into a thread whose comment
+      addresses a model is held, which is the Flagged thread rule working, so the
+      tests about a write's arguments now pin against an ordinary comment. The
+      marked-comment case belongs to the rules tests.
+- ➕ What a `propose` removes is counted in the wiring, `mcpRemoved`: the quoted
+      words of a words change, and the run from `replace_from` to `replace_to` in
+      this session's own read for a block change.
+- ➕ The trusted domains are passed as nil until task 18 reads the flag.
 
 ### Task 16: only the person releases a hold
 
