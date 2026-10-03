@@ -1,0 +1,12 @@
+┌─ publish ────────────────────────────────────────────────────────────────────────── gdoc v2.9.0 ─┐
+│ Build the note as a house-style document and upload it into one folder.                          │
+│ ▸ gdoc v2.10.0 is published and this is v2.9.0. gdoc update installs it.                         │
+├─ Usage ──────────────────────────────────────────────────────────────────────────────────────────┤
+│ gdoc publish --md <file> --folder-id <folder id> [--house <file>]                                │
+├─ Flags ─────────────────┬────────────────────────────────────────────────────────────────────────┤
+│ --md <file>             │ the note to publish                                                    │
+│ --folder-id <folder id> │ the Drive folder the document is created in                            │
+│ --house <file>          │ a house style file other than the one inside gdoc                      │
+└─ Example ───────────────┴────────────────────────────────────────────────────────────────────────┘
+gdoc publish --md note.md --folder-id 1AbC...
+Add --json to print the JSON object a skill reads.

@@ -1,0 +1,26 @@
+gdoc v2.10.0 is published and this is v2.9.0. `gdoc update` installs it.
+
+gdoc v2.9.0
+
+Usage: gdoc <command> [words] [flags]
+
+  auth status  Say whether gdoc has a token, when it expires, and what it may reach.
+  auth login   Print the Google sign-in URL and wait for the browser to come back.
+  read         Print the document as text, with the ids a comment or a suggestion is named by.
+  comments     List the comment threads with their ranges, their replies and the next cursor.
+  suggestions  List the suggestions pending in the document.
+  export       Write the document into the hub as Markdown, one file per tab, with its pictures beside it.
+  restyle      Survey a document against the house style, or apply that style where the document stands.
+  probe        Create a throwaway document and say whether Docs honours a suggestion today.
+  reply        Write one reply into a comment thread, under the robot prefix.
+  propose      Propose changes as native suggestions, each with the comment that says why.
+  withdraw     Take back one pending suggestion, and only one gdoc proposed itself.
+  annotate     Leave a comment on the exact words you quote, under the robot prefix, changing nothing.
+  build        Build the note as a house-style docx on this machine, with no network at all.
+  publish      Build the note as a house-style document and upload it into one folder.
+  update       Replace this gdoc with the newest release, or say what one would take.
+  mcp          Serve gdoc to Claude Desktop over stdin and stdout, as a protocol session rather than one object.
+  help         Print every command gdoc takes, or the words and flags of one.
+  completion   Write the completion script for one shell, and say the line that turns it on.
+
+Run gdoc help <command> for the words and flags one takes.

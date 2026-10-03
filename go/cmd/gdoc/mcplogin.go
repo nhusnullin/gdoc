@@ -71,16 +71,32 @@ var startLogin = func() (loginTrip, string, error) {
 
 // accountOf reads the Google account the token signs in as. It is the one
 // caller of guard.AllowAccountRead in this binary: the policy is built here,
-// for this read, and dies with it, so no other command and no other tool gains
-// that reach. Decision 4 with the DECISIONS.md entry of 2026-10-03.
-var accountOf = func(ctx context.Context) (gapi.Account, error) {
+// for this read, and dies with it, so no room but this function's own callers
+// gains that reach. Decision 4 with the DECISIONS.md entry of 2026-10-03, and
+// the M15 entry, which moved the guard by one caller rather than by a request.
+//
+// Those callers are two, and no third: this file's login tool, and accountFor
+// in main.go, which is `gdoc auth status` naming the account. The status read
+// is not a terminal's: the object carries the account too, so a skill reading
+// a pipe is told the same thing. TestOnlyAccountOfCallsAllowAccountRead and
+// TestAccountOfHasTwoCallers hold the count.
+//
+// The session's warnings come back beside the account, failed read included,
+// because this is an ordinary session: it can refresh an expired access token
+// and rewrite the token file before the request goes out, and a caller that
+// dropped that warning would be the one command in the binary whose object
+// does not say the file changed under it.
+// TestTheAccountReadsWarningsReachTheObject and
+// TestAFailedAccountReadStillCarriesTheSessionsWarnings.
+var accountOf = func(ctx context.Context) (gapi.Account, []string, error) {
 	p := guard.NewPolicy()
 	p.AllowAccountRead()
 	s, err := gapi.Open(p, nil)
 	if err != nil {
-		return gapi.Account{}, err
+		return gapi.Account{}, nil, err
 	}
-	return s.Account(ctx)
+	acc, err := s.Account(ctx)
+	return acc, s.Warnings(), err
 }
 
 // mcpLoginData is what the login tool answers with. The state is a fact and so
@@ -293,8 +309,8 @@ func (m *mcpLogin) close() {
 // to is what could not be read, so that is a warning.
 func (m *mcpLogin) signedIn(ctx context.Context) mcp.Result {
 	data := mcpLoginData{State: loginSignedIn, Note: mcpLoginHere}
-	var warnings []string
-	acc, err := accountOf(ctx)
+	acc, read, err := accountOf(ctx)
+	warnings := append([]string{}, read...)
 	if err != nil {
 		warnings = append(warnings, "the token is there and which Google account it belongs to could not be read: "+err.Error())
 	} else {

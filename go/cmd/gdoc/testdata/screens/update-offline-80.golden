@@ -1,0 +1,6 @@
+┌─ update ───────────────┬──────────────────────────────────────────── v2.9.0 ─┐
+│ ✗ read releases        │ Get                                                 │
+│                        │ "https://api.github.com/repos/nhusnullin/gdoc/relea │
+│                        │ ses": dial tcp: lookup api.github.com: no such host │
+└────────────────────────┴─────────────────────────────────────────────────────┘
+GitHub did not answer, so the gdoc here is unchanged.

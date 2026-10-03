@@ -106,7 +106,11 @@
 //     Google account, so a swapped account is seen in the chat rather than
 //     found out later by what a write did, and nothing gdoc read before this
 //     returned it. Its one caller is accountOf in cmd/gdoc, which builds a
-//     policy for that read alone. Anything else about `about`, another mask, a
+//     policy for that read alone, and which two rooms read: that login tool,
+//     and `gdoc auth status`, which from M15 names the account on every run
+//     that finds a token with every scope.
+//     TestOnlyAccountOfCallsAllowAccountRead and TestAccountOfHasTwoCallers in
+//     go/boundary hold both halves. Anything else about `about`, another mask, a
 //     deeper path, any method but GET, is not judged by this rule at all, so it
 //     falls through to the refusal every Drive path outside /drive/v3/files has
 //     always had: that is what makes it a widening of one read rather than a

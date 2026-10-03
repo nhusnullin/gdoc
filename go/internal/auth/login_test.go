@@ -4,10 +4,11 @@ package auth
 // what the whole flow leaves on disk.
 
 import (
-	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -17,6 +18,20 @@ import (
 
 	"gdoc/internal/guard"
 )
+
+// login is StartLogin, the link on w and Wait, in a row. It is the test's own
+// and not the package's: no room in the tree wants the trip as one call, since
+// cmd/gdoc draws a waiting line between the two halves, and the tests below
+// want the whole flow from the URL to the saved token.
+func login(c *http.Client, w io.Writer) error {
+	p, err := StartLogin(c)
+	if err != nil {
+		return err
+	}
+	defer p.Close()
+	fmt.Fprint(w, LinkLine(p.URL))
+	return p.Wait(context.Background())
+}
 
 // MissingScopes has to know that one scope can stand for another. The Docs API
 // accepts the full Drive scope, so a token holding drive is not missing the
@@ -104,7 +119,7 @@ func TestLoginRoundTrip(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -141,7 +156,7 @@ func TestAStrayCallbackDoesNotEndTheLogin(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -180,7 +195,7 @@ func TestLoginReportsARefusedSignIn(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -219,7 +234,7 @@ func TestARefreshlessExchangeDoesNotOverwriteAGoodToken(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
 	resp, err := http.Get(callbackWith(t, q.Get("redirect_uri"),
@@ -252,7 +267,7 @@ func TestLoginThroughTheGuardsOwnClient(t *testing.T) {
 	w := chanWriter{lines: make(chan string, 4)}
 	done := make(chan error, 1)
 
-	go func() { done <- Login(c, w) }()
+	go func() { done <- login(c, w) }()
 
 	authURL := urlFrom(t, <-w.lines)
 	q := authURL.Query()
@@ -283,32 +298,24 @@ func init() {
 	}
 }
 
-// A build without the secret cannot sign anyone in, and it says so before
-// opening a listener or printing a URL, because a login that fails at the
-// code exchange minutes later would blame Google for a build problem.
-func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
-	saved := BundledClientSecret
-	BundledClientSecret = ""
-	t.Cleanup(func() { BundledClientSecret = saved })
-
-	var w bytes.Buffer
-	err := Login(&http.Client{Transport: refuseAll{}}, &w)
-	if err == nil {
-		t.Fatal("a build with no client secret must refuse to log in")
-	}
-	for _, want := range []string{"client secret", "GDOC_OAUTH_CLIENT_SECRET"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("the refusal must say %q: %q", want, err)
-		}
-	}
-	if w.Len() != 0 {
-		t.Errorf("nothing must be printed before the refusal: %q", w.String())
-	}
-}
-
 // refuseAll fails any request, so a test can prove nothing left the machine.
 type refuseAll struct{}
 
 func (refuseAll) RoundTrip(r *http.Request) (*http.Response, error) {
 	return nil, fmt.Errorf("unexpected request to %s", r.URL)
+}
+
+// The two lines a login prints are the two lines it has always printed, and
+// they are stated here as the literal they are: a pipe reads them, and
+// cmd/gdoc draws the same sentence inside a box on a terminal. A change to
+// either byte is a change to what a skill's log holds.
+func TestTheLinkLineIsTodays(t *testing.T) {
+	const url = "https://accounts.google.com/o/oauth2/auth?client_id=not-real&state=abc"
+	want := "Open this link in your browser to sign in:\n" + url + "\n"
+	if got := LinkLine(url); got != want {
+		t.Errorf("the link line is\n%q\nand it must be\n%q", got, want)
+	}
+	if LinkAsk+"\n" != "Open this link in your browser to sign in:\n" {
+		t.Errorf("the sentence a terminal draws in a box is %q", LinkAsk)
+	}
 }

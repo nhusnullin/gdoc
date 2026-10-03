@@ -115,7 +115,11 @@ func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 
 	for _, c := range commands() {
 		for _, f := range c.flags {
-			presence := strings.Contains(source, `a.has("`+f.name+`")`)
+			// help's flag is read through the constant both readers of it
+			// share, the parser here and helpWords for --help and -h, so the
+			// literal would be two spellings of one flag: see jsonFlag.
+			presence := strings.Contains(source, `a.has("`+f.name+`")`) ||
+				(f.name == jsonFlag && strings.Contains(source, "a.has(jsonFlag)"))
 			value := strings.Contains(source, `a.flags["`+f.name+`"]`) ||
 				strings.Contains(source, `required(a, "`+f.name+`")`)
 			if f.value == kindNone {

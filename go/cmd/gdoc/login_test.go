@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gdoc/internal/auth"
 )
 
 // stubLogin stands in for the browser trip. The flow itself is covered end to
@@ -64,6 +66,38 @@ func TestAFailedLoginIsOneFailingEnvelope(t *testing.T) {
 	}
 	if msg, _ := got["error"].(string); !strings.Contains(msg, "timeout") {
 		t.Fatalf("the error must say what went wrong: %q", msg)
+	}
+}
+
+// A build with no client secret is refused before the link line, so a person
+// is never handed a link that cannot work and then told minutes later. This
+// runs the real login, with no stub: internal/auth's StartLogin refuses and
+// hands back no trip, and nothing here may write to stderr before it asks.
+// TestStartLoginRefusesABuildWithNoClientSecret in internal/auth holds the
+// half below this one.
+func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	saved := auth.BundledClientSecret
+	auth.BundledClientSecret = ""
+	t.Cleanup(func() { auth.BundledClientSecret = saved })
+
+	var out, errOut bytes.Buffer
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	if code != 1 {
+		t.Fatalf("a build with no client secret must exit 1, and this run exited %d", code)
+	}
+	if errOut.Len() != 0 {
+		t.Errorf("nothing may reach stderr before the refusal: %q", errOut.String())
+	}
+	got := decodeOne(t, &out)
+	if got["ok"] != false {
+		t.Fatalf("a build with no client secret must refuse to log in: %v", got)
+	}
+	msg, _ := got["error"].(string)
+	for _, want := range []string{"client secret", "GDOC_OAUTH_CLIENT_SECRET"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("the refusal must say %q: %q", want, msg)
+		}
 	}
 }
 
