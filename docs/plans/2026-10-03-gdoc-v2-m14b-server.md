@@ -551,8 +551,37 @@ Serves decision 2. Scenarios 4, 6, 7, 8, 10.
 **Files:**
 - Create: `go/cmd/gdoc/mcptools.go`, `go/cmd/gdoc/mcptools_test.go`,
   `go/cmd/gdoc/mcpfiles.go`, `go/cmd/gdoc/mcpfiles_test.go`
+- Modify: `go/cmd/gdoc/mcp.go`, `go/cmd/gdoc/mcp_test.go`
 
-- [ ] Test first, `TestEverySchemaPropertyMapsToAWordOrFlagAndBack`. Every
+➕ `mcp.go` and `mcp_test.go` had to move. `mcpTools` now takes the writer the
+log goes to, because a tool runs a command and a command writes human words to
+stderr, and `serveMCP` sweeps stale call directories before it builds the
+server. `TestTheGuideAndLoginStubsSayTheyAreNotBuiltYet` walked every tool and
+insisted each was a stub, which was true of a session with two tools and is
+false of one with eight: it now names `guide` and `login` and counts that it
+found both. `TestTheSixTableCommandsAreOffered` is new beside it and holds the
+order, which is the specification's own table.
+
+➕ Three tests beyond the list, each a rule the implementation carries that
+nothing else pinned: `TestEverySchemaIsAnObjectThatRequiresTheDocument`,
+`TestAnArgumentNoSchemaCarriesIsRefusedByName` (an argument is refused by name
+rather than dropped, as every other line into gdoc is) and
+`TestAnErrorNamingTheTempPathNamesTheArgument`, split out of the temp-file test
+because it is about the sentence rather than about the directory.
+
+➕ `mcpfiles_test.go` also holds `TestTheSweepTakesADirectoryOlderThanTwoHundredSeconds`,
+`TestLivePIDKnowsThisProcess`, `TestADirectoryNameCarriesItsProcessID`,
+`TestOneCallMakesOneDirectoryUnderFixedNames` and
+`TestACallThatNeedsNoFileMakesNoDirectory`. The 200 seconds is a literal in
+`cmd/gdoc`, not read from `internal/mcp`: the two are the same number for the
+same reason and neither reads the other.
+
+➕ The property exclusion list is empty in this commit, as the task says. `code`,
+`title` and `thread_quote` are not schema properties yet, so a list naming them
+now would name properties no schema carries, and the test holds that direction
+too.
+
+- [x] Test first, `TestEverySchemaPropertyMapsToAWordOrFlagAndBack`. Every
       property maps to a word or flag of its table entry, or is on the property
       exclusion list; every word and flag is mapped, or on the flag exclusion
       list of its tool. The lists, as literals:
@@ -564,33 +593,33 @@ Serves decision 2. Scenarios 4, 6, 7, 8, 10.
       - properties that map to no flag: `code` (Task 9), `title` and
         `thread_quote` (Task 12). Tasks 9 and 12 add them to the list in their
         own commits.
-- [ ] Test, `TestAWordStringThatStartsWithADashIsRefused`: `url`,
+- [x] Test, `TestAWordStringThatStartsWithADashIsRefused`: `url`,
       `comment_id` and `since`, the strings that become argv words or flag
       values, are refused when they start with `-`, including `read` with
       `url: "--md=x"`. A `body` or a `why` that starts with `-` goes to a file
       and passes.
-- [ ] Test, `TestFlagValuesArePassedJoined`.
-- [ ] Test, `TestTheSameAnswerAsTheCLI`: for each of the six, the envelope a
+- [x] Test, `TestFlagValuesArePassedJoined`.
+- [x] Test, `TestTheSameAnswerAsTheCLI`: for each of the six, the envelope a
       tool call returns equals what `run` prints for the same arguments,
       against the same fakes, with the temp path normalised. Task 11 narrows
       it for the three read tools.
-- [ ] Test, `TestTempFilesAreMadeForTheCallAndGone`: directory
+- [x] Test, `TestTempFilesAreMadeForTheCallAndGone`: directory
       `gdoc-mcp-<pid>-*`, mode 0700, fixed names only, removed after a success,
       a failure and a panic; an error naming the temp path names the argument
       instead.
-- [ ] Test, `TestOnlyDeadProcessesTempDirectoriesAreRemovedAtStart`: at start
+- [x] Test, `TestOnlyDeadProcessesTempDirectoriesAreRemovedAtStart`: at start
       the server removes `gdoc-mcp-<pid>-*` directories whose pid is not a
       live process or that are older than 200 seconds, and leaves a live
       process's directory alone, because chat and agent mode start together
       (MEASURED 3).
-- [ ] Test, `TestArraysPassThroughAsTheirRawJSON`.
-- [ ] Test, `TestAGrantFromOneCallIsAbsentFromTheNext`.
-- [ ] Implement the six tools: argv built, `safeDispatch` run in process,
+- [x] Test, `TestArraysPassThroughAsTheirRawJSON`.
+- [x] Test, `TestAGrantFromOneCallIsAbsentFromTheNext`.
+- [x] Implement the six tools: argv built, `safeDispatch` run in process,
       the envelope as one text item, `ok: false` sets `isError`. Write tools
       are wired but carry no chat checks yet; Task 9 gates every tool on the
       code, and nothing between Task 5 and Task 18 is given to anyone.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): six table commands as tools, in process, with hand-written schemas"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): six table commands as tools, in process, with hand-written schemas"`
 
 ### Task 6: titles and descriptions in the words people say
 

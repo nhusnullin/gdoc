@@ -12,7 +12,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
+	"time"
 
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
@@ -81,7 +83,11 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 		fmt.Fprintln(errOut, err)
 		return 1
 	}
-	s := mcp.New(mcpInfo(), mcpTools(opts), errOut)
+	// A directory left by a process that died is taken away before this
+	// session makes its own. Nothing here fails a start.
+	sweepCallDirs(os.TempDir(), time.Now())
+
+	s := mcp.New(mcpInfo(), mcpTools(opts, errOut), errOut)
 	if err := s.Serve(ctx, in, out); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -113,22 +119,20 @@ func mcpInfo() mcp.Info {
 // is what a client draws a button for.
 const noArguments = `{"type":"object","properties":{}}`
 
-// mcpTools is what one session offers. Tasks 5 to 9 of the milestone 14 run 2
-// plan fill it: the six table commands, then the code every one of them needs.
-// Today it is the two tools that are no command of the terminal, each saying
-// it is not built yet, because a session that lists nothing is a session a
-// person cannot tell from a broken install.
-func mcpTools(_ mcpOptions) []mcp.Tool {
-	return []mcp.Tool{
-		{
-			Name:        "guide",
-			Title:       "How to review a Google Doc with gdoc",
-			Description: "Call this first. It gives the rules for reviewing a Google Doc with gdoc, and the code every other tool needs.",
-			Schema:      json.RawMessage(noArguments),
-			ReadOnly:    true,
-			Call:        notBuiltYet("guide"),
-		},
-		{
+// mcpTools is what one session offers: the six table commands chat reviews a
+// document with, then the two that are no command of the terminal.
+//
+// The order is the specification's own table, which is the order a review runs
+// in. login and guide come last because a client draws the list in this order
+// and the reading a person does is of the six.
+//
+// guide and login still say they are not built: tasks 8 and 9 of the milestone
+// 14 run 2 plan are what wire them, and a session that listed nothing would be
+// a session a person cannot tell from a broken install.
+func mcpTools(_ mcpOptions, errOut io.Writer) []mcp.Tool {
+	out := mcpCommandTools(errOut)
+	return append(out,
+		mcp.Tool{
 			Name:        "login",
 			Title:       "Sign in to Google for gdoc",
 			Description: "Starts the Google sign-in and gives the link. The link works only on the computer running Claude Desktop.",
@@ -136,7 +140,14 @@ func mcpTools(_ mcpOptions) []mcp.Tool {
 			ReadOnly:    true,
 			Call:        notBuiltYet("login"),
 		},
-	}
+		mcp.Tool{
+			Name:        "guide",
+			Title:       "How to review a Google Doc with gdoc",
+			Description: "Call this first. It gives the rules for reviewing a Google Doc with gdoc, and the code every other tool needs.",
+			Schema:      json.RawMessage(noArguments),
+			ReadOnly:    true,
+			Call:        notBuiltYet("guide"),
+		})
 }
 
 // notBuiltYet is the answer of a tool that is listed and not wired. It is a
