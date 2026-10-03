@@ -5,7 +5,8 @@
 brainstorm of 2026-10-03 and which was reread against M14 the same day. The
 pictures are `docs/design/panels-round-two.html`: every screen this plan builds
 is drawn there at its widths, dark and light. One commit per task, for ralphex.
-It is released after v2.9.0, as v2.10.0, never before M14's gates.
+v2.9.0 shipped M14 on 2026-10-03; this run is released as v2.10.0, after
+Nail's acceptance in Post-Completion.
 
 The spec holds the rule, the decisions and what was rejected. This plan repeats
 none of them. Where the code, the spec or this plan disagree, the task stops
