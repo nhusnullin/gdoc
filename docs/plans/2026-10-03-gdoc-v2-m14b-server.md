@@ -1144,14 +1144,27 @@ call", end to end through the wiring.
 **Files:**
 - Create: `go/cmd/gdoc/mcpsession_test.go`
 
-- [ ] Test first, `TestASessionAgainstFakesRunsEveryTool`: `initialize`,
+- [x] Test first, `TestASessionAgainstFakesRunsEveryTool`: `initialize`,
       `guide`, each read tool, one write released through its card, a refused
       code, a panic in a command, and stdin closing, in one session; stdout
       is JSON-RPC only and the process exits 0.
-- [ ] Fix whatever the session test finds, each fix in the task that owns the
+- [x] Fix whatever the session test finds, each fix in the task that owns the
       code, noted here with ➕.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "test(cmd): one session through every tool, against fakes"`
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "test(cmd): one session through every tool, against fakes"`
+
+**Files, as built:** `go/cmd/gdoc/mcpsession_test.go` only. The session drives
+`serveMCP` over two pipes, because what the next request says comes out of the
+last answer: the code out of `guide`, the hold id out of the held reply, and the
+confirm tool's name out of that id.
+
+- ➕ The session found nothing to fix. It calls all eight tools rather than the
+      six the checkbox names: the other two writes are held on the Link rule, so
+      the wire still sees the one write the person released, and `login` answers
+      for somebody already signed in. The one thing it needed of its own is a
+      locked clock, because the test moves `now` while the server reads it from
+      its own goroutine, which `movingClock` of `mcprelease_test.go` does not
+      guard.
 
 ### Task 21: the extension template, the release zip, and --desktop in both installers
 
