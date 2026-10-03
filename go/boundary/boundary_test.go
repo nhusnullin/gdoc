@@ -302,6 +302,28 @@ func TestOnlyTheGuardBuildsTheWire(t *testing.T) {
 	}
 }
 
+// TestMcpImportsNoNetHTTP holds the one rule that keeps internal/mcp the
+// protocol and nothing else. It speaks JSON-RPC over a reader and a writer it
+// was handed, knows tools as names and functions, and never learns what a
+// document or a request is. It fails in both directions: if the package starts
+// importing net/http, and if the package disappears, because then this test
+// guards nothing.
+func TestMcpImportsNoNetHTTP(t *testing.T) {
+	if _, err := os.Stat(filepath.Join("..", "internal", "mcp")); err != nil {
+		t.Fatalf("internal/mcp is not there, so this test guards nothing: %v", err)
+	}
+	all, _, err := httpImporters("..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if all["internal/mcp"] {
+		t.Error("internal/mcp imports net/http; the protocol layer takes a reader and a writer and opens nothing")
+	}
+	if allowed["internal/mcp"] {
+		t.Error("internal/mcp is on the net/http allowlist; take it off, the server has no wire of its own")
+	}
+}
+
 // TestNothingRunsAnExternalProgram makes the rule true rather than stating it.
 // gdoc runs no external programs at all: that is what lets the login flow print
 // a URL instead of opening a browser, and it is why the binary is one file.

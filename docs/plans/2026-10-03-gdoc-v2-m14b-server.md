@@ -429,28 +429,48 @@ Serves decisions 1 and 2. Scenario 1 (the server starts).
 - Modify: `go/boundary/boundary_test.go` (the `net/http` allowlist stays as it
   is; a new assertion that `internal/mcp` is not in it)
 
-- [ ] Test first, `TestInitializeAnswersEachSupportedVersion` and
+- [x] Test first, `TestInitializeAnswersEachSupportedVersion` and
       `TestAnUnsupportedVersionGetsTheNewest`. Watch them fail.
-- [ ] Test, `TestInitializeCarriesCapabilitiesInfoAndInstructions`.
-- [ ] Test, `TestAnUnknownMethodIsMethodNotFoundBeforeAndAfterInitialize`,
+- [x] Test, `TestInitializeCarriesCapabilitiesInfoAndInstructions`.
+- [x] Test, `TestAnUnknownMethodIsMethodNotFoundBeforeAndAfterInitialize`,
       including `server/discover`.
-- [ ] Test, `TestAnUnknownToolIsInvalidParams` and
+- [x] Test, `TestAnUnknownToolIsInvalidParams` and
       `TestBadArgumentsAreAToolErrorNotAProtocolError`.
-- [ ] Test, `TestANotificationGetsNoAnswer` and
+- [x] Test, `TestANotificationGetsNoAnswer` and
       `TestAnUnknownNotificationIsIgnored`.
-- [ ] Test, `TestStringAndNumberIDsAreEchoedExactly`, with `"7"`, `7`, `7.0`
+- [x] Test, `TestStringAndNumberIDsAreEchoedExactly`, with `"7"`, `7`, `7.0`
       and a long string.
-- [ ] Test, `TestAMalformedLineAnOversizeLineAndABatchEachGetOneErrorAndReadingGoesOn`.
-- [ ] Test, `TestToolsListCarriesTitlesSchemasAndHintsInOrder`.
-- [ ] Test, `TestAddAndRemoveSendListChanged`: each sends
+- [x] Test, `TestAMalformedLineAnOversizeLineAndABatchEachGetOneErrorAndReadingGoesOn`.
+- [x] Test, `TestToolsListCarriesTitlesSchemasAndHintsInOrder`.
+- [x] Test, `TestAddAndRemoveSendListChanged`: each sends
       `notifications/tools/list_changed`, and the next `tools/list` agrees.
-- [ ] Test, `TestStdinClosingEndsServe`.
-- [ ] Test, `TestMcpImportsNoNetHTTP` in `go/boundary`.
-- [ ] Implement as Technical Details, reader and worker, one mutex on output,
+- [x] Test, `TestStdinClosingEndsServe`.
+- [x] Test, `TestMcpImportsNoNetHTTP` in `go/boundary`.
+- [x] Implement as Technical Details, reader and worker, one mutex on output,
       one compact line per message.
-- [ ] `doc.go`: the package's rules, each naming its test.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(mcp): the protocol, written by hand: framing, methods, tools and list changes"`
+- [x] `doc.go`: the package's rules, each naming its test.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(mcp): the protocol, written by hand: framing, methods, tools and list changes"`
+
+- ➕ Three tests beyond the list, each for a rule the implementation had to
+      take and `doc.go` now states: `TestAnEmptyVersionIsDev`,
+      `TestAToolWithNoSchemaStillLists` and
+      `TestATextWithAngleBracketsIsNotEscaped`, the last because Task 10's
+      label is angle brackets and HTML escaping would have turned them into
+      `\u003c` on the wire. Three framing tests likewise:
+      `TestABlankLineIsSkipped`,
+      `TestALastLineWithoutANewlineIsStillRead` and
+      `TestACarriageReturnBeforeTheNewlineIsNotPartOfTheMessage`. Plus
+      `TestEveryTextIsOneContentItemInOrder`,
+      `TestAddBeforeServeTellsNobodyAndStillLists` and
+      `TestAddReplacesAToolOfTheSameName`.
+- ➕ `Serve` answers the calls that reached the queue before it returns,
+      rather than dropping the ones that had not started. The spec's sentence
+      is "returns after the running call", which left the queued ones
+      undecided; dropping them makes a one-line session non-deterministic,
+      since the end of stdin arrives before the worker wakes. A call that
+      reached the queue was asked for. Task 3's cancellation is a separate door
+      and still removes a call that has not started.
 
 ### Task 3: internal/mcp, deadlines, cancellation and panics
 
