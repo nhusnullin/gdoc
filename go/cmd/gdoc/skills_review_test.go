@@ -162,3 +162,90 @@ func TestTheReviewStepsKeepTheirNumbers(t *testing.T) {
 		t.Errorf("Step 2 in %s does not point at %s. Its rules moved, so the heading has to say where they went", reviewSkill, reviewCore)
 	}
 }
+
+// reviewReadAgainRules is the side-by-side guard that runs last: the thread as
+// it is now, read with the draft already written. Stated as literals, because
+// the rule is the wording and not the idea.
+var reviewReadAgainRules = []string{
+	"read the thread again just before the reply goes out",
+	"A 🤖 reply appeared since that read, and this session did not write it: do not post.",
+	"A 🤖 reply this session wrote itself never stops it.",
+}
+
+// Two answers to one thread is the failure both front doors can cause. A chat
+// and a live Claude Code session read the same thread, think, and post, and the
+// thinking is the gap. The only thing that closes it is reading the thread once
+// more before the reply goes out. A session's own acknowledgment is not another
+// answer, so it never stops the receipt that is its other half.
+func TestTheCoreReadsTheThreadAgainBeforePosting(t *testing.T) {
+	// Arrange
+	_, core := readReviewFile(t, reviewCore)
+	_, skill := readReviewFile(t, reviewSkill)
+
+	// Act and assert
+	for _, rule := range reviewReadAgainRules {
+		want := squashSpace(rule)
+		if !strings.Contains(core, want) {
+			t.Errorf("%s does not hold %q. Without it two front doors answer one thread twice", reviewCore, want)
+		}
+		if strings.Contains(skill, want) {
+			t.Errorf("%s holds %q too. A rule in both files is two rules, and this one reads the same through either front door", reviewSkill, want)
+		}
+	}
+}
+
+// reviewLiveRules divide the work while a live session runs: the marker says
+// whose it is, and not knowing is a question for the person.
+var reviewLiveRules = []string{
+	"While a live session runs, marked comments are its work.",
+	"A chat leaves them alone, and says so in one line.",
+	"Ask when you do not know whether one runs.",
+}
+
+// One document, one token, and two sessions that can both see the marker. The
+// live session is the one with a hub, so the marked comments are its work. A
+// chat that guesses answers a comment the live session is already carrying out.
+func TestTheCoreLeavesMarkedCommentsToALiveSession(t *testing.T) {
+	// Arrange
+	_, core := readReviewFile(t, reviewCore)
+	_, skill := readReviewFile(t, reviewSkill)
+
+	// Act and assert
+	for _, rule := range reviewLiveRules {
+		want := squashSpace(rule)
+		if !strings.Contains(core, want) {
+			t.Errorf("%s does not hold %q. A chat that does not leave marked comments alone answers them beside the live session", reviewCore, want)
+		}
+		if strings.Contains(skill, want) {
+			t.Errorf("%s holds %q too, and the guard belongs to both front doors at once", reviewSkill, want)
+		}
+	}
+}
+
+// reviewAnnotateFlow is the flow for a comment on words the person names: find
+// them, read both halves back, post after a yes, and ask rather than guess when
+// the quote is not one place in the document.
+var reviewAnnotateFlow = []string{
+	"Find the exact words in the document's text.",
+	"Read the quote and the comment back to the person",
+	"Post after a yes",
+	"A quote that occurs twice is refused",
+	"Ask the person for more words",
+}
+
+// A comment on words the person names is the one piece of work that starts from
+// them rather than from a thread somebody else opened. It can land on the wrong
+// words, which nothing later undoes, so the quote is read back before it is
+// written and an ambiguous one is a question and never a guess.
+func TestTheCoreHasTheAnnotateFlow(t *testing.T) {
+	// Arrange
+	_, core := readReviewFile(t, reviewCore)
+
+	// Act and assert
+	for _, step := range reviewAnnotateFlow {
+		want := squashSpace(step)
+		if !strings.Contains(core, want) {
+			t.Errorf("%s does not hold %q. The flow is read the same way through either front door, so it lives here", reviewCore, want)
+		}
+	}
+}

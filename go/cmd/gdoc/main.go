@@ -58,7 +58,29 @@ func main() {
 	// the whole process would take the default kill away from every other
 	// command, and a `gdoc propose` that cannot be stopped is worse than one
 	// that dies where it stands.
-	os.Exit(run(context.Background(), os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(route(context.Background(), os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+}
+
+// route is what main does with the line before run sees it, and it is the one
+// place the real streams are named. Everything in this file below it, and every
+// package under internal/, is handed a reader and a writer:
+// TestOnlyMainNamesStdinAndStdout in go/boundary.
+//
+// Fifteen commands print one JSON object and end. mcp does not: it is a
+// JSON-RPC session over stdin and stdout, one message per line, for as long as
+// Claude Desktop is open, so an envelope around it would be a stray line in
+// the middle of somebody's protocol. That is the whole of what this helper
+// decides.
+//
+// --help and -h are not routed. They are the same question about mcp that they
+// are about every other command, and the table answers them, so gdoc mcp
+// --help prints the usage line rather than starting a server that waits on a
+// pipe nobody is going to fill. TestMcpIsRoutedBeforeRun is the pin.
+func route(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer) int {
+	if _, asked := helpAsked(args); !asked && len(args) > 0 && args[0] == "mcp" {
+		return serveMCP(ctx, in, out, errOut, args[1:])
+	}
+	return run(ctx, args, out, errOut)
 }
 
 // run turns arguments into one JSON object on out and an exit code. Human

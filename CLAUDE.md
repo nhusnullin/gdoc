@@ -21,7 +21,9 @@ Two rules about the documents themselves:
 | Path | Holds |
 |---|---|
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
-| `go/cmd/gdoc/` | the entry point, the fifteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit |
+| `go/cmd/gdoc/` | the entry point, the sixteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit. `mcp*.go` is the one command that is a session instead, and `desktop.go` the Claude Desktop extension |
+| `go/internal/mcp/` | the Model Context Protocol over stdio, by hand: the framing, the four methods, the tools, the deadline. It knows no command |
+| `go/internal/chat/` | what a chat adds to a command: the guide code, the labels and facts on a read, the ledger of this process, the hold rules, the card, the write memory |
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
@@ -59,7 +61,7 @@ Two rules about the documents themselves:
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
 | `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`, `gdoc-export`, `gdoc-align`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `.claude-plugin/` | the plugin manifest and the marketplace entry, so this repository is how a colleague's Claude Code gets `skills/` |
-| `release/` | what a colleague gets: the one-line installer, the example note, and the platform list a release walks. The README in the zip is this repository's `README.md` |
+| `release/` | what a colleague gets: the one-line installer, the example note, the Claude Desktop extension template under `mcpb/`, and the platform list a release walks. The README in the zip is this repository's `README.md` |
 | `docs/guide/` | the colleague's pages the README links to: how gdoc stays inside the document, and each command walked through |
 | `docs/v2/` | what v2 is, what is next, why, and what Google does |
 | `docs/backlog/` | deferred work, one file per item |
@@ -82,17 +84,21 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 - **The one host that is not Google's is the fifth grant.** `AllowUpdateFrom`
   names one GitHub repository for one run and admits GET on its releases
   listing, its download path and the two asset hosts that redirect lands on,
-  with no credential on any of them, and it has two callers: `gdoc update`,
-  and the daily check in `help`, which reads the listing and installs nothing:
-  `TestWithoutTheUpdateGrantGitHubIsRefused`,
+  with no credential on any of them, and it has three callers: `gdoc update`,
+  the daily check in `help`, and the same check in `gdoc mcp`, neither of which
+  installs anything: `TestWithoutTheUpdateGrantGitHubIsRefused`,
   `TestTheUpdateGrantOpensNothingBesideThoseThreeReads`,
-  `TestAnUpdateRequestCarriesNoBearer` and
-  `TestTheHelpCheckOpensThePolicyTheUpdateOpens`.
-- **`help` is the one command that asks unasked**, once in 24 hours, under a
-  two-second ceiling, and never from a checkout build, which names no release:
-  `TestAStaleStampMakesHelpAskOnce`, `TestAFreshStampMakesNoRequest`,
-  `TestTheCheckIsBoundedByTwoSeconds`, `TestACheckoutBuildNeverChecks` and
-  `TestReadNeverReachesTheCheck`.
+  `TestAnUpdateRequestCarriesNoBearer`,
+  `TestTheHelpCheckOpensThePolicyTheUpdateOpens` and
+  `TestTheMcpCheckOpensThePolicyTheUpdateOpens`.
+- **Two commands ask unasked, `help` and `mcp`**, and no third: once in 24
+  hours from one stamp they share, under a two-second ceiling, and never from a
+  checkout build, which names no release. `mcp` asks once per process, whichever
+  tool is called first: `TestAStaleStampMakesHelpAskOnce`,
+  `TestAFreshStampMakesNoRequest`, `TestTheCheckIsBoundedByTwoSeconds`,
+  `TestACheckoutBuildNeverChecks`, `TestReadNeverReachesTheCheck`,
+  `TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine` and
+  `TestACheckoutBuildNeverAsksFromMcp`.
 - **The reachable set has two doors**, the ids a command was handed and the id a
   create the guard itself carried came back with, and naming a folder to create
   in does not open a third: `TestAllowCreateInDoesNotAdmitTheFolder` and
@@ -107,26 +113,42 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestNothingAtLevelInPlaceCanChangeACharacter` and
   `TestGrantInPlaceLeavesACreatedDocumentAtFull`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
-  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom` and
+  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`,
+  `AllowAccountRead`, whose one caller is `gdoc mcp`'s `login`, and
   `GrantInPlace` are per-run, and nothing writes one down:
-  `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes` and
-  `TestAGrantedMarkerCarriesAndNothingElseDoes`.
+  `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`,
+  `TestAGrantedMarkerCarriesAndNothingElseDoes` and
+  `TestTheAccountGrantDiesWithThePolicy`.
 - **Nothing trusts a success.** Every write is read back through a route it did
   not go out on, and `verified: false` is reported rather than raised, because
   the write happened: `TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote`.
-- **The binary prints facts and the skills judge.** No field under
-  `go/internal/` says whether something was handled, accepted or matters:
-  `TestThreadsCarriesEveryFactAndJudgesNone` and
-  `TestMatchGivesAnchoredDetachedAndUnmatched`.
+- **The binary prints facts and the skills judge**, with one written-down
+  exception. No field under `go/internal/` says whether something was handled,
+  accepted or matters: `TestThreadsCarriesEveryFactAndJudgesNone` and
+  `TestMatchGivesAnchoredDetachedAndUnmatched`. The exception is
+  `internal/chat`'s hold list, which judges that a chat write is risky, because
+  a model asked whether a comment is steering it is the thing being steered.
+  Nail accepted it in decision 16 of the M14 specification, and the list is
+  fixed and in Go: `TestTheFirstRuleThatTripsIsTheOneNamed` and
+  `TestAuthorDomainChangesNoOutcome`.
 - **One JSON object reaches stdout**, always through `internal/emit`, and the
   exit code is 0 if and only if that object says `ok`:
   `TestOnlyJSONObjectRefusesAnythingAfterTheObject`,
   `TestLoginPrintsTheURLToStderrNotStdout` and `TestAPanicIsStillOneEnvelope`.
-- **The binary never prompts and never reads stdin**, and it refuses what it did
-  not understand rather than ignoring it: `TestTrailingArgumentsAreRefused` and
+  `mcp` is the one command that prints no envelope: it writes JSON-RPC lines
+  there and nothing else, `TestStdoutCarriesOnlyJSONRPC`.
+- **The binary never prompts, and every command but `mcp` leaves stdin alone.**
+  `mcp` reads its protocol there, and only `main` names the real stdin and
+  stdout, so every other room is handed a reader and a writer:
+  `TestOnlyMainNamesStdinAndStdout`. It still refuses what it did not
+  understand rather than ignoring it: `TestTrailingArgumentsAreRefused` and
   `TestUnknownCommandFailsAndNamesItself`.
-- **Nothing under `go/` runs an external program**, which is what lets the login
-  print a URL instead of opening a browser: `TestNothingRunsAnExternalProgram`.
+- **Nothing under `go/` runs an external program, except one `open`**, which is
+  `gdoc update --desktop` handing the extension it just wrote to Claude Desktop,
+  on macOS, from `desktop.go` alone. That is why the login prints a URL instead
+  of opening a browser: `TestNothingRunsAnExternalProgram` and
+  `TestOnlyDesktopRunsAProgram`, which reads that file's syntax tree and its
+  argument list.
 - **Nothing runs git.** No command and no skill runs it, to commit, to ask
   whether the tree is a repository, or to ask whether a file is dirty. Only
   `install.sh`, the Makefile's version stamp, `make tag` and the workflows read
@@ -163,7 +185,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   the same five through the plugin in `.claude-plugin/`, which the hub's
   committed `.claude/settings.json` declares as a marketplace with auto-update
   on, and the one route that copies a folder is `release/install.sh --skills`,
-  which marks what it wrote. Nothing in the binary copies a skill.
+  which marks what it wrote. Nothing in the binary copies a skill. The one
+  committed copy is `skills/gdoc-review/review.md`, which the binary embeds for
+  chat and a test pins byte for byte: `TestTheEmbeddedCoreIsTheSkillsCore`.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
@@ -199,6 +223,8 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
 | a version, a tag, a release or the updater | `go/internal/update/doc.go`, `.github/workflows/release.yml` |
 | a release notice, the stamp | `go/internal/lastcheck/doc.go`, `go/cmd/gdoc/doc.go` |
+| chat: the protocol, a tool, the code, a label, a fact, a hold, a card | `go/internal/mcp/doc.go`, `go/internal/chat/doc.go` |
+| the Claude Desktop extension, either `--desktop` | `go/cmd/gdoc/desktop.go`, `release/mcpb/manifest.json` |
 | a document written back into the hub | `go/internal/export/doc.go`, `go/internal/markers/markers.go` |
 | what a colleague installs, and how | `README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |

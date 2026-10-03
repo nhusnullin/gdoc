@@ -83,3 +83,16 @@ func LastCheckPath() (string, error) {
 	}
 	return filepath.Join(d, "update-check.json"), nil
 }
+
+// LoginPendingPath is where a sign-in waiting for a browser writes itself
+// down: login-pending.json in the config dir, in the shape internal/auth
+// reads and writes. It sits beside the token because it is about the token:
+// two gdoc processes read it so that only one of them opens a listener, and a
+// process that finds one does not start a second browser trip.
+func LoginPendingPath() (string, error) {
+	d, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, "login-pending.json"), nil
+}

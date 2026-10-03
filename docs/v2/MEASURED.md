@@ -374,7 +374,76 @@ What follows for a block proposal:
   case measured came back with one id because the last new paragraph was not
   restyled. A restyled last paragraph there was not measured.
 
+## Claude Desktop and a local MCP server
+
+Measured 2026-10-03 by Nail on his Mac, with a throwaway stub server outside
+the tree and not committed: one Go file speaking MCP over stdio, installed as a
+thin `.mcpb` whose command is the stub's absolute path. It logged every line
+Claude Desktop sent and every answer, and offered four tools: a read, a write,
+a sleep and a held write that registers a one-time `confirm_<id>` tool. These
+are the twelve measurements the M14 specification
+(`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`) puts before any server
+code. Recheck before run 2 ships if Claude Desktop has been updated since, and
+whenever a release note mentions extensions, tool permissions or voice.
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Does a `.mcpb` start a command outside the bundle, and does the setting show as optional? | Yes, it installs and starts. The one `user_config` string reaches the server as `--trusted-email-domains=` when empty. Settings shows the field with its description, which also fills the placeholder, and a Save button. Nothing marks it optional or advanced |
+| 2 | After the binary is replaced, does a restart run the new one? What does a missing binary show? | Toggling the extension restarted the chat process on the new binary; the agent-mode process kept the old one until Claude Desktop was quit. A missing binary shows a toast, "MCP gdoc spike: No executable file at <path>. It may be missing, a directory, or not marked executable. Check the server's command or remove the server", with "Open developer settings"; the tools vanish from chat |
+| 3 | What comes first, and which protocol version? | `initialize`, never `server/discover`, asking `2025-11-25`. Two clients each start their own process at the same moment: `claude-ai` (chat) and `local-agent-mode-<extension name>`, which also declares `roots`. Both stay running |
+| 4 | Does the model see the server instructions? | Not in chat: in two new chats the model did not know a word that appeared only in the instructions, and reached for a tool to find it. A Claude Code session in the same app that has the extension does show them |
+| 5 | The tool timeout | 240 seconds, counted from when the call reaches the server, which is after the card is approved. A 120-second call finished; a 300-second call got `notifications/cancelled` with reason "SdkError: Request timed out" at 240.0 s, and the chat showed "No result received from client-side tool execution after waiting 4 minutes" |
+| 6 | Are two calls sent before the first is answered? | Not observed. Asked for two at once, Claude Desktop sent the second 10 s after the first answered, each behind its own card. Not measured with both tools on always-allow |
+| 7 | A card before a write tool? Elicitation? | A card before every tool by default, read-only ones too. Settings sorts tools by `readOnlyHint` into "Read-only tools" and "Write/delete tools", each with allow, approval and block per tool and per group. The client declares no `elicitation` and no `sampling`, and does declare an `io.modelcontextprotocol/ui` extension |
+| 8 | Are local tools offered in voice? | On the Mac, yes: a voice session called the read tool once. Speech recognition turned spoken tool names into other words ("Calls by Creed", "GDoc expansion"), so later turns never reached the tool. The phone was not measured |
+| 9 | Does a tool added mid-chat get a fresh card, also after always-allow? | Yes. `notifications/tools/list_changed` made the client fetch the list again within 3 ms. `confirm_<id>` got its own card at "Needs approval", and again when the whole "Write/delete tools" group was on always-allow: the group was switched before the hold created the tool, and the new name still got a card |
+| 10 | What does the card show? | Every argument, in full, labelled with its property name. A 1,526-character text scrolled with its paragraph breaks kept. The order is the order the model sent the arguments, once schema order and once alphabetical, not the order the server declared. The model copied the long text back byte for byte. The phone was not measured |
+| 11 | The quiet gap between a hold and its release | A person releasing after reading the card: 95 s and 121 s. The server sees the confirm call only after the card is approved. The model ended its turn after a hold both times it was tried, once refusing an explicit ask to release in the same reply |
+| 12 | Does a comment that names an email address notify that address? | Not measured; Nail skipped it on 2026-10-03 |
+
+Two other facts the log showed:
+
+- **Changing a tool permission restarts the chat's server process.** A hold
+  waiting in it is lost, and nothing is posted.
+- **Only the chat process restarts on a toggle.** The agent-mode process keeps
+  running, so per-process state lives twice and a toggle never reaches both.
+
+What follows for run 2 is a decision, not a measurement, and goes to
+DECISIONS.md: the spec assumed one process (3) and a 60-second timeout with a
+45-second deadline (5), and both answers differ.
+
+## gdoc mcp in Claude Desktop, the first run
+
+Measured 2026-10-03 by Nail on his Mac, with the PR #78 build of `gdoc mcp`
+installed by `./install.sh --desktop`, on `bank-durability-test` in the Drive
+test folder. The server's side comes from Claude Desktop's own log of the
+extension, `~/Library/Logs/Claude/mcp-server-gdoc.log`, which records each
+`tools/call` and its answer, and from `main.log`, which records what the
+local-tool bridge announces. Recheck when Claude Desktop is updated, and before
+a release names voice as supported.
+
+| Question | Answer |
+|---|---|
+| How does chat reach a local extension? | Through Claude Desktop's local-tool bridge. The tools reach the model as `mcp__claude-device__lcl-gdoc-<tool>`, and `main.log` says "[localMcpBridge] announcing gdoc: 8 tool(s)" when the server connects. The spike's chat tests before 09:49 went the direct way; everything after went through the bridge |
+| Does a tool added mid-chat reach the model through the bridge? | Yes, in a fresh typed chat after a quit and reopen: the link reply was held at 17:11:28 with `tools/list_changed`, the client asked for the list again within 1 ms, "release it" raised the card for the confirm tool with its four arguments in full, and the reply posted once at 17:12:15. The bridge logged no new announcement, and none was needed |
+| Can a chat lose a local tool? | Yes. In a long chat the model could not load `annotate` again after one attempt failed, and in another it could not load `reply` after a hold. Neither call reached gdoc: the server log shows none. A new chat called both at once |
+| Are local tools offered in voice mode on the Mac? | No, in practice. Two voice conversations at 17:13 and 17:2x made no gdoc call while gdoc was connected and announced; they found the claude.ai connectors (Google Drive, Claude Docs, Miro) instead. Anthropic's help pages say desktop extensions "are only available in Claude Desktop and Claude Code, not on web or mobile" (support.claude.com, "When to use desktop and web connectors"), and the voice mode page names connectors only ("Use voice mode"); neither says whether voice mode inside Claude Desktop reaches a desktop extension. This corrects measurement 8: its one local call, at 09:52 during the spike, came from dictation into a typed chat, not from voice mode. Dictation into the desktop chat reaches gdoc like typing |
+| Does Drive give a comment author's email address? | No. `author.emailAddress`, asked for in the field mask, came back empty on every comment, Nail's own included, so `author_domain` was empty everywhere. A fact that is never there cannot mark an outside commenter |
+| What does the chat show for a held write? | "Used gdoc, 2 failed", in red, because a held answer set `isError`. Fixed after this run: a hold does not set it |
+
+What follows is in DECISIONS.md, 2026-10-03, "What the first run in Claude
+Desktop changed", and in `docs/backlog/`: the link hold and the trusted-domains
+setting are gone, a hold is not an error, and the outside-commenter summary
+waits for a field Drive does not fill.
+
 ## Not measured yet
+
+One of the M14 measurements stayed open on 2026-10-03: whether Google emails an
+address named in a comment that gdoc posts (12). Recheck it with one `gdoc
+annotate` on a document in the test folder whose text names an address the
+person can read, before anything gdoc says to a person promises or denies an
+email. The phone halves of 8 and 10 are answered by the section above: voice
+mode does not reach the extension, so there is no card on a phone to measure.
 
 The seven paragraph elements `internal/docs` decodes are a fixture built from
 the reference, not from a document. Recheck when somebody reads a real document

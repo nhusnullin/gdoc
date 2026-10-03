@@ -137,6 +137,26 @@ func landed(path, previous string, kept bool, want string) (Result, error) {
 	return out, nil
 }
 
+// FileFrom verifies the zip and reads one named file out of it, and it is the
+// whole of what a caller may take from a release besides the binary.
+//
+// It exists for `gdoc update --desktop`, which needs the Claude Desktop
+// manifest template of the release it is installing. Reading it here rather
+// than downloading it separately is the point: the bytes have already matched
+// the checksum the release published, so the template a person's Claude Desktop
+// is handed came out of the same verified zip as the binary it names. Nothing
+// on disk moves.
+//
+// TestFileFromTakesOneFileOutOfTheVerifiedZip,
+// TestFileFromRefusesAZipThatDoesNotMatchItsChecksum and
+// TestFileFromRefusesAFileTheZipDoesNotHoldByName.
+func FileFrom(archive, sums []byte, asset, name string) ([]byte, error) {
+	if err := Verify(archive, sums, asset); err != nil {
+		return nil, err
+	}
+	return fileIn(archive, asset, name)
+}
+
 // Rollback swaps the two binaries: what is at path becomes the previous one,
 // and the previous one becomes the binary a person runs. It is a swap rather
 // than a move so that a rollback taken by mistake is one more rollback away
@@ -198,9 +218,10 @@ func keepRolledBack(held, previous string) error {
 }
 
 // fileIn reads one file out of the zip by name. The release workflow packs the
-// binary at the top of the archive, so the name is exact: a zip laid out some
-// other way is refused by name rather than searched, because the one thing
-// this function must never do is install a file that is not the binary.
+// binary at the top of the archive and the files beside it at known paths, so
+// every name is exact: a zip laid out some other way is refused by name rather
+// than searched, because the one thing this function must never do is install
+// a file that is not the one that was asked for.
 func fileIn(archive []byte, asset, name string) ([]byte, error) {
 	r, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
 	if err != nil {
@@ -221,7 +242,7 @@ func fileIn(archive []byte, asset, name string) ([]byte, error) {
 		}
 		return b, nil
 	}
-	return nil, fmt.Errorf("%s holds no %s at its top, so there is no binary in it to install", asset, name)
+	return nil, fmt.Errorf("%s holds no %s, so there is nothing in it to take", asset, name)
 }
 
 // sumLine finds the asset's line of the checksum file.

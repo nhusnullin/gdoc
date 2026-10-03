@@ -19,6 +19,14 @@
 // test helper in both directions: a helper that accepts a trailing byte would
 // pass every other test in this package over output no skill can read.
 //
+// Every command but one. mcp is a protocol session rather than an answer, and
+// route in main.go sends it to serveMCP before run is reached, so no envelope
+// is printed around it: TestMcpIsRoutedBeforeRun. What reaches stdout there is
+// one JSON-RPC message per line and nothing else, which is the same promise in
+// the shape a client can read: TestStdoutCarriesOnlyJSONRPC. The protocol's own
+// rules are in internal/mcp/doc.go, and what chat adds to a command is in
+// internal/chat/doc.go.
+//
 // # The commands, and the one table that describes them
 //
 // commands.go holds the table, and dispatch matches what is in it and nothing
@@ -60,13 +68,49 @@
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
 //     that carries no credential, gapi.Plain.
+//   - mcp: this binary as a stdio server for Claude
+//     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
+//     the wiring. The one command route sends past run. It offers eight tools,
+//     the six of the table that chat reviews with and guide and login, and
+//     every one of the six takes the code guide hands out and refuses the call
+//     without it: TestToolsListListsExactlyTheEightToolsWithTheirHints and
+//     TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode. A write tool
+//     names its target twice over, by id and by the document's own title, and by
+//     the words the thread opens with where it writes into a thread: the title
+//     is read off the document on the call itself and a call naming another
+//     document is refused with nothing sent, which is TestAWrongTitleIsRefused
+//     and TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses. One item per
+//     write call, and no field in it the card does not draw:
+//     TestASecondItemIsRefused and TestAssigneeIsRefused. Every chat write is
+//     then judged by internal/chat's hold rules before anything is sent, and a
+//     held write reaches no wire: the answer is ok false, sent false, and the
+//     hold's id, rule, value and words, with one fixed sentence that says to
+//     tell the person and stop. The hold stays in that process for 30 minutes:
+//     TestAHeldWriteSendsNothing, TestTheHeldAnswerNamesTheRuleTheValueAndTheText
+//     and TestAHoldLivesThirtyMinutes. What sends a held write is the one tool
+//     that hold registers, confirm_ and its id, which the client draws as a card
+//     and the person approves: it goes when the write goes or when the thirty
+//     minutes run out, its card carries the hold, the title, the reason and the
+//     text in that order, a byte of difference in any of them is refused with the
+//     hold kept, a release with less than five seconds of quiet behind it is
+//     refused the same way, and what goes out is the call the hold kept rather
+//     than anything the release sends:
+//     TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease,
+//     TestTheConfirmSchemaListsHoldTitleReasonText,
+//     TestAByteDifferentTitleReasonOrTextIsRefused,
+//     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes no words and
+//     no flags, because the extension has no settings, and anything after the
+//     word is refused on stderr with exit 1: TestMcpTakesNoWordsAndNoFlags. The
+//     review core it serves is a committed copy of the skill's, held equal by
+//     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
 //     to a file. completion.go, with the template beside it.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the seventeen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the eighteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -188,9 +232,15 @@
 // the pins, and TestHelpTakesWordsAndNoFlags holds that help itself is parsed
 // as strictly as everything else.
 //
-// TODO(test): no test pins that the binary never reads stdin. Nothing in the
-// tree names os.Stdin today, so the rule holds by absence rather than by a
-// check somebody would see fail.
+// The binary never prompts, and the one command that reads stdin reads a
+// protocol. Every command takes its facts as arguments and answers, so nothing
+// waits on a pipe nobody filled. mcp reads stdin because a JSON-RPC session is
+// a stream, and it still asks no question: what it reads is messages from a
+// client, never words from a person. One room names the real streams, and
+// hands every other room a reader and a writer, so internal/mcp runs a whole
+// session against strings in memory. TestOnlyMainNamesStdinAndStdout in
+// go/boundary is the pin, and it reads the syntax tree, so this paragraph is
+// prose rather than a second room.
 //
 // # Completion is a file, and the reason is the output contract
 //
@@ -252,23 +302,36 @@
 // TestCompletionArgumentsAreStrict, with
 // TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
 //
-// No test sources the script in a real shell, because nothing under go/ runs an
-// external program and TestNothingRunsAnExternalProgram holds that over the
-// test files too. The script is checked structurally here, and a person types
-// Tab at it once per milestone.
+// No test sources the script in a real shell, because the one program anything
+// under go/ runs is the opener below, and TestNothingRunsAnExternalProgram holds
+// that over the test files too. The script is checked structurally here, and a
+// person types Tab at it once per milestone.
 //
-// # The update runs when it is typed; help asks once a day
+// # The update runs when it is typed; help and mcp ask once a day
 //
 // `gdoc update` is the one command that writes over the binary a person is
 // running, and that is why nothing starts it but a person typing it. Nothing
 // installs unasked, ever.
 //
 // Asking what is published is a smaller thing than installing it, and `gdoc
-// help` does it by itself, at most once in 24 hours. Help is the one place: it
-// is the first call of every skill session, it already carries the version,
-// and no document is open in front of it. A colleague who never reads the
-// releases page hears about a release from the tool itself, in the session
-// they already opened.
+// help` does it by itself, at most once in 24 hours. Help is the first call of
+// every skill session, it already carries the version, and no document is open
+// in front of it. A colleague who never reads the releases page hears about a
+// release from the tool itself, in the session they already opened.
+//
+// `gdoc mcp` is the second command that asks unasked, and the last. A chat has
+// no help in it: the session is started by Claude Desktop and the person never
+// types a command at all, so the first tool answer of the process carries the
+// line instead, once, and no answer after it does. It is the same stamp, the
+// same 24 hours, the same two-second ceiling and the same grant, so a chat and
+// a terminal cost one request a day between them. The words differ: a chat is
+// told to run `gdoc update` in a terminal and then quit Claude Desktop and
+// open it again, because a new binary only reaches the session started after
+// it: TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine,
+// TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess,
+// TestACheckoutBuildNeverAsksFromMcp, TestTheMcpCheckIsBoundedByTwoSeconds,
+// TestTheMcpCheckOpensThePolicyTheUpdateOpens and
+// TestTheLineSaysQuitAndOpenAgainNeverToggle.
 //
 // What keeps that bounded is that nothing moves. The check reads one listing,
 // writes one file of gdoc's own, replaces no binary and touches no document.
@@ -284,7 +347,7 @@
 // TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
 //
 // No other command checks. There is no check before a build and none on the
-// way to reading somebody's document. A build is a person waiting for a docx
+// way to reading somebody's document from the terminal. A build is a person waiting for a docx
 // with no network at all, and a review session is somebody's document open in
 // front of them; a background fetch in either is a second thing happening that
 // nobody asked for, and on a slow connection it is the command taking longer
@@ -338,6 +401,74 @@
 // for, which a rollback cannot say about a binary it only put back:
 // TestTheUpdateObjectIsWhatTheSkillsRead and
 // TestRollbackPutsTheEarlierBinaryBack.
+//
+// # --desktop writes the Claude Desktop extension, and is the one program gdoc runs
+//
+// Claude Desktop is chat rather than a terminal, so it does not type `gdoc`. It
+// starts a command named in an extension, which is a zip holding one
+// manifest.json, and every release from v2.9.0 on carries that manifest as a
+// template with two placeholders. `gdoc update --desktop` fills them with the
+// path the binary sits at and the release that was installed, writes
+// `gdoc.mcpb` beside the binary, and hands that file to Claude Desktop:
+// TestDesktopWritesTheMcpbFromTheZipsTemplate. Decision 18 of the M14
+// specification, Nail's call of 2026-10-03.
+//
+// The template is read between the check and the replacement, and the extension
+// is written after the read-back, so the steps on stderr are in the order the
+// run takes them: TestADesktopRunDrawsTheTwoExtensionStepsAndSaysQuitAndOpenAgain.
+//
+// Handing it over is the one place anything under go/ starts another program:
+// /usr/bin/open by its full path, with the file as its only argument, on macOS
+// alone. go/boundary's TestOnlyDesktopRunsAProgram reads desktop.go's syntax
+// tree and holds all three of those: os/exec is imported by that one file, it
+// holds one exec.Command call, and that call names the opener and one argument.
+// Off macOS the file is written and nothing is started, because there is
+// nothing there to hand it to: TestDesktopCallsTheRunnerWithOpenAndThePathOnly
+// and TestDesktopOffMacOSWritesAndRunsNothing.
+//
+// The template comes out of the zip this run verified, through
+// update.FileFrom, so it is always the template of the release that is
+// installed and never a second download. It is read before the binary is
+// replaced: a release carrying no template is refused with the gdoc on this
+// machine exactly where it was, because a person who asked for Claude Desktop
+// and got a new binary and a warning they scrolled past is left wondering why
+// their chat has no gdoc in it:
+// TestAZipWithoutTheTemplateIsRefusedBeforeTheBinaryIsReplaced.
+//
+// The extension follows the release rather than the binary, so a machine
+// already running the newest gdoc still downloads that release's zip for the
+// template and still gets the extension refreshed:
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension. A run that found a
+// release it did not install, which is a major it declined, writes nothing and
+// says so: the template would name a version this machine does not run, and
+// not knowing never resolves to overwrite.
+//
+// --desktop is refused beside --rollback, which puts an earlier binary back,
+// and beside --check, which writes nothing at all. Each pair names two runs:
+// TestDesktopIsRefusedWithRollbackOrCheck. A path carrying a quote or a
+// backslash is refused by name rather than written into a manifest Claude
+// Desktop cannot read: TestAPathThatWouldBreakTheManifestIsRefusedByName.
+//
+// Past the point where the file is written, everything is reported rather than
+// raised. The binary has already been replaced, or there was never one to
+// replace, so a write that failed or an open that refused is a warning naming
+// the file, which is the house rule that nothing raises over a write that
+// happened.
+//
+// Plain `gdoc update` is the run it has always been: it writes no extension and
+// starts no program, and Claude Desktop runs the new binary after a person
+// quits it and opens it again: TestPlainUpdateWritesNoExtensionAndRunsNothing.
+// It ends with one line when the release's template, filled for this machine,
+// differs from the extension already beside the binary, and that line names
+// `gdoc update --desktop`. The comparison leaves the version field out of both
+// sides, so a release that changed its number and nothing else asks nobody to
+// do anything, and a machine with no extension beside its binary is told
+// nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
+// TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
+//
+// The extension has no settings. What differs from one machine to the next is
+// the binary's path and the release, which is why the template travels in the
+// release and is filled here rather than being a file somebody edits.
 //
 // # The update draws its steps on stderr
 //

@@ -21,6 +21,12 @@ jobs:
         run: cd go && go vet ./...
       - name: test
         run: cd go && go test -race ./...
+      # The installers' --desktop, which no Go test can reach: os/exec is banned
+      # in every Go file under go/, so nothing in the suite can run a shell
+      # script. This one runs both installers against fake binaries in temp
+      # directories and compares the extension each wrote.
+      - name: the desktop extension
+        run: sh release/test-desktop.sh
       # Cross-compiling is a claim the Makefile makes and nobody working on
       # macOS can break safely. Running it here finds a windows-only build
       # failure on the commit that caused it.

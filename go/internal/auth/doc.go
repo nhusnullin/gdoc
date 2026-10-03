@@ -43,6 +43,40 @@
 // TestStartLoginRefusesABuildWithNoClientSecret and
 // TestLoginRefusesABuildWithNoClientSecret are the pins.
 //
+// # One waiting sign-in, written down beside the token
+//
+// Claude Desktop runs two gdoc processes, one per client
+// (docs/v2/MEASURED.md, measurement 3), and a person has one browser. So a
+// waiting sign-in leaves a record: login-pending.json in the config dir, mode
+// 0600, through internal/atomicfile, carrying the pid that opened the
+// listener, the link it handed out and the instant it started. A second
+// process reads it and hands on that link rather than opening a listener of
+// its own, which would be a second state parameter and a second trip, leaving
+// the one the person is halfway through unable to finish.
+//
+// The record carries no credential and cannot finish anybody's sign-in: the
+// PKCE verifier never leaves the process that made it. Three things make a
+// lock dead, and all three read as nothing waiting: no process behind its pid,
+// an age over loginLockLife, which is the three minutes the listener itself
+// waits, and a link that is not the sign-in page login.go builds. That last one
+// is a check on a value crossing a boundary: the file is another process's and
+// the link in it is handed to a person to open, so anything this binary would
+// never have made reads as a dead lock. A file that is there and will not parse
+// is an error rather than silence, because not knowing must not resolve to
+// "nobody is signing in": the caller starts its own trip either way, and it
+// does that knowing what it found. TestALoginLockIsWrittenAndReadBack,
+// TestALockWhoseProcessIsGoneIsNotLive, TestALockOlderThanThreeMinutesIsNotLive,
+// TestALockWithNoLinkIsNotLive, TestALockWhoseLinkIsNotGooglesSignInIsNotLive
+// and TestAnUnreadableLockIsNamed are the pins.
+//
+// SignedInSince is the other half: a process holding no listener sees that the
+// sign-in finished somewhere else by the token file being newer than the
+// instant the waiting one started. The instant is the file's, because a token
+// carries its expiry and not the moment it was saved.
+// TestSignedInSinceSeesATokenWrittenAfterTheStart is the pin. Who removes the
+// record is whoever ends the sign-in, and cmd/gdoc's mcplogin.go holds that
+// half: TestStdinClosingClosesAWaitingListenerAndItsLock.
+//
 // # The login asks for the read/write Docs scope
 //
 // loginScopes is the full Drive scope plus documents, which is read/write.

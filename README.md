@@ -196,4 +196,5 @@ what you expected instead.
 | [Restyle](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/restyle.md) | the survey, restyle in place, the house template as a suggestion |
 | [Publishing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/publishing.md) | `build`, `publish`, the `gdoc:` block |
 | [Exporting](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/exporting.md) | `export`, the numbering rule, `assets/`, the marks |
+| [Chat](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/chat.md) | reviewing from Claude Desktop chat, typed or dictated, installed with `install.sh --desktop` |
 | [What is planned](https://github.com/nhusnullin/gdoc/blob/main/docs/v2/PLAN.md) | the open work |
