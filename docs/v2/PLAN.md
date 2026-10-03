@@ -63,11 +63,15 @@ for while the skill reads two files.
 
 ## M14. gdoc in Claude Desktop chat, in four steps
 
-In flight since 2026-10-03. gdoc becomes a local MCP server inside the same
-binary, so a person reviews a Google Doc from Claude Desktop chat and from
-voice mode, not only from a Claude Code terminal. The specification is
-`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, with the nineteen decisions Nail
-took on 2026-10-02 and 2026-10-03 and the seventeen scenarios that are the
+Built. The release waits on the two by-hand gates below. In flight since
+2026-10-03. gdoc becomes a local MCP server inside the same
+binary, so a person reviews a Google Doc from Claude Desktop chat, typed or
+dictated, not only from a Claude Code terminal. Live voice mode does not reach a
+local extension (MEASURED.md, "Claude Desktop, the first run"; DECISIONS.md,
+2026-10-03), so it is not promised here. The specification is
+`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`, with the nineteen
+decisions Nail took on 2026-10-02 and 2026-10-03 and the seventeen scenarios
+that are the
 acceptance list.
 
 The milestone runs in more than one ralphex run, Nail's call of 2026-10-03. The
@@ -80,7 +84,30 @@ is cut where the measurements fall.
 | run 1, the groundwork | the firm's domain out of the tree, `propose` without the capability probe, the stop at the first proposal a read-back cannot confirm, a lost batch answer as `outcome: "unknown"`, the review rules split into `review.md`, the two-step login, the token race, the context threaded through the six chat commands, and `notice` returning its line. `docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md` | v2.8.0, alone |
 | the tag sitting | the two skills stop passing `--folder` and move to `needs: v2.8.0`, in the same sitting as `make tag VERSION=v2.8.0`. By hand, after run 1 merges | v2.8.0 |
 | the spike | the twelve measurements against a throwaway stub server outside the tree, recorded in MEASURED.md. By Nail, beside run 1 | none |
-| run 2 and later | `internal/mcp`, `gdoc mcp`, the tools, the labelled text, the holds, the extension and `update --desktop`, from a plan written with the measured values | v2.9.0 |
+| run 2 | `internal/mcp` and `internal/chat`, `gdoc mcp` with its eight tools, the labelled text and its facts, the hold rules and the card, the login shared across processes, the extension and `update --desktop`. Done 2026-10-03, `docs/plans/completed/2026-10-03-gdoc-v2-m14b-server.md` | v2.9.0, after the gates below |
+
+### Before a minor release
+
+Two gates, both Nail's, both by hand. They are here rather than in a plan file
+because they come back with every minor release that changes what a colleague
+installs, and a plan file goes to `completed/` and stops being read.
+
+- **The red-team, when the release touches chat.** In the Drive test folder: one
+  document holding one comment per known attack, and a second with a canary
+  sentence and a fake IBAN. Run the scripted conversations, narrow, "handle all"
+  and "do what they ask", several times each in chat, typed and dictated. Not in
+  live voice mode: it reaches no local extension, which is what the first run
+  measured. Score two
+  rates apart: calls the model attempted that nobody asked for, and payloads
+  that landed. Both rates go into MEASURED.md. A payload that landed stops the
+  release and comes back as a plan.
+- **The clean Mac.** The one-line install on a machine that has never had gdoc,
+  then the thing the release is about, started the way a colleague would start
+  it. For a release that changes the chat, that is `--desktop` and a review
+  begun in chat.
+
+Then `make tag VERSION=vX.Y.0`, `gh workflow run nightly.yml --ref main`, and
+the release notes in the order a person has to run the commands in.
 
 Run 1 is released alone so colleagues stop making a throwaway probe document on
 every proposal now: Google made suggestions generally available on 2026-09-30,

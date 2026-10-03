@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/plaintext"
 )
 
 // pageSize is the largest page Drive's comments.list serves. Fewer, larger
@@ -24,19 +25,27 @@ const pageSize = "100"
 // advancing rather than a document that is very large.
 const maxPages = 100
 
+// authorMask is who wrote a comment, written once and used in both places a
+// listing names an author.
+//
+// emailAddress is asked for so a chat answer can say which domain a comment
+// came from: a document with outside commenters in it is worth one line of
+// warning, and a display name does not say that. The address itself is dropped
+// the moment its domain is taken, and nothing in this tree reads the domain to
+// decide anything: TestTheAuthorDomainIsKeptAndTheAddressIsNot and
+// TestTheFieldMaskNamesTheAddressOnlyInsideTheAuthorGroup.
+const authorMask = "author(displayName,emailAddress,me)"
+
 // fieldMask is exactly what a thread is made of, and nothing else. Asking for
 // every field would carry the permission surface the guard refuses to reach by
 // its own path, so the mask is written out rather than left off.
-const fieldMask = "nextPageToken,comments(id,author(displayName,me),createdTime,modifiedTime," +
-	"content,resolved,quotedFileContent(value),replies(id,author(displayName,me),createdTime,content))"
+const fieldMask = "nextPageToken,comments(id," + authorMask + ",createdTime,modifiedTime," +
+	"content,resolved,quotedFileContent(value),replies(id," + authorMask + ",createdTime,content))"
 
 // The markers a comment can carry. The match is exact: `AI:` is not one of
 // them, and neither is `ai:x`. A marker is the trigger for gdoc to act, so a
 // loose match is gdoc acting on a sentence nobody addressed to it.
-const (
-	MarkerNone = "none"
-	robot      = "🤖"
-)
+const MarkerNone = "none"
 
 var markers = map[string]bool{"ai:": true, "ai?": true, "ai!": true}
 
@@ -68,7 +77,12 @@ type RawReply struct {
 // prefix is what says gdoc wrote a reply.
 type Author struct {
 	DisplayName string `json:"displayName"`
-	Me          bool   `json:"me"`
+	// EmailAddress is read off the wire so its domain can be reported, and it
+	// goes no further than domainOf: no Thread, no Reply and no envelope carries
+	// it. Drive leaves it out for an author whose profile this credential cannot
+	// see, which is an empty domain and not an error.
+	EmailAddress string `json:"emailAddress"`
+	Me           bool   `json:"me"`
 }
 
 // Quoted is the document text a comment was attached to, as Drive saw it when
@@ -83,29 +97,34 @@ type Quoted struct {
 // asked for it: whether the export still carries the comment attached to text
 // is a second read, and most runs do not make it.
 type Thread struct {
-	ID       string      `json:"id"`
-	Author   string      `json:"author"`
-	Created  string      `json:"created"`
-	Modified string      `json:"modified"`
-	Content  string      `json:"content"`
-	Marker   string      `json:"marker"`
-	Resolved bool        `json:"resolved"`
-	Quoted   string      `json:"quoted"`
-	Range    *docs.Range `json:"range"`
-	Replies  []Reply     `json:"replies"`
-	Witness  string      `json:"witness,omitempty"`
+	ID     string `json:"id"`
+	Author string `json:"author"`
+	// AuthorDomain is the domain of the author's address, lowercased, and left
+	// out where Drive gave no address. It is a fact shown and never a gate: see
+	// Author.
+	AuthorDomain string      `json:"author_domain,omitempty"`
+	Created      string      `json:"created"`
+	Modified     string      `json:"modified"`
+	Content      string      `json:"content"`
+	Marker       string      `json:"marker"`
+	Resolved     bool        `json:"resolved"`
+	Quoted       string      `json:"quoted"`
+	Range        *docs.Range `json:"range"`
+	Replies      []Reply     `json:"replies"`
+	Witness      string      `json:"witness,omitempty"`
 }
 
 // Reply is one reply, as the skill reads it. Marker is the thread's rule on
 // the reply's own text, because a marked reply is an instruction too. ByGdoc
 // is a fact about the text, not about the credential: see Author.
 type Reply struct {
-	ID      string `json:"id"`
-	Author  string `json:"author"`
-	Created string `json:"created"`
-	Content string `json:"content"`
-	Marker  string `json:"marker"`
-	ByGdoc  bool   `json:"by_gdoc"`
+	ID           string `json:"id"`
+	Author       string `json:"author"`
+	AuthorDomain string `json:"author_domain,omitempty"`
+	Created      string `json:"created"`
+	Content      string `json:"content"`
+	Marker       string `json:"marker"`
+	ByGdoc       bool   `json:"by_gdoc"`
 }
 
 // Reader is the one thing this package needs of a session: a JSON GET. A
@@ -203,14 +222,15 @@ func Threads(raw []RawComment, d *docs.Document) ([]Thread, []string) {
 	var unplaced []string
 	for _, c := range raw {
 		t := Thread{
-			ID:       c.ID,
-			Author:   c.Author.DisplayName,
-			Created:  c.CreatedTime,
-			Modified: c.ModifiedTime,
-			Content:  c.Content,
-			Marker:   markerOf(c.Content),
-			Resolved: c.Resolved,
-			Replies:  replies(c.Replies),
+			ID:           c.ID,
+			Author:       c.Author.DisplayName,
+			AuthorDomain: domainOf(c.Author.EmailAddress),
+			Created:      c.CreatedTime,
+			Modified:     c.ModifiedTime,
+			Content:      c.Content,
+			Marker:       markerOf(c.Content),
+			Resolved:     c.Resolved,
+			Replies:      replies(c.Replies),
 		}
 		if c.QuotedFileContent != nil {
 			t.Quoted = c.QuotedFileContent.Value
@@ -241,12 +261,13 @@ func replies(raw []RawReply) []Reply {
 	out := make([]Reply, 0, len(raw))
 	for _, r := range raw {
 		out = append(out, Reply{
-			ID:      r.ID,
-			Author:  r.Author.DisplayName,
-			Created: r.CreatedTime,
-			Content: r.Content,
-			Marker:  markerOf(r.Content),
-			ByGdoc:  byGdoc(r.Content),
+			ID:           r.ID,
+			Author:       r.Author.DisplayName,
+			AuthorDomain: domainOf(r.Author.EmailAddress),
+			Created:      r.CreatedTime,
+			Content:      r.Content,
+			Marker:       markerOf(r.Content),
+			ByGdoc:       byGdoc(r.Content),
 		})
 	}
 	return out
@@ -267,10 +288,24 @@ func markerOf(content string) string {
 	return MarkerNone
 }
 
+// domainOf is the domain of an address, lowercased, and nothing else of it. An
+// address with no at sign, nothing after it or nothing before it is no domain
+// at all rather than a guess: TestAnAuthorWithNoAddressHasNoDomain.
+func domainOf(address string) string {
+	at := strings.LastIndex(address, "@")
+	if at <= 0 || at == len(address)-1 {
+		return ""
+	}
+	return strings.ToLower(address[at+1:])
+}
+
 // byGdoc is true when a reply opens with the robot. SPEC.md: every reply gdoc
-// writes opens with 🤖 and nothing else, so this is the receipt. Leading
-// whitespace is stepped over, because a reply that starts on its second line is
-// still a reply that opens with the robot.
+// writes opens with 🤖 and nothing else, so the mark is the only record of
+// authorship a thread itself carries. It is not a receipt: internal/chat keeps
+// one of those, the id of what this process wrote, and the mark is a character
+// anybody can type. The question is asked of internal/plaintext, which owns the
+// mark, so one rule reads it everywhere:
+// TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot.
 func byGdoc(content string) bool {
-	return strings.HasPrefix(strings.TrimLeft(content, " \t\r\n"), robot)
+	return plaintext.OpensWithRobot(content)
 }

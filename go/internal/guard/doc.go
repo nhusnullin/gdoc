@@ -39,7 +39,7 @@
 // body says SUGGEST, or the document is the one id this run was granted.
 // TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant is the pin.
 //
-// # Two doors into the set, and five grants beside it
+// # Two doors into the set, and six grants beside it
 //
 // Ids reach the reachable set two ways and no more. AllowFile is the id a
 // command was pointed at. Learn is the id a create the guard itself carried
@@ -47,7 +47,7 @@
 // and TestFailedCreateTeachesNothing are the pins: a create that did not
 // succeed teaches nothing.
 //
-// Five grants sit beside the set. Each names one object, opens one shape, and
+// Six grants sit beside the set. Each names one object, opens one shape, and
 // dies with the process. None of them is a level and none is a third door.
 //
 //   - AllowCreateIn names the one folder a create may target. A create naming
@@ -82,9 +82,9 @@
 //     one live. TestASecondAllowMarkerReplacesTheFirst and
 //     TestARefusedSecondMarkerGrantTakesTheFirstBack are the pins.
 //   - AllowUpdateFrom names the one GitHub repository whose releases a run may
-//     read, and it is the only grant that is not about a Google file. gdoc
-//     runs on a colleague's machine now, so gdoc update has to ask what the
-//     latest release is and fetch it. The door is as narrow as that job: GET,
+//     read, and it is the only grant that reaches a host that is not Google's.
+//     gdoc runs on a colleague's machine now, so gdoc update has to ask what
+//     the latest release is and fetch it. The door is as narrow as that job: GET,
 //     the hosts named in policy.go, one repository's releases listing and its
 //     download path, no query the guard did not decide about, and no
 //     credential. The listing carries per_page and nothing else, held to
@@ -99,6 +99,22 @@
 //     TestTheUpdateGrantOpensNothingBesideThoseThreeReads,
 //     TestTheUpdateGrantAdmitsNoDocument and
 //     TestAnUnreadableUpdateGrantOpensNothing.
+//   - AllowAccountRead opens the one Drive read that names no file: who the
+//     token signs in as, GET /drive/v3/about under the one field mask
+//     user(emailAddress,displayName) and no other parameter. Nail's decision,
+//     2026-10-03, DECISIONS.md: the login tool of gdoc mcp answers with the
+//     Google account, so a swapped account is seen in the chat rather than
+//     found out later by what a write did, and nothing gdoc read before this
+//     returned it. Its one caller is accountOf in cmd/gdoc, which builds a
+//     policy for that read alone. Anything else about `about`, another mask, a
+//     deeper path, any method but GET, is not judged by this rule at all, so it
+//     falls through to the refusal every Drive path outside /drive/v3/files has
+//     always had: that is what makes it a widening of one read rather than a
+//     hole. The answer carries no file id, so the set cannot grow through it.
+//     The pins are in about_test.go:
+//     TestTheAboutReadIsAdmittedWithItsFieldsAndNothingElse,
+//     TestWithoutTheAccountGrantTheAboutReadIsRefusedAsBefore and
+//     TestTheAccountGrantDiesWithThePolicy.
 //
 // An asset host is the one place the guard judges a method and a host and
 // nothing further, and the reason is that gdoc does not build that URL: it is
@@ -122,7 +138,7 @@
 // TestAnUpdateRequestCarriesNoBearer and
 // TestTheUpdateReadsGoOutWithNoCredential are the pins.
 //
-// GrantInPlace is the sixth of that shape and the only door to LevelInPlace.
+// GrantInPlace is the seventh of that shape and the only door to LevelInPlace.
 // It upgrades an id already in files and admits nothing new, so it is not a
 // third door into the set. AllowFile refuses to hand that level out at all,
 // because taking any level there was the side door around the invariant.

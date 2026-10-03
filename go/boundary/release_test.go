@@ -99,6 +99,33 @@ func TestTheReleaseInstallerNamesTheFilesTheUpdaterNames(t *testing.T) {
 	}
 }
 
+// TestTheThreeRoutesToTheExtensionNameOnePathEach: the release workflow packs
+// the manifest template at one path inside the zip, and every route that fills
+// it must look there and must write the extension under one name. A route
+// looking somewhere else is a colleague whose --desktop run says it wrote an
+// extension and whose Claude Desktop never sees one, or two extension files
+// beside one binary, each naming it.
+//
+// The values are literals here and constants in each of the three, so a rename
+// in one of them fails rather than drifting.
+func TestTheThreeRoutesToTheExtensionNameOnePathEach(t *testing.T) {
+	for _, file := range []string{
+		filepath.Join("..", "..", "release", "install.sh"),
+		filepath.Join("..", "..", "install.sh"),
+		filepath.Join("..", "cmd", "gdoc", "desktop.go"),
+	} {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("%s is a route to the extension and it is not there: %v", file, err)
+		}
+		for _, want := range []string{"mcpb/manifest.json", "gdoc.mcpb"} {
+			if !strings.Contains(string(b), want) {
+				t.Errorf("%s names no %s; the three routes to the Claude Desktop extension are one path each", file, want)
+			}
+		}
+	}
+}
+
 // TestTheReleaseInstallerNeverEditsTheZshrc holds the one promise the script
 // makes about a file it did not write. It prints the line to add and reads the
 // file to see whether the line is there already. Every mention of .zshrc is
@@ -114,6 +141,37 @@ func TestTheReleaseInstallerNeverEditsTheZshrc(t *testing.T) {
 			continue
 		}
 		t.Errorf("release/install.sh line %d names .zshrc outside a printf, a grep or a comment: %s", i+1, trimmed)
+	}
+}
+
+// TestTheReleaseZipCarriesTheTemplate holds the one path four places name. The
+// Claude Desktop extension is filled from release/mcpb/manifest.json, and a
+// colleague fills it from the copy inside their zip, because the template is no
+// more reachable from their machine than release/platforms is. The pack step is
+// what puts it there, so a zip packed without it is an `install.sh --desktop`
+// that refuses on a machine nobody here can see.
+func TestTheReleaseZipCarriesTheTemplate(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(repoRoot, ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow := string(b)
+	// The source in this repository, and the path it lands on inside the stage
+	// the zip is made from. Both are literals: the installers read the second
+	// one off a stranger's disk and cannot ask this file what it decided.
+	for _, want := range []string{
+		"release/mcpb/manifest.json",
+		"$stage/mcpb/manifest.json",
+	} {
+		if !strings.Contains(workflow, want) {
+			t.Errorf(".github/workflows/release.yml never names %q, so the zip would carry no extension template", want)
+		}
+	}
+
+	// The installers name the path inside the zip, so what the workflow writes
+	// and what they look for is one string.
+	if !strings.Contains(releaseInstaller(t), "mcpb/manifest.json") {
+		t.Error("release/install.sh never names mcpb/manifest.json, and --desktop reads the template from there")
 	}
 }
 

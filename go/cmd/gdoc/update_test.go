@@ -98,9 +98,16 @@ func listing(tags ...string) string {
 	return "[" + strings.Join(entries, ",") + "]"
 }
 
+// zipEntry is one more file in a release zip, for a test that needs something
+// beside the binary.
+type zipEntry struct {
+	name string
+	body []byte
+}
+
 // zipHolding packs the binary the way the release workflow packs one: at the
 // top of the archive, with the files the installer reads beside it.
-func zipHolding(t *testing.T, content []byte) []byte {
+func zipHolding(t *testing.T, content []byte, extra ...zipEntry) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
@@ -118,6 +125,9 @@ func zipHolding(t *testing.T, content []byte) []byte {
 	}
 	add("gdoc", content, 0o755)
 	add("install.sh", []byte("#!/usr/bin/env bash\n"), 0o755)
+	for _, e := range extra {
+		add(e.name, e.body, 0o644)
+	}
 	if err := w.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -132,9 +142,16 @@ func hexSum(b []byte) string {
 // published is one release's two files, keyed by the URL the listing names.
 func published(t *testing.T, tag string, binary []byte) map[string][]byte {
 	t.Helper()
+	return publishedWith(t, tag, binary)
+}
+
+// publishedWith is the same release with more files in its zip, which is how a
+// release from v2.9.0 on carries the Claude Desktop manifest template.
+func publishedWith(t *testing.T, tag string, binary []byte, extra ...zipEntry) map[string][]byte {
+	t.Helper()
 	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
 	asset := update.AssetName(tag, platform)
-	archive := zipHolding(t, binary)
+	archive := zipHolding(t, binary, extra...)
 	return map[string][]byte{
 		assetURL(tag, asset):                     archive,
 		assetURL(tag, update.ChecksumsName(tag)): []byte(fmt.Sprintf("%s  %s\n", hexSum(archive), asset)),

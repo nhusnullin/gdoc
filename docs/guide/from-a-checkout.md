@@ -40,6 +40,22 @@ are written by `gdoc auth login` and by nothing else. After installing, run
 `~/.local/bin` is not on the macOS default PATH. The script says so when it is
 missing and tells you the line to add.
 
+## Claude Desktop
+
+```bash
+./install.sh --desktop
+```
+
+The flag writes `bin/gdoc.mcpb`, the Claude Desktop extension, and opens it.
+Claude Desktop asks to install it. The extension names `bin/gdoc` by its full
+path, so the chat runs this checkout's own build: after `make build`, quit
+Claude Desktop and open it again, and the chat has the binary you just built.
+Nothing else is needed, and `--desktop` is the only flag either installer takes
+for it.
+
+A run without the flag says nothing to Claude Desktop. `bin/` is not in git, so
+the extension file is nobody's to commit.
+
 ## Building
 
 ```bash
