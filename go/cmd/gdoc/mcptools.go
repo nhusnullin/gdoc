@@ -66,6 +66,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
 	"gdoc/internal/plaintext"
+	"gdoc/internal/propose"
 	"gdoc/internal/view"
 )
 
@@ -523,29 +524,61 @@ func mcpRemarks(threads []comments.Thread) []chat.Remark {
 
 // mcpRecordWrite keeps the write a tool made and the ids of what it wrote.
 //
-// Only a write that happened is recorded: a refused call wrote nothing, and
-// counting it would hold the next call for a burst that never reached a
-// document. The ids are how a reply gdoc wrote is told from a robot mark
-// somebody else left, which is the one thing the marker cannot say by itself.
+// What was written is read off the answer and never off `ok`. Nothing trusts a
+// success, so a writer that cannot confirm what it sent answers `ok: false` over
+// a change that is already in somebody's document: a proposal whose read-back
+// did not confirm it, a proposal whose answer was lost, an item that landed
+// before a later one stopped the run. The envelope says which in `sent` and in
+// `outcome`, and that is what is kept. A call that wrote nothing leaves every
+// entry unsent and is not recorded, because counting it would hold the next call
+// for a burst that never reached a document:
+// TestAWriteThatLandedIsRecordedThoughTheCallFailed and
+// TestACallThatWroteNothingIsNotRecorded.
+//
+// The ids are how a reply gdoc wrote is told from a robot mark somebody else
+// left, which is the one thing the marker cannot say by itself. An id gdoc never
+// got back is not one, and RecordOwn drops it.
 func mcpRecordWrite(led *chat.Ledger, tool string, r emit.Result, at time.Time) {
-	if !r.OK {
-		return
-	}
+	// A successful write landed by itself: a reply Drive took and named nothing
+	// for is still a reply in the thread.
+	landed, docID := r.OK, ""
+	var ids []string
 	switch d := r.Data.(type) {
 	case replyData:
-		led.RecordWrite(chat.Written{DocID: d.DocumentID, Tool: tool, At: at})
-		led.RecordOwn(d.ReplyID)
+		docID = d.DocumentID
+		ids = []string{d.ReplyID}
+		if d.ReplyID != "" {
+			landed = true
+		}
 	case annotateData:
-		led.RecordWrite(chat.Written{DocID: d.DocumentID, Tool: tool, At: at})
+		docID = d.DocumentID
 		for _, one := range d.Annotations {
-			led.RecordOwn(one.CommentID)
+			if !one.Sent {
+				continue
+			}
+			landed = true
+			ids = append(ids, one.CommentID)
 		}
 	case proposeData:
-		led.RecordWrite(chat.Written{DocID: d.DocumentID, Tool: tool, At: at})
+		docID = d.DocumentID
 		for _, one := range d.Proposals {
-			led.RecordOwn(one.CommentID)
+			// OutcomeUnknown is the batch that went out and said nothing back.
+			// It may or may not be in the document, and the rules are safer
+			// counting a write that may have happened than missing one that did.
+			if !one.Sent && one.Outcome != propose.OutcomeUnknown {
+				continue
+			}
+			landed = true
+			ids = append(ids, one.CommentID)
 		}
+	default:
+		return
 	}
+	if !landed {
+		return
+	}
+	led.RecordWrite(chat.Written{DocID: docID, Tool: tool, At: at})
+	led.RecordOwn(ids...)
 }
 
 // mcpPin is the read a write makes of the document it is about to write into,
