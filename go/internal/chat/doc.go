@@ -80,7 +80,9 @@
 // no receipt behind it. It asks OwnReplies, this process's record of what gdoc
 // wrote, and never the account, because identity is never a gate:
 // TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote. author_domain is carried
-// and read by nothing: TestAuthorDomainIsCarriedAndDecidesNothing.
+// and read by nothing: TestAuthorDomainIsCarriedAndDecidesNothing. It is absent
+// where Drive gave no address, never an empty string a model could read as a
+// kind of account: TestAnUnknownAuthorDomainIsAbsentFromTheFacts.
 //
 // HasHiddenChars is one function the fact and the refusal share, because two
 // readings of the same rune tables would drift: Rules refuses such text

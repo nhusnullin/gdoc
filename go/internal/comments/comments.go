@@ -99,10 +99,10 @@ type Quoted struct {
 type Thread struct {
 	ID     string `json:"id"`
 	Author string `json:"author"`
-	// AuthorDomain is the domain of the author's address, lowercased, and empty
-	// where Drive gave no address. It is a fact shown and never a gate: see
+	// AuthorDomain is the domain of the author's address, lowercased, and left
+	// out where Drive gave no address. It is a fact shown and never a gate: see
 	// Author.
-	AuthorDomain string      `json:"author_domain"`
+	AuthorDomain string      `json:"author_domain,omitempty"`
 	Created      string      `json:"created"`
 	Modified     string      `json:"modified"`
 	Content      string      `json:"content"`
@@ -120,7 +120,7 @@ type Thread struct {
 type Reply struct {
 	ID           string `json:"id"`
 	Author       string `json:"author"`
-	AuthorDomain string `json:"author_domain"`
+	AuthorDomain string `json:"author_domain,omitempty"`
 	Created      string `json:"created"`
 	Content      string `json:"content"`
 	Marker       string `json:"marker"`

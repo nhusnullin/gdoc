@@ -45,9 +45,12 @@
 // # The author's domain is kept and the address is not
 //
 // The listing asks for the author's address, and a Thread and a Reply carry
-// author_domain: the part after the at sign, lowercased, empty where Drive gave
-// no address. It is there because a chat answer says in one line that a document
-// has commenters from outside the company, and a display name does not say that.
+// author_domain: the part after the at sign, lowercased, and absent where Drive
+// gave no address, so an absent key says only that Google did not say. Measured
+// on 2026-10-03, Drive gave none on any comment, the signed-in person's own
+// included, so in practice the key is absent: TestAnUnknownAuthorDomainIsLeftOut.
+// Saying which commenters are from outside the firm waits on another read:
+// docs/backlog/say-which-commenters-are-from-outside-the-firm.md.
 //
 // The address itself is read and dropped. Nothing in this tree reads the domain
 // either: identity is never a gate, and no hold, no filter and no marker asks

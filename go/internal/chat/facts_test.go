@@ -174,3 +174,16 @@ func TestALongCommentIsJudgedWholeAndNotTruncated(t *testing.T) {
 		t.Error("has_email is false for an address at the end of a long comment")
 	}
 }
+
+// An unknown author's domain is absent from the facts, never an empty string a
+// model could read as a kind of account: TestAnUnknownAuthorDomainIsLeftOut in
+// internal/comments holds the same rule for the envelope.
+func TestAnUnknownAuthorDomainIsAbsentFromTheFacts(t *testing.T) {
+	b, err := json.Marshal(FactsOf(Comment{ID: "AAAA1111", Text: "plain words"}, nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "author_domain") {
+		t.Errorf("facts for an author with no known domain carry author_domain: %s", b)
+	}
+}

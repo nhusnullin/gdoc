@@ -28,7 +28,7 @@ type Facts struct {
 	NamesAI      bool   `json:"names_ai"`
 	HiddenChars  bool   `json:"hidden_chars"`
 	RobotNotOurs bool   `json:"robot_not_ours"`
-	AuthorDomain string `json:"author_domain"`
+	AuthorDomain string `json:"author_domain,omitempty"`
 }
 
 // Comment is one comment or reply the facts are about: what it says, the id
