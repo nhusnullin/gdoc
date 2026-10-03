@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"gdoc/internal/chat"
+	"gdoc/internal/comments"
+	"gdoc/internal/docx"
 )
 
 // theFixedLine is the line every read answer opens with, as a literal. A test
@@ -196,8 +198,9 @@ func TestEveryCommentReplyQuoteAndDocumentTextIsWrapped(t *testing.T) {
 
 // bareFields are the keys of the wrapped copy whose value gdoc made itself or
 // read off a structure: an id, a cursor, a date, the marker a thread opens
-// with, the kind of a suggestion, and the domain of an address. Nobody writes
-// them as a sentence, so nothing in them can read as a sentence gdoc wrote.
+// with, the kind of a suggestion, the witness verdict, and the domain of an
+// address. Nobody writes them as a sentence, so nothing in them can read as a
+// sentence gdoc wrote.
 //
 // Everything else is somebody's words and belongs inside the wrapper. The list
 // is here rather than in the walk so that a field added to the view is wrapped
@@ -210,6 +213,7 @@ var bareFields = map[string]bool{
 	"modified":      true,
 	"marker":        true,
 	"kind":          true,
+	"witness":       true,
 	"author_domain": true,
 }
 
@@ -365,4 +369,39 @@ func sortedRawKeys(m map[string]json.RawMessage) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// The witness verdict reaches the copy the model is told to read. comments
+// offers the flag that asks for it, and the flag's whole answer is one word per
+// thread, so a view without that word makes the flag do nothing where the guide
+// sends the model. The word is gdoc's own, so it is bare.
+func TestTheWrappedCopyCarriesTheWitness(t *testing.T) {
+	threads := []comments.Thread{
+		{ID: "t1", Witness: docx.WitnessAnchored},
+		{ID: "t2", Witness: docx.WitnessUnmatched},
+		{ID: "t3"},
+	}
+	got := chatThreads(threads, "abcdef123456", nil)
+	if len(got) != len(threads) {
+		t.Fatalf("the view carries %d threads, want %d", len(got), len(threads))
+	}
+	for i, want := range threads {
+		if got[i].Witness != want.Witness {
+			t.Errorf("thread %s is witnessed %q, want %q", want.ID, got[i].Witness, want.Witness)
+		}
+	}
+	body, err := mcpJSON(chatComments{Threads: got[:1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(body, `"witness":"`+docx.WitnessAnchored+`"`) {
+		t.Errorf("the verdict is not in the JSON the model reads:\n%s", body)
+	}
+	bare, err := mcpJSON(chatComments{Threads: got[2:]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(bare, "witness") {
+		t.Errorf("a thread nobody witnessed carries the key anyway:\n%s", bare)
+	}
 }

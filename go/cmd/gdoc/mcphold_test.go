@@ -475,3 +475,29 @@ func mcpBlockDoc(paras ...[]docs.Run) *docs.Document {
 		Tabs: []docs.Tab{{ID: "t.0", Body: body}},
 	}
 }
+
+// Both kinds of change are counted in the same unit, because they are compared
+// against one number. A Docs index counts UTF-16 units, so a character outside
+// the basic plane is two, and a words change that counted runes would let
+// through a deletion the same removal written as a block replace holds.
+func TestBothKindsOfRemovalAreCountedInUTF16Units(t *testing.T) {
+	// Each of these is one rune and two UTF-16 units.
+	const astral = "𝐀𝐁𝐂"
+	quoted := strings.Repeat(astral, 60) // 180 runes, 360 units
+	d := mcpBlockDoc(
+		[]docs.Run{{Text: quoted}},
+		[]docs.Run{{Text: "Escalations go to the operations lead."}},
+	)
+
+	// The Large removal line as a literal, the way every rule's test states it.
+	const line = 300
+	runes := len([]rune(quoted))
+	units := len(utf16.Encode([]rune(quoted)))
+	if runes > line || units <= line {
+		t.Fatalf("the fixture no longer makes the point: %d runes and %d units against the %d line",
+			runes, units, line)
+	}
+	if got := mcpRemoved(mcpItem{Quoted: quoted}, d); got != units {
+		t.Errorf("a words change counted %d, want the %d UTF-16 units Docs deletes", got, units)
+	}
+}

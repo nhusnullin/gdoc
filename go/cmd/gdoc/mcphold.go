@@ -32,6 +32,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf16"
 
 	"gdoc/internal/chat"
 	"gdoc/internal/docs"
@@ -402,14 +403,18 @@ func mcpItemWords(item mcpItem) string {
 // count a multi-paragraph deletion as a few dozen characters.
 //
 // The number is the delete range Docs is given, in the UTF-16 units a Docs
-// index counts. Where PlaceReplace refuses the pair, the count is the length of
-// what the call named, which is the least it can be, and nothing is lost by the
+// index counts. Every branch counts in that one unit, because every branch is
+// compared against the one Large removal line: a words change counted in runes
+// would let through a deletion the same removal written as a block replace
+// holds. Where PlaceReplace refuses the pair, the count is the length of what
+// the call named, which is the least it can be, and nothing is lost by the
 // understatement: that same refusal is what the command answers with, so
 // nothing is written either way.
-// TestABlockReplaceIsCountedInWholeParagraphs.
+// TestABlockReplaceIsCountedInWholeParagraphs and
+// TestBothKindsOfRemovalAreCountedInUTF16Units.
 func mcpRemoved(item mcpItem, d *docs.Document) int {
 	if item.Quoted != "" {
-		return len([]rune(item.Quoted))
+		return utf16Units(item.Quoted)
 	}
 	if item.ReplaceFrom == "" {
 		return 0
@@ -420,7 +425,14 @@ func mcpRemoved(item mcpItem, d *docs.Document) int {
 	}
 	place, err := propose.PlaceReplace(d, item.ReplaceFrom, last)
 	if err != nil {
-		return len([]rune(item.ReplaceFrom))
+		return utf16Units(item.ReplaceFrom)
 	}
 	return place.Delete.End - place.Delete.Start
+}
+
+// utf16Units is the length of a string in the units a Docs index counts. A
+// character outside the basic plane is two of them, which is why a rune count
+// will not do.
+func utf16Units(s string) int {
+	return len(utf16.Encode([]rune(s)))
 }

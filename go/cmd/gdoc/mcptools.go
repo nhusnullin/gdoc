@@ -603,6 +603,10 @@ func mcpRecordWrite(led *chat.Ledger, tool string, r emit.Result, at time.Time) 
 // of a document a person has only just pasted a link to would refuse the one
 // call that finds out what the title is. It is handed back nothing, and the
 // rules are asked nothing about it.
+//
+// Which makes the title check the gate the hold rules sit behind, so a write
+// tool whose checks leave titleProp out would reach the wire judged by nobody.
+// TestEveryWriteToolPinsItsTargetByTitle is why no such tool can be added.
 func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.Ledger) (*mcpTarget, error) {
 	if !slices.Contains(c.checks, titleProp) {
 		return nil, nil

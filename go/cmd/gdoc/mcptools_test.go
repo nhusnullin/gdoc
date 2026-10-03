@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -668,5 +669,30 @@ func TestArraysPassThroughAsTheirRawJSON(t *testing.T) {
 	defer empty.remove()
 	if _, err := propose.argv(json.RawMessage(`{"url":"`+proposeDocID+`","proposals":[]}`), empty); err == nil {
 		t.Error("an empty list must be refused")
+	}
+}
+
+// Every write tool pins its target by title, because the pin is what opens the
+// hold rules. mcpPin hands back nothing for a tool whose checks do not name
+// titleProp, and mcpSend asks mcpJudge nothing about nothing: a write tool
+// added without that one string would reach the wire with no Dictated check, no
+// Focus, no Burst and no Large removal, and nothing would fail. So the gate is
+// the fact rather than the list, and it is held here by name.
+func TestEveryWriteToolPinsItsTargetByTitle(t *testing.T) {
+	writes := 0
+	for _, c := range mcpCommands() {
+		if c.readOnly {
+			if slices.Contains(c.checks, titleProp) {
+				t.Errorf("%s is a read and pins a title, which refuses the one call that finds the title out", c.tool)
+			}
+			continue
+		}
+		writes++
+		if !slices.Contains(c.checks, titleProp) {
+			t.Errorf("%s writes and does not check %q, so every hold rule is skipped for it", c.tool, titleProp)
+		}
+	}
+	if writes == 0 {
+		t.Fatal("no write tool was read, so this test holds nothing")
 	}
 }

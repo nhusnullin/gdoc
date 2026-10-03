@@ -38,7 +38,7 @@ const (
 	burstWrites       = 3                // the write that trips it
 	documentWindow    = time.Hour        // the window writes into one document are counted in
 	documentWrites    = 26               // the write into one document that trips it
-	largestRemoval    = 300              // characters a propose may take out without a card
+	largestRemoval    = 300              // units a propose may take out without a card, counted as a Docs index counts
 	holdIDBytes       = 6                // twelve hex characters, enough for one session's holds
 	copiedRunInReason = 12               // words of a copied run the Focus reason names
 )
@@ -58,7 +58,7 @@ type Write struct {
 	Title    string // that document's title, as the write's own read came back with it
 	ThreadID string // the thread a reply goes under, empty for the other two
 	Text     string // the words that would be written: a reply body, a why, a replacement
-	Removed  int    // characters a propose takes out, 0 for the other two
+	Removed  int    // units a propose takes out, as a Docs index counts them, 0 for the other two
 }
 
 // Hold is one write stopped, with everything the card a person sees is built
@@ -357,6 +357,10 @@ func threadOpener(l *Ledger, docID, threadID string) (Remark, bool) {
 // that changes a document at all. Taking out three hundred characters is no
 // longer a correction, and the person should read what goes:
 // TestTheLargeRemovalRuleTripsOverThreeHundredCharacters.
+//
+// Removed is in the UTF-16 units a Docs index counts, whichever kind of change
+// it is. Whoever hands this rule a number counts it that way, and
+// TestBothKindsOfRemovalAreCountedInUTF16Units holds the one caller to it.
 func largeRemovalRule(w Write, _ *Ledger, _ time.Time) (string, string, string) {
 	if w.Tool != "propose" || w.Removed <= largestRemoval {
 		return "", "", ""

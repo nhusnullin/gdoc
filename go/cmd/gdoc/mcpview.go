@@ -16,7 +16,7 @@
 // chooses, and a heading is the document's own words: left bare they would
 // read as gdoc's own fields, which is the one thing the wrapper is for. What
 // stays bare is what gdoc made or read off a structure: the ids, the cursor,
-// the dates, the marker, the kind and the facts.
+// the dates, the marker, the kind, the witness verdict and the facts.
 // TestNoForeignTextEscapesTheWrapper holds the line, so a field added later is
 // either wrapped or named there.
 //
@@ -117,6 +117,12 @@ type chatComments struct {
 // chatThread is one thread, wrapped. The range is not here, because a chat
 // write names text and never a stored index: a position in this object would be
 // a field nothing may use. TestTheWrappedCopyCarriesNoRange.
+//
+// Witness is the one word the --witness flag answers with, and it is here
+// because the guide sends the model to this copy: a view without it would make
+// a flag the comments tool offers do nothing where the model reads. It is left
+// out of the runs that did not ask, which is most of them.
+// TestTheWrappedCopyCarriesTheWitness.
 type chatThread struct {
 	ID       string      `json:"id"`
 	Author   string      `json:"author"`
@@ -126,6 +132,7 @@ type chatThread struct {
 	Resolved bool        `json:"resolved"`
 	Quoted   string      `json:"quoted"`
 	Content  string      `json:"content"`
+	Witness  string      `json:"witness,omitempty"`
 	Facts    chat.Facts  `json:"facts"`
 	Replies  []chatReply `json:"replies"`
 }
@@ -168,6 +175,7 @@ func chatThreads(threads []comments.Thread, boundary string, own chat.OwnReplies
 			Resolved: t.Resolved,
 			Quoted:   chat.Label(t.Quoted, boundary),
 			Content:  chat.Label(t.Content, boundary),
+			Witness:  t.Witness,
 			Facts: chat.FactsOf(chat.Comment{
 				ID:           t.ID,
 				Text:         t.Content,
