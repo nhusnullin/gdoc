@@ -74,8 +74,15 @@
 //     the six of the table that chat reviews with and guide and login, and
 //     every one of the six takes the code guide hands out and refuses the call
 //     without it: TestToolsListListsExactlyTheEightToolsWithTheirHints and
-//     TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode. The review core
-//     it serves is a committed copy of the skill's, held equal by
+//     TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode. A write tool
+//     names its target twice over, by id and by the document's own title, and by
+//     the words the thread opens with where it writes into a thread: the title
+//     is read off the document on the call itself and a call naming another
+//     document is refused with nothing sent, which is TestAWrongTitleIsRefused
+//     and TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses. One item per
+//     write call, and no field in it the card does not draw:
+//     TestASecondItemIsRefused and TestAssigneeIsRefused. The review core it
+//     serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -30,15 +31,16 @@ var flagsNeverOffered = map[string][]string{
 
 // propertiesThatMapToNoFlag are the properties that fill nothing on the line,
 // because they are a check this server makes and no command of the terminal has.
-// code is the guide code, read before the line is built. Task 12 adds title and
-// thread_quote.
+// code is the guide code, read before the line is built. title is the document's
+// own name, read off the document on every write, and thread_quote is the words
+// the thread being replied to opens with: mcpPin judges both.
 var propertiesThatMapToNoFlag = map[string][]string{
 	"read":        {"code"},
 	"comments":    {"code"},
 	"suggestions": {"code"},
-	"reply":       {"code"},
-	"annotate":    {"code"},
-	"propose":     {"code"},
+	"reply":       {"code", "title", "thread_quote"},
+	"annotate":    {"code", "title"},
+	"propose":     {"code", "title"},
 }
 
 // schemaProperties is the property names of a tool's schema, in the order the
@@ -128,6 +130,16 @@ func TestEverySchemaPropertyMapsToAWordOrFlagAndBack(t *testing.T) {
 			if !have[prop] {
 				t.Errorf("%s is on %s's property list and its schema does not offer it", prop, c.tool)
 			}
+		}
+	}
+
+	// And the list is the tool's own checks field, item for item and in order.
+	// The field is what argv drops and what mcpPin reads; the list above is what
+	// a reader of this test takes on trust, and the two drifting apart would
+	// leave an argument judged by nobody.
+	for _, c := range mcpCommands() {
+		if got, want := c.checks, propertiesThatMapToNoFlag[c.tool]; !reflect.DeepEqual(got, want) {
+			t.Errorf("%s checks %v and this test says %v", c.tool, got, want)
 		}
 	}
 
@@ -337,61 +349,81 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 		// envelope sits among them.
 		items int
 		at    int
-		// wire says which fake the command needs.
-		wire func(t *testing.T)
+		// wire says which fake the command needs. chat is true for the tool pass
+		// and false for the CLI one, because a chat write reads the document
+		// first to check the title it was given, and the terminal does not: the
+		// envelope the two answer with is still the same one, which is what this
+		// test is about.
+		wire func(t *testing.T, chat bool)
 	}{
 		{
 			tool: "read", args: `{"url":"` + fixtureDocID + `"}`,
 			cli: []string{"read", fixtureDocID}, ok: true, items: 3, at: 1,
-			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
+			wire: func(t *testing.T, _ bool) { stubSession(t, docsAndComments(t)) },
 		},
 		{
 			tool: "comments", args: `{"url":"` + fixtureDocID + `"}`,
 			cli: []string{"comments", fixtureDocID}, ok: true, items: 3, at: 1,
-			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
+			wire: func(t *testing.T, _ bool) { stubSession(t, docsAndComments(t)) },
 		},
 		{
 			tool: "suggestions", args: `{"url":"` + fixtureDocID + `"}`,
 			cli: []string{"suggestions", fixtureDocID}, ok: true, items: 3, at: 1,
-			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
+			wire: func(t *testing.T, _ bool) { stubSession(t, docsAndComments(t)) },
 		},
 		{
-			tool: "reply", args: `{"url":"` + fixtureDocID + `","comment_id":"AAAA1111","body":"🤖 The 2026 register."}`,
+			tool: "reply", args: `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
+				`"comment_id":"AAAA1111","thread_quote":"ai? which register does this",` +
+				`"body":"🤖 The 2026 register."}`,
 			cli:  []string{"reply", fixtureDocID, "AAAA1111", "--body-file=@FILE@"},
 			body: "🤖 The 2026 register.", ok: true, items: 1,
-			wire: func(t *testing.T) {
+			wire: func(t *testing.T, _ bool) {
 				stubWire(t, &fakeWire{answers: []*answer{
 					{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 The 2026 register."}`},
+					{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
 					{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
 				}})
 			},
 		},
 		{
 			tool: "annotate",
-			args: `{"url":"` + annotateDocID + `","annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
+			args: `{"url":"` + annotateDocID + `","title":"` + chatTitle + `",` +
+				`"annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
 			cli:  []string{"annotate", annotateDocID, "--from=@FILE@"},
 			body: `[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]`, ok: true, items: 1,
-			wire: func(t *testing.T) { stubWire(t, &fakeWire{answers: annotateAnswers(t)}) },
+			wire: func(t *testing.T, _ bool) { stubWire(t, &fakeWire{answers: annotateAnswers(t)}) },
 		},
 		{
-			tool: "propose", args: `{"url":"` + proposeDocID + `","proposals":` + oneProposal + `}`,
+			tool: "propose", args: `{"url":"` + proposeDocID + `","title":"` + chatTitle + `",` +
+				`"proposals":` + oneProposal + `}`,
 			cli:  []string{"propose", proposeDocID, "--from=@FILE@"},
 			body: oneProposal, ok: true, items: 1,
-			wire: func(t *testing.T) { stubWire(t, &fakeWire{answers: proposeAnswers(t, true)}) },
+			wire: func(t *testing.T, chat bool) {
+				answers := proposeAnswers(t, true)
+				if chat {
+					// propose reads the same URL three times in order, each
+					// answer spent before the next is reached, so the pin's read
+					// is one more of the same at the front rather than a fourth
+					// answer anywhere else.
+					answers = append([]*answer{{method: "GET", match: proposeDocID + "?includeTabsContent",
+						json: readFixture(t, "propose-before.json"), once: true}}, answers...)
+				}
+				stubWire(t, &fakeWire{answers: answers})
+			},
 		},
 		{
 			// The refusal too: a document nobody can read answers the same way
 			// through both doors.
 			tool: "read", args: `{"url":"not a document"}`,
 			cli: []string{"read", "not a document"}, ok: false, items: 1,
-			wire: func(t *testing.T) { stubSession(t, docsAndComments(t)) },
+			wire: func(t *testing.T, _ bool) { stubSession(t, docsAndComments(t)) },
 		},
 	} {
 		t.Run(one.tool+"/"+boolWord(one.ok), func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 			signedIn(t)
 
-			one.wire(t)
+			one.wire(t, true)
 			guideCode := callCode(t)
 			res := mcpRun(context.Background(), byName[one.tool], withCode(t, guideCode, one.args), nilWriter{}, guideCode)
 			if len(res.Texts) != one.items {
@@ -401,7 +433,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 				t.Errorf("isError = %v for an answer that is ok = %v", res.IsError, one.ok)
 			}
 
-			one.wire(t)
+			one.wire(t, false)
 			line := make([]string, 0, len(one.cli))
 			var path string
 			if one.body != "" {
@@ -461,8 +493,11 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 		}
 	}
 
+	const oneReply = `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `","comment_id":"AAAA1111",` +
+		`"thread_quote":"ai? which register does this","body":"🤖 yes"}`
+
 	files := &callFiles{}
-	argv, err := reply.argv(json.RawMessage(`{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"🤖 yes"}`), files)
+	argv, err := reply.argv(json.RawMessage(oneReply), files)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,12 +526,14 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 	before := countCallDirs(t)
 	stubWire(t, &fakeWire{answers: []*answer{
 		{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 yes"}`},
+		{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
 		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
 	}})
 	code := callCode(t)
-	mcpRun(context.Background(), reply, withCode(t, code, `{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"🤖 yes"}`), nilWriter{}, code)
+	mcpRun(context.Background(), reply, withCode(t, code, oneReply), nilWriter{}, code)
 	stubWire(t, &fakeWire{})
-	mcpRun(context.Background(), reply, withCode(t, code, `{"url":"`+fixtureDocID+`","comment_id":"AAAA1111","body":"not the robot"}`), nilWriter{}, code)
+	mcpRun(context.Background(), reply, withCode(t, code,
+		strings.Replace(oneReply, `"🤖 yes"`, `"not the robot"`, 1)), nilWriter{}, code)
 	if after := countCallDirs(t); after != before {
 		t.Errorf("%d call directories before and %d after, so a call left one behind", before, after)
 	}

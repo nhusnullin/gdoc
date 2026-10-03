@@ -67,9 +67,12 @@ func mcpCallArgs() map[string]string {
 		"read":        `{"url":"` + fixtureDocID + `"}`,
 		"comments":    `{"url":"` + fixtureDocID + `"}`,
 		"suggestions": `{"url":"` + fixtureDocID + `"}`,
-		"reply":       `{"url":"` + fixtureDocID + `","comment_id":"AAAA1111","body":"🤖 The 2026 register."}`,
-		"annotate":    `{"url":"` + fixtureDocID + `","annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
-		"propose":     `{"url":"` + fixtureDocID + `","proposals":[{"quoted":"reviewed annually","replacement":"reviewed quarterly","why":"The 2026 register says quarterly."}]}`,
+		"reply": `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `","comment_id":"AAAA1111",` +
+			`"thread_quote":"ai? which register does this","body":"🤖 The 2026 register."}`,
+		"annotate": `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
+			`"annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`,
+		"propose": `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
+			`"proposals":[{"quoted":"reviewed annually","replacement":"reviewed quarterly","why":"The 2026 register says quarterly."}]}`,
 	}
 }
 

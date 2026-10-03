@@ -871,16 +871,26 @@ Serves the spec's tools table. Scenarios 4, 6, 7, 10.
 - Modify: `go/cmd/gdoc/mcptools.go`
 - Create: `go/cmd/gdoc/mcpwriteargs_test.go`
 
-- [ ] Test first, `TestAWrongTitleIsRefused`: `title` must equal the
+- [x] Test first, `TestAWrongTitleIsRefused`: `title` must equal the
       document's real title, read fresh.
-- [ ] Test, `TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses`, and one
+- [x] Test, `TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses`, and one
       differing by a word is refused naming what to fix.
-- [ ] Test, `TestASecondItemIsRefused` for `annotations` and `proposals`.
-- [ ] Test, `TestAssigneeIsRefused`.
-- [ ] Add `title` and `thread_quote` to Task 5's property exclusion list.
-- [ ] Implement.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(cmd): a chat write names its document by title, its thread by its opening words, and one item"`
+- [x] Test, `TestASecondItemIsRefused` for `annotations` and `proposals`.
+- [x] Test, `TestAssigneeIsRefused`.
+- [x] Add `title` and `thread_quote` to Task 5's property exclusion list.
+- [x] Implement.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(cmd): a chat write names its document by title, its thread by its opening words, and one item"`
+- ➕ `TestEverySchemaPropertyMapsToAWordOrFlagAndBack` gains a direction: the
+      exclusion list it states as a literal must equal the tool's own `checks`
+      field, item for item, so an argument judged by nobody fails there.
+- ➕ `TestTheSameAnswerAsTheCLI` takes a `chat` flag per wire, because a chat
+      write reads the document once more than the terminal does. `propose` reads
+      the same URL three times in order, so its chat pass prepends one more of
+      the first answer rather than adding one anywhere else.
+- ➕ The one-item and no-assignee checks are read out of the schema
+      (`maxItems`, and the item's own property names) rather than written beside
+      it, so the check and the card a person sees cannot disagree.
 
 ### Task 13: the ledger of what this process read and wrote
 
