@@ -110,6 +110,11 @@ type updateData struct {
 	Verified      bool   `json:"verified"`
 	SHA256        string `json:"sha256,omitempty"`
 	Previous      string `json:"previous,omitempty"`
+	Extension     string `json:"extension,omitempty"`
+	// ExtensionOpened is the extension handed to Claude Desktop. It is absent
+	// rather than false off macOS, where there is nothing to hand it to, so a
+	// reader can tell "not opened" from "nobody to open it".
+	ExtensionOpened bool `json:"extension_opened,omitempty"`
 }
 
 func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
@@ -119,7 +124,11 @@ func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
 		Nightly:  a.has("--nightly"),
 		Rollback: a.has("--rollback"),
 	}
+	desktop := a.has("--desktop")
 	if err := oneRun(flags); err != nil {
+		return emit.Result{OK: false, Error: err.Error()}
+	}
+	if err := oneDesktopRun(flags, desktop); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	path, err := binaryPath()
@@ -129,7 +138,34 @@ func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
 	if flags.Rollback {
 		return runRollback(path)
 	}
-	return runUpdate(ctx, path, flags, errOut)
+	return runUpdate(ctx, path, flags, desktop, errOut)
+}
+
+// oneDesktopRun refuses the two flags --desktop cannot be typed beside.
+//
+// --desktop writes a file naming the version that is installed, so --check,
+// which installs nothing and writes nothing, and --rollback, which puts an
+// earlier binary back, each name a different run from it. Refused by name
+// rather than ignored, the way oneRun refuses its own pairs.
+//
+// TestDesktopIsRefusedWithRollbackOrCheck.
+func oneDesktopRun(f update.Flags, desktop bool) error {
+	if !desktop {
+		return nil
+	}
+	for _, other := range []struct {
+		name  string
+		given bool
+		why   string
+	}{
+		{"--rollback", f.Rollback, "puts an earlier binary back, and --desktop writes the extension of the release it just installed"},
+		{"--check", f.Check, "writes nothing at all, and --desktop writes the extension"},
+	} {
+		if other.given {
+			return fmt.Errorf("%s %s: the two together name two runs, so type one of them", other.name, other.why)
+		}
+	}
+	return nil
 }
 
 // oneRun refuses the flag pairs that name two runs. --rollback is a file move
@@ -217,6 +253,8 @@ const (
 	stepVerify    = "verify checksum"
 	stepReplace   = "replace binary"
 	stepReadBack  = "read back"
+	stepTemplate  = "read extension"
+	stepExtension = "write extension"
 )
 
 // runUpdate is the whole of a run that looks at GitHub, with its steps drawn
@@ -231,11 +269,11 @@ const (
 // The list settles on every way out, a panic included, so the spinner never
 // draws over the crash text safeDispatch writes: TestAPanicInAnUpdateStopsTheSpinner.
 // A panic gets no result line, because nothing finished.
-func runUpdate(ctx context.Context, path string, flags update.Flags, errOut io.Writer) emit.Result {
+func runUpdate(ctx context.Context, path string, flags update.Flags, desktop bool, errOut io.Writer) emit.Result {
 	pr := openProgress(errOut, "gdoc update")
 	defer pr.settle()
 	pr.Plan(stepRead, stepChoose)
-	r := checkAndInstall(ctx, path, flags, pr)
+	r := checkAndInstall(ctx, path, flags, desktop, pr)
 	pr.Finish(resultLine(r))
 	return r
 }
@@ -245,7 +283,7 @@ func runUpdate(ctx context.Context, path string, flags update.Flags, errOut io.W
 var openProgress = newProgress
 
 // checkAndInstall reads the listing and hands it on to be decided.
-func checkAndInstall(ctx context.Context, path string, flags update.Flags, pr *progress) emit.Result {
+func checkAndInstall(ctx context.Context, path string, flags update.Flags, desktop bool, pr *progress) emit.Result {
 	installed, warns := installedVersion()
 	data := updateData{Installed: installed.String(), Path: path}
 
@@ -262,15 +300,18 @@ func checkAndInstall(ctx context.Context, path string, flags update.Flags, pr *p
 		pr.Fail(err)
 		data.Action = string(update.Unreachable)
 		warns = append(warns, fmt.Sprintf("the releases of %s could not be read, so this run cannot say whether there is a newer gdoc: %v", updateRepo, err))
+		if desktop {
+			warns = append(warns, "the extension is written from the release's own template, and this run read no release, so nothing was written and Claude Desktop is as it was")
+		}
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	pr.Done(fmt.Sprintf("%s, %d listed", updateRepo, len(entries)))
-	return decideUpdate(ctx, reach, entries, flags, installed, data, warns, pr)
+	return decideUpdate(ctx, reach, entries, flags, desktop, installed, data, warns, pr)
 }
 
 // decideUpdate chooses a release of each channel, decides, and hands a
 // decision to install on to installDecided.
-func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flags update.Flags, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
+func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flags update.Flags, desktop bool, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
 	pr.Start(stepChoose, "")
 	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
 	stable, stableErr := update.Choose(entries, update.Stable, platform)
@@ -303,24 +344,63 @@ func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flag
 	data.To = d.To.String()
 	data.Run = d.Run
 	if !d.Installs() {
+		if desktop {
+			return refreshExtension(ctx, reach, latest, installed, data, warns, pr)
+		}
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
-	pr.Plan(stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack)
+	pr.Plan(installSteps(desktop)...)
 	chosen := stable
 	if nightly.Version == d.To {
 		chosen = nightly
 	}
-	return installDecided(ctx, reach, chosen, data, warns, pr)
+	return installDecided(ctx, reach, chosen, desktop, data, warns, pr)
+}
+
+// installSteps is the list a run that installs draws, with the two extension
+// steps in it only when --desktop was typed. The template is read before the
+// binary is replaced, because a release that cannot write an extension is a
+// release this run refuses while the gdoc on this machine is still untouched.
+func installSteps(desktop bool) []string {
+	if !desktop {
+		return []string{stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack}
+	}
+	return []string{stepChecksums, stepDownload, stepVerify, stepTemplate, stepReplace, stepReadBack, stepExtension}
+}
+
+// refreshExtension is --desktop on a run with nothing to install. The extension
+// names the binary that is here, so the template comes from the release that is
+// here: the zip is downloaded for that one file and no binary moves.
+//
+// A run that found a release it did not install, which is a major it declined,
+// writes no extension. The template would name a version this machine does not
+// run, and not knowing never resolves to overwrite.
+//
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension.
+func refreshExtension(ctx context.Context, reach plain, rel update.Release, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
+	if update.Compare(rel.Version, installed) != 0 {
+		warns = append(warns, fmt.Sprintf("--desktop writes the extension of the gdoc that is installed, and this run installed nothing: %s is here and %s is what the release this run found holds, so Claude Desktop is as it was", installed, rel.Version))
+		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+	}
+	pr.Plan(stepChecksums, stepDownload, stepVerify, stepTemplate, stepExtension)
+	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
+	defer cancel()
+	template, err := readTemplate(ctx, reach, rel, pr)
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
+	}
+	data, warns = withExtension(template, rel.Version.String(), data, warns, pr)
+	return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 }
 
 // installDecided carries out a decision to install, and fills in what the
 // file at the path is afterwards.
-func installDecided(ctx context.Context, reach plain, chosen update.Release, data updateData, warns []string, pr *progress) emit.Result {
+func installDecided(ctx context.Context, reach plain, chosen update.Release, desktop bool, data updateData, warns []string, pr *progress) emit.Result {
 	// Past here something is replaced, so the action stops being true until it
 	// is: a run that fails on the download says what it was taking and claims
 	// no action at all.
 	data.Action = ""
-	res, err := install(ctx, reach, chosen, data.Path, pr)
+	res, template, err := install(ctx, reach, chosen, data.Path, desktop, pr)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}
@@ -328,7 +408,53 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, dat
 	data.Verified = true
 	data.SHA256 = res.Sum
 	data.Previous = res.Previous
+	if desktop {
+		data, warns = withExtension(template, chosen.Version.String(), data, warns, pr)
+	} else if extensionChanged(template, data.Path, chosen.Version.String()) {
+		warns = append(warns, hintLine())
+	}
 	return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+}
+
+// withExtension writes the extension and hands it to Claude Desktop, as one
+// step, because handing it over is what writing it was for.
+//
+// Everything that goes wrong here is a warning rather than a refusal. The
+// binary has already been replaced by this point, or there was never one to
+// replace, so the run did what it mostly came to do; a file that could not be
+// written or an open that refused is reported with the file still named, which
+// is the house rule that nothing trusts a success and nothing raises over a
+// write that happened.
+//
+// TestDesktopWritesTheMcpbFromTheZipsTemplate,
+// TestDesktopCallsTheRunnerWithOpenAndThePathOnly and
+// TestDesktopOffMacOSWritesAndRunsNothing.
+func withExtension(template []byte, version string, data updateData, warns []string, pr *progress) (updateData, []string) {
+	file := mcpbPath(data.Path)
+	opened := false
+	err := pr.Do(stepExtension, tildePath(file), func() (string, error) {
+		manifest, err := fillManifest(template, data.Path, version)
+		if err != nil {
+			return "", err
+		}
+		if err := writeMcpb(file, manifest); err != nil {
+			return "", fmt.Errorf("the extension could not be written to %s: %w", file, err)
+		}
+		if desktopOS != "darwin" {
+			return joinDetail(tildePath(file), "written, and Claude Desktop runs on macOS, so open it there"), nil
+		}
+		if err := runProgram(macOSOpen, file); err != nil {
+			return "", err
+		}
+		opened = true
+		return joinDetail(tildePath(file), "opened, so Claude Desktop offers to install it"), nil
+	})
+	if err != nil {
+		return data, append(warns, err.Error())
+	}
+	data.Extension = file
+	data.ExtensionOpened = opened
+	return data, warns
 }
 
 // install fetches the checksum file and the zip, and hands both to the
@@ -342,11 +468,18 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, dat
 // safety, and the first is there so a person sees which of the two failed.
 // The read back is inside Apply, so a read back that fails is drawn on the
 // replace step, and the read back step is drawn only once there is a hash.
-func install(ctx context.Context, reach plain, rel update.Release, path string, pr *progress) (update.Result, error) {
+//
+// The second return is the Claude Desktop manifest template out of the same
+// verified zip, and it is read before the binary is replaced. With --desktop a
+// release that carries none is refused right there, while the gdoc on this
+// machine is still the gdoc that was here. Without it the template is read for
+// the comparison the hint rests on, and a release that carries none is no
+// hint and no trouble at all.
+func install(ctx context.Context, reach plain, rel update.Release, path string, desktop bool, pr *progress) (update.Result, []byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
 	sumsName := update.ChecksumsName(rel.Tag)
-	var sums, archive []byte
+	var sums, archive, template []byte
 	var res update.Result
 	steps := []struct {
 		name, detail string
@@ -369,6 +502,19 @@ func install(ctx context.Context, reach plain, rel update.Release, path string, 
 		{stepVerify, "", func() (string, error) {
 			return "matches " + sumsName, update.Verify(archive, sums, rel.AssetName)
 		}},
+		{stepTemplate, templateInZip, func() (string, error) {
+			var err error
+			if template, err = update.FileFrom(archive, sums, rel.AssetName, templateInZip); err != nil {
+				if desktop {
+					return "", fmt.Errorf("%v, so nothing was replaced and no extension was written. %s is packed into every release from v2.9.0 on: install a newer release, or drop --desktop", err, templateInZip)
+				}
+				// A plain run was not asked about Claude Desktop, so a release
+				// that carries no template is one this run has nothing to say
+				// about.
+				template = nil
+			}
+			return "", nil
+		}},
 		{stepReplace, tildePath(path), func() (string, error) {
 			var err error
 			res, err = update.Apply(archive, sums, rel.AssetName, zipBinaryName(runtime.GOOS), path)
@@ -379,13 +525,67 @@ func install(ctx context.Context, reach plain, rel update.Release, path string, 
 		}},
 	}
 	for _, s := range steps {
+		// The template read is a drawn step only when the extension is what
+		// the run came for. A plain run reads it between the same two steps
+		// and says nothing about it, because nothing about Claude Desktop is
+		// what a plain update is.
+		if s.name == stepTemplate && !desktop {
+			if _, err := s.run(); err != nil {
+				return update.Result{}, nil, err
+			}
+			continue
+		}
 		if err := pr.Do(s.name, s.detail, s.run); err != nil {
-			return update.Result{}, err
+			return update.Result{}, nil, err
 		}
 	}
 	pr.Start(stepReadBack, "")
 	pr.Done("sha256 " + shortSum(res.Sum))
-	return res, nil
+	return res, template, nil
+}
+
+// readTemplate is the Claude Desktop manifest template out of a release this
+// run is not installing anything from. It is the two reads and the check with
+// nothing after them: a refresh writes the extension and never a binary.
+//
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension.
+func readTemplate(ctx context.Context, reach plain, rel update.Release, pr *progress) ([]byte, error) {
+	sumsName := update.ChecksumsName(rel.Tag)
+	var sums, archive, template []byte
+	for _, s := range []struct {
+		name, detail string
+		run          func() (string, error)
+	}{
+		{stepChecksums, sumsName, func() (string, error) {
+			var err error
+			if sums, err = reach.GetBytes(ctx, rel.ChecksumsURL, maxChecksums); err != nil {
+				return "", fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %v", rel.Tag, err)
+			}
+			return "", nil
+		}},
+		{stepDownload, joinDetail(rel.AssetName, humanSize(rel.AssetSize)), func() (string, error) {
+			var err error
+			if archive, err = reach.GetBytes(ctx, rel.AssetURL, maxArchive); err != nil {
+				return "", fmt.Errorf("%s could not be downloaded, so no extension was written: %v", rel.AssetName, err)
+			}
+			return "", nil
+		}},
+		{stepVerify, "", func() (string, error) {
+			return "matches " + sumsName, update.Verify(archive, sums, rel.AssetName)
+		}},
+		{stepTemplate, templateInZip, func() (string, error) {
+			var err error
+			if template, err = update.FileFrom(archive, sums, rel.AssetName, templateInZip); err != nil {
+				return "", fmt.Errorf("%v, so no extension was written. %s is packed into every release from v2.9.0 on: install a newer release, or drop --desktop", err, templateInZip)
+			}
+			return "", nil
+		}},
+	} {
+		if err := pr.Do(s.name, s.detail, s.run); err != nil {
+			return nil, err
+		}
+	}
+	return template, nil
 }
 
 // chosenDetail is the choose step's line: the release, the channel and the
@@ -407,6 +607,31 @@ func resultLine(r emit.Result) string {
 	if !r.OK || !ok {
 		return ""
 	}
+	return strings.TrimSpace(actionLine(d) + " " + extensionLine(d))
+}
+
+// extensionLine is what a --desktop run adds to that line, and nothing at all
+// for a run that wrote no extension. Installing one restarts the chat process
+// and leaves agent mode on the binary it already started, so the words are quit
+// and open again, which is what the chat notice says too
+// (docs/v2/MEASURED.md, measurement 2).
+//
+// TestDesktopWritesTheMcpbFromTheZipsTemplate and
+// TestDesktopOffMacOSWritesAndRunsNothing.
+func extensionLine(d updateData) string {
+	switch {
+	case d.Extension == "":
+		return ""
+	case d.ExtensionOpened:
+		return "Claude Desktop offers to install the extension: install it, then quit Claude Desktop and open it again."
+	default:
+		return fmt.Sprintf("The extension is at %s. Claude Desktop runs on macOS, so open that file there.", tildePath(d.Extension))
+	}
+}
+
+// actionLine is the run itself in one sentence, read out of the object's own
+// fields.
+func actionLine(d updateData) string {
 	switch update.Action(d.Action) {
 	case update.Updated:
 		return fmt.Sprintf("gdoc %s installed. gdoc update --rollback goes back.", d.To)

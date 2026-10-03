@@ -99,6 +99,33 @@ func TestTheReleaseInstallerNamesTheFilesTheUpdaterNames(t *testing.T) {
 	}
 }
 
+// TestTheThreeRoutesToTheExtensionNameOnePathEach: the release workflow packs
+// the manifest template at one path inside the zip, and every route that fills
+// it must look there and must write the extension under one name. A route
+// looking somewhere else is a colleague whose --desktop run says it wrote an
+// extension and whose Claude Desktop never sees one, or two extension files
+// beside one binary, each naming it.
+//
+// The values are literals here and constants in each of the three, so a rename
+// in one of them fails rather than drifting.
+func TestTheThreeRoutesToTheExtensionNameOnePathEach(t *testing.T) {
+	for _, file := range []string{
+		filepath.Join("..", "..", "release", "install.sh"),
+		filepath.Join("..", "..", "install.sh"),
+		filepath.Join("..", "cmd", "gdoc", "desktop.go"),
+	} {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("%s is a route to the extension and it is not there: %v", file, err)
+		}
+		for _, want := range []string{"mcpb/manifest.json", "gdoc.mcpb"} {
+			if !strings.Contains(string(b), want) {
+				t.Errorf("%s names no %s; the three routes to the Claude Desktop extension are one path each", file, want)
+			}
+		}
+	}
+}
+
 // TestTheReleaseInstallerNeverEditsTheZshrc holds the one promise the script
 // makes about a file it did not write. It prints the line to add and reads the
 // file to see whether the line is there already. Every mention of .zshrc is

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -324,22 +325,154 @@ func TestMcpImportsNoNetHTTP(t *testing.T) {
 	}
 }
 
+// desktopFile is the one file under go/ that may start another program: the
+// Claude Desktop extension is installed by handing the file to the application
+// that owns it, and on macOS that is /usr/bin/open. Nail's call of 2026-10-03,
+// decision 18 of the M14 specification.
+const desktopFile = "cmd/gdoc/desktop.go"
+
 // TestNothingRunsAnExternalProgram makes the rule true rather than stating it.
-// gdoc runs no external programs at all: that is what lets the login flow print
-// a URL instead of opening a browser, and it is why the binary is one file.
+// gdoc runs no external programs but the one above: that is what lets the login
+// flow print a URL instead of opening a browser, and it is why the binary is one
+// file.
 func TestNothingRunsAnExternalProgram(t *testing.T) {
 	banned := map[string]bool{"os/exec": true, "syscall/js": true}
 	err := walkGo("..", func(rel, path string, f *ast.File) error {
 		for _, imp := range f.Imports {
-			if p := strings.Trim(imp.Path.Value, `"`); banned[p] {
-				t.Errorf("%s imports %s; v2 runs no external programs", path, p)
+			p := strings.Trim(imp.Path.Value, `"`)
+			if !banned[p] {
+				continue
 			}
+			if p == "os/exec" && filepath.ToSlash(filepath.Join(rel, filepath.Base(path))) == desktopFile {
+				continue
+			}
+			t.Errorf("%s imports %s; v2 runs no external programs but the one %s runs", path, p, desktopFile)
 		}
 		return nil
 	}, parser.ImportsOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// TestOnlyDesktopRunsAProgram holds the whole of that one exception by reading
+// the syntax tree rather than by trusting the comment above it.
+//
+// Three things, each of them the narrowness itself. os/exec is imported by that
+// one file and by no other, tests included, so no second call site can appear
+// anywhere. That file holds exactly one exec.Command call. And that call names
+// the opener by its full path, through the file's own constant, with one
+// argument after it: a program gdoc starts with a list of words a caller chose
+// would be a different thing entirely.
+func TestOnlyDesktopRunsAProgram(t *testing.T) {
+	const opener = "/usr/bin/open"
+	calls := 0
+	seen := false
+	err := walkGo("..", func(rel, path string, f *ast.File) error {
+		where := filepath.ToSlash(filepath.Join(rel, filepath.Base(path)))
+		imports := false
+		for _, imp := range f.Imports {
+			if strings.Trim(imp.Path.Value, `"`) == "os/exec" {
+				imports = true
+			}
+		}
+		if where != desktopFile {
+			if imports {
+				t.Errorf("%s imports os/exec; only %s may", where, desktopFile)
+			}
+			return nil
+		}
+		seen = true
+		if !imports {
+			t.Errorf("%s no longer imports os/exec; the one program moved and this test did not", where)
+		}
+		consts := stringConsts(f)
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := sel.X.(*ast.Ident)
+			if !ok || pkg.Name != "exec" {
+				return true
+			}
+			calls++
+			if sel.Sel.Name != "Command" {
+				t.Errorf("%s calls exec.%s; the one program is started by exec.Command", where, sel.Sel.Name)
+				return true
+			}
+			if len(call.Args) != 2 || call.Ellipsis.IsValid() {
+				t.Errorf("%s runs a program with %d arguments; it is one program and one argument", where, len(call.Args))
+				return true
+			}
+			if got := literalOrConst(call.Args[0], consts); got != opener {
+				t.Errorf("%s runs %q; the one program gdoc runs is %s", where, got, opener)
+			}
+			return true
+		})
+		return nil
+	}, parser.AllErrors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !seen {
+		t.Fatalf("%s is not there, so this test guards nothing", desktopFile)
+	}
+	if calls != 1 {
+		t.Errorf("%s holds %d exec calls; one program is started in one place", desktopFile, calls)
+	}
+}
+
+// stringConsts is the file's own string constants, so a call that names one can
+// be read back to the value it holds. The test states the value as a literal and
+// the code keeps its constant.
+func stringConsts(f *ast.File) map[string]string {
+	out := map[string]string{}
+	for _, d := range f.Decls {
+		gen, ok := d.(*ast.GenDecl)
+		if !ok || gen.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			v, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range v.Names {
+				if i >= len(v.Values) {
+					continue
+				}
+				if lit, ok := v.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					if s, err := strconv.Unquote(lit.Value); err == nil {
+						out[name.Name] = s
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
+// literalOrConst is the string a call argument names, written out or held in one
+// of the file's constants. Anything else answers the empty string, which fails
+// the check above, because a program name this test cannot read is a program
+// name nobody reviewing it can read either.
+func literalOrConst(arg ast.Expr, consts map[string]string) string {
+	switch v := arg.(type) {
+	case *ast.BasicLit:
+		if v.Kind == token.STRING {
+			if s, err := strconv.Unquote(v.Value); err == nil {
+				return s
+			}
+		}
+	case *ast.Ident:
+		return consts[v.Name]
+	}
+	return ""
 }
 
 // TestEveryTargetThatWritesIntoBinMakesIt: bin/ is ignored and nothing tracks

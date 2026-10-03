@@ -1238,29 +1238,60 @@ Serves decision 18. Scenario 13.
   `go/cmd/gdoc/completion_test.go`
 - Modify: `go/boundary/boundary_test.go`
 
-- [ ] Test first, `TestPlainUpdateWritesNoExtensionAndRunsNothing`.
-- [ ] Test, `TestPlainUpdateHintsWhenTheTemplateChanged` and
+- [x] Test first, `TestPlainUpdateWritesNoExtensionAndRunsNothing`.
+- [x] Test, `TestPlainUpdateHintsWhenTheTemplateChanged` and
       `TestPlainUpdateIsSilentWithNoMcpbOrNoChange`. The comparison is the
       `manifest.json` inside the existing `gdoc.mcpb` against the new
       release's template filled with the same path, with the `version` field
       left out of both, so a version bump alone is no change.
-- [ ] Test, `TestDesktopWritesTheMcpbFromTheZipsTemplate`, with the
+- [x] Test, `TestDesktopWritesTheMcpbFromTheZipsTemplate`, with the
       installed path and version.
-- [ ] Test, `TestDesktopCallsTheRunnerWithOpenAndThePathOnly`: the seam sees
+- [x] Test, `TestDesktopCallsTheRunnerWithOpenAndThePathOnly`: the seam sees
       exactly `/usr/bin/open` and the file.
-- [ ] Test, `TestDesktopOffMacOSWritesAndRunsNothing`.
-- [ ] Test, `TestAZipWithoutTheTemplateIsRefusedBeforeTheBinaryIsReplaced`.
-- [ ] Test, `TestDesktopWhenAlreadyNewestStillRefreshesTheExtension`.
-- [ ] Test, `TestDesktopIsRefusedWithRollbackOrCheck`.
-- [ ] Test, in `boundary`, `TestOnlyDesktopRunsAProgram`: reading the syntax
+- [x] Test, `TestDesktopOffMacOSWritesAndRunsNothing`.
+- [x] Test, `TestAZipWithoutTheTemplateIsRefusedBeforeTheBinaryIsReplaced`.
+- [x] Test, `TestDesktopWhenAlreadyNewestStillRefreshesTheExtension`.
+- [x] Test, `TestDesktopIsRefusedWithRollbackOrCheck`.
+- [x] Test, in `boundary`, `TestOnlyDesktopRunsAProgram`: reading the syntax
       tree of non-test files, `os/exec` is imported by
       `go/cmd/gdoc/desktop.go` alone, and its one `exec.Command` call names
       `/usr/bin/open` and one argument. `TestNothingRunsAnExternalProgram`
       allows that file by name, and test files keep their present imports.
-- [ ] Implement. The usage line and completion tests gain `--desktop`.
-- [ ] `update/doc.go` and `cmd/gdoc/doc.go`, naming the tests.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(update): --desktop refreshes the extension from the release it verified, by one open"`
+- [x] Implement. The usage line and completion tests gain `--desktop`.
+- [x] `update/doc.go` and `cmd/gdoc/doc.go`, naming the tests.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(update): --desktop refreshes the extension from the release it verified, by one open"`
+
+
+➕ The exported read is `update.FileFrom`, beside `fileIn`: it verifies the zip
+and reads one named file out of it. `fileIn`'s refusal sentence stopped saying
+"there is no binary in it to install", because the same function now reads the
+manifest template too.
+
+➕ `--desktop` is a bool in `cmd/gdoc` rather than a fifth field on
+`update.Flags`. The flag decides nothing `update.Decide` reads, and
+`internal/update` is "the four words" the policy table is a test over.
+
+➕ A run that found a release it did not install, which is a major it declined,
+writes no extension and says so in a warning. The template would name a version
+this machine does not run. The same holds for GitHub not answering.
+
+➕ Past the point where the extension file is written, everything about it is a
+warning rather than a refusal: the binary has already been replaced, or there
+was never one to replace. The one refusal is the missing template, which is read
+before the replacement.
+
+➕ The object gained `extension` and `extension_opened`, and the result line
+gained one sentence: after installing the extension a person quits Claude
+Desktop and opens it again, which is what the chat notice says too.
+
+➕ `completion_test.go` needed no change. It reads the command table, so
+`--desktop` is offered the moment the table names it.
+
+➕ A third test was added that the plan did not name,
+`TestTheThreeRoutesToTheExtensionNameOnePathEach` in `boundary`: both installers
+and `desktop.go` each name `mcpb/manifest.json` and `gdoc.mcpb`, so a rename in
+one of the three fails rather than drifting.
 
 ### Task 23: the documents
 

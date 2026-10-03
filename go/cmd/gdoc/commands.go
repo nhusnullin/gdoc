@@ -323,6 +323,7 @@ func commands() []command {
 				{"--major", kindNone, needOptional, "take a release across a major boundary, which is never taken without this"},
 				{"--nightly", kindNone, needOptional, "take the newest release there is, cut by the nightly or by hand"},
 				{"--rollback", kindNone, needOptional, "put the binary that was here before the last update back"},
+				{"--desktop", kindNone, needOptional, "write the Claude Desktop extension from the release this run installed, and open it"},
 			},
 			summary: "Replace this gdoc with the newest release, or say what one would take.",
 			example: "gdoc update",

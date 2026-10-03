@@ -308,10 +308,10 @@
 // TestCompletionArgumentsAreStrict, with
 // TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
 //
-// No test sources the script in a real shell, because nothing under go/ runs an
-// external program and TestNothingRunsAnExternalProgram holds that over the
-// test files too. The script is checked structurally here, and a person types
-// Tab at it once per milestone.
+// No test sources the script in a real shell, because the one program anything
+// under go/ runs is the opener below, and TestNothingRunsAnExternalProgram holds
+// that over the test files too. The script is checked structurally here, and a
+// person types Tab at it once per milestone.
 //
 // # The update runs when it is typed; help and mcp ask once a day
 //
@@ -407,6 +407,74 @@
 // for, which a rollback cannot say about a binary it only put back:
 // TestTheUpdateObjectIsWhatTheSkillsRead and
 // TestRollbackPutsTheEarlierBinaryBack.
+//
+// # --desktop writes the Claude Desktop extension, and is the one program gdoc runs
+//
+// Claude Desktop is chat rather than a terminal, so it does not type `gdoc`. It
+// starts a command named in an extension, which is a zip holding one
+// manifest.json, and every release from v2.9.0 on carries that manifest as a
+// template with two placeholders. `gdoc update --desktop` fills them with the
+// path the binary sits at and the release that was installed, writes
+// `gdoc.mcpb` beside the binary, and hands that file to Claude Desktop:
+// TestDesktopWritesTheMcpbFromTheZipsTemplate. Decision 18 of the M14
+// specification, Nail's call of 2026-10-03.
+//
+// The template is read between the check and the replacement, and the extension
+// is written after the read-back, so the steps on stderr are in the order the
+// run takes them: TestADesktopRunDrawsTheTwoExtensionStepsAndSaysQuitAndOpenAgain.
+//
+// Handing it over is the one place anything under go/ starts another program:
+// /usr/bin/open by its full path, with the file as its only argument, on macOS
+// alone. go/boundary's TestOnlyDesktopRunsAProgram reads desktop.go's syntax
+// tree and holds all three of those: os/exec is imported by that one file, it
+// holds one exec.Command call, and that call names the opener and one argument.
+// Off macOS the file is written and nothing is started, because there is
+// nothing there to hand it to: TestDesktopCallsTheRunnerWithOpenAndThePathOnly
+// and TestDesktopOffMacOSWritesAndRunsNothing.
+//
+// The template comes out of the zip this run verified, through
+// update.FileFrom, so it is always the template of the release that is
+// installed and never a second download. It is read before the binary is
+// replaced: a release carrying no template is refused with the gdoc on this
+// machine exactly where it was, because a person who asked for Claude Desktop
+// and got a new binary and a warning they scrolled past is left wondering why
+// their chat has no gdoc in it:
+// TestAZipWithoutTheTemplateIsRefusedBeforeTheBinaryIsReplaced.
+//
+// The extension follows the release rather than the binary, so a machine
+// already running the newest gdoc still downloads that release's zip for the
+// template and still gets the extension refreshed:
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension. A run that found a
+// release it did not install, which is a major it declined, writes nothing and
+// says so: the template would name a version this machine does not run, and
+// not knowing never resolves to overwrite.
+//
+// --desktop is refused beside --rollback, which puts an earlier binary back,
+// and beside --check, which writes nothing at all. Each pair names two runs:
+// TestDesktopIsRefusedWithRollbackOrCheck. A path carrying a quote or a
+// backslash is refused by name rather than written into a manifest Claude
+// Desktop cannot read: TestAPathThatWouldBreakTheManifestIsRefusedByName.
+//
+// Past the point where the file is written, everything is reported rather than
+// raised. The binary has already been replaced, or there was never one to
+// replace, so a write that failed or an open that refused is a warning naming
+// the file, which is the house rule that nothing raises over a write that
+// happened.
+//
+// Plain `gdoc update` is the run it has always been: it writes no extension and
+// starts no program, and Claude Desktop runs the new binary after a person
+// quits it and opens it again: TestPlainUpdateWritesNoExtensionAndRunsNothing.
+// It ends with one line when the release's template, filled for this machine,
+// differs from the extension already beside the binary, and that line names
+// `gdoc update --desktop`. The comparison leaves the version field out of both
+// sides, so a release that changed its number and nothing else asks nobody to
+// do anything, and a machine with no extension beside its binary is told
+// nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
+// TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
+//
+// The settings stay in Claude Desktop's own form, where a person sees which
+// options exist, which is why the template travels in the release and is filled
+// here rather than being a file somebody edits.
 //
 // # The update draws its steps on stderr
 //
