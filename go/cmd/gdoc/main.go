@@ -178,10 +178,11 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	// person who typed it reads the whole help, on the stream words go to.
 	//
 	// It is the second help screen, so on a terminal the object goes the way
-	// help's does. The hint does not follow it: see writeJSONHint.
+	// help's does, and the screen opens with the refusal's own words. The hint
+	// does not follow it: see writeJSONHint.
 	if len(args) == 0 {
-		fmt.Fprint(errOut, helpProse(commands(), true))
-		return emit.Result{OK: false, Error: "gdoc needs a command. " + usageLine(), Screen: true}
+		writeBareHelp(errOut)
+		return emit.Result{OK: false, Error: needsCommand + " " + usageLine(), Screen: true}
 	}
 	// --help and -h are the same question wherever they stand on the line, and
 	// they are answered before the table is walked and before the parser runs.

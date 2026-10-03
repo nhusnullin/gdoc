@@ -1,0 +1,45 @@
+[38;2;124;130;150m┌─[0m[38;2;62;123;234m gdoc v2.9.0 [0m[38;2;124;130;150m──────────────────────────────────────────────────[0m[38;2;124;130;150m 18 commands [0m[38;2;124;130;150m─┐[0m
+[38;2;124;130;150m│[0m [38;2;184;119;8mUsage[0m  gdoc <command> [words] [flags]                                        [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m [38;2;184;119;8m▸[0m gdoc v2.10.0 is published and this is v2.9.0. gdoc update installs it.     [38;2;124;130;150m│[0m
+[38;2;124;130;150m├─[0m[38;2;184;119;8m Read [0m[38;2;124;130;150m─────────────┬─────────────────────────────────────────────────────────┤[0m
+[38;2;124;130;150m│[0m read               [38;2;124;130;150m│[0m Print the document as text, with the ids a comment or a [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m suggestion is named by.                                 [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m comments           [38;2;124;130;150m│[0m List the comment threads with their ranges, their       [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m replies and the next cursor.                            [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m suggestions        [38;2;124;130;150m│[0m List the suggestions pending in the document.           [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m export             [38;2;124;130;150m│[0m Write the document into the hub as Markdown, one file   [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m per tab, with its pictures beside it.                   [38;2;124;130;150m│[0m
+[38;2;124;130;150m├─[0m[38;2;184;119;8m Write into a doc [0m[38;2;124;130;150m─┼─────────────────────────────────────────────────────────┤[0m
+[38;2;124;130;150m│[0m restyle            [38;2;124;130;150m│[0m Survey a document against the house style, or apply     [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m that style where the document stands.                   [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m reply              [38;2;124;130;150m│[0m Write one reply into a comment thread, under the robot  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m prefix.                                                 [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m propose            [38;2;124;130;150m│[0m Propose changes as native suggestions, each with the    [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m comment that says why.                                  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m withdraw           [38;2;124;130;150m│[0m Take back one pending suggestion, and only one gdoc     [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m proposed itself.                                        [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m annotate           [38;2;124;130;150m│[0m Leave a comment on the exact words you quote, under the [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m robot prefix, changing nothing.                         [38;2;124;130;150m│[0m
+[38;2;124;130;150m├─[0m[38;2;184;119;8m Make a doc [0m[38;2;124;130;150m───────┼─────────────────────────────────────────────────────────┤[0m
+[38;2;124;130;150m│[0m build              [38;2;124;130;150m│[0m Build the note as a house-style docx on this machine,   [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m with no network at all.                                 [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m publish            [38;2;124;130;150m│[0m Build the note as a house-style document and upload it  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m into one folder.                                        [38;2;124;130;150m│[0m
+[38;2;124;130;150m├─[0m[38;2;184;119;8m Account and tool [0m[38;2;124;130;150m─┼─────────────────────────────────────────────────────────┤[0m
+[38;2;124;130;150m│[0m auth status        [38;2;124;130;150m│[0m Say whether gdoc has a token, when it expires, and what [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m it may reach.                                           [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m auth login         [38;2;124;130;150m│[0m Print the Google sign-in URL and wait for the browser   [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m to come back.                                           [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m probe              [38;2;124;130;150m│[0m Create a throwaway document and say whether Docs        [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m honours a suggestion today.                             [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m update             [38;2;124;130;150m│[0m Replace this gdoc with the newest release, or say what  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m one would take.                                         [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m mcp                [38;2;124;130;150m│[0m Serve gdoc to Claude Desktop over stdin and stdout, as  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m a protocol session rather than one object.              [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m help               [38;2;124;130;150m│[0m Print every command gdoc takes, or the words and flags  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m of one.                                                 [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m completion         [38;2;124;130;150m│[0m Write the completion script for one shell, and say the  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                    [38;2;124;130;150m│[0m line that turns it on.                                  [38;2;124;130;150m│[0m
+[38;2;124;130;150m└────────────────────┴─────────────────────────────────────────────────────────┘[0m
+[38;2;124;130;150mRun gdoc help <command> for the words and flags one takes.[0m
+[38;2;124;130;150mAdd --json to print the JSON object a skill reads.[0m

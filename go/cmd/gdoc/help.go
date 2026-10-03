@@ -62,7 +62,8 @@ type helpFlag struct {
 //
 // json is whether the caller asked for the object in so many words. It changes
 // nothing about what this function answers: the object is the same object, and
-// the words are the same words. What it changes is Screen on the answer, which
+// the words are the same words, drawn as a screen or printed as today's text
+// by writeHelp in helpscreen.go. What it changes is Screen on the answer, which
 // is run()'s leave to drop the object where stdout is a terminal. A caller
 // that asked for the object by name gets it wherever stdout goes, and words
 // that name no command are a refusal rather than a screen, because the object
@@ -78,10 +79,7 @@ func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) e
 		return unknownCommand(words)
 	}
 	facts, line, warns := notice(ctx)
-	if line != "" {
-		fmt.Fprint(errOut, line+"\n\n")
-	}
-	fmt.Fprint(errOut, helpProse(matched, len(words) == 0))
+	writeHelp(errOut, matched, len(words) == 0, line, warns, json)
 	return emit.Result{
 		OK:       true,
 		Data:     helpReport{Commands: helpEntries(matched), Update: facts},
@@ -164,7 +162,7 @@ func versionHeading() string {
 // helpList is every command, one line each, name and sentence aligned.
 func helpList(matched []command) string {
 	var b strings.Builder
-	b.WriteString("Usage: gdoc <command> [words] [flags]\n\n")
+	b.WriteString("Usage: " + usageAll + "\n\n")
 	width := 0
 	for _, c := range matched {
 		if len(c.name) > width {
@@ -174,7 +172,7 @@ func helpList(matched []command) string {
 	for _, c := range matched {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, c.name, c.summary)
 	}
-	b.WriteString("\nRun gdoc help <command> for the words and flags one takes.\n")
+	b.WriteString("\n" + helpFoot + "\n")
 	return b.String()
 }
 

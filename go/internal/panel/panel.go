@@ -138,6 +138,7 @@ type Panel struct {
 	style  tty.Style
 	width  int
 	column int
+	footer string
 }
 
 // New is a Panel for a terminal width columns wide, painted with style. The
@@ -154,6 +155,15 @@ func New(style tty.Style, width int) Panel {
 // TestTheColumnFitsTheWidestLeft.
 func (p Panel) WithColumn(column int) Panel {
 	p.column = column
+	return p
+}
+
+// WithFooter is a copy of p whose bottom border carries name, the way the top
+// one carries a title. It is for a caller that prints something of its own
+// under the box, so the bare line is not a line nobody introduced:
+// TestTheFooterNameSitsInTheBottomBorder. Nothing is changed in p itself.
+func (p Panel) WithFooter(name string) Panel {
+	p.footer = name
 	return p
 }
 
@@ -215,9 +225,11 @@ func (p Panel) Box(title, label string, rows []Row) []string {
 	}
 	last := segments[len(segments)-1]
 	out = append(out, p.drawRule(rule{
-		left:  bottomLeft,
-		right: bottomRight,
-		joint: jointFor(hasPair(last.rows), false),
+		left:      bottomLeft,
+		right:     bottomRight,
+		joint:     jointFor(hasPair(last.rows), false),
+		title:     p.footer,
+		titleRole: roleKey,
 	}, column))
 	return out
 }

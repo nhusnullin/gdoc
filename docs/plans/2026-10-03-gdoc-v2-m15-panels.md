@@ -396,25 +396,54 @@ Before any rendering code changes.
 - Create: `go/cmd/gdoc/helpscreen.go`, `go/cmd/gdoc/helpscreen_test.go`,
   `go/cmd/gdoc/testdata/screens/*.golden`
 
-- [ ] The `command` struct gains `group`, one of `Read`, `Write into a doc`,
+- [x] The `command` struct gains `group`, one of `Read`, `Write into a doc`,
       `Make a doc`, `Account and tool`, set as the spec lists them, `mcp`
       under the last. The JSON object does not carry it:
       `TestEveryCommandHasAGroup`, `TestTheGroupIsNotInTheObject`.
-- [ ] When `isTerminal(errOut)` and `json` is false, `cmdHelp` draws: the top
+- [x] When `isTerminal(errOut)` and `json` is false, `cmdHelp` draws: the top
       box `gdoc <version>` with usage, and the release notice and its
       warnings when there are any; the grouped command table; and the
       `Run gdoc help <command> ...` line. `run()` adds the hint after it.
-- [ ] `gdoc help <command>`: its box, usage, flags as two columns, and the
+- [x] `gdoc help <command>`: its box, usage, flags as two columns, and the
       example flush left under the box as one line.
-- [ ] Bare `gdoc`: `gdoc needs a command.` first, then the help.
-- [ ] Under `NO_COLOR` or `TERM=dumb` on a terminal, the same boxes with no
+- [x] Bare `gdoc`: `gdoc needs a command.` first, then the help.
+- [x] Under `NO_COLOR` or `TERM=dumb` on a terminal, the same boxes with no
       escape byte.
-- [ ] `TestHelpNeverReadsTheToken`: parses `help.go`, `helpscreen.go` and
+- [x] `TestHelpNeverReadsTheToken`: parses `help.go`, `helpscreen.go` and
       `notice.go` with `go/ast` and finds no reference to the `auth` package.
-- [ ] Goldens with no colour at 100, 80, 60 and 44 for the three screens, and
+- [x] Goldens with no colour at 100, 80, 60 and 44 for the three screens, and
       one at 80 in truecolor; they match `panels-round-two.html`. Task 3's
       pipe goldens still pass.
-- [ ] `git commit -m "feat(help): Panels on a terminal, grouped by job"`
+- ➕ `internal/panel` gained one method, `WithFooter`, which puts a name in the
+      bottom border, because `gdoc help <command>` prints its example under the
+      box and a bare line nobody introduced reads like a stray. Task 7's
+      package grew by that method, `TestTheFooterNameSitsInTheBottomBorder` and
+      the `doc.go` rule that names it.
+- ➕ `NO_COLOR` and `TERM=dumb` keep the boxes and drop the colour, which is
+      what the spec and this plan say. The caption of picture 3.15 in
+      `panels-round-two.html` says Panels is off entirely and today's text is
+      printed; the spec's own words, "`NO_COLOR` and `TERM=dumb` turn the
+      colour off", are what was built, and `TERM=dumb` is still a `Depth` of
+      none rather than a second rule.
+- ➕ The order inside a group is the table's order, so `restyle` opens "Write
+      into a doc" and `probe` sits before `update`. The spec's parentheses name
+      which commands are in each group, and one order of commands in the tree
+      is what keeps a reader of the screen and a reader of the object together.
+- ➕ Bare `gdoc` opens with `gdoc needs a command.`, which is the spec's "Still
+      open" item 0 and this plan's bullet. Picture 5b draws the help without
+      those words.
+- ➕ The right end of one command's border carries `gdoc <version>`, and
+      nothing at all on a build from a checkout, which names no release: a
+      label reading only "gdoc" in a box the command's own name titles says
+      nothing.
+- ➕ `TestAWarningIsDrawnWhereTheObjectWouldHaveCarriedIt` holds the warning
+      rows, which no golden shows: the three recorded screens are a check that
+      answered.
+- ➕ `screen_test.go`'s two terminal assertions name the usage line as the
+      screen prints it, `gdoc <command> [words] [flags]`, because the screen's
+      usage row carries the word in a border-coloured key and no colon. Nothing
+      about which stream carries what was loosened.
+- [x] `git commit -m "feat(help): Panels on a terminal, grouped by job"`
 
 ### Task 10: update as Panels
 

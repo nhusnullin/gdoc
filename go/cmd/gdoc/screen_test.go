@@ -52,7 +52,7 @@ func TestHelpOnATerminalWritesNothingToStdout(t *testing.T) {
 	if stdout != "" {
 		t.Errorf("a help screen replaces the object, and stdout carried %q", stdout)
 	}
-	if !strings.Contains(stderr, "Usage: gdoc") {
+	if !strings.Contains(stderr, "gdoc <command> [words] [flags]") {
 		t.Errorf("the screen a person reads must be on stderr: %q", stderr)
 	}
 }
@@ -69,7 +69,7 @@ func TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne(t *testing.T) {
 	if stdout != "" {
 		t.Errorf("bare gdoc on a terminal writes no object, and stdout carried %q", stdout)
 	}
-	if !strings.Contains(stderr, "Usage: gdoc") {
+	if !strings.Contains(stderr, "gdoc <command> [words] [flags]") {
 		t.Errorf("the screen a person reads must be on stderr: %q", stderr)
 	}
 }

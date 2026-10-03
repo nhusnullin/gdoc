@@ -52,6 +52,13 @@
 // that wants its joints names a column past its longest section name, which is
 // what the eighty-column golden does.
 //
+// The bottom rule carries a name too, where a caller named one with
+// WithFooter, because a caller that prints a line of its own under the box
+// wants the border to say what it is:
+// TestTheFooterNameSitsInTheBottomBorder. That is the one thing a footer is
+// for, and `gdoc help <command>` is what asked for it: its example sits under
+// the box, flush left, so it copies as one line.
+//
 // Nothing is ever drawn over a corner. A title too wide for its border is
 // dropped, and so is a label the title already reaches:
 // TestATitleTooWideForTheBorderIsDropped and

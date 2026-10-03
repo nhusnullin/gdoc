@@ -100,6 +100,19 @@ func TestASectionIsARuleWithItsName(t *testing.T) {
 	}
 }
 
+// A caller that prints something under a box names the bottom border, so the
+// bare line under it is not a line nobody introduced.
+func TestTheFooterNameSitsInTheBottomBorder(t *testing.T) {
+	lines := plain(30).WithFooter("Example").Box("publish", "", []Row{Line("x")})
+
+	if last := lines[len(lines)-1]; last != "└─ Example ──────────────────┘" {
+		t.Errorf("the bottom border is %q", last)
+	}
+	if lines[0] != "┌─ publish ──────────────────┐" {
+		t.Errorf("the footer is the bottom border's own name, and the top is %q", lines[0])
+	}
+}
+
 // The joint is a down joint where the column opens, a cross where it carries
 // on through a section, and an up joint where it closes.
 func TestTheColumnJointsAreDownCrossAndUp(t *testing.T) {
