@@ -1,0 +1,1 @@
+{"ok":false,"error":"unknown command \"frobnicate\". Commands: auth status, auth login, read, comments, suggestions, export, restyle, probe, reply, propose, withdraw, annotate, build, publish, update, mcp, help, completion","version":"v2.9.0"}

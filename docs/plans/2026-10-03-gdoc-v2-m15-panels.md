@@ -247,18 +247,18 @@ Before any rendering code changes.
 **Files:**
 - Create: `go/cmd/gdoc/pipe_test.go`, `go/cmd/gdoc/testdata/pipe/*.golden`
 
-- [ ] Goldens of stderr and stdout, through buffers (never a terminal), with
+- [x] Goldens of stderr and stdout, through buffers (never a terminal), with
       the version and the notice fixed by the test: `gdoc help`,
       `gdoc help publish`, `gdoc help comments`, bare `gdoc`,
       `gdoc frobnicate`.
-- [ ] Goldens of `update`'s plain lines: `newProgress` on a buffer, driven
+- [x] Goldens of `update`'s plain lines: `newProgress` on a buffer, driven
       through each step state and a failure, plus `resultLine` for an install
       with and without the extension text.
-- [ ] The login line is not frozen here: the real `StartLogin` refuses a test
+- [x] The login line is not frozen here: the real `StartLogin` refuses a test
       build. Task 11 pins it, test first, before it moves the print.
-- [ ] `TestHelpOnAPipeIsTodaysTextByteForByte` and its siblings pass now. From
+- [x] `TestHelpOnAPipeIsTodaysTextByteForByte` and its siblings pass now. From
       this task on, these goldens are read only.
-- [ ] `git commit -m "test(cmd): what a pipe gets today, frozen"`
+- [x] `git commit -m "test(cmd): what a pipe gets today, frozen"`
 
 ### Task 4: internal/tty, is it a terminal
 
