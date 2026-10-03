@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"gdoc/internal/chat"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
 )
@@ -37,19 +36,24 @@ var mcpReviewCore string
 // server and never from the repository: a person who typed one into Claude
 // Desktop can see here that gdoc took it. It is a fact and nothing suggests
 // setting it, which is decision 17 of the milestone 14 specification and what
-// TestNothingSuggestsTheSetting will hold in task 18.
+// TestNothingSuggestsTheSetting holds.
 type mcpGuideData struct {
 	Code string `json:"code"`
-	// TrustedEmailDomains is the setting as it was given. Task 18 is what
-	// parses it into whole domains and refuses a malformed one.
-	TrustedEmailDomains string `json:"trusted_email_domains"`
-	Text                string `json:"text"`
+	// TrustedEmailDomains is the setting as this session parsed it: whole
+	// lowercased domains, and an empty list where the field was empty, which is
+	// the ordinary case.
+	TrustedEmailDomains []string `json:"trusted_email_domains"`
+	// TrustedEmailDomainsProblem is why a value was not read, where it was not.
+	// guide is the one tool that still answers then, so it is the one place the
+	// person can read it from: TestAMalformedValueMakesEveryToolButGuideNameIt.
+	TrustedEmailDomainsProblem string `json:"trusted_email_domains_problem,omitempty"`
+	Text                       string `json:"text"`
 }
 
 // mcpGuideTool is the one tool a session starts with. It reaches nothing: no
 // token, no wire and no document, so it answers whether or not anybody is
 // signed in, which is what lets the rules arrive before the sign-in does.
-func mcpGuideTool(opts mcpOptions, code *chat.Code) mcp.Tool {
+func mcpGuideTool(ch *mcpChat) mcp.Tool {
 	return mcp.Tool{
 		Name:        "guide",
 		Title:       "How to review a Google Doc with gdoc",
@@ -57,7 +61,7 @@ func mcpGuideTool(opts mcpOptions, code *chat.Code) mcp.Tool {
 		Schema:      json.RawMessage(noArguments),
 		ReadOnly:    true,
 		Call: func(context.Context, json.RawMessage) mcp.Result {
-			return mcpGuideAnswer(opts, code)
+			return mcpGuideAnswer(ch)
 		},
 	}
 }
@@ -65,11 +69,16 @@ func mcpGuideTool(opts mcpOptions, code *chat.Code) mcp.Tool {
 // mcpGuideAnswer is the envelope guide prints, the same shape every other tool
 // answers with: the header and the core as one text, so the model reads them in
 // the order they are written.
-func mcpGuideAnswer(opts mcpOptions, code *chat.Code) mcp.Result {
+func mcpGuideAnswer(ch *mcpChat) mcp.Result {
+	problem := ""
+	if ch.trustedErr != nil {
+		problem = ch.trustedErr.Error()
+	}
 	return mcpEnvelope(emit.Result{OK: true, Data: mcpGuideData{
-		Code:                code.Value(),
-		TrustedEmailDomains: opts.trustedDomains,
-		Text:                mcpGuideText(),
+		Code:                       ch.code.Value(),
+		TrustedEmailDomains:        ch.trusted,
+		TrustedEmailDomainsProblem: problem,
+		Text:                       mcpGuideText(),
 	}})
 }
 

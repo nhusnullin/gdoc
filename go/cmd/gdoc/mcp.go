@@ -27,8 +27,9 @@ import (
 // mistake.
 const mcpFlag = "--trusted-email-domains"
 
-// mcpOptions is the mcp line read. Task 18 is what reads trustedDomains, where
-// it exempts an address at one of those domains from the hold a link gets.
+// mcpOptions is the mcp line read. trustedDomains is handed to the session,
+// which parses it: an address at one of those domains is exempt from the hold a
+// link gets, and a link never is.
 type mcpOptions struct {
 	trustedDomains string
 }
@@ -98,13 +99,20 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	// the ledger of what it read and wrote. A session that could not make a code
 	// is a session where every tool but guide and login refuses, so it is said
 	// here rather than call by call.
-	ch, err := newMCPChat()
+	ch, err := newMCPChat(opts.trustedDomains)
 	if err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
 	}
+	// A setting gdoc could not read is said here and never again, and the
+	// session runs: a server that refuses to start reaches the person as a
+	// connector that failed with no reason. Every tool but guide answers the same
+	// sentence until the field is fixed: mcptrusted.go.
+	if ch.trustedErr != nil {
+		fmt.Fprintln(errOut, ch.trustedErr)
+	}
 
-	s := mcp.New(mcpInfo(), mcpTools(opts, errOut, lg, ch), errOut)
+	s := mcp.New(mcpInfo(), mcpTools(errOut, lg, ch), errOut)
 	// Where a held write's one confirm tool is registered, and taken away when
 	// it is released or its thirty minutes run out. The server is made after the
 	// tools are, so it is told here rather than handed in.
@@ -165,8 +173,11 @@ const noArguments = `{"type":"object","properties":{}}`
 // Every tool also goes through mcpTimed, which sweeps the holds this session is
 // keeping and records the instant the call ended: the quiet gap a release needs
 // behind it is measured from that instant, and a card whose thirty minutes ran
-// out leaves the list on the next call rather than waiting to be pressed.
-func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
+// out leaves the list on the next call rather than waiting to be pressed. And
+// through mcpSettingChecked, which is every tool but guide refusing while the
+// one setting holds a value gdoc could not read:
+// TestAMalformedValueMakesEveryToolButGuideNameIt.
+func mcpTools(errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mcp.Tool {
 	out := mcpCommandTools(errOut, ch)
 	out = append(out,
 		mcp.Tool{
@@ -179,9 +190,9 @@ func mcpTools(opts mcpOptions, errOut io.Writer, lg *mcpLogin, ch *mcpChat) []mc
 				return lg.answer(ctx)
 			},
 		},
-		mcpGuideTool(opts, ch.code))
+		mcpGuideTool(ch))
 	for i := range out {
-		out[i] = mcpTimed(ch, out[i])
+		out[i] = mcpTimed(ch, mcpSettingChecked(ch, out[i]))
 	}
 	return out
 }

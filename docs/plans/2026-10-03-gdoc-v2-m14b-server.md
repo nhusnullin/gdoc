@@ -1070,20 +1070,41 @@ Serves decision 17.
 - Modify: `go/cmd/gdoc/mcp.go`, `go/cmd/gdoc/mcptools.go`, `go/cmd/gdoc/mcpguide.go`
 - Create: `go/cmd/gdoc/mcptrusted_test.go`
 
-- [ ] Test first, `TestAnEmptySettingExemptsNothing`.
-- [ ] Test, `TestAListedDomainExemptsAnEmailAtExactlyThatDomain`, and not
+- [x] Test first, `TestAnEmptySettingExemptsNothing`.
+- [x] Test, `TestAListedDomainExemptsAnEmailAtExactlyThatDomain`, and not
       at `sub.example.com`, not at `example.com.evil.example`, not at
       `xexample.com`.
-- [ ] Test, `TestALinkAtAListedDomainIsStillHeld`.
-- [ ] Test, `TestAMalformedValueMakesEveryToolButGuideNameIt`: a wildcard, a
+- [x] Test, `TestALinkAtAListedDomainIsStillHeld`.
+- [x] Test, `TestAMalformedValueMakesEveryToolButGuideNameIt`: a wildcard, a
       scheme, an `@`, a word with no dot.
-- [ ] Test, `TestTheWriteAnswerNamesTheExemption`, as a fact.
-- [ ] Test, `TestNothingSuggestsTheSetting`: the instructions, the chat
+- [x] Test, `TestTheWriteAnswerNamesTheExemption`, as a fact.
+- [x] Test, `TestNothingSuggestsTheSetting`: the instructions, the chat
       header, the embedded core and every tool description hold no sentence
       naming the setting or asking for it.
-- [ ] Implement.
-- [ ] `cd go && go test -race ./...` passes.
-- [ ] `git commit -m "feat(chat): the person's own trusted email domains, exempting addresses from the link hold"`
+- [x] Implement.
+- [x] `cd go && go test -race ./...` passes.
+- [x] `git commit -m "feat(chat): the person's own trusted email domains, exempting addresses from the link hold"`
+
+**Files, as built:** also `go/cmd/gdoc/mcptrusted.go` (new: the wiring is its own
+file, since `mcptools.go` is already past the 800-line ceiling), and
+`go/cmd/gdoc/mcphold.go`, where `Rules` now takes the session's list.
+`mcpTools` loses its `mcpOptions` argument: the raw value is handed to
+`newMCPChat`, which parses it once, so the list and the reason travel with the
+session the ledger and the holds travel with. `guide` answers the parsed
+domains as a list rather than echoing the raw string, with the reason beside
+them where there is one, so `mcpguide_test.go` moved with it.
+
+- ➕ `TestWithoutTheSettingTheSameWriteIsHeld`: the same write in a session with
+      nothing listed is held, which is what makes the exemption the thing that
+      let it through.
+- ➕ The parse also refuses a path, an empty label, a hyphen at a label's edge
+      and a last label that is not letters, each named:
+      `TestAMalformedDomainIsRefusedAndNamed`. `Trusted` lowercases, takes commas
+      and spaces, and counts one domain once:
+      `TestTrustedTakesCommasAndSpacesAndLowercases`.
+- ➕ `chat.Exempted` is the fact's own reading, through the same `isTrusted` the
+      Link rule uses, so the fact and the rule cannot differ about one address:
+      `TestExemptedNamesEachAddressAtAListedDomainOnce`.
 
 ### Task 19: the update line, once per process
 

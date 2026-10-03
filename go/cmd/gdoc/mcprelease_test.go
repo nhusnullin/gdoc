@@ -45,7 +45,7 @@ type confirmWatcher struct {
 
 func watchConfirms(t *testing.T, ch *mcpChat) *confirmWatcher {
 	t.Helper()
-	tools := mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), ch)
+	tools := mcpTools(io.Discard, newMCPLogin(io.Discard), ch)
 	var out bytes.Buffer
 	s := mcp.New(mcpInfo(), tools, io.Discard)
 	if err := s.Serve(context.Background(), strings.NewReader(""), &out); err != nil {

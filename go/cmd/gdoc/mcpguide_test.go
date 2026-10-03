@@ -119,7 +119,7 @@ func TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode(t *testing.T) {
 
 	// The two that need no code, so the rules can arrive before anything else
 	// does and a person with no token can still sign in.
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
+	for _, tool := range mcpTools(io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name != "guide" {
 			continue
 		}
@@ -139,7 +139,7 @@ func TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode(t *testing.T) {
 // schemaOf is one tool's schema as the client reads it.
 func schemaOf(t *testing.T, name string, code *chat.Code) string {
 	t.Helper()
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
+	for _, tool := range mcpTools(io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name == name {
 			return string(tool.Schema)
 		}
@@ -230,7 +230,7 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	code := callCode(t)
 
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
+	for _, tool := range mcpTools(io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		if tool.Name != "guide" {
 			continue
 		}
@@ -239,8 +239,11 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 		if data.Code != code.Value() {
 			t.Errorf("guide answered the code %q, and the session's is %q", data.Code, code.Value())
 		}
-		if data.TrustedEmailDomains != "" {
-			t.Errorf("this session trusts no email domain and guide says %q", data.TrustedEmailDomains)
+		if len(data.TrustedEmailDomains) != 0 {
+			t.Errorf("this session trusts no email domain and guide says %v", data.TrustedEmailDomains)
+		}
+		if data.TrustedEmailDomainsProblem != "" {
+			t.Errorf("an empty setting is no problem and guide says %q", data.TrustedEmailDomainsProblem)
 		}
 		// The header, by a sentence of its own, and the core, by a heading of
 		// its own, in that order: the header is what tells the model to read on.
@@ -259,13 +262,17 @@ func TestGuideAnswersTheHeaderAndTheCore(t *testing.T) {
 
 	// The setting this process was started with is read from the running
 	// server, never from the repository.
-	for _, tool := range mcpTools(mcpOptions{trustedDomains: "example.com"}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
+	started, err := newMCPChat("Example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range mcpTools(io.Discard, newMCPLogin(io.Discard), started) {
 		if tool.Name != "guide" {
 			continue
 		}
 		data := guideData(t, tool.Call(context.Background(), nil).Texts)
-		if data.TrustedEmailDomains != "example.com" {
-			t.Errorf("guide says the domains are %q, and the session was started with example.com", data.TrustedEmailDomains)
+		if len(data.TrustedEmailDomains) != 1 || data.TrustedEmailDomains[0] != "example.com" {
+			t.Errorf("guide says the domains are %v, and the session was started with Example.com", data.TrustedEmailDomains)
 		}
 	}
 }
@@ -296,7 +303,7 @@ func TestTheEmbeddedCoreIsTheSkillsCore(t *testing.T) {
 func TestTheChatHeaderNamesOnlyToolsThatExist(t *testing.T) {
 	code := callCode(t)
 	tools := map[string]bool{}
-	for _, tool := range mcpTools(mcpOptions{}, io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
+	for _, tool := range mcpTools(io.Discard, newMCPLogin(io.Discard), chatWith(code)) {
 		tools[tool.Name] = true
 	}
 	// The words in the header that are backticked and are no tool: the one

@@ -239,9 +239,33 @@
 // Memory: TestTheMemoryIsPerProcessAndWritesNothingToDisk and
 // TestTheMemoryTakesTwoCallersAtOnce.
 //
-// # What is not here yet
+// # The person's own trusted email domains
 //
-// The trusted-domains setting is task 18 of
-// docs/plans/2026-10-03-gdoc-v2-m14b-server.md. Rules already takes the trusted
-// list; nothing parses the person's setting into it yet.
+// Trusted reads the one setting a person may type into Claude Desktop, "Email
+// domains that need no approval", into the list Rules takes. Whole lowercased
+// domains, separated by commas or spaces, the same domain twice counted once:
+// TestTrustedTakesCommasAndSpacesAndLowercases. An empty value is no domains and
+// no error, which is what the extension sends when nobody typed anything:
+// TestAnEmptySettingExemptsNothing.
+//
+// It exempts an address at exactly a listed domain, not at a subdomain and not at
+// a look-alike, and it never exempts a link:
+// TestAListedDomainExemptsAnEmailAtExactlyThatDomain and
+// TestALinkAtAListedDomainIsStillHeld. It is the one written-down loosening of a
+// check in gdoc, which is why Exempted exists: the addresses a write carried at a
+// listed domain, so cmd/gdoc states the loosening in the write's own answer:
+// TestExemptedNamesEachAddressAtAListedDomainOnce and
+// TestTheWriteAnswerNamesTheExemption in cmd/gdoc.
+//
+// A value gdoc could not read is refused by name, with the setting named beside
+// it, rather than read as best it can: a domain read wrongly is a card that never
+// appears. TestAMalformedDomainIsRefusedAndNamed, and
+// TestAMalformedValueMakesEveryToolButGuideNameIt in cmd/gdoc, where the session
+// still starts and every tool but guide answers the reason.
+//
+// Nothing in gdoc suggests the field. It is decision 17 of the specification: an
+// advanced setting for a person who went looking for it, and what the binary says
+// about it is a fact and never an offer. TestNothingSuggestsTheSetting in
+// cmd/gdoc reads the server instructions, the chat header, the embedded review
+// core and every tool's title and description.
 package chat

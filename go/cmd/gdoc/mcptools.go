@@ -85,6 +85,13 @@ type mcpChat struct {
 	holds  *mcpHolds
 	memory *chat.Memory[mcp.Result]
 
+	// trusted is the email domains the person typed into the extension's one
+	// setting, as internal/chat parsed them, and trustedErr is the sentence a
+	// value it could not read gets. Both are read once when the session starts
+	// and never again: mcptrusted.go.
+	trusted    []string
+	trustedErr error
+
 	mu sync.Mutex
 	// last is when the session's most recent tool call ended. It is what the
 	// quiet gap behind a release is measured from, and nothing else reads it.
@@ -109,15 +116,20 @@ func (ch *mcpChat) lastCall() time.Time {
 	return ch.last
 }
 
-// newMCPChat is one session's own. The error is the random source failing, which
-// a session cannot start without.
-func newMCPChat() (*mcpChat, error) {
+// newMCPChat is one session's own, from the one setting the line carried. The
+// error is the random source failing, which a session cannot start without.
+//
+// A setting that cannot be read is not that error: the session starts with no
+// trusted domain and the reason, and every tool but guide answers the reason:
+// TestAMalformedValueMakesEveryToolButGuideNameIt.
+func newMCPChat(trustedRaw string) (*mcpChat, error) {
 	code, err := chat.NewCode()
 	if err != nil {
 		return nil, err
 	}
+	trusted, trustedErr := chat.Trusted(trustedRaw)
 	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
-		memory: chat.NewMemory[mcp.Result]()}, nil
+		memory: chat.NewMemory[mcp.Result](), trusted: trusted, trustedErr: trustedErr}, nil
 }
 
 // mcpNotSignedIn is what a Google tool answers when there is no token file.
@@ -456,6 +468,13 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 			return res
 		}
 	}
+	// Whatever the Link rule did not ask about because the person listed its
+	// domain. It is read here rather than inside the rules because the released
+	// route above does not ask them and its answer states the exemption too.
+	var exempt []string
+	if target != nil {
+		exempt = mcpExempted(c, args, *target, ch)
+	}
 
 	r := safeDispatch(ctx, argv, errOut)
 	r.Error = files.name(r.Error)
@@ -474,7 +493,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 	// the wire may still have reached the document, and the only answer that is
 	// true for a retry of it is this one. A held write never gets here, because
 	// it was answered above: TestAHeldAnswerIsNotKept.
-	out := mcpEnvelope(r)
+	out := mcpWriteAnswer(r, exempt)
 	ch.memory.Keep(c.tool, args, out, now())
 	return out
 }

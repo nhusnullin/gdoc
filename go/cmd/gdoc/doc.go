@@ -99,7 +99,15 @@
 //     TestTheConfirmSchemaListsHoldTitleReasonText,
 //     TestAByteDifferentTitleReasonOrTextIsRefused,
 //     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
-//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The review core it
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The one flag the line takes
+//     is the extension's own field, the email domains an address may sit at
+//     without a card: it exempts an address at exactly a listed domain and never
+//     a link, a write it applied to states the exemption beside its envelope, and
+//     a value gdoc could not read starts the session anyway, with the reason on
+//     the log and every tool but guide answering it:
+//     TestTheWriteAnswerNamesTheExemption and
+//     TestAMalformedValueMakesEveryToolButGuideNameIt. Nothing gdoc says suggests
+//     that field: TestNothingSuggestsTheSetting. The review core it
 //     serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.

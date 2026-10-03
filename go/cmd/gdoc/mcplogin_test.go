@@ -494,7 +494,7 @@ func TestStdinClosingClosesAWaitingListenerAndItsLock(t *testing.T) {
 func TestTheLoginToolIsListedAsItself(t *testing.T) {
 	m := newMCPLogin(io.Discard)
 	var tool mcp.Tool
-	for _, got := range mcpTools(mcpOptions{}, io.Discard, m, callChat(t)) {
+	for _, got := range mcpTools(io.Discard, m, callChat(t)) {
 		if got.Name == "login" {
 			tool = got
 		}
