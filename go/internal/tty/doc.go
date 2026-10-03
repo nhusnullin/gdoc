@@ -1,6 +1,6 @@
 // Package tty holds the facts about one output stream and the environment
 // around it: whether a person is reading it, how much colour it takes, and how
-// wide it is.
+// wide it is. It also holds the one palette and every escape code gdoc writes.
 //
 // It exists because of the 2026-10-03 decision that on a terminal a help
 // screen is for the person. That decision rests on one question, asked once:
@@ -73,11 +73,55 @@
 // measured, so a golden test sets its own width:
 // TestABufferHasNoDescriptorSoColumnsAnswers.
 //
+// # One palette, by role and by depth
+//
+// Style writes colour around text. Its methods are roles and not colours:
+// Title, Key, Border, Dim, OK, Fail, Warn and Chip. A caller says what a piece
+// of text is for and this package says what that looks like at the depth
+// Colour answered with, so internal/panel draws boxes without naming a
+// colour.
+//
+// Text itself has no role. A command name, a description and a JSON line keep
+// the terminal's own foreground, which the person already tuned for their
+// background. That, and accents at middle brightness, are what let one palette
+// read on a dark terminal and on a light one, which gdoc needs because it
+// cannot ask a terminal what its background is. The values are palette 4A of
+// docs/design/panels-round-two.html, stated as literals in
+// TestTrueColourIsTheHexOfPaletteFourA, TestTwoFiftySixIsTheNearestIndex and
+// TestSixteenIsTheBasicAnsiCode.
+//
+// At NoColour every role hands the text straight back, so a pipe, a file and
+// every non-darwin run see no escape byte: TestNoColourWritesNoEscapeByte,
+// with TestAnEmptyRoleIsStillPlainAtNoColour on the empty string a box draws
+// for a missing label. The zero Style is that one, because NoColour is the
+// zero Depth: TestAStyleNobodySetWritesNothing. Every coloured role closes
+// with the reset, so nothing leaks onto the shell prompt under the screen:
+// TestEveryRoleEndsWithTheReset.
+//
+// Chip is the role that is a background rather than a foreground: a version in
+// a top border, a channel beside it. At sixteen colours no pair of colours
+// reads on both backgrounds, so a chip asks the terminal to swap its own two:
+// TestAChipIsReverseVideoOnSixteen.
+//
+// # Every escape code is here
+//
+// Up, ClearBelow, ClearLine, WrapOff and WrapOn are the cursor and line codes,
+// the same at every depth because they are not colour: a list that redraws
+// itself needs them even where NO_COLOR is set.
+// TestTheLineCodesAreTheirBytes pins each as the bytes it is, and
+// TestUpIsNothingForNoRows holds the first draw, which has nothing above it to
+// move over and must therefore write no code at all.
+//
+// VisibleWidth is how wide a drawn line is: every rune outside an escape
+// sequence counts as one column, so a coloured line and a plain one measure
+// the same, and the box-drawing and braille a panel uses count as one each:
+// TestVisibleWidthSkipsEscapes and
+// TestVisibleWidthCountsBoxDrawingAndBrailleAsOne.
+//
 // # What is not here
 //
-// No layout and no box. No read of stdin. No network. TODO(test): Task 5 of
-// the M15 plan puts the palette and every escape code here, and Task 6 adds
-// boundary's TestNoEscapeLiteralOutsideTTY, which holds that no escape byte is
-// written anywhere else by reading the syntax tree of every non-test file
-// under go/.
+// No layout and no box. No read of stdin. No network. TODO(test): Task 6 of
+// the M15 plan adds boundary's TestNoEscapeLiteralOutsideTTY, which holds that
+// no escape byte is written anywhere else by reading the syntax tree of every
+// non-test file under go/, and moves progress.go onto these codes.
 package tty

@@ -291,19 +291,19 @@ Before any rendering code changes.
 **Files:**
 - Create: `go/internal/tty/style.go`, `go/internal/tty/style_test.go`
 
-- [ ] `Style` built from a `Depth`. Roles, not colours: `Title`, `Key`,
+- [x] `Style` built from a `Depth`. Roles, not colours: `Title`, `Key`,
       `Border`, `Dim`, `OK`, `Fail`, `Warn`, `Chip`. Text has no role: it
       keeps the terminal's own colour. Hex, 256 index and 16-colour code per
       role are palette 4A in `panels-round-two.html`, stated as literals in
       the tests.
-- [ ] The cursor and line codes live here too: up, clear below, clear to end
+- [x] The cursor and line codes live here too: up, clear below, clear to end
       of line, wrap off, wrap on.
-- [ ] At depth none every role returns its text unchanged:
+- [x] At depth none every role returns its text unchanged:
       `TestNoColourWritesNoEscapeByte`.
-- [ ] At 16 colours a chip is reverse video: `TestAChipIsReverseVideoOnSixteen`.
-- [ ] `VisibleWidth(s)` counts runes outside escape sequences, box-drawing and
+- [x] At 16 colours a chip is reverse video: `TestAChipIsReverseVideoOnSixteen`.
+- [x] `VisibleWidth(s)` counts runes outside escape sequences, box-drawing and
       braille as one: `TestVisibleWidthSkipsEscapes`.
-- [ ] `git commit -m "feat(tty): the one palette, by role and by depth"`
+- [x] `git commit -m "feat(tty): the one palette, by role and by depth"`
 
 ### Task 6: one definition of a terminal, and no escape byte outside tty
 
