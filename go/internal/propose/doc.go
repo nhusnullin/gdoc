@@ -6,10 +6,12 @@
 // batchUpdate on a handed-in document without it, and that refusal is about
 // gdoc's own words: what Google did with them is a different question, and one
 // morning the answer was a silent direct edit. BLOCKED-BY-API.md holds both
-// measurements. So the run does not stop at a 200, and internal/probe asks the
-// question on a throwaway document before this package sends anything: a probe
-// that comes back not enrolled means propose writes nothing at all.
-// TestProposeSendsNothingWhenTheProbeSaysNotEnrolled in cmd/gdoc is the pin.
+// measurements. So the run does not stop at a 200: the three read-backs below
+// are what answer it, and cmd/gdoc stops the run at the first proposal they
+// cannot confirm. Until M14 a capability probe asked the same question on a
+// throwaway document before every proposal; suggestions are generally available
+// now, and the 2026-10-02 entry in docs/v2/DECISIONS.md holds why the probe
+// went and what the read-backs carry in its place.
 //
 // Nothing here decides whether a change is worth proposing, or what to say in
 // the comment. The words arrive written and the placement arrives quoted, in a
@@ -115,7 +117,8 @@
 //
 // # A proposal replaces words with words
 //
-// An empty replacement is refused in Proposal.Check, before the probe. The batch
+// An empty replacement is refused in Proposal.Check, before anything is sent.
+// The batch
 // would carry an insertText with no text and a comment anchored on a range of
 // length zero, which Docs rejects, and inlineHolds looks for an insertion a
 // plain deletion never makes, so the write could never verify either. A
@@ -165,8 +168,8 @@
 // and no read-back could see it, since all three read words and a list number is
 // drawn. TestContentRefusesWhatTheSubsetDoesNotHold carries every case. Check
 // reads the content too, so every one of these refusals is made of the whole
-// proposals file before the probe document exists and before the first entry
-// lands, and ApplyBlock reads it again before it reads the document, so a block
+// proposals file before the first entry lands, and ApplyBlock reads it again
+// before it reads the document, so a block
 // gdoc cannot read costs no request at all:
 // TestApplyBlockRefusesContentItCannotReadBeforeAnyRequest and
 // TestProposeRefusesBlockContentBeforeAnythingIsSent in cmd/gdoc are the pins.
@@ -349,14 +352,13 @@
 // Proposal.Check answers from the proposal alone, so the caller asks it of every
 // entry in the file before anything leaves the machine: a third entry refused
 // after the first two have landed is a run that half happened in somebody's
-// document, with a probe document created and trashed on the way. Reading that
-// file is cmd/gdoc's, and it reads it strictly, the way it reads every other
+// document. Reading that file is cmd/gdoc's, and it reads it strictly, the way it reads every other
 // input: an unknown key is refused by name, and so is a second list behind the
 // first. A misspelled quoted, replacement or why is caught here because their
 // empty values are refused, but assignee is optional, so a dropped one would
 // land a comment with nobody assigned and warn about nothing.
 // TestApplyRefusesAQuoteItCannotPlaceBeforeAnyWrite is the pin here;
-// TestProposeRefusesABadProposalBeforeTheProbe,
+// TestProposeRefusesABadProposalBeforeAnythingIsSent,
 // TestProposeRefusesAnUnknownKeyInTheProposalsFile and
 // TestProposeRefusesAnEmptyProposalList in cmd/gdoc are the other half.
 //
@@ -380,8 +382,8 @@
 // applies the requests in order with consistent indexes, so the comment lands on
 // the span the insert made. Two proposals are two batches, each after its own
 // fresh read, because the first moves the ground under the second. A document
-// with more than one tab stops the run before anything is sent, the probe
-// included: a range means nothing without saying which tab it is in.
+// with more than one tab stops the run before anything is sent: a range means
+// nothing without saying which tab it is in.
 // TestBatchSendsThreeRequestsInOrderUnderSuggestMode,
 // TestApplyReadsTheDocumentItselfThenWritesOnce,
 // TestBatchCarriesTheAssigneeWhenThereIsOne and
@@ -470,7 +472,14 @@
 // answer could not be read leaves no state to report, and the warning there
 // names the lost answer rather than blaming a route. preview_without_suggestions
 // is the route that would catch the silent direct edit, which is why it is one
-// of the three rather than a nicety. TestVerifyHoldsOnAllThreeRoutes,
+// of the three rather than a nicety.
+//
+// Not a failure here, and a stop one room up: cmd/gdoc reads the two routes that
+// read the document itself, suggestions_inline and preview_without_suggestions,
+// and ends the run at the first proposal where either is false. This package
+// still reports rather than raises, because the change is in the document and the
+// caller decides. The rule is under "Three rules this package rests on and does
+// not hold" below. TestVerifyHoldsOnAllThreeRoutes,
 // TestApplyVerifiesTheHappyPathThreeWays,
 // TestApplyReportsAPartialFailureFromTheCommentUpdateState,
 // TestApplyReportsABatchWhoseAnswerCouldNotBeRead,
@@ -593,8 +602,8 @@
 // the document already had would be an id under a key neither reads, and the
 // one paragraph a block ever shares is the final mark at the end of a document,
 // which the batch restates nothing on. TestLiveProposeBlock asks that case
-// again with the probe's wider walk, across every suggested key, because on a
-// live run it is Google's answer rather than gdoc's request that decides it.
+// again with a wider walk, across every suggested key, because on a live run it
+// is Google's answer rather than gdoc's request that decides it.
 //
 // # docx_anchored gives no answer when two comments disagree
 //
@@ -641,7 +650,7 @@
 // TestProposeSaysSoWhenTheNoteCannotRememberAProposal and
 // TestProposeReportsEveryProposalWhenOneOfThemCannotBeSent in cmd/gdoc.
 //
-// # Two rules this package rests on and does not hold
+// # Three rules this package rests on and does not hold
 //
 // A write whose answer could not be read is not a write that never happened.
 // internal/gapi marks the failures raised after the server answered 2xx, and
@@ -650,10 +659,35 @@
 // imported sentinel would bring it back through the side door. Apply runs the
 // read-backs on that path and reports the proposal with the comment id unknown,
 // or with whatever the answer still carried. internal/gapi's own comment holds
-// the rule and the three cases it does not cover.
+// the rule and the cases it covers.
+//
+// A write whose answer was lost is neither of those two. internal/gapi marks it
+// apart, because the request went out and nothing came back saying what became
+// of it, and answerLost asks for that mark by behaviour the way sentAnyway asks
+// for the other one. On that path send raises, the read-backs do not run, and the
+// Result carries Outcome OutcomeUnknown: the one route that could say whether the
+// proposal is there is the document itself, and reading it is a person's job
+// rather than a field's. Nothing here says the proposal should be sent again.
+// TestSendNamesALostAnswer and TestAnAnswerDocsTookIsStillNotUnknown are the
+// pins, with TestALostAnswerIsOutcomeUnknownAndStops in cmd/gdoc, which is where
+// the run stops.
 //
 // The note is read again just before it is written, because the run spends
 // seconds to tens of seconds on the network between the pairing check and the
 // write, and these notes live in a synced vault. That rule is cmd/gdoc's, in its
 // package comment, under "The note is read again just before it is written".
+//
+// Where a run of several proposals stops is cmd/gdoc's too. Apply places one
+// proposal and answers for it, and nothing here knows there is a list. The
+// command ends the run at the first proposal whose suggestions_inline or
+// preview_without_suggestions is false, and docx_anchored alone never ends it:
+// that route answers whether the comment is attached, and a comment that did not
+// arrive is an explanation lost rather than a change that went in as an edit. It
+// is the bound on no command running the capability probe any more, because a day
+// when Docs ignores SUGGEST then costs one change rather than a file of them. The
+// rule is in cmd/gdoc's package comment under "propose stops at the first
+// proposal the read-backs cannot confirm", and its pins are there:
+// TestAFalseInlineCheckStopsTheRun, TestAFalsePreviewCheckStopsTheRun,
+// TestAReadBackThatFailedStopsTheRun, TestAFalseDocxCheckAloneDoesNotStop,
+// TestTheStopNeverClaimsADirectEdit and TestAStoppedRunRecordsWhatWasSent.
 package propose

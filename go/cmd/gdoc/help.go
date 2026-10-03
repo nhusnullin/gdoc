@@ -56,13 +56,20 @@ type helpFlag struct {
 // It takes the context because this is the one command that reaches GitHub
 // without being told to: once a day, for at most two seconds, to say whether
 // there is a newer gdoc. Words that name no command are refused before that
-// happens, so a typo costs nothing. See notice.go.
+// happens, so a typo costs nothing. notice does the asking and hands back the
+// line; this is the one place that writes it, above the help itself and with
+// one blank line between them. See notice.go.
+//
+// TestHelpPrintsTheNoticeLineAndABlankLine.
 func cmdHelp(ctx context.Context, words []string, errOut io.Writer) emit.Result {
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
 	}
-	facts, warns := notice(ctx, errOut)
+	facts, line, warns := notice(ctx)
+	if line != "" {
+		fmt.Fprint(errOut, line+"\n\n")
+	}
 	fmt.Fprint(errOut, helpProse(matched, len(words) == 0))
 	return emit.Result{
 		OK:       true,

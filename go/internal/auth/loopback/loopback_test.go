@@ -1,6 +1,7 @@
 package loopback
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/url"
@@ -40,17 +41,20 @@ func TestWaitCodeReturnsTheCodeAndAnswersTheBrowser(t *testing.T) {
 	if !strings.HasPrefix(s.Addr(), "127.0.0.1:") {
 		t.Fatalf("the listener must be loopback only: %q", s.Addr())
 	}
-	page, status := hit(t, s.Addr(), callback("CODE1", "STATE1"))
-	if status != http.StatusOK || !strings.Contains(page, "close this tab") {
-		t.Fatalf("the browser gets a plain sentence back: %d %q", status, page)
-	}
+	// The browser's request is held until Finish, so it is played from its own
+	// goroutine. What the page says is in finish_test.go.
+	got := hitAsync(s.Addr(), callback("CODE1", "STATE1"))
 
-	code, err := s.WaitCode(time.Second)
+	code, err := s.WaitCode(context.Background(), time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if code != "CODE1" {
 		t.Fatalf("code: %q", code)
+	}
+	s.Finish(nil)
+	if p := take(t, got); p.status != http.StatusOK || !strings.Contains(p.body, "close this tab") {
+		t.Fatalf("the browser gets a plain sentence back: %d %q", p.status, p.body)
 	}
 }
 
@@ -74,14 +78,16 @@ func TestAStrayCallbackNeitherEndsNorHijacksTheLogin(t *testing.T) {
 	}
 
 	// The real browser arrives after the stray hit, and the login still works.
-	hit(t, s.Addr(), callback("CODE1", "STATE1"))
-	code, err := s.WaitCode(time.Second)
+	got := hitAsync(s.Addr(), callback("CODE1", "STATE1"))
+	code, err := s.WaitCode(context.Background(), time.Second)
 	if err != nil {
 		t.Fatalf("the real callback must still land: %v", err)
 	}
 	if code != "CODE1" {
 		t.Fatalf("code: %q", code)
 	}
+	s.Finish(nil)
+	take(t, got)
 }
 
 // The authorization server says why it refused. Reporting "no code" instead
@@ -101,7 +107,7 @@ func TestADeniedSignInIsReportedAsSuch(t *testing.T) {
 	if status == http.StatusOK || strings.Contains(page, "Signed in") {
 		t.Fatalf("a refusal must not read as a success: %d %q", status, page)
 	}
-	if _, err := s.WaitCode(time.Second); err == nil {
+	if _, err := s.WaitCode(context.Background(), time.Second); err == nil {
 		t.Fatal("a refused sign-in must fail the login")
 	} else if !strings.Contains(err.Error(), "access_denied") {
 		t.Fatalf("the error must name what the server said: %v", err)
@@ -119,28 +125,31 @@ func TestWaitCodeRefusesACallbackWithNoCode(t *testing.T) {
 		t.Fatalf("a callback with no code must not read as a success: %d %q", status, page)
 	}
 
-	if _, err := s.WaitCode(time.Second); err == nil {
+	if _, err := s.WaitCode(context.Background(), time.Second); err == nil {
 		t.Fatal("a callback with no code must be refused")
 	}
 }
 
-// A second matching hit changes nothing: the first answer stands.
+// A second matching hit changes nothing: the first answer stands. What the
+// second browser is told is in finish_test.go.
 func TestASecondCallbackChangesNothing(t *testing.T) {
 	s, err := Listen("STATE1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	hit(t, s.Addr(), callback("FIRST", "STATE1"))
-	hit(t, s.Addr(), callback("SECOND", "STATE1"))
-
-	code, err := s.WaitCode(time.Second)
+	first := hitAsync(s.Addr(), callback("FIRST", "STATE1"))
+	code, err := s.WaitCode(context.Background(), time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
+	take(t, hitAsync(s.Addr(), callback("SECOND", "STATE1")))
+
 	if code != "FIRST" {
 		t.Fatalf("the first callback is the one that counts: %q", code)
 	}
+	s.Finish(nil)
+	take(t, first)
 }
 
 // Nothing but /callback is served.
@@ -159,7 +168,7 @@ func TestAnotherPathIsNotTheCallback(t *testing.T) {
 	if resp.StatusCode == http.StatusOK {
 		t.Fatalf("only /callback is served, got %d", resp.StatusCode)
 	}
-	if _, err := s.WaitCode(20 * time.Millisecond); err == nil {
+	if _, err := s.WaitCode(context.Background(), 20*time.Millisecond); err == nil {
 		t.Fatal("a hit on another path must not end the wait")
 	}
 }
@@ -172,7 +181,7 @@ func TestWaitCodeTimesOut(t *testing.T) {
 	defer s.Close()
 
 	start := time.Now()
-	if _, err := s.WaitCode(20 * time.Millisecond); err == nil {
+	if _, err := s.WaitCode(context.Background(), 20*time.Millisecond); err == nil {
 		t.Fatal("waiting for a callback that never comes must end in an error")
 	}
 	if time.Since(start) > 2*time.Second {

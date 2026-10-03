@@ -818,7 +818,7 @@ func openCreated(t *testing.T, w *wire) *Session {
 func TestASentErrorStillCarriesItsCause(t *testing.T) {
 	cause := errors.New("the cause the caller asks for")
 
-	err := mark(true, fmt.Errorf("the server answered 200 and then: %w", cause))
+	err := mark(http.StatusOK, fmt.Errorf("the server answered 200 and then: %w", cause))
 
 	if !wasSent(err) {
 		t.Fatalf("err = %q, want it marked as sent", err)
@@ -826,8 +826,11 @@ func TestASentErrorStillCarriesItsCause(t *testing.T) {
 	if !errors.Is(err, cause) {
 		t.Errorf("errors.Is could not reach the cause through the sent error: %q", err)
 	}
-	if !errors.Is(mark(false, fmt.Errorf("nothing was sent: %w", cause)), cause) {
+	if !errors.Is(mark(http.StatusBadRequest, fmt.Errorf("nothing was sent: %w", cause)), cause) {
 		t.Error("an unmarked error lost its cause too, so the wrapping itself is wrong")
+	}
+	if !errors.Is(mark(http.StatusInternalServerError, fmt.Errorf("the answer was lost: %w", cause)), cause) {
+		t.Error("an unknown error lost its cause, so the wrapping itself is wrong")
 	}
 }
 

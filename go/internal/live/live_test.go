@@ -204,9 +204,10 @@ func TestLiveProposeReplyWithdraw(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	// The probe first, because it is what propose runs before it writes: an
-	// unenrolled project makes every assertion below meaningless, and the
-	// probe is the one that says so.
+	// The probe first, and this test is the one running it: an unenrolled
+	// project makes every assertion below meaningless, and the probe is the
+	// one that says so. No command does this any more, so a failure below is
+	// about propose rather than about the day.
 	report, err := probe.Run(ctx, s, folder)
 	for _, w := range report.Warnings {
 		t.Logf("probe warning: %s", w)

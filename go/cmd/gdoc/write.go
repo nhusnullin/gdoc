@@ -27,13 +27,15 @@ import (
 	"gdoc/internal/markers"
 	"gdoc/internal/probe"
 	"gdoc/internal/propose"
+	"gdoc/internal/publish"
 	"gdoc/internal/reply"
 	"gdoc/internal/withdraw"
 )
 
-// probeData is what `gdoc probe` prints, and what rides inside a propose run.
-// The report's own warnings are hoisted onto the envelope instead, where every
-// other warning in this binary lives.
+// probeData is what `gdoc probe` prints, and nothing else: propose stopped
+// running the probe on 2026-10-02 and carries no probe object. The report's own
+// warnings are hoisted onto the envelope instead, where every other warning in
+// this binary lives.
 type probeData struct {
 	Enrolled        bool     `json:"enrolled"`
 	ProbeDocumentID string   `json:"probe_document_id,omitempty"`
@@ -107,7 +109,7 @@ type replyData struct {
 	Verified   bool   `json:"verified"`
 }
 
-func cmdReply(a *args) emit.Result {
+func cmdReply(ctx context.Context, a *args) emit.Result {
 	path, err := required(a, "--body-file")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -130,7 +132,16 @@ func cmdReply(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	res, err := reply.Post(context.Background(), r.session, r.id, commentID, body)
+	// The caller's time is read here and nowhere after here. A call that is
+	// already over posts nothing, and a call that runs out as the reply goes
+	// out still reads the thread back: a reply in somebody's document reported
+	// as unverified is a reply nobody can find again. TestReplyNeverCutsItsReadBack
+	// is the pin.
+	if ctx.Err() != nil {
+		return emit.Result{OK: false, Warnings: r.warnings(),
+			Error: "the time for this call ran out before the reply was sent, so nothing was written. Call again"}
+	}
+	res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, commentID, body)
 	data := replyData{
 		DocumentID: r.id,
 		CommentID:  commentID,
@@ -159,15 +170,19 @@ func readBody(path string) (string, error) {
 }
 
 // proposalReport is one proposal as the envelope carries it. Sent is the fact
-// the skill reads first: a run stopped by the probe reports every proposal, and
-// each one says gdoc got no answer saying it landed.
+// the skill reads first: a run stopped part way reports every proposal in the
+// file, and each one answers `sent` for itself.
 //
 // That is what the field means, and it is narrower than "it never left the
-// machine". A guard refusal and a 4xx never changed the document, and a 5xx or
-// a dropped connection is the third case: the request was written and may have
-// been applied, and gdoc cannot tell. The envelope's own error names it on that
-// path, so read the error beside the flag rather than the flag alone, and read
-// the document before proposing the same words again.
+// machine". A guard refusal and a 4xx never changed the document. A 5xx or a
+// dropped connection after the request went out is the third case, and Outcome
+// is the field that says so: it is "unknown" on that one entry, and absent
+// everywhere else. The envelope's own error names it too, and both say the same
+// thing, which is that the document has to be read before the same words are
+// proposed again. TestALostAnswerIsOutcomeUnknownAndStops is the pin.
+//
+// Outcome is a fact about the answer. Nothing here says the proposal should be
+// sent again: that is a judgement, and it belongs to whoever reads the document.
 // Each kind reports the placement it was asked for and leaves the other kind's
 // fields out: a words proposal names quoted and replacement, a block names
 // after, or replace_from and replace_to. They are the words the file asked for
@@ -180,6 +195,7 @@ type proposalReport struct {
 	ReplaceFrom        string         `json:"replace_from,omitempty"`
 	ReplaceTo          string         `json:"replace_to,omitempty"`
 	Sent               bool           `json:"sent"`
+	Outcome            string         `json:"outcome,omitempty"`
 	SuggestionIDs      []string       `json:"suggestion_ids,omitempty"`
 	CommentID          string         `json:"comment_id,omitempty"`
 	CommentUpdateState string         `json:"comment_update_state,omitempty"`
@@ -192,17 +208,12 @@ type proposeData struct {
 	DocumentID   string           `json:"document_id"`
 	Tabs         int              `json:"tabs"`
 	MultiTab     bool             `json:"multi_tab"`
-	Probe        *probeData       `json:"probe,omitempty"`
 	Proposals    []proposalReport `json:"proposals"`
 	FilesChanged []string         `json:"files_changed,omitempty"`
 }
 
-func cmdPropose(a *args) emit.Result {
+func cmdPropose(ctx context.Context, a *args) emit.Result {
 	from, err := required(a, "--from")
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
-	folder, err := required(a, "--folder")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -214,40 +225,51 @@ func cmdPropose(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	probeFolder, err := folderID(folder)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+	// --folder bought the probe its throwaway document, and there is no probe.
+	// The flag is still read as a folder id, so a caller who pointed it at a
+	// document hears about it rather than having the mistake quietly dropped,
+	// and the run says the flag does nothing.
+	// TestTheFolderFlagIsAcceptedAndIgnored and
+	// TestProposeStillRefusesAMalformedFolder are the pins.
+	var warns []string
+	if a.has("--folder") {
+		if _, err := folderID(a.flags["--folder"]); err != nil {
+			return emit.Result{OK: false, Error: err.Error()}
+		}
+		warns = append(warns, "--folder is ignored: propose no longer creates a working copy, and the flag will be removed in a later release")
 	}
 	// The note is checked before the session is opened. A note paired with
 	// another document would be handed this document's provenance, and
 	// provenance is the permission withdraw reads.
+	// Every refusal from here on carries warns. The flag's warning is the one
+	// signal telling a v2.7 caller to stop sending it, and the caller whose note
+	// is mispaired or whose token is gone is the caller running an old script.
+	// TestTheFolderWarningSurvivesEveryRefusalAfterIt is the pin.
 	note, err := pairedNote(a, docID)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
 	}
 
-	// One policy, two doors: the document at LevelSuggest, and the probe's
-	// folder as the one place a create may land. The probe document itself is
-	// learned from the create the guard carried.
+	// One policy, one door: the document at LevelSuggest. The probe's create
+	// door went with the probe, and nothing here creates anything.
+	// TestProposeRunsNoProbe is the pin.
 	p := guard.NewPolicy()
 	p.AllowFile(docID, guard.LevelSuggest)
-	p.AllowCreateIn(probeFolder)
 	s, err := openSession(p)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
 	}
 	r := &reach{id: docID, session: s}
-	return runPropose(r, probeFolder, proposals, note)
+	return runPropose(ctx, r, proposals, note, warns...)
 }
 
-// runPropose is the run itself: read, probe, then one proposal at a time.
-func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note *notePath) emit.Result {
-	ctx := context.Background()
-	var warns []string
+// runPropose is the run itself: read, then one proposal at a time.
+func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, seed ...string) emit.Result {
+	warns := append([]string{}, seed...)
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(warns...)}
 	}
 	data := proposeData{
 		DocumentID: r.id,
@@ -257,39 +279,61 @@ func runPropose(r *reach, probeFolder string, proposals []propose.Proposal, note
 	}
 	if d.MultiTab() {
 		// A proposal names one range, and a range means nothing without saying
-		// which tab it is in. Nothing is sent, the probe included.
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(),
+		// which tab it is in. Nothing is sent.
+		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
 			Error: fmt.Sprintf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))}
-	}
-
-	report, err := probe.Run(ctx, r.session, probeFolder)
-	shown := probeReport(report)
-	data.Probe = &shown
-	warns = append(warns, report.Warnings...)
-	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
-			Error: fmt.Sprintf("the capability probe could not be run, so whether SUGGEST is honoured today is unknown and nothing was proposed: %v", err)}
-	}
-	if !report.Enrolled {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
-			Error: "the probe document came back with the suggested word as plain text, so SUGGEST is not honoured for this project today and nothing was proposed"}
 	}
 
 	// One proposal at a time, each after its own fresh read, because the first
 	// one moves the ground under the second. The run stops at the first one that
-	// cannot be sent, and the report still carries one entry per proposal in the
-	// file: each entry answers `sent` for itself, so a stop in the middle names
-	// what landed and what never left rather than shortening the list.
+	// cannot be sent, and at the first one the read-backs cannot confirm, and the
+	// report still carries one entry per proposal in the file: each entry answers
+	// `sent` for itself, so a stop in the middle names what landed and what never
+	// left rather than shortening the list.
 	results := make([]propose.Result, 0, len(proposals))
 	for i, one := range proposals {
-		res, err := propose.Apply(ctx, r.session, r.id, one)
+		// The caller's time is read between proposals and nowhere inside one.
+		// What a deadline costs is the proposals that were not reached, and the
+		// sentence says how far the run got so the next call sends the rest
+		// rather than the file. TestProposeStopsBetweenProposalsWhenTimeRunsOut
+		// is the pin.
+		if ctx.Err() != nil {
+			data.FilesChanged, warns = record(note, results, warns)
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf(
+					"the time for this call ran out after %d of %d; nothing after that was sent. Call again with the rest",
+					i, len(proposals))}
+		}
+		// WithoutCancel, so a proposal that went out is read back through all
+		// three routes whatever the caller's clock says: a suggestion in
+		// somebody's document that gdoc did not read back is a change nobody
+		// can account for. TestAReadBackIsNeverCutByTheDeadline is the pin.
+		res, err := propose.Apply(context.WithoutCancel(ctx), r.session, r.id, one)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
+			if res.Outcome == propose.OutcomeUnknown {
+				// The batch went out and nothing came back. The entry stays
+				// `sent: false`, which is what that field means, and the outcome
+				// beside it is what stops it from reading as a change that never
+				// left. Nothing is retried, and nothing behind it is sent.
+				data.Proposals[i].Outcome = res.Outcome
+				return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+					Error: fmt.Sprintf(
+						"proposal %d (%q) was written and its answer was lost, so it may or may not be in the document. Read the suggestions before proposing it again",
+						i+1, res.Quote())}
+			}
 			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
 		}
 		results = append(results, res)
 		data.Proposals[i] = sent(res)
 		warns = append(warns, about(res.Quote(), res.Warnings)...)
+		if !confirmed(res.Checks) {
+			data.FilesChanged, warns = record(note, results, warns)
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf(
+					"gdoc could not confirm that proposal %d (%q) landed as a suggestion, so nothing after it was sent. Look at it in the browser before proposing again: %s",
+					i+1, res.Quote(), publish.DocumentURL(r.id))}
+		}
 	}
 	data.FilesChanged, warns = record(note, results, warns)
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
@@ -327,6 +371,24 @@ func sent(r propose.Result) proposalReport {
 	}
 }
 
+// confirmed is whether the two routes that read the document itself both said
+// the change is in there as a suggestion. It is the bound on there being no
+// probe: nothing asks Google up front whether SUGGEST is honoured today, so the
+// run finds out from the first proposal's read-backs and stops there.
+//
+// The export is not asked. It answers a different question, whether the comment
+// is attached to the words, and a comment that did not arrive is an explanation
+// lost rather than a change that went in as an edit: the suggestion is still a
+// suggestion. TestAFalseInlineCheckStopsTheRun,
+// TestAFalsePreviewCheckStopsTheRun, TestAReadBackThatFailedStopsTheRun and
+// TestAFalseDocxCheckAloneDoesNotStop are the four pins.
+//
+// A read-back that could not be made is false, because Verify leaves a route
+// false when its read fails: not knowing is not a reason to send the rest.
+func confirmed(c propose.Checks) bool {
+	return c.SuggestionsInline && c.PreviewWithoutSuggestions
+}
+
 // about names which proposal a warning belongs to. The envelope carries one
 // list, and a run with two proposals in it would otherwise report a route that
 // did not hold without saying which change it was about.
@@ -352,8 +414,8 @@ func about(quoted string, warns []string) []string {
 // route it would have come from.
 //
 // The note is read again here rather than reused from the pairing check. Between
-// the two sits the probe, a read and a write per proposal and three read-backs
-// each, which is seconds to tens of seconds; these notes live in a synced vault,
+// the two sits a read and a write per proposal and three read-backs each, which
+// is seconds to tens of seconds; these notes live in a synced vault,
 // and writing the bytes this run started with would throw away whatever landed
 // in that window. A note that has stopped naming this document is left alone and
 // said so, because the proposals belong to a pairing it no longer records.
@@ -478,8 +540,8 @@ func readNote(path, docID string) (*notePath, error) {
 }
 
 // readProposals reads the list the skill wrote. An empty list is refused rather
-// than run: a probe document would be created and trashed for a run with
-// nothing to propose.
+// than run: a session is opened and a document read for a run with nothing to
+// propose.
 //
 // The read is strict, for the reason parseArgsN refuses an unknown flag and
 // frontmatter reads with yaml.Strict(). A misspelled `quoted`, `replacement` or
@@ -513,10 +575,10 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)
 	}
-	// Every proposal is checked here, before the probe and before the first
-	// write, for the reason the empty list is refused here: all of them are in
-	// hand, and a third entry refused after the first two have landed is a run
-	// that half happened in somebody's document.
+	// Every proposal is checked here, before the session is opened and before
+	// the first write, for the reason the empty list is refused here: all of
+	// them are in hand, and a third entry refused after the first two have
+	// landed is a run that half happened in somebody's document.
 	for i, p := range out {
 		if err := p.Check(); err != nil {
 			return nil, fmt.Errorf("%s proposals[%d]: %w", path, i, err)

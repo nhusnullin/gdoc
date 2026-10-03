@@ -151,11 +151,14 @@
 //
 // Enrolled today is not a guarantee for tomorrow, and the earlier measurement
 // is what says so. The field is a statement of intent rather than a guarantee,
-// and what makes a write trustworthy is the capability probe before it and the
-// read-back after it, neither of which lives here. Widening or narrowing what
-// isSuggestMode permits is Nail's decision, not a refactor. That bar is the one
-// LevelInPlace removes for a single id, which is why an allowlist of request
-// kinds stands in its place there.
+// and what makes a write trustworthy is the read-back after it, which does not
+// live here. Nothing asks Google up front any more: the capability probe went on
+// 2026-10-02, and cmd/gdoc now stops a propose run at the first proposal whose
+// read-backs do not confirm it landed as a suggestion. DECISIONS.md's entry of
+// that date holds why. Widening or narrowing what isSuggestMode permits is
+// Nail's decision, not a refactor. That bar is the one LevelInPlace removes for
+// a single id, which is why an allowlist of request kinds stands in its place
+// there.
 //
 // # One body, read exactly, and read once
 //
@@ -389,13 +392,15 @@
 // TestThePreludeNeedsNoGrantAtAll stating the other half: the prelude itself is
 // an ordinary SUGGEST batch on a document with no grant of any kind.
 //
-// There is no capability probe at this level, and the read-back stands alone. A
-// proposal is probed because what makes it a suggestion is writeMode, a field
-// gdoc supplies and Google has ignored once. LevelInPlace makes no claim of that
-// kind to the server, so there is nothing for a probe to test. What replaces the
-// second bar is reading the document back. That sentence is about this level and
-// not about the whole run: the prelude phase in front of it does make the
-// writeMode claim, and internal/prelude says why it is unprobed too.
+// There is no capability probe at this level, and the read-back stands alone.
+// There is none anywhere else either since 2026-10-02, but the reason here is
+// its own: a proposal claims to be a suggestion through writeMode, a field gdoc
+// supplies and Google has ignored once, and LevelInPlace makes no claim of that
+// kind to the server, so there would be nothing for a probe to test even on a
+// day when one existed. What stands as the only bar is reading the document
+// back. That sentence is about this level and not about the whole run: the
+// prelude phase in front of it does make the writeMode claim, and
+// internal/prelude says why it is unprobed too.
 //
 // # The multipart create is three signals that have to agree
 //

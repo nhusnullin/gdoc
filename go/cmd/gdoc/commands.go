@@ -170,8 +170,8 @@ func commands() []command {
 			},
 			summary: "Print the document as text, with the ids a comment or a suggestion is named by.",
 			example: "gdoc read https://docs.google.com/document/d/1AbC.../edit",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdRead(a)
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdRead(ctx, a)
 			},
 		},
 		{
@@ -196,8 +196,8 @@ func commands() []command {
 			},
 			summary: "List the suggestions pending in the document.",
 			example: "gdoc suggestions https://docs.google.com/document/d/1AbC.../edit --md note.md",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdSuggestions(a)
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdSuggestions(ctx, a)
 			},
 		},
 		{
@@ -245,8 +245,8 @@ func commands() []command {
 			},
 			summary: "Write one reply into a comment thread, under the robot prefix.",
 			example: "gdoc reply https://docs.google.com/document/d/1AbC.../edit AAAA1234 --body-file reply.txt",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdReply(a)
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdReply(ctx, a)
 			},
 		},
 		{
@@ -254,13 +254,13 @@ func commands() []command {
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to)"},
-				{"--folder", kindFolderID, needRequired, "the Drive folder the working copy is created in"},
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
+				{"--folder", kindFolderID, needOptional, "ignored: propose no longer creates a working copy, and the flag will be removed in a later release"},
 			},
 			summary: "Propose changes as native suggestions, each with the comment that says why.",
-			example: "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --folder 1AbC... --md note.md",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdPropose(a)
+			example: "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --md note.md",
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdPropose(ctx, a)
 			},
 		},
 		{
@@ -285,8 +285,8 @@ func commands() []command {
 			},
 			summary: "Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
 			example: "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdAnnotate(a)
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdAnnotate(ctx, a)
 			},
 		},
 		{

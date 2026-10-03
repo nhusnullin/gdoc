@@ -284,7 +284,7 @@ each with its own read, stops at the first that cannot be sent with
 ```json
 {"requests": [{"insertComment": {"range": {"startIndex": 41, "endIndex": 58},
                                   "content": "🤖 The 2026 register says quarterly.",
-                                  "assigneeEmailAddress": "x@altery.com"}}],
+                                  "assigneeEmailAddress": "x@example.com"}}],
  "writeControl": {"writeMode": "SUGGEST"}}
 ```
 
@@ -304,7 +304,7 @@ task, the same day as the code.
 ```json
 [
   {"quoted": "reviewed annually", "why": "The 2026 register says quarterly."},
-  {"quoted": "the Cyprus entity", "why": "Named twice with two spellings.", "assignee": "x@altery.com"}
+  {"quoted": "the Cyprus entity", "why": "Named twice with two spellings.", "assignee": "x@example.com"}
 ]
 ```
 

@@ -800,7 +800,7 @@ that no line touches `.zshrc` outside a `printf`, a `grep` or a comment.
       marketplace is refused, and the two managed-settings lines to hand to
       the administrator where nothing else loads, with the one command that
       tells which case a machine is in; where Claude Code keeps its plugin
-      update toggle; sign in with an `altery.com` account, and that
+      update toggle; sign in with a firm Workspace account, and that
       everyone signs in once more after 2026-09-16; three things to try;
       `gdoc update` and its flags, and that nothing updates on its own; how
       to report; what gdoc never does. Plain English, no em dashes.

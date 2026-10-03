@@ -105,7 +105,7 @@
     },
     {
       "insertComment": {
-        "assigneeEmailAddress": "nail@altery.com",
+        "assigneeEmailAddress": "person@example.com",
         "content": "🤖 the limits section was missing",
         "range": {
           "endIndex": 36,

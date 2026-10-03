@@ -259,7 +259,20 @@ type Result struct {
 	Verified           bool     `json:"verified"`
 	Checks             Checks   `json:"checks"`
 	Warnings           []string `json:"warnings,omitempty"`
+	// Outcome is OutcomeUnknown on the one path where gdoc cannot say whether
+	// the proposal is in the document: the batch was written and its answer was
+	// lost. It is empty everywhere else, because every other path knows.
+	//
+	// It is a fact about the answer and not advice about what to do next.
+	// Nothing here says the proposal should be sent again: that is a judgement,
+	// and it belongs to whoever reads the document.
+	Outcome string `json:"outcome,omitempty"`
 }
+
+// OutcomeUnknown is the one outcome there is. A batch that was written and
+// answered nothing is neither applied nor refused as far as this side can tell,
+// and saying either would be a guess. TestSendNamesALostAnswer is the pin.
+const OutcomeUnknown = "unknown"
 
 // Quote is the words this proposal is known by afterwards: what a words
 // proposal replaced, and where a block went. It is what the note records and
@@ -367,6 +380,16 @@ func send(ctx context.Context, s Session, docID string, body []byte, out *Result
 	answerRead := true
 	var sentErr error
 	if err := s.PostJSON(ctx, BatchURL(docID), json.RawMessage(body), &answer); err != nil {
+		if answerLost(err) {
+			// The bytes went out and nothing came back. Saying the proposal
+			// could not be written would name something gdoc does not know, and
+			// a caller that reads it sends the same change again on top of one
+			// that may already be there. The outcome on the Result is what the
+			// command reports instead, and the run stops: not knowing never
+			// resolves to sending the rest.
+			out.Outcome = OutcomeUnknown
+			return fmt.Errorf("the proposal was written and its answer was lost, so it may or may not be in the document: %w", err)
+		}
 		if !sentAnyway(err) {
 			return fmt.Errorf("the proposal could not be written: %w", err)
 		}
@@ -423,6 +446,18 @@ func send(ctx context.Context, s Session, docID string, body []byte, out *Result
 func sentAnyway(err error) bool {
 	var sent interface{ Sent() bool }
 	return errors.As(err, &sent) && sent.Sent()
+}
+
+// answerLost says whether the write went out and no answer came back. The
+// session marks that case apart from the two it can decide, and this room asks
+// by behaviour for the same reason sentAnyway does: naming a Session interface
+// here is what keeps net/http out, and an imported sentinel would bring it back.
+//
+// It is asked before sentAnyway, because the two marks say different things and
+// only one of them is a change a caller may act on.
+func answerLost(err error) bool {
+	var lost interface{ Unknown() bool }
+	return errors.As(err, &lost) && lost.Unknown()
 }
 
 // stateAllSaved is the one commentUpdateState that means the comment landed

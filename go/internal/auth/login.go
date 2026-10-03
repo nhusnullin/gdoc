@@ -163,34 +163,85 @@ func satisfied(got map[string]bool, want string) bool {
 	return false
 }
 
-// Login prints the authorization URL to w (stderr: stdout is reserved for the
-// one JSON object) and waits. No browser is opened: v2 runs no external
-// programs at all. It opens a listener on a port the kernel picks on
-// 127.0.0.1, and gives up after loginTimeout.
-func Login(c *http.Client, w io.Writer) error {
+// Pending is a login that has been started: the listener is up, the URL is
+// built, and nobody has opened it yet. It is the login in two halves, because
+// the second front door hands the link to a person in one message and finishes
+// the trip in another, with the listener alive in between.
+//
+// A Pending holds an open port, so every path that makes one closes it.
+type Pending struct {
+	// URL is the link the person opens in their own browser.
+	URL string
+
+	srv      *loopback.Server
+	verifier string
+	redirect string
+	client   *http.Client
+}
+
+// StartLogin opens the listener and builds the authorization URL, and returns
+// at once: nothing here waits for a browser. The listener is on a port the
+// kernel picks on 127.0.0.1. No browser is opened: v2 runs no external
+// programs at all.
+//
+// A build with no client secret is refused here rather than at the exchange
+// minutes later, so nothing opens a listener or hands out a link that cannot
+// work. TestStartLoginReturnsTheLinkAtOnce and
+// TestStartLoginRefusesABuildWithNoClientSecret are the pins.
+func StartLogin(c *http.Client) (*Pending, error) {
 	if BundledClientSecret == "" {
-		return errors.New("this build carries no OAuth client secret, so it cannot sign anyone in. " +
+		return nil, errors.New("this build carries no OAuth client secret, so it cannot sign anyone in. " +
 			"A release build carries one; a local build needs GDOC_OAUTH_CLIENT_SECRET set when running make build")
 	}
 	state := randomToken()
 	srv, err := loopback.Listen(state)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer srv.Close()
 	redirect := "http://" + srv.Addr() + "/callback"
 	verifier, authURL := buildAuthURL(redirect, state)
-	fmt.Fprintf(w, "Open this link in your browser to sign in:\n%s\n", authURL)
-	code, err := srv.WaitCode(loginTimeout)
+	return &Pending{URL: authURL, srv: srv, verifier: verifier, redirect: redirect, client: c}, nil
+}
+
+// Wait waits for the browser to come back, exchanges the code and saves the
+// token, then tells the browser what happened. It gives up after loginTimeout,
+// and the context ends it earlier.
+//
+// Every path past the callback answers the browser, through the defer: the
+// person is looking at that tab, and a dropped connection tells them nothing.
+// The page says "Signed in" only once the token is on disk.
+// TestWaitExchangesAndSaves, TestThePageSaysSignedInOnlyAfterTheSave and
+// TestTheBrowserIsAnsweredOnEveryPath are the pins.
+func (p *Pending) Wait(ctx context.Context) (err error) {
+	code, cerr := p.srv.WaitCode(ctx, loginTimeout)
+	if cerr != nil {
+		return cerr // no code arrived, so there is no held request to answer
+	}
+	defer func() { p.srv.Finish(err) }()
+	var tok Token
+	if tok, err = exchangeCode(ctx, p.client, code, p.verifier, p.redirect); err != nil {
+		return err
+	}
+	err = Save(tok)
+	return err
+}
+
+// Close frees the port. It is safe to call twice.
+func (p *Pending) Close() { p.srv.Close() }
+
+// Login prints the authorization URL to w (stderr: stdout is reserved for the
+// one JSON object) and waits. It is StartLogin and Wait in a row, which is the
+// whole of what the CLI's auth login does.
+//
+// The CLI login has no context of its own: nothing above it can cancel a run
+// that is already waiting on a browser, and loginTimeout is what bounds the
+// wait. The exchange after it is bounded by the client's timeout.
+func Login(c *http.Client, w io.Writer) error {
+	p, err := StartLogin(c)
 	if err != nil {
 		return err
 	}
-	// The login has no context of its own: nothing above it can cancel a run
-	// that is already waiting on a browser, and loginTimeout is what bounds the
-	// wait. The exchange after it is bounded by the client's timeout.
-	tok, err := exchangeCode(context.Background(), c, code, verifier, redirect)
-	if err != nil {
-		return err
-	}
-	return Save(tok)
+	defer p.Close()
+	fmt.Fprintf(w, "Open this link in your browser to sign in:\n%s\n", p.URL)
+	return p.Wait(context.Background())
 }

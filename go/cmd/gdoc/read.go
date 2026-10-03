@@ -342,12 +342,12 @@ type readData struct {
 	Structure  any    `json:"structure,omitempty"`
 }
 
-func cmdRead(a *args) emit.Result {
+func cmdRead(ctx context.Context, a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	d, err := docs.Fetch(context.Background(), r.session, r.id)
+	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 	}
@@ -723,12 +723,12 @@ type suggestionsData struct {
 	FilesChanged []string              `json:"files_changed,omitempty"`
 }
 
-func cmdSuggestions(a *args) emit.Result {
+func cmdSuggestions(ctx context.Context, a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	d, err := docs.Fetch(context.Background(), r.session, r.id)
+	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
 		// The read failed, so the snapshot is not written. A snapshot taken now
 		// would report whatever this run could not see as gone on the next one.

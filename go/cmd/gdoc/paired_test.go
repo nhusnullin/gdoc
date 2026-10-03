@@ -107,7 +107,7 @@ func TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList(t *testing.T) {
 		from := tempFile(t, "proposals.json", oneProposal)
 		note := twoEntryNote(t, otherDocID, proposeDocID, "")
 
-		got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+		got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 		if code != 0 || got["ok"] != true {
 			t.Fatalf("a run of the second document the note names must stand: %v (exit %d)", got, code)
 		}
@@ -121,7 +121,7 @@ func TestEveryWriterActsOnTheURLAndRefusesAnIDOutsideTheList(t *testing.T) {
 		from := tempFile(t, "proposals.json", oneProposal)
 		note := twoEntryNote(t, otherDocID, proposeDocID, "")
 
-		got, code := runJSON(t, "propose", thirdDocID, "--from", from, "--folder", testFolderID, "--md", note)
+		got, code := runJSON(t, "propose", thirdDocID, "--from", from, "--md", note)
 		if code == 0 || got["ok"] != false {
 			t.Fatalf("a document the note does not name must be refused: %v (exit %d)", got, code)
 		}
@@ -187,7 +187,7 @@ func TestAProposalIsRecordedUnderItsOwnDocument(t *testing.T) {
 	note := twoEntryNote(t, otherDocID, proposeDocID,
 		"      proposals:\n        - id: suggest.older\n          comment_id: AAAB\n          at: 2026-09-07T09:00:00Z\n")
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+	got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("propose: %v (exit %d)", got, code)
 	}
@@ -304,7 +304,7 @@ func TestEveryWriterRefusesACopyThatNamesANote(t *testing.T) {
 		from := tempFile(t, "proposals.json", oneProposal)
 		note := copyNote(t, proposeDocID)
 
-		got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--folder", testFolderID, "--md", note)
+		got, code := runJSON(t, "propose", proposeDocID, "--from", from, "--md", note)
 		if code == 0 || got["ok"] != false {
 			t.Fatalf("a copy must be refused: %v (exit %d)", got, code)
 		}

@@ -37,7 +37,7 @@
 // keeps going, so valid JSON of the wrong shape reaches the caller with fields
 // in hand. The gate is the decoded field, never the path that was taken.
 //
-// # What is not marked is three cases, not two
+// # What is not marked as sent is three cases, and the third has its own mark
 //
 // A guard refusal never left the machine, and a 4xx is Docs rejecting the
 // request whole. A caller is right to treat both as a change that did not
@@ -45,15 +45,50 @@
 // TestAMultipartCreateTheGuardRefusesIsNotMarkedAsSent pin the refusal,
 // TestAFailedStatusIsNotMarkedAsSent pins the 4xx.
 //
-// A 5xx or a dropped connection is the third, and it is not marked either. gdoc
-// cannot tell it apart: the request was written and may have been applied.
-// Nothing claims otherwise in either direction, so a caller that sees a
-// transport failure or a 5xx reads the document before sending the same write
-// again. Widening the mark to cover it would make every one of those a
-// reported-not-raised failure, and that is a decision for Nail rather than a
-// refactor. TODO(test): no test pins the 5xx case. It takes the same path a
-// 4xx takes, so a change to statusError moves both at once and only the 4xx
-// would fail.
+// A 5xx or a connection that dropped after the request went out is the third,
+// and it is not sent, because nothing said Docs took it. It is marked unknown
+// instead: the bytes were written and whether they were applied is not knowable
+// from this side. unknownError is the mark, and Unknown reports it, asked by
+// behaviour the way Sent is.
+//
+// Which side of the write a failure fell on comes from net/http/httptrace. The
+// transport calls WroteRequest once the request bytes are out, so a guard
+// refusal, a connection that was never made and a handshake that never finished
+// never reach it and stay unmarked. A 5xx needs no hook: the request was written
+// to get that answer. TestAFiveHundredAfterTheWriteIsMarkedUnknown,
+// TestADropAfterTheWriteIsMarkedUnknown and
+// TestNothingBeforeTheWriteIsMarkedUnknown are the three pins, and the last of
+// them runs the dial and the handshake through a real transport, so what it
+// holds is the transport's own behaviour rather than a fake's.
+//
+// Unknown is a fact and not advice. Nothing here says the write should be made
+// again; the one honest next step is to read the document, and the writer
+// package says so in its own words.
+//
+// # A refresh never writes an old login over a newer one
+//
+// A session remembers the refresh token the file held when it took its token,
+// and a refresh reads the file again twice: once before the exchange and once
+// before the save. Both ask whether the file still carries that refresh token.
+// When it does not, somebody signed in again, and the file's token wins: the
+// session takes it, refreshes it only if it too has expired, and saves nothing.
+// TestARefreshAfterANewerLoginSavesNothing,
+// TestARefreshAfterANewerExpiredLoginRefreshesThatOne and
+// TestALoginBetweenTheRefreshAndTheSaveWins are the three pins, one per point
+// at which the login can land.
+//
+// This matters because a session lives longer than one command now. A chat
+// session opened before a re-login would otherwise refresh the signed-out
+// account an hour later and write it back over the new one, and the next
+// command would read it.
+//
+// Two things hold the rule from overreaching. Nothing locks: Google omits the
+// refresh token on a refresh and auth.Refresh keeps the old one, so two
+// refreshes of one login both save a working token, which
+// TestTwoRefreshesOfOneLoginBothSave pins. And a refresh refuses to save a
+// token carrying no refresh token at all, since that save turns an expired
+// access token into a login nobody can renew:
+// TestARefreshNeverWritesAnEmptyRefreshToken.
 package gapi
 
 import (
@@ -66,8 +101,10 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"net/http/httptrace"
 	"net/textproto"
 	"net/url"
+	"sync/atomic"
 
 	"gdoc/internal/auth"
 	"gdoc/internal/guard"
@@ -92,6 +129,30 @@ func (e sentError) Sent() bool { return true }
 // sent wraps err as having happened after a 2xx answer.
 func sent(err error) error { return sentError{err: err} }
 
+// unknownError marks a failure where the request was written and no answer
+// saying what became of it ever arrived. It is the one case gdoc cannot decide:
+// the bytes went out, and whether Docs applied them is not knowable from this
+// side.
+//
+// It is a separate mark rather than a widening of sentError, because the two say
+// different things. Sent says Docs took the request, which a caller may act on.
+// Unknown says nobody knows, and the only honest next step is to read the
+// document.
+//
+// It is a method rather than an exported sentinel for the same reason sentError
+// is: a writer package asks by behaviour, and an exported sentinel here would
+// bring net/http into that room through the side door.
+type unknownError struct{ err error }
+
+func (e unknownError) Error() string { return e.err.Error() }
+func (e unknownError) Unwrap() error { return e.err }
+
+// Unknown says the request was written and its answer was lost.
+func (e unknownError) Unknown() bool { return true }
+
+// unknown wraps err as having happened after the request bytes were out.
+func unknown(err error) error { return unknownError{err: err} }
+
 // maxErrorBody caps what is read from a failed request. The body is never
 // printed, only Google's error.message is, so this is a bound on the parse.
 const maxErrorBody = 1 << 20
@@ -107,11 +168,17 @@ const MaxJSONBody = 64 << 20
 // It is not safe for concurrent use. A command reads in one goroutine, and
 // making it safe would mean guarding the token a refresh replaces.
 type Session struct {
-	policy    *guard.Policy
-	client    *http.Client
-	token     auth.Token
+	policy *guard.Policy
+	client *http.Client
+	token  auth.Token
+	// loaded is the refresh token the file held when this session took the
+	// token it is using. It is how a refresh tells its own login from a newer
+	// one: a refresh token the file no longer carries belongs to an account
+	// somebody has already signed out of.
+	loaded    string
 	warnings  []string
 	refreshed bool // the refresh is said once, however many requests follow it
+	adopted   bool // so is the newer login
 }
 
 // Open loads the token and builds the guard's client from p. A base of nil
@@ -122,7 +189,7 @@ func Open(p *guard.Policy, base http.RoundTripper) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Session{policy: p, client: guard.NewClient(p, base), token: tok}, nil
+	return &Session{policy: p, client: guard.NewClient(p, base), token: tok, loaded: tok.RefreshToken}, nil
 }
 
 // Warnings is the policy's warnings followed by the session's own, in that
@@ -353,7 +420,15 @@ func (s *Session) send(ctx context.Context, rawURL string, build requestFor, lim
 		}
 	}
 	if status < 200 || status > 299 {
-		return nil, statusError(rawURL, status, body)
+		err := statusError(rawURL, status, body)
+		if status >= 500 {
+			// A 500 is Google answering that something went wrong on its side,
+			// and the request was written to get that answer. Whether the batch
+			// was applied before it failed is not knowable from here.
+			// TestAFiveHundredAfterTheWriteIsMarkedUnknown is the pin.
+			return nil, unknown(err)
+		}
+		return nil, err
 	}
 	return body, nil
 }
@@ -362,6 +437,24 @@ func (s *Session) send(ctx context.Context, rawURL string, build requestFor, lim
 // which is what a guard refusal is, comes back as the error; a status the
 // caller has to decide about does not.
 func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, rawURL string) ([]byte, int, error) {
+	// The hook is the one fact that tells a request that never left from a
+	// request whose answer was lost. http.Transport calls WroteRequest once the
+	// bytes are out, so a guard refusal, a connection that was never made and a
+	// handshake that never finished never reach it.
+	//
+	// It is attached before build, because the request carries the context and
+	// httptrace reads the trace off the request's own context. wrote is atomic
+	// because the hook runs on the transport's write goroutine.
+	// TestADropAfterTheWriteIsMarkedUnknown and
+	// TestNothingBeforeTheWriteIsMarkedUnknown are the pins.
+	var wrote atomic.Bool
+	ctx = httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			if info.Err == nil {
+				wrote.Store(true)
+			}
+		},
+	})
 	req, err := build(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -372,6 +465,9 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		if wrote.Load() {
+			return nil, 0, unknown(unwrapRequestError(err))
+		}
 		return nil, 0, unwrapRequestError(err)
 	}
 	defer resp.Body.Close()
@@ -387,7 +483,7 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 	// is not JSON, and both name something the server did not do.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, read+1))
 	if err != nil {
-		return nil, 0, mark(ok, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err))
+		return nil, 0, mark(resp.StatusCode, fmt.Errorf("the answer from %s could not be read: %w", rawURL, err))
 	}
 	if int64(len(body)) > read {
 		if !ok {
@@ -400,44 +496,128 @@ func (s *Session) attempt(ctx context.Context, build requestFor, limit int64, ra
 	return body, resp.StatusCode, nil
 }
 
-// mark wraps err as sent when the server had answered 2xx before it happened.
+// mark wraps err by what the status the server answered says about the
+// request's fate: a 2xx is sent, a 5xx is unknown, and a 4xx is left alone.
 //
-// It is the most this package can say, and not the whole of what can go wrong.
-// An unmarked failure is one of three: a guard refusal, where nothing left the
-// machine; a 4xx, where Docs rejected the batch whole; and a 5xx or a dropped
-// connection, where the request was written and gdoc cannot tell whether it was
-// applied. The third is not a claim this makes either way, so a caller reading
-// a transport failure or a 5xx should look at the document before sending the
-// same write again.
-func mark(ok bool, err error) error {
-	if !ok {
-		return err
+// It takes the status rather than a bool because the three answers are three
+// different things, and a 5xx whose body then fails to read is the case a bool
+// flattened: the request was written and the answer that would have said what
+// became of it never finished arriving. A failure this leaves alone is one of
+// two: a guard refusal, where nothing left the machine, and a 4xx, where Docs
+// rejected the batch whole. Both are a change that did not happen. A caller
+// reading the unknown mark looks at the document before sending the same write
+// again. TestAFiveHundredWhoseBodyFailsIsStillUnknown is the pin.
+func mark(status int, err error) error {
+	switch {
+	case status >= 200 && status <= 299:
+		return sent(err)
+	case status >= 500:
+		return unknown(err)
 	}
-	return sent(err)
+	return err
 }
 
 // refresh exchanges the refresh token, saves the result and says so once. A
 // refresh that fails names the failure and saves nothing: a half-written token
 // is worse than an expired one.
 //
+// It reads the token file twice, once before the exchange and once before the
+// save, because a login can land at any point in between. Both reads ask one
+// question: does the file still carry the refresh token this session is using?
+// When it does not, somebody signed in again, the file's token wins, and this
+// refresh saves nothing. Without that, a session opened an hour before a
+// re-login would write the signed-out account back over the new one.
+//
 // It carries the caller's context, because a refresh is one more request inside
 // whatever the caller is bounded by. A poll inside `comments --wait` runs on
 // that call's deadline, and a refresh that ignored it would be the one request
 // in a poll that neither the deadline nor a Ctrl-C could reach.
 func (s *Session) refresh(ctx context.Context) error {
+	newer, err := s.newerLogin()
+	if err != nil {
+		return err
+	}
+	if newer != nil {
+		s.adopt(*newer)
+		// A newer login that is still live needs no request at all.
+		if !newer.Expired() {
+			return nil
+		}
+	}
 	tok, err := s.token.Refresh(ctx, s.client)
 	if err != nil {
 		return fmt.Errorf("the access token could not be refreshed: %w", err)
+	}
+	// Google omits the refresh token on a refresh and auth.Refresh keeps the
+	// old one, so an empty one here means the token this session holds could
+	// not have been refreshed again either. Saving it would turn one expired
+	// access token into a login nobody can renew.
+	if tok.RefreshToken == "" {
+		return errors.New("the refreshed token carries no refresh token, so it was not saved. Run: gdoc auth login")
+	}
+	newer, err = s.newerLogin()
+	if err != nil {
+		return err
+	}
+	if newer != nil {
+		s.adopt(*newer)
+		return nil
 	}
 	if err := auth.Save(tok); err != nil {
 		return fmt.Errorf("the refreshed token could not be saved: %w", err)
 	}
 	s.token = tok
+	// loaded follows the save, because the file now holds what was just
+	// written. Google omits the refresh token on most refreshes and the old one
+	// is kept, so this is usually the same string; on the refresh where Google
+	// rotates it, leaving loaded behind would make the session's next
+	// newerLogin read its own save as somebody else's sign-in, warn about a
+	// newer sign-in that never happened, and then refuse to refresh a token it
+	// believes is another account's.
+	// TestARotatedRefreshTokenIsNotASecondLogin is the pin.
+	s.loaded = tok.RefreshToken
 	if !s.refreshed {
 		s.refreshed = true
 		s.warnings = append(s.warnings, "the access token was refreshed and saved")
 	}
 	return nil
+}
+
+// newerLogin reads the token file and returns its token when the file no longer
+// carries the refresh token this session is using. A nil token means the file
+// still holds this session's own login, which is the ordinary case.
+//
+// A file that cannot be read is the error, and the refresh stops on it. At this
+// point the session is about to write a credential, and a file it could not
+// read is a file it cannot say is not somebody's newer login.
+func (s *Session) newerLogin() (*auth.Token, error) {
+	tok, err := auth.Load()
+	if err != nil {
+		return nil, fmt.Errorf("the token file could not be read before refreshing: %w", err)
+	}
+	if tok.RefreshToken == s.loaded {
+		return nil, nil
+	}
+	return &tok, nil
+}
+
+// adopt takes the file's token as this session's own and says so once. The
+// adoption itself writes nothing: the file is already what it is being set to.
+//
+// The warning says what happened and not what was saved, because what follows
+// decides that. A newer login that is still live ends the refresh and nothing is
+// written, and a newer login that is itself expired is refreshed and saved,
+// where the refresh's own warning says so. One sentence claiming nothing was
+// saved would be false on the second path, and the two warnings would sit on the
+// same envelope contradicting each other.
+// TestAnAdoptedExpiredLoginSaysOnlyOneThingAboutTheSave is the pin.
+func (s *Session) adopt(tok auth.Token) {
+	s.token = tok
+	s.loaded = tok.RefreshToken
+	if !s.adopted {
+		s.adopted = true
+		s.warnings = append(s.warnings, "a newer sign-in was found in the token file and used")
+	}
 }
 
 // statusError carries the status and the server's own message, and never the

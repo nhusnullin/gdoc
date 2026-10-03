@@ -43,9 +43,10 @@
 //     reads read and comments --witness make.
 //   - restyle <url> --dry-run | --from [--fields]: the survey, the house style
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
-//   - probe --folder: whether Docs honours SUGGEST today. internal/probe.
+//   - probe --folder: whether Docs honours SUGGEST today, asked by hand.
+//     internal/probe.
 //   - reply <url> <comment id> --body-file: one robot reply. internal/reply.
-//   - propose <url> --from --folder [--md]: a change as a suggestion, either
+//   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
 //     internal/propose.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
@@ -443,10 +444,38 @@
 // dispatch still takes a context, because a test hands a wait one that is
 // already done.
 //
+// # The chat commands take the context they are handed, and no write is cut from its read-back
+//
+// read, comments, suggestions, reply, propose and annotate run on the context
+// dispatch hands them. A caller that stops the call stops the reads: a cancelled
+// context reaches the session, nothing is written, and the envelope fails naming
+// the cancellation rather than blaming Google for a read that was never made.
+// TestACancelledContextCancelsTheRead is the pin, and the fake session answers
+// a done context the way net/http does, so a command that dropped it would not
+// pass.
+//
+// Inside one write the context decides nothing. propose and annotate read
+// ctx.Err() before each item and hand the item itself
+// context.WithoutCancel(ctx), so a proposal or a comment that went out is read
+// back through every route whatever the caller's clock says: a suggestion in
+// somebody's document that gdoc did not read back is a change nobody can
+// account for. reply is the same rule with one item, read before the post.
+//
+// What a deadline costs is the items that were not reached. They stay
+// sent: false, and the sentence says how far the run got, so the next call sends
+// the rest rather than the file again. TestProposeStopsBetweenProposalsWhenTimeRunsOut,
+// TestAReadBackIsNeverCutByTheDeadline,
+// TestAnnotateStopsBetweenItemsWhenTimeRunsOut and
+// TestReplyNeverCutsItsReadBack are the four pins.
+//
+// probe and withdraw keep context.Background(). Neither is a chat tool: the
+// probe is a command somebody types to ask what Docs does today, and a withdraw
+// is one retraction that has a note to rewrite behind it.
+//
 // # The proposals file holds both kinds, and a block field needs the block kind
 //
-// One list, read strictly, and every entry checked before the probe runs and
-// before the first write: all of them are in hand, and a third entry refused
+// One list, read strictly, and every entry checked before the first write: all
+// of them are in hand, and a third entry refused
 // after the first two have landed is a run that half happened in somebody's
 // document. An entry is either the words kind, which names quoted and
 // replacement, or the block kind, which names kind: block, content, and either
@@ -480,22 +509,90 @@
 // the first of a replace's two: TestProposeRecordsABlocksPlacementInTheNote and
 // TestProposeRecordsAReplacesFirstQuoteInTheNote.
 //
-// # annotate takes no folder and no note
+// # propose stops at the first proposal the read-backs cannot confirm
 //
-// The writers before it each carry something annotate does not, and in both
-// cases what is missing is a question this command cannot ask wrongly.
+// Two of the three read-backs read the document itself: suggestions_inline says
+// the replacement is in there carrying a suggestion id, and
+// preview_without_suggestions says the quoted words are still there with pending
+// suggestions hidden, which is the only route that tells a suggestion from an
+// edit. When either is false the run ends. The proposal that failed is reported
+// sent: true with its checks, the note records it, every proposal behind it stays
+// sent: false, and the envelope fails with a sentence naming the proposal, its
+// words and where to open the document.
 //
-// No folder, so no probe. propose creates a throwaway document every run to
-// find out whether Docs honours SUGGEST today, because a SUGGEST that is
-// quietly ignored turns a proposal into a direct edit of somebody's prose. The
-// batch annotate sends holds one insertComment and nothing else, and no
-// insertComment can move a character whatever the write mode does. So the probe
-// has no question to answer here, and running it would litter a folder asking
-// it. PRINCIPLES.md says the probe runs every time, and this is the second
-// writer it does not run for, restyle's phase 1 being the first: that file's
-// 2026-09-18 amendment note names both, docs/v2/DECISIONS.md holds the bend
-// under the same date, and internal/annotate's Batch holds the shape the
-// reasoning rests on.
+// That stop is the bound on no command running the capability probe any more.
+// Nothing asks Google up front whether SUGGEST is honoured today, so the run
+// finds out from the first proposal's read-backs, and a day when it is not
+// honoured costs one change rather than a file of them. A read-back that could
+// not be made counts as false among the two, because internal/propose's Verify
+// leaves a route false when its read fails: not knowing is not a reason to send
+// the rest. TestAFalseInlineCheckStopsTheRun,
+// TestAFalsePreviewCheckStopsTheRun and TestAReadBackThatFailedStopsTheRun are
+// the three pins.
+//
+// docx_anchored is not asked. It answers whether the comment is attached to the
+// words, and a comment the export does not carry is an explanation lost rather
+// than a change that went in as an edit: the suggestion is still a suggestion, so
+// the rest of the file is sent and the loss is a warning.
+// TestAFalseDocxCheckAloneDoesNotStop is the pin.
+//
+// The sentence never says the document was edited. gdoc knows a read-back did not
+// confirm a suggestion and nothing more, and a run that claims an edit sends a
+// colleague looking for damage that may not be there. The preview's own warning
+// may name the shape it saw, because that is what it saw.
+// TestTheStopNeverClaimsADirectEdit holds the error itself, and
+// TestAStoppedRunRecordsWhatWasSent holds the note: what was sent is written
+// down, because a proposal gdoc has forgotten is one it will refuse to withdraw.
+// The 2026-10-02 entry in docs/v2/DECISIONS.md holds the decision.
+//
+// # A batch whose answer was lost is outcome unknown, and stops the run
+//
+// A batch that went out and answered nothing is the one case gdoc cannot decide.
+// internal/gapi marks it, from the moment the request bytes left, and
+// internal/propose raises it with Outcome unknown rather than running read-backs
+// on a change it cannot say is there.
+//
+// The entry stays sent: false, because that field means gdoc got no answer saying
+// the batch landed, and this is exactly that. outcome: "unknown" beside it is what
+// stops it from reading as a change that never left the machine, and it appears on
+// that one entry: on any other it would say nobody knows about a proposal that
+// never went out. The run stops, nothing behind it is sent, nothing is retried,
+// and the envelope says the proposal may or may not be in the document and to read
+// the suggestions before proposing it again.
+//
+// The sentence is the whole of the advice. No field says a proposal should be sent
+// again: whether it is there is a question the document answers, and asking it is a
+// person's job. TestALostAnswerIsOutcomeUnknownAndStops is the pin, with
+// TestSendNamesALostAnswer in internal/propose and
+// TestAFiveHundredAfterTheWriteIsMarkedUnknown,
+// TestADropAfterTheWriteIsMarkedUnknown and
+// TestNothingBeforeTheWriteIsMarkedUnknown in internal/gapi. The 2026-10-02 entry
+// in docs/v2/DECISIONS.md holds the decision.
+//
+// # propose takes a folder it ignores, and annotate takes no note
+//
+// --folder bought the capability probe the throwaway document it measured on.
+// No command runs that probe any more: suggestions are generally available, and
+// the three read-backs plus the stop are what catch a SUGGEST Google did not
+// honour. The 2026-10-02 entry in docs/v2/DECISIONS.md holds the decision, and
+// gdoc probe --folder stays as a command a person runs by hand.
+//
+// The flag is kept for one release so a skill or script written for v2.7 keeps
+// working. It is still read as a folder id, so a caller who pointed it at a
+// document hears about it rather than having the mistake dropped, the run
+// carries one warning saying the flag is ignored and is going, and the policy
+// opens no create door at all. TestTheFolderFlagIsAcceptedAndIgnored,
+// TestProposeStillRefusesAMalformedFolder and TestProposeRunsNoProbe are the
+// pins, and docs/backlog/remove-the-ignored-folder-flag-from-propose.md holds
+// the removal.
+//
+// annotate takes no folder either, and never did: the batch it sends holds one
+// insertComment and nothing else, and no insertComment can move a character
+// whatever the write mode does, so the question the probe asked never had a
+// bearing on it. PRINCIPLES.md's 2026-09-18 amendment names annotate and
+// restyle's phase 1 as the two writers that skipped it, and its 2026-10-02
+// amendment says no writer runs it now. internal/annotate's Batch holds the
+// shape the reasoning rests on.
 //
 // No note, so no provenance. The note exists so withdraw can recognise gdoc's
 // own pending suggestions later, and a comment is not a suggestion: it is in
@@ -612,8 +709,8 @@
 // # The note is read again just before it is written
 //
 // The pairing is checked before the session opens, and the run then spends
-// seconds to tens of seconds on the network: a probe plus a read, a write and
-// three read-backs per proposal for propose, and two whole-document reads plus
+// seconds to tens of seconds on the network: a read, a write and three
+// read-backs per proposal for propose, and two whole-document reads plus
 // a batchUpdate for withdraw. These notes live in a synced vault, so writing
 // back the bytes the run started with would throw away whatever landed in that
 // window.

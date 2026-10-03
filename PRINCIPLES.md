@@ -72,9 +72,9 @@ So:
 - Every change inside a document somebody handed gdoc is a suggestion, which is
   the guard's write levels holding it rather than a rule somebody remembers. The
   one door in that wall is the grant below.
-- Nothing trusts a success. The capability probe runs every time, and every
-  write is read back through a route it did not go out on, because four 200s
-  lied in one day.
+- Nothing trusts a success. Every write is read back through a route it did not
+  go out on, because four 200s lied in one day. See the amendments below for
+  what the probe used to add to that, and what replaced it.
 - The marker is the trigger, so an unmarked comment is reported and never
   executed, and a comment the tool cannot confidently classify is reported, not
   acted on.
@@ -146,6 +146,17 @@ no exception.
   `insertComment` and nothing beside it, and no `insertComment` can move a
   character whatever the write mode does, so the probe has no question to answer
   here. The 2026-09-18 entry in `docs/v2/DECISIONS.md` holds that decision.
+
+*Amended 2026-10-02, for M14. Nail's decision.* No writer runs the probe now.
+`writeMode: SUGGEST` is generally available, so `propose` stopped creating a
+throwaway document on every call, and `gdoc probe --folder` is a command a
+person runs by hand.
+
+The read-back half of the clause does all the work, and it gained a stop:
+`propose` halts at the first proposal the inline read or the preview read
+cannot confirm, reports it with its checks, sends nothing after it, and asks
+for a look in the browser. The 2026-10-02 entry in `docs/v2/DECISIONS.md` holds
+the decision, what it strains and what Nail accepted.
 
 ## 4. Every word costs a reader's attention
 

@@ -144,8 +144,8 @@ Serves principle 3. This is the safety property everything else stands on.
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from
   the public Docs discovery document and once measured returning 200 while making
-  a direct edit. What closes that gap is the probe before a proposal and the
-  read-back after it, and neither is in the guard.
+  a direct edit. What closes that gap is the read-back after a proposal and the
+  stop at the first one it cannot confirm, and neither is in the guard.
 - **The guard judges the request it sends, never a tidier version of it.** A
   method override, a credential in the URL, a path walking through `.` or `..`,
   and a body whose parents it cannot read are refused. The query and the headers
@@ -156,9 +156,11 @@ Serves principle 3. This is the safety property everything else stands on.
 
 These are requirements, not advice. Each has a measured 200-that-lied behind it.
 
-- **Capability probe.** On every `propose` invocation, before its first
-  suggest-mode write, probe `writeMode: SUGGEST` against a throwaway document.
-  One invocation may batch many proposals behind it, and nothing caches it.
+- **Capability probe, by hand only.** `gdoc probe --folder` asks whether
+  `writeMode: SUGGEST` is honoured today, against a throwaway document, and
+  nothing caches the answer. It ran before every proposal until 2026-10-02, when
+  suggestions reached general availability; the read-back below and the stop are
+  what close the gap now, and the entry of that date in DECISIONS.md holds why.
 - **Read-back after every proposal.** The change is absent from the read made
   with `PREVIEW_WITHOUT_SUGGESTIONS`, so it is a suggestion rather than an edit,
   and the span reads as intended. Index arithmetic is the hazard: a 200 once
@@ -298,7 +300,8 @@ thread ends in a true statement rather than a dangling "on it".
 
 Writes a change as a native Google suggestion (`writeMode: SUGGEST`) with an
 anchored comment on the exact words explaining why, opening with 🤖. Subject to
-the capability probe and the read-back above. On a handed-in id this is the only
+the read-back above, and the run stops at the first proposal either the inline
+read or the preview read cannot confirm. On a handed-in id this is the only
 write level the guard allows, which is the point, and an `assigneeEmailAddress`
 may be set when the skill knows who should answer.
 
@@ -373,12 +376,13 @@ exactly once is refused. The reason arrives bare and gdoc writes `🤖 ` in fron
 of it; a reason already carrying the mark is refused, as is markdown a thread
 would render literally. Every entry is checked before the first one is sent.
 
-**The probe does not run here**, and that is the one place a writer skips it.
-The batch holds one `insertComment` and nothing beside it, so no character can
-move even if `writeMode: SUGGEST` were ignored, and the question the probe asks
-has no bearing on what this write can do wrong. Decided 2026-09-18,
-DECISIONS.md. The guard is unchanged: the batch is carried because it says
-SUGGEST, and refused without it.
+**The probe does not run here**, and since 2026-10-02 it runs in no writer at
+all. The batch holds one `insertComment` and nothing beside it, so no character
+can move even if `writeMode: SUGGEST` were ignored, and the question the probe
+asks never had a bearing on what this write can do wrong. Decided 2026-09-18,
+and `propose` followed on 2026-10-02, both in DECISIONS.md. The guard is
+unchanged: the batch is carried because it says SUGGEST, and refused without
+it.
 
 **Two read-backs, on routes the write did not go out on**: Drive's comment
 listing must carry the returned id with the body that was sent, and the docx
@@ -747,5 +751,5 @@ Each is a test or a checkable run, not a claim.
    its features, the chips, the Drawing, the footnotes, the lists, the pinned
    shaded table header, the byte-identical inline image, the anchored comment and
    the pending suggestion, and the original is untouched, same `revisionId`.
-6. The capability probe distinguishes an enrolled project from an unenrolled one
-   without writing to any real document.
+6. `gdoc probe --folder` distinguishes an enrolled project from an unenrolled
+   one without writing to any real document.

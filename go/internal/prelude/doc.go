@@ -48,18 +48,20 @@
 //
 // # The prelude phase is unprobed, and the read-back is the only bar
 //
-// internal/propose runs internal/probe before every proposal, because writeMode
-// is a field gdoc supplies, it is absent from the public discovery document, and
-// one morning the same call came back 200 having made a direct edit:
-// BLOCKED-BY-API.md holds both measurements. Phase 1 makes that same claim, on a
-// whole cover rather than one word, and asks the question of no throwaway
-// document first. internal/guard's paragraph about there being nothing for a
+// Phase 1 makes the writeMode claim, on a whole cover rather than one word, and
+// asks the question of no throwaway document first. writeMode is a field gdoc
+// supplies, it is absent from the public discovery document, and one morning the
+// same call came back 200 having made a direct edit: BLOCKED-BY-API.md holds
+// both measurements. internal/guard's paragraph about there being nothing for a
 // probe to test is true of LevelInPlace and is not true of this phase.
 //
-// The reason is that a probe needs a folder to create its document in, through
-// AllowCreateIn, and restyle takes no folder. Giving it one is a flag, a second
-// create door on a command whose whole shape is that it writes to the one
-// document it was handed, and that is Nail's decision rather than a refactor.
+// Nothing else probes either. gdoc propose stopped running internal/probe on
+// 2026-10-02, because suggestions left the Developer Preview and the probe paid a
+// created document on every call for an answer that no longer changes: the
+// 2026-10-02 entry in DECISIONS.md holds the decision. What it put in the probe's
+// place is the stop, the run halting at the first proposal whose read-backs do
+// not confirm it landed as a suggestion. A restyle has no equivalent, because
+// phase 1 is one write and there is no second proposal to stop.
 //
 // What stands in its place is Verify's first field. Every piece of the prelude
 // is read back and asked whether it carries a suggestion id, and a piece that

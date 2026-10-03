@@ -180,16 +180,16 @@ func TestStrikethroughKeepsItsTextAndItsMark(t *testing.T) {
 // own location and the link opens nothing. The label stays bare.
 func TestAnEmailAutolinkCarriesTheMailtoScheme(t *testing.T) {
 	for _, markdown := range []string{
-		"write to <nail@altery.com> if unsure\n",
-		"write to nail@altery.com if unsure\n",
+		"write to <person@example.com> if unsure\n",
+		"write to person@example.com if unsure\n",
 	} {
 		runs := firstBlockRuns(t, markdown)
 
-		got := runCarrying(t, runs, "nail@altery.com")
-		if got.Link != "mailto:nail@altery.com" {
-			t.Errorf("%q: link = %q, want mailto:nail@altery.com", markdown, got.Link)
+		got := runCarrying(t, runs, "person@example.com")
+		if got.Link != "mailto:person@example.com" {
+			t.Errorf("%q: link = %q, want mailto:person@example.com", markdown, got.Link)
 		}
-		if got.Text != "nail@altery.com" {
+		if got.Text != "person@example.com" {
 			t.Errorf("%q: text = %q, want the bare address", markdown, got.Text)
 		}
 	}

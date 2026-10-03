@@ -459,11 +459,12 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	data.Prelude = pre
 
 	// Phase 1, and it goes out unprobed. What makes this a suggestion is
-	// writeMode, the field propose runs internal/probe about before every
-	// proposal, and the reason there is no probe here is that probe needs a
-	// folder to create its throwaway document in and restyle takes none.
-	// Giving it one is a second create door on a command that writes to the one
-	// document it was handed, which is Nail's decision rather than a refactor.
+	// writeMode, and no command asks internal/probe about it any more: the probe
+	// went on 2026-10-02, and the 2026-10-02 entry in DECISIONS.md holds why.
+	// Restyle could not have run it in any case, because the probe needs a folder
+	// to create its throwaway document in and restyle takes none. Giving it one is
+	// a second create door on a command that writes to the one document it was
+	// handed, which is Nail's decision rather than a refactor.
 	// What stands in its place is prelude.Verify's Written count, read back
 	// below: it names an unenrolled morning after the fact and never before it.
 	proposed, proposeErr := restyle.Suggest(ctx, r.session, r.id, res.Requests, d.RevisionID)

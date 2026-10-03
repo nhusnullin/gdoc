@@ -1203,7 +1203,7 @@ func TestARelativeLinkIsItsWordsAndNoHyperlink(t *testing.T) {
 func TestALinkWithASchemeOrAnAnchorIsStillALink(t *testing.T) {
 	for _, markdown := range []string{
 		"See [the policy](https://example.com/p).\n",
-		"Write to [Nail](mailto:nail@altery.com).\n",
+		"Write to [Nail](mailto:person@example.com).\n",
 		"See [the host](//example.com/p).\n",
 		"See [below](#scope).\n\n## Scope\n",
 	} {

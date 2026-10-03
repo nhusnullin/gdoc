@@ -72,7 +72,7 @@ func TestCheckRefusesEachBadShapeByName(t *testing.T) {
 func TestCheckAcceptsAPlainAnnotation(t *testing.T) {
 	for _, a := range []Annotation{
 		{Quoted: "reviewed annually", Why: "The 2026 register says quarterly."},
-		{Quoted: "the Cyprus entity", Why: "Named twice with two spellings.", Assignee: "x@altery.com"},
+		{Quoted: "the Cyprus entity", Why: "Named twice with two spellings.", Assignee: "x@example.com"},
 		{Quoted: "5 * 3 units", Why: "See issue #28 for the rest."},
 	} {
 		if err := a.Check(); err != nil {
@@ -260,10 +260,10 @@ func TestBatchIsOneInsertCommentUnderSuggest(t *testing.T) {
 }
 
 func TestBatchCarriesTheAssigneeWhenThereIsOne(t *testing.T) {
-	body := decodeBatch(t, Batch(span(quoteStart, quoteEnd), "🤖 why", "nail@altery.com"))
+	body := decodeBatch(t, Batch(span(quoteStart, quoteEnd), "🤖 why", "person@example.com"))
 
 	com := body["requests"].([]any)[0].(map[string]any)["insertComment"].(map[string]any)
-	if com["assigneeEmailAddress"] != "nail@altery.com" {
+	if com["assigneeEmailAddress"] != "person@example.com" {
 		t.Errorf("assigneeEmailAddress = %v", com["assigneeEmailAddress"])
 	}
 }

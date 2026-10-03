@@ -61,11 +61,38 @@ stay deferred in
 live session, and `sergi/go-diff` as a fourth dependency, which nothing asks
 for while the skill reads two files.
 
+## M14. gdoc in Claude Desktop chat, in four steps
+
+In flight since 2026-10-03. gdoc becomes a local MCP server inside the same
+binary, so a person reviews a Google Doc from Claude Desktop chat and from
+voice mode, not only from a Claude Code terminal. The specification is
+`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`, with the nineteen decisions Nail
+took on 2026-10-02 and 2026-10-03 and the seventeen scenarios that are the
+acceptance list.
+
+The milestone runs in more than one ralphex run, Nail's call of 2026-10-03. The
+spec puts twelve measurements in Claude Desktop before any server code, and
+ralphex cannot wait halfway through a run for a person to measure, so the work
+is cut where the measurements fall.
+
+| Step | Holds | Release |
+|---|---|---|
+| run 1, the groundwork | the firm's domain out of the tree, `propose` without the capability probe, the stop at the first proposal a read-back cannot confirm, a lost batch answer as `outcome: "unknown"`, the review rules split into `review.md`, the two-step login, the token race, the context threaded through the six chat commands, and `notice` returning its line. `docs/plans/completed/2026-10-03-gdoc-v2-m14a-groundwork.md` | v2.8.0, alone |
+| the tag sitting | the two skills stop passing `--folder` and move to `needs: v2.8.0`, in the same sitting as `make tag VERSION=v2.8.0`. By hand, after run 1 merges | v2.8.0 |
+| the spike | the twelve measurements against a throwaway stub server outside the tree, recorded in MEASURED.md. By Nail, beside run 1 | none |
+| run 2 and later | `internal/mcp`, `gdoc mcp`, the tools, the labelled text, the holds, the extension and `update --desktop`, from a plan written with the measured values | v2.9.0 |
+
+Run 1 is released alone so colleagues stop making a throwaway probe document on
+every proposal now: Google made suggestions generally available on 2026-09-30,
+and the three read-backs plus the stop are what catch a SUGGEST Google did not
+honour. That moved decision 19's number to v2.9.0. A measurement that
+contradicts the spec stops the plan.
+
 ## What is next
 
-Nothing is in flight. The open work is the by-hand list below, the backlog, and
-what the team asks for after M13 reaches them. A milestone starts when Nail
-names it, and its plan is written then, against the code that exists by then.
+The open work is M14 above, the by-hand list below, the backlog, and what the
+team asks for after M13 reaches them. A milestone starts when Nail names it,
+and its plan is written then, against the code that exists by then.
 
 The three candidates, in no order, each a backlog item today: the picture bytes
 inside `read` itself, so a review session sees a diagram rather than a
