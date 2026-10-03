@@ -85,6 +85,26 @@
 // syscall/js is refused beside os/exec, since it reaches a host that can run
 // anything. TestNothingRunsAnExternalProgram is the pin.
 //
+// # One room writes to the terminal in the terminal's language
+//
+// Every escape sequence gdoc writes lives in internal/tty: the palette by role
+// and by depth, and the cursor and line codes. A sequence written anywhere else
+// is the bug that is hardest to see, because it is invisible until it is in the
+// wrong place: a colour left open paints the shell prompt under the screen, a
+// row counted wrong makes a redraw crawl down the screen, and a byte that
+// reaches a pipe reaches a skill's parser. Holding the codes in one room is
+// also what makes NoColour mean something: there is one place that could write
+// a byte and at that depth it writes none.
+//
+// TestNoEscapeLiteralOutsideTTY reads the syntax tree of every non-test file
+// under go/ and unquotes each literal, so every spelling of the byte is one
+// case and a comment that spells a code out is prose rather than a use. Test
+// files are not judged, because a test that pins what a role paints with has to
+// state the bytes as literals rather than read the constant it is checking. It
+// fails in both directions: a literal outside internal/tty fails, and so does
+// internal/tty holding none, which would mean the codes moved and this test did
+// not.
+//
 // # The robot mark is read in one place
 //
 // The mark is the only record of authorship a thread itself carries, so the

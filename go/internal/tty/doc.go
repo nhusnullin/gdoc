@@ -29,9 +29,9 @@
 // that is the case the old character-device check got wrong:
 // TestDevNullIsNotATerminal. IsTerminal adds nothing of its own to the
 // driver's answer, which is what lets every test above this package stub one
-// variable: TestTheIoctlAnswerIsTheAnswer. TODO(test): Task 6 of the M15 plan
-// moves the progress list onto this question and adds
-// TestOnlyATerminalDriverMakesATerminal in cmd/gdoc.
+// variable: TestTheIoctlAnswerIsTheAnswer. cmd/gdoc asks the question through
+// one variable of its own, so the step list `gdoc update` draws answers to this
+// definition and to nothing else: TestOnlyATerminalDriverMakesATerminal.
 //
 // # Every platform but darwin answers no
 //
@@ -120,8 +120,8 @@
 //
 // # What is not here
 //
-// No layout and no box. No read of stdin. No network. TODO(test): Task 6 of
-// the M15 plan adds boundary's TestNoEscapeLiteralOutsideTTY, which holds that
-// no escape byte is written anywhere else by reading the syntax tree of every
-// non-test file under go/, and moves progress.go onto these codes.
+// No layout and no box. No read of stdin. No network. And no second room
+// writing an escape byte: boundary's TestNoEscapeLiteralOutsideTTY reads the
+// syntax tree of every non-test file under go/ and fails on a literal holding
+// one outside this package.
 package tty

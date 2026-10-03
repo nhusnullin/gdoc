@@ -312,20 +312,20 @@ Before any rendering code changes.
   `go/cmd/gdoc/doc.go`
 - Create: `go/boundary/escape_test.go`
 
-- [ ] `progress.go` uses `tty.IsTerminal`, `tty.Colour` and `tty.Style`, and
+- [x] `progress.go` uses `tty.IsTerminal`, `tty.Colour` and `tty.Style`, and
       its escape constants are gone, replaced by `tty`'s.
-- [ ] `TestOnlyACharDeviceIsATerminal` becomes
+- [x] `TestOnlyACharDeviceIsATerminal` becomes
       `TestOnlyATerminalDriverMakesATerminal`, stubbing `tty`'s variable; the
       paragraph in `cmd/gdoc/doc.go` (around line 482) says the same and names
       it.
-- [ ] The progress tests that pinned the old colour bytes keep pinning them,
+- [x] The progress tests that pinned the old colour bytes keep pinning them,
       as literals, now produced by `tty.Style` at depth 16.
-- [ ] `TestNoEscapeLiteralOutsideTTY` parses every non-test Go file under
+- [x] `TestNoEscapeLiteralOutsideTTY` parses every non-test Go file under
       `go/` with `go/ast` and fails on a string `BasicLit` holding `\x1b`,
       `\033` or `\u001b`, in any letter case, outside `internal/tty`. A
       comment that mentions one does not count.
-- [ ] Task 3's goldens pass unchanged.
-- [ ] `git commit -m "refactor(progress): the terminal check and the escapes live in tty"`
+- [x] Task 3's goldens pass unchanged.
+- [x] `git commit -m "refactor(progress): the terminal check and the escapes live in tty"`
 
 ### Task 7: internal/panel, boxes and the width rule
 

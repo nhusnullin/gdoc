@@ -10,6 +10,10 @@
 // each step prints once as a plain line when it ends, with no colour and no
 // escape code. NO_COLOR turns the colour off on a terminal as well. Nothing
 // here touches stdout, which carries the one object and nothing else.
+//
+// Whether stderr is a terminal, how much colour it takes, and every escape
+// code written below come from internal/tty, which is the one room that holds
+// them. This file knows a step list and no colour name.
 
 package main
 
@@ -20,24 +24,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
-// The escape codes a terminal run writes, and nothing else writes any.
-const (
-	colourGreen = "\x1b[32m"
-	colourRed   = "\x1b[31m"
-	colourDim   = "\x1b[2m"
-	colourCyan  = "\x1b[36m"
-	colourReset = "\x1b[0m"
-	// clearBelow wipes from the cursor to the end of the screen, so a redraw
-	// that has fewer lines than the one before leaves nothing behind.
-	clearBelow = "\x1b[J"
-	// wrapOff and wrapOn turn the terminal's auto-wrap off for the life of a
-	// moving list and back on when it settles. A wrapped line is two rows on
-	// the screen and one in the count a redraw moves up by, so in a narrow
-	// terminal the list would crawl down the screen.
-	wrapOff = "\x1b[?7l"
-	wrapOn  = "\x1b[?7h"
+	"gdoc/internal/tty"
 )
 
 // nameWidth is how wide a step name is padded, wide enough for the longest
@@ -73,13 +61,13 @@ type step struct {
 // progress is one run's step list. Its methods are safe to call from the
 // command while the spinner turns on its own goroutine.
 type progress struct {
-	mu     sync.Mutex
-	out    io.Writer
-	live   bool
-	colour bool
-	steps  []step
-	drawn  int
-	frame  int
+	mu    sync.Mutex
+	out   io.Writer
+	live  bool
+	style tty.Style
+	steps []step
+	drawn int
+	frame int
 	// settled is set once the list is drawn for the last time; finished once
 	// the result line is written.
 	settled  bool
@@ -92,10 +80,18 @@ type progress struct {
 	stopOnce  sync.Once
 }
 
-// newProgress is the list for w, live when w is a terminal.
+// isTerminal is internal/tty's question, through one variable so a test can
+// answer it per writer. tty.IsTerminal is the only definition of a terminal in
+// the tree: it is the terminal driver's answer and not the file's mode, which
+// is why /dev/null is not one. TestOnlyATerminalDriverMakesATerminal holds
+// that this variable is the whole of the decision made here.
+var isTerminal = tty.IsTerminal
+
+// newProgress is the list for w, live when w is a terminal, coloured as much
+// as the environment says that terminal takes.
 func newProgress(w io.Writer, title string) *progress {
 	if isTerminal(w) {
-		return newLiveProgress(w, title, wantsColour())
+		return newLiveProgress(w, title, tty.NewStyle(tty.Colour(os.Getenv)))
 	}
 	p := &progress{out: w}
 	fmt.Fprintln(w, title)
@@ -103,31 +99,12 @@ func newProgress(w io.Writer, title string) *progress {
 }
 
 // newLiveProgress is the redrawn list, whatever w is. A test hands it a
-// buffer; newProgress hands it a terminal.
-func newLiveProgress(w io.Writer, title string, colour bool) *progress {
-	p := &progress{out: w, live: true, colour: colour}
+// buffer; newProgress hands it a terminal. The zero Style writes no escape
+// byte, so a caller that wants the redraw without the colour hands that one.
+func newLiveProgress(w io.Writer, title string, style tty.Style) *progress {
+	p := &progress{out: w, live: true, style: style}
 	fmt.Fprintln(w, title)
 	return p
-}
-
-// isTerminal is the char device bit on the file's mode, and no library. A
-// buffer, a pipe and a regular file are not terminals.
-func isTerminal(w any) bool {
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
-	}
-	info, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
-}
-
-// wantsColour follows no-color.org: NO_COLOR set to anything but empty turns
-// the colour off.
-func wantsColour() bool {
-	return os.Getenv("NO_COLOR") == ""
 }
 
 // Plan names steps in advance, so a terminal shows the whole path before the
@@ -288,16 +265,16 @@ func (p *progress) redraw() {
 func (p *progress) draw(last bool) {
 	var b strings.Builder
 	if !last && !p.unwrapped {
-		b.WriteString(wrapOff)
+		b.WriteString(tty.WrapOff)
 		p.unwrapped = true
 	}
 	if p.drawn > 0 {
-		fmt.Fprintf(&b, "\x1b[%dA\r", p.drawn)
+		b.WriteString(tty.Up(p.drawn) + "\r")
 	}
 	if last && p.unwrapped {
-		b.WriteString(wrapOn)
+		b.WriteString(tty.WrapOn)
 	}
-	b.WriteString(clearBelow)
+	b.WriteString(tty.ClearBelow)
 	n := 0
 	for _, s := range p.steps {
 		if last && s.state == stepPending {
@@ -319,33 +296,29 @@ func (p *progress) stepLines(s step, withReason bool) []string {
 	if p.live {
 		text = cut(text, liveWidth-4)
 	}
-	line := "  " + p.mark(s.state) + " " + text
-	if s.state == stepPending && p.colour {
-		line = "  " + p.mark(s.state) + " " + colourDim + text + colourReset
+	if s.state == stepPending {
+		text = p.style.Dim(text)
 	}
+	line := "  " + p.mark(s.state) + " " + text
 	if s.state != stepFailed || !withReason {
 		return []string{line}
 	}
 	return []string{line, "    " + s.reason}
 }
 
+// mark is the glyph in front of a step, in the role its state is: the spinner
+// is a title, a tick an ok and a cross a failure. A plain list carries the zero
+// Style, so each is the glyph on its own.
 func (p *progress) mark(s stepState) string {
 	switch s {
 	case stepRunning:
-		return p.paint(colourCyan, spinnerFrames[p.frame%len(spinnerFrames)])
+		return p.style.Title(spinnerFrames[p.frame%len(spinnerFrames)])
 	case stepDone:
-		return p.paint(colourGreen, "✓")
+		return p.style.OK("✓")
 	case stepFailed:
-		return p.paint(colourRed, "✗")
+		return p.style.Fail("✗")
 	}
 	return " "
-}
-
-func (p *progress) paint(colour, s string) string {
-	if !p.colour {
-		return s
-	}
-	return colour + s + colourReset
 }
 
 func (p *progress) index(name string) int {

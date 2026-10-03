@@ -480,9 +480,13 @@
 //
 // When stderr is not a terminal, which is every run a skill starts, each step
 // prints once as a plain line when it ends, with no colour and no escape code:
-// TestAPipedRunPrintsOneLinePerFinishedStep. A terminal is the char device bit
-// on the file's mode and nothing else, so a pipe, a file and a buffer all get
-// the plain lines: TestOnlyACharDeviceIsATerminal. On a terminal the list is
+// TestAPipedRunPrintsOneLinePerFinishedStep. What a terminal is comes from
+// internal/tty and is asked here through one variable, so a pipe, a file, a
+// buffer and /dev/null all get the plain lines, /dev/null included because the
+// question is the terminal driver's answer and not the character-device bit the
+// old check read: TestOnlyATerminalDriverMakesATerminal. Every escape code and
+// the colour of every glyph come from internal/tty too, which boundary's
+// TestNoEscapeLiteralOutsideTTY holds. On a terminal the list is
 // drawn in advance and redrawn in place, with a spinner on the running step
 // and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
 // and TestNoColorKeepsTheRedrawAndDropsTheColour. Auto-wrap is off while the
