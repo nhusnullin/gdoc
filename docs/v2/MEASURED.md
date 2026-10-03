@@ -374,7 +374,53 @@ What follows for a block proposal:
   case measured came back with one id because the last new paragraph was not
   restyled. A restyled last paragraph there was not measured.
 
+## Claude Desktop and a local MCP server
+
+Measured 2026-10-03 by Nail on his Mac, with a throwaway stub server outside
+the tree and not committed: one Go file speaking MCP over stdio, installed as a
+thin `.mcpb` whose command is the stub's absolute path. It logged every line
+Claude Desktop sent and every answer, and offered four tools: a read, a write,
+a sleep and a held write that registers a one-time `confirm_<id>` tool. These
+are the twelve measurements the M14 specification
+(`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`) puts before any server code.
+Recheck before run 2 ships if Claude Desktop has been updated since, and
+whenever a release note mentions extensions, tool permissions or voice.
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Does a `.mcpb` start a command outside the bundle, and does the setting show as optional? | Yes, it installs and starts. The one `user_config` string reaches the server as `--trusted-email-domains=` when empty. Settings shows the field with its description, which also fills the placeholder, and a Save button. Nothing marks it optional or advanced |
+| 2 | After the binary is replaced, does a restart run the new one? What does a missing binary show? | Toggling the extension restarted the chat process on the new binary; the agent-mode process kept the old one until Claude Desktop was quit. A missing binary shows a toast, "MCP gdoc spike: No executable file at <path>. It may be missing, a directory, or not marked executable. Check the server's command or remove the server", with "Open developer settings"; the tools vanish from chat |
+| 3 | What comes first, and which protocol version? | `initialize`, never `server/discover`, asking `2025-11-25`. Two clients each start their own process at the same moment: `claude-ai` (chat) and `local-agent-mode-<extension name>`, which also declares `roots`. Both stay running |
+| 4 | Does the model see the server instructions? | Not in chat: in two new chats the model did not know a word that appeared only in the instructions, and reached for a tool to find it. A Claude Code session in the same app that has the extension does show them |
+| 5 | The tool timeout | 240 seconds, counted from when the call reaches the server, which is after the card is approved. A 120-second call finished; a 300-second call got `notifications/cancelled` with reason "SdkError: Request timed out" at 240.0 s, and the chat showed "No result received from client-side tool execution after waiting 4 minutes" |
+| 6 | Are two calls sent before the first is answered? | Not observed. Asked for two at once, Claude Desktop sent the second 10 s after the first answered, each behind its own card. Not measured with both tools on always-allow |
+| 7 | A card before a write tool? Elicitation? | A card before every tool by default, read-only ones too. Settings sorts tools by `readOnlyHint` into "Read-only tools" and "Write/delete tools", each with allow, approval and block per tool and per group. The client declares no `elicitation` and no `sampling`, and does declare an `io.modelcontextprotocol/ui` extension |
+| 8 | Are local tools offered in voice? | On the Mac, yes: a voice session called the read tool once. Speech recognition turned spoken tool names into other words ("Calls by Creed", "GDoc expansion"), so later turns never reached the tool. The phone was not measured |
+| 9 | Does a tool added mid-chat get a fresh card, also after always-allow? | Yes. `notifications/tools/list_changed` made the client fetch the list again within 3 ms. `confirm_<id>` got its own card at "Needs approval", and again when the whole "Write/delete tools" group was on always-allow: the group was switched before the hold created the tool, and the new name still got a card |
+| 10 | What does the card show? | Every argument, in full, labelled with its property name. A 1,526-character text scrolled with its paragraph breaks kept. The order is the order the model sent the arguments, once schema order and once alphabetical, not the order the server declared. The model copied the long text back byte for byte. The phone was not measured |
+| 11 | The quiet gap between a hold and its release | A person releasing after reading the card: 95 s and 121 s. The server sees the confirm call only after the card is approved. The model ended its turn after a hold both times it was tried, once refusing an explicit ask to release in the same reply |
+| 12 | Does a comment that names an email address notify that address? | Not measured; Nail skipped it on 2026-10-03 |
+
+Two other facts the log showed:
+
+- **Changing a tool permission restarts the chat's server process.** A hold
+  waiting in it is lost, and nothing is posted.
+- **Only the chat process restarts on a toggle.** The agent-mode process keeps
+  running, so per-process state lives twice and a toggle never reaches both.
+
+What follows for run 2 is a decision, not a measurement, and goes to
+DECISIONS.md: the spec assumed one process (3) and a 60-second timeout with a
+45-second deadline (5), and both answers differ.
+
 ## Not measured yet
+
+Two of the M14 measurements above stayed open on 2026-10-03: what the phone
+shows in voice mode, for a local tool and for its card (8 and 10), and whether
+Google emails an address named in a comment that gdoc posts (12). Recheck the
+first when gdoc's server first runs in voice on a phone. Recheck the second
+with one `gdoc annotate` on a document in the test folder whose text names an
+address the person can read, before the Link hold's rule for email addresses
+is changed.
 
 The seven paragraph elements `internal/docs` decodes are a fixture built from
 the reference, not from a document. Recheck when somebody reads a real document
