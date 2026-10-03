@@ -620,11 +620,48 @@ Before any rendering code changes.
 
 ### Task 14: verify acceptance
 
-- [ ] `make test`, `make vet`, `GOOS=darwin go vet ./...` and `make dist` pass.
-- [ ] Every Validation Command gives the answer it states; record the counts
+- [x] `make test`, `make vet`, `GOOS=darwin go vet ./...` and `make dist` pass.
+- [x] Every Validation Command gives the answer it states; record the counts
       here as ➕ notes.
-- [ ] Every row of the Decisions table names a task above that built it.
-- [ ] Nothing to commit unless a ➕ note was added.
+- [x] Every row of the Decisions table names a task above that built it.
+- [x] Nothing to commit unless a ➕ note was added.
+
+- ➕ The suite, run uncached with `go test -race -count=1 ./...`: 41 packages,
+  every one `ok`, no failure and no race. `gofmt -l .` names no file. `go vet
+  ./...` and `GOOS=darwin go vet ./...` are both silent.
+- ➕ `make dist` writes the three binaries into `bin/`: `gdoc-darwin-arm64`,
+  `gdoc-darwin-amd64` and `gdoc-windows-amd64.exe`. The darwin pair carries
+  `terminal_darwin.go`, which the raced suite on this machine does not reach
+  through `go vet` alone, so this is the build that compiles it for both
+  architectures.
+- ➕ The binary checks, built into `$TMPDIR/gdoc-m15` and never into `bin/`:
+  `help` into a pipe starts with `{`, `help --json` into a pipe starts with
+  `{`, and `help` with stderr folded in holds 0 lines with an escape byte. A
+  pipe is not a terminal, so the first and the third are the same screen: the
+  object, plain.
+- ➕ `git diff main...HEAD --stat -- go/internal/guard/` names one file,
+  `doc.go`, 4 insertions and 1 deletion. `policy.go` is untouched, which is the
+  "moved by one caller, not one request" rule.
+- ➕ `git diff main...HEAD --stat -- go/internal/mcp go/internal/chat` is
+  empty. `git diff main...HEAD -- go/cmd/gdoc/mcp*.go` is one hunk in
+  `mcplogin.go`, five added comment lines on `accountOf` naming its second
+  reader and the two tests that hold the count. No statement changed.
+- ➕ `wc -l CLAUDE.md` is 297, under the 300 the ceiling test holds, with
+  three lines spare.
+- ➕ The Decisions table has 13 rows naming Tasks 2 to 12, and every number
+  is a `### Task N` header above with a matching subject: the rule in `run()`
+  is Task 8, `isatty` and Windows-out-of-scope are Task 4, `--json` is Task 2,
+  bare `gdoc` and the absent status bar are Task 9, the pipe row is Tasks 3, 6,
+  8 and 11, the width rule is Task 7, the palette is Task 5, the account is
+  Task 12, the login line is Task 11 and `update` is Task 10. No row names a
+  task that does not exist, and no task 2 to 12 is missing from the table. The
+  two tests the `accountOf` comment names, `TestOnlyAccountOfCallsAllowAccountRead`
+  and `TestAccountOfHasTwoCallers`, are both in `boundary/account_test.go`, and
+  Task 6's boundary test is `TestNoEscapeLiteralOutsideTTY` in
+  `boundary/escape_test.go`.
+- ➕ The tree was clean before this task, so the only commit it makes is these
+  notes and the four boxes above them. No code changed in Task 14, which is
+  what a verification task should leave behind.
 
 ## Post-Completion
 
