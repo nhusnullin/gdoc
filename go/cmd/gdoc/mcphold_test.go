@@ -223,8 +223,12 @@ func TestTheHeldAnswerNamesTheRuleTheValueAndTheText(t *testing.T) {
 	if env.OK {
 		t.Fatalf("a held write answered ok: %s", res.Texts[0])
 	}
-	if !res.IsError {
-		t.Error("a held write is an error result, because ok is false")
+	// ok stays false, so the envelope reads as it always did, but the MCP result
+	// is not an error: Claude Desktop paints isError as "failed" in red, and a
+	// hold is the step that protects the person, not a fault. DECISIONS.md,
+	// 2026-10-03, "What the first run in Claude Desktop changed".
+	if res.IsError {
+		t.Error("a held write is marked isError, which the chat shows as failed")
 	}
 	if env.Data.Sent {
 		t.Error("the answer says the write was sent")

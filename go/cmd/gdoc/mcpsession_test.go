@@ -361,8 +361,8 @@ func TestASessionAgainstFakesRunsEveryTool(t *testing.T) {
 	// read above carried. It is held, and the hold registers one card.
 	clock.pass(time.Second)
 	held := d.call("reply", argsWithCode(t, code, heldWriteArgs()["reply"]))
-	if !held.IsError {
-		t.Fatalf("a reply repeating a stranger's comment is held: %v", held.texts())
+	if held.IsError {
+		t.Errorf("a held reply is marked isError, which the chat shows as failed: %v", held.texts())
 	}
 	env := heldEnvelopeOf(t, held.texts())
 	if env.Data.Held.ID == "" {
@@ -401,8 +401,8 @@ func TestASessionAgainstFakesRunsEveryTool(t *testing.T) {
 	for _, tool := range []string{"annotate", "propose"} {
 		clock.pass(time.Minute)
 		got := d.call(tool, argsWithCode(t, code, heldWriteArgs()[tool]))
-		if !got.IsError {
-			t.Fatalf("a %s repeating a stranger's comment is held: %v", tool, got.texts())
+		if got.IsError {
+			t.Errorf("a held %s is marked isError, which the chat shows as failed: %v", tool, got.texts())
 		}
 		if one := heldEnvelopeOf(t, got.texts()); one.Data.Held.ID == "" {
 			t.Errorf("the %s answer names no hold: %s", tool, got.texts()[0])

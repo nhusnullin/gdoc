@@ -225,7 +225,19 @@ func mcpKeptAnswer(held chat.Hold, why string) mcp.Result {
 
 // mcpHoldEnvelope is the envelope both of those are: nothing sent, the facts a
 // card is built from, and one sentence saying why, ending in the fixed one.
+//
+// The envelope says ok: false, as every answer that sent nothing does, but the
+// MCP result is not an error. Claude Desktop shows isError as "failed" in red,
+// and a hold is not a failure: the person's next step is the card. DECISIONS.md,
+// 2026-10-03, "What the first run in Claude Desktop changed", and
+// TestTheHeldAnswerNamesTheRuleTheValueAndTheText.
 func mcpHoldEnvelope(held chat.Hold, why string) mcp.Result {
+	res := mcpHeldEnvelope(held, why)
+	res.IsError = false
+	return res
+}
+
+func mcpHeldEnvelope(held chat.Hold, why string) mcp.Result {
 	return mcpEnvelope(emit.Result{
 		OK:    false,
 		Error: why + ". " + mcpHeldSentence,
