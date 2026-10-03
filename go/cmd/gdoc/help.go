@@ -60,8 +60,13 @@ type helpFlag struct {
 // line; this is the one place that writes it, above the help itself and with
 // one blank line between them. See notice.go.
 //
+// json is whether the caller asked for the object in so many words. It changes
+// nothing about what this function answers: the object is the same object, and
+// the words are the same words. It travels with the answer so run() knows a
+// terminal was told to print the object anyway. See doc.go for the screen rule.
+//
 // TestHelpPrintsTheNoticeLineAndABlankLine.
-func cmdHelp(ctx context.Context, words []string, errOut io.Writer) emit.Result {
+func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) emit.Result {
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
@@ -249,14 +254,28 @@ func helpAsked(args []string) ([]string, bool) {
 	return rest, asked
 }
 
-// helpWords turns what is left into the words help answers over. A command
-// found in the rest is the question, whatever else was typed beside it, so
-// `gdoc restyle --from x --help` asks about restyle rather than about three
-// words that name no command. What matches nothing is passed through, so it is
-// refused by name.
-func helpWords(rest []string) []string {
-	if c := match(rest); c != nil {
-		return c.nameWords()
+// helpWords turns what is left into the words help answers over, and says
+// whether --json stood among them. A command found in the rest is the question,
+// whatever else was typed beside it, so `gdoc restyle --from x --help` asks
+// about restyle rather than about three words that name no command. What
+// matches nothing is passed through, so it is refused by name.
+//
+// --json comes off before match, because a flag left in would be one more word
+// that names no command and would turn an answer into a refusal. The table's
+// own parser reads it on `gdoc help ...`, so both halves of dispatch hand
+// cmdHelp the same two facts: TestEverySpellingOfHelpKeepsJSON.
+func helpWords(rest []string) ([]string, bool) {
+	words := make([]string, 0, len(rest))
+	json := false
+	for _, arg := range rest {
+		if arg == jsonFlag {
+			json = true
+			continue
+		}
+		words = append(words, arg)
 	}
-	return rest
+	if c := match(words); c != nil {
+		return c.nameWords(), json
+	}
+	return words, json
 }

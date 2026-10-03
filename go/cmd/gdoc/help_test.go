@@ -244,15 +244,17 @@ func TestBareGdocStillFailsAndPrintsTheHelpToStderr(t *testing.T) {
 	}
 }
 
-// help takes words and no flags, and says so by name like every other command
-// here. Nothing is accepted and ignored.
-func TestHelpTakesWordsAndNoFlags(t *testing.T) {
+// help takes words and one flag, --json, and refuses any other by name like
+// every other command here. Nothing is accepted and ignored.
+func TestHelpTakesWordsAndOnlyTheJSONFlag(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
 	for _, args := range [][]string{
 		{"help", "--md", "x"},
 		{"help", "--structure"},
 		{"help", "publish", "--folder-id", "1AbC"},
+		{"help", "--json=yes"},
+		{"help", "--json", "--json"},
 	} {
 		got, _, code := runHelp(t, args...)
 		if code == 0 || got["ok"] != false {
@@ -260,9 +262,15 @@ func TestHelpTakesWordsAndNoFlags(t *testing.T) {
 			continue
 		}
 		msg, _ := got["error"].(string)
-		if !strings.Contains(msg, "not a flag this command takes") {
+		if !strings.Contains(msg, "not a flag this command takes") &&
+			!strings.Contains(msg, "takes no value") &&
+			!strings.Contains(msg, "is given twice") {
 			t.Errorf("%v must be refused by name: %q", args, msg)
 		}
+	}
+	got, _, code := runHelp(t, "help", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Errorf("the one flag help takes must be taken: %v (exit %d)", got, code)
 	}
 }
 

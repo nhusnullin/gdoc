@@ -220,22 +220,25 @@ Before the freeze, so the frozen help object already carries the flag.
   `go/cmd/gdoc/main.go`, `go/cmd/gdoc/help_test.go`, `go/cmd/gdoc/doc.go`
 - Create: `go/cmd/gdoc/helpjson_test.go`
 
-- [ ] `help` takes `--json`, optional, summary "print the JSON object even on
+- [x] `help` takes `--json`, optional, summary "print the JSON object even on
       a terminal, and keep stderr plain". The table lists it, so
       `gdoc help help` and completion name it.
-- [ ] `helpWords` returns `(words []string, json bool)` and strips `--json`
+- [x] `helpWords` returns `(words []string, json bool)` and strips `--json`
       before `match`. `cmdHelp` takes `json bool` as a parameter, from the
       table's parsed flags on `gdoc help ...` and from `helpWords` on
       `--help` and `-h`.
-- [ ] `TestHelpWithJSONPrintsTheObjectOnATerminal` is written in Task 8; here
+- [x] `TestHelpWithJSONPrintsTheObjectOnATerminal` is written in Task 8; here
       `TestEverySpellingOfHelpKeepsJSON` has one subtest per spelling:
       `gdoc help --json`, `gdoc help publish --json`,
       `gdoc publish --help --json`, `gdoc --help --json`, `gdoc -h --json`.
-- [ ] `gdoc --json` alone stays an unknown command: `TestJSONAloneIsStillUnknown`.
-- [ ] `TestHelpTakesWordsAndNoFlags` becomes
+- [x] `gdoc --json` alone stays an unknown command: `TestJSONAloneIsStillUnknown`.
+- [x] `TestHelpTakesWordsAndNoFlags` becomes
       `TestHelpTakesWordsAndOnlyTheJSONFlag`, still refusing any other flag;
       `cmd/gdoc/doc.go` (around line 232) names it.
-- [ ] `git commit -m "feat(help): --json, in every spelling of help"`
+- ➕ `jsonFlag` in `commands.go` is the one spelling both readers take, so
+      `TestEveryFlagIsReadTheWayItsKindSays` accepts `a.has(jsonFlag)` beside
+      the literal for that one flag.
+- [x] `git commit -m "feat(help): --json, in every spelling of help"`
 
 ### Task 3: freeze what a pipe gets today
 

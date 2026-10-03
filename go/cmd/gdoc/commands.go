@@ -93,6 +93,12 @@ type flag struct {
 	summary string
 }
 
+// jsonFlag is help's one flag, and it is named here because two readers take
+// it: the parser, from the table entry below, and helpWords, which takes it off
+// the line before looking for a command. A literal in both places could drift
+// into a flag only one of them answers to.
+const jsonFlag = "--json"
+
 // command is one entry in the table. words are the positional arguments in the
 // order they are typed, named the way a reader sees them, and their count is
 // what the parser insists on.
@@ -343,10 +349,13 @@ func commands() []command {
 			name:     "help",
 			words:    []string{"<command>"},
 			anyWords: true,
-			summary:  "Print every command gdoc takes, or the words and flags of one.",
-			example:  "gdoc help publish",
+			flags: []flag{
+				{jsonFlag, kindNone, needOptional, "print the JSON object even on a terminal, and keep stderr plain"},
+			},
+			summary: "Print every command gdoc takes, or the words and flags of one.",
+			example: "gdoc help publish",
 			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
-				return cmdHelp(ctx, a.positional, errOut)
+				return cmdHelp(ctx, a.positional, a.has(jsonFlag), errOut)
 			},
 		},
 		{

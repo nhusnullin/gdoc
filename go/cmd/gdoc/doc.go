@@ -229,8 +229,9 @@
 // The whole help goes to stderr beside it, so the person who typed it reads
 // what they could have typed. TestUnknownCommandFailsAndNamesItself,
 // TestNoArgumentsFails and TestBareGdocStillFailsAndPrintsTheHelpToStderr are
-// the pins, and TestHelpTakesWordsAndNoFlags holds that help itself is parsed
-// as strictly as everything else.
+// the pins, and TestHelpTakesWordsAndOnlyTheJSONFlag holds that help itself is
+// parsed as strictly as everything else: it takes --json and refuses every
+// other flag by name.
 //
 // The binary never prompts, and the one command that reads stdin reads a
 // protocol. Every command takes its facts as arguments and answers, so nothing
