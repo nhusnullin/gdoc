@@ -155,7 +155,15 @@ type mcpNotice struct{ once sync.Once }
 
 // first is the line for the first tool answer of this process, and the empty
 // string for every answer after it. The check runs inside that call, so what it
-// costs is bounded by its own two seconds and by the call's deadline.
+// costs is bounded by its own two seconds, and by nothing else: it is handed a
+// context the call cannot cancel.
+//
+// That is the whole of why. A client that stops the turn its first tool call is
+// in cancels that call's context, and the check riding on it would be stamped
+// as a failure for the day, for both processes Claude Desktop started, while
+// the once that would ask again is already spent and the line is thrown away
+// with the cancelled call's answer:
+// TestACancelledFirstCallStillLeavesTheDaysCheckUnspent.
 //
 // A warning reaches the log and nothing else. A chat that cannot reach GitHub
 // has nothing to tell the person: they asked about a document.
@@ -167,7 +175,7 @@ type mcpNotice struct{ once sync.Once }
 func (n *mcpNotice) first(ctx context.Context, errOut io.Writer) string {
 	var line string
 	n.once.Do(func() {
-		facts, _, warns := notice(ctx)
+		facts, _, warns := notice(context.WithoutCancel(ctx))
 		for _, warn := range warns {
 			fmt.Fprintln(errOut, warn)
 		}

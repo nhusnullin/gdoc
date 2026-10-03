@@ -459,3 +459,63 @@ func TestADesktopRunDrawsTheTwoExtensionStepsAndSaysQuitAndOpenAgain(t *testing.
 		t.Errorf("a toggle restarts the chat process alone, so the line never says it: %s", stderr)
 	}
 }
+
+// This repository cuts a nightly after every merge, so a nightly installed and
+// a plain `gdoc update --desktop` is an ordinary run: the stable channel's
+// newest release is older than the binary, and nothing is installed. The
+// extension still names the binary that is here, and the template it needs is
+// on the other channel rather than nowhere, so that is where it comes from.
+func TestDesktopOnANightlyWritesTheExtensionFromTheNightly(t *testing.T) {
+	pl := &stubPlain{
+		listing: listing("v2.1.0", "v2.1.2"),
+		files:   publishedWith(t, "v2.1.2", []byte("nightly"), zipEntry{"mcpb/manifest.json", []byte(newTemplate)}),
+	}
+	path := installedAt(t, "v2.1.2", []byte("current"), pl)
+	rec := desktopSeams(t, "darwin")
+
+	got, code := runJSON(t, "update", "--desktop")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	mcpb := filepath.Join(filepath.Dir(path), "gdoc.mcpb")
+	if data["action"] != "up_to_date" || data["extension"] != mcpb {
+		t.Errorf("nothing was installed and the extension was refreshed: %v", data)
+	}
+	manifest := manifestIn(t, mcpb)
+	if startedCommand(t, manifest) != path || manifest["version"] != "2.1.2" {
+		t.Errorf("the manifest must name this binary and the version it is: %v", manifest)
+	}
+	nothingMoved(t, path, "current")
+	if len(rec.calls) != 1 {
+		t.Errorf("the extension was written, so it was opened once: %v", rec.calls)
+	}
+}
+
+// A major this run declined is the other half of the same branch, and it is
+// unchanged: neither channel holds the version that is installed, so the
+// template would name a version this machine does not run. Nothing is written,
+// nothing is started, and the warning names both versions.
+func TestDesktopOnADeclinedMajorWritesNoExtension(t *testing.T) {
+	pl := &stubPlain{listing: listing("v3.0.0")}
+	path := installedAt(t, "v2.1.0", []byte("current"), pl)
+	rec := desktopSeams(t, "darwin")
+
+	got, code := runJSON(t, "update", "--desktop")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(path), "gdoc.mcpb")); !os.IsNotExist(err) {
+		t.Errorf("a declined major writes no extension: %v", err)
+	}
+	if len(rec.calls) != 0 {
+		t.Errorf("nothing was written, so nothing was started: %v", rec.calls)
+	}
+	warnings, _ := json.Marshal(got["warnings"])
+	for _, name := range []string{"v2.1.0", "v3.0.0"} {
+		if !strings.Contains(string(warnings), name) {
+			t.Errorf("the warning must name %s: %s", name, warnings)
+		}
+	}
+	nothingMoved(t, path, "current")
+}

@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
 	"strconv"
@@ -228,5 +229,54 @@ func TestTheLineSaysQuitAndOpenAgainNeverToggle(t *testing.T) {
 	texts := guideCalls(t, 1)
 	if len(texts[0]) != 1 {
 		t.Errorf("there is nothing newer, so there is nothing to say: %v", texts[0])
+	}
+}
+
+// ctxPlain answers the listing unless the context it was handed is already
+// done. It is the one thing a stub of the wire has to copy here, because the
+// whole question is whose cancellation the check rides on.
+type ctxPlain struct {
+	listing string
+	got     []string
+}
+
+func (c *ctxPlain) GetJSON(ctx context.Context, rawURL string, into any) error {
+	c.got = append(c.got, rawURL)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return json.Unmarshal([]byte(c.listing), into)
+}
+
+func (c *ctxPlain) GetBytes(_ context.Context, rawURL string, _ int64) ([]byte, error) {
+	return nil, fmt.Errorf("a check downloads nothing, and this one asked for %s", rawURL)
+}
+
+func (c *ctxPlain) Warnings() []string { return nil }
+
+// A client that stops the turn its first tool call is in cancels that call's
+// context. The check is not that call's work: it rides on it, and a failure
+// stamped from a cancellation costs the day's check for both processes Claude
+// Desktop started, and the once is spent for the life of this one. So the check
+// is handed a context of its own, which keeps the two-second ceiling and leaves
+// the stamp out of the call's hands.
+func TestACancelledFirstCallStillLeavesTheDaysCheckUnspent(t *testing.T) {
+	pl := &ctxPlain{listing: listing("v2.9.0", "v2.8.0")}
+	path := checking(t, "v2.8.0", pl)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var errOut strings.Builder
+	line := (&mcpNotice{}).first(ctx, &errOut)
+	if line == "" {
+		t.Fatalf("the check ran and said nothing: %q", errOut.String())
+	}
+	s := stampOnDisk(t, path)
+	if s.Error != "" {
+		t.Errorf("a cancelled call must not stamp a failure: %q", s.Error)
+	}
+	if s.LatestStable != "v2.9.0" {
+		t.Errorf("the check read the listing, so the stamp holds it: %+v", s)
 	}
 }

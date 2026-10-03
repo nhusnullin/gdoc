@@ -349,7 +349,7 @@ func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flag
 	data.Run = d.Run
 	if !d.Installs() {
 		if desktop {
-			return refreshExtension(ctx, reach, latest, installed, data, warns, pr)
+			return refreshExtension(ctx, reach, releaseHere(latest, stable, nightly, installed), installed, data, warns, pr)
 		}
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
@@ -370,6 +370,28 @@ func installSteps(desktop bool) []string {
 		return []string{stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack}
 	}
 	return []string{stepChecksums, stepDownload, stepVerify, stepTemplate, stepReplace, stepReadBack, stepExtension}
+}
+
+// releaseHere is the listed release that names the binary this machine runs,
+// out of the newest of each channel, and the channel the run asked for where
+// neither does.
+//
+// A nightly installed and a plain `gdoc update --desktop` is the ordinary shape
+// of it: this repository cuts a nightly after every merge, so the version that
+// is here is listed on the other channel rather than not at all, and asking the
+// person to type --nightly to get their own extension back is a flag about
+// nothing. A version neither channel holds is a release this run declined or a
+// binary nobody published, and refreshExtension writes nothing for either.
+//
+// TestDesktopOnANightlyWritesTheExtensionFromTheNightly and
+// TestDesktopOnADeclinedMajorWritesNoExtension.
+func releaseHere(asked, stable, nightly update.Release, installed update.Version) update.Release {
+	for _, rel := range []update.Release{stable, nightly} {
+		if update.Compare(rel.Version, installed) == 0 {
+			return rel
+		}
+	}
+	return asked
 }
 
 // refreshExtension is --desktop on a run with nothing to install. The extension

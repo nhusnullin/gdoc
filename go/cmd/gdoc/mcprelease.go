@@ -62,11 +62,22 @@ const mcpConfirmSchema = objectTop +
 // instant for the quiet gap, because an approval is the person's and not the
 // session's own work, and a second card waiting on the first would help nobody.
 // The sweep it needs happens where it looks its hold up.
+//
+// The reason is not in the description, and the description is the one place in
+// this server that may not carry it. It goes out in tools/list and the client
+// keeps it in front of the model for as long as the hold lives, which is the one
+// channel here that reads as gdoc's own words rather than as data, and a reason
+// is built out of text somebody else wrote: the Focus rule names the title of
+// the other document this session read, and a title is free text anybody who
+// can edit chooses. So the description sends the model to the held answer for
+// it, which is where it already is, as a field of its own:
+// TestTheConfirmDescriptionCarriesNoTextFromADocument.
 func mcpConfirmTool(held chat.Hold, errOut io.Writer, ch *mcpChat) mcp.Tool {
 	return mcp.Tool{
 		Name:  mcpConfirmPrefix + held.ID,
 		Title: "Send the " + held.Tool + " gdoc held",
-		Description: "gdoc held this " + held.Tool + " and sent nothing, because " + held.Reason + ". " +
+		Description: "gdoc held this " + held.Tool + " and sent nothing. " +
+			"The held answer carries the reason it was held, in its reason field. " +
 			"Calling this tool asks the person to approve that one write. " +
 			"It sends exactly the words gdoc held, into the document the card names, and nothing else. " +
 			"Send the hold, the title, the reason and the text exactly as the held answer gave them. " +
