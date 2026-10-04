@@ -303,8 +303,10 @@
 // up. An after block is refused for the same reason when the element behind the
 // anchor is a table or the contents list Docs generates, because there is no
 // paragraph start to go in at, and when the paragraph behind it does not begin
-// where the anchor ends. A quote inside a table cell is refused on both routes
-// while docs/backlog/propose-inside-tables.md is unsettled.
+// where the anchor ends. A quote inside a table cell is refused on both block
+// routes while docs/backlog/propose-inside-tables.md is unsettled. The words
+// kind is placed in a cell, because a cell's paragraph is a paragraph:
+// TestFindSpanPlacesAQuoteInsideATableCell.
 //
 // A run covering a paragraph that carries anything but words is refused by the
 // name of what it carries: a picture, a drawing, an equation, a footnote mark, a

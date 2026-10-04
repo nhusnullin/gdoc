@@ -128,14 +128,16 @@ Written before any settings or Keychain code. Part A needs no entry.
 ### Task 3: a words proposal lands inside a table cell, and the note says so
 
 **Files:**
-- Modify: `go/internal/propose/doc.go`, `go/internal/propose/span_test.go`
+- Modify: `go/internal/propose/doc.go`
+- Create: `go/internal/propose/span_table_test.go`
 
-- [ ] `TestFindSpanPlacesAQuoteInsideATableCell`: a document whose one table
+- [x] `TestFindSpanPlacesAQuoteInsideATableCell`: a document whose one table
       holds `Business` and `£20` in two cells; `FindSpan(d, "£20")` returns the
-      cell's range, by literal indexes.
-- [ ] `doc.go:306` says "on both block routes", and one sentence says a words
+      cell's range, by literal indexes. It passed on first run: it pins
+      behaviour that already worked.
+- [x] `doc.go:306` says "on both block routes", and one sentence says a words
       proposal is placed in a cell, naming the test.
-- [ ] `git commit -m "docs(propose): a words proposal lands in a table cell, and a test pins it"`
+- [x] `git commit -m "docs(propose): a words proposal lands in a table cell, and a test pins it"`
 
 ### Task 4: an unknown field is refused with the fields the entry takes
 
