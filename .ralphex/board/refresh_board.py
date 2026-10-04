@@ -35,6 +35,9 @@ from pathlib import Path
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 TASK_COMMIT_PREFIXES = ("feat", "fix", "test", "docs", "refactor", "chore")
+# A plan edited mid-run, or the board itself, is not a task: counting them would
+# pair the next task with the wrong commit.
+NOT_TASK_PREFIXES = ("docs(plans)", "chore(board)")
 
 
 def sh(*args, cwd):
@@ -115,7 +118,8 @@ def build_snapshot(cfg, repo, pid):
     failed = bool(re.search(r"TASK_FAILED|max iterations reached|^error:", log, re.I | re.M)) and not running
     limited = bool(re.search(r"session limit|usage limit", log, re.I))
 
-    task_commits = [c for c in cms if c[2].startswith(TASK_COMMIT_PREFIXES) and "review findings" not in c[2]]
+    task_commits = [c for c in cms if c[2].startswith(TASK_COMMIT_PREFIXES)
+                    and not c[2].startswith(NOT_TASK_PREFIXES) and "review findings" not in c[2]]
     tasks, current_found = [], False
     for t in tasks_meta:
         o = overrides.get(str(t["n"]), {})

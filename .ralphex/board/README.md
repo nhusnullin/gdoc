@@ -105,4 +105,5 @@ the logs and the page. `SCRATCH` below is that directory.
   instance). A noise event is a `noop` reschedule, nothing more.
 - Commit prefixes the board counts as task commits: `feat`, `fix`, `test`,
   `docs`, `refactor`, `chore`. A ralphex fix commit says "review findings" and
-  is counted separately.
+  is counted separately. `docs(plans)` and `chore(board)` are never task
+  commits: a plan edited mid-run, or the board itself.
