@@ -56,7 +56,7 @@ func writeStatusScreen(errOut io.Writer, d statusData) {
 func statusScreen(p panel.Panel, style tty.Style, d statusData) []string {
 	rows := pairRows(p, style.Key("status"), stateOf(style, d))
 	if d.Account != "" {
-		rows = append(rows, pairRows(p, style.Key("account"), d.Account)...)
+		rows = append(rows, pairRows(p, style.Key("account"), accountWords(d))...)
 	}
 	rows = append(rows, pairRows(p, style.Key("file"), d.TokenPath)...)
 	if len(d.Scopes) > 0 {
@@ -68,6 +68,16 @@ func statusScreen(p panel.Panel, style tty.Style, d statusData) []string {
 	rows = append(rows, pairRows(p, style.Key("client"), d.ClientSource)...)
 	rows = append(rows, pairRows(p, style.Key("mode"), d.AuthMode)...)
 	return p.Box("auth status", gdocLabel(), rows)
+}
+
+// accountWords is the account row: the person's name beside the address when
+// Google said who it is, and the address alone when it did not.
+// TestThePanelNamesThePersonBesideTheAddress.
+func accountWords(d statusData) string {
+	if d.AccountName == "" {
+		return d.Account
+	}
+	return d.AccountName + " · " + d.Account
 }
 
 // stateOf is the first row: a mark and the words for it. The marks are the

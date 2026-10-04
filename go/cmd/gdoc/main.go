@@ -286,7 +286,27 @@ func authStatus(ctx context.Context, withAccount bool) emit.Result {
 	}
 	acc, read := accountFor(ctx, report, withAccount)
 	warnings = append(warnings, read...)
-	return emit.Result{OK: true, Data: statusReport(report, acc), Warnings: warnings}
+	return emit.Result{OK: true, Data: statusReport(afterRead(report, acc), acc), Warnings: warnings}
+}
+
+// afterRead is the report as the file stands once the account read is done.
+// That read may have refreshed an expired access token and saved it, so the
+// report read before it would say `expired: true` beside a warning that the
+// token was just refreshed. A read that answered went out with a working
+// token, so the file is read again; one that failed proves nothing, and the
+// first reading stands. A second reading that fails leaves the first one too:
+// the first was good, and the account read did not make it less so.
+// TestExpiredIsWhatTheFileSaysAfterTheAccountRead and
+// TestAFailedAccountReadLeavesExpiredAsRead.
+func afterRead(report *auth.StatusReport, acc gapi.Account) *auth.StatusReport {
+	if acc.Email == "" {
+		return report
+	}
+	fresh, err := auth.Status()
+	if err != nil || fresh == nil {
+		return report
+	}
+	return fresh
 }
 
 // accountFor is who the token signs in as, and the warnings that read came
@@ -296,9 +316,9 @@ func authStatus(ctx context.Context, withAccount bool) emit.Result {
 //
 // The session's warnings are the reason this hands back a list. The read goes
 // out through an ordinary session, which refreshes an expired access token and
-// saves it first, and `expired: true` in the report is then what the file said
-// when auth.Status read it rather than what it says now. The warning is where
-// a reader is told that: TestTheAccountReadsWarningsReachTheObject.
+// saves it first. The warning is where a reader is told that it did:
+// TestTheAccountReadsWarningsReachTheObject. The report is read again after a
+// read that answered, so `expired` says what the file says now: afterRead.
 //
 // Three reports are not asked at all. A report that is not there has no token
 // to read with; neither has one saying there is no token; and a token missing a

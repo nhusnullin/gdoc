@@ -3602,11 +3602,13 @@ ever reaches a pipe or a file. `NO_COLOR` and `TERM=dumb` turn the colour off.
   read sees a swapped token.
 - That read is what makes `auth status` touch the network and, through the
   ordinary session, possibly refresh an expired access token, as every other
-  command already does. `auth.Status` itself still reads and writes nothing, so
-  `expired` is what the file said when it was read, and the session's own
-  warning is what says the account read then refreshed and saved it. That
-  warning reaches the object, failed read included, because every other command
-  in the binary surfaces it.
+  command already does. `auth.Status` itself still reads and writes nothing.
+  After a read that answered, the file is read again, so `expired` says what
+  the file says now, and the session's own warning says the account read
+  refreshed and saved it; Nail's call at acceptance, 2026-10-04, because the
+  first reading beside that warning read as a contradiction. After a read that
+  failed, the first reading stands. The warning reaches the object, failed read
+  included, because every other command in the binary surfaces it.
   The read runs under its own ceiling of five seconds, so a network that hangs,
   such as one that breaks a TLS 1.3 handshake, costs at most that. When it
   fails the report is still `ok: true`, the account is absent, and one warning

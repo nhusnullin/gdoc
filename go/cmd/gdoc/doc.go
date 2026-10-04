@@ -219,12 +219,18 @@
 //
 // The read's own warnings go out with the report. It goes through an ordinary
 // session, which refreshes an expired access token and saves it before the
-// request leaves, so `expired: true` is what the file said when auth.Status
-// read it and the warning is what says the read then rewrote it. A read that
-// failed carries them too, because the refresh had already happened.
+// request leaves, and the warning is what says it did. A read that failed
+// carries them too, because the refresh had already happened.
 // TestTheAccountReadsWarningsReachTheObject,
 // TestAFailedAccountReadStillCarriesTheSessionsWarnings and
 // TestTheLoginToolCarriesTheAccountReadsWarnings for the chat's own answer.
+//
+// After a read that answered, the token file is read again, so `expired` says
+// what the file says now and never contradicts that warning; after one that
+// failed, the first reading stands: TestExpiredIsWhatTheFileSaysAfterTheAccountRead
+// and TestAFailedAccountReadLeavesExpiredAsRead. The panel's account row names
+// the person beside the address when Google said who it is:
+// TestThePanelNamesThePersonBesideTheAddress.
 //
 // auth login does not ask. It just made a browser trip, and the object a skill
 // reads after a login is the object it read before:
