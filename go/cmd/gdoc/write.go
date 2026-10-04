@@ -320,7 +320,12 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 						"proposal %d (%q) was written and its answer was lost, so it may or may not be in the document. Read the suggestions before proposing it again",
 						i+1, res.Quote())}
 			}
-			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
+			// The refusal names its proposal, the way a refusal of the file
+			// names its entry: a caller with seven proposals out should not
+			// have to match the words back against the file.
+			// TestARunTimeRefusalNamesTheProposalByNumber is the pin.
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf("proposal %d (%q): %s", i+1, res.Quote(), err)}
 		}
 		results = append(results, res)
 		data.Proposals[i] = sent(res)

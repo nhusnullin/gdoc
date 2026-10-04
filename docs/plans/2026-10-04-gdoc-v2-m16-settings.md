@@ -179,10 +179,10 @@ Written before any settings or Keychain code. Part A needs no entry.
 - Modify: `go/cmd/gdoc/write.go`
 - Create: `go/cmd/gdoc/proposalnumber_test.go`
 
-- [ ] `TestARunTimeRefusalNamesTheProposalByNumber`: the second of two words
+- [x] `TestARunTimeRefusalNamesTheProposalByNumber`: the second of two words
       proposals quotes text that is not in the document; the error opens with
       `proposal 2 (` and the quote, and the first entry reports `sent: true`.
-- [ ] `git commit -m "fix(cmd): a refusal during the run names its proposal"`
+- [x] `git commit -m "fix(cmd): a refusal during the run names its proposal"`
 
 ### Task 7: the `--from` summary names `why`
 
