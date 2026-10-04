@@ -316,10 +316,24 @@ type Session interface {
 // kinds in one list, and the loop that walks it asks nothing about which kind
 // an entry is.
 func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
+	return ApplyFrom(ctx, s, docID, p, nil)
+}
+
+// ApplyFrom is Apply placed from a read the caller already holds, which must
+// have come back from Google a moment ago and been refused for more than one
+// tab, as readOneTab refuses it. A nil read reads, as Apply does.
+//
+// It exists for the first proposal of a run: the run reads the document to
+// count its tabs, and reading it again before the first write is a call that
+// tells gdoc nothing new. Every later proposal is placed from its own fresh
+// read, because the one before it moved the ground:
+// TestProposeReadsTheDocumentOnceBeforeTheFirstWrite and
+// TestEveryLaterProposalStillReadsFresh in cmd/gdoc.
+func ApplyFrom(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document) (Result, error) {
 	if p.Kind == KindBlock {
-		return ApplyBlock(ctx, s, docID, p)
+		return applyBlock(ctx, s, docID, p, d)
 	}
-	return applyWords(ctx, s, docID, p)
+	return applyWords(ctx, s, docID, p, d)
 }
 
 // applyWords is the words kind's own sequence: read, find the quote, write
@@ -331,12 +345,12 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 //
 // It fails only before the write. After the batch has gone out the change
 // exists, and everything from there is reported rather than raised.
-func applyWords(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
+func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document) (Result, error) {
 	out := Result{Quoted: p.Quoted, Replacement: p.Replacement}
 	if err := p.Check(); err != nil {
 		return out, err
 	}
-	d, err := readOneTab(ctx, s, docID)
+	d, err := readUnlessHeld(ctx, s, docID, d)
 	if err != nil {
 		return out, err
 	}
@@ -372,6 +386,15 @@ func readOneTab(ctx context.Context, s Session, docID string) (*docs.Document, e
 		return nil, fmt.Errorf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))
 	}
 	return d, nil
+}
+
+// readUnlessHeld is the read a proposal is built from: the one the caller
+// holds, or a fresh one.
+func readUnlessHeld(ctx context.Context, s Session, docID string, held *docs.Document) (*docs.Document, error) {
+	if held != nil {
+		return held, nil
+	}
+	return readOneTab(ctx, s, docID)
 }
 
 // send posts the one batch a proposal makes and reads the answer into the

@@ -307,11 +307,10 @@ func exportWithComment(t *testing.T, anchored bool) []byte {
 func proposeAnswers(t *testing.T, anchored bool) []*answer {
 	t.Helper()
 	return []*answer{
-		// Three reads of the inline view, in order: the command's own, which is
-		// where the tab count comes from, the one Apply makes before it writes,
-		// and the read-back. Same URL, so each is spent before the next is
+		// Two reads of the inline view, in order: the command's own, which is
+		// where the tab count comes from and which the first proposal is placed
+		// from, and the read-back. Same URL, so each is spent before the next is
 		// reached, and the preview below is a different URL again.
-		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-after.json"), once: true},
 		{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json")},

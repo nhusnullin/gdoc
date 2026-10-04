@@ -383,7 +383,11 @@
 // insertComment over the inserted span, in that order. One batch, because Docs
 // applies the requests in order with consistent indexes, so the comment lands on
 // the span the insert made. Two proposals are two batches, each after its own
-// fresh read, because the first moves the ground under the second. A document
+// fresh read, because the first moves the ground under the second. The first
+// proposal of a run is placed from the read the run has just made to count the
+// tabs, through ApplyFrom, rather than reading the document a second time:
+// TestProposeReadsTheDocumentOnceBeforeTheFirstWrite and
+// TestEveryLaterProposalStillReadsFresh in cmd/gdoc. A document
 // with more than one tab stops the run before anything is sent: a range means
 // nothing without saying which tab it is in.
 // TestBatchSendsThreeRequestsInOrderUnderSuggestMode,

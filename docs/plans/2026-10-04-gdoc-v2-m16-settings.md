@@ -204,14 +204,17 @@ Written before any settings or Keychain code. Part A needs no entry.
   `go/cmd/gdoc/write.go`, `go/internal/propose/doc.go`
 - Create: `go/cmd/gdoc/proposeread_test.go`
 
-- [ ] `propose.ApplyFrom(ctx, s, docID, p, d)` takes the read the caller
+- [x] `propose.ApplyFrom(ctx, s, docID, p, d)` takes the read the caller
       already holds for the first proposal; `nil` reads, as `Apply` does now.
       Every later proposal still reads fresh.
-- [ ] `TestProposeReadsTheDocumentOnceBeforeTheFirstWrite`: a run of one
+- [x] `TestProposeReadsTheDocumentOnceBeforeTheFirstWrite`: a run of one
       words proposal makes exactly one Docs GET before its batchUpdate.
-- [ ] `TestEveryLaterProposalStillReadsFresh`: a run of two makes a GET
+- [x] `TestEveryLaterProposalStillReadsFresh`: a run of two makes a GET
       between the first proposal's read-backs and the second's write.
-- [ ] `git commit -m "refactor(propose): one read before the first write, not two"`
+- ➕ The fake wire's staged reads drop the second read before the first write:
+      `proposeAnswers`, `proposeRun`, `runFixtures.answers`, `blockAnswers`,
+      the replace fixture and `lostAnswerRun`. No assertion changed.
+- [x] `git commit -m "refactor(propose): one read before the first write, not two"`
 
 <!-- Parts B and C: Tasks 9 onward, merged from the discovery draft. -->
 

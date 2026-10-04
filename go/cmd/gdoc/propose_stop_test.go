@@ -51,9 +51,11 @@ func (rf runFixtures) answers(t *testing.T) []*answer {
 		if i == 0 && rf.firstReadBack != nil {
 			readBack = rf.firstReadBack
 		}
-		out = append(out,
-			&answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
-			readBack)
+		// The first proposal is placed from the command's own read above.
+		if i > 0 {
+			out = append(out, &answer{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true})
+		}
+		out = append(out, readBack)
 	}
 	return out
 }

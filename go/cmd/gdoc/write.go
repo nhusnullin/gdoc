@@ -306,7 +306,13 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 		// three routes whatever the caller's clock says: a suggestion in
 		// somebody's document that gdoc did not read back is a change nobody
 		// can account for. TestAReadBackIsNeverCutByTheDeadline is the pin.
-		res, err := propose.Apply(context.WithoutCancel(ctx), r.session, r.id, one)
+		// The first proposal is placed from the read above, which has just
+		// come back; every later one reads for itself.
+		var held *docs.Document
+		if i == 0 {
+			held = d
+		}
+		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			if res.Outcome == propose.OutcomeUnknown {
