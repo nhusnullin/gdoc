@@ -92,8 +92,8 @@ def parse_tasks(plan):
     return tasks
 
 
-def commits(repo, branch):
-    out = sh("git", "log", "--reverse", f"main..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
+def commits(repo, branch, base="main"):
+    out = sh("git", "log", "--reverse", f"{base}..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
     return [tuple(l.split("|", 2)) for l in out.splitlines()]
 
 
@@ -104,7 +104,7 @@ def build_snapshot(cfg, repo, pid):
     running = alive(pid)
     tasks_meta = parse_tasks(plan_text(repo, cfg["branch"], cfg["plan"]))
     overrides = cfg.get("tasks", {})
-    cms = commits(repo, cfg["branch"])
+    cms = commits(repo, cfg["branch"], cfg.get("base", "main"))
     n_tasks = len(tasks_meta)
 
     iterations = len(re.findall(r"^--- task iteration \d+ ---", log, re.M))
@@ -193,6 +193,7 @@ def main():
     ap.add_argument("--init", action="store_true", help="create the page from the template and save the config sidecar")
     ap.add_argument("--plan"); ap.add_argument("--branch"); ap.add_argument("--heading"); ap.add_argument("--title")
     ap.add_argument("--logs", nargs="*"); ap.add_argument("--warns"); ap.add_argument("--tasks"); ap.add_argument("--started")
+    ap.add_argument("--base", help="the commit the run counts from, default main: for a plan written on the branch itself")
     ap.add_argument("--repo", default=str(Path(__file__).resolve().parents[2]))
     a = ap.parse_args()
 
@@ -210,6 +211,8 @@ def main():
             cfg["warns"] = json.loads(Path(a.warns).read_text())
         if a.tasks:
             cfg["tasks"] = json.loads(Path(a.tasks).read_text())
+        if a.base:
+            cfg["base"] = a.base
         if html_path.exists():
             html_path.unlink()
         side.write_text(json.dumps(cfg, indent=2))
@@ -221,6 +224,10 @@ def main():
             cfg["started"] = a.started
         if a.warns:
             cfg["warns"] = json.loads(Path(a.warns).read_text())
+        if a.tasks:
+            cfg["tasks"] = json.loads(Path(a.tasks).read_text())
+        if a.base:
+            cfg["base"] = a.base
         side.write_text(json.dumps(cfg, indent=2))
 
     snapshot = build_snapshot(cfg, Path(a.repo), a.pid)

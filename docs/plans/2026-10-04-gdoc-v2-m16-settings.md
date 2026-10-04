@@ -10,9 +10,9 @@ The spec holds the rules, the decisions and the measurements. This plan repeats
 none of them. Where the code, the spec or this plan disagree, the task stops and
 says so rather than choosing.
 
-Part A (Tasks 2 to 8) changes no contract, needs no decision, and was run by
-hand in the session that wrote this plan, before Task 1. Task 1 lands before
-Part B.
+Task 1 and Part A (Tasks 2 to 8) are run by hand in the session that wrote
+this plan. Part A changes no contract and needs no decision. Parts B and C
+follow from Task 9.
 
 ## Principles
 
@@ -87,7 +87,7 @@ existing `/usr/bin/open` exception is named.
 
 ### Task 1: the DECISIONS.md entries, SPEC.md and CLAUDE.md
 
-Written before Part B's code. Part A needs no entry and ran first.
+Written before any settings or Keychain code. Part A needs no entry.
 
 **Files:**
 - Modify: `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`, `CLAUDE.md`

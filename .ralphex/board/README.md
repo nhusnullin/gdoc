@@ -48,6 +48,10 @@ the logs and the page. `SCRATCH` below is that directory.
      --warns warns.json --tasks tasks.json --pid <pid>
    ```
 
+   A plan written on the branch itself, not on `main`, adds `--base <commit>`
+   naming the plan's commit, so the docs commits before it are not paired
+   with Task 1.
+
    Publish `mN-run-board.html` with the Artifact tool, with a favicon and a
    one-sentence description. Every later publish uses the same file path so the
    URL stays.
