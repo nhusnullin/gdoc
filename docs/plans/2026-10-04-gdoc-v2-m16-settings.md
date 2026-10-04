@@ -165,12 +165,13 @@ Written before any settings or Keychain code. Part A needs no entry.
 ### Task 5: a deletion is refused with the way to propose it
 
 **Files:**
-- Modify: `go/internal/propose/propose.go`, `go/internal/propose/propose_test.go`
+- Modify: `go/internal/propose/propose.go`
+- Create: `go/internal/propose/deletion_test.go`
 
-- [ ] `TestADeletionRefusalSaysToQuoteANeighbour`: the refusal for an empty
+- [x] `TestADeletionRefusalSaysToQuoteANeighbour`: the refusal for an empty
       replacement contains "quote a neighbouring word with it, and keep that
       word in the replacement".
-- [ ] `git commit -m "fix(propose): a deletion is refused with the way to propose it"`
+- [x] `git commit -m "fix(propose): a deletion is refused with the way to propose it"`
 
 ### Task 6: a refusal during the run names its proposal
 

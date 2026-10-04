@@ -122,7 +122,7 @@ func (p Proposal) checkWords() error {
 		return errors.New("the proposal quotes no text, so there is nothing to replace")
 	}
 	if p.Replacement == "" {
-		return fmt.Errorf("the proposal replaces %q with nothing; a proposal replaces words with words, and a plain deletion is not a shape this write has", p.Quoted)
+		return fmt.Errorf("the proposal replaces %q with nothing; a proposal replaces words with words, and a plain deletion is not a shape this write has. To take words out, quote a neighbouring word with it, and keep that word in the replacement: \"is not ready\" becomes \"is ready\"", p.Quoted)
 	}
 	// Words with words is one paragraph's worth of words, on both sides, and
 	// each side is refused here for its own reason.
