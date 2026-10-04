@@ -65,6 +65,13 @@ type Proposal struct {
 	Assignee    string `json:"assignee,omitempty"`
 }
 
+// Fields is the sentence a refusal gives when an entry of a proposals file
+// carries a field Proposal does not have: what each kind takes, in the words a
+// caller writes. TestTheFieldListsNameEveryTag in cmd/gdoc holds it to the tags
+// above.
+const Fields = "A words entry takes quoted, replacement, why and assignee. " +
+	"A block entry takes kind, after or replace_from and replace_to, content, why and assignee."
+
 // Check is the shape rule for one proposal, as shape rather than as meaning. It
 // answers from the proposal alone, so the caller can ask it of every proposal
 // in the file before the first one leaves the machine: a third entry refused

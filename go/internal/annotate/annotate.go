@@ -40,6 +40,11 @@ type Annotation struct {
 	Assignee string `json:"assignee,omitempty"`
 }
 
+// Fields is the sentence a refusal gives when an entry of an annotations file
+// carries a field Annotation does not have. TestTheFieldListsNameEveryTag in
+// cmd/gdoc holds it to the tags above.
+const Fields = "An entry takes quoted, why and assignee."
+
 // Check is the shape rule for one annotation, as shape rather than as meaning.
 // It answers from the annotation alone, so the caller can ask it of every entry
 // in the file before the first one leaves the machine: a third entry refused

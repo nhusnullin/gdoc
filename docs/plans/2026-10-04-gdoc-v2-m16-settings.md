@@ -146,20 +146,21 @@ Written before any settings or Keychain code. Part A needs no entry.
   `go/cmd/gdoc/propose_block_test.go`
 - Create: `go/cmd/gdoc/unknownfield_test.go`
 
-- [ ] The list is decoded into raw entries first, then each entry strictly, so
-      a refusal names its entry: `proposals[0]`.
-- [ ] `TestAnUnknownFieldIsRefusedWithTheFieldsTheEntryTakes`: a words entry
+- [x] The list is decoded into raw entries first, then each entry strictly, so
+      a refusal names its entry: `proposals[0]`. One generic reader,
+      `strictEntries` in `cmd/gdoc/entries.go`, serves both files.
+- [x] `TestAnUnknownFieldIsRefusedWithTheFieldsTheEntryTakes`: a words entry
       carrying `reason` is refused with `proposals[0]`, `"reason"`, and the
-      literal lists `quoted, replacement, why, assignee` and
-      `kind, after, replace_from, replace_to, content, why, assignee`. Nothing
-      reaches Google.
-- [ ] `TestTheFieldListsNameEveryTag`: the words of both lists, together, are
-      exactly the JSON tags of `propose.Proposal`, so the list cannot drift
-      from the struct.
-- [ ] The same for `annotate --from`:
+      literal sentences of `propose.Fields`. Nothing reaches Google.
+- ➕ `TestAnUnknownFieldNamesTheEntryItIsIn`: the stray field in the second
+      entry is refused as `proposals[1]`.
+- [x] `TestTheFieldListsNameEveryTag`: every JSON tag of `propose.Proposal`
+      and of `annotate.Annotation` is a word of its `Fields` sentence.
+- [x] The same for `annotate --from`:
       `TestAnUnknownAnnotationFieldIsRefusedWithTheFieldsItTakes`.
-- [ ] `TestProposeRefusesAnUnknownFieldInABlockEntry` still passes unchanged.
-- [ ] `git commit -m "fix(cmd): an unknown field is refused with the fields the entry takes"`
+- [x] `TestProposeRefusesAnUnknownFieldInABlockEntry` and
+      `TestAnnotateRefusesAnUnknownKeyInTheFile` still pass unchanged.
+- [x] `git commit -m "fix(cmd): an unknown field is refused with the fields the entry takes"`
 
 ### Task 5: a deletion is refused with the way to propose it
 
