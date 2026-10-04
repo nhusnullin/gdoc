@@ -64,7 +64,7 @@ func (a Annotation) Check() error {
 	// nothing but spaces is a comment that is a bare signature.
 	why := strings.TrimSpace(a.Why)
 	if why == "" {
-		return errors.New("the annotation carries no reason, and a comment that says nothing is one Nail has to guess at")
+		return errors.New("the annotation carries no reason, and a comment that says nothing is one the reader has to guess at")
 	}
 	// Body writes the comment as Prefix + Why, so a reason that already opens
 	// with the robot lands as two of them. reply.Check requires the prefix and

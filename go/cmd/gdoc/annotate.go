@@ -90,7 +90,7 @@ func annotationsFor(a *args) ([]annotate.Annotation, error) {
 			"drop --body-file to leave the comments the file names")
 	case a.has("--quote") && !a.has("--body-file"):
 		return nil, fmt.Errorf("--quote names the words to comment on, and the reason goes in --body-file <file>: " +
-			"a comment that says nothing is one Nail has to guess at")
+			"a comment that says nothing is one the reader has to guess at")
 	case a.has("--body-file") && !a.has("--quote"):
 		return nil, fmt.Errorf("--body-file holds the reason for a comment, and --quote <text> says which words it goes on")
 	case a.has("--from"):

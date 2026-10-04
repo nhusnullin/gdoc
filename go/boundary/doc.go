@@ -363,4 +363,13 @@
 // asks that all five say it in the same words.
 // TestAnUpdateNoticeWithTheCommandInProseIsCaught feeds it the old wording,
 // the command inside a sentence, and wants it refused.
+//
+// # No refusal names a person
+//
+// A refusal reaches whoever runs the binary, and that is a colleague's session
+// as often as it is Nail's. "One Nail has to guess at" told a colleague's AI
+// about somebody it has never met. TestNoRefusalNamesAPerson reads the message
+// of every errors.New and fmt.Errorf, and every Error field, in the production
+// files. TestTheRefusalScannerFindsAllThreeShapes keeps the scanner from
+// passing a tree because it found nothing.
 package boundary

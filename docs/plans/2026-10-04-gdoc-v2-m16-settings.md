@@ -116,11 +116,14 @@ Written before any settings or Keychain code. Part A needs no entry.
   `go/cmd/gdoc/annotate.go`
 - Create: `go/boundary/refusal_test.go`
 
-- [ ] `TestNoRefusalNamesAPerson` reads every non-test `.go` file under `go/`
+- [x] `TestNoRefusalNamesAPerson` reads every non-test `.go` file under `go/`
       and fails on a line that builds an error (`errors.New(`, `fmt.Errorf(`)
       or an `emit.Result` `Error:` and carries `Nail`.
-- [ ] The three sentences say "is one the reader has to guess at".
-- [ ] `git commit -m "fix: no refusal names a person"`
+- ➕ `TestTheRefusalScannerFindsAllThreeShapes`, so the scanner cannot pass a
+      tree by finding nothing; it reads strings joined with `+`, which is how
+      the `cmd/gdoc/annotate.go` sentence is built. `boundary/doc.go` names both.
+- [x] The three sentences say "is one the reader has to guess at".
+- [x] `git commit -m "fix: no refusal names a person"`
 
 ### Task 3: a words proposal lands inside a table cell, and the note says so
 

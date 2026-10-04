@@ -175,7 +175,7 @@ func (p Proposal) checkWhy() error {
 	// verified: true over an explanation that says nothing.
 	why := strings.TrimSpace(p.Why)
 	if why == "" {
-		return errors.New("the proposal carries no reason, and a suggestion nobody explained is one Nail has to guess at")
+		return errors.New("the proposal carries no reason, and a suggestion nobody explained is one the reader has to guess at")
 	}
 	// Batch writes the comment as Prefix + Why, so a reason that already opens
 	// with the robot lands as two of them. reply.Check requires the prefix and
