@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"gdoc/internal/guard"
+	"gdoc/internal/tty"
 	"gdoc/internal/update"
 )
 
@@ -779,7 +780,7 @@ func TestAPanicInAnUpdateStopsTheSpinner(t *testing.T) {
 	pl := &panickingPlain{stubPlain{listing: listing("v2.1.0", "v2.0.0")}}
 	installedAt(t, "v2.0.0", []byte("old"), pl)
 	old := openProgress
-	openProgress = func(w io.Writer, title string) *progress { return newLiveProgress(w, title, true) }
+	openProgress = func(w io.Writer, title string) *progress { return newLiveProgress(w, title, sixteen) }
 	t.Cleanup(func() { openProgress = old })
 
 	var out bytes.Buffer
@@ -801,7 +802,7 @@ func TestAPanicInAnUpdateStopsTheSpinner(t *testing.T) {
 	if strings.Contains(settled[crash:], "\x1b[") {
 		t.Errorf("an escape code follows the crash text: %q", settled[crash:])
 	}
-	if strings.LastIndex(settled[:crash], wrapOn) < strings.LastIndex(settled[:crash], wrapOff) {
+	if strings.LastIndex(settled[:crash], tty.WrapOn) < strings.LastIndex(settled[:crash], tty.WrapOff) {
 		t.Errorf("auto-wrap must be back on before the crash text: %q", settled[:crash])
 	}
 	if strings.Contains(settled, "installed") {

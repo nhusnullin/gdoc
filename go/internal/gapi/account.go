@@ -21,14 +21,16 @@ const accountURL = "https://www.googleapis.com/drive/v3/about?fields=user(emailA
 
 // Account is who a token signs in as. It is the answer gdoc mcp's login tool
 // reads out, so a person in a chat sees which Google account a write would be
-// made by.
+// made by, and the account `gdoc auth status` names, so a person at a prompt
+// reads the same fact.
 type Account struct {
 	Email string
 	Name  string
 }
 
-// Account reads it. The request needs guard.AllowAccountRead, which only the
-// login tool of gdoc mcp grants, so every other caller in this binary is
+// Account reads it. The request needs guard.AllowAccountRead, which only
+// accountOf in cmd/gdoc grants, for the login tool of gdoc mcp and for
+// `gdoc auth status` and nothing else, so every other caller in this binary is
 // refused by the guard before anything leaves:
 // TestTheAccountReadWithoutTheGrantSendsNothing.
 //

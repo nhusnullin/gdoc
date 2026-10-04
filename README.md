@@ -132,8 +132,8 @@ lands as one, and after every write it reads the document back.
 ## Build your own skill on the binary
 
 The five skills are prompts over one binary. Every command takes arguments and
-prints one JSON object, so a skill of your own can build on any of them. `gdoc
-help <command>` prints the words, the flags and an example.
+prints one JSON object. `gdoc help <command> --json` prints the words, the flags
+and an example; without `--json`, a help in a terminal draws a screen instead.
 
 | Command | Does |
 |---|---|

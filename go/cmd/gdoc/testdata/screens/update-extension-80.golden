@@ -1,0 +1,15 @@
+┌─ update ───────────────┬────────────────────────────────── v2.9.0 › v2.10.0 ─┐
+│ ✓ read releases        │ nhusnullin/gdoc, 30 listed                          │
+│ ✓ choose release       │ v2.10.0, stable, darwin-arm64, from v2.9.0          │
+│ ✓ read checksums       │ SHA256SUMS-v2.10.0                                  │
+│ ✓ download             │ gdoc-darwin-arm64.zip, 6.1 MB                       │
+│ ✓ verify checksum      │ matches SHA256SUMS-v2.10.0                          │
+│ ✓ read extension       │ gdoc.mcpb.template                                  │
+│ ✓ replace binary       │ /usr/local/bin/gdoc, the old one kept beside it     │
+│ ✓ read back            │ sha256 4f2a9c1be30d                                 │
+│ ✓ write extension      │ /Users/person/Library/Application                   │
+│                        │ Support/gdoc/gdoc.mcpb, handed to Claude Desktop    │
+└────────────────────────┴─────────────────────────────────────────────────────┘
+gdoc v2.10.0 installed. gdoc update --rollback goes back.
+Claude Desktop offers to install the extension: install it, then quit Claude
+Desktop and open it again.

@@ -93,11 +93,23 @@ type flag struct {
 	summary string
 }
 
+// jsonFlag is help's one flag, and it is named here because two readers take
+// it: the parser, from the table entry below, and helpWords, which takes it off
+// the line before looking for a command. A literal in both places could drift
+// into a flag only one of them answers to.
+const jsonFlag = "--json"
+
 // command is one entry in the table. words are the positional arguments in the
 // order they are typed, named the way a reader sees them, and their count is
 // what the parser insists on.
+//
+// group is the job the command does, and it is read by the screen alone: the
+// grouped help a person reads on a terminal. The object carries no such field,
+// because a group is a way to find a command on a page and not a fact about
+// it: TestEveryCommandHasAGroup and TestTheGroupIsNotInTheObject.
 type command struct {
 	name     string
+	group    string
 	words    []string
 	anyWords bool
 	flags    []flag
@@ -148,22 +160,25 @@ func commands() []command {
 	return []command{
 		{
 			name:    "auth status",
+			group:   groupAccount,
 			summary: "Say whether gdoc has a token, when it expires, and what it may reach.",
 			example: "gdoc auth status",
-			run: func(_ context.Context, _ *args, _ io.Writer) emit.Result {
-				return authStatus()
+			run: func(ctx context.Context, _ *args, errOut io.Writer) emit.Result {
+				return cmdAuthStatus(ctx, errOut)
 			},
 		},
 		{
 			name:    "auth login",
+			group:   groupAccount,
 			summary: "Print the Google sign-in URL and wait for the browser to come back.",
 			example: "gdoc auth login",
-			run: func(_ context.Context, _ *args, errOut io.Writer) emit.Result {
-				return authLogin(errOut)
+			run: func(ctx context.Context, _ *args, errOut io.Writer) emit.Result {
+				return authLogin(ctx, errOut)
 			},
 		},
 		{
 			name:  "read",
+			group: groupRead,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--structure", kindNone, needOptional, "print the tree of tabs, headings and tables instead of the text"},
@@ -176,6 +191,7 @@ func commands() []command {
 		},
 		{
 			name:  "comments",
+			group: groupRead,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--since", kindCursor, needOptional, "only what is newer than this cursor, which an earlier run printed"},
@@ -190,6 +206,7 @@ func commands() []command {
 		},
 		{
 			name:  "suggestions",
+			group: groupRead,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--md", kindFile, needOptional, "the note paired with this document, to say which of gdoc's own proposals have gone"},
@@ -202,6 +219,7 @@ func commands() []command {
 		},
 		{
 			name:  "export",
+			group: groupRead,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--out", kindFile, needRequired, "the Markdown file to write, or the note this document is already paired with"},
@@ -214,6 +232,7 @@ func commands() []command {
 		},
 		{
 			name:  "restyle",
+			group: groupWrite,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--dry-run", kindNone, needEither, "survey the document and write nothing into it"},
@@ -227,7 +246,8 @@ func commands() []command {
 			},
 		},
 		{
-			name: "probe",
+			name:  "probe",
+			group: groupAccount,
 			flags: []flag{
 				{"--folder", kindFolderID, needRequired, "the Drive folder the throwaway document is created in"},
 			},
@@ -239,6 +259,7 @@ func commands() []command {
 		},
 		{
 			name:  "reply",
+			group: groupWrite,
 			words: []string{"<url>", "<comment id>"},
 			flags: []flag{
 				{"--body-file", kindFile, needRequired, "the file holding the words of the reply"},
@@ -251,6 +272,7 @@ func commands() []command {
 		},
 		{
 			name:  "propose",
+			group: groupWrite,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to)"},
@@ -265,6 +287,7 @@ func commands() []command {
 		},
 		{
 			name:  "withdraw",
+			group: groupWrite,
 			words: []string{"<url>", "<suggestion id>"},
 			flags: []flag{
 				{"--md", kindFile, needRequired, "the note that records which suggestions gdoc wrote"},
@@ -277,6 +300,7 @@ func commands() []command {
 		},
 		{
 			name:  "annotate",
+			group: groupWrite,
 			words: []string{"<url>"},
 			flags: []flag{
 				{"--quote", kindText, needEither, "the exact words in the document to leave the comment on"},
@@ -290,7 +314,8 @@ func commands() []command {
 			},
 		},
 		{
-			name: "build",
+			name:  "build",
+			group: groupMake,
 			flags: []flag{
 				{"--md", kindFile, needRequired, "the note to build"},
 				{"--out", kindFile, needRequired, "the docx file to write"},
@@ -304,7 +329,8 @@ func commands() []command {
 			},
 		},
 		{
-			name: "publish",
+			name:  "publish",
+			group: groupMake,
 			flags: []flag{
 				{"--md", kindFile, needRequired, "the note to publish"},
 				{"--folder-id", kindFolderID, needRequired, "the Drive folder the document is created in"},
@@ -317,7 +343,8 @@ func commands() []command {
 			},
 		},
 		{
-			name: "update",
+			name:  "update",
+			group: groupAccount,
 			flags: []flag{
 				{"--check", kindNone, needOptional, "say what a run would take, and write nothing"},
 				{"--major", kindNone, needOptional, "take a release across a major boundary, which is never taken without this"},
@@ -333,6 +360,7 @@ func commands() []command {
 		},
 		{
 			name:    "mcp",
+			group:   groupAccount,
 			summary: "Serve gdoc to Claude Desktop over stdin and stdout, as a protocol session rather than one object.",
 			example: "gdoc mcp",
 			run: func(_ context.Context, _ *args, _ io.Writer) emit.Result {
@@ -341,16 +369,21 @@ func commands() []command {
 		},
 		{
 			name:     "help",
+			group:    groupAccount,
 			words:    []string{"<command>"},
 			anyWords: true,
-			summary:  "Print every command gdoc takes, or the words and flags of one.",
-			example:  "gdoc help publish",
+			flags: []flag{
+				{jsonFlag, kindNone, needOptional, "print the JSON object even on a terminal, and keep stderr plain"},
+			},
+			summary: "Print every command gdoc takes, or the words and flags of one.",
+			example: "gdoc help publish",
 			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
-				return cmdHelp(ctx, a.positional, errOut)
+				return cmdHelp(ctx, a.positional, a.has(jsonFlag), errOut)
 			},
 		},
 		{
 			name:     "completion",
+			group:    groupAccount,
 			words:    []string{"<shell>"},
 			anyWords: true,
 			flags: []flag{

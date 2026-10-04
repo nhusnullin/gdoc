@@ -25,6 +25,7 @@ Two rules about the documents themselves:
 | `go/internal/mcp/` | the Model Context Protocol over stdio, by hand: the framing, the four methods, the tools, the deadline. It knows no command |
 | `go/internal/chat/` | what a chat adds to a command: the guide code, the labels and facts on a read, the ledger of this process, the hold rules, the card, the write memory |
 | `go/internal/emit/` | the output envelope every command prints through |
+| `go/internal/tty/`, `go/internal/panel/` | the terminal, its colours and width, and the boxes drawn on it |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
 | `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
@@ -114,7 +115,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestGrantInPlaceLeavesACreatedDocumentAtFull`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
   `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`,
-  `AllowAccountRead`, whose one caller is `gdoc mcp`'s `login`, and
+  `AllowAccountRead`, called by `gdoc mcp`'s `login` and `auth status`, and
   `GrantInPlace` are per-run, and nothing writes one down:
   `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`,
   `TestAGrantedMarkerCarriesAndNothingElseDoes` and
@@ -131,12 +132,13 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   Nail accepted it in decision 16 of the M14 specification, and the list is
   fixed and in Go: `TestTheFirstRuleThatTripsIsTheOneNamed` and
   `TestAuthorDomainChangesNoOutcome`.
-- **One JSON object reaches stdout**, always through `internal/emit`, and the
-  exit code is 0 if and only if that object says `ok`:
-  `TestOnlyJSONObjectRefusesAnythingAfterTheObject`,
-  `TestLoginPrintsTheURLToStderrNotStdout` and `TestAPanicIsStillOneEnvelope`.
-  `mcp` is the one command that prints no envelope: it writes JSON-RPC lines
-  there and nothing else, `TestStdoutCarriesOnlyJSONRPC`.
+- **One JSON object reaches stdout**, always through `internal/emit`, except
+  that `mcp` writes JSON-RPC lines there and a help screen on a terminal
+  without `--json` writes nothing there, and the exit code is 0 if and only if
+  that object says `ok`, or 0 for `help` and 1 for bare `gdoc` when the screen
+  replaced it: `TestOnlyJSONObjectRefusesAnythingAfterTheObject`,
+  `TestLoginPrintsTheURLToStderrNotStdout`, `TestAPanicIsStillOneEnvelope`,
+  `TestStdoutCarriesOnlyJSONRPC`, `TestHelpOnATerminalWritesNothingToStdout`.
 - **The binary never prompts, and every command but `mcp` leaves stdin alone.**
   `mcp` reads its protocol there, and only `main` names the real stdin and
   stdout, so every other room is handed a reader and a writer:

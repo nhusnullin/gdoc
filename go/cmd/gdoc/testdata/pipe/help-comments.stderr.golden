@@ -1,0 +1,12 @@
+gdoc v2.10.0 is published and this is v2.9.0. `gdoc update` installs it.
+
+gdoc v2.9.0
+
+Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]
+  List the comment threads with their ranges, their replies and the next cursor.
+
+  --since <cursor>   only what is newer than this cursor, which an earlier run printed
+  --witness          export the document and say which threads the export still shows
+  --wait <duration>  wait this long for something new before answering, written as 9m or 90s
+
+  Example: gdoc comments https://docs.google.com/document/d/1AbC.../edit --since <cursor> --wait 9m

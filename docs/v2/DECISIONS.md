@@ -80,9 +80,10 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
 | 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
-| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs only (the link hold, and the trusted email domains, both dropped after the first run in Claude Desktop) |
+| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs and one clause only (the link hold and the trusted email domains, both dropped after the first run in Claude Desktop; and "No CLI command gains it" of `AllowAccountRead`, since `auth status` is the grant's second caller) |
 | 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
 | 2026-10-03 | A change the person approved is not a payload that landed | holds |
+| 2026-10-03 | On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3488,3 +3489,211 @@ is the model's kind of judgement, and a card on the person's own approved edit
 teaches the habit the cards exist to avoid. It can come back as a plan if a
 later run shows a change landing that the person did not see.
 
+
+## 2026-10-03. On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object.
+
+Nail's decision, taken in the TUI brainstorm of 2026-10-03, where he chose the
+"Panels" direction and then its details. Serves principle 4, every word costs a
+reader's attention: a person who types `gdoc help` reads a screen built for
+them, not a 7.5 KB JSON line wrapped under it. Serves 1 as well: no new module,
+the styling and the terminal check are standard library only. The task list is
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels.md`, released as v2.10.0,
+its specification is beside it as
+`docs/plans/completed/2026-10-03-gdoc-v2-m15-panels-spec.md`, and the pictures
+are `docs/design/panels-round-two.html`.
+
+**What was true before.** Every command printed exactly one JSON object on
+stdout, always, and the words a person reads went to stderr. The 2026-09-16
+entry "Help is an answer" applied that to `help`: the object on stdout, the
+prose on stderr, exit 0. On a terminal both streams reach the same screen, so
+the person saw the help and then the raw object under it. A skill reads the
+object and never the prose.
+
+**The rule.** On a terminal without `--json`, a help screen replaces the
+object. Help screens are two: `help` when it answers, and bare `gdoc`. Every
+other result still prints its object, refusals included.
+
+- The decision is made in `run()` (`main.go`), which holds both streams. A
+  result carries an internal marker, `emit.Result.Screen`, set only by a
+  successful `cmdHelp` and by the bare branch of `dispatch`. `run()` drops the
+  object only when the marker is set, `--json` was not given, and both stdout
+  and stderr are a terminal. Stderr is asked because the words the object
+  duplicates went there: a run with stdout on a terminal and stderr redirected
+  wrote them into somebody's file, where the reader of the terminal cannot see
+  them, so the object is the only answer left and it is printed. A panic has no
+  marker, so its envelope is always printed.
+- `help` that answers: Panels on stderr, nothing on stdout, exit 0.
+- Bare `gdoc`: Panels on stderr, nothing on stdout, exit 1. No skill calls bare
+  `gdoc`, and `gdoc --json` stays an unknown command, so bare `gdoc`'s object
+  reaches a terminal only where stderr is redirected, under the rule above.
+  Nothing needs it there.
+- A refusal, such as `gdoc help sing` or an unknown command, keeps its
+  `ok: false` object on a terminal, as today.
+- The last line of a help screen that dropped its object is a dim line,
+  wrapped to the window: `Add --json to print the JSON object a skill reads.`
+  Under fifty columns it takes two lines. It is printed on stderr,
+  so stdout stays the object or nothing. It is dim only when colour is on, and
+  it is printed under `NO_COLOR` and `TERM=dumb` too, because there the object
+  is also gone. It is never on a pipe or in a file, both of which get the
+  object, and never on bare `gdoc`, where `--json` is not a valid call. A
+  window under fifty columns draws no box. Where both streams are a terminal
+  it still drops the object, so the line is there too, under today's plain
+  text. Over that text go the two things the box would have carried, wherever
+  stderr is a terminal that narrow: the warnings, and the words bare `gdoc`
+  refuses with.
+
+**What "terminal" means.** The terminal driver answers for the file
+descriptor: the `isatty` question, asked with the `TIOCGETA` ioctl on darwin.
+Every other platform answers "not a terminal", so it prints today's plain text
+and the object. Windows is out of scope (Nail, 2026-10-03). It is not the
+character-device bit `progress.go` read before this, because `/dev/null` is a
+character device too. `progress.go` moves to the same check, so gdoc has one
+definition of a terminal, in `internal/tty`.
+
+**`--json` is the safety net.** It is a new flag on `help`. It prints the
+object on stdout wherever stdout goes, and it keeps stderr plain, with no
+Panels escapes. It exists because no check can tell a person from an agent that
+runs commands inside a pseudo-terminal, or one that types into a visible
+terminal tab. A pseudo-terminal is a terminal. Claude Code's shell tool gives
+gdoc pipes (measured 2026-10-03), so it would be safe without the flag; other
+agents may not be. It survives every spelling of help, because `helpWords`
+drops what is not a command word, so `gdoc help --json`,
+`gdoc publish --help --json` and `gdoc --help --json` each keep it. Every skill
+passes `--json` on every `help` call, and says that a call with no object at
+all is a failed call. The strict parser refuses a flag it does not know, so the
+skills move to `--json` in the sitting that cuts the tag and their `needs` line
+names that release, the order the 2026-10-02 entry used for `--folder`. A skill
+run against an older gdoc fails loudly, because the refusal still carries
+`version`.
+
+**What a person sees.** All of it on stderr, and only when stderr is a
+terminal. A pipe gets today's plain text, byte for byte, and no escape byte
+ever reaches a pipe or a file. `NO_COLOR` and `TERM=dumb` turn the colour off.
+
+- Boxes with titles in the border. No status bar: the version is in the top
+  border, the channel is in the version, and "signed in" belongs to
+  `auth status`. So `help` never reads the token file.
+- Width: drawn at the terminal's width, up to 100. Two columns from 80,
+  stacked from 50 to 79, plain text under 50. Width comes from `TIOCGWINSZ` on
+  darwin, then `COLUMNS`, then 80.
+- Colour: one palette for dark and light terminals, because gdoc cannot ask
+  which one it is without reading stdin. Text keeps the terminal's own colour;
+  only accents are coloured, at mid brightness. On a 16-colour terminal the
+  codes name the terminal's own colours, so the theme's blue is this blue.
+  There is no chip role: the chip belonged to the status bar of variant 2A,
+  which this entry rejects, so nothing draws one and `internal/tty` holds none.
+- `help` groups the commands by job, from a `group` field in the command table
+  that the JSON object does not carry: Read, Write into a doc, Make a doc, and
+  Account and tool. The pipe keeps today's order and text.
+- An example is printed flush left under its box, as one line the terminal
+  wraps, so a copied example runs as it is. A long word, such as a hash in a
+  checksum error, is cut where the line ends. Nothing is shortened.
+- `auth status` gets a panel saying signed in, signed out or scopes missing,
+  and the account it signs in as. Its object stays below it and carries the
+  account too.
+- The account is read live, on every `auth status` that finds a token, through
+  `accountOf` and `AllowAccountRead` (`GET /drive/v3/about`, field mask
+  `user(emailAddress,displayName)`). `auth status` becomes the grant's second
+  caller. That supersedes one clause of the 2026-10-03 entry
+  "`gdoc mcp`: gdoc in Claude Desktop chat, as measured", its "No CLI command
+  gains it", and the guard's `doc.go` and the invariant line in `CLAUDE.md`
+  name both callers. It is read live rather than stored, because the token
+  file's `account` field belongs to Google's own library, and because a live
+  read sees a swapped token.
+- That read is what makes `auth status` touch the network and, through the
+  ordinary session, possibly refresh an expired access token, as every other
+  command already does. `auth.Status` itself still reads and writes nothing.
+  After a read that answered, the file is read again, so `expired` says what
+  the file says now, and the session's own warning says the account read
+  refreshed and saved it; Nail's call at acceptance, 2026-10-04, because the
+  first reading beside that warning read as a contradiction. After a read that
+  failed, the first reading stands. The warning reaches the object, failed read
+  included, because every other command in the binary surfaces it.
+  The read runs under its own ceiling of five seconds, so a network that hangs,
+  such as one that breaks a TLS 1.3 handshake, costs at most that. When it
+  fails the report is still `ok: true`, the account is absent, and one warning
+  names why. No token, or a token missing a scope, makes no request at all.
+  `auth login`'s object does not carry the account.
+- `auth login` prints the link, then one spinner line redrawn with a carriage
+  return only, then `✓ signed in`. No wrap-off and no cursor-up, because login
+  has no signal handler and a Ctrl-C must leave the terminal as it was.
+- `update` keeps its step list and spinner in the Panels style, and the line
+  M14 added when the Claude Desktop extension changed in a release is its own
+  line under the result. No download progress bar. The step list reads the same
+  width rule the screens read, so a window under fifty columns gets the plain
+  lines a pipe gets rather than a box whose detail cell is one column wide.
+- The daily release notice and its warnings are shown in the panels, because
+  on a terminal the object that carried the warnings is gone.
+
+**What this narrows.** The invariant in `CLAUDE.md` already had one exception,
+M14's: `mcp` prints no envelope and writes JSON-RPC lines on stdout. It becomes
+one rule naming both: one JSON object reaches stdout, always through
+`internal/emit`, except that `mcp` writes JSON-RPC lines there, and a help
+screen on a terminal without `--json` writes nothing there. Its second half
+becomes: the exit code is 0 if and only if that object says `ok`, and when a
+help screen replaced the object, 0 for `help` and 1 for bare `gdoc`. The
+SPEC.md line "Every command writes exactly one JSON object to stdout and exits"
+gets the same words. No MCP tool is affected: `route()` sends `mcp` away before
+`run()`, and the tools call `safeDispatch` and never `run()`, so the
+help-screen rule cannot reach a tool answer.
+
+**What was rejected.**
+
+- Detecting an AI by its environment, for example `CLAUDECODE=1`. Claude Code
+  sets it and other agents do not, and identity is never a gate in gdoc.
+- Hiding the object on a terminal for every command. For most commands the
+  object is the answer.
+- The dim hint on stdout. It would be the only non-JSON line gdoc writes there.
+- `--json` on every command as a no-op, for uniformity. It is a flag accepted
+  and ignored, which the strict parser exists to refuse.
+- A `GDOC_JSON=1` environment variable instead of the flag. A misspelt name is
+  ignored in silence. Left for later.
+- Treating a terminal stdin as the sign of a person. Under a pseudo-terminal,
+  stdin is the same terminal.
+- A status bar, and "signed in" in the top border. Both make `help` read the
+  token file and add a way for it to fail, to answer a question nobody asks
+  `help`.
+- A panel for an unknown command. A typo does not need a screen, and the words
+  would appear twice. Whether it should drop its object like bare `gdoc` is
+  left for later.
+- `auth login` naming the account, which would be a third caller of the grant.
+  `auth status` is where Nail asked for it.
+- A download progress bar. It needs a counting reader for a few-MB download
+  that takes seconds. On the backlog if anyone asks.
+- A backslash at the end of a wrapped example. One line the terminal wraps is
+  simpler and copies the same.
+- Lip Gloss and Bubble Tea. Lip Gloss adds about ten modules; Bubble Tea is an
+  interactive framework and gdoc never reads stdin. A standard-library package,
+  `internal/tty`, draws everything.
+
+**Tests.** The rule: `TestHelpOnATerminalWritesNothingToStdout`,
+`TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne`,
+`TestARefusalKeepsItsObjectOnATerminal`,
+`TestAPanicKeepsItsEnvelopeOnATerminal`,
+`TestEveryOtherCommandKeepsItsObjectOnATerminal`,
+`TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped`,
+`TestScreenNeverReachesTheObject`. The flag:
+`TestEverySpellingOfHelpKeepsJSON`,
+`TestHelpWithJSONPrintsTheObjectOnATerminal`,
+`TestJSONAloneIsStillUnknown`, `TestHelpTakesWordsAndOnlyTheJSONFlag`. The
+pipe: `TestHelpOnAPipeIsTodaysTextByteForByte`, `TestNoEscapeByteReachesAPipe`,
+`TestNoEscapeLiteralOutsideTTY`, `TestThePipeLoginLineIsTodays`,
+`TestAuthStatusOnAPipeWritesNoStderr`. The terminal:
+`TestABufferIsNotATerminal`, `TestAPipeIsNotATerminal`,
+`TestDevNullIsNotATerminal`, `TestTheIoctlAnswerIsTheAnswer`,
+`TestOnlyATerminalDriverMakesATerminal`. The drawing:
+`TestNoColourWritesNoEscapeByte`,
+`TestVisibleWidthSkipsEscapes`, `TestNoLineIsWiderThanItsBox`,
+`TestAHashIsCutNotShortened`, `TestEveryCommandHasAGroup`,
+`TestTheGroupIsNotInTheObject`, `TestHelpNeverReadsTheToken`. Login:
+`TestTheLinkLineIsTodays`,
+`TestTheLoginSpinnerMovesNoCursorButCarriageReturn`,
+`TestLoginRefusesABuildWithNoClientSecret`, which moved to `cmd/gdoc` with the
+login itself when `auth.Login` went. The account:
+`TestAuthStatusNamesTheAccountItReadsLive`, `TestNoTokenMakesNoAccountRequest`,
+`TestAMissingScopeMakesNoAccountRequest`,
+`TestAuthStatusOfflineStillAnswersWithoutTheAccount`,
+`TestAnAccountReadThatHangsStopsAtTheCeiling`,
+`TestTheAccountCeilingIsFiveSeconds`, `TestAuthLoginCarriesNoAccount`,
+`TestOnlyAccountOfCallsAllowAccountRead`, `TestAccountOfHasTwoCallers`.
+`TestEverySkillPassesJSONToHelp` lands in the tag sitting, with the skills.

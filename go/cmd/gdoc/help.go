@@ -60,21 +60,31 @@ type helpFlag struct {
 // line; this is the one place that writes it, above the help itself and with
 // one blank line between them. See notice.go.
 //
+// json is whether the caller asked for the object in so many words. It changes
+// nothing about what this function answers: the object is the same object, and
+// the words are the same words, drawn as a screen or printed as today's text
+// by writeHelp in helpscreen.go. What it changes is Screen on the answer, which
+// is run()'s leave to drop the object where both streams are a terminal. A caller
+// that asked for the object by name gets it wherever stdout goes, and words
+// that name no command are a refusal rather than a screen, because the object
+// is the only record of what was wrong with them.
+// TestHelpOnATerminalWritesNothingToStdout,
+// TestHelpWithJSONPrintsTheObjectOnATerminal and
+// TestARefusalKeepsItsObjectOnATerminal.
+//
 // TestHelpPrintsTheNoticeLineAndABlankLine.
-func cmdHelp(ctx context.Context, words []string, errOut io.Writer) emit.Result {
+func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) emit.Result {
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
 	}
 	facts, line, warns := notice(ctx)
-	if line != "" {
-		fmt.Fprint(errOut, line+"\n\n")
-	}
-	fmt.Fprint(errOut, helpProse(matched, len(words) == 0))
+	writeHelp(errOut, matched, len(words) == 0, line, warns, json)
 	return emit.Result{
 		OK:       true,
 		Data:     helpReport{Commands: helpEntries(matched), Update: facts},
 		Warnings: warns,
+		Screen:   !json,
 	}
 }
 
@@ -152,7 +162,7 @@ func versionHeading() string {
 // helpList is every command, one line each, name and sentence aligned.
 func helpList(matched []command) string {
 	var b strings.Builder
-	b.WriteString("Usage: gdoc <command> [words] [flags]\n\n")
+	b.WriteString("Usage: " + usageAll + "\n\n")
 	width := 0
 	for _, c := range matched {
 		if len(c.name) > width {
@@ -162,7 +172,7 @@ func helpList(matched []command) string {
 	for _, c := range matched {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, c.name, c.summary)
 	}
-	b.WriteString("\nRun gdoc help <command> for the words and flags one takes.\n")
+	b.WriteString("\n" + helpFoot + "\n")
 	return b.String()
 }
 
@@ -249,14 +259,28 @@ func helpAsked(args []string) ([]string, bool) {
 	return rest, asked
 }
 
-// helpWords turns what is left into the words help answers over. A command
-// found in the rest is the question, whatever else was typed beside it, so
-// `gdoc restyle --from x --help` asks about restyle rather than about three
-// words that name no command. What matches nothing is passed through, so it is
-// refused by name.
-func helpWords(rest []string) []string {
-	if c := match(rest); c != nil {
-		return c.nameWords()
+// helpWords turns what is left into the words help answers over, and says
+// whether --json stood among them. A command found in the rest is the question,
+// whatever else was typed beside it, so `gdoc restyle --from x --help` asks
+// about restyle rather than about three words that name no command. What
+// matches nothing is passed through, so it is refused by name.
+//
+// --json comes off before match, because a flag left in would be one more word
+// that names no command and would turn an answer into a refusal. The table's
+// own parser reads it on `gdoc help ...`, so both halves of dispatch hand
+// cmdHelp the same two facts: TestEverySpellingOfHelpKeepsJSON.
+func helpWords(rest []string) ([]string, bool) {
+	words := make([]string, 0, len(rest))
+	json := false
+	for _, arg := range rest {
+		if arg == jsonFlag {
+			json = true
+			continue
+		}
+		words = append(words, arg)
 	}
-	return rest
+	if c := match(words); c != nil {
+		return c.nameWords(), json
+	}
+	return words, json
 }
