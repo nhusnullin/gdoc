@@ -1,8 +1,9 @@
 # gdoc v2 Milestone 14, run 1: the groundwork, plan
 
 2026-10-03. The first of the task lists for the specification at
-`docs/plans/2026-10-02-gdoc-v2-m14-chat.md`. The spec holds the nineteen
-decisions Nail took, the server's shapes, and the seventeen scenarios that are
+`docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`. The spec holds the
+nineteen decisions Nail took, the server's shapes, and the seventeen
+scenarios that are
 the acceptance list. This file holds the work that no measurement can change,
 one commit per task, for ralphex.
 
@@ -695,8 +696,8 @@ Serves decision 13 (the split). Scenario 13.
   `go/internal/live/doc.go`, `go/internal/live/proposeblock_test.go`, each
   only where a sentence is stale
 - Modify: `docs/v2/PLAN.md`
-- Modify: `docs/plans/2026-10-02-gdoc-v2-m14-chat.md` (the status line and
-  decision 19's number)
+- Modify: `docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md` (the status
+  line and decision 19's number)
 
 - [x] `grep -rn -i 'probe' CLAUDE.md README.md docs/guide/ go/cmd/gdoc/doc.go go/internal/live/`:
       every sentence still saying a proposal runs the probe is fixed,

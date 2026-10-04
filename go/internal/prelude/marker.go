@@ -90,8 +90,8 @@ type Decision struct {
 // it is proposed under is accepted, and comes back when that deletion is
 // rejected. Either way one marker is left, which is the shape this function
 // requires of a document whose suggestions are settled. That last step is the
-// inference the measurement makes, not a fifth measured row, and Task 10's live
-// run is what confirms it.
+// inference the measurement makes, not a fifth measured row, and the live run
+// in internal/live is what confirms it.
 func Decide(d *docs.Document) (Decision, error) {
 	published, err := Published(d)
 	if err != nil {

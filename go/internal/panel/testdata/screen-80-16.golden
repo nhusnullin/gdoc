@@ -1,0 +1,11 @@
+[2m┌─[0m[34m gdoc [0m[2m──────────────────────────────────────────────────────────────[0m[2m v2.9.0 [0m[2m─┐[0m
+[2m│[0m Usage: gdoc <command> [flags]                                                [2m│[0m
+[2m├─[0m[33m Read [0m[2m─────────────┬─────────────────────────────────────────────────────────┤[0m
+[2m│[0m [33mread[0m               [2m│[0m a document as text, one tab or all of them, with the    [2m│[0m
+[2m│[0m                    [2m│[0m suggestions marked                                      [2m│[0m
+[2m│[0m [33mcomments[0m           [2m│[0m the threads, their quotes and who wrote them            [2m│[0m
+[2m├─[0m[33m Write into a doc [0m[2m─┼─────────────────────────────────────────────────────────┤[0m
+[2m│[0m [33mpropose[0m            [2m│[0m a change to quoted words as a native suggestion, with a [2m│[0m
+[2m│[0m                    [2m│[0m comment beside it                                       [2m│[0m
+[2m│[0m [33mreply[0m              [2m│[0m one robot reply into a thread nobody has closed         [2m│[0m
+[2m└────────────────────┴─────────────────────────────────────────────────────────┘[0m

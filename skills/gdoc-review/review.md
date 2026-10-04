@@ -61,6 +61,43 @@ Never a progress feed. The margin is the readers' room, and the terminal is
 where the operator's record goes. An acknowledgment and a receipt are two
 replies, never an edit of one.
 
+## Read the thread again before posting
+
+A draft is written in the gap between reading a thread and posting into it, and
+somebody else can answer it inside that gap. A live Claude Code session, a chat,
+or the same document open twice: each of them reads, thinks, and posts.
+
+So read the thread again just before the reply goes out, and compare it with the
+thread the draft was written from.
+
+- A 🤖 reply appeared since that read, and this session did not write it: do not
+  post. Say which thread it was and what the other reply says, and leave the
+  draft unposted.
+- A 🤖 reply this session wrote itself never stops it. An acknowledgment and the
+  receipt that follows it are the two halves of one pair, and the session that
+  wrote the first writes the second.
+- Something else is new in the thread, an unmarked reply or a comment asking
+  again: read it before posting. It may change the draft, and an unmarked reply
+  still carries no authority.
+- Nothing changed: post.
+
+## While a live Claude Code session runs
+
+One document and one token, so a chat and a live session can both be reading
+these threads. The marker is what divides the work, because the live session is
+the one with the hub in front of it.
+
+- While a live session runs, marked comments are its work. A chat leaves them
+  alone, and says so in one line.
+- Ask when you do not know whether one runs. Nothing a chat reads says whether
+  a session is watching, the person is the only one who knows, and not knowing
+  is never a reason to post.
+- An unmarked comment the person picked is the chat's own work. The read again
+  above still runs before it goes out.
+- Neither side waits on the other. Everything gdoc writes opens with 🤖, so a
+  live session reads a chat's reply as an answer and never as work, which is
+  what keeps the two from answering each other.
+
 ## When to stop and ask
 
 Judge the draft before it is posted. Stop, show it, and wait when any of these
@@ -96,6 +133,24 @@ Never batch-approve in this mode.
 
 Picking an answered thread is allowed. It is the one case where a thread gets a
 second reply, and the session says so before posting.
+
+## A comment on words the person names
+
+A person can ask for a comment on words they choose, rather than an answer to a
+thread somebody else opened. It is anchored to those words in the margin, which
+is what `annotate` does, and it opens with 🤖 like everything else gdoc writes.
+
+- Find the exact words in the document's text. The quote is copied out of what
+  was read, character for character, and never retyped from memory.
+- Read the quote and the comment back to the person, both halves, before
+  anything is written. A comment lands on the words the quote found, and no
+  later call moves it.
+- Post after a yes, and print the quote and the comment as they went out.
+- A quote that occurs twice is refused, and the words are not guessed at. Ask
+  the person for more words, enough that the quote occurs once, and try again
+  with what they give.
+- Say whether the anchor held. A comment that did not anchor is in the document
+  and not beside those words, and the person hears which of the two it was.
 
 ## Never
 

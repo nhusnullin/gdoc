@@ -1,0 +1,4 @@
+gdoc update
+  ✓ read checksums       SHA256SUMS-v2.10.0
+  ✗ download             gdoc-darwin-arm64.zip, 6.1 MB
+    gdoc-darwin-arm64.zip could not be downloaded, so nothing was replaced

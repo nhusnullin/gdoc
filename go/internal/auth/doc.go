@@ -21,11 +21,22 @@
 //
 // StartLogin opens the loopback listener, builds the authorization URL and
 // returns at once. Pending.Wait waits for the callback, exchanges the code,
-// saves the token and then tells the browser what happened. Login is the two
-// in a row, which is all the CLI needs; the split is for a front door that
-// hands the link out in one message and finishes the trip in another, with the
-// listener alive in between. TestStartLoginReturnsTheLinkAtOnce and
+// saves the token and then tells the browser what happened. The split is for a
+// front door that hands the link out in one message and finishes the trip in
+// another, with the listener alive in between. Both front doors take it: the
+// MCP login tool because a chat answer cannot wait for a browser, and the CLI
+// because the line a person watches while they wait belongs to cmd/gdoc. So
+// the two halves are the whole of what this package offers, and there is no
+// third call that is both: TestStartLoginReturnsTheLinkAtOnce and
 // TestWaitExchangesAndSaves are the pins.
+//
+// The words that go with the link are here and not there: LinkAsk is the
+// sentence and LinkLine is the sentence with the link under it, which is what
+// cmd/gdoc draws in a box on a terminal and prints as it always did wherever
+// it draws none. So the two routes cannot drift, and this package still holds
+// no terminal code at all: no colour, no box and no escape byte.
+// TestTheLinkLineIsTodays states both as the literal they are and cmd/gdoc's
+// TestThePipeLoginLineIsTodays holds the route a person takes.
 //
 // The callback no longer writes the page itself. It holds the browser's
 // request open and loopback.Finish writes the sentence, so "Signed in" is
@@ -40,8 +51,45 @@
 // A build with no client secret is refused in StartLogin, before a listener is
 // opened or a link handed out, so a chat tool that asked for a link hears the
 // refusal instead of getting one that cannot work.
-// TestStartLoginRefusesABuildWithNoClientSecret and
-// TestLoginRefusesABuildWithNoClientSecret are the pins.
+// TestStartLoginRefusesABuildWithNoClientSecret is the pin, and it holds that
+// no pending login comes back either, so there is nothing to print. The CLI
+// prints nothing before it asks: cmd/gdoc's
+// TestLoginRefusesABuildWithNoClientSecret runs the real login and finds
+// stderr empty.
+//
+// # One waiting sign-in, written down beside the token
+//
+// Claude Desktop runs two gdoc processes, one per client
+// (docs/v2/MEASURED.md, measurement 3), and a person has one browser. So a
+// waiting sign-in leaves a record: login-pending.json in the config dir, mode
+// 0600, through internal/atomicfile, carrying the pid that opened the
+// listener, the link it handed out and the instant it started. A second
+// process reads it and hands on that link rather than opening a listener of
+// its own, which would be a second state parameter and a second trip, leaving
+// the one the person is halfway through unable to finish.
+//
+// The record carries no credential and cannot finish anybody's sign-in: the
+// PKCE verifier never leaves the process that made it. Three things make a
+// lock dead, and all three read as nothing waiting: no process behind its pid,
+// an age over loginLockLife, which is the three minutes the listener itself
+// waits, and a link that is not the sign-in page login.go builds. That last one
+// is a check on a value crossing a boundary: the file is another process's and
+// the link in it is handed to a person to open, so anything this binary would
+// never have made reads as a dead lock. A file that is there and will not parse
+// is an error rather than silence, because not knowing must not resolve to
+// "nobody is signing in": the caller starts its own trip either way, and it
+// does that knowing what it found. TestALoginLockIsWrittenAndReadBack,
+// TestALockWhoseProcessIsGoneIsNotLive, TestALockOlderThanThreeMinutesIsNotLive,
+// TestALockWithNoLinkIsNotLive, TestALockWhoseLinkIsNotGooglesSignInIsNotLive
+// and TestAnUnreadableLockIsNamed are the pins.
+//
+// SignedInSince is the other half: a process holding no listener sees that the
+// sign-in finished somewhere else by the token file being newer than the
+// instant the waiting one started. The instant is the file's, because a token
+// carries its expiry and not the moment it was saved.
+// TestSignedInSinceSeesATokenWrittenAfterTheStart is the pin. Who removes the
+// record is whoever ends the sign-in, and cmd/gdoc's mcplogin.go holds that
+// half: TestStdinClosingClosesAWaitingListenerAndItsLock.
 //
 // # The login asks for the read/write Docs scope
 //
@@ -143,8 +191,9 @@
 //
 // A build without the secret can refresh a token it already holds, because
 // the token file carries the secret it was issued with, but it cannot sign
-// anyone in, and Login refuses before it opens a listener or prints a URL.
-// TestLoginRefusesABuildWithNoClientSecret is the pin, and
+// anyone in, and StartLogin refuses before it opens a listener, so no link is
+// ever handed out to print.
+// TestStartLoginRefusesABuildWithNoClientSecret is the pin, and
 // TestNoGoogleClientSecretInTheTree in go/boundary holds the other half: no
 // file in the tree carries a string shaped like a Google client secret.
 //
@@ -163,7 +212,7 @@
 // clientFileName names oauth-client.json in the config dir. The Python tool
 // this binary replaces lets that file override the bundled client, which is a
 // quota override rather than a setup step: one shared client shares one Google
-// rate limit. Login here does not read it. Status says so instead, and
+// rate limit. The login here does not read it. Status says so instead, and
 // cmd/gdoc's package comment holds what it reports. Saying the client came from
 // a file would name a client no token was ever issued to.
 // TestStatusSaysAClientFileIsNotUsedYet is the pin.

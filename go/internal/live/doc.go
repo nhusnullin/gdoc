@@ -228,8 +228,8 @@
 // pictures the fixture was uploaded from, and the count of w:drawing against
 // each tab's own count. It fails when a read or an export fails and on
 // nothing else, because the three answers are Google's and a test that
-// asserted them would be deciding what it was sent to find out. Task 13 of
-// M13 writes them into MEASURED.md.
+// asserted them would be deciding what it was sent to find out. What it reports
+// is written into MEASURED.md by hand.
 //
 // # Two tests here ask for no network at all
 //

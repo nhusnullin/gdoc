@@ -1,9 +1,10 @@
 // The daily release check, and the one line it prints.
 //
-// `gdoc help` is the only command that asks GitHub what is published without
-// being told to, because it is the first call of every skill session, it
-// already carries the version, and no document is open in front of it. Every
-// other command is exactly as offline from GitHub as it ever was.
+// `gdoc help` and `gdoc mcp` are the two commands that ask GitHub what is
+// published without being told to. help is the first call of every skill
+// session, and mcp is a chat where nobody types a command at all, so its first
+// tool answer carries the line instead: mcp.go's mcpNotice. Every other command
+// is exactly as offline from GitHub as it ever was.
 //
 // The check costs a run nothing it can feel. It reads one small file; the
 // fetch behind it runs only when that file is missing or older than a day,
@@ -163,19 +164,10 @@ func joinCauses(causes []string) string {
 // TestNoticeReturnsTheLine, TestAStaleStampMakesHelpAskOnce and
 // TestTheLineNamesMajorForAMajor.
 func noticeLine(installed string, s lastcheck.Stamp) string {
-	here, err := update.Parse(installed)
-	if err != nil {
+	d, ok := noticeDecision(installed, s.LatestStable, s.LatestNightly)
+	if !ok {
 		return ""
 	}
-	stable, err := update.Parse(s.LatestStable)
-	if err != nil {
-		return ""
-	}
-	nightly, err := update.Parse(s.LatestNightly)
-	if err != nil {
-		nightly = update.Version{}
-	}
-	d := update.Decide(update.State{Installed: here, Stable: stable, Nightly: nightly}, update.Flags{})
 	switch d.Action {
 	case update.Updated:
 		return fmt.Sprintf("gdoc %s is published and this is %s. `gdoc update` installs it.", d.To, installed)
@@ -183,6 +175,56 @@ func noticeLine(installed string, s lastcheck.Stamp) string {
 		return fmt.Sprintf("gdoc %s is published and this is %s. It is a major release: `gdoc update --major` installs it.", d.To, installed)
 	}
 	return ""
+}
+
+// mcpNoticeLine is that same line for a chat, where there is no terminal in
+// front of the reader and a new binary only reaches the session that starts
+// after it. A toggle of the connector restarts the chat process and leaves
+// agent mode on the old binary (docs/v2/MEASURED.md, measurement 2), so the
+// words are quit and open again, and never toggle.
+//
+// It is built from the versions alone, like noticeLine, and never from a URL in
+// the listing: a line a person is told to act on says a command they can read.
+//
+// TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine and
+// TestTheLineSaysQuitAndOpenAgainNeverToggle.
+func mcpNoticeLine(f *updateFacts) string {
+	if f == nil {
+		return ""
+	}
+	d, ok := noticeDecision(f.Installed, f.LatestStable, f.LatestNightly)
+	if !ok {
+		return ""
+	}
+	switch d.Action {
+	case update.Updated:
+		return fmt.Sprintf("gdoc %s is published and this is %s. Run gdoc update in a terminal, then quit Claude Desktop and open it again.", d.To, f.Installed)
+	case update.MajorAvailable:
+		return fmt.Sprintf("gdoc %s is published and this is %s. It is a major release: run gdoc update --major in a terminal, then quit Claude Desktop and open it again.", d.To, f.Installed)
+	}
+	return ""
+}
+
+// noticeDecision is the arithmetic both lines are built from: update.Decide
+// over the parsed versions with no flags typed, which is what
+// `gdoc update --check` does, so neither line can disagree with the command.
+//
+// It answers false where a version does not parse. This binary names a release
+// or it named nothing, and guessing at half a comparison is worse than silence.
+func noticeDecision(installed, stable, nightly string) (update.Decision, bool) {
+	here, err := update.Parse(installed)
+	if err != nil {
+		return update.Decision{}, false
+	}
+	latest, err := update.Parse(stable)
+	if err != nil {
+		return update.Decision{}, false
+	}
+	nightliest, err := update.Parse(nightly)
+	if err != nil {
+		nightliest = update.Version{}
+	}
+	return update.Decide(update.State{Installed: here, Stable: latest, Nightly: nightliest}, update.Flags{}), true
 }
 
 // checkedAt is the stamp's time as the object prints it, and empty when there

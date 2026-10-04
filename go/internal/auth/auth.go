@@ -258,8 +258,14 @@ type StatusReport struct {
 	MissingScopes     []string `json:"missing_scopes,omitempty"`
 }
 
-// Status is what `gdoc auth status` reports. It reads and writes nothing else:
-// a status run must never refresh, move or rewrite the token file.
+// Status is what `gdoc auth status` reports. This function reads and writes
+// nothing else: it must never refresh, move or rewrite the token file.
+//
+// The run around it can. Since M15 the command reads the account it signs in
+// as through an ordinary session, which refreshes an expired access token and
+// saves it, as every other command already does. So Expired is what the file
+// said when this function read it, and the command's own warning is what says
+// the account read then rewrote it. The M15 entry in docs/v2/DECISIONS.md.
 //
 // The report comes back even when the error does. A token file that exists and
 // cannot be read is a fault the caller must name: reporting it as "signed out"

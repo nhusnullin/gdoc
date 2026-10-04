@@ -162,14 +162,15 @@ the decision, what it strains and what Nail accepted.
 
 Added 2026-08-29, Nail's principle, wording settled with a second opinion.
 
-gdoc writes in a terminal Nail chose to open and in documents read by people
-who did not choose it. Its readers have limited attention. They should not
+gdoc writes in a terminal or a chat somebody chose to open, and in documents
+read by people who did not choose either. Its readers have limited attention. They should not
 have to understand gdoc's machinery to understand its work.
 
 gdoc says what happened, why it matters, and what the reader must decide or
 do, in terms the reader uses. Calls, indexes, status codes and other machinery
 stay out of documents. They appear in the terminal only when Nail asks for
-diagnostics or needs them to recover from a failure.
+diagnostics or needs them to recover from a failure, and in a chat they stay in
+the tool answers rather than in what the person hears.
 
 The line that decides: **if the reader must translate it, rewrite it. If the
 reader does not need it, remove it.**

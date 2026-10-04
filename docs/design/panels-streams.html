@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panels and JSON</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f7fb; --card:#ffffff; --ink:#1b1f2e; --soft:#4a5068; --faint:#8a90a6; --line:#dfe2ec;
+  --err-tag:#b4235a; --err-bg:#fde7ef; --out-tag:#0b6e4f; --out-bg:#dcf5ea;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --sans:Inter,system-ui,sans-serif;
+  /* the terminal itself is always dark, like the gallery */
+  --t-bg:#1a1b26; --t-bar:#24283b; --t-fg:#c0cad5; --t-mid:#a9b1d6; --t-dim:#565f89;
+  --t-border:#4e5679; --t-title:#7aa2f7; --t-key:#e0af68; --t-ok:#9ece6a; --t-json:#cfd3dc;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1117; --card:#171a23; --ink:#e6e8ef; --soft:#a8aec2; --faint:#6b7189; --line:#2a2f3d;
+    --err-tag:#ff8fb5; --err-bg:#3a1626; --out-tag:#6ee7b7; --out-bg:#0f3326;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1117; --card:#171a23; --ink:#e6e8ef; --soft:#a8aec2; --faint:#6b7189; --line:#2a2f3d;
+  --err-tag:#ff8fb5; --err-bg:#3a1626; --out-tag:#6ee7b7; --out-bg:#0f3326;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+.wrap{max-width:1060px;margin:0 auto;padding:40px 16px 80px}
+h1{font:700 34px/1.15 var(--mono);margin:0 0 10px;letter-spacing:-.5px}
+h2{font:700 20px/1.3 var(--mono);margin:56px 0 8px}
+p{margin:8px 0;color:var(--soft);max-width:760px}
+p b{color:var(--ink)}
+code{font:600 .88em var(--mono);background:var(--line);padding:1px 6px;border-radius:5px;color:var(--ink)}
+.tag{display:inline-block;font:700 11px/1 var(--mono);padding:4px 7px;border-radius:6px;letter-spacing:.3px}
+.tag.err{background:var(--err-bg);color:var(--err-tag)}
+.tag.out{background:var(--out-bg);color:var(--out-tag)}
+
+/* two pipes diagram */
+.pipes{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:22px 0 4px}
+.pipe{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.pipe h3{margin:0 0 6px;font:700 16px/1.3 var(--mono);display:flex;gap:10px;align-items:center}
+.pipe p{margin:4px 0;font-size:15px}
+.pipe ul{margin:8px 0 0;padding-left:18px;color:var(--soft);font-size:15px}
+@media (max-width:720px){.pipes{grid-template-columns:1fr}}
+
+/* terminal */
+.term{margin:18px 0 6px;border-radius:12px;overflow:hidden;background:var(--t-bg);box-shadow:0 10px 30px rgba(10,12,30,.25);border:1px solid #2b2f45}
+.tbar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#16161e;border-bottom:1px solid #2b2f45}
+.tbar i{width:12px;height:12px;border-radius:50%;display:block}
+.tbar i:nth-child(1){background:#ff5f57}.tbar i:nth-child(2){background:#febc2e}.tbar i:nth-child(3){background:#28c840}
+.tbar span{margin-left:10px;font:600 12px var(--mono);color:#7f86a8}
+.screen{overflow-x:auto;padding:14px 0 16px}
+.row{display:grid;grid-template-columns:90px max-content;align-items:start}
+.gut{font:700 10px/20px var(--mono);text-align:right;padding-right:10px;margin-right:12px;user-select:none;letter-spacing:.3px;border-right:3px solid transparent}
+.gut.err{color:#ff8fb5;border-right-color:#ff8fb566}.gut.out{color:#6ee7b7;border-right-color:#6ee7b766}.gut.you{color:#7f86a8}
+.ln{font:400 13.5px/20px var(--mono);white-space:pre;color:var(--t-fg);padding-right:16px}
+.b{color:var(--t-border)}.t{color:var(--t-title);font-weight:700}.k{color:var(--t-key)}
+.m{color:var(--t-mid)}.d{color:var(--t-dim)}.ok{color:var(--t-ok)}.j{color:var(--t-json)}
+.sb{background:var(--t-bar)}.sb1{background:#7aa2f7;color:#1a1b26;font-weight:700}.sb2{background:#e0af68;color:#1a1b26;font-weight:700}
+.p{color:#7f86a8}
+.cap{font-size:14px;color:var(--faint);margin:6px 0 0}
+
+/* side by side for the AI view */
+.ai{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.box h4{margin:0;padding:12px 16px;font:700 13px/1.3 var(--mono);border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.box pre{margin:0;padding:14px 16px;font:400 12.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-all;color:var(--ink);overflow:auto;max-height:420px}
+.box .key{color:var(--out-tag);font-weight:600}
+@media (max-width:820px){.ai{grid-template-columns:1fr}}
+
+.verdict{margin-top:56px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.verdict h2{margin:0 0 8px}
+.verdict li{margin:6px 0;color:var(--soft)}
+.verdict li b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Panels, and where the JSON goes</h1>
+<p>One command, <code>gdoc help publish</code>, run three ways. Every line carries a tag in the left margin that names the stream it came from. The tag is part of this page only, not of the terminal.</p>
+
+<h2>Two outputs, not one</h2>
+<p>Every program on macOS and Linux has two separate outputs. They are like two pipes leaving the same machine.</p>
+<div class="pipes">
+  <div class="pipe">
+    <h3><span class="tag out">stdout</span> the answer</h3>
+    <p>The result of the command. Other programs read it.</p>
+    <ul>
+      <li>gdoc prints exactly one JSON object here, always.</li>
+      <li>Skills and the AI read this object.</li>
+      <li><b>Panels does not touch it.</b></li>
+    </ul>
+  </div>
+  <div class="pipe">
+    <h3><span class="tag err">stderr</span> words for a person</h3>
+    <p>Messages around the result: help text, progress, the login link, errors.</p>
+    <ul>
+      <li>On a terminal, gdoc can draw it with boxes and colour.</li>
+      <li>On a pipe, gdoc prints it as plain text.</li>
+      <li><b>Panels changes only this, and only on a terminal.</b></li>
+    </ul>
+  </div>
+</div>
+<p>A terminal shows both pipes on the same screen, one after the other. That is why they look like one output. A pipe, a file or <code>| jq</code> pulls them apart.</p>
+
+<h2>1. You type it in a terminal</h2>
+<p>stderr is a terminal, so gdoc draws Panels. stdout is a terminal too, so the JSON line appears under the panels, as it does today under the plain help.</p>
+<div class="term">
+  <div class="tbar"><i></i><i></i><i></i><span>~/hub, zsh, 82 × 24</span></div>
+  <div class="screen" id="scr1"></div>
+</div>
+<p class="cap">The status bar shows version, channel and token time. It has no account name, because gdoc cannot know it offline.</p>
+
+<h2>2. A skill or the AI runs it</h2>
+<p>When Claude runs a command, both outputs are pipes, not a terminal. We measured this in this session: <code>[ -t 2 ]</code> answers "pipe". So gdoc prints the plain help, exactly today's text, and no Panels at all. The AI receives the two outputs separately:</p>
+<div class="ai">
+  <div class="box">
+    <h4><span class="tag out">stdout</span> what the skill reads, unchanged</h4>
+    <pre id="json"></pre>
+  </div>
+  <div class="box">
+    <h4><span class="tag err">stderr</span> plain text, unchanged, no boxes, no colour</h4>
+    <pre id="plain"></pre>
+  </div>
+</div>
+<p class="cap">The JSON on the left is shown with indentation to make it easy to read. gdoc prints it as one line.</p>
+
+<h2>3. You pipe the answer into jq</h2>
+<p><code>|</code> takes stdout only. stderr still goes to your screen. So you see Panels, and jq gets the JSON and prints what you asked for.</p>
+<div class="term">
+  <div class="tbar"><i></i><i></i><i></i><span>~/hub, zsh, 82 × 24</span></div>
+  <div class="screen" id="scr3"></div>
+</div>
+
+<div class="verdict">
+  <h2>What this means</h2>
+  <ul>
+    <li><b>The AI reads the same JSON as today.</b> Panels never writes into stdout.</li>
+    <li><b>The AI sees the same plain words as today.</b> It never runs gdoc on a terminal, so it never gets boxes or colour codes.</li>
+    <li><b>Two tests would lock it.</b> One checks that piped help is today's text, byte for byte. The other checks that no escape byte ever reaches a pipe.</li>
+    <li><b>The one visible cost for you</b> is the raw JSON line under the panels in a terminal. It is there today too, under the plain help.</li>
+  </ul>
+</div>
+
+</div>
+<script>
+var W = 80;
+var JSON_LINE = '{"ok":true,"data":{"commands":[{"name":"publish","words":[],"flags":[{"name":"--md","value":"<file>","need":"required","summary":"the note to publish"},{"name":"--folder-id","value":"<folder id>","need":"required","summary":"the Drive folder the document is created in"},{"name":"--house","value":"<file>","need":"optional","summary":"a house style file other than the one inside gdoc"}],"summary":"Build the note as a house-style document and upload it into one folder.","example":"gdoc publish --md note.md --folder-id 1AbC..."}],"update":{"installed":"v2.8.0","latest_stable":"v2.7.0","latest_nightly":"v2.7.2","checked_at":"2026-10-02T14:12:21Z"}},"version":"v2.8.0"}';
+
+var PLAIN = [
+  "gdoc v2.8.0",
+  "",
+  "Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]",
+  "  Build the note as a house-style document and upload it into one folder.",
+  "",
+  "  --md <file>              the note to publish",
+  "  --folder-id <folder id>  the Drive folder the document is created in",
+  "  --house <file>           a house style file other than the one inside gdoc",
+  "",
+  "  Example: gdoc publish --md note.md --folder-id 1AbC..."
+].join("\n");
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function sp(n){ return " ".repeat(Math.max(0,n)); }
+function B(s){ return '<span class="b">' + esc(s) + '</span>'; }
+function C(cls, s){ return '<span class="' + cls + '">' + esc(s) + '</span>'; }
+
+// a rule line: left corner, title, fill, right label, right corner; mid is a column joint
+function rule(l, r, title, right, mid, midAt){
+  var inner = W - 2, out = "", used = 0;
+  var head = title ? "─ " : "";
+  var cells = [];
+  var s = "";
+  if (title) s += "─ " + title + " ";
+  var tail = right ? " " + right + " ─" : "";
+  var fill = inner - s.length - tail.length;
+  var line = s + "─".repeat(fill) + tail;
+  if (mid && midAt) line = line.slice(0, midAt) + mid + line.slice(midAt + 1);
+  // colour: border everywhere, title and right label highlighted
+  var html = B(l);
+  if (title){
+    html += B("─ ") + C("t", title) + " ";
+    var rest = line.slice(s.length);
+    var restTail = right ? rest.slice(0, rest.length - tail.length) : rest;
+    html += B(restTail);
+    if (right) html += " " + C("d", right) + B(" ─");
+  } else html += B(line);
+  return html + B(r);
+}
+function row1(text, cls){ return B("│") + " " + C(cls || "", text) + sp(W - 3 - text.length) + B("│"); }
+function row2(a, aCls, b, bCls, colA){
+  return B("│") + " " + C(aCls, a) + sp(colA - 1 - a.length) + B("│") + " " + C(bCls, b) + sp(W - 3 - colA - b.length - 1) + B("│");
+}
+
+function panelsPublish(){
+  var colA = 25; // width of the first column inside the box, after the left border
+  var mid = colA; // index inside the rule line where the column joint sits
+  return [
+    rule("┌","┐","publish","gdoc v2.8.0"),
+    row1("Build the note as a house-style document and upload it into one folder.","m"),
+    rule("├","┤","Usage"),
+    B("│") + " " + C("t","gdoc publish") + " " + C("k","--md") + " " + C("m","<file>") + " " + C("k","--folder-id") + " " + C("m","<folder id>") + " " + C("d","[--house <file>]") + sp(W - 3 - "gdoc publish --md <file> --folder-id <folder id> [--house <file>]".length) + B("│"),
+    rule("├","┤","Flags",null,"┬",mid),
+    row2("--md <file>","k","the note to publish","m",colA),
+    row2("--folder-id <folder id>","k","the Drive folder the document is created in","m",colA),
+    row2("--house <file>","k","a house style file other than the one inside gdoc","m",colA),
+    rule("├","┤","Example",null,"┴",mid),
+    B("│") + " " + C("d","$ ") + C("","gdoc publish --md note.md --folder-id 1AbC...") + sp(W - 5 - "gdoc publish --md note.md --folder-id 1AbC...".length) + B("│"),
+    rule("└","┘"),
+    statusBar()
+  ];
+}
+function statusBar(){
+  var left = [["sb1"," gdoc v2.8.0 "],["sb2"," stable "],["sb"," token 52 min "]];
+  var right = " gdoc help <command> ";
+  var used = left.reduce(function(n,p){ return n + p[1].length; },0) + right.length;
+  return left.map(function(p){ return C(p[0], p[1]); }).join("") + C("sb", sp(W - used)) + C("sb d", right);
+}
+function wrapRaw(s, n){ var out = []; for (var i = 0; i < s.length; i += n) out.push(s.slice(i, i + n)); return out; }
+
+function render(id, rows){
+  var el = document.getElementById(id);
+  el.innerHTML = rows.map(function(r){
+    var lbl = {err:"stderr", out:"stdout", you:"you"}[r[0]];
+    return '<div class="row ' + r[0] + '"><div class="gut ' + r[0] + '">' + lbl + '</div><div class="ln">' + r[1] + '</div></div>';
+  }).join("");
+}
+
+// screen 1: terminal, both streams on screen
+var s1 = [["you", C("p","~/hub $ ") + esc("gdoc help publish")]];
+panelsPublish().forEach(function(l){ s1.push(["err", l]); });
+wrapRaw(JSON_LINE, W).forEach(function(l){ s1.push(["out", C("j", l)]); });
+s1.push(["you", C("p","~/hub $ ")]);
+render("scr1", s1);
+
+// screen 3: piped into jq
+var s3 = [["you", C("p","~/hub $ ") + esc("gdoc help publish | jq -r '.data.commands[0].flags[].name'")]];
+panelsPublish().forEach(function(l){ s3.push(["err", l]); });
+["--md","--folder-id","--house"].forEach(function(f){ s3.push(["out", C("j", f)]); });
+s3.push(["you", C("p","~/hub $ ")]);
+render("scr3", s3);
+
+// the AI view
+document.getElementById("plain").textContent = PLAIN;
+var pretty = JSON.stringify(JSON.parse(JSON_LINE), null, 2);
+document.getElementById("json").innerHTML = esc(pretty).replace(/&quot;|"([^"]+)":/g, function(m, k){ return k ? '<span class="key">"' + k + '"</span>:' : m; });
+</script>
+</body>
+</html>

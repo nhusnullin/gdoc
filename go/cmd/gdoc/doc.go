@@ -19,6 +19,21 @@
 // test helper in both directions: a helper that accepts a trailing byte would
 // pass every other test in this package over output no skill can read.
 //
+// Every command but one. mcp is a protocol session rather than an answer, and
+// route in main.go sends it to serveMCP before run is reached, so no envelope
+// is printed around it: TestMcpIsRoutedBeforeRun. What reaches stdout there is
+// one JSON-RPC message per line and nothing else, which is the same promise in
+// the shape a client can read: TestStdoutCarriesOnlyJSONRPC. The protocol's own
+// rules are in internal/mcp/doc.go, and what chat adds to a command is in
+// internal/chat/doc.go.
+//
+// And one narrowing. A help screen on a terminal without --json writes nothing
+// to stdout, because the reader of that screen is a person and the object under
+// it is 7.5 KB they did not ask for. Every other result keeps its object,
+// refusals and the panic envelope included, and a pipe gets the object in every
+// case. The rule and its tests are in "On a terminal a help screen replaces the
+// object" below.
+//
 // # The commands, and the one table that describes them
 //
 // commands.go holds the table, and dispatch matches what is in it and nothing
@@ -60,13 +75,49 @@
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
 //     that carries no credential, gapi.Plain.
+//   - mcp: this binary as a stdio server for Claude
+//     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
+//     the wiring. The one command route sends past run. It offers eight tools,
+//     the six of the table that chat reviews with and guide and login, and
+//     every one of the six takes the code guide hands out and refuses the call
+//     without it: TestToolsListListsExactlyTheEightToolsWithTheirHints and
+//     TestEveryToolButGuideAndLoginRefusesAMissingOrStaleCode. A write tool
+//     names its target twice over, by id and by the document's own title, and by
+//     the words the thread opens with where it writes into a thread: the title
+//     is read off the document on the call itself and a call naming another
+//     document is refused with nothing sent, which is TestAWrongTitleIsRefused
+//     and TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses. One item per
+//     write call, and no field in it the card does not draw:
+//     TestASecondItemIsRefused and TestAssigneeIsRefused. Every chat write is
+//     then judged by internal/chat's hold rules before anything is sent, and a
+//     held write reaches no wire: the answer is ok false, sent false, and the
+//     hold's id, rule, value and words, with one fixed sentence that says to
+//     tell the person and stop. The hold stays in that process for 30 minutes:
+//     TestAHeldWriteSendsNothing, TestTheHeldAnswerNamesTheRuleTheValueAndTheText
+//     and TestAHoldLivesThirtyMinutes. What sends a held write is the one tool
+//     that hold registers, confirm_ and its id, which the client draws as a card
+//     and the person approves: it goes when the write goes or when the thirty
+//     minutes run out, its card carries the hold, the title, the reason and the
+//     text in that order, a byte of difference in any of them is refused with the
+//     hold kept, a release with less than five seconds of quiet behind it is
+//     refused the same way, and what goes out is the call the hold kept rather
+//     than anything the release sends:
+//     TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease,
+//     TestTheConfirmSchemaListsHoldTitleReasonText,
+//     TestAByteDifferentTitleReasonOrTextIsRefused,
+//     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes no words and
+//     no flags, because the extension has no settings, and anything after the
+//     word is refused on stderr with exit 1: TestMcpTakesNoWordsAndNoFlags. The
+//     review core it serves is a committed copy of the skill's, held equal by
+//     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
 //     to a file. completion.go, with the template beside it.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the seventeen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the eighteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -144,14 +195,83 @@
 // TestAuthStatusFailsOnAnUnreadableToken and
 // TestAFailingStatusStillCarriesItsWarnings are the pins.
 //
-// # auth login prints the URL to stderr
+// # auth status names the account, and nothing else reads it
 //
-// Login prints the authorization URL to stderr, waits for the browser to come
-// back to the loopback listener, saves the token, then reports what auth status
-// would. The URL is a human word and human words have one place to go, and it
-// is not stdout. TestLoginPrintsTheURLToStderrNotStdout is the pin, and
-// TestAFailedLoginIsOneFailingEnvelope is the other half: a login that did not
-// happen is still one object.
+// The report also carries account and account_name, read live through
+// accountOf, the one room that grants guard.AllowAccountRead. That makes
+// `gdoc auth status` the grant's second caller and the binary's whole widening
+// in M15: no new grant, no new host and no new request kind.
+// TestAuthStatusNamesTheAccountItReadsLive is the pin, and
+// TestOnlyAccountOfCallsAllowAccountRead with TestAccountOfHasTwoCallers in
+// go/boundary hold that the callers are two.
+//
+// Three reports ask nothing. No report, no token, and a token missing a scope
+// gdoc asks for: the read would be refused by the scope that is missing, and
+// the warning that already says to sign in again is the answer.
+// TestNoTokenMakesNoAccountRequest and TestAMissingScopeMakesNoAccountRequest.
+//
+// The read is bounded by accountCeiling, five seconds, because a person typed
+// the command and is waiting at a prompt. A read that fails or never comes back
+// is a warning and never a failure: the token is the fact, and whose it is was
+// what could not be read. TestTheAccountCeilingIsFiveSeconds,
+// TestAuthStatusOfflineStillAnswersWithoutTheAccount and
+// TestAnAccountReadThatHangsStopsAtTheCeiling.
+//
+// The read's own warnings go out with the report. It goes through an ordinary
+// session, which refreshes an expired access token and saves it before the
+// request leaves, and the warning is what says it did. A read that failed
+// carries them too, because the refresh had already happened.
+// TestTheAccountReadsWarningsReachTheObject,
+// TestAFailedAccountReadStillCarriesTheSessionsWarnings and
+// TestTheLoginToolCarriesTheAccountReadsWarnings for the chat's own answer.
+//
+// After a read that answered, the token file is read again, so `expired` says
+// what the file says now and never contradicts that warning; after one that
+// failed, the first reading stands: TestExpiredIsWhatTheFileSaysAfterTheAccountRead
+// and TestAFailedAccountReadLeavesExpiredAsRead. The panel's account row names
+// the person beside the address when Google said who it is:
+// TestThePanelNamesThePersonBesideTheAddress.
+//
+// auth login does not ask. It just made a browser trip, and the object a skill
+// reads after a login is the object it read before:
+// TestAuthLoginCarriesNoAccount.
+//
+// On a terminal the same facts are a panel on stderr: the state in words,
+// signed in, signed out or scopes missing, then the account, the file, the
+// scopes, what is missing, the client and the mode. No minutes, because when a
+// token expires is a field for a program. The object stays on stdout, because
+// for this command the object is the answer, and a pipe reads no screen at all.
+// TestTheStatusScreenSaysTheStateAndTheAccount and
+// TestAuthStatusOnAPipeWritesNoStderr.
+//
+// # auth login prints the URL to stderr, and waits on one line
+//
+// The login is the browser trip in its two halves, auth.StartLogin and
+// Pending.Wait, which is what the MCP login tool already called: the listener
+// and the code exchange belong to internal/auth, and the stream a person reads
+// belongs here. The link goes to stderr, the browser is waited for, the token
+// is saved, and the run then reports what auth status would. The URL is a
+// human word and human words have one place to go, and it is not stdout.
+// TestLoginPrintsTheURLToStderrNotStdout is the pin,
+// TestAFailedLoginIsOneFailingEnvelope is the other half, because a login that
+// did not happen is still one object, and TestTheLoginClosesItsListenerEitherWay
+// holds the port freed whichever way the wait ended. A build with no client
+// secret is refused before the link line, with nothing on stderr at all:
+// TestLoginRefusesABuildWithNoClientSecret runs the real login, unstubbed.
+//
+// On a pipe, on a file and in a window with no room for a box, the two lines
+// are auth.LinkLine's own, byte for byte, because a skill and a log read them:
+// TestThePipeLoginLineIsTodays and TestANarrowWindowGetsTheLoginLineAndNoBox.
+//
+// On a terminal the sentence sits in a box labelled with the host the link
+// goes to, the link is one line of its own under the box so that a copy gets
+// all of it, and the wait is one line that rewrites itself and ends as a tick
+// and "signed in" or as a cross and the error the object carries:
+// TestTheLoginScreensAreTheirRecordedBytes. Nothing moves the cursor and
+// nothing turns auto-wrap off, because a login traps no signal: a Ctrl-C can
+// land anywhere in those three minutes and has to leave the terminal as it
+// found it. TestTheLoginSpinnerMovesNoCursorButCarriageReturn reads the bytes
+// for both.
 //
 // # The binary never prompts, and help is an answer
 //
@@ -185,12 +305,99 @@
 // The whole help goes to stderr beside it, so the person who typed it reads
 // what they could have typed. TestUnknownCommandFailsAndNamesItself,
 // TestNoArgumentsFails and TestBareGdocStillFailsAndPrintsTheHelpToStderr are
-// the pins, and TestHelpTakesWordsAndNoFlags holds that help itself is parsed
-// as strictly as everything else.
+// the pins, and TestHelpTakesWordsAndOnlyTheJSONFlag holds that help itself is
+// parsed as strictly as everything else: it takes --json and refuses every
+// other flag by name.
 //
-// TODO(test): no test pins that the binary never reads stdin. Nothing in the
-// tree names os.Stdin today, so the rule holds by absence rather than by a
-// check somebody would see fail.
+// The binary never prompts, and the one command that reads stdin reads a
+// protocol. Every command takes its facts as arguments and answers, so nothing
+// waits on a pipe nobody filled. mcp reads stdin because a JSON-RPC session is
+// a stream, and it still asks no question: what it reads is messages from a
+// client, never words from a person. One room names the real streams, and
+// hands every other room a reader and a writer, so internal/mcp runs a whole
+// session against strings in memory. TestOnlyMainNamesStdinAndStdout in
+// go/boundary is the pin, and it reads the syntax tree, so this paragraph is
+// prose rather than a second room.
+//
+// # On a terminal a help screen replaces the object
+//
+// A person who types gdoc help reads the help and then, today, 7.5 KB of JSON
+// wrapped under it. So on a terminal without --json a help screen is the whole
+// answer: the words go to stderr, stdout gets nothing, and the exit code is the
+// one the object would have carried. Two results have such a screen, help when
+// it answers and bare gdoc, and no third.
+//
+// The decision is run's, because run is the room that holds stdout. A result
+// carries emit.Result.Screen, a marker with the tag json:"-" that no object can
+// show: TestScreenNeverReachesTheObject in internal/emit. A successful cmdHelp
+// sets it and the bare branch of dispatch sets it, and nothing else does, so a
+// panic has no marker and its envelope is printed wherever stdout goes.
+// TestHelpOnATerminalWritesNothingToStdout,
+// TestBareGdocOnATerminalWritesNothingToStdoutAndExitsOne,
+// TestARefusalKeepsItsObjectOnATerminal over gdoc help sing,
+// TestAPanicKeepsItsEnvelopeOnATerminal and
+// TestEveryOtherCommandKeepsItsObjectOnATerminal are the pins.
+//
+// --json is how a program asks for the object anyway. It prints the object
+// wherever stdout goes and leaves stderr plain, so a skill driving a terminal
+// reads exactly the bytes it read before. It survives every spelling, because
+// helpWords strips it before the table is matched and hands cmdHelp the answer:
+// TestEverySpellingOfHelpKeepsJSON and
+// TestHelpWithJSONPrintsTheObjectOnATerminal. gdoc --json alone is still an
+// unknown command, because a flag names no command: TestJSONAloneIsStillUnknown.
+// Any other flag on help is refused by name:
+// TestHelpTakesWordsAndOnlyTheJSONFlag.
+//
+// The hint is the last line of a screen that dropped its object, dim, and it
+// says to add --json. It is written by run, never where the object was printed,
+// and never on bare gdoc, which failed: that person was reaching for a command
+// and the refusal already says what to type. The ok field is what parts the
+// two: TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped.
+//
+// What the screens hold is helpscreen.go's, and the command table is still the
+// only description of a command. gdoc help draws the version box with the usage
+// line, the release notice and any warning the dropped object would have
+// carried, then the commands grouped by the four jobs a command does, then the
+// line saying where the detail is. The group is a field on the table entry and
+// reaches no object: TestEveryCommandHasAGroup, TestTheGroupIsNotInTheObject and
+// TestEveryCommandIsOnTheGroupedScreen, with
+// TestAWarningIsDrawnWhereTheObjectWouldHaveCarriedIt over the warning rows.
+// gdoc help <command> draws that command's box, its flags as two columns, and
+// its example on one line under the box:
+// TestTheExampleIsOneLineUnderTheBox. Bare gdoc opens with gdoc needs a
+// command., the words its object carries:
+// TestBareGdocOpensWithTheWordsItRefusesWith. The three screens are recorded at
+// four widths and in colour by TestTheHelpScreensAreTheirRecordedBytes, no line
+// leaves its box in TestNoLineOfAScreenIsWiderThanItsBox, and NO_COLOR or
+// TERM=dumb keeps the boxes and drops every escape byte:
+// TestNoColourOnATerminalDrawsTheBoxesWithNoEscapeByte.
+//
+// A help screen reads no token. There is no line saying whether anyone is
+// signed in, because then every help would be a read of the token file, and
+// help is a question about the tool rather than about an account. auth status is
+// the command that answers that one. TestHelpNeverReadsTheToken reads the
+// syntax tree of help.go, helpscreen.go and notice.go and finds no reference to
+// internal/auth.
+//
+// Everything that is not a terminal reads today's text, byte for byte: a pipe,
+// a file, a run with --json, and every platform but darwin, which answers that
+// no stream is a terminal. The goldens in testdata/pipe hold it, through
+// TestHelpOnAPipeIsTodaysTextByteForByte,
+// TestBareGdocOnAPipeIsTodaysTextByteForByte and
+// TestAnUnknownCommandOnAPipeIsTodaysTextByteForByte, and
+// TestNoEscapeByteReachesAPipe runs every command in the table through run with
+// buffers and finds no escape byte on either stream.
+//
+// A window under fifty columns, which is the plain band of internal/panel's
+// width rule, reads that same text with three things over or under it, because
+// there a person is reading rather than a skill: the warnings, the words bare
+// gdoc refuses with, and the hint line. The goldens in testdata/screens hold
+// what a person reads at forty-four columns. The first two go wherever stderr
+// is a terminal that narrow. The hint is the line that takes the object's
+// place, so it is written where the object is dropped, and the object is
+// dropped only when both streams are a terminal: a run whose words went into a
+// redirected stderr still prints it:
+// TestAScreenWhoseWordsWentToAFileKeepsItsObject.
 //
 // # Completion is a file, and the reason is the output contract
 //
@@ -252,23 +459,36 @@
 // TestCompletionArgumentsAreStrict, with
 // TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
 //
-// No test sources the script in a real shell, because nothing under go/ runs an
-// external program and TestNothingRunsAnExternalProgram holds that over the
-// test files too. The script is checked structurally here, and a person types
-// Tab at it once per milestone.
+// No test sources the script in a real shell, because the one program anything
+// under go/ runs is the opener below, and TestNothingRunsAnExternalProgram holds
+// that over the test files too. The script is checked structurally here, and a
+// person types Tab at it once per milestone.
 //
-// # The update runs when it is typed; help asks once a day
+// # The update runs when it is typed; help and mcp ask once a day
 //
 // `gdoc update` is the one command that writes over the binary a person is
 // running, and that is why nothing starts it but a person typing it. Nothing
 // installs unasked, ever.
 //
 // Asking what is published is a smaller thing than installing it, and `gdoc
-// help` does it by itself, at most once in 24 hours. Help is the one place: it
-// is the first call of every skill session, it already carries the version,
-// and no document is open in front of it. A colleague who never reads the
-// releases page hears about a release from the tool itself, in the session
-// they already opened.
+// help` does it by itself, at most once in 24 hours. Help is the first call of
+// every skill session, it already carries the version, and no document is open
+// in front of it. A colleague who never reads the releases page hears about a
+// release from the tool itself, in the session they already opened.
+//
+// `gdoc mcp` is the second command that asks unasked, and the last. A chat has
+// no help in it: the session is started by Claude Desktop and the person never
+// types a command at all, so the first tool answer of the process carries the
+// line instead, once, and no answer after it does. It is the same stamp, the
+// same 24 hours, the same two-second ceiling and the same grant, so a chat and
+// a terminal cost one request a day between them. The words differ: a chat is
+// told to run `gdoc update` in a terminal and then quit Claude Desktop and
+// open it again, because a new binary only reaches the session started after
+// it: TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine,
+// TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess,
+// TestACheckoutBuildNeverAsksFromMcp, TestTheMcpCheckIsBoundedByTwoSeconds,
+// TestTheMcpCheckOpensThePolicyTheUpdateOpens and
+// TestTheLineSaysQuitAndOpenAgainNeverToggle.
 //
 // What keeps that bounded is that nothing moves. The check reads one listing,
 // writes one file of gdoc's own, replaces no binary and touches no document.
@@ -284,7 +504,7 @@
 // TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
 //
 // No other command checks. There is no check before a build and none on the
-// way to reading somebody's document. A build is a person waiting for a docx
+// way to reading somebody's document from the terminal. A build is a person waiting for a docx
 // with no network at all, and a review session is somebody's document open in
 // front of them; a background fetch in either is a second thing happening that
 // nobody asked for, and on a slow connection it is the command taking longer
@@ -339,6 +559,74 @@
 // TestTheUpdateObjectIsWhatTheSkillsRead and
 // TestRollbackPutsTheEarlierBinaryBack.
 //
+// # --desktop writes the Claude Desktop extension, and is the one program gdoc runs
+//
+// Claude Desktop is chat rather than a terminal, so it does not type `gdoc`. It
+// starts a command named in an extension, which is a zip holding one
+// manifest.json, and every release from v2.9.0 on carries that manifest as a
+// template with two placeholders. `gdoc update --desktop` fills them with the
+// path the binary sits at and the release that was installed, writes
+// `gdoc.mcpb` beside the binary, and hands that file to Claude Desktop:
+// TestDesktopWritesTheMcpbFromTheZipsTemplate. Decision 18 of the M14
+// specification, Nail's call of 2026-10-03.
+//
+// The template is read between the check and the replacement, and the extension
+// is written after the read-back, so the steps on stderr are in the order the
+// run takes them: TestADesktopRunDrawsTheTwoExtensionStepsAndSaysQuitAndOpenAgain.
+//
+// Handing it over is the one place anything under go/ starts another program:
+// /usr/bin/open by its full path, with the file as its only argument, on macOS
+// alone. go/boundary's TestOnlyDesktopRunsAProgram reads desktop.go's syntax
+// tree and holds all three of those: os/exec is imported by that one file, it
+// holds one exec.Command call, and that call names the opener and one argument.
+// Off macOS the file is written and nothing is started, because there is
+// nothing there to hand it to: TestDesktopCallsTheRunnerWithOpenAndThePathOnly
+// and TestDesktopOffMacOSWritesAndRunsNothing.
+//
+// The template comes out of the zip this run verified, through
+// update.FileFrom, so it is always the template of the release that is
+// installed and never a second download. It is read before the binary is
+// replaced: a release carrying no template is refused with the gdoc on this
+// machine exactly where it was, because a person who asked for Claude Desktop
+// and got a new binary and a warning they scrolled past is left wondering why
+// their chat has no gdoc in it:
+// TestAZipWithoutTheTemplateIsRefusedBeforeTheBinaryIsReplaced.
+//
+// The extension follows the release rather than the binary, so a machine
+// already running the newest gdoc still downloads that release's zip for the
+// template and still gets the extension refreshed:
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension. A run that found a
+// release it did not install, which is a major it declined, writes nothing and
+// says so: the template would name a version this machine does not run, and
+// not knowing never resolves to overwrite.
+//
+// --desktop is refused beside --rollback, which puts an earlier binary back,
+// and beside --check, which writes nothing at all. Each pair names two runs:
+// TestDesktopIsRefusedWithRollbackOrCheck. A path carrying a quote or a
+// backslash is refused by name rather than written into a manifest Claude
+// Desktop cannot read: TestAPathThatWouldBreakTheManifestIsRefusedByName.
+//
+// Past the point where the file is written, everything is reported rather than
+// raised. The binary has already been replaced, or there was never one to
+// replace, so a write that failed or an open that refused is a warning naming
+// the file, which is the house rule that nothing raises over a write that
+// happened.
+//
+// Plain `gdoc update` is the run it has always been: it writes no extension and
+// starts no program, and Claude Desktop runs the new binary after a person
+// quits it and opens it again: TestPlainUpdateWritesNoExtensionAndRunsNothing.
+// It ends with one line when the release's template, filled for this machine,
+// differs from the extension already beside the binary, and that line names
+// `gdoc update --desktop`. The comparison leaves the version field out of both
+// sides, so a release that changed its number and nothing else asks nobody to
+// do anything, and a machine with no extension beside its binary is told
+// nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
+// TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
+//
+// The extension has no settings. What differs from one machine to the next is
+// the binary's path and the release, which is why the template travels in the
+// release and is filled here rather than being a file somebody edits.
+//
 // # The update draws its steps on stderr
 //
 // A person who types `gdoc update` sees what it is doing while it does it: a
@@ -348,12 +636,19 @@
 //
 // When stderr is not a terminal, which is every run a skill starts, each step
 // prints once as a plain line when it ends, with no colour and no escape code:
-// TestAPipedRunPrintsOneLinePerFinishedStep. A terminal is the char device bit
-// on the file's mode and nothing else, so a pipe, a file and a buffer all get
-// the plain lines: TestOnlyACharDeviceIsATerminal. On a terminal the list is
+// TestAPipedRunPrintsOneLinePerFinishedStep. What a terminal is comes from
+// internal/tty and is asked here through one variable, so a pipe, a file, a
+// buffer and /dev/null all get the plain lines, /dev/null included because the
+// question is the terminal driver's answer and not the character-device bit the
+// old check read: TestOnlyATerminalDriverMakesATerminal. Every escape code and
+// the colour of every glyph come from internal/tty too, which boundary's
+// TestNoEscapeLiteralOutsideTTY holds. On a terminal the list is
 // drawn in advance and redrawn in place, with a spinner on the running step
 // and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
-// and TestNoColorKeepsTheRedrawAndDropsTheColour. Auto-wrap is off while the
+// and TestNoColorKeepsTheRedrawAndDropsTheColour. A window under fifty columns
+// is the plain band of internal/panel's width rule here as everywhere, so it
+// reads the plain lines rather than a box whose detail cell is one column
+// wide: TestANarrowWindowGetsThePlainStepLines. Auto-wrap is off while the
 // list moves and back on when it settles, because a wrapped line would make
 // the redraw move up too few rows in a narrow terminal; a plain list writes
 // neither code: TestALiveListTurnsWrapOffAndBackOn. The list settles on every
@@ -361,8 +656,28 @@
 // and no result line claims a run that did not finish:
 // TestAPanicInAnUpdateStopsTheSpinner.
 //
+// The terminal list is a box internal/panel draws, titled update and labelled
+// with the gdoc that is running and the one the run is taking once it has
+// chosen one: TestTheUpdateScreensAreTheirRecordedBytes records the six ways
+// a run ends, TestTheTopBorderNamesTheVersionsOfTheRun the words the label is
+// made of, and TestTheBorderOfARunCarriesTheVersionsTheRunChose the two calls
+// in update.go that hand them over, which it holds by reading the top border
+// alone, because the versions are in the choose row too. A step name sits in
+// the left cell behind its mark, and what is known about it in the right one. The marks are the palette's roles, with a muted ring for a
+// step nothing has reached yet: TestTheStepMarksAreTheirRolesOnATerminal,
+// and the ring is the terminal's alone, because a plain line is written when
+// its step ends: TestThePendingRingIsTheTerminalsAlone. Anything too wide for
+// its cell is wrapped into lines that fit, a word with no space in it cut
+// where the line ends and nothing shortened:
+// TestALongReasonWrapsInsideTheBoxAndIsNeverShortened. Under the box a
+// terminal reads the run and, where one was written, the Claude Desktop
+// extension on a line of its own, and a pipe reads the one line it always
+// read: TestTheExtensionIsItsOwnLineOnATerminalAndOneLineOnAPipe, with
+// TestAFailedRunHasNoLineUnderTheBox on the run that says nothing.
+//
 // Only what happened is drawn. A failed step carries its reason on the next
-// line and the steps after it are not drawn at all:
+// plain line, and in the cell its detail was in on a terminal, and the steps
+// after it are not drawn at all:
 // TestAFailedStepIsMarkedAndTheRestAreNotDrawn and
 // TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne. The download and the
 // steps after it are planned only when the decision is to install:

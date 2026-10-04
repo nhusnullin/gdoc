@@ -594,3 +594,76 @@ func TestAnUnusableRangeLeavesTheThreadUnplaced(t *testing.T) {
 		t.Errorf("unplaced = %v, want %v", unplaced, want)
 	}
 }
+
+// The chat answer says which domain a comment came from, because a document
+// with outside commenters in it is worth one line of warning. The address
+// itself is not kept: it is read off the wire, its domain is taken, and nothing
+// carries it any further. Identity is never a gate, so no rule in this tree
+// reads the field.
+func TestTheAuthorDomainIsKeptAndTheAddressIsNot(t *testing.T) {
+	got, _ := threadsFromFixtures(t)
+	if len(got) != 3 {
+		t.Fatalf("Threads returned %d threads, want 3", len(got))
+	}
+	if got[0].AuthorDomain != "example.com" {
+		t.Errorf("the first thread's author_domain = %q, want example.com", got[0].AuthorDomain)
+	}
+	if got[1].AuthorDomain != "example.org" {
+		t.Errorf("the second thread's author_domain = %q, want example.org", got[1].AuthorDomain)
+	}
+	if len(got[0].Replies) != 2 {
+		t.Fatalf("the first thread carries %d replies, want 2", len(got[0].Replies))
+	}
+	if got[0].Replies[0].AuthorDomain != "example.com" || got[0].Replies[1].AuthorDomain != "example.org" {
+		t.Errorf("the replies' domains = %q then %q", got[0].Replies[0].AuthorDomain, got[0].Replies[1].AuthorDomain)
+	}
+
+	raw, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"author_domain":"example.com"`) {
+		t.Errorf("the threads' JSON carries no author_domain: %s", raw)
+	}
+	for _, address := range []string{"nail@example.com", "ada.lovelace@example.org", "emailAddress"} {
+		if strings.Contains(string(raw), address) {
+			t.Errorf("the threads' JSON carries %q, and an address is read and dropped", address)
+		}
+	}
+}
+
+// An author Drive gave no address for is a domain nobody can report, and an
+// empty string is the honest answer. A domain is lowercased, because a person
+// typing their own address in another case is the same person's domain.
+func TestAnAuthorWithNoAddressHasNoDomain(t *testing.T) {
+	cases := map[string]string{
+		"nail@example.com":         "example.com",
+		"Ada.Lovelace@EXAMPLE.ORG": "example.org",
+		"":                         "",
+		"no-at-sign":               "",
+		"trailing@":                "",
+		"@leading":                 "",
+	}
+	for address, want := range cases {
+		if got := domainOf(address); got != want {
+			t.Errorf("domainOf(%q) = %q, want %q", address, got, want)
+		}
+	}
+}
+
+// The widening of the read is exactly one field, inside the author group, and
+// the author group is written once and used twice.
+func TestTheFieldMaskNamesTheAddressOnlyInsideTheAuthorGroup(t *testing.T) {
+	if got := strings.Count(authorMask, "emailAddress"); got != 1 {
+		t.Errorf("the author mask names emailAddress %d times, want once: %s", got, authorMask)
+	}
+	if authorMask != "author(displayName,emailAddress,me)" {
+		t.Errorf("the author mask is %q", authorMask)
+	}
+	if got := strings.Count(fieldMask, "emailAddress"); got != 2 {
+		t.Errorf("the field mask names emailAddress %d times, want twice: once per author group", got)
+	}
+	if got := strings.Count(fieldMask, authorMask); got != 2 {
+		t.Errorf("the field mask carries the author mask %d times, want twice", got)
+	}
+}

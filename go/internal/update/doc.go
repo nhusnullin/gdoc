@@ -85,9 +85,23 @@
 // file would leave an unverified binary for the next run to execute.
 // TestAFailedReadBackWithNothingToRestoreLeavesNoBinary.
 //
-// gdoc never runs the binary it just installed. Nothing under go/ runs an
-// external program, so the proof that the update worked is the next envelope
-// a person sees, and Sum is what this run can honestly say about it.
+// gdoc never runs the binary it just installed. The one program anything under
+// go/ runs is the opener that hands the Claude Desktop extension to Claude
+// Desktop, and it is in cmd/gdoc rather than here, so the proof that the update
+// worked is the next envelope a person sees, and Sum is what this run can
+// honestly say about it.
+//
+// # One more file out of the same zip
+//
+// FileFrom is the whole of what a caller may take from a release besides the
+// binary: one named file, out of bytes that have already matched the published
+// checksum. `gdoc update --desktop` reads the Claude Desktop manifest template
+// that way, so the template a person's Claude Desktop is handed came out of the
+// same verified zip as the binary it names, and no second download decides
+// anything. Nothing on disk moves.
+// TestFileFromTakesOneFileOutOfTheVerifiedZip,
+// TestFileFromRefusesAZipThatDoesNotMatchItsChecksum and
+// TestFileFromRefusesAFileTheZipDoesNotHoldByName.
 //
 // Rollback is a swap rather than a move: what was installed becomes
 // <path>.previous and the earlier binary comes back, so a rollback taken by

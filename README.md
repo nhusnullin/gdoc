@@ -132,8 +132,8 @@ lands as one, and after every write it reads the document back.
 ## Build your own skill on the binary
 
 The five skills are prompts over one binary. Every command takes arguments and
-prints one JSON object, so a skill of your own can build on any of them. `gdoc
-help <command>` prints the words, the flags and an example.
+prints one JSON object. `gdoc help <command> --json` prints the words, the flags
+and an example; without `--json`, a help in a terminal draws a screen instead.
 
 | Command | Does |
 |---|---|
@@ -196,4 +196,5 @@ what you expected instead.
 | [Restyle](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/restyle.md) | the survey, restyle in place, the house template as a suggestion |
 | [Publishing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/publishing.md) | `build`, `publish`, the `gdoc:` block |
 | [Exporting](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/exporting.md) | `export`, the numbering rule, `assets/`, the marks |
+| [Chat](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/chat.md) | reviewing from Claude Desktop chat, typed or dictated, installed with `install.sh --desktop` |
 | [What is planned](https://github.com/nhusnullin/gdoc/blob/main/docs/v2/PLAN.md) | the open work |

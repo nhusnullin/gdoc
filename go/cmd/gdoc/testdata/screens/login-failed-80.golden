@@ -1,0 +1,5 @@
+┌─ auth login ─────────────────────────────────────────── accounts.google.com ─┐
+│ Open this link in your browser to sign in:                                   │
+└──────────────────────────────────────────────────────────────────────────────┘
+https://accounts.google.com/o/oauth2/auth?client_id=not-real.apps.googleusercontent.com&state=hQ2p
+⠋ waiting for the browser to come back[K✗ no login callback arrived within the timeout[K

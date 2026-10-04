@@ -28,9 +28,11 @@ at all.
 
 ## What it does
 
-One static binary at `go/`, fifteen commands plus `help` and `completion`,
+One static binary at `go/`, sixteen commands plus `help` and `completion`,
 nothing to install beside it. Each command takes arguments, prints one JSON
-object and exits. It holds the credential, it reads a document, it writes
+object and exits. The sixteenth is the exception: `gdoc mcp` is a session rather
+than an answer, which is how Claude Desktop reaches the same reads and writes,
+and [Chat](chat.md) holds it. It holds the credential, it reads a document, it writes
 suggestions, it leaves a comment on words a caller quotes, it builds a
 house-style document and publishes it, it surveys what a document holds before
 anything is done to it, it can give that document the house style where it
@@ -56,6 +58,12 @@ If the token was granted less than the binary asks for, `auth status` still
 says ok and lists the difference in `missing_scopes`, with a warning naming the
 scopes and telling you to sign in again.
 
+`auth status` also names the account the token signs in as, read from Google on
+the call itself under a five-second ceiling. A read that fails or never comes
+back is a warning, not a failure: the token is the fact, and whose it is was
+what could not be read. It asks nothing when there is no token, or when a scope
+is missing.
+
 `auth login` prints the link rather than opening a browser for you, because the
 binary runs no other program at all. While it waits it listens on 127.0.0.1
 on a port the kernel picks, which is what your browser comes back to, so a
@@ -63,7 +71,10 @@ firewall may ask once. It gives up after three minutes.
 
 Both print exactly one JSON object on stdout and nothing else. Prose and the
 sign-in link go to stderr, so anything reading the output has one object to
-parse and no filtering to do.
+parse and no filtering to do. In a terminal those words are a panel instead: a
+box saying where you stand for `auth status`, and for `auth login` the link in
+a box and one waiting line that ends `✓ signed in`. The object is on stdout
+either way, and a pipe reads no panel at all.
 
 The token lives in `~/.config/gdoc-agent/oauth-token.json`, and the login asks
 for the Docs read and write scope, because writing a suggestion needs it.

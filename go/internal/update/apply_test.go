@@ -400,3 +400,49 @@ func TestAFailedReadBackWithNothingToRestoreLeavesNoBinary(t *testing.T) {
 	}
 	mustNotExist(t, path)
 }
+
+// FileFrom is the read beside Apply: one named file out of the same verified
+// zip. `gdoc update --desktop` takes the Claude Desktop manifest template that
+// way, so the template is always the one the release it installed carries, and
+// it is read from bytes that have already matched the published checksum.
+func TestFileFromTakesOneFileOutOfTheVerifiedZip(t *testing.T) {
+	archive := zipHolding(t, "gdoc", []byte("the new binary"))
+	asset := AssetName("v2.9.0", "darwin-arm64")
+	sums := sumsFor([2]string{sumOf(archive), asset})
+
+	got, err := FileFrom(archive, sums, asset, "skills/gdoc-review/SKILL.md")
+	if err != nil {
+		t.Fatalf("the zip holds that file: %v", err)
+	}
+	if string(got) != "# review\n" {
+		t.Errorf("the file read out of the zip is %q", got)
+	}
+}
+
+// A zip whose bytes do not match the release's checksum is refused before
+// anything is read out of it, the way Apply refuses one before anything moves.
+func TestFileFromRefusesAZipThatDoesNotMatchItsChecksum(t *testing.T) {
+	archive := zipHolding(t, "gdoc", []byte("the new binary"))
+	asset := AssetName("v2.9.0", "darwin-arm64")
+	sums := sumsFor([2]string{sumOf([]byte("some other bytes")), asset})
+
+	if _, err := FileFrom(archive, sums, asset, "install.sh"); err == nil {
+		t.Fatal("a zip that does not match its checksum was read")
+	}
+}
+
+// A file the zip does not hold is refused naming both the zip and the name,
+// because the caller asked for one path and nothing else will do.
+func TestFileFromRefusesAFileTheZipDoesNotHoldByName(t *testing.T) {
+	archive := zipHolding(t, "gdoc", []byte("the new binary"))
+	asset := AssetName("v2.9.0", "darwin-arm64")
+	sums := sumsFor([2]string{sumOf(archive), asset})
+
+	_, err := FileFrom(archive, sums, asset, "mcpb/manifest.json")
+	if err == nil {
+		t.Fatal("a file the zip does not hold was read out of it")
+	}
+	if !strings.Contains(err.Error(), "mcpb/manifest.json") || !strings.Contains(err.Error(), asset) {
+		t.Errorf("the refusal names neither the file nor the zip: %v", err)
+	}
+}

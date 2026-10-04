@@ -24,6 +24,10 @@ func TestEnvOverrideWins(t *testing.T) {
 	if c != filepath.Join(dir, "update-check.json") {
 		t.Fatalf("last check path: %q", c)
 	}
+	l, _ := LoginPendingPath()
+	if l != filepath.Join(dir, "login-pending.json") {
+		t.Fatalf("login pending path: %q", l)
+	}
 }
 
 func TestPlatformDefault(t *testing.T) {

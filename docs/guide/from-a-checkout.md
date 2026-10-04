@@ -40,6 +40,22 @@ are written by `gdoc auth login` and by nothing else. After installing, run
 `~/.local/bin` is not on the macOS default PATH. The script says so when it is
 missing and tells you the line to add.
 
+## Claude Desktop
+
+```bash
+./install.sh --desktop
+```
+
+The flag writes `bin/gdoc.mcpb`, the Claude Desktop extension, and opens it.
+Claude Desktop asks to install it. The extension names `bin/gdoc` by its full
+path, so the chat runs this checkout's own build: after `make build`, quit
+Claude Desktop and open it again, and the chat has the binary you just built.
+Nothing else is needed, and `--desktop` is the only flag either installer takes
+for it.
+
+A run without the flag says nothing to Claude Desktop. `bin/` is not in git, so
+the extension file is nobody's to commit.
+
 ## Building
 
 ```bash
@@ -57,7 +73,19 @@ bin/gdoc completion zsh --out ~/.gdoc-completion.zsh
 
 `help` prints the command table: the words each command takes, every flag with
 a sentence saying what it is for, and one example. `--help` and `-h` mean the
-same thing anywhere on the line. `completion` renders that same table as a
+same thing anywhere on the line.
+
+In a terminal `help` draws that table as a screen: boxes on stderr, the
+commands grouped by the job they do, and nothing on stdout. Add `--json` and
+you get the JSON object a skill reads instead, with stderr left plain. A pipe
+and a file get today's plain text and the object, unchanged. A window under
+fifty columns has no room for a box, so it gets that plain text, with any
+warnings marked above it and a short dim hint under it saying how to ask for
+the object. Bare `gdoc` draws the same screen, opening with
+`gdoc needs a command.`, and still exits 1. In a window that narrow those same
+words open the plain text.
+
+`completion` renders that same table as a
 shell script and writes it to the file you name, for `zsh` or for `bash`. An
 existing file is refused without `--force`, so the path above is not the
 `bin/gdoc.zsh` that `install.sh` owns. Both read the one table the parser

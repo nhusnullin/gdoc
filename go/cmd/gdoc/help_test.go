@@ -15,7 +15,7 @@ import (
 var everyCommandName = []string{
 	"auth status", "auth login", "read", "comments", "suggestions", "export", "restyle",
 	"probe", "reply", "propose", "withdraw", "annotate", "build", "publish",
-	"update", "help", "completion",
+	"update", "mcp", "help", "completion",
 }
 
 // runHelp runs the command with both streams held apart, because the split is
@@ -63,6 +63,13 @@ func helpNames(t *testing.T, got map[string]any) []string {
 // Help is an answer, so it is one object on stdout and exit 0, and the words a
 // person reads go where the login URL already goes. The output contract does
 // not bend for the one command a person runs to learn the others.
+//
+// This is the pipe, which both streams here are: a skill, a log and a file
+// each read the object. The one narrowing is a terminal, where the screen is
+// the whole answer and the object is dropped:
+// TestHelpOnATerminalWritesNothingToStdout, and
+// TestHelpWithJSONPrintsTheObjectOnATerminal for the caller that asks for the
+// object there by name.
 func TestHelpIsOneObjectAndTheProseIsOnStderr(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
@@ -244,15 +251,17 @@ func TestBareGdocStillFailsAndPrintsTheHelpToStderr(t *testing.T) {
 	}
 }
 
-// help takes words and no flags, and says so by name like every other command
-// here. Nothing is accepted and ignored.
-func TestHelpTakesWordsAndNoFlags(t *testing.T) {
+// help takes words and one flag, --json, and refuses any other by name like
+// every other command here. Nothing is accepted and ignored.
+func TestHelpTakesWordsAndOnlyTheJSONFlag(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
 	for _, args := range [][]string{
 		{"help", "--md", "x"},
 		{"help", "--structure"},
 		{"help", "publish", "--folder-id", "1AbC"},
+		{"help", "--json=yes"},
+		{"help", "--json", "--json"},
 	} {
 		got, _, code := runHelp(t, args...)
 		if code == 0 || got["ok"] != false {
@@ -260,9 +269,15 @@ func TestHelpTakesWordsAndNoFlags(t *testing.T) {
 			continue
 		}
 		msg, _ := got["error"].(string)
-		if !strings.Contains(msg, "not a flag this command takes") {
+		if !strings.Contains(msg, "not a flag this command takes") &&
+			!strings.Contains(msg, "takes no value") &&
+			!strings.Contains(msg, "is given twice") {
 			t.Errorf("%v must be refused by name: %q", args, msg)
 		}
+	}
+	got, _, code := runHelp(t, "help", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Errorf("the one flag help takes must be taken: %v (exit %d)", got, code)
 	}
 }
 
@@ -290,7 +305,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "annotate"}, "Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]"},
 		{[]string{"help", "build"}, "Usage: gdoc build --md <file> --out <file> [--house <file>] [--force]"},
 		{[]string{"help", "publish"}, "Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]"},
-		{[]string{"help", "update"}, "Usage: gdoc update [--check] [--major] [--nightly] [--rollback]"},
+		{[]string{"help", "update"}, "Usage: gdoc update [--check] [--major] [--nightly] [--rollback] [--desktop]"},
 		{[]string{"help", "completion"}, "Usage: gdoc completion <shell> --out <file> [--force]"},
 		{[]string{"help", "auth", "status"}, "Usage: gdoc auth status"},
 	} {

@@ -12,7 +12,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -229,19 +228,17 @@ func (p *Pending) Wait(ctx context.Context) (err error) {
 // Close frees the port. It is safe to call twice.
 func (p *Pending) Close() { p.srv.Close() }
 
-// Login prints the authorization URL to w (stderr: stdout is reserved for the
-// one JSON object) and waits. It is StartLogin and Wait in a row, which is the
-// whole of what the CLI's auth login does.
+// LinkAsk is the sentence that goes with the link, and LinkLine the sentence
+// and the link together: the two lines every login has printed, and the two a
+// pipe and a log still read. cmd/gdoc draws the sentence inside a box on a
+// terminal and prints LinkLine itself everywhere else, which is why both are
+// exported from here rather than written out twice.
 //
-// The CLI login has no context of its own: nothing above it can cancel a run
-// that is already waiting on a browser, and loginTimeout is what bounds the
-// wait. The exchange after it is bounded by the client's timeout.
-func Login(c *http.Client, w io.Writer) error {
-	p, err := StartLogin(c)
-	if err != nil {
-		return err
-	}
-	defer p.Close()
-	fmt.Fprintf(w, "Open this link in your browser to sign in:\n%s\n", p.URL)
-	return p.Wait(context.Background())
-}
+// Nothing about a terminal lives in this package: no colour, no box and no
+// escape byte. TestTheLinkLineIsTodays states both as the literal they are,
+// and cmd/gdoc's TestThePipeLoginLineIsTodays holds that the one route a
+// person takes goes through them.
+const LinkAsk = "Open this link in your browser to sign in:"
+
+// LinkLine is LinkAsk, the link under it, and a newline after each.
+func LinkLine(url string) string { return LinkAsk + "\n" + url + "\n" }

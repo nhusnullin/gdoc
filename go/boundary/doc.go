@@ -85,6 +85,69 @@
 // syscall/js is refused beside os/exec, since it reaches a host that can run
 // anything. TestNothingRunsAnExternalProgram is the pin.
 //
+// # One room writes to the terminal in the terminal's language
+//
+// Every escape sequence gdoc writes lives in internal/tty: the palette by role
+// and by depth, and the cursor and line codes. A sequence written anywhere else
+// is the bug that is hardest to see, because it is invisible until it is in the
+// wrong place: a colour left open paints the shell prompt under the screen, a
+// row counted wrong makes a redraw crawl down the screen, and a byte that
+// reaches a pipe reaches a skill's parser. Holding the codes in one room is
+// also what makes NoColour mean something: there is one place that could write
+// a byte and at that depth it writes none.
+//
+// TestNoEscapeLiteralOutsideTTY reads the syntax tree of every non-test file
+// under go/ and unquotes each literal, so every spelling of the byte is one
+// case and a comment that spells a code out is prose rather than a use. Test
+// files are not judged, because a test that pins what a role paints with has to
+// state the bytes as literals rather than read the constant it is checking. It
+// fails in both directions: a literal outside internal/tty fails, and so does
+// internal/tty holding none, which would mean the codes moved and this test did
+// not.
+//
+// # The account read is granted in one room and asked by two
+//
+// guard.AllowAccountRead opens the one Drive read that names no file: who the
+// token signs in as. What bounds it is the room rather than the request, so the
+// grant is built in accountOf in cmd/gdoc and nowhere else, for one read, and
+// dies with the call. TestOnlyAccountOfCallsAllowAccountRead is the pin, and it
+// counts to one.
+//
+// The read itself has two callers, and that is the whole of what M15 widened:
+// the login tool of gdoc mcp, which answers with the account so a swapped
+// account is seen in a chat, and `gdoc auth status`, which names it on a
+// terminal so a person at a prompt reads the same fact.
+// TestAccountOfHasTwoCallers names both files, so a third caller is noticed
+// here rather than in review. A call written for a third room is a reach
+// somebody has to decide on, which is a DECISIONS.md entry and not a refactor.
+//
+// # The robot mark is read in one place
+//
+// The mark is the only record of authorship a thread itself carries, so the
+// check that reads it is internal/plaintext's and nobody else's. Three readers
+// ask it: internal/comments of a reply, internal/chat of the robot_not_ours
+// fact, and cmd/gdoc of a thread's opening comment. A fourth copy, written as a
+// prefix test of its own, would be a second answer to one question the day the
+// mark changes.
+//
+// Three files are named in markWriters and may test the mark themselves,
+// because each is refusing or requiring it on a caller's own input rather than
+// reading who wrote a thread entry: internal/propose and internal/annotate
+// refuse a comment that opens with the mark, and internal/reply requires it.
+// TestTheRobotMarkIsReadInOnePlace is the pin, and it fails in both
+// directions: a prefix check anywhere else fails, and a listed reader that
+// stops asking plaintext fails too.
+//
+// The mark is matched by its value and never by the name in front of it. The
+// copy taken out of internal/comments in M14 was a lowercase robot constant of
+// that file's own, so a test reading the names Robot and Prefix would have let
+// that line straight back in, and it would have failed on an unrelated prefix
+// somebody happens to call Prefix. The test finds every constant in the tree
+// whose value is the mark, following one constant to another, and a bare "🤖"
+// written into the call is the mark as much as a constant is. All three strings
+// functions that ask about a prefix are the same question: HasPrefix, CutPrefix
+// and TrimPrefix.
+//
 // # Three modules, named in allowedModules, and the rest refused
 //
 // allowedModules names what go.mod may require, each against its reason. Every
