@@ -92,20 +92,22 @@ Written before any settings or Keychain code. Part A needs no entry.
 **Files:**
 - Modify: `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`, `CLAUDE.md`
 
-- [ ] One entry, dated the day this task runs, "Settings, the mark in effect,
+- [x] One entry, dated the day this task runs, "Settings, the mark in effect,
       and the token in the macOS Keychain", from the spec's decisions, in the
       file's own shape, with its register row `holds`. Its test list is this
       plan's test names.
-- [ ] The M14 entry's row names the one clause superseded: chat's
-      `robot_not_ours` fact is removed.
-- [ ] `SPEC.md`: the robot prefix becomes the mark in effect; the token on
+- [x] The M14 entry's row names the one clause superseded: chat's
+      `robot_not_ours` fact is removed. The 2026-08-29 "Everything gdoc writes
+      opens with 🤖" row is superseded in the same words.
+- [x] `SPEC.md`: the robot prefix becomes the mark in effect; the token on
       macOS lives in the Keychain; the settings file and its two arguments.
-- [ ] `CLAUDE.md`, under 300 lines: the robot prefix invariant names the mark
+- [x] `CLAUDE.md`, under 300 lines: the robot prefix invariant names the mark
       in effect and that it may be empty; "Secrets live in" names the Keychain
-      on macOS; the external-program invariant names the `/usr/bin/open`
-      exception M14 recorded.
-- [ ] `cd go && go test -race ./boundary/` passes.
-- [ ] `git commit -m "docs(decisions): settings, the mark in effect, and the token in the Keychain"`
+      on macOS. The external-program invariant already names the `open`
+      exception on main, so it is unchanged. CLAUDE.md is at 299 lines: a later
+      task that adds a line shortens a row first.
+- [x] `cd go && go test -race ./boundary/` passes.
+- [x] `git commit -m "docs(decisions): settings, the mark in effect, and the token in the Keychain"`
 
 ### Task 2: no refusal names a person
 

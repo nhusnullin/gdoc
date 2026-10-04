@@ -108,9 +108,14 @@ PowerShell lands with Windows, under the tag that ships it. Decided
 ## Auth
 
 OAuth only. The bundled Internal client carries two rules: the secret stays in
-version control, and the client stays User type Internal. Token and config live
-in `~/.config/gdoc-agent/` on macOS and `%AppData%\gdoc-agent` on Windows, never
+version control, and the client stays User type Internal. Config lives in
+`~/.config/gdoc-agent/` on macOS and `%AppData%\gdoc-agent` on Windows, never
 in a repo, and `GDOC_CONFIG_DIR` overrides both, which is what the tests use.
+The token lives beside it on Windows, and in the Keychain on macOS, one generic
+password item with service `gdoc`, read with user interaction switched off
+(changed 2026-10-04, DECISIONS.md). The settings file, `settings.yaml`, lives in
+the config folder; `--config <file>` names another, and an argument such as
+`--mark` beats the file.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
@@ -308,9 +313,10 @@ marker is the trigger, always: stickiness carries context, never authority.
 
 **Whether a comment is answered is the skill's judgement, and no rule in the
 binary.** The binary reports the facts of a thread: every reply, its author, its
-time, and whether it opens with 🤖. A 🤖 reply newer than the comment is not an
-answer, because it may be an acknowledgment and the follow-up may have changed
-what was asked. **The 🤖 reply is the receipt, and the document is the ledger**:
+time, and whether it opens with a known mark (`by_gdoc`). A marked reply newer
+than the comment is not an answer, because it may be an acknowledgment and the
+follow-up may have changed what was asked. **The marked reply is the receipt,
+and the document is the ledger**:
 no local record of handled comments exists, so any session recomputes the open
 work from the threads alone. The receipt is written last, after the action
 landed, and before re-acting on an old marked comment the skill checks the
@@ -320,7 +326,9 @@ the missing receipt rather than to acting twice.
 ### `reply`
 
 Posts into an existing thread. Plain text only. Every reply gdoc writes opens
-with 🤖 and nothing else: no name, no prefix text. `commentUpdateState` is
+with the mark in effect and nothing else: no name, no prefix text. gdoc adds the
+mark; the default is ⁘, a person may set any other or none, and 🤖, ⁘ and ∴ stay
+known marks (changed 2026-10-04, DECISIONS.md). `commentUpdateState` is
 checked. gdoc never resolves and never reopens a thread, even though the API can:
 resolving means the answer was accepted, and only Nail accepts. **A long
 action writes at most two messages into its thread**, as two replies rather than
@@ -333,7 +341,7 @@ thread ends in a true statement rather than a dangling "on it".
 ### `propose`
 
 Writes a change as a native Google suggestion (`writeMode: SUGGEST`) with an
-anchored comment on the exact words explaining why, opening with 🤖. Subject to
+anchored comment on the exact words explaining why, opening with the mark. Subject to
 the read-back above, and the run stops at the first proposal either the inline
 read or the preview read cannot confirm. On a handed-in id this is the only
 write level the guard allows, which is the point, and an `assigneeEmailAddress`
@@ -406,8 +414,8 @@ changes nothing else. Two input forms, exclusive: `--quote` with `--body-file`
 for one comment by hand, `--from` for a file of
 `{quoted, why, assignee?}`. The words are found in a document that just came
 back, through the same span walk `propose` uses, so a quote that is not there
-exactly once is refused. The reason arrives bare and gdoc writes `🤖 ` in front
-of it; a reason already carrying the mark is refused, as is markdown a thread
+exactly once is refused. The reason arrives bare and gdoc writes the mark in
+front of it; a reason already carrying a known mark is refused, as is markdown a thread
 would render literally. Every entry is checked before the first one is sent.
 
 **The probe does not run here**, and since 2026-10-02 it runs in no writer at
@@ -831,11 +839,11 @@ themselves come through as they stand: `annotate` and `propose` need the exact
 quote to find it again, and a person listening rather than reading would hear a
 marking as noise.
 
-**Six facts sit beside every comment and every reply**, each one literal check:
-`has_link`, `has_email`, `names_ai`, `hidden_chars`, `robot_not_ours` and
-`author_domain`. They describe the words and never the person. `robot_not_ours`
-is the 🤖 with no receipt behind it, asked of this process's record of what gdoc
-wrote and never of an account. `author_domain` is the domain of the author's
+**Five facts sit beside every comment and every reply**, each one literal check:
+`has_link`, `has_email`, `names_ai`, `hidden_chars` and `author_domain`. They
+describe the words and never the person. `robot_not_ours` was the sixth until
+2026-10-04, when it was removed because it flagged nothing (DECISIONS.md).
+`author_domain` is the domain of the author's
 address, kept in no other form, and it is shown and read by nothing: identity is
 never a gate, the marker decides, and a domain is a fact a person can weigh. It
 is absent where Drive gave no address, never an empty string a model could read
@@ -850,8 +858,7 @@ process read that gdoc did not write; when
 another document was read in the last 30 minutes, or the target was never read;
 on the third write inside 60 seconds, or the 26th into one document inside an
 hour; when a `reply` goes into a thread whose comment carries a link, names the
-model or holds hidden characters (a 🤖 gdoc does not remember writing flags
-nothing since 2026-10-03, DECISIONS.md); and when a
+model or holds hidden characters; and when a
 `propose` takes out more than 300 characters. The first rule that trips is the
 one named. Text holding zero-width, bidi or tag characters is refused outright,
 because nobody can approve what they cannot see. Text copied out of another
@@ -883,10 +890,10 @@ the same tool and the same arguments, so a retry is not a second reply.
 **There is no live mode in chat**, because a server cannot wake the client.
 `comments` answers a cursor and the model reads again from it when the person
 asks, and `--wait` is no part of the tool. Chat and a live Claude Code session
-run side by side on one document and one token: chat's replies open with 🤖, so
-the live session never takes them as work, chat leaves marked comments to that
-session, and chat reads a thread again just before it posts and stops when a 🤖
-reply has appeared.
+run side by side on one document and one token: chat's replies open with the
+mark, so the live session never takes them as work, chat leaves marked comments
+to that session, and chat reads a thread again just before it posts and stops
+when a marked reply has appeared.
 
 **The review rules are one core, read through either front door.**
 `skills/gdoc-review/review.md` holds the markers, when to answer, when to wait
@@ -933,7 +940,8 @@ where it cannot.
 - Never write to a multi-tab document. `export` reads one, one file per tab.
 - Never write markdown into a comment thread.
 - Never trust a status code where the write matters.
-- Never write a comment or reply that does not open with 🤖.
+- Never write a comment or reply that does not open with the mark in effect,
+  which may be set to none.
 - Never send a write gdoc held, in chat, without the person's own card.
   Binary-enforced: the hold is kept in the process, the card's words are
   compared byte for byte, and what goes out is the call the hold kept.

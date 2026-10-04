@@ -42,7 +42,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-29 | The colour scheme is retired, not forgotten. Its "no named ranges" bullet is superseded 2026-09-10 (the house template reaches a document as a suggestion), which gives gdoc one named range as its own marker | holds |
 | 2026-08-29 | Alignment runs both ways, and it is not a command | holds |
 | 2026-08-29 | The product is three things, and it matters which does what | holds |
-| 2026-08-29 | Everything gdoc writes opens with 🤖 | holds |
+| 2026-08-29 | Everything gdoc writes opens with 🤖 | superseded 2026-10-04 (the mark is a setting, ⁘ by default and possibly empty, and 🤖 stays a known mark; why a marker is needed holds) |
 | 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds |
 | 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | superseded 2026-10-02 (suggestions are generally available; a silent edit is still loud, through the read-back and the stop) |
 | 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace` | holds |
@@ -80,10 +80,11 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
 | 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
-| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs and one clause only (the link hold and the trusted email domains, both dropped after the first run in Claude Desktop; and "No CLI command gains it" of `AllowAccountRead`, since `auth status` is the grant's second caller) |
+| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs and one clause only (the link hold and the trusted email domains, both dropped after the first run in Claude Desktop; and "No CLI command gains it" of `AllowAccountRead`, since `auth status` is the grant's second caller); and on 2026-10-04 the `robot_not_ours` fact, removed |
 | 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
 | 2026-10-03 | A change the person approved is not a payload that landed | holds |
 | 2026-10-03 | On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object | holds |
+| 2026-10-04 | Settings, the mark in effect, and the token in the macOS Keychain | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3697,3 +3698,100 @@ login itself when `auth.Login` went. The account:
 `TestTheAccountCeilingIsFiveSeconds`, `TestAuthLoginCarriesNoAccount`,
 `TestOnlyAccountOfCallsAllowAccountRead`, `TestAccountOfHasTwoCallers`.
 `TestEverySkillPassesJSONToHelp` lands in the tag sitting, with the skills.
+
+## 2026-10-04. Settings, the mark in effect, and the token in the macOS Keychain.
+
+Nail's decisions, taken on 2026-10-03 and 2026-10-04 in the session that began
+with how a colleague's own skill uses gdoc. Serves principle 4, every word costs
+a reader's attention: a colleague picks a quieter mark than 🤖, and a refusal
+says what to do next. Serves 1 as well: no new module, CGO stays off, and the
+token stops being a plain file a backup or a sync tool copies. The
+specification is `docs/plans/2026-10-04-gdoc-v2-m16-settings-spec.md`, the
+task list `docs/plans/2026-10-04-gdoc-v2-m16-settings.md`, both released as
+v2.11.0.
+
+**What was true before.** Everything gdoc wrote into a thread opened with 🤖
+and one space (2026-08-29). `propose` and `annotate` added it; `reply` refused a
+body that did not carry it, and chat told the model to type it. `by_gdoc` and
+chat's `robot_not_ours` read it. The token was `oauth-token.json` in the config
+folder, mode 0600, holding the refresh token and the client secret. gdoc had no
+settings file.
+
+**The mark is a setting.** What opens everything gdoc writes into a thread is
+the mark in effect, then one space, then the words. Any value may be set,
+including none at all, in which case gdoc writes the words alone. The default
+for a colleague who sets nothing is ⁘. A value is refused only where a thread
+would show it wrong: a line break, markdown, one of gdoc's document markers, or
+more than eight characters. `reply` adds the mark itself, as `propose` and
+`annotate` already do; for one release a body that already opens with a known
+mark is accepted with a warning and given the mark in effect, never two.
+
+**What a mark means is the skill's business.** Skipping a thread already
+answered, never taking gdoc's own words as an instruction, and naming who asked
+are judgements, and they live in the skills. The binary keeps two jobs: it
+writes the mark in effect, and it prints `by_gdoc` as a fact, "this text opens
+with a known mark or the mark in effect". The known marks are 🤖, ⁘ and ∴, and
+🤖 stays known for good, because every old reply carries it. A colleague's mark
+outside that list reads as a person's reply to everybody else's gdoc, which is
+the price of a free choice. With an empty mark `by_gdoc` is false for that
+person's replies, help and the README say what that costs, and the binary keeps
+no record of the replies it wrote. Chat's `robot_not_ours` fact is removed:
+since 2026-10-03 it flagged nothing and was only shown.
+
+**Settings: one file, and arguments that override it.** `settings.yaml` in the
+config folder, decoded strictly, an unknown key refused by name, no file meaning
+every default. `--config <file>` names another file, for every command and for
+`gdoc mcp`, so tests run in parallel with settings of their own; a named file
+that is not there is refused, never read as empty. Each setting is also an
+argument of its own, `--mark <value>` first, and an argument beats the file,
+which beats the default. `help --json` says the settings in effect and where
+each came from. The token, its path and the update stamp are never settings.
+
+**The token, on macOS, lives in the Keychain.** One generic password item,
+service `gdoc`. The config folder holds no token file. gdoc reads with user
+interaction switched off, through `SecKeychainSetUserInteractionAllowed(false)`:
+measured on 2026-10-04, Apple's documented `kSecUseAuthenticationUI` flag still
+showed the access dialog and blocked, while the switch refused at once. An item
+gdoc may not read counts as no token, and the answer says to sign in. An
+existing `oauth-token.json` is deleted on the first run of v2.11.0, neither
+copied nor revoked. gdoc reaches the Keychain through a bridge of its own, one
+Go file and one assembly file, the way the standard library reaches the same
+framework; only that file may use `go:linkname` and `cgo_import_dynamic`.
+Windows is out of scope and keeps its file.
+
+**Releases are signed, on Nail's Mac.** An unsigned binary is a stranger to the
+Keychain after every build, so everybody would sign in again after every
+update. Measured on 2026-10-04: a self-made certificate does not help, because
+it carries no Apple Team ID. gdoc is signed with a Developer ID Application
+certificate of its own in Altery's team, separate from the Altery certificate
+that already exists, with identifier `com.altery.gdoc` and the hardened
+runtime, without notarisation. The key stays on Nail's Mac and never goes to
+GitHub: CI drafts a stable release, Nail signs the two macOS binaries with one
+command that rebuilds the zips and `SHA256SUMS`, uploads them and publishes.
+Nightlies stay unsigned. Nail's own `make build` is signed with the same
+certificate. The Keychain never ships in an unsigned release; if the two-build
+test with the real certificate fails, Part C stops and comes back to Nail.
+
+**What was rejected.**
+
+- `/usr/bin/security`, with `-w` or over stdin. The item would trust Apple's
+  tool rather than gdoc, so any process could read the token without a dialog.
+- An access list open to every program of the user. It avoids the sign-in and
+  gives back most of what moving the file away gained.
+- A fourth module (`purego`) and CGO for macOS. The module saves about sixty
+  lines and changes how the whole binary starts threads; CGO ends the static
+  build and needs a Mac to build on.
+- Revoking the old token at Google on the first run. It needs a new grant, and
+  Nail chose deletion.
+- Narrowing the Drive scope. Not filed.
+- A record of the replies gdoc wrote, to cover the empty mark.
+- The signing key as a GitHub secret.
+
+**Tests.** Part A: `TestNoRefusalNamesAPerson`,
+`TestFindSpanPlacesAQuoteInsideATableCell`,
+`TestAnUnknownFieldIsRefusedWithTheFieldsTheEntryTakes`,
+`TestTheFieldListsNameEveryTag`, `TestADeletionRefusalSaysToQuoteANeighbour`,
+`TestARunTimeRefusalNamesTheProposalByNumber`,
+`TestTheFromSummaryNamesEveryRequiredField`,
+`TestProposeReadsTheDocumentOnceBeforeTheFirstWrite`. Parts B and C name theirs
+in the plan, and this list gains them as each task lands.
