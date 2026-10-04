@@ -275,7 +275,7 @@ func commands() []command {
 			group: groupWrite,
 			words: []string{"<url>"},
 			flags: []flag{
-				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to)"},
+				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to), and every entry carries why, the reason a thread will show"},
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
 				{"--folder", kindFolderID, needOptional, "ignored: propose no longer creates a working copy, and the flag will be removed in a later release"},
 			},

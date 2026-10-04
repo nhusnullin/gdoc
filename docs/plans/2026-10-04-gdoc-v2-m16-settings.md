@@ -187,11 +187,15 @@ Written before any settings or Keychain code. Part A needs no entry.
 ### Task 7: the `--from` summary names `why`
 
 **Files:**
-- Modify: `go/cmd/gdoc/commands.go`, help goldens if any carry the line
+- Modify: `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/testdata/pipe/help.stdout.golden`
+- Create: `go/cmd/gdoc/fromsummary_test.go`
 
-- [ ] `TestTheFromSummaryNamesEveryRequiredField`: the summary of `propose
+- [x] `TestTheFromSummaryNamesEveryRequiredField`: the summary of `propose
       --from` contains `why` and `quoted, replacement`.
-- [ ] `git commit -m "fix(help): the propose --from summary names why"`
+- [x] The frozen pipe golden for `help` carries the new sentence. That golden
+      is M15's freeze of what a pipe gets, changed on purpose here, in this
+      one line.
+- [x] `git commit -m "fix(help): the propose --from summary names why"`
 
 ### Task 8: propose reads the document once before its first write
 
