@@ -421,27 +421,27 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/testdata/screens/help*.golden`, `bare*.golden`
 - Create: `go/cmd/gdoc/settings_test.go`
 
-- [ ] `commands.go` gains `settingFlags`, the two flags with their summaries:
+- [x] `commands.go` gains `settingFlags`, the two flags with their summaries:
       `--config <file>` "the settings file to use instead of settings.yaml in
       the config folder", and `--mark <text>` "the mark gdoc writes in front
       of its words in a thread; an empty mark writes the words alone, and then
       nothing in the thread says which words are gdoc's". Constants
       `configFlag` and `markFlag` are their one spelling.
-- [ ] `takeSettings(args) (rest []string, given settings.Given, err error)`
+- [x] `takeSettings(args) (rest []string, given settings.Given, err error)`
       takes both flags off the line wherever they stand, in both spellings
       (`--mark x`, `--mark=x`), before `--help` is looked for and before
       `mcp` is routed. `--mark ""` and `--mark=` are the empty mark. A flag
       given twice, or with no value after it, is refused naming it.
-- [ ] `route()` calls it, then `settings.Resolve`. A refusal on a command is
+- [x] `route()` calls it, then `settings.Resolve`. A refusal on a command is
       one envelope with exit 1; on `gdoc mcp` it is one line on stderr and exit
       1, as `checkMCPArgs` refuses today. `checkMCPArgs` itself is unchanged.
-- [ ] `run`, `safeDispatch` and `dispatch` take the `settings.InEffect`, and
+- [x] `run`, `safeDispatch` and `dispatch` take the `settings.InEffect`, and
       `dispatch` puts it on `args` for every command. The MCP session resolves
       once at start and hands the same value to every tool call.
-- [ ] Help prose and the help screen list the two flags once, under "Every
+- [x] Help prose and the help screen list the two flags once, under "Every
       command takes", from `settingFlags`. Both completion scripts offer them
       after any command, `--mark` as opaque text like `--quote`.
-- [ ] Tests: `TestEveryCommandTakesTheSettingFlags` (each table entry run with
+- [x] Tests: `TestEveryCommandTakesTheSettingFlags` (each table entry run with
       both flags reaches its own refusal or answer, never "is not a flag this
       command takes"), `TestTheSettingFlagsAreTakenAnywhereOnTheLine`,
       `TestAnEmptyMarkArgumentIsTheEmptyMark` (both spellings),
@@ -452,14 +452,45 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       --stdio` is still refused), `TestTheMcpSessionHandsItsSettingsToEveryCall`,
       `TestEverySettingFlagIsInHelpAndInBothScripts`,
       `TestTheMarkFlagSaysWhatAnEmptyMarkCosts`.
-- [ ] Goldens: the help stderr goldens and the help and bare screens gain the
+- [x] Goldens: the help stderr goldens and the help and bare screens gain the
       "Every command takes" lines. Regenerate those files only, and record in
       a ➕ note which files moved and that each diff is those lines alone.
-- [ ] `cmd/gdoc/doc.go`: a section "Two setting flags, taken off the line
+- [x] `cmd/gdoc/doc.go`: a section "Two setting flags, taken off the line
       first" naming the tests; the mcp bullet (around line 110) and "The
       extension has no settings" (around line 626) say the line takes the two
       setting flags and the extension passes none.
-- [ ] `git commit -m "feat(cmd): --config and --mark on every command and on mcp"`
+- [x] ➕ The two flags are listed once per page rather than once per run: the
+      grouped table carries the section once, and each command's own page
+      carries it too, because a page is the whole of what a reader who typed
+      `gdoc help publish` reads. The heading "Every command takes" is what
+      keeps them from reading as that command's own.
+- [x] ➕ `settings_test.go` adds `TestASettingFlagWithNoValueIsRefused` and
+      `TestTheDefaultSettingsFileIsReadFromTheConfigFolder`. The first holds
+      the two refusals the plan named together with the one it did not,
+      `--mark --config f`, which would otherwise write "--config" in front of
+      gdoc's words; the second holds that the default path is the config
+      folder's `settings.yaml`.
+- [x] ➕ `dispatching` is `dispatch` behind a variable in `main.go`, as
+      `login`, `openSession` and `serveMCP` already are, so a test can read the
+      line and the settings that reached it without a command running. Nothing
+      in the binary assigns it.
+- [x] ➕ Goldens regenerated: `testdata/pipe/help.stderr.golden`,
+      `help-publish.stderr.golden`, `help-comments.stderr.golden`,
+      `bare.stderr.golden`, and all fifteen of `testdata/screens/help-*.golden`
+      and `bare-*.golden`. The stdout goldens did not move. The pipe diffs are
+      the "Every command takes" lines alone. The screen diffs are those lines
+      plus the name column, which widened by three cells in every box so that
+      `--config <file>` and the rule holding it clear it: `settingColumn` is
+      what both `commandColumn` and `flagColumn` now measure against, and
+      without it the one rule would have lost the joint the rules above it draw.
+- [x] ➕ `TestMcpTakesNoWordsAndNoFlags` is gone, replaced as the plan says;
+      `doc.go` and `manifest_test.go` name the new test instead.
+- [x] ➕ `TestATextFlagIsOpaqueToBothScripts`,
+      `TestTheZshScriptNamesEveryCommandAndEveryFlag` and
+      `TestTheBashScriptNamesEveryCommandAndEveryFlag` read the setting flags
+      beside the table's own, through one new `flagKinds` helper. No assertion
+      is loosened: the text and file arms are still read a flag at a time.
+- [x] `git commit -m "feat(cmd): --config and --mark on every command and on mcp"`
 
 ### Task 12: help --json carries the settings in effect
 

@@ -224,13 +224,15 @@ func zshGroups(table []command) []zshGroup {
 	return groups
 }
 
-// zshSpecs is what _arguments is handed for one command: a line per flag, and
-// last a line for the words it takes. That last line offers nothing, because
-// the words are a document URL, a comment id or a suggestion id, and nothing
-// on this machine knows one. Without it zsh would offer file names for them.
+// zshSpecs is what _arguments is handed for one command: a line per flag, the
+// two setting flags every command takes, and last a line for the words it
+// takes. That last line offers nothing, because the words are a document URL,
+// a comment id or a suggestion id, and nothing on this machine knows one.
+// Without it zsh would offer file names for them.
 func zshSpecs(c command) []string {
-	specs := make([]string, 0, len(c.flags)+1)
-	for _, f := range c.flags {
+	flags := append(append([]flag{}, c.flags...), settingFlags()...)
+	specs := make([]string, 0, len(flags)+1)
+	for _, f := range flags {
 		specs = append(specs, zshFlagSpec(f))
 	}
 	return append(specs, `'*: :'`)
@@ -349,10 +351,12 @@ func bashFirstWords(table []command) []string {
 	return words
 }
 
-// bashFlagWords is the flags of one command, as compgen -W reads them.
+// bashFlagWords is the flags of one command, as compgen -W reads them, with
+// the two setting flags every command takes after them.
 func bashFlagWords(c command) string {
-	names := make([]string, 0, len(c.flags))
-	for _, f := range c.flags {
+	flags := append(append([]flag{}, c.flags...), settingFlags()...)
+	names := make([]string, 0, len(flags))
+	for _, f := range flags {
 		names = append(names, f.name)
 	}
 	return strings.Join(names, " ")
@@ -366,7 +370,10 @@ func bashFlagWords(c command) string {
 func bashFlagArms(table []command) (files, opaque string) {
 	var withFile, withOpaque []string
 	seen := map[string]bool{}
-	for _, c := range table {
+	// The table, and then the two flags that belong to no entry in it. A new
+	// slice, so the caller's table is not written to.
+	all := append(append([]command{}, table...), command{flags: settingFlags()})
+	for _, c := range all {
 		for _, f := range c.flags {
 			if f.value == kindNone || seen[f.name] {
 				continue

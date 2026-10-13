@@ -159,7 +159,8 @@ func versionHeading() string {
 	return ""
 }
 
-// helpList is every command, one line each, name and sentence aligned.
+// helpList is every command, one line each, name and sentence aligned, and
+// under them the two flags none of them owns.
 func helpList(matched []command) string {
 	var b strings.Builder
 	b.WriteString("Usage: " + usageAll + "\n\n")
@@ -172,7 +173,35 @@ func helpList(matched []command) string {
 	for _, c := range matched {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, c.name, c.summary)
 	}
+	b.WriteString("\n" + settingProse())
 	b.WriteString("\n" + helpFoot + "\n")
+	return b.String()
+}
+
+// settingSection names the two flags every command takes, and it says so,
+// because a reader who met them under one command's name would read them as
+// that command's own. settingHeading is the same words where a block of text
+// needs a colon after them; the screen draws the name in a rule, which needs
+// none.
+const (
+	settingSection = "Every command takes"
+	settingHeading = settingSection + ":"
+)
+
+// settingProse is the two setting flags as the plain text lists them, aligned
+// the way one command's flags are. It is written once and read by both shapes
+// of the plain help, the list and one command in full, so a person reading
+// either meets the same two sentences.
+func settingProse() string {
+	var b strings.Builder
+	b.WriteString(settingHeading + "\n")
+	width := 0
+	for _, f := range settingFlags() {
+		width = max(width, len(flagWords(f)))
+	}
+	for _, f := range settingFlags() {
+		fmt.Fprintf(&b, "  %-*s  %s\n", width, flagWords(f), f.summary)
+	}
 	return b.String()
 }
 
@@ -201,6 +230,11 @@ func helpOne(c command) string {
 		}
 	}
 	fmt.Fprintf(&b, "\n  Example: %s\n", c.example)
+	// The two flags this command takes beside its own. They are repeated for
+	// each command a help matched rather than written once under all of them,
+	// because one command in full is one page a person reads, and a reader who
+	// stopped at the first page would otherwise never be told they exist.
+	b.WriteString("\n" + settingProse())
 	return b.String()
 }
 

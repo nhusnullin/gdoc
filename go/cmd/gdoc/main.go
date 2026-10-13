@@ -19,6 +19,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/gapi"
 	"gdoc/internal/panel"
+	"gdoc/internal/settings"
 	"gdoc/internal/tty"
 )
 
@@ -94,11 +95,32 @@ func main() {
 // are about every other command, and the table answers them, so gdoc mcp
 // --help prints the usage line rather than starting a server that waits on a
 // pipe nobody is going to fill. TestMcpIsRoutedBeforeRun is the pin.
+//
+// The two setting flags come off the line here, before the word mcp is looked
+// for and before --help is, so one reading of them serves every command and
+// the session alike. What is left is the line as it always was, and the
+// settings go down beside it. settings.go holds the reading, and the refusal
+// it gives takes the shape of whatever the line was going to be: one envelope
+// for a command, one line on stderr for a session, which is what checkMCPArgs
+// already does with a word it does not know.
+// TestMcpTakesTheSettingFlagsAndNothingElse.
 func route(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer) int {
-	if _, asked := helpAsked(args); !asked && len(args) > 0 && args[0] == "mcp" {
-		return serveMCP(ctx, in, out, errOut, args[1:])
+	rest, given, err := takeSettings(args)
+	var set settings.InEffect
+	if err == nil {
+		set, err = resolveSettings(given)
 	}
-	return run(ctx, args, out, errOut)
+	if _, asked := helpAsked(rest); !asked && len(rest) > 0 && rest[0] == "mcp" {
+		if err != nil {
+			fmt.Fprintln(errOut, err)
+			return 1
+		}
+		return serveMCP(ctx, in, out, errOut, rest[1:], set)
+	}
+	if err != nil {
+		return printResult(emit.Result{OK: false, Error: err.Error()}, out, errOut)
+	}
+	return run(ctx, rest, out, errOut, set)
 }
 
 // isTerminal is internal/tty's question, through one variable so a test can
@@ -142,8 +164,16 @@ const jsonHint = "Add --json to print the JSON object a skill reads."
 // TestEveryOtherCommandKeepsItsObjectOnATerminal,
 // TestAScreenWhoseWordsWentToAFileKeepsItsObject and
 // TestNoEscapeByteReachesAPipe.
-func run(ctx context.Context, args []string, out, errOut io.Writer) int {
-	r := safeDispatch(ctx, args, errOut)
+func run(ctx context.Context, args []string, out, errOut io.Writer, set settings.InEffect) int {
+	return printResult(safeDispatch(ctx, args, errOut, set), out, errOut)
+}
+
+// printResult is the result on its streams and the exit code that agrees with
+// it, which is the whole of run once the work is done. It is named apart
+// because route has one answer of its own: a line whose setting flags could
+// not be read never reaches a command, and it is still one JSON object with
+// the exit code that goes with it.
+func printResult(r emit.Result, out, errOut io.Writer) int {
 	// The version is set here and nowhere else, so every object carries it:
 	// the answers, the refusals and the panic envelope alike. A report of
 	// something odd names the build that did it without anyone being asked.
@@ -184,21 +214,31 @@ func writeJSONHint(r emit.Result, errOut io.Writer) {
 // stack trace, nothing at all on stdout, and exits 2, which breaks the one
 // contract every command has. The trace still goes to stderr, where it is
 // readable without being mistaken for output.
-func safeDispatch(ctx context.Context, args []string, errOut io.Writer) (r emit.Result) {
+func safeDispatch(ctx context.Context, args []string, errOut io.Writer, set settings.InEffect) (r emit.Result) {
 	defer func() {
 		if p := recover(); p != nil {
 			fmt.Fprintf(errOut, "gdoc crashed: %v\n%s\n", p, debug.Stack())
 			r = emit.Result{OK: false, Error: fmt.Sprintf("gdoc crashed: %v", p)}
 		}
 	}()
-	return dispatch(ctx, args, errOut)
+	return dispatching(ctx, args, errOut, set)
 }
+
+// dispatching is dispatch behind a variable, as login, openSession and
+// serveMCP are, so a test can read the line and the settings that reached it
+// without a command running: TestTheSettingFlagsAreTakenAnywhereOnTheLine and
+// TestTheMcpSessionHandsItsSettingsToEveryCall. Nothing in the binary assigns
+// it.
+var dispatching = dispatch
 
 // dispatch takes the context so a test can hand a wait one that is already
 // done, which is the answer a stopped session gets. The signal itself is
 // trapped inside the wait rather than here: every other command makes its
 // requests and ends, and Ctrl-C kills it the way it always did.
-func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result {
+// set is what this run writes, resolved in route before the line was read.
+// Every command is handed it on its args, so a command that writes into a
+// thread asks the value rather than a constant of its own.
+func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings.InEffect) emit.Result {
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown
 	// command ""` names nothing and reads like a fault in the tool. The run did
 	// no work, so it still fails and still exits 1. What is new is that the
@@ -233,6 +273,7 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer) emit.Result 
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
+	a.set = set
 	return c.run(ctx, a, errOut)
 }
 

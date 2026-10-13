@@ -588,7 +588,7 @@ func TestStdinClosingClosesAWaitingListenerAndItsLock(t *testing.T) {
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25"}}` + "\n" +
 			`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"login","arguments":{}}}` + "\n")
 	var out bytes.Buffer
-	if code := serveMCP(context.Background(), in, &out, io.Discard, nil); code != 0 {
+	if code := serveMCP(context.Background(), in, &out, io.Discard, nil, defaultsInEffect()); code != 0 {
 		t.Fatalf("the session ended %d: %s", code, out.String())
 	}
 

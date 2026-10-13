@@ -327,7 +327,7 @@ func TestTheCLIEnvelopeGainsOnlyAuthorDomain(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	stubSession(t, docsAndComments(t))
 	var buf strings.Builder
-	if code := run(context.Background(), []string{"comments", fixtureDocID}, &buf, nilWriter{}); code != 0 {
+	if code := run(context.Background(), []string{"comments", fixtureDocID}, &buf, nilWriter{}, defaultsInEffect()); code != 0 {
 		t.Fatalf("gdoc comments exited %d: %s", code, buf.String())
 	}
 	var envelope struct {

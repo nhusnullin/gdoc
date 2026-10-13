@@ -369,7 +369,7 @@ func TestTheBorderOfARunCarriesTheVersionsTheRunChose(t *testing.T) {
 
 			var out bytes.Buffer
 			errOut := &syncBuffer{}
-			if code := run(context.Background(), []string{"update"}, &out, errOut); code != 0 {
+			if code := run(context.Background(), []string{"update"}, &out, errOut, defaultsInEffect()); code != 0 {
 				t.Fatalf("the update must answer, and this run exited %d: %s", code, out.String())
 			}
 			border := topBorder(lastScreen(errOut.String()))

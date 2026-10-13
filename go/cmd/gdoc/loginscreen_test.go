@@ -61,7 +61,7 @@ func loginRun(t *testing.T, width int, err error) (stderr string, code int) {
 
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	code = run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	code = run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 	return errOut.String(), code
 }
 
@@ -73,7 +73,7 @@ func TestThePipeLoginLineIsTodays(t *testing.T) {
 	signingIn(t, nil)
 
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 	if code != 0 {
 		t.Fatalf("a login that worked exits 0, and this run exited %d: %s", code, out.String())
 	}
@@ -143,7 +143,7 @@ func TestAFailedWaitEndsTheLineWithACrossAndTheObjectSaysWhy(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 	if code != 1 {
 		t.Fatalf("a login that failed exits 1, and this run exited %d", code)
 	}
@@ -172,7 +172,7 @@ func TestTheLoginClosesItsListenerEitherWay(t *testing.T) {
 			tr := signingIn(t, err)
 
 			var out, errOut bytes.Buffer
-			run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+			run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 			if tr.count() != 1 {
 				t.Fatalf("one login opens one listener, and this run opened %d", tr.count())
 			}

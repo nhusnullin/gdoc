@@ -24,7 +24,7 @@ var everyCommandName = []string{
 func runHelp(t *testing.T, args ...string) (map[string]any, string, int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), args, &out, &errOut)
+	code := run(context.Background(), args, &out, &errOut, defaultsInEffect())
 	return decodeOne(t, &out), errOut.String(), code
 }
 

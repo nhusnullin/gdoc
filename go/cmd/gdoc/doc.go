@@ -106,9 +106,13 @@
 //     TestTheConfirmSchemaListsHoldTitleReasonText,
 //     TestAByteDifferentTitleReasonOrTextIsRefused,
 //     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
-//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes no words and
-//     no flags, because the extension has no settings, and anything after the
-//     word is refused on stderr with exit 1: TestMcpTakesNoWordsAndNoFlags. The
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes the two
+//     setting flags and nothing else: they are off it before mcp is routed, the
+//     session resolves them once and every tool call of it goes out under the
+//     same value, the extension passes neither, and whatever is left is refused
+//     on stderr with exit 1:
+//     TestMcpTakesTheSettingFlagsAndNothingElse and
+//     TestTheMcpSessionHandsItsSettingsToEveryCall. The
 //     review core it serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
@@ -623,9 +627,13 @@
 // nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
 // TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
 //
-// The extension has no settings. What differs from one machine to the next is
-// the binary's path and the release, which is why the template travels in the
-// release and is filled here rather than being a file somebody edits.
+// The extension has no settings, and it passes neither setting flag: its line
+// is the word mcp alone, which TestTheManifestDeclaresNoSettings holds. What
+// differs from one machine to the next is the binary's path and the release,
+// which is why the template travels in the release and is filled here rather
+// than being a file somebody edits. A colleague who wants another mark in a
+// chat sets it in settings.yaml, which the session reads at its start like any
+// other run.
 //
 // # The update draws its steps on stderr
 //
@@ -699,6 +707,51 @@
 // stack trace on stderr. Without it a crash prints a Go trace, nothing at all
 // on stdout, and exits 2, which is the one shape no caller can read.
 // TestAPanicIsStillOneEnvelope is the pin.
+//
+// # Two setting flags, taken off the line first
+//
+// --config and --mark belong to no command, because they belong to all of
+// them. They are lifted off the line in route, before the word mcp is looked
+// for and before --help is, so one reading of them serves every command, the
+// session and the help alike. What is left is the line as every parser already
+// read it, and nothing below route sees either flag:
+// TestEveryCommandTakesTheSettingFlags and
+// TestTheSettingFlagsAreTakenAnywhereOnTheLine.
+//
+// Wherever they stand, and in both spellings. `gdoc read <url> --mark ∴` and
+// `gdoc --mark=∴ read <url>` are the same run, because a person does not have
+// to know where in a line a flag of the whole binary goes. `--mark ""` and
+// `--mark=` are the empty mark somebody asked for, which writes gdoc's words
+// with nothing in front of them: TestAnEmptyMarkArgumentIsTheEmptyMark.
+//
+// The refusals are the parser's own, for the same reasons: a flag given twice,
+// a flag with nothing after it, a flag whose value is the other setting flag,
+// and a --config with an empty value each fail naming the offender.
+// TestASettingFlagGivenTwiceIsRefused and
+// TestASettingFlagWithNoValueIsRefused.
+//
+// internal/settings decides what they mean: the argument over the file over
+// the built-in default, what a mark may be, and what the file may hold. What
+// is decided here is the shape of the refusal, which is the shape of whatever
+// the line was going to be. A command gets one envelope on stdout and exit 1,
+// like every other refusal, and `gdoc mcp` gets one line on stderr and exit 1,
+// because a session prints no envelope and a stray object would be a line in
+// the middle of somebody's protocol:
+// TestABadSettingsFileIsOneEnvelope,
+// TestAConfigFileThatDoesNotExistIsRefusedOnTheLine and
+// TestMcpTakesTheSettingFlagsAndNothingElse.
+//
+// What the run resolved to goes down on every command's args, and a session is
+// handed it once at its start, so every tool call of one chat writes the same
+// mark: TestTheMcpSessionHandsItsSettingsToEveryCall.
+//
+// They are in no usage line and in no entry of the help object, because they
+// are not one command's flags. They are in the help a person reads, under
+// their own heading in each command's page and once in the grouped table, and
+// both completion scripts offer them after any command:
+// TestEverySettingFlagIsInHelpAndInBothScripts. The --mark sentence says what
+// the empty mark costs, because turning the mark off turns off the only record
+// of authorship a thread has: TestTheMarkFlagSaysWhatAnEmptyMarkCosts.
 //
 // # GDOC_CONFIG_DIR moves the config dir
 //

@@ -28,6 +28,7 @@ import (
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/gapi"
 	"gdoc/internal/guard"
+	"gdoc/internal/settings"
 	"gdoc/internal/suggestions"
 	"gdoc/internal/view"
 )
@@ -168,10 +169,17 @@ func (fs flagSet) names() string {
 }
 
 // args is one command's arguments after parsing: the words it was pointed at,
-// in the order they were written, and the flags it was given.
+// in the order they were written, the flags it was given, and what this run
+// writes.
+//
+// set is on every command's args rather than on the few that write into a
+// thread, because the two setting flags are off the line before the parser
+// runs and dispatch is the one place that could put them back. A command that
+// has nothing to do with the mark simply never asks.
 type args struct {
 	positional []string
 	flags      map[string]string
+	set        settings.InEffect
 }
 
 // target is the first positional argument, which every command that names a

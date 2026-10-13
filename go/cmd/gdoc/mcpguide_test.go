@@ -162,7 +162,7 @@ func TestToolsListListsExactlyTheEightToolsWithTheirHints(t *testing.T) {
 	}, "\n")
 
 	var out, errOut strings.Builder
-	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil); code != 0 {
+	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil, defaultsInEffect()); code != 0 {
 		t.Fatalf("the session exited %d: %s", code, errOut.String())
 	}
 	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")

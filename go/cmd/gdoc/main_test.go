@@ -89,7 +89,7 @@ func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 func runJSONCtx(t *testing.T, ctx context.Context, args ...string) (map[string]any, int) {
 	t.Helper()
 	var buf bytes.Buffer
-	code := run(ctx, args, &buf, io.Discard)
+	code := run(ctx, args, &buf, io.Discard, defaultsInEffect())
 	return decodeOne(t, &buf), code
 }
 

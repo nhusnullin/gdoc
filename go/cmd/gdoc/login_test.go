@@ -41,7 +41,7 @@ func TestLoginPrintsTheURLToStderrNotStdout(t *testing.T) {
 	})
 
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 	if code != 0 {
 		t.Fatalf("a login that worked must exit 0: %s", out.String())
 	}
@@ -82,7 +82,7 @@ func TestLoginRefusesABuildWithNoClientSecret(t *testing.T) {
 	t.Cleanup(func() { auth.BundledClientSecret = saved })
 
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 	if code != 1 {
 		t.Fatalf("a build with no client secret must exit 1, and this run exited %d", code)
 	}
@@ -108,7 +108,7 @@ func TestAPanicIsStillOneEnvelope(t *testing.T) {
 	stubLogin(t, func(io.Writer) error { panic("something impossible") })
 
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "login"}, &out, &errOut, defaultsInEffect())
 	if code != 1 {
 		t.Fatalf("a crash must exit 1, got %d", code)
 	}

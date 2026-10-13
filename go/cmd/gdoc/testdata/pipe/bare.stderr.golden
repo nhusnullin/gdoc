@@ -21,4 +21,8 @@ Usage: gdoc <command> [words] [flags]
   help         Print every command gdoc takes, or the words and flags of one.
   completion   Write the completion script for one shell, and say the line that turns it on.
 
+Every command takes:
+  --config <file>  the settings file to use instead of settings.yaml in the config folder
+  --mark <text>    the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's
+
 Run gdoc help <command> for the words and flags one takes.

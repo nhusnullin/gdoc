@@ -67,24 +67,27 @@ import (
 	"gdoc/internal/mcp"
 	"gdoc/internal/plaintext"
 	"gdoc/internal/propose"
+	"gdoc/internal/settings"
 	"gdoc/internal/view"
 )
 
 // mcpChat is what one session keeps across its calls: the code guide hands out,
-// the ledger of what this process read and wrote, the writes it is holding, and
-// the answer each write it made gave.
+// the ledger of what this process read and wrote, the writes it is holding, the
+// answer each write it made gave, and the settings this session writes under.
 //
-// All four are made when the session starts and die with it, and none reaches
-// disk. They travel together because a call needs all four: the code before it
+// All five are made when the session starts and die with it, and none reaches
+// disk. They travel together because a call needs them all: the code before it
 // does anything, the ledger because what this session read and wrote is what the
 // hold rules ask about, the holds because a write stopped for the person is
-// released from the process that stopped it and from no other, and the memory
-// because a retry of a write is a call this session has already answered.
+// released from the process that stopped it and from no other, the memory
+// because a retry of a write is a call this session has already answered, and
+// the settings because every call of one session writes the same mark.
 type mcpChat struct {
 	code   *chat.Code
 	ledger *chat.Ledger
 	holds  *mcpHolds
 	memory *chat.Memory[mcp.Result]
+	set    settings.InEffect
 
 	mu sync.Mutex
 	// last is when the session's most recent tool call ended. It is what the
@@ -112,13 +115,13 @@ func (ch *mcpChat) lastCall() time.Time {
 
 // newMCPChat is one session's own. The error is the random source failing,
 // which a session cannot start without.
-func newMCPChat() (*mcpChat, error) {
+func newMCPChat(set settings.InEffect) (*mcpChat, error) {
 	code, err := chat.NewCode()
 	if err != nil {
 		return nil, err
 	}
 	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
-		memory: chat.NewMemory[mcp.Result]()}, nil
+		memory: chat.NewMemory[mcp.Result](), set: set}, nil
 }
 
 // mcpNotSignedIn is what a Google tool answers when there is no token file.
@@ -457,7 +460,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 			return res
 		}
 	}
-	r := safeDispatch(ctx, argv, errOut)
+	r := safeDispatch(ctx, argv, errOut, ch.set)
 	r.Error = files.name(r.Error)
 	for i := range r.Warnings {
 		r.Warnings[i] = files.name(r.Warnings[i])

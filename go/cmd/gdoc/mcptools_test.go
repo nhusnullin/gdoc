@@ -459,7 +459,7 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 				line = append(line, strings.ReplaceAll(word, "@FILE@", path))
 			}
 			var buf strings.Builder
-			code := run(context.Background(), line, &buf, nilWriter{})
+			code := run(context.Background(), line, &buf, nilWriter{}, defaultsInEffect())
 			if (code == 0) != one.ok {
 				t.Fatalf("the CLI exited %d for an answer that is ok = %v: %s", code, one.ok, buf.String())
 			}
