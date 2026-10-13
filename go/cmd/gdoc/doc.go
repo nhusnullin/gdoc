@@ -60,8 +60,8 @@
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
 //   - probe --folder: whether Docs honours SUGGEST today, asked by hand.
 //     internal/probe.
-//   - reply <url> <comment id> --body-file: one reply under the mark in
-//     effect. internal/reply.
+//   - reply <url> <comment id> --body | --body-file: one reply under the mark
+//     in effect, its words on the line or in a file. internal/reply.
 //   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
 //     internal/propose.

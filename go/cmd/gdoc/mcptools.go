@@ -165,6 +165,12 @@ type mcpArg struct {
 	// string, which is what an array argument is: the commands' strict readers
 	// judge it exactly as they judge a file somebody wrote.
 	raw bool
+	// dashAllowed lets the value open with a dash. It is set for one argument,
+	// reply's body, because a reply opening with "- " is plain text the binary
+	// takes, and the value is joined as --body=<words>, which the parser reads
+	// as this flag's value whatever it opens with. Every other value on the
+	// line keeps the refusal: there a dash is a flag nobody meant.
+	dashAllowed bool
 }
 
 // mcpCommand is one table command offered as a tool.
@@ -283,7 +289,7 @@ func mcpCommands() []mcpCommand {
 			title:  "Reply to a comment in a Google Doc",
 			tail:   mcpWriteLines,
 			words:  []string{urlProp, threadProp},
-			flags:  []mcpArg{{prop: "body", flag: "--body-file", file: "body.txt"}},
+			flags:  []mcpArg{{prop: "body", flag: "--body", dashAllowed: true}},
 			checks: []string{codeProp, titleProp, quoteProp},
 			schema: objectTop + codeArg + `,` + urlArg + `,` + titleArg + `,` +
 				`"comment_id":{"type":"string","description":"The id of the thread to reply in, as the comments answer gives it."},` +
@@ -817,6 +823,9 @@ func (c mcpCommand) argv(args json.RawMessage, files *callFiles) ([]string, erro
 // flagArgs is one flag of the line. Which shape it takes is read from the
 // command's own table entry: a flag that carries no value is passed bare and
 // needs a boolean, and every other flag is passed joined.
+//
+// A value that opens with a dash is refused unless the argument says a dash is
+// just a dash there, which one argument does: see dashAllowed.
 func (c mcpCommand) flagArgs(f mcpArg, raw json.RawMessage, files *callFiles) ([]string, error) {
 	carries, err := c.flagCarriesValue(f.flag)
 	if err != nil {
@@ -834,7 +843,7 @@ func (c mcpCommand) flagArgs(f mcpArg, raw json.RawMessage, files *callFiles) ([
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(value, "-") {
+		if strings.HasPrefix(value, "-") && !f.dashAllowed {
 			return nil, dashRefusal(f.prop, value)
 		}
 		return []string{f.flag + "=" + value}, nil

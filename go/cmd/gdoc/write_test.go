@@ -426,7 +426,8 @@ func TestReplyPostsTheBodyAndReadsTheThreadBack(t *testing.T) {
 	}})
 	// The body file holds the words. gdoc adds the mark in effect, and the
 	// recorded thread carries the reply under the robot, so that is the mark
-	// this run is given.
+	// this run is given. The flag on the line carries the same words:
+	// TestReplyTakesTheBodyOnTheLineOrInAFile.
 	path := tempFile(t, "reply.txt", "The 2026 register.\n")
 
 	got, code := runJSONSet(t, robotInEffect(), "reply", fixtureDocID, "AAAA1111", "--body-file", path)
@@ -452,18 +453,6 @@ func TestReplyPostsTheBodyAndReadsTheThreadBack(t *testing.T) {
 	}
 	if body["content"] != "🤖 The 2026 register." {
 		t.Errorf("content = %q", body["content"])
-	}
-}
-
-func TestReplyNeedsABodyFile(t *testing.T) {
-	stubWire(t, &fakeWire{})
-
-	got, code := runJSON(t, "reply", proposeDocID, "AAAA1111")
-	if code == 0 || got["ok"] != false {
-		t.Fatalf("reply without a body file must fail: %v (exit %d)", got, code)
-	}
-	if msg, _ := got["error"].(string); !strings.Contains(msg, "--body-file") {
-		t.Errorf("the error must name the flag: %q", msg)
 	}
 }
 

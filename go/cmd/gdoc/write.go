@@ -8,12 +8,14 @@
 // verified, because a status code is Google agreeing with itself.
 //
 // Nothing here decides what to write. The body of a reply, the words of a
-// proposal and the reason for it arrive written, in a file the skill wrote.
+// proposal and the reason for it arrive written: the reply's words on the line
+// or in a file, and the rest in a file the skill wrote.
 
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -108,17 +110,13 @@ type replyData struct {
 }
 
 func cmdReply(ctx context.Context, a *args) emit.Result {
-	path, err := required(a, "--body-file")
+	body, err := replyBody(a)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	commentID := a.at(1)
 	if commentID == "" {
 		return emit.Result{OK: false, Error: "this command needs the comment id of the thread to reply in"}
-	}
-	body, err := readBody(path)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
 	}
 	// Before the session, and so before anything reaches Drive: a body Docs
 	// would render literally is a mistake in the call, not something a write
@@ -153,18 +151,49 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(res.Warnings...)}
 }
 
-// readBody reads the reply body out of the file the skill wrote.
+// replyBody is the words of the reply, from the line or from a file, and
+// exactly one of the two. Both is refused because which one counts is not
+// decided here, and neither is refused because the words are what the command
+// is about. Each refusal names the two flags, so the caller reads the way
+// forward out of it.
 //
-// The trailing newline a text file ends with is not part of what was said, and
-// it is dropped: the read-back compares the words Drive stored against the
-// words that were sent, and a newline Drive trimmed would report a reply that
-// is plainly in the thread as unverified.
+// The flag on the line is the route chat takes, and the route a colleague
+// typing one sentence takes. The file is the route a skill that wrote a
+// sentence to disk takes, and it stays.
+func replyBody(a *args) (string, error) {
+	typed, onLine := a.flags["--body"]
+	path, inFile := a.flags["--body-file"]
+	switch {
+	case onLine && inFile:
+		return "", errors.New("--body holds the words of the reply and --body-file names the file holding them: " +
+			"give one of the two, not both")
+	case onLine:
+		return trimBody(typed), nil
+	case inFile:
+		return readBody(path)
+	}
+	return "", errors.New("this command needs the words of the reply: --body <text> on the line, or --body-file <file>")
+}
+
+// readBody reads the reply body out of the file the skill wrote.
 func readBody(path string) (string, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("the reply body file could not be read: %w", err)
 	}
-	return strings.TrimRight(string(raw), " \t\r\n"), nil
+	return trimBody(string(raw)), nil
+}
+
+// trimBody drops the whitespace at the end of what was said, whichever route
+// it came in on.
+//
+// The trailing newline a text file ends with is not part of what was said:
+// the read-back compares the words Drive stored against the words that were
+// sent, and a newline Drive trimmed would report a reply that is plainly in
+// the thread as unverified. A value typed on the line is trimmed the same way,
+// so one body is one string however it arrived.
+func trimBody(raw string) string {
+	return strings.TrimRight(raw, " \t\r\n")
 }
 
 // proposalReport is one proposal as the envelope carries it. Sent is the fact

@@ -19,8 +19,8 @@ import (
 // a chat turn open for nine minutes; --md and --folder reach a hub and a Drive
 // folder, and nothing in chat does either; --quote and --body-file are
 // annotate's by-hand form, where chat sends the list instead. reply's
-// --body-file is on the list because no property is named after it: the body
-// property becomes it.
+// --body-file is on the list because the body property fills --body: the words
+// go on the line, and chat writes no file for one sentence.
 var flagsNeverOffered = map[string][]string{
 	"read":        nil,
 	"comments":    {"--wait"},
@@ -195,8 +195,10 @@ func TestEverySchemaIsAnObjectThatRequiresTheDocument(t *testing.T) {
 // "--md=x" would be read as a flag rather than as a document, and a document
 // nobody meant is what the whole guard exists to stop.
 //
-// A body and a why go to a file and never reach the line, so a dash there is
-// just a dash.
+// A why goes to a file and never reaches the line, so a dash there is just a
+// dash. A reply body does reach the line, joined to --body, which the parser
+// cannot read as a flag, and a reply opening with "- " is plain text: see
+// TestAChatReplyOpeningWithAHyphenIsSent.
 func TestAWordStringThatStartsWithADashIsRefused(t *testing.T) {
 	byName := map[string]mcpCommand{}
 	for _, c := range mcpCommands() {
@@ -226,7 +228,7 @@ func TestAWordStringThatStartsWithADashIsRefused(t *testing.T) {
 		}
 	}
 
-	// The same dash, in the two values that go to a file.
+	// The same dash, in the two values no parser would read as a flag.
 	for _, good := range []struct {
 		tool string
 		args string
@@ -238,7 +240,7 @@ func TestAWordStringThatStartsWithADashIsRefused(t *testing.T) {
 		_, err := byName[good.tool].argv(json.RawMessage(good.args), files)
 		files.remove()
 		if err != nil {
-			t.Errorf("%s %s goes to a file and must be taken: %v", good.tool, good.args, err)
+			t.Errorf("%s %s carries words rather than a flag and must be taken: %v", good.tool, good.args, err)
 		}
 	}
 }
@@ -262,6 +264,8 @@ func TestFlagValuesArePassedJoined(t *testing.T) {
 		{"comments", `{"url":"` + fixtureDocID + `","since":"2026-10-03T09:00:00Z","witness":true}`,
 			[]string{"comments", fixtureDocID, "--since=2026-10-03T09:00:00Z", "--witness"}},
 		{"suggestions", `{"url":"` + fixtureDocID + `"}`, []string{"suggestions", fixtureDocID}},
+		{"reply", `{"url":"` + fixtureDocID + `","comment_id":"AAAA1111","body":"yes, the 2026 register"}`,
+			[]string{"reply", fixtureDocID, "AAAA1111", "--body=yes, the 2026 register"}},
 	} {
 		files := &callFiles{}
 		argv, err := byName[one.tool].argv(json.RawMessage(one.args), files)
@@ -275,7 +279,7 @@ func TestFlagValuesArePassedJoined(t *testing.T) {
 		}
 	}
 
-	// The three flags that carry a path are joined to it, and the path is in
+	// The two flags that carry a path are joined to it, and the path is in
 	// the directory this call made.
 	for _, one := range []struct {
 		tool string
@@ -283,7 +287,6 @@ func TestFlagValuesArePassedJoined(t *testing.T) {
 		flag string
 		file string
 	}{
-		{"reply", `{"url":"` + fixtureDocID + `","comment_id":"AAAA1111","body":"🤖 yes"}`, "--body-file", "body.txt"},
 		{"annotate", `{"url":"` + fixtureDocID + `","annotations":[{"quoted":"a","why":"b"}]}`, "--from", "annotations.json"},
 		{"propose", `{"url":"` + fixtureDocID + `","proposals":` + oneProposal + `}`, "--from", "proposals.json"},
 	} {
@@ -384,9 +387,9 @@ func TestTheSameAnswerAsTheCLI(t *testing.T) {
 			tool: "reply", args: `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 				`"comment_id":"AAAA1111","thread_quote":"` + chatQuote + `",` +
 				`"body":"` + chatBody + `"}`,
-			doc:  fixtureDocID,
-			cli:  []string{"reply", fixtureDocID, "AAAA1111", "--body-file=@FILE@"},
-			body: chatBody, ok: true, items: 1,
+			doc: fixtureDocID,
+			cli: []string{"reply", fixtureDocID, "AAAA1111", "--body=" + chatBody},
+			ok:  true, items: 1,
 			wire: func(t *testing.T, _ bool) {
 				stubWire(t, &fakeWire{answers: []*answer{
 					{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"` + chatBody + `"}`},
@@ -498,22 +501,21 @@ func (nilWriter) Write(p []byte) (int, error) { return len(p), nil }
 // Each call makes its own directory, under a name carrying this process's id
 // and a mode only this user can read, and the directory is gone when the call
 // is: after an answer, after a refusal and after a panic.
+//
+// annotate is the tool it is measured on: it sends a list, which is a file
+// whichever route it came in on. reply used to be, and is not one of the tools
+// that writes a file any more.
 func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	signedIn(t)
 
-	var reply mcpCommand
-	for _, c := range mcpCommands() {
-		if c.tool == "reply" {
-			reply = c
-		}
-	}
+	annotate := toolNamed(t, "annotate")
 
-	const oneReply = `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `","comment_id":"AAAA1111",` +
-		`"thread_quote":"ai? which register does this","body":"🤖 yes"}`
+	const oneAnnotation = `{"url":"` + annotateDocID + `","title":"` + chatTitle + `",` +
+		`"annotations":[{"quoted":"reviewed annually","why":"The 2026 register says quarterly."}]}`
 
 	files := &callFiles{}
-	argv, err := reply.argv(json.RawMessage(oneReply), files)
+	argv, err := annotate.argv(json.RawMessage(oneAnnotation), files)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -528,7 +530,7 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 		t.Errorf("the call's directory is %q, want it to open with %q", base, mcpTempPrefix())
 	}
 	// The file name is fixed and never built from an argument.
-	if !contains(argv, "--body-file="+filepath.Join(files.dir, "body.txt")) {
+	if !contains(argv, "--from="+filepath.Join(files.dir, "annotations.json")) {
 		t.Errorf("argv = %v, want the fixed file name", argv)
 	}
 	dir := files.dir
@@ -540,16 +542,13 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 	// Through a whole call, three ways out. The directory each one made is
 	// found by watching how many are there afterwards.
 	before := countCallDirs(t)
-	stubWire(t, &fakeWire{answers: []*answer{
-		{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 yes"}`},
-		{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
-		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
-	}})
+	stubWire(t, &fakeWire{answers: annotateAnswers(t)})
 	code := callCode(t)
-	mcpRun(context.Background(), reply, withCode(t, code, oneReply), nilWriter{}, chatWith(code))
+	ch := chatWith(code)
+	looked(ch, annotateDocID)
+	mcpRun(context.Background(), annotate, withCode(t, code, oneAnnotation), nilWriter{}, ch)
 	stubWire(t, &fakeWire{})
-	mcpRun(context.Background(), reply, withCode(t, code,
-		strings.Replace(oneReply, `"🤖 yes"`, `"not the robot"`, 1)), nilWriter{}, chatWith(code))
+	mcpRun(context.Background(), annotate, withCode(t, code, oneAnnotation), nilWriter{}, chatWith(code))
 	if after := countCallDirs(t); after != before {
 		t.Errorf("%d call directories before and %d after, so a call left one behind", before, after)
 	}
@@ -561,7 +560,7 @@ func TestTempFilesAreMadeForTheCallAndGone(t *testing.T) {
 		defer func() { _ = recover() }()
 		files := &callFiles{}
 		defer files.remove()
-		if _, err := files.write("body.txt", "body", "x"); err != nil {
+		if _, err := files.write("annotations.json", "annotations", "[]"); err != nil {
 			t.Fatal(err)
 		}
 		panic("the call failed in a way nothing expected")

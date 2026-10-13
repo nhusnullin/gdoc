@@ -2,9 +2,9 @@
 // back to see whether it is there.
 //
 // Nothing here decides whether a thread needs a reply, or what to say in it.
-// The body arrives written, in a file the skill wrote, is checked for shape
-// alone, and is sent with the mark in effect in front of it and nothing else
-// added.
+// The body arrives written, on the line or in a file the skill wrote, is
+// checked for shape alone, and is sent with the mark in effect in front of it
+// and nothing else added.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.

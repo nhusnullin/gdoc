@@ -689,16 +689,16 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/testdata/pipe/help*.golden`, `testdata/screens/help*.golden`
 - Create: `go/cmd/gdoc/replybody_test.go`
 
-- [ ] `reply` takes `--body <text>` (`kindText`) and `--body-file <file>`,
+- [x] `reply` takes `--body <text>` (`kindText`) and `--body-file <file>`,
       both `needEither`. Exactly one is given: both, or neither, is refused
       naming the two flags. The `--body` value is used as typed, with the same
       trailing-whitespace trim `readBody` applies to a file.
-- [ ] Chat's `body` maps to `--body` with no file. The dash refusal is not
+- [x] Chat's `body` maps to `--body` with no file. The dash refusal is not
       asked of `body`: the value goes on the line joined as `--body=<value>`,
       which the parser cannot read as a flag, and a reply opening with "- " is
       plain text the binary accepts. Every other on-the-line argument keeps
       the dash refusal.
-- [ ] Tests: `TestReplyTakesTheBodyOnTheLineOrInAFile`,
+- [x] Tests: `TestReplyTakesTheBodyOnTheLineOrInAFile`,
       `TestReplyRefusesBothBodyAndBodyFile`,
       `TestReplyRefusesNeitherBodyNorBodyFile` (replaces
       `TestReplyNeedsABodyFile`), `TestAChatReplyWritesNoFile` (no call
@@ -706,8 +706,23 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       `TestEverySchemaPropertyMapsToAWordOrFlagAndBack` passes with `body`
       mapped to `--body`, `TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout`
       passes with the two marked `either`.
-- [ ] Goldens: the help goldens move by the reply usage line. A ➕ note names them.
-- [ ] `git commit -m "feat(reply): --body on the line, and chat sends it there"`
+- [x] Goldens: the help goldens move by the reply usage line. A ➕ note names them.
+- [x] `git commit -m "feat(reply): --body on the line, and chat sends it there"`
+- ➕ One golden moved: `cmd/gdoc/testdata/pipe/help.stdout.golden`, by reply's
+      two flags and its example. The screen goldens hold names and summaries
+      rather than flags, so none of them moved.
+- ➕ The example stays on `--body-file reply.txt`.
+      `TestEveryExampleIsACallTheTableAccepts` reads an example word by word,
+      and a reply's words have spaces in them, so no `--body` example can be
+      written there. The usage line above it offers `--body` first.
+- ➕ `mcpArg.dashAllowed` is the field that says a dash is just a dash, set for
+      reply's `body` alone, and `TestOnlyTheReplyBodyMayOpenWithADash` fails if
+      a second argument takes it.
+- ➕ `TestTempFilesAreMadeForTheCallAndGone` and
+      `TestOneCallMakesOneDirectoryUnderFixedNames` moved to annotate and
+      propose: reply writes no file, so it could no longer measure a directory.
+      `TestTheSameAnswerAsTheCLI`'s reply case now builds the same `--body=`
+      line both ways and needs no temp file.
 
 ### Task 17: chat's robot_not_ours fact is removed
 

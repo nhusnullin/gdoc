@@ -299,7 +299,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "export"}, "Usage: gdoc export <url> --out <file>"},
 		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},
 		{[]string{"help", "probe"}, "Usage: gdoc probe --folder <folder id>"},
-		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body-file <file>"},
+		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body <text> | --body-file <file>"},
 		{[]string{"help", "propose"}, "Usage: gdoc propose <url> --from <file> [--md <file>] [--folder <folder id>]"},
 		{[]string{"help", "withdraw"}, "Usage: gdoc withdraw <url> <suggestion id> --md <file>"},
 		{[]string{"help", "annotate"}, "Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]"},

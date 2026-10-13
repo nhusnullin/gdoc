@@ -292,9 +292,14 @@ func commands() []command {
 			group: groupWrite,
 			words: []string{"<url>", "<comment id>"},
 			flags: []flag{
-				{"--body-file", kindFile, needRequired, "the file holding the words of the reply"},
+				{"--body", kindText, needEither, "the words of the reply, typed on the line"},
+				{"--body-file", kindFile, needEither, "the file holding the words of the reply"},
 			},
 			summary: "Write one reply into a comment thread, under your mark.",
+			// The file form, because an example is one line read word by
+			// word (TestEveryExampleIsACallTheTableAccepts) and a reply's
+			// words have spaces in them. The usage line above it offers
+			// --body first, which is the route a person types.
 			example: "gdoc reply https://docs.google.com/document/d/1AbC.../edit AAAA1234 --body-file reply.txt",
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdReply(ctx, a)
