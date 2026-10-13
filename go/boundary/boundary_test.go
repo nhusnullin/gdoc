@@ -326,15 +326,16 @@ func TestMcpImportsNoNetHTTP(t *testing.T) {
 	}
 }
 
-// markWriters are the three files that may test a text against the robot mark
-// with a prefix check of their own, because each is refusing or requiring the
-// mark on a caller's own input rather than reading who wrote a thread entry.
-// internal/propose and internal/annotate refuse a comment the caller opened
-// with the mark; internal/reply requires it on the body it was handed.
+// markWriters are the files that may test a text against the robot mark with a
+// prefix check of their own, because each is refusing the mark on a caller's own
+// input rather than reading who wrote a thread entry. internal/propose and
+// internal/annotate refuse a comment the caller opened with the mark.
+// internal/reply is deliberately absent: it takes a typed mark off with
+// plaintext.CutMark and writes the mark in effect instead, so it owns no prefix
+// check of its own.
 var markWriters = map[string]bool{
 	"internal/propose/propose.go":   true,
 	"internal/annotate/annotate.go": true,
-	"internal/reply/reply.go":       true,
 }
 
 // markReaders are the package directories that ask who wrote a thread entry.

@@ -60,7 +60,8 @@
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
 //   - probe --folder: whether Docs honours SUGGEST today, asked by hand.
 //     internal/probe.
-//   - reply <url> <comment id> --body-file: one robot reply. internal/reply.
+//   - reply <url> <comment id> --body-file: one reply under the mark in
+//     effect. internal/reply.
 //   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
 //     internal/propose.
@@ -982,8 +983,8 @@
 //
 // No note, so no provenance. The note exists so withdraw can recognise gdoc's
 // own pending suggestions later, and a comment is not a suggestion: it is in
-// the thread, signed with the robot, and a person deletes it in the browser in
-// one gesture. Recording it would be provenance for a permission nothing uses.
+// the thread, signed with the mark in effect, and a person deletes it in the
+// browser in one gesture. Recording it would be provenance for a permission nothing uses.
 //
 // The two input forms are two calls, and a run naming both is refused before a
 // session opens, by the flag it was given rather than by the flag it was

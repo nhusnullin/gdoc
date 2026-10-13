@@ -12,14 +12,14 @@ gdoc needs a command.
 ├─ Write into a doc ────┼──────────────────────────────────────────────────────┤
 │ restyle               │ Survey a document against the house style, or apply  │
 │                       │ that style where the document stands.                │
-│ reply                 │ Write one reply into a comment thread, under the     │
-│                       │ robot prefix.                                        │
+│ reply                 │ Write one reply into a comment thread, under your    │
+│                       │ mark.                                                │
 │ propose               │ Propose changes as native suggestions, each with the │
 │                       │ comment that says why.                               │
 │ withdraw              │ Take back one pending suggestion, and only one gdoc  │
 │                       │ proposed itself.                                     │
 │ annotate              │ Leave a comment on the exact words you quote, under  │
-│                       │ the robot prefix, changing nothing.                  │
+│                       │ your mark, changing nothing.                         │
 ├─ Make a doc ──────────┼──────────────────────────────────────────────────────┤
 │ build                 │ Build the note as a house-style docx on this         │
 │                       │ machine, with no network at all.                     │

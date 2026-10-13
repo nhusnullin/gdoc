@@ -578,21 +578,21 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/chatheader.md`, `go/cmd/gdoc/doc.go`,
   `go/cmd/gdoc/testdata/pipe/help*.golden`, `testdata/screens/help*.golden`
 
-- [ ] `reply.Check(words, mark)` refuses an empty body, markdown and a marker,
+- [x] `reply.Check(words, mark)` refuses an empty body, markdown and a marker,
       asked of the words alone. It no longer requires a prefix.
-- [ ] `reply.Post(ctx, s, docID, commentID, words, mark)` sends
+- [x] `reply.Post(ctx, s, docID, commentID, words, mark)` sends
       `plaintext.Prefixed(mark, words)` and reads that string back.
-- [ ] A body that opens with a known mark or the mark in effect has it taken
+- [x] A body that opens with a known mark or the mark in effect has it taken
       off with `CutMark` and gets the mark in effect instead, once, with a
       warning: "the reply opened with 🤖, and gdoc adds the mark itself; it was
       written once, as ⁘". This holds for v2.11.0; the warning says so.
-- [ ] `reply.Prefix` is removed.
-- [ ] The reply and annotate summaries say "under your mark" instead of
+- [x] `reply.Prefix` is removed.
+- [x] The reply and annotate summaries say "under your mark" instead of
       "under the robot prefix", and `manifest.json` follows them word for
       word. The reply schema's `body` says: "The words of the reply. gdoc puts
       its mark in front of them, so do not type one. Markdown is refused."
-- [ ] `chatheader.md` stops telling the model to draft a `🤖` reply.
-- [ ] Tests: `TestReplyAddsTheMarkInEffect`,
+- [x] `chatheader.md` stops telling the model to draft a `🤖` reply.
+- [x] Tests: `TestReplyAddsTheMarkInEffect`,
       `TestAnEmptyMarkWritesTheWordsAlone` (the reply subtest),
       `TestABodyOpeningWithAKnownMarkIsWrittenOnceWithAWarning` (one subtest
       per known mark, with leading space and newline),
@@ -602,8 +602,40 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       `TestReplyAcceptsABodyWithNoMark`; the `reply/doc` comment and
       `plaintext`'s "The two writers own the mark differently" section are
       rewritten to "all three writers add the mark".
-- [ ] Goldens: the help goldens move by the two summaries. A ➕ note names them.
-- [ ] `git commit -m "feat(reply): gdoc adds the mark, as propose and annotate do"`
+- [x] Goldens: the help goldens move by the two summaries. A ➕ note names them.
+- [x] ➕ The three mark tests went into a new `go/internal/reply/mark_test.go`,
+      beside `propose/mark_test.go` and `annotate/mark_test.go`, with
+      `TestAnEmptyMarkStillTakesATypedMarkOff` for the corner the two decisions
+      make between them and `TestTheReadBackComparesTheMarkThatWasSent` for the
+      read-back.
+- [x] ➕ `signed(body, mark)` is the one room that puts the mark on, and the
+      warning it returns names the mark the body carried rather than the one
+      this run writes. `Post` reads it once, so the read-back compares the
+      string that went out.
+- [x] ➕ `TestPostSendsTheBodyVerbatimToTheRepliesURL` became
+      `TestPostSendsTheWordsUnderTheMarkToTheRepliesURL`: nothing but the mark
+      is added, and "verbatim" stopped being true.
+- [x] ➕ `TestTheReplyCardAsksForTheMarkItself` became
+      `TestTheReplyCardSaysGdocAddsTheMark`, which also fails if the card names
+      any known mark: the mark is a value this run was given, and a card naming
+      one is wrong for every colleague who set another.
+- [x] ➕ The cmd-level `TestReplyRefusesABodyWithoutTheRobot` was replaced by
+      `TestReplyRefusesAMarkerBeforeAnyRequest`, so the route still has a test
+      that nothing reaches Drive for a body `Check` refused.
+      `TestReplyPostsTheBodyAndReadsTheThreadBack` and
+      `TestReplyNeverCutsItsReadBack` send the words and ask for
+      `robotInEffect()`, which is the mark the recorded thread carries.
+- [x] ➕ Chat's `heldBody` went: a held reply's body is `heldRun`, the words
+      alone, and `heldSent` is what reaches the wire, `"⁘ " + heldRun`.
+- [x] ➕ `internal/reply/reply.go` came off `markWriters` in
+      `go/boundary/boundary_test.go`: it owns no prefix check now, it asks
+      `plaintext.CutMark`.
+- [x] ➕ Goldens regenerated: `testdata/screens/help-{44,60,80,100}.golden`,
+      `help-80-truecolor.golden` and the five `bare-*` of each, by deleting
+      them and running the test twice. `testdata/pipe/help.stderr.golden`,
+      `help.stdout.golden` and `bare.stderr.golden` moved by the two summaries
+      alone, so those three were edited in place.
+- [x] `git commit -m "feat(reply): gdoc adds the mark, as propose and annotate do"`
 
 ### Task 15: by_gdoc is a known mark or the mark in effect
 

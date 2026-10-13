@@ -12,14 +12,14 @@
 [38;2;124;130;150m├─[0m[38;2;184;119;8m Write into a doc [0m[38;2;124;130;150m────┼──────────────────────────────────────────────────────┤[0m
 [38;2;124;130;150m│[0m restyle               [38;2;124;130;150m│[0m Survey a document against the house style, or apply  [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m that style where the document stands.                [38;2;124;130;150m│[0m
-[38;2;124;130;150m│[0m reply                 [38;2;124;130;150m│[0m Write one reply into a comment thread, under the     [38;2;124;130;150m│[0m
-[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m robot prefix.                                        [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m reply                 [38;2;124;130;150m│[0m Write one reply into a comment thread, under your    [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m mark.                                                [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m propose               [38;2;124;130;150m│[0m Propose changes as native suggestions, each with the [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m comment that says why.                               [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m withdraw              [38;2;124;130;150m│[0m Take back one pending suggestion, and only one gdoc  [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m proposed itself.                                     [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m annotate              [38;2;124;130;150m│[0m Leave a comment on the exact words you quote, under  [38;2;124;130;150m│[0m
-[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m the robot prefix, changing nothing.                  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m your mark, changing nothing.                         [38;2;124;130;150m│[0m
 [38;2;124;130;150m├─[0m[38;2;184;119;8m Make a doc [0m[38;2;124;130;150m──────────┼──────────────────────────────────────────────────────┤[0m
 [38;2;124;130;150m│[0m build                 [38;2;124;130;150m│[0m Build the note as a house-style docx on this         [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m machine, with no network at all.                     [38;2;124;130;150m│[0m

@@ -323,8 +323,8 @@ func proposeInto(t *testing.T, ctx context.Context, s *gapi.Session, docID strin
 // read-back found it.
 func replyTo(t *testing.T, ctx context.Context, s *gapi.Session, docID string, result propose.Result) {
 	t.Helper()
-	body := reply.Prefix + "This is the live write test. The proposal above is withdrawn a moment after this reply."
-	posted, err := reply.Post(ctx, s, docID, result.CommentID, body)
+	body := "This is the live write test. The proposal above is withdrawn a moment after this reply."
+	posted, err := reply.Post(ctx, s, docID, result.CommentID, body, liveMark)
 	for _, w := range posted.Warnings {
 		t.Logf("reply warning: %s", w)
 	}

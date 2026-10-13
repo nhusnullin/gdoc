@@ -113,7 +113,7 @@ func replyWire(t *testing.T) *fakeWire {
 	t.Helper()
 	return &fakeWire{answers: append(pinAnswers(t), &answer{
 		method: "POST", match: "/comments/AAAA1111/replies",
-		json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldBody + `"}`,
+		json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldSent + `"}`,
 	})}
 }
 
@@ -265,7 +265,7 @@ func TestAByteDifferentTitleReasonOrTextIsRefused(t *testing.T) {
 	for field, value := range map[string]string{
 		"title":  chatTitle + ".",
 		"reason": "the text shares words with a comment, which is fine",
-		"text":   heldBody + " ",
+		"text":   heldRun + " ",
 	} {
 		t.Run(field, func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
@@ -400,8 +400,10 @@ func TestAReleasedHoldPostsExactlyTheHeldTextOnce(t *testing.T) {
 	if err := json.Unmarshal(sent[0].Body, &body); err != nil {
 		t.Fatalf("the request body is not JSON: %v", err)
 	}
-	if body.Content != held.Data.Held.Text {
-		t.Errorf("the reply posted %q, and the hold held %q", body.Content, held.Data.Held.Text)
+	// gdoc adds the mark, so what goes out is the mark in effect in front of
+	// the words the card showed. The mark is the literal here.
+	if want := "⁘ " + held.Data.Held.Text; body.Content != want {
+		t.Errorf("the reply posted %q, and the hold held %q", body.Content, want)
 	}
 
 	// Once. The tool is gone, the hold with it, and a second call of the same

@@ -151,15 +151,18 @@ func TestTheSpokenWordsFindTheTools(t *testing.T) {
 	}
 }
 
-// The reply card says what internal/reply refuses a body without: the words
-// open with the mark, and gdoc does not put it there. The card said the
-// opposite once, and a model that believed it spent the person's one approval
-// on a write the command then refused for a missing emoji.
+// The reply card says what internal/reply does with a body: gdoc puts the mark
+// in front of the words, so the model types none. The card said the opposite
+// through M15, and a model that believed either version wrongly spends the
+// person's one approval on a write the command refuses or on a thread carrying
+// two marks.
 //
-// The mark is the literal here. internal/reply/doc.go, "The mark is required,
-// and this writer does not add it", is the rule this pins, and
-// TestReplyRefusesABodyWithoutTheRobot is the refusal itself.
-func TestTheReplyCardAsksForTheMarkItself(t *testing.T) {
+// It also names no mark character, because the mark is a value this run was
+// given and a card naming one would be wrong for every colleague who set
+// another. internal/reply's package comment, "gdoc adds the mark, and a mark
+// the caller typed comes off first", is the rule this pins, and
+// TestReplyAcceptsABodyWithNoMark is the acceptance itself.
+func TestTheReplyCardSaysGdocAddsTheMark(t *testing.T) {
 	var schema struct {
 		Properties map[string]struct {
 			Description string `json:"description"`
@@ -177,10 +180,15 @@ func TestTheReplyCardAsksForTheMarkItself(t *testing.T) {
 	if !ok {
 		t.Fatal("the reply tool takes no body, so this test holds nothing")
 	}
-	if !strings.Contains(body.Description, "🤖 ") {
-		t.Errorf("the reply body is described %q, and does not ask for the mark", body.Description)
+	if !strings.Contains(body.Description, "gdoc puts its mark in front of them") {
+		t.Errorf("the reply body is described %q, and does not say gdoc adds the mark", body.Description)
 	}
-	if !strings.Contains(body.Description, "gdoc does not add it") {
-		t.Errorf("the reply body is described %q, and does not say gdoc leaves the mark to the caller", body.Description)
+	if !strings.Contains(body.Description, "do not type one") {
+		t.Errorf("the reply body is described %q, and does not tell the model to type no mark", body.Description)
+	}
+	for _, mark := range []string{"🤖", "⁘", "∴"} {
+		if strings.Contains(body.Description, mark) {
+			t.Errorf("the reply body is described %q, and it names %q; the mark is a value this run was given", body.Description, mark)
+		}
 	}
 }

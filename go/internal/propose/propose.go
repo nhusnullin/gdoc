@@ -170,7 +170,7 @@ func (p Proposal) checkWords(mark string) error {
 // refuses.
 func (p Proposal) checkWhy(mark string) error {
 	// Both tests read the reason with its surrounding space taken off, which is
-	// the same shape reply.Check reads a body in. A reason of nothing but spaces
+	// the same shape reply.Check reads a reply's words in. A reason of nothing but spaces
 	// is a comment that is a bare signature, and sameWords normalises whitespace
 	// on both sides, so the export would still match it and the run would report
 	// verified: true over an explanation that says nothing.
@@ -179,11 +179,13 @@ func (p Proposal) checkWhy(mark string) error {
 		return errors.New("the proposal carries no reason, and a suggestion nobody explained is one the reader has to guess at")
 	}
 	// Batch writes the comment as the mark and the reason, so a reason that
-	// already opens with a mark lands as two of them. A caller carrying the
-	// reply convention over would sign the comment twice, and nothing
-	// downstream would catch it: docxHolds compares against the string that was
-	// sent, so all three read-backs pass and the run reports verified: true
-	// over a doubled mark in the one string that records who wrote the comment.
+	// already opens with a mark lands as two of them, and nothing downstream
+	// would catch it: docxHolds compares against the string that was sent, so
+	// all three read-backs pass and the run reports verified: true over a
+	// doubled mark in the one string that records who wrote the comment. All
+	// three writers add the mark, so no caller has a second convention to carry
+	// over; reply takes a typed mark off instead of refusing it, because a
+	// reply body is prose a person may have signed by hand.
 	//
 	// Every known mark is refused and not only the one this run writes, because
 	// a doubled mark is the same lie in any of them and a reason written for
@@ -200,14 +202,11 @@ func (p Proposal) checkWhy(mark string) error {
 	// held here because this is the other place gdoc writes into a thread.
 	//
 	// The rule is asked of the reason alone, never of the mark and the reason
-	// together. The heading
-	// arm is anchored to a line start, so the prefix in front of it moves the
-	// first character of the reason off offset zero and a reason opening with
-	// "# " passes: the comment then lands with the hash rendered literally,
-	// which is the one thing this check exists to refuse. reply.Check asks it
-	// behind the prefix for the same reason: there the body arrives with the
-	// mark already on it, and Check has required it by then, so trimming it is
-	// exact and a heading on the reply's first line is refused too.
+	// together. The heading arm is anchored to a line start, so the mark in
+	// front of it moves the first character of the reason off offset zero and a
+	// reason opening with "# " passes: the comment then lands with the hash
+	// rendered literally, which is the one thing this check exists to refuse.
+	// reply.Check asks it of the reply's words for the same reason.
 	if m := plaintext.Markdown(p.Why); m != "" {
 		return fmt.Errorf("the reason for the proposal carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", m)
 	}

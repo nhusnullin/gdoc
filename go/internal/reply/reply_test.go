@@ -17,7 +17,12 @@ const (
 	testCommentID = "AAAA"
 	testReplyID   = "AAAB"
 	testCreated   = "2026-09-07T10:00:00Z"
-	goodBody      = "🤖 The 2026 register."
+	// goodWords are the words a caller hands over, and goodBody is what gdoc
+	// writes out of them under the robot. The mark is stated as a literal here,
+	// and every Post in this file is given it, because what these tests ask
+	// about is the write and the read-back rather than which mark is in effect.
+	goodWords = "The 2026 register."
+	goodBody  = "🤖 " + goodWords
 )
 
 // call is one request the fake was asked to make, with the bytes the session
@@ -123,19 +128,6 @@ func quote(s string) string {
 	return string(b)
 }
 
-func TestCheckAcceptsAPlainRobotReply(t *testing.T) {
-	for _, body := range []string{
-		goodBody,
-		"🤖 Done. The register is now reviewed every six months.",
-		"🤖 Two lines.\nThe second one says more.",
-		"🤖 A hyphen bullet reads fine as plain text:\n- one\n- two",
-	} {
-		if err := Check(body); err != nil {
-			t.Errorf("Check(%q) refused a plain reply: %v", body, err)
-		}
-	}
-}
-
 func TestCheckRefusesEachBadShapeByName(t *testing.T) {
 	cases := []struct {
 		name string
@@ -144,27 +136,27 @@ func TestCheckRefusesEachBadShapeByName(t *testing.T) {
 	}{
 		{"empty", "", "empty"},
 		{"whitespace only", "   \n\t ", "empty"},
-		{"no robot at all", "The 2026 register.", "🤖 "},
-		{"a space before the robot", " 🤖 The 2026 register.", "🤖 "},
-		{"the robot with no space", "🤖The 2026 register.", "🤖 "},
-		{"the robot alone", "🤖 ", "empty"},
-		{"bold", "🤖 The **2026** register.", "**"},
-		{"a backtick", "🤖 Run `gdoc read` on it.", "`"},
-		{"a heading on a later line", "🤖 Two things.\n## Second", "#"},
+		{"the mark alone", "🤖 ", "empty"},
+		{"bold", "The **2026** register.", "**"},
+		{"a backtick", "Run `gdoc read` on it.", "`"},
+		{"a heading on a later line", "Two things.\n## Second", "#"},
 		// The heading arm is anchored to a line start, so asking the rule of the
-		// body with the prefix still on it moves the hash off offset zero and
-		// lets this one through to the thread, where Docs renders it as typed.
+		// body with a mark still on it would move the hash off offset zero and
+		// let this one through to the thread, where Docs renders it as typed.
 		// The same words on a second line were always refused, which is the same
 		// rule firing or not depending on where the author put them. Check reads
-		// behind the prefix, which it has already required, so the two agree.
-		{"a heading on the first line", "🤖 # Six months", "#"},
-		{"a deeper heading on the first line", "🤖 ### Six months", "#"},
-		{"a fenced block", "🤖 Like this:\n```\ngdoc read\n```", "`"},
-		{"a link in brackets", "🤖 See [the register](https://example.com).", "["},
+		// the words, which is what gdoc puts the mark in front of, so the two
+		// agree.
+		{"a heading on the first line", "# Six months", "#"},
+		{"a deeper heading on the first line", "### Six months", "#"},
+		{"a heading behind a typed mark", "🤖 # Six months", "#"},
+		{"a fenced block", "Like this:\n```\ngdoc read\n```", "`"},
+		{"a link in brackets", "See [the register](https://example.com).", "["},
+		{"a marker", "the sentence reads {+six months+}[s:AAA] now", "{+"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			err := Check(c.body)
+			err := Check(c.body, "⁘")
 			if err == nil {
 				t.Fatalf("Check(%q) accepted it", c.body)
 			}
@@ -175,10 +167,10 @@ func TestCheckRefusesEachBadShapeByName(t *testing.T) {
 	}
 }
 
-func TestPostSendsTheBodyVerbatimToTheRepliesURL(t *testing.T) {
+func TestPostSendsTheWordsUnderTheMarkToTheRepliesURL(t *testing.T) {
 	f := script()
 
-	if _, err := Post(context.Background(), f, testDocID, testCommentID, goodBody); err != nil {
+	if _, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -211,16 +203,16 @@ func TestPostSendsTheBodyVerbatimToTheRepliesURL(t *testing.T) {
 		t.Fatal(err)
 	}
 	if sent.Content != goodBody {
-		// The mark is the prefix the skill already wrote, so anything added
+		// The mark in effect and one space, and nothing else: anything more
 		// here is text gdoc put in Nail's document unasked.
-		t.Errorf("the body sent is %q, want it verbatim: %q", sent.Content, goodBody)
+		t.Errorf("the body sent is %q, want the words under the mark: %q", sent.Content, goodBody)
 	}
 }
 
 func TestPostReportsTheReplyAndVerifiesItFromTheThread(t *testing.T) {
 	f := script()
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +238,7 @@ func TestPostReportsTheReplyIDWhenTheThreadDoesNotShowIt(t *testing.T) {
 	f := script()
 	f.listing = listingWith() // Drive answered the write and shows no reply
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +263,7 @@ func TestPostDoesNotVerifyAReplyWhoseTextCameBackDifferent(t *testing.T) {
 		Content:     "🤖 something else entirely",
 	})
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +275,7 @@ func TestPostDoesNotVerifyAReplyWhoseTextCameBackDifferent(t *testing.T) {
 func TestPostRefusesMarkdownBeforeAnythingIsSent(t *testing.T) {
 	f := script()
 
-	_, err := Post(context.Background(), f, testDocID, testCommentID, "🤖 The **2026** register.")
+	_, err := Post(context.Background(), f, testDocID, testCommentID, "The **2026** register.", "🤖")
 	if err == nil {
 		t.Fatal("a markdown body was posted")
 	}
@@ -300,7 +292,7 @@ func TestPostCarriesAGuardRefusalToTheCaller(t *testing.T) {
 	refusal := errors.New("file DOC9 was not given to this command")
 	f.failAt[0] = refusal
 
-	_, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	_, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if !errors.Is(err, refusal) {
 		t.Fatalf("the refusal did not reach the caller: %v", err)
 	}
@@ -310,7 +302,7 @@ func TestPostSaysSoWhenDriveAnswersWithNoReplyID(t *testing.T) {
 	f := script()
 	f.created = []byte(`{}`)
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		// An error here would make the skill repost, and Drive may well have
 		// taken the first one. Unverified is the honest answer.
@@ -333,7 +325,7 @@ func TestPostSaysSoWhenTheAnswerCouldNotBeRead(t *testing.T) {
 	f := script()
 	f.failAt[0] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		t.Fatalf("a reply Drive accepted was reported as never sent: %v", err)
 	}
@@ -356,7 +348,7 @@ func TestPostKeepsWhatAFailedAnswerStillCarried(t *testing.T) {
 	f.failAt[0] = acceptedError{errors.New("the answer could not be read: cannot unmarshal number into createdTime")}
 	f.partial = map[int][]byte{0: []byte(`{"id":"` + testReplyID + `","createdTime":42,"content":` + quote(goodBody) + `}`)}
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		t.Fatalf("a reply Drive accepted was reported as never sent: %v", err)
 	}
@@ -389,7 +381,7 @@ func TestAReadBackThatFailedIsAWarningRatherThanAnError(t *testing.T) {
 	f := script()
 	f.failAt[1] = errors.New("the network went away")
 
-	got, err := Post(context.Background(), f, testDocID, testCommentID, goodBody)
+	got, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖")
 	if err != nil {
 		t.Fatalf("a failed read-back came back as an error: %v", err)
 	}
@@ -406,7 +398,7 @@ func TestAReadBackThatFailedIsAWarningRatherThanAnError(t *testing.T) {
 // the guard fails inside the process, on Nail's machine, on the first real run.
 func TestTheGuardCarriesBothOfThePostsRequests(t *testing.T) {
 	f := script()
-	if _, err := Post(context.Background(), f, testDocID, testCommentID, goodBody); err != nil {
+	if _, err := Post(context.Background(), f, testDocID, testCommentID, goodWords, "🤖"); err != nil {
 		t.Fatal(err)
 	}
 

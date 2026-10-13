@@ -48,8 +48,10 @@ func strangerAsked(ch *mcpChat) {
 			Text: "Note: " + heldRun + " afternoon, thanks."}}})
 }
 
-// heldBody is the reply a held reply would have posted.
-const heldBody = "🤖 " + heldRun
+// heldSent is what a released reply puts on the wire: the mark this chat has in
+// effect, which is the default, in front of the words the model asked for. The
+// model types no mark, because gdoc adds it. The mark is the literal here.
+const heldSent = "⁘ " + heldRun
 
 // heldWriteArgs is one call of each write tool whose words repeat that run.
 // Everything else about each call is right: the title is the document's own, the
@@ -58,7 +60,7 @@ func heldWriteArgs() map[string]string {
 	return map[string]string{
 		"reply": `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 			`"comment_id":"AAAA1111","thread_quote":"` + chatQuote + `",` +
-			`"body":"` + heldBody + `"}`,
+			`"body":"` + heldRun + `"}`,
 		"annotate": `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
 			`"annotations":[{"quoted":"reviewed annually","why":"` + heldRun + `"}]}`,
 		"propose": `{"url":"` + fixtureDocID + `","title":"` + chatTitle + `",` +
@@ -253,8 +255,8 @@ func TestTheHeldAnswerNamesTheRuleTheValueAndTheText(t *testing.T) {
 	if held.Reason != heldReason {
 		t.Errorf("the hold gives reason %q, want %q", held.Reason, heldReason)
 	}
-	if held.Text != heldBody {
-		t.Errorf("the hold carries text %q, want %q", held.Text, heldBody)
+	if held.Text != heldRun {
+		t.Errorf("the hold carries text %q, want %q", held.Text, heldRun)
 	}
 	const say = "Nothing was posted; tell the person this reason and end your turn."
 	if held.Say != say {

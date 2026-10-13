@@ -12,10 +12,10 @@ Usage: gdoc <command> [words] [flags]
   export       Write the document into the hub as Markdown, one file per tab, with its pictures beside it.
   restyle      Survey a document against the house style, or apply that style where the document stands.
   probe        Create a throwaway document and say whether Docs honours a suggestion today.
-  reply        Write one reply into a comment thread, under the robot prefix.
+  reply        Write one reply into a comment thread, under your mark.
   propose      Propose changes as native suggestions, each with the comment that says why.
   withdraw     Take back one pending suggestion, and only one gdoc proposed itself.
-  annotate     Leave a comment on the exact words you quote, under the robot prefix, changing nothing.
+  annotate     Leave a comment on the exact words you quote, under your mark, changing nothing.
   build        Build the note as a house-style docx on this machine, with no network at all.
   publish      Build the note as a house-style document and upload it into one folder.
   update       Replace this gdoc with the newest release, or say what one would take.

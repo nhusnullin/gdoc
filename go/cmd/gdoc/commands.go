@@ -294,7 +294,7 @@ func commands() []command {
 			flags: []flag{
 				{"--body-file", kindFile, needRequired, "the file holding the words of the reply"},
 			},
-			summary: "Write one reply into a comment thread, under the robot prefix.",
+			summary: "Write one reply into a comment thread, under your mark.",
 			example: "gdoc reply https://docs.google.com/document/d/1AbC.../edit AAAA1234 --body-file reply.txt",
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdReply(ctx, a)
@@ -337,7 +337,7 @@ func commands() []command {
 				{"--from", kindFile, needEither, "the file holding the comments to leave, each with the words it goes on"},
 				{"--body-file", kindFile, needOptional, "the file holding the reason, which --quote needs"},
 			},
-			summary: "Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
+			summary: "Leave a comment on the exact words you quote, under your mark, changing nothing.",
 			example: "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdAnnotate(ctx, a)

@@ -79,14 +79,20 @@
 // a prefix check written out again anywhere but the three writers that refuse
 // or require the mark on a caller's own input.
 //
-// # The two writers own the mark differently
+// # All three writers add the mark
 //
-// A reply body arrives with the mark already on it, so reply.Check requires it
-// and refuses a body that does not open with exactly it. A proposal's reason
-// arrives without it, because propose writes the comment as Prefix plus the
-// reason, so Proposal.Check refuses a reason that already carries it. An agent
-// following the reply rule when it writes proposals.json has its run refused
-// before anything leaves the machine, which is where that mistake belongs.
+// A reason and a reply body both arrive as words, because propose, annotate and
+// reply each write the comment as the mark in effect plus those words. One
+// convention, so an agent writing proposals.json and an agent writing a reply
+// follow the same sentence.
+//
+// What each does with a mark the caller typed differs, and on purpose.
+// Proposal.Check and Annotation.Check refuse a reason that opens with one: that
+// file is written for gdoc and the refusal lands before anything leaves the
+// machine. reply takes one off with CutMark and says so, because a reply body is
+// prose a person may have signed by hand and every release before v2.11.0 asked
+// the skill to type the mark itself. reply's own package comment holds how long
+// that tolerance lasts.
 //
 // # No markdown, because a thread renders it literally
 //
@@ -99,8 +105,8 @@
 //
 // The heading arm is anchored to a line start, because a hash in the middle of a
 // sentence is a number sign somebody typed. That anchoring is why all three
-// callers ask the rule behind the mark rather than in front of it: reply.Check's
-// own comment holds the argument.
+// callers ask the rule of the words rather than of the mark and the words
+// together: reply.Check's own comment holds the argument.
 //
 // # No marker of gdoc's own, for the same reason
 //

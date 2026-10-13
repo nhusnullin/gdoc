@@ -28,7 +28,7 @@
 // that walk reads one paragraph at a time and such a quote could only ever come
 // back as "not found". TestCheckRefusesEachBadShapeByName is the pin.
 //
-// # The mark is added here, and required in reply
+// # The mark is added here, as all three writers add it
 //
 // Body writes the comment as the mark in effect and the reason, so Check
 // refuses a reason that already opens with a mark. The mark is a value this
@@ -37,13 +37,14 @@
 // TestAnnotateWritesTheMarkInEffect and TestAnEmptyMarkWritesTheWordsAlone are
 // the pins, with TestBodyIsTheRobotAndTheWhy stating one mark as a literal.
 //
-// internal/reply does the opposite: a reply body arrives with the mark already
-// on it and reply.Check refuses a body without it. The two writers own the mark
-// differently on purpose, and internal/plaintext holds the argument. A caller
-// carrying the reply convention over to an annotations file would sign the
-// comment twice, and nothing downstream would catch it: the read-backs compare
-// against the string that was sent, so both hold over a doubled mark in the one
-// string that records who wrote the words.
+// internal/propose and internal/reply do the same, so there is one convention
+// and no caller has to know which writer it is talking to. A reason that
+// already opens with a mark would sign the comment twice, and nothing
+// downstream would catch it: the read-backs compare against the string that was
+// sent, so both hold over a doubled mark in the one string that records who
+// wrote the words. reply takes a typed mark off rather than refusing it, because
+// a reply body is prose a person may have signed by hand, and internal/plaintext
+// holds that argument.
 // TestCheckRefusesEachBadShapeByName refuses it,
 // TestCheckAcceptsAPlainAnnotation is the other direction, and
 // TestAReasonOpeningWithAnyKnownMarkIsRefused walks the marks: every known one

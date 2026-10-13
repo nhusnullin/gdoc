@@ -123,7 +123,7 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 	// Before the session, and so before anything reaches Drive: a body Docs
 	// would render literally is a mistake in the call, not something a write
 	// could fix.
-	if err := reply.Check(body); err != nil {
+	if err := reply.Check(body, a.set.Mark); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	r, err := open(a.target())
@@ -139,7 +139,7 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 		return emit.Result{OK: false, Warnings: r.warnings(),
 			Error: "the time for this call ran out before the reply was sent, so nothing was written. Call again"}
 	}
-	res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, commentID, body)
+	res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, commentID, body, a.set.Mark)
 	data := replyData{
 		DocumentID: r.id,
 		CommentID:  commentID,

@@ -256,7 +256,7 @@ func sessionWire(t *testing.T) *fakeWire {
 		{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
 		{method: "GET", match: "/comments?", json: strangerThreads},
 		{method: "POST", match: "/comments/AAAA1111/replies", once: true,
-			json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldBody + `"}`},
+			json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldSent + `"}`},
 	}}
 }
 
