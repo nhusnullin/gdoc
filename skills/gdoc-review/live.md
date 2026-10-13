@@ -71,14 +71,14 @@ somebody touches it again.
   it. This is the failed-poll rule again: that span is unread, not empty.
 
 When you are not sure, keep the cursor you already had. The worst case is a
-window you read twice, and a thread you already answered carries its 🤖 receipt.
+window you read twice, and a thread you already answered carries gdoc's receipt.
 
 ## What a window contains
 
 Everything with activity after the cursor. That includes gdoc's own replies:
 the binary reports what arrived and judges none of it, exactly as in Step 2.
 
-- A window that is only gdoc's own 🤖 replies coming back is not work. Say
+- A window that is only gdoc's own replies coming back is not work. Say
   nothing, take the new cursor, call again. It does not loop, because the new
   cursor is past those replies.
 - A thread whose `range` is `null` can be answered and cannot be proposed into.
