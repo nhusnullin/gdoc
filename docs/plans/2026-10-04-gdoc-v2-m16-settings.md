@@ -498,16 +498,26 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
 - Modify: `go/cmd/gdoc/help.go`, `go/cmd/gdoc/help_test.go`,
   `go/cmd/gdoc/testdata/pipe/help*.stdout.golden`, `go/cmd/gdoc/doc.go`
 
-- [ ] `helpReport` gains `Settings helpSettings` with `json:"settings"`:
+- [x] `helpReport` gains `Settings helpSettings` with `json:"settings"`:
       `{"mark": "...", "mark_from": "argument" | "file" | "default"}`. Always
       present, the empty mark included: `"mark": ""` is a fact.
-- [ ] Tests: `TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom` (one
+- [x] Tests: `TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom` (one
       subtest per source, values as literals),
       `TestHelpCarriesTheEmptyMarkAsAnEmptyString`,
       `TestHelpForOneCommandCarriesTheSettingsToo`.
-- [ ] The three help stdout goldens gain the field. Regenerate those three and
+- [x] The three help stdout goldens gain the field. Regenerate those three and
       nothing else; a ➕ note says so.
-- [ ] `git commit -m "feat(help): the settings in effect, and where each came from"`
+- [x] ➕ Regenerated, and only those three: `help.stdout.golden`,
+      `help-publish.stdout.golden` and `help-comments.stdout.golden`, each
+      gaining `"settings":{"mark":"⁘","mark_from":"default"}` and nothing else.
+      The three stderr goldens did not move, because the two flags are in no
+      entry of the object and the words a person reads already name them.
+- [x] ➕ `cmdHelp` takes the `settings.InEffect`, so both of its call sites
+      hand it over: `dispatch`'s `--help` reading in `main.go` and the table's
+      own `help` entry in `commands.go`, which reads it off `a.set`.
+- [x] ➕ The test helper reading the field is `settingsInObject`, not
+      `helpSettings`, which is the name the new struct in `help.go` takes.
+- [x] `git commit -m "feat(help): the settings in effect, and where each came from"`
 
 ### Task 13: propose and annotate write the mark in effect
 

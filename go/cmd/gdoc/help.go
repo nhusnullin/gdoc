@@ -14,16 +14,35 @@ import (
 	"strings"
 
 	"gdoc/internal/emit"
+	"gdoc/internal/settings"
 )
 
 // helpReport is what a caller reads. One shape for both forms, so a skill
 // written against `gdoc help publish` reads `gdoc help` without a second path.
 type helpReport struct {
 	Commands []helpCommand `json:"commands"`
+	// Settings is what this run would write into a thread, and where that
+	// value came from. It is always there, the empty mark included, because
+	// the question a colleague asks the help is which mark is in effect, and
+	// an absent field answers it with the default whatever the file says.
+	Settings helpSettings `json:"settings"`
 	// Update is what gdoc last heard about published releases, and it is
 	// absent for a build from a checkout, which names no release and so has
 	// nothing to compare. See notice.go for when it is fetched.
 	Update *updateFacts `json:"update,omitempty"`
+}
+
+// helpSettings is the settings in effect as JSON. MarkFrom is one of the three
+// words internal/settings gives, "argument", "file" or "default", and it is a
+// fact about where the value was read rather than advice about it. Mark has no
+// omitempty: the empty mark is a colleague's choice, and a skill that read an
+// absent field as "nothing was set" would write the default mark into a thread
+// somebody asked to keep clean.
+// TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom and
+// TestHelpCarriesTheEmptyMarkAsAnEmptyString.
+type helpSettings struct {
+	Mark     string `json:"mark"`
+	MarkFrom string `json:"mark_from"`
 }
 
 // helpCommand is one entry of the table as JSON. Words and Flags are always
@@ -73,7 +92,7 @@ type helpFlag struct {
 // TestARefusalKeepsItsObjectOnATerminal.
 //
 // TestHelpPrintsTheNoticeLineAndABlankLine.
-func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) emit.Result {
+func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, set settings.InEffect) emit.Result {
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
@@ -81,8 +100,12 @@ func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) e
 	facts, line, warns := notice(ctx)
 	writeHelp(errOut, matched, len(words) == 0, line, warns, json)
 	return emit.Result{
-		OK:       true,
-		Data:     helpReport{Commands: helpEntries(matched), Update: facts},
+		OK: true,
+		Data: helpReport{
+			Commands: helpEntries(matched),
+			Settings: helpSettings{Mark: set.Mark, MarkFrom: set.MarkFrom},
+			Update:   facts,
+		},
 		Warnings: warns,
 		Screen:   !json,
 	}

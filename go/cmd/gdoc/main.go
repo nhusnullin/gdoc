@@ -257,7 +257,7 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// flag restyle does not take, and no parser refusal changes.
 	if rest, asked := helpAsked(args); asked {
 		words, json := helpWords(rest)
-		return cmdHelp(ctx, words, json, errOut)
+		return cmdHelp(ctx, words, json, errOut, set)
 	}
 	c := match(args)
 	if c == nil {

@@ -753,6 +753,17 @@
 // the empty mark costs, because turning the mark off turns off the only record
 // of authorship a thread has: TestTheMarkFlagSaysWhatAnEmptyMarkCosts.
 //
+// What they resolved to is one field of the help object, settings, which
+// carries the mark in effect and which of the three sources it came from. A
+// colleague who is not sure which mark this run writes asks the binary rather
+// than reading a file and a line. The field is always there, and the empty
+// mark is printed as the empty string, because a skill that read an absent
+// field as "nothing was set" would write the default mark into a thread
+// somebody asked to keep clean:
+// TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom,
+// TestHelpCarriesTheEmptyMarkAsAnEmptyString and
+// TestHelpForOneCommandCarriesTheSettingsToo.
+//
 // # GDOC_CONFIG_DIR moves the config dir
 //
 // It is how every Go test avoids the real config, and it is read in one place,
