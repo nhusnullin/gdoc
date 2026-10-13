@@ -1,6 +1,9 @@
 package plaintext
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestMarkdownNamesWhatDocsWouldRenderLiterally is the rule both writers hold.
 // A thread renders what it is given, so each of these arrives as typed and
@@ -94,6 +97,165 @@ func TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText(t *testing.T) {
 	} {
 		if got := OpensWithRobot(c.text); got != c.want {
 			t.Errorf("OpensWithRobot(%q) = %v, want %v", c.text, got, c.want)
+		}
+	}
+}
+
+// The known list, as literals. It is the robot every old reply carries and the
+// two quieter marks beside it, and it is read back rather than read off the
+// constant, because a test that reads the constant follows it wherever
+// somebody moves it.
+//
+// The second half is the reason KnownMarks is a function: a caller handed the
+// one slice could sort it, trim it or write over an entry, and every later
+// reader of the list would inherit that. A new slice on every call is the
+// cheapest way to say the list is not anybody's to change.
+func TestTheKnownMarksAreTheRobotAndTheTwoDots(t *testing.T) {
+	want := []string{"🤖", "⁘", "∴"}
+	got := KnownMarks()
+	if len(got) != len(want) {
+		t.Fatalf("KnownMarks() = %q, want %q", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("KnownMarks()[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+	got[0] = "Bot:"
+	if again := KnownMarks(); again[0] != "🤖" {
+		t.Errorf("after a caller wrote over the list, KnownMarks()[0] = %q, want %q", again[0], "🤖")
+	}
+}
+
+// The default, as a literal. ⁘ is decision B3 of the M16 specification: the
+// robot stays known forever, because old replies carry it, and what a new run
+// writes is the quieter mark.
+func TestTheDefaultMarkIsTheFourDot(t *testing.T) {
+	if DefaultMark != "⁘" {
+		t.Errorf("DefaultMark = %q, want %q", DefaultMark, "⁘")
+	}
+}
+
+// What a mark may not be, and each refusal names what it found. A thread
+// renders what it is given, so a mark with a line break in it opens the words
+// on the second line, a mark Docs reads as markdown arrives as typed, and a
+// mark carrying one of gdoc's own markers says a thing about a document that
+// the thread turns into prose.
+//
+// The markdown rule is asked of the mark with words behind it, because the
+// heading arm is anchored to a line start: "#" alone is a number sign, and
+// "# the register" is a heading. A mark is what the words open with, so the
+// question is about the line the reader sees.
+func TestCheckMarkRefusesWhatAThreadWouldShowWrong(t *testing.T) {
+	for _, c := range []struct{ name, mark, names string }{
+		{"a line break", "⁘\n", "line break"},
+		{"bold", "**", "**"},
+		{"code", "`", "`"},
+		{"a heading", "#", "#"},
+		{"a marker of gdoc's", "{+", "{+"},
+		{"nine characters", "123456789", "eight"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			err := CheckMark(c.mark)
+			if err == nil {
+				t.Fatalf("CheckMark(%q) = nil, and a thread would show that mark wrong", c.mark)
+			}
+			if !strings.Contains(err.Error(), c.names) {
+				t.Errorf("CheckMark(%q) = %q, and it does not name %q", c.mark, err, c.names)
+			}
+		})
+	}
+}
+
+// The other direction, which is the half that keeps the setting usable. Each
+// known mark passes, the empty mark passes because writing the words alone is
+// a choice a colleague may make, a person's own word passes because decision
+// B2 says any value may be set, and eight characters pass because the ceiling
+// is counted in runes: eight four-dot marks are eight characters and
+// thirty-two bytes.
+func TestCheckMarkAcceptsEachKnownMarkTheEmptyMarkAndEightCharacters(t *testing.T) {
+	for _, mark := range []string{"🤖", "⁘", "∴", "", "Bot:", "12345678", "⁘⁘⁘⁘⁘⁘⁘⁘"} {
+		if err := CheckMark(mark); err != nil {
+			t.Errorf("CheckMark(%q) = %v, and that is a mark a thread shows as typed", mark, err)
+		}
+	}
+}
+
+// The empty mark writes the words alone, with no space in front of them. It is
+// what a colleague who wants no mark at all gets, and the price is in the
+// specification: their own replies read as a person's to everybody else's
+// gdoc.
+func TestAnEmptyMarkPrefixesNothing(t *testing.T) {
+	if got, want := Prefixed("", "the register is reviewed"), "the register is reviewed"; got != want {
+		t.Errorf("Prefixed(%q, ...) = %q, want %q", "", got, want)
+	}
+	if got, want := Prefixed("⁘", "the register is reviewed"), "⁘ the register is reviewed"; got != want {
+		t.Errorf("Prefixed(%q, ...) = %q, want %q", "⁘", got, want)
+	}
+}
+
+// The answers OpensWithMark gives. Every known mark is gdoc's, whichever
+// colleague's run wrote it, and the mark in effect is gdoc's as well when a
+// person set one of their own. A mark in the middle of a sentence is not the
+// text opening with it, and leading whitespace is stepped over, because a
+// reply whose first line is blank still opens with the mark.
+//
+// "Bot:" is decision B2's price in one line: it is this person's mark and
+// nobody else's, so the same text is gdoc's with that mark in effect and a
+// person's reply without it.
+func TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect(t *testing.T) {
+	for _, c := range []struct {
+		text, inEffect string
+		want           bool
+	}{
+		{"🤖 the register is reviewed", "⁘", true},
+		{"⁘ the register is reviewed", "⁘", true},
+		{"∴ the register is reviewed", "⁘", true},
+		{"⁘the register is reviewed", "⁘", true},
+		{"\n\n⁘ the register is reviewed", "⁘", true},
+		{"  \t🤖 the register is reviewed", "⁘", true},
+		{"⁘ the register is reviewed", "", true},
+		{"Bot: the register is reviewed", "Bot:", true},
+		{"Bot: the register is reviewed", "⁘", false},
+		{"Bot: the register is reviewed", "", false},
+		{"the register is reviewed", "⁘", false},
+		{"", "⁘", false},
+		{"Please ask ⁘ about it", "⁘", false},
+	} {
+		if got := OpensWithMark(c.text, c.inEffect); got != c.want {
+			t.Errorf("OpensWithMark(%q, %q) = %v, want %v", c.text, c.inEffect, got, c.want)
+		}
+	}
+}
+
+// One mark and one space come off, and no more. A body carrying two marks
+// keeps the second, because the caller asked for a mark to be taken off and
+// not for the words to be cleaned up, and a second mark is a thing the writer
+// then signs once rather than a thing that quietly disappears.
+//
+// Leading whitespace is stepped over for the same reason OpensWithMark steps
+// over it: the two are asked together, and a pair that disagreed about a body
+// whose first line is blank would say the mark is there and then leave it on.
+func TestCutMarkTakesOneMarkAndOneSpace(t *testing.T) {
+	for _, c := range []struct {
+		text, inEffect, want string
+		cut                  bool
+	}{
+		{"⁘ the register", "⁘", "the register", true},
+		{"🤖 the register", "⁘", "the register", true},
+		{"∴ the register", "", "the register", true},
+		{"⁘the register", "⁘", "the register", true},
+		{"⁘  the register", "⁘", " the register", true},
+		{"\n⁘ the register", "⁘", "the register", true},
+		{"⁘ ⁘ twice", "⁘", "⁘ twice", true},
+		{"Bot: the register", "Bot:", "the register", true},
+		{"Bot: the register", "⁘", "Bot: the register", false},
+		{"the register", "⁘", "the register", false},
+		{"", "⁘", "", false},
+	} {
+		got, cut := CutMark(c.text, c.inEffect)
+		if got != c.want || cut != c.cut {
+			t.Errorf("CutMark(%q, %q) = %q, %v, want %q, %v", c.text, c.inEffect, got, cut, c.want, c.cut)
 		}
 	}
 }

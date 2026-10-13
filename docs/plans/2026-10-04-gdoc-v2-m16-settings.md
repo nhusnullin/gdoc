@@ -337,22 +337,22 @@ constants stay until Task 15 moves the last caller.
 **Files:**
 - Modify: `go/internal/plaintext/plaintext.go`, `go/internal/plaintext/plaintext_test.go`
 
-- [ ] `DefaultMark = "⁘"`. `KnownMarks()` returns a new slice of `🤖`, `⁘`,
+- [x] `DefaultMark = "⁘"`. `KnownMarks()` returns a new slice of `🤖`, `⁘`,
       `∴` on every call, so no caller can change the list.
-- [ ] `CheckMark(v string) error` refuses, naming what it found: a line break
+- [x] `CheckMark(v string) error` refuses, naming what it found: a line break
       (`\r` or `\n`); markdown, asked of `v + " words"` so a `#` that would
       start a heading in front of the words is caught; one of gdoc's markers
       (`Marker`); more than eight characters, counted as runes. The empty
       string passes.
-- [ ] `Prefixed(mark, words string) string` is `mark + " " + words`, or
+- [x] `Prefixed(mark, words string) string` is `mark + " " + words`, or
       `words` alone for the empty mark.
-- [ ] `OpensWithMark(text, inEffect string) bool` steps over leading
+- [x] `OpensWithMark(text, inEffect string) bool` steps over leading
       whitespace and is true when the text opens with a known mark or with a
       non-empty mark in effect.
-- [ ] `CutMark(text, inEffect string) (string, bool)` takes a known mark or
+- [x] `CutMark(text, inEffect string) (string, bool)` takes a known mark or
       the mark in effect and one following space off the front, and says
       whether it did.
-- [ ] Tests: `TestTheKnownMarksAreTheRobotAndTheTwoDots`,
+- [x] Tests: `TestTheKnownMarksAreTheRobotAndTheTwoDots`,
       `TestTheDefaultMarkIsTheFourDot` (both literals),
       `TestCheckMarkRefusesWhatAThreadWouldShowWrong` (one subtest per
       refusal: `"⁘\n"`, `"**"`, `` "`" ``, `"#"`, a marker, `"123456789"`),
@@ -361,9 +361,9 @@ constants stay until Task 15 moves the last caller.
       `TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect` (a person's
       own mark `"Bot:"` is false with another mark in effect and true with it),
       `TestCutMarkTakesOneMarkAndOneSpace`.
-- [ ] The package comment gains "# The mark is a setting, and three marks are
+- [x] The package comment gains "# The mark is a setting, and three marks are
       always known", naming the tests above.
-- [ ] `git commit -m "feat(plaintext): the known marks, the default, and what a mark may be"`
+- [x] `git commit -m "feat(plaintext): the known marks, the default, and what a mark may be"`
 
 ### Task 10: internal/settings, the file and the order
 
