@@ -103,7 +103,9 @@ def commits(repo, branch, base="main"):
 def build_snapshot(cfg, repo, pid):
     logs = read_logs([Path(p) for p in cfg["logs"]])
     log = "\n".join(logs)
-    review_log = "\n".join(logs[1:])
+    # A resumed task phase writes a second task log, so a review log is one
+    # with no task iteration in it, not simply every log after the first.
+    review_log = "\n".join(l for l in logs if not re.search(r"^--- task iteration", l, re.M))
     running = alive(pid)
     tasks_meta = parse_tasks(plan_text(repo, cfg["branch"], cfg["plan"]))
     overrides = cfg.get("tasks", {})
@@ -124,10 +126,15 @@ def build_snapshot(cfg, repo, pid):
     for t in tasks_meta:
         o = overrides.get(str(t["n"]), {})
         commit = ""
-        if t["n"] - 1 < len(task_commits):
-            h, at, _ = task_commits[t["n"] - 1]
+        # Tasks up to the offset landed before the base, by hand: done by their
+        # checkboxes, with no commit on this branch to pair.
+        offset = int(cfg.get("offset", 0))
+        k = t["n"] - 1 - offset
+        if 0 <= k < len(task_commits):
+            h, at, _ = task_commits[k]
             commit = f"{h} · {at}"
-        if commit or (tasks_done and t["total"] and t["done"] == t["total"]):
+        landed_before = t["n"] <= offset and t["total"] and t["done"] == t["total"]
+        if commit or landed_before or (tasks_done and t["total"] and t["done"] == t["total"]):
             state = "done"
         elif not current_found and running and not tasks_done:
             state, current_found = "active", True
@@ -198,6 +205,7 @@ def main():
     ap.add_argument("--plan"); ap.add_argument("--branch"); ap.add_argument("--heading"); ap.add_argument("--title")
     ap.add_argument("--logs", nargs="*"); ap.add_argument("--warns"); ap.add_argument("--tasks"); ap.add_argument("--started")
     ap.add_argument("--base", help="the commit the run counts from, default main: for a plan written on the branch itself")
+    ap.add_argument("--offset", type=int, help="tasks that landed before the base, done by their checkboxes")
     ap.add_argument("--repo", default=str(Path(__file__).resolve().parents[2]))
     a = ap.parse_args()
 
@@ -217,6 +225,8 @@ def main():
             cfg["tasks"] = json.loads(Path(a.tasks).read_text())
         if a.base:
             cfg["base"] = a.base
+        if a.offset is not None:
+            cfg["offset"] = a.offset
         if html_path.exists():
             html_path.unlink()
         side.write_text(json.dumps(cfg, indent=2))
