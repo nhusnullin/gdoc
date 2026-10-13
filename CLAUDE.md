@@ -69,8 +69,7 @@ Two rules about the documents themselves:
 | `docs/plans/` | the milestone plans. `completed/` holds the ones that ran |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
-Secrets never live in this repo. On macOS the token is in the Keychain, item
-`gdoc`; settings and the Windows token are in `~/.config/gdoc-agent/`.
+Secrets live in `~/.config/gdoc-agent/`, never in this repo.
 
 ## The invariants
 

@@ -108,14 +108,13 @@ PowerShell lands with Windows, under the tag that ships it. Decided
 ## Auth
 
 OAuth only. The bundled Internal client carries two rules: the secret stays in
-version control, and the client stays User type Internal. Config lives in
-`~/.config/gdoc-agent/` on macOS and `%AppData%\gdoc-agent` on Windows, never
+version control, and the client stays User type Internal. Token and config live
+in `~/.config/gdoc-agent/` on macOS and `%AppData%\gdoc-agent` on Windows, never
 in a repo, and `GDOC_CONFIG_DIR` overrides both, which is what the tests use.
-The token lives beside it on Windows, and in the Keychain on macOS, one generic
-password item with service `gdoc`, read with user interaction switched off
-(changed 2026-10-04, DECISIONS.md). The settings file, `settings.yaml`, lives in
-the config folder; `--config <file>` names another, and an argument such as
-`--mark` beats the file.
+The settings file, `settings.yaml`, lives in the config folder; `--config
+<file>` names another, and an argument such as `--mark` beats the file. The
+token is never a setting (2026-10-04, DECISIONS.md; the token moves to the
+macOS Keychain in M17).
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs

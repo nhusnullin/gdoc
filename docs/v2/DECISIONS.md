@@ -84,7 +84,8 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
 | 2026-10-03 | A change the person approved is not a payload that landed | holds |
 | 2026-10-03 | On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object | holds |
-| 2026-10-04 | Settings, the mark in effect, and the token in the macOS Keychain | holds |
+| 2026-10-04 | Settings and the mark in effect | holds |
+| 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3699,23 +3700,22 @@ login itself when `auth.Login` went. The account:
 `TestOnlyAccountOfCallsAllowAccountRead`, `TestAccountOfHasTwoCallers`.
 `TestEverySkillPassesJSONToHelp` lands in the tag sitting, with the skills.
 
-## 2026-10-04. Settings, the mark in effect, and the token in the macOS Keychain.
+## 2026-10-04. Settings and the mark in effect.
 
 Nail's decisions, taken on 2026-10-03 and 2026-10-04 in the session that began
 with how a colleague's own skill uses gdoc. Serves principle 4, every word costs
 a reader's attention: a colleague picks a quieter mark than 🤖, and a refusal
-says what to do next. Serves 1 as well: no new module, CGO stays off, and the
-token stops being a plain file a backup or a sync tool copies. The
-specification is `docs/plans/2026-10-04-gdoc-v2-m16-settings-spec.md`, the
-task list `docs/plans/2026-10-04-gdoc-v2-m16-settings.md`, both released as
-v2.11.0.
+says what to do next. The specification is
+`docs/plans/2026-10-04-gdoc-v2-m16-settings-spec.md`, the task list
+`docs/plans/2026-10-04-gdoc-v2-m16-settings.md`, released as v2.11.0. The
+token in the Keychain was decided the same day and is the next entry; on
+2026-10-13 Nail moved it to its own milestone, so v2.11.0 leaves the token a
+file.
 
 **What was true before.** Everything gdoc wrote into a thread opened with 🤖
 and one space (2026-08-29). `propose` and `annotate` added it; `reply` refused a
 body that did not carry it, and chat told the model to type it. `by_gdoc` and
-chat's `robot_not_ours` read it. The token was `oauth-token.json` in the config
-folder, mode 0600, holding the refresh token and the client secret. gdoc had no
-settings file.
+chat's `robot_not_ours` read it. gdoc had no settings file.
 
 **The mark is a setting.** What opens everything gdoc writes into a thread is
 the mark in effect, then one space, then the words. Any value may be set,
@@ -3747,17 +3747,43 @@ argument of its own, `--mark <value>` first, and an argument beats the file,
 which beats the default. `help --json` says the settings in effect and where
 each came from. The token, its path and the update stamp are never settings.
 
+**What was rejected.**
+
+- A record of the replies gdoc wrote, to cover the empty mark.
+
+**Tests.** Part A: `TestNoRefusalNamesAPerson`,
+`TestFindSpanPlacesAQuoteInsideATableCell`,
+`TestAnUnknownFieldIsRefusedWithTheFieldsTheEntryTakes`,
+`TestTheFieldListsNameEveryTag`, `TestADeletionRefusalSaysToQuoteANeighbour`,
+`TestARunTimeRefusalNamesTheProposalByNumber`,
+`TestTheFromSummaryNamesEveryRequiredField`,
+`TestProposeReadsTheDocumentOnceBeforeTheFirstWrite`. Part B names its tests in
+the plan, and this list gains them as each task lands.
+
+## 2026-10-04. The token in the macOS Keychain, and releases signed on Nail's Mac.
+
+Nail's decisions of 2026-10-04, decided with M16 and built in M17: on
+2026-10-13 Nail moved them out of M16 so v2.11.0 does not wait for the
+certificate. Until M17 ships, as v2.12.0, the token is `oauth-token.json` in
+the config folder, mode 0600, holding the refresh token and the client secret,
+and nothing is signed. The specification is
+`docs/plans/2026-10-13-gdoc-v2-m17-keychain-spec.md`, the task list
+`docs/plans/2026-10-13-gdoc-v2-m17-keychain.md`. Serves: the token stops being
+a plain file a backup or a sync tool copies. Serves 1: no new module, CGO stays
+off.
+
 **The token, on macOS, lives in the Keychain.** One generic password item,
 service `gdoc`. The config folder holds no token file. gdoc reads with user
 interaction switched off, through `SecKeychainSetUserInteractionAllowed(false)`:
 measured on 2026-10-04, Apple's documented `kSecUseAuthenticationUI` flag still
 showed the access dialog and blocked, while the switch refused at once. An item
 gdoc may not read counts as no token, and the answer says to sign in. An
-existing `oauth-token.json` is deleted on the first run of v2.11.0, neither
-copied nor revoked. gdoc reaches the Keychain through a bridge of its own, one
-Go file and one assembly file, the way the standard library reaches the same
-framework; only that file may use `go:linkname` and `cgo_import_dynamic`.
-Windows is out of scope and keeps its file.
+existing `oauth-token.json` is deleted on the first run of the release that
+carries this, neither copied nor revoked. gdoc reaches the Keychain through a
+bridge of its own, one Go file and one assembly file, the way the standard
+library reaches the same framework; only that file may use `go:linkname` and
+`cgo_import_dynamic`. The token is never a setting. Windows is out of scope and
+keeps its file.
 
 **Releases are signed, on Nail's Mac.** An unsigned binary is a stranger to the
 Keychain after every build, so everybody would sign in again after every
@@ -3769,8 +3795,10 @@ runtime, without notarisation. The key stays on Nail's Mac and never goes to
 GitHub: CI drafts a stable release, Nail signs the two macOS binaries with one
 command that rebuilds the zips and `SHA256SUMS`, uploads them and publishes.
 Nightlies stay unsigned. Nail's own `make build` is signed with the same
-certificate. The Keychain never ships in an unsigned release; if the two-build
-test with the real certificate fails, Part C stops and comes back to Nail.
+certificate. The Keychain never ships in an unsigned stable release; if the
+two-build test with the real certificate fails, M17 stops and comes back to
+Nail. Whether a nightly may carry the Keychain unsigned is open, and is Nail's
+before M17's code.
 
 **What was rejected.**
 
@@ -3784,14 +3812,6 @@ test with the real certificate fails, Part C stops and comes back to Nail.
 - Revoking the old token at Google on the first run. It needs a new grant, and
   Nail chose deletion.
 - Narrowing the Drive scope. Not filed.
-- A record of the replies gdoc wrote, to cover the empty mark.
 - The signing key as a GitHub secret.
 
-**Tests.** Part A: `TestNoRefusalNamesAPerson`,
-`TestFindSpanPlacesAQuoteInsideATableCell`,
-`TestAnUnknownFieldIsRefusedWithTheFieldsTheEntryTakes`,
-`TestTheFieldListsNameEveryTag`, `TestADeletionRefusalSaysToQuoteANeighbour`,
-`TestARunTimeRefusalNamesTheProposalByNumber`,
-`TestTheFromSummaryNamesEveryRequiredField`,
-`TestProposeReadsTheDocumentOnceBeforeTheFirstWrite`. Parts B and C name theirs
-in the plan, and this list gains them as each task lands.
+**Tests.** Named by M17's plan as its tasks land.
