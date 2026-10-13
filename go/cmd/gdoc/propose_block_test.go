@@ -86,7 +86,7 @@ func TestProposeReadsABlockEntry(t *testing.T) {
 	stubWire(t, &fakeWire{answers: blockAnswers(t)})
 	from := tempFile(t, "proposals.json", oneBlock)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
+	got, code := runJSONSet(t, robotInEffect(), "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a block proposal must run: %v (exit %d)", got, code)
 	}
@@ -272,7 +272,7 @@ func TestProposeRunsABothKindsFileInFileOrder(t *testing.T) {
 			`{"quoted":"reviewed annually","replacement":"reviewed every six months",`+
 			`"why":"the policy says twice a year"}]`)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
+	got, code := runJSONSet(t, robotInEffect(), "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("a file of both kinds must run: %v (exit %d)", got, code)
 	}

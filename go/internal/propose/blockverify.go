@@ -1,6 +1,6 @@
 // This file is the three read-backs one block proposal gets: the block pending
 // inline as one suggestion, the preview view still reading as the document did,
-// and the robot comment anchored in the export. verify.go holds the words kind's
+// and the comment that was sent anchored in the export. verify.go holds the words kind's
 // own three, blockbatch.go holds the write these questions are asked about, and
 // doc.go states each rule with the test that pins it.
 

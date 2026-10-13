@@ -64,7 +64,7 @@ func cmdAnnotate(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	return runAnnotate(ctx, r, list)
+	return runAnnotate(ctx, r, list, a.set.Mark)
 }
 
 // annotationsFor turns the flags into the list this run will place, and refuses
@@ -92,14 +92,14 @@ func annotationsFor(a *args) ([]annotate.Annotation, error) {
 	case a.has("--body-file") && !a.has("--quote"):
 		return nil, fmt.Errorf("--body-file holds the reason for a comment, and --quote <text> says which words it goes on")
 	case a.has("--from"):
-		return readAnnotations(a.flags["--from"])
+		return readAnnotations(a.flags["--from"], a.set.Mark)
 	case a.has("--quote"):
 		why, err := readWhy(a.flags["--body-file"])
 		if err != nil {
 			return nil, err
 		}
 		one := annotate.Annotation{Quoted: a.flags["--quote"], Why: why}
-		if err := one.Check(); err != nil {
+		if err := one.Check(a.set.Mark); err != nil {
 			return nil, err
 		}
 		return []annotate.Annotation{one}, nil
@@ -131,7 +131,7 @@ func readWhy(path string) (string, error) {
 // misspelled `quoted` or `why` is caught a few lines down, because Check refuses
 // their empty values; `assignee` is optional, so a dropped one lands a comment
 // assigned to nobody, reported verified and warned about by nothing.
-func readAnnotations(path string) ([]annotate.Annotation, error) {
+func readAnnotations(path, mark string) ([]annotate.Annotation, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the annotations file could not be read: %w", err)
@@ -144,7 +144,7 @@ func readAnnotations(path string) ([]annotate.Annotation, error) {
 		return nil, fmt.Errorf("%s carries no annotations, so there is nothing to write", path)
 	}
 	for i, one := range out {
-		if err := one.Check(); err != nil {
+		if err := one.Check(mark); err != nil {
 			return nil, fmt.Errorf("%s annotations[%d]: %w", path, i, err)
 		}
 	}
@@ -158,7 +158,7 @@ func readAnnotations(path string) ([]annotate.Annotation, error) {
 // shortened: each entry answers `sent` for itself, so a stop in the middle says
 // what landed and what never left rather than leaving the skill to match the
 // envelope back against the file it wrote.
-func runAnnotate(ctx context.Context, r *reach, list []annotate.Annotation) emit.Result {
+func runAnnotate(ctx context.Context, r *reach, list []annotate.Annotation, mark string) emit.Result {
 	var warns []string
 	data := annotateData{DocumentID: r.id, Annotations: notPlaced(list)}
 
@@ -173,7 +173,7 @@ func runAnnotate(ctx context.Context, r *reach, list []annotate.Annotation) emit
 					"the time for this call ran out after %d of %d; nothing after that was sent. Call again with the rest",
 					i, len(list))}
 		}
-		res, err := annotate.Apply(context.WithoutCancel(ctx), r.session, r.id, one)
+		res, err := annotate.Apply(context.WithoutCancel(ctx), r.session, r.id, one, mark)
 		if err != nil {
 			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
 		}

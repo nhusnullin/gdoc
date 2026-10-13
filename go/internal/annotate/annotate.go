@@ -1,6 +1,6 @@
 // This file is the annotation and the write it becomes: Annotation, the shape
 // rule asked of every entry before the first one leaves the machine, Body, the
-// one place the robot is put in front of the words, Batch, the single request
+// one place the mark is put in front of the words, Batch, the single request
 // that goes out, and Apply, which reads, places, writes once and reads back.
 // verify.go holds the two read-backs and doc.go holds the package comment.
 
@@ -17,16 +17,6 @@ import (
 	"gdoc/internal/plaintext"
 	"gdoc/internal/propose"
 )
-
-// Prefix is what every comment gdoc writes opens with. It is the same mark
-// reply requires on a reply and propose puts on a reason, and it is the only
-// record of authorship there is: the Docs API cannot set an author, so
-// everything gdoc writes is signed by whoever is logged in.
-const Prefix = plaintext.Prefix
-
-// Robot is the mark without its space, which is what Check asks about. See
-// plaintext.Robot for why the check is not the whole prefix.
-const Robot = plaintext.Robot
 
 // Annotation is one comment, as the skill hands it over: the words to comment
 // on, why, and optionally who should answer for it.
@@ -53,7 +43,11 @@ const Fields = "An entry takes quoted, why and assignee."
 // Nothing here says whether the comment is worth making. The words arrive
 // written and the placement arrives quoted, and this package writes what it was
 // told.
-func (a Annotation) Check() error {
+//
+// mark is what this run writes in front of the reason, which is why a shape
+// rule needs it: the reason is refused for carrying a mark already, and the
+// mark in effect is one of the marks it may not carry.
+func (a Annotation) Check(mark string) error {
 	if a.Quoted == "" {
 		return errors.New("the annotation quotes no text, so there is nothing to comment on")
 	}
@@ -71,23 +65,27 @@ func (a Annotation) Check() error {
 	if why == "" {
 		return errors.New("the annotation carries no reason, and a comment that says nothing is one the reader has to guess at")
 	}
-	// Body writes the comment as Prefix + Why, so a reason that already opens
-	// with the robot lands as two of them. reply.Check requires the prefix and
-	// this one refuses it, which is the two writers disagreeing about who owns
-	// the marker: a caller carrying the reply convention over would sign the
-	// comment twice, and nothing downstream would catch it. The read-backs
-	// compare against the string that was sent, so both of them hold over a
-	// doubled mark in the one string that records who wrote the comment.
+	// Body writes the comment as the mark and the reason, so a reason that
+	// already opens with a mark lands as two of them. A caller carrying the
+	// reply convention over would sign the comment twice, and nothing
+	// downstream would catch it: the read-backs compare against the string that
+	// was sent, so both of them hold over a doubled mark in the one string that
+	// records who wrote the comment.
 	//
-	// The test is the robot itself rather than the robot and its space, because
-	// every near miss lands the same doubled mark: the robot with nothing
-	// behind it, a robot behind a newline, a robot behind a leading space.
-	if strings.HasPrefix(why, Robot) {
-		return fmt.Errorf("the reason for the annotation already opens with %q, and gdoc adds it; write the reason without it", Prefix)
+	// Every known mark is refused and not only the one this run writes, because
+	// a doubled mark is the same lie in any of them and a reason written for
+	// yesterday's default is the everyday case. plaintext.MarkOpening steps
+	// over leading whitespace and asks about the mark rather than the mark and
+	// its space, because every near miss lands the same doubled mark: the mark
+	// with nothing behind it, a mark behind a newline, a mark behind a leading
+	// space. It is propose.checkWhy's rule, on this writer.
+	if found, ok := plaintext.MarkOpening(a.Why, mark); ok {
+		return fmt.Errorf("the reason for the annotation already opens with %q, and gdoc adds it; write the reason without it", found)
 	}
 	// The reason is written into a comment thread, where Docs renders markdown
 	// literally. It is the same rule reply.Check and propose.Check hold, and it
-	// is asked of the reason alone rather than of Prefix + Why: the heading arm
+	// is asked of the reason alone rather than of the mark and the reason
+	// together: the heading arm
 	// is anchored to a line start, so the prefix in front of it would move the
 	// first character off offset zero and let a reason opening with "# "
 	// through.
@@ -102,11 +100,15 @@ func (a Annotation) Check() error {
 	return nil
 }
 
-// Body is what the comment holds: the robot, one space, and the reason as it
-// was given. It is the one place the mark is added, so a later reader asking
-// what gdoc wrote is asking about one string built in one room.
-func Body(why string) string {
-	return Prefix + why
+// Body is what the comment holds: the mark in effect, one space, and the reason
+// as it was given. It is the one place this package adds the mark, so a later
+// reader asking what gdoc wrote is asking about one string built in one room.
+//
+// The empty mark writes the words alone, which is what plaintext.Prefixed does
+// with it and what decision B2 of the v2 milestone 16 specification says it
+// costs: TestAnEmptyMarkWritesTheWordsAlone.
+func Body(why, mark string) string {
+	return plaintext.Prefixed(mark, why)
 }
 
 // Session is what this package needs of a session: the read the span is found
@@ -168,9 +170,9 @@ type Result struct {
 //
 // It fails only before the write. After the batch has gone out the comment
 // exists, and everything from there is reported rather than raised.
-func Apply(ctx context.Context, s Session, docID string, a Annotation) (Result, error) {
+func Apply(ctx context.Context, s Session, docID string, a Annotation, mark string) (Result, error) {
 	out := Result{Quoted: a.Quoted}
-	if err := a.Check(); err != nil {
+	if err := a.Check(mark); err != nil {
 		return out, err
 	}
 	d, err := docs.Fetch(ctx, s, docID)
@@ -189,7 +191,7 @@ func Apply(ctx context.Context, s Session, docID string, a Annotation) (Result, 
 		return out, err
 	}
 
-	body := Body(a.Why)
+	body := Body(a.Why, mark)
 	var answer propose.BatchAnswer
 	if err := s.PostJSON(ctx, propose.BatchURL(docID), json.RawMessage(Batch(r, body, a.Assignee)), &answer); err != nil {
 		return out, fmt.Errorf("the comment could not be written: %w", err)

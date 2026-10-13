@@ -215,7 +215,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	proposals, err := readProposals(from)
+	proposals, err := readProposals(from, a.set.Mark)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -258,11 +258,13 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
 	}
 	r := &reach{id: docID, session: s}
-	return runPropose(ctx, r, proposals, note, warns...)
+	return runPropose(ctx, r, proposals, note, a.set.Mark, warns...)
 }
 
-// runPropose is the run itself: read, then one proposal at a time.
-func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, seed ...string) emit.Result {
+// runPropose is the run itself: read, then one proposal at a time. mark is what
+// this run writes in front of every reason, which the proposal itself never
+// carries: it is a setting rather than a field in the file.
+func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, mark string, seed ...string) emit.Result {
 	warns := append([]string{}, seed...)
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
@@ -312,7 +314,7 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 		if i == 0 {
 			held = d
 		}
-		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held)
+		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held, mark)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			if res.Outcome == propose.OutcomeUnknown {
@@ -563,7 +565,7 @@ func readNote(path, docID string) (*notePath, error) {
 // kind, because they are fields it knows: Check does that, by name, and the
 // tests for it are TestProposeRefusesAnUnknownFieldInABlockEntry and
 // TestProposeRefusesABlockFieldWithNoKind.
-func readProposals(path string) ([]propose.Proposal, error) {
+func readProposals(path, mark string) ([]propose.Proposal, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the proposals file could not be read: %w", err)
@@ -580,7 +582,7 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	// them are in hand, and a third entry refused after the first two have
 	// landed is a run that half happened in somebody's document.
 	for i, p := range out {
-		if err := p.Check(); err != nil {
+		if err := p.Check(mark); err != nil {
 			return nil, fmt.Errorf("%s proposals[%d]: %w", path, i, err)
 		}
 		// The quote and the replacement are document text, and document text

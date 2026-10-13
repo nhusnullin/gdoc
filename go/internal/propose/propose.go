@@ -22,16 +22,6 @@ import (
 	"gdoc/internal/plaintext"
 )
 
-// Prefix is what every comment gdoc writes opens with. It is the same mark
-// reply puts on a reply, and it is the only record of authorship there is: the
-// Docs API cannot set an author, so everything gdoc writes is signed by
-// whoever is logged in, and the robot is what tells the two apart.
-const Prefix = plaintext.Prefix
-
-// Robot is the mark without its space, which is what Check asks about. See
-// plaintext.Robot for why the check is not the prefix.
-const Robot = plaintext.Robot
-
 // The two kinds of proposal. The words kind names no kind at all, so every
 // proposals file written before the block kind existed still reads: a caller
 // that never heard of a kind sends the zero value, and the zero value is the
@@ -82,12 +72,16 @@ const Fields = "A words entry takes quoted, replacement, why and assignee. " +
 // than read as the words kind: dispatching a misspelled "blcok" down the words
 // path would refuse it for quoting no text, which names nothing the author did
 // wrong.
-func (p Proposal) Check() error {
+//
+// mark is what this run writes in front of the reason, which is why a shape
+// rule needs it: the reason is refused for carrying a mark already, and the
+// mark in effect is one of the marks it may not carry.
+func (p Proposal) Check(mark string) error {
 	switch p.Kind {
 	case KindWords:
-		return p.checkWords()
+		return p.checkWords(mark)
 	case KindBlock:
-		return p.checkBlock()
+		return p.checkBlock(mark)
 	default:
 		return fmt.Errorf("the proposal names the kind %q, and the kinds are the words kind, which names no kind at all, and %q", p.Kind, KindBlock)
 	}
@@ -100,7 +94,7 @@ func (p Proposal) Check() error {
 // which is a body Docs rejects, and inlineHolds looks for an insertion that a
 // plain deletion never makes, so the write could never verify either. A
 // milestone that wants a deletion-only proposal gives it its own request shape.
-func (p Proposal) checkWords() error {
+func (p Proposal) checkWords(mark string) error {
 	// A block field on an entry naming no kind is refused first, and by name.
 	// The decoder cannot catch it: both kinds are read into the one struct, so
 	// `after` and `content` are fields it knows and an entry that names no kind
@@ -168,13 +162,13 @@ func (p Proposal) checkWords() error {
 			"the replacement %q carries U+%04X, which the Docs API strips out of an inserted text: "+
 				"gdoc counts the characters it sends to place everything after them, so take it out and write the proposal again", p.Replacement, r)
 	}
-	return p.checkWhy()
+	return p.checkWhy(mark)
 }
 
 // checkWhy is the rule both kinds share, because both write the reason into a
-// comment thread as Prefix + Why and nothing downstream would catch what it
+// comment thread under the mark and nothing downstream would catch what it
 // refuses.
-func (p Proposal) checkWhy() error {
+func (p Proposal) checkWhy(mark string) error {
 	// Both tests read the reason with its surrounding space taken off, which is
 	// the same shape reply.Check reads a body in. A reason of nothing but spaces
 	// is a comment that is a bare signature, and sameWords normalises whitespace
@@ -184,28 +178,29 @@ func (p Proposal) checkWhy() error {
 	if why == "" {
 		return errors.New("the proposal carries no reason, and a suggestion nobody explained is one the reader has to guess at")
 	}
-	// Batch writes the comment as Prefix + Why, so a reason that already opens
-	// with the robot lands as two of them. reply.Check requires the prefix and
-	// this one refuses it, which is the two writers disagreeing about who owns
-	// the marker: a caller carrying the reply convention over would sign the
-	// comment twice, and nothing downstream would catch it. docxHolds compares
-	// against the string that was sent, so all three read-backs pass and the
-	// run reports verified: true over a doubled mark in the one string that
-	// records who wrote the comment.
+	// Batch writes the comment as the mark and the reason, so a reason that
+	// already opens with a mark lands as two of them. A caller carrying the
+	// reply convention over would sign the comment twice, and nothing
+	// downstream would catch it: docxHolds compares against the string that was
+	// sent, so all three read-backs pass and the run reports verified: true
+	// over a doubled mark in the one string that records who wrote the comment.
 	//
-	// The test is the robot itself rather than the robot and its space, because
-	// every near miss lands the same doubled mark: "\U0001F916the policy", a robot
-	// behind a newline, a robot behind a leading space. reply_test names those
-	// spellings one by one, and refusing only the exact prefix here would let
-	// each of them through the writer that adds the mark.
-	if strings.HasPrefix(why, Robot) {
-		return fmt.Errorf("the reason for the proposal already opens with %q, and gdoc adds it; write the reason without it", Prefix)
+	// Every known mark is refused and not only the one this run writes, because
+	// a doubled mark is the same lie in any of them and a reason written for
+	// yesterday's default is the everyday case. plaintext.MarkOpening steps
+	// over leading whitespace and asks about the mark rather than the mark and
+	// its space, because every near miss lands the same doubled mark: the mark
+	// with nothing behind it, a mark behind a newline, a mark behind a leading
+	// space.
+	if found, ok := plaintext.MarkOpening(p.Why, mark); ok {
+		return fmt.Errorf("the reason for the proposal already opens with %q, and gdoc adds it; write the reason without it", found)
 	}
 	// The reason is written into a comment thread, where Docs renders markdown
 	// literally. It is the same rule reply.Check holds over a reply, and it is
 	// held here because this is the other place gdoc writes into a thread.
 	//
-	// The rule is asked of the reason alone, never of Prefix + Why. The heading
+	// The rule is asked of the reason alone, never of the mark and the reason
+	// together. The heading
 	// arm is anchored to a line start, so the prefix in front of it moves the
 	// first character of the reason off offset zero and a reason opening with
 	// "# " passes: the comment then lands with the hash rendered literally,
@@ -315,8 +310,8 @@ type Session interface {
 // The dispatch is here so the command has one call. A proposals file holds both
 // kinds in one list, and the loop that walks it asks nothing about which kind
 // an entry is.
-func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
-	return ApplyFrom(ctx, s, docID, p, nil)
+func Apply(ctx context.Context, s Session, docID string, p Proposal, mark string) (Result, error) {
+	return ApplyFrom(ctx, s, docID, p, nil, mark)
 }
 
 // ApplyFrom is Apply placed from a read the caller already holds, which must
@@ -329,11 +324,11 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal) (Result, er
 // read, because the one before it moved the ground:
 // TestProposeReadsTheDocumentOnceBeforeTheFirstWrite and
 // TestEveryLaterProposalStillReadsFresh in cmd/gdoc.
-func ApplyFrom(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document) (Result, error) {
+func ApplyFrom(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document, mark string) (Result, error) {
 	if p.Kind == KindBlock {
-		return applyBlock(ctx, s, docID, p, d)
+		return applyBlock(ctx, s, docID, p, d, mark)
 	}
-	return applyWords(ctx, s, docID, p, d)
+	return applyWords(ctx, s, docID, p, d, mark)
 }
 
 // applyWords is the words kind's own sequence: read, find the quote, write
@@ -345,9 +340,9 @@ func ApplyFrom(ctx context.Context, s Session, docID string, p Proposal, d *docs
 //
 // It fails only before the write. After the batch has gone out the change
 // exists, and everything from there is reported rather than raised.
-func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document) (Result, error) {
+func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document, mark string) (Result, error) {
 	out := Result{Quoted: p.Quoted, Replacement: p.Replacement}
-	if err := p.Check(); err != nil {
+	if err := p.Check(mark); err != nil {
 		return out, err
 	}
 	d, err := readUnlessHeld(ctx, s, docID, d)
@@ -358,11 +353,12 @@ func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *doc
 	if err != nil {
 		return out, err
 	}
-	if err := send(ctx, s, docID, Batch(r, p), &out); err != nil {
+	comment := plaintext.Prefixed(mark, p.Why)
+	if err := send(ctx, s, docID, Batch(r, p, mark), &out); err != nil {
 		return out, err
 	}
 
-	checks, ids, warns := Verify(ctx, s, docID, r, p, Prefix+p.Why)
+	checks, ids, warns := Verify(ctx, s, docID, r, p, comment)
 	out.Checks = checks
 	out.SuggestionIDs = ids
 	out.Warnings = append(out.Warnings, warns...)
@@ -508,13 +504,13 @@ const stateAllSaved = "ALL_SAVED"
 // The insertComment shape is measured rather than documented: content and range
 // at the top of the request, with assigneeEmailAddress beside them. Every other
 // spelling answers "Cannot find field" (DECISIONS.md, 2026-08-29).
-func Batch(r docs.Range, p Proposal) []byte {
+func Batch(r docs.Range, p Proposal, mark string) []byte {
 	comment := map[string]any{
 		"range": map[string]any{
 			"startIndex": r.Start,
 			"endIndex":   r.Start + utf16Len(p.Replacement),
 		},
-		"content": Prefix + p.Why,
+		"content": plaintext.Prefixed(mark, p.Why),
 	}
 	if p.Assignee != "" {
 		comment["assigneeEmailAddress"] = p.Assignee

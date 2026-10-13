@@ -32,6 +32,15 @@ func defaultsInEffect() settings.InEffect {
 	return settings.InEffect{Mark: "⁘", MarkFrom: settings.FromDefault}
 }
 
+// robotInEffect is a run that writes the robot, named on the line. It is what
+// the tests over the recorded comment fixtures hand to run: those fixtures
+// carry the robot, because they were recorded when the robot was the only mark
+// there was, and a read-back is asked about the string that was sent. So the
+// test says which mark it means rather than inheriting the default.
+func robotInEffect() settings.InEffect {
+	return settings.InEffect{Mark: "🤖", MarkFrom: settings.FromArgument}
+}
+
 // quietPlain reaches nothing and says so without failing the test. It is what
 // a run that may touch GitHub is handed where the reach is not what is being
 // measured: refusingPlain of notice_test fails the test instead, which is the

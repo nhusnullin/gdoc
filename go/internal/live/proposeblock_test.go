@@ -276,7 +276,7 @@ func blockBodyText(t *testing.T, ctx context.Context, s *gapi.Session, docID, wh
 // measured shape still holds today.
 func proposeBlock(t *testing.T, ctx context.Context, s *gapi.Session, docID, name string, p propose.Proposal) propose.Result {
 	t.Helper()
-	result, err := propose.Apply(ctx, s, docID, p)
+	result, err := propose.Apply(ctx, s, docID, p, liveMark)
 	for _, w := range result.Warnings {
 		t.Logf("%s warning: %s", name, w)
 	}

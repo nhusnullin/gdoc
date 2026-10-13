@@ -257,7 +257,7 @@ func TestAnnotatePlacesEachEntryAndVerifiesIt(t *testing.T) {
 	f := stubWire(t, &fakeWire{answers: annotateAnswers(t)})
 	from := tempFile(t, "annotations.json", readFixture(t, "annotations.json"))
 
-	got, code := runJSON(t, "annotate", annotateDocID, "--from", from)
+	got, code := runJSONSet(t, robotInEffect(), "annotate", annotateDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("two annotations that landed: %v (exit %d)", got, code)
 	}
@@ -318,7 +318,7 @@ func TestAnnotateByHandPlacesOne(t *testing.T) {
 	f := stubWire(t, &fakeWire{answers: annotateAnswers(t)})
 	body := tempFile(t, "why.txt", "The 2026 register says quarterly.\n")
 
-	got, code := runJSON(t, "annotate", annotateDocID, "--quote", "reviewed annually", "--body-file", body)
+	got, code := runJSONSet(t, robotInEffect(), "annotate", annotateDocID, "--quote", "reviewed annually", "--body-file", body)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("one annotation by hand: %v (exit %d)", got, code)
 	}

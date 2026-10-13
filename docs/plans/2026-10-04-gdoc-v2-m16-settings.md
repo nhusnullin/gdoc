@@ -529,23 +529,44 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   packages that state the sent comment
 - Create: `go/internal/propose/mark_test.go`, `go/internal/annotate/mark_test.go`
 
-- [ ] `Batch`, `BlockBatch`, the apply functions and `annotate.Body` take the
+- [x] `Batch`, `BlockBatch`, the apply functions and `annotate.Body` take the
       mark and write `plaintext.Prefixed(mark, why)`. The read-backs compare
       against that same string. `cmd/gdoc` passes `a.settings.Mark`.
-- [ ] The reason check refuses a reason opening with a known mark or with the
+- [x] The reason check refuses a reason opening with a known mark or with the
       mark in effect (`OpensWithMark`), naming the mark it found and saying
       gdoc adds it.
-- [ ] `propose.Prefix`, `propose.Robot`, `annotate.Prefix` and
+- [x] `propose.Prefix`, `propose.Robot`, `annotate.Prefix` and
       `annotate.Robot` are removed.
-- [ ] Tests: `TestProposeWritesTheMarkInEffect` and
+- [x] Tests: `TestProposeWritesTheMarkInEffect` and
       `TestAnnotateWritesTheMarkInEffect` (with `"∴"`),
       `TestAnEmptyMarkWritesTheWordsAlone` (one subtest per writer),
       `TestAReasonOpeningWithAnyKnownMarkIsRefused` (one subtest per known
       mark and the mark in effect, in both packages),
       `TestTheReadBackComparesTheMarkThatWasSent`.
-- [ ] Existing tests that state `"🤖 "` in a sent comment pass the mark
+- [x] Existing tests that state `"🤖 "` in a sent comment pass the mark
       explicitly as `"🤖"`; none is loosened.
-- [ ] `git commit -m "feat(propose,annotate): the mark in effect, or the words alone"`
+- [x] ➕ `OpensWithMark` cannot name the mark it matched, and the refusal has to
+      name the character the reason carries rather than the one this run writes.
+      So `plaintext.MarkOpening(text, inEffect) (string, bool)` was added and
+      `OpensWithMark` and `CutMark` now ask it, which keeps the reading side one
+      loop instead of three: `TestMarkOpeningNamesTheMarkItFound`, with the
+      package comment naming it beside the other two.
+- [x] ➕ `Proposal.Check`, `Annotation.Check` and `checkWhy` take the mark, so
+      `cmd/gdoc`'s `readProposals`, `readAnnotations`, `annotationsFor`,
+      `runPropose` and `runAnnotate` take it too and read it off `a.set.Mark`.
+      The whole-file check still happens before a session is opened.
+- [x] ➕ The cmd tests over the recorded comment fixtures, which carry the
+      robot, say so through `runJSONSet(t, robotInEffect(), ...)`: a new
+      `robotInEffect` beside `defaultsInEffect`, and `runJSONSet` /
+      `runJSONSetCtx` beside `runJSON`. Seven tests moved to it; nothing was
+      loosened. The live tests name `liveMark = "⁘"`, the default a real write
+      now carries.
+- [x] ➕ `chatWith` in the tests was building a session with no settings, so a
+      chat write sent the words with no mark at all while the CLI sent the
+      default: `TestTheSameAnswerAsTheCLI` caught it. It now carries
+      `defaultsInEffect()`, as `newMCPChat` does in production, through a new
+      `chatWithSettings`.
+- [x] `git commit -m "feat(propose,annotate): the mark in effect, or the words alone"`
 
 ### Task 14: reply adds the mark itself
 

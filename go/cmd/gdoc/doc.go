@@ -745,6 +745,12 @@
 // handed it once at its start, so every tool call of one chat writes the same
 // mark: TestTheMcpSessionHandsItsSettingsToEveryCall.
 //
+// The commands that write into a thread read it off those args and hand it to
+// the writer: propose and annotate pass it to the shape check, which refuses a
+// reason that already carries a mark, and to the write, which puts it in front
+// of the reason. Nothing is remembered between runs, so the mark a comment
+// carries is the mark the run that wrote it was given.
+//
 // They are in no usage line and in no entry of the help object, because they
 // are not one command's flags. They are in the help a person reads, under
 // their own heading in each command's page and once in the grouped table, and

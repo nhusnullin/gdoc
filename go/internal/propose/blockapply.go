@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/plaintext"
 )
 
 // checkBlock is the block kind's shape rule, asked of the proposal alone.
@@ -31,7 +32,7 @@ import (
 // ApplyBlock reads it again because it needs the paragraphs rather than the
 // answer, and eight kilobytes parsed twice costs nothing.
 // TestProposeRefusesBlockContentBeforeAnythingIsSent is the pin.
-func (p Proposal) checkBlock() error {
+func (p Proposal) checkBlock(mark string) error {
 	if err := p.checkPlacement(); err != nil {
 		return err
 	}
@@ -56,7 +57,7 @@ func (p Proposal) checkBlock() error {
 	if _, err := ParseContent(p.Content); err != nil {
 		return err
 	}
-	return p.checkWhy()
+	return p.checkWhy(mark)
 }
 
 // checkPlacement is the one form rule: a block goes after one paragraph, or in
@@ -92,15 +93,15 @@ func (p Proposal) checkPlacement() error {
 //
 // It fails only before the write. After the batch has gone out the block is in
 // the document, and everything from there is reported rather than raised.
-func ApplyBlock(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
-	return applyBlock(ctx, s, docID, p, nil)
+func ApplyBlock(ctx context.Context, s Session, docID string, p Proposal, mark string) (Result, error) {
+	return applyBlock(ctx, s, docID, p, nil, mark)
 }
 
 // applyBlock is ApplyBlock placed from a read the caller may already hold; see
 // ApplyFrom.
-func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *docs.Document) (Result, error) {
+func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *docs.Document, mark string) (Result, error) {
 	out := Result{After: p.After, ReplaceFrom: p.ReplaceFrom, ReplaceTo: p.ReplaceTo}
-	if err := p.Check(); err != nil {
+	if err := p.Check(mark); err != nil {
 		return out, err
 	}
 	// The content is read before the document, because it needs no document: a
@@ -117,11 +118,12 @@ func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *
 	if err != nil {
 		return out, err
 	}
-	if err := send(ctx, s, docID, BlockBatch(place, content, p.Why, p.Assignee), &out); err != nil {
+	comment := plaintext.Prefixed(mark, p.Why)
+	if err := send(ctx, s, docID, BlockBatch(place, content, p.Why, p.Assignee, mark), &out); err != nil {
 		return out, err
 	}
 
-	checks, ids, warns := VerifyBlock(ctx, s, docID, place, content, Prefix+p.Why)
+	checks, ids, warns := VerifyBlock(ctx, s, docID, place, content, comment)
 	out.Checks = checks
 	out.SuggestionIDs = ids
 	out.Warnings = append(out.Warnings, warns...)

@@ -48,12 +48,17 @@
 // TestCheckMarkAcceptsEachKnownMarkTheEmptyMarkAndEightCharacters and
 // TestAnEmptyMarkPrefixesNothing.
 //
-// Prefixed is the one writer of the mark, OpensWithMark the one reader, and
-// CutMark takes one mark and one space off a body that arrived with one
-// already. The reader asks the known list plus the mark in effect, so a
-// colleague who picked their own mark still recognises their own replies:
-// TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect and
-// TestCutMarkTakesOneMarkAndOneSpace.
+// Prefixed is the one writer of the mark, and the reading side is one loop
+// asked three ways: MarkOpening names the mark a text opens with, OpensWithMark
+// is that answer as a yes or no, and CutMark takes one mark and one space off a
+// body that arrived with one already. The reader asks the known list plus the
+// mark in effect, so a colleague who picked their own mark still recognises
+// their own replies: TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect,
+// TestMarkOpeningNamesTheMarkItFound and TestCutMarkTakesOneMarkAndOneSpace.
+//
+// A writer that refuses a reason already carrying a mark asks MarkOpening, so
+// the refusal names the character it found rather than the mark this run would
+// have written.
 //
 // # Robot and Prefix are two constants, and a check asks about Robot
 //
@@ -263,13 +268,29 @@ func Prefixed(mark, words string) string {
 //
 // TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect pins the answers.
 func OpensWithMark(text, inEffect string) bool {
+	_, found := MarkOpening(text, inEffect)
+	return found
+}
+
+// MarkOpening is the same question answered with the mark itself: the one the
+// text opens with, or the empty string and false when it opens with none. The
+// longest wins where two of them match, for the reason CutMark takes the
+// longest off.
+//
+// It is here because a writer refusing a reason that already carries a mark has
+// to say which mark it found, and a refusal naming the wrong character is one a
+// colleague cannot act on. OpensWithMark and CutMark are both this question
+// asked a shorter way, so all three answer from one loop rather than three:
+// TestMarkOpeningNamesTheMarkItFound.
+func MarkOpening(text, inEffect string) (string, bool) {
 	trimmed := strings.TrimLeft(text, " \t\r\n")
+	longest := ""
 	for _, m := range marks(inEffect) {
-		if strings.HasPrefix(trimmed, m) {
-			return true
+		if strings.HasPrefix(trimmed, m) && len(m) > len(longest) {
+			longest = m
 		}
 	}
-	return false
+	return longest, longest != ""
 }
 
 // CutMark takes one mark and one following space off the front, and says
@@ -282,17 +303,12 @@ func OpensWithMark(text, inEffect string) bool {
 // signs once, rather than one that quietly loses words nobody looked at:
 // TestCutMarkTakesOneMarkAndOneSpace.
 func CutMark(text, inEffect string) (string, bool) {
-	trimmed := strings.TrimLeft(text, " \t\r\n")
-	longest := ""
-	for _, m := range marks(inEffect) {
-		if strings.HasPrefix(trimmed, m) && len(m) > len(longest) {
-			longest = m
-		}
-	}
-	if longest == "" {
+	mark, found := MarkOpening(text, inEffect)
+	if !found {
 		return text, false
 	}
-	return strings.TrimPrefix(strings.TrimPrefix(trimmed, longest), " "), true
+	trimmed := strings.TrimLeft(text, " \t\r\n")
+	return strings.TrimPrefix(strings.TrimPrefix(trimmed, mark), " "), true
 }
 
 // marks is the list a reader asks: the known three, and the mark in effect when

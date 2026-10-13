@@ -58,7 +58,7 @@ const detachedXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 func TestVerifiedIsBothRoutesHolding(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestAListingWithoutTheIdIsAWarningNotAnError(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 	f.listing = []byte(`{"comments": []}`)
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("a read-back that did not hold was raised rather than reported: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestAListingCarryingOtherWordsIsAWarning(t *testing.T) {
 	f.listing = []byte(`{"comments": [{"id": "AAACThReAd", "content": "something else entirely",
 		"quotedFileContent": {"value": "reviewed annually"}}]}`)
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestAListingAnchoredToOtherWordsIsAWarning(t *testing.T) {
 	f.listing = []byte(`{"comments": [{"id": "AAACThReAd", "content": "🤖 The 2026 register says quarterly.",
 		"quotedFileContent": {"value": "the operations team"}}]}`)
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestAnExportThatDoesNotAnchorTheCommentIsAWarning(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 	f.export = exportOf(t, detachedXML, string(fixture(t, "comments.xml")))
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestAnExportAnchoredToOtherWordsIsAWarning(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 	f.export = exportOf(t, elsewhereXML, string(fixture(t, "comments.xml")))
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestAReadBackThatFailedIsAWarningNamingTheRoute(t *testing.T) {
 			f := script(t, "before.json", "batch-saved.json")
 			f.failAt[c.at] = errors.New("the network went away")
 
-			res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+			res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 			if err != nil {
 				t.Fatalf("a read-back that could not be made was raised rather than reported: %v", err)
 			}
@@ -297,7 +297,7 @@ func TestAWriteWithNoCommentIdIsNotSearchedFor(t *testing.T) {
 func TestVerifyReadsTheTwoRoutesTheWriteDidNotGoOutOn(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 
-	if _, err := Apply(context.Background(), f, testDocID, testAnnotation); err != nil {
+	if _, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	var read []string

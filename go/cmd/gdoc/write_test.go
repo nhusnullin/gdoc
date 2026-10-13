@@ -464,7 +464,7 @@ func TestProposeWritesTheSuggestionAndVerifiesIt(t *testing.T) {
 	stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
 	from := tempFile(t, "proposals.json", oneProposal)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
+	got, code := runJSONSet(t, robotInEffect(), "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("propose: %v (exit %d)", got, code)
 	}

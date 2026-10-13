@@ -56,7 +56,7 @@ func TestCheckRefusesEachBadShapeByName(t *testing.T) {
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			err := c.a.Check()
+			err := c.a.Check("🤖")
 			if err == nil {
 				t.Fatalf("Check() of %+v gave no error, and %s is refused", c.a, c.name)
 			}
@@ -75,7 +75,7 @@ func TestCheckAcceptsAPlainAnnotation(t *testing.T) {
 		{Quoted: "the Cyprus entity", Why: "Named twice with two spellings.", Assignee: "x@example.com"},
 		{Quoted: "5 * 3 units", Why: "See issue #28 for the rest."},
 	} {
-		if err := a.Check(); err != nil {
+		if err := a.Check("🤖"); err != nil {
 			t.Errorf("Check() of %+v said %q, and there is nothing wrong with it", a, err)
 		}
 	}
@@ -86,7 +86,7 @@ func TestCheckAcceptsAPlainAnnotation(t *testing.T) {
 // wherever somebody moves it. The mark is the only record of authorship a
 // comment has.
 func TestBodyIsTheRobotAndTheWhy(t *testing.T) {
-	if got, want := Body("The register."), "🤖 The register."; got != want {
+	if got, want := Body("The register.", "🤖"), "🤖 The register."; got != want {
 		t.Errorf("Body(%q) = %q, want %q", "The register.", got, want)
 	}
 }
@@ -281,7 +281,7 @@ func TestTheGuardCarriesTheAnnotateBatchOnAHandedInDocument(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw := Batch(span(quoteStart, quoteEnd), Body(testAnnotation.Why), "")
+	raw := Batch(span(quoteStart, quoteEnd), Body(testAnnotation.Why, "🤖"), "")
 
 	if err := p.Judge("POST", u, raw); err != nil {
 		t.Fatalf("the guard refused the batch annotate really builds: %v", err)
@@ -292,7 +292,7 @@ func TestTheGuardCarriesTheAnnotateBatchOnAHandedInDocument(t *testing.T) {
 // of. Take writeControl out and the identical request is a direct edit, which
 // the guard refuses on a document gdoc was handed.
 func TestTheGuardRefusesTheSameBatchWithoutSuggestMode(t *testing.T) {
-	body := decodeBatch(t, Batch(span(quoteStart, quoteEnd), Body(testAnnotation.Why), ""))
+	body := decodeBatch(t, Batch(span(quoteStart, quoteEnd), Body(testAnnotation.Why, "🤖"), ""))
 	delete(body, "writeControl")
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -320,7 +320,7 @@ func TestTheGuardRefusesTheSameBatchWithoutSuggestMode(t *testing.T) {
 func TestApplySendsTheBatchAtTheSpanItFound(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 
-	if _, err := Apply(context.Background(), f, testDocID, testAnnotation); err != nil {
+	if _, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(f.calls) == 0 || f.calls[0].method != "GET" {
@@ -333,7 +333,7 @@ func TestApplySendsTheBatchAtTheSpanItFound(t *testing.T) {
 	if sent[0].url != propose.BatchURL(testDocID) {
 		t.Errorf("the write went to %q", sent[0].url)
 	}
-	want := string(Batch(span(quoteStart, quoteEnd), Body(testAnnotation.Why), ""))
+	want := string(Batch(span(quoteStart, quoteEnd), Body(testAnnotation.Why, "🤖"), ""))
 	if got := string(sent[0].body); got != want {
 		t.Errorf("the body sent was\n%s\nwant\n%s", got, want)
 	}
@@ -345,7 +345,7 @@ func TestApplySendsTheBatchAtTheSpanItFound(t *testing.T) {
 func TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite(t *testing.T) {
 	f := script(t, "two-tabs.json", "batch-saved.json")
 
-	_, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	_, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err == nil {
 		t.Fatal("a two-tab document was written to")
 	}
@@ -377,7 +377,7 @@ func TestApplyReadsTheCommentIdFromTheThreadFirst(t *testing.T) {
 			// so the read-backs hold and the only thing under test is the id.
 			f.listing = fixture(t, c.listing)
 
-			res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+			res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -404,7 +404,7 @@ func TestApplyReadsTheCommentIdFromTheThreadFirst(t *testing.T) {
 func TestAnUpdateStateOtherThanSavedIsAWarning(t *testing.T) {
 	f := script(t, "before.json", "batch-failed.json")
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err != nil {
 		t.Fatalf("an answer saying the comment was lost was raised rather than reported: %v", err)
 	}
@@ -442,7 +442,7 @@ func TestApplyRefusesBeforeTheWriteAndSendsNothing(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			f := script(t, "before.json", "batch-saved.json")
 
-			_, err := Apply(context.Background(), f, testDocID, c.a)
+			_, err := Apply(context.Background(), f, testDocID, c.a, "🤖")
 			if err == nil {
 				t.Fatalf("%s was written", c.name)
 			}
@@ -463,7 +463,7 @@ func TestApplyRefusesBeforeTheWriteAndSendsNothing(t *testing.T) {
 func TestApplyRefusesABadShapeBeforeReadingAnything(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 
-	_, err := Apply(context.Background(), f, testDocID, Annotation{Quoted: "", Why: "so"})
+	_, err := Apply(context.Background(), f, testDocID, Annotation{Quoted: "", Why: "so"}, "🤖")
 	if err == nil {
 		t.Fatal("an annotation quoting nothing was written")
 	}
@@ -479,7 +479,7 @@ func TestAGuardRefusalIsAnErrorAndTheWireSawNoBatch(t *testing.T) {
 	f := script(t, "before.json", "batch-saved.json")
 	f.failAt[1] = errors.New("refused by policy: document was not given to this command")
 
-	res, err := Apply(context.Background(), f, testDocID, testAnnotation)
+	res, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
 	if err == nil {
 		t.Fatal("a refused write was reported as a comment that landed")
 	}

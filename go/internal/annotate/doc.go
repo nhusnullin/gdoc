@@ -28,26 +28,34 @@
 // that walk reads one paragraph at a time and such a quote could only ever come
 // back as "not found". TestCheckRefusesEachBadShapeByName is the pin.
 //
-// # The prefix is added here, and required in reply
+// # The mark is added here, and required in reply
 //
-// Body writes the comment as Prefix + Why, so Check refuses a reason that
-// already opens with the robot. internal/reply does the opposite: a reply body
-// arrives with the mark already on it and reply.Check refuses a body without it.
-// The two writers own the mark differently on purpose, and internal/plaintext
-// holds the argument. A caller carrying the reply convention over to an
-// annotations file would sign the comment twice, and nothing downstream would
-// catch it: the read-backs compare against the string that was sent, so both
-// hold over a doubled mark in the one string that records who wrote the words.
-// TestCheckRefusesEachBadShapeByName refuses it, TestCheckAcceptsAPlainAnnotation
-// is the other direction, and TestBodyIsTheRobotAndTheWhy states the mark as a
-// literal.
+// Body writes the comment as the mark in effect and the reason, so Check
+// refuses a reason that already opens with a mark. The mark is a value this
+// package is handed, never a character it holds: --mark names it, settings.yaml
+// names it, and the empty mark writes the words alone.
+// TestAnnotateWritesTheMarkInEffect and TestAnEmptyMarkWritesTheWordsAlone are
+// the pins, with TestBodyIsTheRobotAndTheWhy stating one mark as a literal.
+//
+// internal/reply does the opposite: a reply body arrives with the mark already
+// on it and reply.Check refuses a body without it. The two writers own the mark
+// differently on purpose, and internal/plaintext holds the argument. A caller
+// carrying the reply convention over to an annotations file would sign the
+// comment twice, and nothing downstream would catch it: the read-backs compare
+// against the string that was sent, so both hold over a doubled mark in the one
+// string that records who wrote the words.
+// TestCheckRefusesEachBadShapeByName refuses it,
+// TestCheckAcceptsAPlainAnnotation is the other direction, and
+// TestAReasonOpeningWithAnyKnownMarkIsRefused walks the marks: every known one
+// is refused whatever this run writes, because a doubled mark is the same lie
+// in any of them.
 //
 // # No markdown, because a thread renders it literally
 //
-// The reason is asked of plaintext.Markdown, alone rather than behind the
-// prefix, for the reason propose.Check gives: the heading arm is anchored to a
-// line start, and the prefix in front of it would let a reason opening with a
-// hash through. TestCheckRefusesEachBadShapeByName carries that case.
+// The reason is asked of plaintext.Markdown, alone rather than behind the mark,
+// for the reason propose.Check gives: the heading arm is anchored to a line
+// start, and a mark in front of it would let a reason opening with a hash
+// through. TestCheckRefusesEachBadShapeByName carries that case.
 //
 // # Two read-backs, and nothing raises after the write
 //

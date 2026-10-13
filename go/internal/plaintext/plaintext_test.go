@@ -228,6 +228,34 @@ func TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect(t *testing.T) {
 	}
 }
 
+// MarkOpening names the character it found, which is what a writer refusing a
+// reason that already carries a mark puts in the refusal. A refusal naming the
+// mark this run would have written instead is one a colleague cannot act on:
+// the reason they typed opens with the robot and the run writes the four dots.
+//
+// The longest match wins, for the reason CutMark takes the longest off: a
+// person whose own mark opens with a known one is signed with their own.
+func TestMarkOpeningNamesTheMarkItFound(t *testing.T) {
+	for _, c := range []struct {
+		text, inEffect, want string
+		found                bool
+	}{
+		{"🤖 the register is reviewed", "⁘", "🤖", true},
+		{"⁘ the register is reviewed", "⁘", "⁘", true},
+		{"∴ the register is reviewed", "⁘", "∴", true},
+		{"\n  Bot: the register", "Bot:", "Bot:", true},
+		{"⁘⁘ the register", "⁘⁘", "⁘⁘", true},
+		{"Bot: the register", "⁘", "", false},
+		{"the register is reviewed", "", "", false},
+		{"", "⁘", "", false},
+	} {
+		got, found := MarkOpening(c.text, c.inEffect)
+		if got != c.want || found != c.found {
+			t.Errorf("MarkOpening(%q, %q) = %q, %v, want %q, %v", c.text, c.inEffect, got, found, c.want, c.found)
+		}
+	}
+}
+
 // One mark and one space come off, and no more. A body carrying two marks
 // keeps the second, because the caller asked for a mark to be taken off and
 // not for the words to be cleaned up, and a second mark is a thing the writer

@@ -149,7 +149,7 @@ func TestLiveExportCarriesAProposal(t *testing.T) {
 		Quoted:      exportQuoted,
 		Replacement: exportNew,
 		Why:         exportWhy,
-	})
+	}, liveMark)
 	for _, w := range result.Warnings {
 		t.Logf("propose warning: %s", w)
 	}

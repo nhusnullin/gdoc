@@ -118,7 +118,7 @@ func TestProposeStopsBetweenProposalsWhenTimeRunsOut(t *testing.T) {
 	f := stubWire(t, &fakeWire{answers: proposeRun(t, 3, nil, cancel)})
 	from := tempFile(t, "proposals.json", threeProposals)
 
-	got, code := runJSONCtx(t, ctx, "propose", proposeDocID, "--from", from)
+	got, code := runJSONSetCtx(t, ctx, robotInEffect(), "propose", proposeDocID, "--from", from)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("a run that ran out of time must fail: %v (exit %d)", got, code)
 	}
@@ -160,7 +160,7 @@ func TestAReadBackIsNeverCutByTheDeadline(t *testing.T) {
 	f := stubWire(t, &fakeWire{answers: proposeRun(t, 1, cancel, nil)})
 	from := tempFile(t, "proposals.json", oneProposal)
 
-	got, code := runJSONCtx(t, ctx, "propose", proposeDocID, "--from", from)
+	got, code := runJSONSetCtx(t, ctx, robotInEffect(), "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("the one proposal was sent and read back: %v (exit %d)", got, code)
 	}
@@ -205,7 +205,7 @@ func TestAnnotateStopsBetweenItemsWhenTimeRunsOut(t *testing.T) {
 	f := stubWire(t, &fakeWire{answers: annotateRun(t, cancel)})
 	from := tempFile(t, "annotations.json", readFixture(t, "annotations.json"))
 
-	got, code := runJSONCtx(t, ctx, "annotate", annotateDocID, "--from", from)
+	got, code := runJSONSetCtx(t, ctx, robotInEffect(), "annotate", annotateDocID, "--from", from)
 	if code == 0 || got["ok"] != false {
 		t.Fatalf("a run that ran out of time must fail: %v (exit %d)", got, code)
 	}

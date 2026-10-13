@@ -31,7 +31,7 @@ func decodeBatch(t *testing.T, raw []byte) map[string]any {
 }
 
 func TestBatchSendsThreeRequestsInOrderUnderSuggestMode(t *testing.T) {
-	body := decodeBatch(t, Batch(span(26, 43), testProposal))
+	body := decodeBatch(t, Batch(span(26, 43), testProposal, "🤖"))
 
 	wc, ok := body["writeControl"].(map[string]any)
 	if !ok || len(wc) != 1 || wc["writeMode"] != "SUGGEST" {
@@ -71,7 +71,7 @@ func TestBatchSendsThreeRequestsInOrderUnderSuggestMode(t *testing.T) {
 // and that span is as long as the replacement is in the units Docs counts.
 func TestBatchCountsTheReplacementInUTF16CodeUnits(t *testing.T) {
 	p := Proposal{Quoted: "annually", Replacement: "twice a year 🤖", Why: "so"}
-	body := decodeBatch(t, Batch(span(26, 34), p))
+	body := decodeBatch(t, Batch(span(26, 34), p, "🤖"))
 
 	reqs := body["requests"].([]any)
 	com := reqs[2].(map[string]any)["insertComment"].(map[string]any)
@@ -85,7 +85,7 @@ func TestBatchCountsTheReplacementInUTF16CodeUnits(t *testing.T) {
 func TestBatchCarriesTheAssigneeWhenThereIsOne(t *testing.T) {
 	p := testProposal
 	p.Assignee = "person@example.com"
-	body := decodeBatch(t, Batch(span(26, 43), p))
+	body := decodeBatch(t, Batch(span(26, 43), p, "🤖"))
 
 	com := body["requests"].([]any)[2].(map[string]any)["insertComment"].(map[string]any)
 	if com["assigneeEmailAddress"] != "person@example.com" {
@@ -96,7 +96,7 @@ func TestBatchCarriesTheAssigneeWhenThereIsOne(t *testing.T) {
 func TestApplyVerifiesTheHappyPathThreeWays(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestApplyVerifiesTheHappyPathThreeWays(t *testing.T) {
 func TestApplyReadsTheCommentIDFromTheCommentThread(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved-measured.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestApplyReadsTheCommentIDFromTheCommentThread(t *testing.T) {
 func TestApplyReadsTheDocumentItselfThenWritesOnce(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	if _, err := Apply(context.Background(), f, testDocID, testProposal); err != nil {
+	if _, err := Apply(context.Background(), f, testDocID, testProposal, "🤖"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(f.calls) < 2 {
@@ -171,7 +171,7 @@ func TestApplyReadsTheDocumentItselfThenWritesOnce(t *testing.T) {
 func TestApplyReportsAPartialFailureFromTheCommentUpdateState(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-failed.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestApplyReportsAPartialFailureFromTheCommentUpdateState(t *testing.T) {
 func TestApplyFailsThePreviewCheckWhenTheWriteWasADirectEdit(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview-edited.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestApplyFailsThePreviewCheckWhenTheWriteWasADirectEdit(t *testing.T) {
 func TestApplyFailsTheDocxCheckWhenTheCommentIsNotInTheExport(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withoutComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestApplyFailsTheDocxCheckWhenTheCommentIsNotInTheExport(t *testing.T) {
 func TestApplyAcceptsAnInsertDocsCutIntoTwoRuns(t *testing.T) {
 	f := script(t, "before.json", "after-split.json", "preview.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestApplyAcceptsAnInsertDocsCutIntoTwoRuns(t *testing.T) {
 func TestApplyRefusesAMultiTabDocumentBeforeAnyWrite(t *testing.T) {
 	f := script(t, "two-tabs.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	_, err := Apply(context.Background(), f, testDocID, testProposal)
+	_, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err == nil {
 		t.Fatal("a two-tab document was written to")
 	}
@@ -259,7 +259,7 @@ func TestApplyRefusesAQuoteItCannotPlaceBeforeAnyWrite(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
 	_, err := Apply(context.Background(), f, testDocID, Proposal{
-		Quoted: "reviewed monthly", Replacement: "reviewed weekly", Why: "so"})
+		Quoted: "reviewed monthly", Replacement: "reviewed weekly", Why: "so"}, "🤖")
 	if err == nil {
 		t.Fatal("a quote that is not in the document was written")
 	}
@@ -306,23 +306,23 @@ func TestCheckRefusesEachBadProposalByName(t *testing.T) {
 		{"markdown reason", Proposal{Quoted: "a", Replacement: "b", Why: "use **six months**"}, "markdown"},
 		{"backtick reason", Proposal{Quoted: "a", Replacement: "b", Why: "the `annually` wording"}, "markdown"},
 		// The heading arm is anchored to a line start, so asking the rule of
-		// Prefix + Why moves the hash off offset zero and lets this one through
+		// "🤖 " + Why moves the hash off offset zero and lets this one through
 		// to the thread, where Docs renders it as typed. The same words on a
 		// second line were always refused, which is the same reason written two
 		// ways depending on where the author put it.
 		{"heading reason", Proposal{Quoted: "a", Replacement: "b", Why: "# Six months, not twelve"}, "markdown"},
-		// Batch writes the comment as Prefix + Why. A caller carrying reply's
+		// Batch writes the comment as "🤖 " + Why. A caller carrying reply's
 		// convention over, where the body must open with the robot, would sign
 		// the comment twice, and every read-back compares against the string
 		// that was sent, so the run would report verified: true over it.
-		{"reason already signed", Proposal{Quoted: "a", Replacement: "b", Why: Prefix + "the policy says six months"}, "already opens with"},
+		{"reason already signed", Proposal{Quoted: "a", Replacement: "b", Why: "🤖 " + "the policy says six months"}, "already opens with"},
 		// The near misses of the prefix. Each one lands the same doubled mark,
 		// so a check that reads the whole prefix rather than the robot lets all
 		// three through the writer that adds it. reply_test names the same
 		// spellings, on the side that requires the mark.
-		{"reason signed with no space", Proposal{Quoted: "a", Replacement: "b", Why: Robot + "the policy says six months"}, "already opens with"},
-		{"reason signed behind a space", Proposal{Quoted: "a", Replacement: "b", Why: " " + Prefix + "the policy"}, "already opens with"},
-		{"reason signed behind a newline", Proposal{Quoted: "a", Replacement: "b", Why: "\n" + Prefix + "the policy"}, "already opens with"},
+		{"reason signed with no space", Proposal{Quoted: "a", Replacement: "b", Why: "🤖" + "the policy says six months"}, "already opens with"},
+		{"reason signed behind a space", Proposal{Quoted: "a", Replacement: "b", Why: " " + "🤖 " + "the policy"}, "already opens with"},
+		{"reason signed behind a newline", Proposal{Quoted: "a", Replacement: "b", Why: "\n" + "🤖 " + "the policy"}, "already opens with"},
 		// A comment that is a bare signature. sameWords normalises whitespace on
 		// both sides, so docx_anchored would match it and the run would report
 		// verified: true over a reason that explains nothing.
@@ -330,7 +330,7 @@ func TestCheckRefusesEachBadProposalByName(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			err := c.p.Check()
+			err := c.p.Check("🤖")
 			if err == nil {
 				t.Fatalf("Check(%+v) accepted it", c.p)
 			}
@@ -349,7 +349,7 @@ func TestApplyRefusesADeletionOnlyProposalBeforeAnyWrite(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
 	_, err := Apply(context.Background(), f, testDocID, Proposal{
-		Quoted: "reviewed annually", Why: "the sentence says nothing"})
+		Quoted: "reviewed annually", Why: "the sentence says nothing"}, "🤖")
 	if err == nil {
 		t.Fatal("a proposal replacing words with nothing was written")
 	}
@@ -366,7 +366,7 @@ func TestApplyReportsABatchWhoseAnswerCouldNotBeRead(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
 	}
@@ -400,7 +400,7 @@ func TestApplyKeepsACommentIdDecodedFromAnAnswerThatFailed(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
 	}
@@ -516,7 +516,7 @@ func TestRecordLeavesTheNoteAloneWhenNothingCanBeRemembered(t *testing.T) {
 // test does not list.
 func TestTheGuardCarriesEveryOneOfProposesRequests(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
-	if _, err := Apply(context.Background(), f, testDocID, testProposal); err != nil {
+	if _, err := Apply(context.Background(), f, testDocID, testProposal, "🤖"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -537,7 +537,7 @@ func TestTheGuardCarriesEveryOneOfProposesRequests(t *testing.T) {
 // made of. Take writeControl out and the identical three requests are a direct
 // edit, which the guard refuses on a document gdoc was handed.
 func TestTheGuardRefusesTheSameBatchWithoutSuggestMode(t *testing.T) {
-	body := decodeBatch(t, Batch(span(26, 43), testProposal))
+	body := decodeBatch(t, Batch(span(26, 43), testProposal, "🤖"))
 	delete(body, "writeControl")
 	raw, err := json.Marshal(body)
 	if err != nil {

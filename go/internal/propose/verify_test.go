@@ -462,9 +462,9 @@ func replacePlace(t *testing.T) (Placement, []Para) {
 
 func TestVerifyBlockHoldsOnAllThreeRoutes(t *testing.T) {
 	place, content := afterPlace(t)
-	f := blockScript(t, "block-after-inline.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-after-inline.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
 		t.Errorf("checks = %+v, warnings = %v", checks, warns)
@@ -483,9 +483,9 @@ func TestVerifyBlockHoldsOnAllThreeRoutes(t *testing.T) {
 // An insertion alone would be the block added beside the words it replaces.
 func TestVerifyBlockHoldsForAReplace(t *testing.T) {
 	place, content := replacePlace(t)
-	f := blockScript(t, "block-replace-inline.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-replace-inline.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
 		t.Errorf("checks = %+v, warnings = %v", checks, warns)
@@ -506,9 +506,9 @@ func TestVerifyBlockHoldsAfterTheLastParagraph(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	f := blockScript(t, "block-at-end-inline.json", "block-body.json", blockExport(t, Prefix+testWhy, "Limits"))
+	f := blockScript(t, "block-at-end-inline.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "Limits"))
 
-	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
 		t.Errorf("checks = %+v, warnings = %v", checks, warns)
@@ -524,9 +524,9 @@ func TestVerifyBlockHoldsAfterTheLastParagraph(t *testing.T) {
 // is a direct edit of part of the block.
 func TestVerifyBlockCatchesANewParagraphThatIsNotSuggested(t *testing.T) {
 	place, content := afterPlace(t)
-	f := blockScript(t, "block-after-inline-written.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-after-inline-written.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks.SuggestionsInline {
 		t.Error("suggestions_inline = true where the block's last paragraph carries no insertion id")
@@ -541,9 +541,9 @@ func TestVerifyBlockCatchesANewParagraphThatIsNotSuggested(t *testing.T) {
 // the document now says both.
 func TestVerifyBlockCatchesAReplaceThatDeletedNothing(t *testing.T) {
 	place, content := replacePlace(t)
-	f := blockScript(t, "block-replace-inline-kept.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-replace-inline-kept.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks.SuggestionsInline {
 		t.Error("suggestions_inline = true where the replaced paragraphs carry no deletion id")
@@ -560,9 +560,9 @@ func TestVerifyBlockCatchesAReplaceThatDeletedNothing(t *testing.T) {
 // the first is the one the note will record, and the check is false.
 func TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw(t *testing.T) {
 	place, content := afterPlace(t)
-	f := blockScript(t, "block-after-inline-two-ids.json", "block-body.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-after-inline-two-ids.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks.SuggestionsInline {
 		t.Error("suggestions_inline = true on a block that came back as two suggestions")
@@ -582,9 +582,9 @@ func TestVerifyBlockReportsEverySuggestionIDAndWarnsAboutWithdraw(t *testing.T) 
 // suggestion hidden, no longer carries them.
 func TestVerifyBlockCatchesADirectEditInThePreview(t *testing.T) {
 	place, content := replacePlace(t)
-	f := blockScript(t, "block-replace-inline.json", "block-preview-replaced.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-replace-inline.json", "block-preview-replaced.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks.PreviewWithoutSuggestions {
 		t.Error("preview_without_suggestions = true on a preview that has lost the replaced paragraphs, which is a direct edit")
@@ -709,9 +709,9 @@ func TestVerifyBlockHoldsWhenAReplaceOnlyShortens(t *testing.T) {
 // check is false with a warning naming both readings rather than a pass.
 func TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine(t *testing.T) {
 	place, content := afterPlace(t)
-	f := blockScript(t, "block-after-inline.json", "block-preview-elsewhere.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+	f := blockScript(t, "block-after-inline.json", "block-preview-elsewhere.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, Prefix+testWhy)
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
 
 	if checks.PreviewWithoutSuggestions {
 		t.Error("preview_without_suggestions = true where the preview carries the block's first line")

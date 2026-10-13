@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"gdoc/internal/docsreq"
+	"gdoc/internal/plaintext"
 )
 
 // MaxContent is how long a block's content may be, in bytes.
@@ -144,7 +145,7 @@ func layOutBlock(place Placement, content []Para) blockLayout {
 // counts. One batch, because each request is built at the indexes the ones
 // before it leave behind: two batches would mean computing the second from a
 // document the first had already changed.
-func BlockBatch(place Placement, content []Para, why, assignee string) []byte {
+func BlockBatch(place Placement, content []Para, why, assignee, mark string) []byte {
 	l := layOutBlock(place, content)
 	var reqs []any
 	add := func(kind string, body map[string]any) {
@@ -214,7 +215,7 @@ func BlockBatch(place Placement, content []Para, why, assignee string) []byte {
 	// propose.Batch sends (DECISIONS.md, 2026-08-29).
 	comment := map[string]any{
 		"range":   spanOf(l.Paras[0].Start, l.Paras[0].End-1),
-		"content": Prefix + why,
+		"content": plaintext.Prefixed(mark, why),
 	}
 	if assignee != "" {
 		comment["assigneeEmailAddress"] = assignee

@@ -28,16 +28,16 @@ func TestSendNamesALostAnswer(t *testing.T) {
 		f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 		f.failAt[1] = lostAnswerError{errors.New("read: connection reset by peer")}
 
-		res, err := Apply(context.Background(), f, testDocID, testProposal)
+		res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 
 		assertLost(t, f, res, err, "reviewed annually")
 	})
 	t.Run("a block", func(t *testing.T) {
 		f := blockApplyScript(t, "block-body.json", "block-after-inline.json", "block-body.json",
-			"batch-saved.json", blockExport(t, Prefix+testWhy, "3.6 Limits"))
+			"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 		f.failAt[1] = lostAnswerError{errors.New("read: connection reset by peer")}
 
-		res, err := ApplyBlock(context.Background(), f, testDocID, testBlock)
+		res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖")
 
 		assertLost(t, f, res, err, testBlock.After)
 	})
@@ -83,7 +83,7 @@ func TestAnAnswerDocsTookIsStillNotUnknown(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal)
+	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
 	if err != nil {
 		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
 	}

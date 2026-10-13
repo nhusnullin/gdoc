@@ -12,6 +12,7 @@ import (
 
 	"gdoc/internal/chat"
 	"gdoc/internal/mcp"
+	"gdoc/internal/settings"
 )
 
 // callCode is a code of a test's own, standing for the one guide handed out.
@@ -27,8 +28,16 @@ func callCode(t *testing.T) *chat.Code {
 // chatWith is one session's chat state, for a test that already has the code:
 // that code, a ledger of its own, and nothing held yet.
 func chatWith(code *chat.Code) *mcpChat {
+	return chatWithSettings(code, defaultsInEffect())
+}
+
+// chatWithSettings is that session told what this run writes, which is what
+// newMCPChat hands it in production: a tool that writes into a thread puts the
+// mark in effect in front of the words, so a session built with none would
+// write a comment no run of gdoc's would.
+func chatWithSettings(code *chat.Code, set settings.InEffect) *mcpChat {
 	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
-		memory: chat.NewMemory[mcp.Result]()}
+		memory: chat.NewMemory[mcp.Result](), set: set}
 }
 
 // callChat is a whole session of a test's own: a code standing for the one guide
