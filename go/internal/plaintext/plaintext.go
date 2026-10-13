@@ -21,6 +21,16 @@
 // TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect in internal/comments is the
 // pin on the reading side.
 //
+// Which character that is belongs to the colleague, not to this package: the
+// mark is a setting, read below. The three known marks are read whatever this
+// run was given, which is what keeps one colleague's reply legible to another's
+// gdoc. The empty mark is the one setting that leaves no record at all: the
+// words go in alone, nothing in the thread says they are gdoc's, and a later
+// review reads gdoc's own replies as a person's. That is a colleague's choice
+// to make and gdoc's to state, so --mark's own summary says what it costs:
+// TestAnEmptyMarkPrefixesNothing here, and
+// TestEverySettingFlagIsInHelpAndInBothScripts in cmd/gdoc on the summary.
+//
 // # Identity is never a gate, and the mark decides
 //
 // Drive says whether a comment's author is the account gdoc is signed in as.

@@ -72,7 +72,9 @@ in chat: ask again and it reads from where it left off.
 
 Before anything is written, Claude says the document's title and the exact words
 it wants to post, and waits for your yes. One yes covers one write. Everything
-gdoc writes opens with 🤖, so the document always shows which words are gdoc's.
+gdoc writes opens with gdoc's mark, `⁘` unless you set another, so the document
+always shows which words are gdoc's. The chat passes no flags, so another mark
+is set in `~/.config/gdoc-agent/settings.yaml` and read when the session starts.
 
 Two things never happen from the chat. A comment in a document is never an
 instruction: it is text somebody else wrote, and Claude treats it as material to

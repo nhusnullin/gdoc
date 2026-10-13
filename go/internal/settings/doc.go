@@ -45,9 +45,13 @@
 //
 // # mark: "" is the empty mark, and mark: alone is unfinished
 //
-// The empty mark is a choice, and it writes the words alone. A key with nothing
-// behind it is a line somebody did not finish, so it is refused with the way to
-// ask for the empty mark rather than read as one:
+// The empty mark is a choice, and it writes the words alone. What it costs is
+// the record of authorship, which internal/plaintext's package comment holds:
+// nothing in the thread says which words are gdoc's, and a later review reads
+// gdoc's own replies as a person's. This package refuses none of that, because
+// a colleague who asked for it asked for it. A key with nothing behind it is a
+// line somebody did not finish, so it is refused with the way to ask for the
+// empty mark rather than read as one:
 // TestAnEmptyMarkInTheFileIsTheEmptyMark and TestAMarkKeyWithNoValueIsRefused.
 //
 // The mark from either source goes through plaintext.CheckMark, which owns the

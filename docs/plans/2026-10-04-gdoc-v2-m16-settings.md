@@ -778,23 +778,59 @@ argument and no JSON key.
   `docs/guide/how-it-works.md`, `go/internal/plaintext/plaintext.go`
   (package comment), `go/internal/settings/doc.go`, `go/cmd/gdoc/doc.go`
 
-- [ ] `README.md`, staying at 200 lines: line 98 says each reply opens with
+- [x] `README.md`, staying at 200 lines: line 98 says each reply opens with
       gdoc's mark, ⁘ unless you set another; one short paragraph says where
       `settings.yaml` lives, that `--mark` and `--config` override it, and
       what an empty mark costs: nothing in the thread says which words are
       gdoc's, and a later review reads gdoc's own replies as a person's. Take
       lines out elsewhere rather than past the ceiling.
-- [ ] `docs/guide/writing.md`: `reply` no longer needs the mark typed; `--body`
+- [x] `docs/guide/writing.md`: `reply` no longer needs the mark typed; `--body`
       beside `--body-file`; propose and annotate refuse a reason opening with
       any known mark.
-- [ ] `docs/guide/chat.md:75`: the mark in effect, not 🤖.
-- [ ] `plaintext`'s package comment: "The mark is the only record of authorship
+- [x] `docs/guide/chat.md:75`: the mark in effect, not 🤖.
+- [x] `plaintext`'s package comment: "The mark is the only record of authorship
       there is" says the mark is a setting, the three known marks are always
       read, and with the empty mark there is no record at all. Each rule names
       its test.
-- [ ] `cd go && go test -race ./boundary/` passes (task map, ceilings,
+- [x] `cd go && go test -race ./boundary/` passes (task map, ceilings,
       package comments).
-- [ ] `git commit -m "docs: the mark is a setting, and what the empty mark costs"`
+- [x] `git commit -m "docs: the mark is a setting, and what the empty mark costs"`
+
+➕ The prose rules got a test of their own, `go/boundary/mark_test.go`, because
+every item above is a sentence nothing would have asked again:
+`TestNoColleaguePageNamesTheRobotAsTheMark` reads `README.md` and every page
+under `docs/guide/` and fails on 🤖, which is the mark no page may name now that
+gdoc writes the mark itself and a colleague picks it;
+`TestTheREADMESaysWhereTheMarkIsSetAndWhatTurningItOffCosts` asks the one page a
+colleague is sure to read for ⁘, `settings.yaml`, both flags and `--mark ""`;
+and `TestTheWritingPageNamesBothWaysToGiveAReplyBody` holds `--body` beside
+`--body-file`. `skills/` is deliberately outside the scan: it still types 🤖
+until the tag sitting, because v2.10.0 refuses a reply body without it.
+
+➕ README.md is 200 lines with the new section in it, so nine lines came out
+elsewhere: the update table became one sentence, the keyboard bullet carries the
+git one, and five paragraphs were tightened by a line each. No fact left the
+page except "the token stays on your machine", which
+`docs/guide/how-it-works.md` holds in full.
+
+➕ `docs/guide/how-it-works.md` gained the paragraph about `settings.yaml` beside
+the token's own, because `writing.md` now sends a reader there for where the
+mark is set, and that page holds the config folder already. It states the one
+key, both flags, `help --json` as the way to ask, and that the token is not a
+setting.
+
+➕ `README.md`'s preview section said `propose` creates a throwaway document
+before it proposes, which stopped being true when the probe left the write path.
+It now says the read-backs are what gdoc trusts. The sentence was two lines of
+the nine that had to come out either way.
+
+➕ `docs/guide/writing.md` also lost "in a file the skill wrote" as the only
+route a reply body takes, and `docs/guide/chat.md` says the file is the route in
+chat, because the extension passes no flags.
+
+➕ `internal/settings/doc.go`'s empty-mark section names what the empty mark
+costs and sends a reader to `internal/plaintext` for it, so the two comments say
+one thing between them rather than each half of it.
 
 ### Task 19: verify acceptance, and M16 completed
 
