@@ -378,22 +378,22 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `CLAUDE.md` (one "What lives where" row and one task-map row, if Task 1 did
   not add them)
 
-- [ ] `config.SettingsPath()` is `settings.yaml` in the config folder:
+- [x] `config.SettingsPath()` is `settings.yaml` in the config folder:
       `TestSettingsPathIsInTheConfigFolder`.
-- [ ] `settings.Given` is what the line said: `Config *string`, `Mark *string`.
+- [x] `settings.Given` is what the line said: `Config *string`, `Mark *string`.
       `settings.InEffect` is `Mark`, `MarkFrom` (`argument`, `file` or
       `default`) and `File` (the path read, or empty).
-- [ ] `Resolve(given Given, defaultPath string) (InEffect, error)`: the
+- [x] `Resolve(given Given, defaultPath string) (InEffect, error)`: the
       argument, then the file in use, then `plaintext.DefaultMark`. A named
       `--config` that does not exist is refused; the default file absent is
       every default.
-- [ ] The file is decoded with `yaml.Strict()`. An unknown key is refused by
+- [x] The file is decoded with `yaml.Strict()`. An unknown key is refused by
       name. `mark: ""` is the empty mark. `mark:` with no value is refused,
       saying to write `mark: ""` for the empty mark. A file of zero bytes is
       every default.
-- [ ] The mark from either source goes through `plaintext.CheckMark`, and the
+- [x] The mark from either source goes through `plaintext.CheckMark`, and the
       refusal names the source: the file and its key, or `--mark`.
-- [ ] Tests: `TestNoFileIsEveryDefault`, `TestTheFileSetsTheMark`,
+- [x] Tests: `TestNoFileIsEveryDefault`, `TestTheFileSetsTheMark`,
       `TestASettingArgumentOverridesTheFile`,
       `TestAConfigFileThatDoesNotExistIsRefused`,
       `TestAnUnknownKeyIsRefusedByName` (`colour: red` names `colour`),
@@ -402,9 +402,11 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       `TestABadMarkIsRefusedNamingWhereItCameFrom` (file and argument),
       `TestMarkFromSaysWhichSourceWon`, `TestTheTokenIsNotASetting`
       (`token: x` and `token_path: x` are unknown keys like any other).
-- [ ] `doc.go` states the order, the strict decode and why the token is not a
+- [x] ➕ `TestAFileOfNoBytesIsEveryDefault`: a zero-byte file is every default
+      and is still the file in use, which `InEffect.File` names.
+- [x] `doc.go` states the order, the strict decode and why the token is not a
       setting, naming each test.
-- [ ] `git commit -m "feat(settings): settings.yaml, strict, with the argument first"`
+- [x] `git commit -m "feat(settings): settings.yaml, strict, with the argument first"`
 
 ### Task 11: --config and --mark on every command and on gdoc mcp
 
