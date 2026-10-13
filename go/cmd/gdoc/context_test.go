@@ -69,7 +69,8 @@ func TestACancelledContextCancelsTheRead(t *testing.T) {
 // The preview and the export come first in the list and are never spent,
 // because find takes the first unused answer whose match string is in the URL.
 // Everything else is once, so the list is the order: the command's own read,
-// then a read, a write and a read-back per proposal.
+// which the first proposal is placed from, then per proposal a read (from the
+// second on), a write and a read-back.
 func proposeRun(t *testing.T, n int, onWrite, onReadBack func()) []*answer {
 	t.Helper()
 	out := []*answer{
@@ -86,10 +87,11 @@ func proposeRun(t *testing.T, n int, onWrite, onReadBack func()) []*answer {
 			write.before = onWrite
 			readBack.before = onReadBack
 		}
-		out = append(out,
-			&answer{method: "GET", match: proposeDocID + "?includeTabsContent",
-				json: readFixture(t, "propose-before.json"), once: true},
-			write, readBack)
+		if i > 0 {
+			out = append(out, &answer{method: "GET", match: proposeDocID + "?includeTabsContent",
+				json: readFixture(t, "propose-before.json"), once: true})
+		}
+		out = append(out, write, readBack)
 	}
 	return out
 }

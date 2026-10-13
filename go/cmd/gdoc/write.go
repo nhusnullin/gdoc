@@ -13,9 +13,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -308,7 +306,13 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 		// three routes whatever the caller's clock says: a suggestion in
 		// somebody's document that gdoc did not read back is a change nobody
 		// can account for. TestAReadBackIsNeverCutByTheDeadline is the pin.
-		res, err := propose.Apply(context.WithoutCancel(ctx), r.session, r.id, one)
+		// The first proposal is placed from the read above, which has just
+		// come back; every later one reads for itself.
+		var held *docs.Document
+		if i == 0 {
+			held = d
+		}
+		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			if res.Outcome == propose.OutcomeUnknown {
@@ -322,7 +326,12 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 						"proposal %d (%q) was written and its answer was lost, so it may or may not be in the document. Read the suggestions before proposing it again",
 						i+1, res.Quote())}
 			}
-			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
+			// The refusal names its proposal, the way a refusal of the file
+			// names its entry: a caller with seven proposals out should not
+			// have to match the words back against the file.
+			// TestARunTimeRefusalNamesTheProposalByNumber is the pin.
+			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf("proposal %d (%q): %s", i+1, res.Quote(), err)}
 		}
 		results = append(results, res)
 		data.Proposals[i] = sent(res)
@@ -559,18 +568,9 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the proposals file could not be read: %w", err)
 	}
-	var out []propose.Proposal
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&out); err != nil {
-		return nil, fmt.Errorf("%s is not a list of proposals: %w", path, err)
-	}
-	// Decode stops at the end of the first value, where Unmarshal refused a
-	// file with anything behind it. A second list after the first is a file
-	// somebody edited wrongly, and running the first half of it silently is the
-	// same mistake as dropping a key.
-	if dec.More() {
-		return nil, fmt.Errorf("%s carries more than one list of proposals", path)
+	out, err := strictEntries[propose.Proposal](path, raw, "proposals", propose.Fields)
+	if err != nil {
+		return nil, err
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)

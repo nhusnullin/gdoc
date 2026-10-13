@@ -303,8 +303,10 @@
 // up. An after block is refused for the same reason when the element behind the
 // anchor is a table or the contents list Docs generates, because there is no
 // paragraph start to go in at, and when the paragraph behind it does not begin
-// where the anchor ends. A quote inside a table cell is refused on both routes
-// while docs/backlog/propose-inside-tables.md is unsettled.
+// where the anchor ends. A quote inside a table cell is refused on both block
+// routes while docs/backlog/propose-inside-tables.md is unsettled. The words
+// kind is placed in a cell, because a cell's paragraph is a paragraph:
+// TestFindSpanPlacesAQuoteInsideATableCell.
 //
 // A run covering a paragraph that carries anything but words is refused by the
 // name of what it carries: a picture, a drawing, an equation, a footnote mark, a
@@ -381,7 +383,11 @@
 // insertComment over the inserted span, in that order. One batch, because Docs
 // applies the requests in order with consistent indexes, so the comment lands on
 // the span the insert made. Two proposals are two batches, each after its own
-// fresh read, because the first moves the ground under the second. A document
+// fresh read, because the first moves the ground under the second. The first
+// proposal of a run is placed from the read the run has just made to count the
+// tabs, through ApplyFrom, rather than reading the document a second time:
+// TestProposeReadsTheDocumentOnceBeforeTheFirstWrite and
+// TestEveryLaterProposalStillReadsFresh in cmd/gdoc. A document
 // with more than one tab stops the run before anything is sent: a range means
 // nothing without saying which tab it is in.
 // TestBatchSendsThreeRequestsInOrderUnderSuggestMode,

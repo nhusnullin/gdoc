@@ -35,6 +35,9 @@ from pathlib import Path
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 TASK_COMMIT_PREFIXES = ("feat", "fix", "test", "docs", "refactor", "chore")
+# A plan edited mid-run, or the board itself, is not a task: counting them would
+# pair the next task with the wrong commit.
+NOT_TASK_PREFIXES = ("docs(plans)", "chore(board)")
 
 
 def sh(*args, cwd):
@@ -92,8 +95,8 @@ def parse_tasks(plan):
     return tasks
 
 
-def commits(repo, branch):
-    out = sh("git", "log", "--reverse", f"main..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
+def commits(repo, branch, base="main"):
+    out = sh("git", "log", "--reverse", f"{base}..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
     return [tuple(l.split("|", 2)) for l in out.splitlines()]
 
 
@@ -104,7 +107,7 @@ def build_snapshot(cfg, repo, pid):
     running = alive(pid)
     tasks_meta = parse_tasks(plan_text(repo, cfg["branch"], cfg["plan"]))
     overrides = cfg.get("tasks", {})
-    cms = commits(repo, cfg["branch"])
+    cms = commits(repo, cfg["branch"], cfg.get("base", "main"))
     n_tasks = len(tasks_meta)
 
     iterations = len(re.findall(r"^--- task iteration \d+ ---", log, re.M))
@@ -115,7 +118,8 @@ def build_snapshot(cfg, repo, pid):
     failed = bool(re.search(r"TASK_FAILED|max iterations reached|^error:", log, re.I | re.M)) and not running
     limited = bool(re.search(r"session limit|usage limit", log, re.I))
 
-    task_commits = [c for c in cms if c[2].startswith(TASK_COMMIT_PREFIXES) and "review findings" not in c[2]]
+    task_commits = [c for c in cms if c[2].startswith(TASK_COMMIT_PREFIXES)
+                    and not c[2].startswith(NOT_TASK_PREFIXES) and "review findings" not in c[2]]
     tasks, current_found = [], False
     for t in tasks_meta:
         o = overrides.get(str(t["n"]), {})
@@ -193,6 +197,7 @@ def main():
     ap.add_argument("--init", action="store_true", help="create the page from the template and save the config sidecar")
     ap.add_argument("--plan"); ap.add_argument("--branch"); ap.add_argument("--heading"); ap.add_argument("--title")
     ap.add_argument("--logs", nargs="*"); ap.add_argument("--warns"); ap.add_argument("--tasks"); ap.add_argument("--started")
+    ap.add_argument("--base", help="the commit the run counts from, default main: for a plan written on the branch itself")
     ap.add_argument("--repo", default=str(Path(__file__).resolve().parents[2]))
     a = ap.parse_args()
 
@@ -210,6 +215,8 @@ def main():
             cfg["warns"] = json.loads(Path(a.warns).read_text())
         if a.tasks:
             cfg["tasks"] = json.loads(Path(a.tasks).read_text())
+        if a.base:
+            cfg["base"] = a.base
         if html_path.exists():
             html_path.unlink()
         side.write_text(json.dumps(cfg, indent=2))
@@ -221,6 +228,10 @@ def main():
             cfg["started"] = a.started
         if a.warns:
             cfg["warns"] = json.loads(Path(a.warns).read_text())
+        if a.tasks:
+            cfg["tasks"] = json.loads(Path(a.tasks).read_text())
+        if a.base:
+            cfg["base"] = a.base
         side.write_text(json.dumps(cfg, indent=2))
 
     snapshot = build_snapshot(cfg, Path(a.repo), a.pid)

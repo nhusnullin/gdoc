@@ -20,7 +20,8 @@ func (lostAnswer) Unknown() bool { return true }
 
 // lostAnswerRun is a run whose first batch is written and answers nothing. The
 // preview and the export are never reached, and they are in the list because the
-// command's own read and the first proposal's read come off the front of it.
+// command's own read, which the first proposal is placed from, comes off the
+// front of it.
 func lostAnswerRun(t *testing.T) []*answer {
 	t.Helper()
 	return []*answer{
@@ -28,7 +29,6 @@ func lostAnswerRun(t *testing.T) []*answer {
 		{method: "GET", match: "/export?", bytes: exportWithComment(t, true)},
 		{method: "POST", match: proposeDocID + ":batchUpdate",
 			err: lostAnswer{errors.New("read: connection reset by peer")}},
-		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "propose-before.json"), once: true},
 	}
 }

@@ -93,6 +93,12 @@ func (p Proposal) checkPlacement() error {
 // It fails only before the write. After the batch has gone out the block is in
 // the document, and everything from there is reported rather than raised.
 func ApplyBlock(ctx context.Context, s Session, docID string, p Proposal) (Result, error) {
+	return applyBlock(ctx, s, docID, p, nil)
+}
+
+// applyBlock is ApplyBlock placed from a read the caller may already hold; see
+// ApplyFrom.
+func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *docs.Document) (Result, error) {
 	out := Result{After: p.After, ReplaceFrom: p.ReplaceFrom, ReplaceTo: p.ReplaceTo}
 	if err := p.Check(); err != nil {
 		return out, err
@@ -103,7 +109,7 @@ func ApplyBlock(ctx context.Context, s Session, docID string, p Proposal) (Resul
 	if err != nil {
 		return out, err
 	}
-	d, err := readOneTab(ctx, s, docID)
+	d, err := readUnlessHeld(ctx, s, docID, held)
 	if err != nil {
 		return out, err
 	}

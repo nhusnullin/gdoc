@@ -24,16 +24,15 @@ const blockWhy = "the policy says nothing about limits"
 const oneBlock = `[{"kind":"block","after":"reviewed annually","content":"` + blockContent + `",` +
 	`"why":"` + blockWhy + `"}]`
 
-// blockAnswers is one block proposal: the command's own read, the read
-// ApplyBlock places from, the batch, and the three read-backs.
+// blockAnswers is one block proposal: the command's own read, which the block
+// is placed from, the batch, and the three read-backs.
 //
-// The two reads before the write are the same URL and the same fixture, and the
-// third is the document with the block pending in it. One fixture for all three
-// would verify the document as it stood before the write.
+// The read before the write and the read-back are the same URL, and the second
+// is the document with the block pending in it. One fixture for both would
+// verify the document as it stood before the write.
 func blockAnswers(t *testing.T) []*answer {
 	t.Helper()
 	return []*answer{
-		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-after.json"), once: true},
 		{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json"), once: true},
@@ -340,7 +339,6 @@ func TestProposeRecordsABlocksPlacementInTheNote(t *testing.T) {
 // first: that is where the block went in, and it is what a later run shows.
 func TestProposeRecordsAReplacesFirstQuoteInTheNote(t *testing.T) {
 	answers := []*answer{
-		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-before.json"), once: true},
 		{method: "GET", match: proposeDocID + "?includeTabsContent", json: readFixture(t, "block-replace-after.json"), once: true},
 		{method: "POST", match: proposeDocID + ":batchUpdate", json: readFixture(t, "propose-batch.json"), once: true},

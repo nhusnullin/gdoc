@@ -48,7 +48,7 @@ Two rules about the documents themselves:
 | `go/internal/prelude/` | the house template as Docs requests, proposed rather than written, and the named range that marks it |
 | `go/internal/docsreq/` | the shapes a Docs request is made of: a measurement, a colour, an alignment, a length, a style object with its mask |
 | `go/internal/drive/` | the trash, its confirming read, and nothing else Drive does |
-| `go/internal/plaintext/` | what gdoc may write into a comment thread: the robot prefix, and no markdown |
+| `go/internal/plaintext/` | what gdoc may write into a comment thread: the mark, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
 | `go/internal/render/` | the docx itself: the twelve parts and the logo, the cover, the tables, the header and footer, the contents field |
@@ -172,10 +172,11 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   path takes the next free number, and the one file it writes into is the note
   it stamps. `TestNothingCanReplaceAFile` reads the package's own source, and
   `TestCreateRefusesAPathThatExists` holds the link-not-rename underneath it.
-- **Everything gdoc writes into a thread opens with the robot prefix and carries
-  no markdown**, because a Docs thread renders markdown literally, and because
-  the marker is the only record of authorship there is:
-  `TestMarkdownNamesWhatDocsWouldRenderLiterally`.
+- **Everything gdoc writes into a thread opens with the mark in effect and
+  carries no markdown**, because a Docs thread renders markdown literally, and
+  because the mark is the only record of authorship there is. The mark is a
+  setting, ⁘ by default, and may be empty; 🤖, ⁘ and ∴ stay known marks
+  (DECISIONS.md, 2026-10-04): `TestMarkdownNamesWhatDocsWouldRenderLiterally`.
 - **Identity is never a gate.** Whose account wrote a comment decides nothing.
   The marker decides.
 - **Skills are linked, not copied.** The five folders under `skills/`,

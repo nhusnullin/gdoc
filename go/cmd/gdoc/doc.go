@@ -797,7 +797,8 @@
 // after or the pair replace_from and replace_to. The words kind names no kind at
 // all, so a file written before the block existed still reads, and the loop that
 // walks the list asks nothing about which kind an entry is: internal/propose's
-// Apply dispatches, each entry gets its own read, and
+// ApplyFrom dispatches, each entry after the first gets its own read (the
+// first is placed from the run's own read), and
 // TestProposeRunsABothKindsFileInFileOrder is the mixed file end to end.
 //
 // The decoder refuses a field it does not know, which is where a misspelled

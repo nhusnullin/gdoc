@@ -25,9 +25,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -90,7 +88,7 @@ func annotationsFor(a *args) ([]annotate.Annotation, error) {
 			"drop --body-file to leave the comments the file names")
 	case a.has("--quote") && !a.has("--body-file"):
 		return nil, fmt.Errorf("--quote names the words to comment on, and the reason goes in --body-file <file>: " +
-			"a comment that says nothing is one Nail has to guess at")
+			"a comment that says nothing is one the reader has to guess at")
 	case a.has("--body-file") && !a.has("--quote"):
 		return nil, fmt.Errorf("--body-file holds the reason for a comment, and --quote <text> says which words it goes on")
 	case a.has("--from"):
@@ -138,18 +136,9 @@ func readAnnotations(path string) ([]annotate.Annotation, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the annotations file could not be read: %w", err)
 	}
-	var out []annotate.Annotation
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&out); err != nil {
-		return nil, fmt.Errorf("%s is not a list of annotations: %w", path, err)
-	}
-	// Decode stops at the end of the first value, where Unmarshal refused a file
-	// with anything behind it. A second list after the first is a file somebody
-	// edited wrongly, and writing the first half of it silently is the same
-	// mistake as dropping a key.
-	if dec.More() {
-		return nil, fmt.Errorf("%s carries more than one list of annotations", path)
+	out, err := strictEntries[annotate.Annotation](path, raw, "annotations", annotate.Fields)
+	if err != nil {
+		return nil, err
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no annotations, so there is nothing to write", path)

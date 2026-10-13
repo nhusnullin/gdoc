@@ -40,6 +40,11 @@ type Annotation struct {
 	Assignee string `json:"assignee,omitempty"`
 }
 
+// Fields is the sentence a refusal gives when an entry of an annotations file
+// carries a field Annotation does not have. TestTheFieldListsNameEveryTag in
+// cmd/gdoc holds it to the tags above.
+const Fields = "An entry takes quoted, why and assignee."
+
 // Check is the shape rule for one annotation, as shape rather than as meaning.
 // It answers from the annotation alone, so the caller can ask it of every entry
 // in the file before the first one leaves the machine: a third entry refused
@@ -64,7 +69,7 @@ func (a Annotation) Check() error {
 	// nothing but spaces is a comment that is a bare signature.
 	why := strings.TrimSpace(a.Why)
 	if why == "" {
-		return errors.New("the annotation carries no reason, and a comment that says nothing is one Nail has to guess at")
+		return errors.New("the annotation carries no reason, and a comment that says nothing is one the reader has to guess at")
 	}
 	// Body writes the comment as Prefix + Why, so a reason that already opens
 	// with the robot lands as two of them. reply.Check requires the prefix and
