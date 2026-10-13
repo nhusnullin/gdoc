@@ -192,17 +192,35 @@ func TestMarkerIsTheFirstTokenAndTheMatchIsExact(t *testing.T) {
 	}
 }
 
-func TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot(t *testing.T) {
-	cases := map[string]bool{
-		"🤖 The 2026 register.":      true,
-		"  🤖 after a space":         true,
-		"thanks, that answers it":   false,
-		"the 🤖 is not at the front": false,
-		"":                          false,
+// TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect: a reply is gdoc's when it
+// opens with one of the three marks every gdoc knows, whatever this run writes,
+// and when it opens with the mark this run was given. A colleague who set
+// "Bot:" recognises their own replies, and nobody else's gdoc does, which is
+// what decision B2 says a mark of one's own costs. The empty mark recognises
+// the known three and nothing more.
+//
+// The marks are literals, never plaintext.KnownMarks read back, because a test
+// reading the list would follow it wherever somebody moved it.
+func TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect(t *testing.T) {
+	cases := []struct {
+		content  string
+		inEffect string
+		want     bool
+	}{
+		{"🤖 The 2026 register.", "⁘", true},
+		{"  🤖 after a space", "", true},
+		{"⁘ the four dots", "∴", true},
+		{"∴ the therefore sign", "🤖", true},
+		{"Bot: the mark in effect", "Bot:", true},
+		{"Bot: not the mark in effect", "⁘", false},
+		{"thanks, that answers it", "⁘", false},
+		{"the 🤖 is not at the front", "⁘", false},
+		{"", "⁘", false},
+		{"nobody's mark opens this", "", false},
 	}
-	for content, want := range cases {
-		if got := byGdoc(content); got != want {
-			t.Errorf("byGdoc(%q) = %v, want %v", content, got, want)
+	for _, c := range cases {
+		if got := byGdoc(c.content, c.inEffect); got != c.want {
+			t.Errorf("byGdoc(%q, %q) = %v, want %v", c.content, c.inEffect, got, c.want)
 		}
 	}
 }
@@ -216,7 +234,7 @@ func TestAReplyCarriesItsMarker(t *testing.T) {
 		{ID: "r2", Content: "ai? which quarter"},
 		{ID: "r3", Content: "thanks, and ai! is not at the front"},
 		{ID: "r4", Content: "🤖 Done."},
-	})
+	}, "⁘")
 	want := []string{"ai!", "ai?", MarkerNone, MarkerNone}
 	for i, reply := range got {
 		if reply.Marker != want[i] {
@@ -262,7 +280,7 @@ func threadsFromFixtures(t *testing.T) ([]Thread, []string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Threads(raw, document())
+	return Threads(raw, document(), "⁘")
 }
 
 func TestThreadsJoinsTheRangeDriveDoesNotCarry(t *testing.T) {
@@ -328,7 +346,7 @@ func TestThreadsCarriesEveryFactAndJudgesNone(t *testing.T) {
 }
 
 func TestThreadsOnAnEmptyListIsEmpty(t *testing.T) {
-	got, unplaced := Threads(nil, document())
+	got, unplaced := Threads(nil, document(), "⁘")
 	if len(got) != 0 || len(unplaced) != 0 {
 		t.Errorf("Threads(nil) = %v, %v", got, unplaced)
 	}
@@ -341,7 +359,7 @@ func TestThreadsWithoutADocumentPlacesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, unplaced := Threads(raw, nil)
+	got, unplaced := Threads(raw, nil, "⁘")
 	if len(got) != 3 || len(unplaced) != 3 {
 		t.Fatalf("Threads without a document = %d threads, %d unplaced", len(got), len(unplaced))
 	}
@@ -444,7 +462,7 @@ func TestFetchDropsTheThreadItsCursorAlreadyReported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	threads, _ := Threads(seen, nil)
+	threads, _ := Threads(seen, nil, "⁘")
 	since := NextCursor(nil, threads)
 	if since.At != at("2026-09-06T10:45:00Z") {
 		t.Fatalf("the previous poll's cursor is %v, want page-one's newest instant", since.At)
@@ -577,7 +595,7 @@ func TestAnUnusableRangeLeavesTheThreadUnplaced(t *testing.T) {
 		},
 	}
 
-	threads, unplaced := Threads(raw, d)
+	threads, unplaced := Threads(raw, d, "⁘")
 
 	if len(threads) != 5 {
 		t.Fatalf("Threads = %d threads, want 5", len(threads))

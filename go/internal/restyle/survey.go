@@ -132,7 +132,9 @@ func (c ChipCounts) Total() int { return c.Person + c.Date + c.RichLink }
 // what is in the document.
 func Survey(in Input) (Report, []string) {
 	var warnings []string
-	threads, unplaced := comments.Threads(in.Comments, in.Document)
+	// The empty mark, because the survey reads no by_gdoc: it counts threads
+	// and whether each is resolved, and who wrote one decides nothing here.
+	threads, unplaced := comments.Threads(in.Comments, in.Document, "")
 	// Only when there was a document to place them in. comments.Threads reports
 	// every comment unplaced on a nil document, so warning per comment there
 	// blames a Docs read nobody made, and the one warning below is the whole of

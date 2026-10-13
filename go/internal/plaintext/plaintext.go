@@ -1,11 +1,11 @@
 // Package plaintext holds the two rules about what gdoc may write into a Google
-// Docs thread: it opens with the robot, and it carries no markdown.
+// Docs thread: it opens with the mark in effect, and it carries no markdown.
 //
 // Every writer asks this package rather than holding a copy, because two copies
 // of one regular expression are two rules that drift. internal/reply asks it of
 // a reply, internal/propose asks it of the reason a proposal carries as a
 // comment, and internal/annotate asks it of the reason a comment carries, adding
-// the prefix as propose does.
+// the mark as propose does.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
@@ -14,10 +14,11 @@
 //
 // The Docs API cannot set an author, so everything gdoc writes is signed by
 // whoever is logged in. Every reply and every comment gdoc writes opens with the
-// robot and one space, with nothing in front of it, and that prefix is the whole
-// of what a later run has to go on. comments.Reply.ByGdoc reads the same prefix,
-// so a reply one writer sends is one a later listing recognises.
-// TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot in internal/comments is the
+// mark in effect and one space, with nothing in front of it, and that opening is
+// the whole of what a later run has to go on. comments.Reply.ByGdoc reads the
+// known marks and the mark in effect, so a reply one writer sends is one a later
+// listing recognises, whichever colleague's run wrote it.
+// TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect in internal/comments is the
 // pin on the reading side.
 //
 // # Identity is never a gate, and the mark decides
@@ -60,24 +61,23 @@
 // the refusal names the character it found rather than the mark this run would
 // have written.
 //
-// # Robot and Prefix are two constants, and a check asks about Robot
+// # A reader asks the mark without the space behind it
 //
-// Prefix is what a writer writes. Robot is what a check asks about, because
-// every near miss of the prefix carries the same mark: the robot with no space
-// behind it, the robot behind a space, the robot behind a newline. A check
-// reading the whole prefix answers no on each of them and lets a second mark
-// through, and a doubled mark is a lie about who wrote the words.
+// A check asks about the mark alone, because every near miss of what a writer
+// wrote carries the same mark: the mark with no space behind it, the mark
+// behind a space, the mark behind a newline. A check reading the mark and its
+// space together answers no on each of them and lets a second mark through,
+// and a doubled mark is a lie about who wrote the words.
 //
-// OpensWithRobot is that check, and it lives here for the same reason the
-// pattern does: every reader of the mark asks this package rather than writing
-// the prefix test out again. internal/comments asks it of a reply,
-// internal/chat asks it of the robot_not_ours fact, and cmd/gdoc asks it of a
-// thread's opening comment, so the day the mark changes there is one line to
-// change. Two tests hold that between them:
-// TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText pins the answers, and
-// TestTheRobotMarkIsReadInOnePlace in go/boundary reads the tree and fails on
-// a prefix check written out again anywhere but the three writers that refuse
-// or require the mark on a caller's own input.
+// The check lives here for the same reason the pattern does: every reader of
+// the mark asks this package rather than writing the prefix test out again.
+// internal/comments asks it of a reply, internal/chat asks it of the
+// robot_not_ours fact, and cmd/gdoc asks it of a thread's opening comment, so
+// the day a mark is added there is one line to change. Two tests hold that
+// between them: TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect pins
+// the answers, and TestTheMarkIsReadInOnePlace in go/boundary reads the tree
+// and fails on a prefix check written out again anywhere but the three writers
+// that refuse or take the mark off a caller's own input.
 //
 // # All three writers add the mark
 //
@@ -132,35 +132,6 @@ import (
 	"gdoc/internal/markers"
 )
 
-// Prefix is what every reply and every comment gdoc writes opens with: the
-// robot and one space, with nothing in front of it. It is the only record of
-// authorship there is, because the Docs API cannot set an author.
-const Prefix = Robot + " "
-
-// Robot is the mark alone, without the space. Prefix is what gdoc writes; this
-// is what a check asks about, because every near miss of the prefix carries the
-// same mark: the robot with no space behind it, or with a space or a newline in
-// front of it. A check that reads the whole prefix answers no on each of them,
-// and a doubled mark is a lie about who wrote the words.
-const Robot = "🤖"
-
-// OpensWithRobot answers whether a text opens with the mark, which is the only
-// record of authorship a thread itself carries. It is not a receipt: anybody
-// can type the character, and what says gdoc wrote a thread entry is the id in
-// internal/chat's own record of what this process wrote. Leading whitespace is
-// stepped over, because a reply that starts on its second line is still a reply
-// that opens with the mark.
-//
-// It is here rather than in each reader because the mark is this package's, and
-// a check written out again is a rule that drifts when the mark changes.
-// internal/comments asks it of a reply, internal/chat asks it of the
-// robot_not_ours fact, and cmd/gdoc asks it of a thread's opening comment:
-// TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText for the answers, and
-// TestTheRobotMarkIsReadInOnePlace in go/boundary for the one place.
-func OpensWithRobot(text string) bool {
-	return strings.HasPrefix(strings.TrimLeft(text, " \t\r\n"), Robot)
-}
-
 // markdown is what Docs renders literally: bold, code, a heading and a
 // bracketed link. Hyphen bullets are deliberately absent: they read as a list in
 // plain text, so refusing them would cost a reply nothing was wrong with.
@@ -205,7 +176,7 @@ const markRunes = 8
 // is read as a person's own words by everybody else's gdoc, which is the price
 // of free choice. The order is the robot first, because it is the one old
 // replies carry.
-var known = []string{Robot, DefaultMark, "∴"}
+var known = []string{"🤖", DefaultMark, "∴"}
 
 // KnownMarks is that list, as a new slice on every call so that no caller can
 // change it. A caller handed the one slice could sort it or write over an

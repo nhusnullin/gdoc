@@ -563,7 +563,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 		}
-		threads, unplaced := comments.Threads(raws, got)
+		threads, unplaced := comments.Threads(raws, got, a.set.Mark)
 		return commentsResult(ctx, r, d, threads, unplaced,
 			startCursor(comments.NextCursor(since, threads), at), a.has("--witness"), nil)
 	}
@@ -589,6 +589,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		Deadline: deadline,
 		List:     list,
 		Read:     read,
+		Mark:     a.set.Mark,
 	})
 	// Off the moment the wait is over. What follows is a --witness export, and
 	// a Ctrl-C during that must kill the run the way it kills every other

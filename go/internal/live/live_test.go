@@ -98,7 +98,7 @@ func TestLiveReadOfARealDocument(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the comment listing failed: %v", err)
 	}
-	threads, unplaced := comments.Threads(raws, d)
+	threads, unplaced := comments.Threads(raws, d, "⁘")
 	for _, thread := range threads {
 		if thread.Marker == "" {
 			t.Errorf("thread %s carries no marker, and every thread carries one, %q included", thread.ID, comments.MarkerNone)
@@ -673,7 +673,7 @@ func baselineCursor(t *testing.T, ctx context.Context, s *gapi.Session, docID st
 	if err != nil {
 		t.Fatalf("the baseline document read failed: %v", err)
 	}
-	threads, _ := comments.Threads(raws, d)
+	threads, _ := comments.Threads(raws, d, "⁘")
 	if len(threads) != 0 {
 		t.Fatalf("the document was created a moment ago and already carries %d threads", len(threads))
 	}

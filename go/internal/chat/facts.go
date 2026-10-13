@@ -132,16 +132,18 @@ func HasHiddenChars(text string) bool {
 	return false
 }
 
-// robotNotOurs is the mark without the receipt: text opening with the robot that
-// this process did not write.
+// robotNotOurs is the mark without the receipt: text opening with a mark gdoc
+// recognises that this process did not write.
 //
-// The mark is read by plaintext.OpensWithRobot, the one check every reader of
+// The mark is read by plaintext.OpensWithMark, the one check every reader of
 // the mark asks, so a reply starting on its second line is still a reply that
-// opens with it and no second copy of the rule can drift. The question is never
-// asked of the account: identity is never a gate, and the mark is the only
-// record of authorship there is.
+// opens with it and no second copy of the rule can drift. The empty mark is
+// passed in effect: a fact read of one comment carries no session, so what this
+// asks is the three marks every gdoc knows and never a mark of one colleague's
+// own. The question is never asked of the account: identity is never a gate,
+// and the mark is the only record of authorship there is.
 func robotNotOurs(id, text string, own OwnReplies) bool {
-	if !plaintext.OpensWithRobot(text) {
+	if !plaintext.OpensWithMark(text, "") {
 		return false
 	}
 	return own == nil || !own.Wrote(id)

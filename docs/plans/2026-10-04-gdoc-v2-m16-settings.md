@@ -646,25 +646,39 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/mcptools.go`, `go/internal/plaintext/plaintext.go`,
   `go/boundary/boundary_test.go`, `go/boundary/doc.go`
 
-- [ ] `comments.Threads(raw, d, mark)` sets `Reply.ByGdoc` with
+- [x] `comments.Threads(raw, d, mark)` sets `Reply.ByGdoc` with
       `plaintext.OpensWithMark(content, mark)`. `WaitOptions` gains `Mark`.
       `read.go` and `mcptools.go` pass the mark in effect; `restyle.Survey`
       passes `""` with a comment saying the survey reads no `by_gdoc`.
-- [ ] `mcpRemarks` asks `OpensWithMark` of a thread's opening comment with the
+- [x] `mcpRemarks` asks `OpensWithMark` of a thread's opening comment with the
       session's mark.
-- [ ] `plaintext.Robot`, `plaintext.Prefix` and `OpensWithRobot` are removed.
-- [ ] `TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot` becomes
+- [x] `plaintext.Robot`, `plaintext.Prefix` and `OpensWithRobot` are removed.
+- [x] `TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot` becomes
       `TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect`: true for 🤖, ⁘ and ∴
       whatever the mark in effect, true for `"Bot:"` only when it is the mark
       in effect, false for every reply under the empty mark that opens with
       none of them.
-- [ ] `TestTheRobotMarkIsReadInOnePlace` becomes `TestTheMarkIsReadInOnePlace`:
+- [x] `TestTheRobotMarkIsReadInOnePlace` becomes `TestTheMarkIsReadInOnePlace`:
       its literal is the three known marks, the call it looks for is
       `plaintext.OpensWithMark`, `markWriters` keeps `propose.go`,
       `annotate.go` and `reply.go` (reply now cuts a known mark off a body),
       and it still fails in both directions. `boundary/doc.go` "The robot mark
       is read in one place" says the same with the new names.
-- [ ] `git commit -m "feat(comments): by_gdoc reads the known marks and the mark in effect"`
+- [x] `git commit -m "feat(comments): by_gdoc reads the known marks and the mark in effect"`
+- ➕ `markWriters` now names `internal/reply/reply.go` as well, and all three
+      writers ask `internal/plaintext` rather than holding a prefix check, so
+      the list is an empty exception kept as the one place such a check would
+      be declared. `boundary/doc.go` says so.
+- ➕ `plaintext.OpensWithRobot` went, so `internal/chat`'s `robotNotOurs` asks
+      `plaintext.OpensWithMark(text, "")`: a fact read of one comment carries
+      no session, so it asks the three known marks and never a colleague's own.
+      The fact itself goes in Task 17.
+- ➕ `mcpPin`, `mcpPinThread` and `mcpRecordRead` each take the session's mark,
+      because `mcpRemarks` and `comments.Threads` now ask for one.
+- ⚠️ The Part B validation grep `'OpensWithRobot|plaintext\.Prefix|plaintext\.Robot'`
+      matches `plaintext.Prefixed`, which is the writer every writer calls.
+      Read with word boundaries, `grep -rnE 'OpensWithRobot|plaintext\.Prefix\b|plaintext\.Robot\b' go/`,
+      it finds nothing.
 
 ### Task 16: reply --body, and chat writes no file for a reply
 

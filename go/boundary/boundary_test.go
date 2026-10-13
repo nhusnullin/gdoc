@@ -326,16 +326,20 @@ func TestMcpImportsNoNetHTTP(t *testing.T) {
 	}
 }
 
-// markWriters are the files that may test a text against the robot mark with a
-// prefix check of their own, because each is refusing the mark on a caller's own
+// markWriters are the files that may test a text against a known mark with a
+// prefix check of their own, because each asks about a mark on a caller's own
 // input rather than reading who wrote a thread entry. internal/propose and
-// internal/annotate refuse a comment the caller opened with the mark.
-// internal/reply is deliberately absent: it takes a typed mark off with
-// plaintext.CutMark and writes the mark in effect instead, so it owns no prefix
-// check of its own.
+// internal/annotate refuse a comment the caller opened with one, and
+// internal/reply takes one off a body that arrived carrying it.
+//
+// All three ask internal/plaintext today, through MarkOpening and CutMark, so
+// the list is an empty exception rather than three files using it. It stays
+// because this is where a prefix check of a writer's own would have to be
+// declared, with its reason, and a writer is the only room that could want one.
 var markWriters = map[string]bool{
 	"internal/propose/propose.go":   true,
 	"internal/annotate/annotate.go": true,
+	"internal/reply/reply.go":       true,
 }
 
 // markReaders are the package directories that ask who wrote a thread entry.
@@ -347,24 +351,25 @@ var markReaders = map[string]bool{
 	"cmd/gdoc":          true,
 }
 
-// TestTheRobotMarkIsReadInOnePlace holds the rule internal/plaintext's doc.go
-// states: every reader of the mark asks that package rather than writing the
-// prefix test out again. The mark is the only record of authorship a thread
-// itself carries, so three copies of the check would be three answers to one
-// question the day the mark changes.
+// TestTheMarkIsReadInOnePlace holds the rule internal/plaintext's package
+// comment states: every reader of the mark asks that package rather than
+// writing the prefix test out again. The mark is the only record of authorship
+// a thread itself carries, so three copies of the check would be three answers
+// to one question the day a mark is added or the default changes.
 //
-// It fails in both directions. A prefix check against the mark anywhere but the
-// three writers above fails, and a listed reader that stops calling
-// plaintext.OpensWithRobot fails too, because then the rule has moved and this
+// It fails in both directions. A prefix check against a known mark anywhere but
+// the three writers above fails, and a listed reader that stops calling
+// plaintext.OpensWithMark fails too, because then the rule has moved and this
 // test is guarding nothing.
 //
-// What counts as naming the mark is the value and never the name, because the
+// What counts as naming a mark is the value and never the name, because the
 // copy this rule took out of internal/comments was a lowercase robot constant
 // of its own: a test matching the names Robot and Prefix would let that same
 // line back in, and would fail on an unrelated prefix somebody happens to call
-// Prefix. So every constant in the tree whose value is the mark is found first,
-// and a bare "🤖" in the call is the mark as much as a constant is.
-func TestTheRobotMarkIsReadInOnePlace(t *testing.T) {
+// Prefix. So every constant in the tree whose value is one of the known marks
+// is found first, and a bare "🤖" in the call is a mark as much as a
+// constant is.
+func TestTheMarkIsReadInOnePlace(t *testing.T) {
 	const owner = "internal/plaintext"
 	marks, err := markConstants("..")
 	if err != nil {
@@ -390,7 +395,7 @@ func TestTheRobotMarkIsReadInOnePlace(t *testing.T) {
 			if !ok {
 				return true
 			}
-			if pkg.Name == "plaintext" && sel.Sel.Name == "OpensWithRobot" {
+			if pkg.Name == "plaintext" && sel.Sel.Name == "OpensWithMark" {
 				asks[rel] = true
 				return true
 			}
@@ -400,7 +405,7 @@ func TestTheRobotMarkIsReadInOnePlace(t *testing.T) {
 			if !marks.names(call.Args[1], rel, imports) || markWriters[where] {
 				return true
 			}
-			t.Errorf("%s tests a text against the robot mark itself; ask plaintext.OpensWithRobot, "+
+			t.Errorf("%s tests a text against a known mark itself; ask plaintext.OpensWithMark, "+
 				"or add the file to markWriters with the reason", where)
 			return true
 		})
@@ -411,7 +416,7 @@ func TestTheRobotMarkIsReadInOnePlace(t *testing.T) {
 	}
 	for reader := range markReaders {
 		if !asks[reader] {
-			t.Errorf("%s no longer calls plaintext.OpensWithRobot; the one check moved and this test did not", reader)
+			t.Errorf("%s no longer calls plaintext.OpensWithMark; the one check moved and this test did not", reader)
 		}
 	}
 	for where := range markWriters {
@@ -421,29 +426,39 @@ func TestTheRobotMarkIsReadInOnePlace(t *testing.T) {
 	}
 }
 
-// robotMark is the mark, written out. It is a literal rather than
-// plaintext.Robot read back, because what this test asks is which files hold a
-// copy of this character, and a test reading the constant would follow it
-// wherever somebody moved it.
-const robotMark = "🤖"
+// knownMarks are the three marks every gdoc recognises, written out. They are
+// literals rather than plaintext.KnownMarks read back, because what this test
+// asks is which files hold a copy of these characters, and a test reading the
+// list would follow it wherever somebody moved it.
+var knownMarks = []string{"🤖", "⁘", "∴"}
+
+// holdsAMark says whether a text carries one of the known marks.
+func holdsAMark(text string) bool {
+	for _, m := range knownMarks {
+		if strings.Contains(text, m) {
+			return true
+		}
+	}
+	return false
+}
 
 // prefixChecks are the strings functions that test or take a prefix off a
 // text. All three are the same question about the mark asked a different way,
 // so all three are the question internal/plaintext owns.
 var prefixChecks = map[string]bool{"HasPrefix": true, "CutPrefix": true, "TrimPrefix": true}
 
-// marks is every constant in the tree whose value is the mark: local by package
-// directory, so a file can name its package's own constant, and qualified by
-// package name, so a file can name another package's exported one.
+// marks is every constant in the tree whose value carries a known mark: local
+// by package directory, so a file can name its package's own constant, and
+// qualified by package name, so a file can name another package's exported one.
 type marks struct {
-	local     map[string]bool // "internal/propose.Robot"
-	qualified map[string]bool // "plaintext.Robot"
+	local     map[string]bool // "internal/plaintext.known"
+	qualified map[string]bool // "plaintext.DefaultMark"
 }
 
-// names answers whether an expression is the mark, from the package directory it
-// is written in and that file's imports. A string literal carrying the mark is
-// one, a constant whose value is the mark is one, and anything else is not,
-// whatever it is called.
+// names answers whether an expression is a known mark, from the package
+// directory it is written in and that file's imports. A string literal
+// carrying one is one, a constant whose value carries one is one, and anything
+// else is not, whatever it is called.
 func (m marks) names(arg ast.Expr, dir string, imports map[string]string) bool {
 	switch v := arg.(type) {
 	case *ast.ParenExpr:
@@ -455,7 +470,7 @@ func (m marks) names(arg ast.Expr, dir string, imports map[string]string) bool {
 			return false
 		}
 		text, err := strconv.Unquote(v.Value)
-		return err == nil && strings.Contains(text, robotMark)
+		return err == nil && holdsAMark(text)
 	case *ast.Ident:
 		return m.local[dir+"."+v.Name]
 	case *ast.SelectorExpr:
@@ -472,10 +487,10 @@ func (m marks) names(arg ast.Expr, dir string, imports map[string]string) bool {
 	return false
 }
 
-// markConstants finds every constant and variable in the tree whose value is
-// the mark, following one constant to another until nothing new is found: the
-// writers hold `const Robot = plaintext.Robot` and `const Prefix = Robot + " "`,
-// and both of those are the mark.
+// markConstants finds every constant and variable in the tree whose value
+// carries a known mark, following one constant to another until nothing new is
+// found: a package holding `const mine = plaintext.DefaultMark` and
+// `const opener = mine + " "` has two of them.
 func markConstants(root string) (marks, error) {
 	type spec struct {
 		dir, pkg, name string

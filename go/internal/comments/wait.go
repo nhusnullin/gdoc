@@ -51,6 +51,11 @@ type WaitOptions struct {
 	// Read is the document read a poll makes when its listing carried
 	// something, and on the first poll.
 	Read Read
+	// Mark is the mark this run writes, which every reply the wait brings back
+	// is read against beside the three marks every gdoc knows. It is here
+	// because Threads asks for it and the wait is the one caller that cannot
+	// be handed it per poll.
+	Mark string
 }
 
 // Waited is what one wait saw. Every field is a fact: what arrived, where the
@@ -174,7 +179,7 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 			d = got
 		}
 
-		threads, unplaced := Threads(raw, d)
+		threads, unplaced := Threads(raw, d, o.Mark)
 		if len(threads) > 0 {
 			out.Threads = threads
 			out.Unplaced = unplaced

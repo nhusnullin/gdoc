@@ -72,35 +72,6 @@ func TestMarkerLeavesPlainWordsAlone(t *testing.T) {
 	}
 }
 
-// The answers OpensWithRobot gives. It is true where the mark opens the text
-// and false everywhere else, and a mark in the middle of a sentence is not the
-// text opening with it.
-//
-// The leading whitespace cases are the reason the check exists at all: a reply
-// whose first line is blank still opens with the mark.
-//
-// That three readers share this one check rather than writing it out again is
-// the other half, and it is read off the tree by
-// TestTheRobotMarkIsReadInOnePlace in go/boundary.
-func TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText(t *testing.T) {
-	for _, c := range []struct {
-		text string
-		want bool
-	}{
-		{"🤖 the register is reviewed", true},
-		{"🤖the register is reviewed", true},
-		{"\n\n🤖 the register is reviewed", true},
-		{"  \t🤖 the register is reviewed", true},
-		{"the register is reviewed", false},
-		{"", false},
-		{"Please ask 🤖 about it", false},
-	} {
-		if got := OpensWithRobot(c.text); got != c.want {
-			t.Errorf("OpensWithRobot(%q) = %v, want %v", c.text, got, c.want)
-		}
-	}
-}
-
 // The known list, as literals. It is the robot every old reply carries and the
 // two quieter marks beside it, and it is read back rather than read off the
 // constant, because a test that reads the constant follows it wherever
@@ -203,6 +174,10 @@ func TestAnEmptyMarkPrefixesNothing(t *testing.T) {
 // "Bot:" is decision B2's price in one line: it is this person's mark and
 // nobody else's, so the same text is gdoc's with that mark in effect and a
 // person's reply without it.
+//
+// That three readers share this one check rather than writing it out again is
+// the other half, and it is read off the tree by TestTheMarkIsReadInOnePlace
+// in go/boundary.
 func TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect(t *testing.T) {
 	for _, c := range []struct {
 		text, inEffect string
