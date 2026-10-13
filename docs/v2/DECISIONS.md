@@ -3706,11 +3706,11 @@ Nail's decisions, taken on 2026-10-03 and 2026-10-04 in the session that began
 with how a colleague's own skill uses gdoc. Serves principle 4, every word costs
 a reader's attention: a colleague picks a quieter mark than 🤖, and a refusal
 says what to do next. The specification is
-`docs/plans/2026-10-04-gdoc-v2-m16-settings-spec.md`, the task list
-`docs/plans/2026-10-04-gdoc-v2-m16-settings.md`, released as v2.11.0. The
-token in the Keychain was decided the same day and is the next entry; on
-2026-10-13 Nail moved it to its own milestone, so v2.11.0 leaves the token a
-file.
+`docs/plans/completed/2026-10-04-gdoc-v2-m16-settings-spec.md`, the task list
+`docs/plans/completed/2026-10-04-gdoc-v2-m16-settings.md`, released as
+v2.11.0. The token in the Keychain was decided the same day and is the next
+entry; on 2026-10-13 Nail moved it to its own milestone, so v2.11.0 leaves the
+token a file.
 
 **What was true before.** Everything gdoc wrote into a thread opened with 🤖
 and one space (2026-08-29). `propose` and `annotate` added it; `reply` refused a

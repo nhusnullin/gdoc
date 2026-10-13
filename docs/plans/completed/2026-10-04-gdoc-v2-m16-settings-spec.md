@@ -1,8 +1,8 @@
 # gdoc v2 Milestone 16: settings, the mark, and answers an AI can act on. Specification
 
 2026-10-04. Every decision below is Nail's and settled. The task list is
-`docs/plans/2026-10-04-gdoc-v2-m16-settings.md`. On 2026-10-13 Nail moved Part
-C, the token in the Keychain and signed releases, to M17
+`docs/plans/completed/2026-10-04-gdoc-v2-m16-settings.md`. On 2026-10-13 Nail
+moved Part C, the token in the Keychain and signed releases, to M17
 (`docs/plans/2026-10-13-gdoc-v2-m17-keychain-spec.md`), so v2.11.0 does not
 wait for the certificate. In v2.11.0 the token stays the file it is today, and
 nothing is signed. It grew out of the 2026-10-03 brainstorm on how a

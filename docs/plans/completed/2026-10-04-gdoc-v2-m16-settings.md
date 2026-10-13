@@ -1,10 +1,10 @@
 # gdoc v2 Milestone 16: settings, the mark, and answers an AI can act on, plan
 
 2026-10-04. The task list for the specification beside it,
-`docs/plans/2026-10-04-gdoc-v2-m16-settings-spec.md`, whose decisions are
-Nail's and settled. One commit per task. Released as v2.11.0, carrying Parts A
-and B, after Nail's acceptance. Part C, the token in the Keychain and signed
-releases, moved to M17 on 2026-10-13 (Nail):
+`docs/plans/completed/2026-10-04-gdoc-v2-m16-settings-spec.md`, whose decisions
+are Nail's and settled. One commit per task. Released as v2.11.0, carrying
+Parts A and B, after Nail's acceptance. Part C, the token in the Keychain and
+signed releases, moved to M17 on 2026-10-13 (Nail):
 `docs/plans/2026-10-13-gdoc-v2-m17-keychain.md`.
 
 The spec holds the rules, the decisions and the measurements. This plan repeats
@@ -837,17 +837,64 @@ one thing between them rather than each half of it.
 **Files:**
 - Modify: `docs/v2/PLAN.md`
 
-- [ ] `make test`, `make vet`, `GOOS=darwin go vet ./...` and `make dist` pass.
-- [ ] Every Validation Command for Part B gives the answer it states; record
+- [x] `make test`, `make vet`, `GOOS=darwin go vet ./...` and `make dist` pass.
+- [x] Every Validation Command for Part B gives the answer it states; record
       the counts here as ➕ notes.
-- [ ] Every row of the spec's Decisions table for Parts A and B names a task
+- [x] Every row of the spec's Decisions table for Parts A and B names a task
       above that built it.
-- [ ] `git diff main...HEAD -- go/internal/guard/policy.go` is empty, and
+- [x] `git diff main...HEAD -- go/internal/guard/policy.go` is empty, and
       `go/internal/auth/` is untouched: the token stays a file in M16.
-- [ ] `PLAN.md`: M16 under Done, with this plan's path, and M17 named as
+- [x] `PLAN.md`: M16 under Done, with this plan's path, and M17 named as
       next. Move this plan and its spec to `docs/plans/completed/`, fixing
       every link to both.
-- [ ] `git commit -m "docs(v2): M16, completed"`
+- [x] `git commit -m "docs(v2): M16, completed"`
+
+➕ The gates: `make test` is the raced suite over 41 packages, every one `ok`;
+`make vet` is `go vet ./...` and the gofmt check, both silent; `GOOS=darwin go
+vet ./...` is silent; `make dist` wrote the three binaries into `bin/`.
+`CLAUDE.md` is 300 lines and `README.md` is 200, which are their ceilings.
+
+➕ Part B's validation commands, each from a fresh `GDOC_CONFIG_DIR`, against
+`go build -o "$TMPDIR/gdoc-m16" ./cmd/gdoc`. The four `help --json` reads print
+`{"mark":"⁘","mark_from":"default"}`, `{"mark":"∴","mark_from":"argument"}`,
+`{"mark":"","mark_from":"argument"}` and `{"mark":"🤖","mark_from":"file"}`,
+each exactly as written. The three refusals exit 1 with `ok: false`, and each
+error names the thing that was wrong: the missing `--config` path, the unknown
+field `colour` with its line and column, and `**` as what a Docs thread would
+render literally. `printf '' | gdoc mcp --mark ∴` exits 0; `gdoc mcp --stdio`
+exits 1, with its one sentence on stderr and nothing on stdout, which is the
+`mcp` half of the one-JSON-object invariant.
+
+➕ The two greps, read as they were meant. `robot_not_ours` has ten hits and no
+field, argument or JSON key among them: six in `cmd/gdoc/mcpledger_test.go`,
+which is the pin that the fact reaches no model, and four sentences of history
+in `boundary/doc.go`, `boundary/boundary_test.go` and `internal/chat/doc.go`,
+exactly the four Task 17 left. The second grep's pattern matches
+`plaintext.Prefixed`, which is the function that replaced the constant;
+`grep -rnE 'OpensWithRobot|plaintext\.Prefix\b|plaintext\.Robot'` finds nothing,
+and `Robot` survives in `internal/plaintext` only inside the name of
+`TestTheKnownMarksAreTheRobotAndTheTwoDots`.
+
+➕ The spec's Decisions table, row by row, against the tasks that built each.
+Part A is one row, "George keeps his own skill. gdoc's own answers have to be
+enough for it", and Tasks 2 to 8 are those answers: the refusals that name no
+person, the table-cell test, the fields an entry takes, the way to propose a
+deletion, the refusal that names its proposal, the `--from` summary with `why`,
+and the one read before the first write. Part B's eight rows: the mark as a
+setting with 🤖, ⁘, ∴ and others allowed is Tasks 9, 10 and 13; the empty mark
+is Tasks 9 and 13, with `plaintext.Prefixed` as the one writer; the settings
+file and its path as an argument is Tasks 10 and 11; every setting also a
+direct argument that overrides the file is Tasks 10 and 11, with the order
+pinned in `internal/settings`; any symbol as the mark is Task 9; the default ⁘
+is Task 9, stated as a literal by `TestTheDefaultMarkIsTheFourDot`;
+`reply --body` with chat's `body` mapping to it is Task 16; and the token not
+being a setting is Task 10's `doc.go` and Task 18's `docs/guide/how-it-works.md`.
+The two rows marked `none`, Part C's move to M17 and `propose --folder` staying
+in its backlog item, ask for no task here.
+
+➕ `git diff main...HEAD -- go/internal/guard/policy.go` is empty and
+`git diff main...HEAD --stat -- go/internal/auth/` prints nothing, over 123
+changed files. The token is still a file, and no grant moved for the mark.
 
 ## Post-Completion
 
