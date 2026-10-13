@@ -124,11 +124,12 @@
 // # The mark is read in one place
 //
 // The mark is the only record of authorship a thread itself carries, so the
-// check that reads it is internal/plaintext's and nobody else's. Three readers
-// ask it: internal/comments of a reply, internal/chat of the robot_not_ours
-// fact, and cmd/gdoc of a thread's opening comment. A fourth copy, written as a
-// prefix test of its own, would be a second answer to one question the day a
-// mark is added or the default changes.
+// check that reads it is internal/plaintext's and nobody else's. Two readers
+// ask it: internal/comments of a reply, and cmd/gdoc of a thread's opening
+// comment. internal/chat was the third until its robot_not_ours fact went on
+// 2026-10-04. A third copy, written as a prefix test of its own, would be a
+// second answer to one question the day a mark is added or the default
+// changes.
 //
 // Three files are named in markWriters and may test a mark themselves, because
 // each asks about one on a caller's own input rather than reading who wrote a

@@ -317,11 +317,11 @@ func burstRule(w Write, l *Ledger, now time.Time) (string, string, string) {
 // the AI addressed, a character nobody can see: each is a comment written at the
 // model rather than at a colleague.
 //
-// robot_not_ours is not one of them, though the model is still shown it. The
-// record of gdoc's own writes lives in the process, so after a restart every
-// comment gdoc wrote before reads as robot_not_ours, and a reply into gdoc's own
-// old thread was held every time. Nail's call, 2026-10-03, DECISIONS.md, "What
-// the first run in Claude Desktop changed".
+// The mark is not one of them. The record of gdoc's own writes lives in the
+// process, so after a restart every comment gdoc wrote before read as a mark
+// with no receipt, and a reply into gdoc's own old thread was held every time.
+// Nail's call, 2026-10-03, DECISIONS.md, "What the first run in Claude Desktop
+// changed"; the fact that said so was removed on 2026-10-04.
 var flaggedFacts = []struct {
 	name string
 	of   func(Facts) bool
@@ -345,7 +345,7 @@ func flaggedThreadRule(w Write, l *Ledger, _ time.Time) (string, string, string)
 	if !found {
 		return "", "", ""
 	}
-	facts := FactsOf(Comment{ID: opener.ID, Text: opener.Text}, l)
+	facts := FactsOf(Comment{Text: opener.Text})
 	var fired []string
 	for _, f := range flaggedFacts {
 		if f.of(facts) {

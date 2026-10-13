@@ -165,18 +165,23 @@ func TestAWriteReadsItsTargetFreshAndRecordsIt(t *testing.T) {
 	}
 }
 
-// The reply this session wrote is not a mark with no receipt, and the one a
-// stranger left is. It is the whole reason the ledger is wired to the view: the
-// marker is the only record of authorship there is, and the receipt is this
-// process's own.
-func TestAReplyThisSessionWroteIsNotRobotNotOurs(t *testing.T) {
+// No fact named robot_not_ours reaches the model, whether or not this session
+// wrote the marked reply in front of it.
+//
+// The fact was the mark without the receipt, and the receipt dies with the
+// process: after a restart every reply gdoc ever wrote read as somebody else's.
+// It was shown and flagged nothing, so it was a word in the answer that said
+// less than the mark beside it. Nail's call, 2026-10-04. The ledger's own record
+// of what gdoc wrote stays, because the Dictated rule asks it:
+// TestWroteAnswersFromTheLedger.
+func TestNoFactNamedRobotNotOursReachesTheModel(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	signedIn(t)
 	stubSession(t, docsAndComments(t))
 	stubNow(t, ledgerClock)
 	ch := callChat(t)
 
-	ours := func() bool {
+	answer := func() []string {
 		t.Helper()
 		stubSession(t, docsAndComments(t))
 		res := mcpRun(context.Background(), mcpToolNamed(t, "comments"),
@@ -184,24 +189,28 @@ func TestAReplyThisSessionWroteIsNotRobotNotOurs(t *testing.T) {
 		if res.IsError {
 			t.Fatalf("comments answered an error: %v", res.Texts)
 		}
-		view := chatViewOf(t, res.Texts[2])
-		for _, thread := range view.Threads {
-			for _, reply := range thread.Replies {
-				if reply.ID == "R1" {
-					flagged, _ := reply.Facts["robot_not_ours"].(bool)
-					return !flagged
-				}
-			}
-		}
-		t.Fatal("the wrapped copy carries no reply R1")
-		return false
+		return res.Texts
 	}
 
-	if ours() {
-		t.Error("a robot reply this session never wrote is reported as ours")
+	// Before any write of this session's own, and after the write that would
+	// once have changed the fact: neither answer names it, in the envelope or
+	// in the wrapped copy the guide sends the model to.
+	for _, when := range []string{"before this session wrote anything", "after this session wrote R1"} {
+		for i, text := range answer() {
+			if strings.Contains(text, "robot_not_ours") {
+				t.Errorf("item %d of the answer %s names robot_not_ours:\n%s", i, when, text)
+			}
+		}
+		ch.ledger.RecordOwn("R1")
 	}
-	ch.ledger.RecordOwn("R1")
-	if !ours() {
-		t.Error("the reply this session wrote is still reported as somebody else's")
+
+	// And the marked reply is still in the answer, with the facts that stayed.
+	view := chatViewOf(t, answer()[2])
+	for _, thread := range view.Threads {
+		for _, reply := range thread.Replies {
+			if _, named := reply.Facts["robot_not_ours"]; named {
+				t.Errorf("reply %s carries a robot_not_ours key", reply.ID)
+			}
+		}
 	}
 }

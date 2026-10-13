@@ -734,19 +734,42 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/mcpledger_test.go`, `go/cmd/gdoc/mcplabel_test.go`,
   `go/cmd/gdoc/mcpguide_test.go`, `go/cmd/gdoc/mcplanded_test.go`
 
-- [ ] `Facts.RobotNotOurs` and `robotNotOurs` go. `FactsOf` no longer takes
+- [x] `Facts.RobotNotOurs` and `robotNotOurs` go. `FactsOf` no longer takes
       `OwnReplies` if nothing else in it asks; `OwnReplies` and
       `Ledger.Wrote` stay for the Dictated rule.
-- [ ] `TestTheFactNamesAreTheLiterals` and the list in `mcplabel_test.go`
+- [x] `TestTheFactNamesAreTheLiterals` and the list in `mcplabel_test.go`
       name five facts. `TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote`
       and `TestAReplyThisSessionWroteIsNotRobotNotOurs` are deleted;
       `TestRobotNotOursUsesTheLedger` becomes `TestWroteAnswersFromTheLedger`.
-- [ ] `TestNoFactNamedRobotNotOursReachesTheModel`: a comments answer through
+- [x] `TestNoFactNamedRobotNotOursReachesTheModel`: a comments answer through
       `mcpReadAnswer` carries no `robot_not_ours` key anywhere.
-- [ ] `chat/doc.go` "Six facts" becomes five, and the Flagged thread bullet
+- [x] `chat/doc.go` "Six facts" becomes five, and the Flagged thread bullet
       loses its sentence about `robot_not_ours`. `chatheader.md` drops it from
       the list of facts.
-- [ ] `git commit -m "refactor(chat): robot_not_ours goes, the ledger stays for Dictated"`
+- [x] `git commit -m "refactor(chat): robot_not_ours goes, the ledger stays for Dictated"`
+
+➕ `Comment.ID` went with the fact. No check asked anything of the item beyond
+its own words once `robotNotOurs` was gone, so the field was one nothing read.
+
+➕ `OwnReplies` moved from `facts.go` to `ledger.go`, where the record it
+describes lives, with `var _ OwnReplies = (*Ledger)(nil)` so the interface the
+Dictated rule asks is pinned to the type that answers it.
+
+➕ `mcpReadAnswer`, `mcpChatView`, `chatThreads` and `chatReplies` lost their
+`chat.OwnReplies` argument: they only carried it to `FactsOf`. `mcptools.go`
+hands the ledger to `mcpRecordRead` and nothing else now.
+
+➕ `internal/chat` left `markReaders` in `boundary/boundary_test.go`, because
+`robotNotOurs` was its one call of `plaintext.OpensWithMark`. Two readers ask it
+now, `internal/comments` of a reply and `cmd/gdoc` of a thread's opening
+comment, and `boundary/doc.go` and `plaintext`'s package comment say so.
+
+⚠️ The Part B validation command `grep -rn 'robot_not_ours\|RobotNotOurs' go/`
+cannot find nothing: the test this task's third item names carries the string,
+and three comments date the removal. After this task it finds six lines in
+`cmd/gdoc/mcpledger_test.go` (the pin) and one each in `boundary/boundary_test.go`,
+`boundary/doc.go` and `internal/chat/doc.go` (the history). No field, no
+argument and no JSON key.
 
 ### Task 18: the documents of Part B
 

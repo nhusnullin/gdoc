@@ -16,8 +16,8 @@ import (
 // answer was lost, and an item that landed before a later one stopped the run.
 // Nothing trusts a success, so the envelope says what landed in `sent` and in
 // `outcome`, and that is what the ledger must read. Reading `ok` instead would
-// under-count the burst, leave the Focus rule's reset point behind, and report a
-// comment gdoc itself wrote as `robot_not_ours`.
+// under-count the burst, leave the Focus rule's reset point behind, and let the
+// Dictated rule hold a reply for quoting words gdoc itself wrote.
 func TestAWriteThatLandedIsRecordedThoughTheCallFailed(t *testing.T) {
 	confirmed := propose.Checks{}
 	cases := []struct {

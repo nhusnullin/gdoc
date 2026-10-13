@@ -71,12 +71,11 @@
 //
 // The check lives here for the same reason the pattern does: every reader of
 // the mark asks this package rather than writing the prefix test out again.
-// internal/comments asks it of a reply, internal/chat asks it of the
-// robot_not_ours fact, and cmd/gdoc asks it of a thread's opening comment, so
-// the day a mark is added there is one line to change. Two tests hold that
+// internal/comments asks it of a reply and cmd/gdoc of a thread's opening
+// comment, so the day a mark is added there is one line to change. Two tests hold that
 // between them: TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect pins
 // the answers, and TestTheMarkIsReadInOnePlace in go/boundary reads the tree
-// and fails on a prefix check written out again anywhere but the three writers
+// and fails on a prefix check written out again anywhere but the writers
 // that refuse or take the mark off a caller's own input.
 //
 // # All three writers add the mark

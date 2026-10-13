@@ -344,10 +344,10 @@ var markWriters = map[string]bool{
 
 // markReaders are the package directories that ask who wrote a thread entry.
 // Each one asks internal/plaintext, so the day the mark changes there is one
-// line to change rather than three answers to one question.
+// line to change rather than three answers to one question. internal/chat was
+// the third until its robot_not_ours fact went on 2026-10-04.
 var markReaders = map[string]bool{
 	"internal/comments": true,
-	"internal/chat":     true,
 	"cmd/gdoc":          true,
 }
 
@@ -358,7 +358,7 @@ var markReaders = map[string]bool{
 // to one question the day a mark is added or the default changes.
 //
 // It fails in both directions. A prefix check against a known mark anywhere but
-// the three writers above fails, and a listed reader that stops calling
+// the writers above fails, and a listed reader that stops calling
 // plaintext.OpensWithMark fails too, because then the rule has moved and this
 // test is guarding nothing.
 //

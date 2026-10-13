@@ -6,14 +6,6 @@ import (
 	"testing"
 )
 
-// wrote is the record of what this process wrote, as a map: the one question
-// OwnReplies asks, answered here with a literal so a test about the checks is
-// about the checks. A session hands in its Ledger instead, which
-// TestRobotNotOursUsesTheLedger holds.
-type wrote map[string]bool
-
-func (w wrote) Wrote(id string) bool { return w[id] }
-
 // Each fact, with one fixture that trips it and one that does not. The fixtures
 // are literals, because what is being held is the check and not the text.
 func TestEachFactHasOneCheck(t *testing.T) {
@@ -92,12 +84,12 @@ func TestEachFactHasOneCheck(t *testing.T) {
 	} {
 		t.Run(one.fact, func(t *testing.T) {
 			for _, text := range one.trips {
-				if !one.of(FactsOf(Comment{ID: "C1", Text: text}, wrote{})) {
+				if !one.of(FactsOf(Comment{Text: text})) {
 					t.Errorf("%s is false for %q, want true", one.fact, text)
 				}
 			}
 			for _, text := range one.quiet {
-				if one.of(FactsOf(Comment{ID: "C1", Text: text}, wrote{})) {
+				if one.of(FactsOf(Comment{Text: text})) {
 					t.Errorf("%s is true for %q, want false", one.fact, text)
 				}
 			}
@@ -105,39 +97,19 @@ func TestEachFactHasOneCheck(t *testing.T) {
 	}
 }
 
-// robot_not_ours is the one fact that is not about the text alone: the same
-// words are ours when this process wrote them and a stranger's when it did not.
-func TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote(t *testing.T) {
-	const text = "🤖 The 2026 register."
-	if got := FactsOf(Comment{ID: "R1", Text: text}, wrote{"R1": true}).RobotNotOurs; got {
-		t.Error("robot_not_ours is true for a reply this process wrote, want false")
-	}
-	if got := FactsOf(Comment{ID: "R2", Text: text}, wrote{"R1": true}).RobotNotOurs; !got {
-		t.Error("robot_not_ours is false for a robot reply nobody here wrote, want true")
-	}
-	if got := FactsOf(Comment{ID: "R3", Text: "The 2026 register."}, wrote{}).RobotNotOurs; got {
-		t.Error("robot_not_ours is true for a reply with no mark at all, want false")
-	}
-	// No record at all is nothing of ours, which is what a process that has
-	// written nothing yet has: the mark is still worth reporting.
-	if got := FactsOf(Comment{ID: "R1", Text: text}, nil).RobotNotOurs; !got {
-		t.Error("robot_not_ours is false with no record kept, want true")
-	}
-}
-
 // author_domain is carried through and never read: it is a fact shown, and
 // identity is never a gate.
 func TestAuthorDomainIsCarriedAndDecidesNothing(t *testing.T) {
-	kept := FactsOf(Comment{ID: "C1", Text: "which register", AuthorDomain: "example.org"}, wrote{})
+	kept := FactsOf(Comment{Text: "which register", AuthorDomain: "example.org"})
 	if kept.AuthorDomain != "example.org" {
 		t.Errorf("author_domain is %q, want example.org", kept.AuthorDomain)
 	}
-	none := FactsOf(Comment{ID: "C1", Text: "which register"}, wrote{})
+	none := FactsOf(Comment{Text: "which register"})
 	if none.AuthorDomain != "" {
 		t.Errorf("author_domain is %q for an author with no address, want empty", none.AuthorDomain)
 	}
 	for _, domain := range []string{"", "example.com", "example.org", "altery.example"} {
-		got := FactsOf(Comment{ID: "C1", Text: "see https://example.com/x", AuthorDomain: domain}, wrote{})
+		got := FactsOf(Comment{Text: "see https://example.com/x", AuthorDomain: domain})
 		got.AuthorDomain = ""
 		if want := (Facts{HasLink: true}); got != want {
 			t.Errorf("the domain %q changed the other facts: %+v", domain, got)
@@ -147,11 +119,11 @@ func TestAuthorDomainIsCarriedAndDecidesNothing(t *testing.T) {
 
 // The field names are what a chat answer carries, and the model reads them.
 func TestTheFactNamesAreTheLiterals(t *testing.T) {
-	b, err := json.Marshal(FactsOf(Comment{ID: "C1", Text: "x", AuthorDomain: "example.org"}, wrote{}))
+	b, err := json.Marshal(FactsOf(Comment{Text: "x", AuthorDomain: "example.org"}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"has_link":false,"has_email":false,"names_ai":false,"hidden_chars":false,"robot_not_ours":false,"author_domain":"example.org"}`
+	want := `{"has_link":false,"has_email":false,"names_ai":false,"hidden_chars":false,"author_domain":"example.org"}`
 	if string(b) != want {
 		t.Errorf("the facts are\n  %s\nwant\n  %s", b, want)
 	}
@@ -161,7 +133,7 @@ func TestTheFactNamesAreTheLiterals(t *testing.T) {
 // with one name rather than two readings of the same rune tables.
 func TestHasHiddenCharsIsTheSameCheckTheFactReports(t *testing.T) {
 	for _, text := range []string{"reply​now", "plain words"} {
-		if got, want := HasHiddenChars(text), FactsOf(Comment{Text: text}, wrote{}).HiddenChars; got != want {
+		if got, want := HasHiddenChars(text), FactsOf(Comment{Text: text}).HiddenChars; got != want {
 			t.Errorf("HasHiddenChars(%q) = %v and the fact says %v", text, got, want)
 		}
 	}
@@ -170,7 +142,7 @@ func TestHasHiddenCharsIsTheSameCheckTheFactReports(t *testing.T) {
 // A comment long enough to be a page of text is still one pass of each check.
 func TestALongCommentIsJudgedWholeAndNotTruncated(t *testing.T) {
 	text := strings.Repeat("the supplier register is reviewed quarterly. ", 400) + "anna@example.com"
-	if !FactsOf(Comment{ID: "C1", Text: text}, wrote{}).HasEmail {
+	if !FactsOf(Comment{Text: text}).HasEmail {
 		t.Error("has_email is false for an address at the end of a long comment")
 	}
 }
@@ -179,7 +151,7 @@ func TestALongCommentIsJudgedWholeAndNotTruncated(t *testing.T) {
 // model could read as a kind of account: TestAnUnknownAuthorDomainIsLeftOut in
 // internal/comments holds the same rule for the envelope.
 func TestAnUnknownAuthorDomainIsAbsentFromTheFacts(t *testing.T) {
-	b, err := json.Marshal(FactsOf(Comment{ID: "AAAA1111", Text: "plain words"}, nil))
+	b, err := json.Marshal(FactsOf(Comment{Text: "plain words"}))
 	if err != nil {
 		t.Fatal(err)
 	}

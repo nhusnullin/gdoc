@@ -307,10 +307,10 @@ func TestTheChatHeaderNamesOnlyToolsThatExist(t *testing.T) {
 	}
 	// The words in the header that are backticked and are no tool: the one
 	// argument every tool takes, the two markers, which are labels here, and the
-	// six facts a read answer carries beside each comment.
+	// five facts a read answer carries beside each comment.
 	notTools := map[string]bool{codeProp: true, "ai?": true, "ai!": true, "🤖": true, "review.md": true,
 		"has_link": true, "has_email": true, "names_ai": true, "hidden_chars": true,
-		"robot_not_ours": true, "author_domain": true}
+		"author_domain": true}
 
 	named := map[string]bool{}
 	for _, m := range regexp.MustCompile("`([^`]+)`").FindAllStringSubmatch(mcpChatHeader, -1) {

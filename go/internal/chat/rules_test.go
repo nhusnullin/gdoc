@@ -290,9 +290,9 @@ func TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread(t *testing.T) {
 
 	// A robot mark this process did not write does not flag a thread. The record
 	// of gdoc's own writes dies with the process, so after a restart every comment
-	// gdoc wrote earlier reads as robot_not_ours, and a reply into gdoc's own old
-	// thread was held each time. robot_not_ours stays a fact the model is shown;
-	// it no longer decides a hold. Nail's call, 2026-10-03, DECISIONS.md.
+	// gdoc wrote earlier read as a mark with no receipt, and a reply into gdoc's
+	// own old thread was held each time. Nail's call, 2026-10-03, DECISIONS.md;
+	// the fact that said so went on 2026-10-04.
 	robot := NewLedger()
 	robot.RecordRead(Read{
 		DocID: targetID, Title: targetTitle, At: ruleNow.Add(-5 * time.Minute),

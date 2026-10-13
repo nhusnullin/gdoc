@@ -476,7 +476,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 	// envelope alone, because what it carries is what gdoc did.
 	if c.readOnly {
 		mcpRecordRead(ch.ledger, r, now(), ch.set.Mark)
-		return mcpReadAnswer(r, ch.ledger)
+		return mcpReadAnswer(r)
 	}
 	mcpRecordWrite(ch.ledger, c.tool, r, now())
 	// A card for this write is a card for a write that has happened, so it goes

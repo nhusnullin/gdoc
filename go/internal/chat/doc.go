@@ -63,9 +63,9 @@
 // TestEveryCommentReplyQuoteAndDocumentTextIsWrapped in cmd/gdoc, which holds
 // that the wrapped copy and the envelope carry the same words.
 //
-// # Six facts about a comment, each one literal check
+// # Five facts about a comment, each one literal check
 //
-// Facts carries has_link, has_email, names_ai, hidden_chars, robot_not_ours and
+// Facts carries has_link, has_email, names_ai, hidden_chars and
 // author_domain beside every comment and reply:
 // TestEachFactHasOneCheck, TestTheFactNamesAreTheLiterals, and
 // TestAFactsObjectSitsBesideEachThreadAndReply in cmd/gdoc.
@@ -76,11 +76,15 @@
 // linkTLDs, because a dot between two words is usually a sentence ending and a
 // fact firing on ordinary prose is a hold the person learns to wave through.
 //
-// robot_not_ours is the one fact that is not about the text alone: the mark with
-// no receipt behind it. It asks OwnReplies, this process's record of what gdoc
-// wrote, and never the account, because identity is never a gate:
-// TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote. author_domain is carried
-// and read by nothing: TestAuthorDomainIsCarriedAndDecidesNothing. It is absent
+// Every one is a reading of the item's own words, so a comment reads the same
+// way in a session that has written nothing and in one that has written all
+// afternoon: TestEachFactHasOneCheck. robot_not_ours was a sixth, the mark with
+// no receipt behind it, and it went on 2026-10-04: the receipt dies with the
+// process, so after a restart every reply gdoc ever wrote read as somebody
+// else's, and the fact flagged nothing anyway. The mark beside it says more:
+// TestNoFactNamedRobotNotOursReachesTheModel in cmd/gdoc. The facts are never
+// asked of the account, because identity is never a gate. author_domain is
+// carried and read by nothing: TestAuthorDomainIsCarriedAndDecidesNothing. It is absent
 // where Drive gave no address, never an empty string a model could read as a
 // kind of account: TestAnUnknownAuthorDomainIsAbsentFromTheFacts.
 //
@@ -115,12 +119,10 @@
 // a document behind that holds every later one:
 // TestAPinReadOfAnotherDocumentIsNotAttentionElsewhere.
 //
-// The ids of what gdoc wrote are kept beside the writes, and they are what
-// robot_not_ours asks: TestRobotNotOursUsesTheLedger, and
-// TestAReplyThisSessionWroteIsNotRobotNotOurs in cmd/gdoc through the answer a
-// model reads. A *Ledger is the OwnReplies the facts are asked of, and it is
-// what the Dictated rule asks too: the mark on a remark says gdoc's words, and
-// only the receipt says this process wrote them.
+// The ids of what gdoc wrote are kept beside the writes, and the Dictated rule
+// is what asks them: the mark on a remark says the words are gdoc's, and only
+// the receipt says this process wrote them. A *Ledger answers OwnReplies, the
+// one question a rule puts to that record: TestWroteAnswersFromTheLedger.
 //
 // It is per process and nothing reaches disk, which is the rule a grant lives by
 // as well: TestTheLedgerIsPerProcessAndWritesNothingToDisk, which reads the
@@ -172,8 +174,8 @@
 //     TestTheBurstRuleTripsOnTheThirdWriteAndTheTwentySixth.
 //   - Flagged thread: a reply under a comment carrying has_link, names_ai or
 //     hidden_chars, each of which is a comment written at the model rather than
-//     at a colleague. robot_not_ours is shown and flags nothing, because the
-//     record of gdoc's own writes dies with the process:
+//     at a colleague. A mark on that comment flags nothing, because the record
+//     of gdoc's own writes dies with the process:
 //     TestTheFlaggedThreadRuleTripsOnAReplyIntoAFlaggedThread.
 //   - Large removal: a propose taking out more than three hundred characters,
 //     which is no longer a correction:
