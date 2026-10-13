@@ -333,14 +333,12 @@ func TestMcpImportsNoNetHTTP(t *testing.T) {
 // internal/reply takes one off a body that arrived carrying it.
 //
 // All three ask internal/plaintext today, through MarkOpening and CutMark, so
-// the list is an empty exception rather than three files using it. It stays
-// because this is where a prefix check of a writer's own would have to be
-// declared, with its reason, and a writer is the only room that could want one.
-var markWriters = map[string]bool{
-	"internal/propose/propose.go":   true,
-	"internal/annotate/annotate.go": true,
-	"internal/reply/reply.go":       true,
-}
+// the list is empty. It stays as the declaration itself: this is where a prefix
+// check of a writer's own would have to be named, with its reason, and a writer
+// is the only room that could want one. Listing a file that does not hold one
+// would take the rule off that file for nothing, which is why the three came
+// off the day they stopped needing it.
+var markWriters = map[string]bool{}
 
 // markReaders are the package directories that ask who wrote a thread entry.
 // Each one asks internal/plaintext, so the day the mark changes there is one

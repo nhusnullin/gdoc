@@ -121,8 +121,9 @@
 //
 // The ids of what gdoc wrote are kept beside the writes, and the Dictated rule
 // is what asks them: the mark on a remark says the words are gdoc's, and only
-// the receipt says this process wrote them. A *Ledger answers OwnReplies, the
-// one question a rule puts to that record: TestWroteAnswersFromTheLedger.
+// the receipt says this process wrote them. Ledger.Wrote is that one question,
+// and the rule puts it to the record itself:
+// TestWroteAnswersFromTheLedger.
 //
 // It is per process and nothing reaches disk, which is the rule a grant lives by
 // as well: TestTheLedgerIsPerProcessAndWritesNothingToDisk, which reads the

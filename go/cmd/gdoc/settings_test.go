@@ -418,6 +418,45 @@ func TestMcpTakesTheSettingFlagsAndNothingElse(t *testing.T) {
 		})
 	}
 
+	// A setting flag the reading itself refuses is the same line on stderr. The
+	// flags come off before the word mcp is looked for, so a refusal that threw
+	// the line away would leave route with nothing to recognise and the reason
+	// would go out as a JSON envelope on the protocol stream, which the host
+	// reads as a message and a person never reads at all.
+	//
+	// The last three put a second setting flag between the refused one and the
+	// word mcp. A reading that stopped at the first refusal would leave that
+	// flag in front of the command, and the word mcp would never be found.
+	for _, bad := range [][]string{
+		{"mcp", markFlag},
+		{"mcp", markFlag, "∴", markFlag, "🤖"},
+		{"mcp", configFlag + "="},
+		{"mcp", markFlag, configFlag, "settings.yaml"},
+		{configFlag + "=", "mcp"},
+		{configFlag + "=", markFlag, "∴", "mcp"},
+		{markFlag, configFlag, "settings.yaml", "mcp"},
+		{markFlag, "∴", markFlag, "🤖", configFlag + "=", "mcp"},
+	} {
+		t.Run(strings.Join(bad, " "), func(t *testing.T) {
+			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+			var out, errOut bytes.Buffer
+			code := route(context.Background(), bad, strings.NewReader(""), &out, &errOut)
+			if code != 1 {
+				t.Errorf("gdoc %v must be refused with exit 1: got %d", bad, code)
+			}
+			if out.Len() != 0 {
+				t.Errorf("a session prints no envelope, so nothing reaches stdout: %q", out.String())
+			}
+			if !strings.Contains(errOut.String(), markFlag) && !strings.Contains(errOut.String(), configFlag) {
+				t.Errorf("the refusal must name the flag: %q", errOut.String())
+			}
+			if lines := strings.Count(strings.TrimRight(errOut.String(), "\n"), "\n"); lines != 0 {
+				t.Errorf("a session's refusal is one line: %q", errOut.String())
+			}
+		})
+	}
+
 	t.Run("a bad mark is one line on stderr", func(t *testing.T) {
 		t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 

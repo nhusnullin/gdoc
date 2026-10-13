@@ -66,11 +66,13 @@ func (a Annotation) Check(mark string) error {
 		return errors.New("the annotation carries no reason, and a comment that says nothing is one the reader has to guess at")
 	}
 	// Body writes the comment as the mark and the reason, so a reason that
-	// already opens with a mark lands as two of them. A caller carrying the
-	// reply convention over would sign the comment twice, and nothing
-	// downstream would catch it: the read-backs compare against the string that
-	// was sent, so both of them hold over a doubled mark in the one string that
-	// records who wrote the comment.
+	// already opens with a mark lands as two of them, and nothing downstream
+	// would catch it: the read-backs compare against the string that was sent,
+	// so both of them hold over a doubled mark in the one string that records
+	// who wrote the comment. All three writers add the mark, so no caller has a
+	// second convention to carry over; reply takes a typed mark off instead of
+	// refusing it, because a reply body is prose a person may have signed by
+	// hand.
 	//
 	// Every known mark is refused and not only the one this run writes, because
 	// a doubled mark is the same lie in any of them and a reason written for

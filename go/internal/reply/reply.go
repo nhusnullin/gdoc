@@ -30,7 +30,7 @@
 // TestABodyOpeningWithAKnownMarkIsWrittenOnceWithAWarning and
 // TestAnEmptyMarkStillTakesATypedMarkOff are the pins.
 //
-// An empty body is said to be empty rather than said to be missing the mark,
+// An empty body is said to be empty rather than said to carry markdown,
 // because that is the sentence somebody can act on, and a body that is nothing
 // but a mark is refused too: a bare signature is a reply that says nothing and
 // every read-back would hold over it.

@@ -102,7 +102,10 @@ func main() {
 // settings go down beside it. settings.go holds the reading, and the refusal
 // it gives takes the shape of whatever the line was going to be: one envelope
 // for a command, one line on stderr for a session, which is what checkMCPArgs
-// already does with a word it does not know.
+// already does with a word it does not know. That is why takeSettings reads the
+// line to the end even when it refuses it: the word mcp is still on it with
+// every setting flag off, and a session told its reason in an envelope would be
+// told it on the protocol stream.
 // TestMcpTakesTheSettingFlagsAndNothingElse.
 func route(ctx context.Context, args []string, in io.Reader, out, errOut io.Writer) int {
 	rest, given, err := takeSettings(args)

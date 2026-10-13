@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-// A *Ledger is what the facts ask about a robot mark, so the stub of Task 11 is
-// gone and the record is the real one.
-var _ OwnReplies = (*Ledger)(nil)
-
 // read is the instant the fixtures below are read at, written out rather than
 // taken from the clock: what the ledger keeps is the time it was handed, and a
 // test that read the clock would hold nothing.
@@ -182,10 +178,6 @@ func TestWroteAnswersFromTheLedger(t *testing.T) {
 	}
 	if l.Wrote("R2") {
 		t.Error("the ledger claims a reply this process never wrote")
-	}
-	var record OwnReplies = l
-	if !record.Wrote("R1") {
-		t.Error("a *Ledger does not answer OwnReplies, which the rules ask it as")
 	}
 }
 

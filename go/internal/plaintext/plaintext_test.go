@@ -120,6 +120,10 @@ func TestTheDefaultMarkIsTheFourDot(t *testing.T) {
 func TestCheckMarkRefusesWhatAThreadWouldShowWrong(t *testing.T) {
 	for _, c := range []struct{ name, mark, names string }{
 		{"a line break", "⁘\n", "line break"},
+		{"a space alone", " ", "whitespace"},
+		{"a tab alone", "\t", "whitespace"},
+		{"a space in front", " Bot:", "either side"},
+		{"a space behind", "Bot: ", "either side"},
 		{"bold", "**", "**"},
 		{"code", "`", "`"},
 		{"a heading", "#", "#"},
@@ -227,6 +231,56 @@ func TestMarkOpeningNamesTheMarkItFound(t *testing.T) {
 		got, found := MarkOpening(c.text, c.inEffect)
 		if got != c.want || found != c.found {
 			t.Errorf("MarkOpening(%q, %q) = %q, %v, want %q, %v", c.text, c.inEffect, got, found, c.want, c.found)
+		}
+	}
+}
+
+// A mark that is a short word is a word, not a prefix. markRunes leaves room
+// for "Bot", so a prefix check alone would take those three letters off
+// "Both readings agree" and read a person's own sentence as gdoc's: the reply
+// gdoc then writes is "Bot h readings agree", and the read-back compares
+// against that same string and reports it verified.
+//
+// So a mark ending in a letter or a digit opens a text only where a space or
+// the end of the text follows it, which is what Prefixed writes. Asking only
+// that the next character is no letter and no digit is the same defect one
+// character along: "AI-generated summaries" would come back "-generated
+// summaries" and "Bot: readings agree" ": readings agree". The three known
+// marks end in a symbol and are matched as they always were, which the three
+// cases with the four-dot mark in effect hold.
+func TestAWordLikeMarkDoesNotOpenALongerWord(t *testing.T) {
+	for _, c := range []struct {
+		text, inEffect, want string
+		found                bool
+	}{
+		{"Both readings agree", "Bot", "", false},
+		{"Bot readings agree", "Bot", "Bot", true},
+		{"Bot: readings agree", "Bot", "", false},
+		{"Bot", "Bot", "Bot", true},
+		{"Bot\nthe second line", "Bot", "Bot", true},
+		{"AIM is fine", "AI", "", false},
+		{"AI should redo this", "AI", "AI", true},
+		{"AI-generated summaries need a source", "AI", "", false},
+		{"AI's draft is wrong", "AI", "", false},
+		{"B2 of the specification", "B", "", false},
+		{"Both readings agree", "Bot:", "", false},
+		{"Bot: readings agree", "Bot:", "Bot:", true},
+		{"Bot:readings agree", "Bot:", "Bot:", true},
+		{"⁘the register", "Bot", "⁘", true},
+		{"⁘ the register", "Bot", "⁘", true},
+		{"🤖 the register", "Bot", "🤖", true},
+	} {
+		got, found := MarkOpening(c.text, c.inEffect)
+		if got != c.want || found != c.found {
+			t.Errorf("MarkOpening(%q, %q) = %q, %v, want %q, %v", c.text, c.inEffect, got, found, c.want, c.found)
+		}
+		cut, didCut := CutMark(c.text, c.inEffect)
+		wantCut := c.text
+		if c.found {
+			wantCut = strings.TrimPrefix(strings.TrimPrefix(c.text, c.want), " ")
+		}
+		if cut != wantCut || didCut != c.found {
+			t.Errorf("CutMark(%q, %q) = %q, %v, want %q, %v", c.text, c.inEffect, cut, didCut, wantCut, c.found)
 		}
 	}
 }

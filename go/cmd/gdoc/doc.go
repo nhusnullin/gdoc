@@ -628,8 +628,9 @@
 // nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
 // TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
 //
-// The extension has no settings, and it passes neither setting flag: its line
-// is the word mcp alone, which TestTheManifestDeclaresNoSettings holds. What
+// The extension has no settings, which TestTheManifestDeclaresNoSettings
+// holds, and it passes neither setting flag: its line is the word mcp alone,
+// which TestTheManifestTemplateParses holds. What
 // differs from one machine to the next is the binary's path and the release,
 // which is why the template travels in the release and is filled here rather
 // than being a file somebody edits. A colleague who wants another mark in a

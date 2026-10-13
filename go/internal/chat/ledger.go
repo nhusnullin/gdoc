@@ -110,18 +110,6 @@ func (l *Ledger) RecordWrite(w Written) {
 	l.writes = append(l.writes, w)
 }
 
-// OwnReplies is this process's record of what gdoc wrote into a document, as
-// the one question a rule asks of it. A *Ledger answers it, and the interface
-// stays because the question is small: a test holds it with a map, and nothing
-// that asks needs the rest of a session's ledger. A nil OwnReplies has written
-// nothing, which is the honest state of a process that has just started.
-type OwnReplies interface {
-	// Wrote answers whether this process wrote the comment or reply with this id.
-	Wrote(id string) bool
-}
-
-var _ OwnReplies = (*Ledger)(nil)
-
 // RecordOwn keeps the ids of what gdoc wrote: the reply a reply made, the
 // comment an annotate or a propose made. An empty id is dropped, because a write
 // whose answer carried no id is a write nothing can be matched against later.

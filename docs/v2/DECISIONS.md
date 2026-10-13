@@ -84,8 +84,9 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
 | 2026-10-03 | A change the person approved is not a payload that landed | holds |
 | 2026-10-03 | On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object | holds |
-| 2026-10-04 | Settings and the mark in effect | holds |
+| 2026-10-04 | Settings and the mark in effect | superseded 2026-10-13 (the list of what a mark may not be, and what counts as a text opening with one, only; everything else in the entry holds) |
 | 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds |
+| 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3815,3 +3816,48 @@ before M17's code.
 - The signing key as a GitHub secret.
 
 **Tests.** Named by M17's plan as its tasks land.
+
+## 2026-10-13. A blank mark is refused, and a word-like mark is read as a word.
+
+Two values a thread shows wrong that the 2026-10-04 list did not name, found in
+review of M16 and decided the same day. The rule they are read against is that
+entry's own: a value is refused only where a thread would show it wrong, and
+what opens everything gdoc writes is the mark in effect and then one space.
+Serves principle 4, every word costs a reader's attention: a mark nobody can
+see, and a mark that eats the front of a person's sentence, each cost a reader
+more than the refusal does.
+
+**A mark of nothing but whitespace is refused, and the refusal names the empty
+mark.** The thread shows no mark in front of the words, so it looks like the
+empty mark, and it is not: a reader compares a text against the mark it was
+given, so this run's own replies read as a person's and `by_gdoc` is false for
+them. That is the empty mark's price paid by somebody who never chose it. The
+refusal says to write the empty mark, as `""` rather than as a space, if the
+words should go in alone.
+
+**Whitespace on either side of a mark is refused for a reason of its own**, and
+not as a blank mark. gdoc writes one space of its own behind the mark, so a
+trailing space puts two spaces in front of every line it writes, and a leading
+space is a blank the mark hides behind. The refusal says to pick a mark with no
+space on either side.
+
+**A mark ending in a letter or a digit opens a text only where a space or the
+end of the text follows it.** markRunes leaves room for a mark like `Bot`, and
+a prefix check alone cannot tell "Bot readings agree" from "Both readings
+agree": it takes the three letters off either way, so a person's own sentence
+is read as gdoc's and the reply gdoc writes back is "Bot h readings agree",
+which every read-back then holds over. The test is what gdoc itself writes, the
+mark and one space, rather than the weaker question of whether a letter or a
+digit follows: under the mark `AI` that weaker question reads "AI-generated
+summaries need a source" as gdoc's and hands back "-generated summaries need a
+source". A mark ending in anything else is matched as it always was, because no
+word boundary is in question: the three known marks end in a symbol, and so
+does `Bot:`.
+
+**What this does not change.** Any value may still be set, which is decision
+B2. Nothing here is a judgement about a thread, and `by_gdoc` stays a fact:
+what changed is which texts that fact is true of.
+
+**Tests.** `TestCheckMarkRefusesWhatAThreadWouldShowWrong`, whose subtests name
+the space alone, the tab alone, the space in front and the space behind, and
+`TestAWordLikeMarkDoesNotOpenALongerWord`.

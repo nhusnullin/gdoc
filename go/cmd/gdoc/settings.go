@@ -38,9 +38,28 @@ import (
 // And `--config` with an empty value is refused, because the empty string
 // names no file, while the empty mark is a mark.
 // TestASettingFlagGivenTwiceIsRefused and TestASettingFlagWithNoValueIsRefused.
+//
+// A refusal still gives the line back, and the reading finishes it: the first
+// reason is the one kept, and every setting flag comes off the line whatever
+// stood before it. Nothing runs on that line, because route has an error in
+// hand, and the one question left to ask of it is whether the line was a
+// session. A line that stopped at the first refusal would answer that question
+// with a flag where the command should be, so `gdoc --config= --mark ⁘ mcp`
+// would print a JSON envelope into somebody's protocol stream instead of one
+// line on stderr. TestMcpTakesTheSettingFlagsAndNothingElse.
 func takeSettings(args []string) ([]string, settings.Given, error) {
 	rest := make([]string, 0, len(args))
 	var given settings.Given
+	var refusal error
+	// refuse keeps the first reason and reads on. The reading goes to the end
+	// of the line either way, so what is left is the command and its own
+	// arguments whichever flag was wrong, and nothing the caller is handed came
+	// from a flag the line refused.
+	refuse := func(err error) {
+		if refusal == nil {
+			refusal = err
+		}
+	}
 	for i := 0; i < len(args); i++ {
 		name, value, joined := strings.Cut(args[i], "=")
 		if name != configFlag && name != markFlag {
@@ -49,10 +68,12 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 		}
 		if !joined {
 			if i+1 >= len(args) {
-				return nil, settings.Given{}, fmt.Errorf("%s needs a value, and none follows it", name)
+				refuse(fmt.Errorf("%s needs a value, and none follows it", name))
+				continue
 			}
 			if next := args[i+1]; next == configFlag || next == markFlag {
-				return nil, settings.Given{}, fmt.Errorf("%s needs a value, and %q is another flag", name, next)
+				refuse(fmt.Errorf("%s needs a value, and %q is another flag", name, next))
+				continue
 			}
 			i++
 			value = args[i]
@@ -60,14 +81,19 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 		held := &given.Mark
 		if name == configFlag {
 			if value == "" {
-				return nil, settings.Given{}, fmt.Errorf("%s was given an empty value", name)
+				refuse(fmt.Errorf("%s was given an empty value", name))
+				continue
 			}
 			held = &given.Config
 		}
 		if *held != nil {
-			return nil, settings.Given{}, fmt.Errorf("%s is given twice, and which one counts is not decided here", name)
+			refuse(fmt.Errorf("%s is given twice, and which one counts is not decided here", name))
+			continue
 		}
 		*held = &value
+	}
+	if refusal != nil {
+		return rest, settings.Given{}, refusal
 	}
 	return rest, given, nil
 }

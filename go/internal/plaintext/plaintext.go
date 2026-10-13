@@ -29,7 +29,7 @@
 // review reads gdoc's own replies as a person's. That is a colleague's choice
 // to make and gdoc's to state, so --mark's own summary says what it costs:
 // TestAnEmptyMarkPrefixesNothing here, and
-// TestEverySettingFlagIsInHelpAndInBothScripts in cmd/gdoc on the summary.
+// TestTheMarkFlagSaysWhatAnEmptyMarkCosts in cmd/gdoc on the summary.
 //
 // # Identity is never a gate, and the mark decides
 //
@@ -53,9 +53,10 @@
 // Any value may be set, which is decision B2, and the price is that a mark
 // outside the known list reads as a person's own words to everybody else's
 // gdoc. CheckMark refuses only what a thread would show wrong: a line break, a
-// value Docs renders as markdown, one of gdoc's own markers, and more than
-// eight characters counted as runes. The empty mark passes, and it writes the
-// words alone: TestCheckMarkRefusesWhatAThreadWouldShowWrong,
+// mark of nothing but whitespace, whitespace on either side of one, a value
+// Docs renders as markdown, one of gdoc's own markers, and more than eight
+// characters counted as runes. The empty mark passes, and it writes the words
+// alone: TestCheckMarkRefusesWhatAThreadWouldShowWrong,
 // TestCheckMarkAcceptsEachKnownMarkTheEmptyMarkAndEightCharacters and
 // TestAnEmptyMarkPrefixesNothing.
 //
@@ -66,6 +67,13 @@
 // mark in effect, so a colleague who picked their own mark still recognises
 // their own replies: TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect,
 // TestMarkOpeningNamesTheMarkItFound and TestCutMarkTakesOneMarkAndOneSpace.
+//
+// A mark that is a short word is read as a word and not as a prefix: a mark
+// ending in a letter or a digit opens a text only where a space or the end of
+// the text follows it, which is what Prefixed writes, so "Both readings agree"
+// and "AI-generated summaries" are a person's own sentences under the marks
+// "Bot" and "AI" rather than gdoc's replies with their first letters eaten.
+// TestAWordLikeMarkDoesNotOpenALongerWord is the pin.
 //
 // A writer that refuses a reason already carrying a mark asks MarkOpening, so
 // the refusal names the character it found rather than the mark this run would
@@ -136,6 +144,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"gdoc/internal/markers"
@@ -201,11 +210,19 @@ func KnownMarks() []string {
 // colleague may make, and the specification says what it costs.
 //
 // Each refusal is a thread showing the mark wrong. A line break opens the words
-// on the second line and leaves the mark alone on the first. Markdown arrives
-// as typed, because a thread renders it literally, and the question is asked of
-// the mark with words behind it: the heading arm is anchored to a line start,
-// so "#" alone is a number sign and "# the register" is a heading, which is
-// what a mark in front of words makes of it. A marker of gdoc's says a thing
+// on the second line and leaves the mark alone on the first. A mark of nothing
+// but whitespace is the empty mark with nobody told: the thread shows no mark
+// in front of the words, and this run's own replies still read as a person's,
+// because a reader compares against the mark it was given rather than against
+// what was written. That refusal names the empty mark, which is the same choice
+// made out loud. Whitespace on either side of a mark is refused for a reason of
+// its own: gdoc writes one space of its own behind the mark, so a trailing
+// space puts two in, and a leading space is a blank in front of the mark that
+// no reader of a thread can see. Markdown arrives as typed, because a thread
+// renders it literally, and the question is asked of the mark with words behind
+// it: the heading arm is anchored to a line start, so "#" alone is a number
+// sign and "# the register" is a heading, which is what a mark in front of
+// words makes of it. A marker of gdoc's says a thing
 // about a document, and a thread turns it into prose. More than eight runes is
 // the ceiling markRunes holds.
 //
@@ -218,6 +235,11 @@ func CheckMark(v string) error {
 	}
 	if strings.ContainsAny(v, "\r\n") {
 		return errors.New("the mark holds a line break, and a mark is what one line opens with; pick a mark with no line break in it")
+	}
+	if trimmed := strings.TrimSpace(v); trimmed == "" {
+		return errors.New(`the mark is nothing but whitespace, and a thread shows no mark at all in front of the words; write the empty mark, as "" rather than as a space, if the words should go in alone`)
+	} else if trimmed != v {
+		return fmt.Errorf("the mark %q opens or ends with whitespace, and gdoc writes one space of its own behind it; pick a mark with no space on either side", v)
 	}
 	if m := Markdown(v + " words"); m != "" {
 		return fmt.Errorf("the mark holds %q, which a Docs thread renders literally; pick a mark without markdown in it", m)
@@ -272,11 +294,48 @@ func MarkOpening(text, inEffect string) (string, bool) {
 	trimmed := strings.TrimLeft(text, " \t\r\n")
 	longest := ""
 	for _, m := range marks(inEffect) {
-		if strings.HasPrefix(trimmed, m) && len(m) > len(longest) {
-			longest = m
+		if !strings.HasPrefix(trimmed, m) || len(m) <= len(longest) {
+			continue
 		}
+		if !standsAsAMark(trimmed, m) {
+			continue
+		}
+		longest = m
 	}
 	return longest, longest != ""
+}
+
+// standsAsAMark says whether a mark that matched the front of a text is a mark
+// there, rather than the front of the writer's own first word. A mark may be a
+// short word, which is what "Bot" is and what markRunes leaves room for, and a
+// prefix check alone cannot tell "Bot readings" from "Both readings": it takes
+// the three letters off either way, so a person's own reply is read as gdoc's
+// and the words gdoc then writes are "Bot h readings".
+//
+// The test is what Prefixed writes. A mark ending in a letter or a digit goes
+// in with one space behind it, so it is a mark only where a space or the end of
+// the text follows it. Asking merely that the next character is no letter and
+// no digit is the same defect one character along: under the mark "AI" it reads
+// "AI-generated summaries need a source" as gdoc's and hands back
+// "-generated summaries need a source".
+//
+// A mark ending in anything else is matched as it always was, because no word
+// boundary is in question: the three known marks end in a symbol, and so does
+// "Bot:".
+// TestAWordLikeMarkDoesNotOpenALongerWord.
+func standsAsAMark(trimmed, mark string) bool {
+	last, _ := utf8.DecodeLastRuneInString(mark)
+	if !letterOrDigit(last) {
+		return true
+	}
+	next, size := utf8.DecodeRuneInString(trimmed[len(mark):])
+	return size == 0 || unicode.IsSpace(next)
+}
+
+// letterOrDigit is what counts as the inside of a word, asked of a mark's last
+// character and of nothing else.
+func letterOrDigit(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // CutMark takes one mark and one following space off the front, and says
