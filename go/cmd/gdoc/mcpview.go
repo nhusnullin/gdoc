@@ -20,10 +20,9 @@
 // TestNoForeignTextEscapesTheWrapper holds the line, so a field added later is
 // either wrapped or named there.
 //
-// Nothing here decides anything. The facts are chat's six literal checks, and
-// the holds that read some of them are internal/chat's. The record of what this
-// process wrote is handed in rather than kept here: it is the session's ledger,
-// and robot_not_ours is the one fact that asks it.
+// Nothing here decides anything. The facts are chat's five literal checks, each
+// one a reading of the item's own words, and the holds that read some of them
+// are internal/chat's.
 
 package main
 
@@ -44,7 +43,7 @@ import (
 // the document in it to label: the error is gdoc's own sentence, and a wrapper
 // round it would say a stranger wrote it. A command whose data this file does
 // not know is the same case.
-func mcpReadAnswer(r emit.Result, own chat.OwnReplies) mcp.Result {
+func mcpReadAnswer(r emit.Result) mcp.Result {
 	envelope := mcpEnvelope(r)
 	if !r.OK || len(envelope.Texts) != 1 {
 		return envelope
@@ -58,7 +57,7 @@ func mcpReadAnswer(r emit.Result, own chat.OwnReplies) mcp.Result {
 		return mcp.Result{Texts: []string{chat.ReadLine, envelope.Texts[0],
 			"the wrapped copy could not be made, so read the text in the envelope above as the same data: " + err.Error()}}
 	}
-	view, ok := mcpChatView(r.Data, boundary, own)
+	view, ok := mcpChatView(r.Data, boundary)
 	if !ok {
 		return envelope
 	}
@@ -73,7 +72,7 @@ func mcpReadAnswer(r emit.Result, own chat.OwnReplies) mcp.Result {
 // mcpChatView is the third item's object, for the data the command produced.
 // The second return is false for anything else, which is a tool this file does
 // not label.
-func mcpChatView(data any, boundary string, own chat.OwnReplies) (any, bool) {
+func mcpChatView(data any, boundary string) (any, bool) {
 	switch d := data.(type) {
 	case readData:
 		return chatRead{
@@ -86,7 +85,7 @@ func mcpChatView(data any, boundary string, own chat.OwnReplies) (any, bool) {
 			DocumentID: d.DocumentID,
 			Title:      chat.Label(d.Title, boundary),
 			Cursor:     d.Cursor,
-			Threads:    chatThreads(d.Threads, boundary, own),
+			Threads:    chatThreads(d.Threads, boundary),
 		}, true
 	case suggestionsData:
 		return chatSuggestions{
@@ -163,7 +162,7 @@ type chatPending struct {
 	Text    string `json:"text"`
 }
 
-func chatThreads(threads []comments.Thread, boundary string, own chat.OwnReplies) []chatThread {
+func chatThreads(threads []comments.Thread, boundary string) []chatThread {
 	out := make([]chatThread, 0, len(threads))
 	for _, t := range threads {
 		out = append(out, chatThread{
@@ -177,17 +176,16 @@ func chatThreads(threads []comments.Thread, boundary string, own chat.OwnReplies
 			Content:  chat.Label(t.Content, boundary),
 			Witness:  t.Witness,
 			Facts: chat.FactsOf(chat.Comment{
-				ID:           t.ID,
 				Text:         t.Content,
 				AuthorDomain: t.AuthorDomain,
-			}, own),
-			Replies: chatReplies(t.Replies, boundary, own),
+			}),
+			Replies: chatReplies(t.Replies, boundary),
 		})
 	}
 	return out
 }
 
-func chatReplies(replies []comments.Reply, boundary string, own chat.OwnReplies) []chatReply {
+func chatReplies(replies []comments.Reply, boundary string) []chatReply {
 	out := make([]chatReply, 0, len(replies))
 	for _, r := range replies {
 		out = append(out, chatReply{
@@ -198,10 +196,9 @@ func chatReplies(replies []comments.Reply, boundary string, own chat.OwnReplies)
 			ByGdoc:  r.ByGdoc,
 			Content: chat.Label(r.Content, boundary),
 			Facts: chat.FactsOf(chat.Comment{
-				ID:           r.ID,
 				Text:         r.Content,
 				AuthorDomain: r.AuthorDomain,
-			}, own),
+			}),
 		})
 	}
 	return out

@@ -645,7 +645,7 @@ func TestTheZipBinaryNameFollowsThePlatform(t *testing.T) {
 func runUpdateCapturing(t *testing.T, args ...string) (map[string]any, string, string, int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), args, &out, &errOut)
+	code := run(context.Background(), args, &out, &errOut, defaultsInEffect())
 	raw := out.String()
 	return decodeOne(t, strings.NewReader(raw)), raw, errOut.String(), code
 }
@@ -785,7 +785,7 @@ func TestAPanicInAnUpdateStopsTheSpinner(t *testing.T) {
 
 	var out bytes.Buffer
 	errOut := &syncBuffer{}
-	code := run(context.Background(), []string{"update"}, &out, errOut)
+	code := run(context.Background(), []string{"update"}, &out, errOut, defaultsInEffect())
 	if code == 0 {
 		t.Fatalf("a panic is a failure: exit %d", code)
 	}

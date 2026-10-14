@@ -275,7 +275,7 @@ func TestTheBoundaryIsNewForEachAnswer(t *testing.T) {
 func TestAFactsObjectSitsBesideEachThreadAndReply(t *testing.T) {
 	texts := readAnswer(t, "comments")
 	view := chatViewOf(t, texts[2])
-	want := []string{"author_domain", "has_email", "has_link", "hidden_chars", "names_ai", "robot_not_ours"}
+	want := []string{"author_domain", "has_email", "has_link", "hidden_chars", "names_ai"}
 	for _, thread := range view.Threads {
 		if got := sortedKeys(thread.Facts); !reflect.DeepEqual(got, want) {
 			t.Errorf("thread %s carries facts %v, want %v", thread.ID, got, want)
@@ -294,11 +294,6 @@ func TestAFactsObjectSitsBesideEachThreadAndReply(t *testing.T) {
 	}
 	if got := view.Threads[1].Facts["author_domain"]; got != "example.org" {
 		t.Errorf("the second thread's author_domain = %v, want example.org", got)
-	}
-	// Nothing in this process wrote that reply, and the record is empty until
-	// the ledger lands, so the mark is reported as somebody else's.
-	if got := view.Threads[0].Replies[0].Facts["robot_not_ours"]; got != true {
-		t.Errorf("the robot reply has robot_not_ours = %v, want true", got)
 	}
 }
 
@@ -327,7 +322,7 @@ func TestTheCLIEnvelopeGainsOnlyAuthorDomain(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 	stubSession(t, docsAndComments(t))
 	var buf strings.Builder
-	if code := run(context.Background(), []string{"comments", fixtureDocID}, &buf, nilWriter{}); code != 0 {
+	if code := run(context.Background(), []string{"comments", fixtureDocID}, &buf, nilWriter{}, defaultsInEffect()); code != 0 {
 		t.Fatalf("gdoc comments exited %d: %s", code, buf.String())
 	}
 	var envelope struct {
@@ -381,7 +376,7 @@ func TestTheWrappedCopyCarriesTheWitness(t *testing.T) {
 		{ID: "t2", Witness: docx.WitnessUnmatched},
 		{ID: "t3"},
 	}
-	got := chatThreads(threads, "abcdef123456", nil)
+	got := chatThreads(threads, "abcdef123456")
 	if len(got) != len(threads) {
 		t.Fatalf("the view carries %d threads, want %d", len(got), len(threads))
 	}

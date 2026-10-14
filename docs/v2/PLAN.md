@@ -50,6 +50,7 @@ one is written against the code that exists by then.
 | M12 | five backlog items: `GrantInPlace` leaves a created document at full and says the grant changed nothing, a styling batch whose answer names no revision stops the run instead of reading the document for one, the offline drift gate pins the measured pair of every known difference, every numbered list gets its own definition and starts at 1, and an internal anchor link jumps to a bookmark every heading with words carries | 2026-09-18 | `2026-09-18-gdoc-v2-m12-five-backlog-items.md` |
 | M13 | `export`, the fifteenth command: a Google Doc written into the hub as Markdown, one file per tab, its pictures as PNG files beside it, the house prelude taken out and listed, and nothing on disk replaced. With it the `gdoc:` block became a list of documents, `publish` learned to run again, every route into a document learned to refuse gdoc's own markers, `read` gained link targets and list numbering, and two skills landed, `gdoc-export` and `gdoc-align` | 2026-09-19 | `2026-09-19-gdoc-v2-m13-export-and-align.md` |
 | M15 | Panels, what a person sees in a terminal: `internal/tty` as the one answer to whether a stream is a terminal and the one palette, `internal/panel` as the boxes and the width rule, `help` and bare `gdoc` as a screen on stderr with nothing on stdout, `--json` to print the object anyway, `update`'s step list inside a box, `auth login` waiting on one line, and `auth status` naming the account it signs in as. A pipe, a file and every platform but darwin get today's text byte for byte. Released as v2.10.0 after Nail's acceptance, which is the plan's Post-Completion list | 2026-10-04 | `2026-10-03-gdoc-v2-m15-panels.md`, with its specification beside it as `2026-10-03-gdoc-v2-m15-panels-spec.md` |
+| M16 | settings, the mark, and answers an AI can act on. Part A, which changed no contract: four refusals that say what to do next rather than naming a person, the fields a `--from` entry takes, the way to propose a deletion and which proposal failed, the `--from` summary carrying `why`, one read of the document before the first write, and the first offline test that a words proposal lands inside a table cell. Part B made the thread mark a setting: `internal/settings` over `settings.yaml`, decoded strictly, `--config` naming the file and `--mark` overriding it on every command and on `gdoc mcp`, `help --json` printing the mark in effect and where it came from, `propose`, `annotate` and `reply` writing that mark themselves so no skill types it, `comments` reading `by_gdoc` from the three known marks and the mark in effect, `reply --body` on the line, and chat's `robot_not_ours` fact gone. The empty mark is allowed, and it costs the only record of authorship a thread has. The token is not a setting. Released as v2.11.0 after Nail's acceptance, which is the plan's Post-Completion list | 2026-10-13 | `2026-10-04-gdoc-v2-m16-settings.md`, with its specification beside it as `2026-10-04-gdoc-v2-m16-settings-spec.md` |
 | the docs restructure | CLAUDE.md cut to the invariants under a test that holds its size, every package's essay moved into its own `doc.go`, SPEC.md and PLAN.md in the present tense, a status register over DECISIONS.md, MEASURED.md split out of it, and v1 retired | 2026-09-15 | `2026-09-11-gdoc-v2-docs-restructure.md` |
 
 ## M8. Landed in M13, except two things
@@ -118,9 +119,16 @@ contradicts the spec stops the plan.
 
 ## What is next
 
-The open work is M14 above, the by-hand list below, the backlog, and what the
-team asks for after M13 reaches them. A milestone starts when Nail names it,
-and its plan is written then, against the code that exists by then.
+M17 is next. Nail named it on 2026-10-13, when Part C left M16 so that v2.11.0
+would not wait for a certificate: the token moves into the macOS Keychain, and a
+release is signed on Nail's Mac. Its plan is
+`docs/plans/2026-10-13-gdoc-v2-m17-keychain.md`, with its specification beside
+it as `docs/plans/2026-10-13-gdoc-v2-m17-keychain-spec.md`. It starts from
+`main` after M16 has merged, and it is released as v2.12.0.
+
+Beside it the open work is M14 above, the by-hand list below, the backlog, and
+what the team asks for after M13 reaches them. A milestone starts when Nail
+names it, and its plan is written then, against the code that exists by then.
 
 The three candidates, in no order, each a backlog item today: the picture bytes
 inside `read` itself, so a review session sees a diagram rather than a

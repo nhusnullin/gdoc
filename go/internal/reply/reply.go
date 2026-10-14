@@ -2,44 +2,51 @@
 // back to see whether it is there.
 //
 // Nothing here decides whether a thread needs a reply, or what to say in it.
-// The body arrives written, in a file the skill wrote, is checked for shape
-// alone, and is sent verbatim. Nothing is appended to it either: the mark is
-// the prefix the skill has already written.
+// The body arrives written, on the line or in a file the skill wrote, is
+// checked for shape alone, and is sent with the mark in effect in front of it
+// and nothing else added.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
 //
-// # The mark is required, and this writer does not add it
+// # gdoc adds the mark, and a mark the caller typed comes off first
 //
-// Check refuses a body that does not open with exactly the robot and one space.
-// That is the opposite of the rule Proposal.Check holds, which refuses a reason
-// that already carries the mark, because propose writes the comment as the
-// prefix plus the reason. A caller has to know which writer it is talking to:
-// an agent following this sentence when it writes proposals.json has its run
-// refused before anything leaves the machine. internal/plaintext holds the mark
-// itself and what it is for. TestCheckAcceptsAPlainRobotReply and
-// TestCheckRefusesEachBadShapeByName are the pins, with
-// TestReplyRefusesABodyWithoutTheRobot in cmd/gdoc.
+// Check is asked of the words alone. internal/propose and internal/annotate
+// hold the same rule over a reason, so all three writers add the mark and no
+// caller has to know which one it is talking to. internal/plaintext holds the
+// mark itself, the list of known marks and what a mark may be.
+// TestReplyAcceptsABodyWithNoMark and TestCheckRefusesEachBadShapeByName are
+// the pins, with TestReplyAddsTheMarkInEffect over the string that reaches
+// Drive.
 //
-// An empty body is said to be empty rather than said to be missing the prefix,
-// because that is the sentence somebody can act on, and a body that is empty
-// behind the prefix is refused too: a bare signature is a reply that says
-// nothing and every read-back would hold over it.
+// A body that opens with a mark gdoc recognises, one of the known three or the
+// mark in effect, has it taken off with plaintext.CutMark and the mark in
+// effect written instead, once, and the warning names what it found. A reply
+// body is prose a person may have signed by hand, and every release before
+// this one asked the skill to type the mark itself, so refusing it would refuse
+// the call every older skill makes. That tolerance holds for v2.11.0 only and
+// the warning says so, because a release that kept it quietly would make the
+// typed mark part of the call again.
+// TestABodyOpeningWithAKnownMarkIsWrittenOnceWithAWarning and
+// TestAnEmptyMarkStillTakesATypedMarkOff are the pins.
+//
+// An empty body is said to be empty rather than said to carry markdown,
+// because that is the sentence somebody can act on, and a body that is nothing
+// but a mark is refused too: a bare signature is a reply that says nothing and
+// every read-back would hold over it.
 //
 // # The markdown rule is asked behind the mark, never in front of it
 //
 // A Docs thread renders markdown literally, so asterisks and backticks arrive
 // as typed and somebody strips them by hand. The heading arm of that rule is
-// anchored to a line start, so a robot sitting in front of a "# " moves the
-// hash off offset zero and the arm cannot fire: asked of the whole body, a
-// heading on the first line passes while the same words on the second line are
-// refused, which is one rule firing or not depending on where the author put
-// them. So the prefix is trimmed first, which is exact because the line above
-// has already required the body to open with exactly it, and the prefix carries
-// no markdown of its own, so the trim can only bring a line start into reach.
-// Nothing that was refused before starts being accepted, and a heading on the
-// first line, which used to pass, is now refused. Proposal.Check asks the same
-// rule of the reason alone, for the same reason.
+// anchored to a line start, so a mark sitting in front of a "# " moves the hash
+// off offset zero and the arm cannot fire: asked of the whole body, a heading
+// on the first line passes while the same words on the second line are refused,
+// which is one rule firing or not depending on where the author put them. So
+// the rule is asked of the words, which is the string gdoc puts the mark in
+// front of, and a mark the caller typed is already off by then. A heading on
+// the first line is refused either way. Proposal.Check asks the same rule of
+// the reason alone, for the same reason.
 // TestPostRefusesMarkdownBeforeAnythingIsSent is the pin, with
 // TestReplyRefusesMarkdownBeforeAnyRequest in cmd/gdoc.
 //
@@ -49,7 +56,7 @@
 // everything that goes wrong is a fact about a reply that already exists, so it
 // is reported rather than raised: a caller told the run failed is a caller that
 // posts the reply a second time. Warnings carry the reason Verified is false.
-// TestPostSendsTheBodyVerbatimToTheRepliesURL,
+// TestPostSendsTheWordsUnderTheMarkToTheRepliesURL,
 // TestPostCarriesAGuardRefusalToTheCaller,
 // TestAReadBackThatFailedIsAWarningRatherThanAnError and
 // TestTheGuardRefusesAReplyOnADocumentNobodyNamed are the pins.
@@ -88,12 +95,6 @@ import (
 	"gdoc/internal/plaintext"
 )
 
-// Prefix is what every reply gdoc writes opens with: the robot and one space,
-// with nothing in front of it. comments.Reply.ByGdoc reads the same prefix, so
-// a reply this package sends is one a later listing recognises, and
-// internal/propose signs its comments with the same mark.
-const Prefix = plaintext.Prefix
-
 // Result is what one reply left behind. The id and the time come from Drive's
 // answer to the write; Verified comes from reading the thread back, which is a
 // different route to the same fact and the only one that is not Drive agreeing
@@ -119,42 +120,63 @@ type Session interface {
 }
 
 // Check is the whole rule about what a reply may say, as shape rather than as
-// meaning. It refuses an empty body, a body that does not open with exactly the
-// robot and one space, and a body carrying markdown, naming what it found.
+// meaning. It refuses an empty body, a body that is nothing but a mark, and a
+// body carrying markdown or one of gdoc's own markers, naming what it found. It
+// requires no mark: gdoc adds the mark in effect itself.
 //
-// The order matters: an empty body is said to be empty rather than said to be
-// missing the prefix, because that is the sentence somebody can act on.
-func Check(body string) error {
-	if strings.TrimSpace(body) == "" {
+// Every question is asked of the words, which is the string Post puts the mark
+// in front of, so a mark the caller typed changes no answer. The order matters:
+// an empty body is said to be empty rather than said to carry markdown,
+// because that is the sentence somebody can act on.
+func Check(body, mark string) error {
+	words, found := plaintext.CutMark(body, mark)
+	if strings.TrimSpace(words) == "" {
+		if found {
+			return errors.New("the reply body is empty behind the mark")
+		}
 		return errors.New("the reply body is empty")
 	}
-	if !strings.HasPrefix(body, Prefix) {
-		return fmt.Errorf("the reply body does not open with %q, which is how a later run tells gdoc's own replies from everybody else's", Prefix)
-	}
-	if strings.TrimSpace(strings.TrimPrefix(body, Prefix)) == "" {
-		return errors.New("the reply body is empty behind the prefix")
-	}
-	// The rule is asked behind the prefix, never of the whole body. The heading
-	// arm is anchored to a line start, so the robot in front of it moves the
-	// first character off offset zero and a reply opening with "# " passes,
-	// while the same words on the second line are refused: the rule would fire
-	// or not depending on where the author put them. The prefix check above has
-	// already run, so the trim is exact, and Prefix carries no markdown of its
-	// own, so the trim can only bring a line start into reach: nothing that was
-	// refused before starts being accepted. It goes the other way on purpose,
-	// and a heading on the first line, which used to pass, is now refused.
-	// Proposal.Check asks the same rule of the reason alone, for the same
-	// reason.
-	if m := plaintext.Markdown(strings.TrimPrefix(body, Prefix)); m != "" {
+	// The rule is asked of the words, never of the body with a mark still on
+	// it. The heading arm is anchored to a line start, so a mark in front of it
+	// moves the first character off offset zero and a reply opening with "# "
+	// would pass, while the same words on the second line are refused: the rule
+	// would fire or not depending on where the author put them. Proposal.Check
+	// asks the same rule of the reason alone, for the same reason.
+	if m := plaintext.Markdown(words); m != "" {
 		return fmt.Errorf("the reply body carries markdown (%q); a Docs thread renders it literally, so it would arrive as typed", m)
 	}
 	// The same rule about the same thing. A review session quoting an exported
 	// file back into the thread it came from would otherwise put the marker
 	// into the document as words.
-	if m := plaintext.Marker(body); m != "" {
+	if m := plaintext.Marker(words); m != "" {
 		return fmt.Errorf("the reply body carries %s, one of gdoc's own markers; a marker travels out of a document and never back in, so it would arrive as typed", m)
 	}
 	return nil
+}
+
+// signed is what Post sends: the mark in effect, one space, then the words. A
+// body that already opens with a mark gdoc recognises has it taken off first,
+// and the warning that comes back names the mark the body carried rather than
+// the one this run writes, because that is the character somebody has to go and
+// find in their skill.
+//
+// One mark comes off and no more, which is plaintext.CutMark's rule: a body
+// carrying two is a body gdoc signs once rather than one that quietly loses
+// words nobody looked at.
+func signed(body, mark string) (string, string) {
+	words, found := plaintext.CutMark(body, mark)
+	sent := plaintext.Prefixed(mark, words)
+	if !found {
+		return sent, ""
+	}
+	opened, _ := plaintext.MarkOpening(body, mark)
+	wrote := fmt.Sprintf("it was written once, as %s", mark)
+	if mark == "" {
+		wrote = "the mark in effect is empty, so the words were written alone"
+	}
+	return sent, fmt.Sprintf(
+		"the reply opened with %s, and gdoc adds the mark itself; %s. gdoc takes a mark off the front for v2.11.0 only, so stop typing one",
+		opened, wrote)
 }
 
 // Post writes one reply and then reads the thread it went into.
@@ -163,10 +185,13 @@ func Check(body string) error {
 // reaches the document. After the write the run cannot fail: everything that
 // goes wrong from there is a fact about a reply that already exists, and the
 // caller needs it reported rather than raised.
-func Post(ctx context.Context, s Session, docID, commentID, body string) (Result, error) {
-	if err := Check(body); err != nil {
+func Post(ctx context.Context, s Session, docID, commentID, body, mark string) (Result, error) {
+	if err := Check(body, mark); err != nil {
 		return Result{}, err
 	}
+	// The mark goes on here and nowhere else, so the read-back below compares
+	// the string that went out rather than a constant.
+	body, markWarning := signed(body, mark)
 	var answer struct {
 		ID      string `json:"id"`
 		Created string `json:"createdTime"`
@@ -188,6 +213,9 @@ func Post(ctx context.Context, s Session, docID, commentID, body string) (Result
 	// reply, and throwing that id away would report a reply Drive named in full
 	// as one that could not be looked for.
 	out := Result{ReplyID: answer.ID, Created: answer.Created}
+	if markWarning != "" {
+		out.Warnings = append(out.Warnings, markWarning)
+	}
 	if answer.ID == "" {
 		// Drive took the write and said nothing useful about it. Calling that a
 		// failure would send the skill back to post it again, and the first one

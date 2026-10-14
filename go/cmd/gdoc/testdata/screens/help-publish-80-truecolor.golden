@@ -7,6 +7,13 @@
 [38;2;124;130;150m│[0m [38;2;184;119;8m--md <file>[0m             [38;2;124;130;150m│[0m the note to publish                                [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m [38;2;184;119;8m--folder-id <folder id>[0m [38;2;124;130;150m│[0m the Drive folder the document is created in        [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m [38;2;184;119;8m--house <file>[0m          [38;2;124;130;150m│[0m a house style file other than the one inside gdoc  [38;2;124;130;150m│[0m
+[38;2;124;130;150m├─[0m[38;2;184;119;8m Every command takes [0m[38;2;124;130;150m───┼────────────────────────────────────────────────────┤[0m
+[38;2;124;130;150m│[0m [38;2;184;119;8m--config <file>[0m         [38;2;124;130;150m│[0m the settings file to use instead of settings.yaml  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                         [38;2;124;130;150m│[0m in the config folder                               [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m [38;2;184;119;8m--mark <text>[0m           [38;2;124;130;150m│[0m the mark gdoc writes in front of its words in a    [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                         [38;2;124;130;150m│[0m thread; an empty mark writes the words alone, and  [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                         [38;2;124;130;150m│[0m then nothing in the thread says which words are    [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                         [38;2;124;130;150m│[0m gdoc's                                             [38;2;124;130;150m│[0m
 [38;2;124;130;150m└─[0m[38;2;184;119;8m Example [0m[38;2;124;130;150m───────────────┴────────────────────────────────────────────────────┘[0m
 gdoc publish --md note.md --folder-id 1AbC...
 [38;2;124;130;150mAdd --json to print the JSON object a skill reads.[0m

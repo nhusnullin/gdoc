@@ -355,13 +355,8 @@ and `zip`, and no git.
    status` deletes his `oauth-token.json` and asks him to sign in; sign in;
    `token_store: keychain`; `make build` again and `gdoc auth status` still
    signed in. Then the same through Claude Desktop's `gdoc mcp`.
-3. **The tag sitting**, in one sitting with `make tag VERSION=v2.12.0`, because
-   a skill that stops typing 🤖 is refused by v2.10.0: `skills/gdoc-review/`
-   (`SKILL.md`, `review.md`, `live.md`, `propose.md`) and
-   `skills/gdoc-align/SKILL.md` stop telling a session to type 🤖 and say gdoc
-   adds the mark; `go/cmd/gdoc/review.md` is copied from the skill's again
-   (`TestTheEmbeddedCoreIsTheSkillsCore`); every skill's `needs` line moves to
-   v2.12.0. v2.12.0 still accepts a body opening with a known mark, with a
-   warning, so the order is safe either way for one release.
+3. **The tag:** `make tag VERSION=v2.12.0`. The skills stop typing 🤖 in M16's
+   own tag sitting, with v2.11.0 (its plan's Post-Completion), so this tag
+   carries no skill change unless a task above made one.
 4. **Sign and publish:** the release workflow leaves v2.12.0 as a draft; Nail
    runs `make sign-release TAG=v2.12.0`.

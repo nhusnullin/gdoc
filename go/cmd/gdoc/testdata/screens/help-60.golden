@@ -19,8 +19,8 @@
 │   Survey a document against the house style, or apply    │
 │   that style where the document stands.                  │
 │ reply                                                    │
-│   Write one reply into a comment thread, under the robot │
-│   prefix.                                                │
+│   Write one reply into a comment thread, under your      │
+│   mark.                                                  │
 │ propose                                                  │
 │   Propose changes as native suggestions, each with the   │
 │   comment that says why.                                 │
@@ -29,7 +29,7 @@
 │   proposed itself.                                       │
 │ annotate                                                 │
 │   Leave a comment on the exact words you quote, under    │
-│   the robot prefix, changing nothing.                    │
+│   your mark, changing nothing.                           │
 ├─ Make a doc ─────────────────────────────────────────────┤
 │ build                                                    │
 │   Build the note as a house-style docx on this machine,  │
@@ -59,6 +59,14 @@
 │ completion                                               │
 │   Write the completion script for one shell, and say the │
 │   line that turns it on.                                 │
+├─ Every command takes ────────────────────────────────────┤
+│ --config <file>                                          │
+│   the settings file to use instead of settings.yaml in   │
+│   the config folder                                      │
+│ --mark <text>                                            │
+│   the mark gdoc writes in front of its words in a        │
+│   thread; an empty mark writes the words alone, and then │
+│   nothing in the thread says which words are gdoc's      │
 └──────────────────────────────────────────────────────────┘
 Run gdoc help <command> for the words and flags one takes.
 Add --json to print the JSON object a skill reads.

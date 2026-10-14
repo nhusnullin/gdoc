@@ -1,11 +1,11 @@
 // Package plaintext holds the two rules about what gdoc may write into a Google
-// Docs thread: it opens with the robot, and it carries no markdown.
+// Docs thread: it opens with the mark in effect, and it carries no markdown.
 //
 // Every writer asks this package rather than holding a copy, because two copies
 // of one regular expression are two rules that drift. internal/reply asks it of
 // a reply, internal/propose asks it of the reason a proposal carries as a
 // comment, and internal/annotate asks it of the reason a comment carries, adding
-// the prefix as propose does.
+// the mark as propose does.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
@@ -14,11 +14,22 @@
 //
 // The Docs API cannot set an author, so everything gdoc writes is signed by
 // whoever is logged in. Every reply and every comment gdoc writes opens with the
-// robot and one space, with nothing in front of it, and that prefix is the whole
-// of what a later run has to go on. comments.Reply.ByGdoc reads the same prefix,
-// so a reply one writer sends is one a later listing recognises.
-// TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot in internal/comments is the
+// mark in effect and one space, with nothing in front of it, and that opening is
+// the whole of what a later run has to go on. comments.Reply.ByGdoc reads the
+// known marks and the mark in effect, so a reply one writer sends is one a later
+// listing recognises, whichever colleague's run wrote it.
+// TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect in internal/comments is the
 // pin on the reading side.
+//
+// Which character that is belongs to the colleague, not to this package: the
+// mark is a setting, read below. The three known marks are read whatever this
+// run was given, which is what keeps one colleague's reply legible to another's
+// gdoc. The empty mark is the one setting that leaves no record at all: the
+// words go in alone, nothing in the thread says they are gdoc's, and a later
+// review reads gdoc's own replies as a person's. That is a colleague's choice
+// to make and gdoc's to state, so --mark's own summary says what it costs:
+// TestAnEmptyMarkPrefixesNothing here, and
+// TestTheMarkFlagSaysWhatAnEmptyMarkCosts in cmd/gdoc on the summary.
 //
 // # Identity is never a gate, and the mark decides
 //
@@ -28,33 +39,77 @@
 // what gdoc wrote, and the marker in a comment's own text decides what gdoc is
 // being asked to do. Neither question is ever asked of the account.
 //
-// # Robot and Prefix are two constants, and a check asks about Robot
+// # The mark is a setting, and three marks are always known
 //
-// Prefix is what a writer writes. Robot is what a check asks about, because
-// every near miss of the prefix carries the same mark: the robot with no space
-// behind it, the robot behind a space, the robot behind a newline. A check
-// reading the whole prefix answers no on each of them and lets a second mark
-// through, and a doubled mark is a lie about who wrote the words.
+// The mark a run writes is a value, not a character this package decides:
+// --mark names it, settings.yaml names it, and the built-in default is the
+// four-dot mark, which is decision B3 of the v2 milestone 16 specification.
+// What this package owns is the list every gdoc recognises whoever wrote the
+// words, 🤖, ⁘ and ∴, and the rule about what a mark may be at all.
+// KnownMarks hands that list out as a new slice, so no caller can change it:
+// TestTheKnownMarksAreTheRobotAndTheTwoDots and TestTheDefaultMarkIsTheFourDot
+// state all four as literals.
 //
-// OpensWithRobot is that check, and it lives here for the same reason the
-// pattern does: every reader of the mark asks this package rather than writing
-// the prefix test out again. internal/comments asks it of a reply,
-// internal/chat asks it of the robot_not_ours fact, and cmd/gdoc asks it of a
-// thread's opening comment, so the day the mark changes there is one line to
-// change. Two tests hold that between them:
-// TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText pins the answers, and
-// TestTheRobotMarkIsReadInOnePlace in go/boundary reads the tree and fails on
-// a prefix check written out again anywhere but the three writers that refuse
-// or require the mark on a caller's own input.
+// Any value may be set, which is decision B2, and the price is that a mark
+// outside the known list reads as a person's own words to everybody else's
+// gdoc. CheckMark refuses only what a thread would show wrong: a line break, a
+// mark of nothing but whitespace, whitespace on either side of one, a value
+// Docs renders as markdown, one of gdoc's own markers, and more than eight
+// characters counted as runes. The empty mark passes, and it writes the words
+// alone: TestCheckMarkRefusesWhatAThreadWouldShowWrong,
+// TestCheckMarkAcceptsEachKnownMarkTheEmptyMarkAndEightCharacters and
+// TestAnEmptyMarkPrefixesNothing.
 //
-// # The two writers own the mark differently
+// Prefixed is the one writer of the mark, and the reading side is one loop
+// asked three ways: MarkOpening names the mark a text opens with, OpensWithMark
+// is that answer as a yes or no, and CutMark takes one mark and one space off a
+// body that arrived with one already. The reader asks the known list plus the
+// mark in effect, so a colleague who picked their own mark still recognises
+// their own replies: TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect,
+// TestMarkOpeningNamesTheMarkItFound and TestCutMarkTakesOneMarkAndOneSpace.
 //
-// A reply body arrives with the mark already on it, so reply.Check requires it
-// and refuses a body that does not open with exactly it. A proposal's reason
-// arrives without it, because propose writes the comment as Prefix plus the
-// reason, so Proposal.Check refuses a reason that already carries it. An agent
-// following the reply rule when it writes proposals.json has its run refused
-// before anything leaves the machine, which is where that mistake belongs.
+// A mark that is a short word is read as a word and not as a prefix: a mark
+// ending in a letter or a digit opens a text only where a space or the end of
+// the text follows it, which is what Prefixed writes, so "Both readings agree"
+// and "AI-generated summaries" are a person's own sentences under the marks
+// "Bot" and "AI" rather than gdoc's replies with their first letters eaten.
+// TestAWordLikeMarkDoesNotOpenALongerWord is the pin.
+//
+// A writer that refuses a reason already carrying a mark asks MarkOpening, so
+// the refusal names the character it found rather than the mark this run would
+// have written.
+//
+// # A reader asks the mark without the space behind it
+//
+// A check asks about the mark alone, because every near miss of what a writer
+// wrote carries the same mark: the mark with no space behind it, the mark
+// behind a space, the mark behind a newline. A check reading the mark and its
+// space together answers no on each of them and lets a second mark through,
+// and a doubled mark is a lie about who wrote the words.
+//
+// The check lives here for the same reason the pattern does: every reader of
+// the mark asks this package rather than writing the prefix test out again.
+// internal/comments asks it of a reply and cmd/gdoc of a thread's opening
+// comment, so the day a mark is added there is one line to change. Two tests hold that
+// between them: TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect pins
+// the answers, and TestTheMarkIsReadInOnePlace in go/boundary reads the tree
+// and fails on a prefix check written out again anywhere but the writers
+// that refuse or take the mark off a caller's own input.
+//
+// # All three writers add the mark
+//
+// A reason and a reply body both arrive as words, because propose, annotate and
+// reply each write the comment as the mark in effect plus those words. One
+// convention, so an agent writing proposals.json and an agent writing a reply
+// follow the same sentence.
+//
+// What each does with a mark the caller typed differs, and on purpose.
+// Proposal.Check and Annotation.Check refuse a reason that opens with one: that
+// file is written for gdoc and the refusal lands before anything leaves the
+// machine. reply takes one off with CutMark and says so, because a reply body is
+// prose a person may have signed by hand and every release before v2.11.0 asked
+// the skill to type the mark itself. reply's own package comment holds how long
+// that tolerance lasts.
 //
 // # No markdown, because a thread renders it literally
 //
@@ -67,8 +122,8 @@
 //
 // The heading arm is anchored to a line start, because a hash in the middle of a
 // sentence is a number sign somebody typed. That anchoring is why all three
-// callers ask the rule behind the mark rather than in front of it: reply.Check's
-// own comment holds the argument.
+// callers ask the rule of the words rather than of the mark and the words
+// together: reply.Check's own comment holds the argument.
 //
 // # No marker of gdoc's own, for the same reason
 //
@@ -85,40 +140,15 @@
 package plaintext
 
 import (
+	"errors"
+	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"gdoc/internal/markers"
 )
-
-// Prefix is what every reply and every comment gdoc writes opens with: the
-// robot and one space, with nothing in front of it. It is the only record of
-// authorship there is, because the Docs API cannot set an author.
-const Prefix = Robot + " "
-
-// Robot is the mark alone, without the space. Prefix is what gdoc writes; this
-// is what a check asks about, because every near miss of the prefix carries the
-// same mark: the robot with no space behind it, or with a space or a newline in
-// front of it. A check that reads the whole prefix answers no on each of them,
-// and a doubled mark is a lie about who wrote the words.
-const Robot = "🤖"
-
-// OpensWithRobot answers whether a text opens with the mark, which is the only
-// record of authorship a thread itself carries. It is not a receipt: anybody
-// can type the character, and what says gdoc wrote a thread entry is the id in
-// internal/chat's own record of what this process wrote. Leading whitespace is
-// stepped over, because a reply that starts on its second line is still a reply
-// that opens with the mark.
-//
-// It is here rather than in each reader because the mark is this package's, and
-// a check written out again is a rule that drifts when the mark changes.
-// internal/comments asks it of a reply, internal/chat asks it of the
-// robot_not_ours fact, and cmd/gdoc asks it of a thread's opening comment:
-// TestOpensWithRobotIsTrueOnlyWhereTheMarkOpensTheText for the answers, and
-// TestTheRobotMarkIsReadInOnePlace in go/boundary for the one place.
-func OpensWithRobot(text string) bool {
-	return strings.HasPrefix(strings.TrimLeft(text, " \t\r\n"), Robot)
-}
 
 // markdown is what Docs renders literally: bold, code, a heading and a
 // bracketed link. Hyphen bullets are deliberately absent: they read as a list in
@@ -144,4 +174,194 @@ func Markdown(body string) string {
 func Marker(body string) string {
 	m, _ := markers.Lines(body)
 	return m
+}
+
+// DefaultMark is the mark gdoc writes when neither an argument nor the settings
+// file names one. It is the four-dot mark, decision B3 of the v2 milestone 16
+// specification: the robot stays a known mark forever, because every reply
+// written before this release carries it, and what a new run writes is the
+// quieter one. TestTheDefaultMarkIsTheFourDot states it as a literal.
+const DefaultMark = "⁘"
+
+// markRunes is the ceiling on a mark, counted in runes. Eight is room for a
+// short word like "Bot:" and no room for a sentence, because a mark is what
+// every line of gdoc's in a thread opens with and a long one is a reader's
+// attention spent on the same characters over and over.
+const markRunes = 8
+
+// known is the list every gdoc recognises, whichever colleague's run wrote the
+// words. It is decision B2: any value may be set, and a mark outside this list
+// is read as a person's own words by everybody else's gdoc, which is the price
+// of free choice. The order is the robot first, because it is the one old
+// replies carry.
+var known = []string{"🤖", DefaultMark, "∴"}
+
+// KnownMarks is that list, as a new slice on every call so that no caller can
+// change it. A caller handed the one slice could sort it or write over an
+// entry, and every later reader would inherit that.
+// TestTheKnownMarksAreTheRobotAndTheTwoDots states the three as literals and
+// writes over what it is handed.
+func KnownMarks() []string {
+	return append([]string(nil), known...)
+}
+
+// CheckMark is the whole rule about what a mark may be, and it names what it
+// found. The empty mark passes: writing the words alone is a choice a
+// colleague may make, and the specification says what it costs.
+//
+// Each refusal is a thread showing the mark wrong. A line break opens the words
+// on the second line and leaves the mark alone on the first. A mark of nothing
+// but whitespace is the empty mark with nobody told: the thread shows no mark
+// in front of the words, and this run's own replies still read as a person's,
+// because a reader compares against the mark it was given rather than against
+// what was written. That refusal names the empty mark, which is the same choice
+// made out loud. Whitespace on either side of a mark is refused for a reason of
+// its own: gdoc writes one space of its own behind the mark, so a trailing
+// space puts two in, and a leading space is a blank in front of the mark that
+// no reader of a thread can see. Markdown arrives as typed, because a thread
+// renders it literally, and the question is asked of the mark with words behind
+// it: the heading arm is anchored to a line start, so "#" alone is a number
+// sign and "# the register" is a heading, which is what a mark in front of
+// words makes of it. A marker of gdoc's says a thing
+// about a document, and a thread turns it into prose. More than eight runes is
+// the ceiling markRunes holds.
+//
+// TestCheckMarkRefusesWhatAThreadWouldShowWrong has one subtest per refusal,
+// and TestCheckMarkAcceptsEachKnownMarkTheEmptyMarkAndEightCharacters is the
+// other direction.
+func CheckMark(v string) error {
+	if v == "" {
+		return nil
+	}
+	if strings.ContainsAny(v, "\r\n") {
+		return errors.New("the mark holds a line break, and a mark is what one line opens with; pick a mark with no line break in it")
+	}
+	if trimmed := strings.TrimSpace(v); trimmed == "" {
+		return errors.New(`the mark is nothing but whitespace, and a thread shows no mark at all in front of the words; write the empty mark, as "" rather than as a space, if the words should go in alone`)
+	} else if trimmed != v {
+		return fmt.Errorf("the mark %q opens or ends with whitespace, and gdoc writes one space of its own behind it; pick a mark with no space on either side", v)
+	}
+	if m := Markdown(v + " words"); m != "" {
+		return fmt.Errorf("the mark holds %q, which a Docs thread renders literally; pick a mark without markdown in it", m)
+	}
+	if m := Marker(v + " words"); m != "" {
+		return fmt.Errorf("the mark holds %q, which is one of gdoc's own markers and reads as prose in a thread; pick another mark", m)
+	}
+	if n := utf8.RuneCountInString(v); n > markRunes {
+		return fmt.Errorf("the mark is %d characters, and a mark may be eight at most; pick a shorter mark", n)
+	}
+	return nil
+}
+
+// Prefixed is what gdoc writes into a thread: the mark, one space, then the
+// words. The empty mark writes the words alone, with no space in front of
+// them: TestAnEmptyMarkPrefixesNothing.
+func Prefixed(mark, words string) string {
+	if mark == "" {
+		return words
+	}
+	return mark + " " + words
+}
+
+// OpensWithMark answers whether a text opens with a mark gdoc recognises:
+// one of the known three, or the mark in effect when a person set one of their
+// own. It is not a receipt, because anybody can type the character; what says
+// gdoc wrote a thread entry is the id in internal/chat's own record of what
+// this process wrote.
+//
+// Leading whitespace is stepped over, because a reply that starts on its second
+// line is still a reply that opens with the mark. An empty mark in effect adds
+// nothing to the list, so that person's own replies are false here, which is
+// what decision B1 says the empty mark costs.
+//
+// TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect pins the answers.
+func OpensWithMark(text, inEffect string) bool {
+	_, found := MarkOpening(text, inEffect)
+	return found
+}
+
+// MarkOpening is the same question answered with the mark itself: the one the
+// text opens with, or the empty string and false when it opens with none. The
+// longest wins where two of them match, for the reason CutMark takes the
+// longest off.
+//
+// It is here because a writer refusing a reason that already carries a mark has
+// to say which mark it found, and a refusal naming the wrong character is one a
+// colleague cannot act on. OpensWithMark and CutMark are both this question
+// asked a shorter way, so all three answer from one loop rather than three:
+// TestMarkOpeningNamesTheMarkItFound.
+func MarkOpening(text, inEffect string) (string, bool) {
+	trimmed := strings.TrimLeft(text, " \t\r\n")
+	longest := ""
+	for _, m := range marks(inEffect) {
+		if !strings.HasPrefix(trimmed, m) || len(m) <= len(longest) {
+			continue
+		}
+		if !standsAsAMark(trimmed, m) {
+			continue
+		}
+		longest = m
+	}
+	return longest, longest != ""
+}
+
+// standsAsAMark says whether a mark that matched the front of a text is a mark
+// there, rather than the front of the writer's own first word. A mark may be a
+// short word, which is what "Bot" is and what markRunes leaves room for, and a
+// prefix check alone cannot tell "Bot readings" from "Both readings": it takes
+// the three letters off either way, so a person's own reply is read as gdoc's
+// and the words gdoc then writes are "Bot h readings".
+//
+// The test is what Prefixed writes. A mark ending in a letter or a digit goes
+// in with one space behind it, so it is a mark only where a space or the end of
+// the text follows it. Asking merely that the next character is no letter and
+// no digit is the same defect one character along: under the mark "AI" it reads
+// "AI-generated summaries need a source" as gdoc's and hands back
+// "-generated summaries need a source".
+//
+// A mark ending in anything else is matched as it always was, because no word
+// boundary is in question: the three known marks end in a symbol, and so does
+// "Bot:".
+// TestAWordLikeMarkDoesNotOpenALongerWord.
+func standsAsAMark(trimmed, mark string) bool {
+	last, _ := utf8.DecodeLastRuneInString(mark)
+	if !letterOrDigit(last) {
+		return true
+	}
+	next, size := utf8.DecodeRuneInString(trimmed[len(mark):])
+	return size == 0 || unicode.IsSpace(next)
+}
+
+// letterOrDigit is what counts as the inside of a word, asked of a mark's last
+// character and of nothing else.
+func letterOrDigit(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// CutMark takes one mark and one following space off the front, and says
+// whether it did. The mark is a known one or the mark in effect, the same list
+// OpensWithMark asks, and leading whitespace is stepped over for the same
+// reason: the two are asked together, and a pair that disagreed about a body
+// whose first line is blank would say the mark is there and then leave it on.
+//
+// One mark comes off and no more. A body carrying two is a body the writer
+// signs once, rather than one that quietly loses words nobody looked at:
+// TestCutMarkTakesOneMarkAndOneSpace.
+func CutMark(text, inEffect string) (string, bool) {
+	mark, found := MarkOpening(text, inEffect)
+	if !found {
+		return text, false
+	}
+	trimmed := strings.TrimLeft(text, " \t\r\n")
+	return strings.TrimPrefix(strings.TrimPrefix(trimmed, mark), " "), true
+}
+
+// marks is the list a reader asks: the known three, and the mark in effect when
+// it is one of a person's own. The empty mark adds nothing, because every text
+// opens with the empty string.
+func marks(inEffect string) []string {
+	if inEffect == "" {
+		return known
+	}
+	return append(KnownMarks(), inEffect)
 }

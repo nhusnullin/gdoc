@@ -9,7 +9,7 @@ import (
 // the write has, and the refusal names the shape that is, so the next attempt
 // is the right one.
 func TestADeletionRefusalSaysToQuoteANeighbour(t *testing.T) {
-	err := Proposal{Quoted: "not ", Replacement: "", Why: "the limit applies"}.Check()
+	err := Proposal{Quoted: "not ", Replacement: "", Why: "the limit applies"}.Check("🤖")
 	if err == nil {
 		t.Fatal("an empty replacement was accepted")
 	}

@@ -364,14 +364,20 @@
 // TestProposeRefusesAnUnknownKeyInTheProposalsFile and
 // TestProposeRefusesAnEmptyProposalList in cmd/gdoc are the other half.
 //
-// A reason that already carries the robot is refused too, because Batch writes
-// the comment as Prefix + Why and a caller following reply's convention would
-// sign it twice. internal/plaintext holds that rule and says why the two writers
-// own the mark differently. TestCheckRefusesEachBadProposalByName carries the
-// near misses.
+// A reason that already carries a mark is refused too, because Batch writes the
+// comment as the mark and the reason and a caller following reply's convention
+// would sign it twice. Every known mark is refused and so is the mark in
+// effect, through plaintext.MarkOpening, so the refusal names the character it
+// found: internal/plaintext holds that rule and says why the two writers own
+// the mark differently. TestCheckRefusesEachBadProposalByName carries the near
+// misses and TestAReasonOpeningWithAnyKnownMarkIsRefused the marks.
+//
+// Check takes the mark for that one rule, which is why a shape rule needs
+// anything from outside the proposal: the mark is a setting rather than a field
+// in the file, and cmd/gdoc hands down what the line and settings.yaml said.
 //
 // The reason is the one rule both kinds ask, because both kinds write it into a
-// thread as Prefix + Why. Everything else Check asks is the kind's own: the
+// thread under that mark. Everything else Check asks is the kind's own: the
 // words kind's quote and replacement, and the block's placement form, its
 // content read through ParseContent, and that content's ceiling.
 // TestCheckRefusesEachBadBlockByName is the block's half of this rule, over the
@@ -443,8 +449,10 @@
 //
 // The comment is anchored on the words of the first new paragraph, without its
 // paragraph mark, because a range carrying a mark anchors across into the
-// paragraph behind it. It carries the robot prefix and the reason, and nothing
-// else: TestBlockBatchWritesTheReasonAsPlainTextUnderTheRobot.
+// paragraph behind it. It carries the mark in effect and the reason, and
+// nothing else, with the empty mark writing the words alone:
+// TestBlockBatchWritesTheReasonAsPlainTextUnderTheRobot,
+// TestProposeWritesTheMarkInEffect and TestAnEmptyMarkWritesTheWordsAlone.
 //
 // # A block's content has a ceiling, and it is the guard's rather than Docs'
 //
@@ -467,8 +475,8 @@
 // cannot. suggestions_inline: the replacement is in the document, carrying a
 // suggestion id. preview_without_suggestions: the quoted words are still
 // somewhere in the tab with suggestions hidden, so it is a suggestion and not an
-// edit. docx_anchored: the docx export carries the robot comment, attached to
-// text.
+// edit. docx_anchored: the docx export carries the comment that was sent, mark
+// and all, attached to text: TestTheReadBackComparesTheMarkThatWasSent.
 //
 // All three, plus a write that answered commentUpdateState ALL_SAVED, is
 // Verified. Anything less is the write reported with the route or the answer
@@ -589,8 +597,8 @@
 // TestVerifyBlockHoldsWhenAReplaceOnlyShortens and
 // TestVerifyBlockHoldsForAReplaceThatKeepsItsFirstLine are the pins.
 //
-// docx_anchored is the words kind's own check, unchanged: the export carries the
-// robot comment and it is attached to text.
+// docx_anchored is the words kind's own check, unchanged: the export carries
+// the comment that was sent and it is attached to text.
 //
 // # One suggestion id is what a verified block means
 //

@@ -24,7 +24,7 @@ var everyCommandName = []string{
 func runHelp(t *testing.T, args ...string) (map[string]any, string, int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), args, &out, &errOut)
+	code := run(context.Background(), args, &out, &errOut, defaultsInEffect())
 	return decodeOne(t, &out), errOut.String(), code
 }
 
@@ -299,7 +299,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "export"}, "Usage: gdoc export <url> --out <file>"},
 		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},
 		{[]string{"help", "probe"}, "Usage: gdoc probe --folder <folder id>"},
-		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body-file <file>"},
+		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body <text> | --body-file <file>"},
 		{[]string{"help", "propose"}, "Usage: gdoc propose <url> --from <file> [--md <file>] [--folder <folder id>]"},
 		{[]string{"help", "withdraw"}, "Usage: gdoc withdraw <url> <suggestion id> --md <file>"},
 		{[]string{"help", "annotate"}, "Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]"},
@@ -413,4 +413,119 @@ func standInFor(word string) string {
 		return "zsh"
 	}
 	return "x"
+}
+
+// settingsInObject is the settings object out of a help answer, as a skill reads
+// it. A missing field is a failure rather than a zero value: the field is
+// always there, and a skill telling "the default mark" from "said nothing"
+// is the reason it is.
+func settingsInObject(t *testing.T, got map[string]any) map[string]any {
+	t.Helper()
+	data, ok := got["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("no data object: %v", got)
+	}
+	set, ok := data["settings"].(map[string]any)
+	if !ok {
+		t.Fatalf("data.settings is not an object: %v", data)
+	}
+	return set
+}
+
+// routedHelp runs one whole line through route, the way a person's shell hands
+// it over, so the two setting flags are read here rather than handed in. The
+// version is the empty string and the reach refuses everything, so a run that
+// would otherwise ask GitHub what is published asks nothing.
+func routedHelp(t *testing.T, args ...string) (map[string]any, int) {
+	t.Helper()
+	checking(t, "", quietPlain{})
+	var out, errOut bytes.Buffer
+	code := route(context.Background(), args, strings.NewReader(""), &out, &errOut)
+	return decodeOne(t, &out), code
+}
+
+// `gdoc help --json` says what this run would write into a thread and where
+// that value came from, so a colleague who is not sure which mark is in effect
+// asks the binary rather than reading two files. Every mark here is a literal.
+func TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		args func(t *testing.T) []string
+		mark string
+		from string
+	}{
+		{
+			name: "default",
+			args: func(*testing.T) []string { return []string{"help", "--json"} },
+			mark: "⁘",
+			from: "default",
+		},
+		{
+			name: "argument",
+			args: func(*testing.T) []string { return []string{"--mark", "∴", "help", "--json"} },
+			mark: "∴",
+			from: "argument",
+		},
+		{
+			name: "file",
+			args: func(t *testing.T) []string {
+				return []string{"--config", writeSettingsFile(t, "mark: \"🤖\"\n"), "help", "--json"}
+			},
+			mark: "🤖",
+			from: "file",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			args := c.args(t)
+
+			got, code := routedHelp(t, args...)
+			if code != 0 || got["ok"] != true {
+				t.Fatalf("%v is an answer: %v (exit %d)", args, got, code)
+			}
+			set := settingsInObject(t, got)
+			if set["mark"] != c.mark {
+				t.Errorf("the mark in effect is %v, want %q", set["mark"], c.mark)
+			}
+			if set["mark_from"] != c.from {
+				t.Errorf("the mark came from %v, want %q", set["mark_from"], c.from)
+			}
+		})
+	}
+}
+
+// The empty mark is a colleague's choice, so it is printed as the empty string
+// rather than left out. A skill that read an absent field would write the
+// default mark into a thread somebody asked to keep clean.
+func TestHelpCarriesTheEmptyMarkAsAnEmptyString(t *testing.T) {
+	got, code := routedHelp(t, "--mark", "", "help", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("help with the empty mark is an answer: %v (exit %d)", got, code)
+	}
+	set := settingsInObject(t, got)
+	mark, ok := set["mark"]
+	if !ok {
+		t.Fatalf("the mark is a fact and the empty one is still printed: %v", set)
+	}
+	if mark != "" {
+		t.Errorf("the empty mark was asked for and the object says %v", mark)
+	}
+	if set["mark_from"] != "argument" {
+		t.Errorf("the empty mark came from the line: %v", set["mark_from"])
+	}
+}
+
+// One command's help is the same shape as every command's, so a skill written
+// against `gdoc help reply` reads the settings without a second path.
+func TestHelpForOneCommandCarriesTheSettingsToo(t *testing.T) {
+	got, code := routedHelp(t, "--mark", "∴", "help", "reply", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("help reply is an answer: %v (exit %d)", got, code)
+	}
+	set := settingsInObject(t, got)
+	if set["mark"] != "∴" {
+		t.Errorf("the mark in effect is %v, want %q", set["mark"], "∴")
+	}
+	if set["mark_from"] != "argument" {
+		t.Errorf("the mark came from %v, want %q", set["mark_from"], "argument")
+	}
 }

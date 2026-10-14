@@ -126,7 +126,7 @@ func TestOneCallMakesOneDirectoryUnderFixedNames(t *testing.T) {
 	files := &callFiles{}
 	defer files.remove()
 
-	first, err := files.write("body.txt", "body", "🤖 yes")
+	first, err := files.write("proposals.json", "proposals", "[]")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,11 +137,11 @@ func TestOneCallMakesOneDirectoryUnderFixedNames(t *testing.T) {
 	if filepath.Dir(first) != filepath.Dir(second) {
 		t.Errorf("one call is one directory: %s and %s", first, second)
 	}
-	if filepath.Base(first) != "body.txt" || filepath.Base(second) != "annotations.json" {
+	if filepath.Base(first) != "proposals.json" || filepath.Base(second) != "annotations.json" {
 		t.Errorf("the file names are fixed: %s and %s", first, second)
 	}
 	body, err := os.ReadFile(first)
-	if err != nil || string(body) != "🤖 yes" {
+	if err != nil || string(body) != "[]" {
 		t.Errorf("the file holds the value: %q, %v", body, err)
 	}
 	info, err := os.Stat(first)
@@ -153,7 +153,7 @@ func TestOneCallMakesOneDirectoryUnderFixedNames(t *testing.T) {
 	}
 }
 
-// A call that needs no file makes no directory. Three of the six never write
+// A call that needs no file makes no directory. Four of the six never write
 // one, and a directory made for nothing is a directory a sweep has to reason
 // about.
 func TestACallThatNeedsNoFileMakesNoDirectory(t *testing.T) {

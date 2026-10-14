@@ -54,15 +54,7 @@ func TestTheZshScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 	}
 
 	// One kind per flag name, so the lines below can be read one at a time.
-	kinds := map[string]kind{}
-	for _, c := range table {
-		for _, f := range c.flags {
-			if was, seen := kinds[f.name]; seen && was != f.value {
-				t.Fatalf("%s carries two kinds, and this test reads the script a line at a time", f.name)
-			}
-			kinds[f.name] = f.value
-		}
-	}
+	kinds := flagKinds(t, table)
 	for _, line := range strings.Split(body, "\n") {
 		spec := strings.TrimSpace(line)
 		if !strings.HasPrefix(spec, "'--") {
@@ -317,15 +309,7 @@ func TestTheBashScriptNamesEveryCommandAndEveryFlag(t *testing.T) {
 	}
 
 	// One kind per flag name, so the arms below can be read one at a time.
-	kinds := map[string]kind{}
-	for _, c := range table {
-		for _, f := range c.flags {
-			if was, seen := kinds[f.name]; seen && was != f.value {
-				t.Fatalf("%s carries two kinds, and this test reads the script an arm at a time", f.name)
-			}
-			kinds[f.name] = f.value
-		}
-	}
+	kinds := flagKinds(t, table)
 
 	// Every arm of the case over the word before the cursor. A flag with a
 	// value is in one of them, and a flag without a value is in none, because
@@ -493,12 +477,15 @@ func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
 		t.Errorf("the zsh script must carry the spec the flag makes: %q", zsh)
 	}
 
+	// The two setting flags are in every script, because every command takes
+	// them: --config is the one file flag of this table, and --mark is a text
+	// flag like --quote and stands in the same arm.
 	files, opaque := bashFlagArms(table)
-	if files != "" {
-		t.Errorf("a text flag is not a file flag: %q", files)
+	if files != configFlag {
+		t.Errorf("the only file flag here is the settings file: %q", files)
 	}
-	if opaque != "--quote" {
-		t.Errorf("a text flag belongs in the opaque arm: %q", opaque)
+	if want := "--quote|" + markFlag; opaque != want {
+		t.Errorf("a text flag belongs in the opaque arm: %q, want %q", opaque, want)
 	}
 
 	bash, err := bashScript(table)
@@ -506,10 +493,34 @@ func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := withoutComments(bash)
-	if !strings.Contains(body, "--quote) return ;;") {
+	if !strings.Contains(body, "--quote|"+markFlag+") return ;;") {
 		t.Errorf("the bash script must answer for --quote with nothing: %q", bash)
 	}
-	if strings.Contains(body, "compgen -f") {
-		t.Errorf("the bash script must not offer file names after a text flag: %q", bash)
+	for _, arm := range flagArms(body) {
+		if !strings.Contains(arm, "compgen -f") {
+			continue
+		}
+		if names, _, _ := strings.Cut(arm, ")"); names != configFlag {
+			t.Errorf("file names are offered after %q, and only the settings file carries one: %q", names, arm)
+		}
 	}
+}
+
+// flagKinds is one kind per flag name, over the table and the two setting
+// flags every command takes, which is what both scripts are written from. A
+// name carrying two kinds would make the assertions below unreadable, so it
+// stops the test instead.
+func flagKinds(t *testing.T, table []command) map[string]kind {
+	t.Helper()
+	kinds := map[string]kind{}
+	all := append(append([]command{}, table...), command{flags: settingFlags()})
+	for _, c := range all {
+		for _, f := range c.flags {
+			if was, seen := kinds[f.name]; seen && was != f.value {
+				t.Fatalf("%s carries two kinds, and this test reads the script one line at a time", f.name)
+			}
+			kinds[f.name] = f.value
+		}
+	}
+	return kinds
 }

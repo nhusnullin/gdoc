@@ -19,12 +19,14 @@ import (
 	"gdoc/internal/chat"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
+	"gdoc/internal/settings"
 )
 
-// checkMCPArgs refuses anything after the word mcp. The line takes no words and
-// no flags: the Claude Desktop extension has no settings, so what it sends is
-// the word alone, and whatever else arrives is named back rather than ignored.
-// TestMcpTakesNoWordsAndNoFlags.
+// checkMCPArgs refuses anything after the word mcp. The two setting flags are
+// off the line before mcp is routed, so what reaches here is what is left:
+// the Claude Desktop extension passes neither of them and sends the word
+// alone, and whatever else arrives is named back rather than ignored.
+// TestMcpTakesTheSettingFlagsAndNothingElse.
 func checkMCPArgs(args []string) error {
 	if len(args) == 0 {
 		return nil
@@ -36,10 +38,15 @@ func checkMCPArgs(args []string) error {
 // exit code. It is behind a variable so a test can watch main's routing
 // without starting a server, the way login and openSession are.
 //
+// set is what this session writes, resolved once in route before the session
+// started. Every tool call of this session goes out under it, because a tool
+// call carries no flag that could say otherwise:
+// TestTheMcpSessionHandsItsSettingsToEveryCall.
+//
 // The log goes to errOut, through one locked writer, because a session logs
 // from more than one goroutine. Nothing in a session writes to stdout but the
 // protocol: TestStdoutCarriesOnlyJSONRPC.
-var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, args []string) int {
+var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, args []string, set settings.InEffect) int {
 	if err := checkMCPArgs(args); err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1
@@ -58,11 +65,12 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	lg := newMCPLogin(errOut)
 	defer lg.close()
 
-	// What this session keeps across its calls: the code guide hands out, and
-	// the ledger of what it read and wrote. A session that could not make a code
-	// is a session where every tool but guide and login refuses, so it is said
-	// here rather than call by call.
-	ch, err := newMCPChat()
+	// What this session keeps across its calls: the code guide hands out, the
+	// ledger of what it read and wrote, and the settings every call of it goes
+	// out under. A session that could not make a code is a session where every
+	// tool but guide and login refuses, so it is said here rather than call by
+	// call.
+	ch, err := newMCPChat(set)
 	if err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1

@@ -18,10 +18,10 @@
 // # Facts, never verdicts
 //
 // Nothing here decides whether a thread is answered. SPEC.md was corrected on
-// 2026-09-06 for exactly this: "a 🤖 reply newer than the comment" is a
+// 2026-09-06 for exactly this: "a marked reply newer than the comment" is a
 // heuristic, and a wrong one when the reply was an acknowledgment or the
 // follow-up changed the question. So a Thread carries every reply, its author,
-// its time and whether it opens with 🤖, and the skill reading the JSON decides
+// its time and whether it opens with a mark, and the skill reading the JSON decides
 // what still needs an answer. There is no Handled field, and there must not be.
 // The fields are a marker (ai:, ai?, ai! or none) on a thread and on each
 // reply, a resolved flag and a reply's by_gdoc, each a fact with a neutral
@@ -31,7 +31,7 @@
 // reply and the listing still looks complete.
 // TestThreadsCarriesEveryFactAndJudgesNone is the pin, with
 // TestMarkerIsTheFirstTokenAndTheMatchIsExact and
-// TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot over the two facts most
+// TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect over the two facts most
 // easily read loosely, and TestAReplyCarriesItsMarker over the reply's.
 //
 // Waited is that same rule under the wait. Every field on it is a count, a
@@ -217,7 +217,7 @@
 // TestTheWaitDoesNotPollOnTheDeadlineItHasAlreadyRunOutOf are the pins.
 //
 // The first non-empty window ends the wait. A window is what Fetch narrowed and
-// Threads joined, so gdoc's own 🤖 reply arriving after a poll does end it: the
+// Threads joined, so gdoc's own marked reply arriving after a poll does end it: the
 // binary reports it and the skill reads it as a receipt.
 // TestWaitReturnsTheFirstWindowWithActivityAndAdvancesTheCursor and
 // TestAWindowThatIsOnlyAGdocReplyIsStillReturned are the pins, with

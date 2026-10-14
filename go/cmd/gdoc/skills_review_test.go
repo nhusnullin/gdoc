@@ -168,8 +168,8 @@ func TestTheReviewStepsKeepTheirNumbers(t *testing.T) {
 // the rule is the wording and not the idea.
 var reviewReadAgainRules = []string{
 	"read the thread again just before the reply goes out",
-	"A 🤖 reply appeared since that read, and this session did not write it: do not post.",
-	"A 🤖 reply this session wrote itself never stops it.",
+	"A gdoc reply appeared since that read, and this session did not write it: do not post.",
+	"A gdoc reply this session wrote itself never stops it.",
 }
 
 // Two answers to one thread is the failure both front doors can cause. A chat
@@ -219,6 +219,27 @@ func TestTheCoreLeavesMarkedCommentsToALiveSession(t *testing.T) {
 		if strings.Contains(skill, want) {
 			t.Errorf("%s holds %q too, and the guard belongs to both front doors at once", reviewSkill, want)
 		}
+	}
+}
+
+// reviewGdocReplyRule is what makes a reply gdoc's for every rule above. The
+// marks are literals, because the mark gdoc writes is a setting, ⁘ by default,
+// and a rule that looks for 🤖 alone stops seeing gdoc's own replies.
+const reviewGdocReplyRule = "A gdoc reply is one whose `by_gdoc` is true, or one that opens with 🤖, ⁘ or ∴."
+
+// The done rules, the read-again guard and the live split all ask whether a
+// reply is gdoc's. A core that recognises one mark answers a thread twice the
+// first time someone writes with another, so it names all three.
+func TestTheCoreCountsEveryKnownMarkAsGdocs(t *testing.T) {
+	// Arrange
+	_, core := readReviewFile(t, reviewCore)
+
+	// Act
+	held := strings.Contains(core, squashSpace(reviewGdocReplyRule))
+
+	// Assert
+	if !held {
+		t.Errorf("%s does not hold %q. Without it a session misses its own ⁘ replies and answers again", reviewCore, reviewGdocReplyRule)
 	}
 }
 

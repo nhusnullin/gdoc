@@ -303,7 +303,7 @@ func TestCheckRefusesABlockFieldWithoutTheBlockKind(t *testing.T) {
 			"content"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.p.Check()
+			err := tc.p.Check("🤖")
 			if err == nil {
 				t.Fatal("a block field on an entry naming no kind must be refused")
 			}

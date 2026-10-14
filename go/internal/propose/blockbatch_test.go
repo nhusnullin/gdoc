@@ -57,7 +57,7 @@ func TestBlockBatchForAnAfterBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	checkGolden(t, "block-after-batch.json", BlockBatch(place, content, testWhy, ""))
+	checkGolden(t, "block-after-batch.json", BlockBatch(place, content, testWhy, "", "🤖"))
 }
 
 // TestBlockBatchForAReplace is the same batch with two requests more: the
@@ -69,7 +69,7 @@ func TestBlockBatchForAReplace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	checkGolden(t, "block-replace-batch.json", BlockBatch(place, content, testWhy, "person@example.com"))
+	checkGolden(t, "block-replace-batch.json", BlockBatch(place, content, testWhy, "person@example.com", "🤖"))
 }
 
 // TestBlockBatchAfterTheLastParagraph is the shape MEASURED.md row 7 pins. The
@@ -84,7 +84,7 @@ func TestBlockBatchAfterTheLastParagraph(t *testing.T) {
 	if !place.AtEnd {
 		t.Fatal("the anchor is the document's last paragraph, and this test is about that case")
 	}
-	checkGolden(t, "block-at-end-batch.json", BlockBatch(place, content, testWhy, ""))
+	checkGolden(t, "block-at-end-batch.json", BlockBatch(place, content, testWhy, "", "🤖"))
 }
 
 // TestBlockBatchAfterTheLastParagraphRestatesNothingOnTheFinalMark is the rest
@@ -103,7 +103,7 @@ func TestBlockBatchAfterTheLastParagraphRestatesNothingOnTheFinalMark(t *testing
 	// The final mark is the last unit of the block's last paragraph.
 	l := layOutBlock(place, content)
 	mark := l.Paras[len(l.Paras)-1].End - 1
-	for _, r := range requestsOf(t, BlockBatch(place, content, testWhy, "")) {
+	for _, r := range requestsOf(t, BlockBatch(place, content, testWhy, "", "🤖")) {
 		for _, kind := range []string{"updateParagraphStyle", "deleteParagraphBullets", "createParagraphBullets"} {
 			if _, ok := r[kind]; !ok {
 				continue
@@ -128,7 +128,7 @@ func TestBlockBatchCountsInUTF16CodeUnits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	reqs := requestsOf(t, BlockBatch(place, content, testWhy, ""))
+	reqs := requestsOf(t, BlockBatch(place, content, testWhy, "", "🤖"))
 
 	// "Body " is five units and the robot is two, so the bold run opens at
 	// 93 + 8. Counted in bytes the robot is four and the mark would land at
@@ -156,7 +156,7 @@ func TestBlockBatchClearsTheMarksTheInsertInherited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	reqs := requestsOf(t, BlockBatch(place, content, testWhy, ""))
+	reqs := requestsOf(t, BlockBatch(place, content, testWhy, "", "🤖"))
 
 	var clearing, marks int
 	for i, r := range reqs {
@@ -202,7 +202,7 @@ func TestBlockBatchRemovesBulletsFromItsOwnParagraphsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	reqs := requestsOf(t, BlockBatch(place, content, testWhy, ""))
+	reqs := requestsOf(t, BlockBatch(place, content, testWhy, "", "🤖"))
 
 	// The anchor is the bullet at 142..185 and the block goes in at 185.
 	// "Limits" is the paragraph 185..192, the two items run to 200, and the
@@ -235,7 +235,7 @@ func TestBlockBatchNumbersANumberedList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	reqs := requestsOf(t, BlockBatch(place, content, testWhy, ""))
+	reqs := requestsOf(t, BlockBatch(place, content, testWhy, "", "🤖"))
 	for _, r := range reqs {
 		body, ok := r["createParagraphBullets"].(map[string]any)
 		if !ok {
@@ -260,12 +260,12 @@ func TestBlockBatchWritesTheReasonAsPlainTextUnderTheRobot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	reqs := requestsOf(t, BlockBatch(place, content, testWhy, ""))
+	reqs := requestsOf(t, BlockBatch(place, content, testWhy, "", "🤖"))
 	body, ok := reqs[len(reqs)-1]["insertComment"].(map[string]any)
 	if !ok {
 		t.Fatalf("the last request is %v, and the comment is written last", reqs[len(reqs)-1])
 	}
-	if want := Prefix + testWhy; body["content"] != want {
+	if want := "🤖 " + testWhy; body["content"] != want {
 		t.Errorf("the comment reads %v, want %q", body["content"], want)
 	}
 	// "3.6 Limits" is ten units at 93, and its mark is the eleventh.
@@ -333,7 +333,7 @@ func buildLargest(t *testing.T, content string) []byte {
 	if err != nil {
 		t.Fatalf("placing the block: %v", err)
 	}
-	raw := BlockBatch(place, paras, testWhy, "")
+	raw := BlockBatch(place, paras, testWhy, "", "🤖")
 
 	p := guard.NewPolicy()
 	p.AllowFile(testDocID, guard.LevelSuggest)

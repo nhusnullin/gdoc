@@ -73,8 +73,8 @@ type RawReply struct {
 
 // Author is who wrote a comment. `me` is kept because Drive sends it, and not
 // used for anything: under one credential it means gdoc and under another it
-// means Nail, so branching on it would skip every comment Nail wrote. The 🤖
-// prefix is what says gdoc wrote a reply.
+// means Nail, so branching on it would skip every comment Nail wrote. The mark
+// a reply opens with is what says gdoc wrote it.
 type Author struct {
 	DisplayName string `json:"displayName"`
 	// EmailAddress is read off the wire so its domain can be reported, and it
@@ -213,7 +213,12 @@ func Fetch(ctx context.Context, s Reader, id string, since *Cursor) ([]RawCommen
 //
 // A nil document is no ranges rather than a crash: a run that reads threads
 // without a Docs read behind it is a run where every thread is unplaced.
-func Threads(raw []RawComment, d *docs.Document) ([]Thread, []string) {
+//
+// mark is the mark this run writes, which Reply.ByGdoc is read against beside
+// the three marks every gdoc knows. It is a parameter because the mark is a
+// setting from v2.11.0 and this package holds no settings: a caller that reads
+// no by_gdoc passes the empty mark, which is the known three and nothing more.
+func Threads(raw []RawComment, d *docs.Document, mark string) ([]Thread, []string) {
 	var ranges map[string]docs.Range
 	if d != nil {
 		ranges = d.CommentRanges
@@ -230,7 +235,7 @@ func Threads(raw []RawComment, d *docs.Document) ([]Thread, []string) {
 			Content:      c.Content,
 			Marker:       markerOf(c.Content),
 			Resolved:     c.Resolved,
-			Replies:      replies(c.Replies),
+			Replies:      replies(c.Replies, mark),
 		}
 		if c.QuotedFileContent != nil {
 			t.Quoted = c.QuotedFileContent.Value
@@ -257,7 +262,7 @@ func Threads(raw []RawComment, d *docs.Document) ([]Thread, []string) {
 
 // replies is the reply list, never nil: a null in the JSON is a shape the
 // caller has to special-case, and an empty list says the same thing.
-func replies(raw []RawReply) []Reply {
+func replies(raw []RawReply, mark string) []Reply {
 	out := make([]Reply, 0, len(raw))
 	for _, r := range raw {
 		out = append(out, Reply{
@@ -267,7 +272,7 @@ func replies(raw []RawReply) []Reply {
 			Created:      r.CreatedTime,
 			Content:      r.Content,
 			Marker:       markerOf(r.Content),
-			ByGdoc:       byGdoc(r.Content),
+			ByGdoc:       byGdoc(r.Content, mark),
 		})
 	}
 	return out
@@ -299,13 +304,15 @@ func domainOf(address string) string {
 	return strings.ToLower(address[at+1:])
 }
 
-// byGdoc is true when a reply opens with the robot. SPEC.md: every reply gdoc
-// writes opens with 🤖 and nothing else, so the mark is the only record of
-// authorship a thread itself carries. It is not a receipt: internal/chat keeps
-// one of those, the id of what this process wrote, and the mark is a character
-// anybody can type. The question is asked of internal/plaintext, which owns the
-// mark, so one rule reads it everywhere:
-// TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot.
-func byGdoc(content string) bool {
-	return plaintext.OpensWithRobot(content)
+// byGdoc is true when a reply opens with a mark gdoc recognises: one of the
+// three every gdoc knows, or the mark this run writes when a colleague set one
+// of their own. The mark is the only record of authorship a thread itself
+// carries, because the Docs API cannot set an author.
+//
+// It is not a receipt: internal/chat keeps one of those, the id of what this
+// process wrote, and a mark is a character anybody can type. The question is
+// asked of internal/plaintext, which owns the list, so one rule reads it
+// everywhere: TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect.
+func byGdoc(content, mark string) bool {
+	return plaintext.OpensWithMark(content, mark)
 }

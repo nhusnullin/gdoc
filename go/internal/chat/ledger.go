@@ -130,7 +130,9 @@ func (l *Ledger) RecordOwn(ids ...string) {
 }
 
 // Wrote answers whether this process wrote the comment or reply with this id,
-// which is what the robot_not_ours fact asks: TestRobotNotOursUsesTheLedger.
+// which is what the Dictated rule asks of a marked remark: the mark says gdoc's
+// words and only the receipt says this process wrote them.
+// TestWroteAnswersFromTheLedger.
 func (l *Ledger) Wrote(id string) bool {
 	if l == nil || id == "" {
 		return false

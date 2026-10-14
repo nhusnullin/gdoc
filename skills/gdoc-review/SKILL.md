@@ -64,7 +64,7 @@ documents, and the place an `ai!` writes.
 
 Nothing here runs git. Not to commit, not to check whether a file is dirty.
 
-There is no local record of which comments were handled. The 🤖 reply in the
+There is no local record of which comments were handled. gdoc's reply in the
 thread is the receipt, and the document is the ledger. Every run recomputes the
 open work from the threads alone.
 
@@ -101,7 +101,8 @@ $GDOC read <url>
 `modified`, `content`, `marker` (`ai:`, `ai?`, `ai!` or `none`), `resolved`,
 `quoted`, `range`, and `replies`. Each reply carries `id`, `author`, `created`,
 `content`, `marker`, read by the same rule as a thread's, and `by_gdoc`, which
-is true when it opens with 🤖. Never narrow a listing on thread markers alone: a
+is true when it opens with one of gdoc's marks. `review.md` says which reply
+counts as gdoc's. Never narrow a listing on thread markers alone: a
 marked reply is an instruction too.
 
 The envelope carries `cursor` beside the threads: the position of the newest
@@ -178,8 +179,9 @@ Plain text only. Docs threads render markdown as typed, so `**`, backticks and
 `#` headings arrive broken. The binary refuses them, and that is a safeguard
 rather than permission to try.
 
-Every reply opens with `🤖 ` and nothing before it. The binary refuses a body
-that does not.
+Every reply opens with `🤖 ` and nothing before it. Up to v2.10.0 the binary
+refuses a body that does not. From v2.11.0 gdoc takes the typed 🤖 off, writes
+its own mark, and warns, and that warning needs nothing from you.
 
 Shape:
 

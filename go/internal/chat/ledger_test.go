@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-// A *Ledger is what the facts ask about a robot mark, so the stub of Task 11 is
-// gone and the record is the real one.
-var _ OwnReplies = (*Ledger)(nil)
-
 // read is the instant the fixtures below are read at, written out rather than
 // taken from the clock: what the ledger keeps is the time it was handed, and a
 // test that read the clock would hold nothing.
@@ -168,20 +164,20 @@ func TestTheLedgerTakesTwoRecordersAtOnce(t *testing.T) {
 	}
 }
 
-// The robot mark with no receipt is the one fact that is not about the text
-// alone, and the ledger is what answers it now.
-func TestRobotNotOursUsesTheLedger(t *testing.T) {
-	const text = "🤖 the 2026 register"
+// Wrote answers out of the ledger, which is what the Dictated rule asks of a
+// marked remark: the mark says the words are gdoc's and only the receipt says
+// this process wrote them.
+func TestWroteAnswersFromTheLedger(t *testing.T) {
 	l := NewLedger()
-	if !FactsOf(Comment{ID: "R1", Text: text}, l).RobotNotOurs {
-		t.Error("a mark is ours before this process wrote anything")
+	if l.Wrote("R1") {
+		t.Error("the ledger knows a write before this process made one")
 	}
 	l.RecordOwn("R1")
-	if FactsOf(Comment{ID: "R1", Text: text}, l).RobotNotOurs {
-		t.Error("the reply this process wrote is reported as somebody else's")
+	if !l.Wrote("R1") {
+		t.Error("the ledger does not know this process wrote R1")
 	}
-	if !FactsOf(Comment{ID: "R2", Text: text}, l).RobotNotOurs {
-		t.Error("a marked reply this process never wrote is reported as ours")
+	if l.Wrote("R2") {
+		t.Error("the ledger claims a reply this process never wrote")
 	}
 }
 

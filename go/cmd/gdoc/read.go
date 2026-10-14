@@ -28,6 +28,7 @@ import (
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/gapi"
 	"gdoc/internal/guard"
+	"gdoc/internal/settings"
 	"gdoc/internal/suggestions"
 	"gdoc/internal/view"
 )
@@ -168,10 +169,17 @@ func (fs flagSet) names() string {
 }
 
 // args is one command's arguments after parsing: the words it was pointed at,
-// in the order they were written, and the flags it was given.
+// in the order they were written, the flags it was given, and what this run
+// writes.
+//
+// set is on every command's args rather than on the few that write into a
+// thread, because the two setting flags are off the line before the parser
+// runs and dispatch is the one place that could put them back. A command that
+// has nothing to do with the mark simply never asks.
 type args struct {
 	positional []string
 	flags      map[string]string
+	set        settings.InEffect
 }
 
 // target is the first positional argument, which every command that names a
@@ -555,7 +563,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		if err != nil {
 			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
 		}
-		threads, unplaced := comments.Threads(raws, got)
+		threads, unplaced := comments.Threads(raws, got, a.set.Mark)
 		return commentsResult(ctx, r, d, threads, unplaced,
 			startCursor(comments.NextCursor(since, threads), at), a.has("--witness"), nil)
 	}
@@ -581,6 +589,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		Deadline: deadline,
 		List:     list,
 		Read:     read,
+		Mark:     a.set.Mark,
 	})
 	// Off the moment the wait is over. What follows is a --witness export, and
 	// a Ctrl-C during that must kill the run the way it kills every other

@@ -36,7 +36,7 @@ func screenRun(t *testing.T, args ...string) (stdout, stderr string, code int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	code = run(context.Background(), args, &out, &errOut)
+	code = run(context.Background(), args, &out, &errOut, defaultsInEffect())
 	return out.String(), errOut.String(), code
 }
 
@@ -90,7 +90,7 @@ func TestHelpWithJSONPrintsTheObjectOnATerminal(t *testing.T) {
 
 			var out, errOut bytes.Buffer
 			terminals(t, &out, &errOut)
-			code := run(context.Background(), args, &out, &errOut)
+			code := run(context.Background(), args, &out, &errOut, defaultsInEffect())
 			if code != 0 {
 				t.Fatalf("%v is an answer and must exit 0, and this run exited %d", args, code)
 			}
@@ -190,7 +190,7 @@ func TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped(t *testing.T) {
 
 		var out, errOut bytes.Buffer
 		terminals(t, &errOut)
-		if code := run(context.Background(), []string{"help"}, &out, &errOut); code != 0 {
+		if code := run(context.Background(), []string{"help"}, &out, &errOut, defaultsInEffect()); code != 0 {
 			t.Fatalf("help is an answer and must exit 0, and this run exited %d", code)
 		}
 		if decodeOne(t, &out)["ok"] != true {
@@ -222,7 +222,7 @@ func TestNoEscapeByteReachesAPipe(t *testing.T) {
 
 			var out, errOut bytes.Buffer
 			terminals(t)
-			run(context.Background(), c.nameWords(), &out, &errOut)
+			run(context.Background(), c.nameWords(), &out, &errOut, defaultsInEffect())
 			for name, got := range map[string]string{"stdout": out.String(), "stderr": errOut.String()} {
 				if strings.ContainsRune(got, 0x1b) {
 					t.Errorf("%s of %q carries an escape byte: %q", name, c.name, got)
@@ -236,7 +236,7 @@ func TestNoEscapeByteReachesAPipe(t *testing.T) {
 
 		var out, errOut bytes.Buffer
 		terminals(t)
-		run(context.Background(), nil, &out, &errOut)
+		run(context.Background(), nil, &out, &errOut, defaultsInEffect())
 		if strings.ContainsRune(out.String()+errOut.String(), 0x1b) {
 			t.Errorf("bare gdoc on a pipe carries an escape byte: %q %q", out.String(), errOut.String())
 		}
@@ -263,7 +263,7 @@ func TestAScreenWhoseWordsWentToAFileKeepsItsObject(t *testing.T) {
 
 			var out, errOut bytes.Buffer
 			terminals(t, &out)
-			run(context.Background(), args, &out, &errOut)
+			run(context.Background(), args, &out, &errOut, defaultsInEffect())
 
 			if decodeOne(t, &out) == nil {
 				t.Fatal("the words went to a file, so the object is the whole answer and must be printed")

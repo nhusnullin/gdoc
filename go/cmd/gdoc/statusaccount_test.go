@@ -215,7 +215,7 @@ func statusScreenRun(t *testing.T) (stdout, stderr string, code int) {
 
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	code = run(context.Background(), []string{"auth", "status"}, &out, &errOut)
+	code = run(context.Background(), []string{"auth", "status"}, &out, &errOut, defaultsInEffect())
 	return out.String(), errOut.String(), code
 }
 
@@ -284,7 +284,7 @@ func TestAuthStatusOnAPipeWritesNoStderr(t *testing.T) {
 	tokenWithScopes(t, dir, driveScope)
 
 	var out, errOut bytes.Buffer
-	code := run(context.Background(), []string{"auth", "status"}, &out, &errOut)
+	code := run(context.Background(), []string{"auth", "status"}, &out, &errOut, defaultsInEffect())
 	if code != 0 {
 		t.Fatalf("status exits 0, and this run exited %d", code)
 	}

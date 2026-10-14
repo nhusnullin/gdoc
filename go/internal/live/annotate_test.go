@@ -86,7 +86,7 @@ func TestLiveAnnotateParagraphAndTable(t *testing.T) {
 	paragraph, err := annotate.Apply(ctx, s, docID, annotate.Annotation{
 		Quoted: annotateParagraphQuoted,
 		Why:    annotateParagraphWhy,
-	})
+	}, liveMark)
 	logAnnotation(t, "paragraph", paragraph, err)
 	if err != nil {
 		t.Fatalf("the comment on the paragraph could not be written: %v", err)
@@ -109,7 +109,7 @@ func TestLiveAnnotateParagraphAndTable(t *testing.T) {
 	cell, err := annotate.Apply(ctx, s, docID, annotate.Annotation{
 		Quoted: annotateCellQuoted,
 		Why:    annotateCellWhy,
-	})
+	}, liveMark)
 	logAnnotation(t, "table cell", cell, err)
 	t.Logf("table cell measured: sent %t, drive_listing %t, docx_anchored %t, verified %t",
 		err == nil, cell.Checks.DriveListing, cell.Checks.DocxAnchored, cell.Verified)

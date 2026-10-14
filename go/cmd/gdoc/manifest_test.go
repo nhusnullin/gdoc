@@ -110,8 +110,9 @@ func TestTheManifestTemplateParses(t *testing.T) {
 	if m.Server.MCPConfig.Command != "@BIN@" {
 		t.Errorf("server.mcp_config.command is %q, want the placeholder %q", m.Server.MCPConfig.Command, "@BIN@")
 	}
-	// The word mcp and nothing after it, because mcp takes no words and no
-	// flags: TestMcpTakesNoWordsAndNoFlags.
+	// The word mcp and nothing after it. The extension passes neither setting
+	// flag, and everything else is refused:
+	// TestMcpTakesTheSettingFlagsAndNothingElse.
 	want := []string{"mcp"}
 	if strings.Join(m.Server.MCPConfig.Args, " ") != strings.Join(want, " ") {
 		t.Errorf("server.mcp_config.args is %v, want %v", m.Server.MCPConfig.Args, want)

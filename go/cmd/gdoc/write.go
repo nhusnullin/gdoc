@@ -8,12 +8,14 @@
 // verified, because a status code is Google agreeing with itself.
 //
 // Nothing here decides what to write. The body of a reply, the words of a
-// proposal and the reason for it arrive written, in a file the skill wrote.
+// proposal and the reason for it arrive written: the reply's words on the line
+// or in a file, and the rest in a file the skill wrote.
 
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -108,7 +110,7 @@ type replyData struct {
 }
 
 func cmdReply(ctx context.Context, a *args) emit.Result {
-	path, err := required(a, "--body-file")
+	body, err := replyBody(a)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -116,14 +118,10 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 	if commentID == "" {
 		return emit.Result{OK: false, Error: "this command needs the comment id of the thread to reply in"}
 	}
-	body, err := readBody(path)
-	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
-	}
 	// Before the session, and so before anything reaches Drive: a body Docs
 	// would render literally is a mistake in the call, not something a write
 	// could fix.
-	if err := reply.Check(body); err != nil {
+	if err := reply.Check(body, a.set.Mark); err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	r, err := open(a.target())
@@ -139,7 +137,7 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 		return emit.Result{OK: false, Warnings: r.warnings(),
 			Error: "the time for this call ran out before the reply was sent, so nothing was written. Call again"}
 	}
-	res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, commentID, body)
+	res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, commentID, body, a.set.Mark)
 	data := replyData{
 		DocumentID: r.id,
 		CommentID:  commentID,
@@ -153,18 +151,49 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(res.Warnings...)}
 }
 
-// readBody reads the reply body out of the file the skill wrote.
+// replyBody is the words of the reply, from the line or from a file, and
+// exactly one of the two. Both is refused because which one counts is not
+// decided here, and neither is refused because the words are what the command
+// is about. Each refusal names the two flags, so the caller reads the way
+// forward out of it.
 //
-// The trailing newline a text file ends with is not part of what was said, and
-// it is dropped: the read-back compares the words Drive stored against the
-// words that were sent, and a newline Drive trimmed would report a reply that
-// is plainly in the thread as unverified.
+// The flag on the line is the route chat takes, and the route a colleague
+// typing one sentence takes. The file is the route a skill that wrote a
+// sentence to disk takes, and it stays.
+func replyBody(a *args) (string, error) {
+	typed, onLine := a.flags["--body"]
+	path, inFile := a.flags["--body-file"]
+	switch {
+	case onLine && inFile:
+		return "", errors.New("--body holds the words of the reply and --body-file names the file holding them: " +
+			"give one of the two, not both")
+	case onLine:
+		return trimBody(typed), nil
+	case inFile:
+		return readBody(path)
+	}
+	return "", errors.New("this command needs the words of the reply: --body <text> on the line, or --body-file <file>")
+}
+
+// readBody reads the reply body out of the file the skill wrote.
 func readBody(path string) (string, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("the reply body file could not be read: %w", err)
 	}
-	return strings.TrimRight(string(raw), " \t\r\n"), nil
+	return trimBody(string(raw)), nil
+}
+
+// trimBody drops the whitespace at the end of what was said, whichever route
+// it came in on.
+//
+// The trailing newline a text file ends with is not part of what was said:
+// the read-back compares the words Drive stored against the words that were
+// sent, and a newline Drive trimmed would report a reply that is plainly in
+// the thread as unverified. A value typed on the line is trimmed the same way,
+// so one body is one string however it arrived.
+func trimBody(raw string) string {
+	return strings.TrimRight(raw, " \t\r\n")
 }
 
 // proposalReport is one proposal as the envelope carries it. Sent is the fact
@@ -215,7 +244,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	proposals, err := readProposals(from)
+	proposals, err := readProposals(from, a.set.Mark)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
@@ -258,11 +287,13 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
 	}
 	r := &reach{id: docID, session: s}
-	return runPropose(ctx, r, proposals, note, warns...)
+	return runPropose(ctx, r, proposals, note, a.set.Mark, warns...)
 }
 
-// runPropose is the run itself: read, then one proposal at a time.
-func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, seed ...string) emit.Result {
+// runPropose is the run itself: read, then one proposal at a time. mark is what
+// this run writes in front of every reason, which the proposal itself never
+// carries: it is a setting rather than a field in the file.
+func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, mark string, seed ...string) emit.Result {
 	warns := append([]string{}, seed...)
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
@@ -312,7 +343,7 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 		if i == 0 {
 			held = d
 		}
-		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held)
+		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held, mark)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			if res.Outcome == propose.OutcomeUnknown {
@@ -563,7 +594,7 @@ func readNote(path, docID string) (*notePath, error) {
 // kind, because they are fields it knows: Check does that, by name, and the
 // tests for it are TestProposeRefusesAnUnknownFieldInABlockEntry and
 // TestProposeRefusesABlockFieldWithNoKind.
-func readProposals(path string) ([]propose.Proposal, error) {
+func readProposals(path, mark string) ([]propose.Proposal, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the proposals file could not be read: %w", err)
@@ -580,7 +611,7 @@ func readProposals(path string) ([]propose.Proposal, error) {
 	// them are in hand, and a third entry refused after the first two have
 	// landed is a run that half happened in somebody's document.
 	for i, p := range out {
-		if err := p.Check(); err != nil {
+		if err := p.Check(mark); err != nil {
 			return nil, fmt.Errorf("%s proposals[%d]: %w", path, i, err)
 		}
 		// The quote and the replacement are document text, and document text

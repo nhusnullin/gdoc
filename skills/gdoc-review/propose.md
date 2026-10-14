@@ -219,12 +219,12 @@ Read `verified` and `checks` per proposal:
 - `suggestions_inline`: the new words are in the document as a suggestion.
 - `preview_without_suggestions`: the old words are still what a reader sees, so
   it is a suggestion and not an edit.
-- `docx_anchored`: the 🤖 comment is attached to the new words.
+- `docx_anchored`: gdoc's comment is attached to the new words.
 
 For a block those three read the same document three ways: every new paragraph
 carries the insertion id, and a replace's old paragraphs carry a deletion id;
 the anchor paragraph, or the replaced run, still reads to a reader as it did,
-and the block's first new line is nowhere in that reading; and the 🤖 comment is
+and the block's first new line is nowhere in that reading; and gdoc's comment is
 attached to the first new paragraph. For a replace the first new line is the
 first one the replaced paragraphs did not already carry, so a section rewritten
 under its own heading verifies. A block whose every line is already in the words
@@ -248,7 +248,7 @@ $GDOC withdraw <url> <suggestion_id> --md <paired note>
 ```
 
 It works only on suggestions the note records as gdoc's own. Then reply in the
-🤖 comment's thread saying the proposal was withdrawn and why. The comment stays
+thread of gdoc's comment saying the proposal was withdrawn and why. The comment stays
 where it is: gdoc does not delete comments.
 
 Never accept, reject or delete a suggestion anyone else wrote, and never accept

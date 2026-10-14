@@ -36,7 +36,7 @@ func guideCalls(t *testing.T, n int) [][]string {
 	lines = append(lines, "")
 
 	var out, errOut strings.Builder
-	if code := serveMCP(context.Background(), strings.NewReader(strings.Join(lines, "\n")), &out, &errOut, nil); code != 0 {
+	if code := serveMCP(context.Background(), strings.NewReader(strings.Join(lines, "\n")), &out, &errOut, nil, defaultsInEffect()); code != 0 {
 		t.Fatalf("the session exited %d: %s", code, errOut.String())
 	}
 	answers := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")

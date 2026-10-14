@@ -1,4 +1,4 @@
-// The facts a chat answer carries beside every comment and reply: six literal
+// The facts a chat answer carries beside every comment and reply: five literal
 // checks on the words, and the author's domain, which decides nothing.
 
 package chat
@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
-
-	"gdoc/internal/plaintext"
 )
 
 // Facts is what one comment or reply carries beside its words in a chat answer.
@@ -17,7 +15,7 @@ import (
 // fact about the item in front of them rather than a judgement: "this comment
 // has a link and addresses the AI". Nothing here says whether a comment is
 // handled, trustworthy or worth acting on. The hold rules in rules.go read
-// HasLink, NamesAI, HiddenChars and RobotNotOurs; nothing reads AuthorDomain.
+// HasLink, NamesAI and HiddenChars; nothing reads AuthorDomain.
 //
 // TestEachFactHasOneCheck holds every check against a fixture that trips it and
 // one that does not, and TestTheFactNamesAreTheLiterals holds the names the
@@ -27,28 +25,15 @@ type Facts struct {
 	HasEmail     bool   `json:"has_email"`
 	NamesAI      bool   `json:"names_ai"`
 	HiddenChars  bool   `json:"hidden_chars"`
-	RobotNotOurs bool   `json:"robot_not_ours"`
 	AuthorDomain string `json:"author_domain,omitempty"`
 }
 
-// Comment is one comment or reply the facts are about: what it says, the id
-// Drive gave it, and the domain of whoever wrote it.
+// Comment is one comment or reply the facts are about: what it says, and the
+// domain of whoever wrote it. The id Drive gave it is not here, because no fact
+// asks anything of the item beyond its own words.
 type Comment struct {
-	ID           string
 	Text         string
 	AuthorDomain string
-}
-
-// OwnReplies is this process's record of what gdoc wrote into a document.
-//
-// Ledger is what answers it in a session. It stays an interface because the
-// facts ask one question of the record and nothing else, so a test holds the
-// checks with a map and the session hands in its own ledger. A nil OwnReplies is
-// a process that has written nothing, which is the honest state of one that has
-// just started: every robot mark it then sees is somebody else's.
-type OwnReplies interface {
-	// Wrote answers whether this process wrote the comment or reply with this id.
-	Wrote(id string) bool
 }
 
 // aiWords is the fixed list that makes NamesAI true, from the specification.
@@ -98,8 +83,9 @@ var linkTLDs = []string{
 
 var bareHostPattern = regexp.MustCompile(`(?i)\b[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9\-]+)*\.(?:` + strings.Join(linkTLDs, "|") + `)\b`)
 
-// FactsOf reads one comment or reply.
-func FactsOf(c Comment, own OwnReplies) Facts {
+// FactsOf reads one comment or reply. Every answer is a check on the text it
+// was handed, so the same words read the same way in every session.
+func FactsOf(c Comment) Facts {
 	// The addresses come out before the links are looked for, so an address is
 	// one fact and not two.
 	withoutEmails := emailPattern.ReplaceAllString(c.Text, " ")
@@ -108,7 +94,6 @@ func FactsOf(c Comment, own OwnReplies) Facts {
 		HasEmail:     emailPattern.MatchString(c.Text),
 		NamesAI:      aiPattern.MatchString(c.Text),
 		HiddenChars:  HasHiddenChars(c.Text),
-		RobotNotOurs: robotNotOurs(c.ID, c.Text, own),
 		AuthorDomain: c.AuthorDomain,
 	}
 }
@@ -130,19 +115,4 @@ func HasHiddenChars(text string) bool {
 		}
 	}
 	return false
-}
-
-// robotNotOurs is the mark without the receipt: text opening with the robot that
-// this process did not write.
-//
-// The mark is read by plaintext.OpensWithRobot, the one check every reader of
-// the mark asks, so a reply starting on its second line is still a reply that
-// opens with it and no second copy of the rule can drift. The question is never
-// asked of the account: identity is never a gate, and the mark is the only
-// record of authorship there is.
-func robotNotOurs(id, text string, own OwnReplies) bool {
-	if !plaintext.OpensWithRobot(text) {
-		return false
-	}
-	return own == nil || !own.Wrote(id)
 }

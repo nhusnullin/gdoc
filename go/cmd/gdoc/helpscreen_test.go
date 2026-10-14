@@ -146,7 +146,7 @@ func TestNoColourOnATerminalDrawsTheBoxesWithNoEscapeByte(t *testing.T) {
 
 			var out, errOut bytes.Buffer
 			terminals(t, &out, &errOut)
-			run(context.Background(), []string{"help"}, &out, &errOut)
+			run(context.Background(), []string{"help"}, &out, &errOut, defaultsInEffect())
 
 			screen := errOut.String()
 			if strings.ContainsRune(screen, 0x1b) {
@@ -170,7 +170,7 @@ func TestAWarningIsDrawnWhereTheObjectWouldHaveCarriedIt(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	if code := run(context.Background(), []string{"help"}, &out, &errOut); code != 0 {
+	if code := run(context.Background(), []string{"help"}, &out, &errOut, defaultsInEffect()); code != 0 {
 		t.Fatalf("a check that failed is still an answer, and this run exited %d", code)
 	}
 
@@ -270,7 +270,7 @@ func screenRecord(t *testing.T, width int, truecolor bool, args ...string) strin
 
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	run(context.Background(), args, &out, &errOut)
+	run(context.Background(), args, &out, &errOut, defaultsInEffect())
 	if out.Len() != 0 {
 		t.Errorf("a help screen replaces the object, and stdout carried %q", out.String())
 	}
@@ -340,7 +340,7 @@ func TestANarrowWindowKeepsTheWarningsTheObjectWouldHaveCarried(t *testing.T) {
 
 		var out, errOut bytes.Buffer
 		terminals(t, &out, &errOut)
-		if code := run(context.Background(), []string{"help"}, &out, &errOut); code != 0 {
+		if code := run(context.Background(), []string{"help"}, &out, &errOut, defaultsInEffect()); code != 0 {
 			t.Fatalf("help is an answer and must exit 0, and this run exited %d", code)
 		}
 		if out.Len() != 0 {
@@ -359,7 +359,7 @@ func TestANarrowWindowKeepsTheWarningsTheObjectWouldHaveCarried(t *testing.T) {
 
 		var out, errOut bytes.Buffer
 		terminals(t)
-		if code := run(context.Background(), []string{"help"}, &out, &errOut); code != 0 {
+		if code := run(context.Background(), []string{"help"}, &out, &errOut, defaultsInEffect()); code != 0 {
 			t.Fatalf("help is an answer and must exit 0, and this run exited %d", code)
 		}
 		if !hasWarning(warningsOf(t, decodeOne(t, &out)), cause) {
@@ -383,7 +383,7 @@ func TestANarrowWindowOpensWithTheWordsBareGdocRefusesWith(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 	terminals(t, &out, &errOut)
-	if code := run(context.Background(), nil, &out, &errOut); code != 1 {
+	if code := run(context.Background(), nil, &out, &errOut, defaultsInEffect()); code != 1 {
 		t.Fatalf("bare gdoc named no command, so it exits 1, and this run exited %d", code)
 	}
 	if out.Len() != 0 {

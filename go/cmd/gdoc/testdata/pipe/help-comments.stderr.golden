@@ -10,3 +10,7 @@ Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]
   --wait <duration>  wait this long for something new before answering, written as 9m or 90s
 
   Example: gdoc comments https://docs.google.com/document/d/1AbC.../edit --since <cursor> --wait 9m
+
+Every command takes:
+  --config <file>  the settings file to use instead of settings.yaml in the config folder
+  --mark <text>    the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's

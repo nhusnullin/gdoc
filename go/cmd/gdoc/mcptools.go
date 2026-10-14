@@ -67,24 +67,27 @@ import (
 	"gdoc/internal/mcp"
 	"gdoc/internal/plaintext"
 	"gdoc/internal/propose"
+	"gdoc/internal/settings"
 	"gdoc/internal/view"
 )
 
 // mcpChat is what one session keeps across its calls: the code guide hands out,
-// the ledger of what this process read and wrote, the writes it is holding, and
-// the answer each write it made gave.
+// the ledger of what this process read and wrote, the writes it is holding, the
+// answer each write it made gave, and the settings this session writes under.
 //
-// All four are made when the session starts and die with it, and none reaches
-// disk. They travel together because a call needs all four: the code before it
+// All five are made when the session starts and die with it, and none reaches
+// disk. They travel together because a call needs them all: the code before it
 // does anything, the ledger because what this session read and wrote is what the
 // hold rules ask about, the holds because a write stopped for the person is
-// released from the process that stopped it and from no other, and the memory
-// because a retry of a write is a call this session has already answered.
+// released from the process that stopped it and from no other, the memory
+// because a retry of a write is a call this session has already answered, and
+// the settings because every call of one session writes the same mark.
 type mcpChat struct {
 	code   *chat.Code
 	ledger *chat.Ledger
 	holds  *mcpHolds
 	memory *chat.Memory[mcp.Result]
+	set    settings.InEffect
 
 	mu sync.Mutex
 	// last is when the session's most recent tool call ended. It is what the
@@ -112,13 +115,13 @@ func (ch *mcpChat) lastCall() time.Time {
 
 // newMCPChat is one session's own. The error is the random source failing,
 // which a session cannot start without.
-func newMCPChat() (*mcpChat, error) {
+func newMCPChat(set settings.InEffect) (*mcpChat, error) {
 	code, err := chat.NewCode()
 	if err != nil {
 		return nil, err
 	}
 	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
-		memory: chat.NewMemory[mcp.Result]()}, nil
+		memory: chat.NewMemory[mcp.Result](), set: set}, nil
 }
 
 // mcpNotSignedIn is what a Google tool answers when there is no token file.
@@ -162,6 +165,12 @@ type mcpArg struct {
 	// string, which is what an array argument is: the commands' strict readers
 	// judge it exactly as they judge a file somebody wrote.
 	raw bool
+	// dashAllowed lets the value open with a dash. It is set for one argument,
+	// reply's body, because a reply opening with "- " is plain text the binary
+	// takes, and the value is joined as --body=<words>, which the parser reads
+	// as this flag's value whatever it opens with. Every other value on the
+	// line keeps the refusal: there a dash is a flag nobody meant.
+	dashAllowed bool
 }
 
 // mcpCommand is one table command offered as a tool.
@@ -280,12 +289,12 @@ func mcpCommands() []mcpCommand {
 			title:  "Reply to a comment in a Google Doc",
 			tail:   mcpWriteLines,
 			words:  []string{urlProp, threadProp},
-			flags:  []mcpArg{{prop: "body", flag: "--body-file", file: "body.txt"}},
+			flags:  []mcpArg{{prop: "body", flag: "--body", dashAllowed: true}},
 			checks: []string{codeProp, titleProp, quoteProp},
 			schema: objectTop + codeArg + `,` + urlArg + `,` + titleArg + `,` +
 				`"comment_id":{"type":"string","description":"The id of the thread to reply in, as the comments answer gives it."},` +
 				quoteArg + `,` +
-				`"body":{"type":"string","description":"The words of the reply. Open them with ` + plaintext.Prefix + `(the robot and one space): gdoc does not add it, and a reply without it is refused. Markdown is refused as well."}` +
+				`"body":{"type":"string","description":"The words of the reply. gdoc puts its mark in front of them, so do not type one. Markdown is refused."}` +
 				`},"required":["code","url","title","comment_id","thread_quote","body"],"additionalProperties":false}`,
 		},
 		{
@@ -445,7 +454,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 	// and the second naming is the one a person agreed to: mcpPin reads the
 	// document and refuses a call that drifted onto another one. The read it
 	// makes goes into the ledger, because the rules want the target's own words.
-	target, err := mcpPin(ctx, c, args, ch.ledger)
+	target, err := mcpPin(ctx, c, args, ch.ledger, ch.set.Mark)
 	if err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
 	}
@@ -457,7 +466,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 			return res
 		}
 	}
-	r := safeDispatch(ctx, argv, errOut)
+	r := safeDispatch(ctx, argv, errOut, ch.set)
 	r.Error = files.name(r.Error)
 	for i := range r.Warnings {
 		r.Warnings[i] = files.name(r.Warnings[i])
@@ -466,8 +475,8 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 	// wrapped: mcpview.go holds what that is and why. A write answers with the
 	// envelope alone, because what it carries is what gdoc did.
 	if c.readOnly {
-		mcpRecordRead(ch.ledger, r, now())
-		return mcpReadAnswer(r, ch.ledger)
+		mcpRecordRead(ch.ledger, r, now(), ch.set.Mark)
+		return mcpReadAnswer(r)
 	}
 	mcpRecordWrite(ch.ledger, c.tool, r, now())
 	// A card for this write is a card for a write that has happened, so it goes
@@ -490,7 +499,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 // A refused read is not recorded, because nothing came back to record. What is
 // kept is used by nothing here: the ledger is read by the hold rules in
 // internal/chat, and a fact about a document is never a judgement about it.
-func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time) {
+func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time, mark string) {
 	if !r.OK {
 		return
 	}
@@ -499,7 +508,7 @@ func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time) {
 		led.RecordRead(chat.Read{DocID: d.DocumentID, Title: d.Title, At: at, Text: d.Text})
 	case commentsData:
 		led.RecordRead(chat.Read{DocID: d.DocumentID, Title: d.Title, At: at,
-			Remarks: mcpRemarks(d.Threads)})
+			Remarks: mcpRemarks(d.Threads, mark)})
 	case suggestionsData:
 		// A suggestion is nobody's comment and the listing carries no title, so
 		// what this read says is that the model looked at this document now,
@@ -510,14 +519,14 @@ func mcpRecordRead(led *chat.Ledger, r emit.Result, at time.Time) {
 
 // mcpRemarks is a comment listing as the ledger keeps it: every thread and every
 // reply, flattened, each saying which thread it sits in and whether gdoc wrote
-// it. ByGdoc is the robot prefix on the text, asked of plaintext the way
-// internal/comments asks it of a reply, and never the account: identity is
-// never a gate.
-func mcpRemarks(threads []comments.Thread) []chat.Remark {
+// it. ByGdoc is a mark gdoc recognises opening the text, asked of plaintext
+// with this session's own mark the way internal/comments asks it of a reply,
+// and never the account: identity is never a gate.
+func mcpRemarks(threads []comments.Thread, mark string) []chat.Remark {
 	out := make([]chat.Remark, 0, len(threads))
 	for _, t := range threads {
 		out = append(out, chat.Remark{ID: t.ID, ThreadID: t.ID, Text: t.Content,
-			ByGdoc: plaintext.OpensWithRobot(t.Content)})
+			ByGdoc: plaintext.OpensWithMark(t.Content, mark)})
 		for _, reply := range t.Replies {
 			out = append(out, chat.Remark{ID: reply.ID, ThreadID: t.ID, Text: reply.Content,
 				ByGdoc: reply.ByGdoc})
@@ -611,7 +620,7 @@ func mcpRecordWrite(led *chat.Ledger, tool string, r emit.Result, at time.Time) 
 // Which makes the title check the gate the hold rules sit behind, so a write
 // tool whose checks leave titleProp out would reach the wire judged by nobody.
 // TestEveryWriteToolPinsItsTargetByTitle is why no such tool can be added.
-func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.Ledger) (*mcpTarget, error) {
+func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.Ledger, mark string) (*mcpTarget, error) {
 	if !slices.Contains(c.checks, titleProp) {
 		return nil, nil
 	}
@@ -658,7 +667,7 @@ func mcpPin(ctx context.Context, c mcpCommand, args json.RawMessage, led *chat.L
 	if !slices.Contains(c.checks, quoteProp) {
 		return at, nil
 	}
-	if err := mcpPinThread(ctx, r, d, given, led); err != nil {
+	if err := mcpPinThread(ctx, r, d, given, led, mark); err != nil {
 		return nil, err
 	}
 	return at, nil
@@ -682,7 +691,7 @@ type mcpTarget struct {
 // mcpPinThread is the second half of the pin, for the one tool that writes into
 // a thread rather than into the document's own words: the thread named by id
 // has to be the thread named by its opening words.
-func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[string]json.RawMessage, led *chat.Ledger) error {
+func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[string]json.RawMessage, led *chat.Ledger, mark string) error {
 	quote, err := mcpRequired(given, quoteProp)
 	if err != nil {
 		return err
@@ -698,9 +707,9 @@ func mcpPinThread(ctx context.Context, r *reach, d *docs.Document, given map[str
 	// The listing is recorded as its own read: a reply is judged against the
 	// words of the thread it goes into, and this is the only read of them the
 	// call makes.
-	threads, _ := comments.Threads(raws, d)
+	threads, _ := comments.Threads(raws, d, mark)
 	led.RecordRead(chat.Read{DocID: d.ID, Title: d.Title, At: now(),
-		Remarks: mcpRemarks(threads), ForWrite: true})
+		Remarks: mcpRemarks(threads, mark), ForWrite: true})
 	for _, raw := range raws {
 		if raw.ID != id {
 			continue
@@ -814,6 +823,9 @@ func (c mcpCommand) argv(args json.RawMessage, files *callFiles) ([]string, erro
 // flagArgs is one flag of the line. Which shape it takes is read from the
 // command's own table entry: a flag that carries no value is passed bare and
 // needs a boolean, and every other flag is passed joined.
+//
+// A value that opens with a dash is refused unless the argument says a dash is
+// just a dash there, which one argument does: see dashAllowed.
 func (c mcpCommand) flagArgs(f mcpArg, raw json.RawMessage, files *callFiles) ([]string, error) {
 	carries, err := c.flagCarriesValue(f.flag)
 	if err != nil {
@@ -831,7 +843,7 @@ func (c mcpCommand) flagArgs(f mcpArg, raw json.RawMessage, files *callFiles) ([
 		if err != nil {
 			return nil, err
 		}
-		if strings.HasPrefix(value, "-") {
+		if strings.HasPrefix(value, "-") && !f.dashAllowed {
 			return nil, dashRefusal(f.prop, value)
 		}
 		return []string{f.flag + "=" + value}, nil

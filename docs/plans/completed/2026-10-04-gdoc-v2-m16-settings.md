@@ -1,10 +1,10 @@
 # gdoc v2 Milestone 16: settings, the mark, and answers an AI can act on, plan
 
 2026-10-04. The task list for the specification beside it,
-`docs/plans/2026-10-04-gdoc-v2-m16-settings-spec.md`, whose decisions are
-Nail's and settled. One commit per task. Released as v2.11.0, carrying Parts A
-and B, after Nail's acceptance. Part C, the token in the Keychain and signed
-releases, moved to M17 on 2026-10-13 (Nail):
+`docs/plans/completed/2026-10-04-gdoc-v2-m16-settings-spec.md`, whose decisions
+are Nail's and settled. One commit per task. Released as v2.11.0, carrying
+Parts A and B, after Nail's acceptance. Part C, the token in the Keychain and
+signed releases, moved to M17 on 2026-10-13 (Nail):
 `docs/plans/2026-10-13-gdoc-v2-m17-keychain.md`.
 
 The spec holds the rules, the decisions and the measurements. This plan repeats
@@ -337,22 +337,22 @@ constants stay until Task 15 moves the last caller.
 **Files:**
 - Modify: `go/internal/plaintext/plaintext.go`, `go/internal/plaintext/plaintext_test.go`
 
-- [ ] `DefaultMark = "⁘"`. `KnownMarks()` returns a new slice of `🤖`, `⁘`,
+- [x] `DefaultMark = "⁘"`. `KnownMarks()` returns a new slice of `🤖`, `⁘`,
       `∴` on every call, so no caller can change the list.
-- [ ] `CheckMark(v string) error` refuses, naming what it found: a line break
+- [x] `CheckMark(v string) error` refuses, naming what it found: a line break
       (`\r` or `\n`); markdown, asked of `v + " words"` so a `#` that would
       start a heading in front of the words is caught; one of gdoc's markers
       (`Marker`); more than eight characters, counted as runes. The empty
       string passes.
-- [ ] `Prefixed(mark, words string) string` is `mark + " " + words`, or
+- [x] `Prefixed(mark, words string) string` is `mark + " " + words`, or
       `words` alone for the empty mark.
-- [ ] `OpensWithMark(text, inEffect string) bool` steps over leading
+- [x] `OpensWithMark(text, inEffect string) bool` steps over leading
       whitespace and is true when the text opens with a known mark or with a
       non-empty mark in effect.
-- [ ] `CutMark(text, inEffect string) (string, bool)` takes a known mark or
+- [x] `CutMark(text, inEffect string) (string, bool)` takes a known mark or
       the mark in effect and one following space off the front, and says
       whether it did.
-- [ ] Tests: `TestTheKnownMarksAreTheRobotAndTheTwoDots`,
+- [x] Tests: `TestTheKnownMarksAreTheRobotAndTheTwoDots`,
       `TestTheDefaultMarkIsTheFourDot` (both literals),
       `TestCheckMarkRefusesWhatAThreadWouldShowWrong` (one subtest per
       refusal: `"⁘\n"`, `"**"`, `` "`" ``, `"#"`, a marker, `"123456789"`),
@@ -361,9 +361,9 @@ constants stay until Task 15 moves the last caller.
       `TestOpensWithMarkKnowsEveryKnownMarkAndTheMarkInEffect` (a person's
       own mark `"Bot:"` is false with another mark in effect and true with it),
       `TestCutMarkTakesOneMarkAndOneSpace`.
-- [ ] The package comment gains "# The mark is a setting, and three marks are
+- [x] The package comment gains "# The mark is a setting, and three marks are
       always known", naming the tests above.
-- [ ] `git commit -m "feat(plaintext): the known marks, the default, and what a mark may be"`
+- [x] `git commit -m "feat(plaintext): the known marks, the default, and what a mark may be"`
 
 ### Task 10: internal/settings, the file and the order
 
@@ -378,22 +378,22 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `CLAUDE.md` (one "What lives where" row and one task-map row, if Task 1 did
   not add them)
 
-- [ ] `config.SettingsPath()` is `settings.yaml` in the config folder:
+- [x] `config.SettingsPath()` is `settings.yaml` in the config folder:
       `TestSettingsPathIsInTheConfigFolder`.
-- [ ] `settings.Given` is what the line said: `Config *string`, `Mark *string`.
+- [x] `settings.Given` is what the line said: `Config *string`, `Mark *string`.
       `settings.InEffect` is `Mark`, `MarkFrom` (`argument`, `file` or
       `default`) and `File` (the path read, or empty).
-- [ ] `Resolve(given Given, defaultPath string) (InEffect, error)`: the
+- [x] `Resolve(given Given, defaultPath string) (InEffect, error)`: the
       argument, then the file in use, then `plaintext.DefaultMark`. A named
       `--config` that does not exist is refused; the default file absent is
       every default.
-- [ ] The file is decoded with `yaml.Strict()`. An unknown key is refused by
+- [x] The file is decoded with `yaml.Strict()`. An unknown key is refused by
       name. `mark: ""` is the empty mark. `mark:` with no value is refused,
       saying to write `mark: ""` for the empty mark. A file of zero bytes is
       every default.
-- [ ] The mark from either source goes through `plaintext.CheckMark`, and the
+- [x] The mark from either source goes through `plaintext.CheckMark`, and the
       refusal names the source: the file and its key, or `--mark`.
-- [ ] Tests: `TestNoFileIsEveryDefault`, `TestTheFileSetsTheMark`,
+- [x] Tests: `TestNoFileIsEveryDefault`, `TestTheFileSetsTheMark`,
       `TestASettingArgumentOverridesTheFile`,
       `TestAConfigFileThatDoesNotExistIsRefused`,
       `TestAnUnknownKeyIsRefusedByName` (`colour: red` names `colour`),
@@ -402,9 +402,11 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       `TestABadMarkIsRefusedNamingWhereItCameFrom` (file and argument),
       `TestMarkFromSaysWhichSourceWon`, `TestTheTokenIsNotASetting`
       (`token: x` and `token_path: x` are unknown keys like any other).
-- [ ] `doc.go` states the order, the strict decode and why the token is not a
+- [x] ➕ `TestAFileOfNoBytesIsEveryDefault`: a zero-byte file is every default
+      and is still the file in use, which `InEffect.File` names.
+- [x] `doc.go` states the order, the strict decode and why the token is not a
       setting, naming each test.
-- [ ] `git commit -m "feat(settings): settings.yaml, strict, with the argument first"`
+- [x] `git commit -m "feat(settings): settings.yaml, strict, with the argument first"`
 
 ### Task 11: --config and --mark on every command and on gdoc mcp
 
@@ -419,27 +421,27 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/testdata/screens/help*.golden`, `bare*.golden`
 - Create: `go/cmd/gdoc/settings_test.go`
 
-- [ ] `commands.go` gains `settingFlags`, the two flags with their summaries:
+- [x] `commands.go` gains `settingFlags`, the two flags with their summaries:
       `--config <file>` "the settings file to use instead of settings.yaml in
       the config folder", and `--mark <text>` "the mark gdoc writes in front
       of its words in a thread; an empty mark writes the words alone, and then
       nothing in the thread says which words are gdoc's". Constants
       `configFlag` and `markFlag` are their one spelling.
-- [ ] `takeSettings(args) (rest []string, given settings.Given, err error)`
+- [x] `takeSettings(args) (rest []string, given settings.Given, err error)`
       takes both flags off the line wherever they stand, in both spellings
       (`--mark x`, `--mark=x`), before `--help` is looked for and before
       `mcp` is routed. `--mark ""` and `--mark=` are the empty mark. A flag
       given twice, or with no value after it, is refused naming it.
-- [ ] `route()` calls it, then `settings.Resolve`. A refusal on a command is
+- [x] `route()` calls it, then `settings.Resolve`. A refusal on a command is
       one envelope with exit 1; on `gdoc mcp` it is one line on stderr and exit
       1, as `checkMCPArgs` refuses today. `checkMCPArgs` itself is unchanged.
-- [ ] `run`, `safeDispatch` and `dispatch` take the `settings.InEffect`, and
+- [x] `run`, `safeDispatch` and `dispatch` take the `settings.InEffect`, and
       `dispatch` puts it on `args` for every command. The MCP session resolves
       once at start and hands the same value to every tool call.
-- [ ] Help prose and the help screen list the two flags once, under "Every
+- [x] Help prose and the help screen list the two flags once, under "Every
       command takes", from `settingFlags`. Both completion scripts offer them
       after any command, `--mark` as opaque text like `--quote`.
-- [ ] Tests: `TestEveryCommandTakesTheSettingFlags` (each table entry run with
+- [x] Tests: `TestEveryCommandTakesTheSettingFlags` (each table entry run with
       both flags reaches its own refusal or answer, never "is not a flag this
       command takes"), `TestTheSettingFlagsAreTakenAnywhereOnTheLine`,
       `TestAnEmptyMarkArgumentIsTheEmptyMark` (both spellings),
@@ -450,14 +452,45 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       --stdio` is still refused), `TestTheMcpSessionHandsItsSettingsToEveryCall`,
       `TestEverySettingFlagIsInHelpAndInBothScripts`,
       `TestTheMarkFlagSaysWhatAnEmptyMarkCosts`.
-- [ ] Goldens: the help stderr goldens and the help and bare screens gain the
+- [x] Goldens: the help stderr goldens and the help and bare screens gain the
       "Every command takes" lines. Regenerate those files only, and record in
       a ➕ note which files moved and that each diff is those lines alone.
-- [ ] `cmd/gdoc/doc.go`: a section "Two setting flags, taken off the line
+- [x] `cmd/gdoc/doc.go`: a section "Two setting flags, taken off the line
       first" naming the tests; the mcp bullet (around line 110) and "The
       extension has no settings" (around line 626) say the line takes the two
       setting flags and the extension passes none.
-- [ ] `git commit -m "feat(cmd): --config and --mark on every command and on mcp"`
+- [x] ➕ The two flags are listed once per page rather than once per run: the
+      grouped table carries the section once, and each command's own page
+      carries it too, because a page is the whole of what a reader who typed
+      `gdoc help publish` reads. The heading "Every command takes" is what
+      keeps them from reading as that command's own.
+- [x] ➕ `settings_test.go` adds `TestASettingFlagWithNoValueIsRefused` and
+      `TestTheDefaultSettingsFileIsReadFromTheConfigFolder`. The first holds
+      the two refusals the plan named together with the one it did not,
+      `--mark --config f`, which would otherwise write "--config" in front of
+      gdoc's words; the second holds that the default path is the config
+      folder's `settings.yaml`.
+- [x] ➕ `dispatching` is `dispatch` behind a variable in `main.go`, as
+      `login`, `openSession` and `serveMCP` already are, so a test can read the
+      line and the settings that reached it without a command running. Nothing
+      in the binary assigns it.
+- [x] ➕ Goldens regenerated: `testdata/pipe/help.stderr.golden`,
+      `help-publish.stderr.golden`, `help-comments.stderr.golden`,
+      `bare.stderr.golden`, and all fifteen of `testdata/screens/help-*.golden`
+      and `bare-*.golden`. The stdout goldens did not move. The pipe diffs are
+      the "Every command takes" lines alone. The screen diffs are those lines
+      plus the name column, which widened by three cells in every box so that
+      `--config <file>` and the rule holding it clear it: `settingColumn` is
+      what both `commandColumn` and `flagColumn` now measure against, and
+      without it the one rule would have lost the joint the rules above it draw.
+- [x] ➕ `TestMcpTakesNoWordsAndNoFlags` is gone, replaced as the plan says;
+      `doc.go` and `manifest_test.go` name the new test instead.
+- [x] ➕ `TestATextFlagIsOpaqueToBothScripts`,
+      `TestTheZshScriptNamesEveryCommandAndEveryFlag` and
+      `TestTheBashScriptNamesEveryCommandAndEveryFlag` read the setting flags
+      beside the table's own, through one new `flagKinds` helper. No assertion
+      is loosened: the text and file arms are still read a flag at a time.
+- [x] `git commit -m "feat(cmd): --config and --mark on every command and on mcp"`
 
 ### Task 12: help --json carries the settings in effect
 
@@ -465,16 +498,26 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
 - Modify: `go/cmd/gdoc/help.go`, `go/cmd/gdoc/help_test.go`,
   `go/cmd/gdoc/testdata/pipe/help*.stdout.golden`, `go/cmd/gdoc/doc.go`
 
-- [ ] `helpReport` gains `Settings helpSettings` with `json:"settings"`:
+- [x] `helpReport` gains `Settings helpSettings` with `json:"settings"`:
       `{"mark": "...", "mark_from": "argument" | "file" | "default"}`. Always
       present, the empty mark included: `"mark": ""` is a fact.
-- [ ] Tests: `TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom` (one
+- [x] Tests: `TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom` (one
       subtest per source, values as literals),
       `TestHelpCarriesTheEmptyMarkAsAnEmptyString`,
       `TestHelpForOneCommandCarriesTheSettingsToo`.
-- [ ] The three help stdout goldens gain the field. Regenerate those three and
+- [x] The three help stdout goldens gain the field. Regenerate those three and
       nothing else; a ➕ note says so.
-- [ ] `git commit -m "feat(help): the settings in effect, and where each came from"`
+- [x] ➕ Regenerated, and only those three: `help.stdout.golden`,
+      `help-publish.stdout.golden` and `help-comments.stdout.golden`, each
+      gaining `"settings":{"mark":"⁘","mark_from":"default"}` and nothing else.
+      The three stderr goldens did not move, because the two flags are in no
+      entry of the object and the words a person reads already name them.
+- [x] ➕ `cmdHelp` takes the `settings.InEffect`, so both of its call sites
+      hand it over: `dispatch`'s `--help` reading in `main.go` and the table's
+      own `help` entry in `commands.go`, which reads it off `a.set`.
+- [x] ➕ The test helper reading the field is `settingsInObject`, not
+      `helpSettings`, which is the name the new struct in `help.go` takes.
+- [x] `git commit -m "feat(help): the settings in effect, and where each came from"`
 
 ### Task 13: propose and annotate write the mark in effect
 
@@ -486,23 +529,44 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   packages that state the sent comment
 - Create: `go/internal/propose/mark_test.go`, `go/internal/annotate/mark_test.go`
 
-- [ ] `Batch`, `BlockBatch`, the apply functions and `annotate.Body` take the
+- [x] `Batch`, `BlockBatch`, the apply functions and `annotate.Body` take the
       mark and write `plaintext.Prefixed(mark, why)`. The read-backs compare
       against that same string. `cmd/gdoc` passes `a.settings.Mark`.
-- [ ] The reason check refuses a reason opening with a known mark or with the
+- [x] The reason check refuses a reason opening with a known mark or with the
       mark in effect (`OpensWithMark`), naming the mark it found and saying
       gdoc adds it.
-- [ ] `propose.Prefix`, `propose.Robot`, `annotate.Prefix` and
+- [x] `propose.Prefix`, `propose.Robot`, `annotate.Prefix` and
       `annotate.Robot` are removed.
-- [ ] Tests: `TestProposeWritesTheMarkInEffect` and
+- [x] Tests: `TestProposeWritesTheMarkInEffect` and
       `TestAnnotateWritesTheMarkInEffect` (with `"∴"`),
       `TestAnEmptyMarkWritesTheWordsAlone` (one subtest per writer),
       `TestAReasonOpeningWithAnyKnownMarkIsRefused` (one subtest per known
       mark and the mark in effect, in both packages),
       `TestTheReadBackComparesTheMarkThatWasSent`.
-- [ ] Existing tests that state `"🤖 "` in a sent comment pass the mark
+- [x] Existing tests that state `"🤖 "` in a sent comment pass the mark
       explicitly as `"🤖"`; none is loosened.
-- [ ] `git commit -m "feat(propose,annotate): the mark in effect, or the words alone"`
+- [x] ➕ `OpensWithMark` cannot name the mark it matched, and the refusal has to
+      name the character the reason carries rather than the one this run writes.
+      So `plaintext.MarkOpening(text, inEffect) (string, bool)` was added and
+      `OpensWithMark` and `CutMark` now ask it, which keeps the reading side one
+      loop instead of three: `TestMarkOpeningNamesTheMarkItFound`, with the
+      package comment naming it beside the other two.
+- [x] ➕ `Proposal.Check`, `Annotation.Check` and `checkWhy` take the mark, so
+      `cmd/gdoc`'s `readProposals`, `readAnnotations`, `annotationsFor`,
+      `runPropose` and `runAnnotate` take it too and read it off `a.set.Mark`.
+      The whole-file check still happens before a session is opened.
+- [x] ➕ The cmd tests over the recorded comment fixtures, which carry the
+      robot, say so through `runJSONSet(t, robotInEffect(), ...)`: a new
+      `robotInEffect` beside `defaultsInEffect`, and `runJSONSet` /
+      `runJSONSetCtx` beside `runJSON`. Seven tests moved to it; nothing was
+      loosened. The live tests name `liveMark = "⁘"`, the default a real write
+      now carries.
+- [x] ➕ `chatWith` in the tests was building a session with no settings, so a
+      chat write sent the words with no mark at all while the CLI sent the
+      default: `TestTheSameAnswerAsTheCLI` caught it. It now carries
+      `defaultsInEffect()`, as `newMCPChat` does in production, through a new
+      `chatWithSettings`.
+- [x] `git commit -m "feat(propose,annotate): the mark in effect, or the words alone"`
 
 ### Task 14: reply adds the mark itself
 
@@ -514,21 +578,21 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/chatheader.md`, `go/cmd/gdoc/doc.go`,
   `go/cmd/gdoc/testdata/pipe/help*.golden`, `testdata/screens/help*.golden`
 
-- [ ] `reply.Check(words, mark)` refuses an empty body, markdown and a marker,
+- [x] `reply.Check(words, mark)` refuses an empty body, markdown and a marker,
       asked of the words alone. It no longer requires a prefix.
-- [ ] `reply.Post(ctx, s, docID, commentID, words, mark)` sends
+- [x] `reply.Post(ctx, s, docID, commentID, words, mark)` sends
       `plaintext.Prefixed(mark, words)` and reads that string back.
-- [ ] A body that opens with a known mark or the mark in effect has it taken
+- [x] A body that opens with a known mark or the mark in effect has it taken
       off with `CutMark` and gets the mark in effect instead, once, with a
       warning: "the reply opened with 🤖, and gdoc adds the mark itself; it was
       written once, as ⁘". This holds for v2.11.0; the warning says so.
-- [ ] `reply.Prefix` is removed.
-- [ ] The reply and annotate summaries say "under your mark" instead of
+- [x] `reply.Prefix` is removed.
+- [x] The reply and annotate summaries say "under your mark" instead of
       "under the robot prefix", and `manifest.json` follows them word for
       word. The reply schema's `body` says: "The words of the reply. gdoc puts
       its mark in front of them, so do not type one. Markdown is refused."
-- [ ] `chatheader.md` stops telling the model to draft a `🤖` reply.
-- [ ] Tests: `TestReplyAddsTheMarkInEffect`,
+- [x] `chatheader.md` stops telling the model to draft a `🤖` reply.
+- [x] Tests: `TestReplyAddsTheMarkInEffect`,
       `TestAnEmptyMarkWritesTheWordsAlone` (the reply subtest),
       `TestABodyOpeningWithAKnownMarkIsWrittenOnceWithAWarning` (one subtest
       per known mark, with leading space and newline),
@@ -538,8 +602,40 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       `TestReplyAcceptsABodyWithNoMark`; the `reply/doc` comment and
       `plaintext`'s "The two writers own the mark differently" section are
       rewritten to "all three writers add the mark".
-- [ ] Goldens: the help goldens move by the two summaries. A ➕ note names them.
-- [ ] `git commit -m "feat(reply): gdoc adds the mark, as propose and annotate do"`
+- [x] Goldens: the help goldens move by the two summaries. A ➕ note names them.
+- [x] ➕ The three mark tests went into a new `go/internal/reply/mark_test.go`,
+      beside `propose/mark_test.go` and `annotate/mark_test.go`, with
+      `TestAnEmptyMarkStillTakesATypedMarkOff` for the corner the two decisions
+      make between them and `TestTheReadBackComparesTheMarkThatWasSent` for the
+      read-back.
+- [x] ➕ `signed(body, mark)` is the one room that puts the mark on, and the
+      warning it returns names the mark the body carried rather than the one
+      this run writes. `Post` reads it once, so the read-back compares the
+      string that went out.
+- [x] ➕ `TestPostSendsTheBodyVerbatimToTheRepliesURL` became
+      `TestPostSendsTheWordsUnderTheMarkToTheRepliesURL`: nothing but the mark
+      is added, and "verbatim" stopped being true.
+- [x] ➕ `TestTheReplyCardAsksForTheMarkItself` became
+      `TestTheReplyCardSaysGdocAddsTheMark`, which also fails if the card names
+      any known mark: the mark is a value this run was given, and a card naming
+      one is wrong for every colleague who set another.
+- [x] ➕ The cmd-level `TestReplyRefusesABodyWithoutTheRobot` was replaced by
+      `TestReplyRefusesAMarkerBeforeAnyRequest`, so the route still has a test
+      that nothing reaches Drive for a body `Check` refused.
+      `TestReplyPostsTheBodyAndReadsTheThreadBack` and
+      `TestReplyNeverCutsItsReadBack` send the words and ask for
+      `robotInEffect()`, which is the mark the recorded thread carries.
+- [x] ➕ Chat's `heldBody` went: a held reply's body is `heldRun`, the words
+      alone, and `heldSent` is what reaches the wire, `"⁘ " + heldRun`.
+- [x] ➕ `internal/reply/reply.go` came off `markWriters` in
+      `go/boundary/boundary_test.go`: it owns no prefix check now, it asks
+      `plaintext.CutMark`.
+- [x] ➕ Goldens regenerated: `testdata/screens/help-{44,60,80,100}.golden`,
+      `help-80-truecolor.golden` and the five `bare-*` of each, by deleting
+      them and running the test twice. `testdata/pipe/help.stderr.golden`,
+      `help.stdout.golden` and `bare.stderr.golden` moved by the two summaries
+      alone, so those three were edited in place.
+- [x] `git commit -m "feat(reply): gdoc adds the mark, as propose and annotate do"`
 
 ### Task 15: by_gdoc is a known mark or the mark in effect
 
@@ -550,25 +646,39 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/mcptools.go`, `go/internal/plaintext/plaintext.go`,
   `go/boundary/boundary_test.go`, `go/boundary/doc.go`
 
-- [ ] `comments.Threads(raw, d, mark)` sets `Reply.ByGdoc` with
+- [x] `comments.Threads(raw, d, mark)` sets `Reply.ByGdoc` with
       `plaintext.OpensWithMark(content, mark)`. `WaitOptions` gains `Mark`.
       `read.go` and `mcptools.go` pass the mark in effect; `restyle.Survey`
       passes `""` with a comment saying the survey reads no `by_gdoc`.
-- [ ] `mcpRemarks` asks `OpensWithMark` of a thread's opening comment with the
+- [x] `mcpRemarks` asks `OpensWithMark` of a thread's opening comment with the
       session's mark.
-- [ ] `plaintext.Robot`, `plaintext.Prefix` and `OpensWithRobot` are removed.
-- [ ] `TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot` becomes
+- [x] `plaintext.Robot`, `plaintext.Prefix` and `OpensWithRobot` are removed.
+- [x] `TestByGdocIsTrueOnlyForAReplyOpeningWithTheRobot` becomes
       `TestByGdocIsTrueForAKnownMarkOrTheMarkInEffect`: true for 🤖, ⁘ and ∴
       whatever the mark in effect, true for `"Bot:"` only when it is the mark
       in effect, false for every reply under the empty mark that opens with
       none of them.
-- [ ] `TestTheRobotMarkIsReadInOnePlace` becomes `TestTheMarkIsReadInOnePlace`:
+- [x] `TestTheRobotMarkIsReadInOnePlace` becomes `TestTheMarkIsReadInOnePlace`:
       its literal is the three known marks, the call it looks for is
       `plaintext.OpensWithMark`, `markWriters` keeps `propose.go`,
       `annotate.go` and `reply.go` (reply now cuts a known mark off a body),
       and it still fails in both directions. `boundary/doc.go` "The robot mark
       is read in one place" says the same with the new names.
-- [ ] `git commit -m "feat(comments): by_gdoc reads the known marks and the mark in effect"`
+- [x] `git commit -m "feat(comments): by_gdoc reads the known marks and the mark in effect"`
+- ➕ `markWriters` now names `internal/reply/reply.go` as well, and all three
+      writers ask `internal/plaintext` rather than holding a prefix check, so
+      the list is an empty exception kept as the one place such a check would
+      be declared. `boundary/doc.go` says so.
+- ➕ `plaintext.OpensWithRobot` went, so `internal/chat`'s `robotNotOurs` asks
+      `plaintext.OpensWithMark(text, "")`: a fact read of one comment carries
+      no session, so it asks the three known marks and never a colleague's own.
+      The fact itself goes in Task 17.
+- ➕ `mcpPin`, `mcpPinThread` and `mcpRecordRead` each take the session's mark,
+      because `mcpRemarks` and `comments.Threads` now ask for one.
+- ⚠️ The Part B validation grep `'OpensWithRobot|plaintext\.Prefix|plaintext\.Robot'`
+      matches `plaintext.Prefixed`, which is the writer every writer calls.
+      Read with word boundaries, `grep -rnE 'OpensWithRobot|plaintext\.Prefix\b|plaintext\.Robot\b' go/`,
+      it finds nothing.
 
 ### Task 16: reply --body, and chat writes no file for a reply
 
@@ -579,16 +689,16 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/testdata/pipe/help*.golden`, `testdata/screens/help*.golden`
 - Create: `go/cmd/gdoc/replybody_test.go`
 
-- [ ] `reply` takes `--body <text>` (`kindText`) and `--body-file <file>`,
+- [x] `reply` takes `--body <text>` (`kindText`) and `--body-file <file>`,
       both `needEither`. Exactly one is given: both, or neither, is refused
       naming the two flags. The `--body` value is used as typed, with the same
       trailing-whitespace trim `readBody` applies to a file.
-- [ ] Chat's `body` maps to `--body` with no file. The dash refusal is not
+- [x] Chat's `body` maps to `--body` with no file. The dash refusal is not
       asked of `body`: the value goes on the line joined as `--body=<value>`,
       which the parser cannot read as a flag, and a reply opening with "- " is
       plain text the binary accepts. Every other on-the-line argument keeps
       the dash refusal.
-- [ ] Tests: `TestReplyTakesTheBodyOnTheLineOrInAFile`,
+- [x] Tests: `TestReplyTakesTheBodyOnTheLineOrInAFile`,
       `TestReplyRefusesBothBodyAndBodyFile`,
       `TestReplyRefusesNeitherBodyNorBodyFile` (replaces
       `TestReplyNeedsABodyFile`), `TestAChatReplyWritesNoFile` (no call
@@ -596,8 +706,23 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
       `TestEverySchemaPropertyMapsToAWordOrFlagAndBack` passes with `body`
       mapped to `--body`, `TestEveryRequiredFlagIsOneTheCommandRefusesToRunWithout`
       passes with the two marked `either`.
-- [ ] Goldens: the help goldens move by the reply usage line. A ➕ note names them.
-- [ ] `git commit -m "feat(reply): --body on the line, and chat sends it there"`
+- [x] Goldens: the help goldens move by the reply usage line. A ➕ note names them.
+- [x] `git commit -m "feat(reply): --body on the line, and chat sends it there"`
+- ➕ One golden moved: `cmd/gdoc/testdata/pipe/help.stdout.golden`, by reply's
+      two flags and its example. The screen goldens hold names and summaries
+      rather than flags, so none of them moved.
+- ➕ The example stays on `--body-file reply.txt`.
+      `TestEveryExampleIsACallTheTableAccepts` reads an example word by word,
+      and a reply's words have spaces in them, so no `--body` example can be
+      written there. The usage line above it offers `--body` first.
+- ➕ `mcpArg.dashAllowed` is the field that says a dash is just a dash, set for
+      reply's `body` alone, and `TestOnlyTheReplyBodyMayOpenWithADash` fails if
+      a second argument takes it.
+- ➕ `TestTempFilesAreMadeForTheCallAndGone` and
+      `TestOneCallMakesOneDirectoryUnderFixedNames` moved to annotate and
+      propose: reply writes no file, so it could no longer measure a directory.
+      `TestTheSameAnswerAsTheCLI`'s reply case now builds the same `--body=`
+      line both ways and needs no temp file.
 
 ### Task 17: chat's robot_not_ours fact is removed
 
@@ -609,19 +734,42 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `go/cmd/gdoc/mcpledger_test.go`, `go/cmd/gdoc/mcplabel_test.go`,
   `go/cmd/gdoc/mcpguide_test.go`, `go/cmd/gdoc/mcplanded_test.go`
 
-- [ ] `Facts.RobotNotOurs` and `robotNotOurs` go. `FactsOf` no longer takes
+- [x] `Facts.RobotNotOurs` and `robotNotOurs` go. `FactsOf` no longer takes
       `OwnReplies` if nothing else in it asks; `OwnReplies` and
       `Ledger.Wrote` stay for the Dictated rule.
-- [ ] `TestTheFactNamesAreTheLiterals` and the list in `mcplabel_test.go`
+- [x] `TestTheFactNamesAreTheLiterals` and the list in `mcplabel_test.go`
       name five facts. `TestRobotNotOursAsksTheRecordOfWhatThisProcessWrote`
       and `TestAReplyThisSessionWroteIsNotRobotNotOurs` are deleted;
       `TestRobotNotOursUsesTheLedger` becomes `TestWroteAnswersFromTheLedger`.
-- [ ] `TestNoFactNamedRobotNotOursReachesTheModel`: a comments answer through
+- [x] `TestNoFactNamedRobotNotOursReachesTheModel`: a comments answer through
       `mcpReadAnswer` carries no `robot_not_ours` key anywhere.
-- [ ] `chat/doc.go` "Six facts" becomes five, and the Flagged thread bullet
+- [x] `chat/doc.go` "Six facts" becomes five, and the Flagged thread bullet
       loses its sentence about `robot_not_ours`. `chatheader.md` drops it from
       the list of facts.
-- [ ] `git commit -m "refactor(chat): robot_not_ours goes, the ledger stays for Dictated"`
+- [x] `git commit -m "refactor(chat): robot_not_ours goes, the ledger stays for Dictated"`
+
+➕ `Comment.ID` went with the fact. No check asked anything of the item beyond
+its own words once `robotNotOurs` was gone, so the field was one nothing read.
+
+➕ `OwnReplies` moved from `facts.go` to `ledger.go`, where the record it
+describes lives, with `var _ OwnReplies = (*Ledger)(nil)` so the interface the
+Dictated rule asks is pinned to the type that answers it.
+
+➕ `mcpReadAnswer`, `mcpChatView`, `chatThreads` and `chatReplies` lost their
+`chat.OwnReplies` argument: they only carried it to `FactsOf`. `mcptools.go`
+hands the ledger to `mcpRecordRead` and nothing else now.
+
+➕ `internal/chat` left `markReaders` in `boundary/boundary_test.go`, because
+`robotNotOurs` was its one call of `plaintext.OpensWithMark`. Two readers ask it
+now, `internal/comments` of a reply and `cmd/gdoc` of a thread's opening
+comment, and `boundary/doc.go` and `plaintext`'s package comment say so.
+
+⚠️ The Part B validation command `grep -rn 'robot_not_ours\|RobotNotOurs' go/`
+cannot find nothing: the test this task's third item names carries the string,
+and three comments date the removal. After this task it finds six lines in
+`cmd/gdoc/mcpledger_test.go` (the pin) and one each in `boundary/boundary_test.go`,
+`boundary/doc.go` and `internal/chat/doc.go` (the history). No field, no
+argument and no JSON key.
 
 ### Task 18: the documents of Part B
 
@@ -630,40 +778,123 @@ lives and is imported by `auth` and `lastcheck`; settings decode YAML and ask
   `docs/guide/how-it-works.md`, `go/internal/plaintext/plaintext.go`
   (package comment), `go/internal/settings/doc.go`, `go/cmd/gdoc/doc.go`
 
-- [ ] `README.md`, staying at 200 lines: line 98 says each reply opens with
+- [x] `README.md`, staying at 200 lines: line 98 says each reply opens with
       gdoc's mark, ⁘ unless you set another; one short paragraph says where
       `settings.yaml` lives, that `--mark` and `--config` override it, and
       what an empty mark costs: nothing in the thread says which words are
       gdoc's, and a later review reads gdoc's own replies as a person's. Take
       lines out elsewhere rather than past the ceiling.
-- [ ] `docs/guide/writing.md`: `reply` no longer needs the mark typed; `--body`
+- [x] `docs/guide/writing.md`: `reply` no longer needs the mark typed; `--body`
       beside `--body-file`; propose and annotate refuse a reason opening with
       any known mark.
-- [ ] `docs/guide/chat.md:75`: the mark in effect, not 🤖.
-- [ ] `plaintext`'s package comment: "The mark is the only record of authorship
+- [x] `docs/guide/chat.md:75`: the mark in effect, not 🤖.
+- [x] `plaintext`'s package comment: "The mark is the only record of authorship
       there is" says the mark is a setting, the three known marks are always
       read, and with the empty mark there is no record at all. Each rule names
       its test.
-- [ ] `cd go && go test -race ./boundary/` passes (task map, ceilings,
+- [x] `cd go && go test -race ./boundary/` passes (task map, ceilings,
       package comments).
-- [ ] `git commit -m "docs: the mark is a setting, and what the empty mark costs"`
+- [x] `git commit -m "docs: the mark is a setting, and what the empty mark costs"`
+
+➕ The prose rules got a test of their own, `go/boundary/mark_test.go`, because
+every item above is a sentence nothing would have asked again:
+`TestNoColleaguePageNamesTheRobotAsTheMark` reads `README.md` and every page
+under `docs/guide/` and fails on 🤖, which is the mark no page may name now that
+gdoc writes the mark itself and a colleague picks it;
+`TestTheREADMESaysWhereTheMarkIsSetAndWhatTurningItOffCosts` asks the one page a
+colleague is sure to read for ⁘, `settings.yaml`, both flags and `--mark ""`;
+and `TestTheWritingPageNamesBothWaysToGiveAReplyBody` holds `--body` beside
+`--body-file`. `skills/` is deliberately outside the scan: it still types 🤖
+until the tag sitting, because v2.10.0 refuses a reply body without it.
+
+➕ README.md is 200 lines with the new section in it, so nine lines came out
+elsewhere: the update table became one sentence, the keyboard bullet carries the
+git one, and five paragraphs were tightened by a line each. No fact left the
+page except "the token stays on your machine", which
+`docs/guide/how-it-works.md` holds in full.
+
+➕ `docs/guide/how-it-works.md` gained the paragraph about `settings.yaml` beside
+the token's own, because `writing.md` now sends a reader there for where the
+mark is set, and that page holds the config folder already. It states the one
+key, both flags, `help --json` as the way to ask, and that the token is not a
+setting.
+
+➕ `README.md`'s preview section said `propose` creates a throwaway document
+before it proposes, which stopped being true when the probe left the write path.
+It now says the read-backs are what gdoc trusts. The sentence was two lines of
+the nine that had to come out either way.
+
+➕ `docs/guide/writing.md` also lost "in a file the skill wrote" as the only
+route a reply body takes, and `docs/guide/chat.md` says the file is the route in
+chat, because the extension passes no flags.
+
+➕ `internal/settings/doc.go`'s empty-mark section names what the empty mark
+costs and sends a reader to `internal/plaintext` for it, so the two comments say
+one thing between them rather than each half of it.
 
 ### Task 19: verify acceptance, and M16 completed
 
 **Files:**
 - Modify: `docs/v2/PLAN.md`
 
-- [ ] `make test`, `make vet`, `GOOS=darwin go vet ./...` and `make dist` pass.
-- [ ] Every Validation Command for Part B gives the answer it states; record
+- [x] `make test`, `make vet`, `GOOS=darwin go vet ./...` and `make dist` pass.
+- [x] Every Validation Command for Part B gives the answer it states; record
       the counts here as ➕ notes.
-- [ ] Every row of the spec's Decisions table for Parts A and B names a task
+- [x] Every row of the spec's Decisions table for Parts A and B names a task
       above that built it.
-- [ ] `git diff main...HEAD -- go/internal/guard/policy.go` is empty, and
+- [x] `git diff main...HEAD -- go/internal/guard/policy.go` is empty, and
       `go/internal/auth/` is untouched: the token stays a file in M16.
-- [ ] `PLAN.md`: M16 under Done, with this plan's path, and M17 named as
+- [x] `PLAN.md`: M16 under Done, with this plan's path, and M17 named as
       next. Move this plan and its spec to `docs/plans/completed/`, fixing
       every link to both.
-- [ ] `git commit -m "docs(v2): M16, completed"`
+- [x] `git commit -m "docs(v2): M16, completed"`
+
+➕ The gates: `make test` is the raced suite over 41 packages, every one `ok`;
+`make vet` is `go vet ./...` and the gofmt check, both silent; `GOOS=darwin go
+vet ./...` is silent; `make dist` wrote the three binaries into `bin/`.
+`CLAUDE.md` is 300 lines and `README.md` is 200, which are their ceilings.
+
+➕ Part B's validation commands, each from a fresh `GDOC_CONFIG_DIR`, against
+`go build -o "$TMPDIR/gdoc-m16" ./cmd/gdoc`. The four `help --json` reads print
+`{"mark":"⁘","mark_from":"default"}`, `{"mark":"∴","mark_from":"argument"}`,
+`{"mark":"","mark_from":"argument"}` and `{"mark":"🤖","mark_from":"file"}`,
+each exactly as written. The three refusals exit 1 with `ok: false`, and each
+error names the thing that was wrong: the missing `--config` path, the unknown
+field `colour` with its line and column, and `**` as what a Docs thread would
+render literally. `printf '' | gdoc mcp --mark ∴` exits 0; `gdoc mcp --stdio`
+exits 1, with its one sentence on stderr and nothing on stdout, which is the
+`mcp` half of the one-JSON-object invariant.
+
+➕ The two greps, read as they were meant. `robot_not_ours` has ten hits and no
+field, argument or JSON key among them: six in `cmd/gdoc/mcpledger_test.go`,
+which is the pin that the fact reaches no model, and four sentences of history
+in `boundary/doc.go`, `boundary/boundary_test.go` and `internal/chat/doc.go`,
+exactly the four Task 17 left. The second grep's pattern matches
+`plaintext.Prefixed`, which is the function that replaced the constant;
+`grep -rnE 'OpensWithRobot|plaintext\.Prefix\b|plaintext\.Robot'` finds nothing,
+and `Robot` survives in `internal/plaintext` only inside the name of
+`TestTheKnownMarksAreTheRobotAndTheTwoDots`.
+
+➕ The spec's Decisions table, row by row, against the tasks that built each.
+Part A is one row, "George keeps his own skill. gdoc's own answers have to be
+enough for it", and Tasks 2 to 8 are those answers: the refusals that name no
+person, the table-cell test, the fields an entry takes, the way to propose a
+deletion, the refusal that names its proposal, the `--from` summary with `why`,
+and the one read before the first write. Part B's eight rows: the mark as a
+setting with 🤖, ⁘, ∴ and others allowed is Tasks 9, 10 and 13; the empty mark
+is Tasks 9 and 13, with `plaintext.Prefixed` as the one writer; the settings
+file and its path as an argument is Tasks 10 and 11; every setting also a
+direct argument that overrides the file is Tasks 10 and 11, with the order
+pinned in `internal/settings`; any symbol as the mark is Task 9; the default ⁘
+is Task 9, stated as a literal by `TestTheDefaultMarkIsTheFourDot`;
+`reply --body` with chat's `body` mapping to it is Task 16; and the token not
+being a setting is Task 10's `doc.go` and Task 18's `docs/guide/how-it-works.md`.
+The two rows marked `none`, Part C's move to M17 and `propose --folder` staying
+in its backlog item, ask for no task here.
+
+➕ `git diff main...HEAD -- go/internal/guard/policy.go` is empty and
+`git diff main...HEAD --stat -- go/internal/auth/` prints nothing, over 123
+changed files. The token is still a file, and no grant moved for the mark.
 
 ## Post-Completion
 

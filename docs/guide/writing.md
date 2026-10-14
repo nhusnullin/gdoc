@@ -18,7 +18,7 @@ proposed template with.
 
 ```bash
 gdoc probe --folder <folder url or id>
-gdoc reply <url> <comment id> --body-file reply.txt
+gdoc reply <url> <comment id> --body <text> | --body-file reply.txt
 gdoc propose <url> --from proposals.json [--md note.md]
 gdoc withdraw <url> <suggestion id> --md note.md
 gdoc annotate <url> --from annotations.json
@@ -26,7 +26,8 @@ gdoc annotate <url> --quote "reviewed annually" --body-file why.txt
 ```
 
 None of them decides what to write. The body of a reply, the words of a proposal
-and the reason for it arrive already written, in a file the skill wrote.
+and the reason for it arrive already written, on the line or in a file the skill
+wrote.
 
 **`probe`** asks Google whether suggestions are honoured for this project today.
 It creates a throwaway document in the folder you name, writes one sentence into
@@ -52,10 +53,13 @@ want the question asked directly. `--folder` stays on `propose` for one release,
 accepted, warned about and ignored.
 
 **`reply`** posts one reply into a comment thread and reads the thread back to
-see it there. The body must open with `🤖 ` and nothing before it, which is how
-a later run tells gdoc's own replies from everybody else's, and it must be plain
-text: a Docs thread renders markdown literally, so asterisks and backticks
-arrive as typed. Both are refused naming what was found.
+see it there. The body is the words alone, on the line with `--body` or in the
+file `--body-file` names. gdoc puts its mark in front of them, which is how a
+later run tells gdoc's own replies from everybody else's, so a body that already
+opens with a mark has it taken off and the report says so. The body must be
+plain text: a Docs thread renders markdown literally, so asterisks and backticks
+arrive as typed, and that is refused naming what was found. The mark itself is a
+setting: [How it works](how-it-works.md) says where it is set.
 
 **`propose`** writes a change as a native suggestion with a comment beside it
 saying why. It reads the file `--from` names, a list of entries of two kinds.
@@ -86,7 +90,7 @@ before anything is sent.
 `replacement` may not be empty, and it may not carry a line break: that entry
 replaces words with words inside one paragraph, and there is no deletion-only
 shape. Whole paragraphs are the other kind, below. `why` becomes the comment, so
-it must be plain text and must not carry the `🤖 ` prefix itself, which gdoc adds.
+it must be plain text and may not open with a mark, which gdoc adds itself.
 Every proposal in the file is checked before the first one is sent, so a bad
 entry stops the run with nothing written.
 
@@ -167,7 +171,7 @@ note records.
 |---|---|
 | `suggestions_inline` | the replacement is there, carrying a suggestion id |
 | `preview_without_suggestions` | the original words are still there with suggestions hidden, so it is a suggestion and not an edit |
-| `docx_anchored` | the docx export carries the 🤖 comment, attached to text |
+| `docx_anchored` | the docx export carries gdoc's comment, attached to text |
 
 All three, plus a write that answered `commentUpdateState: ALL_SAVED`, is
 `verified: true`. Anything less is still `verified: false` with a warning naming
@@ -200,8 +204,8 @@ the guard carries it only because the command granted exactly that id for this
 run: gdoc still never accepts, rejects or deletes anyone else's suggestion. The
 suggestion is gone only when the answer names it in `rejectedSuggestionIds` and
 a fresh read shows no run carrying it on either side; only then does the entry
-leave the note. The 🤖 comment stays where it is, because deleting a comment is
-a write the guard does not carry.
+leave the note. The comment gdoc wrote stays where it is, because deleting a
+comment is a write the guard does not carry.
 
 With `--md`, `propose` records what it wrote into the note's `gdoc:` block:
 the suggestion id, the comment id, the time and the words that were replaced,
@@ -233,8 +237,8 @@ or `--quote` with `--body-file` for one comment by hand:
 
 `quoted` is found the way `propose` finds it: a fresh read, the exact words,
 refused when they are not there exactly once. `why` is the bare reason, with no
-`🤖 ` on it, because gdoc writes the prefix itself and refuses a reason that
-already carries one. It must be plain text, for the reason a reply must: a Docs
+mark on it, because gdoc writes its mark itself and refuses a reason opening
+with any mark gdoc knows, naming the character it found. It must be plain text, for the reason a reply must: a Docs
 thread renders markdown literally. Every entry is checked before the first one
 is sent, and a run stops at the first entry that cannot be sent, with
 `ok: false` and every annotation still reported with `sent` answered for itself.

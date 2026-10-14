@@ -385,7 +385,7 @@ func TestProbeNeedsAFolder(t *testing.T) {
 // before anything reaches Drive, and the refusal quotes what it found.
 func TestReplyRefusesMarkdownBeforeAnyRequest(t *testing.T) {
 	f := stubWire(t, &fakeWire{})
-	path := tempFile(t, "reply.txt", "🤖 See **the** register.")
+	path := tempFile(t, "reply.txt", "See **the** register.")
 
 	got, code := runJSON(t, "reply", proposeDocID, "AAAA1111", "--body-file", path)
 	if code == 0 || got["ok"] != false {
@@ -400,18 +400,22 @@ func TestReplyRefusesMarkdownBeforeAnyRequest(t *testing.T) {
 	}
 }
 
-// A reply that does not open with the robot is refused for the same reason: the
-// prefix is the only record of who wrote it.
-func TestReplyRefusesABodyWithoutTheRobot(t *testing.T) {
+// A marker of gdoc's own is refused on the same rule and before the same
+// session: it travels out of a document and never back in, and a thread would
+// render its brackets as prose.
+func TestReplyRefusesAMarkerBeforeAnyRequest(t *testing.T) {
 	f := stubWire(t, &fakeWire{})
-	path := tempFile(t, "reply.txt", "The 2026 register.")
+	path := tempFile(t, "reply.txt", "the sentence reads {+six months+}[s:AAA] now")
 
 	got, code := runJSON(t, "reply", proposeDocID, "AAAA1111", "--body-file", path)
 	if code == 0 || got["ok"] != false {
-		t.Fatalf("a body without the prefix must be refused: %v (exit %d)", got, code)
+		t.Fatalf("a body carrying a marker must be refused: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "{+") {
+		t.Errorf("the error must name what it found: %q", msg)
 	}
 	if len(f.calls) != 0 {
-		t.Errorf("nothing may reach Drive: %v", f.calls)
+		t.Errorf("nothing may reach Drive for a body that was refused: %v", f.calls)
 	}
 }
 
@@ -420,9 +424,13 @@ func TestReplyPostsTheBodyAndReadsTheThreadBack(t *testing.T) {
 		{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"R1","createdTime":"2026-09-06T10:45:00Z","content":"🤖 The 2026 register."}`},
 		{method: "GET", match: "/comments?", json: readFixture(t, "comments.json")},
 	}})
-	path := tempFile(t, "reply.txt", "🤖 The 2026 register.\n")
+	// The body file holds the words. gdoc adds the mark in effect, and the
+	// recorded thread carries the reply under the robot, so that is the mark
+	// this run is given. The flag on the line carries the same words:
+	// TestReplyTakesTheBodyOnTheLineOrInAFile.
+	path := tempFile(t, "reply.txt", "The 2026 register.\n")
 
-	got, code := runJSON(t, "reply", fixtureDocID, "AAAA1111", "--body-file", path)
+	got, code := runJSONSet(t, robotInEffect(), "reply", fixtureDocID, "AAAA1111", "--body-file", path)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("reply: %v (exit %d)", got, code)
 	}
@@ -448,23 +456,11 @@ func TestReplyPostsTheBodyAndReadsTheThreadBack(t *testing.T) {
 	}
 }
 
-func TestReplyNeedsABodyFile(t *testing.T) {
-	stubWire(t, &fakeWire{})
-
-	got, code := runJSON(t, "reply", proposeDocID, "AAAA1111")
-	if code == 0 || got["ok"] != false {
-		t.Fatalf("reply without a body file must fail: %v (exit %d)", got, code)
-	}
-	if msg, _ := got["error"].(string); !strings.Contains(msg, "--body-file") {
-		t.Errorf("the error must name the flag: %q", msg)
-	}
-}
-
 func TestProposeWritesTheSuggestionAndVerifiesIt(t *testing.T) {
 	stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})
 	from := tempFile(t, "proposals.json", oneProposal)
 
-	got, code := runJSON(t, "propose", proposeDocID, "--from", from)
+	got, code := runJSONSet(t, robotInEffect(), "propose", proposeDocID, "--from", from)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("propose: %v (exit %d)", got, code)
 	}

@@ -41,6 +41,11 @@ const (
 	recordVar = "GDOC_LIVE_RECORD"
 )
 
+// liveMark is the mark a live write puts in front of its reason: the built-in
+// default, written out here rather than read off plaintext.DefaultMark, because
+// what a live run writes is what somebody reads in a real document.
+const liveMark = "⁘"
+
 // TestLiveReadOfARealDocument runs the whole read path against Google: the
 // token is loaded and refreshed if it has expired, every request goes through
 // the guard, and the readers run on what really came back rather than on a
@@ -93,7 +98,7 @@ func TestLiveReadOfARealDocument(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the comment listing failed: %v", err)
 	}
-	threads, unplaced := comments.Threads(raws, d)
+	threads, unplaced := comments.Threads(raws, d, "⁘")
 	for _, thread := range threads {
 		if thread.Marker == "" {
 			t.Errorf("thread %s carries no marker, and every thread carries one, %q included", thread.ID, comments.MarkerNone)
@@ -285,7 +290,7 @@ func proposeInto(t *testing.T, ctx context.Context, s *gapi.Session, docID strin
 		Quoted:      subjectQuoted,
 		Replacement: subjectNew,
 		Why:         subjectWhy,
-	})
+	}, liveMark)
 	for _, w := range result.Warnings {
 		t.Logf("propose warning: %s", w)
 	}
@@ -318,8 +323,8 @@ func proposeInto(t *testing.T, ctx context.Context, s *gapi.Session, docID strin
 // read-back found it.
 func replyTo(t *testing.T, ctx context.Context, s *gapi.Session, docID string, result propose.Result) {
 	t.Helper()
-	body := reply.Prefix + "This is the live write test. The proposal above is withdrawn a moment after this reply."
-	posted, err := reply.Post(ctx, s, docID, result.CommentID, body)
+	body := "This is the live write test. The proposal above is withdrawn a moment after this reply."
+	posted, err := reply.Post(ctx, s, docID, result.CommentID, body, liveMark)
 	for _, w := range posted.Warnings {
 		t.Logf("reply warning: %s", w)
 	}
@@ -441,7 +446,7 @@ func recordBatch(t *testing.T, ctx context.Context, s *gapi.Session, docID strin
 		return
 	}
 	var answer json.RawMessage
-	if err := s.PostJSON(ctx, propose.BatchURL(docID), json.RawMessage(propose.Batch(r, p)), &answer); err != nil {
+	if err := s.PostJSON(ctx, propose.BatchURL(docID), json.RawMessage(propose.Batch(r, p, liveMark)), &answer); err != nil {
 		t.Logf("the recording write failed: %v", err)
 		return
 	}
@@ -668,7 +673,7 @@ func baselineCursor(t *testing.T, ctx context.Context, s *gapi.Session, docID st
 	if err != nil {
 		t.Fatalf("the baseline document read failed: %v", err)
 	}
-	threads, _ := comments.Threads(raws, d)
+	threads, _ := comments.Threads(raws, d, "⁘")
 	if len(threads) != 0 {
 		t.Fatalf("the document was created a moment ago and already carries %d threads", len(threads))
 	}

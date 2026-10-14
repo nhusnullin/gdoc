@@ -2,10 +2,15 @@
 // process that died.
 //
 // Where the terminal reads a file, chat sends the value. The CLI's readers are
-// strict and they read files, so the server writes the value to a file and
-// hands the command a path. The directory is made for the one call and taken
-// away after it, whatever the call did, and the path never reaches the person:
-// a refusal naming it is rewritten to name the argument the file came from.
+// strict and the lists they read are files, so the server writes such a value
+// to a file and hands the command a path. The directory is made for the one
+// call and taken away after it, whatever the call did, and the path never
+// reaches the person: a refusal naming it is rewritten to name the argument
+// the file came from.
+//
+// A value that is one string goes on the line instead, joined to its flag, and
+// makes no directory: that is the reply body, which is one sentence a model
+// just wrote.
 
 package main
 

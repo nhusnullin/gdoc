@@ -14,16 +14,35 @@ import (
 	"strings"
 
 	"gdoc/internal/emit"
+	"gdoc/internal/settings"
 )
 
 // helpReport is what a caller reads. One shape for both forms, so a skill
 // written against `gdoc help publish` reads `gdoc help` without a second path.
 type helpReport struct {
 	Commands []helpCommand `json:"commands"`
+	// Settings is what this run would write into a thread, and where that
+	// value came from. It is always there, the empty mark included, because
+	// the question a colleague asks the help is which mark is in effect, and
+	// an absent field answers it with the default whatever the file says.
+	Settings helpSettings `json:"settings"`
 	// Update is what gdoc last heard about published releases, and it is
 	// absent for a build from a checkout, which names no release and so has
 	// nothing to compare. See notice.go for when it is fetched.
 	Update *updateFacts `json:"update,omitempty"`
+}
+
+// helpSettings is the settings in effect as JSON. MarkFrom is one of the three
+// words internal/settings gives, "argument", "file" or "default", and it is a
+// fact about where the value was read rather than advice about it. Mark has no
+// omitempty: the empty mark is a colleague's choice, and a skill that read an
+// absent field as "nothing was set" would write the default mark into a thread
+// somebody asked to keep clean.
+// TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom and
+// TestHelpCarriesTheEmptyMarkAsAnEmptyString.
+type helpSettings struct {
+	Mark     string `json:"mark"`
+	MarkFrom string `json:"mark_from"`
 }
 
 // helpCommand is one entry of the table as JSON. Words and Flags are always
@@ -73,7 +92,7 @@ type helpFlag struct {
 // TestARefusalKeepsItsObjectOnATerminal.
 //
 // TestHelpPrintsTheNoticeLineAndABlankLine.
-func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) emit.Result {
+func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, set settings.InEffect) emit.Result {
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
@@ -81,8 +100,12 @@ func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer) e
 	facts, line, warns := notice(ctx)
 	writeHelp(errOut, matched, len(words) == 0, line, warns, json)
 	return emit.Result{
-		OK:       true,
-		Data:     helpReport{Commands: helpEntries(matched), Update: facts},
+		OK: true,
+		Data: helpReport{
+			Commands: helpEntries(matched),
+			Settings: helpSettings{Mark: set.Mark, MarkFrom: set.MarkFrom},
+			Update:   facts,
+		},
 		Warnings: warns,
 		Screen:   !json,
 	}
@@ -159,7 +182,8 @@ func versionHeading() string {
 	return ""
 }
 
-// helpList is every command, one line each, name and sentence aligned.
+// helpList is every command, one line each, name and sentence aligned, and
+// under them the two flags none of them owns.
 func helpList(matched []command) string {
 	var b strings.Builder
 	b.WriteString("Usage: " + usageAll + "\n\n")
@@ -172,7 +196,35 @@ func helpList(matched []command) string {
 	for _, c := range matched {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, c.name, c.summary)
 	}
+	b.WriteString("\n" + settingProse())
 	b.WriteString("\n" + helpFoot + "\n")
+	return b.String()
+}
+
+// settingSection names the two flags every command takes, and it says so,
+// because a reader who met them under one command's name would read them as
+// that command's own. settingHeading is the same words where a block of text
+// needs a colon after them; the screen draws the name in a rule, which needs
+// none.
+const (
+	settingSection = "Every command takes"
+	settingHeading = settingSection + ":"
+)
+
+// settingProse is the two setting flags as the plain text lists them, aligned
+// the way one command's flags are. It is written once and read by both shapes
+// of the plain help, the list and one command in full, so a person reading
+// either meets the same two sentences.
+func settingProse() string {
+	var b strings.Builder
+	b.WriteString(settingHeading + "\n")
+	width := 0
+	for _, f := range settingFlags() {
+		width = max(width, len(flagWords(f)))
+	}
+	for _, f := range settingFlags() {
+		fmt.Fprintf(&b, "  %-*s  %s\n", width, flagWords(f), f.summary)
+	}
 	return b.String()
 }
 
@@ -201,6 +253,11 @@ func helpOne(c command) string {
 		}
 	}
 	fmt.Fprintf(&b, "\n  Example: %s\n", c.example)
+	// The two flags this command takes beside its own. They are repeated for
+	// each command a help matched rather than written once under all of them,
+	// because one command in full is one page a person reads, and a reader who
+	// stopped at the first page would otherwise never be told they exist.
+	b.WriteString("\n" + settingProse())
 	return b.String()
 }
 

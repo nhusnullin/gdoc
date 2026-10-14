@@ -60,7 +60,8 @@
 //     in place, and the proposed prelude. internal/restyle, internal/prelude.
 //   - probe --folder: whether Docs honours SUGGEST today, asked by hand.
 //     internal/probe.
-//   - reply <url> <comment id> --body-file: one robot reply. internal/reply.
+//   - reply <url> <comment id> --body | --body-file: one reply under the mark
+//     in effect, its words on the line or in a file. internal/reply.
 //   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
 //     internal/propose.
@@ -106,9 +107,13 @@
 //     TestTheConfirmSchemaListsHoldTitleReasonText,
 //     TestAByteDifferentTitleReasonOrTextIsRefused,
 //     TestAReleaseInsideTheQuietGapIsRefusedAndTheHoldKept and
-//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes no words and
-//     no flags, because the extension has no settings, and anything after the
-//     word is refused on stderr with exit 1: TestMcpTakesNoWordsAndNoFlags. The
+//     TestAReleasedHoldPostsExactlyTheHeldTextOnce. The line takes the two
+//     setting flags and nothing else: they are off it before mcp is routed, the
+//     session resolves them once and every tool call of it goes out under the
+//     same value, the extension passes neither, and whatever is left is refused
+//     on stderr with exit 1:
+//     TestMcpTakesTheSettingFlagsAndNothingElse and
+//     TestTheMcpSessionHandsItsSettingsToEveryCall. The
 //     review core it serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
 //   - help [<command>]: the table itself, as an object and as words. help.go.
@@ -623,9 +628,14 @@
 // nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
 // TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
 //
-// The extension has no settings. What differs from one machine to the next is
-// the binary's path and the release, which is why the template travels in the
-// release and is filled here rather than being a file somebody edits.
+// The extension has no settings, which TestTheManifestDeclaresNoSettings
+// holds, and it passes neither setting flag: its line is the word mcp alone,
+// which TestTheManifestTemplateParses holds. What
+// differs from one machine to the next is the binary's path and the release,
+// which is why the template travels in the release and is filled here rather
+// than being a file somebody edits. A colleague who wants another mark in a
+// chat sets it in settings.yaml, which the session reads at its start like any
+// other run.
 //
 // # The update draws its steps on stderr
 //
@@ -699,6 +709,68 @@
 // stack trace on stderr. Without it a crash prints a Go trace, nothing at all
 // on stdout, and exits 2, which is the one shape no caller can read.
 // TestAPanicIsStillOneEnvelope is the pin.
+//
+// # Two setting flags, taken off the line first
+//
+// --config and --mark belong to no command, because they belong to all of
+// them. They are lifted off the line in route, before the word mcp is looked
+// for and before --help is, so one reading of them serves every command, the
+// session and the help alike. What is left is the line as every parser already
+// read it, and nothing below route sees either flag:
+// TestEveryCommandTakesTheSettingFlags and
+// TestTheSettingFlagsAreTakenAnywhereOnTheLine.
+//
+// Wherever they stand, and in both spellings. `gdoc read <url> --mark ∴` and
+// `gdoc --mark=∴ read <url>` are the same run, because a person does not have
+// to know where in a line a flag of the whole binary goes. `--mark ""` and
+// `--mark=` are the empty mark somebody asked for, which writes gdoc's words
+// with nothing in front of them: TestAnEmptyMarkArgumentIsTheEmptyMark.
+//
+// The refusals are the parser's own, for the same reasons: a flag given twice,
+// a flag with nothing after it, a flag whose value is the other setting flag,
+// and a --config with an empty value each fail naming the offender.
+// TestASettingFlagGivenTwiceIsRefused and
+// TestASettingFlagWithNoValueIsRefused.
+//
+// internal/settings decides what they mean: the argument over the file over
+// the built-in default, what a mark may be, and what the file may hold. What
+// is decided here is the shape of the refusal, which is the shape of whatever
+// the line was going to be. A command gets one envelope on stdout and exit 1,
+// like every other refusal, and `gdoc mcp` gets one line on stderr and exit 1,
+// because a session prints no envelope and a stray object would be a line in
+// the middle of somebody's protocol:
+// TestABadSettingsFileIsOneEnvelope,
+// TestAConfigFileThatDoesNotExistIsRefusedOnTheLine and
+// TestMcpTakesTheSettingFlagsAndNothingElse.
+//
+// What the run resolved to goes down on every command's args, and a session is
+// handed it once at its start, so every tool call of one chat writes the same
+// mark: TestTheMcpSessionHandsItsSettingsToEveryCall.
+//
+// The commands that write into a thread read it off those args and hand it to
+// the writer: propose and annotate pass it to the shape check, which refuses a
+// reason that already carries a mark, and to the write, which puts it in front
+// of the reason. Nothing is remembered between runs, so the mark a comment
+// carries is the mark the run that wrote it was given.
+//
+// They are in no usage line and in no entry of the help object, because they
+// are not one command's flags. They are in the help a person reads, under
+// their own heading in each command's page and once in the grouped table, and
+// both completion scripts offer them after any command:
+// TestEverySettingFlagIsInHelpAndInBothScripts. The --mark sentence says what
+// the empty mark costs, because turning the mark off turns off the only record
+// of authorship a thread has: TestTheMarkFlagSaysWhatAnEmptyMarkCosts.
+//
+// What they resolved to is one field of the help object, settings, which
+// carries the mark in effect and which of the three sources it came from. A
+// colleague who is not sure which mark this run writes asks the binary rather
+// than reading a file and a line. The field is always there, and the empty
+// mark is printed as the empty string, because a skill that read an absent
+// field as "nothing was set" would write the default mark into a thread
+// somebody asked to keep clean:
+// TestHelpCarriesTheSettingsInEffectAndWhereEachCameFrom,
+// TestHelpCarriesTheEmptyMarkAsAnEmptyString and
+// TestHelpForOneCommandCarriesTheSettingsToo.
 //
 // # GDOC_CONFIG_DIR moves the config dir
 //
@@ -912,8 +984,8 @@
 //
 // No note, so no provenance. The note exists so withdraw can recognise gdoc's
 // own pending suggestions later, and a comment is not a suggestion: it is in
-// the thread, signed with the robot, and a person deletes it in the browser in
-// one gesture. Recording it would be provenance for a permission nothing uses.
+// the thread, signed with the mark in effect, and a person deletes it in the
+// browser in one gesture. Recording it would be provenance for a permission nothing uses.
 //
 // The two input forms are two calls, and a run naming both is refused before a
 // session opens, by the flag it was given rather than by the flag it was

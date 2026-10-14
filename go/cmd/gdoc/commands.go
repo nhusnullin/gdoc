@@ -99,6 +99,36 @@ type flag struct {
 // into a flag only one of them answers to.
 const jsonFlag = "--json"
 
+// The two flags every command takes, and the one spelling each has. They are
+// named here because three readers take them: takeSettings, which lifts them
+// off the line before any command's parser sees it, the help, which lists
+// them under their own heading, and both completion scripts, which offer them
+// after any command.
+const (
+	configFlag = "--config"
+	markFlag   = "--mark"
+)
+
+// settingFlags are the flags that belong to no command, because they belong to
+// all of them. They are in this file rather than beside takeSettings, so this
+// table stays the only place a flag of gdoc is written down.
+//
+// They are not in any entry's flags, and that is the difference: an entry's
+// flag reaches that command's parser, and these two are off the line before
+// the parser runs, including for mcp, which has no parser at all. So they are
+// in no usage line and in no entry of the help object, and they are in the
+// help a person reads and in both completion scripts:
+// TestEverySettingFlagIsInHelpAndInBothScripts.
+//
+// A function, as commands() is, so nothing a caller is handed points into a
+// table somebody else is reading.
+func settingFlags() []flag {
+	return []flag{
+		{configFlag, kindFile, needOptional, "the settings file to use instead of settings.yaml in the config folder"},
+		{markFlag, kindText, needOptional, "the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's"},
+	}
+}
+
 // command is one entry in the table. words are the positional arguments in the
 // order they are typed, named the way a reader sees them, and their count is
 // what the parser insists on.
@@ -262,9 +292,14 @@ func commands() []command {
 			group: groupWrite,
 			words: []string{"<url>", "<comment id>"},
 			flags: []flag{
-				{"--body-file", kindFile, needRequired, "the file holding the words of the reply"},
+				{"--body", kindText, needEither, "the words of the reply, typed on the line"},
+				{"--body-file", kindFile, needEither, "the file holding the words of the reply"},
 			},
-			summary: "Write one reply into a comment thread, under the robot prefix.",
+			summary: "Write one reply into a comment thread, under your mark.",
+			// The file form, because an example is one line read word by
+			// word (TestEveryExampleIsACallTheTableAccepts) and a reply's
+			// words have spaces in them. The usage line above it offers
+			// --body first, which is the route a person types.
 			example: "gdoc reply https://docs.google.com/document/d/1AbC.../edit AAAA1234 --body-file reply.txt",
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdReply(ctx, a)
@@ -307,7 +342,7 @@ func commands() []command {
 				{"--from", kindFile, needEither, "the file holding the comments to leave, each with the words it goes on"},
 				{"--body-file", kindFile, needOptional, "the file holding the reason, which --quote needs"},
 			},
-			summary: "Leave a comment on the exact words you quote, under the robot prefix, changing nothing.",
+			summary: "Leave a comment on the exact words you quote, under your mark, changing nothing.",
 			example: "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdAnnotate(ctx, a)
@@ -378,7 +413,7 @@ func commands() []command {
 			summary: "Print every command gdoc takes, or the words and flags of one.",
 			example: "gdoc help publish",
 			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
-				return cmdHelp(ctx, a.positional, a.has(jsonFlag), errOut)
+				return cmdHelp(ctx, a.positional, a.has(jsonFlag), errOut, a.set)
 			},
 		},
 		{

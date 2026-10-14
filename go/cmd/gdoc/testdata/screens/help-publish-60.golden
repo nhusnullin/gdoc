@@ -13,6 +13,14 @@
 │   the Drive folder the document is created in            │
 │ --house <file>                                           │
 │   a house style file other than the one inside gdoc      │
+├─ Every command takes ────────────────────────────────────┤
+│ --config <file>                                          │
+│   the settings file to use instead of settings.yaml in   │
+│   the config folder                                      │
+│ --mark <text>                                            │
+│   the mark gdoc writes in front of its words in a        │
+│   thread; an empty mark writes the words alone, and then │
+│   nothing in the thread says which words are gdoc's      │
 └─ Example ────────────────────────────────────────────────┘
 gdoc publish --md note.md --folder-id 1AbC...
 Add --json to print the JSON object a skill reads.

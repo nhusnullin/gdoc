@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"gdoc/internal/settings"
 )
 
 // mcp is the one command that is not one JSON object, so it is the one command
@@ -26,15 +28,16 @@ func TestMcpIsRoutedBeforeRun(t *testing.T) {
 
 	var got []string
 	var read string
-	serveMCP = func(_ context.Context, in io.Reader, out, errOut io.Writer, args []string) int {
+	serveMCP = func(_ context.Context, in io.Reader, out, errOut io.Writer, args []string, _ settings.InEffect) int {
 		got = append([]string(nil), args...)
 		b, _ := io.ReadAll(in)
 		read = string(b)
 		return 7
 	}
 
-	// What follows the word reaches serveMCP as it was given, because serveMCP
-	// is what refuses it: TestMcpTakesNoWordsAndNoFlags.
+	// What follows the word reaches serveMCP as it was given, once the two
+	// setting flags are off it, because serveMCP is what refuses the rest:
+	// TestMcpTakesTheSettingFlagsAndNothingElse.
 	var out, errOut bytes.Buffer
 	code := route(context.Background(), []string{"mcp", "serve"},
 		strings.NewReader("a line\n"), &out, &errOut)
@@ -72,40 +75,6 @@ func TestMcpIsRoutedBeforeRun(t *testing.T) {
 	}
 }
 
-// mcp takes no words and no flags. The Claude Desktop extension has no settings
-// since 2026-10-03, so its line is the word mcp and nothing after it, and
-// --trusted-email-domains, the flag it used to carry, is refused like any other.
-//
-// Everything after the word is refused on stderr with exit 1 and nothing on
-// stdout: a server that started anyway would be a session built on a line
-// nobody meant.
-func TestMcpTakesNoWordsAndNoFlags(t *testing.T) {
-	for _, bad := range []struct {
-		args []string
-		says string
-	}{
-		{[]string{"serve"}, "serve"},
-		{[]string{"--stdio"}, "--stdio"},
-		{[]string{"--trusted-email-domains="}, "--trusted-email-domains="},
-		{[]string{"--trusted-email-domains=example.com"}, "--trusted-email-domains=example.com"},
-		{[]string{"--trusted-email-domains", "example.com"}, "--trusted-email-domains"},
-	} {
-		t.Run(strings.Join(bad.args, " "), func(t *testing.T) {
-			var out, errOut bytes.Buffer
-			code := serveMCP(context.Background(), strings.NewReader(""), &out, &errOut, bad.args)
-			if code != 1 {
-				t.Errorf("%v must be refused with exit 1: got %d", bad.args, code)
-			}
-			if out.Len() != 0 {
-				t.Errorf("nothing reaches stdout on a refusal: %q", out.String())
-			}
-			if !strings.Contains(errOut.String(), bad.says) {
-				t.Errorf("the refusal must name %q: %q", bad.says, errOut.String())
-			}
-		})
-	}
-}
-
 // Everything on stdout is a JSON-RPC message, and nothing else is: not a
 // warning, not a stack trace, not a log line. The client parses that stream a
 // line at a time and one stray word ends the session.
@@ -127,7 +96,7 @@ func TestStdoutCarriesOnlyJSONRPC(t *testing.T) {
 	}, "\n")
 
 	var out, errOut bytes.Buffer
-	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil); code != 0 {
+	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil, defaultsInEffect()); code != 0 {
 		t.Fatalf("stdin closing ends the session: exit %d, stderr %q", code, errOut.String())
 	}
 

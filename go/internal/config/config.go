@@ -96,3 +96,16 @@ func LoginPendingPath() (string, error) {
 	}
 	return filepath.Join(d, "login-pending.json"), nil
 }
+
+// SettingsPath is where the settings file sits: settings.yaml in the config
+// dir, in the shape internal/settings reads. It lives beside the token because
+// both are per-user state this machine keeps, and it is never a credential:
+// what may be in it is internal/settings' business, and the token is not one
+// of the things a colleague may set there.
+func SettingsPath() (string, error) {
+	d, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, "settings.yaml"), nil
+}

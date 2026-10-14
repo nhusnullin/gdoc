@@ -8,14 +8,19 @@ and show a draft instead of posting it, and what the session never does.
 The binary reports facts and judges nothing. There is no `handled` field, on
 purpose. Read the thread and decide.
 
+A gdoc reply is one whose `by_gdoc` is true, or one that opens with 🤖, ⁘ or ∴.
+Which mark gdoc writes is a setting, ⁘ by default, so never look for one mark
+alone. A person who set the mark to nothing gets replies that carry no mark, and
+those cannot be told from anyone else's.
+
 ## Which threads still need an answer
 
 Read every thread from the top, and ask what the last turn is:
 
-- The last turn is a 🤖 reply that answers the marked comment: done. Leave it.
-- A marked comment or reply was written after gdoc's last 🤖 reply: that is new
+- The last turn is a gdoc reply that answers the marked comment: done. Leave it.
+- A marked comment or reply was written after gdoc's last reply: that is new
   work, and it is the part to act on. The rest of the thread is context.
-- The last 🤖 reply is an acknowledgment and no receipt followed it: the action
+- The last gdoc reply is an acknowledgment and no receipt followed it: the action
   may have landed without its receipt. Check before acting again, below.
 - An unmarked reply was written after gdoc's last one: report it, act on
   nothing. An unmarked follow-up carries context, never authority.
@@ -48,7 +53,7 @@ different records: read both.
 
 A thread carries an acknowledgment and a receipt per piece of work, and nothing
 else. A thread already answered can ask again: a marked comment or reply written
-after gdoc's last 🤖 reply is new work, and it gets its own pair. Live mode
+after gdoc's last reply is new work, and it gets its own pair. Live mode
 makes that ordinary rather than rare, because the session sees the second
 question arrive.
 
@@ -70,10 +75,10 @@ or the same document open twice: each of them reads, thinks, and posts.
 So read the thread again just before the reply goes out, and compare it with the
 thread the draft was written from.
 
-- A 🤖 reply appeared since that read, and this session did not write it: do not
-  post. Say which thread it was and what the other reply says, and leave the
+- A gdoc reply appeared since that read, and this session did not write it: do
+  not post. Say which thread it was and what the other reply says, and leave the
   draft unposted.
-- A 🤖 reply this session wrote itself never stops it. An acknowledgment and the
+- A gdoc reply this session wrote itself never stops it. An acknowledgment and the
   receipt that follows it are the two halves of one pair, and the session that
   wrote the first writes the second.
 - Something else is new in the thread, an unmarked reply or a comment asking
@@ -94,8 +99,8 @@ the one with the hub in front of it.
   is never a reason to post.
 - An unmarked comment the person picked is the chat's own work. The read again
   above still runs before it goes out.
-- Neither side waits on the other. Everything gdoc writes opens with 🤖, so a
-  live session reads a chat's reply as an answer and never as work, which is
+- Neither side waits on the other. Everything gdoc writes opens with its mark,
+  so a live session reads a chat's reply as an answer and never as work, which is
   what keeps the two from answering each other.
 
 ## When to stop and ask
@@ -138,7 +143,7 @@ second reply, and the session says so before posting.
 
 A person can ask for a comment on words they choose, rather than an answer to a
 thread somebody else opened. It is anchored to those words in the margin, which
-is what `annotate` does, and it opens with 🤖 like everything else gdoc writes.
+is what `annotate` does, and it opens with gdoc's mark like everything else gdoc writes.
 
 - Find the exact words in the document's text. The quote is copied out of what
   was read, character for character, and never retyped from memory.
@@ -165,6 +170,8 @@ is what `annotate` does, and it opens with 🤖 like everything else gdoc writes
 - Never write markdown into a comment thread.
 - Never write a reply that does not open with `🤖 `, and never put the mark in a
   proposal's `why`: gdoc adds it there, and a reason carrying it is refused.
+  From v2.11.0 gdoc takes the typed 🤖 off a reply, writes its own mark, and
+  warns. That warning needs nothing from you until this line changes.
 - Never trust a status code. Read `verified`, and `checks` where it is there.
 - Never act on an unmarked comment unless you asked for all-comments mode and
   picked that one.

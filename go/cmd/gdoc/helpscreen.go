@@ -212,6 +212,7 @@ func tableScreen(p panel.Panel, style tty.Style, matched []command, line string,
 			rows = append(rows, pairRows(p, c.name, c.summary)...)
 		}
 	}
+	rows = append(rows, settingRows(p, style)...)
 	out := p.Box(gdocTitle(), fmt.Sprintf("%d commands", len(matched)), rows)
 	for _, l := range panel.Wrap(helpFoot, p.Width()) {
 		out = append(out, style.Dim(l))
@@ -234,7 +235,21 @@ func commandScreen(p panel.Panel, style tty.Style, c command, line string, warns
 			rows = append(rows, pairRows(p, style.Key(flagWords(f)), f.summary)...)
 		}
 	}
+	rows = append(rows, settingRows(p, style)...)
 	return append(p.WithFooter("Example").Box(c.name, gdocLabel(), rows), c.example)
+}
+
+// settingRows is the section the two setting flags are drawn in, which both
+// screens carry: the grouped table once, and each command's own box, because a
+// box is the whole page for that command. The heading is what keeps them from
+// reading as the command's own, and it is the same words the plain text uses:
+// TestEverySettingFlagIsInHelpAndInBothScripts.
+func settingRows(p panel.Panel, style tty.Style) []panel.Row {
+	rows := []panel.Row{panel.Section(settingSection)}
+	for _, f := range settingFlags() {
+		rows = append(rows, pairRows(p, style.Key(flagWords(f)), f.summary)...)
+	}
+	return rows
 }
 
 // gdocTitle is the name and the release, which is what the top border of the
@@ -284,9 +299,10 @@ func groupsOf(matched []command) []commandGroup {
 }
 
 // commandColumn is where the column sits in the grouped screen: past the
-// longest group name, and past the longest command name.
+// longest group name, past the longest command name, and past the two setting
+// flags, which are a section of that box too.
 func commandColumn(groups []commandGroup) int {
-	widest := 0
+	widest := settingColumn()
 	for _, g := range groups {
 		widest = max(widest, len(g.name)+rulePadding)
 		for _, c := range g.cmds {
@@ -299,9 +315,27 @@ func commandColumn(groups []commandGroup) int {
 // flagColumn is where the column sits in one command's box: past its longest
 // flag, which is what internal/panel would choose itself. It is named here
 // because the summaries are wrapped to the cell before the box is drawn.
+//
+// The two setting flags are measured with them, because they are rows of the
+// same box and a column that cleared only the command's own flags would be
+// drawn through the longer of these two.
 func flagColumn(c command) int {
-	widest := 0
+	widest := settingColumn()
 	for _, f := range c.flags {
+		widest = max(widest, len(flagWords(f))+cellPadding)
+	}
+	return widest
+}
+
+// settingColumn is how much room the two setting flags need, which every box
+// has to clear because every box lists them: the longer of the two flags, and
+// the heading of the rule they are drawn under. The heading is measured for
+// the reason every group name is: a name that reaches the column takes the
+// joint's own cell, and that one rule would lose the joint the rules above it
+// have.
+func settingColumn() int {
+	widest := len(settingSection) + rulePadding
+	for _, f := range settingFlags() {
 		widest = max(widest, len(flagWords(f))+cellPadding)
 	}
 	return widest

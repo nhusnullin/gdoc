@@ -27,6 +27,7 @@ import (
 
 	"gdoc/internal/chat"
 	"gdoc/internal/gapi"
+	"gdoc/internal/settings"
 )
 
 // panicDocID is the document whose read panics. It is a document id in shape, so
@@ -126,12 +127,19 @@ type mcpDriver struct {
 
 func startSession(t *testing.T, args ...string) *mcpDriver {
 	t.Helper()
+	return startSessionWith(t, defaultsInEffect(), args...)
+}
+
+// startSessionWith is one session under settings the test chose, which is what
+// route resolves before a session starts.
+func startSessionWith(t *testing.T, set settings.InEffect, args ...string) *mcpDriver {
+	t.Helper()
 	inR, inW := io.Pipe()
 	outR, outW := io.Pipe()
 	errOut := &syncWriter{}
 	done := make(chan int, 1)
 	go func() {
-		code := serveMCP(context.Background(), inR, outW, errOut, args)
+		code := serveMCP(context.Background(), inR, outW, errOut, args, set)
 		outW.Close()
 		done <- code
 	}()
@@ -248,7 +256,7 @@ func sessionWire(t *testing.T) *fakeWire {
 		{method: "GET", match: fixtureDocID + "?includeTabsContent", json: readFixture(t, "single-tab.json")},
 		{method: "GET", match: "/comments?", json: strangerThreads},
 		{method: "POST", match: "/comments/AAAA1111/replies", once: true,
-			json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldBody + `"}`},
+			json: `{"id":"R2","createdTime":"2026-09-06T10:45:00Z","content":"` + heldSent + `"}`},
 	}}
 }
 

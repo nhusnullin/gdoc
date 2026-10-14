@@ -884,7 +884,7 @@ func TestASurveyThisBinaryPrintedIsOneItCanApply(t *testing.T) {
 	stubSession(t, restyleSession(t))
 	var printed bytes.Buffer
 	if code := run(context.Background(),
-		[]string{"restyle", fixtureDocID, "--dry-run"}, &printed, io.Discard); code != 0 {
+		[]string{"restyle", fixtureDocID, "--dry-run"}, &printed, io.Discard, defaultsInEffect()); code != 0 {
 		t.Fatalf("restyle --dry-run failed: exit %d, %s", code, printed.String())
 	}
 	from := filepath.Join(t.TempDir(), "survey.json")
@@ -918,7 +918,7 @@ func TestASurveyAReleaseBinaryPrintedIsOneItCanApply(t *testing.T) {
 	stubSession(t, restyleSession(t))
 	var printed bytes.Buffer
 	if code := run(context.Background(),
-		[]string{"restyle", fixtureDocID, "--dry-run"}, &printed, io.Discard); code != 0 {
+		[]string{"restyle", fixtureDocID, "--dry-run"}, &printed, io.Discard, defaultsInEffect()); code != 0 {
 		t.Fatalf("restyle --dry-run failed: exit %d, %s", code, printed.String())
 	}
 	if !bytes.Contains(printed.Bytes(), []byte(`"version":"v9.9.9"`)) {

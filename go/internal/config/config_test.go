@@ -138,3 +138,18 @@ func TestTokenPathFailsWhenTheDirectoryCannotBeNamed(t *testing.T) {
 		t.Errorf("TokenPath() = %q on failure, want the empty string", p)
 	}
 }
+
+// The settings file sits beside the token, because both are per-user state this
+// machine keeps. It is never a credential, and internal/settings decides what
+// may be in it.
+func TestSettingsPathIsInTheConfigFolder(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	p, err := SettingsPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != filepath.Join(dir, "settings.yaml") {
+		t.Errorf("SettingsPath() = %q, want settings.yaml in the config folder", p)
+	}
+}

@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"gdoc/internal/lastcheck"
+	"gdoc/internal/settings"
 )
 
 // decodeOne insists a stream is exactly one JSON object. It is the output
@@ -88,8 +89,21 @@ func runJSON(t *testing.T, args ...string) (map[string]any, int) {
 // answer a stopped session gets.
 func runJSONCtx(t *testing.T, ctx context.Context, args ...string) (map[string]any, int) {
 	t.Helper()
+	return runJSONSetCtx(t, ctx, defaultsInEffect(), args...)
+}
+
+// runJSONSet is runJSON for a run whose settings are not the defaults, which is
+// how a test over a comment fixture says which mark the run writes.
+func runJSONSet(t *testing.T, set settings.InEffect, args ...string) (map[string]any, int) {
+	t.Helper()
+	return runJSONSetCtx(t, context.Background(), set, args...)
+}
+
+// runJSONSetCtx is runJSONSet with the context main builds from the signal.
+func runJSONSetCtx(t *testing.T, ctx context.Context, set settings.InEffect, args ...string) (map[string]any, int) {
+	t.Helper()
 	var buf bytes.Buffer
-	code := run(ctx, args, &buf, io.Discard)
+	code := run(ctx, args, &buf, io.Discard, set)
 	return decodeOne(t, &buf), code
 }
 

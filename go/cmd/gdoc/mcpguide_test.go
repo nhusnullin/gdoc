@@ -12,6 +12,7 @@ import (
 
 	"gdoc/internal/chat"
 	"gdoc/internal/mcp"
+	"gdoc/internal/settings"
 )
 
 // callCode is a code of a test's own, standing for the one guide handed out.
@@ -27,8 +28,16 @@ func callCode(t *testing.T) *chat.Code {
 // chatWith is one session's chat state, for a test that already has the code:
 // that code, a ledger of its own, and nothing held yet.
 func chatWith(code *chat.Code) *mcpChat {
+	return chatWithSettings(code, defaultsInEffect())
+}
+
+// chatWithSettings is that session told what this run writes, which is what
+// newMCPChat hands it in production: a tool that writes into a thread puts the
+// mark in effect in front of the words, so a session built with none would
+// write a comment no run of gdoc's would.
+func chatWithSettings(code *chat.Code, set settings.InEffect) *mcpChat {
 	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
-		memory: chat.NewMemory[mcp.Result]()}
+		memory: chat.NewMemory[mcp.Result](), set: set}
 }
 
 // callChat is a whole session of a test's own: a code standing for the one guide
@@ -162,7 +171,7 @@ func TestToolsListListsExactlyTheEightToolsWithTheirHints(t *testing.T) {
 	}, "\n")
 
 	var out, errOut strings.Builder
-	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil); code != 0 {
+	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil, defaultsInEffect()); code != 0 {
 		t.Fatalf("the session exited %d: %s", code, errOut.String())
 	}
 	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
@@ -298,10 +307,10 @@ func TestTheChatHeaderNamesOnlyToolsThatExist(t *testing.T) {
 	}
 	// The words in the header that are backticked and are no tool: the one
 	// argument every tool takes, the two markers, which are labels here, and the
-	// six facts a read answer carries beside each comment.
+	// five facts a read answer carries beside each comment.
 	notTools := map[string]bool{codeProp: true, "ai?": true, "ai!": true, "🤖": true, "review.md": true,
 		"has_link": true, "has_email": true, "names_ai": true, "hidden_chars": true,
-		"robot_not_ours": true, "author_domain": true}
+		"author_domain": true}
 
 	named := map[string]bool{}
 	for _, m := range regexp.MustCompile("`([^`]+)`").FindAllStringSubmatch(mcpChatHeader, -1) {

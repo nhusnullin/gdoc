@@ -78,3 +78,13 @@ either way, and a pipe reads no panel at all.
 
 The token lives in `~/.config/gdoc-agent/oauth-token.json`, and the login asks
 for the Docs read and write scope, because writing a suggestion needs it.
+
+Beside it sits `~/.config/gdoc-agent/settings.yaml`, which holds what you set
+rather than what gdoc knows. It has one key today, `mark`, the characters every
+reply and comment gdoc writes opens with: `⁘` when nothing sets it. `--config
+<file>` reads another file instead, `--mark <value>` wins over both, and either
+flag stands anywhere on the line of any command. `gdoc help --json` prints the
+mark in effect and which of the three it came from, so a skill can ask rather
+than guess. The token is not a setting, and neither is its path: a file you edit
+by hand is not where a credential's location is decided, so both words read as
+unknown keys and the file is refused by name.

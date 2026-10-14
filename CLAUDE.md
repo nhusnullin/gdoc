@@ -30,6 +30,7 @@ Two rules about the documents themselves:
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
 | `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
 | `go/internal/config/` | where the per-user files live, per platform |
+| `go/internal/settings/` | `settings.yaml`, the arguments over it, and the mark in effect |
 | `go/internal/gapi/` | the authenticated session. The one room that builds a request |
 | `go/internal/docs/` | the Docs read: tabs, the document tree, suggestion ids, comment ranges |
 | `go/internal/view/` | the document as the text `read` prints, and as the tree `--structure` prints |
@@ -220,6 +221,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | the survey, the apply loop, the in-place styling | `go/internal/restyle/doc.go` |
 | the cover, the front-matter tables, the marker | `go/internal/prelude/doc.go` |
 | the `gdoc:` block in a note | `go/internal/frontmatter/doc.go` |
+| a setting, the settings file, the mark in effect | `go/internal/settings/doc.go` |
 | the docx the generator writes | `go/internal/render/doc.go`, `go/internal/body/doc.go` |
 | a house style value, or the gate that measures it | `go/internal/house/house.yaml`, `go/internal/drift/doc.go` |
 | putting a document into Drive | `go/internal/publish/doc.go` |

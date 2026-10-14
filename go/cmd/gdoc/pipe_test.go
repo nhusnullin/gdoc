@@ -56,7 +56,7 @@ var checkedAtInObject = regexp.MustCompile(`"checked_at":"[^"]*"`)
 func pipeRun(t *testing.T, args ...string) (stdout, stderr string, code int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code = run(context.Background(), args, &out, &errOut)
+	code = run(context.Background(), args, &out, &errOut, defaultsInEffect())
 	return out.String(), errOut.String(), code
 }
 
