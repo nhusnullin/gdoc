@@ -510,9 +510,11 @@ func (d *Doc) BodyParagraph() BodyParagraph {
 		}
 		st := d.resolve(p, ts)
 		return BodyParagraph{Found: true,
-			FontSize:  st.FontSize,
-			Alignment: st.Alignment,
-			Font:      st.Font,
+			FontSize:   st.FontSize,
+			Alignment:  st.Alignment,
+			Font:       st.Font,
+			SpaceAbove: st.SpaceAbove,
+			SpaceBelow: st.SpaceBelow,
 		}
 	}
 	return BodyParagraph{}

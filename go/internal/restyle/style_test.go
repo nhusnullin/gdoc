@@ -183,8 +183,8 @@ func TestBodyProseTakesTheHouseBodyLook(t *testing.T) {
 	if got := magnitude(t, ps, "spaceAbove"); got != 0 {
 		t.Errorf("spaceAbove is %v, want 0 (house says %v)", got, cfg.Body.SpaceBeforePt)
 	}
-	if got := magnitude(t, ps, "spaceBelow"); got != 0 {
-		t.Errorf("spaceBelow is %v, want 0 (house says %v)", got, cfg.Body.SpaceAfterPt)
+	if got := magnitude(t, ps, "spaceBelow"); got != 12 {
+		t.Errorf("spaceBelow is %v, want 12 (house says %v)", got, cfg.Body.SpaceAfterPt)
 	}
 	ts := styleOf(t, one(t, plan, "updateTextStyle", 7), "textStyle")
 	if got := magnitude(t, ts, "fontSize"); got != 12 {
@@ -571,4 +571,27 @@ func lastParagraph(t *testing.T, tab docs.Tab) *docs.Paragraph {
 	}
 	t.Fatal("the fixture holds no top-level paragraph")
 	return nil
+}
+
+// A bulleted paragraph takes the house's list item gap beneath it, 3pt, and
+// the last bulleted paragraph before prose takes the body's 12, so a restyled
+// list reads as a built one does: a block that ends the way a paragraph ends.
+// The numbers are literals on purpose.
+func TestABulletedParagraphTakesTheListGapAndTheLastTheBodys(t *testing.T) {
+	bullet := &docs.Bullet{ListID: "kix.l0"}
+	tab := docs.Tab{ID: "t.0", Body: []docs.Block{
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 1, EndIndex: 8, Bullet: bullet}},
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 8, EndIndex: 15, Bullet: bullet}},
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 15, EndIndex: 30}},
+	}}
+	plan := TabRequests(tab, embeddedHouse(t))
+	for start, want := range map[int]float64{1: 3, 8: 12, 15: 12} {
+		ps := styleOf(t, one(t, plan, "updateParagraphStyle", start), "paragraphStyle")
+		if got := magnitude(t, ps, "spaceBelow"); got != want {
+			t.Errorf("the paragraph at %d has spaceBelow %v, want %v", start, got, want)
+		}
+		if got := magnitude(t, ps, "spaceAbove"); got != 0 {
+			t.Errorf("the paragraph at %d has spaceAbove %v, want 0", start, got)
+		}
+	}
 }

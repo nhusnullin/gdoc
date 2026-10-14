@@ -568,7 +568,7 @@ measured list reads a page break or counts a front-matter paragraph. Added
 2026-09-16, DECISIONS.md. Nothing reads the master `.docx` at runtime: it stays in the repo as
 provenance and as the drift test's fixture. **The comparison is the acceptance
 gate, and it runs both ways.** The list of
-169 measured values is written once, with one reader per item: offline that
+171 measured values is written once, with one reader per item: offline that
 reader is given the docx XML, live it is given a Docs API answer, so a row that
 fails in one gate is findable in the other. Offline runs in `make test` on every
 commit; live is opt-in, uploads both documents with conversion, and is the
@@ -957,7 +957,7 @@ Each is a test or a checkable run, not a claim.
    an empty mask or one naming either header toggle. `createNamedRange` carries
    only over the range `AllowMarker` granted.
 2. The drift test: config-rendered and master-rendered documents compare across
-   the 169 items with no new differences.
+   the 171 items with no new differences.
 3. A publish produces a document with the positioned logo, a live contents list
    and footer page numbers, verified by export.
 4. A propose lands as a genuine suggestion, absent under

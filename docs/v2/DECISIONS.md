@@ -87,6 +87,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-04 | Settings and the mark in effect | superseded 2026-10-13 (the list of what a mark may not be, and what counts as a text opening with one, only; everything else in the entry holds) |
 | 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds |
 | 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds |
+| 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3861,3 +3862,73 @@ what changed is which texts that fact is true of.
 **Tests.** `TestCheckMarkRefusesWhatAThreadWouldShowWrong`, whose subtests name
 the space alone, the tab alone, the space in front and the space behind, and
 `TestAWordLikeMarkDoesNotOpenALongerWord`.
+
+## 2026-10-14. The body breathes: 12pt under a paragraph and under a list, 5pt around a cell.
+
+Found by hand. Nail published a note and added blank paragraphs by hand under
+the prose, because a built document put no space under a body paragraph.
+Mel's template, read the same day through the Docs API, states 3pt above and
+6pt below on its Normal style and then overrides every typed chapter to 0
+above and 12 below on the paragraph itself. The drift gate read the style and
+passed a generator that wrote 0 and 0 on every paragraph. A domain choice with
+no principle above it, decided on the advice of four readers asked the same
+question: a UX researcher, a typographer, an accessibility reviewer and a
+compliance officer. All four put the paragraph gap first and the heading
+indent last.
+
+**A body paragraph carries 0 above and 12 below.** 12 is the master's own typed
+value and the one a board pack already shows; 6 was argued and rejected,
+because on a 15pt line it is subtle enough that people would keep adding blank
+lines, which is the thing this entry is for. A blank paragraph added by hand
+is not cosmetic: it shows in a redline as an inserted line, it travels with a
+quoted clause, and it moves when one person deletes it and another puts it
+back. The value is `body.space_after_pt` in house.yaml, so `build`, every
+block that reads the body spacing, and `restyle` in place all say it once.
+
+**A list keeps 3pt between its items and carries 12 under its last one.** 0
+between items was argued and rejected: policy items run two or three lines,
+and 0 makes their boundaries hard to find. The 12 goes under the last paragraph
+the outermost list emits, nested levels and continuation paragraphs included,
+so the list ends the way a paragraph does. A list whose last block is a table
+is left alone, because the paragraph after a table already takes 12 above.
+The 3 was a constant in the body package and is `body.list_item_space_after_pt`
+in house.yaml now, because `restyle` styles bulleted paragraphs in place too:
+reading the body's 12 for every bullet, as it did, would have put a restyled
+list and a built one apart. It reads the same two values, the list gap under a
+bulleted paragraph and the body's gap under the last bulleted paragraph before
+anything that is not one.
+
+**A picture with a caption carries no space beneath it.** The picture
+paragraph read the body's space after, so raising that to 12 would have floated
+every caption 12pt under its picture. The caption ends the figure instead.
+
+**A body table's cells carry 5pt on every side and single-spaced text.** The
+master's own body tables carry 5 all round; the generator wrote Word's 3 above
+and below and 5.4 at the sides. Text in a cell is single-spaced because a table
+is scanned rather than read, and the margin supplies the gap.
+
+**The heading indent stays 0 on every heading.** Mel's file shows chapters 3
+onward indented 36pt in Drive and chapters 1 and 2 at 0. That is Google
+importing Word's multilevel numbering, not a design: the Word file's Heading 1
+states no indent. Nothing in gdoc changes; her Docs copy is what needs fixing.
+
+**The gate now reads the spacing off the paragraph.** Two rows, `body
+spaceAbove` and `body spaceBelow`, read the first prose paragraph's own
+spacing over its style, so the list is 171 rows. Without them this entry would
+have been found by hand again.
+
+**What was not decided here.** Three of the four readers said left-aligned
+rather than justified, the compliance reader asked for numbered paragraphs so
+a clause can be cited, and the typographer said one body size across every
+policy. Each is a decision for Nail and Mel together, and none is taken by
+this entry.
+
+**Tests.** `TestABodyParagraphCarriesTwelvePointsBelow`,
+`TestTheLastItemOfAListEndsItLikeAParagraph`,
+`TestANestedListEndsOnItsInnermostLastItem`,
+`TestAListThatRenderedNothingLeavesTheBlockBeforeItAlone`,
+`TestAPictureSitsOnItsCaption`, `TestARuleAndAQuoteEndLikeAParagraph`,
+`TestACellHasFivePointsOnEverySide`, `TestACellParagraphIsSingleSpaced`,
+`TestTheBodySpacingIsReadOffTheParagraphNotTheStyle` and, for the in-place
+half, `TestABulletedParagraphTakesTheListGapAndTheLastTheBodys`. Each states
+its number as a literal.

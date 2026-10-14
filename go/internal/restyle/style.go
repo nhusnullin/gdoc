@@ -202,7 +202,7 @@ func TabRequestsExcept(t docs.Tab, cfg *house.Config, skip ...Span) Plan {
 // inside a table cell, where the look is the house style's table text and the
 // paragraph itself is left as the author set it.
 func (p *Plan) walk(blocks []docs.Block, cfg *house.Config, unknown map[string]bool, inCell bool) {
-	for _, b := range blocks {
+	for i, b := range blocks {
 		switch {
 		case b.Paragraph != nil:
 			// A paragraph the prelude wrote is left exactly as the prelude
@@ -211,7 +211,7 @@ func (p *Plan) walk(blocks []docs.Block, cfg *house.Config, unknown map[string]b
 				p.Skipped++
 				continue
 			}
-			p.paragraph(b.Paragraph, cfg, unknown, inCell)
+			p.paragraph(b.Paragraph, cfg, unknown, inCell, lastInList(blocks, i))
 		case b.Table != nil:
 			// A table is skipped on its start alone, because internal/docs
 			// decodes no end index for one. The span holds whole preludes and
@@ -234,7 +234,7 @@ func (p *Plan) walk(blocks []docs.Block, cfg *house.Config, unknown map[string]b
 // body's justified alignment is not the look inside a narrow cell, and
 // house.yaml states no spacing for a cell of a table the author wrote, so
 // writing one would be gdoc inventing a value rather than applying the style.
-func (p *Plan) paragraph(par *docs.Paragraph, cfg *house.Config, unknown map[string]bool, inCell bool) {
+func (p *Plan) paragraph(par *docs.Paragraph, cfg *house.Config, unknown map[string]bool, inCell, lastInList bool) {
 	if par.EndIndex <= par.StartIndex {
 		return // a paragraph with no span is one no range can name
 	}
@@ -256,7 +256,8 @@ func (p *Plan) paragraph(par *docs.Paragraph, cfg *house.Config, unknown map[str
 		return
 	}
 	style := cfg.Styles[key]
-	p.add("updateParagraphStyle", "paragraphStyle", rangeOf(par), paragraphLook(style, key, cfg))
+	p.add("updateParagraphStyle", "paragraphStyle", rangeOf(par),
+		paragraphLook(style, key, cfg, par.Bullet != nil, lastInList))
 	p.Paragraphs++
 	p.add("updateTextStyle", "textStyle", rangeOf(par), textLook(style, key, cfg))
 	p.Text++
@@ -330,7 +331,13 @@ func rangeOf(par *docs.Paragraph) map[string]any {
 // style alone would make a document that does not match one gdoc built from a
 // note. Everything else reads its own style, and the document defaults fill in
 // what a style leaves unsaid, which is what word/styles.xml does in the docx.
-func paragraphLook(s house.Style, key string, cfg *house.Config) *fields {
+//
+// A bulleted paragraph is a list item, and build spaces those by the house's
+// list item gap rather than the body's, with the body's own gap under the last
+// item so the list ends as a paragraph does. The same two values are read here
+// so a restyled document and a built one agree. DECISIONS.md, 2026-10-14.
+// TestABulletedParagraphTakesTheListGapAndTheLastTheBodys is the pin.
+func paragraphLook(s house.Style, key string, cfg *house.Config, bulleted, lastInList bool) *fields {
 	f := newFields()
 	align := s.Align
 	before, after := s.SpaceBeforePt, s.SpaceAfterPt
@@ -338,6 +345,9 @@ func paragraphLook(s house.Style, key string, cfg *house.Config) *fields {
 		align = cfg.Body.Align
 		body := cfg.Body
 		before, after = &body.SpaceBeforePt, &body.SpaceAfterPt
+		if bulleted && !lastInList {
+			after = &body.ListItemSpaceAfterPt
+		}
 	}
 	if a, ok := docsreq.Alignment(align); ok {
 		f.Put("alignment", a)
@@ -443,3 +453,18 @@ func optionalColor(hex string) (map[string]any, bool) { return docsreq.Color(hex
 type fields = docsreq.Fields
 
 func newFields() *fields { return docsreq.NewFields() }
+
+// lastInList says whether the paragraph at i is the last bulleted paragraph
+// before something that is not one: the end of the body, a table, or a
+// paragraph carrying no bullet. A paragraph that carries no bullet is never
+// in a list, so it answers false and takes the body spacing as it always did.
+func lastInList(blocks []docs.Block, i int) bool {
+	if blocks[i].Paragraph == nil || blocks[i].Paragraph.Bullet == nil {
+		return false
+	}
+	if i+1 >= len(blocks) {
+		return true
+	}
+	next := blocks[i+1].Paragraph
+	return next == nil || next.Bullet == nil
+}

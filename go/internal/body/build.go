@@ -18,9 +18,6 @@ const (
 	// A figure's caption: 10pt grey italic, under the picture.
 	captionSizePt = 10.0
 	captionColor  = "#595959"
-	// 3pt between list items. The house style sets none, which runs wrapped
-	// bullets together into a block.
-	listItemSpacePt = 3.0
 	// 12pt above a paragraph that follows a table. A table carries no space
 	// beneath it, so the next paragraph would otherwise sit hard against its
 	// bottom border.
@@ -387,7 +384,9 @@ func (r *renderer) listItem(runs []Run, numID string, level int, ordered bool) *
 		indent, hanging = r.cfg.Body.Numbered.IndentStartPt, r.cfg.Body.Numbered.HangingPt
 	}
 	indent = indent * float64(level+1)
-	before, after := 0.0, listItemSpacePt
+	// The gap between items is the house's own; the last item of a list
+	// takes the body's space after instead, in endList.
+	before, after := 0.0, r.cfg.Body.ListItemSpaceAfterPt
 	size := r.cfg.Body.SizePt
 	mark := runOpts{SizePt: &size}
 	hangingPt := &hanging

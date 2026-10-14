@@ -92,7 +92,8 @@ const docsAnswer = `{
        {"tableCellStyle": {}, "content": []}]}]}},
   {"paragraph": {"paragraphStyle": {"namedStyleType": "HEADING_1", "indentStart": {"magnitude": 0, "unit": "PT"}},
     "elements": [{"textRun": {"content": "1-Third Party and Outsourcing Policy", "textStyle": {}}}]}},
-  {"paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT", "alignment": "JUSTIFIED"},
+  {"paragraph": {"paragraphStyle": {"namedStyleType": "NORMAL_TEXT", "alignment": "JUSTIFIED",
+                                     "spaceBelow": {"magnitude": 12, "unit": "PT"}},
     "elements": [{"textRun": {"content": "This policy sets out how the firm selects, approves, monitors and exits third party arrangements.",
                               "textStyle": {}}}]}},
   {"paragraph": {"bullet": {"listId": "kix.l0"},
@@ -220,6 +221,12 @@ func TestFromDocReadsTheDocsAnswer(t *testing.T) {
 	if got := d.BodyParagraph(); !got.Found || got.FontSize != 11.0 || got.Alignment != "JUSTIFIED" || got.Font != "Calibri" {
 		t.Errorf("the body paragraph read %v point %v aligned %v, and the house body is 11 point Calibri",
 			got.FontSize, got.Font, got.Alignment)
+	}
+	// The spacing is the paragraph's own over NORMAL_TEXT's: the fixture
+	// states 12 below on the paragraph and 3 above only on the style.
+	if got := d.BodyParagraph(); got.SpaceAbove != 3.0 || got.SpaceBelow != 12.0 {
+		t.Errorf("the body paragraph reads %v above and %v below, want 3 from the style and 12 from the paragraph",
+			got.SpaceAbove, got.SpaceBelow)
 	}
 	if got := d.Bullets(); got != 1.0 {
 		t.Errorf("the answer carries %v list items, and it carries one", got)
@@ -391,7 +398,7 @@ func TestTheHeadingsColourComesFromTheStyleWhenTheRunIsSilent(t *testing.T) {
 // compares one answer against itself.
 //
 // This is the Docs half alone. The offline gate reads two docx files, so its
-// 169 rows do not move and nothing here is re-baselined.
+// 171 rows do not move and nothing here is re-baselined.
 //
 // Four reasons, and each is a fact about the fixture rather than about the
 // reader:

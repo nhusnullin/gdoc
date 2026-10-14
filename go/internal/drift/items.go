@@ -227,6 +227,12 @@ func buildItems() []Item {
 	add(item("body text size", 0, func(s Source) any { return s.BodyParagraph().FontSize }))
 	add(item("body alignment", 0, func(s Source) any { return s.BodyParagraph().Alignment }))
 	add(item("body font", 0, func(s Source) any { return s.BodyParagraph().Font }))
+	// The spacing a body paragraph carries, read off the paragraph itself. The
+	// named style rows above read Normal, and the master states its body
+	// spacing on the paragraphs instead, so without these two rows a
+	// generator writing no space under a paragraph passed the gate.
+	add(item("body spaceAbove", 0, func(s Source) any { return s.BodyParagraph().SpaceAbove }))
+	add(item("body spaceBelow", 0, func(s Source) any { return s.BodyParagraph().SpaceBelow }))
 	add(item("bulleted paragraphs", 0, func(s Source) any { return s.Bullets() }))
 
 	return items

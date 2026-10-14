@@ -764,10 +764,12 @@ func (d *Docx) firstRunColour(p *part, para *etree.Element) any {
 // the size, the alignment and the font a reader spends most of the document
 // looking at.
 type BodyParagraph struct {
-	Found     bool
-	FontSize  any
-	Alignment any
-	Font      any
+	Found      bool
+	FontSize   any
+	Alignment  any
+	Font       any
+	SpaceAbove any
+	SpaceBelow any
 }
 
 // bodyProseMin is how long a paragraph has to be before it counts as prose.
@@ -797,10 +799,14 @@ func (d *Docx) BodyParagraph() BodyParagraph {
 			continue
 		}
 		base := d.Style(styleOr(style, "Normal"))
-		out := BodyParagraph{Found: true, FontSize: base.FontSize, Alignment: base.Alignment, Font: base.Font}
-		if v := p.attr(pPr, "jc", "val"); v != "" {
-			out.Alignment = alignment(v)
-		}
+		// The spacing is the paragraph's own over the style's, because the
+		// master states it on the paragraph and not on Normal, and a reader
+		// of the style alone would pass a generator that wrote none.
+		// TestTheBodySpacingIsReadOffTheParagraphNotTheStyle is the pin.
+		own := base
+		d.applyPara(&own, pPr)
+		out := BodyParagraph{Found: true, FontSize: base.FontSize, Alignment: own.Alignment, Font: base.Font,
+			SpaceAbove: own.SpaceAbove, SpaceBelow: own.SpaceBelow}
 		for _, r := range p.children(para, "r") {
 			if strings.TrimSpace(runText(p, r)) == "" {
 				continue

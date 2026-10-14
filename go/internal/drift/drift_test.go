@@ -324,3 +324,29 @@ func buildNote(t *testing.T) *Docx {
 	}
 	return d
 }
+
+// The body's spacing is read off the paragraph, not off the Normal style. The
+// master's typed chapters carry 0 above and 12 below on each paragraph while
+// its Normal style says 3 and 6, so a gate reading the style alone passed a
+// generator that wrote no space at all under a paragraph: that is how the
+// 2026-10-14 decision was found by hand rather than by this gate. The literals
+// are the master's own, stated here rather than read from house.yaml.
+func TestTheBodySpacingIsReadOffTheParagraphNotTheStyle(t *testing.T) {
+	values := FromDocx(openMaster(t))
+	want := map[string]float64{"body spaceAbove": 0, "body spaceBelow": 12}
+	for name, expected := range want {
+		found := false
+		for _, v := range values {
+			if v.Name != name {
+				continue
+			}
+			found = true
+			if v.V != expected {
+				t.Errorf("%s reads %v on the master, want %v", name, v.V, expected)
+			}
+		}
+		if !found {
+			t.Errorf("no row is named %q", name)
+		}
+	}
+}

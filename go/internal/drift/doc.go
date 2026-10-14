@@ -40,7 +40,7 @@
 // # The gate runs both ways
 //
 // Offline, in make test. TestTheOfflineGate builds 03-policy.md from the
-// embedded config and reads the master docx beside it. 169 items, and every
+// embedded config and reads the master docx beside it. 171 items, and every
 // DIFFERENT or MISSING row is named in Known with the reason it is there. A
 // CLOSE row is never in Known and cannot be, because Unexplained only ever asks
 // for an entry on the two verdicts that fail the gate.
@@ -143,7 +143,7 @@
 // does, and nothing here opens one. The page count was one of the two real
 // differences the 2026-08-29 report counted, and it came from a stale contents
 // list in the master rather than from the style. 160 was compare.py's count
-// with those three in it, and 157 without them. The 169 here is not 157 plus a
+// with those three in it, and 157 without them. The 171 here is not 157 plus a
 // fixed number: compare.py emitted a bold or italic row only when one of the
 // two sides carried it, so its 157 already held some of them, and this port
 // emits bold and italic for all nine named styles unconditionally, because a

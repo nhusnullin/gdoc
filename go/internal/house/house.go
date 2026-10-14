@@ -187,10 +187,14 @@ type Style struct {
 
 // Body is how the note's own markdown is set.
 type Body struct {
-	SizePt                float64      `yaml:"size_pt"`
-	Align                 string       `yaml:"align"`
-	SpaceBeforePt         float64      `yaml:"space_before_pt"`
-	SpaceAfterPt          float64      `yaml:"space_after_pt"`
+	SizePt        float64 `yaml:"size_pt"`
+	Align         string  `yaml:"align"`
+	SpaceBeforePt float64 `yaml:"space_before_pt"`
+	SpaceAfterPt  float64 `yaml:"space_after_pt"`
+	// ListItemSpaceAfterPt is the gap between two items of a list. The last
+	// item takes SpaceAfterPt instead, so the list ends as a paragraph does.
+	// build and restyle both read it here. DECISIONS.md, 2026-10-14.
+	ListItemSpaceAfterPt  float64      `yaml:"list_item_space_after_pt"`
 	FirstHeadingPageBreak bool         `yaml:"first_heading_page_break"`
 	Bullet                BulletList   `yaml:"bullet"`
 	Numbered              NumberedList `yaml:"numbered"`

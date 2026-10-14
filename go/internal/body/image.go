@@ -272,7 +272,10 @@ func readImage(target, base string, line int) ([]byte, string, error) {
 // place reads one picture and returns the centred paragraph that holds it,
 // with the media part it needs. A picture wider than the text column is scaled
 // down to it, and never scaled up.
-func (r *renderer) place(target string, line int) (*etree.Element, error) {
+// captioned says a caption follows, so the picture carries no space beneath
+// it and sits on its caption; the caption then ends the figure as a paragraph
+// does. TestAPictureSitsOnItsCaption is the pin.
+func (r *renderer) place(target string, line int, captioned bool) (*etree.Element, error) {
 	data, path, err := readImage(target, r.base, line)
 	if err != nil {
 		return nil, err
@@ -302,14 +305,14 @@ func (r *renderer) place(target string, line int) (*etree.Element, error) {
 	}
 
 	r.docPr++
-	return r.pictureParagraph(relID, name, r.docPr, width, height), nil
+	return r.pictureParagraph(relID, name, r.docPr, width, height, captioned), nil
 }
 
 // pictureParagraph writes the DrawingML an inline picture is made of, with the
 // three namespaces declared on the elements that need them. The part's root
 // declares them too; declaring them here as well is what a .docx does, and it
 // costs nothing.
-func (r *renderer) pictureParagraph(relID, name string, docPrID int, width, height int64) *etree.Element {
+func (r *renderer) pictureParagraph(relID, name string, docPrID int, width, height int64, captioned bool) *etree.Element {
 	const (
 		nsWP  = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
 		nsA   = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -317,6 +320,9 @@ func (r *renderer) pictureParagraph(relID, name string, docPrID int, width, heig
 		nsR   = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 	)
 	before, after := 0.0, r.cfg.Body.SpaceAfterPt
+	if captioned {
+		after = 0
+	}
 	p := r.para(paraOpts{Align: "center", BeforePt: &before, AfterPt: &after})
 
 	drawing := sub(sub(p, "w:r"), "w:drawing")

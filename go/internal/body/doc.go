@@ -268,6 +268,24 @@
 // TestTwoDeadAnchorsOnOneLineWarnOncePerDestination and
 // TestTheSameDeadAnchorOnTwoLinesWarnsTwice are the pins.
 //
+// # The body breathes: 12pt under a paragraph, 3pt between items, 12pt under
+// the last
+//
+// A body paragraph carries house.yaml's body spacing, 0 above and 12 below,
+// so two paragraphs in a row read as two and nobody adds a blank line by
+// hand. Items of a list carry the house's list item gap between them, and the
+// last paragraph an outermost list emits takes the body's space after
+// instead, patched in endList once the whole list has been walked. A picture
+// with a caption carries none, so it sits on its caption. A body table's
+// cells carry 5pt on every side and single-spaced text. DECISIONS.md,
+// 2026-10-14. TestABodyParagraphCarriesTwelvePointsBelow,
+// TestTheLastItemOfAListEndsItLikeAParagraph,
+// TestANestedListEndsOnItsInnermostLastItem,
+// TestAListThatRenderedNothingLeavesTheBlockBeforeItAlone,
+// TestAPictureSitsOnItsCaption, TestARuleAndAQuoteEndLikeAParagraph,
+// TestACellHasFivePointsOnEverySide and TestACellParagraphIsSingleSpaced are
+// the pins.
+//
 // # A numbered list starts at 1, and a list that opens elsewhere says so
 //
 // A w:num is where Word keeps a list's running count, so two numbered lists

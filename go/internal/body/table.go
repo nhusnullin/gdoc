@@ -31,11 +31,17 @@ const (
 	tableNoFill     = "#ffffff"
 	// Half a point on every line, which is the master's own weight.
 	tableBorderPt = 0.5
-	// 3pt above and below the text in a cell. The master sets no cell margin
-	// at all, so descenders sit on the bottom border and a table reads as a
-	// wall. Left and right stay at Word's own 5.4pt.
-	cellMarginVPt = 3.0
-	cellMarginHPt = 5.4
+	// 5pt on every side of the text in a cell, which is what the master's own
+	// body tables carry. Word's default is 0 above and below, so descenders
+	// sit on the bottom border and a table reads as a wall. DECISIONS.md,
+	// 2026-10-14. TestACellHasFivePointsOnEverySide is the pin.
+	cellMarginVPt = 5.0
+	cellMarginHPt = 5.0
+	// Text inside a cell is single-spaced, the master's own value for a body
+	// row. A table is scanned rather than read, and the cell margin supplies
+	// the gap the body's 1.15 would. TestACellParagraphIsSingleSpaced is the
+	// pin.
+	cellLineSpacing = 1.0
 	// The row heights, at least. A header row is taller because it carries the
 	// band.
 	headerRowHeightPt = 19.5
@@ -132,9 +138,10 @@ func (r *renderer) cellParagraph(runs []Run, header bool) *etree.Element {
 		align = "center"
 	}
 	mark := runOpts{SizePt: &size, Font: r.cfg.TableText.Font, Bold: header}
+	line := cellLineSpacing
 	p := r.para(paraOpts{
 		Align: align, KeepNext: true, KeepLines: true,
-		BeforePt: &zero, AfterPt: &zero, Mark: &mark,
+		BeforePt: &zero, AfterPt: &zero, LineSpacing: &line, Mark: &mark,
 	})
 	r.addRuns(p, runs, runOpts{SizePt: &size, Font: r.cfg.TableText.Font, Bold: header})
 	if len(p.SelectElements("w:r")) == 0 && len(p.SelectElements("w:hyperlink")) == 0 {

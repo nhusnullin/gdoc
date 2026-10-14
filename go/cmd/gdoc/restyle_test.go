@@ -628,7 +628,7 @@ const styledDocument = `{
     "body": {"content": [
     {"startIndex": 1, "endIndex": 14, "paragraph": {
       "paragraphStyle": {"namedStyleType": "NORMAL_TEXT", "alignment": "JUSTIFIED",
-                         "lineSpacing": 115},
+                         "lineSpacing": 115, "spaceBelow": {"magnitude": 12, "unit": "PT"}},
       "elements": [{"startIndex": 1, "endIndex": 14, "textRun": {"content": "The supplier\n",
         "textStyle": {"weightedFontFamily": {"fontFamily": "Calibri", "weight": 400},
                       "fontSize": {"magnitude": 12, "unit": "PT"},

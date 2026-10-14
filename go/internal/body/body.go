@@ -226,6 +226,37 @@ func (r *renderer) emit(block *etree.Element) {
 	r.blocks = append(r.blocks, block)
 }
 
+// endList puts the body's own space under the last paragraph an outermost
+// list emitted, so the list ends the way a paragraph ends and the prose after
+// it starts as prose does. Items carry the house's list item gap between them, and which
+// paragraph is the list's last is known only once the whole list, nested
+// levels and continuation paragraphs included, has been walked: so the last
+// block is patched here rather than handed a different value on the way in.
+//
+// A list whose last block is not a paragraph, a table inside the last item,
+// is left alone: the paragraph after a table takes afterTableSpacePt already.
+// TestTheLastItemOfAListEndsItLikeAParagraph,
+// TestANestedListEndsOnItsInnermostLastItem and
+// TestAListThatRenderedNothingLeavesTheBlockBeforeItAlone are the pins.
+func (r *renderer) endList() {
+	if len(r.blocks) == 0 {
+		return
+	}
+	last := r.blocks[len(r.blocks)-1]
+	if last.Tag != "p" {
+		return
+	}
+	pPr := last.SelectElement("w:pPr")
+	if pPr == nil {
+		return
+	}
+	spacing := pPr.SelectElement("w:spacing")
+	if spacing == nil {
+		return
+	}
+	spacing.CreateAttr("w:after", twips(r.cfg.Body.SpaceAfterPt))
+}
+
 // nextRelID hands out one relationship id. Pictures and links share the run,
 // because two runs could hand one id to each.
 func (r *renderer) nextRelID() string {
@@ -621,10 +652,16 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		if level == 0 {
 			r.counts.Lists++
 		}
+		opened := len(r.blocks)
 		for item := typed.FirstChild(); item != nil; item = item.NextSibling() {
 			if err := r.itemBlocks(item, level+1, inner); err != nil {
 				return err
 			}
+		}
+		// A list whose items rendered nothing, a code block alone say, added
+		// no block, and the block before the list is not the list's.
+		if level == 0 && len(r.blocks) > opened {
+			r.endList()
 		}
 		r.afterTable = false
 		return nil
@@ -853,13 +890,14 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 // the caption.
 func (r *renderer) emitImages(images []ImageRef, line int) error {
 	for _, image := range images {
-		paragraph, err := r.place(image.Target, line)
+		alt := merge(image.Alt)
+		paragraph, err := r.place(image.Target, line, len(alt) > 0)
 		if err != nil {
 			return err
 		}
 		r.emit(paragraph)
 		r.counts.Images++
-		if alt := merge(image.Alt); len(alt) > 0 {
+		if len(alt) > 0 {
 			r.emit(r.caption(alt))
 		}
 	}

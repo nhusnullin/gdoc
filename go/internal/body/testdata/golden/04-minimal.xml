@@ -32,7 +32,7 @@
   </w:p>
   <w:p>
     <w:pPr>
-      <w:spacing w:before="0" w:after="0"/>
+      <w:spacing w:before="0" w:after="240"/>
       <w:jc w:val="both"/>
       <w:rPr>
         <w:sz w:val="24"/>
@@ -64,7 +64,7 @@
   </w:p>
   <w:p>
     <w:pPr>
-      <w:spacing w:before="0" w:after="0"/>
+      <w:spacing w:before="0" w:after="240"/>
       <w:jc w:val="both"/>
       <w:rPr>
         <w:sz w:val="24"/>

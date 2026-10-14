@@ -112,7 +112,8 @@ body:
   size_pt: 12
   align: justify
   space_before_pt: 0
-  space_after_pt: 0
+  space_after_pt: 12
+  list_item_space_after_pt: 3
   first_heading_page_break: true
   bullet:
     indent_start_pt: 36
