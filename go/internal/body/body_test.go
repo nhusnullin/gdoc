@@ -782,6 +782,37 @@ func TestATablesPropertiesAreInSchemaOrder(t *testing.T) {
 	}
 }
 
+// TestARunsPropertiesAreInSchemaOrder is TestAQuotesPropertiesAreInSchemaOrder
+// for a run. CT_RPr is a sequence like w:pPr and w:tblPr: w:rStyle opens it,
+// and w:shd and w:vertAlign come after the underline, which the comment in
+// build.go used to call the last property there is. One run carrying every
+// property the writer can write states the whole sequence as a literal list.
+func TestARunsPropertiesAreInSchemaOrder(t *testing.T) {
+	size := 11.0
+	p := etree.NewElement("w:p")
+	textRun(p, "words", runOpts{
+		Style: "Yellow", SizePt: &size, Bold: true, Italic: true,
+		Strike: true, Underline: true, Color: "#9A9A9A", Font: "Consolas",
+		Highlight: "yellow", Fill: "#FFD500", VertAlign: "superscript",
+	})
+	rPr := p.FindElement("w:r/w:rPr")
+	if rPr == nil {
+		t.Fatal("the run carries no w:rPr")
+	}
+	var got []string
+	for _, e := range rPr.ChildElements() {
+		got = append(got, e.FullTag())
+	}
+	want := []string{
+		"w:rStyle", "w:rFonts", "w:b", "w:bCs", "w:i", "w:iCs", "w:strike",
+		"w:color", "w:sz", "w:szCs", "w:highlight", "w:u", "w:shd",
+		"w:vertAlign",
+	}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("the run's properties run %v, want %v", got, want)
+	}
+}
+
 // TestAHeadingCarriesTheHouseStyleAndItsColour reads the house literals off a
 // rendered heading.
 func TestAHeadingCarriesTheHouseStyleAndItsColour(t *testing.T) {

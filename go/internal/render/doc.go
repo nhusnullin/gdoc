@@ -35,8 +35,23 @@
 // states the sequence it writes as a literal list of tags:
 // TestTheFrontMatterTablesPropertiesAreInSchemaOrder and
 // TestSettingsChildrenAreInSchemaOrder are the pins here, beside
-// internal/body's TestAQuotesPropertiesAreInSchemaOrder and
-// TestATablesPropertiesAreInSchemaOrder for the parts that package writes.
+// internal/body's TestAQuotesPropertiesAreInSchemaOrder,
+// TestATablesPropertiesAreInSchemaOrder and
+// TestARunsPropertiesAreInSchemaOrder for the parts that package writes.
+//
+// # A character style is how a run says what it is
+//
+// charStyleElement writes one w:type="character" style: an id, a name and the
+// run properties it carries. Both parts of the footnotes-and-marks milestone
+// use it. A footnote reference is the FootnoteReference style, superscript,
+// and each mark is a style of its own carrying the colour the house file
+// states, so Word lists them and a reader finds every yellow with one search.
+// The run names the style and states the same colour itself, because Google
+// Docs has no character styles and keeps only what the run says: after import
+// a mark is direct formatting, and that is what export reads back.
+// TestACharacterStyleIsWrittenWithItsRunProperties is the pin over the writer,
+// and internal/body's TestARunMayNameItsCharacterStyle over the w:rStyle that
+// names it.
 //
 // # Every list level states w:start
 //

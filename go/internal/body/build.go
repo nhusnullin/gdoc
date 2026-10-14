@@ -72,6 +72,13 @@ func sub(parent *etree.Element, tag string, attrs ...string) *etree.Element {
 
 // runOpts is the formatting of one run. The zero value declares nothing, so
 // the style's own values win.
+//
+// Style is the character style the run names, which is how a footnote
+// reference and a mark reach Word's own style list: internal/render writes the
+// style, and the run names it. Fill is the shading a highlight mark carries,
+// VertAlign the superscript a footnote reference carries, and both are stated
+// on the style as well, because Google Docs has no character styles and keeps
+// only what the run itself says.
 type runOpts struct {
 	SizePt    *float64
 	Bold      bool
@@ -82,21 +89,28 @@ type runOpts struct {
 	Color     string
 	Font      string
 	Highlight string
+	Style     string
+	Fill      string
+	VertAlign string
 }
 
 func (o runOpts) empty() bool {
 	return o.SizePt == nil && !o.Bold && !o.Italic && !o.Strike && !o.Underline &&
-		!o.Mono && o.Color == "" && o.Font == "" && o.Highlight == ""
+		!o.Mono && o.Color == "" && o.Font == "" && o.Highlight == "" &&
+		o.Style == "" && o.Fill == "" && o.VertAlign == ""
 }
 
 // runProps builds a w:rPr, or nil when the run states nothing. The order is
-// the schema's: fonts, weight, slope, strike, colour, size, highlight, then
-// underline.
+// the schema's: the character style, fonts, weight, slope, strike, colour,
+// size, highlight, underline, shading, then vertical alignment.
 func runProps(o runOpts) *etree.Element {
 	if o.empty() {
 		return nil
 	}
 	rPr := etree.NewElement("w:rPr")
+	if o.Style != "" {
+		sub(rPr, "w:rStyle", "w:val", o.Style)
+	}
 	font := o.Font
 	if o.Mono {
 		font = monoFont
@@ -128,10 +142,22 @@ func runProps(o runOpts) *etree.Element {
 	if o.Highlight != "" {
 		sub(rPr, "w:highlight", "w:val", o.Highlight)
 	}
-	// Underline is last because that is where the schema puts it: the run
-	// properties are a sequence, and Word reads one out of order as a repair.
+	// Underline is the last of the properties this writer had before the
+	// marks: the run properties are a sequence, and Word reads one out of
+	// order as a repair. The schema puts shading and vertical alignment after
+	// it, in that order, which is why those two are written last.
 	if o.Underline {
 		sub(rPr, "w:u", "w:val", "single")
+	}
+	if o.Fill != "" {
+		// w:val clear and w:color auto are the pattern and its foreground: a
+		// solid fill of the one colour, which is what a highlight is. A
+		// w:shd carrying the fill alone defaults its pattern to nil, and a
+		// nil pattern draws no shading.
+		sub(rPr, "w:shd", "w:val", "clear", "w:color", "auto", "w:fill", hexColor(o.Fill))
+	}
+	if o.VertAlign != "" {
+		sub(rPr, "w:vertAlign", "w:val", o.VertAlign)
 	}
 	return rPr
 }

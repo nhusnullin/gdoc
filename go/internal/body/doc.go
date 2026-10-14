@@ -55,11 +55,16 @@
 // every w:t. TestAnAmpersandIsEscapedOnce is the pin.
 //
 // A properties element is a sequence, and Word reads one out of order as a
-// document to repair. This package writes two of them, a quote's w:pPr and a
-// table's w:tblPr, and each writer states the sequence it writes as a literal
-// list of tags: TestAQuotesPropertiesAreInSchemaOrder and
-// TestATablesPropertiesAreInSchemaOrder are the pins, beside internal/render's
-// own two for the parts that package writes.
+// document to repair. This package writes three of them, a quote's w:pPr, a
+// table's w:tblPr and a run's w:rPr, where the character style opens the
+// sequence and the shading and the vertical alignment close it. Each writer
+// states the sequence it writes as a literal list of tags:
+// TestAQuotesPropertiesAreInSchemaOrder,
+// TestATablesPropertiesAreInSchemaOrder and
+// TestARunsPropertiesAreInSchemaOrder are the pins, beside internal/render's
+// own two for the parts that package writes. A run names the character style
+// internal/render writes, which is how a footnote reference and a mark reach
+// Word's own style list: TestARunMayNameItsCharacterStyle is the pin.
 //
 // # One list item takes at most one marker, whatever it holds
 //

@@ -104,6 +104,55 @@ func (b *builder) styleElement(id, name string, s house.Style, based string, isD
 	return style
 }
 
+// charRunProps is what a character style states on the runs that name it: a
+// text colour, a shading, a vertical alignment, or nothing. Only the three
+// this generator needs are here, and a style carries at most two of them: the
+// footnote reference is superscript, a highlight mark is a shading, and the
+// pencil is a colour.
+type charRunProps struct {
+	Color     string // w:color, the pencil's grey
+	Fill      string // w:shd w:fill, a highlight mark's own colour
+	VertAlign string // w:vertAlign, the footnote reference's superscript
+}
+
+// empty says whether the style states no run properties at all.
+func (p charRunProps) empty() bool {
+	return p.Color == "" && p.Fill == "" && p.VertAlign == ""
+}
+
+// charStyleElement is one w:type="character" style: the id Word knows it by,
+// the name a person reads in the style list, and the run properties it
+// carries. A character style is how a run says what it is rather than only
+// how it looks, so Word lists the marks and a reader finds every yellow with
+// one search.
+//
+// CT_Style is a sequence and so is the w:rPr inside it, where EG_RPrBase puts
+// colour, then shading, then vertical alignment. Word reads either out of
+// order as a document to repair, so both are written in the schema's order
+// and TestACharacterStyleIsWrittenWithItsRunProperties states them as a
+// literal list of tags.
+func charStyleElement(id, name string, p charRunProps) *etree.Element {
+	style := el("w:style", "w:type", "character", "w:styleId", id)
+	sub(style, "w:name", "w:val", name)
+	sub(style, "w:qFormat")
+	if p.empty() {
+		return style
+	}
+	rPr := sub(style, "w:rPr")
+	if p.Color != "" {
+		sub(rPr, "w:color", "w:val", hexColor(p.Color))
+	}
+	if p.Fill != "" {
+		// w:val clear and w:color auto are the pattern and its foreground: a
+		// solid fill of the one colour, which is what a highlight is.
+		sub(rPr, "w:shd", "w:val", "clear", "w:color", "auto", "w:fill", hexColor(p.Fill))
+	}
+	if p.VertAlign != "" {
+		sub(rPr, "w:vertAlign", "w:val", p.VertAlign)
+	}
+	return style
+}
+
 // settingsPart tells Word to refresh its fields on open, which is what makes
 // the contents list arrive filled in rather than empty.
 func (b *builder) settingsPart() []byte {

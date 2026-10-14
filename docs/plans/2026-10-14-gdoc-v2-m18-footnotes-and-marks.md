@@ -183,21 +183,21 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/body/build.go`
 - Test: `go/internal/render/charstyles_test.go`, `go/internal/body/runs_test.go`
 
-- [ ] `TestACharacterStyleIsWrittenWithItsRunProperties`: `styles.go` gains
+- [x] `TestACharacterStyleIsWrittenWithItsRunProperties`: `styles.go` gains
       a writer for `w:type="character"` styles, taking an id, a name and the
       run properties it carries, with the rPr in schema order.
-- [ ] `TestARunMayNameItsCharacterStyle`: body's `runOpts` in `build.go`
+- [x] `TestARunMayNameItsCharacterStyle`: body's `runOpts` in `build.go`
       gains `Style`, `runOpts.empty()` counts it, and `addRuns` writes
       `w:rStyle` first in the rPr. Render's own run writer in `render/xml.go`
       is a different copy and is not touched.
-- [ ] `TestARunsPropertiesAreInSchemaOrder` is written here, beside the
+- [x] `TestARunsPropertiesAreInSchemaOrder` is written here, beside the
       Quote and Table ones in `body_test.go`: `w:rStyle`, then the order
       `runProps` writes today through `w:u`, then `w:shd`, then
       `w:vertAlign`. The comment in `build.go` that says underline is last
       is corrected: it is last of today's properties, and shading and
       vertical alignment follow it in the schema.
-- [ ] `render/doc.go` names the mechanism and says the two parts use it.
-- [ ] `git commit -m "feat(render): character styles, and a run that names one"`
+- [x] `render/doc.go` names the mechanism and says the two parts use it.
+- [x] `git commit -m "feat(render): character styles, and a run that names one"`
 
 ### Task 5: a footnote reference is a run, and the list renders
 
