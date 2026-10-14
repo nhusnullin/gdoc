@@ -490,8 +490,12 @@ suggestion and a comment anchor. Beyond `read`: link targets, list numbering,
 pictures as files, and the house prelude taken out and listed with the text each
 piece held, so an edit inside a cover table reaches the envelope rather than the
 note. A prelude it cannot recognise stays in the file under a warning naming
-what stood there. Footnotes come across with a warning, because `publish`
-refuses a note holding one. The front matter of a file `export` creates holds
+what stood there. A footnote comes across as `[^n]` in the prose with its
+definition after a `---` line, and that file publishes again: `build` sets
+footnotes rather than refusing them (2026-10-14, DECISIONS.md). A label
+referenced twice in the hub comes back as two notes, because a document holds
+one note per mark. A mark the author wrote comes back as the syntax it left
+as. The front matter of a file `export` creates holds
 the `gdoc:` block and nothing else: a skill adds `title` when it makes the file
 a note.
 
@@ -576,6 +580,47 @@ measurement that means something, because Google's import is part of the result.
 Either way a difference not named in the list of known ones, with its reason,
 fails the gate. No item reads a PDF. House-style tests state house values as
 literals, never by reading the constant they test.
+
+## The marks, and footnotes
+
+Both are the author's own markdown, carried into the document and written back
+by `export`. Decided 2026-10-14, DECISIONS.md, one entry each.
+
+**A highlight is Obsidian's syntax and no other.** `==words==` is yellow, and a
+colour emoji at the start of the highlight picks the rest: 🔴 red, 🟠 orange,
+🟡 yellow, 🟢 green, 🔵 blue, 🟣 purple. One grey, `pencil`, is Pandoc's
+bracketed span, `[words]{.pencil}`, the only span gdoc reads, and it is text
+colour rather than a highlight. The seven are stated once, in `house.yaml`
+under `marks:`, keyed by Obsidian's own colour names, each with its syntax, its
+kind and its Doc colour. `gdoc help marks` prints that table, so a skill reads
+the binary rather than carrying a copy.
+
+In the docx each mark is a named character style and the run carries the exact
+hex, as shading for a highlight and as text colour for pencil. Docs has no
+character styles, so after import a mark is direct formatting and that is what
+`export` reads back. A colour outside the palette stays plain words and is
+counted by hex. `read` prints the words and not the mark. `restyle` is
+unchanged, and the cover's yellow placeholders are the prelude's rather than
+marks.
+
+Yellow, green and purple are authoring debts: `build` and `publish` carry a
+count of each on the envelope, zero included, and the publish skill asks before
+a document carrying any goes to Drive. The binary counts and never judges.
+
+**A footnote is `[^label]` with `[^label]: the text` on its own line**, which is
+what goldmark already parses and what `read` already prints. Notes are numbered
+in first-reference order. One label referenced twice becomes two notes carrying
+the same text, because Word and Docs hold one note per mark. The note text is
+the tenth house style, `footnote_text`, and the reference mark is a superscript
+character style. `word/footnotes.xml` is always written, with the separator and
+the continuation separator, which makes the generator's parts thirteen.
+
+**What is refused by line, in both halves.** A reference with no definition, a
+definition nothing references, a footnote mark in a heading, a mark in a
+heading, a nested mark, an empty span, a span carrying any attribute but
+`.pencil`, and a span crossing a paragraph. Inside a footnote, a list, a table,
+a picture, a code block or a heading is warned about by line and left out. No
+footnote and no mark in a table cell.
 
 ## Install and update
 

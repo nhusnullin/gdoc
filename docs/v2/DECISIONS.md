@@ -88,6 +88,8 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds |
 | 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds |
 | 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
+| 2026-10-14 | A footnote is carried on every route | holds |
+| 2026-10-14 | The marks: Obsidian's six colours and one grey | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3932,3 +3934,221 @@ this entry.
 `TestTheBodySpacingIsReadOffTheParagraphNotTheStyle` and, for the in-place
 half, `TestABulletedParagraphTakesTheListGapAndTheLastTheBodys`. Each states
 its number as a literal.
+
+## 2026-10-14. A footnote is carried on every route.
+
+Part A of M18, decided by Nail on the decision page of the same day. Serves
+principle 1, two renderings of one text: a footnote the author wrote belongs in
+the document and comes home on export. Serves principle 4: a citation under the
+page costs a reader less attention than the same words in the sentence.
+
+What stood before this entry is a hole in the pairing. `build` and `publish`
+dropped every footnote and warned about it by line, and `export` wrote the
+notes back into the hub as `[^n]` in the prose with the definitions after a
+`---` line. So a document pulled out of Drive and built again published its
+notes as nothing, and a note written in the hub could not carry a citation at
+all. Three decisions of the page close it.
+
+**The syntax is the one goldmark already parses.** `[^label]` in the prose and
+`[^label]: the text` on a line of its own, and a label may be words rather than
+a number. `internal/body` has the footnote extension on today, so no fourth
+module and no new grammar.
+
+**A footnote that does not line up refuses the build and names the line**
+(decision 2.1 A). A reference with no definition, and a definition nothing
+references, are each a refusal. Both were argued as warnings and rejected: a
+warning let a published document look finished while a citation was missing
+from it. goldmark is silent in both shapes, because its parser leaves `[^x]`
+as prose when no definition follows and its transformer removes a definition
+nobody references, so the check reads the note's own source lines, beside the
+markers check `Render` already runs.
+
+**One label referenced twice is two notes carrying one text** (decision 2.2 B).
+Word and Docs hold one note per mark, so there is no second shape to render.
+`export` then writes two notes where the author wrote one, and the round-trip
+rule says so: the renumbering to first-reference order is a known difference
+with a reason, not a failure.
+
+**The measurement comes before the code** (decision 2.3 A). Task 2 of the plan
+uploads a docx carrying one Word footnote with conversion, reads it back bare
+and exports it, and writes what Drive did into MEASURED.md either way. If Drive
+drops the note, part A stops there: footnotes would exist in the file `build`
+writes and nowhere else, and whether that is worth shipping is Nail's and not
+the plan's.
+
+Taken in the design pass and not contested: notes are numbered in
+first-reference order, Word's own, whatever order the definitions were written
+in; inside a note, paragraphs with inline marks only, and a list, a table, a
+picture, a code block or a heading there is warned about by line and left out;
+a footnote mark inside a heading is refused by line, because Word copies the
+mark into the contents field; the note text is a tenth house style,
+`footnote_text`, 10pt, single-spaced, no space above or below, in the body
+face, and the reference mark is a character style set superscript; `read` keeps
+printing exactly what it prints today.
+
+**What this strains.** Two rules this tree states, each loosened on purpose.
+
+- "A file gdoc half understands never reaches a document." A footnote used to
+  reach the document half understood, as a warning and a missing line. It is
+  now refused by line when it does not line up, and carried when it does, so
+  the rule is kept in the one direction that was broken.
+- `internal/render` writes "the twelve parts and the logo", and writes thirteen
+  from Task 6. `word/footnotes.xml` is always written, with the separator and
+  the continuation separator, whether or not the note holds a footnote,
+  because a reader that meets a footnote reference with no part behind it
+  repairs the document.
+
+**What this does not do.** A suggestion or a comment inside a footnote stays
+invisible to `read` and `suggestions`, which is
+`docs/backlog/suggestions-inside-footnotes.md`. No footnote in a table cell.
+`propose` and `annotate` do not change: both already refuse a quote that
+crosses a footnote mark.
+
+**Tests.** `TestAFootnoteReferenceCarriesItsNumber`,
+`TestAFootnoteRunSurvivesMerge`,
+`TestAFootnoteBecomesAFootnoteTextParagraph`,
+`TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder`,
+`TestAReferenceWithNoDefinitionIsRefusedByLine`,
+`TestADefinitionNobodyReferencesIsRefusedByLine`,
+`TestAFootnoteMarkInsideAHeadingIsRefusedByLine`,
+`TestAFootnoteReferencedTwiceIsTwoNotesWithOneText`,
+`TestAListInsideAFootnoteWarnsAndIsLeftOut`, `TestTheTenStylesAreThere`,
+`TestTheFootnotesPartCarriesTheTwoSeparators`,
+`TestTheFootnotesPartIsDeclaredAndRelated`,
+`TestAFootnoteReferenceIsASuperscriptCharacterStyle`,
+`TestBuildWritesTheThirteenPartsAndTheLogo`, `TestLiveFootnoteImportProbe` and
+`TestLivePublishCarriesAFootnoteIntoDocs`. `TestAFootnoteWarnsAndIsLeftOut`
+and `TestEveryFootnoteIsNamedByItsOwnLine` are retired by this entry;
+`TestAHeadingInsideAFootnoteIsNoAnchor` and
+`TestAHeadingInsideAFootnoteSetsNoHeadingDepth` still hold.
+
+## 2026-10-14. The marks: Obsidian's six colours and one grey.
+
+Part B of M18, decided by Nail on the decision page of the same day. Serves
+principle 1, because a highlight the author wrote in Obsidian is in the Doc and
+comes home as the same syntax. Serves principle 2, the binary prints facts and
+the skills judge, because the binary counts marks and never says whether a
+document carrying them may be published.
+
+An author marks words while writing: a figure to replace, a claim to confirm, a
+question for one reviewer, prose that stays but is not the argument. gdoc had
+one of those, `==words==`, and it reached the docx as Word's named yellow
+highlight.
+
+**Highlights are written the way Obsidian 1.14 writes them and no other way.**
+`==words==` for the default yellow, and a colour emoji at the start of the
+highlight for the rest: `==🔴words==`, `==🟠words==`, `==🟡words==`,
+`==🟢words==`, `==🔵words==`, `==🟣words==`. One position, six emoji, no
+Pandoc span and no HTML for a highlight. The syntax is Obsidian's because the
+author writes the note there, and a syntax their editor renders is one they can
+see without building anything.
+
+**The names are Obsidian's too**, `yellow`, `red`, `orange`, `green`, `blue`
+and `purple`, with no name of gdoc's own. What a colour means is Nail's, said
+in his notes and his skills and never in a key. His own use, recorded on the
+decision page: yellow a word or figure to replace, green a claim to confirm,
+purple a question to one reviewer, blue text changed since the last version.
+Red and orange carry no meaning, so a note using them is not refused.
+
+**The one grey is `pencil`**, prose that stays in the document but is not the
+argument. Obsidian has no text colour, so pencil is written as Pandoc's
+bracketed span, `[words]{.pencil}`, the only span gdoc reads and the only
+attribute it reads in one. In the Doc it is text colour #9A9A9A and no italic.
+That is under the 4.5:1 contrast floor, chosen knowingly after both designers
+asked for #767676: pencil is prose a reader may skip, and a grey a reader
+cannot tell from the body is not one.
+
+**The palette.** house.yaml is the one source, keyed by the colour, and
+`gdoc help marks` prints it so a skill reads the binary rather than carrying a
+copy. The hexes are the merge of a UX designer's set and a typographer's, each
+colour as saturated as its lightness allows and the lightnesses a staircase.
+None is the template's #FFFF00, which means placeholder.
+
+| Mark | Syntax | Kind | Doc colour | Counted on the envelope |
+|---|---|---|---|---|
+| yellow | `==words==` or `==🟡words==` | highlight | #FFD500 | yes |
+| green | `==🟢words==` | highlight | #3DD67A | yes |
+| purple | `==🟣words==` | highlight | #BA92FF | yes |
+| blue | `==🔵words==` | highlight | #5DB3FF | no |
+| red | `==🔴words==` | highlight | #FF6B6B | no |
+| orange | `==🟠words==` | highlight | #FFB85C | no |
+| pencil | `[words]{.pencil}` | text colour | #9A9A9A | no |
+
+The hexes are a proposal until Task 3's measurement says what Drive keeps
+through an import and an in-place restyle. If a hex comes back changed, part B
+stops and says what came back.
+
+**Yellow, green and purple are authoring debts.** Each is counted on the
+envelope of `build` and `publish`, zero included, and the publish skill shows
+the count and asks before a document carrying any goes to Drive. The binary
+says nothing about whether to publish, which is the second principle: a count
+is a fact, and whether a draft with four unanswered questions in it may go to a
+board is the person's call. The other four are carried and not counted.
+
+**No per-person logic anywhere**, in the binary or in a skill. A colour means
+what the author's own notes say it means.
+
+**In the docx each mark is a named character style**, `Yellow`, `Green`,
+`Purple`, `Blue`, `Red`, `Orange`, `Pencil`, so Word lists them and a reader
+finds every yellow with one search. The six highlights are run shading with the
+exact hex, not one of Word's sixteen named highlights, which carry none of
+these hexes. Google Docs has no character styles, so after import a mark is
+direct formatting, and direct formatting is what `export` reads: it recognises
+a mark by its exact colour and writes Obsidian's syntax back, or the pencil
+span. A colour outside the palette stays plain words and is counted by hex.
+
+**`read` is unchanged, and that is a decision rather than an omission.** The
+words reach a reviewing session and the mark around them does not. A mark in
+the projection changes what a session quotes: a model that reads
+`==the figure==` may answer about the marks instead of the text, and a quote a
+skill sends back to `propose` would have to be stripped of syntax that is not
+in the document.
+Printing marks in `read` is a decision for a later entry.
+
+**What was dropped on the way.** Five named text colours. A per-person legend.
+The writer's desk names sticky, proof, flag and ink. `coin`. Hilo and every
+other Obsidian plugin's syntax. An HTML span for pencil. A rule that colours a
+paragraph by its first words. A mark on a whole paragraph, and a meaning for
+any colour in the binary, are later entries.
+
+**What this strains.** Two rules this tree states.
+
+- `internal/body/mark.go` says `==text==` is "the only way to say a human still
+  has to fill this in". It is now one of six colours, and that sentence becomes
+  yellow's meaning in Nail's own notes rather than the syntax's meaning in the
+  code.
+- `internal/body` warns about inline HTML and drops it, and has had no span
+  syntax at all. This entry adds one, Pandoc's, reading exactly one attribute,
+  `.pencil`. A `[` not followed by `]{` is ordinary text and `[words](url)`
+  stays a link, so the grammar takes nothing away from what already parses.
+
+A highlight carrying anything but one of the six emoji at its start, or an
+emoji anywhere else in it, is the words as written. A nested mark, an empty
+span, a span carrying another attribute, a span crossing a paragraph and a mark
+inside a heading are each refused by line. `restyle` is unchanged, and whether
+an in-place restyle leaves run shading and run colour alone is measured. The
+cover's own yellow placeholders are the prelude's, keep writing Word's named
+yellow, and are not marks.
+
+**Tests.** `TestTheSevenMarksAreStatedAsLiterals`,
+`TestAMarkWithAnUnknownKindIsRefused`,
+`TestAMarkWhoseColourIsNotHexIsRefused`, `TestTwoMarksCannotShareASyntax`,
+`TestTheMarksAreTheSevenAndNoOther`,
+`TestAHighlightOpeningWithAColourEmojiCarriesItsMark`,
+`TestAnEmojiElsewhereInAHighlightIsText`,
+`TestAnEmojiOutsideAHighlightIsText`, `TestAPencilSpanIsARunCarryingItsMark`,
+`TestALinkIsStillALink`, `TestABracketNotFollowedByAttributesIsText`,
+`TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil`,
+`TestANestedMarkIsRefusedByLine`, `TestAnEmptySpanIsRefusedByLine`,
+`TestAMarkInAHeadingIsRefusedByLine`,
+`TestASpanCrossingAParagraphIsRefusedByLine`,
+`TestTwoMarksSideBySideStayTwoRuns`, `TestTheDebtsAreCountedAndTheOthersAreNot`,
+`TestAMarkedRunCarriesItsStyleAndItsShading`,
+`TestTheSevenCharacterStylesAreWritten`,
+`TestTheCoverPlaceholdersAreNotMarks`,
+`TestARunKeepsItsBackgroundAndTextColour`,
+`TestExportWritesObsidiansSyntaxForEachPaletteColour`,
+`TestAColourOutsideThePaletteIsPlainWordsAndCounted`, `TestReadPrintsNoMark`,
+`TestHelpMarksPrintsTheSevenFromTheBinary`, `TestLiveMarkImportProbe` and
+`TestLivePublishCarriesTheMarksIntoDocs`. Each states every emoji and every hex
+as a literal. `TestAMarkedSpanIsItsOwnNodeKind` still holds.

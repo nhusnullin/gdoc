@@ -96,18 +96,18 @@ Checkboxes below. A task is done when its commit is on the branch.
 - Modify: `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`, `CLAUDE.md`,
   `go/internal/body/doc.go`
 
-- [ ] Two DECISIONS.md entries dated 2026-10-14, each with its register row:
+- [x] Two DECISIONS.md entries dated 2026-10-14, each with its register row:
       "A footnote is carried on every route", naming its two strains and the
       three decisions of the page; and "The marks: Obsidian's six colours
       and one grey", carrying the palette table, its two strains, what was
       dropped, and why `read` is unchanged.
-- [ ] `docs/v2/SPEC.md:493` stops saying publish refuses a footnote; SPEC
+- [x] `docs/v2/SPEC.md:493` stops saying publish refuses a footnote; SPEC
       gains a section on marks beside the one on the house style.
-- [ ] `CLAUDE.md`'s `go/internal/render/` row reads "the thirteen parts and
+- [x] `CLAUDE.md`'s `go/internal/render/` row reads "the thirteen parts and
       the logo"; `TestCLAUDEmdIsUnderTheCeiling` still passes.
-- [ ] `body/doc.go`'s footnote section and its `==mark==` sentence are
+- [x] `body/doc.go`'s footnote section and its `==mark==` sentence are
       rewritten to say what is carried, refused and warned about.
-- [ ] `git commit -m "docs: footnotes and marks, the two decisions"`
+- [x] `git commit -m "docs: footnotes and marks, the two decisions"`
 
 ### Task 2: the measurement, Drive's import of a Word footnote
 

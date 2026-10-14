@@ -19,12 +19,34 @@
 // not define, and a reader that meets a dangling w:pStyle discards the whole
 // w:pPr around it: every bullet and every number then silently disappears. The
 // extension set is the one the previous generator asked pandoc for, pipe
-// tables, ==mark==, strikeout and task lists, plus the smart punctuation
-// pandoc's markdown format enables by default. parse in body.go is where that
-// set is stated, with the typographer writing characters rather than HTML
-// entities, because a "&ldquo;" in a w:t is both wrong and a different width.
-// TestSmartQuotesAreTheCharacters and TestSmartPunctuationIsCharactersNotEntities
-// are the pins.
+// tables, ==mark==, strikeout and task lists, plus footnotes and the smart
+// punctuation pandoc's markdown format enables by default. parse in body.go is
+// where that set is stated, with the typographer writing characters rather than
+// HTML entities, because a "&ldquo;" in a w:t is both wrong and a different
+// width. TestSmartQuotesAreTheCharacters and
+// TestSmartPunctuationIsCharactersNotEntities are the pins.
+//
+// ==mark== is mark.go, written here rather than pulled in, and it carries seven
+// marks rather than one highlight (DECISIONS.md, 2026-10-14). ==words== is
+// yellow, a colour emoji at the start of the highlight picks one of the other
+// five, and [words]{.pencil} is the one Pandoc span this package reads, text
+// colour rather than shading. house.yaml states the seven with their syntax,
+// kind and Doc colour, so no emoji and no hex is a constant here. What is
+// carried is the mark on the run; what is refused by line is a nested mark, an
+// empty span, a span carrying any other attribute, a span crossing a paragraph
+// and a mark inside a heading, for the reason a footnote mark in a heading is
+// refused. An emoji anywhere but the start of a highlight, and a bracket not
+// followed by ]{, are the author's own words.
+// TestAHighlightOpeningWithAColourEmojiCarriesItsMark,
+// TestAnEmojiElsewhereInAHighlightIsText, TestAPencilSpanIsARunCarryingItsMark,
+// TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,
+// TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil,
+// TestANestedMarkIsRefusedByLine, TestAnEmptySpanIsRefusedByLine,
+// TestASpanCrossingAParagraphIsRefusedByLine and
+// TestAMarkInAHeadingIsRefusedByLine are the pins, with
+// TestTwoMarksSideBySideStayTwoRuns over merge and
+// TestTheDebtsAreCountedAndTheOthersAreNot over the three counted on the
+// envelope.
 //
 // Every size, colour, indent and alignment comes from house.Config. What is a
 // constant in this package is a value the house file does not state, and each
@@ -133,23 +155,47 @@
 // is the pin, over a picture the walk embedded and a picture it only warned
 // about.
 //
-// # The footnote extension is on so that a footnote can be refused
+// # A footnote is set in the document, and one that does not line up is refused
 //
-// With it off, "[^1]" and "[^1]: the text" are ordinary markdown text, so they
-// published as prose with nothing on the envelope. That is not a hypothetical
-// note: internal/view writes a document's footnotes in exactly that shape, a
-// marker in the prose and the definitions after a "---" line, so a note pulled
-// out of a Doc and built back into one carried the markers into the published
-// document. goldmark collects every definition into one list at the end of the
-// file whatever order they were written in, so each footnote is named by its
-// own line rather than the list's. TestAFootnoteWarnsAndIsLeftOut and
-// TestEveryFootnoteIsNamedByItsOwnLine are the pins.
+// "[^1]" in the prose and "[^1]: the text" on a line of its own, which is what
+// the footnote extension parses and what internal/view already prints: a marker
+// in the prose and the definitions after a "---" line. A reference becomes a
+// run carrying its number and internal/render writes the notes into
+// word/footnotes.xml, numbered in first-reference order, which is Word's own
+// order whatever order the definitions were written in. Nothing is dropped and
+// nothing is warned about for a note that lines up (DECISIONS.md, 2026-10-14).
+// TestAFootnoteReferenceCarriesItsNumber,
+// TestAFootnoteBecomesAFootnoteTextParagraph and
+// TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder are the pins, with
+// TestAFootnoteRunSurvivesMerge over the run, whose text is empty.
 //
-// The definition is dropped whole, children and all, so the two walks that run
-// before the blocks skip that subtree as well: a heading written inside a
-// footnote is not a heading of this document, it carries no bookmark, and it
-// does not set the depth every other heading numbers from.
-// TestAHeadingInsideAFootnoteIsNoAnchor and
+// One label referenced twice is two notes carrying one text, because Word and
+// Docs hold one note per mark and there is no second shape to write.
+// TestAFootnoteReferencedTwiceIsTwoNotesWithOneText is the pin.
+//
+// A reference with no definition, a definition nothing references, and a
+// footnote mark inside a heading are each refused by line. The first two are
+// read off the source lines, beside the markers check, because goldmark is
+// silent in both shapes: its parser leaves "[^x]" as prose when no definition
+// follows, and its transformer removes a definition nobody references, so the
+// tree says nothing happened. A warning was argued and rejected: it let a
+// published document look finished with a citation missing from it. The heading
+// case is Word's, which copies the mark into the contents field.
+// TestAReferenceWithNoDefinitionIsRefusedByLine,
+// TestADefinitionNobodyReferencesIsRefusedByLine and
+// TestAFootnoteMarkInsideAHeadingIsRefusedByLine are the pins.
+//
+// Inside a footnote, paragraphs with inline marks only. A list, a table, a
+// picture, a code block or a heading there is warned about by line and left
+// out, the way a picture the house style cannot place is: a note under the page
+// is a sentence, and the house style has no geometry for a table in one.
+// TestAListInsideAFootnoteWarnsAndIsLeftOut is the pin, with the same shape for
+// the other four.
+//
+// Because a heading inside a footnote is left out, the two walks that run
+// before the blocks skip it as well: it is not a heading of this document, it
+// carries no bookmark, and it does not set the depth every other heading
+// numbers from. TestAHeadingInsideAFootnoteIsNoAnchor and
 // TestAHeadingInsideAFootnoteSetsNoHeadingDepth are the pins.
 //
 // # A marker of gdoc's own is refused by line, before the note is parsed
@@ -167,9 +213,9 @@
 // TestBuildRefusesAMarkerByLine and TestBuildLeavesAnEscapedMarkerAlone are the
 // pins.
 //
-// It is a refusal rather than the warning a footnote gets. A footnote leaves
-// one line out of the document; a marker puts words into it that the author
-// never wrote and that nothing downstream would name.
+// It is a refusal rather than the warning a code block gets. A code block
+// leaves one block out of the document; a marker puts words into it that the
+// author never wrote and that nothing downstream would name.
 //
 // # An email autolink carries the mailto: scheme, and the label does not
 //
@@ -234,10 +280,10 @@
 // link to a heading further down resolves, and the pre-walk collects only the
 // headings that will carry a bookmark: a figure-only heading emits no
 // paragraph, so a link naming it is as dead as a link naming nothing, and so
-// does a heading inside a footnote definition, which the block walk drops
-// whole. A pre-walk that counted either would write a live w:anchor naming a
-// bookmark nothing wrote, which is the one failure this is here to prevent,
-// and it would do it silently.
+// does a heading inside a footnote definition, which the footnote walk warns
+// about and leaves out. A pre-walk that counted either would write a live
+// w:anchor naming a bookmark nothing wrote, which is the one failure this is
+// here to prevent, and it would do it silently.
 // TestAnAnchorLinkIsAJumpAndNotARelationship,
 // TestAnAnchorToNoHeadingWarnsAndPrintsPlainText,
 // TestAFigureOnlyHeadingCarriesNoBookmark and
