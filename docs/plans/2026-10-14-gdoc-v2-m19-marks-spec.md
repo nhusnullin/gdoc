@@ -71,6 +71,15 @@ one in-place restyle over the document, and the eight read again. The answers
 go into MEASURED.md either way. If a hex came back changed, or the restyle
 cleared one, the plan stops after Task 2 and says what came back.
 
+## House values that change in this milestone
+
+Nail will change style values during this milestone, size and alignment among
+them. The mechanism is fixed and the values are not: each change is a
+DECISIONS.md line, a house.yaml line, a literal test re-stated, and a `Known`
+entry where the master states the old value. The master docx stays as
+provenance and the gate is never loosened, only re-pinned with the reason
+written down. Task 10 of the plan holds the steps.
+
 ## What this milestone does not do
 
 - No mark on a whole paragraph or a table cell. A mark is a run of words.
