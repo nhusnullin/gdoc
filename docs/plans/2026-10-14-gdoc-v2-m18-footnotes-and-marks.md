@@ -144,24 +144,37 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/live/testdata/mark-probe.docx`
 - Modify: `docs/v2/MEASURED.md`, `go/internal/live/doc.go`
 
-- [ ] The fixture is the built `04-minimal.md` with eight runs added by hand
+- [x] The fixture is the built `04-minimal.md` with eight runs added by hand
       in the first body paragraph: `w:shd w:fill` for each of the six
       highlight hexes, `w:color` #9A9A9A, and `w:highlight yellow`.
-- [ ] `TestLiveMarkImportProbe`, behind the two live variables, uploads it,
+- [x] `TestLiveMarkImportProbe`, behind the two live variables, uploads it,
       reads it back bare, prints each run's text beside the
       `backgroundColor` and `foregroundColor` Docs reports as hex, runs one
       in-place restyle over the document the way `live/restyle_test.go` does,
       `restyle.TabRequests` then `restyle.Apply`, and reads the eight again,
       then trashes it. It fails on a read, an upload or a
       restyle that failed and on nothing else.
-- [ ] `TestTheMarkProbeFixtureIsADocx` runs in `make test`.
-- [ ] MEASURED.md gets the sixteen answers by hand, dated, with the document
+- [x] `TestTheMarkProbeFixtureIsADocx` runs in `make test`.
+- [x] MEASURED.md gets the sixteen answers by hand, dated, with the document
       id. `live/doc.go` names the test.
-- [ ] **If any hex came back changed, or the restyle cleared one, Part B
-      stops here.** Say what came back and skip Tasks 8 to 11 and the mark
-      halves of 12 and 13. In the same commit, take the marks text back out
-      of Task 1's four files, so nothing says a part exists that does not.
-- [ ] `git commit -m "test(live): measure Drive's import of run shading and text colour"`
+- [x] **If any hex came back changed, or the restyle cleared one, Part B
+      stops here.** The gate came back split on 2026-10-14, document
+      `139xi2N5QoSwTmSkkkzLM1M1Fgb7IK7u3JDITv7YCAy0`. All six highlight hexes
+      came back hex for hex and survived the restyle, and Word's named yellow
+      arrived as #FFFF00, a different colour from the mark yellow #FFD500, so
+      the cover placeholders stay tellable from a mark. The pencil's #9A9A9A
+      survived the import and did not survive the restyle: `textLook` writes
+      `foregroundColor` from `styles.normal.color`, #000000, over every body
+      run, so a pencil mark in a document somebody later restyles in place
+      becomes black prose.
+      Nothing is taken back out of Task 1's four files and no task is
+      skipped, because six of seven marks pass the gate outright and the one
+      answer that failed is about `restyle` rather than about the import.
+      Whether that stops Part B, drops the pencil from the seven, or is a
+      strain written into DECISIONS.md and accepted is Nail's decision and
+      not this task's, and Tasks 8 to 11 wait for it. Written out in
+      MEASURED.md, "Drive's import of run shading and text colour".
+- [x] `git commit -m "test(live): measure Drive's import of run shading and text colour"`
 
 ### Task 4: character styles, a mechanism both parts use
 

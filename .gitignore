@@ -24,9 +24,11 @@ bin/
 # a file re-included out of it.
 go/internal/live/testdata/*
 
-# The exception: M18's footnote import probe uploads this, and it is the built
-# 04-minimal.md with one Word footnote added by hand. No real document is in it.
+# The exceptions: M18's two import probes upload these, and each is the built
+# 04-minimal.md with one thing added by hand, a Word footnote and eight runs
+# carrying the mark colours. No real document is in either.
 !go/internal/live/testdata/footnote-probe.docx
+!go/internal/live/testdata/mark-probe.docx
 
 # A `go build` run from inside go/cmd/gdoc leaves the binary beside the source.
 # `bin/` above does not cover that path, and one got committed once.

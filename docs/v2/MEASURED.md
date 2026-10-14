@@ -492,6 +492,69 @@ the Docs API, whether a suggestion can be made inside one, and whether a
 comment can be anchored to one. The first is BLOCKED-BY-API's question, and the
 second is `docs/backlog/`'s.
 
+## Drive's import of run shading and text colour
+
+Measured 2026-10-14 by `TestLiveMarkImportProbe`
+(`go/internal/live/markprobe_test.go`), one document uploaded into the test
+folder from `go/internal/live/testdata/mark-probe.docx` and trashed on the way
+out. The document was `139xi2N5QoSwTmSkkkzLM1M1Fgb7IK7u3JDITv7YCAy0`. The probe
+was run twice that day, on two documents, and both gave the same sixteen
+answers.
+
+The fixture is the built `04-minimal.md` with eight runs added by hand at the
+end of the first body paragraph that carries prose: `w:shd w:val="clear"
+w:color="auto" w:fill="<hex>"` for each of the six highlight hexes M18's
+specification proposes, `w:color w:val="9A9A9A"` for the pencil, and
+`w:highlight w:val="yellow"` for the control, which is what the cover's
+placeholders already carry.
+
+Each run was read twice, bare through `documents.get` with no query: once on
+the imported document, and once after one in-place restyle over the whole
+document, `restyle.TabRequests` then `restyle.Apply` at `LevelInPlace`, which
+is the run a person's `gdoc restyle` makes.
+
+This is M18's gate for Part B. Recheck before anything else rests on a mark's
+colour reaching a document.
+
+| Run | Sent | After the import | After one in-place restyle |
+|---|---|---|---|
+| RED | shading #FF6B6B | background #FF6B6B | background #FF6B6B |
+| ORANGE | shading #FFB85C | background #FFB85C | background #FFB85C |
+| YELLOW | shading #FFD500 | background #FFD500 | background #FFD500 |
+| GREEN | shading #3DD67A | background #3DD67A | background #3DD67A |
+| BLUE | shading #5DB3FF | background #5DB3FF | background #5DB3FF |
+| PURPLE | shading #BA92FF | background #BA92FF | background #BA92FF |
+| PENCIL | text colour #9A9A9A | foreground #9A9A9A | no foreground colour at all |
+| WORDYELLOW | Word's named yellow | background #FFFF00 | background #FFFF00 |
+
+So six of the seven marks come home exactly as they went out, and stay through
+a restyle: Drive turns `w:shd w:fill` into a run's `backgroundColor` hex for
+hex, and nothing on the styling allowlist touches a background.
+
+Two answers need reading carefully.
+
+Word's named yellow arrives as `backgroundColor` #FFFF00, which is a different
+hex from the mark yellow #FFD500. So a placeholder and a yellow mark are two
+colours in the Docs answer and `export` can tell them apart, which is what
+decision "The cover placeholders are not marks" rests on.
+
+The pencil's grey survives the import and does not survive a restyle. The
+restyle writes `foregroundColor` from `styles.normal.color`, which house.yaml
+states as #000000, over every body run; Docs then reports no colour on the run
+at all, because the run matches the named style it inherits from. That is the
+styling allowlist working as written: it can change no character, and a text
+colour is not a character. It means a pencil mark in a document somebody later
+restyles in place becomes ordinary black prose, and `export` reads it back as
+plain words.
+
+Whether that stops Part B, drops the pencil from the seven, or is a strain
+written down and accepted is Nail's decision, not this probe's. Part B is held
+at the gate until he says.
+
+What was not asked: whether the docx export brings `w:shd` back. Nothing in
+M18 reads a mark out of an export, because `export` reads the Docs answer, so
+the plan's sixteen answers are the eight runs read twice and no export row.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

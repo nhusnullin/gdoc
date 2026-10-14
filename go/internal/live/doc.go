@@ -188,6 +188,18 @@
 //     Like the other probes it fails on a read or an export that failed and
 //     on nothing else. Measured 2026-10-14, all three yes, MEASURED.md
 //     "Drive's import of a Word footnote".
+//   - TestLiveMarkImportProbe, M18's, and the gate Part B of that milestone
+//     rests on. It uploads testdata/mark-probe.docx, the built 04-minimal.md
+//     with eight runs added by hand, one per mark colour plus Word's named
+//     yellow as the control, and prints the background and the foreground
+//     Docs reports for each: once on the imported document, and once after
+//     one in-place restyle over it. One document, trashed. Like the other
+//     probes it fails on an upload, a read or a restyle that failed and on
+//     nothing else. Measured 2026-10-14: the six highlight hexes come back
+//     hex for hex and survive the restyle, the named yellow arrives as
+//     #FFFF00, and the pencil's #9A9A9A survives the import and is cleared by
+//     the restyle, which writes the house body colour over every run.
+//     MEASURED.md "Drive's import of run shading and text colour".
 //
 // Copied, and the original never written to:
 //
@@ -240,7 +252,7 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Three tests here ask for no network at all
+// # Four tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -258,4 +270,9 @@
 // The probe uploads a file on this disk rather than rendering one, so a
 // fixture that lost its footnotes part, its relationship or its content type
 // row would otherwise measure nothing and report that Drive dropped the note.
+//
+// TestTheMarkProbeFixtureIsADocx is the fourth, in markprobe_test.go, and it
+// is there for the same reason: a fixture that lost a run, or carries one
+// whose run properties are out of schema order, would measure nothing and
+// report that Drive dropped the colour.
 package live
