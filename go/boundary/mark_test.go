@@ -16,9 +16,9 @@ import (
 
 // markPages are the pages a colleague reads outside the code: the README that
 // GitHub and the release zip both carry, and the guide pages it links to. The
-// skills under skills/ are deliberately absent: they still tell a session to
-// type the robot mark, because a skill that stops doing so is refused by the
-// release before this one, and they move in the tag sitting instead.
+// skills under skills/ are deliberately absent: they name the robot as one of
+// the three known marks a gdoc reply may open with, which is a read rule and
+// not the mark.
 var markPages = []string{"README.md", "docs/guide"}
 
 // TestNoColleaguePageNamesTheRobotAsTheMark reads those pages and fails on the

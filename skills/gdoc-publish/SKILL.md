@@ -3,7 +3,7 @@ name: gdoc-publish
 description: Use when the request names a note in the hub and a Drive folder and asks for that note in Drive as a Google Doc in the Altery house style. Reads the note's front matter, builds it, uploads it into the one folder the request named, and reads back what came out.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive. An SVG picture is rendered to PNG on this machine, by svg2png.js on macOS and by Chrome or librsvg elsewhere.
 metadata:
-  needs: v2.4.0
+  needs: v2.11.0
 ---
 
 # Publish a note as a Google Doc
@@ -26,11 +26,13 @@ setting somebody tidies away.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help
+$GDOC help --json
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+Every `help` call passes `--json`, and one that prints no object is a failed
+call.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
@@ -69,7 +71,7 @@ Nothing here runs git. Not to commit, not to check whether the note is dirty.
 Before the first call of a command in this session, run:
 
 ```bash
-$GDOC help <command>
+$GDOC help <command> --json
 ```
 
 It prints the words that command takes, every flag with one sentence saying
@@ -211,7 +213,7 @@ changes.
 
 ## Step 2: Publish
 
-Run `$GDOC help publish`, then build the call from what it printed: the note,
+Run `$GDOC help publish --json`, then build the call from what it printed: the note,
 and the folder you named in this request.
 
 The folder is the one door this run has. gdoc is handed the folder and learns

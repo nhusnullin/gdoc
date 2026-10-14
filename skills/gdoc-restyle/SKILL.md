@@ -3,7 +3,7 @@ name: gdoc-restyle
 description: Use when the request gives a link to a Google Doc gdoc did not write and asks for it in the Altery house style where it stands. Surveys what the document holds first, proposes the house cover when the request asks for one, and styles the body in place.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.0.0
+  needs: v2.11.0
 ---
 
 # Restyle a document where it stands
@@ -27,11 +27,13 @@ person, and an apply that quotes the survey back. Nothing skips the survey.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help
+$GDOC help --json
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+Every `help` call passes `--json`, and one that prints no object is a failed
+call.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
@@ -70,7 +72,7 @@ Nothing here runs git. Not to commit, not to check whether a file is dirty.
 Before the first call of a command in this session, run:
 
 ```bash
-$GDOC help <command>
+$GDOC help <command> --json
 ```
 
 It prints the words that command takes, every flag with one sentence saying

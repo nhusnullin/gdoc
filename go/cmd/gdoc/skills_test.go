@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -186,6 +187,52 @@ func TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas(t *testing.T) {
 		for _, problem := range skillProblems(calls) {
 			t.Error(problem)
 		}
+	}
+}
+
+// helpWithoutJSON names every help call that does not pass --json. On a
+// terminal help draws a screen and prints no object, so a skill that leaves the
+// flag off reads nothing the day its session runs on one.
+func helpWithoutJSON(calls []skillCall) []string {
+	var problems []string
+	for _, call := range calls {
+		if len(call.words) == 0 || call.words[0] != "help" || slices.Contains(call.flags, "--json") {
+			continue
+		}
+		problems = append(problems, fmt.Sprintf("%s:%d: help without --json", call.file, call.line))
+	}
+	return problems
+}
+
+func TestEverySkillPassesJSONToHelp(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		for _, problem := range helpWithoutJSON(skillCalls(file, string(src))) {
+			t.Error(problem)
+		}
+	}
+}
+
+func TestAHelpCallWithoutJSONIsCaught(t *testing.T) {
+	// Arrange
+	src := "```bash\n$GDOC help publish\n$GDOC help --json\n```\n"
+
+	// Act
+	problems := helpWithoutJSON(skillCalls("SKILL.md", src))
+
+	// Assert
+	if len(problems) != 1 {
+		t.Fatalf("problems = %q, want the one help call without --json", problems)
 	}
 }
 
@@ -544,11 +591,11 @@ var skillWants = []struct {
 	folder string
 	needs  string
 }{
-	{"gdoc-align", "v2.8.0"},
-	{"gdoc-export", "v2.4.0"},
-	{"gdoc-publish", "v2.4.0"},
-	{"gdoc-restyle", "v2.0.0"},
-	{"gdoc-review", "v2.8.0"},
+	{"gdoc-align", "v2.11.0"},
+	{"gdoc-export", "v2.11.0"},
+	{"gdoc-publish", "v2.11.0"},
+	{"gdoc-restyle", "v2.11.0"},
+	{"gdoc-review", "v2.11.0"},
 }
 
 // skillFrontMatterValue is what the front matter says after this key, or the

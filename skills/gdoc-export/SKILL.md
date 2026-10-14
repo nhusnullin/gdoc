@@ -3,7 +3,7 @@ name: gdoc-export
 description: Use when the request gives a Google Doc link and asks for that document in the hub as a Markdown note, and no note is paired with it yet. Reads the document, writes one file per tab with its pictures beside it, and resolves gdoc's markers with you.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.4.0
+  needs: v2.11.0
 ---
 
 # Bring a document into the hub
@@ -40,11 +40,13 @@ out of the link before you decide, and say what you found.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help
+$GDOC help --json
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+Every `help` call passes `--json`, and one that prints no object is a failed
+call.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
@@ -81,7 +83,7 @@ Nothing here runs git. Not to commit, not to check whether a file is dirty.
 Before the first call of a command in this session, run:
 
 ```bash
-$GDOC help <command>
+$GDOC help <command> --json
 ```
 
 It prints the words that command takes, every flag with one sentence saying
@@ -129,7 +131,7 @@ was taken. There is no flag that replaces a file.
 
 ## Step 2: Export
 
-Run `$GDOC help export`, then build the call from what it printed: the link, and
+Run `$GDOC help export --json`, then build the call from what it printed: the link, and
 the path you agreed.
 
 ```bash

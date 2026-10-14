@@ -3,7 +3,7 @@ name: gdoc-align
 description: Use when a note in the hub and a Google Doc are paired and the request asks for the two brought back together, in either direction. Exports the document, shows the differences, merges what you agree to, and proposes the note's own changes into the document as suggestions.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.8.0
+  needs: v2.11.0
 ---
 
 # Align a note and its document
@@ -39,11 +39,13 @@ document.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help
+$GDOC help --json
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+Every `help` call passes `--json`, and one that prints no object is a failed
+call.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
@@ -80,7 +82,7 @@ Nothing here runs git. Not to commit, not to check whether the note is dirty.
 Before the first call of a command in this session, run:
 
 ```bash
-$GDOC help <command>
+$GDOC help <command> --json
 ```
 
 It prints the words that command takes, every flag with one sentence saying
@@ -145,7 +147,7 @@ suggestions the document's owner accepts.
 
 ## Step 1: Export the document
 
-Run `$GDOC help export`, then:
+Run `$GDOC help export --json`, then:
 
 ```bash
 $GDOC export <url> --out <note>.md
@@ -269,7 +271,7 @@ later. Pass it every time.
 The rules for the proposals file are `/gdoc-review`'s Step 7 and they hold here
 unchanged: `quoted` must appear exactly once, no line breaks in either field, no
 empty replacement, the quote must not run across a footnote mark or a picture, no
-markdown in `why`, and no 🤖 in `why` because gdoc puts it there. A paragraph the
+markdown in `why`, and no mark in `why` because gdoc puts it there. A paragraph the
 note lost arrives as a suggested deletion, which is a replace whose words say the
 paragraph is proposed for removal: there is no deletion-only shape. A block is
 the same: its `content` may not be empty, so a run of paragraphs the note lost

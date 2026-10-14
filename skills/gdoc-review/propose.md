@@ -60,14 +60,13 @@ one. A paragraph's text ends with its own break, so a quote copied out of `read`
 with the trailing newline still on it would take the paragraph mark with it and
 merge two paragraphs. Quote the words, not the line.
 
-`why` becomes the body of a comment anchored on the new words, opening with 🤖.
-gdoc adds that prefix, so never write it into the reason: one that already opens
-with it is refused, because the comment would arrive signed twice and every
-read-back would still pass. This is the opposite of `--body-file` for a reply,
-where the prefix belongs in the body and a body missing it is refused. A leading
-space or newline in front of the robot does not get around the refusal, and
-neither does the robot with no space after it: all three land the same doubled
-mark. A reason that is only whitespace is refused too, because the comment would
+`why` becomes the body of a comment anchored on the new words, opening with
+gdoc's mark. gdoc adds it, so never write a mark into the reason: one that
+already opens with 🤖, ⁘ or ∴ is refused, because the comment would arrive
+signed twice and every read-back would still pass. A reply is the same: gdoc
+adds the mark there too. A leading space or newline in front of the mark does
+not get around the refusal, and neither does the mark with no space after it:
+all three land the same doubled mark. A reason that is only whitespace is refused too, because the comment would
 be a bare signature. The reason
 is what the reader sees, so write it for the reader, in plain text. Markdown is
 refused before anything is sent, because a Docs thread renders asterisks and

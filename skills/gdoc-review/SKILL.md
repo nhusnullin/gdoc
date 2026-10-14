@@ -3,7 +3,7 @@ name: gdoc-review
 description: Use when the request gives a Google Doc link and asks for the marked comments in it to be handled, once or live. Reads the threads, answers ai? in the document, carries out ai! in the hub, and proposes document changes as native suggestions. The word live keeps the session watching that one document until it is stopped.
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
-  needs: v2.8.0
+  needs: v2.11.0
 ---
 
 # Google Docs review
@@ -27,11 +27,13 @@ Google suggestion with a comment explaining why. Never edit the document.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help
+$GDOC help --json
 ```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
+Every `help` call passes `--json`, and one that prints no object is a failed
+call.
 
 `help` is the first call of every session, because its object carries
 `version`, the release this binary was built from. This skill needs the version
@@ -179,9 +181,8 @@ Plain text only. Docs threads render markdown as typed, so `**`, backticks and
 `#` headings arrive broken. The binary refuses them, and that is a safeguard
 rather than permission to try.
 
-Every reply opens with `🤖 ` and nothing before it. Up to v2.10.0 the binary
-refuses a body that does not. From v2.11.0 gdoc takes the typed 🤖 off, writes
-its own mark, and warns, and that warning needs nothing from you.
+A reply is the words alone. gdoc puts its mark in front of them, so never type
+one: a typed 🤖, ⁘ or ∴ is taken off again, with a warning.
 
 Shape:
 
@@ -192,7 +193,7 @@ Shape:
 
 ```bash
 cat > /tmp/reply.txt <<'EOF'
-🤖 <the reply>
+<the reply>
 EOF
 $GDOC reply <url> <comment_id> --body-file /tmp/reply.txt
 ```
@@ -210,7 +211,7 @@ whatever the comment names. Nothing is queued, and there is no `pending.md`.
 Then receipt it in the thread, once, after the work is done and saved:
 
 ```
-🤖 Done. Added to domains/regulatory/decisions.md, the CBC section.
+Done. Added to domains/regulatory/decisions.md, the CBC section.
 ```
 
 The receipt names where the work landed, in reader language. A file path is
@@ -230,7 +231,7 @@ question, and a comment thread is not where that conversation happens.
 Answer it in the thread, once, and act on nothing:
 
 ```
-🤖 An export starts from a session by name, never from a comment. Ask a session:
+An export starts from a session by name, never from a comment. Ask a session:
 "Bring this into the hub", with this document's link.
 ```
 
@@ -244,7 +245,7 @@ When the marked comment was written by somebody other than the account gdoc is
 signed in as, the receipt names them:
 
 ```
-🤖 Done, asked by William Mejia. Added to domains/regulatory/decisions.md.
+Done, asked by William Mejia. Added to domains/regulatory/decisions.md.
 ```
 
 The document already shows who wrote the comment. Saying it in the receipt puts
@@ -312,10 +313,10 @@ now visible to everyone on the document.
 
 ```
 --- posted to "reviewed annually" ---
-🤖 <the reply, exactly as sent>
+<the reply, exactly as it went out>
 
 --- comment on the proposal "reviewed every six months" ---
-🤖 <the body, exactly as sent>
+<the body, exactly as it went out>
 ```
 
 Say what was cut from a draft and why, which threads the session stopped on and

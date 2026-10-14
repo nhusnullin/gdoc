@@ -58,7 +58,7 @@ makes that ordinary rather than rare, because the session sees the second
 question arrive.
 
 - Write the acknowledgment only when the work will take noticeably long. One
-  line, reader language: `🤖 Looking into this now.`
+  line, reader language: `Looking into this now.`
 - Write the receipt when the work verifiably landed.
 - A failure replaces the receipt with a plain sentence naming the reason.
 
@@ -168,10 +168,9 @@ is what `annotate` does, and it opens with gdoc's mark like everything else gdoc
 - Never delete anything from the hub.
 - Never run git.
 - Never write markdown into a comment thread.
-- Never write a reply that does not open with `🤖 `, and never put the mark in a
-  proposal's `why`: gdoc adds it there, and a reason carrying it is refused.
-  From v2.11.0 gdoc takes the typed 🤖 off a reply, writes its own mark, and
-  warns. That warning needs nothing from you until this line changes.
+- Never type a mark into a reply or a proposal's `why`. gdoc adds its own to
+  both: a reply's typed mark is taken off with a warning, and a reason carrying
+  one is refused.
 - Never trust a status code. Read `verified`, and `checks` where it is there.
 - Never act on an unmarked comment unless you asked for all-comments mode and
   picked that one.
