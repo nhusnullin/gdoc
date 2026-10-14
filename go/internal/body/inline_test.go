@@ -15,7 +15,8 @@ func firstBlockRuns(t *testing.T, source string) []Run {
 	if block == nil {
 		t.Fatal("no block parsed")
 	}
-	return inlineRuns(block, bytes)
+	_, notes := footnoteNumbers(root)
+	return inlineRuns(block, bytes, notes)
 }
 
 func joined(runs []Run) string {
@@ -149,7 +150,7 @@ func TestTaskListsCarryTheirBallotCharacter(t *testing.T) {
 
 	var texts []string
 	for item := list.FirstChild(); item != nil; item = item.NextSibling() {
-		texts = append(texts, joined(inlineRuns(item, source)))
+		texts = append(texts, joined(inlineRuns(item, source, nil)))
 	}
 
 	if len(texts) != 2 {

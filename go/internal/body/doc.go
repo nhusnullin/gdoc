@@ -119,17 +119,21 @@
 // # What the walker will not render is a warning naming the line, never a
 // silent drop
 //
-// Fenced and indented code blocks, blocks of HTML, inline HTML, footnotes, and
-// the list marker an item holding none of those can carry. Code blocks stay out
-// of the house style, which is Nail's decision, and a note carrying one has to
-// say so on the envelope. A picture inside a list item, a block quote or a
-// table cell is the same answer: the house style puts a figure on a centred
-// line of its own, which it cannot be there. All three used to collect the
-// picture and throw it away, so a bullet naming one published with no picture,
-// no warning and an image count of nought, and inline HTML in a cell or a quote
-// was dropped the same way. TestACodeBlockWarnsAndIsLeftOut,
+// Fenced and indented code blocks, blocks of HTML, inline HTML, and the list
+// marker an item holding none of those can carry. Code blocks stay out of the
+// house style, which is Nail's decision, and a note carrying one has to say so
+// on the envelope. A picture inside a list item, a block quote or a table cell
+// is the same answer: the house style puts a figure on a centred line of its
+// own, which it cannot be there. All three used to collect the picture and
+// throw it away, so a bullet naming one published with no picture, no warning
+// and an image count of nought, and inline HTML in a cell or a quote was
+// dropped the same way. TestACodeBlockWarnsAndIsLeftOut,
 // TestInlineHTMLWarnsAndIsLeftOut, TestInlineHTMLInATableCellOrAQuoteWarnsToo
 // and TestAPictureTheHouseStyleCannotPlaceIsNamed are the pins.
+//
+// A footnote is no longer one of them: it is set in the document, and what the
+// house style cannot set inside one is the warning instead. The section below
+// on footnotes holds the rules and its pins.
 //
 // A heading that names nothing but a picture is not one of those: it emits no
 // heading at all, takes no number and no contents entry, because it is a
@@ -166,13 +170,21 @@
 // the footnote extension parses and what internal/view already prints: a marker
 // in the prose and the definitions after a "---" line. A reference becomes a
 // run carrying its number and internal/render writes the notes into
-// word/footnotes.xml, numbered in first-reference order, which is Word's own
-// order whatever order the definitions were written in. Nothing is dropped and
-// nothing is warned about for a note that lines up (DECISIONS.md, 2026-10-14).
-// TestAFootnoteReferenceCarriesItsNumber,
+// word/footnotes.xml, numbered in the order a reader meets the mark, which is
+// Word's own order whatever order the definitions were written in. Nothing is
+// dropped and nothing is warned about for a note that lines up (DECISIONS.md,
+// 2026-10-14). TestAFootnoteReferenceCarriesItsNumber,
 // TestAFootnoteBecomesAFootnoteTextParagraph and
 // TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder are the pins, with
-// TestAFootnoteRunSurvivesMerge over the run, whose text is empty.
+// TestAFootnoteRunSurvivesMerge over the run, whose text is empty and which
+// merge must keep, and TestTheBodyCarriesAFootnoteReferenceRun over the
+// w:footnoteReference the paragraph gets.
+//
+// The number is the mark's position in that order and never
+// east.FootnoteLink.Index, which is the definition's: goldmark gives both
+// marks of a label written twice the same Index, and each mark is its own
+// note. So the number cannot be read off a node and is counted in one pre-walk
+// before the blocks, the way the heading anchors are.
 //
 // One label referenced twice is two notes carrying one text, because Word and
 // Docs hold one note per mark and there is no second shape to write.
@@ -190,12 +202,38 @@
 // TestADefinitionNobodyReferencesIsRefusedByLine and
 // TestAFootnoteMarkInsideAHeadingIsRefusedByLine are the pins.
 //
+// The scan skips a fenced code block and an inline code span, because nothing
+// inside either is markdown: goldmark reads no mark in a span, a code block is
+// left out of the document whole, and a note explaining a regular expression
+// writes "[^abc]" in a span. Read as a mark, that refused a note nothing was
+// wrong with. TestAFootnoteInsideACodeBlockIsNotAFootnote is the pin.
+//
+// A footnote mark inside a table cell is refused as well. The spec carries
+// none, and a cell's paragraph has no footnotes part to write into, so the note
+// would be numbered in the body and written nowhere.
+// TestAFootnoteReferenceInATableCellIsRefusedByLine is the pin.
+//
 // Inside a footnote, paragraphs with inline marks only. A list, a table, a
 // picture, a code block or a heading there is warned about by line and left
 // out, the way a picture the house style cannot place is: a note under the page
 // is a sentence, and the house style has no geometry for a table in one.
-// TestAListInsideAFootnoteWarnsAndIsLeftOut is the pin, with the same shape for
-// the other four.
+// TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut is the pin, and
+// it asks all five.
+//
+// A link inside a footnote is its words. A link is a relationship in
+// word/_rels/document.xml.rels, and the footnotes part names no relationships
+// at all, so the words stay and the link goes, named by line like the rest. A
+// relationships part of its own is a later entry, for citations that need a
+// live address. TestALinkInsideAFootnoteIsWarnedAndPrintedAsItsWords is the
+// pin.
+//
+// A footnote mark inside a definition is the same answer: Word has one level of
+// note and no second, and the numbers are the prose's reading order, so a mark
+// there takes no number and is named rather than dropped in silence.
+// TestAFootnoteInsideAFootnoteIsWarnedAndLeftOut is the pin. Because such a
+// mark makes no note, it does not answer for a definition either: a definition
+// marked only from inside another one is refused the way an unmarked one is.
+// TestADefinitionMarkedOnlyFromInsideAnotherIsRefusedByLine is the pin.
 //
 // Because a heading inside a footnote is left out, the two walks that run
 // before the blocks skip it as well: it is not a heading of this document, it

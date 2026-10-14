@@ -288,6 +288,20 @@ func (r *renderer) align(a string) string {
 // jump that lands nowhere is worse than no jump.
 func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 	for _, run := range runs {
+		// A footnote mark is a run with no text, so it is written before the
+		// guard that drops one: what it says is the number, and Word prints
+		// that from word/footnotes.xml.
+		if run.Footnote > 0 {
+			o := base
+			o.Style = footnoteRefStyle
+			o.VertAlign = vertAlignSuperscript
+			mark := sub(parent, "w:r")
+			if rPr := runProps(o); rPr != nil {
+				mark.AddChild(rPr)
+			}
+			sub(mark, "w:footnoteReference", "w:id", strconv.Itoa(run.Footnote))
+			continue
+		}
 		if run.Text == "" {
 			continue
 		}
@@ -430,6 +444,31 @@ func (r *renderer) listItem(runs []Run, numID string, level int, ordered bool) *
 		Mark:      &mark,
 	})
 	r.addRuns(p, runs, r.bodyRun())
+	return p
+}
+
+// footnoteParagraph is one paragraph of a note under the page: the house's
+// footnote_text style, which internal/render writes, and nothing stated over
+// it, because the style is where the size and the spacing of a note live.
+//
+// first says whether this is the note's opening paragraph, which carries
+// Word's own reference mark, w:footnoteRef, in the same character style the
+// mark in the prose names. Only the first: a second one in the same note
+// prints the number twice.
+func (r *renderer) footnoteParagraph(runs []Run, first bool) *etree.Element {
+	p := r.para(paraOpts{Style: footnoteTextStyle})
+	if first {
+		mark := sub(p, "w:r")
+		if rPr := runProps(runOpts{Style: footnoteRefStyle, VertAlign: vertAlignSuperscript}); rPr != nil {
+			mark.AddChild(rPr)
+		}
+		sub(mark, "w:footnoteRef")
+		// The space between the number and the note's first word. Word's own
+		// template writes it as a run of its own, and a note whose text opens
+		// hard against its number reads as one word.
+		textRun(p, " ", runOpts{})
+	}
+	r.addRuns(p, runs, runOpts{})
 	return p
 }
 

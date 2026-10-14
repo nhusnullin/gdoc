@@ -37,6 +37,11 @@ type Run struct {
 	// otherwise. The destination becomes a package relationship, so the reader
 	// can follow it.
 	Link string
+	// Footnote is the number the note this run marks takes, 1-based and
+	// counted in reading order, or 0 for a run that marks none. Such a run
+	// carries no text: the number on the page is Word's to print from
+	// word/footnotes.xml, and the run is only where the mark sits.
+	Footnote int
 }
 
 type marks struct {
@@ -57,13 +62,18 @@ type ImageRef struct {
 // inlineRuns flattens an inline subtree. Images are skipped: a caller that
 // wants them asks collectImages for them, so nothing depends on where in the
 // tree they were found.
-func inlineRuns(node ast.Node, source []byte) []Run {
+//
+// notes is the number each footnote mark in the note takes, which footnoteNumbers
+// read off the whole tree before the blocks were walked: the number is the
+// mark's position in reading order, and no node knows its own. A caller with no
+// footnotes to place, or one asking what a heading reads as, passes nil.
+func inlineRuns(node ast.Node, source []byte, notes map[ast.Node]int) []Run {
 	var out []Run
-	appendInline(&out, node, source, marks{})
+	appendInline(&out, node, source, marks{}, notes)
 	return merge(out)
 }
 
-func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
+func appendInline(out *[]Run, node ast.Node, source []byte, m marks, notes map[ast.Node]int) {
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 		switch typed := child.(type) {
 		case *ast.Text:
@@ -98,15 +108,15 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 			} else {
 				next.italic = true
 			}
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, notes)
 		case *Highlight:
 			next := m
 			next.highlight = "yellow"
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, notes)
 		case *east.Strikethrough:
 			next := m
 			next.strike = true
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, notes)
 		case *east.TaskCheckBox:
 			// The reference renderer takes these from pandoc, which writes the
 			// ballot characters into the text rather than marking the item.
@@ -122,7 +132,7 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 			if dest := string(typed.Destination); !isHubPath(dest) {
 				next.link = dest
 			}
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, notes)
 		case *ast.AutoLink:
 			label := string(typed.URL(source))
 			// goldmark puts the mailto: scheme on an email autolink in its
@@ -138,10 +148,21 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 			}
 			*out = append(*out, Run{Text: label, Bold: m.bold, Italic: m.italic,
 				Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: target})
-		case *east.FootnoteLink, *east.FootnoteBacklink:
-			// The reference to a footnote the walker does not render. The
-			// warning is on the footnote itself, where the author's own line
-			// is, so the marker leaves no half of a footnote behind here.
+		case *east.FootnoteLink:
+			// The mark in the prose. It is a run of its own carrying the
+			// number and no text, because the number on the page is Word's to
+			// print. A mark the pre-walk gave no number is one inside a
+			// definition, which takes no note of its own: footnoteRuns names
+			// it and nothing is written here.
+			if number := notes[typed]; number > 0 {
+				*out = append(*out, Run{Footnote: number, Bold: m.bold,
+					Italic: m.italic, Strike: m.strike, Mono: m.mono,
+					Highlight: m.highlight, Link: m.link})
+			}
+			continue
+		case *east.FootnoteBacklink:
+			// goldmark's own jump back up to the mark, which is for HTML and
+			// says nothing in a document.
 			continue
 		case *ast.Image:
 			// Handled by collectImages. Its alt text is not rendered here,
@@ -151,7 +172,7 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 		case *ast.RawHTML, *ast.HTMLBlock:
 			continue
 		default:
-			appendInline(out, child, source, m)
+			appendInline(out, child, source, m, notes)
 		}
 	}
 }
@@ -170,15 +191,21 @@ func nodeText(node ast.Node, source []byte) string {
 // merge joins adjacent runs that carry the same marks. goldmark splits text at
 // every syntactic boundary, and one w:r per word would bloat the document
 // without changing a pixel.
+//
+// A footnote mark joins nothing and is never dropped: it is a run with no text
+// at all, and the number is what it says.
 func merge(runs []Run) []Run {
 	out := runs[:0:0]
 	for _, run := range runs {
-		if run.Text == "" {
+		// A footnote mark is the one run with no text that is still a run:
+		// what it says is the number, and the empty-text guard would drop it.
+		if run.Text == "" && run.Footnote == 0 {
 			continue
 		}
-		if len(out) > 0 {
+		if len(out) > 0 && run.Footnote == 0 {
 			last := &out[len(out)-1]
-			if last.Bold == run.Bold && last.Italic == run.Italic &&
+			if last.Footnote == 0 &&
+				last.Bold == run.Bold && last.Italic == run.Italic &&
 				last.Strike == run.Strike && last.Mono == run.Mono &&
 				last.Highlight == run.Highlight && last.Link == run.Link {
 				last.Text += run.Text
@@ -206,7 +233,7 @@ func collectImages(node ast.Node, source []byte) []ImageRef {
 			if image, ok := child.(*ast.Image); ok {
 				found = append(found, ImageRef{
 					Target: string(image.Destination),
-					Alt:    inlineRuns(image, source),
+					Alt:    inlineRuns(image, source, nil),
 				})
 				continue
 			}

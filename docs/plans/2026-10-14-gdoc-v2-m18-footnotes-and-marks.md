@@ -206,42 +206,42 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/body/body.go`
 - Test: `go/internal/body/footnote_test.go`
 
-- [ ] `TestAFootnoteReferenceCarriesItsNumber`: `Run` gains `Footnote int`,
+- [x] `TestAFootnoteReferenceCarriesItsNumber`: `Run` gains `Footnote int`,
       1-based, numbered in walk order across the note, one number per
       reference (decision 2.2 B). `east.FootnoteLink.Index` only selects
       which definition's text the note carries; it is never the number,
       because goldmark gives both references to one label the same Index.
       `appendInline` emits it; `FootnoteBacklink` stays skipped.
-- [ ] `TestALinkInsideAFootnoteIsWarnedAndPrintedAsItsWords`: `linkID`
+- [x] `TestALinkInsideAFootnoteIsWarnedAndPrintedAsItsWords`: `linkID`
       writes into `document.xml.rels`, which the footnotes part cannot
       reach, so a link in a footnote is its words, warned about by line,
       like a list in a footnote. A relationships part for footnotes is a
       later entry if citations need live links.
-- [ ] `TestAFootnoteReferenceInATableCellIsRefusedByLine`: the spec allows
+- [x] `TestAFootnoteReferenceInATableCellIsRefusedByLine`: the spec allows
       none, and `cellParagraph` has no footnotes part to write into.
-- [ ] `body/doc.go:117`, which lists footnotes among what is not rendered,
+- [x] `body/doc.go:117`, which lists footnotes among what is not rendered,
       is updated in the same commit.
-- [ ] `TestAFootnoteRunSurvivesMerge`.
-- [ ] `addRuns` writes the `FootnoteReference` style run with
+- [x] `TestAFootnoteRunSurvivesMerge`.
+- [x] `addRuns` writes the `FootnoteReference` style run with
       `w:footnoteReference w:id="N"`, before its own empty-text guard.
-- [ ] `TestAFootnoteBecomesAFootnoteTextParagraph`: the `*east.FootnoteList`
+- [x] `TestAFootnoteBecomesAFootnoteTextParagraph`: the `*east.FootnoteList`
       arm renders each note's paragraphs into
       `Result.Footnotes []Footnote{ID int; Blocks []*etree.Element}`, each
       paragraph in the `FootnoteText` style opening with a `w:footnoteRef`
       run. `Counts` gains `Footnotes`.
-- [ ] `TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder`.
-- [ ] `TestAReferenceWithNoDefinitionIsRefusedByLine`,
+- [x] `TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder`.
+- [x] `TestAReferenceWithNoDefinitionIsRefusedByLine`,
       `TestADefinitionNobodyReferencesIsRefusedByLine`,
       `TestAFootnoteMarkInsideAHeadingIsRefusedByLine`: source-line checks
       in `Render` beside the markers check.
-- [ ] `TestAFootnoteReferencedTwiceIsTwoNotesWithOneText` (decision 2.2 B).
-- [ ] `TestAListInsideAFootnoteWarnsAndIsLeftOut`, and the same shape for a
+- [x] `TestAFootnoteReferencedTwiceIsTwoNotesWithOneText` (decision 2.2 B).
+- [x] `TestAListInsideAFootnoteWarnsAndIsLeftOut`, and the same shape for a
       table, a picture, a code block and a heading.
-- [ ] `TestAHeadingInsideAFootnoteIsNoAnchor` and
+- [x] `TestAHeadingInsideAFootnoteIsNoAnchor` and
       `TestAHeadingInsideAFootnoteSetsNoHeadingDepth` still pass;
       `TestAFootnoteWarnsAndIsLeftOut` and
       `TestEveryFootnoteIsNamedByItsOwnLine` are retired.
-- [ ] `git commit -m "feat(body): footnotes render, and ones that do not line up are refused"`
+- [x] `git commit -m "feat(body): footnotes render, and ones that do not line up are refused"`
 
 ### Task 6: the footnotes part and the tenth house style
 
