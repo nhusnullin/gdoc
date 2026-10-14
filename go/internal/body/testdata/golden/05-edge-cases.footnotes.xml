@@ -1,0 +1,62 @@
+<w:footnotes>
+  <w:footnote w:id="1">
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="FootnoteText"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rStyle w:val="FootnoteReference"/>
+          <w:vertAlign w:val="superscript"/>
+        </w:rPr>
+        <w:footnoteRef/>
+      </w:r>
+      <w:r>
+        <w:t xml:space="preserve"> </w:t>
+      </w:r>
+      <w:r>
+        <w:t xml:space="preserve">A label that is a word rather than a number.</w:t>
+      </w:r>
+    </w:p>
+  </w:footnote>
+  <w:footnote w:id="2">
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="FootnoteText"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rStyle w:val="FootnoteReference"/>
+          <w:vertAlign w:val="superscript"/>
+        </w:rPr>
+        <w:footnoteRef/>
+      </w:r>
+      <w:r>
+        <w:t xml:space="preserve"> </w:t>
+      </w:r>
+      <w:r>
+        <w:t xml:space="preserve">One definition, and two notes under the page.</w:t>
+      </w:r>
+    </w:p>
+  </w:footnote>
+  <w:footnote w:id="3">
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="FootnoteText"/>
+      </w:pPr>
+      <w:r>
+        <w:rPr>
+          <w:rStyle w:val="FootnoteReference"/>
+          <w:vertAlign w:val="superscript"/>
+        </w:rPr>
+        <w:footnoteRef/>
+      </w:r>
+      <w:r>
+        <w:t xml:space="preserve"> </w:t>
+      </w:r>
+      <w:r>
+        <w:t xml:space="preserve">One definition, and two notes under the page.</w:t>
+      </w:r>
+    </w:p>
+  </w:footnote>
+</w:footnotes>

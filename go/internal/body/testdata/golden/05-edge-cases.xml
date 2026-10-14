@@ -110,6 +110,54 @@
       </w:rPr>
       <w:t xml:space="preserve">The first section called Overview. There is a second one further down carrying exactly the same heading text, which is what makes the page-number lookup interesting: matched by text alone, both would resolve to whichever comes first.</w:t>
     </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="FootnoteReference"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:vertAlign w:val="superscript"/>
+      </w:rPr>
+      <w:footnoteReference w:id="1"/>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> One label may be marked twice,</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="FootnoteReference"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:vertAlign w:val="superscript"/>
+      </w:rPr>
+      <w:footnoteReference w:id="2"/>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> and the same label again here</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="FootnoteReference"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:vertAlign w:val="superscript"/>
+      </w:rPr>
+      <w:footnoteReference w:id="3"/>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> takes a number of its own.</w:t>
+    </w:r>
   </w:p>
   <w:p>
     <w:pPr>

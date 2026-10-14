@@ -296,8 +296,10 @@ func TestAChipExportsLabelAndTarget(t *testing.T) {
 	}
 }
 
-// TestAFootnoteIsWrittenAndWarned is the footnote carried and the three things
-// it costs named, because publish refuses a note that holds one.
+// TestAFootnoteIsWrittenAndWarned is the footnote carried and the two things
+// it still costs named. The third warning went when publish stopped refusing a
+// note holding a footnote: a note built from this file carries the footnote
+// into the document it publishes, so nothing has to be resolved first.
 func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 	files, _, warnings := Project(fixture(t, "objects.json"), nil)
 	body := files[0].Body
@@ -306,7 +308,6 @@ func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 		t.Errorf("the footnote is not in the file:\n%s", body)
 	}
 	for _, want := range []string{
-		"publish refuses a note that holds a footnote",
 		"docs/backlog/suggestions-inside-footnotes.md",
 		"docs/backlog/comment-anchors-in-headers-and-footnotes.md",
 	} {
@@ -318,6 +319,13 @@ func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("no warning names %q: %v", want, warnings)
+		}
+	}
+	for _, gone := range []string{"publish refuses", "footnote reference(s)"} {
+		for _, w := range warnings {
+			if strings.Contains(w, gone) {
+				t.Errorf("a warning still says %q, and publish carries a footnote now: %q", gone, w)
+			}
 		}
 	}
 }

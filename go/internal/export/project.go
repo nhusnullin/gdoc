@@ -249,26 +249,27 @@ func ghostRanges(d *docs.Document) map[string]docs.Range {
 // becoming a note. The text is written and the notes are under the body, so
 // nothing is dropped here; what is warned about is what happens next.
 //
-// Three sentences, because there are three losses and a reader has to act on
-// each: publish refuses a note that holds one, a suggestion inside a footnote
-// arrives as plain text, and a comment anchored inside one is never marked.
+// Two sentences, because there are two losses and a reader has to act on each:
+// a suggestion inside a footnote arrives as plain text, and a comment anchored
+// inside one is never marked. The third sentence went when publish stopped
+// refusing a note that holds a footnote: a footnote now goes home and comes
+// back, so the notes are a note's own words like any other.
 func footnoteWarnings(t docs.Tab) []string {
-	n := 0
+	found := false
 	walk(t.Body, func(b docs.Block) {
 		if b.Paragraph == nil {
 			return
 		}
 		for _, r := range b.Paragraph.Runs {
 			if r.Kind == docs.KindFootnoteRef {
-				n++
+				found = true
 			}
 		}
 	})
-	if n == 0 {
+	if !found {
 		return nil
 	}
 	return []string{
-		fmt.Sprintf("this tab holds %d footnote reference(s), written as [^n] with the notes under a --- rule at the end: publish refuses a note that holds a footnote, so they have to be resolved before this file becomes one", n),
 		"a suggestion inside a footnote is written as plain text, because the read does not carry the ids there: docs/backlog/suggestions-inside-footnotes.md",
 		"a comment anchored inside a footnote, a header or a footer carries no marker in this file: docs/backlog/comment-anchors-in-headers-and-footnotes.md",
 	}

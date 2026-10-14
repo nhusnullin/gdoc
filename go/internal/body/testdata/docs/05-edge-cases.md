@@ -26,7 +26,13 @@ and the Icelandic þ all appear here: ıßłþ.
 
 The first section called Overview. There is a second one further down carrying
 exactly the same heading text, which is what makes the page-number lookup
-interesting: matched by text alone, both would resolve to whichever comes first.
+interesting: matched by text alone, both would resolve to whichever comes
+first.[^lookup] One label may be marked twice,[^twice] and the same label again
+here[^twice] takes a number of its own.
+
+[^lookup]: A label that is a word rather than a number.
+
+[^twice]: One definition, and two notes under the page.
 
 ### A table with an empty cell and a very long token
 

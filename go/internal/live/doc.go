@@ -275,4 +275,11 @@
 // is there for the same reason: a fixture that lost a run, or carries one
 // whose run properties are out of schema order, would measure nothing and
 // report that Drive dropped the colour.
+//
+// TestTheFootnoteRuleNumbersTheNotesTheWayTheDocumentWill and
+// TestARoundTripOverAFootnoteLeavesNothingUnnamed are the fifth and the sixth,
+// in footnote_roundtrip_test.go. The round trip's footnotes rule renumbers the
+// note's own labels, which is a reading of a note rather than a question for
+// Drive, so it is pinned over the two notes that hold the shapes before any
+// live run spends a document on it.
 package live

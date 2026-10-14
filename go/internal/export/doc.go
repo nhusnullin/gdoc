@@ -154,11 +154,15 @@
 // when it makes the file a note.
 //
 // A footnote is written as read writes it, "[^1]" with the notes under a rule
-// at the end, and three warnings ride with it: publish refuses a note holding
-// one, a suggestion inside a footnote arrives as plain text
-// (docs/backlog/suggestions-inside-footnotes.md), and a comment anchored inside
-// one carries no marker (docs/backlog/comment-anchors-in-headers-and-footnotes.md).
-// TestAFootnoteIsWrittenAndWarned is the pin.
+// at the end, and two warnings ride with it: a suggestion inside a footnote
+// arrives as plain text (docs/backlog/suggestions-inside-footnotes.md), and a
+// comment anchored inside one carries no marker
+// (docs/backlog/comment-anchors-in-headers-and-footnotes.md). The file is
+// publishable as it stands: internal/body carries a footnote into the docx and
+// Drive imports it, so the note this file becomes puts its notes back under the
+// page. What it does not put back is the author's own label: a note written
+// twice over is two notes here, numbered, and a round trip renumbers rather
+// than relabels. TestAFootnoteIsWrittenAndWarned is the pin.
 //
 // # The pictures are paired by order, and by nothing else
 //

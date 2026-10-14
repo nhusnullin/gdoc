@@ -23,6 +23,7 @@ package live
 import (
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -55,7 +56,8 @@ type knownDifference struct {
 }
 
 var (
-	footnoteDefinition = regexp.MustCompile(`^\[\^[^\]]+\]:`)
+	footnoteDefinition = regexp.MustCompile(`^\[\^([^\]]+)\]:`)
+	footnoteMark       = regexp.MustCompile(`\[\^[^\]]+\]`)
 	imageLink          = regexp.MustCompile(`!\[([^\]]*)\]\(([^)]*)\)`)
 	relativeLink       = regexp.MustCompile(`\[([^\]]*)\]\(([^)]*)\)`)
 	houseNumber        = regexp.MustCompile(`^(#{1,6} )[0-9]+(?:\.[0-9]+)*-(\S)`)
@@ -64,10 +66,11 @@ var (
 	blockStarter       = regexp.MustCompile(`^(#{1,6} |[-*+] |[0-9]+[.)] |> |\||` + "```" + `|---$|\*\*\*$)`)
 )
 
-// knownDifferences is the list, and alt is the alt text of every picture the
-// note links, because the caption the generator writes under a figure is a
-// paragraph of the document and those are the words it holds.
-func knownDifferences(alt map[string]bool) []knownDifference {
+// knownDifferences is the list. alt is the alt text of every picture the note
+// links, because the caption the generator writes under a figure is a
+// paragraph of the document and those are the words it holds, and notes is the
+// note's own footnote labels numbered the way the document numbered them.
+func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDifference {
 	return []knownDifference{{
 		Name:   "front matter and the prelude",
 		Reason: "the note's own keys become the cover, the three house tables and the contents list, and the export strips every one of them as the prelude",
@@ -83,9 +86,9 @@ func knownDifferences(alt map[string]bool) []knownDifference {
 		Added:  func(s string) bool { return s == "[rule]" },
 	}, {
 		Name:   "footnotes",
-		Reason: "read writes every footnote under a --- rule at the end whatever the note did with it, so the definition moves and the rule is a line the note never had",
-		Gone:   func(l noteLine) bool { return footnoteDefinition.MatchString(l.Text) },
-		Added:  func(s string) bool { return s == "---" || footnoteDefinition.MatchString(s) },
+		Reason: "the numbers are the document's: a label the note wrote is the number Word gave the mark it carried, read writes every note under a --- rule at the end whatever the note did with it, and a label the note marked twice is two notes under the page, so the second definition is a line the note never had",
+		Note:   notes.numbered,
+		Added:  func(s string) bool { return s == "---" || notes.repeated(s) },
 	}, {
 		Name:   "pictures",
 		Reason: "the bytes come back from the docx export as a new file under assets/, so the file the export links is not the file the note links, and the caption the generator wrote under a figure is a paragraph of its own",
@@ -134,6 +137,97 @@ func knownDifferences(alt map[string]bool) []knownDifference {
 	}}
 }
 
+// footnoteNumbering is the note's own footnote labels read as the numbers the
+// document gives them. It cannot be a per-line function, because a line does
+// not know how many marks stood before it in the note, and the number a mark
+// takes is its place in the whole note's reading order. So the whole note is
+// read once and the two answers the footnotes difference needs are written
+// down: how a line of the note has to be read, and which definition lines of
+// the file the note never had.
+//
+// One shape is out of its reach, and no fixture holds it: a mark on an
+// indented continuation line of another definition. internal/body warns about
+// such a mark and leaves it out, so the document has no note for it, and this
+// reading would number it.
+type footnoteNumbering struct {
+	// lines is a line of the note as the comparison reads it, mapped to the
+	// same line with every label replaced by its number.
+	lines map[string]string
+	// extra is every number that belongs to a second or later mark of one
+	// label. The note wrote one definition and the document holds a note per
+	// mark, so read writes a definition line for each of them.
+	extra map[string]bool
+}
+
+// numbered is the Note rule: the line as the document holds it, or the line
+// itself where no mark stood in it.
+func (f footnoteNumbering) numbered(s string) string {
+	if out, ok := f.lines[s]; ok {
+		return out
+	}
+	return s
+}
+
+// repeated is the Added rule: a definition line of the file whose number is a
+// second mark of a label the note defined once.
+func (f footnoteNumbering) repeated(s string) bool {
+	m := footnoteDefinition.FindStringSubmatch(s)
+	return m != nil && f.extra[m[1]]
+}
+
+// numberFootnotes reads the note once: every mark in the prose takes the next
+// number, in the order the marks appear, which is the order Word numbers them
+// in and the order read prints them back in. A definition then takes the first
+// number its own label was given, and the rest of that label's numbers are
+// definition lines the file holds and the note never wrote.
+func numberFootnotes(src []byte) footnoteNumbering {
+	out := footnoteNumbering{lines: map[string]string{}, extra: map[string]bool{}}
+	numbers := map[string][]string{}
+	var definitions []string
+	n := 0
+
+	for _, l := range noteLines(src) {
+		if l.FrontMatter || l.Code {
+			continue
+		}
+		if footnoteDefinition.MatchString(l.Text) {
+			definitions = append(definitions, l.Text)
+			continue
+		}
+		if !footnoteMark.MatchString(l.Text) {
+			continue
+		}
+		line := footnoteMark.ReplaceAllStringFunc(l.Text, func(mark string) string {
+			label := mark[2 : len(mark)-1]
+			n++
+			at := strconv.Itoa(n)
+			numbers[label] = append(numbers[label], at)
+			return "[^" + at + "]"
+		})
+		if _, seen := out.lines[l.Text]; !seen {
+			out.lines[l.Text] = line
+		}
+	}
+
+	for _, text := range definitions {
+		label := footnoteDefinition.FindStringSubmatch(text)[1]
+		took := numbers[label]
+		if len(took) == 0 {
+			// internal/body refuses a definition nothing marks, so the note
+			// this runs over cannot hold one. Left alone rather than guessed
+			// at, so a note that somehow holds one shows up as a difference.
+			continue
+		}
+		if _, seen := out.lines[text]; !seen {
+			out.lines[text] = footnoteDefinition.ReplaceAllString(text, "[^"+took[0]+"]:")
+		}
+		for _, at := range took[1:] {
+			out.extra[at] = true
+		}
+	}
+	return out
+}
+
 // difference is one line the comparison could not match, with the side it came
 // from, and named is one entry of the list with how many lines it covered.
 type (
@@ -161,7 +255,7 @@ func roundTrip(note []byte, body string) roundTripReport {
 			alt[s] = true
 		}
 	}
-	list := knownDifferences(alt)
+	list := knownDifferences(alt, numberFootnotes(note))
 	counts := map[string]int{}
 
 	// The file's lines first, each read back through every Export rule, so the

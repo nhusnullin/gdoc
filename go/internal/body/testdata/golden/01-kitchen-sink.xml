@@ -176,6 +176,48 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
+      <w:t xml:space="preserve">Two of the claims above are cited under the page rather than argued in the sentence,</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="FootnoteReference"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:vertAlign w:val="superscript"/>
+      </w:rPr>
+      <w:footnoteReference w:id="1"/>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> which is where a citation costs a reader least.</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="FootnoteReference"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:vertAlign w:val="superscript"/>
+      </w:rPr>
+      <w:footnoteReference w:id="2"/>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="240"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
       <w:t xml:space="preserve">Punctuation matters too: “double quotes”, ‘single quotes’, an em dash — like this, an en dash – like that, and an ellipsis… all of which a smart-quotes pass rewrites.</w:t>
     </w:r>
   </w:p>

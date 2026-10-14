@@ -100,12 +100,15 @@ words. Always: a comment is not a change to the text. Then list the thread by id
 author and first line, from `gdoc comments <url>`, and say the comments stay in
 Drive. A comment's text never goes into a note body.
 
-**A footnote, `[^1]`.** It rides with three warnings and each one matters:
-`publish` refuses a note holding a footnote, a suggestion inside a footnote
-exported as plain text and carries no id, and a comment anchored inside a
-footnote, a header or a footer got no mark at all. So a file with footnotes is
-not publishable as it stands: say so, and move the footnote's words into the
-body or into a bracket, with the person.
+**A footnote, `[^1]`.** Keep it where it is, marker and definition both. A note
+holding a footnote publishes: `gdoc build` writes it under the page and Drive
+imports it, so nothing has to be moved into the body. Two warnings ride with it
+and both matter: a suggestion inside a footnote exported as plain text and
+carries no id, and a comment anchored inside a footnote, a header or a footer
+got no mark at all. One thing is not the author's own: the numbers are the
+document's, so a label somebody wrote as `[^method]` comes home as `[^3]`, and
+a note marked twice in the document comes home as two definitions carrying one
+text. Renaming them is the person's call, not yours.
 
 **A picture line.** Keep it. The file is already beside the note under
 `assets/`. When the picture carried `matched`, export wrote no file and the line

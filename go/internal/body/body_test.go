@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -52,6 +53,28 @@ func serialise(t *testing.T, blocks []*etree.Element) string {
 	var buf bytes.Buffer
 	if _, err := doc.WriteTo(&buf); err != nil {
 		t.Fatalf("serialise: %v", err)
+	}
+	return buf.String()
+}
+
+// serialiseNotes serialises the notes under the page the way word/footnotes.xml
+// holds them, so a golden reads as the part a person would open: one
+// w:footnote per mark, carrying the number internal/body gave it.
+func serialiseNotes(t *testing.T, notes []Footnote) string {
+	t.Helper()
+	doc := etree.NewDocument()
+	root := doc.CreateElement("w:footnotes")
+	for _, note := range notes {
+		el := root.CreateElement("w:footnote")
+		el.CreateAttr("w:id", strconv.Itoa(note.ID))
+		for _, block := range note.Blocks {
+			el.AddChild(block.Copy())
+		}
+	}
+	doc.Indent(2)
+	var buf bytes.Buffer
+	if _, err := doc.WriteTo(&buf); err != nil {
+		t.Fatalf("serialise the notes: %v", err)
 	}
 	return buf.String()
 }
@@ -136,10 +159,12 @@ func TestTheSixDocumentsRenderToTheirGoldens(t *testing.T) {
 			got := serialise(t, out.Blocks)
 			golden := filepath.Join("testdata/golden",
 				strings.TrimSuffix(filepath.Base(name), ".md")+".xml")
+			notes := strings.TrimSuffix(golden, ".xml") + ".footnotes.xml"
 			if *update {
 				if err := os.WriteFile(golden, []byte(got), 0o644); err != nil {
 					t.Fatalf("write %s: %v", golden, err)
 				}
+				compareNotes(t, notes, out.Footnotes)
 				return
 			}
 			want, err := os.ReadFile(golden)
@@ -150,7 +175,41 @@ func TestTheSixDocumentsRenderToTheirGoldens(t *testing.T) {
 				t.Errorf("%s does not match %s. Run go test -update and read the diff",
 					name, golden)
 			}
+			compareNotes(t, notes, out.Footnotes)
 		})
+	}
+}
+
+// compareNotes is the notes under the page against their own golden, where the
+// note has one. A note with no footnote has no file, so a footnote added to a
+// fixture with no golden written for it fails rather than passing in silence.
+func compareNotes(t *testing.T, golden string, notes []Footnote) {
+	t.Helper()
+	if len(notes) == 0 {
+		if *update {
+			if err := os.Remove(golden); err != nil && !os.IsNotExist(err) {
+				t.Fatalf("remove %s: %v", golden, err)
+			}
+			return
+		}
+		if _, err := os.Stat(golden); err == nil {
+			t.Errorf("%s is there and the note renders no footnote", golden)
+		}
+		return
+	}
+	got := serialiseNotes(t, notes)
+	if *update {
+		if err := os.WriteFile(golden, []byte(got), 0o644); err != nil {
+			t.Fatalf("write %s: %v", golden, err)
+		}
+		return
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("read %s: %v (run go test -update to write it)", golden, err)
+	}
+	if got != string(want) {
+		t.Errorf("the notes do not match %s. Run go test -update and read the diff", golden)
 	}
 }
 

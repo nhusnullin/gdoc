@@ -284,14 +284,21 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/live/roundtrip_test.go`
 - Create: `go/internal/body/testdata/golden/01-kitchen-sink.footnotes.xml`
 
-- [ ] Two footnotes in the kitchen sink, the second defined first; an edge
+- [x] Two footnotes in the kitchen sink, the second defined first; an edge
       case with a word label and one with a reference used twice.
       `TestTheSixDocumentsRenderToTheirGoldens` also compares
       `Result.Footnotes` against `<name>.footnotes.xml` where one exists.
-- [ ] `TestAFootnoteIsWrittenAndWarned` shrinks to what is still true, the
+      Both notes got one, so `05-edge-cases.footnotes.xml` was written
+      beside the kitchen sink's: three notes there, 2 and 3 carrying one
+      text. A note with no footnote must have no such file, so a footnote
+      added to a fixture with no golden written for it fails rather than
+      passing in silence.
+- [x] `TestAFootnoteIsWrittenAndWarned` shrinks to what is still true, the
       suggestion-and-comment loss inside a footnote; `footnoteWarnings`
-      loses its first sentence; the two skill pages follow.
-- [ ] `knownDifferences`'s `footnotes` entry keeps the `---` line on the
+      loses its first sentence; the two skill pages follow. The test now
+      also asserts no warning says "publish refuses" or counts the
+      references, so the sentence cannot come back unnoticed.
+- [x] `knownDifferences`'s `footnotes` entry keeps the `---` line on the
       `Added` side only and drops `Gone`. Its `Note` rule cannot be a
       per-line function, because a line does not know the order of the
       references in the whole note: `roundTrip` builds one closure over the
@@ -299,7 +306,14 @@ Checkboxes below. A task is done when its commit is on the branch.
       appearance, a label referenced twice taking two numbers, and `Added`
       excuses the second definition line that produces. The rule is tested
       offline on the edge-cases note before the live run.
-- [ ] `git commit -m "feat(export): a footnote goes home and comes back"`
+      `numberFootnotes` is the closure and `footnoteNumbering` its two
+      answers. `TestTheFootnoteRuleNumbersTheNotesTheWayTheDocumentWill`
+      states every number over both notes as a literal, and
+      `TestARoundTripOverAFootnoteLeavesNothingUnnamed` runs `roundTrip`
+      itself over one label marked twice: nothing unnamed, four lines under
+      the footnotes name. `TestLiveExportRoundTrip` is Task 13's and was
+      not run here.
+- [x] `git commit -m "feat(export): a footnote goes home and comes back"`
 
 ### Task 8: the palette in house.yaml
 
