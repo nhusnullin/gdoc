@@ -45,7 +45,7 @@ Nail, 2026-10-14, on the decision page:
 | No per-person logic anywhere, in the binary or in a skill. Who a mark is for is the author's words | all |
 | `yellow`, `green` and `purple` are authoring debts: counted on the envelope of `build` and `publish`, and the publish skill asks before a document carrying any goes to Drive. `blue`, `red`, `orange` and `pencil` are not counted: they are meant to reach the reader | cmd, skills |
 | house.yaml is the one source of the palette, keyed by the emoji. `gdoc help marks` prints the seven with their syntax, their Doc colour and their fate, and the skills read that rather than carrying a copy | cmd, skills |
-| The Doc hexes are a proposal until Task 2 measures what Drive keeps: yellow #FFD500, green #4DD94D, purple #C79BFF, blue #74C0FC, red #FF6B6B, orange #FFA94D, pencil #9A9A9A | house, live |
+| The Doc hexes are a proposal until Task 2 measures what Drive keeps: yellow #FFD500, green #3DD67A, purple #BA92FF, blue #5DB3FF, red #FF6B6B, orange #FFB85C, pencil #9A9A9A | house, live |
 | Dropped on the way: five named text colours, a per-person legend, the writer's desk names sticky, proof, flag and ink, `coin`, Hilo and every other plugin, an HTML span for pencil, a rule that colours a paragraph by its first words | none |
 
 Taken in the design pass and not contested:
