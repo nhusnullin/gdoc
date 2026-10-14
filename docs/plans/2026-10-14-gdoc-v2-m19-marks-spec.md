@@ -1,4 +1,4 @@
-# gdoc v2 Milestone 19: the marks, Obsidian's highlights and one grey. Specification
+# gdoc v2 Milestone 19: the marks, Obsidian's colours and one grey. Specification
 
 2026-10-14. Every decision below is Nail's and settled, taken on the decision
 page of the same day after a design pass by a UX designer, a typographer and a
@@ -11,8 +11,10 @@ because both touch `internal/body`'s inline walk.
 An author marks words in a note, and the mark says what a reader does with
 them. The note carries only syntax Obsidian renders by itself: a highlight,
 with one of Obsidian's six colour emoji at its start. gdoc carries the palette
-in house.yaml: what each colour is called, what it becomes in the Doc, and
-whether it is an authoring debt that must be gone before approval. gdoc never
+in house.yaml under Obsidian's own colour names: what each becomes in the
+Doc, and whether it is an authoring debt that must be gone before approval.
+No name of gdoc's own: what a colour means is Nail's, said in his notes and
+his skills, never in a key. gdoc never
 knows who a mark is for. Nail's v0.5 used three colours for three reviewers;
 the person stays in his words.
 
@@ -38,13 +40,13 @@ Nail, 2026-10-14, on the decision page:
 | Rule | Where |
 |---|---|
 | Highlights are written the way Obsidian 1.14 writes them and no other way: `==words==` for the default yellow, and `==🔴words==`, `==🟠words==`, `==🟡words==`, `==🟢words==`, `==🔵words==`, `==🟣words==` for the six colours. No Pandoc span and no HTML for a highlight | body |
-| Four colours carry a role: yellow is `sticky`, a word or figure to replace before sign-off; green is `proof`, a claim somebody confirms against a rule or a source; purple is `flag`, a question to one reviewer in the author's voice; blue is `ink`, text changed since the last version a reviewer read. Red and orange carry no role yet and keep their colour names, so a note that uses them is not refused | house |
+| The six are keyed and named as Obsidian names them: `yellow`, `red`, `orange`, `green`, `blue`, `purple`. No name of gdoc's own. Nail's own use, written on the decision page and not into the binary: yellow a word or figure to replace, green a claim to confirm, purple a question to one reviewer, blue text changed since the last version. Red and orange are carried without a meaning, so a note that uses them is not refused | house |
 | The one grey, `pencil`, is prose that stays in the document but is not the argument. Obsidian has no text colour, so pencil is written as Pandoc's bracketed span, `[words]{.pencil}`, the only span gdoc reads. In the Doc it is text colour #9A9A9A, light grey, chosen knowingly under the 4.5:1 accessibility floor. No italic | body, house |
 | No per-person logic anywhere, in the binary or in a skill. Who a mark is for is the author's words | all |
-| `sticky`, `proof` and `flag` are authoring debts: counted on the envelope of `build` and `publish`, and the publish skill asks before a document carrying any goes to Drive. `ink`, `red`, `orange` and `pencil` are not counted: they are meant to reach the reader | cmd, skills |
+| `yellow`, `green` and `purple` are authoring debts: counted on the envelope of `build` and `publish`, and the publish skill asks before a document carrying any goes to Drive. `blue`, `red`, `orange` and `pencil` are not counted: they are meant to reach the reader | cmd, skills |
 | house.yaml is the one source of the palette, keyed by the emoji. `gdoc help marks` prints the seven with their syntax, their Doc colour and their fate, and the skills read that rather than carrying a copy | cmd, skills |
-| The Doc hexes are a proposal until Task 2 measures what Drive keeps: sticky #FFD500, proof #4DD94D, flag #C79BFF, ink #74C0FC, red #FF6B6B, orange #FFA94D, pencil #9A9A9A | house, live |
-| Dropped on the way: five named text colours, a per-person legend, `coin`, Hilo and every other plugin, an HTML span for pencil, a rule that colours a paragraph by its first words | none |
+| The Doc hexes are a proposal until Task 2 measures what Drive keeps: yellow #FFD500, green #4DD94D, purple #C79BFF, blue #74C0FC, red #FF6B6B, orange #FFA94D, pencil #9A9A9A | house, live |
+| Dropped on the way: five named text colours, a per-person legend, the writer's desk names sticky, proof, flag and ink, `coin`, Hilo and every other plugin, an HTML span for pencil, a rule that colours a paragraph by its first words | none |
 
 Taken in the design pass and not contested:
 
@@ -52,10 +54,10 @@ Taken in the design pass and not contested:
 |---|---|
 | A highlight carrying anything other than one of the six emoji at its start, or an emoji anywhere else in it, is the words as written. A pencil span inside a highlight, a highlight inside a pencil span, an empty span and a span crossing a paragraph are refused by line | body |
 | A mark inside a heading is refused by line, because Word copies the run into the contents field | body |
-| In the docx each mark is a named character style, `Sticky`, `Proof`, `Flag`, `Ink`, `Red`, `Orange`, `Pencil`, so Word lists them and a reader finds every sticky with one search. Google Docs has no character styles, so after import a mark is direct formatting, and that is what export reads | render, export |
+| In the docx each mark is a named character style, `Yellow`, `Green`, `Purple`, `Blue`, `Red`, `Orange`, `Pencil`, so Word lists them and a reader finds every yellow with one search. Google Docs has no character styles, so after import a mark is direct formatting, and that is what export reads | render, export |
 | The six highlight colours are run shading with the exact hex, not Word's sixteen named highlights, which carry none of these hexes. Whether Drive imports run shading as `backgroundColor` with the hex intact is measured first; if it does not, Task 2 stops the plan | render, live |
 | `export` recognises a mark by its exact colour and writes Obsidian's syntax back, or the pencil span. A colour that is not in the palette is left as plain words and counted on the envelope by hex, because a colour gdoc did not write is a fact about the document, not a mark | export |
-| `read` is unchanged in this milestone: the words of a flag reach a reviewing session, the mark around them does not. Printing marks in the projection changes what a session quotes, and is a decision for a later entry | view |
+| `read` is unchanged in this milestone: the words of a purple question reach a reviewing session, the mark around them does not. Printing marks in the projection changes what a session quotes, and is a decision for a later entry | view |
 | `restyle` is unchanged. Whether an in-place restyle leaves run shading and run colour alone is measured in Task 2 | restyle |
 | The cover's own yellow placeholders are the prelude's and keep writing Word's named yellow. They are not marks | render |
 
@@ -76,7 +78,7 @@ cleared one, the plan stops after Task 2 and says what came back.
 - No change to `propose` and `annotate`: a quote matches words, and the words
   are the same with or without the mark around them.
 - No mark in `read`'s projection.
-- No meaning for red and orange. They render and round-trip, and that is all.
+- No meaning for any colour in the binary. All six render, round-trip and are counted or not, and that is all.
 
 ## Acceptance
 
@@ -87,7 +89,7 @@ cleared one, the plan stops after Task 2 and says what came back.
 2. A nested mark, an empty span, a mark in a heading and a span crossing a
    paragraph are each refused by line, and nothing is written.
 3. The `build` and `publish` envelopes carry `marks` with a count per name
-   for `sticky`, `proof` and `flag` only, zero included.
+   for `yellow`, `green` and `purple` only, zero included.
 4. `gdoc help marks` prints the seven, their syntax, their Doc colour and
    their fate, and `skills/gdoc-publish/SKILL.md` tells the session to run it
    and to ask before publishing a note whose debts are not zero.
