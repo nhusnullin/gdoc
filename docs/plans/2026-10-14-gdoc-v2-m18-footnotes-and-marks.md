@@ -131,6 +131,9 @@ Checkboxes below. A task is done when its commit is on the branch.
       id. `live/doc.go` names the test.
 - [ ] **If Drive dropped the footnote, Part A stops here.** Say so in the
       task log and skip Tasks 5 to 7 and the footnote halves of 12 and 13.
+      In the same commit, take the footnote text back out of Task 1's four
+      files, "thirteen parts" in CLAUDE.md included, so nothing says a part
+      exists that does not.
 - [ ] `git commit -m "test(live): measure Drive's import of a Word footnote"`
 
 ### Task 3: the measurement, Drive's import of run shading and text colour
@@ -146,15 +149,17 @@ Checkboxes below. A task is done when its commit is on the branch.
 - [ ] `TestLiveMarkImportProbe`, behind the two live variables, uploads it,
       reads it back bare, prints each run's text beside the
       `backgroundColor` and `foregroundColor` Docs reports as hex, runs one
-      in-place restyle over the document through the restyle path and reads
-      the eight again, then trashes it. It fails on a read, an upload or a
+      in-place restyle over the document the way `live/restyle_test.go` does,
+      `restyle.TabRequests` then `restyle.Apply`, and reads the eight again,
+      then trashes it. It fails on a read, an upload or a
       restyle that failed and on nothing else.
 - [ ] `TestTheMarkProbeFixtureIsADocx` runs in `make test`.
 - [ ] MEASURED.md gets the sixteen answers by hand, dated, with the document
       id. `live/doc.go` names the test.
 - [ ] **If any hex came back changed, or the restyle cleared one, Part B
       stops here.** Say what came back and skip Tasks 8 to 11 and the mark
-      halves of 12 and 13.
+      halves of 12 and 13. In the same commit, take the marks text back out
+      of Task 1's four files, so nothing says a part exists that does not.
 - [ ] `git commit -m "test(live): measure Drive's import of run shading and text colour"`
 
 ### Task 4: character styles, a mechanism both parts use
@@ -167,9 +172,16 @@ Checkboxes below. A task is done when its commit is on the branch.
 - [ ] `TestACharacterStyleIsWrittenWithItsRunProperties`: `styles.go` gains
       a writer for `w:type="character"` styles, taking an id, a name and the
       run properties it carries, with the rPr in schema order.
-- [ ] `TestARunMayNameItsCharacterStyle`: `runOpts` gains `Style`, and
-      `addRuns` writes `w:rStyle` first in the rPr.
-      `TestARunsPropertiesAreInSchemaOrder` is the pin for the order.
+- [ ] `TestARunMayNameItsCharacterStyle`: body's `runOpts` in `build.go`
+      gains `Style`, `runOpts.empty()` counts it, and `addRuns` writes
+      `w:rStyle` first in the rPr. Render's own run writer in `render/xml.go`
+      is a different copy and is not touched.
+- [ ] `TestARunsPropertiesAreInSchemaOrder` is written here, beside the
+      Quote and Table ones in `body_test.go`: `w:rStyle`, then the order
+      `runProps` writes today through `w:u`, then `w:shd`, then
+      `w:vertAlign`. The comment in `build.go` that says underline is last
+      is corrected: it is last of today's properties, and shading and
+      vertical alignment follow it in the schema.
 - [ ] `render/doc.go` names the mechanism and says the two parts use it.
 - [ ] `git commit -m "feat(render): character styles, and a run that names one"`
 
@@ -181,8 +193,20 @@ Checkboxes below. A task is done when its commit is on the branch.
 - Test: `go/internal/body/footnote_test.go`
 
 - [ ] `TestAFootnoteReferenceCarriesItsNumber`: `Run` gains `Footnote int`,
-      1-based, from `east.FootnoteLink.Index`; `appendInline` emits it;
-      `FootnoteBacklink` stays skipped.
+      1-based, numbered in walk order across the note, one number per
+      reference (decision 2.2 B). `east.FootnoteLink.Index` only selects
+      which definition's text the note carries; it is never the number,
+      because goldmark gives both references to one label the same Index.
+      `appendInline` emits it; `FootnoteBacklink` stays skipped.
+- [ ] `TestALinkInsideAFootnoteIsWarnedAndPrintedAsItsWords`: `linkID`
+      writes into `document.xml.rels`, which the footnotes part cannot
+      reach, so a link in a footnote is its words, warned about by line,
+      like a list in a footnote. A relationships part for footnotes is a
+      later entry if citations need live links.
+- [ ] `TestAFootnoteReferenceInATableCellIsRefusedByLine`: the spec allows
+      none, and `cellParagraph` has no footnotes part to write into.
+- [ ] `body/doc.go:117`, which lists footnotes among what is not rendered,
+      is updated in the same commit.
 - [ ] `TestAFootnoteRunSurvivesMerge`.
 - [ ] `addRuns` writes the `FootnoteReference` style run with
       `w:footnoteReference w:id="N"`, before its own empty-text guard.
@@ -212,9 +236,9 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/house/house.yaml`, `go/internal/house/house.go`
 - Test: `go/internal/render/footnotes_test.go`, `go/internal/house/house_test.go`
 
-- [ ] `TestTheTenStylesAreThere`: `styles.footnote_text` at 10pt,
-      single-spaced, 0 above and below, in the body face; `validateStyles`
-      counts ten.
+- [ ] `TestTheTenStylesAreThere`, renamed from `TestTheNineStylesAreThere`:
+      `styles.footnote_text` at 10pt, single-spaced, 0 above and below, in
+      the body face; `validateStyles` counts ten.
 - [ ] `TestTheFootnotesPartCarriesTheTwoSeparators`: `word/footnotes.xml` is
       always written, with the separator and continuation separator, then
       one `w:footnote` per note.
@@ -245,8 +269,13 @@ Checkboxes below. A task is done when its commit is on the branch.
       suggestion-and-comment loss inside a footnote; `footnoteWarnings`
       loses its first sentence; the two skill pages follow.
 - [ ] `knownDifferences`'s `footnotes` entry keeps the `---` line on the
-      `Added` side only, drops `Gone`, and gains a `Note` rule renumbering
-      `[^label]` to its ordinal in first-reference order.
+      `Added` side only and drops `Gone`. Its `Note` rule cannot be a
+      per-line function, because a line does not know the order of the
+      references in the whole note: `roundTrip` builds one closure over the
+      note's text that numbers every `[^label]` reference in order of
+      appearance, a label referenced twice taking two numbers, and `Added`
+      excuses the second definition line that produces. The rule is tested
+      offline on the edge-cases note before the live run.
 - [ ] `git commit -m "feat(export): a footnote goes home and comes back"`
 
 ### Task 8: the palette in house.yaml
@@ -263,8 +292,7 @@ Checkboxes below. A task is done when its commit is on the branch.
 - [ ] `TestAMarkWithAnUnknownKindIsRefused`,
       `TestAMarkWhoseColourIsNotHexIsRefused`,
       `TestTwoMarksCannotShareASyntax`: `validateMarks` in `house.go`.
-- [ ] `TestTheMarksAreTheSevenAndNoOther`, and the drift and restyle
-      packages do not read them.
+- [ ] `TestTheMarksAreTheSevenAndNoOther`.
 - [ ] `git commit -m "feat(house): the seven marks, stated once"`
 
 ### Task 9: the colour emoji on a highlight, the pencil span, and what is refused
@@ -277,7 +305,14 @@ Checkboxes below. A task is done when its commit is on the branch.
 - [ ] `TestAHighlightOpeningWithAColourEmojiCarriesItsMark`: a `*Highlight`
       whose text opens with one of the six emoji sets `Run.Mark` to that
       colour's name and drops the emoji from the words; a plain highlight is
-      `yellow`; `==🟡words==` is `yellow` too.
+      `yellow`; `==🟡words==` is `yellow` too. The emoji-to-name map is read
+      off `cfg.Marks`, Task 8's palette, because `Render` already takes
+      `cfg` and `body/doc.go` says no emoji and no hex is a constant in body.
+- [ ] `TestAMarkInATableCellIsCarried`: `cellParagraph` walks inlines
+      through the same path, so `01-kitchen-sink.md:107`'s `==to fill in==`
+      keeps working and becomes a yellow mark. The spec's "no mark in a
+      table cell" sentence under "What this milestone does not do" is
+      corrected to footnotes alone, in the same commit.
 - [ ] `TestAnEmojiElsewhereInAHighlightIsText`,
       `TestAnEmojiOutsideAHighlightIsText`.
 - [ ] `TestAPencilSpanIsARunCarryingItsMark`: a new inline parser in
@@ -329,7 +364,14 @@ Checkboxes below. A task is done when its commit is on the branch.
       `view.Options` flag export passes and read does not, a palette
       background becomes `==🟢words==` and so on, yellow as plain
       `==words==`, pencil's text colour as `[words]{.pencil}`.
-- [ ] `TestAColourOutsideThePaletteIsPlainWordsAndCounted`.
+- [ ] `TestAColourOutsideThePaletteIsPlainWordsAndCounted`: the count is
+      `marks.other` on the export envelope, a map from hex to count.
+- [ ] `TestAMarkSplitOverSeveralRunsComesHomeWhole`: Docs splits a mark that
+      carries bold or code into runs sharing one background, and export
+      joins adjacent runs of one palette colour into one mark.
+- [ ] `stripDelimiters` in `live/roundtrip_test.go` stops removing `==`, and
+      the `inline markup` entry's reason drops the highlight, because from
+      here export writes the mark syntax back and both sides must agree.
 - [ ] `TestReadPrintsNoMark`: `view.Text` without the flag is byte for byte
       what it was.
 - [ ] `markers.md` gains the rows for the six highlights and the pencil span.
@@ -345,9 +387,15 @@ Checkboxes below. A task is done when its commit is on the branch.
 
 - [ ] `TestBuildAndPublishCarryTheDebtCounts`: `body.marks` on both
       envelopes, the three debts, zero included; `body.footnotes` beside it.
-- [ ] `TestHelpMarksPrintsTheSevenFromTheBinary`: `gdoc help marks` prints
-      syntax, kind, colour and fate for each, from `house.Load`, in JSON
-      under `--json` and as a table on a terminal.
+- [ ] `TestHelpMarksPrintsTheSevenFromTheBinary`: `marks` is a help topic,
+      not a command, so `cmdHelp` gains a `marks` branch before
+      `helpMatches`, which would otherwise answer `unknownCommand`, and
+      `completion` lists the word. It prints syntax, kind, colour and fate
+      for each, from `house.Load`, in JSON under `--json` and as a table on
+      a terminal.
+- [ ] `TestARefusedNoteWritesNothing`: `gdoc build` on a note with a
+      dangling footnote, and on one with a nested mark, refuses by line and
+      leaves no file at `--out` (acceptance 2 and 4 at the command level).
 - [ ] The publish skill's Step 1 runs `gdoc help marks` once and Step 2 reads
       `body.marks` from the dry run: a debt above zero is shown to the
       person with the count per colour, and the skill asks before
