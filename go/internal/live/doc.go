@@ -179,6 +179,15 @@
 //     above names a variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and
 //     GDOC_LIVE_FOLDER_ID with its default are the whole of what they read, and
 //     every document they touch is one they made.
+//   - TestLiveFootnoteImportProbe, M18's, and the gate Part A of that
+//     milestone rests on. It uploads testdata/footnote-probe.docx, the built
+//     04-minimal.md with one Word footnote added by hand, and prints three
+//     answers: whether the converted body holds a footnoteReference, whether
+//     the document holds a footnotes map with the note's words, and whether
+//     the docx export brings word/footnotes.xml back. One document, trashed.
+//     Like the other probes it fails on a read or an export that failed and
+//     on nothing else. Measured 2026-10-14, all three yes, MEASURED.md
+//     "Drive's import of a Word footnote".
 //
 // Copied, and the original never written to:
 //
@@ -231,7 +240,7 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Two tests here ask for no network at all
+// # Three tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -244,4 +253,9 @@
 // measurement, in export_measure_test.go: it compares what Drive sends back
 // against the pictures on this disk, so a picture that moved out of
 // internal/body/testdata/docs is found by the suite instead.
+//
+// TestTheFootnoteProbeFixtureIsADocx is the third, in footnoteprobe_test.go.
+// The probe uploads a file on this disk rather than rendering one, so a
+// fixture that lost its footnotes part, its relationship or its content type
+// row would otherwise measure nothing and report that Drive dropped the note.
 package live

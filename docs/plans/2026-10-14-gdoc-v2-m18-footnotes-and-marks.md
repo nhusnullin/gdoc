@@ -116,25 +116,26 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/live/testdata/footnote-probe.docx`
 - Modify: `docs/v2/MEASURED.md`, `go/internal/live/doc.go`
 
-- [ ] The fixture is the built `04-minimal.md` with a `word/footnotes.xml`
+- [x] The fixture is the built `04-minimal.md` with a `word/footnotes.xml`
       added by hand, one note, the reference run in the first body paragraph,
       and the relationship and content type rows.
-- [ ] `TestLiveFootnoteImportProbe`, behind `GDOC_LIVE_TEST=1` and
+- [x] `TestLiveFootnoteImportProbe`, behind `GDOC_LIVE_TEST=1` and
       `GDOC_LIVE_WRITE=1`, uploads it with conversion through
       `liveWriteSession`, reads it back with `driftReadURL`, prints whether
       the body holds a `footnoteReference` and whether the document holds a
       `footnotes` map with the note's text, exports it and prints whether
       `word/footnotes.xml` came back, then trashes it with `trashLive`. It
       fails on a read or an export that failed and on nothing else.
-- [ ] `TestTheFootnoteProbeFixtureIsADocx` runs in `make test`.
-- [ ] MEASURED.md gets the three answers by hand, dated, with the document
+- [x] `TestTheFootnoteProbeFixtureIsADocx` runs in `make test`.
+- [x] MEASURED.md gets the three answers by hand, dated, with the document
       id. `live/doc.go` names the test.
-- [ ] **If Drive dropped the footnote, Part A stops here.** Say so in the
-      task log and skip Tasks 5 to 7 and the footnote halves of 12 and 13.
-      In the same commit, take the footnote text back out of Task 1's four
-      files, "thirteen parts" in CLAUDE.md included, so nothing says a part
-      exists that does not.
-- [ ] `git commit -m "test(live): measure Drive's import of a Word footnote"`
+- [x] **If Drive dropped the footnote, Part A stops here.** Drive did not
+      drop it. All three answers came back yes on 2026-10-14: one
+      `footnoteReference` in the body, a `footnotes` map keyed `kix.fn1`
+      carrying the note's words, and `word/footnotes.xml` in the export with
+      those words in it. Part A goes ahead, and nothing of Task 1's is taken
+      back out.
+- [x] `git commit -m "test(live): measure Drive's import of a Word footnote"`
 
 ### Task 3: the measurement, Drive's import of run shading and text colour
 

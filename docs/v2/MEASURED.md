@@ -459,6 +459,39 @@ it. A1 and C were run once each, not three times, at Nail's choice. What
 followed is in DECISIONS.md, 2026-10-03, "A change the person approved is not a
 payload that landed".
 
+## Drive's import of a Word footnote
+
+Measured 2026-10-14 by `TestLiveFootnoteImportProbe`
+(`go/internal/live/footnoteprobe_test.go`), one document uploaded into the test
+folder from `go/internal/live/testdata/footnote-probe.docx` and trashed on the
+way out. The document was `1YJdGXV988kwqP_DnXU6K1voENWz4TpVgm4RuLGgEDb8`.
+
+The fixture is the built `04-minimal.md` with `word/footnotes.xml` added by
+hand: the separator, the continuation separator and one note numbered 1, the
+reference run at the end of the first body paragraph that carries prose, plus
+the relationship row and the content type row. The note's words are
+`The probe footnote: carried into Drive by hand on 14 October 2026.`
+
+This is M18's gate for Part A. Recheck before anything else rests on a
+footnote reaching a document, and when Google's release notes touch footnotes.
+
+| Question | Answer |
+|---|---|
+| Does the body of the converted document hold a `footnoteReference`? | yes, one |
+| Does the document hold a `footnotes` map with the note's text? | yes, one entry, keyed `kix.fn1`, carrying the note's words |
+| Does the docx export bring `word/footnotes.xml` back? | yes, with the note's words in it |
+
+So the footnote survives all three translations: the docx into Drive's import,
+Drive's import into the Docs API answer, and the document back out as a docx.
+Part A of M18 goes ahead. The export came back as sixteen parts, two more than
+went up, because Drive adds `word/fontTable.xml` and `word/theme/theme1.xml`
+and renames the logo to `word/media/image1.png`.
+
+What was not asked: whether a footnote can be written into a document through
+the Docs API, whether a suggestion can be made inside one, and whether a
+comment can be anchored to one. The first is BLOCKED-BY-API's question, and the
+second is `docs/backlog/`'s.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an
