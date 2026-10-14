@@ -250,20 +250,29 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/house/house.yaml`, `go/internal/house/house.go`
 - Test: `go/internal/render/footnotes_test.go`, `go/internal/house/house_test.go`
 
-- [ ] `TestTheTenStylesAreThere`, renamed from `TestTheNineStylesAreThere`:
+- [x] `TestTheTenStylesAreThere`, renamed from `TestTheNineStylesAreThere`:
       `styles.footnote_text` at 10pt, single-spaced, 0 above and below, in
       the body face; `validateStyles` counts ten.
-- [ ] `TestTheFootnotesPartCarriesTheTwoSeparators`: `word/footnotes.xml` is
+- [x] `TestTheFootnotesPartCarriesTheTwoSeparators`: `word/footnotes.xml` is
       always written, with the separator and continuation separator, then
       one `w:footnote` per note.
-- [ ] `TestTheFootnotesPartIsDeclaredAndRelated`: the content type and the
+- [x] `TestTheFootnotesPartIsDeclaredAndRelated`: the content type and the
       relationship row; the footnotes relationship takes the next fixed id
       and `FirstMediaRelID` moves by one; the image goldens are regenerated
-      and the diff read.
-- [ ] `TestAFootnoteReferenceIsASuperscriptCharacterStyle`, through Task 4's
+      and the diff read. The footnotes relationship took rId8 and
+      `FirstMediaRelID` moved from 8 to 9. The four body goldens and the
+      three render goldens were regenerated: every line of the body diff is
+      one relationship id a picture or a link holds, raised by one, and the
+      render diff is the content type row, the relationship row and the two
+      new styles. The house file's first draft of `footnote_text` landed
+      between `subtitle`'s values and its two `keep_` keys, which gave the
+      notes Subtitle's keepNext and took it off Subtitle; the style is now
+      after them and `TestFootnoteTextIsTenPointSingleSpacedAndTight` asks
+      both keys are false.
+- [x] `TestAFootnoteReferenceIsASuperscriptCharacterStyle`, through Task 4's
       writer, `w:vertAlign superscript`, a constant with its reason.
-- [ ] `TestBuildWritesTheThirteenPartsAndTheLogo`, renamed from twelve.
-- [ ] `git commit -m "feat(render): the footnotes part, and the two styles it needs"`
+- [x] `TestBuildWritesTheThirteenPartsAndTheLogo`, renamed from twelve.
+- [x] `git commit -m "feat(render): the footnotes part, and the two styles it needs"`
 
 ### Task 7: the footnote goldens, and the round trip carries one
 

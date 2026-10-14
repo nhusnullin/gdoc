@@ -882,7 +882,7 @@
                   <pic:cNvPicPr/>
                 </pic:nvPicPr>
                 <pic:blipFill>
-                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId8"/>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId9"/>
                   <a:stretch>
                     <a:fillRect/>
                   </a:stretch>
@@ -972,7 +972,7 @@
       </w:rPr>
       <w:t xml:space="preserve">1.6-A heading with a </w:t>
     </w:r>
-    <w:hyperlink r:id="rId9">
+    <w:hyperlink r:id="rId10">
       <w:r>
         <w:rPr>
           <w:color w:val="1155cc"/>

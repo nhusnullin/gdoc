@@ -333,10 +333,10 @@ func TestALinkIsAHyperlinkWithARelationship(t *testing.T) {
 	if link.Target != "https://example.com/p?a=1&b=2" {
 		t.Errorf("the relationship points at %q", link.Target)
 	}
-	if link.RelID != "rId8" {
-		t.Errorf("the link took %s, and the shell's own seven end at rId7", link.RelID)
+	if link.RelID != "rId9" {
+		t.Errorf("the link took %s, and the shell's own eight end at rId8", link.RelID)
 	}
-	if !strings.Contains(got, `r:id="rId8"`) {
+	if !strings.Contains(got, `r:id="rId9"`) {
 		t.Errorf("the hyperlink names no relationship:\n%s", got)
 	}
 }

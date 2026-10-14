@@ -200,7 +200,7 @@ func numByID(t *testing.T, doc *etree.Document, id string) *etree.Element {
 // numbering builds word/numbering.xml for a body holding n numbered lists.
 func numbering(t *testing.T, n int) *etree.Document {
 	t.Helper()
-	pkg, err := Build(config(t), fields(), nil, nil, n)
+	pkg, err := Build(config(t), fields(), nil, nil, nil, n)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

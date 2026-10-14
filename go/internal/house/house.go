@@ -1,9 +1,9 @@
 // Package house holds the Altery house style as a file, parsed.
 //
-// house.yaml is the style: page geometry, the nine named styles, the cover,
+// house.yaml is the style: page geometry, the ten named styles, the cover,
 // the header and footer with the positioned logo, the three front-matter
 // tables cell by cell, the legend, the live contents field, heading numbering
-// and the logo itself as base64. TestTheNineStylesAreThere,
+// and the logo itself as base64. TestTheTenStylesAreThere,
 // TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
 // TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoDecodesAsAPNGOfTheStatedSize
 // are the pins over what the file has to carry.
@@ -85,14 +85,19 @@ import (
 //go:embed house.yaml
 var embedded []byte
 
-// styleNames is the nine styles a house config must define. A tenth is refused
-// and a missing one is refused, both by name: render reads these by name, so a
-// config that carries something else is a config it would build silently
-// wrong.
+// styleNames is the ten styles a house config must define. An eleventh is
+// refused and a missing one is refused, both by name: render reads these by
+// name, so a config that carries something else is a config it would build
+// silently wrong.
+//
+// footnote_text is the tenth, added with the footnotes of 2026-10-14. It is
+// the only one of the ten that is not a Docs named style: a restyle cannot
+// set it, and nothing in internal/drift reads it, which is why that package's
+// styleIDs stays at nine.
 var styleNames = []string{
 	"normal",
 	"heading_1", "heading_2", "heading_3", "heading_4", "heading_5", "heading_6",
-	"title", "subtitle",
+	"title", "subtitle", "footnote_text",
 }
 
 // blockKinds is what a front_matter entry may name.
@@ -511,7 +516,7 @@ func (c *Config) LogoBytes() ([]byte, error) {
 	return raw, nil
 }
 
-// Validate says what YAML cannot: the nine styles are there and nothing else
+// Validate says what YAML cannot: the ten styles are there and nothing else
 // is, every front_matter block names a kind that exists and a ref that is
 // there, every highlight is one of OOXML's names rather than a colour, and the
 // logo really is a PNG of the size the file states. Each of those is something
@@ -648,7 +653,7 @@ func checkTableHighlights(name string, table Table) error {
 	return nil
 }
 
-// validateStyles requires exactly the nine names, no more and no fewer.
+// validateStyles requires exactly the ten names, no more and no fewer.
 func (c *Config) validateStyles() error {
 	want := make(map[string]bool, len(styleNames))
 	for _, name := range styleNames {

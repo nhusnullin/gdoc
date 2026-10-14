@@ -17,7 +17,7 @@ gdoc build --md note.md --out note.docx [--house house.yaml] [--force]
 
 The house style is a file, `house.yaml`, and it is embedded in the binary, so
 there is still nothing to install beside it. It states the page geometry, the
-nine named styles, the cover, the header and footer with the logo, the three
+ten named styles, the cover, the header and footer with the logo, the three
 front-matter tables cell by cell, the legend, the contents field and the heading
 numbering. `--house` points at another copy of that file for one run, which is
 how a change to the style is looked at before it is committed; the output names

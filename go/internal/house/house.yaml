@@ -108,6 +108,12 @@ styles:
     line_spacing: 1.15
     keep_with_next: true
     keep_lines_together: true
+  footnote_text:
+    size_pt: 10
+    font: Calibri
+    space_before_pt: 0
+    space_after_pt: 0
+    line_spacing: 1.0
 body:
   size_pt: 12
   align: justify

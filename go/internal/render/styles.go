@@ -5,9 +5,14 @@ import (
 	"github.com/beevik/etree"
 )
 
-// houseStyles pairs the config's nine style names with the ids Word knows them
+// houseStyles pairs the config's ten style names with the ids Word knows them
 // by. The order is the order they are written in, and a style missing from the
 // config is refused in house.Validate before a build starts.
+//
+// FootnoteText is Word's own id and name for the notes under the page, so a
+// person opening the document in Word finds the style where they expect it,
+// and a note pasted out of another document lands in the house's own values
+// rather than beside them.
 var houseStyles = []struct {
 	id     string
 	name   string
@@ -24,10 +29,29 @@ var houseStyles = []struct {
 	{id: "Heading6", name: "heading 6", key: "heading_6", based: "Normal"},
 	{id: "Title", name: "Title", key: "title", based: "Normal"},
 	{id: "Subtitle", name: "Subtitle", key: "subtitle", based: "Normal"},
+	{id: "FootnoteText", name: "footnote text", key: "footnote_text", based: "Normal"},
 }
 
-// stylesPart writes word/styles.xml: the document defaults, then the nine
-// house styles, then the table default every table is based on.
+// vertAlignSuperscript is Word's value for a raised character, which is the
+// whole of what makes a footnote mark read as a mark rather than as a digit of
+// the sentence. internal/body states the same value on the reference run
+// itself, because Google Docs has no character styles and keeps only what the
+// run says.
+const vertAlignSuperscript = "superscript"
+
+// charStyles is every w:type="character" style the part carries, in the order
+// they are written. FootnoteReference is Word's own id and name. Part B of
+// this milestone adds one per mark beside it.
+var charStyles = []struct {
+	id, name string
+	props    charRunProps
+}{
+	{"FootnoteReference", "footnote reference", charRunProps{VertAlign: vertAlignSuperscript}},
+}
+
+// stylesPart writes word/styles.xml: the document defaults, the ten house
+// paragraph styles, the character styles, then the table default every table
+// is based on.
 func (b *builder) stylesPart() []byte {
 	doc, root := newPart("w:styles")
 	b.docDefaults(root)
@@ -38,6 +62,9 @@ func (b *builder) stylesPart() []byte {
 			continue
 		}
 		root.AddChild(b.styleElement(s.id, s.name, style, s.based, s.isDflt))
+	}
+	for _, s := range charStyles {
+		root.AddChild(charStyleElement(s.id, s.name, s.props))
 	}
 	table := sub(root, "w:style", "w:type", "table", "w:default", "1", "w:styleId", "TableNormal")
 	sub(table, "w:name", "w:val", "Table Normal")

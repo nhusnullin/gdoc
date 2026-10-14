@@ -557,7 +557,7 @@ person supplies the context a paired note would have given.
 
 ## The generator and `house.yaml`
 
-`house.yaml` is the house style: page geometry, all nine named styles, the cover,
+`house.yaml` is the house style: page geometry, all ten named styles, the cover,
 header and footer, the three tables cell by cell, the contents field, heading
 numbering, and the logo as base64. The generator reads it plus markdown and emits
 a docx.

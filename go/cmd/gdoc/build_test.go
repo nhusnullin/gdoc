@@ -110,8 +110,9 @@ func TestBuildWritesADocxAndReportsWhatItWrote(t *testing.T) {
 		}
 	}
 
-	// The twelve XML parts, the logo, and nothing else: this note carries no
-	// picture of its own.
+	// The thirteen XML parts, the logo, and nothing else: this note carries no
+	// picture of its own. word/footnotes.xml is there whether or not the note
+	// has a footnote, because the relationship to it is the shell's own.
 	want := []string{
 		"[Content_Types].xml",
 		"_rels/.rels",
@@ -125,6 +126,7 @@ func TestBuildWritesADocxAndReportsWhatItWrote(t *testing.T) {
 		"word/header2.xml",
 		"word/footer1.xml",
 		"word/footer2.xml",
+		"word/footnotes.xml",
 		"word/media/logo.png",
 	}
 	names := zipNames(t, out)
@@ -199,7 +201,7 @@ func TestBuildRefusesAnExistingOutUnlessForced(t *testing.T) {
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("--force replaces it: %v (exit %d)", got, code)
 	}
-	if names := zipNames(t, out); len(names) != 13 {
+	if names := zipNames(t, out); len(names) != 14 {
 		t.Errorf("the file was replaced by the built document: %v", names)
 	}
 }

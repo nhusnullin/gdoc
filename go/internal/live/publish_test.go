@@ -341,7 +341,7 @@ func renderNoteFile(t *testing.T, path string) noteDocument {
 	for _, w := range walked.Warnings {
 		t.Logf("render warning: %s", w)
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.NumberedLists)
+	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}

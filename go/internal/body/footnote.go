@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"gdoc/internal/render"
 	"github.com/beevik/etree"
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
@@ -21,10 +22,10 @@ import (
 // Footnote is one note under the page: the number the body's reference run
 // names, and the paragraphs the note holds. internal/render writes them into
 // word/footnotes.xml, one w:footnote per entry, in this order.
-type Footnote struct {
-	ID     int
-	Blocks []*etree.Element
-}
+//
+// It is render's own type, the way Media is, so the numbers this package hands
+// out are the numbers the part is written from and the two cannot drift.
+type Footnote = render.Footnote
 
 // The two styles a footnote is set in, as Word names them. internal/render
 // writes both into word/styles.xml: the mark in the prose names the character
