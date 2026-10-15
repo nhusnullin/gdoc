@@ -453,3 +453,41 @@ func runElement(t *testing.T, blocks []*etree.Element, words string) *etree.Elem
 	}
 	return found[0]
 }
+
+// TestAHighlightOfOnlyItsColourEmojiIsRefusedByLine. The emoji says which
+// colour and is not the words, so a highlight holding nothing else marks no
+// words: withoutOpener takes the emoji off, merge drops the run that is left,
+// and the author's own character is gone from the document. countMarks counts
+// the node either way, so the envelope reported a colour the document does not
+// carry, which is the fact the alt-text refusal exists to prevent. An empty
+// span is refused for the same reason.
+func TestAHighlightOfOnlyItsColourEmojiIsRefusedByLine(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\nA line with ==🟢== in it.\n",
+		"Words.\n\nA line with ==🟡 go== and ==🟣== in it.\n",
+	} {
+		got := refused(t, note)
+		if !strings.Contains(got, "line 3:") {
+			t.Errorf("the refusal is %q, want it to name line 3", got)
+		}
+		if !strings.Contains(got, "no words") {
+			t.Errorf("the refusal is %q, and it does not say the mark holds no words", got)
+		}
+	}
+}
+
+// The other side of it: a highlight whose colour emoji is followed by words is
+// the mark the author meant, and one whose words hold an emoji of their own
+// further in is words.
+func TestAHighlightWithWordsAfterItsColourIsNotRefused(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\nA line with ==🟢 go== in it.\n",
+		"Words.\n\nA line with ==🟢 **go**== in it.\n",
+		"Words.\n\nA line with ==go 🟢== in it.\n",
+	} {
+		runs := firstBlockRuns(t, strings.TrimPrefix(note, "Words.\n\n"))
+		if len(runs) == 0 {
+			t.Errorf("%q rendered no runs", note)
+		}
+	}
+}

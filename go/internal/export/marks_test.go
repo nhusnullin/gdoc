@@ -198,6 +198,8 @@ func TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed(t *testin
 			docs.Run{Text: "the grey link", Colour: "#9A9A9A", Link: &docs.Link{URL: "https://example.com/x"}}},
 		{"a pencil over a bracket", "draft]b",
 			docs.Run{Text: "draft]b", Colour: "#9A9A9A"}},
+		{"a pencil whose words open with a caret", "^1",
+			docs.Run{Text: "^1", Colour: "#9A9A9A"}},
 		{"a highlight holding the delimiter", "a==b",
 			docs.Run{Text: "a==b", Background: "#FFD500"}},
 		{"a highlight ending in one half of it", "a=",

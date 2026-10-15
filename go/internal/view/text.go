@@ -6,6 +6,7 @@ package view
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1099,12 +1100,57 @@ func (e *emitter) cell(c docs.Cell) string {
 // the formatting changes and two markers around one suggested phrase would read
 // as two suggestions.
 func (e *emitter) runs(rs []docs.Run) {
+	e.footnoteMarks(rs)
 	for i := 0; i < len(rs); {
 		j := i + 1
 		for j < len(rs) && sameSpan(rs[i], rs[j]) {
 			j++
 		}
 		e.span(rs[i:j])
+		i = j
+	}
+}
+
+// footnoteMark is the shape internal/body reads as a footnote mark.
+//
+// The projection writes a real note's reference as "[^n]", so the document's
+// own words holding that shape are read by the next build as a mark of gdoc's.
+// A label the file does not define refuses the file by line, blaming the file
+// rather than the export; a label it does define grows a second reference to a
+// note the document never had, and the words the author typed go with it.
+//
+// A backslash is not the answer, for the reason cannotCarry gives: internal/body
+// hands goldmark's text through as it stands and never unescapes a punctuation
+// mark, and body's own line scan reads the mark through the backslash anyway.
+// docs/backlog/build-never-unescapes-a-backslash.md is where that stands. Until
+// then the words go home as the document holds them and the loss is named,
+// which is what a mark that cannot carry its syntax already does.
+var footnoteMark = regexp.MustCompile(`\[\^[^\]\n]+\]`)
+
+// footnoteMarks names every stretch of the document's own words that the next
+// build would read as a footnote mark of gdoc's.
+//
+// Consecutive text runs are joined before the search, because Docs splits a run
+// wherever the formatting changes, so "[^" and "1]" can be two runs of one
+// sentence. A run that is not text stops the join: gdoc writes its own markup
+// there, and a bracket of gdoc's is not the author's.
+func (e *emitter) footnoteMarks(rs []docs.Run) {
+	for i := 0; i < len(rs); {
+		if rs[i].Kind != docs.KindText {
+			i++
+			continue
+		}
+		var b strings.Builder
+		at, j := rs[i].StartIndex, i
+		for ; j < len(rs) && rs[j].Kind == docs.KindText; j++ {
+			b.WriteString(rs[j].Text)
+		}
+		text := b.String()
+		for _, m := range footnoteMark.FindAllStringIndex(text, -1) {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the words at index %d hold %s, which the next build reads as a footnote mark of gdoc's rather than as the words this document shows",
+				at+units(text[:m[0]]), text[m[0]:m[1]]))
+		}
 		i = j
 	}
 }
@@ -1214,7 +1260,13 @@ func (e *emitter) body(rs []docs.Run) {
 //     for a run that is not text: a footnote mark is "[^3]". internal/body
 //     refuses the line rather than guessing, so the file would not build at
 //     all. A link is the same bracket from the other side: "[[words](url)]"
-//     opens nothing either side can read.
+//     opens nothing either side can read. Words opening with a caret are the
+//     same bracket once more: the span's own "[" in front of them is how a
+//     footnote mark is written, and goldmark's footnote parser runs ahead of
+//     the span parser, so "[^1]{.pencil}" is a mark of gdoc's to the next
+//     build. A label the file does not define refuses it by line; a label it
+//     does define grows a second reference to a note the document never had,
+//     and the words and the colour go with it.
 //   - A delimiter pair is read by its run of characters, so the pair itself
 //     inside the words closes the mark early, and one of its characters against
 //     either delimiter lengthens that run and comes home as a stray character
@@ -1234,6 +1286,9 @@ func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
 		}
 		if strings.ContainsAny(words, "[]") {
 			return "the words hold a bracket, and a span's words end at the first bracket a reader meets"
+		}
+		if strings.HasPrefix(words, "^") {
+			return "the words open with a caret, and a bracket in front of one is how a footnote mark is written"
 		}
 		for _, r := range rs {
 			if l := textLink(r); l != nil && e.target(l) != "" {

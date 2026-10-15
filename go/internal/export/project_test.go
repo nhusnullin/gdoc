@@ -754,3 +754,41 @@ func TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark(t *testing.T) {
 		}
 	}
 }
+
+// TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss. The projection writes a
+// real note's reference as "[^n]", so the document's own words holding that
+// shape are read by the next build as a mark of gdoc's. A label the file does
+// not define refuses the file by line, blaming the file rather than the export;
+// a label it does define grows a second reference to a note the document never
+// had, and the author's own words go with it. Neither is something a session
+// can see, so the loss is named.
+func TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss(t *testing.T) {
+	// The words are the document's own: no footnote run, so nothing gdoc wrote
+	// is in this paragraph at all.
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "see [^1] and [^note] here"}), nil, palette(t))
+
+	for _, want := range []string{"[^1]", "[^note]"} {
+		found := false
+		for _, w := range warnings {
+			if strings.Contains(w, want) && strings.Contains(w, "footnote mark") {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("no warning names %s as a footnote mark the next build would read: %v", want, warnings)
+		}
+	}
+}
+
+// The other half: a document whose prose holds no such shape is not warned
+// about one, so the sentence is a fact about this document rather than a line
+// every export carries.
+func TestProseWithNoFootnoteMarkIsNotWarnedAboutOne(t *testing.T) {
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "see [the note] and ^1 here"}), nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "footnote mark") {
+			t.Errorf("a warning names a footnote mark in words that hold none: %q", w)
+		}
+	}
+}

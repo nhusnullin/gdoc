@@ -35,7 +35,10 @@
 // string written out is the attribute ".pencil", because the parsers are built
 // before any house file is read, and TestThePencilSyntaxIsTheHouseStyles pins
 // it to the pencil mark's own syntax. What is carried is the mark on the run;
-// what is refused by line is a nested mark, an empty span, a span carrying any
+// what is refused by line is a nested mark, an empty span, a highlight whose
+// only content is the colour emoji that opened it, which marks no words the way
+// an empty span marks none and counted a colour on an envelope the document does
+// not carry, a span carrying any
 // other attribute, a span that does not open and close on one line, a mark
 // inside a heading, for the reason a footnote mark in a heading is refused, and
 // a mark inside a picture's alt text, which becomes the caption: the caption is
@@ -50,6 +53,8 @@
 // TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,
 // TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil,
 // TestANestedMarkIsRefusedByLine, TestAnEmptySpanIsRefusedByLine,
+// TestAHighlightOfOnlyItsColourEmojiIsRefusedByLine,
+// TestAHighlightWithWordsAfterItsColourIsNotRefused,
 // TestASpanCrossingAParagraphIsRefusedByLine,
 // TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan,
 // TestASpanInsideACodeBlockIsNotASpan and

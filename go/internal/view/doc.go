@@ -184,6 +184,23 @@
 // TestASecondReferenceToOneFootnotePrintsTheSameNumber and
 // TestAFootnoteWithTwoParagraphsIsNotGluedTogether are the pins.
 //
+// # Words that would read as a footnote mark are named as a loss
+//
+// A real note's reference is written [^n], so the document's own words holding
+// that shape are read by the next build as a mark of gdoc's: a label the file
+// does not define refuses the file by line, and a label it does define grows a
+// second reference to a note the document never had. The escaping cannot carry
+// it, because internal/body never unescapes a punctuation mark and reads the
+// mark through a backslash anyway, so the words go home as the document holds
+// them and the warning says what the next build will make of them.
+// internal/export's TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss and
+// TestProseWithNoFootnoteMarkIsNotWarnedAboutOne are the pins, and
+// docs/backlog/build-never-unescapes-a-backslash.md is the escaping.
+//
+// The same bracket from the span's side is in cannotCarry: words opening with a
+// caret cannot carry a pencil, because the span's own [ in front of them is how
+// a footnote mark is written and goldmark's footnote parser runs first.
+//
 // # A comment range that names no position is a warning, not a marker
 //
 // The gating is docs.Places, the one rule the comments command reports a range

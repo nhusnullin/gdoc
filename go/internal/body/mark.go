@@ -364,13 +364,14 @@ func isMark(node ast.Node) bool {
 	return false
 }
 
-// checkMarks refuses a mark inside a mark, a mark inside a heading and a mark
-// inside a picture's alt text.
+// checkMarks refuses a mark inside a mark, a mark inside a heading, a mark
+// inside a picture's alt text, and a highlight whose only content is the colour
+// emoji that opened it.
 //
-// All three are read off the tree rather than off the source lines, because
-// each is a question about what a mark sits inside and goldmark answers those:
-// a source scan would have to decide for itself whether "a == b == c" is a
-// highlight, and the flanking rules that say it is not are goldmark's.
+// All four are read off the tree rather than off the source lines, because each
+// is a question about what a mark sits inside or holds and goldmark answers
+// those: a source scan would have to decide for itself whether "a == b == c" is
+// a highlight, and the flanking rules that say it is not are goldmark's.
 func (r *renderer) checkMarks(root ast.Node) error {
 	var refusal error
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -378,6 +379,19 @@ func (r *renderer) checkMarks(root ast.Node) error {
 			return ast.WalkContinue, nil
 		}
 		line := r.markLine(node)
+		if h, highlight := node.(*Highlight); highlight {
+			// The emoji is the instruction and not the words, so a highlight
+			// holding nothing else marks no words: withoutOpener takes it off,
+			// merge drops the empty run, and the author's own character is gone
+			// from the document. countMarks counts the node either way, so the
+			// envelope named a colour the document does not carry. An empty
+			// span is refused for the same reason.
+			if _, opener := r.marks.highlight(h, r.source); opener != "" &&
+				strings.TrimSpace(withoutOpener(markWords(h, r.source), opener)) == "" {
+				refusal = fmt.Errorf("line %d: the ==%s== mark holds its colour emoji and no words, so the mark would be a colour on nothing and the emoji would be dropped from the text", line, opener)
+				return ast.WalkStop, nil
+			}
+		}
 		for parent := node.Parent(); parent != nil; parent = parent.Parent() {
 			if isMark(parent) {
 				refusal = fmt.Errorf("line %d: a mark inside a mark carries two colours on one stretch of words and Word carries one, so the house style has none; the inner mark's own words are what gdoc would have to drop", line)
@@ -400,6 +414,26 @@ func (r *renderer) checkMarks(root ast.Node) error {
 		return ast.WalkContinue, nil
 	})
 	return refusal
+}
+
+// markWords is every character of the author's own text inside a mark,
+// descendants included. nodeText reads a node's direct children only, which for
+// this question would call "==\U0001F7E2 **go**==" a mark holding no words.
+func markWords(node ast.Node, source []byte) string {
+	var b strings.Builder
+	_ = ast.Walk(node, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch typed := n.(type) {
+		case *ast.Text:
+			b.Write(typed.Segment.Value(source))
+		case *ast.String:
+			b.Write(typed.Value)
+		}
+		return ast.WalkContinue, nil
+	})
+	return b.String()
 }
 
 // markLine is the line a mark's refusal names. descendantLine cannot be asked
