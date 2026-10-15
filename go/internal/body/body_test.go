@@ -362,12 +362,14 @@ func TestANumberedListNamesTheNumberedList(t *testing.T) {
 }
 
 // TestMarkIsAYellowHighlight is the ==mark== syntax the house markdown uses to
-// say a human still has to fill something in.
+// say a human still has to fill something in. The colour is the palette's own
+// hex as run shading, not one of Word's sixteen named highlights, and
+// TestAMarkedRunCarriesItsStyleAndItsShading holds the other six beside it.
 func TestMarkIsAYellowHighlight(t *testing.T) {
 	out := walk(t, "A sentence with ==a gap== in it.\n")
 	got := serialise(t, out.Blocks)
-	if !strings.Contains(got, `<w:highlight w:val="yellow"/>`) {
-		t.Errorf("the marked span carries no yellow highlight:\n%s", got)
+	if !strings.Contains(got, `<w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>`) {
+		t.Errorf("the marked span carries no yellow shading:\n%s", got)
 	}
 	if !strings.Contains(got, ">a gap<") {
 		t.Errorf("the marked words are missing:\n%s", got)
@@ -852,7 +854,7 @@ func TestARunsPropertiesAreInSchemaOrder(t *testing.T) {
 	textRun(p, "words", runOpts{
 		Style: "Yellow", SizePt: &size, Bold: true, Italic: true,
 		Strike: true, Underline: true, Color: "#9A9A9A", Font: "Consolas",
-		Highlight: "yellow", Fill: "#FFD500", VertAlign: "superscript",
+		Fill: "#FFD500", VertAlign: "superscript",
 	})
 	rPr := p.FindElement("w:r/w:rPr")
 	if rPr == nil {
@@ -864,8 +866,7 @@ func TestARunsPropertiesAreInSchemaOrder(t *testing.T) {
 	}
 	want := []string{
 		"w:rStyle", "w:rFonts", "w:b", "w:bCs", "w:i", "w:iCs", "w:strike",
-		"w:color", "w:sz", "w:szCs", "w:highlight", "w:u", "w:shd",
-		"w:vertAlign",
+		"w:color", "w:sz", "w:szCs", "w:u", "w:shd", "w:vertAlign",
 	}
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("the run's properties run %v, want %v", got, want)

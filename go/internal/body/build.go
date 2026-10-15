@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
+
+	"gdoc/internal/render"
 )
 
 const (
@@ -78,7 +80,9 @@ func sub(parent *etree.Element, tag string, attrs ...string) *etree.Element {
 // style, and the run names it. Fill is the shading a highlight mark carries,
 // VertAlign the superscript a footnote reference carries, and both are stated
 // on the style as well, because Google Docs has no character styles and keeps
-// only what the run itself says.
+// only what the run itself says. There is no named highlight here: a mark is
+// the exact hex, and the cover's own yellow placeholders are internal/render's
+// and written by its own run writer.
 type runOpts struct {
 	SizePt    *float64
 	Bold      bool
@@ -88,7 +92,6 @@ type runOpts struct {
 	Mono      bool
 	Color     string
 	Font      string
-	Highlight string
 	Style     string
 	Fill      string
 	VertAlign string
@@ -96,13 +99,13 @@ type runOpts struct {
 
 func (o runOpts) empty() bool {
 	return o.SizePt == nil && !o.Bold && !o.Italic && !o.Strike && !o.Underline &&
-		!o.Mono && o.Color == "" && o.Font == "" && o.Highlight == "" &&
-		o.Style == "" && o.Fill == "" && o.VertAlign == ""
+		!o.Mono && o.Color == "" && o.Font == "" && o.Style == "" &&
+		o.Fill == "" && o.VertAlign == ""
 }
 
 // runProps builds a w:rPr, or nil when the run states nothing. The order is
 // the schema's: the character style, fonts, weight, slope, strike, colour,
-// size, highlight, underline, shading, then vertical alignment.
+// size, underline, shading, then vertical alignment.
 func runProps(o runOpts) *etree.Element {
 	if o.empty() {
 		return nil
@@ -138,9 +141,6 @@ func runProps(o runOpts) *etree.Element {
 	if o.SizePt != nil {
 		sub(rPr, "w:sz", "w:val", halfPoints(*o.SizePt))
 		sub(rPr, "w:szCs", "w:val", halfPoints(*o.SizePt))
-	}
-	if o.Highlight != "" {
-		sub(rPr, "w:highlight", "w:val", o.Highlight)
 	}
 	// Underline is the last of the properties this writer had before the
 	// marks: the run properties are a sequence, and Word reads one out of
@@ -260,6 +260,38 @@ func (r *renderer) para(o paraOpts) *etree.Element {
 	return p
 }
 
+// marked is one run's formatting with a mark on it, or the same formatting
+// back when the run carries none.
+//
+// A mark reaches Word twice over: the run names the character style
+// internal/render writes, so Word lists the marks and a reader finds every
+// yellow with one search, and the run states the colour itself, because
+// Google Docs has no character styles and keeps only what the run says. A
+// highlight is shading with the exact hex rather than one of Word's sixteen
+// named highlights, none of which carries these hexes, and the pencil is the
+// run's own colour.
+//
+// A mark the house style does not state is refused by name rather than
+// dropped, the way an alignment it does not have is: a colour silently left
+// off is a document nobody would think to check.
+func (r *renderer) marked(o runOpts, name string) runOpts {
+	if name == "" {
+		return o
+	}
+	mark, ok := r.cfg.Marks[name]
+	if !ok {
+		r.fail("mark %q is not one the house style states", name)
+		return o
+	}
+	o.Style = render.MarkStyleID(name)
+	if mark.IsHighlight() {
+		o.Fill = mark.Color
+		return o
+	}
+	o.Color = mark.Color
+	return o
+}
+
 // align maps a house alignment onto Word's. One the house does not have is
 // refused by name rather than dropped: a paragraph silently left aligned is a
 // document nobody would think to check.
@@ -310,15 +342,7 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 		o.Italic = o.Italic || run.Italic
 		o.Strike = run.Strike
 		o.Mono = run.Mono
-		if run.Mark != "" && run.Mark == r.marks.plain {
-			// A mark reaches Word as a character style and the shading or the
-			// colour that style carries, which is written in the commit after
-			// this one. Until then the plain highlight, the one mark the
-			// previous generator had, keeps the named highlight it has always
-			// had: the house style calls that mark by the same word OOXML
-			// calls the highlight.
-			o.Highlight = run.Mark
-		}
+		o = r.marked(o, run.Mark)
 		if run.Link == "" {
 			textRun(parent, run.Text, o)
 			continue

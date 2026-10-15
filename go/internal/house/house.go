@@ -128,9 +128,19 @@ var markNames = []string{
 	"yellow", "green", "purple", "blue", "red", "orange", "pencil",
 }
 
+// MarkNames is the seven marks in the order they are written down: the order
+// render writes their character styles in and help prints them in. A copy,
+// because a caller holding the slice itself could reorder the palette for
+// every other caller.
+func MarkNames() []string { return append([]string(nil), markNames...) }
+
+// markKindHighlight is one of the two kinds a mark may be, and the one that
+// reaches the docx as shading. The other, text, is the run's own colour.
+const markKindHighlight = "highlight"
+
 // markKinds is how a mark reaches the docx: a highlight is run shading with
 // the exact hex, and text is the run's own colour.
-var markKinds = map[string]bool{"highlight": true, "text": true}
+var markKinds = map[string]bool{markKindHighlight: true, "text": true}
 
 // Mark is one authoring mark. Syntax is every opener an author may write for
 // it: one colour emoji for five of the highlights, both '==' and 🟡 for the
@@ -143,6 +153,12 @@ type Mark struct {
 	Color  string   `yaml:"color"`
 	Debt   bool     `yaml:"debt"`
 }
+
+// IsHighlight says which way the mark's colour is written: a highlight is run
+// shading with the exact hex, and the one other kind is the run's own text
+// colour. Asked here rather than in render and body, so neither of those two
+// writes the name of a kind out and the two cannot read one differently.
+func (m Mark) IsHighlight() bool { return m.Kind == markKindHighlight }
 
 // blockKinds is what a front_matter entry may name.
 var blockKinds = map[string]bool{

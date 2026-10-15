@@ -18,18 +18,19 @@ func style(t *testing.T, doc *etree.Document, id string) *etree.Element {
 	return nil
 }
 
-func TestStylesDefinesTheTenHouseStylesTheCharacterStyleAndTheTableDefault(t *testing.T) {
+func TestStylesDefinesTheTenHouseStylesTheEightCharacterStylesAndTheTableDefault(t *testing.T) {
 	pkg := build(t)
 	doc := parse(t, part(t, pkg, "word/styles.xml"))
 	for _, id := range []string{
 		"Normal", "Heading1", "Heading2", "Heading3", "Heading4", "Heading5",
 		"Heading6", "Title", "Subtitle", "FootnoteText",
-		"FootnoteReference", "TableNormal",
+		"FootnoteReference", "Yellow", "Green", "Purple", "Blue", "Red",
+		"Orange", "Pencil", "TableNormal",
 	} {
 		style(t, doc, id)
 	}
-	if got := len(doc.FindElements("//w:style")); got != 12 {
-		t.Errorf("word/styles.xml defines %d styles, want 12", got)
+	if got := len(doc.FindElements("//w:style")); got != 19 {
+		t.Errorf("word/styles.xml defines %d styles, want 19", got)
 	}
 	if got := style(t, doc, "Normal").SelectAttrValue("w:default", ""); got != "1" {
 		t.Errorf("Normal w:default = %q, want 1", got)

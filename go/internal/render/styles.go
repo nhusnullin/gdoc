@@ -1,6 +1,8 @@
 package render
 
 import (
+	"strings"
+
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
 )
@@ -39,9 +41,9 @@ var houseStyles = []struct {
 // run says.
 const vertAlignSuperscript = "superscript"
 
-// charStyles is every w:type="character" style the part carries, in the order
-// they are written. FootnoteReference is Word's own id and name. Part B of
-// this milestone adds one per mark beside it.
+// charStyles is every w:type="character" style the part carries that no house
+// value decides, in the order they are written. FootnoteReference is Word's
+// own id and name. The seven marks follow it, each read off the palette.
 var charStyles = []struct {
 	id, name string
 	props    charRunProps
@@ -49,9 +51,33 @@ var charStyles = []struct {
 	{"FootnoteReference", "footnote reference", charRunProps{VertAlign: vertAlignSuperscript}},
 }
 
+// MarkStyleID is the character style id a mark's runs name: the mark's own
+// house key with its first letter raised, so Word's style list reads Yellow,
+// Green, Purple, Blue, Red, Orange and Pencil. internal/body calls it to name
+// the style on the run and this package to write the style, which is the
+// whole of what keeps the two from drifting. The keys are the seven
+// house.MarkNames states and nothing else, which house.Validate refuses, and
+// all seven are ASCII.
+func MarkStyleID(name string) string {
+	if name == "" {
+		return ""
+	}
+	return strings.ToUpper(name[:1]) + name[1:]
+}
+
+// markRunProps is what a mark's character style states: the exact hex as
+// shading for a highlight, and the run's own text colour for the pencil.
+// Which way round is the house file's, read through house.Mark.
+func markRunProps(m house.Mark) charRunProps {
+	if m.IsHighlight() {
+		return charRunProps{Fill: m.Color}
+	}
+	return charRunProps{Color: m.Color}
+}
+
 // stylesPart writes word/styles.xml: the document defaults, the ten house
-// paragraph styles, the character styles, then the table default every table
-// is based on.
+// paragraph styles, the footnote reference and the seven marks as character
+// styles, then the table default every table is based on.
 func (b *builder) stylesPart() []byte {
 	doc, root := newPart("w:styles")
 	b.docDefaults(root)
@@ -65,6 +91,15 @@ func (b *builder) stylesPart() []byte {
 	}
 	for _, s := range charStyles {
 		root.AddChild(charStyleElement(s.id, s.name, s.props))
+	}
+	for _, name := range house.MarkNames() {
+		mark, ok := b.cfg.Marks[name]
+		if !ok {
+			b.fail("styles: the mark %s is missing", name)
+			continue
+		}
+		id := MarkStyleID(name)
+		root.AddChild(charStyleElement(id, id, markRunProps(mark)))
 	}
 	table := sub(root, "w:style", "w:type", "table", "w:default", "1", "w:styleId", "TableNormal")
 	sub(table, "w:name", "w:val", "Table Normal")

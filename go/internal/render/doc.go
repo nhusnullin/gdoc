@@ -84,8 +84,16 @@
 // Docs has no character styles and keeps only what the run says: after import
 // a mark is direct formatting, and that is what export reads back.
 // TestACharacterStyleIsWrittenWithItsRunProperties is the pin over the writer,
-// and internal/body's TestARunMayNameItsCharacterStyle over the w:rStyle that
-// names it.
+// TestTheSevenCharacterStylesAreWritten over the seven the palette gives,
+// TestTheMarkStyleIDIsTheHouseKeyRaised over the one id both packages name a
+// style by, and internal/body's TestARunMayNameItsCharacterStyle and
+// TestAMarkedRunCarriesItsStyleAndItsShading over the w:rStyle that names it.
+//
+// The cover's own yellow placeholders are not marks. They are the template's,
+// they mean "a person fills this in" rather than any of the seven, and they
+// keep Word's named yellow and name no character style, so nothing counting
+// or exporting marks reads a cover as one:
+// TestTheCoverPlaceholdersAreNotMarks is the pin.
 //
 // # Every list level states w:start
 //

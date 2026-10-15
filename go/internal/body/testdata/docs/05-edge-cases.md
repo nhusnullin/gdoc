@@ -49,6 +49,16 @@ here[^twice] takes a number of its own.
 - [ ] A third item, long enough to wrap so the hanging indent is exercised the
       same way an ordinary bullet is.
 
+### The marks, where they are awkward
+
+A colour emoji carries the colour at the start of a highlight and nowhere else,
+so ==a 🔴 gap== is yellow and keeps the circle in its words, and the light
+turned 🔴 and we stopped. An [aside] in brackets is not a span, because
+Pandoc's grammar wants the attribute straight after the bracket. A mark carries
+the formatting inside it: ==🔵 a change with **weight** and `code`==, and
+[a pencilled **note**]{.pencil}==a gap== side by side are two runs rather than
+one.
+
 ### Strikethrough and nesting
 
 Text with ~~a struck-out span~~ inside it, and **bold containing *italic*

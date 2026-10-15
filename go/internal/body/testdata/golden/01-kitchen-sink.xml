@@ -130,9 +130,10 @@
     </w:r>
     <w:r>
       <w:rPr>
+        <w:rStyle w:val="Yellow"/>
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
-        <w:highlight w:val="yellow"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>
       </w:rPr>
       <w:t xml:space="preserve">a highlighted span that a human still has to fill in</w:t>
     </w:r>
@@ -160,6 +161,135 @@
         <w:szCs w:val="24"/>
       </w:rPr>
       <w:t xml:space="preserve"> sitting inside the sentence rather than on a line of its own.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="240"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">The seven marks, one of each: </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Yellow"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a figure to replace</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Green"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="3dd67a"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a claim to confirm</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Purple"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ba92ff"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a question for one reviewer</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Blue"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="5db3ff"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a line changed since the last version</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Red"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ff6b6b"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a warning</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Orange"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ffb85c"/>
+      </w:rPr>
+      <w:t xml:space="preserve">an aside</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, and </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Pencil"/>
+        <w:color w:val="9a9a9a"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a line that stays in the document but is not the argument</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">.</w:t>
     </w:r>
   </w:p>
   <w:p>
@@ -1951,10 +2081,11 @@
           </w:pPr>
           <w:r>
             <w:rPr>
+              <w:rStyle w:val="Yellow"/>
               <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
               <w:sz w:val="24"/>
               <w:szCs w:val="24"/>
-              <w:highlight w:val="yellow"/>
+              <w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>
             </w:rPr>
             <w:t xml:space="preserve">to fill in</w:t>
           </w:r>

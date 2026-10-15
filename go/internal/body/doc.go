@@ -51,6 +51,18 @@
 // TestTheDebtsAreCountedAndTheOthersAreNot over the three counted on the
 // envelope.
 //
+// A mark reaches Word twice over. The run names the character style
+// internal/render writes, so Word lists the marks and a reader finds every
+// yellow with one search, and the run states the colour itself, shading with
+// the exact hex for a highlight and the run's own colour for the pencil.
+// Twice over because Google Docs has no character styles and keeps only what
+// the run says: after import a mark is direct formatting, and direct
+// formatting is all export can read back. None of the six is one of Word's
+// sixteen named highlights, which carry none of these hexes.
+// TestAMarkedRunCarriesItsStyleAndItsShading is the pin, with
+// internal/render's TestTheSevenCharacterStylesAreWritten over the styles and
+// TestTheCoverPlaceholdersAreNotMarks over the one yellow that is not a mark.
+//
 // Every size, colour, indent and alignment comes from house.Config. What is a
 // constant in this package is a value the house file does not state, and each
 // one carries the reason it is what it is. Nothing is concatenated into XML:

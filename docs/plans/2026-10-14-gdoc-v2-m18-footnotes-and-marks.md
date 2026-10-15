@@ -388,17 +388,17 @@ Checkboxes below. A task is done when its commit is on the branch.
   the two test notes and their goldens
 - Test: `go/internal/body/marks_test.go`, `go/internal/render/marks_test.go`
 
-- [ ] `TestAMarkedRunCarriesItsStyleAndItsShading`: `addRuns` names the
+- [x] `TestAMarkedRunCarriesItsStyleAndItsShading`: `addRuns` names the
       mark's style through Task 4, then writes `w:shd w:val="clear"
       w:color="auto" w:fill="<hex>"` for a highlight mark or `w:color` for
       pencil.
-- [ ] `TestTheSevenCharacterStylesAreWritten`, each carrying the same
+- [x] `TestTheSevenCharacterStylesAreWritten`, each carrying the same
       shading or colour as its runs.
-- [ ] `TestTheCoverPlaceholdersAreNotMarks`: the cover's yellow keeps
+- [x] `TestTheCoverPlaceholdersAreNotMarks`: the cover's yellow keeps
       `w:highlight yellow` and no `w:rStyle`.
-- [ ] Goldens: `01-kitchen-sink.md` and `05-edge-cases.md` gain the seven
+- [x] Goldens: `01-kitchen-sink.md` and `05-edge-cases.md` gain the seven
       marks; `go test ./internal/body -update`, and the diff read.
-- [ ] `git commit -m "feat(render): a character style per mark, and the run shaded to match"`
+- [x] `git commit -m "feat(render): a character style per mark, and the run shaded to match"`
 
 ### Task 11: the read keeps a run's colours, and export writes the mark back
 

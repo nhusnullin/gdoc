@@ -11,6 +11,8 @@ package body
 import (
 	"strings"
 	"testing"
+
+	"github.com/beevik/etree"
 )
 
 // TestAHighlightOpeningWithAColourEmojiCarriesItsMark is Obsidian 1.14's own
@@ -59,7 +61,7 @@ func TestAMarkInATableCellIsCarried(t *testing.T) {
 	if strings.Contains(got, "==") {
 		t.Errorf("the delimiters reached the cell:\n%s", got)
 	}
-	if !strings.Contains(got, `<w:highlight w:val="yellow"/>`) {
+	if !strings.Contains(got, `<w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>`) {
 		t.Errorf("the cell's mark carries no colour:\n%s", got)
 	}
 }
@@ -280,4 +282,101 @@ func TestAMarkInAHeadingIsRefusedByLine(t *testing.T) {
 			t.Errorf("the refusal is %q, and it does not say the mark is in a heading", got)
 		}
 	}
+}
+
+// TestAMarkedRunCarriesItsStyleAndItsShading is how a mark reaches Word: the
+// run names the character style internal/render writes, and it states the
+// colour itself as well, as shading for a highlight and as the run's own
+// colour for the pencil. The run has to say it because Google Docs has no
+// character styles: after import a mark is direct formatting, and direct
+// formatting is all export can read back.
+//
+// Every id and every hex here is written out. The colours come from
+// house.yaml, so a test that read them too would follow the palette wherever
+// somebody moved it and claim nothing.
+func TestAMarkedRunCarriesItsStyleAndItsShading(t *testing.T) {
+	out := walk(t, "A ==a gap==, a ==🔴 warning==, a ==🟠 aside==, a ==🟢 claim==,\n"+
+		"a ==🔵 change==, a ==🟣 question== and [a pencilled line]{.pencil}.\n")
+
+	cases := []struct {
+		words, style, fill, color string
+	}{
+		{words: "a gap", style: "Yellow", fill: "ffd500"},
+		{words: "warning", style: "Red", fill: "ff6b6b"},
+		{words: "aside", style: "Orange", fill: "ffb85c"},
+		{words: "claim", style: "Green", fill: "3dd67a"},
+		{words: "change", style: "Blue", fill: "5db3ff"},
+		{words: "question", style: "Purple", fill: "ba92ff"},
+		{words: "a pencilled line", style: "Pencil", color: "9a9a9a"},
+	}
+	for _, c := range cases {
+		run := runElement(t, out.Blocks, c.words)
+		rPr := run.SelectElement("w:rPr")
+		if rPr == nil {
+			t.Errorf("the run marking %q carries no w:rPr", c.words)
+			continue
+		}
+		if got := value(rPr, "w:rStyle"); got != c.style {
+			t.Errorf("the run marking %q names style %q, want %s", c.words, got, c.style)
+		}
+		shd := rPr.FindElement("w:shd")
+		if c.fill == "" {
+			if shd != nil {
+				t.Errorf("the pencil run marking %q carries shading, want its text colour alone", c.words)
+			}
+			if got := value(rPr, "w:color"); got != c.color {
+				t.Errorf("the run marking %q is coloured %q, want %s", c.words, got, c.color)
+			}
+			continue
+		}
+		if shd == nil {
+			t.Errorf("the run marking %q carries no shading", c.words)
+			continue
+		}
+		if got := shd.SelectAttrValue("w:val", ""); got != "clear" {
+			t.Errorf("the shading on %q is pattern %q, want clear", c.words, got)
+		}
+		if got := shd.SelectAttrValue("w:color", ""); got != "auto" {
+			t.Errorf("the shading on %q has foreground %q, want auto", c.words, got)
+		}
+		if got := shd.SelectAttrValue("w:fill", ""); got != c.fill {
+			t.Errorf("the shading on %q is filled %q, want %s", c.words, got, c.fill)
+		}
+		if rPr.FindElement("w:highlight") != nil {
+			t.Errorf("the run marking %q carries one of Word's sixteen named highlights, want the exact hex", c.words)
+		}
+	}
+}
+
+// value is one property's w:val, or the empty string when the run does not
+// carry the property at all.
+func value(rPr *etree.Element, tag string) string {
+	e := rPr.FindElement(tag)
+	if e == nil {
+		return ""
+	}
+	return e.SelectAttrValue("w:val", "")
+}
+
+// runElement is the one run whose words are the given text, as the paragraph
+// carries it. The run is where a mark's style and its colour are, which the
+// Run struct cannot show.
+func runElement(t *testing.T, blocks []*etree.Element, words string) *etree.Element {
+	t.Helper()
+	var found []*etree.Element
+	for _, block := range blocks {
+		for _, run := range findAll(block, "w:r") {
+			text := ""
+			for _, e := range run.FindElements("w:t") {
+				text += e.Text()
+			}
+			if text == words {
+				found = append(found, run)
+			}
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("%d runs carry the words %q, want one", len(found), words)
+	}
+	return found[0]
 }

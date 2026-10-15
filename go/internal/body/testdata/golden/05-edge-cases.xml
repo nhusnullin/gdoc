@@ -716,7 +716,137 @@
       <w:rPr>
         <w:color w:val="549f99"/>
       </w:rPr>
-      <w:t xml:space="preserve">1.3.3-Strikethrough and nesting</w:t>
+      <w:t xml:space="preserve">1.3.3-The marks, where they are awkward</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="240"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A colour emoji carries the colour at the start of a highlight and nowhere else, so </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Yellow"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a 🔴 gap</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> is yellow and keeps the circle in its words, and the light turned 🔴 and we stopped. An [aside] in brackets is not a span, because Pandoc’s grammar wants the attribute straight after the bracket. A mark carries the formatting inside it: </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Blue"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="5db3ff"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a change with </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Blue"/>
+        <w:b w:val="1"/>
+        <w:bCs w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="5db3ff"/>
+      </w:rPr>
+      <w:t xml:space="preserve">weight</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Blue"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="5db3ff"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> and </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Blue"/>
+        <w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Consolas" w:eastAsia="Consolas"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="5db3ff"/>
+      </w:rPr>
+      <w:t xml:space="preserve">code</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">, and </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Pencil"/>
+        <w:color w:val="9a9a9a"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a pencilled </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Pencil"/>
+        <w:b w:val="1"/>
+        <w:bCs w:val="1"/>
+        <w:color w:val="9a9a9a"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">note</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:rStyle w:val="Yellow"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>
+      </w:rPr>
+      <w:t xml:space="preserve">a gap</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> side by side are two runs rather than one.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:pStyle w:val="Heading3"/>
+      <w:ind w:left="0" w:hanging="0"/>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
+        <w:color w:val="549f99"/>
+      </w:rPr>
+      <w:t xml:space="preserve">1.3.4-Strikethrough and nesting</w:t>
     </w:r>
   </w:p>
   <w:p>
