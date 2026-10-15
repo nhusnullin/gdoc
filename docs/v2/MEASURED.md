@@ -548,8 +548,13 @@ restyles in place becomes ordinary black prose, and `export` reads it back as
 plain words.
 
 Whether that stops Part B, drops the pencil from the seven, or is a strain
-written down and accepted is Nail's decision, not this probe's. Part B is held
-at the gate until he says.
+written down and accepted was Nail's decision, not this probe's. He chose the
+strain on 2026-10-15: Part B goes ahead with all seven marks, the DECISIONS.md
+entry on the marks records that an in-place restyle flattens pencil to black,
+and `docs/backlog/restyle-keeps-pencil.md` holds the fix for a later entry,
+restyle splitting its colour request around the runs that carry the pencil
+grey. Until then a person who restyles a document that holds pencil gets black
+prose where the grey was, and `export` brings the words home without the span.
 
 What was not asked: whether the docx export brings `w:shd` back. Nothing in
 M18 reads a mark out of an export, because `export` reads the Docs answer, so

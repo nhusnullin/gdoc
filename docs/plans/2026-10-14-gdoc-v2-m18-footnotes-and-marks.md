@@ -174,6 +174,9 @@ Checkboxes below. A task is done when its commit is on the branch.
       strain written into DECISIONS.md and accepted is Nail's decision and
       not this task's, and Tasks 8 to 11 wait for it. Written out in
       MEASURED.md, "Drive's import of run shading and text colour".
+      Nail chose on 2026-10-15: the strain, written down and accepted. Part
+      B runs with all seven marks; Task 8 writes the strain and its backlog
+      item.
 - [x] `git commit -m "test(live): measure Drive's import of run shading and text colour"`
 
 ### Task 4: character styles, a mechanism both parts use
@@ -330,6 +333,16 @@ Checkboxes below. A task is done when its commit is on the branch.
       `TestAMarkWhoseColourIsNotHexIsRefused`,
       `TestTwoMarksCannotShareASyntax`: `validateMarks` in `house.go`.
 - [ ] `TestTheMarksAreTheSevenAndNoOther`.
+- [ ] The DECISIONS.md entry "The marks: Obsidian's six colours and one
+      grey" gains a paragraph under "What this strains", dated 2026-10-15:
+      gate B measured that an in-place restyle writes `styles.normal.color`
+      over every body run and so turns pencil black, Nail accepted it, and
+      publish and export are unaffected. Its register row stays "holds".
+- [ ] `docs/backlog/restyle-keeps-pencil.md`, in the shape of the other
+      backlog files: `worth: yes`, `added: 2026-10-15`, what happens today
+      with the MEASURED.md section named, and the fix, restyle splitting its
+      `foregroundColor` request around runs whose colour is the pencil hex,
+      which needs the run colours Task 11's read keeps.
 - [ ] `git commit -m "feat(house): the seven marks, stated once"`
 
 ### Task 9: the colour emoji on a highlight, the pencil span, and what is refused
