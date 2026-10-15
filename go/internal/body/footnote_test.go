@@ -403,6 +403,31 @@ func TestACodeBlockShutsOnItsOwnFenceAndNotAnother(t *testing.T) {
 	}
 }
 
+// TestABacktickSpanIsNotACodeFence: a line opening with a backtick code span
+// is prose, not a fenced block: CommonMark forbids a backtick in the info
+// string of a backtick fence, so "```x``` is a span" opens nothing and
+// goldmark reads a code span there. The scan read the line as a fence and
+// left every line after it out of both checks, so a mark naming no note
+// reached the document as the words the author wrote, and a real fenced block
+// below such a line was read as prose instead.
+func TestABacktickSpanIsNotACodeFence(t *testing.T) {
+	got := refused(t, "```lang``` is how a fence opens.\n\nA claim.[^nope]\n")
+
+	for _, want := range []string{"line 3", "[^nope]", "does not define"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the refusal does not say %q: %s", want, got)
+		}
+	}
+
+	// The other half: the fence below the span is the real one, and what it
+	// holds is code rather than a mark the scan would refuse.
+	out := walk(t, "```x``` is a span.\n\n```\nexample [^abc] here\n```\n")
+
+	if len(out.Footnotes) != 0 {
+		t.Errorf("the walk produced %d notes out of a code block, want none", len(out.Footnotes))
+	}
+}
+
 // TestALabelDefinedTwiceIsRefusedNamingBothLines: goldmark matches a mark
 // against the first definition of a label and its transformer removes the
 // rest, so the second note's words reach no page and the tree says nothing
@@ -413,6 +438,27 @@ func TestALabelDefinedTwiceIsRefusedNamingBothLines(t *testing.T) {
 	for _, want := range []string{"line 5", "[^a]", "line 3"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the refusal does not say %q: %s", want, got)
+		}
+	}
+}
+
+// TestALabelDefinedAgainWhereTheLineScanCannotSeeItIsRefused: goldmark reads a
+// definition wherever a block may start, and lifts one out of a block quote or
+// a list item into the document's own notes. The line scan sees a definition
+// at the margin only, so a second definition written in either place was
+// dropped by goldmark's transformer and named by nothing: the exact silence
+// the margin refusal exists to prevent.
+func TestALabelDefinedAgainWhereTheLineScanCannotSeeItIsRefused(t *testing.T) {
+	for _, markdown := range []string{
+		"A claim.[^a]\n\n[^a]: one.\n\n> [^a]: two.\n",
+		"A claim.[^a]\n\n[^a]: one.\n\n- [^a]: two.\n",
+	} {
+		got := refused(t, markdown)
+
+		for _, want := range []string{"line 5", "[^a]", "line 3"} {
+			if !strings.Contains(got, want) {
+				t.Errorf("%q: the refusal does not say %q: %s", markdown, want, got)
+			}
 		}
 	}
 }

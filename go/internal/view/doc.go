@@ -453,6 +453,16 @@
 // internal/export's
 // TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
 //
+// Where the opener stands is asked as well as what the words hold, in
+// cannotOpenHere. A delimiter pair is read by its run of characters, so a mark
+// written right against the closer of the mark before it is one run of four:
+// two highlights on neighbouring words with nothing between them came home as
+// "==ab====cd==", which publishes as one colour over "ab====cd" or as one
+// colour and the other's syntax printed as words, and nothing said so. The
+// character before the opener has to be one gdoc wrote; a character of the
+// document's own, a held one included, separates the two runs.
+// TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords is the pin.
+//
 // Every mark in the palette is asked, not the one being written alone. A pencil
 // whose words hold a pair of "==" came home as "[a ==b== c]{.pencil}", which
 // the next build refuses as a mark inside a mark, and a highlight whose words

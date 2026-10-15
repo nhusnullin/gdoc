@@ -119,7 +119,7 @@ func proseLines(source []byte, f func(sourceLine)) {
 			}
 			continue
 		}
-		if m := fence.FindStringSubmatch(raw); m != nil && indent <= base+3 {
+		if m := fence.FindStringSubmatch(raw); m != nil && indent <= base+3 && opensFence(m[1], m[2]) {
 			opener, fenceBase = m[1], base
 			// A fence shallower than the content indent of the block in hand
 			// is outside that block, so the block ends here.
@@ -167,6 +167,21 @@ func proseLines(source []byte, f func(sourceLine)) {
 		openParagraph = !blank && !closes
 		f(line)
 	}
+}
+
+// opensFence says a line matching fence opens a block rather than being prose.
+//
+// CommonMark forbids a backtick in the info string of a backtick fence, so
+// "```x``` is a span" opens nothing: goldmark reads a code span there and the
+// rest of the line as words. Read as an opener, every line after it was left
+// out of both checks until something closed the block, so a mark naming no
+// note and an attribute closing no span reached the document as the words the
+// author wrote; and a real fenced block under such a line was read as prose
+// instead, which refused a note nothing was wrong with. A tilde fence's info
+// string may hold anything, backticks included.
+// TestABacktickSpanIsNotACodeFence is the pin.
+func opensFence(run, info string) bool {
+	return run[0] != '`' || !strings.Contains(info, "`")
 }
 
 // definitionIndent is the content indent of a footnote definition, which is

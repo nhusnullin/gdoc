@@ -786,3 +786,48 @@ func TestAFrontCutCountsTheIndexInUTF16Units(t *testing.T) {
 		t.Errorf("the cut gave %d and %d, want 2 and 2", space.EndIndex, words.StartIndex)
 	}
 }
+
+// TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords: a delimiter pair is read
+// by its run of characters, so two highlights with no character between them
+// come home as "==ab====cd==", whose middle is one run of four equals signs.
+// The next build reads that as one pair and a stray pair in the words: with the
+// plain mark first it loses the second colour and publishes "==🟢 cd==" as
+// words, and with the emoji first it publishes "ab====cd" as one green stretch.
+// The group's own words are not where that shows, which is why cannotCarry
+// alone cannot see it.
+//
+// The second mark is the one printed as its words, because the first has
+// already been written, and the loss is named the way every other mark that
+// cannot carry its syntax is.
+func TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords(t *testing.T) {
+	// The two hexes are the house's plain yellow and its green, as literals.
+	marks := []Mark{
+		{Background: "#FFD500", Open: "==", Shut: "=="},
+		{Background: "#34A853", Open: "==🟢 ", Shut: "=="},
+	}
+	// "ab" in the first colour and "cd" in the second, with nothing between
+	// them, then " ok".
+	for _, c := range []struct {
+		first, second string
+		want          string
+	}{
+		{first: `"red":1,"green":0.8352941,"blue":0`, second: `"red":0.20392157,"green":0.65882355,"blue":0.3254902`, want: "==ab==cd ok"},
+		{first: `"red":0.20392157,"green":0.65882355,"blue":0.3254902`, second: `"red":1,"green":0.8352941,"blue":0`, want: "==🟢 ab==cd ok"},
+	} {
+		raw := `{"documentId":"D","body":{"content":[
+			{"startIndex":1,"endIndex":10,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+			 "elements":[
+			  {"startIndex":1,"endIndex":3,"textRun":{"content":"ab","textStyle":{"backgroundColor":{"color":{"rgbColor":{` + c.first + `}}}}}},
+			  {"startIndex":3,"endIndex":5,"textRun":{"content":"cd","textStyle":{"backgroundColor":{"color":{"rgbColor":{` + c.second + `}}}}}},
+			  {"startIndex":5,"endIndex":10,"textRun":{"content":" ok\n"}}]}}]}}`
+
+		text, warnings := Project(parse(t, raw), Options{Marks: marks})
+
+		if !strings.Contains(text, c.want) {
+			t.Errorf("text = %q, want %q", text, c.want)
+		}
+		if len(warnings) != 1 {
+			t.Errorf("text = %q: warnings = %v, want the one naming the mark printed as its words", text, warnings)
+		}
+	}
+}

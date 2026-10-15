@@ -17,6 +17,8 @@ import (
 	"github.com/beevik/etree"
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/text"
 )
 
 // Footnote is one note under the page: the number the body's reference run
@@ -287,8 +289,11 @@ var atxHeading = regexp.MustCompile(`^ {0,3}#{1,6}(\s|$)`)
 // and TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused are the pins.
 //
 // The heading question is asked of the tree as well, in headingBlock, because
-// an ATX heading is the only one a line scan can see.
-func checkFootnotes(source []byte, root ast.Node) error {
+// an ATX heading is the only one a line scan can see. The duplicate question
+// is asked of the parse as well, in checkDefinedTwice, because a definition
+// goldmark lifted out of a block quote or a list item is the other one it
+// cannot: defs is the snapshot readDefinitions took.
+func checkFootnotes(source []byte, root ast.Node, read []definitionAt) error {
 	type mark struct {
 		label string
 		line  int
@@ -311,7 +316,7 @@ func checkFootnotes(source []byte, root ast.Node) error {
 				// goldmark matches a mark against the first definition of a
 				// label and its transformer removes the rest, so the words
 				// here would reach no page and nothing would say so.
-				refusal = fmt.Errorf("line %d: the footnote [^%s] is defined again here, after line %d, and goldmark keeps the first definition only, so these words would reach no page of the document", l.at, l.label, at)
+				refusal = definedTwice(l.label, l.at, at)
 				return
 			}
 			defs[l.label] = l.at
@@ -334,6 +339,9 @@ func checkFootnotes(source []byte, root ast.Node) error {
 	if refusal != nil {
 		return refusal
 	}
+	if err := checkDefinedTwice(read); err != nil {
+		return err
+	}
 	for _, ref := range refs {
 		if !defined[ref.label] {
 			return fmt.Errorf("line %d: the footnote mark [^%s] names a note this file does not define, so the document would carry a mark with nothing under the page; goldmark publishes it as the words [^%s] instead", ref.line, ref.label, ref.label)
@@ -353,6 +361,94 @@ func checkFootnotes(source []byte, root ast.Node) error {
 		if !marked[label] {
 			return fmt.Errorf("line %d: the footnote [^%s] is defined and nothing in this file's own words marks it, so its words would reach no page of the document; a mark inside another footnote does not count, because Word has one level of note", defs[label], label)
 		}
+	}
+	return nil
+}
+
+// definitionsKey is where readDefinitions leaves what it read, in the parser
+// context Render hands the parse.
+var definitionsKey = parser.NewContextKey()
+
+// definitionAt is one footnote definition goldmark read: the label it defines
+// and the line it sits on.
+type definitionAt struct {
+	label string
+	line  int
+}
+
+// readDefinitions records every definition goldmark read, duplicates included,
+// before the footnote extension's own transformer removes the ones nothing
+// references.
+//
+// It is the only place a dropped definition can be seen. The block parser
+// lifts every definition it reads, wherever in the file a block may start,
+// into one list; the extension's transformer then removes each one no mark
+// resolved to, which is every second definition of a label, and nothing in
+// the tree afterwards says one was there. The line scan sees a definition at
+// the margin only, so without this a label defined again inside a block quote
+// or a list item was dropped in silence.
+//
+// The priority is below the extension's own 999, and the parser runs its
+// transformers in that order, so this one reads the list while it is whole.
+// A definition inside a block of HTML is not here, because goldmark reads one
+// leaf block there and parses no definition at all, which is the answer that
+// package wants: TestADefinitionInsideABlockOfHTMLRefusesNothing.
+type readDefinitions struct{}
+
+// definitionsPriority is below the footnote extension's own transformer, which
+// is registered at 999 and is the one that removes a dropped definition.
+const definitionsPriority = 900
+
+func (readDefinitions) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
+	source := reader.Source()
+	var defs []definitionAt
+	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		note, ok := node.(*east.Footnote)
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+		line := 1
+		if at, found := descendantLineOf(source, note); found {
+			line = at
+		}
+		defs = append(defs, definitionAt{label: string(note.Ref), line: line})
+		return ast.WalkSkipChildren, nil
+	})
+	pc.Set(definitionsKey, defs)
+}
+
+// definitionsRead is the snapshot readDefinitions left in the context, empty
+// where the note holds no definition at all.
+func definitionsRead(pc parser.Context) []definitionAt {
+	if pc == nil {
+		return nil
+	}
+	defs, _ := pc.Get(definitionsKey).([]definitionAt)
+	return defs
+}
+
+// definedTwice is the refusal both halves of the rule state, so the sentence
+// an author reads is the same wherever the second definition was written.
+func definedTwice(label string, at, first int) error {
+	return fmt.Errorf("line %d: the footnote [^%s] is defined again here, after line %d, and goldmark keeps the first definition only, so these words would reach no page of the document", at, label, first)
+}
+
+// checkDefinedTwice is the duplicate rule asked of the parse: a label with two
+// definitions in the snapshot, named by the lines goldmark read them on.
+//
+// The line scan asks the same question first, and names the opener's own line,
+// which is the answer for every definition written at the margin. This is the
+// half the scan cannot see.
+func checkDefinedTwice(defs []definitionAt) error {
+	first := map[string]int{}
+	for _, def := range defs {
+		if at, seen := first[def.label]; seen {
+			return definedTwice(def.label, def.line, at)
+		}
+		first[def.label] = def.line
 	}
 	return nil
 }

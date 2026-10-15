@@ -21,6 +21,7 @@ import (
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 
 	"gdoc/internal/house"
 	"gdoc/internal/markers"
@@ -169,14 +170,18 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	if m, line := markers.Lines(string(source)); line > 0 {
 		return Result{}, fmt.Errorf("line %d carries %s, one of gdoc's own markers; the note was exported out of a document and its suggestions and comments have not been resolved, so publishing it would put the marker into the document as words", line, m)
 	}
-	root := parse().Parser().Parse(text.NewReader(source))
+	// The parse carries a context of Render's own, because readDefinitions
+	// leaves its snapshot of the footnote definitions there and footnote.go
+	// holds why the parse is the only place one of them can be seen.
+	pc := parser.NewContext()
+	root := parse().Parser().Parse(text.NewReader(source), parser.WithContext(pc))
 	// The footnotes and the spans are refused before a block is built, both
 	// mostly off the source lines: a mark naming no note and an attribute
 	// closing no span are facts about a line, and goldmark is silent in each
 	// of them. Each asks the parse the one question a line cannot answer,
 	// which is whether goldmark read the same thing there; footnote.go and
 	// mark.go hold which question that is.
-	if err := checkFootnotes(source, root); err != nil {
+	if err := checkFootnotes(source, root, definitionsRead(pc)); err != nil {
 		return Result{}, err
 	}
 	if err := checkSpans(source, root); err != nil {
@@ -254,7 +259,14 @@ func parse() goldmark.Markdown {
 			// prose.
 			extension.Footnote,
 		),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+			// The snapshot of the footnote definitions, taken before the
+			// extension's own transformer removes the ones it drops.
+			parser.WithASTTransformers(
+				util.Prioritized(readDefinitions{}, definitionsPriority),
+			),
+		),
 	)
 }
 
@@ -392,9 +404,15 @@ func (r *renderer) itemLine(item ast.Node) int {
 // through its inlines: a block that carries no lines of its own is read
 // through the first text inside it instead.
 func (r *renderer) descendantLine(node ast.Node) (int, bool) {
+	return descendantLineOf(r.source, node)
+}
+
+// descendantLineOf is the same answer without a renderer, for the snapshot
+// readDefinitions takes during the parse, which is before one is built.
+func descendantLineOf(source []byte, node ast.Node) (int, bool) {
 	if node.Type() != ast.TypeInline {
 		if lines := node.Lines(); lines != nil && lines.Len() > 0 {
-			line := r.lineAt(lines.At(0).Start)
+			line := lineOf(source, lines.At(0).Start)
 			if _, fenced := node.(*ast.FencedCodeBlock); fenced && line > 1 {
 				line--
 			}
@@ -402,10 +420,10 @@ func (r *renderer) descendantLine(node ast.Node) (int, bool) {
 		}
 	}
 	if text, ok := node.(*ast.Text); ok {
-		return r.lineAt(text.Segment.Start), true
+		return lineOf(source, text.Segment.Start), true
 	}
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if line, ok := r.descendantLine(child); ok {
+		if line, ok := descendantLineOf(source, child); ok {
 			return line, true
 		}
 	}

@@ -254,6 +254,15 @@
 // TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused and
 // TestADefinitionInsideABlockOfHTMLRefusesNothing are the pins.
 //
+// The duplicate refusal is asked of the parse as well, for the same reason:
+// the scan names the opener's own line for a definition at the margin, and a
+// label defined again inside a block quote or a list item is the half it
+// cannot see. readDefinitions snapshots every definition goldmark read before
+// the extension's transformer removes the ones it drops, which is the only
+// place a dropped one can be seen, and both halves state one sentence.
+// Written in silence, those words reached no page and nothing said so.
+// TestALabelDefinedAgainWhereTheLineScanCannotSeeItIsRefused is the pin.
+//
 // The heading refusal is asked of the tree as well, in headingBlock, because
 // the line scan sees an ATX heading and goldmark builds a heading from a setext
 // line, from inside a block quote and from inside a list item too.
@@ -291,6 +300,14 @@
 // TestACodeBlockShutsOnItsOwnFenceAndNotAnother,
 // TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode and
 // TestAMarkInAListItemsOwnLaterParagraphIsStillProse are the pins.
+//
+// A line opening with a backtick code span opens no fence: CommonMark forbids
+// a backtick in the info string of a backtick fence, so "```x``` is a span" is
+// prose and goldmark reads a span there. Read as an opener, every line after
+// it was left out of both checks, so a mark naming no note reached the
+// document as words, and a real fenced block under such a line was read as
+// prose instead.
+// TestABacktickSpanIsNotACodeFence is the pin.
 //
 // A footnote mark inside a table cell is refused as well. The spec carries
 // none, and a cell's paragraph has no footnotes part to write into, so the note

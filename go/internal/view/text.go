@@ -1232,7 +1232,11 @@ func (e *emitter) body(rs []docs.Run) {
 		// comment anchored at the same character would otherwise end up
 		// behind markup gdoc wrote.
 		e.drain(words[0].StartIndex, false)
-		if why := e.cannotCarry(m, words); why != "" {
+		why := e.cannotCarry(m, words)
+		if why == "" {
+			why = e.cannotOpenHere(m, words)
+		}
+		if why != "" {
 			e.warnings = append(e.warnings, fmt.Sprintf(
 				"the mark on the words at index %d is printed as the words alone: %s", words[0].StartIndex, why))
 			e.links(words)
@@ -1246,6 +1250,31 @@ func (e *emitter) body(rs []docs.Run) {
 		e.links(tail)
 		i = j
 	}
+}
+
+// cannotOpenHere is why this mark's opener cannot be written where the text
+// stands, or nothing where it can be.
+//
+// A delimiter pair is read by its run of characters, so an opener written right
+// against the closer of the mark before it is one run of four: the next build
+// reads one pair out of it and leaves the other two characters in the words. A
+// highlight on "ab" and another on "cd" with nothing between them came home as
+// "==ab====cd==", which publishes as one colour over "ab====cd" or as one
+// colour and the other's syntax printed as words, and nothing said so.
+//
+// cannotCarry reads the group's own words, and this is the one thing outside
+// them that changes what the delimiter reads as. The character before the
+// opener has to be one gdoc wrote: a character of the document's own separates
+// the two runs, whatever it is, and a held character is the document's. The
+// second mark is the one that loses its syntax, because the first is already
+// written, and the loss is named the way every other one is.
+// TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords is the pin.
+func (e *emitter) cannotOpenHere(m *Mark, words []docs.Run) string {
+	first := edgeRune(m.opener(words), true)
+	if first == 0 || e.held != 0 || !e.prevGdoc || e.prev != first {
+		return ""
+	}
+	return "the mark before these words closes right against this one's delimiter, and the two would read as one run of characters"
 }
 
 // cannotCarry is why this mark cannot be written around these words, or nothing
