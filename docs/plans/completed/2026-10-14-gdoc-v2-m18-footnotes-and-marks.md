@@ -536,11 +536,16 @@ mechanism, so the master stays provenance and the gate stays honest.
 
 ### Task 16: verify acceptance, and M18 completed
 
-- [ ] Every acceptance item in the spec, run and ticked in the task log,
+- [x] Every acceptance item in the spec, run and ticked in the task log,
       with the items of a part that stopped at its gate marked as such.
-- [ ] `make test`, `make vet`, `make dist`.
-- [ ] Both plan files move to `docs/plans/completed/`.
-- [ ] `git commit -m "chore: M18 completed"`
+      Neither part stopped. The table is in the spec's acceptance section:
+      seven pass, item 7 is partial on eight pre-M18 lines of the kitchen
+      sink round trip.
+- [x] `make test`, `make vet`, `make dist`, green on 2026-10-15.
+- [x] Both plan files move to `docs/plans/completed/`.
+- [x] `git commit -m "chore: M18 completed"`. Done by hand: the Task 16
+      agent was throttled to one turn an hour, so Claude stopped it on a
+      clean tree and closed the task itself.
 
 ## Post-Completion
 
