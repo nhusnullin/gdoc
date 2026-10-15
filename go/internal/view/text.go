@@ -1272,6 +1272,12 @@ func (e *emitter) body(rs []docs.Run) {
 //     either delimiter lengthens that run and comes home as a stray character
 //     in the document.
 //
+// Every mark in the palette is asked, not this one alone. A mark the words hold
+// is another mark's syntax inside this one, which the next build refuses as a
+// mark inside a mark, and a span's closer inside a highlight's words is one it
+// refuses as a span the line does not open. internal/export's
+// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords is the pin.
+//
 // A backslash is not the answer. internal/body hands goldmark's text through as
 // it stands and never unescapes a punctuation mark, so a backslash written into
 // the file reaches the document as a backslash. A colour nobody can see in the
@@ -1295,7 +1301,7 @@ func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
 				return "the words point somewhere, and a link is written with the bracket that would close the span"
 			}
 		}
-		return ""
+		return e.holdsAnotherMark(m, words)
 	}
 	if strings.Contains(words, m.Shut) || strings.Contains(words, m.Open) {
 		return "the words hold the delimiter the mark is written with, which would close it early"
@@ -1305,6 +1311,37 @@ func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
 	}
 	if edgeRune(m.Shut, true) != 0 && strings.HasSuffix(words, string(edgeRune(m.Shut, true))) {
 		return "the words end with the character the mark's own delimiter is made of, which would lengthen it"
+	}
+	return e.holdsAnotherMark(m, words)
+}
+
+// holdsAnotherMark is why these words hold the syntax of a mark that is not
+// this one, or nothing where they hold none.
+//
+// A span's closer is enough on its own: the next build refuses a closer the
+// line does not open, whatever sits in front of it. A delimiter pair takes
+// both halves, because one "==" in a sentence is a sentence and the build
+// reads a mark only where a pair closes. Either way the mark around these
+// words would nest inside this one, and two colours on one stretch of words is
+// what the house style has no answer for.
+func (e *emitter) holdsAnotherMark(m *Mark, words string) string {
+	for i := range e.opts.Marks {
+		other := &e.opts.Marks[i]
+		// A mark that shuts with nothing is written around nothing, and
+		// counting the empty string in the words would refuse every one of
+		// them.
+		if other.Shut == "" || (other.Open == m.Open && other.Shut == m.Shut) {
+			continue
+		}
+		if strings.Contains(other.Shut, "]") {
+			if strings.Contains(words, other.Shut) {
+				return "the words hold the closer of another mark, which the next build reads as a span this line does not open"
+			}
+			continue
+		}
+		if strings.Count(words, other.Shut) > 1 {
+			return "the words hold the delimiter another mark is written with, twice, which the next build reads as a mark inside this one"
+		}
 	}
 	return ""
 }

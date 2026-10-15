@@ -491,3 +491,57 @@ func TestAHighlightWithWordsAfterItsColourIsNotRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine: Pandoc's span is a
+// bracket gdoc's own parser claims, and three of goldmark's parsers claim one
+// first. A bracket after "!" is a picture's, a bracket holding a caret is a
+// footnote mark's, and a bracket followed by a target or a reference is a
+// link's. In each of those the attribute closes nothing, so "{.pencil}" is
+// published as words. The line check read the shape and called it a span.
+func TestAPencilAttributeThatOpensNoSpanIsRefusedByLine(t *testing.T) {
+	for _, markdown := range []string{
+		"Words.\n\nA picture ![a]{.pencil} here.\n",
+		"Words.[^a]{.pencil}\n\n[^a]: the note.\n",
+		"Words.\n\nA link [words](https://example.com){.pencil} here.\n",
+		"Words.\n\nA reference [words][ref]{.pencil} here.\n\n[ref]: https://example.com\n",
+		"Words.\n\nA bare {.pencil} in the prose.\n",
+	} {
+		got := refused(t, markdown)
+
+		if !strings.Contains(got, pencilAttribute) {
+			t.Errorf("%q: the refusal is %q, and it does not name the attribute", markdown, got)
+		}
+		if !strings.Contains(got, "words") {
+			t.Errorf("%q: the refusal is %q, and it does not say the attribute would reach the document as words", markdown, got)
+		}
+	}
+}
+
+// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing: a block of HTML is
+// named on the envelope and left out, so the syntax written inside it reaches
+// no page and refuses nothing, which is the rule a code block already has.
+func TestAPencilAttributeInsideABlockOfHTMLRefusesNothing(t *testing.T) {
+	out, err := Render(config(t), []byte("Words.\n\n<div>\n[a]{.pencil}\n</div>\n"), "testdata/docs", true)
+	if err != nil {
+		t.Fatalf("the file was refused: %v", err)
+	}
+	if len(out.Blocks) == 0 {
+		t.Error("the file wrote nothing")
+	}
+}
+
+// TestASpanTheParseFormsIsNotRefused guards the check above from refusing the
+// spans that do work: one of its own, two on a line, one inside emphasis and
+// one inside a table cell.
+func TestASpanTheParseFormsIsNotRefused(t *testing.T) {
+	for _, markdown := range []string{
+		"A [note]{.pencil} here.\n",
+		"A [note]{.pencil} and [another]{.pencil} here.\n",
+		"A *[note]{.pencil}* here.\n",
+		"| a | b |\n| --- | --- |\n| [note]{.pencil} | x |\n",
+	} {
+		if _, err := Render(config(t), []byte(markdown), "testdata/docs", true); err != nil {
+			t.Errorf("%q was refused: %v", markdown, err)
+		}
+	}
+}

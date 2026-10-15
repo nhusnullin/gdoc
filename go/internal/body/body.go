@@ -169,21 +169,19 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	if m, line := markers.Lines(string(source)); line > 0 {
 		return Result{}, fmt.Errorf("line %d carries %s, one of gdoc's own markers; the note was exported out of a document and its suggestions and comments have not been resolved, so publishing it would put the marker into the document as words", line, m)
 	}
-	// The footnotes are asked of the source lines beside the markers, and for
-	// the same reason: both failures are facts about a line rather than about
-	// any block goldmark builds. footnote.go holds why goldmark is silent in
-	// both shapes.
-	if err := checkFootnotes(source); err != nil {
-		return Result{}, err
-	}
-	// The spans are asked of the source lines beside the footnotes, and for
-	// the same reason: goldmark reads a span it does not recognise as prose,
-	// and prose carrying braces is the author's own syntax printed in the
-	// document. mark.go holds the three shapes.
-	if err := checkSpans(source); err != nil {
-		return Result{}, err
-	}
 	root := parse().Parser().Parse(text.NewReader(source))
+	// The footnotes and the spans are refused before a block is built, both
+	// mostly off the source lines: a mark naming no note and an attribute
+	// closing no span are facts about a line, and goldmark is silent in each
+	// of them. Each asks the parse the one question a line cannot answer,
+	// which is whether goldmark read the same thing there; footnote.go and
+	// mark.go hold which question that is.
+	if err := checkFootnotes(source, root); err != nil {
+		return Result{}, err
+	}
+	if err := checkSpans(source, root); err != nil {
+		return Result{}, err
+	}
 	order, numbers := footnoteNumbers(root)
 
 	r := &renderer{
@@ -345,11 +343,15 @@ func (r *renderer) line(node ast.Node) int {
 
 // lineAt turns a source offset into the 1-based line holding it. An offset
 // nothing carried is line 1, which is the only answer left.
-func (r *renderer) lineAt(offset int) int {
-	if offset < 0 || offset > len(r.source) {
+func (r *renderer) lineAt(offset int) int { return lineOf(r.source, offset) }
+
+// lineOf is the same answer without a renderer, because the two refusals the
+// parse answers are asked before one is built.
+func lineOf(source []byte, offset int) int {
+	if offset < 0 || offset > len(source) {
 		return 1
 	}
-	return 1 + bytes.Count(r.source[:offset], []byte("\n"))
+	return 1 + bytes.Count(source[:offset], []byte("\n"))
 }
 
 // itemLine is the line a list item's own warning names. A ListItem carries no

@@ -287,3 +287,37 @@ func TestAMarkedSpaceBetweenPlainWordsComesHomeAsItStands(t *testing.T) {
 		t.Errorf("the marked space came home as\n%q\nwant %q", files[0].Body, want)
 	}
 }
+
+// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords: a mark is checked
+// against every mark in the palette and not against its own syntax alone.
+//
+// The pencil's words holding a pair of "==" came home as
+// "[a ==b== c]{.pencil}", which the next build refuses as a mark inside a
+// mark, and a highlight's words holding "]{.pencil}" came home as
+// "==a ]{.pencil} b==", which it refuses as a span the line does not open. The
+// guarantee is that the file builds again, so in both the colour is dropped and
+// the loss is named.
+func TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords(t *testing.T) {
+	for _, c := range []struct {
+		name, words, never string
+		run                docs.Run
+	}{
+		{"a pencil whose words hold a highlight", "a ==b== c", "{.pencil}",
+			docs.Run{Text: "a ==b== c", Colour: "#9A9A9A"}},
+		{"a highlight whose words hold a span's closer", "a ]{.pencil} b", "==",
+			docs.Run{Text: "a ]{.pencil} b", Background: "#FFD500"}},
+	} {
+		files, _, _, warnings := Project(oneMarked(c.run), nil, palette(t))
+
+		if got := files[0].Body; !strings.Contains(got, c.words+"\n") {
+			t.Errorf("%s came home as\n%q\nwant the words %q alone", c.name, got, c.words)
+		}
+		if strings.Contains(files[0].Body, c.never) {
+			t.Errorf("%s came home carrying %q, which the next build cannot read:\n%q",
+				c.name, c.never, files[0].Body)
+		}
+		if len(warnings) != 1 {
+			t.Errorf("%s raised %v, want the one sentence naming the loss", c.name, warnings)
+		}
+	}
+}

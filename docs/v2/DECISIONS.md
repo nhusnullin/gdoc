@@ -90,7 +90,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
 | 2026-10-14 | A footnote is carried on every route | holds |
 | 2026-10-14 | The marks: Obsidian's six colours and one grey | holds |
-| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, and a mark inside a footnote | holds |
+| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4372,3 +4372,58 @@ The second round of the review adds
 `TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed`,
 `TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused` and
 `TestTheBareHighlightBelongsToAHighlight`.
+
+The third round closes the two questions a line scan was still answering for
+the parse, and one mark the export asked about its own syntax alone.
+
+**Which labels are defined is the parse's answer.** The line scan sees a
+definition at the margin and goldmark reads one wherever a block may start, so
+the two disagreed in both directions. A definition inside a block quote or
+inside a list item is lifted into the document's own list of notes and renders:
+`> [^a]: the note` was refused with a sentence saying the file does not define
+a note it does define, and nothing the author could type fixed it. A definition
+inside a block of HTML defines nothing, because the block is one leaf and
+nothing in it is markdown: that file built with `ok` and published `[^a]` into
+the document as words, which is the exact failure the refusal exists to
+prevent. `definedFootnotes` walks the parse for the labels it resolved, which is
+also goldmark's own answer about which definitions survive, and the scan keeps
+the three questions a line answers: a definition nothing marks, a label defined
+twice, and a mark in a heading.
+
+**The lines of a block of HTML are left out of both scans**, the way a code
+block's are. Nothing inside one reaches the document, so a definition there
+answers for nothing and a span there is never formed, and both scans refused a
+file over syntax no reader would ever see. The lines come off the parse rather
+than off a second reading of the source: CommonMark opens a block of HTML on
+seven conditions and shuts it on as many, and a scan that guessed at them would
+be a third reading to keep in step with goldmark.
+
+**The pencil attribute is counted against the spans the parse formed.** gdoc's
+span parser claims a bracket, and three of goldmark's parsers claim one first: a
+bracket after `!` is a picture's, a bracket holding a caret is a footnote
+mark's, and a bracket followed by a target or a reference is a link's. The line
+check read the shape and called each of them a span, so `![a]{.pencil}`,
+`[^a]{.pencil}`, `[words](url){.pencil}` and `[words][ref]{.pencil}` all built
+with `ok` and put `{.pencil}` into the document as words. The count of the
+attribute on a line may not exceed the spans the parse formed on it, which
+makes that a sixth refusal by line, and `{.pencil}` written in prose with no
+span at all is refused with the rest. A code span is how an author writes the
+syntax itself, which is the answer the other span refusals already give.
+
+**A mark is checked against every mark in the palette, not its own syntax
+alone.** `cannotCarry` asked whether the words hold the delimiter of the mark
+being written, so a pencil over words holding `==b==` came home as
+`[a ==b== c]{.pencil}`, which the next build refuses as a mark inside a mark,
+and a highlight over words holding `]{.pencil}` came home as a span the line
+does not open. Both broke the one guarantee the function exists for, which is
+that the file builds again. A span's closer counts on its own, because the
+build refuses one whatever sits in front of it; a delimiter pair takes both
+halves, because one `==` in a sentence is a sentence.
+
+**Tests.** `TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused`,
+`TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused`,
+`TestADefinitionInsideABlockOfHTMLRefusesNothing`,
+`TestAPencilAttributeThatOpensNoSpanIsRefusedByLine`,
+`TestAPencilAttributeInsideABlockOfHTMLRefusesNothing`,
+`TestASpanTheParseFormsIsNotRefused` and
+`TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords`.

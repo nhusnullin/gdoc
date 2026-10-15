@@ -437,17 +437,9 @@ func markWords(node ast.Node, source []byte) string {
 }
 
 // markLine is the line a mark's refusal names. descendantLine cannot be asked
-// for it: a mark is an inline node, and goldmark's Lines panics on one. The
-// first text inside the mark is where it starts, and a mark holding no text at
-// all resolves through the block around it.
-func (r *renderer) markLine(node ast.Node) int {
-	for at := node; at != nil; at = at.Parent() {
-		if text := firstTextNode(at); text != nil {
-			return r.lineAt(text.Segment.Start)
-		}
-	}
-	return 1
-}
+// for it: a mark is an inline node, and inlineLine holds why and what the
+// answer is instead.
+func (r *renderer) markLine(node ast.Node) int { return inlineLine(r.source, node) }
 
 // spanWritten is one whole span as an author writes it: bracketed words
 // carrying no bracket of their own, then the attribute list.
@@ -457,18 +449,35 @@ var spanWritten = regexp.MustCompile(`\[([^\[\]]*)\]\{([^{}]*)\}`)
 // span does not open on it.
 var spanClosed = regexp.MustCompile(`\]\{\.[^{}]*\}`)
 
-// checkSpans is the question the source lines are asked before the note is
-// parsed: does every span carry the one attribute gdoc reads, does every span
-// mark some words, and does every span open and close on one line.
+// spanAttribute is the attribute list a span is closed with, which is what a
+// line carries once for every span written on it.
+const spanAttribute = "{" + pencilAttribute + "}"
+
+// checkSpans is the question asked of the note before a block is built: does
+// every span carry the one attribute gdoc reads, does every span mark some
+// words, does every span open and close on one line, and did the parse form a
+// span wherever the attribute was written.
 //
-// It is the source rather than the tree because goldmark is silent in all
-// three shapes: a span it does not recognise is prose, and prose carrying
+// The first three are read off the source lines because goldmark is silent in
+// all three shapes: a span it does not recognise is prose, and prose carrying
 // braces is a document with the author's syntax printed in it. scan.go holds
-// which lines it reads, and it is the same set checkFootnotes reads: nothing
-// inside backticks and nothing inside a code block is markdown.
-func checkSpans(source []byte) error {
+// which lines are read, and it is the same set checkFootnotes reads: nothing
+// inside backticks, nothing inside a code block and nothing inside a block of
+// HTML is markdown.
+//
+// The fourth is the parse's own answer, because a bracket this package's
+// parser never gets to claim still reads as a span by line. Three of
+// goldmark's parsers claim one first: a bracket after "!" is a picture's, a
+// bracket holding a caret is a footnote mark's, and a bracket followed by a
+// target or a reference is a link's. In each of those the attribute closes
+// nothing and "{.pencil}" was published as words with the build saying ok, so
+// the attribute is counted against the spans the parse formed on that line.
+// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine and
+// TestASpanTheParseFormsIsNotRefused are the pins.
+func checkSpans(source []byte, root ast.Node) error {
 	var refusal error
-	proseLines(source, func(l sourceLine) {
+	formed := spanLines(source, root)
+	checkLines(source, root, func(l sourceLine) {
 		if refusal != nil {
 			return
 		}
@@ -487,7 +496,45 @@ func checkSpans(source []byte) error {
 		}
 		if closer := spanClosed.FindString(rest); closer != "" {
 			refusal = fmt.Errorf("line %d: %s closes a span this line does not open; a span marks words on one line, and one that does not open and close on the same line would reach the document as the syntax the author wrote", l.at, closer)
+			return
+		}
+		if written := strings.Count(l.text, spanAttribute); written > formed[l.at] {
+			refusal = fmt.Errorf("line %d: %s on this line closes no span gdoc reads, because the bracket in front of it opens a picture, a link or a footnote mark rather than a span; written as it is, the attribute would reach the document as words", l.at, spanAttribute)
 		}
 	})
 	return refusal
+}
+
+// spanLines is how many spans the parse formed, by the line each sits on.
+//
+// A span opens and closes on one line, so the line a span's own words start on
+// is the line its attribute was written on. A span holding no text at all
+// resolves through the block around it, the way a mark's refusal does.
+func spanLines(source []byte, root ast.Node) map[int]int {
+	out := map[int]int{}
+	if root == nil {
+		return out
+	}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, ok := node.(*Span); ok {
+			out[inlineLine(source, node)]++
+		}
+		return ast.WalkContinue, nil
+	})
+	return out
+}
+
+// inlineLine is the line an inline node sits on. goldmark's Lines panics on an
+// inline, so the first text inside it is where it starts, and a node holding
+// no text at all resolves through the block around it.
+func inlineLine(source []byte, node ast.Node) int {
+	for at := node; at != nil; at = at.Parent() {
+		if text := firstTextNode(at); text != nil {
+			return lineOf(source, text.Segment.Start)
+		}
+	}
+	return 1
 }

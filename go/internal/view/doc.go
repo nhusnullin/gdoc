@@ -453,6 +453,15 @@
 // internal/export's
 // TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
 //
+// Every mark in the palette is asked, not the one being written alone. A pencil
+// whose words hold a pair of "==" came home as "[a ==b== c]{.pencil}", which
+// the next build refuses as a mark inside a mark, and a highlight whose words
+// hold "]{.pencil}" came home as a span that line does not open. A span's
+// closer is enough on its own, because the build refuses one whatever sits in
+// front of it, and a delimiter pair takes both halves, because one "==" in a
+// sentence is a sentence. internal/export's
+// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords is the pin.
+//
 // A mark may carry a second opener for the case where its own would be read
 // off the words. The one highlight an author writes bare says no colour, so
 // marked words that themselves begin with a colour emoji would be read as

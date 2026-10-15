@@ -48,6 +48,14 @@
 // ]{, are the author's own words. A bracket inside a code span is neither: the
 // parser steps over a code span the way the line scan does, so the two agree
 // on what opens a span.
+//
+// The attribute is counted against the spans the parse formed, because a
+// bracket this package's parser never gets to claim still reads as a span by
+// line: a bracket after "!" is a picture's, a bracket holding a caret is a
+// footnote mark's, and a bracket followed by a target or a reference is a
+// link's. In each of those "{.pencil}" closed nothing and was published as
+// words with the build saying ok, which is the failure the line check exists
+// to prevent.
 // TestAHighlightOpeningWithAColourEmojiCarriesItsMark,
 // TestAnEmojiElsewhereInAHighlightIsText, TestAPencilSpanIsARunCarryingItsMark,
 // TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,
@@ -57,7 +65,10 @@
 // TestAHighlightWithWordsAfterItsColourIsNotRefused,
 // TestASpanCrossingAParagraphIsRefusedByLine,
 // TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan,
-// TestASpanInsideACodeBlockIsNotASpan and
+// TestASpanInsideACodeBlockIsNotASpan,
+// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine,
+// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing,
+// TestASpanTheParseFormsIsNotRefused and
 // TestAMarkInAHeadingIsRefusedByLine and
 // TestAMarkInAPicturesAltTextIsRefusedByLine are the pins, with
 // TestTwoMarksSideBySideStayTwoRuns over merge and
@@ -232,15 +243,30 @@
 // TestALabelDefinedTwiceIsRefusedNamingBothLines and
 // TestAFootnoteMarkInsideAHeadingIsRefusedByLine are the pins.
 //
+// Which labels are defined is the parse's answer and not the scan's, in
+// definedFootnotes. goldmark reads a definition wherever a block may start, and
+// a line scan sees one at the margin only: a definition inside a block quote or
+// inside a list item is lifted into the document's notes and renders, while one
+// inside a block of HTML defines nothing. The first was refused with a sentence
+// saying the file does not define a note it does define, and the second built
+// with "[^a]" published into the document as words.
+// TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused,
+// TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused and
+// TestADefinitionInsideABlockOfHTMLRefusesNothing are the pins.
+//
 // The heading refusal is asked of the tree as well, in headingBlock, because
 // the line scan sees an ATX heading and goldmark builds a heading from a setext
 // line, from inside a block quote and from inside a list item too.
 // TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused is the pin.
 //
-// The scan skips a code block and an inline code span, because nothing inside
-// either is markdown: goldmark reads no mark in a span, a code block is left
-// out of the document whole, and a note explaining a regular expression writes
-// "[^abc]" in one. Read as a mark, that refused a note nothing was wrong with.
+// The scan skips a code block, an inline code span and a block of HTML,
+// because nothing inside any of them is markdown: goldmark reads no mark in a
+// span, a code block and a block of HTML are each left out of the document
+// whole, and a note explaining a regular expression writes "[^abc]" in one.
+// Read as a mark, that refused a note nothing was wrong with. The lines of a
+// block of HTML come off the parse rather than off a second reading of the
+// source, because CommonMark opens one on seven different conditions and shuts
+// it on as many.
 // A code block is a fence or four spaces, a fenced block shuts only on its own
 // character in a run at least as long as its opener and carrying nothing else,
 // and the whole rule lives in scan.go because the footnote scan and the span

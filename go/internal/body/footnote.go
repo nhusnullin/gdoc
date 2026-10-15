@@ -268,18 +268,27 @@ func definitionOpener(l sourceLine) int {
 // atxHeading is a heading line, which is where a footnote mark is refused.
 var atxHeading = regexp.MustCompile(`^ {0,3}#{1,6}(\s|$)`)
 
-// checkFootnotes is the question the source lines are asked before the note is
-// parsed: does every mark have a definition, does every definition have a
-// mark, is a label defined twice, and is any mark inside a heading.
+// checkFootnotes is the question asked of the note before a block is built:
+// does every mark have a definition, does every definition have a mark, is a
+// label defined twice, and is any mark inside a heading.
 //
-// It is the source rather than the tree for the reason the package comment
-// gives, and it is the whole file at once so that the line a refusal names is
-// counted the one way internal/markers counts it. scan.go holds which lines it
-// reads and why a code block is not one of them.
+// Three of the four are read off the source lines, for the reason the package
+// comment gives, and the whole file at once so that the line a refusal names
+// is counted the one way internal/markers counts it. scan.go holds which
+// lines are read and why a code block is not one of them.
+//
+// Which labels are defined is the parse's own answer, in definedFootnotes. A
+// line scan sees a definition at the margin only, and goldmark reads one
+// wherever a block may start: a definition inside a block quote or inside a
+// list item is lifted into the document's notes and renders, and one inside a
+// block of HTML defines nothing at all. Both were refused by the line the mark
+// sits on, one of them with a sentence saying the file does not define a note
+// it does define. TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused
+// and TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused are the pins.
 //
 // The heading question is asked of the tree as well, in headingBlock, because
 // an ATX heading is the only one a line scan can see.
-func checkFootnotes(source []byte) error {
+func checkFootnotes(source []byte, root ast.Node) error {
 	type mark struct {
 		label string
 		line  int
@@ -292,7 +301,8 @@ func checkFootnotes(source []byte) error {
 	defs := map[string]int{}
 	var defOrder []string
 	var refusal error
-	proseLines(source, func(l sourceLine) {
+	defined := definedFootnotes(root)
+	checkLines(source, root, func(l sourceLine) {
 		if refusal != nil {
 			return
 		}
@@ -325,7 +335,7 @@ func checkFootnotes(source []byte) error {
 		return refusal
 	}
 	for _, ref := range refs {
-		if _, ok := defs[ref.label]; !ok {
+		if !defined[ref.label] {
 			return fmt.Errorf("line %d: the footnote mark [^%s] names a note this file does not define, so the document would carry a mark with nothing under the page; goldmark publishes it as the words [^%s] instead", ref.line, ref.label, ref.label)
 		}
 	}
@@ -345,6 +355,30 @@ func checkFootnotes(source []byte) error {
 		}
 	}
 	return nil
+}
+
+// definedFootnotes is every label the parse resolved to a note under the page.
+//
+// It is the set goldmark's own transformer leaves standing: a definition
+// nothing references is removed from the list, and a mark naming no definition
+// is left in the prose as the words the author wrote. So the labels here are
+// exactly the ones a mark in the prose may name, wherever in the file their
+// definition was written.
+func definedFootnotes(root ast.Node) map[string]bool {
+	out := map[string]bool{}
+	if root == nil {
+		return out
+	}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if note, ok := node.(*east.Footnote); ok {
+			out[string(note.Ref)] = true
+		}
+		return ast.WalkContinue, nil
+	})
+	return out
 }
 
 // checkFootnotesInPictures refuses a footnote mark inside a picture's alt

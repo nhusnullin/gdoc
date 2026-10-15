@@ -599,3 +599,60 @@ func TestAFootnoteReferenceIsNotADeadAnchor(t *testing.T) {
 		t.Errorf("the reference names note %q, want 4", got)
 	}
 }
+
+// TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused:
+// goldmark's footnote parser reads a definition wherever a block may start, so
+// one written inside a block quote or inside a list item is lifted into the
+// document's own list of notes and renders. The line scan sees a definition at
+// the margin only, so it called both files undefined and refused them by the
+// line the mark sits on, blaming the file for something it did do.
+//
+// The defined set is the parse's answer, which is why these build.
+func TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused(t *testing.T) {
+	for _, markdown := range []string{
+		"A claim.[^a]\n\n> [^a]: the note inside a quote.\n",
+		"A claim.[^a]\n\n- item\n- [^a]: the note inside an item.\n",
+	} {
+		out, err := Render(config(t), []byte(markdown), "testdata/docs", true)
+		if err != nil {
+			t.Errorf("%q was refused: %v", markdown, err)
+			continue
+		}
+		if len(out.Footnotes) != 1 {
+			t.Errorf("%q produced %d notes, want the one the mark names", markdown, len(out.Footnotes))
+			continue
+		}
+		if got := noteText(t, out.Footnotes[0]); !strings.Contains(got, "the note inside") {
+			t.Errorf("%q: the note under the page reads %q, want the definition's own words", markdown, got)
+		}
+	}
+}
+
+// TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused: a block of HTML is one
+// leaf block and nothing inside it is markdown, so a definition written there
+// defines nothing and the mark in the prose is published as the words "[^a]".
+// The line scan read the definition and called the mark answered, so the build
+// said ok and put gdoc's own syntax into the document.
+func TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused(t *testing.T) {
+	got := refused(t, "A claim.[^a]\n\n<div>\n[^a]: the note inside the HTML.\n</div>\n")
+
+	for _, want := range []string{"line 1", "[^a]", "does not define"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the refusal does not say %q: %s", want, got)
+		}
+	}
+}
+
+// TestADefinitionInsideABlockOfHTMLRefusesNothing is the other side of it. The
+// words inside the block reach no page either way, so a definition there
+// answers for nothing and is no reason to refuse a file that is otherwise
+// sound. The scan read it as a definition nothing marked.
+func TestADefinitionInsideABlockOfHTMLRefusesNothing(t *testing.T) {
+	out, err := Render(config(t), []byte("Words.\n\n<div>\n[^a]: a note nothing marks.\n</div>\n"), "testdata/docs", true)
+	if err != nil {
+		t.Fatalf("the file was refused: %v", err)
+	}
+	if len(out.Footnotes) != 0 {
+		t.Errorf("the walk produced %d notes out of a block of HTML, want none", len(out.Footnotes))
+	}
+}

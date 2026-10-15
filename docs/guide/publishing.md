@@ -214,15 +214,19 @@ purple, because those are the marks that say a note is not finished. The other
 four are carried and not counted. Nothing in the binary says whether a note
 carrying one may be published: `/gdoc-publish` shows you the counts and asks.
 
-Five shapes are refused here too, each naming the line: a mark inside a mark,
-because one stretch of words carries one colour; an empty span; a span
-carrying any attribute other than `.pencil`; a span that does not open and
-close on one line, so a note you hard-wrap keeps each span on its own line;
-and a mark inside a heading, for the reason a footnote mark in a heading is
-refused. An emoji anywhere but the start of a highlight is your own text, and
-so is a `[` that is not followed by `]{`, so a link stays a link. A bracket
-inside a code span is neither, because nothing inside backticks is read as
-syntax.
+Six shapes are refused here too, each naming the line: a mark inside a mark,
+because one stretch of words carries one colour; an empty span; a span carrying
+any attribute other than `.pencil`; a span that does not open and close on one
+line, so a note you hard-wrap keeps each span on its own line; a mark inside a
+heading, for the reason a footnote mark in a heading is refused; and `{.pencil}`
+written where no span can open. The bracket in front of it has to be the span's
+own: a bracket after `!` is a picture's, a bracket holding a caret is a footnote
+mark's, and a bracket followed by a target or a reference is a link's. In each
+of those the attribute closes nothing and would reach the document as words, so
+write the words in a code span when you mean the syntax itself. An emoji
+anywhere but the start of a highlight is your own text, and so is a `[` that is
+not followed by `]{`, so a link stays a link. A bracket inside a code span is
+neither, because nothing inside backticks is read as syntax.
 
 A mark reaches Word twice, as a character style and as the colour on the run
 itself. The style is how a reader finds every yellow with one search, and the
@@ -286,7 +290,9 @@ at is one the next publish makes a second of.
     "verified": true,
     "checks": {"read_back": true, "one_tab": true, "docx_export": true},
     "files_changed": ["/Users/you/notes/supplier-register-policy.md"],
-    "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1}
+    "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1,
+             "footnotes": 2,
+             "marks": {"yellow": 3, "green": 0, "purple": 1}}
   },
   "warnings": []
 }

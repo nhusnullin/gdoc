@@ -623,16 +623,20 @@ the continuation separator, which makes the generator's parts thirteen.
 **What is refused by line, in both halves.** A reference with no definition, a
 definition nothing references, a label defined twice, a footnote mark in a
 heading, a mark in a heading, a nested mark, an empty span, a span carrying any
-attribute but `.pencil`, a span that does not open and close on one line, and a
-footnote mark or a mark inside a picture's alt text. The heading refusals are
-read off the tree as well as off the line, because goldmark builds a heading
-from a setext line, from a block quote and from a list item, and no line scan
-sees one; the alt-text refusals are read off the tree alone, because an alt text
-sits on a line of prose. Inside a footnote, a list, a table, a picture, a code
-block or a heading is warned about by line and left out. No footnote in a table
-cell; a mark in one is carried. A code block is measured from the content indent
-of the block it sits in, so a code sample in a nested list item or inside a
-footnote defines nothing and refuses nothing.
+attribute but `.pencil`, a span that does not open and close on one line,
+`{.pencil}` written where the parse formed no span, and a footnote mark or a
+mark inside a picture's alt text. The heading refusals are read off the tree as
+well as off the line, because goldmark builds a heading from a setext line, from
+a block quote and from a list item, and no line scan sees one; the alt-text
+refusals are read off the tree alone, because an alt text sits on a line of
+prose. Which labels are defined and which spans were formed are the parse's
+answers too: goldmark reads a definition wherever a block may start, and three
+of its own parsers claim a bracket before gdoc's span parser can. Inside a
+footnote, a list, a table, a picture, a code block or a heading is warned about
+by line and left out. No footnote in a table cell; a mark in one is carried. A
+code block is measured from the content indent of the block it sits in, so a
+code sample in a nested list item or inside a footnote defines nothing and
+refuses nothing, and a block of HTML is left out of both scans whole.
 
 ## Install and update
 

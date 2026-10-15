@@ -14,6 +14,8 @@ package body
 import (
 	"regexp"
 	"strings"
+
+	"github.com/yuin/goldmark/ast"
 )
 
 // fence opens or shuts a code block, inside which nothing is markdown. The run
@@ -261,4 +263,53 @@ func ticks(line []byte, i int) int {
 		n++
 	}
 	return n
+}
+
+// checkLines calls f for every source line a refusal may be read off: the
+// prose lines, with the lines of a block of HTML left out.
+//
+// A block of HTML is named on the envelope and left out of the document, and
+// nothing inside one is markdown: goldmark reads the whole block as one leaf,
+// so a footnote definition written there defines nothing and a span written
+// there is never formed. That is the rule a code block already has, and the
+// lines come off the parse rather than off a second reading of the source,
+// because CommonMark opens a block of HTML on seven different conditions and
+// shuts it on as many. TestADefinitionInsideABlockOfHTMLRefusesNothing and
+// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing are the pins.
+func checkLines(source []byte, root ast.Node, f func(sourceLine)) {
+	html := htmlBlockLines(source, root)
+	proseLines(source, func(l sourceLine) {
+		if html[l.at] {
+			return
+		}
+		f(l)
+	})
+}
+
+// htmlBlockLines is every line a block of HTML holds, the line it shuts on
+// included. goldmark appends one segment per line of a leaf block, so the
+// lines are the segments' own.
+func htmlBlockLines(source []byte, root ast.Node) map[int]bool {
+	out := map[int]bool{}
+	if root == nil {
+		return out
+	}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		block, ok := node.(*ast.HTMLBlock)
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+		lines := block.Lines()
+		for i := 0; i < lines.Len(); i++ {
+			out[lineOf(source, lines.At(i).Start)] = true
+		}
+		if block.HasClosure() {
+			out[lineOf(source, block.ClosureLine.Start)] = true
+		}
+		return ast.WalkContinue, nil
+	})
+	return out
 }
