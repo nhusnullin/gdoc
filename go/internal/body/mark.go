@@ -232,9 +232,19 @@ func popSpan(pc parser.Context) {
 // A bracket this says no to is left to goldmark's link parser, which runs
 // after this one, so [words](url) is still a link and [an aside] is still the
 // author's own words.
+//
+// A code span is stepped over, because nothing inside backticks is markdown
+// and checkSpans reads the line the same way: a bracket in a code example
+// would otherwise stop the scan here, leave the span unopened, and print the
+// author's own syntax into the document with checkSpans seeing nothing wrong.
+// TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan is the pin.
 func spanAhead(line []byte) bool {
 	for i := 1; i < len(line); i++ {
 		switch line[i] {
+		case '`':
+			if shut := codeSpanEnd(line, i); shut > 0 {
+				i = shut - 1
+			}
 		case '[', '\n':
 			return false
 		case ']':
@@ -409,35 +419,31 @@ var spanClosed = regexp.MustCompile(`\]\{\.[^{}]*\}`)
 //
 // It is the source rather than the tree because goldmark is silent in all
 // three shapes: a span it does not recognise is prose, and prose carrying
-// braces is a document with the author's syntax printed in it. A fenced code
-// block is skipped, and so is a code span, for the reason checkFootnotes skips
-// both: nothing inside backticks is markdown.
+// braces is a document with the author's syntax printed in it. scan.go holds
+// which lines it reads, and it is the same set checkFootnotes reads: nothing
+// inside backticks and nothing inside a code block is markdown.
 func checkSpans(source []byte) error {
-	inFence := false
-	for i, line := range strings.Split(string(source), "\n") {
-		if fence.MatchString(line) {
-			inFence = !inFence
-			continue
+	var refusal error
+	proseLines(source, func(l sourceLine) {
+		if refusal != nil {
+			return
 		}
-		if inFence {
-			continue
-		}
-		at := i + 1
-		line = withoutCode(line)
-		rest := line
-		for _, m := range spanWritten.FindAllStringSubmatch(line, -1) {
+		rest := l.text
+		for _, m := range spanWritten.FindAllStringSubmatch(l.text, -1) {
 			whole, words, attribute := m[0], m[1], m[2]
 			if attribute != pencilAttribute {
-				return fmt.Errorf("line %d: the span %s carries {%s}, and %s is the only attribute gdoc reads; written as it is, the brackets and the braces would reach the document as words", at, whole, attribute, pencilAttribute)
+				refusal = fmt.Errorf("line %d: the span %s carries {%s}, and %s is the only attribute gdoc reads; written as it is, the brackets and the braces would reach the document as words", l.at, whole, attribute, pencilAttribute)
+				return
 			}
 			if strings.TrimSpace(words) == "" {
-				return fmt.Errorf("line %d: the span %s marks no words, so the mark would be a colour on nothing", at, whole)
+				refusal = fmt.Errorf("line %d: the span %s marks no words, so the mark would be a colour on nothing", l.at, whole)
+				return
 			}
 			rest = strings.Replace(rest, whole, "", 1)
 		}
 		if closer := spanClosed.FindString(rest); closer != "" {
-			return fmt.Errorf("line %d: %s closes a span this line does not open; a span marks words on one line, and one that crosses a line break or a paragraph would reach the document as the syntax the author wrote", at, closer)
+			refusal = fmt.Errorf("line %d: %s closes a span this line does not open; a span marks words on one line, and one that does not open and close on the same line would reach the document as the syntax the author wrote", l.at, closer)
 		}
-	}
-	return nil
+	})
+	return refusal
 }

@@ -292,22 +292,134 @@ func TestAFootnoteInsideACodeBlockIsNotAFootnote(t *testing.T) {
 	}
 }
 
+// TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote: four spaces is a code
+// block as much as a fence is, and a note explaining a regular expression
+// writes "[^abc]" in one. Read as a mark, it refused a note nothing was wrong
+// with.
+func TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote(t *testing.T) {
+	// An indented code block opens after a blank line, and after any line that
+	// cannot be continued: a heading, a horizontal rule, the underline of a
+	// setext heading, and a fence that shut. What it cannot interrupt is a
+	// paragraph, which is why the blank line is not the whole rule and the
+	// indent alone is not enough.
+	for _, markdown := range []string{
+		"Words.\n\n    pattern [^abc] here\n",
+		"## Example\n    see [^abc] here\n",
+		"Words.\n\n```\nx\n```\n    pattern [^abc] here\n",
+		"A claim.[^a]\n\n[^a]: note.\n\n```\nx\n```\n\n    pattern [^abc] here\n",
+		"Title\n-----\n    pattern [^abc] here\n",
+		"***\n    pattern [^abc] here\n",
+	} {
+		out := walk(t, markdown)
+
+		for _, note := range out.Footnotes {
+			if strings.Contains(noteText(t, note), "pattern") {
+				t.Errorf("%q made the code block's words a note", markdown)
+			}
+		}
+	}
+}
+
+// TestACodeBlockShutsOnItsOwnFenceAndNotAnother: a "```" block may hold a
+// "~~~" line and a four-backtick block may hold a three-backtick one, so a
+// scan that closes on any fence reads the rest of the block as prose and
+// refuses the syntax written inside it.
+//
+// A block shuts on a fence carrying nothing else, which is goldmark's own
+// rule, so a "```js" line inside a "```" block is the block's own content: a
+// note showing a markdown file writes one, and a scan that closed there read
+// the rest of the example as prose and the real closing fence as a new block.
+func TestACodeBlockShutsOnItsOwnFenceAndNotAnother(t *testing.T) {
+	for _, markdown := range []string{
+		"Words.\n\n```\n~~~\nexample [^abc] here\n```\n",
+		"Words.\n\n````\n```\nexample [^abc] here\n````\n",
+		"Words.\n\n```\n```js\nexample [^abc] here\n```\n",
+	} {
+		out := walk(t, markdown)
+
+		if len(out.Footnotes) != 0 {
+			t.Errorf("%q produced %d notes out of a code block, want none", markdown, len(out.Footnotes))
+		}
+	}
+}
+
+// TestALabelDefinedTwiceIsRefusedNamingBothLines: goldmark matches a mark
+// against the first definition of a label and its transformer removes the
+// rest, so the second note's words reach no page and the tree says nothing
+// happened. It is the same loss the unmarked-definition refusal exists for.
+func TestALabelDefinedTwiceIsRefusedNamingBothLines(t *testing.T) {
+	got := refused(t, "A claim.[^a]\n\n[^a]: one.\n\n[^a]: two.\n")
+
+	for _, want := range []string{"line 5", "[^a]", "line 3"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the refusal does not say %q: %s", want, got)
+		}
+	}
+}
+
+// TestAMarkInAListItemsOwnLaterParagraphIsStillProse: a list item's
+// continuation lines sit at the item's content indent, two or three spaces for
+// the openers an author writes, and the scan does not measure that indent. A
+// line indented three spaces ending the list in the scan read the item's next
+// paragraph, indented four, as a code block: the mark in it was never seen and
+// the note it names was refused as defined and unmarked.
+func TestAMarkInAListItemsOwnLaterParagraphIsStillProse(t *testing.T) {
+	out := walk(t, "1. Step one.\n\n   More about it.\n\n    Further words[^n]\n\n[^n]: The note.\n")
+
+	if len(out.Footnotes) != 1 {
+		t.Fatalf("the walk produced %d notes, want the one the item's own paragraph marks", len(out.Footnotes))
+	}
+	if got := noteText(t, out.Footnotes[0]); !strings.Contains(got, "The note.") {
+		t.Errorf("the note under the page reads %q, want the words the definition holds", got)
+	}
+}
+
+// TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused: checkFootnotes
+// reads an ATX heading off the line, and goldmark builds a heading from a
+// setext line, from inside a block quote and from inside a list item too. Each
+// of those put a note number into the contents field, which is the failure the
+// ATX refusal exists to prevent, so the tree is asked as well.
+func TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused(t *testing.T) {
+	for _, markdown := range []string{
+		"A heading[^a]\n=========\n\nWords.\n\n[^a]: the detail.\n",
+		"> ## A heading[^a]\n\nWords.\n\n[^a]: the detail.\n",
+		"- ## A heading[^a]\n\nWords.\n\n[^a]: the detail.\n",
+	} {
+		got := refused(t, markdown)
+
+		for _, want := range []string{"line 1", "heading", "contents"} {
+			if !strings.Contains(got, want) {
+				t.Errorf("%q: the refusal does not say %q: %s", markdown, want, got)
+			}
+		}
+	}
+}
+
 // TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut: a note under
 // the page is a sentence, and the house style has no geometry for a table, a
 // list or a figure in one. Each is named by its own line and left out, the way
 // a picture the house style cannot place is.
+//
+// The line is the block's own and not the definition's, so a note written over
+// several lines sends the author to the line they have to change. A picture is
+// an inline and is named by the line of the paragraph it sits in, which in the
+// one-line case here is the line the definition opens on.
 func TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut(t *testing.T) {
 	for _, c := range []struct{ name, markdown, want string }{
 		{"a list", "A claim.[^a]\n\n[^a]: the detail.\n\n    - one\n    - two\n",
-			"line 3: a list inside a footnote is not rendered in the house style and was left out"},
+			"line 5: a list inside a footnote is not rendered in the house style and was left out"},
 		{"a table", "A claim.[^a]\n\n[^a]: the detail.\n\n    | a | b |\n    |---|---|\n    | x | y |\n",
-			"line 3: a table inside a footnote is not rendered in the house style and was left out"},
+			"line 5: a table inside a footnote is not rendered in the house style and was left out"},
 		{"a code block", "A claim.[^a]\n\n[^a]: the detail.\n\n    ```\n    code\n    ```\n",
-			"line 3: a code block inside a footnote is not rendered in the house style and was left out"},
+			"line 5: a code block inside a footnote is not rendered in the house style and was left out"},
 		{"a heading", "A claim.[^a]\n\n[^a]: the detail.\n\n    # Hidden\n",
-			"line 3: a heading inside a footnote is not rendered in the house style and was left out"},
+			"line 5: a heading inside a footnote is not rendered in the house style and was left out"},
 		{"a picture", "A claim.[^a]\n\n[^a]: see ![the chart](diagram.png).\n",
 			"line 3: a picture inside a footnote is not rendered in the house style and was left out"},
+		{"a picture in the note's second paragraph", "A claim.[^a]\n\n[^a]: the detail.\n\n    See ![the chart](diagram.png).\n",
+			"line 5: a picture inside a footnote is not rendered in the house style and was left out"},
+		{"a horizontal rule, which carries no line", "A claim.[^a]\n\n[^a]: the detail.\n\n    ---\n",
+			"line 3: a horizontal rule inside a footnote is not rendered in the house style and was left out"},
 	} {
 		out, err := Render(config(t), []byte(c.markdown), "testdata/docs", true)
 		if err != nil {

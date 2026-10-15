@@ -24,20 +24,24 @@ and any later session reads this file and undoes them. `gdoc-export` and
 | `[person: Name]` `[date: Sep 9, 2026]` `[link: Title]` | a smart chip, with the label the document shows |
 | `[auto text: PAGE_NUMBER]` `[page break]` `[column break]` `[rule]` | the members that hold no text of their own |
 | `[unknown: member]` | a paragraph element gdoc has never seen, named by its member |
-| `==words==` | a yellow mark: a figure or a name a human still has to fill in |
-| `==🟢 words==` | a green mark: a claim to confirm |
-| `==🟣 words==` | a purple mark: a question for one reviewer |
-| `==🔵 words==` | a blue mark: a line changed since the last version |
-| `==🔴 words==` | a red mark: a warning |
-| `==🟠 words==` | an orange mark: an aside |
-| `[words]{.pencil}` | the pencil: prose that stays in the document but is not the argument |
+| `==words==` | a highlight, in the colour the house gives the bare delimiter |
+| `==<emoji> words==` | a highlight, in the colour that emoji names |
+| `[words]{.pencil}` | the one span gdoc reads, which is grey text rather than a highlight |
 
 The seven marks are not markers to undo. They are the author's own syntax:
 written in the note, carried into the document as a colour, and written back
-here as the words left. Keep them. A highlight the export found in a colour no
-house mark claims is plain words in this file, and the envelope counts it
-under `marks.other` by hex: those words were marked in the document and
-nothing in the note will say so.
+here as the words left. Keep them.
+
+Say nothing about what a colour means. What a mark means is the author's, said
+in their own notes, and the binary gives no colour a meaning. Run
+`gdoc help marks --json` once if you need the list: it prints each mark with
+its syntax, its colour and whether the envelope counts it, out of the house
+style, which is the one place the palette lives. Do not keep a copy of it here
+or in a reply.
+
+A highlight the export found in a colour no house mark claims is plain words in
+this file, and the envelope counts it under `marks.other` by hex: those words
+were marked in the document and nothing in the note will say so.
 
 A link is `[words](target)`, an external URL as it stands and `#slug` for a
 heading in this document. A numbered list is numbered, `1.` and `2.`, and a
@@ -115,11 +119,16 @@ author and first line, from `gdoc comments <url>`, and say the comments stay in
 Drive. A comment's text never goes into a note body.
 
 **A footnote, `[^1]`.** Keep it where it is, marker and definition both. A note
-holding a footnote publishes: `gdoc build` writes it under the page and Drive
-imports it, so nothing has to be moved into the body. Two warnings ride with it
-and both matter: a suggestion inside a footnote exported as plain text and
-carries no id, and a comment anchored inside a footnote, a header or a footer
-got no mark at all. One thing is not the author's own: the numbers are the
+holding a footnote in its prose publishes: `gdoc build` writes it under the
+page and Drive imports it, so nothing has to be moved into the body. Where the
+mark came home inside a heading or a table cell, `# Title[^1]` or `| x[^2] |`,
+it has to move: Docs allows a note there and the house style carries none, so
+`build` refuses that line. Decide with the person where the mark goes. The
+warnings that ride with a footnote all matter: a suggestion inside one exported
+as plain text and carries no id, a comment anchored inside a footnote, a header
+or a footer got no mark at all, and where the export says so, a mark the author
+wrote inside a note came home as plain words, counted nowhere, so ask whether
+to mark them again. One thing is not the author's own: the numbers are the
 document's, so a label somebody wrote as `[^method]` comes home as `[^3]`, and
 a note marked twice in the document comes home as two definitions carrying one
 text. Renaming them is the person's call, not yours.

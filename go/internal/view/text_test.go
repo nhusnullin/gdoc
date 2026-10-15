@@ -751,3 +751,38 @@ func TestANewlineInALabelBecomesASpace(t *testing.T) {
 		t.Errorf("text = %q, want the newline written as a space", text)
 	}
 }
+
+// A Docs index counts UTF-16 units, so the boundary splitRun writes is counted
+// from the end the whitespace was cut off. Counting the tail from the run's
+// start with the byte length of the words put the boundary one byte too far
+// for every multi-byte rune in them, and the index a comment marker is drained
+// against is that boundary.
+func TestATailCutCountsTheIndexInUTF16Units(t *testing.T) {
+	// "café " is five runes and six bytes, starting at index 1, so the space
+	// is at index 5 and the run ends at 6.
+	r := docs.Run{Kind: docs.KindText, Text: "café ", StartIndex: 1, EndIndex: 6}
+
+	space, words := splitRun(r, 1, false)
+
+	if space.StartIndex != 5 {
+		t.Errorf("the space starts at %d, want 5", space.StartIndex)
+	}
+	if words.EndIndex != 5 {
+		t.Errorf("the words end at %d, want 5", words.EndIndex)
+	}
+	if words.Text != "café" || space.Text != " " {
+		t.Errorf("the cut gave %q and %q, want %q and %q", words.Text, space.Text, "café", " ")
+	}
+}
+
+// The front cut is the same question from the other end, where the whitespace
+// is ASCII and the arithmetic is the count either way.
+func TestAFrontCutCountsTheIndexInUTF16Units(t *testing.T) {
+	r := docs.Run{Kind: docs.KindText, Text: " café", StartIndex: 1, EndIndex: 6}
+
+	space, words := splitRun(r, 1, true)
+
+	if space.EndIndex != 2 || words.StartIndex != 2 {
+		t.Errorf("the cut gave %d and %d, want 2 and 2", space.EndIndex, words.StartIndex)
+	}
+}

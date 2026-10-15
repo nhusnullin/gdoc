@@ -399,6 +399,37 @@
 // run wherever the formatting changes and a highlight over a phrase holding
 // bold is three runs sharing one background.
 //
+// The delimiters go around the words and not around the group's own
+// whitespace. A highlight is read by flanking in the file it becomes, so "=="
+// with a space before it closes nothing and "==" with a space after it opens
+// nothing: a run that begins or ends with a space, which is what an edit in
+// Docs leaves behind, would come home with the delimiters printed in it. The
+// space is the document's either way, so it is written outside them. A run
+// that points somewhere is left whole, because splitting it would write its
+// target twice. The whitespace is the set goldmark's own flanking test reads,
+// unicode.IsSpace, which is wider than the four characters a file is written
+// with: Docs keeps a soft line break inside the run as U+000B, and a mark
+// ending in one wrote a closing delimiter that closed nothing.
+// internal/export's TestAMarkedRunsOwnSpacesAreWrittenOutsideTheDelimiters and
+// TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters are
+// the pins.
+//
+// A group holding no words of its own is written bare, whitespace and all: the
+// guard and the cut read one whitespace set, and "== ==" would not read as a
+// mark anyway. internal/export's
+// TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands is the pin. The cut counts
+// the index it writes from the end it took the whitespace off, because a Docs
+// index counts UTF-16 units and the words between the two ends are not ASCII:
+// TestATailCutCountsTheIndexInUTF16Units.
+//
+// A mark may carry a second opener for the case where its own would be read
+// off the words. The one highlight an author writes bare says no colour, so
+// marked words that themselves begin with a colour emoji would be read as
+// naming one: Ambiguous is what the words must not begin with and Explicit is
+// what opens the mark where they do. The strings are the caller's, because the
+// palette is, and internal/export's
+// TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour is the pin.
+//
 // The read passes none, and that is a decision rather than an omission: the
 // words of a marked phrase reach a reviewing session and the mark around them
 // does not, because a session quotes what it reads and a quote carrying == is

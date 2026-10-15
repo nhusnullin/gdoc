@@ -112,13 +112,24 @@ func (r *renderer) footnoteList(list *east.FootnoteList) error {
 // picture, a code block, a heading, a link or a second footnote mark is named
 // by its line and left out: a note under the page is a sentence, and the house
 // style has no geometry for a table in one.
+//
+// The line is the block's own, not the definition's, because a note written
+// over several lines sends an author to the line they have to change. A
+// picture is an inline and takes the line of the paragraph it sits in, which
+// is that paragraph's own. The definition's line is the answer only for a
+// block carrying no source position anywhere under it, which a horizontal rule
+// is.
 func (r *renderer) footnoteBlocks(note *east.Footnote) []*etree.Element {
-	line := 1
+	opens := 1
 	if at, ok := r.descendantLine(note); ok {
-		line = at
+		opens = at
 	}
 	var blocks []*etree.Element
 	for child := note.FirstChild(); child != nil; child = child.NextSibling() {
+		line := opens
+		if at, ok := r.descendantLine(child); ok {
+			line = at
+		}
 		switch child.(type) {
 		case *ast.Paragraph, *ast.TextBlock:
 		case *east.FootnoteBacklink:
@@ -242,18 +253,17 @@ var footnoteReference = regexp.MustCompile(`\[\^([^\]]+)\](:?)`)
 // atxHeading is a heading line, which is where a footnote mark is refused.
 var atxHeading = regexp.MustCompile(`^ {0,3}#{1,6}(\s|$)`)
 
-// fence opens or shuts a code block, inside which nothing is markdown.
-var fence = regexp.MustCompile("^ {0,3}(```+|~~~+)")
-
 // checkFootnotes is the question the source lines are asked before the note is
 // parsed: does every mark have a definition, does every definition have a
-// mark, and is any mark inside a heading.
+// mark, is a label defined twice, and is any mark inside a heading.
 //
 // It is the source rather than the tree for the reason the package comment
 // gives, and it is the whole file at once so that the line a refusal names is
-// counted the one way internal/markers counts it. A fenced code block is
-// skipped: the block is warned about and left out whole, so the syntax written
-// inside one reaches no page and defines nothing.
+// counted the one way internal/markers counts it. scan.go holds which lines it
+// reads and why a code block is not one of them.
+//
+// The heading question is asked of the tree as well, in headingBlock, because
+// an ATX heading is the only one a line scan can see.
 func checkFootnotes(source []byte) error {
 	type mark struct {
 		label string
@@ -266,54 +276,37 @@ func checkFootnotes(source []byte) error {
 	var refs []mark
 	defs := map[string]int{}
 	var defOrder []string
-	inFence := false
-	// openDefinition says whether the line before this one was part of a
-	// definition, so that an indented line under it is read as its own.
-	openDefinition := false
-	for i, line := range strings.Split(string(source), "\n") {
-		if fence.MatchString(line) {
-			inFence = !inFence
-			continue
+	var refusal error
+	proseLines(source, func(l sourceLine) {
+		if refusal != nil {
+			return
 		}
-		if inFence {
-			continue
-		}
-		at := i + 1
-		indented := strings.HasPrefix(line, "    ") || strings.HasPrefix(line, "\t")
-		blank := strings.TrimSpace(line) == ""
-		line = withoutCode(line)
-		definition := false
-		if m := footnoteDefinition.FindStringSubmatch(line); m != nil {
-			if label := m[1]; strings.TrimSpace(label) != "" {
-				definition = true
-				if _, seen := defs[label]; !seen {
-					defs[label] = at
-					defOrder = append(defOrder, label)
-				}
+		if l.definition {
+			if at, seen := defs[l.label]; seen {
+				// goldmark matches a mark against the first definition of a
+				// label and its transformer removes the rest, so the words
+				// here would reach no page and nothing would say so.
+				refusal = fmt.Errorf("line %d: the footnote [^%s] is defined again here, after line %d, and goldmark keeps the first definition only, so these words would reach no page of the document", l.at, l.label, at)
+				return
 			}
+			defs[l.label] = l.at
+			defOrder = append(defOrder, l.label)
 		}
-		// A definition runs on through its blank and indented lines, which is
-		// goldmark's own rule for continuing one, and ends at the first line
-		// that is neither.
-		if definition {
-			openDefinition = true
-		} else if !indented && !blank {
-			openDefinition = false
-		}
-		heading := atxHeading.MatchString(line)
-		// A mark on a definition's own line, or on one of its indented
-		// continuation lines, is inside a note rather than in the prose.
-		inside := definition || (indented && openDefinition)
-		for _, m := range footnoteReference.FindAllStringSubmatch(line, -1) {
+		heading := atxHeading.MatchString(l.text)
+		for _, m := range footnoteReference.FindAllStringSubmatch(l.text, -1) {
 			label, colon := m[1], m[2]
 			if colon == ":" || strings.TrimSpace(label) == "" {
 				continue
 			}
 			if heading {
-				return fmt.Errorf("line %d: the footnote mark [^%s] is inside a heading, which Word copies into the contents field, so the note would be marked from the contents list as well as from the page", at, label)
+				refusal = fmt.Errorf("line %d: the footnote mark [^%s] is inside a heading, which Word copies into the contents field, so the note would be marked from the contents list as well as from the page", l.at, label)
+				return
 			}
-			refs = append(refs, mark{label: label, line: at, prose: !inside})
+			refs = append(refs, mark{label: label, line: l.at, prose: !l.inside})
 		}
+	})
+	if refusal != nil {
+		return refusal
 	}
 	for _, ref := range refs {
 		if _, ok := defs[ref.label]; !ok {
@@ -336,53 +329,4 @@ func checkFootnotes(source []byte) error {
 		}
 	}
 	return nil
-}
-
-// withoutCode is the line with its code spans taken out, because nothing
-// inside backticks is markdown. goldmark reads no footnote mark in a span, and
-// a note explaining a regular expression writes "[^abc]" in one: read as a
-// mark, it would refuse a note nothing is wrong with.
-//
-// A backtick run with no closer on the line is text, which is what goldmark
-// makes of it, so the scan carries on from just after it rather than giving up
-// on the rest of the line and missing a real mark.
-func withoutCode(line string) string {
-	var b strings.Builder
-	for i := 0; i < len(line); {
-		if line[i] != '`' {
-			b.WriteByte(line[i])
-			i++
-			continue
-		}
-		open := ticks(line, i)
-		shut := -1
-		for j := i + open; j < len(line); {
-			if line[j] != '`' {
-				j++
-				continue
-			}
-			n := ticks(line, j)
-			if n == open {
-				shut = j + n
-				break
-			}
-			j += n
-		}
-		if shut < 0 {
-			b.WriteString(line[i : i+open])
-			i += open
-			continue
-		}
-		i = shut
-	}
-	return b.String()
-}
-
-// ticks is the length of the run of backticks starting at i.
-func ticks(line string, i int) int {
-	n := 0
-	for i+n < len(line) && line[i+n] == '`' {
-		n++
-	}
-	return n
 }

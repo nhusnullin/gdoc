@@ -286,6 +286,20 @@
 // for the same reason. That hole is written down rather than guessed at, in
 // docs/backlog/suggestions-inside-footnotes.md.
 //
+// A mark inside a footnote is the same flattening, and that one does not go
+// unsaid: the colour is gone from the text, so FootnoteColours holds, for each
+// note whose runs carried one, the backgrounds and the text colours they
+// carried. The hexes are the fact and nothing here is a judgement: which of
+// them says somebody marked words is export's question, and a link in Google
+// Docs carries the link blue on its own run, so a read that answered only
+// "there was a colour" would have export call most hand-written citations a lost
+// mark. TestAFootnoteCarryingAColourIsNamedOnTheRead is the pin, with
+// TestAMarkInsideAFootnoteIsNamedAsALoss,
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss and
+// TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark over the warning,
+// and docs/backlog/marks-inside-footnotes.md holds why the runs are not
+// carried.
+//
 // A body over the read's ceiling is an error naming the ceiling, never a short
 // read. The bound is gapi.MaxJSONBody, because a body without one is a memory
 // limit somebody else sets, and truncating instead made the JSON reader say the

@@ -252,6 +252,50 @@ func TestObjectRunsCarryTheirKindsAndTheFootnoteText(t *testing.T) {
 	}
 }
 
+// TestAFootnoteCarryingAColourIsNamedOnTheRead. A footnote's text is all this
+// read keeps, so a mark the author wrote inside one has no colour left for any
+// route after this to find. The hexes its runs carried are the one record that
+// there was one, and export warns where they say somebody marked words, which
+// is any background at all or a text colour the house claims, rather than
+// letting the words come home plainer than they went.
+// docs/backlog/marks-inside-footnotes.md holds the hole itself.
+//
+// #FFD500 is the yellow mark and #1155CC is the link blue Docs writes on a
+// link's own run, each stated as a literal: the read hands over the hex and
+// judges neither.
+func TestAFootnoteCarryingAColourIsNamedOnTheRead(t *testing.T) {
+	d := fixture(t, "objects.json")
+	if len(d.FootnoteColours) != 0 {
+		t.Errorf("FootnoteColours = %v, want nothing: this document's note carries no colour", d.FootnoteColours)
+	}
+
+	marked := fixture(t, "coloured-footnote.json")
+	if len(marked.FootnoteColours) != 1 {
+		t.Fatalf("FootnoteColours = %v, want kix.fn1 alone", marked.FootnoteColours)
+	}
+	c := marked.FootnoteColours["kix.fn1"]
+	if len(c.Backgrounds) != 1 || c.Backgrounds[0] != "#FFD500" {
+		t.Errorf("the note's backgrounds = %v, want #FFD500 alone", c.Backgrounds)
+	}
+	if len(c.Colours) != 0 {
+		t.Errorf("the note's text colours = %v, want nothing", c.Colours)
+	}
+	if got := marked.Footnotes["kix.fn1"]; got != "to fill in" {
+		t.Errorf("the note's text = %q, want the words with no colour in them", got)
+	}
+
+	// A link's own run carries the link blue as a direct text colour, which is
+	// a fact this read states and nothing it judges.
+	linked := fixture(t, "linked-footnote.json")
+	lc := linked.FootnoteColours["kix.fn1"]
+	if len(lc.Colours) != 1 || lc.Colours[0] != "#1155CC" {
+		t.Errorf("the linked note's text colours = %v, want #1155CC alone", lc.Colours)
+	}
+	if len(lc.Backgrounds) != 0 {
+		t.Errorf("the linked note's backgrounds = %v, want nothing", lc.Backgrounds)
+	}
+}
+
 func TestCommentRangesPlaceOneAndListTheOther(t *testing.T) {
 	d := fixture(t, "single-tab.json")
 	got, ok := d.CommentRanges["AAAA1111"]

@@ -384,7 +384,7 @@ func commands() []command {
 			},
 			summary: "Build the note as a house-style docx on this machine, with no network at all.",
 			notes: []string{
-				"A footnote is set under the page: [^1] where the mark goes and [^1]: the words on a line of their own, numbered in the order a reader meets the marks. A mark that names no note, a note nothing marks, and a mark inside a heading or a table cell are refused naming the line.",
+				"A footnote is set under the page: [^1] where the mark goes and [^1]: the words on a line of their own, numbered in the order a reader meets the marks. A mark that names no note, a note nothing marks, one label defined twice, and a mark inside a heading or a table cell are refused naming the line.",
 				"==words== and a colour emoji opening a highlight are Obsidian's own marks, and [words]{.pencil} is a grey aside. Run gdoc help marks for the seven, their colours, and which three are counted on this envelope.",
 			},
 			example: "gdoc build --md note.md --out note.docx",

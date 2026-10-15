@@ -90,6 +90,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
 | 2026-10-14 | A footnote is carried on every route | holds |
 | 2026-10-14 | The marks: Obsidian's six colours and one grey | holds |
+| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, and a mark inside a footnote | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4012,7 +4013,8 @@ crosses a footnote mark.
 `TestADefinitionNobodyReferencesIsRefusedByLine`,
 `TestAFootnoteMarkInsideAHeadingIsRefusedByLine`,
 `TestAFootnoteReferencedTwiceIsTwoNotesWithOneText`,
-`TestAListInsideAFootnoteWarnsAndIsLeftOut`, `TestTheTenStylesAreThere`,
+`TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut`,
+`TestTheTenStylesAreThere`,
 `TestTheFootnotesPartCarriesTheTwoSeparators`,
 `TestTheFootnotesPartIsDeclaredAndRelated`,
 `TestAFootnoteReferenceIsASuperscriptCharacterStyle`,
@@ -4167,3 +4169,133 @@ yellow, and are not marks.
 `TestHelpMarksPrintsTheSevenFromTheBinary`, `TestLiveMarkImportProbe` and
 `TestLivePublishCarriesTheMarksIntoDocs`. Each states every emoji and every hex
 as a literal. `TestAMarkedSpanIsItsOwnNodeKind` still holds.
+## 2026-10-15. What the M18 review closed.
+
+The holes the external review of M18 found, round after round, each one a
+silent loss rather than a wrong answer. Serves principle 2, because every one of them had the binary
+say a document was fine when it was not, or refuse a note nothing was wrong
+with. No design changes: the shapes M18 decided are the shapes, and these are
+the edges they did not cover.
+
+**A label defined twice is refused, naming both lines.** goldmark matches a
+mark against the first definition of a label and its transformer removes the
+rest, so `[^a]: one` followed by `[^a]: two` built with no message and the
+words "two" reached no page. That is the loss the unmarked-definition refusal
+already exists for, so it is the same answer.
+
+**The heading refusal is asked of the tree as well as of the line.** The line
+scan reads an ATX heading, and goldmark builds a heading from a setext line,
+from inside a block quote and from inside a list item too. A footnote mark in
+one of those reached the contents field, which is the exact failure the ATX
+refusal exists to prevent. `headingBlock` refuses it; the line scan stays for
+its earlier line number.
+
+**A code block is a fence or four spaces, and a fence shuts on its own
+character.** Both line scans skipped a fenced block by flipping a flag on any
+fence line, so a "```" block holding a "~~~" line closed early and the lines
+after it were read as prose; and neither knew an indented code block at all, so
+`    pattern [^abc] here` refused a note nothing was wrong with. The rule is
+one function now, `body/scan.go`, read by the footnote scan and the span scan.
+A bracket inside a code span is the same story on the parser's side: it stopped
+the span scan, so the author's own `]{.pencil}` was printed into the document
+while the line check, which takes code spans out, saw nothing wrong.
+
+The one scan follows goldmark on three more edges, each a line read as the
+wrong kind of thing. A fenced block shuts on a fence carrying nothing after the
+run, so the "```js" line inside a "```" block is the block's own content and
+not its end; a note showing a markdown file writes one. An indented code block
+opens after a horizontal rule and after the underline of a setext heading, the
+way it opens after a heading, because each closes the block above it. And a
+list item or a definition runs on until a line of prose at the margin: a
+continuation line sits at the item's own content indent, which the scan does
+not measure, so ending the item at a three-space line read the item's next
+paragraph, indented four, as code and refused the mark in it.
+
+**A mark inside a footnote comes home as plain words, and the file says so.**
+`build` shades a mark inside a note and counts it as a debt. The read keeps a
+footnote's text alone, so `export` has no colour to read there: the words came
+home plain, no envelope counted them, and the next build reported a debt fewer
+than the document held. The read now records the colours each note's own runs
+carried, on `docs.Document.FootnoteColours`, and `export` names the loss
+against `docs/backlog/marks-inside-footnotes.md`. Carrying the mark itself
+needs the footnote's runs, which is that backlog item and the suggestions one
+together.
+
+The hexes rather than the ids, because the question is whether the house claims
+the colour and only `export` can ask it. A link inserted in Google Docs carries
+the link blue as a direct text colour on its own run, and a footnote is where a
+citation lives, so a read that said no more than "there was a colour here"
+had `export` calling most hand-written footnotes a lost mark and the skill
+asking the person about a debt that never existed. The rule is the one
+`otherColours` already states for the body: a background is somebody marking
+words, and a text colour is design unless it is the pencil's own.
+
+**Two edges of the mark round trip.** A run in Docs may begin or end with a
+space, and a highlight's delimiter is read by flanking, so `==to fill in ==`
+came home as words with the delimiters printed in them; the space is written
+outside the delimiters now. And the one highlight an author may write bare says
+no colour, so marked words of the author's own that open with a colour emoji
+were read as naming one: the colour is written out, `==🟡 🟢 go==`, where they
+do.
+
+**A mark around whitespace alone is no mark, and the cut counts UTF-16
+units.** The export writes a mark's delimiters around the words of a group and
+the group's own whitespace outside them, and the two halves of that walk read
+whitespace differently: the guard counted a space as a word and the cut took it
+away, so a space somebody highlighted on its own, which is what an edit inside
+a highlight leaves behind, ended `gdoc export` as a panic recovered into a
+failed envelope and no files. One whitespace set now, and a group holding
+nothing else is written bare. The same cut took its index from the byte length
+of the words, a byte too far for every multi-byte rune in them, so a comment
+opening on the word after the space came home behind the delimiter: it is
+counted from the run's own end now.
+
+The whitespace is goldmark's own flanking set, `unicode.IsSpace`, and not the
+four characters a file is written with. Docs keeps a soft line break, the
+Shift+Enter one, inside the run as U+000B, so a highlight ending in one was
+written `==words\v==`, whose closing delimiter is not right-flanking: the mark
+came home as two pairs of equals signs in the words. A leading or trailing
+non-breaking space did the same, and the cut counts UTF-16 units off the text
+it took rather than bytes, because that space is one unit in two bytes.
+
+**The spec said no mark in a table cell, and the code has always carried one.**
+A cell's runs go through the same inline walk every paragraph's do, so
+`==words==` in one is shaded and counted; what a cell cannot hold is a footnote,
+which needs a footnotes part the cell's paragraph does not name. The spec line
+joined the two and was wrong about the mark on the day it was written.
+`TestAMarkInATableCellIsCarried` is the pin, and the line now says what the
+binary does. This is the entry that change is written in, because a change to
+`SPEC.md` is an entry here first.
+
+**One line was edited inside the 2026-10-14 footnotes entry, and this says
+why.** An entry here is never edited after the day it is written, and the
+exception at the 2026-09-16 entry above is recorded the same way. The entry "A
+footnote is carried on every route" named
+`TestAListInsideAFootnoteWarnsAndIsLeftOut` in its list of tests, which was
+never a test function: it was the plan's own words for the rule, and the test
+that pins it is `TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut`.
+The list now names that one. The edit changes no decision: a name that pins
+nothing is worse than no name, because a reader checking the entry finds
+nothing and cannot tell which of the two is wrong.
+
+**Tests.** `TestALabelDefinedTwiceIsRefusedNamingBothLines`,
+`TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused`,
+`TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote`,
+`TestACodeBlockShutsOnItsOwnFenceAndNotAnother`,
+`TestASpanInsideACodeBlockIsNotASpan`,
+`TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan`,
+`TestAMarkInsideAFootnoteIsNamedAsALoss`,
+`TestAFootnoteWithNoColourIsNotWarnedAboutAMark`,
+`TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark`,
+`TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands`,
+`TestAMarkedSpaceBetweenPlainWordsComesHomeAsItStands`,
+`TestATailCutCountsTheIndexInUTF16Units`,
+`TestAMarkedRunsOwnSpacesAreWrittenOutsideTheDelimiters`,
+`TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour`,
+`TestOnlyTheFirstEmojiOfAHighlightIsItsColour`,
+`TestThePreludesOwnYellowIsNotCounted`,
+`TestAMarkInAListItemsOwnLaterParagraphIsStillProse`,
+`TestAPencilMarkInsideAFootnoteIsNamedAsALoss` and
+`TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters`.
+`TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut` now names each
+left-out block by its own line rather than by the line its definition opens on.

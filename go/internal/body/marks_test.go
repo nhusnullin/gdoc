@@ -45,6 +45,21 @@ func TestAHighlightOpeningWithAColourEmojiCarriesItsMark(t *testing.T) {
 	}
 }
 
+// TestOnlyTheFirstEmojiOfAHighlightIsItsColour is the other half of the round
+// trip: export writes the colour out where the marked words themselves open
+// with an emoji, so "==🟡 🟢 go==" is one yellow mark over the words "🟢 go".
+func TestOnlyTheFirstEmojiOfAHighlightIsItsColour(t *testing.T) {
+	runs := firstBlockRuns(t, "A sentence with ==🟡 🟢 go== in it.\n")
+
+	got := runCarrying(t, runs, "go")
+	if got.Mark != "yellow" {
+		t.Errorf("==🟡 🟢 go== is mark %q, want yellow", got.Mark)
+	}
+	if got.Text != "🟢 go" {
+		t.Errorf("==🟡 🟢 go== marks %q, want the author's own emoji kept", got.Text)
+	}
+}
+
 // TestAMarkInATableCellIsCarried. A cell's paragraph walks its inlines through
 // the same path a paragraph's does, and the kitchen sink's own table holds a
 // ==to fill in== cell.
@@ -263,6 +278,44 @@ func TestASpanCrossingAParagraphIsRefusedByLine(t *testing.T) {
 	}
 	if !strings.Contains(got, pencilAttribute) {
 		t.Errorf("the refusal is %q, and it does not name the span it is about", got)
+	}
+}
+
+// TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan. Nothing inside
+// backticks is markdown, and both halves of the span read a line that way:
+// the parser used to stop at the bracket inside the code, leave the span
+// unopened and print "]{.pencil}" into the document, while checkSpans looked
+// at the line with the code taken out and saw nothing wrong.
+func TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan(t *testing.T) {
+	runs := firstBlockRuns(t, "Words [see `a[0]`]{.pencil} here.\n")
+
+	code := runCarrying(t, runs, "a[0]")
+	if code.Mark != "pencil" {
+		t.Errorf("the code inside the span is %#v, want a pencil mark", code)
+	}
+	if text := joined(runs); strings.Contains(text, "]{.pencil}") {
+		t.Errorf("the prose reads %q, want the span's own syntax out of it", text)
+	}
+}
+
+// TestASpanInsideACodeBlockIsNotASpan. The span scan reads the same lines the
+// footnote scan reads, so an author writing the syntax out in an example is
+// not refused for it. The indented block is the half that was read as prose.
+func TestASpanInsideACodeBlockIsNotASpan(t *testing.T) {
+	for _, markdown := range []string{
+		"Words.\n\n    example [x]{.y} here\n",
+		"Words.\n\n```\nexample [x]{.y} here\n```\n",
+		"## Example\n    example [x]{.y} here\n",
+		"Words.\n\n```\nx\n```\n    example [x]{.y} here\n",
+	} {
+		out, err := Render(config(t), []byte(markdown), "testdata/docs", true)
+		if err != nil {
+			t.Errorf("%q was refused: %v", markdown, err)
+			continue
+		}
+		if len(out.Blocks) == 0 {
+			t.Errorf("%q wrote nothing", markdown)
+		}
 	}
 }
 

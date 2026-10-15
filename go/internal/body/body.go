@@ -378,13 +378,20 @@ func (r *renderer) itemLine(item ast.Node) int {
 // descendant that carries one. A fence is read the way the code block's own
 // warning reads it, one line above the block's first line of code, because
 // that is the line the author sees.
+//
+// Only a block is asked for its lines. goldmark panics when an inline node is,
+// which is why markLine exists, and the walk down to a block's words goes
+// through its inlines: a block that carries no lines of its own is read
+// through the first text inside it instead.
 func (r *renderer) descendantLine(node ast.Node) (int, bool) {
-	if lines := node.Lines(); lines != nil && lines.Len() > 0 {
-		line := r.lineAt(lines.At(0).Start)
-		if _, fenced := node.(*ast.FencedCodeBlock); fenced && line > 1 {
-			line--
+	if node.Type() != ast.TypeInline {
+		if lines := node.Lines(); lines != nil && lines.Len() > 0 {
+			line := r.lineAt(lines.At(0).Start)
+			if _, fenced := node.(*ast.FencedCodeBlock); fenced && line > 1 {
+				line--
+			}
+			return line, true
 		}
-		return line, true
 	}
 	if text, ok := node.(*ast.Text); ok {
 		return r.lineAt(text.Segment.Start), true
@@ -797,6 +804,18 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 	runs := inlineRuns(heading, r.source, r.footnoteNumber, r.marks)
 	plain := plainText(runs)
 	r.warnRawHTML(heading, r.line(heading))
+	// A footnote mark in a heading is refused here as well as off the source
+	// lines, because an ATX heading is the only heading a line scan sees:
+	// goldmark builds one from a setext line, from inside a block quote and
+	// from inside a list item too, and each of those reached the contents
+	// field with a note number in it. A mark needs no second check, because
+	// checkMarks reads the tree already.
+	for _, run := range runs {
+		if run.Footnote > 0 {
+			r.fail("line %d: a footnote mark inside a heading is refused, because Word copies a heading into the contents field, so the note would be marked from the contents list as well as from the page", r.line(heading))
+			break
+		}
+	}
 
 	if isFigureOnly(heading, r.source) {
 		// Nothing but a picture. It is a figure, not a heading, so it takes no

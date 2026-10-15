@@ -94,8 +94,15 @@ say where they are; `gdoc comments <url>` says what they say.
 A footnote in the document is `[^1]` where the mark stands, with the notes
 under a `---` rule at the end of the file. The numbers are the document's own,
 so a note you wrote as `[^register]` comes back as `[^2]`: a round trip
-renumbers rather than relabels. The file is publishable as it stands, because
-`gdoc build` sets a footnote back under the page.
+renumbers rather than relabels. A note in the prose is publishable as it
+stands, because `gdoc build` sets a footnote back under the page.
+
+Google Docs allows a footnote where the house style carries none, and the file
+is written as the document stands. So a document whose footnote sits in a
+heading or in a table cell comes home as `# Title[^1]` or `| x[^2] |`, and
+`gdoc build` refuses each by line, as it refuses a mark in a heading. The
+session moves it into the prose with you: taking it out on the way home would
+be editing the document.
 
 A mark comes home as the syntax an author types for it. A highlight in the
 document is `==words==` for yellow, and the mark's own colour emoji for the
@@ -106,13 +113,20 @@ the emoji is the space `gdoc build` takes off again, so a phrase published
 from a note comes home spelled the way it left. Yellow is the one mark written
 two ways, and the bare one wins: a note that said `==🟡 words==` comes
 home as `==words==`, because an emoji in the file would be an instruction the
-author never typed. `gdoc help marks` prints the
+author never typed. The one exception is marked words that themselves open
+with a colour emoji: there the colour is written out, `==🟡 🟢 go==`, or the
+next build would read your own emoji as the instruction. `gdoc help marks` prints the
 seven with their colours, out of the house style, which is the one place they
 live.
 
 A mark Google split into several runs comes home whole. Bold or code inside a
 highlight is its own run in the document, and the run beside it carries the
 same colour, so neighbouring runs of one colour are written as one mark.
+
+A mark inside a footnote is the one that does not come home. The read keeps a
+footnote's text alone, so the words arrive plain, no count names them, and the
+export warns about it where the document has one. Mark the words again in the
+note if the debt still stands.
 
 A colour no mark claims stays plain words. gdoc has no syntax that means it,
 and inventing one would put an instruction in your note that nobody typed.

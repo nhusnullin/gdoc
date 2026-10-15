@@ -330,6 +330,85 @@ func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 	}
 }
 
+// TestAMarkInsideAFootnoteIsNamedAsALoss. The read keeps a footnote's text
+// alone, so a mark the author wrote inside one has no colour left to read by
+// the time the projection runs: the words come home plain, no envelope counts
+// them, and the next build would report a debt fewer than the document holds.
+// The read records which notes carried a colour, and that is the sentence.
+func TestAMarkInsideAFootnoteIsNamedAsALoss(t *testing.T) {
+	d := fixture(t, "coloured-footnote.json")
+	if len(d.FootnoteColours) != 1 {
+		t.Fatalf("the read names %v as the coloured notes, want kix.fn1 alone", d.FootnoteColours)
+	}
+	files, _, other, warnings := Project(d, nil, palette(t))
+
+	if !strings.Contains(files[0].Body, "[^1]: to fill in") {
+		t.Errorf("the note is not in the file:\n%s", files[0].Body)
+	}
+	if strings.Contains(files[0].Body, "==to fill in==") {
+		t.Errorf("the mark came home after all, so this warning is the wrong fact:\n%s", files[0].Body)
+	}
+	if len(other) != 0 {
+		t.Errorf("other = %v, want nothing: the colour is inside a footnote", other)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no warning names the mark lost inside the footnote: %v", warnings)
+	}
+}
+
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss is the text-colour half of the
+// same question, and it is the reason the read hands over the hexes rather
+// than a yes or a no. The pencil is a run's text colour and nothing else, so a
+// note carrying it carries no background at all: a rule that counted
+// backgrounds alone would let that mark come home as plain words with nothing
+// said.
+//
+// #9A9A9A is the pencil's hex, stated as a literal, and the fixture carries it
+// as the colour Docs returns, 0.6039216 on each channel.
+func TestAPencilMarkInsideAFootnoteIsNamedAsALoss(t *testing.T) {
+	d := fixture(t, "pencil-footnote.json")
+	c, ok := d.FootnoteColours["kix.fn1"]
+	if !ok || len(c.Backgrounds) != 0 {
+		t.Fatalf("the read names %v, want kix.fn1 with no background: the pencil is a text colour", d.FootnoteColours)
+	}
+	if len(c.Colours) != 1 || !strings.EqualFold(c.Colours[0], "#9A9A9A") {
+		t.Fatalf("the note's text colours are %v, want the pencil's #9A9A9A alone", c.Colours)
+	}
+
+	_, _, other, warnings := Project(d, nil, palette(t))
+
+	if len(other) != 0 {
+		t.Errorf("other = %v, want nothing: the colour is inside a footnote", other)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no warning names the pencil mark lost inside the footnote: %v", warnings)
+	}
+}
+
+// TestAFootnoteWithNoColourIsNotWarnedAboutAMark is the other half: the
+// sentence is a fact about this document and not a line every footnote carries.
+func TestAFootnoteWithNoColourIsNotWarnedAboutAMark(t *testing.T) {
+	_, _, _, warnings := Project(fixture(t, "objects.json"), nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "marks-inside-footnotes") {
+			t.Errorf("a note carrying no colour was warned about: %q", w)
+		}
+	}
+}
+
 // TestTwoTabsGiveTwoProjections is one file per tab, each naming the tab it
 // came from, and neither holding the other's text or the tab line the read
 // prints.
@@ -653,5 +732,25 @@ func TestABodyOpeningWithTheDelimiterKeepsItsFirstParagraph(t *testing.T) {
 				t.Errorf("the block read back is %+v, want the one entry for the document:\n%s", got, out)
 			}
 		})
+	}
+}
+
+// TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark. A link inserted
+// in Google Docs carries the link blue as a direct text colour on its run, and
+// a footnote is where a citation lives, so most footnotes in a document gdoc
+// did not write carry one. A text colour is how a document is designed unless
+// it is the one the house claims, which is the rule otherColours already
+// states: a note coloured only by its own link lost no mark, and asking the
+// person whether to mark those words again asks about a debt that never
+// existed.
+func TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark(t *testing.T) {
+	d := fixture(t, "linked-footnote.json")
+
+	_, _, _, warnings := Project(d, nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+			t.Errorf("the link's own blue was named as a mark that came home plain: %q", w)
+		}
 	}
 }

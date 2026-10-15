@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"gdoc/internal/docs"
 	"gdoc/internal/house"
 	"gdoc/internal/view"
 )
@@ -98,5 +99,133 @@ func TestReadPrintsNoMark(t *testing.T) {
 		"red orange yellow green blue purple pencil\n"
 	if text != want {
 		t.Errorf("read printed\n%q\nwant\n%q", text, want)
+	}
+}
+
+// oneYellow is a document of one paragraph whose whole text is one run marked
+// with the yellow mark's hex, which is the mark an author may write bare.
+func oneYellow(text string) *docs.Document {
+	return &docs.Document{
+		ID: "1yellow", Title: "One yellow run",
+		Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{
+			Style: "NORMAL_TEXT",
+			Runs: []docs.Run{{Kind: docs.KindText, Text: text + "\n",
+				StartIndex: 1, EndIndex: 1 + len([]rune(text)) + 1,
+				Background: "#FFD500"}},
+		}}}}},
+	}
+}
+
+// A highlight's delimiter is read by flanking: "==" with a space before it
+// does not close a highlight and "==" with a space after it does not open one.
+// A run in Docs can begin or end with a space, which is what an edit leaves
+// behind, so the space is written outside the delimiters. Written inside them,
+// the next build printed "==" into the document and the debt stopped being
+// counted.
+func TestAMarkedRunsOwnSpacesAreWrittenOutsideTheDelimiters(t *testing.T) {
+	files, _, _, _ := Project(oneYellow(" to fill in "), nil, palette(t))
+
+	if want := " ==to fill in== "; !strings.Contains(files[0].Body, want) {
+		t.Errorf("the marked run came home as\n%q\nwant %q", files[0].Body, want)
+	}
+}
+
+// The flanking test is goldmark's, and goldmark reads whitespace as
+// unicode.IsSpace: a soft line break, which is what Docs writes for
+// Shift+Enter and which it keeps inside the run, and a non-breaking space are
+// both whitespace there. A narrower set wrote "==to fill in\v==", whose
+// closing delimiter is not right-flanking, so the mark came home as two pairs
+// of equals signs in the words.
+func TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters(t *testing.T) {
+	for _, c := range []struct{ name, text, want string }{
+		{"a soft line break", "to fill in\v", "==to fill in==\v"},
+		{"a non-breaking space", " to fill in", " ==to fill in=="},
+	} {
+		files, _, _, _ := Project(oneYellow(c.text), nil, palette(t))
+
+		if !strings.Contains(files[0].Body, c.want) {
+			t.Errorf("%s: the marked run came home as\n%q\nwant %q", c.name, files[0].Body, c.want)
+		}
+	}
+}
+
+// internal/body reads the first rune of a highlight as its colour, so words of
+// the author's own opening with a colour emoji cannot be written after the
+// bare delimiter: the mark would come home a different colour with the emoji
+// dropped from the words. The colour is written out instead.
+func TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour(t *testing.T) {
+	files, _, _, _ := Project(oneYellow("🟢 go"), nil, palette(t))
+
+	if want := "==🟡 🟢 go=="; !strings.Contains(files[0].Body, want) {
+		t.Errorf("the marked run came home as\n%q\nwant %q", files[0].Body, want)
+	}
+}
+
+// The cover's own placeholders are Word's named yellow, #FFFF00, which a
+// published document carries on every field the author has not filled in yet.
+// They are the prelude: they leave the file with the rest of it, and counting
+// them would say a document gdoc wrote came home with marks nobody made. The
+// count rests on the caller's skip, so this asks a document whose prelude the
+// layout recognised, with a placeholder carrying that yellow.
+func TestThePreludesOwnYellowIsNotCounted(t *testing.T) {
+	files, pieces, other, _ := Project(fixture(t, "publish-prelude.json"), nil, palette(t))
+
+	if len(pieces) == 0 {
+		t.Fatal("no prelude was stripped, so this document does not ask the question")
+	}
+	// The same walk with no skip finds it, so this cannot pass on a fixture
+	// that holds no yellow at all.
+	bare := map[string]int{}
+	otherColours(fixture(t, "publish-prelude.json").Tabs[0].Body, nil, palette(t), bare)
+	if bare["#FFFF00"] == 0 {
+		t.Fatalf("the prelude carries no #FFFF00, so this test asks nothing: %v", bare)
+	}
+	if len(other) != 0 {
+		t.Errorf("other = %v, want nothing: the only colour is the cover's own", other)
+	}
+	if strings.Contains(files[0].Body, "The Board") {
+		t.Errorf("the placeholder is still in the file, so it was never the prelude:\n%s", files[0].Body)
+	}
+}
+
+// A marked run holding no words of its own is written as it stands. A space
+// an author highlighted on its own, or the highlight an edit left on the
+// trailing space a paragraph's newline shares, has nothing for a pair of
+// delimiters to sit around, and "== ==" would not read as a mark anyway.
+//
+// It used to be the group the walk could not take the whitespace off: the
+// guard counted the space as a word and the cut took it away, leaving the cut
+// nothing to index, and the export of a document anybody could write ended as
+// a panic recovered into a failed envelope.
+func TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands(t *testing.T) {
+	// The whole paragraph is one highlighted space, so the run holds the
+	// space and the paragraph's own newline and nothing else.
+	files, _, _, _ := Project(oneYellow(" "), nil, palette(t))
+
+	if got := files[0].Body; !strings.Contains(got, " \n") || strings.Contains(got, "==") {
+		t.Errorf("the highlighted space came home as\n%q\nwant the space with no delimiters", got)
+	}
+}
+
+// The same group between words, which is the shape an edit inside a highlight
+// leaves behind: the space carries the mark and the words on either side do
+// not.
+func TestAMarkedSpaceBetweenPlainWordsComesHomeAsItStands(t *testing.T) {
+	d := &docs.Document{
+		ID: "1space", Title: "A marked space",
+		Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{
+			Style: "NORMAL_TEXT",
+			Runs: []docs.Run{
+				{Kind: docs.KindText, Text: "Hello", StartIndex: 1, EndIndex: 6},
+				{Kind: docs.KindText, Text: " ", StartIndex: 6, EndIndex: 7, Background: "#FFD500"},
+				{Kind: docs.KindText, Text: "world\n", StartIndex: 7, EndIndex: 13},
+			},
+		}}}}},
+	}
+
+	files, _, _, _ := Project(d, nil, palette(t))
+
+	if want := "Hello world"; !strings.Contains(files[0].Body, want) {
+		t.Errorf("the marked space came home as\n%q\nwant %q", files[0].Body, want)
 	}
 }

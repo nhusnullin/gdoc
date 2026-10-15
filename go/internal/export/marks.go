@@ -43,11 +43,21 @@ func Palette(cfg *house.Config) []view.Mark {
 			continue
 		}
 		if m.IsHighlight() {
-			out = append(out, view.Mark{
+			mark := view.Mark{
 				Background: m.Color,
 				Open:       plainHighlight + emoji(m),
 				Shut:       plainHighlight,
-			})
+			}
+			// The mark an author may write bare says no colour, so words of
+			// the author's own that open with a colour emoji would be read as
+			// naming one. Where they do, the colour is written out.
+			if emoji(m) == "" {
+				if e := colourEmoji(m); e != "" {
+					mark.Explicit = plainHighlight + e + " "
+					mark.Ambiguous = paletteEmoji(cfg)
+				}
+			}
+			out = append(out, mark)
 			continue
 		}
 		out = append(out, view.Mark{
@@ -78,6 +88,74 @@ func emoji(m house.Mark) string {
 		}
 	}
 	return colour
+}
+
+// colourEmoji is the mark's own colour emoji, whether or not the mark may also
+// be written bare.
+func colourEmoji(m house.Mark) string {
+	for _, syntax := range m.Syntax {
+		if syntax != plainHighlight {
+			return syntax
+		}
+	}
+	return ""
+}
+
+// paletteEmoji is every colour emoji the house states. It is what the words of
+// a bare highlight must not begin with: internal/body reads the first rune of
+// a highlight as its colour, so "==🟢 go==" written for the plain mark would
+// come home green with the emoji dropped from the words.
+func paletteEmoji(cfg *house.Config) []string {
+	var out []string
+	for _, name := range house.MarkNames() {
+		m, ok := cfg.Marks[name]
+		if !ok || !m.IsHighlight() {
+			continue
+		}
+		for _, syntax := range m.Syntax {
+			if syntax != plainHighlight {
+				out = append(out, syntax)
+			}
+		}
+	}
+	return out
+}
+
+// markedNotes is the footnotes whose colours say the author marked words
+// inside them, out of the colours the read collected for each.
+//
+// It is the rule otherColours states, asked of a footnote: a background is
+// somebody marking words, so any of them counts, and a text colour is how a
+// document is designed unless it is the one the house claims, which is the
+// pencil. A link inserted in Google Docs carries the link blue as a direct
+// text colour on its run, and a footnote is where a citation lives: counting
+// that would tell the session a mark came home plain in most of the footnotes
+// anybody wrote by hand.
+// TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark is the pin over
+// the colour that is not a mark, and
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss over the one that is: the
+// pencil is a text colour and no background, so a rule counting backgrounds
+// alone would say nothing about it.
+func markedNotes(colours map[string]docs.NoteColours, palette []view.Mark) map[string]bool {
+	out := map[string]bool{}
+	for id, c := range colours {
+		if len(c.Backgrounds) > 0 || claimedColour(c.Colours, palette) {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// claimedColour says whether one of these text colours is a mark's own.
+func claimedColour(hexes []string, palette []view.Mark) bool {
+	for _, hex := range hexes {
+		for _, m := range palette {
+			if m.Colour != "" && strings.EqualFold(m.Colour, hex) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // otherColours counts the backgrounds a document carries that no mark in the

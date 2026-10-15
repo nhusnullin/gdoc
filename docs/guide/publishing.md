@@ -173,14 +173,21 @@ order you defined them in, so a note defined last and marked first is note 1.
 A label you mark twice is two notes carrying one text, because Word and Google
 Docs hold one note per mark.
 
-Four shapes are refused, each naming the line, and nothing is written:
+Five shapes are refused, each naming the line, and nothing is written:
 
 | Refused | Because |
 |---|---|
 | a mark that names no note in the file | the document would carry a mark with nothing under the page, and markdown prints the mark as words instead |
 | a note nothing marks | its words would reach no page of the document |
+| one label defined twice | markdown keeps the first definition and drops the second, so the second note's words would reach no page |
 | a mark inside a heading | Word copies a heading into the contents field, so the note would be marked from the contents list as well as from the page |
 | a mark inside a table cell | the house style carries no note from a cell, so the note would be numbered in the body and written nowhere |
+
+A heading is a heading however you wrote it: `## Title[^1]`, a title underlined
+with `=====`, and a heading inside a quote or a list item are all refused.
+Syntax inside a code block is not syntax, so a note explaining a regular
+expression may write `[^abc]` in one, fenced or indented, and nothing is
+refused for it.
 
 Inside a note, write sentences. A list, a table, a picture, a code block, a
 heading or a second footnote there is warned about by line and left out: the
@@ -209,10 +216,13 @@ carrying one may be published: `/gdoc-publish` shows you the counts and asks.
 
 Five shapes are refused here too, each naming the line: a mark inside a mark,
 because one stretch of words carries one colour; an empty span; a span
-carrying any attribute other than `.pencil`; a span that crosses a paragraph;
+carrying any attribute other than `.pencil`; a span that does not open and
+close on one line, so a note you hard-wrap keeps each span on its own line;
 and a mark inside a heading, for the reason a footnote mark in a heading is
 refused. An emoji anywhere but the start of a highlight is your own text, and
-so is a `[` that is not followed by `]{`, so a link stays a link.
+so is a `[` that is not followed by `]{`, so a link stays a link. A bracket
+inside a code span is neither, because nothing inside backticks is read as
+syntax.
 
 A mark reaches Word twice, as a character style and as the colour on the run
 itself. The style is how a reader finds every yellow with one search, and the

@@ -135,6 +135,35 @@ type Mark struct {
 	Background string
 	Colour     string
 	Open, Shut string
+	// Ambiguous are the openers the marked words themselves must not begin
+	// with, because a reader of this file would take one of them for the
+	// mark's own opener and drop it from the words. Explicit is what opens the
+	// mark where they do: it says the colour outright, so whatever the words
+	// begin with is the author's. Only a mark whose Open leaves the colour
+	// unsaid carries either, which is the one highlight an author may write
+	// bare.
+	Ambiguous []string
+	Explicit  string
+}
+
+// opener is what this group of marked words opens with: Open, or Explicit
+// where the words would read as carrying the opener themselves.
+func (m Mark) opener(rs []docs.Run) string {
+	if m.Explicit == "" {
+		return m.Open
+	}
+	for _, r := range rs {
+		if r.Text == "" {
+			continue
+		}
+		for _, a := range m.Ambiguous {
+			if strings.HasPrefix(r.Text, a) {
+				return m.Explicit
+			}
+		}
+		break
+	}
+	return m.Open
 }
 
 // matches says whether this run carries this mark. The comparison is on the
@@ -1130,9 +1159,10 @@ func (e *emitter) wrap(open, shut string, ids []string, f func()) {
 // several runs sharing one background, and a pair of delimiters around each of
 // them would say the author marked the words three times.
 //
-// A group with no words of its own is written bare. The only text a run can
-// hold that reaches nothing is the paragraph's own newline, which the chunks
-// carry, and an empty "====" would be a mark over nothing.
+// A group with no words of its own is written bare: the paragraph's own
+// newline, which the chunks carry, and the whitespace an edit can leave marked
+// on its own. An empty "====" would be a mark over nothing, and "== ==" does
+// not read as a mark at all.
 func (e *emitter) body(rs []docs.Run) {
 	if len(e.opts.Marks) == 0 {
 		e.links(rs)
@@ -1149,14 +1179,17 @@ func (e *emitter) body(rs []docs.Run) {
 			i = j
 			continue
 		}
+		head, words, tail := edges(rs[i:j])
+		e.links(head)
 		// The markers that open where the mark opens are drained before the
 		// delimiter, for the reason linked drains before its bracket: a
 		// comment anchored at the same character would otherwise end up
 		// behind markup gdoc wrote.
-		e.drain(rs[i].StartIndex, false)
-		e.write(m.Open)
-		e.links(rs[i:j])
+		e.drain(words[0].StartIndex, false)
+		e.write(m.opener(words))
+		e.links(words)
 		e.write(m.Shut)
+		e.links(tail)
 		i = j
 	}
 }
@@ -1172,14 +1205,145 @@ func (e *emitter) markFor(r docs.Run) *Mark {
 	return nil
 }
 
-// hasWords says whether these runs hold a character the projection writes.
+// markEdge says this rune is whitespace that cannot sit inside a mark's
+// delimiters. It is the set goldmark's own flanking test reads, which is
+// unicode.IsSpace: a space and a tab, the newline and the carriage return,
+// Docs' soft line break at U+000B, the form feed, and the non-breaking space.
+// A narrower set left a mark that ended in a soft break written as
+// "==words\v==", whose closing delimiter is not right-flanking, so the
+// highlight came home as two pairs of equals signs in the words.
+// TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters is
+// the pin.
+func markEdge(r rune) bool { return unicode.IsSpace(r) }
+
+// edges is the group's whitespace at either end, split off the words between
+// them, so a mark is written around the words alone.
+//
+// A highlight's delimiter is read by flanking: "==" with a space after it does
+// not open a highlight and "==" with a space before it does not close one. A
+// run in Docs can begin or end with a space, which is what an edit leaves
+// behind, and written as "==words ==" the delimiters would come home as words
+// and the mark would be gone. The space is the document's either way, so it is
+// written outside the delimiters rather than dropped.
+//
+// A run that points somewhere is left whole: splitting it would write its
+// target twice, once around the space and once around the words.
+func edges(rs []docs.Run) (head, words, tail []docs.Run) {
+	words = rs
+	if first, rest, ok := cutEdge(words, true); ok {
+		head, words = first, rest
+	}
+	if last, rest, ok := cutEdge(words, false); ok {
+		tail, words = last, rest
+	}
+	return head, words, tail
+}
+
+// cutEdge takes the whitespace off one end of the group: the runs that hold
+// nothing else, and then the whitespace of the run that holds words too.
+//
+// The group is copied, because the runs it is a window on belong to the
+// paragraph. The walk stops at the first run that holds a word, which the
+// group has by hasWords over this same whitespace set, so it never empties.
+func cutEdge(rs []docs.Run, front bool) (cut, rest []docs.Run, ok bool) {
+	rest = append([]docs.Run{}, rs...)
+	for {
+		at := 0
+		if !front {
+			at = len(rest) - 1
+		}
+		r := rest[at]
+		if r.Link != nil {
+			// Splitting it would write its target twice, once around the
+			// space and once around the words.
+			break
+		}
+		if strings.TrimFunc(r.Text, markEdge) == "" {
+			cut, rest, ok = append(cut, r), append(rest[:at], rest[at+1:]...), true
+			continue
+		}
+		n := edgeWidth(r.Text, front)
+		if n == 0 {
+			break
+		}
+		space, words := splitRun(r, n, front)
+		rest[at] = words
+		cut, ok = append(cut, space), true
+		break
+	}
+	if !front {
+		// The run nearest the words was taken first, so the tail reads
+		// backwards.
+		for i, j := 0, len(cut)-1; i < j; i, j = i+1, j-1 {
+			cut[i], cut[j] = cut[j], cut[i]
+		}
+	}
+	return cut, rest, ok
+}
+
+// edgeWidth is how many bytes of whitespace the text carries at the end
+// cutEdge is working on. Bytes rather than characters, because it is where
+// splitRun cuts the string; a Docs index is counted there, off the text the
+// cut gave.
+func edgeWidth(text string, front bool) int {
+	if front {
+		return len(text) - len(strings.TrimLeftFunc(text, markEdge))
+	}
+	return len(text) - len(strings.TrimRightFunc(text, markEdge))
+}
+
+// splitRun is the run's whitespace at one end and the rest of it, each
+// carrying the index its own text begins at. n is bytes, which is where the
+// string is cut, and the boundary is the UTF-16 units of the piece cut off,
+// counted from the end it was taken from: a Docs index counts units, and a
+// non-breaking space is one unit in two bytes.
+//
+// It is counted from that end rather than from the other one, because the
+// words between the two ends are not ASCII. The tail's boundary was once
+// StartIndex plus the byte length of the words, which is a byte too far for
+// every multi-byte rune in them: a comment opening on the word after the space
+// was then drained before the space and came home behind the delimiter.
+// TestATailCutCountsTheIndexInUTF16Units is the pin.
+func splitRun(r docs.Run, n int, front bool) (space, words docs.Run) {
+	space, words = r, r
+	if front {
+		space.Text, words.Text = r.Text[:n], r.Text[n:]
+		space.EndIndex = r.StartIndex + units(space.Text)
+		words.StartIndex = space.EndIndex
+		return space, words
+	}
+	at := len(r.Text) - n
+	words.Text, space.Text = r.Text[:at], r.Text[at:]
+	space.StartIndex = r.EndIndex - units(space.Text)
+	words.EndIndex = space.StartIndex
+	return space, words
+}
+
+// hasWords says whether these runs hold a character a mark can sit around.
+//
+// The set trimmed here is markEdge, the same set cutEdge takes off either end,
+// and the two cannot differ. A group counted as holding words and then emptied
+// by the cut left the cut nothing to index: a space an author highlighted on
+// its own answered yes to "\n" alone and no to " \t\r\n", and the export of a
+// document anybody could write panicked.
+// TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands is the pin.
 func hasWords(rs []docs.Run) bool {
 	for _, r := range rs {
-		if strings.Trim(r.Text, "\n") != "" {
+		if strings.TrimFunc(r.Text, markEdge) != "" {
 			return true
 		}
 	}
 	return false
+}
+
+// units is the text's length in UTF-16 units, which is what a Docs index
+// counts.
+func units(s string) int {
+	n := 0
+	for _, r := range s {
+		n += utf16Len(r)
+	}
+	return n
 }
 
 // links writes runs with their comment markers and their placeholders, tracking

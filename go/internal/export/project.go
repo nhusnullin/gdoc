@@ -84,6 +84,11 @@ func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFil
 	// it up: one wording for the fact, whether read prints it or export does.
 	ghosts := ghostRanges(d)
 
+	// The read says which notes carried a colour and which hexes; whether one
+	// of them is a mark is the palette's question, asked once for the
+	// document, because the read keys the footnotes across the whole of it.
+	marked := markedNotes(d.FootnoteColours, palette)
+
 	for i, t := range d.Tabs {
 		mark, twoMarkers := markerFor(marks, t.ID)
 		if twoMarkers {
@@ -126,7 +131,7 @@ func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFil
 		case routeUnsure:
 			warnings = append(warnings, keptNumbers(t.ID, body)...)
 		}
-		warnings = append(warnings, footnoteWarnings(t)...)
+		warnings = append(warnings, footnoteWarnings(t, marked)...)
 
 		files = append(files, TabFile{TabID: t.ID, TabTitle: t.Title, Body: body})
 	}
@@ -256,30 +261,45 @@ func ghostRanges(d *docs.Document) map[string]docs.Range {
 // becoming a note. The text is written and the notes are under the body, so
 // nothing is dropped here; what is warned about is what happens next.
 //
-// Two sentences, because there are two losses and a reader has to act on each:
-// a suggestion inside a footnote arrives as plain text, and a comment anchored
-// inside one is never marked. The third sentence went when publish stopped
-// refusing a note that holds a footnote: a footnote now goes home and comes
-// back, so the notes are a note's own words like any other.
-func footnoteWarnings(t docs.Tab) []string {
-	found := false
+// Two sentences for every footnote, because there are two losses and a reader
+// has to act on each: a suggestion inside a footnote arrives as plain text,
+// and a comment anchored inside one is never marked. A third where the read
+// found a colour inside one of this tab's notes: the read keeps a footnote's
+// text alone, so a mark the author wrote there comes home as plain words, it
+// is counted on no envelope, and the next build reports a debt fewer than the
+// document holds. The sentence that went is publish refusing a note that holds
+// a footnote: a footnote now goes home and comes back.
+//
+// marked is the document's, because the read keys the footnotes by id across
+// the whole document; what makes it this tab's is the reference in this tab's
+// own body.
+func footnoteWarnings(t docs.Tab, marked map[string]bool) []string {
+	found, lost := false, false
 	walk(t.Body, func(b docs.Block) {
 		if b.Paragraph == nil {
 			return
 		}
 		for _, r := range b.Paragraph.Runs {
-			if r.Kind == docs.KindFootnoteRef {
-				found = true
+			if r.Kind != docs.KindFootnoteRef {
+				continue
+			}
+			found = true
+			if marked[r.FootnoteID] {
+				lost = true
 			}
 		}
 	})
 	if !found {
 		return nil
 	}
-	return []string{
+	out := []string{
 		"a suggestion inside a footnote is written as plain text, because the read does not carry the ids there: docs/backlog/suggestions-inside-footnotes.md",
 		"a comment anchored inside a footnote, a header or a footer carries no marker in this file: docs/backlog/comment-anchors-in-headers-and-footnotes.md",
 	}
+	if lost {
+		out = append(out, "a footnote in this tab carries a colour on its own words, and the read keeps a footnote's text alone: that mark comes home as plain words and is counted on no envelope: docs/backlog/marks-inside-footnotes.md")
+	}
+	return out
 }
 
 // walk calls f on every block of a body, table cells and contents entries

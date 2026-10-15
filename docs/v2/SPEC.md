@@ -599,7 +599,9 @@ In the docx each mark is a named character style and the run carries the exact
 hex, as shading for a highlight and as text colour for pencil. Docs has no
 character styles, so after import a mark is direct formatting and that is what
 `export` reads back. A colour outside the palette stays plain words and is
-counted by hex. `read` prints the words and not the mark. `restyle` is
+counted by hex. A mark inside a footnote is the one that does not come home:
+the read keeps a footnote's text alone, so the words arrive plain and `export`
+names the loss. `read` prints the words and not the mark. `restyle` is
 unchanged, and the cover's yellow placeholders are the prelude's rather than
 marks.
 
@@ -616,11 +618,14 @@ character style. `word/footnotes.xml` is always written, with the separator and
 the continuation separator, which makes the generator's parts thirteen.
 
 **What is refused by line, in both halves.** A reference with no definition, a
-definition nothing references, a footnote mark in a heading, a mark in a
-heading, a nested mark, an empty span, a span carrying any attribute but
-`.pencil`, and a span crossing a paragraph. Inside a footnote, a list, a table,
-a picture, a code block or a heading is warned about by line and left out. No
-footnote and no mark in a table cell.
+definition nothing references, a label defined twice, a footnote mark in a
+heading, a mark in a heading, a nested mark, an empty span, a span carrying any
+attribute but `.pencil`, and a span that does not open and close on one line.
+The heading refusals are read off the tree as well as off the line, because
+goldmark builds a heading from a setext line, from a block quote and from a
+list item, and no line scan sees one. Inside a footnote, a list, a table, a
+picture, a code block or a heading is warned about by line and left out. No
+footnote in a table cell; a mark in one is carried.
 
 ## Install and update
 
