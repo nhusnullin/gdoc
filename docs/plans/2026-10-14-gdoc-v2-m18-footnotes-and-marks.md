@@ -522,12 +522,17 @@ mechanism, so the master stays provenance and the gate stays honest.
 - Modify: `docs/guide/` (the build and export pages), `README.md`,
   `CLAUDE.md`'s task map if a new file needs a row
 
-- [ ] The guide's build page shows a footnote and the seven marks in the
+- [x] The guide's build page shows a footnote and the seven marks in the
       example note, says the marks are Obsidian's own syntax, and names the
-      refusals. The export page says what comes home.
-- [ ] `gdoc help build` names footnotes and marks in one line each and
+      refusals. The export page says what comes home. `TestTheBuildPageShowsAFootnoteAndTheSevenMarks` and `TestTheExportPageSaysWhatComesHome`
+      in `go/boundary/guide_test.go` reads the palette off house.yaml and
+      hold the two pages to it.
+- [x] `gdoc help build` names footnotes and marks in one line each and
       points at `help marks`.
-- [ ] `git commit -m "docs: footnotes and marks in the guide and the help"`
+- [x] `git commit -m "docs: footnotes and marks in the guide and the help"`.
+      The task agent finished the work and then waited two hours on a suite
+      that had already passed; Claude stopped the run at 11:05, ran vet and
+      the raced suite green on the tree, and committed it by hand.
 
 ### Task 16: verify acceptance, and M18 completed
 

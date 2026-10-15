@@ -1,7 +1,7 @@
-# Exporting a document: the file, the pictures and the marks
+# Exporting a document: the file, the pictures and the markers
 
-This page holds `gdoc export`: what it writes, where it puts it, what the marks
-in the file mean, and what it refuses. It is for somebody who opened an exported
+This page holds `gdoc export`: what it writes, where it puts it, what the
+markers and the marks in the file mean, and what it refuses. It is for somebody who opened an exported
 file and wants to know what they are reading. Publishing is the other direction,
 and it is on [its own page](publishing.md).
 
@@ -49,11 +49,15 @@ Two tabs with the same title take the numbering rule like any other taken name.
 Pictures follow their own tab. Each file's `gdoc:` block names the document and
 the tab it came from.
 
-## What the marks in the file mean
+## What the markers in the file mean
 
 The file is the document as it stands, including what is still being argued
 about in it. Pending suggestions and comments cannot be left out, because the
 words they cover are the words you are reading.
+
+The first four rows are gdoc's own markers, which say a thing about the
+document rather than holding its words. The rest is the document itself,
+written as markdown.
 
 | In the file | Means |
 |---|---|
@@ -63,23 +67,59 @@ words they cover are the words you are reading.
 | `<!-- image: floating, kix.p1 -->` | a picture laid out beside the text rather than in it, after the paragraph it is anchored to |
 | `![](assets/note-1.png)` | a picture, written as a file |
 | `[^1]` | a footnote, with the notes under a rule at the end of the file |
+| `==words==`, `==🟢 words==` | a mark the words carry in the document, written as Obsidian writes it |
+| `[words]{.pencil}` | the grey pencil mark, written as Pandoc's span |
 
 A backslash makes the one character after it the document's own. So `\{+` is
-text somebody typed into the document and `{+` is gdoc's mark. That rule has no
-exceptions and runs across the whole file, so you can undo the marks by reading
-the backslashes and nothing else.
+text somebody typed into the document and `{+` is gdoc's marker. That rule has
+no exceptions and runs across the whole file, so you can undo the markers by
+reading the backslashes and nothing else.
 
-**A marked file cannot become a document.** `build`, `publish`, `propose`,
-`reply` and `annotate` all refuse a file carrying one of those marks, naming the
-line. That is the whole cost of keeping them: nothing else in the hub minds
-them. There is no deadline to resolve them and no command that expires them. The
-marks are gdoc's own, so any later session can take them out for you, on the day
-you have time. Ask for that in words, and the session reads the document once
+**A file carrying a marker cannot become a document.** `build`, `publish`,
+`propose`, `reply` and `annotate` all refuse a file carrying one of those four
+markers, naming the line. A mark the author typed is not one of them: a note
+holding `==words==` builds and publishes like any other. That is the whole cost
+of keeping the markers: nothing else in the hub minds them. There is no
+deadline to resolve them and no command that expires them. The markers are
+gdoc's own, so any later session can take them out for you, on the day you have
+time. Ask for that in words, and the session reads the document once
 more first, so a suggestion that was decided in the meantime is not put to you
 again.
 
 Comment threads live in Drive and never come into the file as text. The anchors
 say where they are; `gdoc comments <url>` says what they say.
+
+## What comes home as the syntax it left as
+
+A footnote in the document is `[^1]` where the mark stands, with the notes
+under a `---` rule at the end of the file. The numbers are the document's own,
+so a note you wrote as `[^register]` comes back as `[^2]`: a round trip
+renumbers rather than relabels. The file is publishable as it stands, because
+`gdoc build` sets a footnote back under the page.
+
+A mark comes home as the syntax an author types for it. A highlight in the
+document is `==words==` for yellow, and the mark's own colour emoji for the
+rest, so green is `==🟢 words==`, and purple, blue, red and orange are
+`==🟣 words==`, `==🔵 words==`, `==🔴 words==` and
+`==🟠 words==`. Grey text is `[words]{.pencil}`. The one space after
+the emoji is the space `gdoc build` takes off again, so a phrase published
+from a note comes home spelled the way it left. Yellow is the one mark written
+two ways, and the bare one wins: a note that said `==🟡 words==` comes
+home as `==words==`, because an emoji in the file would be an instruction the
+author never typed. `gdoc help marks` prints the
+seven with their colours, out of the house style, which is the one place they
+live.
+
+A mark Google split into several runs comes home whole. Bold or code inside a
+highlight is its own run in the document, and the run beside it carries the
+same colour, so neighbouring runs of one colour are written as one mark.
+
+A colour no mark claims stays plain words. gdoc has no syntax that means it,
+and inventing one would put an instruction in your note that nobody typed.
+Those colours are counted instead, by hex, under `marks.other` on the
+envelope, so the session can tell you how much of the document came home as
+prose. Backgrounds are counted and text colours are not: a background is
+somebody marking words, and a text colour is how a document was designed.
 
 ## The house cover comes out
 
@@ -164,7 +204,8 @@ simply a taken path, and the run goes to the next free number.
     "threads": 2,
     "stripped": [{"kind": "cover", "text": "Supplier Register Policy"},
                  {"kind": "table", "text": "Document Owner ..."}],
-    "stamped": [{"path": "/Users/you/notes/supplier-register-policy.md"}]
+    "stamped": [{"path": "/Users/you/notes/supplier-register-policy.md"}],
+    "marks": {"other": {"#D9EAD3": 4}}
   },
   "warnings": ["the match against the note's own pictures is off until an exported picture is measured byte for byte against the one publish uploaded, so every picture here was written as a new file even where the note already holds those bytes"]
 }
@@ -178,8 +219,12 @@ difference matters is the skill's judgement, with you, and no field here answers
 it.
 
 A warning rides with anything that could not be carried: a picture with no
-bytes, a footnote, a prelude that was not recognised, a document whose two
-routes disagreed about how many pictures it holds. When they disagree no picture
+bytes, a prelude that was not recognised, a document whose two routes
+disagreed about how many pictures it holds. A document holding a footnote
+carries two of its own: a suggestion inside a note arrives as plain text,
+because the read carries no ids there, and a comment anchored inside a note, a
+header or a footer is not marked in the file at all. The notes themselves come
+home. When they disagree no picture
 file is written at all, because a pairing one place out would put the wrong
 bytes under the right name and nobody reading the note afterwards could see it.
 

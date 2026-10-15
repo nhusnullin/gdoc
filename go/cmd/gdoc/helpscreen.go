@@ -43,6 +43,11 @@ const (
 // is what a session does first, and the account and the tool itself last.
 var helpGroups = []string{groupRead, groupWrite, groupMake, groupAccount}
 
+// notesSection is the rule the lines that belong to no flag are drawn under.
+// It is the screen's own word and the plain text has no heading for them: a
+// box needs a rule where a blank line is enough on a page.
+const notesSection = "Notes"
+
 // needsCommand is what bare gdoc says, in the refusal's object and as the
 // first line of its screen, so a person reads why they got a help they did not
 // ask for: TestBareGdocOpensWithTheWordsItRefusesWith.
@@ -229,6 +234,18 @@ func commandScreen(p panel.Panel, style tty.Style, c command, line string, warns
 	rows = append(rows, noticeRows(p, style, line, warns)...)
 	rows = append(rows, panel.Section("Usage"))
 	rows = append(rows, usageRows(p, style, c)...)
+	// The lines that belong to no flag get a rule of their own, so a reader
+	// meets them as what the command carries rather than as a second half of
+	// the sentence at the top of the box.
+	if len(c.notes) > 0 {
+		rows = append(rows, panel.Section(notesSection))
+		for i, note := range c.notes {
+			if i > 0 {
+				rows = append(rows, panel.Line(""))
+			}
+			rows = append(rows, lineRows(p, note)...)
+		}
+	}
 	if len(c.flags) > 0 {
 		rows = append(rows, panel.Section("Flags"))
 		for _, f := range c.flags {

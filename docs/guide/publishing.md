@@ -56,8 +56,9 @@ never writes one into your note. Any other key in the front matter is carried
 untouched, the `gdoc:` block included.
 
 The body is your markdown: headings to six levels, bulleted and numbered lists
-three deep, bold, italic, strikeout, `==marked==` text as a highlight, links,
-pictures, tables, horizontal rules and block quotes. A picture is read from the
+three deep, bold, italic, strikeout, marked text, footnotes, links,
+pictures, tables, horizontal rules and block quotes. Footnotes and the marks
+have [their own section](#footnotes-and-the-seven-marks) below. A picture is read from the
 note's own directory, or decoded when the markdown carries it as a `data:` URI;
 PNG and JPEG. A picture at an `http` address is refused naming the line, because
 a document built from a link is a document that breaks when the link expires. An
@@ -90,11 +91,8 @@ search the hub for.
 
 Code blocks are not rendered. The house style has nothing to render them in, so
 a note carrying one gets a warning naming the line and the block is left out
-rather than dropped in silence. Blocks of HTML, inline HTML and footnotes are
-the same answer. Footnotes matter more than they look: `gdoc read` writes a
-document's footnotes as `[^1]` in the prose and the definitions after a `---`
-line, so a note pulled out of a Doc carries them, and each one is named by the
-line the author wrote it on. So is a picture inside a list item, a block quote or a table cell: the
+rather than dropped in silence. Blocks of HTML and inline HTML are the same
+answer. So is a picture inside a list item, a block quote or a table cell: the
 house style puts a figure on a centred line of its own, which it cannot be
 there, and the warning names the line.
 
@@ -125,14 +123,18 @@ counted.
     "title": "Supplier Register Policy",
     "running_head": "Altery - Supplier Register Policy",
     "house": "embedded",
-    "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1}
+    "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1,
+             "footnotes": 2,
+             "marks": {"yellow": 3, "green": 0, "purple": 1}}
   },
   "warnings": ["line 88: a code block is not rendered in the house style and was left out"]
 }
 ```
 
-Those counts are facts and nothing more. Whether the document is right is
-answered by opening it, in Word or in Drive, and not by the binary.
+`body.footnotes` is how many notes the document carries, and `body.marks` is
+the three marks that mean a note is not finished, zero included. Those counts
+are facts and nothing more. Whether the document is right is answered by
+opening it, in Word or in Drive, and not by the binary.
 
 The contents list is a Word field, which is what the master template carries
 too. Word fills it in when the document is opened and refreshed, and Google Docs
@@ -141,7 +143,7 @@ Word writes into an unrefreshed field.
 
 There is one test that keeps this honest on every commit. It builds a document
 from the embedded style, opens the Word master the style was extracted from, and
-compares 169 measured values across the two: page geometry, all nine styles, the
+compares 171 measured values across the two: page geometry, all ten styles, the
 header, the footer, the logo's position, the contents field, the three tables
 and the body. Every row that differs, and every row the master has nothing to
 compare against, is named in a list with the reason it is there, most of them
@@ -149,6 +151,74 @@ because the master states a value twice and because the two documents hold
 different words. A row inside its own tolerance reads as close and needs no
 entry. Any other difference fails the test suite, so the style cannot drift away
 from the master quietly.
+
+## Footnotes and the seven marks
+
+Two things in a note are more than prose. A footnote is set under the page, and
+a mark colours the words. Both are written the way Obsidian writes them, so a
+note you wrote in Obsidian builds as it reads there.
+
+**A footnote** is the mark where it belongs and the words on a line of their
+own:
+
+```markdown
+Every vendor account is reviewed quarterly.[^1]
+
+[^1]: The register is the record, and the owner above signs it off.
+```
+
+The label is yours, so `[^1]`, `[^register]` and `[^why]` all work. The
+document numbers the notes in the order a reader meets the marks, whatever
+order you defined them in, so a note defined last and marked first is note 1.
+A label you mark twice is two notes carrying one text, because Word and Google
+Docs hold one note per mark.
+
+Four shapes are refused, each naming the line, and nothing is written:
+
+| Refused | Because |
+|---|---|
+| a mark that names no note in the file | the document would carry a mark with nothing under the page, and markdown prints the mark as words instead |
+| a note nothing marks | its words would reach no page of the document |
+| a mark inside a heading | Word copies a heading into the contents field, so the note would be marked from the contents list as well as from the page |
+| a mark inside a table cell | the house style carries no note from a cell, so the note would be numbered in the body and written nowhere |
+
+Inside a note, write sentences. A list, a table, a picture, a code block, a
+heading or a second footnote there is warned about by line and left out: the
+house style has no geometry for any of them under the page. A link inside a
+note is printed as its words, warned about the same way, because the footnotes
+part of a docx names no addresses.
+
+**The seven marks** are a colour on a stretch of words. `==words==` is
+Obsidian's own highlight, and a colour emoji at the start of one picks another
+colour, which is Obsidian's rule rather than gdoc's. `[words]{.pencil}` is the
+one Pandoc span gdoc reads, and it writes grey text rather than a highlight:
+
+```markdown
+A ==figure== to fill in, and ==🟡one more==.
+==🟢Agreed with Mel==, ==🟣a question for Mel==, ==🔵an aside==,
+==🔴wrong today== and ==🟠being rewritten==.
+[Not sure this clause is needed]{.pencil}
+```
+
+Run `gdoc help marks` for the seven with their colours. The binary prints them
+out of the house style, so what you read there is the colour the document
+gets. Three are counted on the envelope under `body.marks`, yellow, green and
+purple, because those are the marks that say a note is not finished. The other
+four are carried and not counted. Nothing in the binary says whether a note
+carrying one may be published: `/gdoc-publish` shows you the counts and asks.
+
+Five shapes are refused here too, each naming the line: a mark inside a mark,
+because one stretch of words carries one colour; an empty span; a span
+carrying any attribute other than `.pencil`; a span that crosses a paragraph;
+and a mark inside a heading, for the reason a footnote mark in a heading is
+refused. An emoji anywhere but the start of a highlight is your own text, and
+so is a `[` that is not followed by `]{`, so a link stays a link.
+
+A mark reaches Word twice, as a character style and as the colour on the run
+itself. The style is how a reader finds every yellow with one search, and the
+colour on the run is what survives Google's import, because Google Docs has no
+character styles. That is also what brings a mark home again:
+[`gdoc export`](exporting.md) writes it back as the syntax you typed.
 
 ## Publishing the document
 
@@ -220,7 +290,7 @@ as though it were would pair your note with a document it does not match.
 
 There is a second test that only runs when you ask for it, and it is the one
 that means something: it builds the document, uploads it and the Word master
-side by side, reads both back through the Docs API, and compares the same 169
+side by side, reads both back through the Docs API, and compares the same 171
 values. Google's import is part of that reading, so a difference that shows up
 there and not offline is Drive's doing rather than the generator's. It creates
 two real documents and trashes them, so it is behind two environment variables

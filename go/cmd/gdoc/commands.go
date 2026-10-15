@@ -160,6 +160,17 @@ type command struct {
 	// the one word nobody can guess is there is a Tab away:
 	// TestBothCompletionScriptsListTheMarksTopic.
 	topics []string
+	// notes are the lines about this command that belong to no flag: syntax
+	// it reads out of a note, and where the binary answers the rest. One
+	// sentence each, in the order a reader meets them, and only build has
+	// any today.
+	//
+	// They reach the object as well as the screen, unlike group, because a
+	// note is a fact about what the command carries and a group is a way to
+	// find it on a page. The field is absent for a command with none: here
+	// "takes none" and "said nothing" are the same answer, which is not
+	// true of words and flags: TestHelpBuildNamesFootnotesAndMarks.
+	notes []string
 }
 
 // anyCount is the word count of a command that takes however many words it is
@@ -372,6 +383,10 @@ func commands() []command {
 				{"--force", kindNone, needOptional, "replace the out file if something is already there"},
 			},
 			summary: "Build the note as a house-style docx on this machine, with no network at all.",
+			notes: []string{
+				"A footnote is set under the page: [^1] where the mark goes and [^1]: the words on a line of their own, numbered in the order a reader meets the marks. A mark that names no note, a note nothing marks, and a mark inside a heading or a table cell are refused naming the line.",
+				"==words== and a colour emoji opening a highlight are Obsidian's own marks, and [words]{.pencil} is a grey aside. Run gdoc help marks for the seven, their colours, and which three are counted on this envelope.",
+			},
 			example: "gdoc build --md note.md --out note.docx",
 			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdBuild(a)

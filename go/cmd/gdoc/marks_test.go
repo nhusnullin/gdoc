@@ -236,3 +236,48 @@ func TestARefusedNoteWritesNothing(t *testing.T) {
 		})
 	}
 }
+
+// A note carries two things an author has to be told about, and neither
+// belongs to a flag: a footnote is set in the document, and the seven marks
+// are syntax gdoc reads. So `gdoc help build` names each in one line and
+// sends the question about the colours to `gdoc help marks`, which answers it
+// out of house.yaml. The lines are in the object as well as on the screen,
+// because a skill building a note is the other reader of this help.
+func TestHelpBuildNamesFootnotesAndMarks(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	got, prose, code := runHelp(t, "help", "build", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("gdoc help build must be answered: %v (exit %d)", got, code)
+	}
+	list := helpCommands(t, got)
+	if len(list) != 1 {
+		t.Fatalf("gdoc help build is one entry and %d came back: %v", len(list), list)
+	}
+	entry, ok := list[0].(map[string]any)
+	if !ok {
+		t.Fatalf("the entry is not an object: %v", list[0])
+	}
+	notes, ok := entry["notes"].([]any)
+	if !ok {
+		t.Fatalf("build's entry carries no notes: %v", entry)
+	}
+	if len(notes) != 2 {
+		t.Fatalf("the two lines are the footnote's and the marks', and %d came back: %v", len(notes), notes)
+	}
+	footnoteLine, _ := notes[0].(string)
+	markLine, _ := notes[1].(string)
+	if !strings.Contains(footnoteLine, "footnote") {
+		t.Errorf("the first line is the footnote's: %q", footnoteLine)
+	}
+	if !strings.Contains(markLine, "gdoc help marks") {
+		t.Errorf("the marks line must point at the topic that lists the seven: %q", markLine)
+	}
+	// The words a person reads carry both lines, so a colleague who typed
+	// the help without --json is not sent to the object for them.
+	for _, want := range []string{footnoteLine, markLine} {
+		if !strings.Contains(prose, want) {
+			t.Errorf("the words a person reads leave out %q: %q", want, prose)
+		}
+	}
+}

@@ -48,11 +48,14 @@ type helpSettings struct {
 // helpCommand is one entry of the table as JSON. Words and Flags are always
 // there, empty rather than absent, because a skill telling "takes none" from
 // "said nothing" is the whole reason to print the help at all.
+// Notes is the lines that belong to no flag, absent for a command with none,
+// for the reason the table's own field says.
 type helpCommand struct {
 	Name    string     `json:"name"`
 	Words   []string   `json:"words"`
 	Flags   []helpFlag `json:"flags"`
 	Summary string     `json:"summary"`
+	Notes   []string   `json:"notes,omitempty"`
 	Example string     `json:"example"`
 }
 
@@ -157,6 +160,7 @@ func helpEntries(matched []command) []helpCommand {
 			Words:   append([]string{}, c.words...),
 			Flags:   flags,
 			Summary: c.summary,
+			Notes:   append([]string{}, c.notes...),
 			Example: c.example,
 		})
 	}
@@ -249,6 +253,12 @@ func helpOne(c command) string {
 		b.WriteString(" " + part)
 	}
 	fmt.Fprintf(&b, "\n  %s\n", c.summary)
+	// The lines that belong to no flag, under the sentence that says what the
+	// command does and above the flags, because they are about the note the
+	// command reads rather than about the call.
+	for _, note := range c.notes {
+		fmt.Fprintf(&b, "\n  %s\n", note)
+	}
 	if len(c.flags) > 0 {
 		b.WriteString("\n")
 		width := 0
