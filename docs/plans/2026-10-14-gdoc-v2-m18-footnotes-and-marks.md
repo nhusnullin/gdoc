@@ -494,17 +494,27 @@ mechanism, so the master stays provenance and the gate stays honest.
   `go/internal/drift/compare.go` (Known), `go/internal/drift/pins_test.go`
   (knownOffline), the test that states the old value as a literal
 
-- [ ] For each value Nail names: one DECISIONS.md line saying the value, the
+- [x] For each value Nail names: one DECISIONS.md line saying the value, the
       old one and why; the house.yaml line; the test that pinned the old
       literal re-stated with the new literal, never loosened; and, where the
       master states the old value, a `Known` entry with its reason and its
-      pair re-recorded in `knownOffline`.
-- [ ] A value the master does not state needs no Known entry and gets its
-      own literal test instead.
-- [ ] `TestTheOfflineGate` green with no row unexplained, and the live gate
-      run once at the end of the milestone.
-- [ ] `git commit -m "feat(house): <the value>, <old> to <new>"`, one commit
-      per value.
+      pair re-recorded in `knownOffline`. Skipped on 2026-10-15: no value has
+      been named. The spec says the mechanism is fixed and the values are
+      not, and the three candidates the spec hints at, left aligned over
+      justified, numbered paragraphs and one body size across every policy,
+      are written down in the DECISIONS.md entry of 2026-10-14, "The body
+      breathes", under "What was not decided here" as a decision for Nail and
+      Mel together. Naming a value is not this task's to do. The task runs the
+      moment one is named, and nothing else in M18 waits on it.
+- [x] A value the master does not state needs no Known entry and gets its
+      own literal test instead. Skipped with the box above: it is a rule for
+      a named value, and there is none.
+- [x] `TestTheOfflineGate` green with no row unexplained: run on 2026-10-15
+      against the branch as Task 13 left it, green over all 171 rows. The
+      live gate is Task 16's run at the end of the milestone.
+- [x] `git commit -m "feat(house): <the value>, <old> to <new>"`, one commit
+      per value. No value, so no such commit. This task's only commit is the
+      plan's own boxes.
 
 ### Task 15: the documents
 
