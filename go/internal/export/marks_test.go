@@ -294,17 +294,22 @@ func TestAMarkedSpaceBetweenPlainWordsComesHomeAsItStands(t *testing.T) {
 // The pencil's words holding a pair of "==" came home as
 // "[a ==b== c]{.pencil}", which the next build refuses as a mark inside a
 // mark, and a highlight's words holding "]{.pencil}" came home as
-// "==a ]{.pencil} b==", which it refuses as a span the line does not open. The
-// guarantee is that the file builds again, so in both the colour is dropped and
-// the loss is named.
+// "==a ]{.pencil} b==", which it refuses as a span the line does not open. In
+// both the colour is dropped and the loss is named.
+//
+// Dropping the colour is not enough to make the second file build: the words
+// still hold the attribute, and internal/body refuses a closer no line opened
+// whether or not a mark was written around it. So that one carries a second
+// sentence, ownSyntax's, naming the words the next build misreads. The two say
+// different things, and also is which case expects which.
 func TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords(t *testing.T) {
 	for _, c := range []struct {
-		name, words, never string
-		run                docs.Run
+		name, words, never, also string
+		run                      docs.Run
 	}{
-		{"a pencil whose words hold a highlight", "a ==b== c", "{.pencil}",
+		{"a pencil whose words hold a highlight", "a ==b== c", "{.pencil}", "",
 			docs.Run{Text: "a ==b== c", Colour: "#9A9A9A"}},
-		{"a highlight whose words hold a span's closer", "a ]{.pencil} b", "==",
+		{"a highlight whose words hold a span's closer", "a ]{.pencil} b", "==", "{.pencil}",
 			docs.Run{Text: "a ]{.pencil} b", Background: "#FFD500"}},
 	} {
 		files, _, _, warnings := Project(oneMarked(c.run), nil, palette(t))
@@ -316,8 +321,34 @@ func TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords(t *testing.T) {
 			t.Errorf("%s came home carrying %q, which the next build cannot read:\n%q",
 				c.name, c.never, files[0].Body)
 		}
-		if len(warnings) != 1 {
-			t.Errorf("%s raised %v, want the one sentence naming the loss", c.name, warnings)
+		want := 1
+		if c.also != "" {
+			want = 2
+		}
+		if len(warnings) != want {
+			t.Errorf("%s raised %v, want %d sentences naming the loss", c.name, warnings, want)
+		}
+		dropped := false
+		for _, w := range warnings {
+			if strings.Contains(w, "is printed as the words alone") {
+				dropped = true
+			}
+		}
+		if !dropped {
+			t.Errorf("%s raised %v, and none of it names the colour that was dropped", c.name, warnings)
+		}
+		if c.also == "" {
+			continue
+		}
+		named := false
+		for _, w := range warnings {
+			if strings.Contains(w, c.also) && strings.Contains(w, "the next build reads") {
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%s raised %v, and none of it names %q as syntax the next build reads",
+				c.name, warnings, c.also)
 		}
 	}
 }

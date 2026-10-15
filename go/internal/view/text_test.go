@@ -831,3 +831,25 @@ func TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords(t *testing.T) {
 		}
 	}
 }
+
+// TestReadNamesNothingTheNextBuildWouldRead. The read's text is never built:
+// it reaches a reviewing session, which quotes it. A sentence about what a
+// build would make of the document's own words is the export's, because the
+// export is the one route that writes a file gdoc builds again, and the
+// specification says nothing in this projection changes for the read.
+func TestReadNamesNothingTheNextBuildWouldRead(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":40,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":40,"textRun":{"content":"see [^9] and {.pencil} here\n"}}]}}]}}`
+
+	text, warnings := Text(parse(t, raw))
+
+	if !strings.Contains(text, "see [^9] and {.pencil} here") {
+		t.Errorf("the read prints %q, want the document's own words", text)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "next build") {
+			t.Errorf("the read names what a build would read: %q", w)
+		}
+	}
+}

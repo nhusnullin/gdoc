@@ -545,3 +545,42 @@ func TestASpanTheParseFormsIsNotRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan. The line scan reads the
+// line with its code taken out, so a span whose whole content is a code span
+// read as "[]{.pencil}" and was refused for marking no words, naming a span
+// nowhere in the file. The parser forms that span: spanAhead steps over the
+// code, and the words reach the document grey.
+//
+// A document exported from Drive is where it showed: a pencil run whose text
+// is one piece of code comes home as the span, and the note would not build.
+func TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan(t *testing.T) {
+	source := "Words [`code`]{.pencil} here.\n"
+	if _, err := Render(config(t), []byte(source), "testdata/docs", true); err != nil {
+		t.Fatalf("the span was refused: %v", err)
+	}
+
+	runs := firstBlockRuns(t, source)
+
+	code := runCarrying(t, runs, "code")
+	if code.Mark != "pencil" {
+		t.Errorf("the code inside the span is %#v, want a pencil mark", code)
+	}
+	if text := joined(runs); strings.Contains(text, "]{.pencil}") {
+		t.Errorf("the prose reads %q, want the span's own syntax out of it", text)
+	}
+}
+
+// The other half: an empty span on a line that also holds a code span is still
+// refused. The words are empty because the author wrote no words, not because
+// the scan took them out, and nothing may reach the document as a colour on
+// nothing.
+func TestAnEmptySpanBesideACodeSpanIsStillRefused(t *testing.T) {
+	_, err := Render(config(t), []byte("Words `x` and []{.pencil} here.\n"), "testdata/docs", true)
+	if err == nil {
+		t.Fatal("the empty span was not refused")
+	}
+	if !strings.Contains(err.Error(), "line 1") {
+		t.Errorf("the refusal is %q, want it to name line 1", err)
+	}
+}

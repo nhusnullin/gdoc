@@ -792,3 +792,158 @@ func TestProseWithNoFootnoteMarkIsNotWarnedAboutOne(t *testing.T) {
 		}
 	}
 }
+
+// headed is a document of one heading paragraph holding the runs passed, so a
+// test can put a mark or a footnote reference in a heading and read back what
+// the file holds. The runs carry their own indexes, which is what the warnings
+// name.
+func headed(rs ...docs.Run) *docs.Document {
+	at := 1
+	for i := range rs {
+		if rs[i].Kind == "" {
+			rs[i].Kind = docs.KindText
+		}
+		rs[i].StartIndex = at
+		at += len([]rune(rs[i].Text))
+		if rs[i].Kind != docs.KindText {
+			at = rs[i].StartIndex + 1
+		}
+		rs[i].EndIndex = at
+	}
+	rs = append(rs, docs.Run{Kind: docs.KindText, Text: "\n", StartIndex: at, EndIndex: at + 1})
+	return &docs.Document{
+		ID: "1head", Title: "One heading",
+		Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{
+			Style: "HEADING_2", Runs: rs,
+		}}}}},
+	}
+}
+
+// TestAMarkInsideAHeadingComesHomeAsItsWords. internal/body refuses a mark
+// inside a heading by line, because Word copies a heading into the contents
+// field and the mark would be in the contents list as well as on the page. So
+// a highlighted heading written home as "## Scope ==to fill in==" is a file
+// the next build refuses, blaming the file rather than the export: the words
+// go home alone and the loss is named, which is what every other mark that
+// cannot be written does.
+func TestAMarkInsideAHeadingComesHomeAsItsWords(t *testing.T) {
+	files, _, _, warnings := Project(headed(
+		docs.Run{Text: "Scope "},
+		docs.Run{Text: "to fill in", Background: "#FFD500"},
+	), nil, palette(t))
+
+	if len(files) != 1 {
+		t.Fatalf("the document gave %d files, want 1", len(files))
+	}
+	if body := files[0].Body; !strings.Contains(body, "## Scope to fill in") || strings.Contains(body, "==") {
+		t.Errorf("the heading came home as\n%q\nwant the words alone", body)
+	}
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "heading") && strings.Contains(w, "contents") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no warning names the mark a heading cannot carry: %v", warnings)
+	}
+}
+
+// The other half: a mark in a paragraph that is not a heading still comes home
+// as its syntax, so the rule is about the heading and not about every mark.
+func TestAMarkOutsideAHeadingIsNotNamedAsAHeadingLoss(t *testing.T) {
+	files, _, _, warnings := Project(oneMarked(docs.Run{Text: "to fill in", Background: "#FFD500"}), nil, palette(t))
+
+	if body := files[0].Body; !strings.Contains(body, "==to fill in==") {
+		t.Errorf("the mark came home as\n%q\nwant its syntax", body)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "heading") {
+			t.Errorf("a warning names a heading in a document that has none: %q", w)
+		}
+	}
+}
+
+// TestAFootnoteMarkInsideAHeadingIsNamedAsALoss. The reference is written where
+// the document holds it, because the note's own words are written under the
+// body and a definition nothing marks is refused as well. So the file the
+// export writes is one the next build refuses either way, and the one thing
+// this package can do is say which words have to move.
+func TestAFootnoteMarkInsideAHeadingIsNamedAsALoss(t *testing.T) {
+	d := headed(docs.Run{Text: "Scope "}, docs.Run{Kind: docs.KindFootnoteRef, FootnoteID: "f1", Text: "1"})
+	d.Footnotes = map[string]string{"f1": "The note's words."}
+
+	_, _, _, warnings := Project(d, nil, palette(t))
+
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "footnote mark") && strings.Contains(w, "heading") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no warning names the footnote mark inside the heading: %v", warnings)
+	}
+}
+
+// TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss. A note's
+// text is written under the body as "[^n]: words", and those words are the
+// document's own: one of them holding "[^9]" is read by the next build as a
+// mark of gdoc's, which refuses the file by line and blames the file rather
+// than the export. The scan over the prose did not reach them, so the one
+// route that writes a note's words said nothing.
+func TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss(t *testing.T) {
+	d := oneMarked(docs.Run{Text: "words "})
+	d.Tabs[0].Body[0].Paragraph.Runs = append(d.Tabs[0].Body[0].Paragraph.Runs,
+		docs.Run{Kind: docs.KindFootnoteRef, FootnoteID: "f1", Text: "1", StartIndex: 8, EndIndex: 9})
+	d.Footnotes = map[string]string{"f1": "see [^9] in the note"}
+
+	_, _, _, warnings := Project(d, nil, palette(t))
+
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "[^9]") && strings.Contains(w, "footnote mark") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no warning names the shape inside the note's own words: %v", warnings)
+	}
+}
+
+// TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss. The pencil comes home as
+// Pandoc's span, so the attribute it closes with is syntax of gdoc's in the
+// file: the document's own words holding it are read by the next build as that
+// syntax and not as the words the document shows. Two of the three shapes
+// refuse the file by line and the third publishes a grey phrase the document
+// never carried, with the brackets and the attribute dropped from the words.
+func TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss(t *testing.T) {
+	for _, prose := range []string{
+		"the {.pencil} attribute",
+		"ends with ]{.pencil} here",
+		"write [x]{.pencil} to mark",
+	} {
+		_, _, _, warnings := Project(oneMarked(docs.Run{Text: prose}), nil, palette(t))
+
+		named := false
+		for _, w := range warnings {
+			if strings.Contains(w, "{.pencil}") {
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%q: no warning names the span syntax the next build would read: %v", prose, warnings)
+		}
+	}
+}
+
+// The other half: prose holding no such shape is not warned about one.
+func TestProseWithNoSpanSyntaxIsNotWarnedAboutOne(t *testing.T) {
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "a pencil note about .pencil here"}), nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "{.pencil}") {
+			t.Errorf("a warning names span syntax in words that hold none: %q", w)
+		}
+	}
+}

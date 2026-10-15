@@ -702,3 +702,24 @@ func TestADefinitionInsideABlockOfHTMLRefusesNothing(t *testing.T) {
 		t.Errorf("the walk produced %d notes out of a block of HTML, want none", len(out.Footnotes))
 	}
 }
+
+// TestAMarkInAListInsideADefinitionDoesNotAnswerForThatNote. A list item is a
+// block, so a list inside a footnote definition runs on at the definition's
+// own content indent: the line scan used to end the definition there and read
+// every line after it as the document's own prose. A mark in such a line then
+// answered for a note nothing in the document's words marks, and that note's
+// words reached no page with the build saying ok.
+//
+// The list itself is still warned about and still left out, which is the rule
+// above. What this pins is the second note: it is defined, the only mark on it
+// is inside the first note, and Word has one level of note, so the file is
+// refused rather than published short.
+func TestAMarkInAListInsideADefinitionDoesNotAnswerForThatNote(t *testing.T) {
+	_, err := Render(config(t), []byte("words[^a]\n\n[^a]: note\n    - bullet with [^b]\n\n[^b]: second note\n"), "testdata/docs", true)
+	if err == nil {
+		t.Fatal("the second note reached no page and nothing said so")
+	}
+	if !strings.Contains(err.Error(), "[^b]") {
+		t.Errorf("the refusal is %q, want it to name the note nothing marks", err)
+	}
+}

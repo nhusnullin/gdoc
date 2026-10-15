@@ -465,6 +465,17 @@ const spanAttribute = "{" + pencilAttribute + "}"
 // inside backticks, nothing inside a code block and nothing inside a block of
 // HTML is markdown.
 //
+// Which is why the words question is asked of a line that lost no code. The
+// lines come with their code spans taken out, so a span whose whole content is
+// one, "[`code`]{.pencil}", reads here as "[]{.pencil}" and was refused for
+// marking no words, naming a span nowhere in the file. The parser forms that
+// span, because spanAhead steps over the code, and the words reach the
+// document grey. An empty span on a line that held code is still refused, by
+// the attribute count below: the parse forms no span for a bracket with
+// nothing in it, so the attribute closes none.
+// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan and
+// TestAnEmptySpanBesideACodeSpanIsStillRefused are the pins.
+//
 // The fourth is the parse's own answer, because a bracket this package's
 // parser never gets to claim still reads as a span by line. Three of
 // goldmark's parsers claim one first: a bracket after "!" is a picture's, a
@@ -488,7 +499,7 @@ func checkSpans(source []byte, root ast.Node) error {
 				refusal = fmt.Errorf("line %d: the span %s carries {%s}, and %s is the only attribute gdoc reads; written as it is, the brackets and the braces would reach the document as words", l.at, whole, attribute, pencilAttribute)
 				return
 			}
-			if strings.TrimSpace(words) == "" {
+			if strings.TrimSpace(words) == "" && !l.code {
 				refusal = fmt.Errorf("line %d: the span %s marks no words, so the mark would be a colour on nothing", l.at, whole)
 				return
 			}

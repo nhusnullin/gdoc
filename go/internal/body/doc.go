@@ -49,6 +49,14 @@
 // parser steps over a code span the way the line scan does, so the two agree
 // on what opens a span.
 //
+// The words question is asked of a line that lost no code. The line scan reads
+// a line with its code spans taken out, so a span whose whole content is one,
+// "[`code`]{.pencil}", read as "[]{.pencil}" and was refused for marking no
+// words, naming a span nowhere in the file and refusing a note the parser was
+// about to render grey. An empty span on a line that held code is still
+// refused, because the parse forms no span for a bracket with nothing in it
+// and the attribute then closes none.
+//
 // The attribute is counted against the spans the parse formed, because a
 // bracket this package's parser never gets to claim still reads as a span by
 // line: a bracket after "!" is a picture's, a bracket holding a caret is a
@@ -68,7 +76,9 @@
 // TestASpanInsideACodeBlockIsNotASpan,
 // TestAPencilAttributeThatOpensNoSpanIsRefusedByLine,
 // TestAPencilAttributeInsideABlockOfHTMLRefusesNothing,
-// TestASpanTheParseFormsIsNotRefused and
+// TestASpanTheParseFormsIsNotRefused,
+// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan,
+// TestAnEmptySpanBesideACodeSpanIsStillRefused and
 // TestAMarkInAHeadingIsRefusedByLine and
 // TestAMarkInAPicturesAltTextIsRefusedByLine are the pins, with
 // TestTwoMarksSideBySideStayTwoRuns over merge and
@@ -349,6 +359,15 @@
 // mark makes no note, it does not answer for a definition either: a definition
 // marked only from inside another one is refused the way an unmarked one is.
 // TestADefinitionMarkedOnlyFromInsideAnotherIsRefusedByLine is the pin.
+//
+// Which lines are a definition's own is the line scan's question, and a list
+// item indented inside one is among them: the item is a block, so the scan
+// used to end the definition where the item opened and read every line after
+// it as the document's own prose. A mark in such a line then answered for a
+// note nothing in the document marks, and that note's words reached no page
+// with the build saying ok. goldmark lifts the item into the note, which is
+// the reading the scan now follows.
+// TestAMarkInAListInsideADefinitionDoesNotAnswerForThatNote is the pin.
 //
 // Because a heading inside a footnote is left out, the two walks that run
 // before the blocks skip it as well: it is not a heading of this document, it

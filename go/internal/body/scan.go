@@ -58,6 +58,11 @@ type sourceLine struct {
 	at int
 	// text is the line with its code spans taken out.
 	text string
+	// code says a code span was taken out of this line, so text is shorter
+	// than the line the author wrote. A check reading an empty stretch of
+	// text cannot tell whether the author left it empty or the code came out
+	// of it, and this is how it asks.
+	code bool
 	// definition says this line opens a footnote definition, and label is the
 	// label it opens.
 	definition bool
@@ -138,7 +143,8 @@ func proseLines(source []byte, f func(sourceLine)) {
 		if !blank {
 			inCode = false
 		}
-		line := sourceLine{at: i + 1, text: withoutCode(raw)}
+		stripped := withoutCode(raw)
+		line := sourceLine{at: i + 1, text: stripped, code: stripped != raw}
 		if m := footnoteDefinition.FindStringSubmatch(line.text); m != nil {
 			if label := m[1]; strings.TrimSpace(label) != "" {
 				line.definition, line.label = true, label
@@ -158,7 +164,19 @@ func proseLines(source []byte, f func(sourceLine)) {
 		case line.definition:
 			openDefinition, base = true, definitionIndent
 		case indent <= base+3 && !closes && listOpener.MatchString(line.text):
-			openDefinition, base = false, itemIndent(line.text, indent)
+			// A list item indented inside the definition still running is one
+			// of that definition's own blocks, which is goldmark's reading of
+			// it too: the item is lifted into the note. Ending the definition
+			// here read the item and every line after it as the document's
+			// own prose, so a mark in one answered for a note nothing in the
+			// document marks, and that note's words reached no page with the
+			// build saying ok.
+			// TestAMarkInAListInsideADefinitionDoesNotAnswerForThatNote is the
+			// pin.
+			if indent < definitionIndent {
+				openDefinition = false
+			}
+			base = itemIndent(line.text, indent)
 		case !blank && atMargin(raw):
 			openDefinition, base = false, 0
 		}

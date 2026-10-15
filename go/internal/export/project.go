@@ -108,6 +108,7 @@ func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFil
 			Skip:        skip,
 			ChipTargets: true,
 			Marks:       palette,
+			Rebuilt:     true,
 		})
 		warnings = append(warnings, tw...)
 		otherColours(t.Body, skip, palette, other)

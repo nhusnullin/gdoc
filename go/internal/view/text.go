@@ -111,17 +111,24 @@ func detailLabel(r docs.Run) string {
 // Marks writes a run's colour back as the syntax an author typed for it, and
 // an empty list writes none.
 //
-// All four are the export's, and none of them is the read's: read prints what
-// the document holds and nothing that is not in it, and a file in the hub
-// carries a picture that has a file beside it, a chip's target a later session
-// has to resolve, and the mark the words were written with.
-// TestProjectSkipsAndNamesPictures, TestAChipCarriesItsTargetWhenAskedFor and
-// TestReadPrintsNoMark are the pins.
+// Rebuilt says this text becomes a file in the hub that gdoc builds again, so
+// the projection names every stretch of the document's own words that the next
+// build reads as syntax of gdoc's rather than as the words the document shows.
+//
+// All five are the export's, and none of them is the read's: read prints what
+// the document holds and nothing that is not in it, and says nothing about a
+// build that is not happening, while a file in the hub carries a picture that
+// has a file beside it, a chip's target a later session has to resolve, and the
+// mark the words were written with.
+// TestProjectSkipsAndNamesPictures, TestAChipCarriesItsTargetWhenAskedFor,
+// TestReadPrintsNoMark and TestReadNamesNothingTheNextBuildWouldRead are the
+// pins.
 type Options struct {
 	Picture     func(objectID string) string
 	Skip        func(docs.Block) bool
 	ChipTargets bool
 	Marks       []Mark
+	Rebuilt     bool
 }
 
 // Mark is one colour a caller can name, and what goes around the words that
@@ -345,8 +352,15 @@ type emitter struct {
 	// inLink says the words being written are a link's. One bracket is markup
 	// there and nowhere else, because the words end at the first one a reader
 	// meets.
-	inLink   bool
-	warnings []string
+	inLink bool
+	// inHeading says the paragraph being written becomes a heading line in the
+	// file, which is a line the next build carries no mark and no footnote
+	// mark on. The question is the paragraph's rather than the words', so it
+	// cannot be asked of the runs cannotCarry reads. A paragraph inside a
+	// table cell is never one: a cell is flattened onto one line and takes no
+	// "#" prefix, whatever style the paragraph carries.
+	inHeading bool
+	warnings  []string
 }
 
 func (e *emitter) chunk(s string) {
@@ -654,7 +668,12 @@ func (e *emitter) blocks(bs []docs.Block) {
 }
 
 func (e *emitter) paragraph(p *docs.Paragraph) {
+	// The style is read before the runs are written, because what the next
+	// build reads a mark on this line as depends on the "#" prefix below. A
+	// paragraph is never written inside another, so one flag is enough.
+	e.inHeading = headingLevel(p.Style) > 0
 	text := e.capture(func() { e.runs(p.Runs) })
+	e.inHeading = false
 	// The prefix is taken even when the text is empty, so an item of a numbered
 	// list that holds no text still counts: the numbers then say what the
 	// document shows rather than closing the gap over an item nobody typed into.
@@ -1100,7 +1119,7 @@ func (e *emitter) cell(c docs.Cell) string {
 // the formatting changes and two markers around one suggested phrase would read
 // as two suggestions.
 func (e *emitter) runs(rs []docs.Run) {
-	e.footnoteMarks(rs)
+	e.ownSyntax(rs)
 	for i := 0; i < len(rs); {
 		j := i + 1
 		for j < len(rs) && sameSpan(rs[i], rs[j]) {
@@ -1127,14 +1146,20 @@ func (e *emitter) runs(rs []docs.Run) {
 // which is what a mark that cannot carry its syntax already does.
 var footnoteMark = regexp.MustCompile(`\[\^[^\]\n]+\]`)
 
-// footnoteMarks names every stretch of the document's own words that the next
-// build would read as a footnote mark of gdoc's.
+// ownSyntax names every stretch of the document's own words that the next
+// build would read as syntax of gdoc's.
 //
 // Consecutive text runs are joined before the search, because Docs splits a run
 // wherever the formatting changes, so "[^" and "1]" can be two runs of one
 // sentence. A run that is not text stops the join: gdoc writes its own markup
 // there, and a bracket of gdoc's is not the author's.
-func (e *emitter) footnoteMarks(rs []docs.Run) {
+//
+// Nothing is said where the text is not going to be built. Options.Rebuilt
+// holds why.
+func (e *emitter) ownSyntax(rs []docs.Run) {
+	if !e.opts.Rebuilt {
+		return
+	}
 	for i := 0; i < len(rs); {
 		if rs[i].Kind != docs.KindText {
 			i++
@@ -1146,13 +1171,83 @@ func (e *emitter) footnoteMarks(rs []docs.Run) {
 			b.WriteString(rs[j].Text)
 		}
 		text := b.String()
-		for _, m := range footnoteMark.FindAllStringIndex(text, -1) {
+		for _, f := range e.gdocShapes(text) {
 			e.warnings = append(e.warnings, fmt.Sprintf(
-				"the words at index %d hold %s, which the next build reads as a footnote mark of gdoc's rather than as the words this document shows",
-				at+units(text[:m[0]]), text[m[0]:m[1]]))
+				"the words at index %d hold %s, which the next build reads as %s rather than as the words this document shows",
+				at+units(text[:f.at]), f.what, f.noun))
 		}
 		i = j
 	}
+}
+
+// shape is one stretch of the document's own words the next build reads as
+// syntax of gdoc's: where it starts in the text, what it says, and what a
+// warning calls it.
+type shape struct {
+	at         int
+	what, noun string
+}
+
+// gdocShapes is every such stretch of this text, in the order it is read.
+//
+// Two shapes, both of them markup gdoc writes into the file itself. The first
+// is a real note's reference, "[^n]", and footnoteMark holds what the next
+// build makes of one. The second is the attribute a mark's span closes with,
+// "{.pencil}", which comes off the palette rather than being a constant here,
+// because the house style is the one place the syntax is stated. The attribute
+// is searched for on its own, without the bracket in front of it, because all
+// three shapes it appears in are losses: internal/body refuses an attribute
+// that closes no span it reads and refuses a closer no line opened, and a
+// whole span written in the document's own words publishes a grey phrase the
+// document never carried with the brackets dropped out of the text.
+//
+// Neither shape can be escaped out of the way: internal/body hands goldmark's
+// text through as it stands and never unescapes a punctuation mark, so a
+// backslash written here reaches the document as a backslash. The words go
+// home as the document holds them and the loss is named, which is what a mark
+// that cannot carry its syntax already does.
+func (e *emitter) gdocShapes(text string) []shape {
+	var out []shape
+	for _, m := range footnoteMark.FindAllStringIndex(text, -1) {
+		out = append(out, shape{at: m[0], what: text[m[0]:m[1]], noun: "a footnote mark of gdoc's"})
+	}
+	for _, a := range e.spanAttributes() {
+		for from := 0; ; {
+			i := strings.Index(text[from:], a)
+			if i < 0 {
+				break
+			}
+			out = append(out, shape{at: from + i, what: a, noun: "the attribute gdoc closes a mark's span with"})
+			from += i + len(a)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].at < out[j].at })
+	return out
+}
+
+// spanAttributes is the attribute each span in the palette closes with, once
+// each. A mark written as a delimiter pair has none, and two marks sharing one
+// attribute would otherwise name the same words twice.
+func (e *emitter) spanAttributes() []string {
+	var out []string
+	for i := range e.opts.Marks {
+		shut := e.opts.Marks[i].Shut
+		brace := strings.Index(shut, "{")
+		if brace < 0 || !strings.Contains(shut, "]") {
+			continue
+		}
+		a := shut[brace:]
+		seen := false
+		for _, had := range out {
+			if had == a {
+				seen = true
+			}
+		}
+		if !seen {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func sameSpan(a, b docs.Run) bool {
@@ -1232,7 +1327,10 @@ func (e *emitter) body(rs []docs.Run) {
 		// comment anchored at the same character would otherwise end up
 		// behind markup gdoc wrote.
 		e.drain(words[0].StartIndex, false)
-		why := e.cannotCarry(m, words)
+		why := e.cannotMarkHere()
+		if why == "" {
+			why = e.cannotCarry(m, words)
+		}
 		if why == "" {
 			why = e.cannotOpenHere(m, words)
 		}
@@ -1250,6 +1348,28 @@ func (e *emitter) body(rs []docs.Run) {
 		e.links(tail)
 		i = j
 	}
+}
+
+// cannotMarkHere is why no mark can be written on this paragraph at all, or
+// nothing where one can.
+//
+// A heading is the one paragraph that carries none. internal/body refuses a
+// mark inside a heading by line, because Word copies a heading into the
+// contents field and the mark would be in the contents list as well as on the
+// page, so a highlighted heading written home as "## Scope ==to fill in==" is
+// a file the next build refuses, blaming the file rather than the export. The
+// words go home alone and the loss is named, which is what cannotCarry does
+// for words that cannot carry the syntax.
+//
+// It is asked before cannotCarry, because this is the reason a reader needs:
+// the words are fine and the line they are on is not.
+// internal/export's TestAMarkInsideAHeadingComesHomeAsItsWords and
+// TestAMarkOutsideAHeadingIsNotNamedAsAHeadingLoss are the pins.
+func (e *emitter) cannotMarkHere() string {
+	if !e.inHeading {
+		return ""
+	}
+	return "these words are a heading's, and the next build refuses a mark inside a heading, because Word copies a heading into the contents field and the mark would be in the contents list as well as on the page"
 }
 
 // cannotOpenHere is why this mark's opener cannot be written where the text
@@ -1585,7 +1705,19 @@ func (e *emitter) one(r docs.Run) {
 		e.writeText(r.Text, r.StartIndex)
 	case docs.KindFootnoteRef:
 		e.drain(r.StartIndex, false)
-		e.write("[^" + e.footnote(r) + "]")
+		number := e.footnote(r)
+		// The reference is written where the document holds it, heading or
+		// not: the note's own words go under the body, and the next build
+		// refuses a definition nothing marks as well. So the file is one that
+		// build refuses either way, and the one thing this projection can do
+		// is say which words have to move. internal/export's
+		// TestAFootnoteMarkInsideAHeadingIsNamedAsALoss is the pin.
+		if e.inHeading && e.opts.Rebuilt {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the footnote mark [^%s] at index %d is a heading's, and the next build refuses a footnote mark inside a heading, because Word copies a heading into the contents field and the note would be marked from the contents list as well as from the page",
+				number, r.StartIndex))
+		}
+		e.write("[^" + number + "]")
 		e.drain(r.EndIndex, true)
 	default:
 		e.drain(r.StartIndex, false)
@@ -1721,6 +1853,16 @@ func (e *emitter) footnote(r docs.Run) string {
 
 // appendFootnotes puts the footnote texts under the body, after a rule, in the
 // order they were referenced.
+//
+// A note's own words are the document's own words, and they are written into
+// the file the same way the prose is, so they are asked the same question:
+// ownSyntax walks the prose runs and never reaches here, and a note holding
+// "[^9]" went home in a file the next build refuses by line, blaming the file
+// rather than the export. The warning names the note rather than an index,
+// because a second copy of the document's text occupies no index of its own,
+// which is what writeText's -1 says.
+// internal/export's
+// TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss is the pin.
 func (e *emitter) appendFootnotes(d *docs.Document) {
 	if len(e.order) == 0 {
 		return
@@ -1731,6 +1873,13 @@ func (e *emitter) appendFootnotes(d *docs.Document) {
 		// line, so they become spaces. Dropping them instead glued the last word
 		// of one paragraph to the first word of the next.
 		text := strings.ReplaceAll(d.Footnotes[n.id], "\n", " ")
+		if e.opts.Rebuilt {
+			for _, f := range e.gdocShapes(text) {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"the footnote [^%s] holds %s in its own words, which the next build reads as %s rather than as the words this document shows",
+					n.number, f.what, f.noun))
+			}
+		}
 		e.chunk("[^" + n.number + "]: " + e.capture(func() { e.writeText(text, -1) }))
 	}
 }
