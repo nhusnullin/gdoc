@@ -1186,12 +1186,101 @@ func (e *emitter) body(rs []docs.Run) {
 		// comment anchored at the same character would otherwise end up
 		// behind markup gdoc wrote.
 		e.drain(words[0].StartIndex, false)
+		if why := e.cannotCarry(m, words); why != "" {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the mark on the words at index %d is printed as the words alone: %s", words[0].StartIndex, why))
+			e.links(words)
+			e.links(tail)
+			i = j
+			continue
+		}
 		e.write(m.opener(words))
 		e.links(words)
 		e.write(m.Shut)
 		e.links(tail)
 		i = j
 	}
+}
+
+// cannotCarry is why this mark cannot be written around these words, or nothing
+// where it can be. The words are then written as they stand and the loss is
+// named, which is what a placeholder does for a picture.
+//
+// A mark comes home as the syntax an author types, and the next build reads
+// that syntax back. Two shapes of words it cannot be read around:
+//
+//   - A span's words end at the first bracket a reader meets, so a bracket the
+//     document holds closes the span early, and so do the brackets gdoc writes
+//     for a run that is not text: a footnote mark is "[^3]". internal/body
+//     refuses the line rather than guessing, so the file would not build at
+//     all. A link is the same bracket from the other side: "[[words](url)]"
+//     opens nothing either side can read.
+//   - A delimiter pair is read by its run of characters, so the pair itself
+//     inside the words closes the mark early, and one of its characters against
+//     either delimiter lengthens that run and comes home as a stray character
+//     in the document.
+//
+// A backslash is not the answer. internal/body hands goldmark's text through as
+// it stands and never unescapes a punctuation mark, so a backslash written into
+// the file reaches the document as a backslash. A colour nobody can see in the
+// file is better than a file that will not build, and better than a backslash
+// nobody typed in the document. internal/export's
+// TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
+func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
+	words, allText := writtenWords(rs)
+	if strings.Contains(m.Open, "[") || strings.Contains(m.Shut, "]") {
+		if !allText {
+			return "a span marks words, and gdoc writes this content as markup of its own, which carries the bracket that would close the span"
+		}
+		if strings.ContainsAny(words, "[]") {
+			return "the words hold a bracket, and a span's words end at the first bracket a reader meets"
+		}
+		for _, r := range rs {
+			if l := textLink(r); l != nil && e.target(l) != "" {
+				return "the words point somewhere, and a link is written with the bracket that would close the span"
+			}
+		}
+		return ""
+	}
+	if strings.Contains(words, m.Shut) || strings.Contains(words, m.Open) {
+		return "the words hold the delimiter the mark is written with, which would close it early"
+	}
+	if edgeRune(m.Open, false) != 0 && strings.HasPrefix(words, string(edgeRune(m.Open, false))) {
+		return "the words open with the character the mark's own delimiter is made of, which would lengthen it"
+	}
+	if edgeRune(m.Shut, true) != 0 && strings.HasSuffix(words, string(edgeRune(m.Shut, true))) {
+		return "the words end with the character the mark's own delimiter is made of, which would lengthen it"
+	}
+	return ""
+}
+
+// writtenWords is the document's own text in these runs, and whether every one
+// of them is text: a run that is not writes gdoc's markup instead, which is
+// what the caller is asking about.
+func writtenWords(rs []docs.Run) (words string, allText bool) {
+	var b strings.Builder
+	allText = true
+	for _, r := range rs {
+		if r.Kind != docs.KindText {
+			allText = false
+			continue
+		}
+		b.WriteString(r.Text)
+	}
+	return b.String(), allText
+}
+
+// edgeRune is the first or the last rune of a delimiter, or 0 where there is
+// none.
+func edgeRune(s string, first bool) rune {
+	rs := []rune(s)
+	if len(rs) == 0 {
+		return 0
+	}
+	if first {
+		return rs[0]
+	}
+	return rs[len(rs)-1]
 }
 
 // markFor is the mark this run carries, as the one element of the caller's

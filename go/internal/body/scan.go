@@ -22,12 +22,21 @@ import (
 // and a four-backtick block may hold a three-backtick one. What follows the run
 // is captured because a block shuts on a fence carrying nothing else: the
 // "```js" line inside a "```" block is the block's own content.
-var fence = regexp.MustCompile("^ {0,3}(`{3,}|~{3,})(.*)$")
+//
+// The indent is not bounded here. A fence is indented up to three spaces from
+// the content indent of the block it sits in, which is four inside a footnote
+// definition and the item's own inside a list, so the bound is the caller's and
+// is measured against base.
+var fence = regexp.MustCompile("^[ \t]*(`{3,}|~{3,})(.*)$")
 
-// listOpener opens a list item, whose own indented lines are its content. It
-// bounds the indent the way footnoteDefinition does, because four spaces is a
-// continuation line rather than a new item.
-var listOpener = regexp.MustCompile(`^ {0,3}([-*+]|[0-9]{1,9}[.)])(\s|$)`)
+// listOpener opens a list item, whose own indented lines are its content. The
+// marker is captured because the item's content indent is measured from it: a
+// "- " item carries its lines at two, a "1. " item at three.
+//
+// The indent is not bounded here either, because a nested item sits at its
+// parent's content indent. The bound is base, the same one the fence is
+// measured against.
+var listOpener = regexp.MustCompile(`^[ \t]*([-*+]|[0-9]{1,9}[.)])(\s|$)`)
 
 // thematicBreak is a horizontal rule. It closes the block above it the way a
 // heading does, so an indented code block may open on the line after one. RE2
@@ -60,24 +69,31 @@ type sourceLine struct {
 // proseLines calls f for every line of the source a check should read, in
 // order, with the code left out.
 //
-// A fenced block is left out whole, and so is an indented code block: four
-// spaces where a new block could open, with no footnote definition and no list
-// item still running on. Inside either of those an indented line is that
-// block's own content and may hold a mark the author meant, which is why the
-// indent alone is not enough.
+// A fenced block is left out whole, and so is an indented code block. Both are
+// measured from the content indent of the block they sit in rather than from
+// the margin: a footnote definition carries its lines at four and a list item
+// at its marker's width, so a fence inside one is indented four or more and
+// four spaces inside one is the note's own prose rather than code. Measuring
+// from the margin instead read a code sample in a nested list item as prose
+// and refused a note nothing was wrong with.
 //
 // What an indented code block cannot do is interrupt a paragraph, which is the
-// whole of the rule: it opens after a blank line, at the start of the file, and
+// rest of the rule: it opens after a blank line, at the start of the file, and
 // after any line that closes a block of its own. A heading is one, a horizontal
 // rule and a setext underline are two more, and a fence that shut is the last.
 // mayOpen is false only after a line that could be continued.
 func proseLines(source []byte, f func(sourceLine)) {
 	// opener is the fence run that opened the block in hand, empty when none
-	// is open.
-	opener := ""
+	// is open, and fenceBase the content indent it opened at: the closer is
+	// indented up to three spaces from there and anything deeper is content.
+	opener, fenceBase := "", 0
 	openDefinition := false
-	openList := false
 	inCode := false
+	// base is the content indent of the block still running on: four inside a
+	// footnote definition, the marker's width inside a list item, and zero at
+	// the margin. A fence opens within three spaces of it and an indented code
+	// block four beyond it.
+	base := 0
 	// openParagraph says the line before this one was a line of prose, so a
 	// setext underline on this line underlines it. It is not the negation of
 	// mayOpen: after a line of an indented code block neither is true.
@@ -87,11 +103,13 @@ func proseLines(source []byte, f func(sourceLine)) {
 	// own.
 	mayOpen := true
 	for i, raw := range strings.Split(string(source), "\n") {
+		indent := indentWidth(raw)
 		if opener != "" {
 			// Inside a fenced block nothing is markdown and no state moves.
 			// The block shuts on its own character, in a run at least as long
-			// as the opener, with nothing but whitespace after it.
-			if m := fence.FindStringSubmatch(raw); m != nil {
+			// as the opener, with nothing but whitespace after it, indented no
+			// more than three spaces past the block's own content indent.
+			if m := fence.FindStringSubmatch(raw); m != nil && indent <= fenceBase+3 {
 				run, rest := m[1], m[2]
 				if run[0] == opener[0] && len(run) >= len(opener) && strings.TrimSpace(rest) == "" {
 					opener, mayOpen, openParagraph = "", true, false
@@ -99,22 +117,18 @@ func proseLines(source []byte, f func(sourceLine)) {
 			}
 			continue
 		}
-		if m := fence.FindStringSubmatch(raw); m != nil {
-			opener = m[1]
-			// A fence this regexp matches is indented under four spaces, so it
-			// is no definition's continuation line and the definition ends
-			// here. A list item's content indent is the item's own, which this
-			// scan does not measure, so only a fence at the margin ends one.
-			openDefinition = false
-			if atMargin(raw) {
-				openList = false
+		if m := fence.FindStringSubmatch(raw); m != nil && indent <= base+3 {
+			opener, fenceBase = m[1], base
+			// A fence shallower than the content indent of the block in hand
+			// is outside that block, so the block ends here.
+			if indent < base {
+				openDefinition, base, fenceBase = false, 0, 0
 			}
 			mayOpen, openParagraph = true, false
 			continue
 		}
 		blank := strings.TrimSpace(raw) == ""
-		indented := strings.HasPrefix(raw, "    ") || strings.HasPrefix(raw, "\t")
-		if indented && !openDefinition && !openList && (inCode || mayOpen) {
+		if !blank && indent >= base+4 && (inCode || mayOpen) {
 			inCode = true
 			mayOpen, openParagraph = false, false
 			continue
@@ -136,24 +150,55 @@ func proseLines(source []byte, f func(sourceLine)) {
 			(openParagraph && setextUnderline.MatchString(line.text))
 		// A definition and a list item each run on through their blank and
 		// indented lines, which is goldmark's own rule for continuing one, and
-		// end at the first line of prose at the margin. A line indented one,
-		// two or three spaces is a continuation line of the item it sits in,
-		// whose content indent this scan does not measure, so it ends nothing:
-		// ending the list there read the item's own later paragraph, indented
-		// four, as a code block.
+		// end at the first line of prose at the margin. A line indented inside
+		// the block in hand is one of its own lines and ends nothing.
 		switch {
 		case line.definition:
-			openDefinition, openList = true, false
-		case listOpener.MatchString(line.text) && !closes:
-			openDefinition, openList = false, true
+			openDefinition, base = true, definitionIndent
+		case indent <= base+3 && !closes && listOpener.MatchString(line.text):
+			openDefinition, base = false, itemIndent(line.text, indent)
 		case !blank && atMargin(raw):
-			openDefinition, openList = false, false
+			openDefinition, base = false, 0
 		}
-		line.inside = line.definition || (indented && openDefinition)
+		line.inside = line.definition || (openDefinition && indent >= definitionIndent)
 		mayOpen = blank || closes
 		openParagraph = !blank && !closes
 		f(line)
 	}
+}
+
+// definitionIndent is the content indent of a footnote definition, which is
+// goldmark's own: four spaces, whatever the label's width.
+const definitionIndent = 4
+
+// itemIndent is the content indent of the list item this line opens: its own
+// indent, the marker, and the one space after it. An author writing more than
+// one space there carries their content further in, which this does not follow;
+// the answer is only ever too shallow, and too shallow reads a line as the
+// item's prose rather than as its code.
+func itemIndent(text string, indent int) int {
+	m := listOpener.FindStringSubmatch(text)
+	if m == nil {
+		return indent
+	}
+	return indent + len(m[1]) + 1
+}
+
+// indentWidth is how far the line is indented, counting a tab to the next
+// multiple of four, which is how CommonMark reads one.
+func indentWidth(raw string) int {
+	n := 0
+	for _, r := range raw {
+		switch r {
+		case ' ':
+			n++
+		case '\t':
+			n += 4 - n%4
+		default:
+			return n
+		}
+	}
+	return n
 }
 
 // atMargin says the line starts in column 0, so it is no continuation line of

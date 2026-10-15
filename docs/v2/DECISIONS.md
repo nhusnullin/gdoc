@@ -4278,6 +4278,70 @@ The list now names that one. The edit changes no decision: a name that pins
 nothing is worse than no name, because a reader checking the entry finds
 nothing and cannot tell which of the two is wrong.
 
+**A colon after a mark says nothing about it.** The line scan skipped every
+`[^label]` with a colon after it, on the theory that a colon is always a
+definition opening. A definition opens at the start of a line and nowhere else,
+and goldmark reads `the source[^1]: it is good` in the middle of a sentence as a
+mark like any other. So the rule got both answers wrong at once: a reference
+ending a clause was never counted and its own definition was refused as
+unmarked, and an undefined mark of the same shape was published as the words the
+author typed, which is the silence every footnote refusal exists for. The one
+`[^label]` the scan leaves alone is the definition's own opener, known by where
+it sits on the line.
+
+**A code block is measured from the content indent of the block it sits in.**
+The paragraph above in this entry says the scan does not measure a list item's
+content indent. It measures it now, and this says why: measured from the margin,
+neither kind of code block inside a nested list item was seen at all, because a
+fence sits at four spaces there and the indented-code rule was switched off
+while a list was open. A code sample in a nested bullet was read as prose, so
+`[^ref]` in it refused a note nothing was wrong with and a shell line holding
+`]{.pencil}` refused a span nobody opened. The footnote definition is the same
+shape from the other side: its content sits at four, so the fence of a code
+block inside a note was never seen either. `base` is that indent, four inside a
+definition and the marker's width inside an item; a fence opens within three
+spaces of it and an indented block four beyond it.
+
+**A footnote mark and a mark inside a picture's alt text are refused.** The alt
+text becomes the picture's caption, and the caption is built with no palette and
+no numbers at all, which is what `markTable`'s zero value and the nil note map
+are for: neither reaches a run that could carry a colour. So both were dropped
+there in silence. The footnote was worse than silent: the mark was numbered by
+the pre-walk, so the note was written under the page with nothing on any page
+pointing at it and the envelope counted a footnote the document does not have,
+which is a false fact and not a loss. Both are refused by line now, for the
+reason the heading and the table cell are. The alt text sits on a line of prose,
+so neither can be read off the line scan and both are asked of the tree.
+
+**A mark whose words cannot carry its syntax comes home as the words alone.**
+`export` writes a mark as the syntax an author types and the next build reads
+that syntax back, and three shapes of words it cannot be read around: a bracket
+the document holds, because a span's words end at the first bracket a reader
+meets; a link, because that is written with the same bracket, so a pencilled
+link came home as `[[words](url)]{.pencil}`; and a highlight's own delimiter
+inside the words, which closes the mark early, or one half of it against either
+end, which lengthens it and leaves a stray equals sign in the document. The
+first two wrote a file into the hub that `build` refuses by line, blaming the
+file rather than the export, with nothing the author could type to fix it.
+
+A backslash is not the answer, and that is measured: `internal/body` hands
+goldmark's text through as it stands and never unescapes a punctuation mark, so
+an escape written into the file reaches the document as a backslash. That is a
+hole of its own, older than M18 and documented in
+`docs/backlog/build-never-unescapes-a-backslash.md`, because fixing it changes
+what every note carrying a backslash publishes. Until then the words are written
+as they stand, the mark is left off and the loss is named, which is what a
+placeholder does for a picture: a colour nobody can see in the file is better
+than a file that will not build.
+
+**A house palette has to give `==` to a highlight.** `validateMarks` checked the
+seven names, the kinds, the hexes and the openers, and never that some mark
+claims the bare delimiter. `internal/body` resolves it to a mark by name, so a
+file passed to `--house` with `==` taken off yellow resolved to no name: every
+`==highlight==` in the note reached the document with no colour on it, no
+character style, and no count on the envelope. Two refusals now, one for nobody
+claiming it and one for a mark that is not a highlight claiming it.
+
 **Tests.** `TestALabelDefinedTwiceIsRefusedNamingBothLines`,
 `TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused`,
 `TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote`,
@@ -4299,3 +4363,12 @@ nothing and cannot tell which of the two is wrong.
 `TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters`.
 `TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut` now names each
 left-out block by its own line rather than by the line its definition opens on.
+
+The second round of the review adds
+`TestAFootnoteMarkFollowedByAColonIsStillAMark`,
+`TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode`,
+`TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine`,
+`TestAMarkInAPicturesAltTextIsRefusedByLine`,
+`TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed`,
+`TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused` and
+`TestTheBareHighlightBelongsToAHighlight`.

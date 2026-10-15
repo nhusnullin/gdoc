@@ -364,11 +364,12 @@ func isMark(node ast.Node) bool {
 	return false
 }
 
-// checkMarks refuses a mark inside a mark and a mark inside a heading.
+// checkMarks refuses a mark inside a mark, a mark inside a heading and a mark
+// inside a picture's alt text.
 //
-// Both are read off the tree rather than off the source lines, because both
-// are questions about what a mark sits inside and goldmark answers those: a
-// source scan would have to decide for itself whether "a == b == c" is a
+// All three are read off the tree rather than off the source lines, because
+// each is a question about what a mark sits inside and goldmark answers those:
+// a source scan would have to decide for itself whether "a == b == c" is a
 // highlight, and the flanking rules that say it is not are goldmark's.
 func (r *renderer) checkMarks(root ast.Node) error {
 	var refusal error
@@ -384,6 +385,15 @@ func (r *renderer) checkMarks(root ast.Node) error {
 			}
 			if _, heading := parent.(*ast.Heading); heading {
 				refusal = fmt.Errorf("line %d: a mark inside a heading is refused, because Word copies a heading into the contents field and the mark would be in the contents list as well as on the page", line)
+				return ast.WalkStop, nil
+			}
+			if _, picture := parent.(*ast.Image); picture {
+				// An alt text becomes the picture's caption, and the caption
+				// carries no colour: markTable's zero value is what the walk
+				// reads it with. Left standing, the colour emoji that opens a
+				// highlight reached the caption as words and the envelope
+				// counted a mark the document does not carry.
+				refusal = fmt.Errorf("line %d: a mark inside a picture's alt text is refused, because the alt text becomes the picture's caption and a caption carries no colour, so the mark would be lost and the syntax for it would reach the document as words", line)
 				return ast.WalkStop, nil
 			}
 		}

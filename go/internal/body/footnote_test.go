@@ -253,6 +253,32 @@ func TestADefinitionNobodyReferencesIsRefusedByLine(t *testing.T) {
 	}
 }
 
+// TestAFootnoteMarkFollowedByAColonIsStillAMark: a colon after a mark says
+// nothing about it. The one "[^label]" the scan leaves alone is the
+// definition's own opener, which is known by where it sits on the line.
+//
+// Skipping every mark with a colon after it got both answers wrong at once: a
+// reference ending a clause was never counted, so its own definition was
+// refused as unmarked, and an undefined one of the same shape was published as
+// the words the author typed.
+func TestAFootnoteMarkFollowedByAColonIsStillAMark(t *testing.T) {
+	out, err := Render(config(t), []byte("See the source[^1]: it is good.\n\n[^1]: The source.\n"), "testdata/docs", true)
+	if err != nil {
+		t.Fatalf("the note was refused and holds a mark and its definition: %v", err)
+	}
+	if len(out.Footnotes) != 1 {
+		t.Errorf("the walk produced %d notes, want the one the mark makes", len(out.Footnotes))
+	}
+
+	got := refused(t, "See the source[^9]: it is good.\n\nA claim.[^a]\n\n[^a]: the detail.\n")
+
+	for _, want := range []string{"line 1", "[^9]", "does not define"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the refusal does not say %q: %s", want, got)
+		}
+	}
+}
+
 // TestADefinitionMarkedOnlyFromInsideAnotherIsRefusedByLine: the numbers are
 // the prose's reading order and Word has one level of note, so a mark inside a
 // definition makes no note. A definition marked only from there would reach no
@@ -317,6 +343,40 @@ func TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote(t *testing.T) {
 				t.Errorf("%q made the code block's words a note", markdown)
 			}
 		}
+	}
+}
+
+// TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode: a fence sits up
+// to three spaces from the content indent of the block it is in, and four
+// spaces past that indent is an indented code block. A scan that measured both
+// from the margin saw neither inside a nested list item, so a code sample in
+// one was read as prose: the mark in it refused a note nothing was wrong with,
+// and so did a "]{.pencil}" in a shell line.
+//
+// The footnote definition is the same shape from the other side. Its content
+// sits at four, so a fence there is indented four and a scan bounded at three
+// never saw it.
+func TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode(t *testing.T) {
+	for _, markdown := range []string{
+		"- item\n  - sub\n    ```\n    code [^abc] here\n    ```\n",
+		"- item\n  - sub\n\n        code [^abc] here\n",
+		"- a\n  - b\n    - c\n      ```\n      code [^abc] here\n      ```\n",
+		"A claim.[^a]\n\n[^a]: note.\n\n    ```\n    code [^abc] here\n    ```\n",
+	} {
+		out := walk(t, markdown)
+
+		for _, note := range out.Footnotes {
+			if strings.Contains(noteText(t, note), "code") {
+				t.Errorf("%q made the code block's words a note", markdown)
+			}
+		}
+	}
+
+	// The span scan reads the same lines, so a closer written inside a code
+	// block in a nested item is the block's own content there too.
+	out := walk(t, "- item\n  - sub\n    ```\n    echo \"x]{.pencil}\"\n    ```\n")
+	if len(out.Blocks) == 0 {
+		t.Error("the note built no blocks at all")
 	}
 }
 
@@ -391,6 +451,22 @@ func TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused(t *testing.T) {
 			if !strings.Contains(got, want) {
 				t.Errorf("%q: the refusal does not say %q: %s", markdown, want, got)
 			}
+		}
+	}
+}
+
+// TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine: the alt text sits on
+// a line of prose, so the line scan reads a mark in it as the document's own
+// words and the definition it names answers for. The walk that builds the
+// caption drops it, so before the refusal the note was written under the page
+// with nothing pointing at it and the envelope counted a footnote the document
+// does not have.
+func TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine(t *testing.T) {
+	got := refused(t, "Words.\n\n![alt[^a] text](badge.png)\n\n[^a]: the note.\n")
+
+	for _, want := range []string{"line 3", "alt text", "caption"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the refusal does not say %q: %s", want, got)
 		}
 	}
 }

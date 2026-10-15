@@ -186,3 +186,46 @@ func TestAMarkWithNoSyntaxIsRefused(t *testing.T) {
 		t.Errorf("error %q does not name orange", err)
 	}
 }
+
+// TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused. "==" with no colour
+// emoji on it is what an author writes when they mean nothing by the colour,
+// and internal/body resolves it to a mark by name: a palette claiming it
+// nowhere resolves to no name, and every ==highlight== in the note then reached
+// the document with no colour on it and nothing said so.
+func TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("    syntax:\n    - '=='\n    - \U0001F7E1\n"),
+		[]byte("    syntax:\n    - \U0001F7E1\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the yellow mark's bare delimiter was not found to remove")
+	}
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a palette where nothing claims == was accepted")
+	}
+	if !strings.Contains(err.Error(), "==") {
+		t.Errorf("error %q does not name the delimiter nobody claims", err)
+	}
+}
+
+// TestTheBareHighlightBelongsToAHighlight. The delimiter is read as shading,
+// so the mark claiming it has to be one: given to the pencil, every
+// ==highlight== would come out as grey text.
+func TestTheBareHighlightBelongsToAHighlight(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("    syntax:\n    - .pencil\n"),
+		[]byte("    syntax:\n    - .pencil\n    - '=='\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the pencil mark's syntax was not found to extend")
+	}
+	src = bytes.Replace(src,
+		[]byte("    syntax:\n    - '=='\n    - \U0001F7E1\n"),
+		[]byte("    syntax:\n    - \U0001F7E1\n"), 1)
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a palette giving == to the pencil was accepted")
+	}
+	if !strings.Contains(err.Error(), "pencil") {
+		t.Errorf("error %q does not name the pencil", err)
+	}
+}

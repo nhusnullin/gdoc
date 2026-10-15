@@ -36,8 +36,11 @@
 // before any house file is read, and TestThePencilSyntaxIsTheHouseStyles pins
 // it to the pencil mark's own syntax. What is carried is the mark on the run;
 // what is refused by line is a nested mark, an empty span, a span carrying any
-// other attribute, a span that does not open and close on one line, and a mark
-// inside a heading, for the reason a footnote mark in a heading is refused. An
+// other attribute, a span that does not open and close on one line, a mark
+// inside a heading, for the reason a footnote mark in a heading is refused, and
+// a mark inside a picture's alt text, which becomes the caption: the caption is
+// built with no palette at all, so the mark was dropped there and the colour
+// emoji that opened it reached the document as words. An
 // emoji anywhere but the start of a highlight, and a bracket not followed by
 // ]{, are the author's own words. A bracket inside a code span is neither: the
 // parser steps over a code span the way the line scan does, so the two agree
@@ -50,7 +53,8 @@
 // TestASpanCrossingAParagraphIsRefusedByLine,
 // TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan,
 // TestASpanInsideACodeBlockIsNotASpan and
-// TestAMarkInAHeadingIsRefusedByLine are the pins, with
+// TestAMarkInAHeadingIsRefusedByLine and
+// TestAMarkInAPicturesAltTextIsRefusedByLine are the pins, with
 // TestTwoMarksSideBySideStayTwoRuns over merge and
 // TestTheDebtsAreCountedAndTheOthersAreNot over the three counted on the
 // envelope.
@@ -240,20 +244,35 @@
 // block of its own, which is a heading, a horizontal rule, the underline of a
 // setext heading or a fence that shut. The one thing it cannot do is interrupt
 // a paragraph, and a scan that asked only for the blank line refused the line
-// after a heading and the line after a closed fence. A list item and a
-// definition each run on until a line of prose at the margin, because a
-// continuation line sits at the item's own content indent, which this scan
-// does not measure: ending the item at a three-space line read its next
-// paragraph, indented four, as a code block.
+// after a heading and the line after a closed fence.
+//
+// Both are measured from the content indent of the block they sit in and not
+// from the margin: a footnote definition carries its lines at four and a list
+// item at its marker's width, so a fence inside one is indented four or more
+// and four spaces inside one is that block's own prose. Measured from the
+// margin, a code sample in a nested list item was read as prose and the mark
+// in it refused a note nothing was wrong with, and the fence of a code block
+// inside a definition was never seen at all. A list item and a definition each
+// run on through their blank and indented lines and end at the first line of
+// prose at the margin, which is goldmark's own rule for continuing one.
 // TestAFootnoteInsideACodeBlockIsNotAFootnote,
 // TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote,
-// TestACodeBlockShutsOnItsOwnFenceAndNotAnother and
+// TestACodeBlockShutsOnItsOwnFenceAndNotAnother,
+// TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode and
 // TestAMarkInAListItemsOwnLaterParagraphIsStillProse are the pins.
 //
 // A footnote mark inside a table cell is refused as well. The spec carries
 // none, and a cell's paragraph has no footnotes part to write into, so the note
 // would be numbered in the body and written nowhere.
 // TestAFootnoteReferenceInATableCellIsRefusedByLine is the pin.
+//
+// A footnote mark inside a picture's alt text is refused for the same reason,
+// and that one is asked of the tree: the alt text sits on a line of prose, so
+// the line scan reads the mark as the document's own words and the definition
+// it names answers for, while the walk that builds the caption drops it. The
+// note was written under the page with nothing pointing at it, and the envelope
+// counted a footnote the document does not have.
+// TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine is the pin.
 //
 // Inside a footnote, paragraphs with inline marks only. A list, a table, a
 // picture, a code block or a heading there is warned about by line and left

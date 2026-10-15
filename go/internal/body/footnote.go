@@ -245,10 +245,25 @@ func copyBlocks(blocks []*etree.Element) []*etree.Element {
 // definition above it, which is why the indent is bounded.
 var footnoteDefinition = regexp.MustCompile(`^ {0,3}\[\^([^\]]+)\]:`)
 
-// footnoteReference is a footnote mark in the prose. A "[^label]" followed by
-// a colon is the opening of a definition rather than a mark, and is left to
-// footnoteDefinition.
-var footnoteReference = regexp.MustCompile(`\[\^([^\]]+)\](:?)`)
+// footnoteReference is a footnote mark in the prose.
+//
+// A colon after the mark says nothing about it. The one "[^label]" that is not
+// a mark is the definition's own opener, and that is known by where it sits
+// rather than by what follows it: footnoteDefinition is anchored to the start
+// of the line, and goldmark reads "[^label]:" in the middle of a sentence as a
+// mark like any other. Skipping every mark with a colon after it refused a
+// note whose reference happened to end a clause, and let an undefined one
+// through. TestAFootnoteMarkFollowedByAColonIsStillAMark is the pin.
+var footnoteReference = regexp.MustCompile(`\[\^([^\]]+)\]`)
+
+// definitionOpener is where the definition's own "[^label]" starts on this
+// line, or -1 where the line opens no definition.
+func definitionOpener(l sourceLine) int {
+	if !l.definition {
+		return -1
+	}
+	return strings.Index(l.text, "[")
+}
 
 // atxHeading is a heading line, which is where a footnote mark is refused.
 var atxHeading = regexp.MustCompile(`^ {0,3}#{1,6}(\s|$)`)
@@ -293,9 +308,10 @@ func checkFootnotes(source []byte) error {
 			defOrder = append(defOrder, l.label)
 		}
 		heading := atxHeading.MatchString(l.text)
-		for _, m := range footnoteReference.FindAllStringSubmatch(l.text, -1) {
-			label, colon := m[1], m[2]
-			if colon == ":" || strings.TrimSpace(label) == "" {
+		opener := definitionOpener(l)
+		for _, m := range footnoteReference.FindAllStringSubmatchIndex(l.text, -1) {
+			label := l.text[m[2]:m[3]]
+			if m[0] == opener || strings.TrimSpace(label) == "" {
 				continue
 			}
 			if heading {
@@ -329,4 +345,49 @@ func checkFootnotes(source []byte) error {
 		}
 	}
 	return nil
+}
+
+// checkFootnotesInPictures refuses a footnote mark inside a picture's alt
+// text, which the line scan cannot see: the alt text is written on a line of
+// prose like any other, so the scan reads the mark as the document's own
+// words.
+//
+// It is a refusal rather than a warning, and for the reason the heading and
+// the table cell are refused: an alt text becomes the picture's caption, the
+// caption carries no mark, and the note would be written under the page with
+// nothing on any page pointing at it. The envelope would then count a footnote
+// the document does not have.
+// TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine is the pin.
+func (r *renderer) checkFootnotesInPictures(root ast.Node) error {
+	var refusal error
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, picture := node.(*ast.Image); !picture {
+			return ast.WalkContinue, nil
+		}
+		if mark := firstFootnoteLink(node); mark != nil {
+			refusal = fmt.Errorf("line %d: a footnote mark inside a picture's alt text is refused, because the alt text becomes the picture's caption and a caption carries no mark, so the note would be written under the page with nothing pointing at it", r.markLine(mark))
+			return ast.WalkStop, nil
+		}
+		return ast.WalkSkipChildren, nil
+	})
+	return refusal
+}
+
+// firstFootnoteLink is the first footnote mark anywhere under this node.
+func firstFootnoteLink(node ast.Node) ast.Node {
+	var found ast.Node
+	_ = ast.Walk(node, func(at ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering || found != nil {
+			return ast.WalkContinue, nil
+		}
+		if _, ok := at.(*east.FootnoteLink); ok {
+			found = at
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return found
 }

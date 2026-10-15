@@ -202,6 +202,12 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	if err := r.checkMarks(root); err != nil {
 		return Result{}, err
 	}
+	// A footnote mark inside a picture's alt text is the tree's answer too: the
+	// alt text sits on a line of prose, so the line scan reads the mark as the
+	// document's own words and the walk that builds the caption drops it.
+	if err := r.checkFootnotesInPictures(root); err != nil {
+		return Result{}, err
+	}
 	r.counts.Marks = countMarks(root, source, r.marks)
 
 	if err := r.walk(root, 0, listCtx{}); err != nil {

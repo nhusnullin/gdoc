@@ -161,6 +161,62 @@ func TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour(t *testing.T
 	}
 }
 
+// oneMarked is a document of one paragraph whose whole text is the run passed,
+// so a test can mark any words with any colour and read back what the file
+// holds.
+func oneMarked(r docs.Run) *docs.Document {
+	r.Kind = docs.KindText
+	r.StartIndex = 1
+	r.EndIndex = 1 + len([]rune(r.Text))
+	return &docs.Document{
+		ID: "1mark", Title: "One marked run",
+		Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{
+			Style: "NORMAL_TEXT",
+			Runs: []docs.Run{r,
+				{Kind: docs.KindText, Text: "\n", StartIndex: r.EndIndex, EndIndex: r.EndIndex + 1}},
+		}}}}},
+	}
+}
+
+// A mark whose words cannot carry its syntax comes home as the words alone,
+// with the loss named. The next build reads the syntax back, and in each of
+// these shapes it cannot: a span's words end at the first bracket a reader
+// meets, a link is written with that same bracket, and the delimiter of a
+// highlight inside the words closes it early or lengthens it.
+//
+// Written anyway, the first two put a file into the hub that `build` refuses by
+// line, blaming the file rather than the export, and the third brought the
+// document's own "==" home as the author's syntax. A backslash is no answer:
+// internal/body never unescapes a punctuation mark, so one written here reaches
+// the document as a backslash.
+func TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed(t *testing.T) {
+	for _, c := range []struct {
+		name, want string
+		run        docs.Run
+	}{
+		{"a pencil over a link", "[the grey link](https://example.com/x)",
+			docs.Run{Text: "the grey link", Colour: "#9A9A9A", Link: &docs.Link{URL: "https://example.com/x"}}},
+		{"a pencil over a bracket", "draft]b",
+			docs.Run{Text: "draft]b", Colour: "#9A9A9A"}},
+		{"a highlight holding the delimiter", "a==b",
+			docs.Run{Text: "a==b", Background: "#FFD500"}},
+		{"a highlight ending in one half of it", "a=",
+			docs.Run{Text: "a=", Background: "#FFD500"}},
+	} {
+		files, _, _, warnings := Project(oneMarked(c.run), nil, palette(t))
+
+		if got := files[0].Body; !strings.Contains(got, c.want+"\n") {
+			t.Errorf("%s came home as\n%q\nwant the words %q alone", c.name, got, c.want)
+		}
+		if strings.Contains(files[0].Body, "{.pencil}") || strings.Contains(files[0].Body, "==a") {
+			t.Errorf("%s came home carrying a mark the next build cannot read:\n%q", c.name, files[0].Body)
+		}
+		if len(warnings) != 1 {
+			t.Errorf("%s raised %v, want the one sentence naming the loss", c.name, warnings)
+		}
+	}
+}
+
 // The cover's own placeholders are Word's named yellow, #FFFF00, which a
 // published document carries on every field the author has not filled in yet.
 // They are the prelude: they leave the file with the rest of it, and counting

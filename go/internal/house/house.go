@@ -605,8 +605,15 @@ func (c *Config) Validate() error {
 }
 
 // validateMarks requires exactly the seven marks, each with a kind the writer
-// knows, a colour it can write and at least one opener an author can type, and
-// no two of them claiming the same opener.
+// knows, a colour it can write and at least one opener an author can type, no
+// two of them claiming the same opener, and one highlight claiming the bare
+// "==" an author writes when they mean nothing by the colour.
+//
+// The bare delimiter is required because internal/body resolves it to a mark by
+// name: a palette where no mark claims it resolves to no name at all, and every
+// ==highlight== in the note then reached the document with no colour on it and
+// nothing said so. A house file is a file somebody edits, which is why this is
+// a refusal and not a comment.
 //
 // The walk is ordered for the reason validateHighlights is ordered: a draft
 // with two bad marks in it is refused naming the same one on every run, so
@@ -651,8 +658,20 @@ func (c *Config) validateMarks() error {
 			owner[syntax] = name
 		}
 	}
+	if name := owner[plainHighlight]; name == "" {
+		return fmt.Errorf("marks: no mark claims %q, which is the highlight an author writes when they mean nothing by the colour, so every one of them would reach the document with no colour", plainHighlight)
+	} else if !c.Marks[name].IsHighlight() {
+		return fmt.Errorf("marks.%s: %q is a highlight an author writes, and this mark is %q rather than a highlight", name, plainHighlight, c.Marks[name].Kind)
+	}
 	return nil
 }
+
+// plainHighlight is the syntax a bare ==highlight== is written with. It is
+// stated in internal/body and in internal/export as well, each for its own
+// reason. TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused and
+// TestTheBareHighlightBelongsToAHighlight are the pins over the two refusals it
+// is here for.
+const plainHighlight = "=="
 
 // isHexColor is '#' and six hex digits, which is what w:shd w:fill and w:color
 // take and what the Docs answer is matched against.

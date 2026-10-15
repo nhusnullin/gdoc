@@ -168,7 +168,8 @@ this order:
 - **Every warning, each one in full.** A warning is something the file could not
   carry: a floating picture as a placeholder comment, a suggestion or a comment
   inside a footnote, a Drawing with no PNG, a picture count that did not match,
-  a prelude the run did not recognise. Read them out. A prelude warning means nothing was stripped and
+  a mark whose words could not carry the syntax it is written with, a prelude
+  the run did not recognise. Read them out. A prelude warning means nothing was stripped and
   the cover is still in the file, which is yours to take out. A second warning
   then names the headings that open with digits and a `-`. It says nothing about
   whose they are, and neither do you: the same warning reaches a published

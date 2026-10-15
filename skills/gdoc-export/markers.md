@@ -43,6 +43,12 @@ A highlight the export found in a colour no house mark claims is plain words in
 this file, and the envelope counts it under `marks.other` by hex: those words
 were marked in the document and nothing in the note will say so.
 
+A mark the export could not write around its own words is plain words too, with
+a warning naming the index. The words hold a bracket, or they point somewhere,
+or they hold the `==` a highlight is written with, and the syntax written round
+them would not be read back: the file has to build again. Read the warning out
+and say which words lost their colour, because nothing in the note will.
+
 A link is `[words](target)`, an external URL as it stands and `#slug` for a
 heading in this document. A numbered list is numbered, `1.` and `2.`, and a
 sub-list is indented to the column its parent's content starts at. Neither is a

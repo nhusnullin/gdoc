@@ -337,6 +337,26 @@ func TestAMarkInAHeadingIsRefusedByLine(t *testing.T) {
 	}
 }
 
+// TestAMarkInAPicturesAltTextIsRefusedByLine. An alt text becomes the
+// picture's caption, and the walk builds the caption with no palette at all,
+// because a caption carries no colour. The mark was dropped there in silence:
+// the colour emoji that opens a highlight reached the caption as words, and the
+// envelope counted a mark the document does not carry.
+func TestAMarkInAPicturesAltTextIsRefusedByLine(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\n![a ==\U0001F7E2 marked== alt](badge.png)\n",
+		"Words.\n\n![a [pencilled]{.pencil} alt](badge.png)\n",
+	} {
+		got := refused(t, note)
+		if !strings.Contains(got, "line 3:") {
+			t.Errorf("the refusal is %q, want it to name line 3", got)
+		}
+		if !strings.Contains(got, "alt text") {
+			t.Errorf("the refusal is %q, and it does not say the mark is in an alt text", got)
+		}
+	}
+}
+
 // TestAMarkedRunCarriesItsStyleAndItsShading is how a mark reaches Word: the
 // run names the character style internal/render writes, and it states the
 // colour itself as well, as shading for a highlight and as the run's own

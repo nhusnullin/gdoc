@@ -422,6 +422,20 @@
 // index counts UTF-16 units and the words between the two ends are not ASCII:
 // TestATailCutCountsTheIndexInUTF16Units.
 //
+// A mark whose words cannot carry its syntax is written as the words alone,
+// with the loss named, which is what a placeholder does for a picture. The
+// next build reads the syntax back, and three shapes of words it cannot read
+// it around: a bracket the document holds, because a span's words end at the
+// first bracket a reader meets; a link, because that is written with the same
+// bracket; and a highlight's own delimiter inside the words, which closes the
+// mark early, or one half of it against either end, which lengthens it.
+// Written anyway, the first two put a file into the hub that `build` refuses by
+// line, blaming the file rather than the export. A backslash is no answer:
+// internal/body hands goldmark's text through as it stands and never unescapes
+// a punctuation mark, so one written here reaches the document as a backslash.
+// internal/export's
+// TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
+//
 // A mark may carry a second opener for the case where its own would be read
 // off the words. The one highlight an author writes bare says no colour, so
 // marked words that themselves begin with a colour emoji would be read as
