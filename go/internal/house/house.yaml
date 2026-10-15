@@ -25,6 +25,50 @@ palette:
   rule_grey: '#A0A0A0'
   highlight_yellow: '#FFFF00'
   placeholder_red: '#FF0000'
+marks:
+  yellow:
+    syntax:
+    - '=='
+    - 🟡
+    kind: highlight
+    color: '#FFD500'
+    debt: true
+  green:
+    syntax:
+    - 🟢
+    kind: highlight
+    color: '#3DD67A'
+    debt: true
+  purple:
+    syntax:
+    - 🟣
+    kind: highlight
+    color: '#BA92FF'
+    debt: true
+  blue:
+    syntax:
+    - 🔵
+    kind: highlight
+    color: '#5DB3FF'
+    debt: false
+  red:
+    syntax:
+    - 🔴
+    kind: highlight
+    color: '#FF6B6B'
+    debt: false
+  orange:
+    syntax:
+    - 🟠
+    kind: highlight
+    color: '#FFB85C'
+    debt: false
+  pencil:
+    syntax:
+    - .pencil
+    kind: text
+    color: '#9A9A9A'
+    debt: false
 fonts:
   body: Calibri
   title: Arial

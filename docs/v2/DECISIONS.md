@@ -4121,6 +4121,21 @@ any colour in the binary, are later entries.
   syntax at all. This entry adds one, Pandoc's, reading exactly one attribute,
   `.pencil`. A `[` not followed by `]{` is ordinary text and `[words](url)`
   stays a link, so the grammar takes nothing away from what already parses.
+- **An in-place restyle turns every pencil mark black**, measured on
+  2026-10-14 and accepted by Nail on 2026-10-15. Gate B's probe, written up in
+  MEASURED.md under "Drive's import of run shading and text colour", found that
+  `restyle.TabRequests` writes `foregroundColor` from `styles.normal.color`,
+  which house.yaml states as #000000, over every body run, so the grey is gone
+  and Docs reports no colour on the run at all. That is the styling allowlist
+  working as written: it can change no character, and a text colour is not a
+  character. `export` then brings those words home without the span. The six
+  highlight colours are untouched, because a highlight is a run background and
+  nothing on the allowlist writes a background. Nail chose the strain rather
+  than dropping the pencil from the seven or stopping part B: `publish` and
+  `export` are unaffected, and a document nobody restyles in place keeps its
+  pencil. `docs/backlog/restyle-keeps-pencil.md` holds the fix, restyle
+  splitting its colour request around the runs that carry the pencil hex, which
+  needs the run colours the read now keeps.
 
 A highlight carrying anything but one of the six emoji at its start, or an
 emoji anywhere else in it, is the words as written. A nested mark, an empty
@@ -4133,7 +4148,7 @@ yellow, and are not marks.
 **Tests.** `TestTheSevenMarksAreStatedAsLiterals`,
 `TestAMarkWithAnUnknownKindIsRefused`,
 `TestAMarkWhoseColourIsNotHexIsRefused`, `TestTwoMarksCannotShareASyntax`,
-`TestTheMarksAreTheSevenAndNoOther`,
+`TestAMarkWithNoSyntaxIsRefused`, `TestTheMarksAreTheSevenAndNoOther`,
 `TestAHighlightOpeningWithAColourEmojiCarriesItsMark`,
 `TestAnEmojiElsewhereInAHighlightIsText`,
 `TestAnEmojiOutsideAHighlightIsText`, `TestAPencilSpanIsARunCarryingItsMark`,

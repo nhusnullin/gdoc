@@ -59,6 +59,25 @@
 // the key. TestAPageBreakCarryingAnotherKeyIsRefusedNamingIt and
 // TestACountedPageBreakIsRefused are the pins.
 //
+// # The marks are the one palette, and Validate refuses the rest
+//
+// marks: holds the seven authoring marks of 2026-10-14, keyed as Obsidian
+// names its six highlight colours plus pencil, each stating every opener an
+// author may write, whether it is a highlight or a text colour, the hex it
+// reaches the document as, and whether it is counted on the envelope. Nothing
+// else holds a mark's emoji or a mark's hex: body reads the openers off this
+// file, render writes the shading and the character style from it, and export
+// matches the Docs answer against the same hexes, so one colour has one place
+// it is written down. TestTheSevenMarksAreStatedAsLiterals and
+// TestTheMarksAreTheSevenAndNoOther are the pins over what the file carries.
+//
+// The door is validateMarks: an eighth mark and a missing one, a kind that is
+// neither highlight nor text, a colour that is not six hex digits after a
+// hash, a mark with no opener and two marks claiming the same opener are each
+// refused naming what was written. TestAMarkWithAnUnknownKindIsRefused,
+// TestAMarkWhoseColourIsNotHexIsRefused, TestAMarkWithNoSyntaxIsRefused and
+// TestTwoMarksCannotShareASyntax are the pins.
+//
 // # A house-style test states its value as a literal
 //
 // if got != 595.28, never if got != cfg.Page.WidthPt. A test that reads the
@@ -100,6 +119,31 @@ var styleNames = []string{
 	"title", "subtitle", "footnote_text",
 }
 
+// markNames is the seven authoring marks, Obsidian's six highlight colours
+// and the one grey. body parses them, render writes a character style for
+// each, export reads each back by its colour and the three debts are counted
+// on the envelope, all of it by name, so an eighth nobody reads and a seventh
+// that is gone are each a document built silently wrong.
+var markNames = []string{
+	"yellow", "green", "purple", "blue", "red", "orange", "pencil",
+}
+
+// markKinds is how a mark reaches the docx: a highlight is run shading with
+// the exact hex, and text is the run's own colour.
+var markKinds = map[string]bool{"highlight": true, "text": true}
+
+// Mark is one authoring mark. Syntax is every opener an author may write for
+// it: one colour emoji for five of the highlights, both '==' and 🟡 for the
+// yellow a plain highlight is, and '.pencil' for the one span gdoc reads.
+// Debt says the mark is counted on the build and publish envelopes, which is
+// a fact the skills judge rather than a refusal.
+type Mark struct {
+	Syntax []string `yaml:"syntax"`
+	Kind   string   `yaml:"kind"`
+	Color  string   `yaml:"color"`
+	Debt   bool     `yaml:"debt"`
+}
+
 // blockKinds is what a front_matter entry may name.
 var blockKinds = map[string]bool{
 	"cover": true, "label": true, "table": true,
@@ -111,6 +155,7 @@ type Config struct {
 	Meta             Meta              `yaml:"meta"`
 	Page             Page              `yaml:"page"`
 	Palette          map[string]string `yaml:"palette"`
+	Marks            map[string]Mark   `yaml:"marks"`
 	Fonts            Fonts             `yaml:"fonts"`
 	Defaults         Defaults          `yaml:"defaults"`
 	Styles           map[string]Style  `yaml:"styles"`
@@ -518,8 +563,9 @@ func (c *Config) LogoBytes() ([]byte, error) {
 
 // Validate says what YAML cannot: the ten styles are there and nothing else
 // is, every front_matter block names a kind that exists and a ref that is
-// there, every highlight is one of OOXML's names rather than a colour, and the
-// logo really is a PNG of the size the file states. Each of those is something
+// there, every highlight is one of OOXML's names rather than a colour, the
+// seven marks are there with a kind, a hex colour and an opener of their own,
+// and the logo really is a PNG of the size the file states. Each of those is something
 // render reads by name, so a config that fails one here is a document it would
 // build silently wrong.
 //
@@ -536,7 +582,76 @@ func (c *Config) Validate() error {
 	if err := c.validateHighlights(); err != nil {
 		return err
 	}
+	if err := c.validateMarks(); err != nil {
+		return err
+	}
 	return c.validateLogo()
+}
+
+// validateMarks requires exactly the seven marks, each with a kind the writer
+// knows, a colour it can write and at least one opener an author can type, and
+// no two of them claiming the same opener.
+//
+// The walk is ordered for the reason validateHighlights is ordered: a draft
+// with two bad marks in it is refused naming the same one on every run, so
+// somebody fixing them one at a time is not sent somewhere else each time.
+func (c *Config) validateMarks() error {
+	want := make(map[string]bool, len(markNames))
+	for _, name := range markNames {
+		want[name] = true
+		if _, ok := c.Marks[name]; !ok {
+			return fmt.Errorf("marks: %s is missing", name)
+		}
+	}
+	var extra []string
+	for name := range c.Marks {
+		if !want[name] {
+			extra = append(extra, name)
+		}
+	}
+	if len(extra) > 0 {
+		sort.Strings(extra)
+		return fmt.Errorf("marks: %s is not a house mark", strings.Join(extra, ", "))
+	}
+	owner := make(map[string]string, len(markNames))
+	for _, name := range markNames {
+		mark := c.Marks[name]
+		if !markKinds[mark.Kind] {
+			return fmt.Errorf("marks.%s: %q is not a mark kind", name, mark.Kind)
+		}
+		if !isHexColor(mark.Color) {
+			return fmt.Errorf("marks.%s: %q is not a hex colour", name, mark.Color)
+		}
+		if len(mark.Syntax) == 0 {
+			return fmt.Errorf("marks.%s: no syntax, so nothing an author writes is this mark", name)
+		}
+		for _, syntax := range mark.Syntax {
+			if syntax == "" {
+				return fmt.Errorf("marks.%s: an empty syntax is not something an author writes", name)
+			}
+			if first, taken := owner[syntax]; taken {
+				return fmt.Errorf("marks.%s: %q is already mark %s", name, syntax, first)
+			}
+			owner[syntax] = name
+		}
+	}
+	return nil
+}
+
+// isHexColor is '#' and six hex digits, which is what w:shd w:fill and w:color
+// take and what the Docs answer is matched against.
+func isHexColor(value string) bool {
+	if len(value) != 7 || value[0] != '#' {
+		return false
+	}
+	for _, r := range value[1:] {
+		switch {
+		case r >= '0' && r <= '9', r >= 'a' && r <= 'f', r >= 'A' && r <= 'F':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // highlightNames is OOXML's ST_HighlightColor, which is the whole of what

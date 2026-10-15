@@ -324,26 +324,26 @@ Checkboxes below. A task is done when its commit is on the branch.
 - Modify: `go/internal/house/house.yaml`, `go/internal/house/house.go`
 - Test: `go/internal/house/marks_test.go`
 
-- [ ] `TestTheSevenMarksAreStatedAsLiterals`: a `marks:` section keyed by
+- [x] `TestTheSevenMarksAreStatedAsLiterals`: a `marks:` section keyed by
       Obsidian's colour names plus `pencil`, each with `syntax` (the emoji,
       `==` for the plain highlight, or `.pencil`), `kind` (highlight or
       text), `color` and `debt` (true for yellow, green and purple). Every
       emoji and hex a literal.
-- [ ] `TestAMarkWithAnUnknownKindIsRefused`,
+- [x] `TestAMarkWithAnUnknownKindIsRefused`,
       `TestAMarkWhoseColourIsNotHexIsRefused`,
       `TestTwoMarksCannotShareASyntax`: `validateMarks` in `house.go`.
-- [ ] `TestTheMarksAreTheSevenAndNoOther`.
-- [ ] The DECISIONS.md entry "The marks: Obsidian's six colours and one
+- [x] `TestTheMarksAreTheSevenAndNoOther`.
+- [x] The DECISIONS.md entry "The marks: Obsidian's six colours and one
       grey" gains a paragraph under "What this strains", dated 2026-10-15:
       gate B measured that an in-place restyle writes `styles.normal.color`
       over every body run and so turns pencil black, Nail accepted it, and
       publish and export are unaffected. Its register row stays "holds".
-- [ ] `docs/backlog/restyle-keeps-pencil.md`, in the shape of the other
+- [x] `docs/backlog/restyle-keeps-pencil.md`, in the shape of the other
       backlog files: `worth: yes`, `added: 2026-10-15`, what happens today
       with the MEASURED.md section named, and the fix, restyle splitting its
       `foregroundColor` request around runs whose colour is the pencil hex,
       which needs the run colours Task 11's read keeps.
-- [ ] `git commit -m "feat(house): the seven marks, stated once"`
+- [x] `git commit -m "feat(house): the seven marks, stated once"`
 
 ### Task 9: the colour emoji on a highlight, the pencil span, and what is refused
 
