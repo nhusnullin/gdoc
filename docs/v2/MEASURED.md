@@ -560,6 +560,47 @@ What was not asked: whether the docx export brings `w:shd` back. Nothing in
 M18 reads a mark out of an export, because `export` reads the Docs answer, so
 the plan's sixteen answers are the eight runs read twice and no export row.
 
+## Footnotes and the marks, published by gdoc
+
+Measured 2026-10-15 by `TestLivePublishCarriesAFootnoteIntoDocs`
+(`go/internal/live/footnote_test.go`) and
+`TestLivePublishCarriesTheMarksIntoDocs` (`go/internal/live/marks_test.go`),
+one document each, both built from
+`go/internal/body/testdata/docs/01-kitchen-sink.md` and both trashed on the way
+out. The documents were `1s9wU0a8VpfKdpr-DrVB1oRCVigBJfAKWn1xM6RqZEaI` and
+`1wnr5NEI0tyWpY5uKY7RZmolKW9MsOH47OdW4r5ufvc4`.
+
+The two probes above uploaded a fixture a person had edited by hand. These two
+are gdoc's own route end to end: `body.Render`, `render.Build`, `publish.Run`,
+`documents.get` with no query, and `docx.Export`. They assert rather than
+report, so a row here is what passed and not only what was seen: a change in
+Google's import fails the suite instead of being read out of a log.
+
+| Question | Answer |
+|---|---|
+| Does the body hold one `footnoteReference` per mark the note wrote? | yes, two for two |
+| Does the document hold one footnote per definition, carrying the words of both? | yes, two, the note's own words including the typographer's apostrophe |
+| Does the docx export bring `word/footnotes.xml` back with both notes in it? | yes, in a package of 19 parts |
+| Is each of the six highlight marks the palette's own hex on the run that carries its words? | yes, as `backgroundColor`: #FFD500, #3DD67A, #BA92FF, #5DB3FF, #FF6B6B, #FFB85C |
+| Is the pencil the palette's grey? | yes, #9A9A9A as `foregroundColor` |
+| Does Drive keep a marked span as a run of its own? | yes. Each of the seven came back as a run carrying exactly the marked words, out of 166 runs of text |
+
+Two things the run says beside the rows. The note's other two yellow marks, the
+span in the second paragraph and the one inside a table cell, came back #FFD500
+as well, so a mark in a cell survives the import like a mark in prose. And the
+colour emoji is not in the document: the green run reads `a claim to confirm`,
+which is the emoji spent on choosing the colour rather than carried into the
+words.
+
+The round trip over the same note, `TestLiveExportRoundTrip/01-kitchen-sink.md`,
+was run the same day. Every footnote line and every mark line is named: the
+`footnotes` entry covered four lines and `inline markup` four, and nothing of
+either is unnamed. The run itself is still red, on eight lines from two
+constructs older than this milestone, a blockquote wrapped over three lines and
+a numbered list starting at seven.
+`docs/backlog/round-trip-fails-on-a-wrapped-quote-and-a-list-starting-at-seven.md`
+holds both with the decision each needs.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

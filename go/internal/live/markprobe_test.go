@@ -110,28 +110,25 @@ type probeRun struct {
 	foreground string
 }
 
-// readMarkColours reads the document bare, prints every run it holds beside
-// the two colours Docs reports for it, and answers the colours against each of
-// the eight words.
+// runsWithColour reads one document bare and hands back every run that
+// carries text, with the two colours Docs reports for it, printing each as it
+// goes.
 //
 // The read is driftReadURL's, documents.get with no query: the legacy body is
 // the first tab, which is the whole of a document converted from one docx, and
 // it is the shape the colour is documented on.
 //
-// A word is looked for as a run of its own first and as part of a longer run
-// second, because a run Docs joined to its neighbour still carries one colour
-// and is still an answer. The order matters and is not a style: YELLOW is part
-// of WORDYELLOW, so a single pass on "somewhere in the run" could answer about
-// the control where the yellow mark was asked for. Where the answer came from
-// a longer run it says so, and every run is printed either way.
-func readMarkColours(t *testing.T, ctx context.Context, s *gapi.Session, id, when string) map[string]string {
+// The acceptance in marks_test.go reads a published document through this same
+// helper, so the probe and the acceptance ask Google the same question in the
+// same words and a difference between them is a difference in the document.
+func runsWithColour(t *testing.T, ctx context.Context, s *gapi.Session, id, when string) []probeRun {
 	t.Helper()
 	var answer map[string]any
 	if err := s.GetJSON(ctx, driftReadURL(id), &answer); err != nil {
-		t.Fatalf("the probe document (%s) could not be read %s: %v", id, when, err)
+		t.Fatalf("the document (%s) could not be read %s: %v", id, when, err)
 	}
 	if len(answer) == 0 {
-		t.Fatalf("the probe document (%s) came back as an empty answer %s", id, when)
+		t.Fatalf("the document (%s) came back as an empty answer %s", id, when)
 	}
 
 	var runs []probeRun
@@ -161,6 +158,21 @@ func readMarkColours(t *testing.T, ctx context.Context, s *gapi.Session, id, whe
 	for _, r := range runs {
 		t.Logf("%s: %q background %s, foreground %s", when, r.text, r.background, r.foreground)
 	}
+	return runs
+}
+
+// readMarkColours answers the two colours against each of the eight words the
+// probe's fixture carries.
+//
+// A word is looked for as a run of its own first and as part of a longer run
+// second, because a run Docs joined to its neighbour still carries one colour
+// and is still an answer. The order matters and is not a style: YELLOW is part
+// of WORDYELLOW, so a single pass on "somewhere in the run" could answer about
+// the control where the yellow mark was asked for. Where the answer came from
+// a longer run it says so.
+func readMarkColours(t *testing.T, ctx context.Context, s *gapi.Session, id, when string) map[string]string {
+	t.Helper()
+	runs := runsWithColour(t, ctx, s, id, when)
 
 	colours := func(r probeRun) string {
 		return fmt.Sprintf("background %s, foreground %s", r.background, r.foreground)

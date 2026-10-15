@@ -21,10 +21,13 @@
 package live
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"testing"
 )
 
 // noteLine is one line of a note as the comparison reads it.
@@ -539,4 +542,51 @@ func unescapeMarkup(s string) string {
 		b.WriteRune(rs[i])
 	}
 	return b.String()
+}
+
+// TestTheRoundTripNoteCarriesAFootnoteAndEveryMark runs in `make test`, with
+// neither variable set.
+//
+// The round trip above is the one test that measures a footnote and a mark
+// over four translations, and it measures them only if one of the six notes it
+// publishes holds them. The kitchen sink does. A note somebody edits back to
+// the shapes of M17 would otherwise leave the live run green and the question
+// unasked, so the seven mark openers and the footnote are pinned here, each as
+// the literal an author types.
+func TestTheRoundTripNoteCarriesAFootnoteAndEveryMark(t *testing.T) {
+	named := false
+	for _, name := range roundTripNotes {
+		if name == kitchenSinkNote {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("%s is not one of the notes the round trip publishes: %v", kitchenSinkNote, roundTripNotes)
+	}
+
+	src, err := os.ReadFile(filepath.Join(bodyNotes, kitchenSinkNote))
+	if err != nil {
+		t.Fatalf("the note %s could not be read: %v", kitchenSinkNote, err)
+	}
+	note := string(src)
+
+	for _, c := range []struct{ syntax, mark string }{
+		{"==", "yellow"},
+		{"🟢", "green"},
+		{"🟣", "purple"},
+		{"🔵", "blue"},
+		{"🔴", "red"},
+		{"🟠", "orange"},
+		{"{.pencil}", "pencil"},
+	} {
+		if !strings.Contains(note, c.syntax) {
+			t.Errorf("%s holds no %q, so the round trip measures no %s mark", kitchenSinkNote, c.syntax, c.mark)
+		}
+	}
+	if !footnoteDefinition.MatchString(note) && !strings.Contains(note, "\n[^") {
+		t.Errorf("%s defines no footnote, so the round trip measures none", kitchenSinkNote)
+	}
+	if n := len(footnoteMark.FindAllString(note, -1)); n == 0 {
+		t.Errorf("%s marks no footnote in its prose", kitchenSinkNote)
+	}
 }

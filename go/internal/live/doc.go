@@ -200,6 +200,22 @@
 //     #FFFF00, and the pencil's #9A9A9A survives the import and is cleared by
 //     the restyle, which writes the house body colour over every run.
 //     MEASURED.md "Drive's import of run shading and text colour".
+//   - TestLivePublishCarriesAFootnoteIntoDocs, M18's acceptance for Part A and
+//     the first half of acceptance 6. It publishes the kitchen sink note
+//     through the production render and the production upload, reads the
+//     document back bare, and asserts the two references in the body, the two
+//     notes in the footnotes map with the words of both, and word/footnotes.xml
+//     in the docx export carrying them. One document, trashed. Where the probe
+//     above asks whether Drive keeps a Word footnote at all, from a fixture
+//     edited by hand, this one asks whether gdoc's own route carries one, so it
+//     asserts rather than reports.
+//   - TestLivePublishCarriesTheMarksIntoDocs, M18's acceptance for Part B and
+//     the second half of acceptance 6. The same note through the same route,
+//     read back bare through the probe's own helper, with each of the seven
+//     marked runs asserted against the colour the specification states as a
+//     literal: six backgrounds and the pencil's foreground. It makes a document
+//     of its own rather than sharing the one above, because a document two tests
+//     hold is a document neither owns.
 //
 // Copied, and the original never written to:
 //
@@ -252,7 +268,7 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Four tests here ask for no network at all
+// # Seven tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -282,4 +298,11 @@
 // note's own labels, which is a reading of a note rather than a question for
 // Drive, so it is pinned over the two notes that hold the shapes before any
 // live run spends a document on it.
+//
+// TestTheRoundTripNoteCarriesAFootnoteAndEveryMark is the seventh, in
+// roundtrip_test.go. The round trip measures a footnote and a mark only if one
+// of the six notes it publishes still holds them, so the kitchen sink's seven
+// mark openers and its footnote are pinned as the literals an author types: a
+// note edited back to the shapes of M17 would otherwise leave the live run
+// green and the question unasked.
 package live
