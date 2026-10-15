@@ -68,9 +68,10 @@ type helpFlag struct {
 	Summary string `json:"summary"`
 }
 
-// cmdHelp answers with every command, or with the ones whose name opens with
-// the words it was given. Words that match nothing are refused the way an
-// unknown command is, because that is what they are.
+// cmdHelp answers with every command, with the ones whose name opens with the
+// words it was given, or with the one topic that names no command. Words that
+// match nothing are refused the way an unknown command is, because that is
+// what they are.
 //
 // It takes the context because this is the one command that reaches GitHub
 // without being told to: once a day, for at most two seconds, to say whether
@@ -93,6 +94,14 @@ type helpFlag struct {
 //
 // TestHelpPrintsTheNoticeLineAndABlankLine.
 func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, set settings.InEffect) emit.Result {
+	// The one word help answers that names no command, and it is answered
+	// before the table is walked: helpMatches would find nothing for it and
+	// the question would be refused the way a typo is. It asks GitHub
+	// nothing, because the daily check belongs to the help of the tool and
+	// this is a page about the house style.
+	if len(words) == 1 && words[0] == markTopic {
+		return cmdHelpMarks(json, errOut)
+	}
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)

@@ -99,6 +99,14 @@ type flag struct {
 // into a flag only one of them answers to.
 const jsonFlag = "--json"
 
+// markTopic is the one word `gdoc help` answers that names no command. The
+// seven authoring marks are a thing a colleague asks the binary about, and
+// they belong to no command: build and publish write them, export reads them
+// back, and the palette is house.yaml's. It is named here because three
+// readers take it: cmdHelp, which branches on it before the table is walked,
+// and both completion scripts, which offer it after the word help.
+const markTopic = "marks"
+
 // The two flags every command takes, and the one spelling each has. They are
 // named here because three readers take them: takeSettings, which lifts them
 // off the line before any command's parser sees it, the help, which lists
@@ -146,6 +154,12 @@ type command struct {
 	summary  string
 	example  string
 	run      func(ctx context.Context, a *args, errOut io.Writer) emit.Result
+	// topics are the words this command answers that name no command of
+	// their own. Only help has any, and today only one, markTopic. Both
+	// completion scripts offer them where they offer a command's flags, so
+	// the one word nobody can guess is there is a Tab away:
+	// TestBothCompletionScriptsListTheMarksTopic.
+	topics []string
 }
 
 // anyCount is the word count of a command that takes however many words it is
@@ -407,6 +421,7 @@ func commands() []command {
 			group:    groupAccount,
 			words:    []string{"<command>"},
 			anyWords: true,
+			topics:   []string{markTopic},
 			flags: []flag{
 				{jsonFlag, kindNone, needOptional, "print the JSON object even on a terminal, and keep stderr plain"},
 			},

@@ -435,22 +435,22 @@ Checkboxes below. A task is done when its commit is on the branch.
   `skills/gdoc-publish/SKILL.md`
 - Test: `go/cmd/gdoc/marks_test.go`
 
-- [ ] `TestBuildAndPublishCarryTheDebtCounts`: `body.marks` on both
+- [x] `TestBuildAndPublishCarryTheDebtCounts`: `body.marks` on both
       envelopes, the three debts, zero included; `body.footnotes` beside it.
-- [ ] `TestHelpMarksPrintsTheSevenFromTheBinary`: `marks` is a help topic,
+- [x] `TestHelpMarksPrintsTheSevenFromTheBinary`: `marks` is a help topic,
       not a command, so `cmdHelp` gains a `marks` branch before
       `helpMatches`, which would otherwise answer `unknownCommand`, and
       `completion` lists the word. It prints syntax, kind, colour and fate
       for each, from `house.Load`, in JSON under `--json` and as a table on
       a terminal.
-- [ ] `TestARefusedNoteWritesNothing`: `gdoc build` on a note with a
+- [x] `TestARefusedNoteWritesNothing`: `gdoc build` on a note with a
       dangling footnote, and on one with a nested mark, refuses by line and
       leaves no file at `--out` (acceptance 2 and 4 at the command level).
-- [ ] The publish skill's Step 1 runs `gdoc help marks` once and Step 2 reads
+- [x] The publish skill's Step 1 runs `gdoc help marks` once and Step 2 reads
       `body.marks` from the dry run: a debt above zero is shown to the
       person with the count per colour, and the skill asks before
       publishing. The binary says nothing about whether to publish.
-- [ ] `git commit -m "feat(cmd): the debts on the envelope, and help marks"`
+- [x] `git commit -m "feat(cmd): the debts on the envelope, and help marks"`
 
 ### Task 13: the live acceptance
 

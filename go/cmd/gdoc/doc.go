@@ -116,7 +116,9 @@
 //     TestTheMcpSessionHandsItsSettingsToEveryCall. The
 //     review core it serves is a committed copy of the skill's, held equal by
 //     TestTheEmbeddedCoreIsTheSkillsCore.
-//   - help [<command>]: the table itself, as an object and as words. help.go.
+//   - help [<command>|marks]: the table itself, as an object and as words.
+//     help.go. marks is the one word it answers that names no command, and it
+//     has its own file, helpmarks.go.
 //   - completion <shell> --out [--force]: the table as a shell script, written
 //     to a file. completion.go, with the template beside it.
 //
@@ -376,6 +378,34 @@
 // leaves its box in TestNoLineOfAScreenIsWiderThanItsBox, and NO_COLOR or
 // TERM=dumb keeps the boxes and drops every escape byte:
 // TestNoColourOnATerminalDrawsTheBoxesWithNoEscapeByte.
+//
+// # help marks is a topic, and the only one
+//
+// `gdoc help marks` prints the seven authoring marks: what an author writes
+// for each, how it reaches the document, the colour it lands as, and whether
+// the build and publish envelopes count it. It is not a command. A mark
+// belongs to no one command, because build and publish write them, export
+// reads them back, and the palette itself is house.yaml's, so there would be
+// nothing for a table entry to run.
+//
+// So cmdHelp branches on the word before the table is walked. helpMatches
+// would find nothing for it and the question would be refused the way a typo
+// is. Both completion scripts offer the word, from the topics field of the
+// help entry, because a word that is not in the table is the one word nobody
+// can guess is there: TestHelpMarksPrintsTheSevenFromTheBinary and
+// TestBothCompletionScriptsListTheMarksTopic.
+//
+// The seven come out of house.Load every time, so a colour changed in
+// house.yaml is the colour this prints, and the skills read the topic rather
+// than carrying a copy of the palette. The topic asks GitHub nothing: the
+// daily check belongs to the help of the tool, and this is a page about the
+// house style.
+//
+// It is the one page that draws no box. Six of the seven marks are written
+// with a colour emoji, internal/tty measures a column as a rune, and an emoji
+// takes two columns on a terminal, so a box holding one draws its right
+// border a column out. The table is the same bytes on every stream, and the
+// object is still dropped where both streams are a terminal, as any screen is.
 //
 // A help screen reads no token. There is no line saying whether anyone is
 // signed in, because then every help would be a read of the token file, and
