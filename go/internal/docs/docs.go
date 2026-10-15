@@ -172,6 +172,11 @@ type Cell struct {
 // Run is one piece of a paragraph. The suggestion ids are the whole reason the
 // read asks for SUGGESTIONS_INLINE: they are what says this text is pending
 // rather than written. A run may carry both, and that is a replacement.
+//
+// Background and Colour are the run's own two colours as "#RRGGBB", empty
+// where the answer states none. They are facts about the text and nothing
+// here says what they mean: export reads a house mark out of them, and a
+// colour no mark claims is a colour somebody chose.
 type Run struct {
 	Kind         string   `json:"kind"`
 	Text         string   `json:"text,omitempty"`
@@ -180,6 +185,8 @@ type Run struct {
 	InsertionIDs []string `json:"insertion_ids,omitempty"`
 	DeletionIDs  []string `json:"deletion_ids,omitempty"`
 	FootnoteID   string   `json:"footnote_id,omitempty"`
+	Background   string   `json:"background,omitempty"`
+	Colour       string   `json:"colour,omitempty"`
 	Link         *Link    `json:"link,omitempty"`
 	Detail       *Detail  `json:"detail,omitempty"`
 }

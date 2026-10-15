@@ -107,16 +107,50 @@ func detailLabel(r docs.Run) string {
 // placeholder and its warning where they were. Skip drops a block of a tab's
 // body before it is projected, which is how a caller removes a span it
 // recognised. ChipTargets adds the address a chip points at behind its label.
+// Marks writes a run's colour back as the syntax an author typed for it, and
+// an empty list writes none.
 //
-// All three are the export's, and none of them is the read's: read prints what
+// All four are the export's, and none of them is the read's: read prints what
 // the document holds and nothing that is not in it, and a file in the hub
-// carries a picture that has a file beside it and a chip's target a later
-// session has to resolve. TestProjectSkipsAndNamesPictures and
-// TestAChipCarriesItsTargetWhenAskedFor are the pins.
+// carries a picture that has a file beside it, a chip's target a later session
+// has to resolve, and the mark the words were written with.
+// TestProjectSkipsAndNamesPictures, TestAChipCarriesItsTargetWhenAskedFor and
+// TestReadPrintsNoMark are the pins.
 type Options struct {
 	Picture     func(objectID string) string
 	Skip        func(docs.Block) bool
 	ChipTargets bool
+	Marks       []Mark
+}
+
+// Mark is one colour a caller can name, and what goes around the words that
+// carry it. A mark states one of the two colours: a highlight is the run's
+// background, and a mark written as a text colour is the run's own Colour. One
+// stating neither matches no run.
+//
+// The syntax is the caller's, because this package knows a colour and the
+// house style knows what an author types for it. internal/export builds the
+// list out of house.yaml, the one place the palette is stated.
+type Mark struct {
+	Background string
+	Colour     string
+	Open, Shut string
+}
+
+// matches says whether this run carries this mark. The comparison is on the
+// hex the read wrote, case folded: a mark is one exact colour, which is the
+// rule the specification states, and a document styled by hand carries
+// whatever Google rounded to.
+func (m Mark) matches(r docs.Run) bool {
+	if r.Kind != docs.KindText {
+		// A chip or a picture prints a placeholder of gdoc's own, and a mark
+		// around it would say gdoc's words were the author's.
+		return false
+	}
+	if m.Background != "" {
+		return strings.EqualFold(m.Background, r.Background)
+	}
+	return m.Colour != "" && strings.EqualFold(m.Colour, r.Colour)
 }
 
 // Text projects the document into the one string the AI reads, and returns the
@@ -1088,11 +1122,71 @@ func (e *emitter) wrap(open, shut string, ids []string, f func()) {
 	e.write(shut + "[s:" + strings.Join(ids, ",") + "]")
 }
 
-// body writes runs with their comment markers and their placeholders, tracking
+// body writes runs with the marks the caller named around them, and the runs
+// that carry no mark as they stand.
+//
+// Adjacent runs carrying one mark are one mark: Docs splits a run wherever the
+// formatting changes, so a highlight over a phrase holding bold arrives as
+// several runs sharing one background, and a pair of delimiters around each of
+// them would say the author marked the words three times.
+//
+// A group with no words of its own is written bare. The only text a run can
+// hold that reaches nothing is the paragraph's own newline, which the chunks
+// carry, and an empty "====" would be a mark over nothing.
+func (e *emitter) body(rs []docs.Run) {
+	if len(e.opts.Marks) == 0 {
+		e.links(rs)
+		return
+	}
+	for i := 0; i < len(rs); {
+		m := e.markFor(rs[i])
+		j := i + 1
+		for j < len(rs) && e.markFor(rs[j]) == m {
+			j++
+		}
+		if m == nil || !hasWords(rs[i:j]) {
+			e.links(rs[i:j])
+			i = j
+			continue
+		}
+		// The markers that open where the mark opens are drained before the
+		// delimiter, for the reason linked drains before its bracket: a
+		// comment anchored at the same character would otherwise end up
+		// behind markup gdoc wrote.
+		e.drain(rs[i].StartIndex, false)
+		e.write(m.Open)
+		e.links(rs[i:j])
+		e.write(m.Shut)
+		i = j
+	}
+}
+
+// markFor is the mark this run carries, as the one element of the caller's
+// list it is, so two runs carrying one mark compare equal by pointer.
+func (e *emitter) markFor(r docs.Run) *Mark {
+	for i := range e.opts.Marks {
+		if e.opts.Marks[i].matches(r) {
+			return &e.opts.Marks[i]
+		}
+	}
+	return nil
+}
+
+// hasWords says whether these runs hold a character the projection writes.
+func hasWords(rs []docs.Run) bool {
+	for _, r := range rs {
+		if strings.Trim(r.Text, "\n") != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// links writes runs with their comment markers and their placeholders, tracking
 // the character index as it goes. Runs that point at the same target are one
 // link: Docs splits a run wherever the formatting changes, and two forms around
 // one linked phrase would read as two links.
-func (e *emitter) body(rs []docs.Run) {
+func (e *emitter) links(rs []docs.Run) {
 	for i := 0; i < len(rs); {
 		l := textLink(rs[i])
 		if l == nil {

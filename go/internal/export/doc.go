@@ -164,6 +164,24 @@
 // twice over is two notes here, numbered, and a round trip renumbers rather
 // than relabels. TestAFootnoteIsWrittenAndWarned is the pin.
 //
+// A mark comes home as the syntax it left as. The six house highlights are a
+// run's background in the document and Obsidian's "==", with the mark's colour
+// emoji and the one space internal/body takes off again; the pencil is a run's
+// text colour and Pandoc's "[words]{.pencil}". Palette states the pairing out
+// of house.yaml, which is the one place the colours live, and
+// TestExportWritesObsidiansSyntaxForEachPaletteColour and
+// TestAMarkSplitOverSeveralRunsComesHomeWhole are the pins.
+//
+// A colour no mark claims is the words as they stand, because gdoc has no
+// syntax that means it, and it is counted by hex on the envelope under
+// marks.other so the session knows how much of the document came home as
+// prose. Backgrounds alone are counted: a background is somebody marking
+// words, and a text colour is how a document is designed. The cover's own
+// yellow placeholders are not counted either, because they are the prelude and
+// leave the file, and the live probe measured them as #FFFF00 against the
+// yellow mark's #FFD500, two colours this projection can tell apart.
+// TestAColourOutsideThePaletteIsPlainWordsAndCounted is the pin.
+//
 // # The pictures are paired by order, and by nothing else
 //
 // A picture's bytes are not in the Docs answer. Its contentUri is a

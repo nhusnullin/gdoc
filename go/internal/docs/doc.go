@@ -143,6 +143,22 @@
 // TestARunCarriesItsLinkTarget and TestALinkInItsNestedFormIsTheSameFact are
 // the pins.
 //
+// # A run's two colours are facts, and nothing here says what they mean
+//
+// A text run's textStyle carries backgroundColor and foregroundColor, and
+// Run.Background and Run.Colour hold them as "#RRGGBB", empty where the answer
+// states none. Each channel of the answer is a fraction of one and a channel
+// it leaves out is zero, so the hex is rounded back the way the mark probe
+// measured it: #FFD500 goes out as 0.835294 and comes home as #FFD500.
+//
+// They are read because a house mark lands in a document as direct formatting:
+// Google Docs has no character styles, so the only record that words were
+// highlighted green is the green. What the colour means is export's question,
+// not this package's, which is why neither field says "mark" and a colour no
+// mark claims is still carried. TestARunKeepsItsBackgroundAndTextColour is the
+// pin, over testdata/marks.json, whose hexes the live probe in
+// internal/live/markprobe_test.go measured.
+//
 // # A bullet names its list, and the tab's lists name the glyph
 //
 // Bullet carried the nesting level alone, which is all a reader printing "- "

@@ -408,24 +408,24 @@ Checkboxes below. A task is done when its commit is on the branch.
   `skills/gdoc-export/markers.md`
 - Test: `go/internal/docs/walk_test.go`, `go/internal/export/marks_test.go`
 
-- [ ] `TestARunKeepsItsBackgroundAndTextColour`: `docs.Run` gains
+- [x] `TestARunKeepsItsBackgroundAndTextColour`: `docs.Run` gains
       `Background` and `Colour`, hex strings, empty when the API states none.
-- [ ] `TestExportWritesObsidiansSyntaxForEachPaletteColour`: under a
+- [x] `TestExportWritesObsidiansSyntaxForEachPaletteColour`: under a
       `view.Options` flag export passes and read does not, a palette
       background becomes `==🟢words==` and so on, yellow as plain
       `==words==`, pencil's text colour as `[words]{.pencil}`.
-- [ ] `TestAColourOutsideThePaletteIsPlainWordsAndCounted`: the count is
+- [x] `TestAColourOutsideThePaletteIsPlainWordsAndCounted`: the count is
       `marks.other` on the export envelope, a map from hex to count.
-- [ ] `TestAMarkSplitOverSeveralRunsComesHomeWhole`: Docs splits a mark that
+- [x] `TestAMarkSplitOverSeveralRunsComesHomeWhole`: Docs splits a mark that
       carries bold or code into runs sharing one background, and export
       joins adjacent runs of one palette colour into one mark.
-- [ ] `stripDelimiters` in `live/roundtrip_test.go` stops removing `==`, and
+- [x] `stripDelimiters` in `live/roundtrip_test.go` stops removing `==`, and
       the `inline markup` entry's reason drops the highlight, because from
       here export writes the mark syntax back and both sides must agree.
-- [ ] `TestReadPrintsNoMark`: `view.Text` without the flag is byte for byte
+- [x] `TestReadPrintsNoMark`: `view.Text` without the flag is byte for byte
       what it was.
-- [ ] `markers.md` gains the rows for the six highlights and the pencil span.
-- [ ] `git commit -m "feat(export): a mark comes home as the syntax it left as"`
+- [x] `markers.md` gains the rows for the six highlights and the pencil span.
+- [x] `git commit -m "feat(export): a mark comes home as the syntax it left as"`
 
 ### Task 12: the envelopes, gdoc help marks, and the publish skill
 

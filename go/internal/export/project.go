@@ -49,17 +49,22 @@ type PictureNames func(objectID string) string
 // Project is the document as Markdown, one file per tab, with the house
 // prelude taken out and listed.
 //
+// palette is the house marks, which Palette builds: a run carrying one of
+// those colours comes home as the syntax an author typed for it. A caller
+// passing none gets the words alone, which is what the read does.
+//
 // Nothing here reaches the network or the disk, and nothing here judges. What
-// comes back is the files, every piece the prelude was made of, and the
-// warnings: what the projection could not carry, and what the file loses on
-// its way to becoming a note.
-func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string) {
+// comes back is the files, every piece the prelude was made of, the colours no
+// mark claimed counted by hex, and the warnings: what the projection could not
+// carry, and what the file loses on its way to becoming a note.
+func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFile, []Piece, map[string]int, []string) {
 	if d == nil {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	files := make([]TabFile, 0, len(d.Tabs))
 	var pieces []Piece
 	var warnings []string
+	other := map[string]int{}
 
 	marks, err := prelude.Markers(d)
 	refused := false
@@ -97,8 +102,10 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 			Picture:     picture(pics),
 			Skip:        skip,
 			ChipTargets: true,
+			Marks:       palette,
 		})
 		warnings = append(warnings, tw...)
+		otherColours(t.Body, skip, palette, other)
 
 		// The numbers come off only where the layout shape recognised
 		// publish's prelude, which is the one route whose numbers are gdoc's
@@ -123,7 +130,7 @@ func Project(d *docs.Document, pics PictureNames) ([]TabFile, []Piece, []string)
 
 		files = append(files, TabFile{TabID: t.ID, TabTitle: t.Title, Body: body})
 	}
-	return files, pieces, warnings
+	return files, pieces, other, warnings
 }
 
 // File is one tab's body with the gdoc: block in front of it, which is the

@@ -120,7 +120,7 @@ func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDiffe
 		Note:   typography,
 	}, {
 		Name:   "inline markup",
-		Reason: "bold, italic, code, highlight and strikeout are text styles in the document rather than characters, so the projection prints the words and the delimiters are not there to print",
+		Reason: "bold, italic, code and strikeout are text styles in the document rather than characters, so the projection prints the words and the delimiters are not there to print. The highlight is not in that list any more: a mark is a colour the export recognises and writes back, so both sides spell it the same way and a difference in one is a difference",
 		Note:   stripDelimiters,
 	}, {
 		Name:   "relative links as words",
@@ -498,8 +498,15 @@ func quotes(s string) string {
 
 // stripDelimiters takes the emphasis characters off, longest first, so ** is
 // never read as two single stars.
+//
+// The highlight's == is not taken off. It was until M18: the colour reached
+// the document and nothing brought it home, so the note's delimiters had to go
+// before the two sides could be compared. From M18 the export writes the mark
+// syntax back, so the note's ==🟢 a claim== is the file's ==🟢 a claim==, and
+// taking the == off one side would hide a mark that came home as the wrong
+// colour or did not come home at all.
 func stripDelimiters(s string) string {
-	for _, d := range []string{"***", "**", "~~", "==", "*", "_", "`"} {
+	for _, d := range []string{"***", "**", "~~", "*", "_", "`"} {
 		s = strings.ReplaceAll(s, d, "")
 	}
 	return s

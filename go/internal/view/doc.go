@@ -385,11 +385,26 @@
 // projected, which is how internal/export removes a house prelude it
 // recognised; a picture written as the file that now sits beside the note; and
 // a chip's target behind its label, because the session merging that file into
-// a note has no second read to go back to. So Options carries Skip, Picture and
-// ChipTargets, Text is Project with none of them set, and there is one emitter
-// rather than two escapings of one document.
+// a note has no second read to go back to. So Options carries Skip, Picture,
+// ChipTargets and Marks, Text is Project with none of them set, and there is
+// one emitter rather than two escapings of one document.
 // TestProjectSkipsAndNamesPictures is the pin, with the zero options asked of
 // every golden, and TestAChipCarriesItsTargetWhenAskedFor is the chip half.
+//
+// Marks is the fourth, and it is what a run's colour is written back as.
+// Google Docs has no character styles, so a house mark lands in a document as
+// a run's background or as its own text colour, and a caller that knows the
+// palette hands this projection the colour and the syntax to put around the
+// words. Adjacent runs carrying one mark are one mark, because Docs splits a
+// run wherever the formatting changes and a highlight over a phrase holding
+// bold is three runs sharing one background.
+//
+// The read passes none, and that is a decision rather than an omission: the
+// words of a marked phrase reach a reviewing session and the mark around them
+// does not, because a session quotes what it reads and a quote carrying == is
+// not text the document holds. Printing marks in the read is a later entry's
+// decision. internal/export's TestReadPrintsNoMark is the pin, beside
+// TestExportWritesObsidiansSyntaxForEachPaletteColour.
 //
 // A named picture raises no warning, because nothing was lost: the bytes are on
 // disk. A floating one keeps its placeholder and its warning either way, since

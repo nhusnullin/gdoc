@@ -24,6 +24,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/export"
 	"gdoc/internal/frontmatter"
+	"gdoc/internal/house"
 	"gdoc/internal/suggestions"
 )
 
@@ -50,6 +51,18 @@ type exportData struct {
 	Threads    int              `json:"threads"`
 	Stripped   []export.Piece   `json:"stripped"`
 	Stamped    []export.Stamp   `json:"stamped,omitempty"`
+	Marks      exportMarks      `json:"marks"`
+}
+
+// exportMarks is what the document's colours cost this file. The six house
+// highlights and the pencil come home as the syntax an author typed, so they
+// are not counted here; other is every background no mark claims, by hex, and
+// those words came home as prose. The count is a fact and names nothing good
+// or bad about it: a document somebody highlighted by hand in Docs is a
+// document with marks gdoc has no syntax for, and what to do about that is
+// the session's question.
+type exportMarks struct {
+	Other map[string]int `json:"other"`
 }
 
 // cmdExport is the whole of the command, in the order the work has to happen.
@@ -105,7 +118,11 @@ func cmdExport(ctx context.Context, a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}
 	}
 
-	files, pieces, w := export.Project(d, layout.PictureNames())
+	cfg, err := house.Load()
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}
+	}
+	files, pieces, other, w := export.Project(d, layout.PictureNames(), export.Palette(cfg))
 	notes = append(notes, w...)
 
 	written, err := export.Write(layout, files)
@@ -131,6 +148,7 @@ func cmdExport(ctx context.Context, a *args) emit.Result {
 		Threads:    len(d.CommentRanges) + len(d.Unplaced),
 		Stripped:   pieces,
 		Stamped:    written.Stamped,
+		Marks:      exportMarks{Other: other},
 	}
 	if data.Pictures == nil {
 		data.Pictures = []export.Picture{}

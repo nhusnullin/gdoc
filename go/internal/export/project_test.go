@@ -38,7 +38,7 @@ func fixture(t *testing.T, name string) *docs.Document {
 // the gdoc: block included.
 func file(t *testing.T, name string, pics PictureNames) (string, []Piece, []string) {
 	t.Helper()
-	files, pieces, warnings := Project(fixture(t, name), pics)
+	files, pieces, _, warnings := Project(fixture(t, name), pics, nil)
 	if len(files) != 1 {
 		t.Fatalf("%s gave %d files, want 1", name, len(files))
 	}
@@ -152,7 +152,7 @@ func TestARestyledPreludeIsStrippedOverItsNamedRange(t *testing.T) {
 // added inside the cover breaks the layout the strip reads, so the whole
 // document stays in the file and the warning names what stood there.
 func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
-	files, pieces, warnings := Project(fixture(t, "edited-prelude.json"), nil)
+	files, pieces, _, warnings := Project(fixture(t, "edited-prelude.json"), nil, nil)
 
 	if len(pieces) != 0 {
 		t.Errorf("a prelude nothing recognised stripped %v", kinds(pieces))
@@ -208,7 +208,7 @@ func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
 // rules apart. TestTheAnchorViewWritesIsTheIDBodyCollects is the other half,
 // which asks goldmark itself rather than a literal.
 func TestAHeadingLinkRoundTripsToItsSlug(t *testing.T) {
-	files, _, _ := Project(fixture(t, "headings.json"), nil)
+	files, _, _, _ := Project(fixture(t, "headings.json"), nil, nil)
 
 	for _, want := range []string{
 		"[Risk & Control <ampersands>](#risk--control-ampersands)",
@@ -243,7 +243,7 @@ func TestRepointDoesNotChainRewrites(t *testing.T) {
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks is the number publish wrote
 // into the heading itself, taken back out with the links that pointed at it.
 func TestAHeadingLosesItsHouseNumberAndKeepsItsLinks(t *testing.T) {
-	files, pieces, _ := Project(fixture(t, "publish-prelude.json"), nil)
+	files, pieces, _, _ := Project(fixture(t, "publish-prelude.json"), nil, nil)
 	body := files[0].Body
 
 	for _, gone := range []string{"# 1-Scope", "## 1.1-Out of scope", "# 2-Who decides"} {
@@ -283,7 +283,7 @@ func TestTheHeadingNumberIsTheHouseSeparator(t *testing.T) {
 // TestAChipExportsLabelAndTarget is the chip in the file: the label the
 // document shows, and where it points, which the read leaves to --structure.
 func TestAChipExportsLabelAndTarget(t *testing.T) {
-	files, _, _ := Project(fixture(t, "elements.json"), nil)
+	files, _, _, _ := Project(fixture(t, "elements.json"), nil, nil)
 	body := files[0].Body
 
 	for _, want := range []string{
@@ -301,7 +301,7 @@ func TestAChipExportsLabelAndTarget(t *testing.T) {
 // note holding a footnote: a note built from this file carries the footnote
 // into the document it publishes, so nothing has to be resolved first.
 func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
-	files, _, warnings := Project(fixture(t, "objects.json"), nil)
+	files, _, _, warnings := Project(fixture(t, "objects.json"), nil, nil)
 	body := files[0].Body
 
 	if !strings.Contains(body, "[^1]") || !strings.Contains(body, "[^1]: Measured on 2026-09-06.") {
@@ -334,7 +334,7 @@ func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 // came from, and neither holding the other's text or the tab line the read
 // prints.
 func TestTwoTabsGiveTwoProjections(t *testing.T) {
-	files, _, _ := Project(fixture(t, "two-tabs.json"), nil)
+	files, _, _, _ := Project(fixture(t, "two-tabs.json"), nil, nil)
 
 	if len(files) != 2 {
 		t.Fatalf("two tabs gave %d files", len(files))
@@ -364,7 +364,7 @@ func TestAPictureIsWrittenWhereItStands(t *testing.T) {
 		}
 		return "![](assets/note-1.png)"
 	}
-	files, _, warnings := Project(fixture(t, "objects.json"), names)
+	files, _, _, warnings := Project(fixture(t, "objects.json"), names, nil)
 	body := files[0].Body
 
 	if !strings.Contains(body, "![](assets/note-1.png)") {
@@ -398,7 +398,7 @@ func TestAPlainDocumentKeepsAHeadingThatOpensWithANumber(t *testing.T) {
 		para("HEADING_2", "1-on-1 meetings"),
 		para("NORMAL_TEXT", "Prose."),
 	}}}}
-	files, pieces, _ := Project(d, nil)
+	files, pieces, _, _ := Project(d, nil, nil)
 	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
 		if !strings.Contains(files[0].Body, want) {
 			t.Errorf("%q lost its own words:\n%s", want, files[0].Body)
@@ -436,7 +436,7 @@ func TestARestyledDocumentKeepsAHeadingThatOpensWithANumber(t *testing.T) {
 			at("NORMAL_TEXT", "Prose.", 120),
 		},
 	}}}
-	files, pieces, _ := Project(d, nil)
+	files, pieces, _, _ := Project(d, nil, nil)
 	if strings.Contains(files[0].Body, "Altery Group") {
 		t.Errorf("the marked prelude is still in the file:\n%s", files[0].Body)
 	}
@@ -466,7 +466,7 @@ func TestATabWithNoLevelOneHeadingIsNotAPrelude(t *testing.T) {
 		para("HEADING_2", "Scope"),
 		table, table, table,
 	}}}}
-	files, pieces, warnings := Project(d, nil)
+	files, pieces, _, warnings := Project(d, nil, nil)
 	if !strings.Contains(files[0].Body, "Somebody's own front page") {
 		t.Errorf("the front page is gone from a document nothing recognised:\n%s", files[0].Body)
 	}
@@ -500,7 +500,7 @@ func TestAPlainDocumentWithAContentsListIsNotToldItsNumbersAreTheHouses(t *testi
 		para("HEADING_1", "2024-2025 Budget"),
 		para("HEADING_2", "1-on-1 meetings"),
 	}}}}
-	files, pieces, warnings := Project(d, nil)
+	files, pieces, _, warnings := Project(d, nil, nil)
 
 	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
 		if !strings.Contains(files[0].Body, want) {
@@ -543,7 +543,7 @@ func TestARefusedMarkerStripsNothing(t *testing.T) {
 			para("HEADING_1", "1-Scope"),
 		},
 	}}}
-	files, pieces, warnings := Project(d, nil)
+	files, pieces, _, warnings := Project(d, nil, nil)
 
 	if !strings.Contains(files[0].Body, "Altery Group") {
 		t.Errorf("a prelude whose marker was refused was stripped by the layout:\n%s", files[0].Body)
@@ -580,7 +580,7 @@ func TestACommentInTheStrippedPreludeIsNotMarkedInTheBody(t *testing.T) {
 		"CoverComment": {Tab: "t.0", Start: 15, End: 34},
 	}
 
-	files, _, warnings := Project(d, nil)
+	files, _, _, warnings := Project(d, nil, nil)
 	if len(files) != 1 {
 		t.Fatalf("got %d files, want 1", len(files))
 	}
@@ -611,7 +611,7 @@ func TestACommentNamingAMissingTabIsNamed(t *testing.T) {
 		"Ghost": {Tab: "t.9", Start: 300, End: 310},
 	}
 
-	_, _, warnings := Project(d, nil)
+	_, _, _, warnings := Project(d, nil, nil)
 	named := false
 	for _, w := range warnings {
 		if strings.Contains(w, "Ghost") && strings.Contains(w, "t.9") {

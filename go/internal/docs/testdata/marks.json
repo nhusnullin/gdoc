@@ -1,0 +1,400 @@
+{
+ "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789mark",
+ "title": "The seven marks, and one colour that is not one",
+ "revisionId": "ALm37BXmarks",
+ "tabs": [
+  {
+   "tabProperties": {
+    "tabId": "t.0",
+    "title": "",
+    "index": 0
+   },
+   "documentTab": {
+    "body": {
+     "content": [
+      {
+       "startIndex": 0,
+       "endIndex": 1,
+       "sectionBreak": {
+        "sectionStyle": {}
+       }
+      },
+      {
+       "startIndex": 1,
+       "endIndex": 69,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "NORMAL_TEXT"
+        },
+        "elements": [
+         {
+          "startIndex": 1,
+          "endIndex": 5,
+          "textRun": {
+           "content": "The ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 5,
+          "endIndex": 11,
+          "textRun": {
+           "content": "figure",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 0.835294
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 11,
+          "endIndex": 16,
+          "textRun": {
+           "content": " and ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 16,
+          "endIndex": 23,
+          "textRun": {
+           "content": "a claim",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.239216,
+               "green": 0.839216,
+               "blue": 0.478431
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 23,
+          "endIndex": 34,
+          "textRun": {
+           "content": " to confirm",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.239216,
+               "green": 0.839216,
+               "blue": 0.478431
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 34,
+          "endIndex": 36,
+          "textRun": {
+           "content": ", ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 36,
+          "endIndex": 45,
+          "textRun": {
+           "content": "pencilled",
+           "textStyle": {
+            "foregroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.603922,
+               "green": 0.603922,
+               "blue": 0.603922
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 45,
+          "endIndex": 47,
+          "textRun": {
+           "content": ", ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 47,
+          "endIndex": 52,
+          "textRun": {
+           "content": "stale",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 1.0
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 52,
+          "endIndex": 58,
+          "textRun": {
+           "content": " words",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 1.0
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 58,
+          "endIndex": 63,
+          "textRun": {
+           "content": " and ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 63,
+          "endIndex": 67,
+          "textRun": {
+           "content": "more",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 1.0
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 67,
+          "endIndex": 69,
+          "textRun": {
+           "content": ".\n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      },
+      {
+       "startIndex": 69,
+       "endIndex": 112,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "NORMAL_TEXT"
+        },
+        "elements": [
+         {
+          "startIndex": 69,
+          "endIndex": 72,
+          "textRun": {
+           "content": "red",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 0.419608,
+               "blue": 0.419608
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 72,
+          "endIndex": 73,
+          "textRun": {
+           "content": " ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 73,
+          "endIndex": 79,
+          "textRun": {
+           "content": "orange",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 0.721569,
+               "blue": 0.360784
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 79,
+          "endIndex": 80,
+          "textRun": {
+           "content": " ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 80,
+          "endIndex": 86,
+          "textRun": {
+           "content": "yellow",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 1.0,
+               "green": 0.835294
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 86,
+          "endIndex": 87,
+          "textRun": {
+           "content": " ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 87,
+          "endIndex": 92,
+          "textRun": {
+           "content": "green",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.239216,
+               "green": 0.839216,
+               "blue": 0.478431
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 92,
+          "endIndex": 93,
+          "textRun": {
+           "content": " ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 93,
+          "endIndex": 97,
+          "textRun": {
+           "content": "blue",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.364706,
+               "green": 0.701961,
+               "blue": 1.0
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 97,
+          "endIndex": 98,
+          "textRun": {
+           "content": " ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 98,
+          "endIndex": 104,
+          "textRun": {
+           "content": "purple",
+           "textStyle": {
+            "backgroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.729412,
+               "green": 0.572549,
+               "blue": 1.0
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 104,
+          "endIndex": 105,
+          "textRun": {
+           "content": " ",
+           "textStyle": {}
+          }
+         },
+         {
+          "startIndex": 105,
+          "endIndex": 111,
+          "textRun": {
+           "content": "pencil",
+           "textStyle": {
+            "foregroundColor": {
+             "color": {
+              "rgbColor": {
+               "red": 0.603922,
+               "green": 0.603922,
+               "blue": 0.603922
+              }
+             }
+            }
+           }
+          }
+         },
+         {
+          "startIndex": 111,
+          "endIndex": 112,
+          "textRun": {
+           "content": "\n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

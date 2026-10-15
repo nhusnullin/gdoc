@@ -685,3 +685,30 @@ func TestAnUnnamedMemberThatIsNotAnObjectStillDecodes(t *testing.T) {
 		t.Errorf("ids = %v/%v, want none", r.InsertionIDs, r.DeletionIDs)
 	}
 }
+
+// A run's two colours are the fact a mark is read back from: a highlight is the
+// run's background and the pencil is the run's own text colour. The hexes here
+// are literals rather than house.yaml's palette read back, because a test that
+// reads the file it checks follows the file wherever somebody moves it.
+//
+// A channel the answer leaves out is zero, which is the API's own way of
+// writing a colour with no red in it, and marks.json omits one for that reason.
+func TestARunKeepsItsBackgroundAndTextColour(t *testing.T) {
+	p := paragraphs(fixture(t, "marks.json").Tabs[0].Body)[0]
+
+	if got := linked(t, p, "figure"); got.Background != "#FFD500" || got.Colour != "" {
+		t.Errorf("the yellow run = %q/%q, want #FFD500 and no text colour", got.Background, got.Colour)
+	}
+	if got := linked(t, p, "a claim"); got.Background != "#3DD67A" {
+		t.Errorf("the green run's background = %q, want #3DD67A", got.Background)
+	}
+	if got := linked(t, p, "pencilled"); got.Colour != "#9A9A9A" || got.Background != "" {
+		t.Errorf("the pencil run = %q/%q, want #9A9A9A as the text colour and no background", got.Background, got.Colour)
+	}
+	// A run the answer states no colour on carries neither, so a reader asking
+	// whether these words are marked gets no for an answer rather than black
+	// on white it has to know means nothing.
+	if got := linked(t, p, "The "); got.Background != "" || got.Colour != "" {
+		t.Errorf("an unmarked run = %q/%q, want neither", got.Background, got.Colour)
+	}
+}
