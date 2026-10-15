@@ -352,34 +352,34 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/body/body.go`
 - Test: `go/internal/body/marks_test.go`
 
-- [ ] `TestAHighlightOpeningWithAColourEmojiCarriesItsMark`: a `*Highlight`
+- [x] `TestAHighlightOpeningWithAColourEmojiCarriesItsMark`: a `*Highlight`
       whose text opens with one of the six emoji sets `Run.Mark` to that
       colour's name and drops the emoji from the words; a plain highlight is
       `yellow`; `==🟡words==` is `yellow` too. The emoji-to-name map is read
       off `cfg.Marks`, Task 8's palette, because `Render` already takes
       `cfg` and `body/doc.go` says no emoji and no hex is a constant in body.
-- [ ] `TestAMarkInATableCellIsCarried`: `cellParagraph` walks inlines
+- [x] `TestAMarkInATableCellIsCarried`: `cellParagraph` walks inlines
       through the same path, so `01-kitchen-sink.md:107`'s `==to fill in==`
       keeps working and becomes a yellow mark. The spec's "no mark in a
       table cell" sentence under "What this milestone does not do" is
       corrected to footnotes alone, in the same commit.
-- [ ] `TestAnEmojiElsewhereInAHighlightIsText`,
+- [x] `TestAnEmojiElsewhereInAHighlightIsText`,
       `TestAnEmojiOutsideAHighlightIsText`.
-- [ ] `TestAPencilSpanIsARunCarryingItsMark`: a new inline parser in
+- [x] `TestAPencilSpanIsARunCarryingItsMark`: a new inline parser in
       `mark.go` for `[words]{.pencil}`, producing a `*Span` node;
       `inline.go` folds it into `Run.Mark`. `Run.Highlight` is retired, with
       `build.go:273` following.
-- [ ] `TestALinkIsStillALink`, `TestABracketNotFollowedByAttributesIsText`,
+- [x] `TestALinkIsStillALink`, `TestABracketNotFollowedByAttributesIsText`,
       `TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil`.
-- [ ] `TestAMarkMayCarryEmphasisAndCode`.
-- [ ] `TestANestedMarkIsRefusedByLine`, `TestAnEmptySpanIsRefusedByLine`,
+- [x] `TestAMarkMayCarryEmphasisAndCode`.
+- [x] `TestANestedMarkIsRefusedByLine`, `TestAnEmptySpanIsRefusedByLine`,
       `TestAMarkInAHeadingIsRefusedByLine`,
       `TestASpanCrossingAParagraphIsRefusedByLine`.
-- [ ] `merge` joins neighbours only when their `Mark` is the same:
+- [x] `merge` joins neighbours only when their `Mark` is the same:
       `TestTwoMarksSideBySideStayTwoRuns`.
-- [ ] `Counts` gains `Marks map[string]int` over the three debts, zero
+- [x] `Counts` gains `Marks map[string]int` over the three debts, zero
       included: `TestTheDebtsAreCountedAndTheOthersAreNot`.
-- [ ] `git commit -m "feat(body): Obsidian's colour emoji on a highlight, and the pencil span"`
+- [x] `git commit -m "feat(body): Obsidian's colour emoji on a highlight, and the pencil span"`
 
 ### Task 10: the seven character styles and the shaded runs
 

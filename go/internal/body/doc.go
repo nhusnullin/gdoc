@@ -31,12 +31,15 @@
 // yellow, a colour emoji at the start of the highlight picks one of the other
 // five, and [words]{.pencil} is the one Pandoc span this package reads, text
 // colour rather than shading. house.yaml states the seven with their syntax,
-// kind and Doc colour, so no emoji and no hex is a constant here. What is
-// carried is the mark on the run; what is refused by line is a nested mark, an
-// empty span, a span carrying any other attribute, a span crossing a paragraph
-// and a mark inside a heading, for the reason a footnote mark in a heading is
-// refused. An emoji anywhere but the start of a highlight, and a bracket not
-// followed by ]{, are the author's own words.
+// kind and Doc colour, so no emoji and no hex is a constant here; the one
+// string written out is the attribute ".pencil", because the parsers are built
+// before any house file is read, and TestThePencilSyntaxIsTheHouseStyles pins
+// it to the pencil mark's own syntax. What is carried is the mark on the run;
+// what is refused by line is a nested mark, an empty span, a span carrying any
+// other attribute, a span crossing a paragraph and a mark inside a heading, for
+// the reason a footnote mark in a heading is refused. An emoji anywhere but
+// the start of a highlight, and a bracket not followed by ]{, are the author's
+// own words.
 // TestAHighlightOpeningWithAColourEmojiCarriesItsMark,
 // TestAnEmojiElsewhereInAHighlightIsText, TestAPencilSpanIsARunCarryingItsMark,
 // TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,

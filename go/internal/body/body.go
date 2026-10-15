@@ -41,6 +41,10 @@ type Counts struct {
 	Tables     int `json:"tables"`
 	Images     int `json:"images"`
 	Footnotes  int `json:"footnotes"`
+	// Marks is how many of each debt mark the note holds, by name, zero
+	// included. Only the marks the house style calls a debt are in here, for
+	// the reason countMarks gives.
+	Marks map[string]int `json:"marks"`
 }
 
 // Result is one walk: the blocks, the relationships they name, what could not
@@ -78,6 +82,7 @@ type renderer struct {
 	base     string
 	source   []byte
 	numberer *headingNumberer
+	marks    markTable
 
 	blocks    []*etree.Element
 	media     []Media
@@ -171,11 +176,18 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	if err := checkFootnotes(source); err != nil {
 		return Result{}, err
 	}
+	// The spans are asked of the source lines beside the footnotes, and for
+	// the same reason: goldmark reads a span it does not recognise as prose,
+	// and prose carrying braces is the author's own syntax printed in the
+	// document. mark.go holds the three shapes.
+	if err := checkSpans(source); err != nil {
+		return Result{}, err
+	}
 	root := parse().Parser().Parse(text.NewReader(source))
 	order, numbers := footnoteNumbers(root)
 
 	r := &renderer{
-		cfg: cfg, base: base, source: source,
+		cfg: cfg, base: base, source: source, marks: newMarkTable(cfg),
 		anchors: headingAnchors(root, source), linked: linkedAnchors(root),
 		deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
@@ -184,6 +196,13 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 		footnoteNumber: numbers,
 	}
 	r.numberer = newHeadingNumberer(numbering, separator, shallowestHeadingLevel(root, source))
+	// A mark inside a mark and a mark inside a heading are the two refusals
+	// the tree answers rather than the source lines, so they are asked once
+	// the parse is in hand and before any block is built.
+	if err := r.checkMarks(root); err != nil {
+		return Result{}, err
+	}
+	r.counts.Marks = countMarks(root, source, r.marks)
 
 	if err := r.walk(root, 0, listCtx{}); err != nil {
 		return Result{}, err
@@ -504,7 +523,7 @@ func linkedAnchors(root ast.Node) map[string]bool {
 // emits no heading paragraph for it at all.
 func isFigureOnly(heading ast.Node, source []byte) bool {
 	return len(collectImages(heading, source)) > 0 &&
-		strings.TrimSpace(plainText(inlineRuns(heading, source, nil))) == ""
+		strings.TrimSpace(plainText(inlineRuns(heading, source, nil, markTable{}))) == ""
 }
 
 // shallowestHeadingLevel finds the smallest heading level anywhere in the
@@ -775,7 +794,7 @@ func (r *renderer) headingBookmark(heading *ast.Heading) string {
 func (r *renderer) headingBlock(heading *ast.Heading) error {
 	r.curLine = r.line(heading)
 	images := collectImages(heading, r.source)
-	runs := inlineRuns(heading, r.source, r.footnoteNumber)
+	runs := inlineRuns(heading, r.source, r.footnoteNumber, r.marks)
 	plain := plainText(runs)
 	r.warnRawHTML(heading, r.line(heading))
 
@@ -826,7 +845,7 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 // paragraphBlock is one paragraph, or one list item when it sits inside a list.
 func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error {
 	images := collectImages(node, r.source)
-	runs := inlineRuns(node, r.source, r.footnoteNumber)
+	runs := inlineRuns(node, r.source, r.footnoteNumber, r.marks)
 	line := r.line(node)
 	r.curLine = line
 	r.warnRawHTML(node, line)
@@ -895,7 +914,7 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 		r.curLine = line
 		r.warnRawHTML(paragraph, line)
 		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
-		r.emit(r.quote(inlineRuns(paragraph, r.source, r.footnoteNumber), r.quoteDepth))
+		r.emit(r.quote(inlineRuns(paragraph, r.source, r.footnoteNumber, r.marks), r.quoteDepth))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
@@ -981,7 +1000,7 @@ func (r *renderer) tableRows(table *east.Table) [][][]Run {
 			line := r.line(cell)
 			r.warnRawHTML(cell, line)
 			r.warnImages(collectImages(cell, r.source), line, "a table cell")
-			runs := inlineRuns(cell, r.source, r.footnoteNumber)
+			runs := inlineRuns(cell, r.source, r.footnoteNumber, r.marks)
 			// A footnote mark in a cell is refused rather than warned about:
 			// the spec carries none, and a cell's paragraph has no footnotes
 			// part to write into, so the note would be numbered in the body

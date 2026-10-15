@@ -156,7 +156,7 @@ func (r *renderer) footnoteBlocks(note *east.Footnote) []*etree.Element {
 // footnote mark took no number, for the reason footnoteNumbers gives, so it
 // reaches here as a run with no number and no text.
 func (r *renderer) footnoteRuns(node ast.Node, line int) []Run {
-	runs := inlineRuns(node, r.source, r.footnoteNumber)
+	runs := inlineRuns(node, r.source, r.footnoteNumber, r.marks)
 	out := make([]Run, 0, len(runs))
 	linked := false
 	for _, run := range runs {

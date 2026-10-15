@@ -310,8 +310,14 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 		o.Italic = o.Italic || run.Italic
 		o.Strike = run.Strike
 		o.Mono = run.Mono
-		if run.Highlight != "" {
-			o.Highlight = run.Highlight
+		if run.Mark != "" && run.Mark == r.marks.plain {
+			// A mark reaches Word as a character style and the shading or the
+			// colour that style carries, which is written in the commit after
+			// this one. Until then the plain highlight, the one mark the
+			// previous generator had, keeps the named highlight it has always
+			// had: the house style calls that mark by the same word OOXML
+			// calls the highlight.
+			o.Highlight = run.Mark
 		}
 		if run.Link == "" {
 			textRun(parent, run.Text, o)

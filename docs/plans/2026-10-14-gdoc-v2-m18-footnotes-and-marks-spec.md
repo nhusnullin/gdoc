@@ -119,7 +119,9 @@ written down. Task 14 of the plan holds the steps.
 - `propose` and `annotate` do not change. Both already refuse a quote that
   crosses a footnote mark, and a quote matches words with or without a mark
   around them.
-- No footnote and no mark in a table cell.
+- No footnote in a table cell. A mark in one is carried: a cell's paragraph
+  walks its inlines the way every other paragraph does, and the kitchen sink's
+  own table holds a `==to fill in==` cell (corrected 2026-10-15, Task 9).
 - No mark on a whole paragraph, no mark in `read`'s projection, no meaning
   for any colour in the binary.
 
