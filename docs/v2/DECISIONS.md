@@ -96,6 +96,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
 | 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds |
 | 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds |
+| 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4923,3 +4924,40 @@ milestone.
 `TestAnOpenerGoldmarkReadIsNotRefused`,
 `TestAnAsideOpeningLikeGdocsOwnCommentSaysSo` and
 `TestAMarkupMarkerStillNamesTheExport`.
+
+## 2026-10-17. What the fourth M20 review closed: an escaped opener refused as a comment the line never closes.
+
+One correction to the entry above, found by the fourth review of the
+milestone. It is a rule the entries above already state, applied where it was
+not.
+
+**An escaped opener refuses nothing.** The refusal the entry above added
+counts the comment openers on a line and compares that count with the openers
+goldmark read. It counted every `<!--` on the line, the escaped ones with the
+rest. A backslash makes the one character after it the author's own, which is
+the parity `internal/markers` holds for every route out of the hub and the
+parity `read` writes an author's own opener home with, so `\<!--` is four
+characters of prose: goldmark reads no raw HTML there, nothing is left
+unclosed, and the characters reach the page as the ones that were typed. The
+count said otherwise, so `An escaped opener \<!-- aside --> here.` was refused
+with a sentence saying the line never closes, which it does, and the way out
+it named was a closer the line already had.
+
+What that cost is the door the marker refusal leaves open. The entry above
+says an escaped marker is the author's own text and is left alone, so a note
+written about the markers themselves still publishes. Four of the eight
+markers are comments now, so for those four the marker refusal let the note
+through and this refusal stopped it: a note explaining
+`\<!-- image: picture.png -->`, which is the shape of `skills/gdoc-export/markers.md`,
+could not be published at all.
+
+Both counts are read through the parity now, the line's and the raw HTML's,
+because an opener escaped inside a comment's own words is that comment's words
+on both sides of the comparison. `internal/markers`' `escaped` is exported as
+`Escaped` for it, rather than copied, because that package is where the parity
+lives.
+
+**Where it is pinned.** `internal/body`'s `TestAnEscapedOpenerIsNotRefused`,
+`TestAnOpenerAfterAnEscapedBackslashIsStillRefused` and
+`TestBuildLeavesAnEscapedMarkerAlone`, which now asks its question of a
+comment marker as well as of the markup.

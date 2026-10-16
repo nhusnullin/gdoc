@@ -113,7 +113,7 @@ func Find(line string) (string, bool) {
 	first, at := "", -1
 	for _, m := range looked {
 		for i := 0; i+len(m) <= len(line); i++ {
-			if line[i:i+len(m)] != m || escaped(line, i) {
+			if line[i:i+len(m)] != m || Escaped(line, i) {
 				continue
 			}
 			if at < 0 || i < at || (i == at && len(m) > len(first)) {
@@ -125,9 +125,15 @@ func Find(line string) (string, bool) {
 	return first, at >= 0
 }
 
-// escaped is view's parity read back: the backslashes immediately before this
+// Escaped is view's parity read back: the backslashes immediately before this
 // position, counted, with an odd run ending in gdoc's escape.
-func escaped(line string, at int) bool {
+//
+// It is exported because the parity is this package's to hold for every route
+// out of the hub, and internal/body asks it of a comment opener as well: an
+// escaped opener is prose the author wrote and opens no comment, so a check
+// that counted one refused the very note this rule exists to keep
+// publishable.
+func Escaped(line string, at int) bool {
 	n := 0
 	for i := at - 1; i >= 0 && line[i] == '\\'; i-- {
 		n++

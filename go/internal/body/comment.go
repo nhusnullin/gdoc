@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/yuin/goldmark/ast"
+
+	"gdoc/internal/markers"
 )
 
 // commentOpener and commentCloser are what an HTML comment is written with.
@@ -300,11 +302,37 @@ func openersRead(source []byte, root ast.Node) map[int]int {
 		for i := 0; i < raw.Segments.Len(); i++ {
 			segment := raw.Segments.At(i)
 			out[lineOf(source, segment.Start)] +=
-				strings.Count(string(segment.Value(source)), commentOpener)
+				unescapedOpeners(string(segment.Value(source)))
 		}
 		return ast.WalkContinue, nil
 	})
 	return out
+}
+
+// unescapedOpeners counts the comment openers in this text that the author
+// did not escape.
+//
+// A backslash makes the one character after it the author's own, which is the
+// rule internal/markers holds for every route out of the hub and the rule
+// `read` writes an author's own opener home with. An escaped opener is four
+// characters of prose: goldmark reads no raw HTML there, nothing is left
+// unclosed, and the characters reach the page as the ones that were typed. So
+// counting one refused a note for the shape the marker refusal deliberately
+// leaves alone, and a note written about gdoc's own comment markers could not
+// be published at all. Both counts are read this way, because an opener
+// escaped inside a comment's own words is that comment's words on both sides
+// of the comparison.
+// TestAnEscapedOpenerIsNotRefused and
+// TestAnOpenerAfterAnEscapedBackslashIsStillRefused are the pins.
+func unescapedOpeners(text string) int {
+	n := 0
+	for i := 0; i+len(commentOpener) <= len(text); i++ {
+		if text[i:i+len(commentOpener)] != commentOpener || markers.Escaped(text, i) {
+			continue
+		}
+		n++
+	}
+	return n
 }
 
 // checkUnclosedComment refuses an opener inside a sentence that the parse
@@ -333,7 +361,7 @@ func checkUnclosedComment(source []byte, root ast.Node) error {
 		if refusal != nil {
 			return
 		}
-		if strings.Count(l.text, commentOpener) <= read[l.at] {
+		if unescapedOpeners(l.text) <= read[l.at] {
 			return
 		}
 		refusal = fmt.Errorf("line %d: %s inside a sentence opens a comment this line never closes, and an opener nothing closes is not read as one: the aside and the %s in front of it would reach the document as words rather than grey; shut it with %s, or write the aside as %s words %s, which Obsidian hides while somebody reads the note",

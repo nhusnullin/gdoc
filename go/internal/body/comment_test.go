@@ -678,3 +678,34 @@ func TestAnOpenerGoldmarkReadIsNotRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestAnEscapedOpenerIsNotRefused. A backslash makes the one character after
+// it the author's own, which is the rule `read` writes home with and the one
+// way a note about gdoc's own comment markers publishes at all: the marker
+// refusal leaves an escaped marker alone, and TestBuildLeavesAnEscapedMarkerAlone
+// is its pin. An escaped opener opens nothing and is meant to open nothing,
+// so the characters the author typed are exactly what reaches the page and
+// there is no closer for the line to be missing.
+func TestAnEscapedOpenerIsNotRefused(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\nAn escaped opener \\<!-- aside --> here.\n",
+		"Words.\n\nAn escaped opener \\<!-- with no closer.\n",
+		"Words.\n\nExport writes \\<!-- image: picture.png --> into the note.\n",
+		"Words.\n\nA \\<!-- escaped one and a <!-- read one --> here.\n",
+		"Words.\n\nA <!-- aside about \\<!-- itself --> here.\n",
+	} {
+		if _, err := Render(config(t), []byte(note), "testdata/docs", true); err != nil {
+			t.Errorf("%q was refused: %v", note, err)
+		}
+	}
+}
+
+// The other side of the parity: two backslashes are one of the author's own,
+// so the opener after them is gdoc's reading again and an opener nothing
+// closes is still refused.
+func TestAnOpenerAfterAnEscapedBackslashIsStillRefused(t *testing.T) {
+	note := "Words.\n\nAn escaped backslash \\\\<!-- and no closer.\n"
+	if got := refused(t, note); !strings.Contains(got, "line 3:") {
+		t.Errorf("the refusal is %q, want it to name line 3", got)
+	}
+}

@@ -44,10 +44,22 @@ func TestBuildRefusesAMarkerByLine(t *testing.T) {
 // TestBuildLeavesAnEscapedMarkerAlone is the half that keeps a note about gdoc
 // publishable. `read` escapes the author's own "{+", so a note written about
 // the markers themselves carries escaped ones and none of them is gdoc's.
+//
+// A comment marker is one of the eight and is asked about here too, because
+// the escape has to survive every check the note then meets: the opener is
+// also a comment's, so the unclosed-opener refusal in comment.go reads the
+// same line, and counting the escaped opener there refused this note while
+// the marker refusal was leaving it alone.
 func TestBuildLeavesAnEscapedMarkerAlone(t *testing.T) {
-	note := "# Heading\n\n" + `The insertion marker is written \{+words\+} in the export.` + "\n"
-	if _, err := Render(config(t), []byte(note), "testdata/docs", true); err != nil {
-		t.Fatalf("Render refused a note whose markers are all escaped: %v", err)
+	for _, line := range []string{
+		`The insertion marker is written \{+words\+} in the export.`,
+		`A floating picture comes home as \<!-- image: floating, kix.p1 -->.`,
+		`A tab line is written \<!-- tab t.0: Operations -->.`,
+	} {
+		note := "# Heading\n\n" + line + "\n"
+		if _, err := Render(config(t), []byte(note), "testdata/docs", true); err != nil {
+			t.Fatalf("Render refused a note whose markers are all escaped: %v", err)
+		}
 	}
 }
 

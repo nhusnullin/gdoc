@@ -239,9 +239,14 @@
 // nothing. An opener the parse did read refuses nothing either, which is how
 // a comment the author's editor wrapped and an opener inside a comment's own
 // words stay what they are. Only the HTML spelling is asked about: a lone
-// "%%" is two characters an author may have typed for themselves.
-// TestAnUnclosedCommentInsideASentenceIsRefusedByLine and
-// TestAnOpenerGoldmarkReadIsNotRefused are the pins.
+// "%%" is two characters an author may have typed for themselves. An escaped
+// opener refuses nothing either, by the one escaping parity internal/markers
+// holds: a backslash makes the opener the author's own four characters, which
+// is how a note written about gdoc's own comment markers publishes at all.
+// TestAnUnclosedCommentInsideASentenceIsRefusedByLine,
+// TestAnOpenerGoldmarkReadIsNotRefused,
+// TestAnEscapedOpenerIsNotRefused and
+// TestAnOpenerAfterAnEscapedBackslashIsStillRefused are the pins.
 //
 // A pencil goes where a mark goes, because the milestone's one decision is
 // that the grey mark keeps everything it does and changes its spelling. So a
