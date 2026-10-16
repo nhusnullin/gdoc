@@ -593,3 +593,36 @@ func TestAPencilsRefusalNamesItsOwnLine(t *testing.T) {
 		}
 	}
 }
+
+// TestAnUnclosedHTMLCommentIsNamedAsAComment. The milestone named the unclosed
+// Obsidian fence as the comment it is and left the HTML one as "a block of
+// HTML", which is the spelling the guide teaches and the one export writes. An
+// author told they wrote a block of HTML goes looking for a tag that is not in
+// the note, and goldmark gives an unclosed comment every line to the end of
+// the note, so the sentence says that too.
+func TestAnUnclosedHTMLCommentIsNamedAsAComment(t *testing.T) {
+	out := walk(t, "Before.\n\n<!-- an aside with no closer\n\nAfter the aside.\n")
+
+	if !warned(out.Warnings, "never closed") {
+		t.Errorf("an unclosed comment warned %q, want it named as a comment", out.Warnings)
+	}
+	if warned(out.Warnings, "a block of HTML") {
+		t.Errorf("an unclosed comment warned %q, want no tag named", out.Warnings)
+	}
+	if !warned(out.Warnings, "every line after it") {
+		t.Errorf("an unclosed comment warned %q, want the lines under it named too", out.Warnings)
+	}
+	if got := serialise(t, out.Blocks); strings.Contains(got, "an aside") {
+		t.Errorf("the unclosed comment reached the document:\n%s", got)
+	}
+}
+
+// The other side of it: a block of HTML that is no comment keeps the sentence
+// it has always had, because that author did write a tag.
+func TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne(t *testing.T) {
+	out := walk(t, "Before.\n\n<div>\nnot a comment\n</div>\n")
+
+	if !warned(out.Warnings, "a block of HTML") {
+		t.Errorf("a block of HTML warned %q, want the block named", out.Warnings)
+	}
+}

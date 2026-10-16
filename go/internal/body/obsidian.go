@@ -13,8 +13,11 @@ package body
 // reaches into goldmark's unexported state.
 //
 // A fence that never closes runs to the end of the note, which is what
-// goldmark does with an unclosed HTML comment. What is left out is named by
-// line: TestAnUnterminatedObsidianFenceIsNamedAndLeftOut is the pin.
+// goldmark does with an unclosed HTML comment. Either way what is left out is
+// named by line, as the comment it is, and comment.go's unclosedComment is
+// where the two spellings are asked:
+// TestAnUnterminatedObsidianFenceIsNamedAndLeftOut and
+// TestAnUnclosedHTMLCommentIsNamedAsAComment are the pins.
 
 import (
 	"bytes"
@@ -34,24 +37,43 @@ type obsidianInlineParser struct{}
 
 func (p *obsidianInlineParser) Trigger() []byte { return []byte{'%'} }
 
+// Parse walks forward to the closer the way goldmark's own comment parser
+// does, over the lines of the paragraph in hand and no further, and puts the
+// position back where it found it when there is no closer to reach.
+//
+// The closer is looked for past the end of the opening line because an author
+// writes one aside and their editor wraps it. Shutting on the opening line
+// instead left the pair unclaimed, which published "%% an aside that" and
+// "wraps over two lines %%" as the words the author typed, delimiters and all,
+// with the build saying ok: the one failure every line check in this package
+// exists to prevent, in the one spelling Obsidian hides. The HTML spelling has
+// always reached across the wrap, so this is the rule that spelling already
+// has rather than a new one. Two unrelated pairs of percent signs grey what
+// stands between them, which is what they already did on one line and what
+// export names as a loss on the way home.
+// TestAWrappedObsidianCommentIsOnePencil is the pin.
 func (p *obsidianInlineParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
 	line, segment := block.PeekLine()
 	delimiter := []byte(obsidianDelimiter)
 	if !bytes.HasPrefix(line, delimiter) {
 		return nil
 	}
-	// A comment closes on the line it opened on, the way a highlight does.
-	// Left to run on, two unrelated pairs of percent signs in one note would
-	// grey everything between them.
-	shut := bytes.Index(line[len(delimiter):], delimiter)
-	if shut < 0 {
-		return nil
-	}
-	length := 2*len(delimiter) + shut
+	savedLine, savedSegment := block.Position()
 	node := &ast.RawHTML{Segments: text.NewSegments()}
-	node.Segments.Append(segment.WithStop(segment.Start + length))
-	block.Advance(length)
-	return node
+	for offset := len(delimiter); ; offset = 0 {
+		if shut := bytes.Index(line[offset:], delimiter); shut >= 0 {
+			length := offset + shut + len(delimiter)
+			node.Segments.Append(segment.WithStop(segment.Start + length))
+			block.Advance(length)
+			return node
+		}
+		node.Segments.Append(segment)
+		block.AdvanceLine()
+		if line, segment = block.PeekLine(); line == nil {
+			block.SetPosition(savedLine, savedSegment)
+			return nil
+		}
+	}
 }
 
 // obsidianBlockParser claims a %% alone on a line, and everything to the next
@@ -109,10 +131,11 @@ func isObsidianFence(line []byte) bool {
 	return strings.TrimSpace(string(line)) == obsidianDelimiter
 }
 
-// unclosedObsidianComment says whether a block of HTML is a fence the note
-// never closed. It is a loss and it is named, but naming it as a block of HTML
-// would send the author looking for a tag they never wrote.
-func unclosedObsidianComment(node *ast.HTMLBlock, source []byte) bool {
+// obsidianFenceBlock says whether a block of HTML is one this file's own
+// parser opened, which is the question "was it written with %%": a block
+// opens here on a fence and on nothing else. Whether that fence closed is
+// unclosedComment's.
+func obsidianFenceBlock(node *ast.HTMLBlock, source []byte) bool {
 	lines := node.Lines()
 	if lines.Len() == 0 {
 		return false

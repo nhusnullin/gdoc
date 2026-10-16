@@ -133,11 +133,46 @@ func isComment(node *ast.RawHTML, source []byte) bool {
 // asks the same question of the same node and two readings of one block are
 // one rule with a copy that can drift.
 func blockComment(node *ast.HTMLBlock, source []byte) ([]string, string, bool) {
+	// A comment the note never closed is asked first, because Obsidian's
+	// opener is also its closer: "%%" on a fence line with "note 50%%" under
+	// it opens a comment and closes none, and insideComment, which reads a
+	// prefix and a suffix, said the block was a comment that shut. So the
+	// fence swallowed every line after it as one grey aside with nothing
+	// named. TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed is the
+	// pin.
+	if _, unclosed := unclosedComment(node, source); unclosed {
+		return nil, "", false
+	}
 	words, opener, comment := insideComment(blockText(node, source))
 	if !comment {
 		return nil, "", false
 	}
 	return commentParagraphs(words), opener, true
+}
+
+// unclosedComment is the delimiter a block of HTML opened a comment with and
+// never closed, and whether it is one at all.
+//
+// It is a loss either way and it is named either way, but naming it as a block
+// of HTML would send the author looking for a tag they never wrote, and the
+// HTML spelling is the one the guide teaches and the one export writes. Both
+// run to the end of the note, so the lines after the opener go with it, which
+// is what the warning says.
+func unclosedComment(node *ast.HTMLBlock, source []byte) (string, bool) {
+	written := blockText(node, source)
+	if obsidianFenceBlock(node, source) {
+		// obsidian.go shuts a fence on a fence and on nothing else, so the
+		// closing line is the whole of the answer here.
+		return obsidianDelimiter, !node.HasClosure()
+	}
+	if !strings.HasPrefix(strings.TrimLeft(written, " \t"), commentOpener) {
+		return "", false
+	}
+	// The text holding a closer is what closed, rather than goldmark's own
+	// ClosureLine: goldmark shuts a comment on the first "-->" it meets
+	// wherever on the line it is, and a comment opening and shutting on one
+	// line of its own carries no closure line at all.
+	return commentOpener, !strings.Contains(written, commentCloser)
 }
 
 // commentParagraphs gathers the lines inside a comment into paragraphs.
@@ -234,13 +269,14 @@ func checkOldPencilSpan(source []byte, root ast.Node) error {
 }
 
 // isCommentBlock says whether a block of HTML is a comment, closed or not. A
-// fence the note never closes is one too: naming it a block of HTML would send
-// the author looking for a tag they never wrote.
+// comment the note never closes is one too, in either spelling: naming it a
+// block of HTML would send the author looking for a tag they never wrote.
 func isCommentBlock(node *ast.HTMLBlock, source []byte) bool {
 	if _, _, comment := blockComment(node, source); comment {
 		return true
 	}
-	return unclosedObsidianComment(node, source)
+	_, unclosed := unclosedComment(node, source)
+	return unclosed
 }
 
 // blockText is every line of a block of HTML, its closing line included, with

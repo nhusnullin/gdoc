@@ -264,6 +264,15 @@
 // highlight is goldmark's flanking rule rather than a shape:
 // docs/backlog/export-never-names-a-highlight-in-the-documents-own-words.md.
 //
+// The attribute the grey mark's old span closed with, {.pencil}, is the third
+// shape, and it is the one the next build refuses the file for rather than
+// reading: internal/body names that spelling by line and tells the author the
+// comment to write instead. A document whose own prose shows it, a page about
+// gdoc among them, otherwise came home with no warning and refused the next
+// build, blaming the file rather than the export. internal/export's
+// TestWordsHoldingTheOldPencilSpanAreNamed is the pin, and the shape goes the
+// day that refusal goes.
+//
 // A note's own words are asked as well. They are written under the body as
 // "[^n]: words", by the one route that writes a second copy of the document's
 // text, and the prose walk never reaches them: a note holding [^9] went home

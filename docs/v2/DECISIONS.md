@@ -94,6 +94,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-16 | `---` is a page break | holds |
 | 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
 | 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
+| 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4807,3 +4808,63 @@ paragraph's line is on that line.
 `internal/export`'s `TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords`,
 `TestWordsHoldingTheObsidianSpellingAreNamed` and
 `TestAGreyRunHoldingAFootnoteMarkIsStillNamed`.
+
+
+## 2026-10-17. What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home.
+
+Three corrections to the two entries above, found by the second review of the
+milestone. Each is a rule those entries already state, applied where it was
+not. Nothing here changes what a pencil is.
+
+**A comment the author's editor wrapped is one pencil in both spellings.** The
+entry above says a wrapped comment is one line in the document, and the HTML
+spelling has always reached across the wrap because goldmark's own comment
+parser walks forward to its closer. Obsidian's parser shut on the opening
+line, so `%% an aside that` with `wraps over two lines %%` under it was
+claimed by neither parser and published as the words the author typed,
+delimiters and all, with the build saying ok. That is the one failure every
+line check in `internal/body` exists to prevent, in the spelling Obsidian
+hides while somebody reads the note, and "two parsers, one meaning" is the
+premise it broke. The inline parser now walks forward the way goldmark's does,
+over the lines of the paragraph in hand and no further, and puts the position
+back where it found it when there is no closer to reach. A single delimiter
+that closes nothing is still the character the author typed.
+
+**A comment the note never closes is named as a comment in both spellings.**
+The milestone named the unclosed fence and left the unclosed `<!--` as "a
+block of HTML", which is the spelling the guide teaches and the one `export`
+writes. An author told they wrote a block of HTML goes looking for a tag that
+is not in the note. Both spellings run to the end of the note, so the warning
+now names the comment and says the lines under it went with it. The same
+reading found the other half: Obsidian's opener is also its closer, and the
+block was read as closed whenever its last line happened to end in `%%`, so
+`%%` with `note 50%%` under it swallowed every line after it as one grey aside
+with nothing named. A fence shuts on a fence line and on nothing else, which is
+what `unclosedComment` now asks.
+
+**The old span is named on the way home.** `internal/body` refuses a line
+carrying `[words]{.pencil}` by name, and the projection stopped naming that
+shape when it took on the comment's opener. So a document whose own prose
+shows the retired spelling, a page about gdoc among them, came home with no
+warning and refused the next build by line, blaming the file rather than the
+export. It is the third shape `gdocShapes` asks for, with its own sentence,
+because the next build does not read those characters in place of the words:
+it refuses the file for them. The shape goes the day that refusal goes.
+
+**What was left.** A grey run's words are still written home through the
+projection's own escaping, so a pencil holding `[[`, `{+` or a backslash
+gains a character nobody typed. That is
+`docs/backlog/build-never-unescapes-a-backslash.md` and it is Nail's to settle,
+because unescaping inside a comment contradicts "nothing inside a comment is
+markdown". The old span inside a pencil's own words is refused by `build` and
+named by `export`, which is consistent but stricter than "nothing inside a
+comment is markdown" would have it; loosening a refusal is a decision rather
+than a review fix.
+
+**Where they are pinned.** `internal/body`'s
+`TestAWrappedObsidianCommentIsOnePencil`,
+`TestAnObsidianDelimiterWithNoCloserIsWords`,
+`TestAnUnclosedHTMLCommentIsNamedAsAComment`,
+`TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed` and
+`TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne`; and `internal/export`'s
+`TestWordsHoldingTheOldPencilSpanAreNamed`.

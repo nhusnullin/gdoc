@@ -835,11 +835,14 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 			r.greyParagraphs(paragraphs, opener, level, list)
 			return nil
 		}
-		if unclosedObsidianComment(typed, r.source) {
+		if delimiter, unclosed := unclosedComment(typed, r.source); unclosed {
 			// Named as the comment it is: an author told they wrote a block of
-			// HTML would go looking for a tag that is not in the note.
-			r.warn("line %d: a %s comment that is never closed is not rendered in the house style and was left out",
-				r.line(node), obsidianDelimiter)
+			// HTML would go looking for a tag that is not in the note. A
+			// comment with no closer runs to the end of the note, so the
+			// warning says that the lines under it went with it rather than
+			// leaving the author to notice.
+			r.warn("line %d: a %s comment that is never closed is not rendered in the house style, and it was left out with every line after it",
+				r.line(node), delimiter)
 			r.afterTable = false
 			return nil
 		}

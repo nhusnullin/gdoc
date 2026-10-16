@@ -1273,6 +1273,20 @@ func (e *emitter) runs(rs []docs.Run) {
 // which is what a mark that cannot carry its syntax already does.
 var footnoteMark = regexp.MustCompile(`\[\^[^\]\n]+\]`)
 
+// oldPencilSpan is the spelling the grey mark had before milestone 20, the
+// Pandoc span "[words]{.pencil}", as the attribute that closed it.
+//
+// Nothing reads the span now, and internal/body refuses a line that carries
+// it by name: an author who typed the old spelling knows what they meant and
+// is told the comment to write instead. So a document whose own prose shows
+// that attribute, a guide page about gdoc among them, came home with no
+// warning and refused the next build by line, blaming the file rather than
+// the export. The words go home as the document holds them and the loss is
+// named, which is what this projection does with every other shape of its
+// own. It goes the day that refusal goes.
+// internal/export's TestWordsHoldingTheOldPencilSpanAreNamed is the pin.
+var oldPencilSpan = regexp.MustCompile(`\]\{\.pencil\}`)
+
 // ownSyntax names every stretch of the document's own words that the next
 // build would read as syntax of gdoc's.
 //
@@ -1335,6 +1349,12 @@ func (e *emitter) nameShapes(rs []docs.Run, inComment bool) {
 			if inComment && f.commented {
 				continue
 			}
+			if f.refused {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"the words at index %d hold %s, which the next build refuses the file for: it is %s",
+					at+units(text[:f.at]), f.what, f.noun))
+				continue
+			}
 			e.warnings = append(e.warnings, fmt.Sprintf(
 				"the words at index %d hold %s, which the next build reads as %s rather than as the words this document shows",
 				at+units(text[:f.at]), f.what, f.noun))
@@ -1358,17 +1378,23 @@ type shape struct {
 	// internal/export's
 	// TestAGreyRunHoldingAFootnoteMarkIsStillNamed is the pin.
 	commented bool
+	// refused says the next build does not read these characters at all: it
+	// refuses the file for them. The sentence is the other one, because a
+	// shape that stops the build is not a shape read in place of the words.
+	refused bool
 }
 
 // gdocShapes is every such stretch of this text, in the order it is read.
 //
-// Two shapes, both of them markup gdoc writes into the file itself. The first
-// is a real note's reference, "[^n]", and footnoteMark holds what the next
-// build makes of one. The second is an opener a mark written as a comment is
-// read from, "<!--" and Obsidian's "%%", which come off the palette rather
-// than being constants here, because the house style is the one place the
-// syntax is stated. Both spellings, not the one export writes: what matters
-// here is what the next build reads.
+// Three shapes, each of them syntax of gdoc's in the file. The first is a real
+// note's reference, "[^n]", and footnoteMark holds what the next build makes
+// of one. The second is an opener a mark written as a comment is read from,
+// "<!--" and Obsidian's "%%", which come off the palette rather than being
+// constants here, because the house style is the one place the syntax is
+// stated. Both spellings, not the one export writes: what matters here is what
+// the next build reads. The third is the attribute the grey mark's old span
+// closed with, which the next build refuses the file for rather than reading,
+// and oldPencilSpan holds why it is still asked.
 //
 // The opener alone, and not the comment it would make. A complete one in the
 // document's own words publishes a grey aside the document never carried, with
@@ -1379,7 +1405,7 @@ type shape struct {
 // reads it as the characters the document shows, so naming it would call an
 // arrow in a caption a loss.
 //
-// Neither shape can be escaped out of the way: internal/body hands goldmark's
+// No shape can be escaped out of the way: internal/body hands goldmark's
 // text through as it stands and never unescapes a punctuation mark, so a
 // backslash written here reaches the document as a backslash. The words go
 // home as the document holds them and the loss is named, which is what a mark
@@ -1388,6 +1414,10 @@ func (e *emitter) gdocShapes(text string) []shape {
 	var out []shape
 	for _, m := range footnoteMark.FindAllStringIndex(text, -1) {
 		out = append(out, shape{at: m[0], what: text[m[0]:m[1]], noun: "a footnote mark of gdoc's"})
+	}
+	for _, m := range oldPencilSpan.FindAllStringIndex(text, -1) {
+		out = append(out, shape{at: m[0], what: text[m[0]:m[1]],
+			noun: "how the grey mark was written before milestone 20", refused: true})
 	}
 	for _, a := range e.commentOpeners() {
 		for from := 0; ; {

@@ -233,9 +233,11 @@ words are an aside the note's reader never pays for and the document's reader
 gets in grey. A comment inside a sentence is a grey run where it stands. A
 comment on lines of its own is grey paragraphs of its own, the lines of each
 joined by one space, and a blank line inside it starts the next paragraph. A
-comment holding no words marks nothing and is left out in silence. Nothing
-inside a comment is markdown, so `<!-- a ==b== c -->` carries the equals signs
-as characters, and a highlight inside a pencil is words.
+comment holding no words marks nothing and is left out in silence. A comment
+you never close runs to the end of the note, so it is left out with every line
+after it, and the warning names the line it opened on. Nothing inside a
+comment is markdown, so `<!-- a ==b== c -->` carries the equals signs as
+characters, and a highlight inside a pencil is words.
 
 Run `gdoc help marks` for the seven with their colours. The binary prints them
 out of the house style, so what you read there is the colour the document

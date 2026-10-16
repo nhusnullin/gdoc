@@ -1090,3 +1090,47 @@ func TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords(t *testing.T) {
 		t.Errorf("an aside that is no marker raised %v", warnings)
 	}
 }
+
+// TestWordsHoldingTheOldPencilSpanAreNamed. The grey mark was a Pandoc span
+// until milestone 20, and internal/body now refuses a line that carries that
+// spelling by name. So a document whose own prose shows it, a page about gdoc
+// among them, came home with no warning and refused the next build by line,
+// blaming the file rather than the export. The words come home as the
+// document holds them and the loss is named, which is what this projection
+// does with every other shape of its own.
+func TestWordsHoldingTheOldPencilSpanAreNamed(t *testing.T) {
+	for _, prose := range []string{
+		"the old spelling was [words]{.pencil} once",
+		"an attribute ]{.pencil} with no bracket",
+	} {
+		_, _, _, warnings := Project(oneMarked(docs.Run{Text: prose}), nil, palette(t))
+
+		named := false
+		for _, w := range warnings {
+			if strings.Contains(w, "]{.pencil}") && strings.Contains(w, "refuses the file") {
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%q: no warning names the spelling the next build refuses: %v", prose, warnings)
+		}
+	}
+
+	// The word on its own is a word. A note about pencils is not a span.
+	_, _, _, quiet := Project(oneMarked(docs.Run{Text: "a pencil and a {.pencil} class"}), nil, palette(t))
+	for _, w := range quiet {
+		if strings.Contains(w, "{.pencil}") {
+			t.Errorf("a warning names the old span in words that hold none: %q", w)
+		}
+	}
+
+	// A grey run's own words are named too, because internal/body reads that
+	// refusal off the source line and a comment in the middle of a
+	// paragraph's line is on that line, so the file would not build at all.
+	// This is the footnote mark's case rather than the comment opener's.
+	_, _, _, inside := Project(
+		oneMarked(docs.Run{Text: "it was ]{.pencil} before", Colour: "#9A9A9A"}), nil, palette(t))
+	if !warnedAbout(inside, "]{.pencil}") {
+		t.Errorf("a grey run holding the old spelling raised %v, and the next build refuses it", inside)
+	}
+}

@@ -215,8 +215,18 @@
 // TestAnObsidianFenceInterruptsAParagraph,
 // TestAnObsidianCommentOnOneLineOfItsOwnIsOneGreyParagraph and
 // TestAnObsidianCommentInCodeIsCode are the pins, with
-// TestAnUnterminatedObsidianFenceIsNamedAndLeftOut over the fence that never
-// closes.
+// TestAWrappedObsidianCommentIsOnePencil over the pair the author's editor
+// wrapped and TestAnObsidianDelimiterWithNoCloserIsWords over the single
+// delimiter that closes nothing.
+//
+// A comment the note never closes runs to the end of the note, in either
+// spelling, and is named as the comment it is rather than as a block of HTML:
+// an author told they wrote one would go looking for a tag that is not in the
+// note. The sentence names the lines under it too, because they went with it.
+// TestAnUnterminatedObsidianFenceIsNamedAndLeftOut,
+// TestAnUnclosedHTMLCommentIsNamedAsAComment,
+// TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed and
+// TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne are the pins.
 //
 // A pencil goes where a mark goes, because the milestone's one decision is
 // that the grey mark keeps everything it does and changes its spelling. So a

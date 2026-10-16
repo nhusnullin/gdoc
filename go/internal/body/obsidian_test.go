@@ -225,3 +225,55 @@ func TestAnUnterminatedObsidianFenceIsNamedAndLeftOut(t *testing.T) {
 		t.Errorf("the unclosed fence reached the document:\n%s", got)
 	}
 }
+
+// TestAWrappedObsidianCommentIsOnePencil. An author writes one aside and
+// their editor wraps it. Claimed only where the closer was on the opening
+// line, the pair was claimed by neither parser, so "%% an aside that" and
+// "wraps over two lines %%" published as the words the author typed,
+// delimiters and all, with the build saying ok. That is the failure every line
+// check in this package exists to prevent, in the one spelling Obsidian hides
+// while somebody reads the note. The HTML spelling has always reached across
+// the wrap, which is the rule both now share.
+func TestAWrappedObsidianCommentIsOnePencil(t *testing.T) {
+	out := walk(t, "Words.\n\n%% an aside that\nwraps over two lines %%\n")
+
+	if got := serialise(t, out.Blocks); strings.Contains(got, "%%") {
+		t.Errorf("the delimiters reached the document as words:\n%s", got)
+	}
+	pencil(t, out.Blocks, "an aside that wraps over two lines", "a wrapped comment")
+	if len(out.Warnings) != 0 {
+		t.Errorf("a wrapped comment warned %v, and nothing was lost", out.Warnings)
+	}
+}
+
+// The other side of it. A single delimiter with no closer anywhere in the
+// paragraph is the characters the author typed, which is what it was before
+// and what goldmark makes of an unclosed "<!--" inside a sentence. The walk
+// forward stops at the end of the paragraph, so it cannot reach a pair in the
+// next one.
+func TestAnObsidianDelimiterWithNoCloserIsWords(t *testing.T) {
+	out := walk(t, "Words.\n\nA stray %% with no closer.\n\nA later %% pair %% here.\n")
+
+	got := serialise(t, out.Blocks)
+	if !strings.Contains(got, "A stray %% with no closer.") {
+		t.Errorf("the stray delimiter did not come through as words:\n%s", got)
+	}
+	pencil(t, out.Blocks, "pair", "the paragraph after the stray delimiter")
+}
+
+// TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed. Obsidian's opener is
+// also its closer, and a fence shuts on a fence line and on nothing else. Read
+// as a prefix and a suffix of the block's text instead, "%%" with "note 50%%"
+// under it was a comment that closed: the fence swallowed every line after it
+// as one grey aside with nothing named.
+func TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed(t *testing.T) {
+	out := walk(t, "Before.\n\n%%\nnote 50%%\n")
+
+	if !warned(out.Warnings, "never closed") {
+		t.Errorf("an unclosed fence ending in the delimiter warned %q, want it named as unclosed",
+			out.Warnings)
+	}
+	if got := serialise(t, out.Blocks); strings.Contains(got, "note 50") {
+		t.Errorf("the unclosed fence reached the document:\n%s", got)
+	}
+}
