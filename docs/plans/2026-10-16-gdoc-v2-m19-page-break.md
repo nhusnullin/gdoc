@@ -192,47 +192,69 @@ paragraphs and not one held a `page_break` run. MEASURED.md, "How read prints
 the two kinds of page break", holds the table, the three ways out and the
 recheck line.
 
-### Task 5: export writes `---`, and the round trip pairs it
+### Task 5: the read sees where the page turns, and export writes `---`
 
-**STOPPED by Task 4's gate. Do not implement this task.** The measurement
-found no `pageBreak` element for a published break, so `export` cannot see one
-and every checkbox below rests on a shape that does not exist. Nail decides
-which of the three ways out in MEASURED.md M19 takes, and this task is
-rewritten from his answer. Read the Task 4 outcome above first.
+Rewritten 2026-10-16 after the Task 4 measurement, from the first of the
+three ways out in MEASURED.md: `internal/docs` decodes the flag Drive
+writes, `read` prints the break it has been silent about since M13, and
+`export` writes `---` for it. Claude took that way out under Nail's standing
+"do it for me" of the same day, in his absence, and said so; the other two
+are left in MEASURED.md for him to reverse to. The spec's `view` row changed
+with it: `read` is no longer unchanged.
 
 **Files:**
-- Modify: `go/internal/export/project.go` (or the file that writes a
-  placeholder line), `go/internal/export/doc.go`,
-  `go/internal/live/roundtrip_test.go`, `skills/gdoc-export/markers.md`
-- Create: `go/internal/export/pagebreak_test.go`
+- Modify: `go/internal/docs/docs.go`, `go/internal/docs/walk.go`,
+  `go/internal/docs/doc.go`, a fixture under `go/internal/docs/testdata/`
+  in the measured shape, `go/internal/view/text.go`,
+  `go/internal/view/doc.go`, `go/internal/export/project.go` (or the file
+  that writes a placeholder line), `go/internal/export/doc.go`,
+  `go/internal/live/roundtrip_test.go`, `go/internal/live/pagebreak_test.go`,
+  `docs/v2/MEASURED.md`, `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`,
+  `docs/plans/2026-10-16-gdoc-v2-m19-page-break-spec.md`,
+  `skills/gdoc-export/markers.md`
+- Create: `go/internal/export/pagebreak_test.go`,
+  `go/internal/view/pagebreak_test.go`
 
-The five checkboxes below were ticked on 2026-10-16 as **blocked, not done**,
-so the run could move on to Task 6. Nothing in them was implemented. They are
-rewritten, and unticked, when Nail names the way out.
-
-- [x] blocked by the Task 4 gate, not implemented.
-      `TestAPageBreakOfItsOwnExportsAsThreeHyphens`: a document fixture with
-      a paragraph holding one `pageBreak` and nothing else exports `---` on a
-      line between blank lines, with no warning for it.
-      `TestTheFirstHeadingsBreakIsLeftOut`: the break on or before the first
-      body heading, in the shape Task 4 measured, is not written.
-      `TestAPageBreakInsideASentenceKeepsItsMarker`: text, a `pageBreak`,
-      text in one paragraph exports `[page break]` and warns.
-      `TestAHorizontalRuleStillExportsAsItsMarker`.
-- [x] blocked by the Task 4 gate, not implemented.
-      `export` writes the line through the same place it writes a picture
-      line, so a break in a table cell is handled the way a picture there is.
-- [x] blocked by the Task 4 gate, not implemented.
-      `roundtrip_test.go`: the `rules` entry becomes `page breaks the note
+- [ ] `docs.Paragraph` gains `PageBreakBefore bool`
+      (`json:"page_break_before,omitempty"`), decoded from
+      `paragraphStyle.pageBreakBefore`. `TestAParagraphKeepsWhetherThePageBreaksBeforeIt`
+      reads a fixture in the measured shape: an empty `NORMAL_TEXT` paragraph
+      carrying the flag, and a `HEADING_1` carrying it. The structure print
+      carries the field where it carries the style.
+- [ ] `view`: a paragraph carrying the flag prints `[page break]` on a line of
+      its own before it, through the same placeholder and with the same
+      warning the native `pageBreak` element gets, so the two shapes read
+      alike downstream. `TestABreakBeforeAParagraphPrintsAsAPageBreakLine`,
+      `TestTheHousesFirstHeadingBreakPrintsBeforeTheHeading`, and
+      `TestANativePageBreakElementStillPrintsWhereItStands`. `view/doc.go`
+      says why the read now prints a line it printed nothing for.
+- [ ] `export`: a `[page break]` line standing on its own, from the flag or
+      from a native element that is a paragraph's only content, is written as
+      `---` on a line of its own between blank lines, with no warning for it.
+      The one standing directly before the first body heading after the
+      prelude strip is left out, because `build` puts that break back. A
+      native `pageBreak` element inside a sentence keeps its marker and its
+      warning. `TestAPageBreakOfItsOwnExportsAsThreeHyphens`,
+      `TestTheFirstHeadingsBreakIsLeftOut`,
+      `TestAPageBreakInsideASentenceKeepsItsMarker`,
+      `TestAHorizontalRuleStillExportsAsItsMarker`. The line is written through
+      the same place a picture line is, so a break in a table cell is handled
+      the way a picture there is.
+- [ ] `roundtrip_test.go`: the `rules` entry becomes `page breaks the note
       wrote`, pairing `---`/`***` with `[page break]`; the `page breaks` entry
       becomes the house's own, the first heading's and column breaks, with
-      its reason rewritten. `markers.md:25` moves `[page break]` out of the
-      no-text row into a line saying a break of its own comes home as `---`.
-- [x] blocked by the Task 4 gate, not implemented.
-      Live: `TestLiveRoundTrip` on the kitchen sink passes with the new
-      pairing, document id in the log.
-- [x] blocked by the Task 4 gate, no commit made.
-      `git commit -m "feat(export): a page break comes home as ---"`
+      its reason rewritten to what Task 4 measured. `markers.md:25` moves
+      `[page break]` out of the no-text row into a line saying a break of its
+      own comes home as `---`, and one inside a sentence stays a marker.
+- [ ] The documents: MEASURED.md's "three ways out" names the one taken and
+      by whom; the DECISIONS.md entry of Task 1 and the spec's `view` and
+      `export` rows say `read` prints `[page break]` where a published
+      document breaks the page, which it printed nothing for since M13.
+- [ ] Live: `TestLivePageBreakShape` rerun, now printing `[page break]` for
+      both kinds, and its MEASURED.md table gains a column for what `read`
+      prints since this task. `TestLiveRoundTrip` on the kitchen sink passes
+      with the new pairing. Document ids in the log.
+- [ ] `git commit -m "feat(docs,view,export): a page break is read where the page turns, and comes home as ---"`
 
 ### Task 6: the help, the guide and the skills
 
@@ -248,8 +270,8 @@ rewritten, and unticked, when Nail names the way out.
       page break, and `help --json` carries it. The guide's publishing page
       replaces "horizontal rules" with the page break and its two drops; the
       writing page's block refusal says a page break; the exporting page says
-      a break comes home as `---` and a rule as `[rule]`; the reading page is
-      checked and left as it is.
+      a break comes home as `---` and a rule as `[rule]`; the reading page
+      says `[page break]` prints where a published document breaks the page.
 - [ ] The publish skill reads `body.page_breaks` beside `body.footnotes` and
       says the number when it is above zero, judging nothing. The review
       skill's `propose.md:35` and `:148` say "page break (`---`)".
