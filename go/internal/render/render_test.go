@@ -41,14 +41,20 @@ func config(t *testing.T) *house.Config {
 	return cfg
 }
 
-// houseLogo is the mark the shell is built with. Build takes it from the
-// caller now rather than reading it off the config, because a house style may
-// name the logo as one file in Drive and this package reaches nothing.
+// placeholderLogo is the stand-in for the mark in the first page's header. The
+// firm's logo is one file in its Drive and the tree carries no copy of it, so
+// a test that needs real PNG bytes reads internal/house's placeholder: a flat
+// light grey of the size the house file states.
+const placeholderLogo = "../house/testdata/placeholder-logo.png"
+
+// houseLogo is the mark render is handed. Build takes the logo from its caller
+// rather than reading it off the config, because a house style may name one
+// file in Drive instead of carrying the bytes, and this package reaches nothing.
 func houseLogo(t *testing.T) []byte {
 	t.Helper()
-	raw, err := config(t).LogoBytes()
+	raw, err := os.ReadFile(placeholderLogo)
 	if err != nil {
-		t.Fatalf("LogoBytes: %v", err)
+		t.Fatalf("read the placeholder logo: %v", err)
 	}
 	return raw
 }

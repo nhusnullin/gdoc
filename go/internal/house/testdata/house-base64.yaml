@@ -1,0 +1,1171 @@
+meta:
+  name: altery-group-policy
+  version: '1.0'
+  note: Everything gdoc needs to build the Altery house document. No .docx master, no template document
+    in Drive.
+page:
+  size: A4
+  width_pt: 595.2755905511811
+  height_pt: 841.8897637795275
+  margin_top_pt: 62.35
+  margin_bottom_pt: 51
+  margin_left_pt: 51.05
+  margin_right_pt: 51.05
+  header_margin_pt: 14.15
+  footer_margin_pt: 0
+  different_first_page: true
+  page_number_start: 1
+palette:
+  navy: '#22265F'
+  heading_blue_declared: '#06436E'
+  teal: '#549F99'
+  running_head_orange: '#FF771C'
+  subtitle_grey: '#666666'
+  legend_navy: '#0F1340'
+  highlight_yellow: '#FFFF00'
+  placeholder_red: '#FF0000'
+marks:
+  yellow:
+    syntax:
+    - '=='
+    - 🟡
+    kind: highlight
+    color: '#FFD500'
+    debt: true
+  green:
+    syntax:
+    - 🟢
+    kind: highlight
+    color: '#3DD67A'
+    debt: true
+  purple:
+    syntax:
+    - 🟣
+    kind: highlight
+    color: '#BA92FF'
+    debt: true
+  blue:
+    syntax:
+    - 🔵
+    kind: highlight
+    color: '#5DB3FF'
+    debt: false
+  red:
+    syntax:
+    - 🔴
+    kind: highlight
+    color: '#FF6B6B'
+    debt: false
+  orange:
+    syntax:
+    - 🟠
+    kind: highlight
+    color: '#FFB85C'
+    debt: false
+  pencil:
+    syntax:
+    - .pencil
+    kind: text
+    color: '#9A9A9A'
+    debt: false
+fonts:
+  body: Calibri
+  title: Arial
+  subtitle: Georgia
+defaults:
+  font: Calibri
+  size_pt: 11
+  space_before_pt: 3
+  space_after_pt: 6
+  line_spacing: 1.15
+styles:
+  normal:
+    size_pt: 11
+    color: '#000000'
+    space_before_pt: 3
+    space_after_pt: 6
+    line_spacing: 1.15
+  heading_1:
+    size_pt: 16
+    bold: true
+    color: '#22265F'
+    space_before_pt: 12
+    space_after_pt: 0
+    indent_start_pt: 0
+    keep_with_next: true
+  heading_2:
+    size_pt: 14
+    bold: false
+    color: '#22265F'
+    space_before_pt: 12
+    space_after_pt: 0
+    indent_start_pt: 0
+    keep_with_next: true
+  heading_3:
+    size_pt: 12
+    bold: false
+    color: '#549F99'
+    space_before_pt: 12
+    space_after_pt: 6
+    indent_start_pt: 0
+    keep_with_next: true
+  heading_4:
+    size_pt: 11
+    bold: true
+    color: '#000000'
+    space_before_pt: 12
+    space_after_pt: 6
+    indent_start_pt: 0
+    keep_with_next: true
+  heading_5:
+    size_pt: 11
+    bold: true
+    italic: true
+    color: '#000000'
+    space_before_pt: 12
+    space_after_pt: 6
+    indent_start_pt: 0
+  heading_6:
+    size_pt: 11
+    bold: true
+    color: '#000000'
+    space_before_pt: 12
+    space_after_pt: 6
+    indent_start_pt: 0
+  title:
+    size_pt: 16
+    bold: true
+    color: '#000000'
+    font: Arial
+    align: center
+    space_before_pt: 12
+    space_after_pt: 3
+    line_spacing: 1.0
+  subtitle:
+    size_pt: 24
+    italic: true
+    color: '#666666'
+    font: Georgia
+    space_before_pt: 18
+    space_after_pt: 4
+    line_spacing: 1.15
+    keep_with_next: true
+    keep_lines_together: true
+  footnote_text:
+    size_pt: 10
+    font: Calibri
+    space_before_pt: 0
+    space_after_pt: 0
+    line_spacing: 1.0
+body:
+  size_pt: 12
+  align: justify
+  space_before_pt: 0
+  space_after_pt: 12
+  list_item_space_after_pt: 3
+  first_heading_page_break: true
+  bullet:
+    indent_start_pt: 36
+    hanging_pt: 18
+    glyphs:
+    - ●
+    - ○
+    - ■
+  numbered:
+    indent_start_pt: 36
+    hanging_pt: 18
+    format: '%1.'
+header:
+  first:
+    paragraphs:
+    - align: left
+      line_spacing: 2.0
+      space_before_pt: 0
+      space_after_pt: 0
+      runs:
+      - text: 'For internal use only '
+        size_pt: 12
+        color: '#22265F'
+      - tab: true
+      logo: true
+    - align: center
+      runs: []
+    - align: left
+      line_spacing: 2.0
+      space_before_pt: 0
+      space_after_pt: 0
+      runs: []
+  default:
+    align: right
+    paragraphs:
+    - space_before_pt: 0
+      space_after_pt: 0
+      runs:
+      - text: Altery - xxx Policy
+        size_pt: 12
+        color: '#FF771C'
+        placeholder: running_head
+    - space_before_pt: 0
+      space_after_pt: 0
+      size_pt: 9
+      rule:
+        height_pt: 1.5
+        color: '#A0A0A0'
+    - space_before_pt: 0
+      space_after_pt: 0
+      size_pt: 9
+      runs: []
+footer:
+  first:
+    line_spacing: 2.0
+    indent_start_pt: 108
+    paragraphs:
+    - space_before_pt: 0
+      space_after_pt: 0
+      runs:
+      - tabs: 6
+        size_pt: 12
+        color: '#22265F'
+      - text: '                               '
+        size_pt: 12
+        color: '#22265F'
+      - tabs: 2
+        size_pt: 12
+        color: '#22265F'
+      - page_number: true
+        size_pt: 12
+        color: '#22265F'
+  default:
+    line_spacing: 2.0
+    paragraphs:
+    - runs: []
+      size_pt: 12
+      color: '#22265F'
+      space_before_pt: 0
+      space_after_pt: 0
+    - space_before_pt: 0
+      space_after_pt: 0
+      runs:
+      - text: 'For internal use only '
+        size_pt: 12
+        color: '#22265F'
+      - tabs: 7
+        size_pt: 12
+        color: '#22265F'
+      - text: '                       '
+        size_pt: 12
+        color: '#22265F'
+      - tabs: 3
+        size_pt: 12
+        color: '#22265F'
+      - page_number: true
+        size_pt: 12
+        color: '#22265F'
+cover:
+  leading_blanks:
+  - {}
+  - {}
+  - {}
+  - size_pt: 18
+  - size_pt: 18
+  align: center
+  lines:
+  - text: 'Altery Group '
+    size_pt: 29
+    bold: true
+    space_before_pt: 0
+    space_after_pt: 0
+  - text: ''
+    size_pt: 29
+    bold: true
+    space_before_pt: 0
+    space_after_pt: 0
+  - size_pt: 29
+    bold: true
+    placeholder: title
+    space_before_pt: 0
+    space_after_pt: 0
+    runs:
+    - text: (Name of)
+      highlight: yellow
+    - text: ' '
+    - text: Framework/Policy
+      color: '#FF0000'
+  - text: or
+    size_pt: 29
+    bold: true
+    with: alt_title
+    space_before_pt: 0
+    space_after_pt: 0
+  - size_pt: 29
+    bold: true
+    placeholder: alt_title
+    with: alt_title
+    space_before_pt: 0
+    space_after_pt: 0
+    runs:
+    - text: (Name of)
+      highlight: yellow
+    - text: ' '
+    - text: Framework/Policy
+      color: '#FF0000'
+  - size_pt: 20
+    runs:
+    - text: 'Version: '
+    - text: '1.0'
+      highlight: yellow
+      placeholder: version
+  - text: May 2025
+    size_pt: 20
+    highlight: yellow
+    placeholder: date
+  trailing_blanks: []
+labels:
+  version_control:
+    text: Version Control
+    bold: true
+    size_pt: 12
+    color: '#22265F'
+    align: justify
+    space_before_pt: 18
+    space_after_pt: 0
+  document_classification:
+    text: Document Classification (Highlight as appropriate)
+    bold: true
+    size_pt: 12
+    color: '#22265F'
+    line_spacing: 1.0
+    space_before_pt: 0
+    space_after_pt: 0
+  contents:
+    text: Contents
+    size_pt: 16
+    color: '#22265F'
+    space_before_pt: 24
+    space_after_pt: 0
+    keep_lines_together: true
+legend:
+  size_pt: 12
+  color: '#0F1340'
+  line_spacing: 1.0
+  lines:
+  - - 'New         '
+    - '  New information has been added'
+  - - 'Update     '
+    - '  Existing information has been updated'
+  - - 'Amend     '
+    - '  Existing information has been amended'
+  - - 'Remove    '
+    - '  Existing information has been removed'
+front_matter:
+- block: cover
+- block: page_break
+- block: label
+  ref: version_control
+- block: table
+  ref: version_control
+- block: blank
+  align: justify
+  space_before_pt: 6
+  space_after_pt: 0
+- block: table
+  ref: revision_history
+- block: blank
+  size_pt: 12
+  line_spacing: 1.0
+  space_after_pt: 0
+- block: legend
+- block: blank
+  size_pt: 12
+  line_spacing: 1.0
+  space_before_pt: 0
+  space_after_pt: 0
+- block: label
+  ref: document_classification
+- block: table
+  ref: document_classification
+- block: page_break
+- block: label
+  ref: contents
+- block: toc
+tables:
+  version_control:
+    columns_pt:
+    - 150.0
+    - 359.25
+    border:
+      width_pt: 1.0
+      color: '#000000'
+    rows:
+    - min_height_pt: 28.5
+      cells:
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: 'Document Owner '
+            bold: true
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          indent_start_pt: 4.0
+          indent_first_line_pt: 4.0
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: owner
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 24.398
+      cells:
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Date of Last Approval
+            bold: true
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          indent_start_pt: 4.0
+          indent_first_line_pt: 4.0
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: last_approval
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 23.25
+      cells:
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Review Frequency
+            bold: true
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          indent_start_pt: 4.0
+          indent_first_line_pt: 4.0
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: 'Annually '
+            size_pt: 12.0
+            placeholder: review_frequency
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 23.25
+      cells:
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Board Ratification Date
+            bold: true
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          indent_start_pt: 4.0
+          indent_first_line_pt: 4.0
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: board_ratification
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 23.25
+      cells:
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Policy Distribution
+            bold: true
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          indent_start_pt: 4.0
+          indent_first_line_pt: 4.0
+      - fill: '#F5D1AE'
+        pad_pt: 5.0
+        pad_tlbr_pt:
+        - 5.0
+        - 5.0
+        - 5.0
+        - 5.0
+        valign: top
+        paragraphs:
+        - runs:
+          - text: ''
+            size_pt: 12.0
+            placeholder: distribution
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+  revision_history:
+    columns_pt:
+    - 52.5
+    - 75.75
+    - 63.0
+    - 78.0
+    - 61.5
+    - 79.5
+    - 102.0
+    border:
+      width_pt: 0.5
+      color: '#000000'
+    rows:
+    - min_height_pt: 32.4
+      cells:
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Version No
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Date
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Version Author
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Approved By
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Approval Date
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Section Updated
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Revisions/
+            bold: true
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+        - runs:
+          - text: Changes
+            bold: true
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+    - min_height_pt: 28.35
+      repeat: revisions
+      cells:
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: xx
+            color: '#FF0000'
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: xx
+            color: '#FF0000'
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: xx
+            color: '#FF0000'
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: '[Relevant Board Level Committee]'
+            highlight: yellow
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: xx
+            color: '#FF0000'
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: 'New document '
+            size_pt: 12.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+    - min_height_pt: 28.35
+      without: revisions
+      cells:
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#F3F8F9'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs: []
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+  document_classification:
+    columns_pt:
+    - 90.0
+    - 417.0
+    border:
+      width_pt: 0.5
+      color: '#000000'
+    rows:
+    - min_height_pt: 19.5
+      cells:
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Class
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+      - fill: '#BDCDD2'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Description
+            bold: true
+            size_pt: 12.0
+          align: center
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+          keep_lines_together: true
+          keep_with_next: true
+    - min_height_pt: 30.4
+      cells:
+      - fill: '#F4CCCC'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Confidential (C)
+            bold: true
+            size_pt: 12.0
+          align: center
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+      - fill: '#F4CCCC'
+        classification: 'Confidential (C)'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Data that is extremely sensitive, of highest value, to Company and intended for use
+              by named individual(s) only.
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 26.05
+      cells:
+      - fill: '#FCE5CD'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Restricted (R)
+            bold: true
+            size_pt: 12.0
+          align: center
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+      - fill: '#FCE5CD'
+        classification: 'Restricted (R)'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Data that is sensitive within the Company and is intended for business use only by specific
+              groups of employees.
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 27.6
+      cells:
+      - fill: '#FFF2CC'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Internal (I)
+            bold: true
+            size_pt: 12.0
+          align: center
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+      - fill: '#FFF2CC'
+        classification: 'Internal (I)'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Data that is only sensitive outside the company. Generally available to employees and
+              approved non-employees.
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+    - min_height_pt: 18.55
+      cells:
+      - fill: '#D9EAD3'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Public (P)
+            bold: true
+            size_pt: 12.0
+          align: center
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+      - fill: '#D9EAD3'
+        classification: 'Public (P)'
+        pad_pt: 5
+        pad_tlbr_pt:
+        - 0
+        - 5
+        - 0
+        - 5
+        valign: top
+        paragraphs:
+        - runs:
+          - text: Non-sensitive data available for external release.
+            size_pt: 12.0
+          line_spacing: 1.0
+          space_before_pt: 0.0
+          space_after_pt: 0.0
+table_text:
+  font: Calibri
+  default_size_pt: 12
+toc:
+  live: true
+  instr: ' TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3," '
+  size_pt: 11
+heading_numbering:
+  mechanism: literal
+  level1_format: '{n}-{title}'
+  note: list numbering would renumber the ordinary paragraphs between headings
+logo:
+  mime: image/png
+  px:
+  - 195
+  - 97
+  width_pt: 146.25
+  height_pt: 72.75
+  anchor:
+    in: first_page_header
+    relative_h: column
+    offset_x_pt: 404.25
+    relative_v: paragraph
+    offset_y_pt: -5.15
+    wrap: square
+    wrap_dist_pt: 9
+  base64: |-
+    iVBORw0KGgoAAAANSUhEUgAAAMMAAABhCAYAAABrqxVPAAABnElEQVR4nOzTQREAAAgDIPs3XBq9
+    s8Z4EIFJslDuySCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCD
+    DDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwy
+    yCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgg
+    gwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMM
+    MsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLI
+    IIMMMsgggwwyyCCDDDLIIIMMMsgggwwyyCCDDDLIIIMMMsggQ3eGY5+OBQAAAACE+Vun0TGIwQAD
+    DDDAAAMMMMAAAwwwwAADDDDAAAMMMMAAAwwwwAADDDDAAAMMMMAAAwwwwAADDHcMDQBy84yqCJet
+    zwAAAABJRU5ErkJggg==

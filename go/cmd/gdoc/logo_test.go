@@ -20,7 +20,6 @@ import (
 
 	"gdoc/internal/config"
 	"gdoc/internal/guard"
-	"gdoc/internal/house"
 )
 
 // houseFile is the embedded style as a file, read so that a test can write a
@@ -33,17 +32,35 @@ const houseFile = "../../internal/house/house.yaml"
 // test that did would be one slip away from asking Drive for it.
 const logoFileID = "1TestLogoFileIdAAAAAAAAAAAAAAAAAAA"
 
+// placeholderLogo is the PNG every test here stands Drive up with. The firm's
+// logo is one file in its Drive and the tree carries no copy of it, so the
+// bytes come from internal/house's placeholder: a flat light grey of the size
+// the house file states, which is what makes the room's own check pass.
+const placeholderLogo = "../../internal/house/testdata/placeholder-logo.png"
+
+// logoBytesKeys are the two keys a house file names its logo's bytes with.
+// driveLogoHouse cuts at whichever of them is there, so it reads the same
+// whether the shipped style carries the bytes or already names the file.
+var logoBytesKeys = []string{"  base64: |-", "  drive: "}
+
 // driveLogoHouse writes a copy of the embedded style whose logo is one file in
-// Drive: every placement value kept, and logo.base64 replaced by logo.drive.
+// Drive: every placement value kept, and the key that names the bytes replaced
+// by logo.drive, which is this package's own test id and never the firm's.
 func driveLogoHouse(t *testing.T) string {
 	t.Helper()
 	src, err := os.ReadFile(houseFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cut := strings.Index(string(src), "  base64: |-")
+	cut := -1
+	for _, key := range logoBytesKeys {
+		if at := strings.Index(string(src), key); at >= 0 {
+			cut = at
+			break
+		}
+	}
 	if cut < 0 {
-		t.Fatalf("%s no longer carries logo.base64, so this test cannot build its Drive twin", houseFile)
+		t.Fatalf("%s names its logo's bytes with none of %v, so this test cannot build its Drive twin", houseFile, logoBytesKeys)
 	}
 	path := filepath.Join(t.TempDir(), "drive-logo.yaml")
 	text := string(src[:cut]) + "  drive: " + logoFileID + "\n"
@@ -53,18 +70,14 @@ func driveLogoHouse(t *testing.T) string {
 	return path
 }
 
-// housePNG is the logo the embedded style carries, which is what a stubbed
-// Drive answers with: the right file, so the room's own check passes and what
-// is left under test is where the bytes came from.
+// housePNG is what a stubbed Drive answers with: a PNG of the size the house
+// file states, so the room's own check passes and what is left under test is
+// where the bytes came from.
 func housePNG(t *testing.T) []byte {
 	t.Helper()
-	cfg, err := house.Load()
+	raw, err := os.ReadFile(placeholderLogo)
 	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := cfg.LogoBytes()
-	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("read the placeholder logo: %v", err)
 	}
 	return raw
 }

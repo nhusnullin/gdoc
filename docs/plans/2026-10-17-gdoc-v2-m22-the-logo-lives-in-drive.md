@@ -99,7 +99,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'HouseL
 - [x] Task 2: the seventh grant, `AllowAsset`
 - [x] Task 3: the asset room, its cache and its stamp
 - [x] Task 4: `build` and `publish` read the logo through the room, and say where it came from
-- [ ] Task 5: a placeholder, and the tests that read the embedded bytes read it instead
+- [x] Task 5: a placeholder, and the tests that read the embedded bytes read it instead
 - [ ] Task 6: the tree carries no logo
 - [ ] Task 7: the words
 - [ ] Task 8: the live measurement
