@@ -39,7 +39,7 @@
 // body says SUGGEST, or the document is the one id this run was granted.
 // TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant is the pin.
 //
-// # Two doors into the set, and six grants beside it
+// # Two doors into the set, and seven grants beside it
 //
 // Ids reach the reachable set two ways and no more. AllowFile is the id a
 // command was pointed at. Learn is the id a create the guard itself carried
@@ -47,8 +47,11 @@
 // and TestFailedCreateTeachesNothing are the pins: a create that did not
 // succeed teaches nothing.
 //
-// Six grants sit beside the set. Each names one object, opens one shape, and
-// dies with the process. None of them is a level and none is a third door.
+// Seven grants sit beside the set. Each names one object, opens one shape, and
+// dies with the process. None of them is a level. One of them, AllowAsset, is
+// a third id a run may touch at all, read out of the house file, and its
+// bullet says why the set still cannot grow through it: nothing it admits is a
+// document, and nothing that comes back carries an id.
 //
 //   - AllowCreateIn names the one folder a create may target. A create naming
 //     any other parent is refused, and naming the folder does not put the
@@ -119,8 +122,31 @@
 //     TestTheAboutReadIsAdmittedWithItsFieldsAndNothingElse,
 //     TestWithoutTheAccountGrantTheAboutReadIsRefusedAsBefore and
 //     TestTheAccountGrantDiesWithThePolicy.
+//   - AllowAsset names the one file whose bytes a run may read: GET on that
+//     file id with alt=media and supportsAllDrives=true, no third parameter,
+//     and nothing else on the id. M22: the house logo is the firm's file in the
+//     firm's Drive rather than bytes in this tree, so a build fetches it once a
+//     day. alt=media is written into this rule alone and stays out of
+//     driveGetParams, because it is what turns files.get into a download, and a
+//     document the command was handed must not become bytes because one asset
+//     may be. supportsAllDrives is there because the file sits in a Shared
+//     Drive, which Drive answers 404 for without it. It is the third way an id
+//     becomes reachable, and the one that cannot grow the set: the id is read
+//     out of house.yaml rather than out of anything Drive said, the answer is a
+//     PNG, and a PNG carries no id to learn. What
+//     bounds the read is what the run then does with the bytes, which is
+//     internal/asset holding them to the house file's own mime and pixels
+//     before they reach a document. Every other shape on that id is not judged
+//     by this rule at all, so it falls through to the refusal an id nobody
+//     handed in has always had. The pins are in asset_test.go:
+//     TestTheAssetGrantAdmitsOneMediaReadAndNothingElse,
+//     TestWithoutTheAssetGrantTheReadIsRefused,
+//     TestTheAssetGrantAdmitsNoDocument,
+//     TestTheAssetGrantDiesWithThePolicy and
+//     TestAnEmptyAssetGrantOpensNothing.
 //
-// An asset host is the one place the guard judges a method and a host and
+// A release asset host, which is GitHub's and not the firm's file AllowAsset
+// names, is the one place the guard judges a method and a host and
 // nothing further, and the reason is that gdoc does not build that URL: it is
 // where github.com's download redirects, signed, with a query no allowlist
 // here can hold. What bounds that read is what the run then does with the
@@ -142,7 +168,7 @@
 // TestAnUpdateRequestCarriesNoBearer and
 // TestTheUpdateReadsGoOutWithNoCredential are the pins.
 //
-// GrantInPlace is the seventh of that shape and the only door to LevelInPlace.
+// GrantInPlace is the eighth of that shape and the only door to LevelInPlace.
 // It upgrades an id already in files and admits nothing new, so it is not a
 // third door into the set. AllowFile refuses to hand that level out at all,
 // because taking any level there was the side door around the invariant.

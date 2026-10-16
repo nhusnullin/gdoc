@@ -96,7 +96,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'HouseL
 ## Progress Tracking
 
 - [x] Task 1: `logo:` names exactly one of `drive` and `base64`
-- [ ] Task 2: the seventh grant, `AllowAsset`
+- [x] Task 2: the seventh grant, `AllowAsset`
 - [ ] Task 3: the asset room, its cache and its stamp
 - [ ] Task 4: `build` and `publish` read the logo through the room, and say where it came from
 - [ ] Task 5: a placeholder, and the tests that read the embedded bytes read it instead
