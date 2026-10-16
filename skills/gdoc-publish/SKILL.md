@@ -86,9 +86,10 @@ every command gdoc answers.
 ## If the credential is not working
 
 Any command that reaches the network can fail with no token or a permission
-error. `build` is not one of them: it touches no network at all. Run `$GDOC auth
-status` and read it before guessing. It reports whether a token is present,
-whether it expired, and which scopes are missing.
+error. `build` reaches for one thing only, the house logo in the firm's Drive,
+and a cache of it may be enough. Run `$GDOC auth status` and read it before
+guessing. It reports whether a token is present, whether it expired, and which
+scopes are missing.
 
 The fix is `$GDOC auth login`. It prints a URL, waits for you to approve in the
 browser, and saves the token. Ask before running it: it changes which account
@@ -102,10 +103,10 @@ Never edit `~/.config/gdoc-agent/` by hand, and never tell anyone to.
 Do every step, but put nothing in Drive and write nothing into the note.
 
 The dry run is `build`, to a scratch path under the session's scratchpad. It
-renders the same bytes `publish` would upload, on this machine, with no
-network. Read its report back: the file it wrote, its size, the title and the
-running head it took from the note's front matter, the house style it used, and
-the counts of what it found in the body.
+renders the same bytes `publish` would upload, on this machine, and the one
+thing it reaches for is the house logo. Read its report back: the file it
+wrote, its size, the title and the running head it took from the note's front
+matter, the house style it used, and the counts of what it found in the body.
 
 Say at the end that nothing was uploaded, no document exists, and the note's
 front matter is untouched.
@@ -232,8 +233,8 @@ each colour means in a note is the author's, not gdoc's.
 
 **Build once first, and read the marks off it.** Run `build` to a scratch path
 under the session's scratchpad. It renders the same bytes `publish` would
-upload, on this machine, with no network, so a note that is refused is refused
-before anything exists in Drive.
+upload, on this machine and reaching only for the house logo, so a note that is
+refused is refused before anything exists in Drive.
 
 Read `body.marks` off that object. It is a count per colour, zero included.
 
@@ -296,6 +297,13 @@ this order:
   `false` means the pairing could not be written and the rollback did not hold:
   the document is live, its id is on the envelope, and somebody has to trash it
   by hand. Say that plainly, with the id.
+- **`logo`.** Where the picture in the first-page header came from. The house
+  logo is one file in the firm's Drive, fetched once a day and cached beside the
+  token, so `source` reads `drive` on the first run of a day, `cache` after
+  that, and `file` for a style carrying its own bytes. A `cache` with a `reason`
+  is a run that could not reach Drive and used what it had: say the reason and
+  the age. A run with neither refuses before anything is uploaded, and the
+  refusal names `gdoc auth login` when that is what is missing.
 - **Every warning**, each one in full. A title that came back from Drive
   different from the one on the cover is a warning, not a check.
 - **Any picture this session rendered.** A PNG made from an SVG is a change to
@@ -313,7 +321,7 @@ Repeat that. Do not guess which.
 The binary cannot see a rendered page. After a publish that produced a document,
 say these three, as things to look at:
 
-- the Altery logo in the first-page header,
+- the house logo in the first-page header,
 - the contents list, which Docs fills in when the document is opened,
 - the page numbers in the footer.
 

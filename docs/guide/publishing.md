@@ -7,9 +7,9 @@ somebody who wants to know what the front matter does and what the run checks.
 ## Building the document
 
 `gdoc build` turns a note into an Altery house-style `.docx` on your own
-machine. It reaches nothing: no Drive, no Docs, no network at all, and it runs
-no other program. `gdoc publish`, below, is the same render with the upload
-behind it.
+machine. Beyond the house logo it reaches nothing: no Drive, no Docs, no other
+network, and it runs no other program. `gdoc publish`, below, is the same
+render with the upload behind it.
 
 ```bash
 gdoc build --md note.md --out note.docx [--house house.yaml] [--force]
@@ -23,6 +23,16 @@ numbering. `--house` points at another copy of that file for one run, which is
 how a change to the style is looked at before it is committed; the output names
 which one was used, `embedded` or the path, so a document built from a draft
 says so.
+
+The one thing the style does not carry is the picture. The house logo is one
+file in the firm's Drive, named in `house.yaml` by its id, so this repository
+holds no copy of it. A build fetches it once a day and keeps it cached beside
+the token, so the second build of a day asks Drive nothing. A build that can
+read neither Drive nor that cache refuses rather than writing a document
+without the mark, and the refusal names `gdoc auth login` when that is what is
+missing. The `logo` block on the output says where the bytes came from:
+`drive`, `cache` with its age and the reason Drive was not used, or `file` for
+a style carrying its own bytes.
 
 `--out` will not overwrite a file that is already there. Add `--force` when you
 mean to replace it. `--force` is consent to replace a document, not a folder and

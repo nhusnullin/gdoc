@@ -217,11 +217,19 @@ func TestAChipThatIsGoneIsReported(t *testing.T) {
 // The three the Docs API cannot create at all, each with the menu path a person
 // follows. SPEC has gdoc write this list into the document; Nail's decision of
 // 2026-09-09 is that it reports them and the skill reads them out.
+//
+// The header step states its whole sentence as a literal. Since M22 the logo
+// is one file in the firm's Drive and no longer bytes in this tree, so the
+// step says "the house logo": a step naming the firm tells a person to go and
+// find a picture, and the one they need is the one the style points at.
 func TestTheManualStepsNameTheMenuPathForEach(t *testing.T) {
 	got := ManualSteps(Plan{})
 
 	if len(got) != 3 {
 		t.Fatalf("steps = %+v, want the three the API cannot create", got)
+	}
+	if got[0].What != "the first-page header carrying the house logo" {
+		t.Errorf("the header step reads %q, want \"the first-page header carrying the house logo\"", got[0].What)
 	}
 	for _, want := range []string{"header", "contents", "page numbers"} {
 		if !anyStep(got, want) {

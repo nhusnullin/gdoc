@@ -129,9 +129,8 @@ this project the preview on 2026-08-29. Three things gdoc does need it.
 
 The preview is not a general release. Google may change it or withdraw it, and
 its terms say so. If it goes, gdoc loses proposing in the document, though
-replies in existing threads survive on the public API. So gdoc trusts nothing:
-after every write it reads the document back, through a route the write did not
-go out on.
+replies in existing threads survive. So gdoc trusts nothing: after every write
+it reads the document back, through a route the write did not go out on.
 
 ## Build your own skill on the binary
 
@@ -152,7 +151,7 @@ and an example; without `--json`, a help in a terminal draws a screen instead.
 | `withdraw <url> <suggestion id>` | take back one pending suggestion gdoc proposed itself |
 | `annotate <url>` | leave a comment on the exact words you quote, changing nothing |
 | `export <url>` | write the document into the hub as Markdown, one file per tab, with its pictures |
-| `build` | build a note as a house-style docx on this machine, with no network |
+| `build` | build a note as a house-style docx on this machine, reaching only for the house logo |
 | `publish` | build a note as a house-style document and upload it into one folder |
 | `update` | replace this gdoc with the newest release, or say what one would take |
 | `help`, `completion` | print every command, or the seven authoring marks with `help marks`; write the shell completion script |
@@ -184,6 +183,7 @@ what you expected instead.
 - It never replaces a file in your hub. A taken name takes the next free number.
 - It sees only the documents you name, and cannot search your Drive.
 - gdoc itself never asks you a question, reads your keyboard or runs git. Claude Code asks you before it signs in and before it restyles.
+- It never ships the firm's picture. The house logo is one file in the firm's Drive, fetched once a day and cached beside the token. The firm's logo and marks are the firm's, and are not licensed with the code.
 
 ## The mechanism is on its own pages
 

@@ -163,3 +163,62 @@ func sortedNames(members map[string]string) []string {
 	sort.Strings(names)
 	return names
 }
+
+// logoWordPages are the pages that promise a reader where the logo comes from:
+// the two skills that run a build or a restyle, and the two guide pages behind
+// them. A person whose run refused because Drive was unreachable reads one of
+// these, so each has to say the whole of it in one place.
+var logoWordPages = []string{
+	"skills/gdoc-publish/SKILL.md",
+	"skills/gdoc-restyle/SKILL.md",
+	"docs/guide/publishing.md",
+	"docs/guide/restyle.md",
+}
+
+// logoWords are the four facts about the logo, in the words each page says
+// them in. Where it lives, how often gdoc asks, where the answer is kept, and
+// what a run that cannot get it does. The last is the one that matters on a
+// bad day: a reader who knows the run refuses looks for the network, and a
+// reader who does not goes looking for a missing picture in the tree.
+var logoWords = []string{
+	"one file in the firm's Drive",
+	"once a day",
+	"cached beside the token",
+	"refuses",
+}
+
+// The words. Each page says where the house logo comes from, because since M22
+// the tree carries no copy of it and a build can refuse for a reason no older
+// page explains.
+func TestTheWordsSayWhereTheLogoLives(t *testing.T) {
+	for _, page := range logoWordPages {
+		b, err := os.ReadFile(filepath.Join(repoRoot, page))
+		if err != nil {
+			t.Fatalf("%s is named by this test and is not there: %v", page, err)
+		}
+		// Folded, so a rewrap of the paragraph is not a difference: these
+		// pages are written to about eighty columns and a phrase lands
+		// across two lines as often as not.
+		text := strings.Join(strings.Fields(string(b)), " ")
+		for _, want := range logoWords {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s never says %q, so a reader whose build refused cannot tell why", page, want)
+			}
+		}
+	}
+}
+
+// The README's one line. The binary and these pages are the code's; the
+// picture and the marks they fetch are the firm's, and a colleague who forks
+// this repository gets the one and not the other.
+func TestTheREADMESaysTheLogoIsNotLicensedWithTheCode(t *testing.T) {
+	text := strings.Join(strings.Fields(releaseREADME(t)), " ")
+	for _, want := range []string{
+		"The firm's logo and marks are the firm's",
+		"not licensed with the code",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("README.md never says %q, and a colleague forking this repository cannot tell what is theirs to use", want)
+		}
+	}
+}
