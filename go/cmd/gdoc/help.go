@@ -43,6 +43,15 @@ type helpReport struct {
 type helpSettings struct {
 	Mark     string `json:"mark"`
 	MarkFrom string `json:"mark_from"`
+	// Presence and PresenceFrom are the experimental flag, and both are
+	// absent while it is off. That is the opposite of Mark's rule, and for
+	// the same reason: the question a colleague asks the help is which mark
+	// is in effect, and nobody asks it about a flag they have not turned on.
+	// An absent pair is what every other colleague's help object carries,
+	// byte for byte as it was before the flag existed:
+	// TestAnExperimentalFlagIsInTheTableAndInNoScreen.
+	Presence     bool   `json:"presence,omitempty"`
+	PresenceFrom string `json:"presence_from,omitempty"`
 }
 
 // helpCommand is one entry of the table as JSON. Words and Flags are always
@@ -115,8 +124,13 @@ func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, s
 		OK: true,
 		Data: helpReport{
 			Commands: helpEntries(matched),
-			Settings: helpSettings{Mark: set.Mark, MarkFrom: set.MarkFrom},
-			Update:   facts,
+			Settings: helpSettings{
+				Mark:         set.Mark,
+				MarkFrom:     set.MarkFrom,
+				Presence:     set.Presence,
+				PresenceFrom: set.PresenceFrom,
+			},
+			Update: facts,
 		},
 		Warnings: warns,
 		Screen:   !json,
@@ -214,7 +228,7 @@ func helpList(matched []command) string {
 	return b.String()
 }
 
-// settingSection names the two flags every command takes, and it says so,
+// settingSection names the flags every command takes, and it says so,
 // because a reader who met them under one command's name would read them as
 // that command's own. settingHeading is the same words where a block of text
 // needs a colon after them; the screen draws the name in a rule, which needs
@@ -224,18 +238,19 @@ const (
 	settingHeading = settingSection + ":"
 )
 
-// settingProse is the two setting flags as the plain text lists them, aligned
+// settingProse is the setting flags a reader is offered as the plain text
+// lists them, aligned
 // the way one command's flags are. It is written once and read by both shapes
 // of the plain help, the list and one command in full, so a person reading
-// either meets the same two sentences.
+// either meets the same sentences.
 func settingProse() string {
 	var b strings.Builder
 	b.WriteString(settingHeading + "\n")
 	width := 0
-	for _, f := range settingFlags() {
+	for _, f := range shownSettingFlags() {
 		width = max(width, len(flagWords(f)))
 	}
-	for _, f := range settingFlags() {
+	for _, f := range shownSettingFlags() {
 		fmt.Fprintf(&b, "  %-*s  %s\n", width, flagWords(f), f.summary)
 	}
 	return b.String()

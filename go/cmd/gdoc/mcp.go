@@ -22,7 +22,7 @@ import (
 	"gdoc/internal/settings"
 )
 
-// checkMCPArgs refuses anything after the word mcp. The two setting flags are
+// checkMCPArgs refuses anything after the word mcp. The three setting flags are
 // off the line before mcp is routed, so what reaches here is what is left:
 // the Claude Desktop extension passes neither of them and sends the word
 // alone, and whatever else arrives is named back rather than ignored.

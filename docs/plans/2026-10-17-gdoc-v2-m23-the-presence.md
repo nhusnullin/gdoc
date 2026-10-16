@@ -17,9 +17,11 @@ Serves 4 and 3, strains 2 and 1, as the spec says.
 
 ## Context (from discovery)
 
-Every reference below was read on 2026-10-17 before M21 and M22 merged, so
-the first task re-checks `update.go` and `main.go` line numbers before it
-starts and corrects this list in its commit.
+Every reference below was read on 2026-10-17 before M21 and M22 merged. Task 1
+re-checked every line number in this list against `main` as it stands and
+corrected the five that had moved: `present()`, both SPEC.md sentences, the
+CLAUDE.md ceiling test and the README's `gdoc update` paragraph. `update.go`
+and `main.go` had not moved at all.
 
 - `go/cmd/gdoc/main.go:244` `dispatch`: matches the table entry `c`, parses
   `a`, sets `a.set`, returns `c.run(ctx, a, errOut)` at `:280`. `:179`
@@ -39,11 +41,13 @@ starts and corrects this list in its commit.
   `TestEverySettingFlagIsInHelpAndInBothScripts`, `completion_test.go:480`,
   `help_test.go:436`. The help screens are the 15 bare goldens among the 23
   files under `cmd/gdoc/testdata/screens/`, through `helpscreen_test.go`.
-  There is no `help --json` golden: Task 1 captures that object with the flag
-  off before its change and compares after.
+  There is no `help --json` golden under `testdata/screens/`, but
+  `testdata/pipe/help.stdout.golden` is the same object frozen read-only, so
+  Task 1 captured `help --json` with the flag off before its change as a
+  sha256 and a length, both literals, rather than as 8,921 bytes inline.
 - `go/internal/settings/settings.go`: `key = "mark"`, `Given{Config, Mark}`,
   `InEffect{Mark, MarkFrom, File}`, `file{Mark *string}`, `Resolve` lays the
-  argument over the file over the default; `:107` `present()` tells a key
+  argument over the file over the default; `:117` `present()` tells a key
   with no value from a key nobody wrote. `doc.go` holds the rules and
   `TestAnUnknownKeyIsRefusedByName`, `TestTheTokenIsNotASetting`. Measured
   with goccy/go-yaml v1.19.2: `yes`, `1` and `""` into a `*bool` are refused
@@ -76,16 +80,18 @@ starts and corrects this list in its commit.
   `TestTheReleaseWalksThePlatformsFileRatherThanASecondList` refuses a
   platform named in `release.yml`. A failed release is re-run from the
   Actions page; the nightly is not touched.
-- `docs/v2/SPEC.md:719` "A zip carries six things"; `:743` "the one program
+- `docs/v2/SPEC.md:730` "A zip carries six things"; `:754` "the one program
   gdoc runs is `/usr/bin/open`". `docs/v2/PLAN.md:33` the Done table.
 - `CLAUDE.md` is 300 lines and `TestCLAUDEmdIsUnderTheCeiling`
-  (`go/boundary/docs_test.go:40`) allows 300; M22 adds rows first. `:257`
+  (`go/boundary/docs_test.go:42`) allows 300; M22 adds rows first. `:257`
   says `~/.local/bin/gdoc` links to `bin/gdoc`: true for the checkout route
   (`docs/guide/from-a-checkout.md:19`, `install.sh:20`), false on Nail's
   machine, where it is the v2.12.1 release binary with `gdoc.previous`
   beside it. `README.md` is 200 lines and `releaseREADMECeiling` is 200
   (`go/boundary/release_test.go:258`). `docs/guide/` has no page for
-  `gdoc update`; the README holds it at `:169`.
+  `gdoc update`; the README holds it at `:171`.
+  `TestAccountOfHasTwoCallers`, which Task 4 puts its own pin beside, is in
+  `go/boundary/account_test.go:52` and not in `boundary_test.go`.
 - Toolchain on Nail's machine, measured 2026-10-17: Xcode 26.6 selected,
   Swift 6.3.3, `swift format` 6.3.0, `xctest` present, no signing identity.
   A tools-6.0 package with `.copy("Fixtures")` and `Bundle.module` passes
@@ -134,11 +140,12 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/settings.go`, `go/cmd/gdoc/help.go`
 - Modify: `go/cmd/gdoc/settings_test.go`, `go/cmd/gdoc/completion_test.go`, `go/cmd/gdoc/help_test.go`
 
-- [ ] re-check the line numbers in Context against `main` as it stands and
+- [x] re-check the line numbers in Context against `main` as it stands and
       correct this plan where they moved
-- [ ] capture `gdoc help --json` with the flag off before any change, into
-      the test as a literal, for the byte compare below
-- [ ] `TestPresenceIsOffByDefault`, `TestTheFileTurnsPresenceOn`,
+- [x] capture `gdoc help --json` with the flag off before any change, into
+      the test as a literal, for the byte compare below (8,921 bytes,
+      sha256 `40a28f2a…`, in `cmd/gdoc/presenceflag_test.go`)
+- [x] `TestPresenceIsOffByDefault`, `TestTheFileTurnsPresenceOn`,
       `TestThePresenceArgumentOverridesTheFile`,
       `TestABadPresenceValueIsRefusedNamingWhereItCameFrom` (`yes`, `1`, an
       empty value and `True` on the argument, each naming the file and key
@@ -147,21 +154,21 @@ every box in it is ticked and its commit is on the branch.
       `TestPresenceFromIsSetOnlyWhenTheFlagIsOn`,
       `TestPresenceFromSaysWhichSourceWon`; `TestAnUnknownKeyIsRefusedByName`
       and `TestTheTokenIsNotASetting` unchanged
-- [ ] `file` gains `Presence *bool` under `presence`, `Given` gains
+- [x] `file` gains `Presence *bool` under `presence`, `Given` gains
       `Presence *string` taking `true` or `false` only, `InEffect` gains
       `Presence bool` and `PresenceFrom`; `Resolve` lays them in the same
       order as the mark
-- [ ] `settingFlags()` gains the entry with its sentence and an
+- [x] `settingFlags()` gains the entry with its sentence and an
       `experimental` bit; `takeSettings` takes it with the same refusals as
       `--mark`; `checkMCPArgs` still admits setting flags only;
       `helpSettings` gains `presence` and `presence_from`, both `omitempty`,
       set only when on
-- [ ] `TestAnExperimentalFlagIsInTheTableAndInNoScreen`: the 15 help screens,
+- [x] `TestAnExperimentalFlagIsInTheTableAndInNoScreen`: the 15 help screens,
       both completion scripts and the captured `help --json` with the flag
       off are byte for byte as before; `TestEverySettingFlagIsInHelpAndInBothScripts`
       skips experimental flags, and the "two setting flags" comments say
       three, one experimental. No golden moves
-- [ ] `settings/doc.go` gains the rule and why the flag is a setting and not
+- [x] `settings/doc.go` gains the rule and why the flag is a setting and not
       an account check; `make test`
 
 ### Task 2: the event, the file and the writer, `internal/presence`

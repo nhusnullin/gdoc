@@ -1,4 +1,4 @@
-// The two setting flags on the line: taken off it wherever they stand, turned
+// The three setting flags on the line, one of them experimental: taken off it wherever they stand, turned
 // into what this run writes, and handed down to every command and to the
 // session.
 //
@@ -108,7 +108,7 @@ func routed(t *testing.T, args ...string) (settings.InEffect, []string, map[stri
 	return sets[0], lines[0], nil, code
 }
 
-// Every command takes the two flags, and none of them refuses one as a flag it
+// Every command takes the three flags, and none of them refuses one as a flag it
 // does not take. They are off the line before any command's own parser sees
 // it, so the refusal a command gives is its own: a missing document, a flag it
 // needs, or no token on this machine.
@@ -124,11 +124,11 @@ func TestEveryCommandTakesTheSettingFlags(t *testing.T) {
 				return 0
 			}
 
-			args := append(c.nameWords(), configFlag, file, markFlag, "∴")
+			args := append(c.nameWords(), configFlag, file, markFlag, "∴", presenceFlag, "false")
 			var out, errOut bytes.Buffer
 			route(context.Background(), args, strings.NewReader(""), &out, &errOut)
 			said := out.String() + errOut.String()
-			for _, name := range []string{configFlag, markFlag} {
+			for _, name := range []string{configFlag, markFlag, presenceFlag} {
 				if strings.Contains(said, name+"\\\" is not a flag") || strings.Contains(said, name+"\" is not a flag") {
 					t.Errorf("%s refused %s as a flag of its own: %s", c.name, name, said)
 				}
@@ -156,6 +156,7 @@ func TestTheSettingFlagsAreTakenAnywhereOnTheLine(t *testing.T) {
 		{markFlag, "∴", configFlag, file, "read", "https://docs.google.com/document/d/1AbC/edit"},
 		{"read", markFlag, "∴", "https://docs.google.com/document/d/1AbC/edit", configFlag, file},
 		{"read", "https://docs.google.com/document/d/1AbC/edit", markFlag + "=∴", configFlag + "=" + file},
+		{presenceFlag, "true", "read", markFlag, "∴", "https://docs.google.com/document/d/1AbC/edit", configFlag + "=" + file},
 	} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
@@ -216,6 +217,7 @@ func TestASettingFlagGivenTwiceIsRefused(t *testing.T) {
 		{[]string{"read", markFlag, "∴", markFlag, "🤖", "1AbC"}, markFlag},
 		{[]string{"read", markFlag, "∴", markFlag + "=🤖", "1AbC"}, markFlag},
 		{[]string{"read", configFlag, file, configFlag + "=" + file, "1AbC"}, configFlag},
+		{[]string{"read", presenceFlag, "true", presenceFlag + "=false", "1AbC"}, presenceFlag},
 	} {
 		t.Run(strings.Join(c.args, " "), func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
@@ -246,6 +248,10 @@ func TestASettingFlagWithNoValueIsRefused(t *testing.T) {
 		{[]string{"read", "1AbC", markFlag}, "none follows it"},
 		{[]string{"read", "1AbC", configFlag}, "none follows it"},
 		{[]string{"read", "1AbC", markFlag, configFlag, "f"}, "another flag"},
+		{[]string{"read", "1AbC", presenceFlag}, "none follows it"},
+		{[]string{"read", "1AbC", presenceFlag, markFlag, "∴"}, "another flag"},
+		{[]string{"read", "1AbC", presenceFlag, "yes"}, "true or false"},
+		{[]string{"read", "1AbC", presenceFlag + "="}, "true or false"},
 		{[]string{"read", "1AbC", configFlag, ""}, "empty value"},
 		{[]string{"read", "1AbC", configFlag + "="}, "empty value"},
 	} {
@@ -285,6 +291,17 @@ func TestABadSettingsFileIsOneEnvelope(t *testing.T) {
 		{name: "markdown on the line", body: "",
 			args: func(p string) []string { return []string{"read", "1AbC", configFlag, p, markFlag, "**"} },
 			says: markFlag},
+		{name: "presence with no value", body: "presence:\n",
+			args: func(p string) []string { return []string{"read", "1AbC", configFlag, p} },
+			says: "presence"},
+		{name: "a presence the file wrote that is no boolean", body: "presence: yes\n",
+			args: func(p string) []string { return []string{"read", "1AbC", configFlag, p} },
+			says: "true or false"},
+		{name: "a presence the line wrote that is no boolean", body: "",
+			args: func(p string) []string {
+				return []string{"read", "1AbC", configFlag, p, presenceFlag, "True"}
+			},
+			says: presenceFlag},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
@@ -355,7 +372,7 @@ func TestTheDefaultSettingsFileIsReadFromTheConfigFolder(t *testing.T) {
 	}
 }
 
-// mcp takes the two setting flags and nothing else. The flags come off the
+// mcp takes the setting flags and nothing else. The flags come off the
 // line before mcp is routed, so what is left for the session to refuse is what
 // it always refused, on stderr with exit 1.
 func TestMcpTakesTheSettingFlagsAndNothingElse(t *testing.T) {
@@ -375,7 +392,7 @@ func TestMcpTakesTheSettingFlagsAndNothingElse(t *testing.T) {
 
 		var out, errOut bytes.Buffer
 		code := route(context.Background(),
-			[]string{"mcp", markFlag, "∴", configFlag, file}, strings.NewReader(""), &out, &errOut)
+			[]string{"mcp", markFlag, "∴", configFlag, file, presenceFlag, "true"}, strings.NewReader(""), &out, &errOut)
 		if code != 0 {
 			t.Fatalf("gdoc mcp with the setting flags starts, and this run exited %d: %s", code, errOut.String())
 		}
@@ -387,6 +404,9 @@ func TestMcpTakesTheSettingFlagsAndNothingElse(t *testing.T) {
 		}
 		if got.Mark != "∴" || got.MarkFrom != settings.FromArgument {
 			t.Errorf("the session was handed %q from %q", got.Mark, got.MarkFrom)
+		}
+		if !got.Presence || got.PresenceFrom != settings.FromArgument {
+			t.Errorf("the session was handed the presence %v from %q", got.Presence, got.PresenceFrom)
 		}
 	})
 
@@ -524,8 +544,11 @@ func codeFromGuide(t *testing.T, d *mcpDriver) string {
 	return guided.Data.Code
 }
 
-// Both flags are in the help a person reads and in both completion scripts, so
-// a flag every command takes is a flag every command offers.
+// Every setting flag a reader is offered is in the help a person reads and in
+// both completion scripts, so a flag every command takes is a flag every
+// command offers. An experimental flag is offered nowhere and is skipped here;
+// TestAnExperimentalFlagIsInTheTableAndInNoScreen is the other half, and it
+// holds that it reaches no screen and no script at all.
 func TestEverySettingFlagIsInHelpAndInBothScripts(t *testing.T) {
 	zsh, err := zshScript(commands())
 	if err != nil {
@@ -539,6 +562,9 @@ func TestEverySettingFlagIsInHelpAndInBothScripts(t *testing.T) {
 	prose := helpProse(commands(), true) + helpProse(helpMatches([]string{"publish"}), false)
 
 	for _, f := range settingFlags() {
+		if f.experimental {
+			continue
+		}
 		if !strings.Contains(prose, f.name) {
 			t.Errorf("the help must name %s: %q", f.name, prose)
 		}
@@ -553,7 +579,7 @@ func TestEverySettingFlagIsInHelpAndInBothScripts(t *testing.T) {
 		}
 	}
 	if !strings.Contains(prose, settingHeading) {
-		t.Errorf("the help must say the two flags are not one command's own: %q", prose)
+		t.Errorf("the help must say the flags are not one command's own: %q", prose)
 	}
 }
 

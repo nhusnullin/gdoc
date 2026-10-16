@@ -225,16 +225,16 @@ func zshGroups(table []command) []zshGroup {
 }
 
 // zshSpecs is what _arguments is handed for one command: a line per flag, the
-// two setting flags every command takes, a line for the topics it answers
-// where it has any, and last a line for the words it takes. That last line
-// offers nothing, because the words are a document URL, a comment id or a
+// two setting flags every command takes and offers, a line for the topics it
+// answers where it has any, and last a line for the words it takes. That last
+// line offers nothing, because the words are a document URL, a comment id or a
 // suggestion id, and nothing on this machine knows one. Without it zsh would
 // offer file names for them.
 //
 // A topic is offered for the first word alone, because `gdoc help marks read`
 // is not a question: TestBothCompletionScriptsListTheMarksTopic.
 func zshSpecs(c command) []string {
-	flags := append(append([]flag{}, c.flags...), settingFlags()...)
+	flags := append(append([]flag{}, c.flags...), shownSettingFlags()...)
 	specs := make([]string, 0, len(flags)+2)
 	for _, f := range flags {
 		specs = append(specs, zshFlagSpec(f))
@@ -359,11 +359,11 @@ func bashFirstWords(table []command) []string {
 }
 
 // bashFlagWords is the flags of one command, as compgen -W reads them, with
-// the two setting flags every command takes after them. A topic the command
-// answers comes first, because it is typed first:
+// the two setting flags every command takes and offers after them. A topic the
+// command answers comes first, because it is typed first:
 // TestBothCompletionScriptsListTheMarksTopic.
 func bashFlagWords(c command) string {
-	flags := append(append([]flag{}, c.flags...), settingFlags()...)
+	flags := append(append([]flag{}, c.flags...), shownSettingFlags()...)
 	names := append([]string{}, c.topics...)
 	for _, f := range flags {
 		names = append(names, f.name)
@@ -381,7 +381,7 @@ func bashFlagArms(table []command) (files, opaque string) {
 	seen := map[string]bool{}
 	// The table, and then the two flags that belong to no entry in it. A new
 	// slice, so the caller's table is not written to.
-	all := append(append([]command{}, table...), command{flags: settingFlags()})
+	all := append(append([]command{}, table...), command{flags: shownSettingFlags()})
 	for _, c := range all {
 		for _, f := range c.flags {
 			if f.value == kindNone || seen[f.name] {

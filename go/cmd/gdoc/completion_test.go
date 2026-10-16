@@ -477,9 +477,11 @@ func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
 		t.Errorf("the zsh script must carry the spec the flag makes: %q", zsh)
 	}
 
-	// The two setting flags are in every script, because every command takes
-	// them: --config is the one file flag of this table, and --mark is a text
-	// flag like --quote and stands in the same arm.
+	// Both offered setting flags are in every script, because every command
+	// takes them: --config is the one file flag of this table, and --mark is a
+	// text flag like --quote and stands in the same arm. The experimental
+	// third is in neither script, which is what
+	// TestAnExperimentalFlagIsInTheTableAndInNoScreen holds.
 	files, opaque := bashFlagArms(table)
 	if files != configFlag {
 		t.Errorf("the only file flag here is the settings file: %q", files)
@@ -506,14 +508,15 @@ func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
 	}
 }
 
-// flagKinds is one kind per flag name, over the table and the two setting
-// flags every command takes, which is what both scripts are written from. A
+// flagKinds is one kind per flag name, over the table and the setting flags
+// both scripts offer, which is what both scripts are written from. An
+// experimental flag is in neither script, so it is in neither this map. A
 // name carrying two kinds would make the assertions below unreadable, so it
 // stops the test instead.
 func flagKinds(t *testing.T, table []command) map[string]kind {
 	t.Helper()
 	kinds := map[string]kind{}
-	all := append(append([]command{}, table...), command{flags: settingFlags()})
+	all := append(append([]command{}, table...), command{flags: shownSettingFlags()})
 	for _, c := range all {
 		for _, f := range c.flags {
 			if was, seen := kinds[f.name]; seen && was != f.value {

@@ -107,34 +107,70 @@ const jsonFlag = "--json"
 // and both completion scripts, which offer it after the word help.
 const markTopic = "marks"
 
-// The two flags every command takes, and the one spelling each has. They are
+// The three flags every command takes, and the one spelling each has. They are
 // named here because three readers take them: takeSettings, which lifts them
 // off the line before any command's parser sees it, the help, which lists
 // them under their own heading, and both completion scripts, which offer them
-// after any command.
+// after any command. The third is experimental, so only the first of those
+// three readers meets it.
 const (
-	configFlag = "--config"
-	markFlag   = "--mark"
+	configFlag   = "--config"
+	markFlag     = "--mark"
+	presenceFlag = "--presence"
 )
+
+// settingFlag is a flag that belongs to no command, with the one bit a
+// command's flag cannot carry: whether it is experimental.
+//
+// An experimental flag is in this table with its sentence, and in no screen
+// and no script. It is not hidden: `gdoc help --json` carries it where it is
+// in effect, which is the one place a caller that is already using it looks.
+// What it buys is that a flag one person is trying out changes no word of the
+// help every other colleague reads, so the fifteen screens and both
+// completion scripts stay as they are:
+// TestAnExperimentalFlagIsInTheTableAndInNoScreen.
+type settingFlag struct {
+	flag
+	experimental bool
+}
 
 // settingFlags are the flags that belong to no command, because they belong to
 // all of them. They are in this file rather than beside takeSettings, so this
 // table stays the only place a flag of gdoc is written down.
 //
 // They are not in any entry's flags, and that is the difference: an entry's
-// flag reaches that command's parser, and these two are off the line before
+// flag reaches that command's parser, and these three are off the line before
 // the parser runs, including for mcp, which has no parser at all. So they are
-// in no usage line and in no entry of the help object, and they are in the
-// help a person reads and in both completion scripts:
-// TestEverySettingFlagIsInHelpAndInBothScripts.
+// in no usage line and in no entry of the help object, and the two that are
+// not experimental are in the help a person reads and in both completion
+// scripts: TestEverySettingFlagIsInHelpAndInBothScripts.
 //
 // A function, as commands() is, so nothing a caller is handed points into a
 // table somebody else is reading.
-func settingFlags() []flag {
-	return []flag{
-		{configFlag, kindFile, needOptional, "the settings file to use instead of settings.yaml in the config folder"},
-		{markFlag, kindText, needOptional, "the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's"},
+func settingFlags() []settingFlag {
+	return []settingFlag{
+		{flag: flag{configFlag, kindFile, needOptional, "the settings file to use instead of settings.yaml in the config folder"}},
+		{flag: flag{markFlag, kindText, needOptional, "the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's"}},
+		{
+			flag:         flag{presenceFlag, kindText, needOptional, "record what this run is doing into the presence file in the config folder, for the menu bar app to read; true or false, and off unless something says otherwise"},
+			experimental: true,
+		},
 	}
+}
+
+// shownSettingFlags is the setting flags a reader is offered: every one that is
+// not experimental. It is what the help a person reads, both help screens and
+// both completion scripts walk, so none of them has to know which flags are
+// which.
+func shownSettingFlags() []flag {
+	shown := make([]flag, 0, len(settingFlags()))
+	for _, f := range settingFlags() {
+		if f.experimental {
+			continue
+		}
+		shown = append(shown, f.flag)
+	}
+	return shown
 }
 
 // command is one entry in the table. words are the positional arguments in the

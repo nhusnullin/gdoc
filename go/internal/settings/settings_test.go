@@ -240,3 +240,228 @@ func TestTheTokenIsNotASetting(t *testing.T) {
 		})
 	}
 }
+
+// The presence is off unless somebody turns it on, and nothing was read.
+// PresenceFrom is the empty string there, because where a value nobody set
+// came from is a question with no answer worth printing.
+func TestPresenceIsOffByDefault(t *testing.T) {
+	in, err := Resolve(Given{}, gone(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.Presence {
+		t.Error("Presence is on with nothing anywhere that asked for it")
+	}
+	if in.PresenceFrom != "" {
+		t.Errorf("PresenceFrom = %q, want the empty string while the presence is off", in.PresenceFrom)
+	}
+}
+
+// The file turns it on, in either spelling go-yaml reads as a boolean. `True`
+// is one of them, which is the difference from the argument below.
+func TestTheFileTurnsPresenceOn(t *testing.T) {
+	for _, body := range []string{"presence: true\n", "presence: True\n"} {
+		t.Run(body, func(t *testing.T) {
+			in, err := Resolve(Given{}, write(t, body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !in.Presence {
+				t.Error("Presence is off, and the file turned it on")
+			}
+			if in.PresenceFrom != "file" {
+				t.Errorf("PresenceFrom = %q, want %q", in.PresenceFrom, "file")
+			}
+		})
+	}
+	t.Run("presence: false\n", func(t *testing.T) {
+		in, err := Resolve(Given{}, write(t, "presence: false\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if in.Presence || in.PresenceFrom != "" {
+			t.Errorf("Resolve() = %v from %q, want it off from nowhere", in.Presence, in.PresenceFrom)
+		}
+	})
+}
+
+func TestThePresenceArgumentOverridesTheFile(t *testing.T) {
+	t.Run("on over a file that says off", func(t *testing.T) {
+		on := "true"
+		in, err := Resolve(Given{Presence: &on}, write(t, "presence: false\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !in.Presence || in.PresenceFrom != "argument" {
+			t.Errorf("Resolve() = %v from %q, want it on from the argument", in.Presence, in.PresenceFrom)
+		}
+	})
+	t.Run("off over a file that says on", func(t *testing.T) {
+		off := "false"
+		in, err := Resolve(Given{Presence: &off}, write(t, "presence: true\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if in.Presence {
+			t.Error("Presence is on, and the argument turned it off")
+		}
+		if in.PresenceFrom != "" {
+			t.Errorf("PresenceFrom = %q, want the empty string while the presence is off", in.PresenceFrom)
+		}
+	})
+}
+
+// Every refusal names where the value came from and what gdoc takes, in
+// gdoc's words: go-yaml names the Go field rather than the key, which is no
+// line a colleague can go and change.
+func TestABadPresenceValueIsRefusedNamingWhereItCameFrom(t *testing.T) {
+	for _, body := range []string{"presence: yes\n", "presence: 1\n", "presence: \"\"\n"} {
+		t.Run(body, func(t *testing.T) {
+			path := write(t, body)
+			_, err := Resolve(Given{}, path)
+			if err == nil {
+				t.Fatalf("Resolve() with %q, want a refusal", body)
+			}
+			if !strings.Contains(err.Error(), path) {
+				t.Errorf("refusal %q, want the file it read", err)
+			}
+			if !strings.Contains(err.Error(), "presence") {
+				t.Errorf("refusal %q, want the key it came from", err)
+			}
+			if !strings.Contains(err.Error(), "true or false") {
+				t.Errorf("refusal %q, want what the key takes", err)
+			}
+			// The path is cut off first: a temp directory named after this
+			// test carries the word the assertion looks for.
+			if said := strings.TrimPrefix(err.Error(), path); strings.Contains(said, "Presence") {
+				t.Errorf("refusal %q names the Go field, and a colleague edits a key", said)
+			}
+		})
+	}
+	for _, value := range []string{"True", "yes", "1", ""} {
+		t.Run("--presence "+value, func(t *testing.T) {
+			given := value
+			_, err := Resolve(Given{Presence: &given}, gone(t))
+			if err == nil {
+				t.Fatalf("Resolve() with --presence %q, want a refusal", value)
+			}
+			if !strings.Contains(err.Error(), "--presence") {
+				t.Errorf("refusal %q, want the flag it came from", err)
+			}
+			if !strings.Contains(err.Error(), "true or false") {
+				t.Errorf("refusal %q, want what the flag takes", err)
+			}
+			if strings.Contains(err.Error(), "settings.yaml") {
+				t.Errorf("refusal %q names a file, and the argument is where it came from", err)
+			}
+		})
+	}
+}
+
+// `presence:` with nothing behind it is a line somebody did not finish, and
+// the strict decode cannot tell it from a key nobody wrote. present answers it.
+func TestAPresenceKeyWithNoValueIsRefused(t *testing.T) {
+	path := write(t, "presence:\n")
+	_, err := Resolve(Given{}, path)
+	if err == nil {
+		t.Fatal("Resolve() with presence: and no value, want a refusal")
+	}
+	if !strings.Contains(err.Error(), "presence: true") {
+		t.Errorf("refusal %q, want the way to turn the presence on", err)
+	}
+	if !strings.Contains(err.Error(), path) {
+		t.Errorf("refusal %q, want the file it read", err)
+	}
+}
+
+// PresenceFrom is a fact only while the presence is on. Off is off from
+// everywhere, and an experimental flag says nothing about itself until it is
+// in effect.
+func TestPresenceFromIsSetOnlyWhenTheFlagIsOn(t *testing.T) {
+	off, on := "false", "true"
+	for _, c := range []struct {
+		name  string
+		given Given
+		body  string
+		file  bool
+	}{
+		{name: "nothing anywhere"},
+		{name: "the file says off", body: "presence: false\n", file: true},
+		{name: "the argument says off", given: Given{Presence: &off}},
+		{name: "the argument says off over a file that says on", given: Given{Presence: &off}, body: "presence: true\n", file: true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			path := gone(t)
+			if c.file {
+				path = write(t, c.body)
+			}
+			in, err := Resolve(c.given, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if in.PresenceFrom != "" {
+				t.Errorf("PresenceFrom = %q while the presence is off", in.PresenceFrom)
+			}
+		})
+	}
+	t.Run("the argument says on", func(t *testing.T) {
+		in, err := Resolve(Given{Presence: &on}, gone(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if in.PresenceFrom != "argument" {
+			t.Errorf("PresenceFrom = %q, want %q", in.PresenceFrom, "argument")
+		}
+	})
+}
+
+func TestPresenceFromSaysWhichSourceWon(t *testing.T) {
+	on := "true"
+	for _, c := range []struct {
+		name  string
+		given Given
+		body  string
+		file  bool
+		from  string
+	}{
+		{name: "the file alone", body: "presence: true\n", file: true, from: "file"},
+		{name: "the argument alone", given: Given{Presence: &on}, from: "argument"},
+		{
+			name:  "both, and the argument wins",
+			given: Given{Presence: &on},
+			body:  "presence: true\n",
+			file:  true,
+			from:  "argument",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			path := gone(t)
+			if c.file {
+				path = write(t, c.body)
+			}
+			in, err := Resolve(c.given, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !in.Presence || in.PresenceFrom != c.from {
+				t.Errorf("Resolve() = %v from %q, want it on from %q", in.Presence, in.PresenceFrom, c.from)
+			}
+		})
+	}
+}
+
+// The mark and the presence are read out of one file and laid over by one
+// order, and neither one's refusal hides the other's value.
+func TestTheMarkAndThePresenceComeOutOfOneFile(t *testing.T) {
+	path := write(t, "mark: \"∴\"\npresence: true\n")
+	in, err := Resolve(Given{}, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.Mark != "∴" || in.MarkFrom != "file" {
+		t.Errorf("Mark = %q from %q, want the three-dot mark from the file", in.Mark, in.MarkFrom)
+	}
+	if !in.Presence || in.PresenceFrom != "file" {
+		t.Errorf("Presence = %v from %q, want it on from the file", in.Presence, in.PresenceFrom)
+	}
+}
