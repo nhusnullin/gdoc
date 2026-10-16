@@ -75,7 +75,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
 | 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
 | 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
-| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
+| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | superseded 2026-10-16 (the bookmark half only; a relative link is its words holds) |
 | 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
@@ -94,6 +94,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-16 | `---` is a page break | holds |
 | 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
 | 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
+| 2026-10-16 | Every heading carries one hidden bookmark, because Drive's import makes it the heading id | holds |
 | 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds |
 | 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds |
 | 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds |
@@ -2747,6 +2748,11 @@ Tests: `TestOnlyALinkedHeadingCarriesABookmark`,
 `TestARelativeLinkIsItsWordsAndNoHyperlink` and
 `TestALinkWithASchemeOrAnAnchorIsStillALink`.
 
+*Superseded 2026-10-16 in its bookmark half: every heading carries one hidden
+bookmark, because Drive's import mints the heading id from it, and the flag
+reasoning above held only for a visible one. The first two tests go with it.
+The relative-link half holds. See that entry.*
+
 ## 2026-09-27. `publish` marks its own cover, and a restyle never styles a marked span.
 
 Found in real use on 2026-09-25. A note went out with `publish`, and later the
@@ -4817,6 +4823,72 @@ paragraph's line is on that line.
 `TestWordsHoldingTheObsidianSpellingAreNamed` and
 `TestAGreyRunHoldingAFootnoteMarkIsStillNamed`.
 
+
+## 2026-10-16. Every heading carries one hidden bookmark, because Drive's import makes it the heading id.
+
+Found by Nail on 2026-10-16 in "Embedded retail card concept paper v0.9": after
+a refresh of the contents list in Google Docs, every entry's hover card said
+"Tab 1" and a click landed on the title page, not on the heading it names.
+Every document gdoc has published has it, and the measurement is MEASURED.md,
+2026-10-16, "Drive's import of a heading's bookmark". Serves principle 3,
+because the publish read-back gains a check that catches this class of silent
+failure, and principle 4, because a reader who clicks a contents entry should
+land on the section and not on the cover.
+
+**Every heading `render` writes carries one empty bookmark before its first
+run, named `_h_<slug>`.** A contents entry is a link to a heading by its id,
+and Drive's import mints that id for a heading paragraph only when the
+paragraph carries a bookmark whose name opens with `_`. That is Google's own
+docx export convention, and Word treats such a bookmark as hidden, so it shows
+in no bookmark list there and no flag sits beside the heading in Docs. The
+leading underscore is the whole trigger: the bookmark's range does not matter,
+and the name is not kept, because Google mints its own `h.` id from it.
+`bookmarkName` keeps its rule, letters, digits and underscores, at most 40
+characters with a seven-digit hash past the ceiling, and opens with `_h_`. A
+figure-only heading and a heading inside a footnote definition still carry
+none, because neither emits a heading paragraph.
+
+**A `#` link in the note anchors at that name**, so it comes back as a heading
+link naming the heading's id rather than as a bookmark link, which
+`internal/docs` already decodes and `internal/view` already prints as `#` and
+the heading's words. The `h_` bookmark that wrapped a linked heading's runs
+goes. The pre-walk still collects every heading id, so a dead `#` still warns
+by line; the set of linked headings stops deciding anything and goes with it.
+
+**`publish` counts what came back.** The read-back `publish` already makes
+gains one fact, `headings_without_id`, and a warning when the count is not
+zero. It is a fact and a warning rather than a failure, because the document is
+there. That is the check that would have caught this a month ago.
+
+**What this retires.** The first half of 2026-09-27, "a heading carries a
+bookmark only when a link names it", including its reasoning that a note with
+no internal link showed a flag on every heading for nothing: that held for a
+visible bookmark, and a hidden one shows no flag. Its second half, a relative
+link is its words, holds untouched. The 2026-09-18 entry, which the 2026-09-27
+one superseded on this point, had a bookmark on every heading for a different
+reason, that a note is edited after it is published; the reason here is the
+heading id and nothing else.
+
+**What was rejected.** Repairing a document already published: re-applying
+`namedStyleType: HEADING_1` through `updateParagraphStyle` mints no id, the id
+is minted at import and nowhere else, and the route for an existing document is
+a fresh publish from its note. Nail's call of 2026-10-16 is that the documents
+already out stay as they are. Refreshing the contents list from gdoc is not
+rejected but blocked: the Docs API has no request that builds or refreshes one,
+so the refresh stays a click in the UI, as the guide says.
+
+Nail's gate, passed on 2026-10-16 on the variant f probe document
+`118is97pMYpL14kgtolRM3JuBlFup5B8rTZD5Pr8Ah5s`: an entry names its heading and
+opens it, no bookmark flag sits beside any heading, and the `#` jump lands.
+
+Tests: `TestEveryHeadingCarriesAHiddenBookmark`,
+`TestAnAnchorLinkIsAJumpAndNotARelationship`, `TestBookmarkNameIsWordSafe`,
+`TestAFigureOnlyHeadingCarriesNoBookmark`,
+`TestAHeadingInsideAFootnoteIsNoAnchor`,
+`TestAPublishReportsHeadingsThatCameBackWithNoId`, and `internal/live`'s
+`TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` under
+`GDOC_LIVE_WRITE`. The plan is
+`docs/plans/2026-10-16-gdoc-v2-m21-heading-ids.md`.
 
 ## 2026-10-17. What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home.
 

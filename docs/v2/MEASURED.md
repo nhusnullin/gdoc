@@ -662,6 +662,76 @@ reader.
 Recheck when Google's docx import changes, or before anything downstream of
 `read` is asked about a page break.
 
+## Drive's import of a heading's bookmark
+
+Measured 2026-10-16 by hand, from one probe note of three headings, one `#`
+link and one page break, built with `gdoc build` and uploaded with conversion
+into the test folder six times, once per variant. Nothing was trashed: the six
+documents are `toc-headingid-probe-a` to `toc-headingid-probe-f` there, and
+they are the evidence this section points at. The reads are `documents.get`
+through `docs.URL`, the read every command makes.
+
+The question came from a document of Nail's, "Embedded retail card concept
+paper v0.9". After a refresh of the contents list in Google Docs, every entry's
+hover card said "Tab 1" and a click landed on the title page rather than on the
+heading the entry names.
+
+Recheck when Google's docx import changes, when Word's treatment of a hidden
+bookmark changes, and before anything else rests on a contents entry opening
+its heading.
+
+**First, the survey: every document gdoc has published has it, and it is not
+new with M19.**
+
+| Document | Headings | With a heading id | Contents entries | Entry link shape |
+|---|---|---|---|---|
+| v0.9, `1AbUOmAgEJdyCZdHFKdSlX8FrbCfQlEpTWSRAloaIHV0` | 28 | 0 | 28 | `heading: {tabId: t.0}`, no `id` |
+| v0.5, 13 October | 19 | 0 | 19 | the same |
+| v0.4, 13 October | 16 | 0 | 16 | the same |
+| `toc-font-experiment-copy`, 19 September | 12 | 0 | 12 | the same |
+| Nail's "Group Application Development Policy V4.0", written in Docs | 85 | 85 | 20 | `heading: {id: h.…, tabId: t.0}` |
+
+A contents entry is a link to a heading by its id. gdoc's headings come back
+from Drive's import with no `headingId` at all, so the refresh writes a link
+with the tab and no id, and Docs resolves that to the start of the tab. A
+document written in Docs has an id on every heading, so its entries open.
+
+**Then the cause, one variant at a time.** Drive's import mints a heading id
+for a heading paragraph only when the paragraph carries a bookmark whose name
+opens with `_`. That is the convention Google's own docx export uses: every
+heading gets `<w:bookmarkStart w:name="_2csi3wz2phe8"/><w:bookmarkEnd/>` before
+its first run, and a link to the heading is
+`<w:hyperlink w:anchor="_2csi3wz2phe8">`. Word treats a bookmark opening with
+`_` as hidden, so it shows in no bookmark list there either.
+
+| Variant | What each heading carried | Heading ids | The `#` link came back as |
+|---|---|---|---|
+| a, as gdoc built it until this milestone (`1ODMFgBjoDJktG7DtbCUroUhtEPLcju-EEB5UvMoH9FE`) | nothing, except `h_who_decides` wrapping the linked heading | none | `link.bookmark` |
+| b | an empty `_probeNNN` pair before the runs, on the headings with no bookmark | the two with the pair; the linked heading still none | `link.bookmark` |
+| c | an empty `_probeNNN` pair on every heading, beside the `h_` one | all three | `link.bookmark` |
+| d | an empty `probeNNN` pair, no underscore | none | `link.bookmark` |
+| e | `_probeNNN` wrapping the runs, like the `h_` one | the two that carried it | `link.bookmark` |
+| f, the shape M21 builds (`118is97pMYpL14kgtolRM3JuBlFup5B8rTZD5Pr8Ah5s`) | one empty `_h_<slug>` pair before the runs, on every heading, and the `#` link anchored at it | all three | `link.heading` with that heading's id |
+
+So the leading underscore is the trigger, the range does not matter, the name
+is not kept (Google mints its own `h.` id), and a jump anchored at the hidden
+bookmark becomes a heading link, which `internal/docs` already decodes and
+`internal/view` already prints as `#` and the heading's words.
+
+**An existing document cannot be repaired through the API.** Re-applying
+`namedStyleType: HEADING_1` on variant a's headings through
+`updateParagraphStyle` mints no id: the read after it carries the same 0 of 3.
+The id is minted at import and nowhere else, so the route for a document
+already published is a fresh publish from its note, which creates a new
+document.
+
+**Nail's gate.** The one step the measuring session could not take was the
+click in the Docs UI, because the browser pane there was not signed in. Nail
+opened variant f on 2026-10-16, refreshed the contents list and checked it: an
+entry names its heading and opens it, no bookmark flag sits beside any heading,
+and the `#` jump lands. The decision is DECISIONS.md, 2026-10-16, "Every
+heading carries one hidden bookmark".
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

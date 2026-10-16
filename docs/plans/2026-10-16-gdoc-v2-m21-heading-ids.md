@@ -115,19 +115,19 @@ in the test folder.
 - Modify: `docs/v2/MEASURED.md`
 - Modify: `docs/v2/DECISIONS.md`
 
-- [ ] add a section "Drive's import of a heading's bookmark" to
+- [x] add a section "Drive's import of a heading's bookmark" to
       `docs/v2/MEASURED.md` with the two tables above, the probe document ids,
       the `updateParagraphStyle` result and the date
-- [ ] add a 2026-10-16 entry to `docs/v2/DECISIONS.md`: every heading carries
+- [x] add a 2026-10-16 entry to `docs/v2/DECISIONS.md`: every heading carries
       one hidden bookmark, because Drive's import makes it the heading id, and
       a `#` link anchors at it. Name what it retires: the first half of
       2026-09-27 (a bookmark only on a linked heading, and the flag reasoning,
       which held only for a visible bookmark). The second half, a relative link
       is its words, holds
-- [ ] update the register: the 2026-09-27 row becomes
+- [x] update the register: the 2026-09-27 row becomes
       `superseded 2026-10-16 (the bookmark half only; a relative link is its words holds)`,
       and the new row is added
-- [ ] run `make test`, because `go/boundary` reads these documents
+- [x] run `make test`, because `go/boundary` reads these documents
 
 ### Task 2: Every heading carries one hidden bookmark
 
