@@ -4829,14 +4829,16 @@ and `TestTheAssetGrantDiesWithThePolicy`; `internal/asset`'s
 `TestARefusedReadUsesTheCacheAndNamesTheReason`,
 `TestABadFileRefusesEvenWithAGoodCache`, `TestACacheWriteFailureStillBuilds`
 and `TestTheCacheIsWrittenAtomically`; `cmd/gdoc`'s
-`TestBuildReportsTheLogoSource`, `TestPublishReportsTheLogoSource` and
+`TestBuildReportsTheLogoSourceFile`, `TestBuildReportsTheLogoSourceDrive`,
+`TestBuildReportsTheLogoSourceCache`, `TestPublishReportsTheLogoSource` and
 `TestBuildWithNoTokenAndNoCacheRefusesNamingTheLogin`; `go/boundary`'s
 `TestTheLogoIsNotInTheTree`, `TestTheLogoScanFindsAPlantedPNG`,
 `TestOnlyBuildAndPublishCallTheAssetRoom` and
 `TestReadExportRestyleAndHelpNeverReachTheAssetRoom`; and `internal/live`'s
 `TestPublishCarriesTheHouseLogo`, under `GDOC_LIVE_WRITE`. The specification
-is `docs/plans/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md` and
-the task list is beside it.
+is
+`docs/plans/completed/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md`
+and the task list is beside it.
 
 ## 2026-10-17. The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it.
 

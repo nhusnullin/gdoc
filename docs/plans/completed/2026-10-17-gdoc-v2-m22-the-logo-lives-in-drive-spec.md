@@ -10,8 +10,8 @@ the tree carries no logo. `house.yaml` names the firm's logo by the id of one
 file in the firm's Shared Drive, and only a run signed in as somebody that
 file is shared with gets it. The decision entry is in `docs/v2/DECISIONS.md`
 under 2026-10-17, and the task list is
-`docs/plans/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive.md`. It starts
-from `main` after M20 merged.
+`docs/plans/completed/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive.md`. It
+starts from `main` after M20 merged.
 
 ## Principles
 
@@ -101,5 +101,58 @@ admit on `files.get`, the task stops and Nail decides.
 
 ## Acceptance
 
-Filled in when the run finishes, one row per rule above, pass or the test
-that says otherwise.
+Filled in on 2026-10-17, when the run finished. One row per rule above. Every
+row names the test that holds it, and a row whose rule is held by a document
+rather than by a test says so. `make test` and `make vet` are clean, and the
+live measurement ran against real Drive on 2026-10-17.
+
+Nail's five:
+
+| Rule | Verdict | Held by |
+|---|---|---|
+| `house.yaml` keeps the sizes, the styles, the palette and the cover. Only the logo moves | pass | `TestLoadReadsTheEmbeddedFile`, `TestPageIsA4InPoints`, `TestTheTenStylesAreThere`, `TestFrontMatterIsFourteenBlocksInOrder`, all against the shipped file, and `TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes` |
+| The logo is one PNG in the firm's Shared Drive, named as `logo.drive` beside the sizes | pass | `TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes`, `TestADriveLogoCarriesNoBytes`, and `house.yaml`'s `logo.drive` |
+| Fetched at render by `build` and `publish` only, through a cache with a stamp, one request a day | pass | `TestOnlyBuildAndPublishCallTheAssetRoom`, `TestReadExportRestyleAndHelpNeverReachTheAssetRoom`, `TestBuildWithAFreshCacheAsksDriveNothing`, `TestAFreshStampMakesNoRequest`, `TestAStaleStampFetchesOnce`, `TestTheIntervalIsADay` |
+| No cache and no access refuses the run, and never falls back to an unbranded document | pass | `TestNoTokenAndNoCacheRefusesNamingTheLogin` in `internal/asset` and `TestBuildWithNoTokenAndNoCacheRefusesNamingTheLogin` in `cmd/gdoc`, which also holds that no file was written |
+| A file in Drive that is not a PNG of the stated size refuses even with a good cache | pass | `TestABadFileRefusesEvenWithAGoodCache`, three cases, and `TestBuildRefusesAWrongFileInDriveWithAGoodCache` |
+
+The design pass, each one Nail can still strike:
+
+| Rule | Verdict | Held by |
+|---|---|---|
+| `logo:` carries exactly one of `drive` and `base64`, and both or neither is refused naming the key | pass | `TestALogoNamesExactlyOneOfDriveAndBase64`, `TestADriveIdThatIsNotOneIsRefusedByName` |
+| `house` still reaches nothing. It checks the id's shape, and the PNG check moves to the room with the bytes | pass | `TestNothingHereReachesTheNetwork`, `TestADriveLogoCarriesNoBytes`, `TestALogoThatIsNotAPNGIsRefused` for the `base64` route, and `hold` in `internal/asset` for the Drive route |
+| One room, `internal/asset`: one file by id, checked against what the house says, cached, handed a client and never building one, knowing no logo as such | pass, stronger than written | `TestOnlyTheGuardBuildsTheWire` and `TestNetHTTPStaysInItsRooms` unchanged: the room names no `net/http` type at all and takes a `Drive` interface, so neither allowlist grew. `Want` carries a mime and two pixel counts and the word logo appears nowhere in the room's API |
+| One grant, `AllowAsset(id)`: one media read on one id, per run, nowhere written down, and the set cannot grow through it | pass | `TestTheAssetGrantAdmitsOneMediaReadAndNothingElse`, `TestWithoutTheAssetGrantTheReadIsRefused`, `TestTheAssetGrantAdmitsNoDocument`, `TestTheAssetGrantDiesWithThePolicy`, `TestAnEmptyAssetGrantOpensNothing`, and `TestTheLogoFetchOpensTheAssetGrantAndNothingElse` over the command |
+| The cache is `assets/<id>` with a stamp beside it, written through `internal/atomicfile`. Missing, unreadable or older than a day is stale | pass | `TestAnAssetAndItsStampSitUnderAssets`, `TestAnAssetPathRefusesAnIdThatIsNotOne`, `TestTheCacheIsWrittenAtomically`, `TestTheStampIsOneLineAPersonCanRead`, `TestAStaleStampFetchesOnce` (eight cases), `TestAFreshStampMakesNoRequest` |
+| Written to the cache when the bytes differ. Refused, offline or no token uses the cache with its age and reason. No token and no cache refuses naming the login | pass | `TestUnchangedBytesLeaveTheCacheFileAlone`, `TestARefusedReadUsesTheCacheAndNamesTheReason` (403, 404, a dial error, a timeout), `TestNoTokenAndACacheUsesTheCache`, `TestNoTokenAndNoCacheRefusesNamingTheLogin` |
+| A cache that cannot be written still builds, and the envelope says it was not saved | pass | `TestACacheWriteFailureStillBuilds`, and `logo.cache_error` in the envelope |
+| `build` and `publish` print a `logo` block of facts, and in chat the person hears about the logo only when it came from the cache | pass, and the chat half is narrower than this sentence | `TestBuildReportsTheLogoSourceFile`, `TestBuildReportsTheLogoSourceDrive`, `TestBuildReportsTheLogoSourceCache`, `TestPublishReportsTheLogoSource`, `TestPublishReportsALogoInTheFile`. See the two notes below |
+| `export`, `restyle` and `help marks` never touch the asset room, so `read` still makes no request, and `restyle`'s manual step says "the house logo" | pass | `TestReadExportRestyleAndHelpNeverReachTheAssetRoom`, `TestReadNeverFetchesTheLogo`, `TestTheManualStepsNameTheMenuPathForEach` with the new literal |
+| The tree carries no logo. The three docx carry a placeholder of 195 by 97 pixels, so drift's seven logo items still measure | pass | `TestTheLogoIsNotInTheTree` with the real PNG's SHA-256 as a literal, proved by `TestTheLogoScanFindsAPlantedPNG` first, bare and inside a zip. `TestThePlaceholderIsAPNGOfTheHouseSize`, and `TestFromDocxReadsTheMaster` and `TestTheOfflineGate` unchanged: every logo item is geometry and none is a pixel |
+| History and the 28 tags are not rewritten, and that is written down as accepted | pass, a document and not a test | `docs/v2/DECISIONS.md`, 2026-10-17, which also marks the 2026-09-16 entry's logo assessment superseded |
+| The README gains one line: the firm's logo and marks are not licensed with the code | pass | `TestTheREADMESaysTheLogoIsNotLicensedWithTheCode` |
+| The skills, the guide and the help say "the house logo", one line each | pass | `TestTheWordsSayWhereTheLogoLives` over `skills/gdoc-publish/SKILL.md`, `skills/gdoc-restyle/SKILL.md`, `docs/guide/publishing.md` and `docs/guide/restyle.md`, and `TestTheManualStepsNameTheMenuPathForEach` for the help |
+
+The measurement:
+
+| Claim | Verdict | Held by |
+|---|---|---|
+| `files.get` with `alt=media` and `supportsAllDrives=true` on the firm's file returns the PNG whose SHA-256 the boundary test holds, under the scope the token already carries | pass, measured live on 2026-10-17 | `TestPublishCarriesTheHouseLogo` under `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`: one request on the first build in a fresh config directory, none on the second, 5468 bytes, 195 by 97, the hash matched. No parameter outside the guard's list was needed, so nothing stopped for Nail |
+
+Two notes, both narrowings the run chose and neither a rule it broke:
+
+- The chat half of the envelope rule is vacuous as written and narrower in the
+  code. Chat has six tools, `read`, `comments`, `suggestions`, `reply`,
+  `annotate` and `propose`, and none of them renders a note, so no logo reaches
+  chat at all. What a person reads is the envelope's `warnings`, and the run
+  writes a line there in two cases rather than one: the cache used because
+  Drive did not answer, and bytes fetched that could not be cached. A cache
+  used because Drive was already asked today is the designed path and earns no
+  line, although the envelope still says `source: "cache"`. The reason is in
+  `cmd/gdoc/logo.go`'s comment on `logoFor`. Nail can widen it to every cache
+  read in one line.
+- `TestPublishCarriesTheHouseLogo` asks for both live variables although it
+  creates nothing in Drive. It reads the firm's own file and writes a cache on
+  this machine, which is why, and `internal/live/doc.go` says so. The rest of
+  that package's rule is unchanged: a read needs only `GDOC_LIVE_TEST`.

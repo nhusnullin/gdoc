@@ -1,11 +1,11 @@
 # gdoc v2 Milestone 22: the logo lives in Drive, not in the tree, plan
 
 2026-10-17. The task list for the specification beside it,
-`docs/plans/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md`, whose
-five decisions are Nail's and whose design rules are listed there for him to
-strike. One commit per task. The spec holds the rules. This plan repeats none
-of them. Where the code, the spec or this plan disagree, the task stops and
-says so rather than choosing. It starts from `main` after M20 merged.
+`docs/plans/completed/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md`,
+whose five decisions are Nail's and whose design rules are listed there for
+him to strike. One commit per task. The spec holds the rules. This plan
+repeats none of them. Where the code, the spec or this plan disagree, the task
+stops and says so rather than choosing. It starts from `main` after M20 merged.
 
 ## Principles
 
@@ -103,7 +103,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'HouseL
 - [x] Task 6: the tree carries no logo
 - [x] Task 7: the words
 - [x] Task 8: the live measurement
-- [ ] Task 9: the acceptance table
+- [x] Task 9: the acceptance table
 
 ## Tasks
 
