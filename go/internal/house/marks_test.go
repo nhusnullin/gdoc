@@ -230,3 +230,87 @@ func TestTheBareHighlightBelongsToAHighlight(t *testing.T) {
 		t.Errorf("error %q does not name the pencil", err)
 	}
 }
+
+// TestAPaletteWhereNoMarkClaimsACommentIsRefused. A comment's opener is how an
+// author writes an aside nobody is meant to read, and internal/body resolves
+// it to a mark by name: a palette claiming it nowhere resolves to no name, and
+// the aside then reached the document as prose, in the body's own black, with
+// the build saying ok.
+func TestAPaletteWhereNoMarkClaimsACommentIsRefused(t *testing.T) {
+	for _, spelling := range []string{"<!--", "%%"} {
+		src := bytes.Replace(embedded,
+			[]byte("    - '"+spelling+"'\n"), nil, 1)
+		if bytes.Equal(src, embedded) {
+			t.Fatalf("the pencil mark's %q was not found to remove", spelling)
+		}
+		_, err := LoadFile(write(t, src))
+		if err == nil {
+			t.Fatalf("a palette where nothing claims %q was accepted", spelling)
+		}
+		if !strings.Contains(err.Error(), spelling) {
+			t.Errorf("error %q does not name the opener nobody claims", err)
+		}
+	}
+}
+
+// TestBothCommentSpellingsBelongToOneMark. internal/export writes a comment
+// with the mark's first opener and shuts it with "-->", so the two spellings
+// split over two marks would come home as "%% words -->", which is neither
+// spelling and which the next build reads as an opener nothing closes.
+func TestBothCommentSpellingsBelongToOneMark(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("    - '<!--'\n    - '%%'\n"),
+		[]byte("    - '<!--'\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the pencil mark's two openers were not found")
+	}
+	src = bytes.Replace(src,
+		[]byte("  orange:\n    syntax:\n"),
+		[]byte("  orange:\n    syntax:\n    - '%%'\n"), 1)
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a palette splitting the two comment spellings was accepted")
+	}
+	if !strings.Contains(err.Error(), "%%") {
+		t.Errorf("error %q does not name the spelling the other mark took", err)
+	}
+}
+
+// TestTheWrittenCommentSpellingComesFirst. The projection writes the mark's
+// first opener and always the HTML closer, so Obsidian's spelling first would
+// write "%% words -->" into every note a document comes home as.
+func TestTheWrittenCommentSpellingComesFirst(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("    - '<!--'\n    - '%%'\n"),
+		[]byte("    - '%%'\n    - '<!--'\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the pencil mark's two openers were not found to reorder")
+	}
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a palette writing Obsidian's spelling home was accepted")
+	}
+	if !strings.Contains(err.Error(), "<!--") {
+		t.Errorf("error %q does not name the opener that comes first", err)
+	}
+}
+
+// TestTheCommentBelongsToATextColour. A comment is read as the run's own
+// colour, so the mark claiming it has to be one: given to a highlight, every
+// aside would reach the document shaded and come home as "==words==" rather
+// than as the comment it was written as.
+func TestTheCommentBelongsToATextColour(t *testing.T) {
+	src := bytes.Replace(embedded,
+		[]byte("    - '<!--'\n    - '%%'\n    kind: text\n"),
+		[]byte("    - '<!--'\n    - '%%'\n    kind: highlight\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("the pencil mark's kind was not found to change")
+	}
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a palette giving the comment to a highlight was accepted")
+	}
+	if !strings.Contains(err.Error(), "pencil") {
+		t.Errorf("error %q does not name the pencil", err)
+	}
+}
