@@ -214,21 +214,28 @@ part of a docx names no addresses.
 
 **The seven marks** are a colour on a stretch of words. `==words==` is
 Obsidian's own highlight, and a colour emoji at the start of one picks another
-colour, which is Obsidian's rule rather than gdoc's. `[words]{.pencil}` is the
-one Pandoc span gdoc reads, and it writes grey text rather than a highlight:
+colour, which is Obsidian's rule rather than gdoc's. The seventh is the grey
+pencil, and a pencil is a comment: HTML's `<!-- words -->` or Obsidian's
+`%% words %%`, which writes grey text rather than a highlight:
 
 ```markdown
 A ==figure== to fill in, and ==🟡one more==.
 ==🟢Agreed with Mel==, ==🟣a question for Mel==, ==🔵an aside==,
 ==🔴wrong today== and ==🟠being rewritten==.
-[Not sure this clause is needed]{.pencil}
+A clause <!-- I am not sure this one is needed --> and the doubt beside it.
+
+%% A whole aside, on lines of its own. %%
 ```
 
-A pencil is also written as a comment, HTML's `<!-- words -->` and, once
-milestone 20 is finished, Obsidian's `%% words %%`. Obsidian dims a comment
-while you edit and hides it while you read, so the words are an aside the
-note's reader never pays for and the document's reader gets in grey. The span
-goes when that milestone lands.
+The two comment spellings are one mark, so write whichever your editor suits.
+Obsidian dims a comment while you edit and hides it while you read, so the
+words are an aside the note's reader never pays for and the document's reader
+gets in grey. A comment inside a sentence is a grey run where it stands. A
+comment on lines of its own is grey paragraphs of its own, the lines of each
+joined by one space, and a blank line inside it starts the next paragraph. A
+comment holding no words marks nothing and is left out in silence. Nothing
+inside a comment is markdown, so `<!-- a ==b== c -->` carries the equals signs
+as characters, and a highlight inside a pencil is words.
 
 Run `gdoc help marks` for the seven with their colours. The binary prints them
 out of the house style, so what you read there is the colour the document
@@ -237,19 +244,19 @@ purple, because those are the marks that say a note is not finished. The other
 four are carried and not counted. Nothing in the binary says whether a note
 carrying one may be published: `/gdoc-publish` shows you the counts and asks.
 
-Six shapes are refused here too, each naming the line: a mark inside a mark,
-because one stretch of words carries one colour; an empty span; a span carrying
-any attribute other than `.pencil`; a span that does not open and close on one
-line, so a note you hard-wrap keeps each span on its own line; a mark inside a
-heading, for the reason a footnote mark in a heading is refused; and `{.pencil}`
-written where no span can open. The bracket in front of it has to be the span's
-own: a bracket after `!` is a picture's, a bracket holding a caret is a footnote
-mark's, and a bracket followed by a target or a reference is a link's. In each
-of those the attribute closes nothing and would reach the document as words, so
-write the words in a code span when you mean the syntax itself. An emoji
-anywhere but the start of a highlight is your own text, and so is a `[` that is
-not followed by `]{`, so a link stays a link. A bracket inside a code span is
-neither, because nothing inside backticks is read as syntax.
+Five shapes are refused here too, each naming the line: a mark inside a mark,
+because one stretch of words carries one colour, so a highlight whose words
+hold `<!--` is refused and a pencil's own words are asked nothing; a highlight
+holding its colour emoji and no words, which would be a colour on nothing with
+the emoji dropped; a mark inside a heading, for the reason a footnote mark in a
+heading is refused; a mark inside a picture's alt text, because the alt text
+becomes the caption and a caption carries no colour; and `[words]{.pencil}`,
+the Pandoc span the pencil was written as before milestone 20. Nothing parses
+that span now, so the brackets and the braces would reach the document as
+words, and the refusal names the comment to write instead. An emoji anywhere
+but the start of a highlight is your own text. Syntax inside a code span, a
+code block or a block of HTML is not syntax, so a note explaining the old
+spelling is not refused for explaining it.
 
 A mark reaches Word twice, as a character style and as the colour on the run
 itself. The style is how a reader finds every yellow with one search, and the

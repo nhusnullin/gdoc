@@ -71,7 +71,7 @@ written as markdown.
 | `[page break]` | a page break the file has no line for: one inside a sentence, or one that is all a heading, a list item or a table cell holds. It stays a marker, with a warning |
 | `[rule]` | a horizontal rule the document draws. A note has no spelling for one, so it stays a marker too |
 | `==words==`, `==🟢 words==` | a mark the words carry in the document, written as Obsidian writes it |
-| `[words]{.pencil}` | the grey pencil mark, written as Pandoc's span |
+| `<!-- words -->` | the grey pencil mark, written as an HTML comment |
 
 A backslash makes the one character after it the document's own. So `\{+` is
 text somebody typed into the document and `{+` is gdoc's marker. That rule has
@@ -79,9 +79,11 @@ no exceptions and runs across the whole file, so you can undo the markers by
 reading the backslashes and nothing else.
 
 **A file carrying a marker cannot become a document.** `build`, `publish`,
-`propose`, `reply` and `annotate` all refuse a file carrying one of those four
-markers, naming the line. A mark the author typed is not one of them: a note
-holding `==words==` builds and publishes like any other. That is the whole cost
+`propose`, `reply` and `annotate` all refuse a file carrying one of those
+markers, naming the line. That counts gdoc's own two comments, `<!-- tab ` and
+`<!-- image: `, each of which says a thing the document holds otherwise. A
+mark the author typed is not one of them: a note holding `==words==` or a
+comment of its own builds and publishes like any other. That is the whole cost
 of keeping the markers: nothing else in the hub minds them. There is no
 deadline to resolve them and no command that expires them. The markers are
 gdoc's own, so any later session can take them out for you, on the day you have
@@ -125,20 +127,29 @@ A mark comes home as the syntax an author types for it. A highlight in the
 document is `==words==` for yellow, and the mark's own colour emoji for the
 rest, so green is `==🟢 words==`, and purple, blue, red and orange are
 `==🟣 words==`, `==🔵 words==`, `==🔴 words==` and
-`==🟠 words==`. Grey text is `[words]{.pencil}`. The one space after
-the emoji is the space `gdoc build` takes off again, so a phrase published
-from a note comes home spelled the way it left. Yellow is the one mark written
-two ways, and the bare one wins: a note that said `==🟡 words==` comes
-home as `==words==`, because an emoji in the file would be an instruction the
-author never typed. The one exception is marked words that themselves open
-with a colour emoji: there the colour is written out, `==🟡 🟢 go==`, or the
-next build would read your own emoji as the instruction. `gdoc help marks` prints the
-seven with their colours, out of the house style, which is the one place they
-live.
+`==🟠 words==`. Grey text is a comment, `<!-- words -->`. The one space after
+the emoji, and the one inside each of the comment's delimiters, is the space
+`gdoc build` takes off again, so a phrase published from a note comes home
+spelled the way it left. Yellow is the one mark written two ways, and the bare
+one wins: a note that said `==🟡 words==` comes home as `==words==`,
+because an emoji in the file would be an instruction the author never typed.
+The one exception is marked words that themselves open with a colour emoji:
+there the colour is written out, `==🟡 🟢 go==`, or the next build would read
+your own emoji as the instruction. `gdoc help marks` prints the seven with
+their colours, out of the house style, which is the one place they live.
 
-Grey text is also written as a comment, HTML's `<!-- words -->` and, once
-milestone 20 is finished, Obsidian's `%% words %%`. That milestone is where
-the comment becomes what a pencil comes home as.
+A pencil has a second spelling in a note, Obsidian's `%% words %%`, and that
+one never comes home. The two mean the same mark on the way in, and the export
+writes the HTML one, so the file you get is dimmed the same way by every
+editor. A grey paragraph of the document comes home as a comment on a line of
+its own. The words inside a comment are literal, so a highlight in them is the
+characters it is and a link on them is dropped with the loss named: inside a
+comment `[words](url)` is text rather than a link. A pencil whose words hold
+the closer `-->` comes home plain with the loss named, because the comment
+would shut in the middle of them. So does any stretch of words that holds
+`<!--` itself, because that opener reaches the closer of the next pencil in
+the file, or on a line of its own swallows every line after it. A `-->` in the
+document's own prose is left alone: it is the characters the next build reads.
 
 A mark Google split into several runs comes home whole. Bold or code inside a
 highlight is its own run in the document, and the run beside it carries the

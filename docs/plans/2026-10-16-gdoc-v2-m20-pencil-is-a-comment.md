@@ -101,7 +101,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 - [x] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
 - [x] Task 8: the live round trip
-- [ ] Task 9: the words in the guide, the skills, the backlog and the README
+- [x] Task 9: the words in the guide, the skills, the backlog and the README
 - [ ] Task 10: the acceptance table
 
 ## Tasks
@@ -361,6 +361,31 @@ gdoc comments as markers and `<!-- words -->` as the pencil,
 `restyle-keeps-pencil.md` and the other backlog item reworded, `live/doc.go`
 reworded, the help line in `commands.go`. `go/boundary`'s
 `TestThePublishingPageSaysAPencilIsAComment` pins the guide's line.
+
+Ran 2026-10-16. Every file the Context lists carries the comment now:
+`publishing.md` says a pencil is a comment and shows both spellings in its
+example, `exporting.md` names `<!-- words -->` in the marker table and holds
+the export's own rules in a paragraph of its own, `markers.md` lists gdoc's two
+comments as markers beside the pencil, `gdoc-publish/SKILL.md` names the two
+spellings, both backlog items are reworded off the span, `live/doc.go` counts
+nine offline tests and says what the comparison's pencil rule is for, and the
+help line in `commands.go` names the comment and the refusal.
+`TestThePublishingPageSaysAPencilIsAComment` holds the page from both sides:
+the words it must say, and that no `markdown` example writes `.pencil`, because
+the prose has to name the old spelling for somebody who wrote it last month
+while no example may teach it.
+
+The README names no mark syntax at all, so the Context's "README (check)" is
+checked and nothing moved there.
+
+One golden moved, `cmd/gdoc/testdata/pipe/help.stdout.golden`, because the
+`build` note is in it. `pipe_test.go` says a changed byte there is a bug rather
+than a new golden, and that rule is about the screens: it was written so the
+terminal work could not quietly reword a command. A note the milestone was
+asked to reword is the other thing, and M19's own words task moved the same
+file for the same reason (`2750362`). The one note is the only byte that
+changed. `make vet`, gofmt and the raced suite are green over the whole tree
+with the live variables unset.
 
 ### Task 10: the acceptance table
 

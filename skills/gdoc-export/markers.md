@@ -28,11 +28,18 @@ and any later session reads this file and undoes them. `gdoc-export` and
 | `[unknown: member]` | a paragraph element gdoc has never seen, named by its member |
 | `==words==` | a highlight, in the colour the house gives the bare delimiter |
 | `==<emoji> words==` | a highlight, in the colour that emoji names |
-| `[words]{.pencil}` | the one span gdoc reads, which is grey text rather than a highlight |
+| `<!-- words -->` | the grey pencil, which is a comment rather than a highlight. One on a line of its own is a grey paragraph of the document |
 
 The seven marks are not markers to undo. They are the author's own syntax:
 written in the note, carried into the document as a colour, and written back
 here as the words left. Keep them.
+
+gdoc's own two comments are markers and not pencils: `<!-- image: ` and
+`<!-- tab `, each shut by `-->`. The build refuses a note carrying either by
+line, the way it refuses the other markers, so an author's own comment stays a
+pencil and gdoc's never comes back as one. A pencil an author wrote is also
+written `%% words %%` in a note, which Obsidian hides while somebody reads it;
+the export never writes that spelling, only the HTML one.
 
 Say nothing about what a colour means. What a mark means is the author's, said
 in their own notes, and the binary gives no colour a meaning. Run
@@ -46,10 +53,11 @@ this file, and the envelope counts it under `marks.other` by hex: those words
 were marked in the document and nothing in the note will say so.
 
 A mark the export could not write around its own words is plain words too, with
-a warning naming the index. The words hold a bracket, or they point somewhere,
-or they hold the `==` a highlight is written with, and the syntax written round
-them would not be read back: the file has to build again. Read the warning out
-and say which words lost their colour, because nothing in the note will.
+a warning naming the index. The words hold the `==` a highlight is written
+with, or the `<!--` a pencil is, or the `-->` that would shut a pencil in the
+middle of them, and the syntax written round them would not be read back: the
+file has to build again. Read the warning out and say which words lost their
+colour, because nothing in the note will.
 
 A link is `[words](target)`, an external URL as it stands and `#slug` for a
 heading in this document. A numbered list is numbered, `1.` and `2.`, and a

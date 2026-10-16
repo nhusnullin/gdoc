@@ -129,3 +129,57 @@ func TestThePublishingPageSaysAThematicBreakIsAPageBreak(t *testing.T) {
 		t.Error("docs/guide/publishing.md still lists horizontal rules among what a note may hold, and `---` has not drawn one since milestone 19")
 	}
 }
+
+// markdownExamples is every fenced ```markdown block on a page, which is what
+// the page teaches a colleague to type. Prose may name a spelling gdoc refuses,
+// because naming it is how somebody finds the refusal; an example may not.
+func markdownExamples(text string) []string {
+	const fence = "```"
+	var out []string
+	lines := strings.Split(text, "\n")
+	for i := 0; i < len(lines); i++ {
+		if lines[i] != fence+"markdown" {
+			continue
+		}
+		var block []string
+		for i++; i < len(lines) && !strings.HasPrefix(lines[i], fence); i++ {
+			block = append(block, lines[i])
+		}
+		out = append(out, strings.Join(block, "\n"))
+	}
+	return out
+}
+
+// TestThePublishingPageSaysAPencilIsAComment holds the page to what the grey
+// mark is since milestone 20. A pencil is a comment, HTML's or Obsidian's, and
+// the Pandoc span it was written as is refused by line now: a page that still
+// shows the span in an example teaches a colleague to write a note the build
+// will not take, and one that never names the span leaves somebody who wrote
+// it last month with nothing to read.
+func TestThePublishingPageSaysAPencilIsAComment(t *testing.T) {
+	text := guidePage(t, "publishing.md")
+	for _, want := range []string{
+		// What the mark is, in the words the page names it by.
+		"a pencil is a comment",
+		// The two spellings an author types, both of them stated in
+		// house.yaml and both read by the build.
+		"`<!-- words -->`",
+		"`%% words %%`",
+		// The shape that is gone, named as the refusal it is now.
+		"`[words]{.pencil}`",
+		"before milestone 20",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("docs/guide/publishing.md never says %q, and a colleague writing a grey aside has nowhere to read it", want)
+		}
+	}
+	examples := markdownExamples(text)
+	if len(examples) == 0 {
+		t.Fatal("docs/guide/publishing.md shows no markdown example, and this test reads what the page teaches an author to type")
+	}
+	for _, block := range examples {
+		if strings.Contains(block, ".pencil") {
+			t.Errorf("a markdown example on docs/guide/publishing.md writes .pencil, which the build refuses by line:\n%s", block)
+		}
+	}
+}
