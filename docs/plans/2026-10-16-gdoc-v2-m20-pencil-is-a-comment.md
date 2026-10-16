@@ -62,6 +62,18 @@ Serves 4 and strains 1 in one place, as the spec says.
   and is unchanged.
 - Hub count on 2026-10-16: two HTML comments in two notes, no `%%`, no span.
 
+- The first launch, 2026-10-16 15:03, stopped on its own Task 1 and reverted
+  to a clean tree: dropping `.pencil` from house.yaml alone turns twelve tests
+  red across nine task boundaries (eight in `internal/body`, because
+  `markTable.span` looks the mark up by the syntax the author wrote; three in
+  `internal/export`, because `Palette` writes `Shut` as `]{` + `Syntax[0]` +
+  `}`; two in `go/boundary`, because both guide gates require every opener
+  house.yaml states to appear in `publishing.md` and `exporting.md`). The
+  reorder below keeps every commit green: the old spelling stays first in the
+  file until export writes the comment, and the span goes after that.
+  `.ralphex/progress/progress-gdoc-v2-m20-pencil-is-a-comment.txt` holds the
+  failure list.
+
 ## Development Approach
 
 TDD, one commit per task, the test first and failing. Every XML name and
@@ -81,31 +93,20 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 
 ## Progress Tracking
 
-- [ ] Task 1: house.yaml and help say both spellings
-- [ ] Task 2: an HTML comment inside a sentence is a pencil run
-- [ ] Task 3: a comment on lines of its own is grey paragraphs
-- [ ] Task 4: the Obsidian spelling reaches the same node
-- [ ] Task 5: a pencil goes where a mark goes
-- [ ] Task 6: gdoc's own two comments are markers
-- [ ] Task 7: the span goes, and `]{.pencil}` is refused by name
-- [ ] Task 8: export writes a pencil home as an HTML comment
-- [ ] Task 9: the live round trip
-- [ ] Task 10: the words in the guide, the skills, the backlog and the README
-- [ ] Task 11: the acceptance table
+- [ ] Task 1: an HTML comment inside a sentence is a pencil run, and the file states three spellings
+- [ ] Task 2: a comment on lines of its own is grey paragraphs
+- [ ] Task 3: the Obsidian spelling reaches the same node
+- [ ] Task 4: a pencil goes where a mark goes
+- [ ] Task 5: gdoc's own two comments are markers
+- [ ] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
+- [ ] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
+- [ ] Task 8: the live round trip
+- [ ] Task 9: the words in the guide, the skills, the backlog and the README
+- [ ] Task 10: the acceptance table
 
 ## Tasks
 
-### Task 1: house.yaml and help say both spellings
-
-Test first: `TestThePencilSyntaxIsTheHouseStyles` states the two literals
-`<!--` and `%%` as the pencil's openers, HTML first, and
-`TestHelpMarksPrintsBothPencilSpellings` in `cmd/gdoc` reads them off
-`help marks --json`. Then change `house.yaml`'s `pencil.syntax` and the
-`house.go` comment. The body constant the test pins moves in Task 2; until
-then the body test is the failing one, which is allowed across one task
-boundary only because Task 2 follows at once.
-
-### Task 2: an HTML comment inside a sentence is a pencil run
+### Task 1: an HTML comment inside a sentence is a pencil run, and the file states three spellings
 
 `TestAnHTMLCommentIsAPencilRun`: `a <!-- quiet --> b` builds a paragraph of
 three runs, the middle one carrying the pencil mark and the words `quiet`,
@@ -119,19 +120,28 @@ a comment and keeps its `warnRawHTML` path otherwise
 One space inside each delimiter is taken off the words, as `withoutOpener`
 takes the highlight's.
 
-### Task 3: a comment on lines of its own is grey paragraphs
+In the same commit `house.yaml`'s `pencil.syntax` becomes
+`['.pencil', '<!--', '%%']`, the old spelling still first so `Palette` keeps
+writing the span and every span test stays green, and the `house.go` comment
+says so. `TestThePencilSyntaxIsTheHouseStyles` reads the list rather than its
+first element. `docs/guide/publishing.md` and `docs/guide/exporting.md` each
+gain one line naming the two comment spellings, so the two boundary gates that
+require every stated opener to appear in the guide pass. `gdoc help marks`
+prints all three without a change of its own.
+
+### Task 2: a comment on lines of its own is grey paragraphs
 
 `TestACommentOnLinesOfItsOwnIsGreyParagraphs`: an `HTMLBlockType2` of three
 lines, a blank line and two more lines builds two body paragraphs, each with
 one pencil run, the first holding the three lines joined by single spaces.
 The `*ast.HTMLBlock` arm of `block` does this for a comment and leaves every
-other block type as it is. The empty case joins Task 2's test.
+other block type as it is. The empty case joins Task 1's test.
 
-### Task 4: the Obsidian spelling reaches the same node
+### Task 3: the Obsidian spelling reaches the same node
 
-`TestAnObsidianCommentIsAPencilRun`: `a %% quiet %% b` builds what Task 2
+`TestAnObsidianCommentIsAPencilRun`: `a %% quiet %% b` builds what Task 1
 built. The block form, `%%` alone on a line to `%%` alone on a line, builds
-what Task 3 built. Design: the inline parser claims `%%` when a closing `%%`
+what Task 2 built. Design: the inline parser claims `%%` when a closing `%%`
 sits on the same line and leaves a node the walk treats exactly as a comment
 `RawHTML`; the block parser claims a line that is `%%` alone and runs to the
 next. The cheapest way to keep one meaning is for both parsers to produce
@@ -140,7 +150,7 @@ so the walk reads the words; if that cannot be done without reaching into
 goldmark's unexported state, a `Pencil` node of this package's own is the
 fallback and the comment arm wraps the same way. The task log says which.
 
-### Task 5: a pencil goes where a mark goes
+### Task 4: a pencil goes where a mark goes
 
 `TestAPencilGoesWhereAMarkGoes`, table-driven: refused by line in a heading,
 in a picture's alt text and inside a highlight; carried in a table cell, a
@@ -150,7 +160,7 @@ footnote's own loss is warned today. `TestAHighlightInsideAPencilIsWords`:
 `checkMarks` learn the comment shape; `countMarks` is unchanged because the
 pencil is no debt.
 
-### Task 6: gdoc's own two comments are markers
+### Task 5: gdoc's own two comments are markers
 
 `TestMarkersNamesEachOpener` grows by `{"<!-- tab ", "-->"}` and
 `{"<!-- image: ", "-->"}`, and `TestGdocsOwnCommentsAreMarkersAndNotPencil`
@@ -159,21 +169,9 @@ is refused by line as a marker and builds no grey run.
 `TestBuildRefusesAMarkerByLine`, `TestPlaintextRefusesAMarker` and
 `TestProposeRefusesAMarkerInTheFile` gain the two cases. `view`'s own
 writing of the two is untouched; `skills/gdoc-export/markers.md` lists them
-as markers in Task 10.
+as markers in Task 9.
 
-### Task 7: the span goes, and `]{.pencil}` is refused by name
-
-`TestTheOldSpanIsRefusedByLineNamingTheComment`: `[words]{.pencil}` is
-refused by line, and the refusal names `<!-- words -->`. Then delete both
-span parsers, the `Span` and `spanOpen` nodes, `spanAhead`, `checkSpans`,
-`spanWritten`, `spanClosed`, `spanAttribute`, `spanCloser` and
-`pencilAttribute`, and every test under `TestASpan*`, `TestAnEmptySpan*`,
-`TestAPencilAttribute*` and `TestAPencilSpanIsARunCarryingItsMark`. The new
-refusal is one regular expression on the lines `checkLines` reads, beside
-`checkFootnotes`. `doc.go`'s span section is rewritten as the comment
-section, naming the tests above.
-
-### Task 8: export writes a pencil home as an HTML comment
+### Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 
 `TestAPencilRunComesHomeAsAnHTMLComment`: a run at #9A9A9A inside a sentence
 writes `<!-- words -->` in place. `TestAGreyParagraphComesHomeAsACommentOfItsOwn`:
@@ -182,12 +180,30 @@ own. `TestAPencilWhoseWordsHoldTheCloserIsNamedAsALoss`:
 words holding `-->` come home plain with the loss named.
 `TestFormattingOnAPencilIsDroppedAndNamed`: a bold grey run comes home as
 `<!-- words -->` with the bold named as lost.
-`TestTheObsidianSpellingIsNeverWritten` reads the palette. `Palette` builds
+`TestTheObsidianSpellingIsNeverWritten` reads the palette. In the same
+commit `house.yaml` reorders to `['<!--', '%%', '.pencil']`, `Palette` builds
 the text-colour mark as `Open: m.Syntax[0] + " "`, `Shut: " -->"`, and the
 `view` loss rule for words that would read as a mark's syntax learns `-->`
-and forgets `]{`.
+and forgets `]{`. The span tests in `internal/export` that read the old
+`Shut` are rewritten here, because this is the commit that changes what
+export writes; the span still parses on the way in until Task 7.
 
-### Task 9: the live round trip
+### Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
+
+`TestTheOldSpanIsRefusedByLineNamingTheComment`: `[words]{.pencil}` is
+refused by line, and the refusal names `<!-- words -->`. Then delete both
+span parsers, the `Span` and `spanOpen` nodes, `spanAhead`, `checkSpans`,
+`spanWritten`, `spanClosed`, `spanAttribute`, `spanCloser` and
+`pencilAttribute`, and every test under `TestASpan*`, `TestAnEmptySpan*`,
+`TestAPencilAttribute*` and `TestAPencilSpanIsARunCarryingItsMark`. The new
+refusal is one regular expression on the lines `checkLines` reads, beside
+`checkFootnotes`. `house.yaml` drops `.pencil`, leaving `['<!--', '%%']`;
+`TestThePencilSyntaxIsTheHouseStyles` states those two literals, and
+`TestHelpMarksPrintsBothPencilSpellings` in `cmd/gdoc` reads them off
+`help marks --json`. `doc.go`'s span section is rewritten as the comment
+section, naming the tests above.
+
+### Task 8: the live round trip
 
 `TestLiveRoundTrip`'s pencil pair becomes `<!-- words -->` inline and a
 comment on a line of its own, and the test publishes a note holding both and
@@ -195,7 +211,7 @@ reads both home. `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`. If the paragraph form
 comes home as anything but a comment on a line of its own, stop and write
 what came back into the task log for Nail.
 
-### Task 10: the words in the guide, the skills, the backlog and the README
+### Task 9: the words in the guide, the skills, the backlog and the README
 
 Every file the Context lists: one line saying a pencil is a comment in both
 spellings, the example in `publishing.md` rewritten with one, the six
@@ -205,7 +221,7 @@ gdoc comments as markers and `<!-- words -->` as the pencil,
 reworded, the help line in `commands.go`. `go/boundary`'s
 `TestThePublishingPageSaysAPencilIsAComment` pins the guide's line.
 
-### Task 11: the acceptance table
+### Task 10: the acceptance table
 
 One row per rule in the spec, pass or the test that says otherwise, written
 into the spec file. Both plan files move to `docs/plans/completed/`.
