@@ -115,6 +115,17 @@ The settings file, `settings.yaml`, lives in the config folder; `--config
 <file>` names another, and an argument such as `--mark` beats the file. The
 token is never a setting (2026-10-04, DECISIONS.md; the token moves to the
 macOS Keychain in M17).
+
+**The presence is a file gdoc appends to and never reads.** Under the
+`presence` setting, every command that names a document, `update` and `auth
+login` write a start and an end line, and a chat hold writes held, released
+or expired, into `presence/<yyyy>-<mm>.jsonl` in the config directory. The
+line is a fixed projection, never the envelope: no document word but a title,
+no quote, no hold text, no error sentence, no path, no account. The binary
+exports no reader and nothing it decides depends on the file. A separate
+application, `GdocPresence.app`, travels in the darwin zips and is installed
+by `gdoc update` under the same setting; gdoc never launches it. Off is
+today's bytes. Decided 2026-10-17, DECISIONS.md.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
@@ -148,14 +159,17 @@ Serves principle 3. This is the safety property everything else stands on.
   in both directions.
 - **Two doors into the id set:** ids handed in on the command line, and ids
   learned from a create the guard itself carried. `files.list` is refused
-  outright. An empty set refuses everything.
+  outright. An empty set refuses everything. A third door admits one object
+  that is not a document, the house logo, under `AllowAsset` below, and the
+  set cannot grow through it. Added 2026-10-17, DECISIONS.md.
 - **Every id carries a write level:** an id learned from a create is fully
   writable, because gdoc made it; a handed-in id is read and suggest only, never
   direct-editable; and the styling grant is the one exception, given for one id
   and one run, never inherited and never remembered.
-- **Six grants stand beside the set**, each naming one object for one run,
+- **Seven grants stand beside the set**, each naming one object for one run,
   never inherited and nowhere written down: `AllowCreateIn`, `AllowReject`,
-  `AllowCopy`, `AllowMarker`, `AllowUpdateFrom` and `AllowAccountRead`.
+  `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`, `AllowAccountRead` and
+  `AllowAsset`.
   `AllowUpdateFrom` is the fifth, and the only one that reaches a host that is
   not Google's. It names one GitHub repository and admits GET on that
   repository's releases listing, its download path, and the two asset hosts a
@@ -178,6 +192,16 @@ Serves principle 3. This is the safety property everything else stands on.
   that finds a token with every scope. No other command gains it, and every
   other `about` request keeps its refusal. Added 2026-10-03, the second reader
   in M15, DECISIONS.md.
+- **`AllowAsset` is the seventh, and it reads the house logo.** It names the
+  one Drive file id `house.yaml` carries as `logo.drive` and admits
+  `GET https://www.googleapis.com/drive/v3/files/{id}` with `alt=media` and
+  `supportsAllDrives=true`, under the `drive` scope the token already has,
+  and nothing else on that id: no metadata read, no Docs read, no patch, no
+  copy. Two commands open it, `build` and `publish`, the two that write a
+  docx, and each asks Drive at most once a day through the cache beside the
+  token. `export`, `restyle`, `help marks` and `read` never reach it. A PNG
+  carries no id, so the reachable set is untouched. Added 2026-10-17,
+  DECISIONS.md.
 - **The level-1 write bar is what gdoc asks for, not what the server is known to
   enforce.** What holds a handed-in document to suggestions is
   `writeControl.writeMode == "SUGGEST"`, a field the client supplies, absent from
@@ -564,8 +588,22 @@ person supplies the context a paired note would have given.
 
 `house.yaml` is the house style: page geometry, all ten named styles, the cover,
 header and footer, the three tables cell by cell, the contents field, heading
-numbering, and the logo as base64. The generator reads it plus markdown and emits
-a docx.
+numbering, and the logo. The generator reads it plus markdown and emits a docx.
+
+**The logo is named, not carried.** `logo:` holds the sizes and the anchor and
+exactly one of `drive`, the id of one PNG in the firm's Shared Drive, and
+`base64`, the bytes. The embedded file names the firm's file by id, so the
+tree, the releases and the binary carry no logo, and a boundary test holding
+the PNG's hash fails on any tracked file or docx member that does. `build` and
+`publish` fetch the bytes under `AllowAsset`, check them as a PNG of the stated
+size, and keep them in `assets/<id>` beside the token with a stamp: one
+request a day, the cache on any other day and whenever Drive cannot be
+reached, with the envelope's `logo` block saying `drive`, `cache` or `file`
+and why. No cache and no access refuses the run, and so does a file in Drive
+that is not the PNG the house states, because an unbranded document in the
+firm's name is the wrong answer and a wrong file in Drive is somebody's to
+fix now. `base64` stays for a test house and for a firm that embeds, and
+`--house <file>` is the only override. Decided 2026-10-17, DECISIONS.md.
 
 **`---` on a line of its own in a note's body is a page break**, not a
 horizontal rule. Every thematic break goldmark parses is that one break,
@@ -1030,6 +1068,12 @@ where it cannot.
   export says that copy holds nothing the document does not. A skill rule,
   narrowed 2026-09-19, DECISIONS.md.
 - Never run git, in the binary or in the skills.
+- Never carry the firm's logo in the tree. Test-enforced: a boundary test holds
+  the PNG's hash and walks every tracked file and every docx member. Added
+  2026-10-17, DECISIONS.md.
+- Never read the presence file in the binary, and never let anything gdoc
+  decides depend on it. Test-enforced: the package exports no reader and
+  `O_APPEND` lives in one room. Added 2026-10-17, DECISIONS.md.
 - Never prompt, in the binary, and never in the installer either.
 - Never install unasked. `gdoc update` replaces the binary when a person types
   it and at no other moment. The one thing that runs by itself is the check in

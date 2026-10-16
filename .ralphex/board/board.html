@@ -320,11 +320,12 @@ const snapshot = {
 };
 // ---- render ----
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 $("refreshed").textContent = snapshot.refreshed;
 $("started").textContent = snapshot.started;
 $("run-pill").textContent = snapshot.state;
 $("phases").innerHTML = snapshot.phases.map(p => `
-  <div class="phase ${p.s}"><div class="n">${p.n}</div><div class="t">${p.t}</div><div class="d">${p.d}</div></div>`).join("");
+  <div class="phase ${p.s}"><div class="n">${esc(p.n)}</div><div class="t">${esc(p.t)}</div><div class="d">${esc(p.d)}</div></div>`).join("");
 const t = snapshot.tasks;
 const committed = t.filter(x => x.s === "done").length;
 const ticked = t.reduce((a,x)=>a+x.done,0), steps = t.reduce((a,x)=>a+x.total,0);
@@ -340,12 +341,12 @@ const label = {done:"Done", active:"In progress", pending:"Waiting"};
 $("tasks").innerHTML = t.map(x => `
   <tr class="${x.s}">
     <td class="num mono">${x.n}</td>
-    <td><div class="name">${x.name}</div><div class="what">${x.what}</div><div class="pkg mono">${x.pkg}</div></td>
+    <td><div class="name">${esc(x.name)}</div><div class="what">${esc(x.what)}</div><div class="pkg mono">${esc(x.pkg)}</div></td>
     <td><div class="steps"><div class="meter"><i class="${x.s==="done"?"d":""}" style="width:${Math.round(x.done/x.total*100)}%"></i></div><span class="mono">${x.done}/${x.total}</span></div></td>
     <td><span class="pill ${x.s}">${label[x.s]}</span></td>
-    <td class="commit mono">${x.commit || "·"}</td>
+    <td class="commit mono">${esc(x.commit || "·")}</td>
   </tr>`).join("");
 $("reviews").innerHTML = snapshot.reviews.map(r => `
-  <div class="row"><div><div class="t">${r.t}</div><div class="d">${r.d}</div></div><span class="pill ${r.s}">${r.v}</span></div>`).join("");
-$("warns").innerHTML = snapshot.warns.map(w => `<div><span class="m">${w.m}</span><span><b>${w.b}</b> · ${w.d}</span></div>`).join("");
+  <div class="row"><div><div class="t">${esc(r.t)}</div><div class="d">${esc(r.d)}</div></div><span class="pill ${r.s}">${esc(r.v)}</span></div>`).join("");
+$("warns").innerHTML = snapshot.warns.map(w => `<div><span class="m">${esc(w.m)}</span><span><b>${esc(w.b)}</b> · ${esc(w.d)}</span></div>`).join("");
 </script>
