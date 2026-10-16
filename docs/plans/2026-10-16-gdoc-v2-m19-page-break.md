@@ -31,8 +31,10 @@ Serves: 1 and 4, as the spec says. Strains: none.
 - goldmark lifts footnote definitions out of the body into a
   `*east.FootnoteList` at the end, so a `---` written before them is the last
   `*ast.ThematicBreak` child of the document with the list after it.
-- `go/internal/body/testdata/golden/01-kitchen-sink.xml` holds two `w:pBdr`
-  paragraphs, the only goldens that do. `spacing_test.go:102`
+- `go/internal/body/testdata/golden/01-kitchen-sink.xml` holds one `w:pBdr`
+  paragraph, the only golden that does. Discovery read two: the fixture's
+  `---` at its lines 1 and 28 are the front matter's own fences, and line 133
+  is its one body break. Corrected in Task 2. `spacing_test.go:102`
   `TestARuleAndAQuoteEndLikeAParagraph` reads the rule's spacing.
 - `go/internal/view/text.go:63-65`: `[page break]`, `[column break]` and
   `[rule]` are placeholders; `view/doc.go:178` says why a rule is not `---`.
@@ -104,20 +106,21 @@ Checkboxes below. A task is done when its commit is on the branch.
   `go/internal/body/testdata/golden/01-kitchen-sink.xml`
 - Create: `go/internal/body/pagebreak_test.go`
 
-- [ ] `TestAThematicBreakIsAPageBreakParagraph`: a note of two paragraphs
+- [x] `TestAThematicBreakIsAPageBreakParagraph`: a note of two paragraphs
       with `---` between them renders three paragraphs, the middle one empty
       with `w:pageBreakBefore w:val="1"` in its `w:pPr`, no `w:pBdr` anywhere
       in the body. `TestEveryThematicBreakSpellingIsTheSameBreak` builds
       `---`, `***`, `___` and `- - -` and gets the same XML for each.
-- [ ] The `*ast.ThematicBreak` arm emits `r.para(paraOpts{PageBreak: true})`
+- [x] The `*ast.ThematicBreak` arm emits `r.para(paraOpts{PageBreak: true})`
       with the house's zero spacing. `rule()`, `ruleWidthPt` and `ruleColor`
       are deleted; `rule_grey` leaves `house.yaml` and nothing refuses the
       file for its absence. `TestARuleAndAQuoteEndLikeAParagraph` becomes a
       test about the quote alone, or is renamed to what it now pins.
-- [ ] The kitchen-sink golden is regenerated and the diff is only the two
-      paragraphs: a `w:pBdr` paragraph out, a `w:pageBreakBefore` paragraph
-      in, each time.
-- [ ] `git commit -m "feat(body): a thematic break is a page break"`
+- [x] The kitchen-sink golden is regenerated and the diff is the one
+      paragraph the fixture holds: a `w:pBdr` paragraph out, a
+      `w:pageBreakBefore` paragraph in. The Context's count of two was the
+      front matter's fences read as breaks, corrected above.
+- [x] `git commit -m "feat(body): a thematic break is a page break"`
 
 ### Task 3: a break before nothing, a break before a break, and the count
 

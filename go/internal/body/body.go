@@ -776,7 +776,7 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *ast.ThematicBreak:
-		r.emit(r.rule())
+		r.emit(r.pageBreak())
 		r.afterTable = false
 		return nil
 

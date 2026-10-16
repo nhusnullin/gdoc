@@ -22,7 +22,6 @@ palette:
   running_head_orange: '#FF771C'
   subtitle_grey: '#666666'
   legend_navy: '#0F1340'
-  rule_grey: '#A0A0A0'
   highlight_yellow: '#FFFF00'
   placeholder_red: '#FF0000'
 marks:
