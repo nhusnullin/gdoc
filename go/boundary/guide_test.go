@@ -98,3 +98,34 @@ func TestTheExportPageSaysWhatComesHome(t *testing.T) {
 		}
 	}
 }
+
+// TestThePublishingPageSaysAThematicBreakIsAPageBreak holds the page to what
+// the build does with `---` since milestone 19. The page listed "horizontal
+// rules" among what a note may hold while the line drew a grey border; it
+// starts a new page now (DECISIONS.md, 2026-10-16), so a page that still
+// promises a rule teaches an author to expect a line nothing draws. The two
+// drops are on it too, because a note with three dividers and two pages in the
+// document is a difference nobody can see from the file.
+func TestThePublishingPageSaysAThematicBreakIsAPageBreak(t *testing.T) {
+	text := guidePage(t, "publishing.md")
+	for _, want := range []string{
+		// What an author types, and what the document does with it.
+		"`---`",
+		"page break",
+		// The other two spellings goldmark reads as the same break.
+		"`***`",
+		"`___`",
+		// The two drops, in the words the page names them by.
+		"before nothing",
+		"footnote definitions",
+		// The count the build and the publish envelopes carry for it.
+		"body.page_breaks",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("docs/guide/publishing.md never says %q, and a colleague writing a note has nowhere to read it", want)
+		}
+	}
+	if strings.Contains(text, "horizontal rules") {
+		t.Error("docs/guide/publishing.md still lists horizontal rules among what a note may hold, and `---` has not drawn one since milestone 19")
+	}
+}

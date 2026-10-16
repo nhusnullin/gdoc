@@ -291,7 +291,7 @@
 // and the whole rule lives in scan.go because the footnote scan and the span
 // scan read the same lines. An indented block opens wherever a new block may:
 // after a blank line, at the start of the file, and after a line that closed a
-// block of its own, which is a heading, a horizontal rule, the underline of a
+// block of its own, which is a heading, a thematic break, the underline of a
 // setext heading or a fence that shut. The one thing it cannot do is interrupt
 // a paragraph, and a scan that asked only for the blank line refused the line
 // after a heading and the line after a closed fence.
@@ -338,12 +338,14 @@
 // is a sentence, and the house style has no geometry for a table in one. The
 // line is the block's own, so a note written over several lines sends the
 // author to the line they have to change. A picture is an inline and takes the
-// line of the paragraph it sits in, and the definition's own line is the answer
-// only for a block carrying no source position anywhere under it, which a
-// horizontal rule is.
+// line of the paragraph it sits in, and a thematic break, which carries neither
+// lines nor text, takes the position goldmark set on it, so a break further
+// down a long note names the line it is on. The definition's own line is the
+// answer only for a block carrying nothing anywhere under it and no position
+// either.
 // TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut is the pin, and
-// it asks each of them, a picture in the note's second paragraph and a
-// horizontal rule among them.
+// it asks each of them, a picture in the note's second paragraph and a page
+// break among them.
 //
 // A link inside a footnote is its words. A link is a relationship in
 // word/_rels/document.xml.rels, and the footnotes part names no relationships
@@ -491,6 +493,80 @@
 // TestTwoDeadAnchorsOnOneLineWarnOncePerDestination and
 // TestTheSameDeadAnchorOnTwoLinesWarnsTwice are the pins.
 //
+// # `---` is a page break
+//
+// A line of three hyphens on its own in a note is a page break and not a
+// horizontal rule (DECISIONS.md, 2026-10-16). Every thematic break goldmark
+// parses is that one break, `---`, `***` or `___`, three or more and with or
+// without spaces, because the node carries no spelling and reading the source
+// again would be a second parse to keep in step. The shape is the one the
+// front matter already uses, an empty paragraph carrying pageBreakBefore
+// through paraOpts, so nothing new is written into the XML and Drive's import
+// of it is the route the house's own breaks have taken since M13. The rule
+// goes with it: nothing else in this package draws a line, and a document that
+// holds a rule of its own is internal/view's business rather than this
+// package's. TestAThematicBreakIsAPageBreakParagraph and
+// TestEveryThematicBreakSpellingIsTheSameBreak are the pins.
+//
+// Two breaks are dropped, and neither is warned about, because the author's
+// intent is met either way and a warning on a divider somebody wrote out of
+// habit is noise on every note in the hub.
+//
+// A break before nothing is nothing. A break that is the last block of the
+// body, or that only footnote definitions follow, would add a page holding
+// nothing. The second case is not the author's doing at all: `---` before the
+// notes is the line internal/view prints and internal/export writes, so an
+// exported note has to publish again without a blank last page. goldmark lifts
+// footnote definitions into a FootnoteList at the end of the document, which is
+// what the look-ahead reads. TestAPageBreakBeforeNothingIsNothing and
+// TestTheFootnoteSeparatorIsNotAPageBreak are the pins.
+//
+// Nothing is the next block the document holds rather than the break's own
+// next sibling. A break that ends a list item has no sibling at all, and
+// reading only siblings dropped the author's page turn between two items in
+// silence while keeping the same break when one more paragraph of that item
+// followed it. A list the break ends still ends on the item above it: the
+// break paragraph holds nothing and states zero space on both sides, so the
+// space the body puts under a list is the item's. A list and an item are not
+// blocks the document prints, so the look-ahead descends into them: the page
+// opens on the first block the next item holds, and an item opening with a
+// break is a break the rule below has to see. A block quote is not descended
+// into, because the break inside one is left out and the page opens on the
+// quoted words under it.
+// TestABreakEndingAListItemIsTheBreakBeforeTheNextOne,
+// TestAListEndingOnABreakEndsOnTheItemAboveIt,
+// TestTwoItemsEachHoldingABreakAreOneBreak and
+// TestABreakEndingTheLastListItemOfTheNoteIsNothing are the pins.
+//
+// A break before a break is one break. A break standing directly before the
+// first body heading, while the house breaks before that heading, would turn
+// one page into two empty ones, so the heading's own break is the one that
+// stands. Two breaks in a row are one for the same reason. Nothing else is
+// collapsed: a break between two paragraphs is always honoured, however many
+// of them the note holds, because that is the author saying where a page ends.
+// TestABreakBeforeTheFirstHeadingIsTheHeadingsOwn, TestTwoBreaksInARowAreOne
+// and TestABreakBetweenTwoParagraphsIsAlwaysHonoured are the pins.
+//
+// Result.Counts.PageBreaks counts the paragraphs the walk emitted and not the
+// breaks it parsed, so the number on an envelope is the pages the document got.
+// A break inside a footnote definition or a block quote is warned about by line
+// and left out, the way a picture in a footnote is: the notes sit under the
+// page Word puts them on, and the break paragraph is a body paragraph that
+// would open a page in the middle of a quote. Every one of them is warned
+// about, so the quote is asked before the look-ahead: the look-ahead reads a
+// break that ends a quote as a break before nothing and left that one out in
+// silence. The line is the break's own position, because goldmark appends no
+// lines to a thematic break and builds no text inside one, and reading its
+// lines named line 1 for every break in every note. A table cell needs no rule
+// at all, because a pipe table's cell holds inline text and goldmark builds no
+// thematic break in one; the sentence that said the walker warns about one was
+// corrected the day it was measured (DECISIONS.md, 2026-10-16).
+// TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut,
+// TestEveryBreakInsideAQuoteIsWarnedAbout,
+// TestABreakInsideAQuoteNamesItsLine,
+// TestThreeHyphensInACellAreNotABreak and
+// TestBuildAndPublishCarryThePageBreakCount are the pins.
+//
 // # The body breathes: 12pt under a paragraph, 3pt between items, 12pt under
 // the last
 //
@@ -505,7 +581,7 @@
 // TestTheLastItemOfAListEndsItLikeAParagraph,
 // TestANestedListEndsOnItsInnermostLastItem,
 // TestAListThatRenderedNothingLeavesTheBlockBeforeItAlone,
-// TestAPictureSitsOnItsCaption, TestARuleAndAQuoteEndLikeAParagraph,
+// TestAPictureSitsOnItsCaption, TestAQuoteEndsLikeAParagraph,
 // TestACellHasFivePointsOnEverySide and TestACellParagraphIsSingleSpaced are
 // the pins.
 //

@@ -40,9 +40,10 @@ var fence = regexp.MustCompile("^[ \t]*(`{3,}|~{3,})(.*)$")
 // measured against.
 var listOpener = regexp.MustCompile(`^[ \t]*([-*+]|[0-9]{1,9}[.)])(\s|$)`)
 
-// thematicBreak is a horizontal rule. It closes the block above it the way a
-// heading does, so an indented code block may open on the line after one. RE2
-// has no backreference, so each character is its own alternative.
+// thematicBreak is the `---` line, which a note writes for a page break. It
+// closes the block above it the way a heading does, so an indented code block
+// may open on the line after one. RE2 has no backreference, so each character
+// is its own alternative.
 var thematicBreak = regexp.MustCompile(`^ {0,3}(\*[ \t]*){3,}$|^ {0,3}(-[ \t]*){3,}$|^ {0,3}(_[ \t]*){3,}$`)
 
 // setextUnderline is the underline under a setext heading, which closes the
@@ -150,7 +151,7 @@ func proseLines(source []byte, f func(sourceLine)) {
 				line.definition, line.label = true, label
 			}
 		}
-		// A heading, a horizontal rule and the underline of a setext heading
+		// A heading, a thematic break and the underline of a setext heading
 		// each end on their own line, so the line after one opens a new block,
 		// an indented code block among them.
 		closes := atxHeading.MatchString(line.text) ||

@@ -382,17 +382,19 @@
 // # A note on an entry is what belongs to no flag
 //
 // A command whose note carries syntax of its own has something to say that no
-// flag can hold. build has two lines, the footnote and the seven marks, and
-// no other entry has any: what a footnote is, what each mark is written as,
-// and which refusals a note runs into. They are the notes field of the table
+// flag can hold. build has three lines, the footnote, the seven marks and the
+// page break, and no other entry has any: what a footnote is, what each mark
+// is written as, which refusals a note runs into, and that `---` on a line of
+// its own turns the page (DECISIONS.md, 2026-10-16). They are the notes field of the table
 // entry, printed under the summary in today's text and in a Notes rule on the
 // screen, and they reach the object too, unlike the group: a note is a fact
 // about what the command carries off a note's own lines, and a skill writing
 // one is the other reader of this help. The field is absent where there is
 // none, because "takes none" and "said nothing" are one answer for a line of
 // prose, which they are not for the words and flags beside it.
-// TestHelpBuildNamesFootnotesAndMarks is the pin, and the seven colours
-// themselves are the topic below rather than a second copy here.
+// TestHelpBuildNamesFootnotesAndMarks is the pin, with
+// TestHelpBuildSaysAThematicBreakIsAPageBreak over the third line, and the
+// seven colours themselves are the topic below rather than a second copy here.
 //
 // # help marks is a topic, and the only one
 //

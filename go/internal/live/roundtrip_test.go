@@ -83,10 +83,9 @@ func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDiffe
 		Reason: "the generator writes a fenced block as paragraphs in the code style, so no character of the document says it was fenced and nothing can put the fence back",
 		Gone:   func(l noteLine) bool { return l.Code },
 	}, {
-		Name:   "rules",
-		Reason: "a horizontal rule is a paragraph border in the document, so read prints it as [rule] and the note's three hyphens are not in it",
-		Gone:   func(l noteLine) bool { return l.Text == "---" || l.Text == "***" },
-		Added:  func(s string) bool { return s == "[rule]" },
+		Name:   "page breaks the note wrote",
+		Reason: "a thematic break in the note is a page break in the document since M19, and the export writes a break of its own back as `---`, so both sides spell it the same way and no line needs excusing; a note's `***` or `___` is that same break and comes home as `---`, and a break the build left out, at the end of a note or before its footnote definitions, is a line the document never held",
+		Note:   thematicBreak,
 	}, {
 		Name:   "footnotes",
 		Reason: "the numbers are the document's: a label the note wrote is the number Word gave the mark it carried, read writes every note under a --- rule at the end whatever the note did with it, and a label the note marked twice is two notes under the page, so the second definition is a line the note never had",
@@ -101,8 +100,8 @@ func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDiffe
 				s == "[image]" || s == "[drawing]" || alt[s]
 		},
 	}, {
-		Name:   "page breaks",
-		Reason: "the house layout breaks the page where the template says, and a note holds no character that could",
+		Name:   "the house's own breaks",
+		Reason: "the house layout breaks the page after the cover and before the contents list, both inside the prelude the strip takes out, and before the first body heading, which Drive rides inside the heading paragraph and the export leaves out because build puts it back; a column break is the layout's too, and a page break still marked is one inside a sentence that no line of markdown could carry",
 		Added:  func(s string) bool { return s == "[page break]" || s == "[column break]" },
 	}, {
 		Name:   "heading numbers",
@@ -138,6 +137,16 @@ func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDiffe
 		Reason: "a task box is a checkbox character in the note and a plain bullet in the house style",
 		Note:   func(s string) string { return taskBox.ReplaceAllString(s, "$1") },
 	}}
+}
+
+// thematicBreak is a note's thematic break in the one spelling the export
+// writes. goldmark reads `---`, `***` and `___` as one node, so all three are
+// the same page break in the document, and the export has one line for it.
+func thematicBreak(s string) string {
+	if s == "***" || s == "___" {
+		return "---"
+	}
+	return s
 }
 
 // footnoteNumbering is the note's own footnote labels read as the numbers the

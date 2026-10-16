@@ -66,7 +66,10 @@ written as markdown.
 | `[[c:ID]]words[[/c]]` | these are the words a comment thread is attached to |
 | `<!-- image: floating, kix.p1 -->` | a picture laid out beside the text rather than in it, after the paragraph it is anchored to |
 | `![](assets/note-1.png)` | a picture, written as a file |
-| `[^1]` | a footnote, with the notes under a rule at the end of the file |
+| `[^1]` | a footnote, with the notes under a `---` line at the end of the file |
+| `---` on a line of its own | the document starts a new page there. `---` is what a note writes for a page break, so the next build puts the same break back: there is nothing to resolve |
+| `[page break]` | a page break the file has no line for: one inside a sentence, or one that is all a heading, a list item or a table cell holds. It stays a marker, with a warning |
+| `[rule]` | a horizontal rule the document draws. A note has no spelling for one, so it stays a marker too |
 | `==words==`, `==🟢 words==` | a mark the words carry in the document, written as Obsidian writes it |
 | `[words]{.pencil}` | the grey pencil mark, written as Pandoc's span |
 
@@ -92,7 +95,9 @@ say where they are; `gdoc comments <url>` says what they say.
 ## What comes home as the syntax it left as
 
 A footnote in the document is `[^1]` where the mark stands, with the notes
-under a `---` rule at the end of the file. The numbers are the document's own,
+under a `---` line at the end of the file. That last `---` is the separator
+above the notes and not a page break: the definitions follow it, and `build`
+reads it back as the separator it is. The numbers are the document's own,
 so a note you wrote as `[^register]` comes back as `[^2]`: a round trip
 renumbers rather than relabels. A note in the prose is publishable as it
 stands, because `gdoc build` sets a footnote back under the page.
@@ -103,6 +108,18 @@ heading or in a table cell comes home as `# Title[^1]` or `| x[^2] |`, and
 `gdoc build` refuses each by line, as it refuses a mark in a heading. The
 session moves it into the prose with you: taking it out on the way home would
 be editing the document.
+
+Where the document breaks the page, the file carries `---` on a line of its
+own, between blank lines. That is the syntax a note writes for a page break, so
+the file publishes back to a document that breaks in the same place. The break
+the house style puts before the first heading is left out, because `build` puts
+that one back by itself. A page break Google put inside a sentence has no line
+of markdown to be, so it stays `[page break]` with a warning: decide where the
+page should turn, or take it out. A break that is all a heading, a list item or
+a table cell holds keeps the marker for the same reason: `# ---` reads back as
+a heading saying `---` rather than as a page break. A horizontal rule the document draws comes
+home as `[rule]` for the opposite reason: a note has no spelling for a rule at
+all.
 
 A mark comes home as the syntax an author types for it. A highlight in the
 document is `==words==` for yellow, and the mark's own colour emoji for the

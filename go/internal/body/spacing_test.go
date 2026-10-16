@@ -97,11 +97,13 @@ func TestAPictureSitsOnItsCaption(t *testing.T) {
 	}
 }
 
-// A rule and a quote end the way a paragraph does, 12pt beneath and nothing
-// above, so the values are looked at rather than inherited in silence.
-func TestARuleAndAQuoteEndLikeAParagraph(t *testing.T) {
-	out := walk(t, "Prose.\n\n---\n\n> Quoted words.\n")
-	for i, want := range []string{"240", "240", "240"} {
+// A quote ends the way a paragraph does, 12pt beneath and nothing above, so
+// the values are looked at rather than inherited in silence. The page break
+// that used to stand between these two blocks states its own zero spacing, and
+// TestAPageBreakParagraphPushesTheNewPageNowhere reads that.
+func TestAQuoteEndsLikeAParagraph(t *testing.T) {
+	out := walk(t, "Prose.\n\n> Quoted words.\n")
+	for i, want := range []string{"240", "240"} {
 		if got := attr(t, find(out.Blocks[i], "w:spacing"), "w:after"); got != want {
 			t.Errorf("block %d has %s twips below it, want %s", i, got, want)
 		}

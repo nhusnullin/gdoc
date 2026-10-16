@@ -546,27 +546,23 @@ func (r *renderer) quote(runs []Run, depth int) *etree.Element {
 	return p
 }
 
-// rule is a horizontal rule: an empty paragraph carrying a bottom border.
-func (r *renderer) rule() *etree.Element {
-	before, after := 0.0, r.cfg.Body.SpaceAfterPt
-	p := r.para(paraOpts{BeforePt: &before, AfterPt: &after})
-	pPr := p.SelectElement("w:pPr")
-	bdr := etree.NewElement("w:pBdr")
-	sub(bdr, "w:bottom", "w:val", "single", "w:sz", eighths(ruleWidthPt),
-		"w:space", "1", "w:color", hexColor(r.ruleColor()))
-	// w:pBdr comes before w:spacing in the schema.
-	pPr.InsertChildAt(0, bdr)
-	return p
+// pageBreak is the author's own break, written as `---` on a line of its own:
+// an empty paragraph carrying pageBreakBefore, which is the shape the front
+// matter's three breaks already use. The spacing is stated as zero rather than
+// left out, because a paragraph that holds nothing has no reason to push the
+// page it opens down.
+func (r *renderer) pageBreak() *etree.Element {
+	before, after := 0.0, 0.0
+	return r.para(paraOpts{PageBreak: true, BeforePt: &before, AfterPt: &after})
 }
 
-// The horizontal rule's own line. The house file states no rule for the body,
-// so this is the running head's weight at the palette's grey.
-const ruleWidthPt = 0.5
-
-// ruleColor is the palette's grey, or black when the file names none.
-func (r *renderer) ruleColor() string {
-	if c, ok := r.cfg.Palette["rule_grey"]; ok {
-		return c
+// isBreakParagraph says whether this block is one pageBreak wrote: a paragraph
+// that breaks the page before it and holds no run at all. A heading breaks the
+// page the same way and is not one, because it holds its own words.
+func isBreakParagraph(block *etree.Element) bool {
+	if block.Tag != "p" || len(block.SelectElements("w:r")) > 0 {
+		return false
 	}
-	return "#000000"
+	pPr := block.SelectElement("w:pPr")
+	return pPr != nil && pPr.SelectElement("w:pageBreakBefore") != nil
 }

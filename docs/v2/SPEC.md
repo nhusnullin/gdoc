@@ -367,7 +367,7 @@ whole. Changed 2026-09-28, DECISIONS.md.
 
 **What a block refuses, by name.** Content the subset does not hold: a table, a
 nested list, a numbered list that does not begin at 1, a picture, a code block, a
-block quote, raw HTML, a thematic break, and empty content. A character the Docs API strips out of an inserted text, and
+block quote, raw HTML, a page break (`---`), and empty content. A character the Docs API strips out of an inserted text, and
 a line break inside a paragraph, each in whichever spelling it arrives in: the
 character itself, or an entity reference such as `&#12;` that decodes to one.
 gdoc counts what it sends to place everything after it, so a unit the server
@@ -495,7 +495,12 @@ definition after a `---` line, and that file publishes again: `build` sets
 footnotes rather than refusing them (2026-10-14, DECISIONS.md). A label
 referenced twice in the hub comes back as two notes, because a document holds
 one note per mark. A mark the author wrote comes back as the syntax it left
-as. The front matter of a file `export` creates holds
+as. A page break that stands on its own comes back as `---` on a line of its
+own, which is the line the next build reads as that same break; the one on the
+first body heading is left out, because `build` puts it back, and a break the
+file has no line for, inside a sentence or alone in a heading, a list item or a
+table cell, keeps its `[page break]` marker and its warning.
+The front matter of a file `export` creates holds
 the `gdoc:` block and nothing else: a skill adds `title` when it makes the file
 a note.
 
@@ -562,6 +567,24 @@ header and footer, the three tables cell by cell, the contents field, heading
 numbering, and the logo as base64. The generator reads it plus markdown and emits
 a docx.
 
+**`---` on a line of its own in a note's body is a page break**, not a
+horizontal rule. Every thematic break goldmark parses is that one break,
+`---`, `***` or `___`, and the source spelling is not read. A break before
+nothing is nothing: one that ends the body, or that only footnote definitions
+follow, is left out with no warning. A break before a break is one break: one
+standing directly before the first body heading while
+`first_heading_page_break` is on is left out, and two in a row are one.
+Nothing else is collapsed. `Counts` carries `PageBreaks`, the breaks the
+document got rather than the lines the note held, and both envelopes print it
+as `page_breaks`. The horizontal rule goes with its three constants and the
+`rule_grey` palette key, because no other route into a document draws a line;
+a document that holds a rule of its own still reads as `[rule]` and exports as
+that marker. `read` prints `[page break]` where a published document breaks
+the page, which it printed nothing for from M13 to v2.12.0, and `export`
+writes `---` back for a break standing on its own: the two halves of one line.
+Decided 2026-10-16, DECISIONS.md, with the measurement that changed the read
+half in MEASURED.md.
+
 **The front matter's page breaks are blocks in that file**, `- block:
 page_break`, one after the cover and one after the classification table, beside
 `cover`, `label`, `table`, `blank`, `legend` and `toc`. One layout, two writers:
@@ -569,7 +592,9 @@ the docx renderer emits the block as a paragraph carrying `pageBreakBefore`, the
 prelude emits it as `insertPageBreak`, and neither holds a page break of its own
 any more. The drift gate reports nothing new for it, because no item in the
 measured list reads a page break or counts a front-matter paragraph. Added
-2026-09-16, DECISIONS.md. Nothing reads the master `.docx` at runtime: it stays in the repo as
+2026-09-16, DECISIONS.md. The body's page breaks are the author's own,
+written as `---` in the note, and they go through the same paragraph shape
+the docx renderer writes for this block. Nothing reads the master `.docx` at runtime: it stays in the repo as
 provenance and as the drift test's fixture. **The comparison is the acceptance
 gate, and it runs both ways.** The list of
 171 measured values is written once, with one reader per item: offline that

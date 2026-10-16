@@ -34,10 +34,21 @@ pending marked in it:
 | `[image]`, `[drawing]`, `[equation]`, `[object]` | content that is not text yet |
 | `[person: Ada Lovelace]`, `[date: Sep 9, 2026]`, `[link: Q3 planning]` | a smart chip, with the label it shows |
 | `[auto text: PAGE_NUMBER]`, `[page break]`, `[column break]`, `[rule]` | the rest of what a paragraph can hold |
+| `[page break]` on a line of its own | the page turns before the paragraph that follows |
 | `[unknown: member]` | something in the document this version of gdoc has never seen |
 | `[words](target)` | text that points somewhere: the address, or `#slug` for a heading in the document |
 | `1. text` | an item of a numbered list, counted per list and per level |
 | `<!-- image: floating, kix.p1 -->` | an object laid out beside the text, after the paragraph it is anchored to |
+
+`[page break]` stands on a line of its own where a published document breaks
+the page. Drive writes that break as a property of the paragraph it precedes
+rather than as content, so the read printed nothing at all for it until
+milestone 19, and a document of twenty pages read as one run of prose. Both
+shapes print the same placeholder now: the paragraph property, which is what a
+document built from a note carries, and a break Google put inside a sentence,
+which prints where it stands. A note writes `---` for that break, so
+`/gdoc-export` brings a break on a body line of its own home as `---` rather
+than as the marker.
 
 Every placeholder row in that table comes back with a warning naming what the
 read did not take from it, the chips and the breaks included. A policy with

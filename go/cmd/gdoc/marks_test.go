@@ -262,8 +262,8 @@ func TestHelpBuildNamesFootnotesAndMarks(t *testing.T) {
 	if !ok {
 		t.Fatalf("build's entry carries no notes: %v", entry)
 	}
-	if len(notes) != 2 {
-		t.Fatalf("the two lines are the footnote's and the marks', and %d came back: %v", len(notes), notes)
+	if len(notes) != 3 {
+		t.Fatalf("the three lines are the footnote's, the marks' and the page break's, and %d came back: %v", len(notes), notes)
 	}
 	footnoteLine, _ := notes[0].(string)
 	markLine, _ := notes[1].(string)

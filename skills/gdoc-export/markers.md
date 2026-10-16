@@ -17,12 +17,14 @@ and any later session reads this file and undoes them. `gdoc-export` and
 | `{+words+}[s:ID]` | a pending suggested insertion, with its suggestion id |
 | `{-words-}[s:ID]` | a pending suggested deletion, with its id |
 | `[[c:ID]]words[[/c]]` | the words a comment thread is anchored to, by Drive comment id |
-| `[^1]` and `[^1]: text` | a footnote reference, with its text under a `---` rule at the end |
+| `[^1]` and `[^1]: text` | a footnote reference, with its text under a `---` line at the end. That one `---` is the separator above the notes and not a page break: it is the last one in the file and the definitions follow it |
 | `![](assets/<stem>-<n>.png)` | a picture, as the file export wrote beside the note |
 | `<!-- image: floating, <id> -->` | a picture laid out beside the text, after the paragraph it is anchored to. A drawing reads `drawing:` |
 | `[drawing]` `[equation]` `[object]` | content the read does not take, with a warning naming it |
 | `[person: Name]` `[date: Sep 9, 2026]` `[link: Title]` | a smart chip, with the label the document shows |
-| `[auto text: PAGE_NUMBER]` `[page break]` `[column break]` `[rule]` | the members that hold no text of their own |
+| `[auto text: PAGE_NUMBER]` `[column break]` `[rule]` | the members that hold no text of their own |
+| `---` on a line of its own | a page break. The document breaks the page there, `---` is what a note writes for it, and the next build puts the same break back. Nothing to undo: keep the line |
+| `[page break]` | a page break the file has no line for: one inside a sentence, or one that is all a heading, a list item or a table cell holds. `---` on those lines would read back as text rather than as a break, so this one stays a marker with a warning: decide where the break belongs, or take it out |
 | `[unknown: member]` | a paragraph element gdoc has never seen, named by its member |
 | `==words==` | a highlight, in the colour the house gives the bare delimiter |
 | `==<emoji> words==` | a highlight, in the colour that emoji names |

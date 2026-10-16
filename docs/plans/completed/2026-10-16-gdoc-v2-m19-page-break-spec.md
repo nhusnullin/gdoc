@@ -53,8 +53,8 @@ Taken in the design pass by Claude, each one a sentence Nail can strike:
 | A break before nothing is nothing. A thematic break that is the last block of the body, or that only footnote definitions follow, is left out with no warning. That is the line `read` and `export` write before the notes, so an exported note publishes again without a blank last page | body |
 | A break before a break is one break. A thematic break standing directly before the first body heading, when `first_heading_page_break` is on, is left out with no warning, because that heading already opens a page. Two thematic breaks in a row are one. Nothing else is collapsed: a break between two paragraphs is always honoured, however many stand in the note | body |
 | `Counts` gains `PageBreaks`, the breaks the body carries after the two rules above, and both envelopes print it as `page_breaks`. The binary counts and judges nothing; the publish skill says the number when it is above zero and goes on | body, cmd, skill |
-| `read` is unchanged. A page break still prints `[page break]` where it stands, a horizontal rule `[rule]`, and the footnote separator stays `---` | view |
-| `export` writes `---` for a page break that is a paragraph of its own, as a line of its own between blank lines. It leaves out the break on the first body heading, because `build` puts that one back. A break inside a sentence keeps its `[page break]` marker and its warning, because no line of markdown says a page turns mid-sentence | export |
+| `read` prints `[page break]` on a line of its own before a paragraph the document breaks the page before, the flag Drive's import writes, which `read` printed nothing for since M13. A native page break still prints where it stands, a horizontal rule `[rule]`, and the footnote separator stays `---`. Changed 2026-10-16 after the Task 4 measurement, see below | docs, view |
+| `export` writes `---` for a page break that stands on its own, the flag's line or a native break that is a paragraph's only content, as a line of its own between blank lines. It leaves out the break on the first body heading, because `build` puts that one back. A native break inside a sentence keeps its `[page break]` marker and its warning, because no line of markdown says a page turns mid-sentence | export |
 | The round-trip rule pairs the note's `---` with the document's `[page break]`, and the house's own breaks stay excused: the first heading's, and the column breaks | live |
 | `propose --block` keeps refusing a thematic break in its content, and its refusal now says a page break. A suggestion that inserts a page break is a different request kind and is not built here | propose |
 | The guide, the help and the skills say `---` is a page break in one line each, and say that a document holding a horizontal rule exports it as `[rule]`, which is a marker to resolve | docs, skills |
@@ -73,16 +73,30 @@ both and records what `read` printed in MEASURED.md. If a body break comes
 back in any other shape, the export task stops and says so, and Nail
 decides the rule.
 
+**Outcome, 2026-10-16.** Neither kind is a `pageBreak` element. Drive's
+import writes both as `paragraphStyle.pageBreakBefore: true`, a field the
+read did not decode, so `read` printed nothing where either page turned, and
+the round trip had been excusing a line no published document produced.
+MEASURED.md, "How read prints the two kinds of page break", holds the table
+and three ways out. The first was taken, by Claude under Nail's standing
+"do it for me" of the same day and in his absence: `internal/docs` decodes
+the flag, `read` prints `[page break]` before the paragraph, and `export`
+writes `---` for it. The `view` and `export` rows above were rewritten from
+it, and Task 5 of the plan with them. Nail can reverse to either of the other
+two.
+
 ## What this milestone does not do
 
 - No syntax for a horizontal rule in a note. A document's own rule still
   exports as `[rule]`, to be resolved by hand.
 - No `insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body
   pass. The house's own breaks in the prelude are untouched.
-- No page break inside a table cell, a footnote or a block quote: goldmark
-  parses a thematic break there as a block of its own and the walker warns
-  and leaves it out the way it does a picture in a footnote. A test pins the
-  footnote and the cell.
+- No page break inside a footnote or a block quote: goldmark parses a
+  thematic break there as a block of its own and the walker warns and leaves
+  it out the way it does a picture in a footnote. A test pins each. The table
+  cell this sentence also named needs no rule: Task 3 measured a pipe table's
+  cell as inline text, in which goldmark builds no thematic break at all, so
+  there is nothing for the walker to warn about. A test pins that too.
 - No house value. The break is the author's, not the template's, so
   `house.yaml` loses a key and gains none.
 - No column break.
@@ -106,6 +120,7 @@ document id.
    and no `---` before the first heading; built again, the docx holds the same
    number of `w:pageBreakBefore` paragraphs. Live.
 7. `read` of a document holding a horizontal rule still prints `[rule]`, and
-   `export` keeps the marker and warns.
+   `export` keeps the marker and warns. `read` of the document from item 2
+   prints `[page break]` where `---` stood and before its first heading.
 8. `make test`, `make vet` and `make dist` green, and the live round trip
    green with the new pairing.

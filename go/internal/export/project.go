@@ -6,6 +6,7 @@ package export
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"gdoc/internal/docs"
@@ -108,8 +109,10 @@ func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFil
 			Skip:        skip,
 			ChipTargets: true,
 			Marks:       palette,
+			PageBreak:   PageBreakLine,
 			Rebuilt:     true,
 		})
+		body = dropFirstHeadingBreak(body)
 		warnings = append(warnings, tw...)
 		otherColours(t.Body, skip, palette, other)
 
@@ -137,6 +140,42 @@ func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFil
 		files = append(files, TabFile{TabID: t.ID, TabTitle: t.Title, Body: body})
 	}
 	return files, pieces, other, warnings
+}
+
+// PageBreakLine is what a page break standing on its own comes home as: the
+// thematic break, which internal/body reads as that same page break on the way
+// out. It is the one marker of this projection that is not a marker to resolve,
+// because the note's own spelling for the fact is a line of markdown.
+//
+// A break the file has no line for is not this shape and keeps its
+// [page break] marker and its warning, which internal/view decides: one inside
+// a sentence, because no line of markdown says a page turns mid-sentence, and
+// one that is all a heading, a list item or a table cell holds, because the
+// line would read back as text rather than as a break.
+const PageBreakLine = "---"
+
+// headingLine is a heading line of the projection, which is what the break
+// above is dropped in front of.
+var headingLine = regexp.MustCompile(`^#{1,6} `)
+
+// dropFirstHeadingBreak takes the house's own break off the first body
+// heading.
+//
+// The house breaks the page before the first body heading, and Drive's import
+// rides that break inside the heading paragraph rather than putting a
+// paragraph before it, so the strip leaves its line at the top of the file.
+// internal/body puts it back from first_heading_page_break on the next build,
+// and a line written here would be a second break the note never asked for.
+//
+// Only the top of the file, and only directly in front of a heading. A break
+// anywhere else is the author's, however many headings it stands before.
+// TestTheFirstHeadingsBreakIsLeftOut is the pin.
+func dropFirstHeadingBreak(body string) string {
+	rest, ok := strings.CutPrefix(body, PageBreakLine+"\n\n")
+	if !ok || !headingLine.MatchString(rest) {
+		return body
+	}
+	return rest
 }
 
 // File is one tab's body with the gdoc: block in front of it, which is the

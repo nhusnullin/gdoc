@@ -216,6 +216,24 @@
 //     literal: six backgrounds and the pencil's foreground. It makes a document
 //     of its own rather than sharing the one above, because a document two tests
 //     hold is a document neither owns.
+//   - TestLivePageBreakShape, M19's, and the gate the export half of that
+//     milestone rested on. It publishes a note of a heading, a paragraph, `---`
+//     and a paragraph, so one document carries both kinds of break, the
+//     author's own and the house's on the first heading, and prints what the
+//     Docs read came back with: every paragraph of the walked tree that holds
+//     a page_break run, every raw paragraph holding a pageBreak element or
+//     pageBreakBefore on its style, and what the projection prints around each
+//     of the two paragraphs the note wrote. One document, trashed. Like the
+//     probes it fails on a publish or a read that failed and on nothing else.
+//     Measured 2026-10-16: neither kind is a pageBreak element, both are
+//     pageBreakBefore on the paragraph's style, and read printed nothing where
+//     the page turned. MEASURED.md "How read prints the two kinds of page
+//     break", and the gate did not hold. Task 5 of the milestone decoded the
+//     flag instead, so the same run now prints [page break] for both kinds and
+//     the run after that is the pin on the read as well as the measurement. It
+//     names no variable of its own:
+//     GDOC_LIVE_TEST, GDOC_LIVE_WRITE and GDOC_LIVE_FOLDER_ID with its default
+//     are the whole of what it reads.
 //
 // Copied, and the original never written to:
 //
@@ -268,7 +286,7 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Seven tests here ask for no network at all
+// # Eight tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -305,4 +323,10 @@
 // mark openers and its footnote are pinned as the literals an author types: a
 // note edited back to the shapes of M17 would otherwise leave the live run
 // green and the question unasked.
+//
+// TestThePageBreakNoteRendersWithNoNetwork is the eighth, in pagebreak_test.go,
+// and it is there for the same reason. The measurement's note is written in
+// that file rather than kept as a fixture, so it renders the note offline and
+// holds it to what it is for: one body break, one body heading, and the two
+// paragraphs the projection window is read around.
 package live

@@ -91,6 +91,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-14 | A footnote is carried on every route | holds |
 | 2026-10-14 | The marks: Obsidian's six colours and one grey | holds |
 | 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | holds |
+| 2026-10-16 | `---` is a page break | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4427,3 +4428,156 @@ halves, because one `==` in a sentence is a sentence.
 `TestAPencilAttributeInsideABlockOfHTMLRefusesNothing`,
 `TestASpanTheParseFormsIsNotRefused` and
 `TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords`.
+
+## 2026-10-16. `---` is a page break.
+
+Nail's decision, taken in chat on the date above after the alternatives were
+put to him. A line of three hyphens on its own in a note's body is a page
+break, on every route. Serves principle 1, two renderings of one text, because
+a break the author wrote is in the document and comes home on export as the
+line it left as; and principle 4, every word costs a reader's attention,
+because a page holding nothing is a page the reader turns for nothing.
+
+Until now the body walker turned a thematic break into a horizontal rule, a
+paragraph with a grey bottom border, and nothing an author could write in a
+note broke a page. The house file breaks the page in three places of its own,
+after the cover, before the contents list and before the first body heading,
+and the author could neither move one nor add one.
+
+**The two alternatives, declined.** The HTML div,
+`<div style="page-break-after: always;"></div>`, which Obsidian's own PDF
+export honours: it reads as machinery in a note somebody else will edit.
+Pandoc's `\newpage`, which Obsidian prints as text on the page, so the note
+stops being readable where the break is. `---` is the line Obsidian, Pandoc
+and CommonMark all already read as a thematic break, and it is the one line
+`read` never printed as `---` in the first place, which is why giving it a
+second meaning contradicts no standard.
+
+**The count he was shown.** The hub holds 1,348 such lines across 206 notes
+today, nearly all of them dividers written before a heading, and a note
+carrying 216 dividers becomes a document of 216 pages. He chose `---` anyway.
+The hub is his, and gdoc reports the number rather than arguing with it.
+
+**Every spelling is the same break.** `---`, `***` and `___`, three or more,
+with or without spaces between them. goldmark parses one node and the source
+spelling is not read, so one meaning reaches the document however the author
+typed it.
+
+**The docx shape is the one the front matter already uses.** An empty
+paragraph carrying `w:pageBreakBefore`, emitted through the same
+`paraOpts{PageBreak: true}` path the house's own breaks go through. No run
+break, no section break, no new XML, and Drive's import of that attribute has
+been the way the front matter's three breaks reach a Doc since M13.
+
+**The horizontal rule goes.** `rule()`, `ruleWidthPt`, `ruleColor` and the
+`rule_grey` palette key leave with it, because nothing else reads them. No
+other route into a document draws a line. A document that already holds a rule
+is unaffected: `read` still prints it as `[rule]` and `export` keeps that
+marker for somebody to resolve.
+
+**A break before nothing is nothing.** A thematic break that is the last block
+of the body, or that only footnote definitions follow, is left out, with no
+warning. That second case is the line `read` and `export` both write before a
+document's notes, so an exported note publishes again without a blank last
+page. The author's intent is met either way, which is why there is nothing to
+warn about.
+
+**A break before a break is one break.** A thematic break standing directly
+before the first body heading, while `first_heading_page_break` is on, is left
+out, because that heading already opens a page. Two thematic breaks in a row
+are one. Nothing else is collapsed: a break between two paragraphs is always
+honoured, however many of them stand in the note.
+
+**`Counts` gains `PageBreaks`**, the breaks the body carries after the two
+drops above, and both envelopes print it as `page_breaks`. It is the breaks
+the document got, not the lines the note held. The binary counts and judges
+nothing; the publish skill says the number when it is above zero and goes on.
+
+**`read` prints `[page break]` where the page turns, which it printed nothing
+for since M13.** This sentence read "`read` is unchanged" until the Task 4
+measurement, below, found that neither kind of break is a `pageBreak` element:
+Drive's docx import states both as `pageBreakBefore` on the paragraph's own
+style, which `internal/docs` did not decode. So the read decodes it, and a
+paragraph the page breaks before prints `[page break]` on a line of its own in
+front of it, through the same placeholder and with the same warning a native
+break gets. A horizontal rule still prints `[rule]`, and the footnote
+separator stays `---`.
+
+`export` writes `---` for a page break that stands on its own, the flag's line
+or a native element that is a body paragraph's only content, as a line of its
+own between blank lines, and leaves out the break on the first body heading
+because `build` puts that one back. A break inside a sentence keeps its
+`[page break]` marker and its warning, because no line of markdown says a page
+turns mid-sentence.
+
+**Only a body paragraph's break is written as that line**, which this entry
+said as "a paragraph's only content" until the review of the same day. A
+native break that is all a heading, a list item or a table cell holds keeps the
+placeholder and the warning instead, because the line would come back as
+something else on the next build: `# ---` as a heading saying `---`, `1. ---`
+as an item holding a break, and `---` in a cell as three hyphens of text, since
+a pipe table's cell holds inline text and goldmark reads no thematic break in
+one. The flag's line is written in front of the paragraph and carries no
+prefix, so a heading and a list item take it; a cell does not, because nothing
+inside a cell is a line of its own, and a cell paragraph carrying the flag
+keeps the placeholder and the warning too. `internal/view`'s
+`TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine` and
+`TestABreakFlaggedOnACellParagraphKeepsThePlaceholder` are the pins.
+
+**No line is written beside a pending suggestion**, which the same review left
+half done. The markers that say a span is pending are written around it, so the
+line would go inside them or sit against them, and `---{++}[s:ID]` is read back
+as prose rather than as a break. The refusal was on the break run alone, so a
+paragraph holding a break and a newline somebody suggested still got the line
+and lost the break with no warning. It is the whole paragraph now: a standalone
+break is one where no run carries a suggestion id.
+`TestABreakBesideASuggestionKeepsThePlaceholder` is the pin.
+
+**What is not built here.** No syntax for a horizontal rule in a note. No
+`insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body pass, so
+`propose --block` keeps refusing a thematic break in its content and its
+refusal now says a page break. No page break inside a footnote definition or a
+block quote: the walker warns and leaves it out the way it does a picture in a
+footnote. A table cell needs no rule, because a pipe table's cell holds inline
+text and goldmark builds no thematic break in one, which Task 3 measured after
+the specification said the walker warns there. No house value, because the
+break is the author's rather than the template's. No column break.
+
+**What is measured.** The docx route needs no gate. What was not known is the
+shape `read` gives the two kinds of break, so the milestone published a note
+holding both and recorded in MEASURED.md what `read` printed, with the document
+id. The export rule assumed a body break comes back as a paragraph holding one
+`pageBreak` element and no text, and the gate said that if it came back as
+anything else the export task stops and Nail decides the rule.
+
+**It came back as anything else, and the gate did not hold.** Document
+`1MmipMWaS96OmV3ONxFioNFmaKhBYHWb7w3jrrF90hic`, 2026-10-16: no `pageBreak`
+element anywhere, and four paragraphs carrying `pageBreakBefore`. MEASURED.md
+wrote down three ways out and Claude took the first of them, under Nail's
+standing "do it for me" of the same day and in his absence, and said so: the
+read decodes the flag. The other two, a docx run break and shipping without
+the export half, are in MEASURED.md for Nail to reverse to.
+
+**Tests.** `internal/body`'s `TestAThematicBreakIsAPageBreakParagraph`,
+`TestEveryThematicBreakSpellingIsTheSameBreak`,
+`TestAPageBreakBeforeNothingIsNothing`,
+`TestTheFootnoteSeparatorIsNotAPageBreak`,
+`TestABreakBeforeTheFirstHeadingIsTheHeadingsOwn`,
+`TestTwoBreaksInARowAreOne`,
+`TestABreakBetweenTwoParagraphsIsAlwaysHonoured`,
+`TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut` and
+`TestThreeHyphensInACellAreNotABreak`;
+`cmd/gdoc`'s `TestBuildAndPublishCarryThePageBreakCount`, the build and the
+publish twin in one table;
+`internal/docs`'s `TestAParagraphKeepsWhetherThePageBreaksBeforeIt` and
+`TestTheStructurePrintCarriesThePageBreakFlag`; `internal/view`'s
+`TestABreakBeforeAParagraphPrintsAsAPageBreakLine`,
+`TestTheHousesFirstHeadingBreakPrintsBeforeTheHeading`,
+`TestANativePageBreakElementStillPrintsWhereItStands` and
+`TestACallerThatNamesALineForABreakGetsItAndNoWarning`;
+`internal/export`'s `TestAPageBreakOfItsOwnExportsAsThreeHyphens`,
+`TestTheFirstHeadingsBreakIsLeftOut`,
+`TestAPageBreakInsideASentenceKeepsItsMarker` and
+`TestAHorizontalRuleStillExportsAsItsMarker`; `internal/live`'s
+`TestLivePageBreakShape` and `TestLiveRoundTrip`; and `go/boundary`'s
+`TestThePublishingPageSaysAThematicBreakIsAPageBreak`.

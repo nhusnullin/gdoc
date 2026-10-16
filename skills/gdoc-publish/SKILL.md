@@ -245,8 +245,14 @@ Read `body.marks` off that object. It is a count per colour, zero included.
   does this skill: it is the author's call, and the author is who the count is
   for.
 
-Read `body.footnotes` at the same time and say the number if it is above zero,
-so the person knows the notes made it into the build.
+Read `body.footnotes` and `body.page_breaks` at the same time and say each
+number if it is above zero, so the person knows the notes and the pages made it
+into the build. The page break count is the breaks the document got, not the
+`---` lines in the note: a break at the end of a note, one before its footnote
+definitions, and one standing directly before another break are left out, so
+three dividers can come back as two. Say the number and carry on. Whether the
+document breaks where the author wanted is the author's to read, and this skill
+judges neither count.
 
 Then run `$GDOC help publish --json`, and build the call from what it printed:
 the note, and the folder you named in this request.

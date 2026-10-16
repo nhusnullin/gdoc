@@ -34,8 +34,10 @@
 //	[person: Name] [date: Sep 9,     a smart chip, with the label the document
 //	2026] [link: Title]              shows
 //	[auto text: PAGE_NUMBER]         the four remaining members that hold no
-//	[page break] [column break]      text of their own
-//	[rule]
+//	[column break] [rule]            text of their own
+//	[page break]                     where the page turns, as the document's
+//	                                 own element or as the style of the
+//	                                 paragraph it breaks before
 //	[unknown: member]                a paragraph element gdoc has never seen,
 //	                                 named by its member
 //	[^1]                             a footnote reference, with its text under
@@ -175,10 +177,57 @@
 //     at the first one, and a label ends at the bracket mark writes behind it,
 //     which is the last rune the window above already covers.
 //
+// # A page break prints where the page turns, in either shape
+//
+// Docs states a page break two ways, and until M19 this package printed only
+// one of them. A native break, inserted by hand, is an element and a run, and
+// it printed as [page break] where it stood. A break that reached the document
+// through a docx import is pageBreakBefore on the paragraph's own style, which
+// internal/docs did not decode, so every break in a document gdoc published
+// printed as nothing at all: the live measurement of 2026-10-16 found all four
+// breaks of such a document in that shape and no element in any of them
+// (MEASURED.md). So a paragraph carrying the flag prints [page break] on a
+// line of its own in front of it, through the same placeholder and with the
+// same warning, and the two shapes read alike downstream.
+// TestABreakBeforeAParagraphPrintsAsAPageBreakLine,
+// TestTheHousesFirstHeadingBreakPrintsBeforeTheHeading and
+// TestANativePageBreakElementStillPrintsWhereItStands are the pins.
+//
+// Options.PageBreak is the door export comes through. A break standing on its
+// own is a line somebody can write in a note, so the caller says what that
+// line is, the placeholder and its warning go with it, and a break inside a
+// sentence keeps both: no line of markdown says a page turns mid-sentence.
+// TestACallerThatNamesALineForABreakGetsItAndNoWarning is the pin.
+//
+// Standing on its own is the paragraph's question as well as the runs'. The
+// line is written only where the paragraph takes no prefix and is not a cell:
+// "# ---" is a heading reading "---" to the next build, "1. ---" is an item
+// holding a break, and "---" in a cell is three hyphens of text, because a
+// pipe table's cell holds inline text and goldmark reads no thematic break in
+// one. Each of those keeps the placeholder and the warning that says the break
+// did not survive, which is what every break printed before the line existed.
+// TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine is the pin.
+//
+// The flag's line is written in front of the paragraph and carries no prefix,
+// so a heading and a list item take it. A cell does not: nothing inside a cell
+// is a line of its own, so a cell paragraph carrying the flag keeps the
+// placeholder and the warning the way a native break in a cell does.
+// TestABreakFlaggedOnACellParagraphKeepsThePlaceholder is the pin.
+//
+// A pending suggestion is the other place the line is not written. The markers
+// that say a span is pending are written around it, so the line would go
+// inside them or sit against them, and neither reads back as a break: a
+// paragraph is a standalone break only where no run of it carries a suggestion
+// id. TestABreakBesideASuggestionKeepsThePlaceholder is the pin.
+//
 // # A horizontal rule prints [rule] and not ---
 //
 // The footnote separator is already ---, and one line meaning two things is a
-// line neither of them can be read from. A footnote referenced twice is one
+// line neither of them can be read from. Since 2026-10-16 that line has a
+// second job on the way in, where `---` written in a note is a page break
+// (DECISIONS.md), so a horizontal rule has no spelling in a note at all: this
+// package prints a document's own rule as [rule] for somebody to resolve, and
+// nothing a build reads turns back into one. A footnote referenced twice is one
 // entry under that rule, numbered as the document numbers it, and a footnote's
 // own paragraphs are joined with spaces rather than dropped.
 // TestASecondReferenceToOneFootnotePrintsTheSameNumber and
@@ -429,8 +478,10 @@
 // recognised; a picture written as the file that now sits beside the note; and
 // a chip's target behind its label, because the session merging that file into
 // a note has no second read to go back to. So Options carries Skip, Picture,
-// ChipTargets, Marks and Rebuilt, Text is Project with none of them set, and
-// there is one emitter rather than two escapings of one document. Rebuilt is the fifth,
+// ChipTargets, Marks, PageBreak and Rebuilt, Text is Project with none of them
+// set, and there is one emitter rather than two escapings of one document.
+// PageBreak is the fifth and the section on the page break above is its own.
+// Rebuilt is the sixth,
 // and it is the gate over every sentence about what the next build reads,
 // because the export is the one route whose text becomes a file gdoc builds
 // again.

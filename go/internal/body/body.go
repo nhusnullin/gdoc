@@ -42,6 +42,11 @@ type Counts struct {
 	Tables     int `json:"tables"`
 	Images     int `json:"images"`
 	Footnotes  int `json:"footnotes"`
+	// PageBreaks is how many breaks the document got, which is the paragraphs
+	// the walk emitted and not the `---` lines the note held: a break before
+	// nothing and a break before a break are left out, so counting the lines
+	// would report pages the reader never turns.
+	PageBreaks int `json:"page_breaks"`
 	// Marks is how many of each debt mark the note holds, by name, zero
 	// included. Only the marks the house style calls a debt are in here, for
 	// the reason countMarks gives.
@@ -300,11 +305,22 @@ func (r *renderer) emit(block *etree.Element) {
 // TestTheLastItemOfAListEndsItLikeAParagraph,
 // TestANestedListEndsOnItsInnermostLastItem and
 // TestAListThatRenderedNothingLeavesTheBlockBeforeItAlone are the pins.
-func (r *renderer) endList() {
-	if len(r.blocks) == 0 {
+//
+// A break paragraph the last item ended on is not that item's paragraph: it
+// holds nothing and states zero space on both sides, so the page it opens
+// starts where a page starts, and the paragraph above it is the one the list
+// ends on. The walk back stops at the first block the list itself emitted,
+// because the block before the list is not the list's.
+// TestAListEndingOnABreakEndsOnTheItemAboveIt is the pin.
+func (r *renderer) endList(opened int) {
+	at := len(r.blocks) - 1
+	for at > opened && isBreakParagraph(r.blocks[at]) {
+		at--
+	}
+	if at < 0 || isBreakParagraph(r.blocks[at]) {
 		return
 	}
-	last := r.blocks[len(r.blocks)-1]
+	last := r.blocks[at]
 	if last.Tag != "p" {
 		return
 	}
@@ -356,6 +372,19 @@ func (r *renderer) line(node ast.Node) int {
 // lineAt turns a source offset into the 1-based line holding it. An offset
 // nothing carried is line 1, which is the only answer left.
 func (r *renderer) lineAt(offset int) int { return lineOf(r.source, offset) }
+
+// breakLine is the line a thematic break sits on, which line cannot answer: a
+// break is the one construct goldmark builds with no lines appended and no
+// text inside it, so line falls through both of its offsets and names line 1
+// wherever the break stands, which in a note is the front matter's own
+// delimiter. The parser sets Pos on every block it opens, and for a break
+// that is the offset of the "---" itself, inside a quote as well as in the
+// body. internal/propose names the same line by scanning the source instead,
+// which reaches the same answer on the subset it accepts, and body cannot copy
+// that scan: a scan inside a quote lands on the ">" of the blank quote line
+// above the break, and body renders quotes. TestABreakInsideAQuoteNamesItsLine
+// is the pin.
+func (r *renderer) breakLine(node ast.Node) int { return r.lineAt(node.Pos()) }
 
 // lineOf is the same answer without a renderer, because the two refusals the
 // parse answers are asked before one is built.
@@ -741,7 +770,7 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		// A list whose items rendered nothing, a code block alone say, added
 		// no block, and the block before the list is not the list's.
 		if level == 0 && len(r.blocks) > opened {
-			r.endList()
+			r.endList(opened)
 		}
 		r.afterTable = false
 		return nil
@@ -776,8 +805,25 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *ast.ThematicBreak:
-		r.emit(r.rule())
 		r.afterTable = false
+		// The quote is asked before the look-ahead, because every break
+		// inside a quote is left out and the author is told about each one:
+		// asking the look-ahead first dropped the break that ends a quote in
+		// silence, which is the one case the look-ahead reads wrongly.
+		//
+		// A quote is a run of indented paragraphs, and the break paragraph is
+		// a body paragraph: emitting one here would open a page in the middle
+		// of the quote and leave the rest of it looking like prose.
+		if r.quoteDepth > 0 {
+			r.warn("line %d: a page break inside a block quote is not rendered in the house style and was left out",
+				r.breakLine(typed))
+			return nil
+		}
+		if !r.breakReachesTheDocument(typed) {
+			return nil
+		}
+		r.emit(r.pageBreak())
+		r.counts.PageBreaks++
 		return nil
 
 	case *ast.HTMLBlock:
@@ -798,6 +844,83 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		}
 		r.afterTable = false
 		return nil
+	}
+}
+
+// breakReachesTheDocument reads the one block after a thematic break and says
+// whether the author's page break is worth a paragraph. Neither drop warns:
+// what the author meant is what the document got, and a divider somebody wrote
+// out of habit is on hundreds of notes.
+//
+// A break before nothing is nothing. The next block is absent, so the page it
+// opens would hold not one word. A FootnoteList is the same case: goldmark
+// lifts the definitions to the end of the document, and the `---` above them
+// is the line internal/view prints and internal/export writes rather than
+// anything the author chose, so a note that came home out of a document
+// publishes again without a blank last page.
+//
+// A break before a break is one break. Another thematic break is going to
+// break the page itself, and the first body heading breaks it already while
+// the house style says so, so standing a break in front of either adds a page
+// holding nothing. A figure-only heading emits no heading paragraph and so no
+// break of its own, which is why it is not one of them.
+//
+// The block read is the next one the document holds rather than the next
+// sibling, because a break that ends a list item is a break before the next
+// item: reading the sibling alone handed back nothing there, and the author's
+// page turn between two items disappeared without a word. The next item is not
+// itself the block the page opens on, which is why nextBlock descends into it.
+func (r *renderer) breakReachesTheDocument(node ast.Node) bool {
+	switch next := nextBlock(node).(type) {
+	case nil:
+		return false
+	case *east.FootnoteList:
+		return false
+	case *ast.ThematicBreak:
+		return false
+	case *ast.Heading:
+		if r.firstHeading && r.cfg.Body.FirstHeadingPageBreak && !isFigureOnly(next, r.source) {
+			return false
+		}
+	}
+	return true
+}
+
+// nextBlock is the block the document holds after this one: the next sibling
+// where the node has one, and otherwise the block after the container it ends,
+// however many containers end with it. Nothing after the last block of the
+// document is nothing, which is the one answer of nil the look-ahead means.
+func nextBlock(node ast.Node) ast.Node {
+	for up := node; up != nil; up = up.Parent() {
+		if next := up.NextSibling(); next != nil {
+			return firstBlockOf(next)
+		}
+	}
+	return nil
+}
+
+// firstBlockOf is the first block a list or an item holds, however deeply the
+// two nest, and the node itself where it is neither. A list is not a block the
+// document prints: what the page opens on is the first block inside the first
+// item, so an item opening with a break is the break the drop rule has to see.
+// Without it a break ending one item and a break opening the next were two
+// break paragraphs in a row, which is an empty page.
+//
+// A block quote is not descended into, because a break inside one is left out
+// and the page opens on the quoted words under it.
+// TestTwoItemsEachHoldingABreakAreOneBreak is the pin.
+func firstBlockOf(node ast.Node) ast.Node {
+	for {
+		switch node.(type) {
+		case *ast.List, *ast.ListItem:
+		default:
+			return node
+		}
+		first := node.FirstChild()
+		if first == nil {
+			return node
+		}
+		node = first
 	}
 }
 

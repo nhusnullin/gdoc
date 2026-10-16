@@ -118,9 +118,10 @@ func (r *renderer) footnoteList(list *east.FootnoteList) error {
 // The line is the block's own, not the definition's, because a note written
 // over several lines sends an author to the line they have to change. A
 // picture is an inline and takes the line of the paragraph it sits in, which
-// is that paragraph's own. The definition's line is the answer only for a
-// block carrying no source position anywhere under it, which a horizontal rule
-// is.
+// is that paragraph's own. A thematic break carries neither lines nor text, so
+// its line is the position goldmark set on it, the way breakLine reads it in
+// the body. The definition's line is the answer only for a block that carries
+// nothing anywhere under it and no position either.
 func (r *renderer) footnoteBlocks(note *east.Footnote) []*etree.Element {
 	opens := 1
 	if at, ok := r.descendantLine(note); ok {
@@ -131,6 +132,8 @@ func (r *renderer) footnoteBlocks(note *east.Footnote) []*etree.Element {
 		line := opens
 		if at, ok := r.descendantLine(child); ok {
 			line = at
+		} else if _, isBreak := child.(*ast.ThematicBreak); isBreak && child.Pos() >= 0 {
+			line = r.breakLine(child)
 		}
 		switch child.(type) {
 		case *ast.Paragraph, *ast.TextBlock:
@@ -227,7 +230,7 @@ func footnoteBlockName(node ast.Node) string {
 	case *ast.HTMLBlock:
 		return "a block of HTML"
 	case *ast.ThematicBreak:
-		return "a horizontal rule"
+		return "a page break"
 	default:
 		return "this block"
 	}

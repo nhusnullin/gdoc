@@ -1,6 +1,6 @@
 // This file is where in a block's content a refusal points: the line a
-// construct sits on, and the line it sits on when goldmark gave it no source
-// position at all. block.go holds the content itself.
+// construct sits on, and the line it sits on when goldmark appended it no
+// lines and built no text inside it. block.go holds the content itself.
 
 package propose
 
@@ -32,12 +32,13 @@ func (w *blockWalk) line(node ast.Node) int {
 	return w.unpositionedLine(node)
 }
 
-// unpositionedLine is the line a block carrying no source position of its own
-// sits on. A thematic break is the one the subset meets: goldmark builds it with
-// no lines and no text inside it, and naming line 1 sends the author to the top
-// of a file whose rule is thirty lines down. The first line holding anything
-// after the block before it is this block's own line, because a blank line is
-// what separated the two.
+// unpositionedLine is the line a block whose own lines and text are both
+// absent sits on. A thematic break is the one the subset meets: goldmark builds
+// it with no lines appended and no text inside it, and naming line 1 sends the
+// author to the top of a file whose rule is thirty lines down. The first line
+// holding anything after the block before it is this block's own line, because
+// a blank line is what separated the two. The node's Pos holds that offset too,
+// which is how internal/body reads it.
 func (w *blockWalk) unpositionedLine(node ast.Node) int {
 	from := 0
 	for sibling := node.PreviousSibling(); sibling != nil; sibling = sibling.PreviousSibling() {

@@ -124,6 +124,24 @@
 // DECISIONS.md, 2026-09-09. TestTheDroppedElementsFixtureNamesAllSeven and
 // TestTheSevenElementsDecodeIntoRuns are the pins.
 //
+// # A page break is a paragraph style, not an element
+//
+// Docs states a page break two ways. A native break, the one a person inserts
+// with Insert, Break, Page break, is a pageBreak element and a run of the
+// paragraph like any other. A break that reached the document through a docx
+// import is pageBreakBefore on the paragraph's own style, and there is no
+// element for it at all.
+//
+// Only the first was decoded until M19, which is why `read` printed nothing
+// where a document gdoc published turned the page: the live measurement of
+// 2026-10-16 walked such a document as 69 paragraphs and found no pageBreak
+// run in any of them, while four paragraphs carried the flag. So
+// Paragraph.PageBreakBefore carries it, and internal/view prints the same
+// placeholder for either shape. MEASURED.md, "How read prints the two kinds of
+// page break", holds the table and the document id.
+// TestAParagraphKeepsWhetherThePageBreaksBeforeIt and
+// TestTheStructurePrintCarriesThePageBreakFlag are the pins.
+//
 // # A link is a fact about a run, and it is read from the reference
 //
 // A text run's textStyle.link says where that text points, and Run.Link carries

@@ -218,6 +218,10 @@ type rawParagraph struct {
 	ParagraphStyle struct {
 		NamedStyleType string `json:"namedStyleType"`
 		HeadingID      string `json:"headingId"`
+		// PageBreakBefore is how Drive's docx import states a page break, and
+		// the one way a break reaches a document gdoc published. M19 measured
+		// it: no pageBreak element comes back for either kind.
+		PageBreakBefore bool `json:"pageBreakBefore"`
 	} `json:"paragraphStyle"`
 	Bullet *struct {
 		NestingLevel int    `json:"nestingLevel"`
@@ -501,11 +505,12 @@ func blocks(content []rawElement, b body) []Block {
 
 func paragraph(el rawElement, b body) *Paragraph {
 	p := &Paragraph{
-		Style:      el.Paragraph.ParagraphStyle.NamedStyleType,
-		HeadingID:  el.Paragraph.ParagraphStyle.HeadingID,
-		Positioned: append([]string(nil), el.Paragraph.PositionedObjectIDs...),
-		StartIndex: el.StartIndex,
-		EndIndex:   el.EndIndex,
+		Style:           el.Paragraph.ParagraphStyle.NamedStyleType,
+		HeadingID:       el.Paragraph.ParagraphStyle.HeadingID,
+		PageBreakBefore: el.Paragraph.ParagraphStyle.PageBreakBefore,
+		Positioned:      append([]string(nil), el.Paragraph.PositionedObjectIDs...),
+		StartIndex:      el.StartIndex,
+		EndIndex:        el.EndIndex,
 	}
 	if el.Paragraph.Bullet != nil {
 		p.Bullet = bullet(el.Paragraph.Bullet.ListID, el.Paragraph.Bullet.NestingLevel, b.lists)
