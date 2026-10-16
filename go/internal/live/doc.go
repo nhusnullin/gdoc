@@ -94,9 +94,11 @@
 // real command one refresh of its own.
 //
 // It asks for GDOC_LIVE_WRITE beside GDOC_LIVE_TEST even so. The file it
-// reads is the firm's rather than a document somebody handed in, and it is the
-// only test here that writes anything to this machine, so the second decision
-// is made on purpose like the others.
+// reads is the firm's rather than a document somebody handed in, and writing
+// a logo cache and a stamp into a gdoc config directory is something only this
+// test and TestLivePublish do here, so the second decision is made on purpose
+// like the others. TestLivePublish writes the real cache rather than a
+// directory of its own, which its entry below says.
 //
 // # Which test creates, and which copies
 //
@@ -117,7 +119,10 @@
 //     the note. Since M22 the note is built with the firm's own mark, fetched
 //     the way a publish fetches it, and the document is held to that file's
 //     hash before it is uploaded: the document a person opens is branded, or
-//     this test says so. The measurement the hash comes from is below.
+//     this test says so. That fetch goes through this machine's real config
+//     directory, so it fills the logo cache and its stamp there, and costs one
+//     request a day across every live run rather than one per test. The
+//     measurement the hash comes from is below.
 //   - TestLiveDrift, M6's. It uploads the built document and the master with
 //     conversion and runs drift.Items over both. That is the measurement that
 //     means something, because Google's import is part of the result.

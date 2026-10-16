@@ -4786,7 +4786,7 @@ request here is asked, by the house file the run named.
 **Not knowing never resolves to an unbranded document.** Offline, refused or
 timed out, the cached bytes are used and the envelope says so, with their age
 and the reason. No token and a cache is the same. No token and no cache
-refuses, naming `gdoc login`: a stranger's `build` on the embedded house
+refuses, naming `gdoc auth login`: a stranger's `build` on the embedded house
 refuses, which is the point, and a colleague has a token before the first
 build because every skill asks for one. Bytes that come back and are not a
 PNG of the stated size refuse the run even when a good cache exists, because

@@ -14,7 +14,7 @@ Usage: gdoc <command> [words] [flags]
   propose      Propose changes as native suggestions, each with the comment that says why.
   withdraw     Take back one pending suggestion, and only one gdoc proposed itself.
   annotate     Leave a comment on the exact words you quote, under your mark, changing nothing.
-  build        Build the note as a house-style docx on this machine, with no network at all.
+  build        Build the note as a house-style docx on this machine, reaching only for the house logo.
   publish      Build the note as a house-style document and upload it into one folder.
   update       Replace this gdoc with the newest release, or say what one would take.
   mcp          Serve gdoc to Claude Desktop over stdin and stdout, as a protocol session rather than one object.

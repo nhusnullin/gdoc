@@ -124,7 +124,7 @@ func Fetch(ctx context.Context, client Drive, id string, want Want) (Bytes, erro
 	}
 
 	if client == nil {
-		return c.orRefuse(id, now, "this machine holds no sign-in, so Drive was not asked; run: gdoc login")
+		return c.orRefuse(id, now, "this machine holds no sign-in, so Drive was not asked; run: gdoc auth login")
 	}
 	raw, err := client.FileBytes(ctx, id, MaxBytes)
 	if err != nil {

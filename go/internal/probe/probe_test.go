@@ -453,7 +453,7 @@ func TestTheGuardCarriesEveryOneOfTheProbesRequests(t *testing.T) {
 	for i, c := range f.calls {
 		if i == 1 {
 			// The transport learns the new id from the create's answer, which
-			// is the second of the policy's two doors. Everything after the
+			// is the second of the policy's three doors. Everything after the
 			// create is judged with the document in the set at full level.
 			p.Learn(testDocID)
 		}

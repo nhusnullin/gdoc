@@ -754,13 +754,13 @@ func TestThePlaceholderIsAPNGOfTheHouseSize(t *testing.T) {
 }
 
 // TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes is where this milestone ends:
-// the shipped house names the firm's file and carries none of it. It skips
-// itself while the embedded file still holds logo.base64, so the task that
-// replaces those bytes with the file id makes it run with no edit here.
+// the shipped house names the firm's file and carries none of it. Bytes put
+// back under logo.base64 fail here, which is the point: the tree holds no
+// copy of the firm's mark.
 func TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes(t *testing.T) {
 	cfg := load(t)
 	if strings.TrimSpace(cfg.Logo.Base64) != "" {
-		t.Skip("the embedded house still carries logo.base64, which the task that empties the tree replaces")
+		t.Fatal("the embedded house carries logo.base64, and the firm's bytes do not live in this tree")
 	}
 	if cfg.LogoDrive() == "" {
 		t.Fatal("the embedded logo names neither bytes nor a file in Drive")

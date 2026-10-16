@@ -39,19 +39,22 @@
 // body says SUGGEST, or the document is the one id this run was granted.
 // TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant is the pin.
 //
-// # Two doors into the set, and seven grants beside it
+// # Three doors into the set, and seven grants beside it
 //
-// Ids reach the reachable set two ways and no more. AllowFile is the id a
+// Ids reach the reachable set three ways and no more. AllowFile is the id a
 // command was pointed at. Learn is the id a create the guard itself carried
 // came back with, read off that create's own answer. TestCreateTeachesThePolicy
 // and TestFailedCreateTeachesNothing are the pins: a create that did not
-// succeed teaches nothing.
+// succeed teaches nothing. The third is the one id AllowAsset admits a media
+// read of, which the bullet below holds to a file that is not a document.
+// Nail's decision, 2026-10-17, DECISIONS.md, and CLAUDE.md states the same
+// count.
 //
 // Seven grants sit beside the set. Each names one object, opens one shape, and
 // dies with the process. None of them is a level. One of them, AllowAsset, is
-// a third id a run may touch at all, read out of the house file, and its
-// bullet says why the set still cannot grow through it: nothing it admits is a
-// document, and nothing that comes back carries an id.
+// the third door above, read out of the house file, and its bullet says why
+// the set still cannot grow through it: nothing it admits is a document, and
+// nothing that comes back carries an id.
 //
 //   - AllowCreateIn names the one folder a create may target. A create naming
 //     any other parent is refused, and naming the folder does not put the
@@ -170,7 +173,7 @@
 //
 // GrantInPlace is the eighth of that shape and the only door to LevelInPlace.
 // It upgrades an id already in files and admits nothing new, so it is not a
-// third door into the set. AllowFile refuses to hand that level out at all,
+// door into the set at all. AllowFile refuses to hand that level out at all,
 // because taking any level there was the side door around the invariant.
 // TestGrantInPlaceNeverAdmitsAnUnknownID and TestAllowFileCannotOpenTheInPlaceDoor
 // are the pins. The grant also never narrows: an id at LevelFull, which a

@@ -18,7 +18,7 @@ import (
 
 // publishDocID is the id the fake Drive answers the create with. It is learned
 // from that answer rather than handed in, which is the second of the guard's
-// two doors and the reason a publish opens with no file at all.
+// three doors and the reason a publish opens with no file at all.
 const publishDocID = "1PuBl15h0000000000000000000000000000000"
 
 // otherFolderID is where an earlier publish of the same note put its document.

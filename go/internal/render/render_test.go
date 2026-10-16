@@ -143,6 +143,30 @@ func TestTheLogoPartIsThePNGTheConfigCarries(t *testing.T) {
 	}
 }
 
+// A caller with no mark in hand gets a refusal rather than a document whose
+// header carries an empty picture. An unbranded document is the one thing a
+// missing logo must not resolve to, and the logo is the caller's to fetch
+// since M22, so this is the room that has to say no.
+func TestBuildRefusesALogoWithNoBytes(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		logo []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			pkg, err := Build(config(t), c.logo, fields(), nil, nil, nil, 0)
+			if err == nil {
+				t.Fatalf("Build() returned %d parts, want a refusal", len(pkg.Parts))
+			}
+			if !strings.Contains(err.Error(), "logo") {
+				t.Errorf("the refusal is %q, and it has to name the logo", err)
+			}
+		})
+	}
+}
+
 func TestTheZipListsContentTypesFirst(t *testing.T) {
 	pkg := build(t)
 	var buf bytes.Buffer

@@ -111,7 +111,7 @@ const FirstMediaRelID = 9
 // internal/asset can turn that into bytes, and this package reaches nothing:
 // the caller fetches the mark and hands it over. An empty logo is refused
 // rather than rendered, because an unbranded document is the one thing this
-// must not resolve to.
+// must not resolve to: TestBuildRefusesALogoWithNoBytes.
 //
 // footnotes is body.Result.Footnotes, one entry per mark in the prose and in
 // the order Word numbers them. numberedLists is body.Result.NumberedLists.

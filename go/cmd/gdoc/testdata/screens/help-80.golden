@@ -22,7 +22,7 @@
 │                       │ your mark, changing nothing.                         │
 ├─ Make a doc ──────────┼──────────────────────────────────────────────────────┤
 │ build                 │ Build the note as a house-style docx on this         │
-│                       │ machine, with no network at all.                     │
+│                       │ machine, reaching only for the house logo.           │
 │ publish               │ Build the note as a house-style document and upload  │
 │                       │ it into one folder.                                  │
 ├─ Account and tool ────┼──────────────────────────────────────────────────────┤

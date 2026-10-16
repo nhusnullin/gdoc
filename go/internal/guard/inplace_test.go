@@ -267,8 +267,8 @@ func TestAGrantedRejectStillCarriesInPlace(t *testing.T) {
 	}
 }
 
-// GrantInPlace upgrades a level. It is not a third door into the set, and the
-// test that said so came back with the grant.
+// GrantInPlace upgrades a level. It is no door into the set, and the test that
+// said so came back with the grant.
 func TestGrantInPlaceNeverAdmitsAnUnknownID(t *testing.T) {
 	p := NewPolicy()
 	p.GrantInPlace("EVIL")

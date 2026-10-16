@@ -14,7 +14,7 @@
 // bytes. internal/asset is the room that turns an id into bytes, and this one
 // reaches nothing: the caller fetches the mark and hands it over. Build
 // refuses an empty one rather than writing a document with no mark in its
-// header.
+// header: TestBuildRefusesALogoWithNoBytes.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.

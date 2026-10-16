@@ -196,8 +196,8 @@ func (p *Policy) AllowFile(id string, lvl Level) {
 
 // GrantInPlace upgrades an id already in the set to LevelInPlace, which permits
 // a batchUpdate without SUGGEST on that one document, and only for the request
-// kinds inPlaceKinds names. It is not a third door: an id nobody handed in is
-// not admitted by asking to style it.
+// kinds inPlaceKinds names. It is not a door into the set at all: an id nobody
+// handed in is not admitted by asking to style it.
 //
 // The grant is one id and one run. Nothing writes it down, nothing reads it
 // from a file, and no flag turns it on for every document: it dies with the
@@ -277,8 +277,9 @@ func (p *Policy) mayCopy(id string) bool {
 
 // AllowCreateIn names the one folder a create may target. The folder id is not
 // added to the file set: creating in a folder is not a licence to read it, and
-// the set has exactly two doors, the ids passed in and the ids learned from a
-// create.
+// a create target is none of the three doors into the set, which are the ids
+// passed in, the ids learned from a create, and the one id AllowAsset admits a
+// media read of.
 func (p *Policy) AllowCreateIn(folderID string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

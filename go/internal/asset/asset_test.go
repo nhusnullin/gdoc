@@ -165,7 +165,11 @@ func TestAStaleStampFetchesOnce(t *testing.T) {
 		{"a stamp a newer gdoc wrote", func(t *testing.T) {
 			seedCache(t, old, time.Hour, true)
 			sp, _ := config.AssetStampPath(theID)
-			if err := os.WriteFile(sp, []byte(`{"fetched_at":"2026-10-17T00:00:00Z","revision":"3"}`), 0o600); err != nil {
+			// Written an hour ago and about these very bytes, so the
+			// unknown key is the only thing left that can make it stale.
+			line := fmt.Sprintf(`{"fetched_at":%q,"sha256":%q,"revision":"3"}`,
+				time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), sum(old))
+			if err := os.WriteFile(sp, []byte(line), 0o600); err != nil {
 				t.Fatal(err)
 			}
 		}, "an unknown key"},
@@ -261,7 +265,7 @@ func TestNoTokenAndACacheUsesTheCache(t *testing.T) {
 	if got.Age < 24*time.Hour {
 		t.Errorf("Age = %v, want the stamp's own age", got.Age)
 	}
-	if !strings.Contains(got.Reason, "gdoc login") {
+	if !strings.Contains(got.Reason, "gdoc auth login") {
 		t.Errorf("Reason = %q, want the sign-in named", got.Reason)
 	}
 }
@@ -286,7 +290,7 @@ func TestNoTokenAndNoCacheRefusesNamingTheLogin(t *testing.T) {
 			if err == nil {
 				t.Fatalf("Fetch() = %+v, want a refusal", got)
 			}
-			if !strings.Contains(err.Error(), "gdoc login") {
+			if !strings.Contains(err.Error(), "gdoc auth login") {
 				t.Errorf("the refusal is %q, want the sign-in named", err)
 			}
 			if got.Raw != nil {
