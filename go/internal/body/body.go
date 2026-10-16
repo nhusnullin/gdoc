@@ -1113,7 +1113,7 @@ func (r *renderer) emitImages(images []ImageRef, line int) error {
 // loses those words on the way in. Saying so is the same rule the block form
 // follows: what was left out is named, never dropped in silence.
 func (r *renderer) warnRawHTML(node ast.Node, line int) {
-	if !hasRawHTML(node) {
+	if !hasRawHTML(node, r.source) {
 		return
 	}
 	r.warn("line %d: inline HTML is not rendered in the house style and was left out", line)
@@ -1144,14 +1144,18 @@ func (r *renderer) warnImages(images []ImageRef, line int, where string) {
 		line, where)
 }
 
-// hasRawHTML says whether an inline subtree holds raw HTML, however deeply it
-// is nested.
-func hasRawHTML(node ast.Node) bool {
+// hasRawHTML says whether an inline subtree holds raw HTML the house style
+// does not carry, however deeply it is nested.
+//
+// A comment is not counted, because a comment is a pencil: it reaches the
+// document grey rather than being left out, so a line warned about it would
+// name a loss there is none of.
+func hasRawHTML(node ast.Node, source []byte) bool {
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if _, ok := child.(*ast.RawHTML); ok {
+		if raw, ok := child.(*ast.RawHTML); ok && !isComment(raw, source) {
 			return true
 		}
-		if hasRawHTML(child) {
+		if hasRawHTML(child, source) {
 			return true
 		}
 	}

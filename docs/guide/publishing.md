@@ -224,6 +224,12 @@ A ==figure== to fill in, and ==🟡one more==.
 [Not sure this clause is needed]{.pencil}
 ```
 
+A pencil is also written as a comment, HTML's `<!-- words -->` and, once
+milestone 20 is finished, Obsidian's `%% words %%`. Obsidian dims a comment
+while you edit and hides it while you read, so the words are an aside the
+note's reader never pays for and the document's reader gets in grey. The span
+goes when that milestone lands.
+
 Run `gdoc help marks` for the seven with their colours. The binary prints them
 out of the house style, so what you read there is the colour the document
 gets. Three are counted on the envelope under `body.marks`, yellow, green and

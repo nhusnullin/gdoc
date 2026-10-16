@@ -180,6 +180,14 @@
 // TestInlineHTMLWarnsAndIsLeftOut, TestInlineHTMLInATableCellOrAQuoteWarnsToo
 // and TestAPictureTheHouseStyleCannotPlaceIsNamed are the pins.
 //
+// Inline HTML that is a comment is the one exception, and it is not a loss: a
+// comment is how a pencil is written from milestone 20 on, so its words reach
+// the document grey rather than being left out, and the line is not warned
+// about. A comment holding no words marks none and goes in silence.
+// TestAnHTMLCommentIsAPencilRun, TestTheWordsInsideAPencilAreLiteral,
+// TestAnEmptyCommentIsLeftOut and TestOtherRawHTMLIsStillWarnedAndLeftOut are
+// the pins.
+//
 // A footnote is no longer one of them: it is set in the document, and what the
 // house style cannot set inside one is the warning instead. The section below
 // on footnotes holds the rules and its pins.

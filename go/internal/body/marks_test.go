@@ -9,6 +9,7 @@ package body
 // wherever somebody moved it and claim nothing.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -122,18 +123,26 @@ func TestAPencilSpanIsARunCarryingItsMark(t *testing.T) {
 	}
 }
 
-// TestThePencilSyntaxIsTheHouseStyles. The attribute the parser matches is a
-// constant here, because the parser is built before the house style is read;
-// the house file states the same string as the pencil mark's syntax, and the
-// two agreeing is the whole of what makes the constant safe.
+// TestThePencilSyntaxIsTheHouseStyles. The spellings the parser matches are
+// constants in this package, because the parsers are built before the house
+// style is read; the house file states the same strings as the pencil mark's
+// syntax, and the two agreeing is the whole of what makes those constants
+// safe. The list is written out here rather than read off the file, so a
+// spelling somebody adds is a spelling somebody states.
 func TestThePencilSyntaxIsTheHouseStyles(t *testing.T) {
 	mark, ok := config(t).Marks["pencil"]
 	if !ok {
 		t.Fatal("the house style states no pencil mark")
 	}
-	if len(mark.Syntax) != 1 || mark.Syntax[0] != pencilAttribute {
-		t.Errorf("the house style's pencil syntax is %q, and the parser matches %q",
-			mark.Syntax, pencilAttribute)
+	want := []string{".pencil", "<!--", "%%"}
+	if !slices.Equal(mark.Syntax, want) {
+		t.Errorf("the house style's pencil syntax is %q, want %q", mark.Syntax, want)
+	}
+	for _, syntax := range []string{pencilAttribute, commentOpener} {
+		if !slices.Contains(mark.Syntax, syntax) {
+			t.Errorf("the parser matches %q and the house style's pencil syntax %q does not state it",
+				syntax, mark.Syntax)
+		}
 	}
 }
 

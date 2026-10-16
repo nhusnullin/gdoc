@@ -198,7 +198,22 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks, ctx inlineC
 			// which matches the reference renderer: an image inside a
 			// paragraph is lifted out and captioned instead.
 			continue
-		case *ast.RawHTML, *ast.HTMLBlock:
+		case *ast.RawHTML:
+			// A comment is the author's aside and reaches the document grey.
+			// Nothing inside it is markdown: goldmark hands the whole comment
+			// over as raw HTML, so the words arrive as they were typed.
+			//
+			// A comment holding no words marks none, so there is nothing to
+			// colour and nothing was lost. Any other raw HTML is left out and
+			// warnRawHTML names the line.
+			words, comment := commentWords(typed, source)
+			if !comment || words == "" {
+				continue
+			}
+			*out = append(*out, Run{Text: words, Bold: m.bold, Italic: m.italic,
+				Strike: m.strike, Mono: m.mono,
+				Mark: ctx.marks.comment(commentOpener), Link: m.link})
+		case *ast.HTMLBlock:
 			continue
 		default:
 			appendInline(out, child, source, m, ctx)

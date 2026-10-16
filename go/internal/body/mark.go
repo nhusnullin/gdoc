@@ -107,6 +107,12 @@ func (t markTable) highlight(node ast.Node, source []byte) (name, opener string)
 // span is the mark a [words]{.pencil} span carries.
 func (t markTable) span(node *Span) string { return t.bySyntax[node.Syntax] }
 
+// comment is the mark a comment carries, by the delimiter it was written
+// with. It is asked of the table rather than named here for the same reason
+// the span is: the house style says which mark that spelling is, and this
+// package says which spellings there are.
+func (t markTable) comment(opener string) string { return t.bySyntax[opener] }
+
 // withoutOpener is the marked words with the colour emoji taken off the front,
 // and the one space an author writes after it. The emoji says which colour;
 // the space separates it from the words, and a highlight opening with a shaded

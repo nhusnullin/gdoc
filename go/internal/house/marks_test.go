@@ -15,7 +15,9 @@ import (
 // TestTheSevenMarksAreStatedAsLiterals is the palette of M18's part B, the one
 // source of what an author may write and what colour it reaches the document
 // as. Yellow carries two openers because a plain highlight is yellow and
-// Obsidian's own 🟡 says the same thing.
+// Obsidian's own 🟡 says the same thing. The pencil carries three since
+// milestone 20: Pandoc's span, which is going, and the two comments that
+// replace it, HTML's and Obsidian's.
 func TestTheSevenMarksAreStatedAsLiterals(t *testing.T) {
 	cfg := load(t)
 	cases := []struct {
@@ -31,7 +33,7 @@ func TestTheSevenMarksAreStatedAsLiterals(t *testing.T) {
 		{"blue", []string{"🔵"}, "highlight", "#5DB3FF", false},
 		{"red", []string{"🔴"}, "highlight", "#FF6B6B", false},
 		{"orange", []string{"🟠"}, "highlight", "#FFB85C", false},
-		{"pencil", []string{".pencil"}, "text", "#9A9A9A", false},
+		{"pencil", []string{".pencil", "<!--", "%%"}, "text", "#9A9A9A", false},
 	}
 	for _, c := range cases {
 		mark, ok := cfg.Marks[c.name]

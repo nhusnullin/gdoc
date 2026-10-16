@@ -136,6 +136,10 @@ next build would read your own emoji as the instruction. `gdoc help marks` print
 seven with their colours, out of the house style, which is the one place they
 live.
 
+Grey text is also written as a comment, HTML's `<!-- words -->` and, once
+milestone 20 is finished, Obsidian's `%% words %%`. That milestone is where
+the comment becomes what a pencil comes home as.
+
 A mark Google split into several runs comes home whole. Bold or code inside a
 highlight is its own run in the document, and the run beside it carries the
 same colour, so neighbouring runs of one colour are written as one mark.

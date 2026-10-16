@@ -108,7 +108,7 @@ var theSevenMarks = []markTopicRow{
 	{"blue", []string{"🔵"}, "highlight", "#5DB3FF", "carried"},
 	{"red", []string{"🔴"}, "highlight", "#FF6B6B", "carried"},
 	{"orange", []string{"🟠"}, "highlight", "#FFB85C", "carried"},
-	{"pencil", []string{".pencil"}, "text", "#9A9A9A", "carried"},
+	{"pencil", []string{".pencil", "<!--", "%%"}, "text", "#9A9A9A", "carried"},
 }
 
 // `marks` is a word help answers and no command gdoc takes, so the help
