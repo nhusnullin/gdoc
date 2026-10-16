@@ -204,3 +204,107 @@ func runWords(run *etree.Element) string {
 	}
 	return words
 }
+
+// TestAPencilGoesWhereAMarkGoes. The milestone's one decision is that the grey
+// mark keeps everything it does and changes its spelling, so a comment is
+// refused where a highlight is refused and carried where a highlight is
+// carried. Both spellings are the one node, so one case of each is the pin
+// that the rule is not written twice.
+func TestAPencilGoesWhereAMarkGoes(t *testing.T) {
+	for _, c := range []struct{ note, names string }{
+		{"Words.\n\n## A <!-- a note --> heading\n\nMore words.\n", "heading"},
+		{"Words.\n\n## A %% a note %% heading\n\nMore words.\n", "heading"},
+		{"Words.\n\n![a <!-- a note --> alt](badge.png)\n", "alt text"},
+		{"Words.\n\nA ==gap with <!-- a note --> inside it== here.\n", "mark inside"},
+		{"Words.\n\nA ==gap with %% a note %% inside it== here.\n", "mark inside"},
+	} {
+		got := refused(t, c.note)
+		if !strings.Contains(got, "line 3:") {
+			t.Errorf("%q: the refusal is %q, want it to name line 3", c.note, got)
+		}
+		if !strings.Contains(got, c.names) {
+			t.Errorf("%q: the refusal is %q, and it does not say where the mark sits", c.note, got)
+		}
+	}
+
+	for _, c := range []struct{ where, note string }{
+		{"a table cell", "| a | b |\n| --- | --- |\n| x <!-- a note --> y | z |\n"},
+		{"a list item", "- item <!-- a note --> here\n"},
+		{"a list item in Obsidian's spelling", "- item %% a note %% here\n"},
+		{"a block quote", "> quoted <!-- a note --> words\n"},
+	} {
+		out := walk(t, c.note)
+		pencil(t, out.Blocks, "a note", c.where)
+		if len(out.Warnings) != 0 {
+			t.Errorf("the pencil in %s warned %q, and nothing was left out", c.where, out.Warnings)
+		}
+	}
+
+	// A footnote is the one place a mark goes out and does not come home, and
+	// the pencil goes there the way the others do: footnoteRuns walks a
+	// definition's inlines through the same path a paragraph's take, so the
+	// aside is set under the page grey. The read keeps a footnote's text
+	// alone, so internal/export writes the words plain and names the loss
+	// there rather than here: its own
+	// TestAPencilMarkInsideAFootnoteIsNamedAsALoss is that pin, and
+	// docs/backlog/marks-inside-footnotes.md is the item.
+	out := walk(t, "Words.[^a]\n\n[^a]: a note with <!-- an aside --> in it.\n")
+	if len(out.Footnotes) != 1 {
+		t.Fatalf("the file built %d notes, want the one the mark makes", len(out.Footnotes))
+	}
+	pencil(t, out.Footnotes[0].Blocks, "an aside", "a footnote")
+	if len(out.Warnings) != 0 {
+		t.Errorf("the pencil in a footnote warned %q, and nothing was left out", out.Warnings)
+	}
+
+	// A comment on lines of its own inside a footnote is the one shape that is
+	// left out there, the way every block a footnote cannot hold is left out:
+	// footnoteBlocks sets paragraphs, and the house style has no grey
+	// paragraph of its own under the page. It is named as a comment rather
+	// than as a block of HTML, because an author told they wrote a block of
+	// HTML would look for a tag that is not in the note.
+	block := walk(t, "Words.[^a]\n\n[^a]: a note\n\n    <!-- an aside -->\n")
+	if !warned(block.Warnings, "a comment inside a footnote") {
+		t.Errorf("a comment on lines of its own inside a footnote warned %q, want it named as a comment",
+			block.Warnings)
+	}
+	if len(block.Footnotes) != 1 {
+		t.Fatalf("the file built %d notes, want the one the mark makes", len(block.Footnotes))
+	}
+	if got := serialise(t, block.Footnotes[0].Blocks); strings.Contains(got, "an aside") {
+		t.Errorf("the aside reached the note:\n%s", got)
+	}
+}
+
+// pencil is the one run carrying these words, checked for the grey. The
+// character style is written out, because it is what internal/render writes
+// and a test reading the constant would follow it wherever somebody moved it.
+func pencil(t *testing.T, blocks []*etree.Element, words, where string) {
+	t.Helper()
+	rPr := runElement(t, blocks, words).SelectElement("w:rPr")
+	if rPr == nil {
+		t.Errorf("the pencil in %s carries no w:rPr, want the grey", where)
+		return
+	}
+	if got := value(rPr, "w:rStyle"); got != "Pencil" {
+		t.Errorf("the pencil in %s names style %q, want Pencil", where, got)
+	}
+}
+
+// TestAHighlightInsideAPencilIsWords is the other side of the nesting rule.
+// Nothing inside a comment is markdown, so a highlight written in one is words
+// rather than a mark inside a mark: the aside is one grey run carrying the
+// equals signs the author typed.
+func TestAHighlightInsideAPencilIsWords(t *testing.T) {
+	for _, source := range []string{
+		"Words.\n\na <!-- a ==b== c --> d\n",
+		"Words.\n\n<!-- a ==b== c -->\n",
+	} {
+		out, err := Render(config(t), []byte(source), "testdata/docs", true)
+		if err != nil {
+			t.Errorf("%q was refused: %v", source, err)
+			continue
+		}
+		pencil(t, out.Blocks, "a ==b== c", "a comment holding a highlight")
+	}
+}

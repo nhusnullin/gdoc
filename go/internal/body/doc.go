@@ -210,6 +210,29 @@
 // TestAnUnterminatedObsidianFenceIsNamedAndLeftOut over the fence that never
 // closes.
 //
+// A pencil goes where a mark goes, because the milestone's one decision is
+// that the grey mark keeps everything it does and changes its spelling. So a
+// comment that marks words is one of the shapes isMark names, and it is
+// refused by line inside a heading, inside a picture's alt text and inside
+// another mark, for the three reasons the marks section above gives. It is
+// carried in a table cell, a list item and a block quote. A comment holding no
+// words is not a mark at all: it reaches no run, so there is nothing for a
+// refusal to protect and "empty is nothing" holds in a heading as it holds in
+// a paragraph. A highlight written inside a comment is words rather than a
+// mark inside a mark, because nothing inside a comment is markdown.
+// TestAPencilGoesWhereAMarkGoes and TestAHighlightInsideAPencilIsWords are the
+// pins.
+//
+// A pencil inside a footnote is carried, which is what every mark does there,
+// and it does not come home: the read keeps a footnote's text alone, so
+// internal/export writes the words plain and names the loss, which is
+// docs/backlog/marks-inside-footnotes.md and its own
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss. A comment on lines of its own
+// inside a footnote is the one shape left out there, because a note under the
+// page is a paragraph this package sets and the house style has no grey
+// paragraph of its own in one. It is named as a comment rather than as a block
+// of HTML, for the reason the unclosed fence is.
+//
 // A paragraph that renders not one run and names not one picture emits
 // nothing. The only way to write one is a comment holding no words, and an
 // empty paragraph there is a blank line the author never typed and the hub's

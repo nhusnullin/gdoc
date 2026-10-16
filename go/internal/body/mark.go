@@ -369,13 +369,15 @@ func countMarks(root ast.Node, source []byte, table markTable) map[string]int {
 	return counts
 }
 
-// isMark says whether a node is one of the two shapes a mark is written in.
-func isMark(node ast.Node) bool {
+// isMark says whether a node is one of the three shapes a mark is written in.
+// The source is what the third needs: a comment is raw HTML, and only its
+// words say whether it is a comment at all and whether it marks anything.
+func isMark(node ast.Node, source []byte) bool {
 	switch node.(type) {
 	case *Highlight, *Span:
 		return true
 	}
-	return false
+	return isPencil(node, source)
 }
 
 // checkMarks refuses a mark inside a mark, a mark inside a heading, a mark
@@ -389,7 +391,7 @@ func isMark(node ast.Node) bool {
 func (r *renderer) checkMarks(root ast.Node) error {
 	var refusal error
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering || !isMark(node) {
+		if !entering || !isMark(node, r.source) {
 			return ast.WalkContinue, nil
 		}
 		line := r.markLine(node)
@@ -407,7 +409,7 @@ func (r *renderer) checkMarks(root ast.Node) error {
 			}
 		}
 		for parent := node.Parent(); parent != nil; parent = parent.Parent() {
-			if isMark(parent) {
+			if isMark(parent, r.source) {
 				refusal = fmt.Errorf("line %d: a mark inside a mark carries two colours on one stretch of words and Word carries one, so the house style has none; the inner mark's own words are what gdoc would have to drop", line)
 				return ast.WalkStop, nil
 			}

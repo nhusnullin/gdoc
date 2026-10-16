@@ -138,3 +138,30 @@ func commentParagraphs(words string) []string {
 	end()
 	return paragraphs
 }
+
+// isPencil says whether a node is a comment that marks words, which is the
+// third shape a mark is written in.
+//
+// A comment holding no words is not one. It marks none, so no run of its own
+// reaches the document and nothing a refusal exists to protect is at risk:
+// "empty is nothing" holds wherever a mark is refused, the same as it holds in
+// a paragraph. TestAPencilGoesWhereAMarkGoes is the pin over where a comment
+// that does mark words is refused.
+func isPencil(node ast.Node, source []byte) bool {
+	raw, ok := node.(*ast.RawHTML)
+	if !ok {
+		return false
+	}
+	words, _, comment := commentWords(raw, source)
+	return comment && words != ""
+}
+
+// isCommentBlock says whether a block of HTML is a comment, closed or not. A
+// fence the note never closes is one too: naming it a block of HTML would send
+// the author looking for a tag they never wrote.
+func isCommentBlock(node *ast.HTMLBlock, source []byte) bool {
+	if _, _, comment := blockComment(node, source); comment {
+		return true
+	}
+	return unclosedObsidianComment(node, source)
+}

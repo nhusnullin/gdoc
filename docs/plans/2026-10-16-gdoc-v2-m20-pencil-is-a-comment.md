@@ -96,7 +96,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 1: an HTML comment inside a sentence is a pencil run, and the file states three spellings
 - [x] Task 2: a comment on lines of its own is grey paragraphs
 - [x] Task 3: the Obsidian spelling reaches the same node
-- [ ] Task 4: a pencil goes where a mark goes
+- [x] Task 4: a pencil goes where a mark goes
 - [ ] Task 5: gdoc's own two comments are markers
 - [ ] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 - [ ] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
@@ -159,6 +159,19 @@ footnote's own loss is warned today. `TestAHighlightInsideAPencilIsWords`:
 `<!-- a ==b== c -->` is not refused and carries the words. `isMark` and
 `checkMarks` learn the comment shape; `countMarks` is unchanged because the
 pencil is no debt.
+
+Ran 2026-10-16. The footnote clause above and the spec's own row read two ways,
+and the run did not choose between them: both are true of a different shape.
+A pencil inside a sentence inside a footnote is carried, which is the spec's
+"carried out and home plain with the loss named", what a highlight and the old
+span already do there, and what the milestone's one decision requires, since
+leaving it out would change what the grey mark does rather than how it is
+spelled; `internal/export` names that loss already. A comment on lines of its
+own inside a footnote is left out and warned, which is this clause, because a
+note under the page is a paragraph `footnoteBlocks` sets and the house style
+has no grey paragraph of its own in one. It is named "a comment" rather than
+"a block of HTML", for the reason the unclosed fence is. Both halves are in
+`TestAPencilGoesWhereAMarkGoes`.
 
 ### Task 5: gdoc's own two comments are markers
 
