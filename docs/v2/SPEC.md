@@ -613,9 +613,17 @@ by `export`. Decided 2026-10-14, DECISIONS.md, one entry each.
 
 **A highlight is Obsidian's syntax and no other.** `==words==` is yellow, and a
 colour emoji at the start of the highlight picks the rest: 🔴 red, 🟠 orange,
-🟡 yellow, 🟢 green, 🔵 blue, 🟣 purple. One grey, `pencil`, is Pandoc's
-bracketed span, `[words]{.pencil}`, the only span gdoc reads, and it is text
-colour rather than a highlight. The seven are stated once, in `house.yaml`
+🟡 yellow, 🟢 green, 🔵 blue, 🟣 purple. One grey, `pencil`, is a comment,
+HTML's `<!-- words -->` or Obsidian's `%% words %%`, and it is text colour
+rather than a highlight. Inside a sentence it is a grey run; on lines of its
+own it is grey paragraphs of its own, one per blank-line-separated stretch.
+The words inside it are literal and not markdown, so a highlight inside a
+pencil is words, and an empty comment is nothing and is left out with no
+warning. `export` writes the HTML spelling and never Obsidian's. gdoc's own
+two comments, `<!-- tab ` and `<!-- image: `, are markers and not pencil, and
+are refused by line on every route in. The old span `[words]{.pencil}` is no
+longer read and is refused by line naming the comment. Changed 2026-10-16,
+DECISIONS.md. The seven are stated once, in `house.yaml`
 under `marks:`, keyed by Obsidian's own colour names, each with its syntax, its
 kind and its Doc colour, and one of the highlights has to claim the bare `==`. `gdoc help marks` prints that table, so a skill reads
 the binary rather than carrying a copy.
@@ -625,9 +633,10 @@ hex, as shading for a highlight and as text colour for pencil. Docs has no
 character styles, so after import a mark is direct formatting and that is what
 `export` reads back. A colour outside the palette stays plain words and is
 counted by hex. A mark whose words cannot carry the syntax it is written with,
-a bracket inside a span's words, a link, or the highlight's own delimiter, comes
-home as the words alone with the loss named, because the file has to build
-again. A mark inside a footnote is the one that does not come home:
+the highlight's own delimiter inside a highlight or the comment's closer `-->`
+inside a pencil, comes home as the words alone with the loss named, because
+the file has to build again, and so does any formatting other than the grey
+on a pencilled run. A mark inside a footnote is the one that does not come home:
 the read keeps a footnote's text alone, so the words arrive plain and `export`
 names the loss. `read` prints the words and not the mark. `restyle` is
 unchanged, and the cover's yellow placeholders are the prelude's rather than
@@ -647,21 +656,19 @@ the continuation separator, which makes the generator's parts thirteen.
 
 **What is refused by line, in both halves.** A reference with no definition, a
 definition nothing references, a label defined twice, a footnote mark in a
-heading, a mark in a heading, a nested mark, an empty span, a span carrying any
-attribute but `.pencil`, a span that does not open and close on one line,
-`{.pencil}` written where the parse formed no span, and a footnote mark or a
-mark inside a picture's alt text. The heading refusals are read off the tree as
+heading, a mark in a heading, a nested mark, the old pencil span `]{.pencil}`,
+and a footnote mark or a mark inside a picture's alt text. The heading refusals are read off the tree as
 well as off the line, because goldmark builds a heading from a setext line, from
 a block quote and from a list item, and no line scan sees one; the alt-text
 refusals are read off the tree alone, because an alt text sits on a line of
-prose. Which labels are defined and which spans were formed are the parse's
-answers too: goldmark reads a definition wherever a block may start, and three
-of its own parsers claim a bracket before gdoc's span parser can. Inside a
+prose. Which labels are defined is the parse's answer too: goldmark reads a
+definition wherever a block may start. Inside a
 footnote, a list, a table, a picture, a code block or a heading is warned about
 by line and left out. No footnote in a table cell; a mark in one is carried. A
 code block is measured from the content indent of the block it sits in, so a
 code sample in a nested list item or inside a footnote defines nothing and
-refuses nothing, and a block of HTML is left out of both scans whole.
+refuses nothing, and a block of HTML that is not a comment is left out of
+both scans whole.
 
 ## Install and update
 

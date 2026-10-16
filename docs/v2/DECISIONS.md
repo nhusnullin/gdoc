@@ -89,9 +89,10 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds |
 | 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
 | 2026-10-14 | A footnote is carried on every route | holds |
-| 2026-10-14 | The marks: Obsidian's six colours and one grey | holds |
-| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | holds |
+| 2026-10-14 | The marks: Obsidian's six colours and one grey | superseded 2026-10-16 (the pencil's spelling, the span refusals and the "an HTML span for pencil" clause only; everything else in the entry holds) |
+| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | superseded 2026-10-16 (the span paragraphs only: the attribute counted against the spans the parse formed, and the words a span cannot hold; everything else in the entry holds) |
 | 2026-10-16 | `---` is a page break | holds |
+| 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4581,3 +4582,124 @@ publish twin in one table;
 `TestAHorizontalRuleStillExportsAsItsMarker`; `internal/live`'s
 `TestLivePageBreakShape` and `TestLiveRoundTrip`; and `go/boundary`'s
 `TestThePublishingPageSaysAThematicBreakIsAPageBreak`.
+
+## 2026-10-16. Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes.
+
+Nail's decision, taken in chat on the date above, two days after the marks
+shipped in v2.12.0. The grey mark keeps everything it does and changes its
+spelling. A pencil is written as a comment, HTML's `<!-- words -->` or
+Obsidian's `%% words %%`, and Pandoc's bracketed span `[words]{.pencil}` is no
+longer read. Supersedes the pencil half of the 2026-10-14 marks entry: the
+spelling, the span refusals, and the clause declining "an HTML span for
+pencil", which declined a span and not a comment. The colour, the character
+style, the fate on the envelope and `read` are unchanged.
+
+**Why.** In Obsidian the span renders as its own brackets and braces, and
+most of what the M18 review closed was the bracket: a link inside a pencil,
+`]{.pencil}` closing nothing, a highlight inside a span, a span the parse
+never formed because a picture, a footnote mark or a link claimed the bracket
+first. A comment has none of that. The only words a comment cannot hold are
+its own closer. Obsidian dims a comment while the author edits and hides it
+when anybody reads, Pandoc and CommonMark both parse the HTML spelling, and
+gdoc's own two markers in a projection are already HTML comments.
+
+**What this strains.** Principle 1, two renderings of one text, in one place:
+the hub's reading view hides what the Doc shows grey. Nail accepted it, and it
+changes what a pencil is. The 2026-10-14 entry called it prose that stays in
+the document but is not the argument, visible in both renderings. It is now an
+aside for the Doc's reader, which the note's reader skips entirely. The hub
+was counted before he chose: two HTML comments in two notes, both asides of
+exactly that shape, a `TODO(Nail)` and an `Add ideas below`, no `%%` and no
+span. Both reach their documents grey from now on instead of being left out.
+
+**Two spellings, one mark.** `<!-- words -->` and `%% words %%` are the same
+pencil. house.yaml states both under the pencil's `syntax:`, HTML first, and
+`gdoc help marks` prints both. `export` writes the first, because CommonMark
+and Pandoc read it and Obsidian's is Obsidian's alone. The Obsidian spelling
+is read and never written.
+
+**Two shapes.** A comment inside a sentence is a grey run in that paragraph.
+A comment on lines of its own is grey paragraphs of its own, one per
+blank-line-separated stretch inside it, the lines within a stretch joined by
+one space, which is how markdown reads prose.
+
+**The words are literal.** Nothing inside a comment is markdown: `**x**`
+reaches the Doc as asterisks, grey, and `==x==` as its equals signs. goldmark
+hands a comment back as raw text, reading markdown inside it would be a second
+parse to keep in step, and a pencil is an aside rather than typeset prose. So
+a highlight inside a pencil is words and is not refused, and a pencil inside a
+highlight is a mark inside a mark and is. `export` writes a grey run's words
+and nothing else about it: a bold or a link somebody put on grey words in the
+Doc is dropped, with the loss named the way a mark inside a mark is named
+today, because the comment cannot carry it home.
+
+**Empty is nothing.** `<!-- -->`, `<!---->` and `%%%%` carry no words and are
+left out with no warning. The span's empty case was refused because its syntax
+would have reached the document as words; a comment's syntax never does.
+
+**A pencil goes where a mark goes.** Refused by line in a heading, in a
+picture's alt text and inside another mark. Carried in a table cell, a list
+item and a block quote. Inside a footnote it is carried out and comes home
+plain with the loss named, as every mark does. Inside a code block or a code
+span it is code. The one rule a highlight has that a pencil does not is the
+colour emoji, which a comment never opens with.
+
+**The one word a pencil cannot hold is its closer.** A grey run in the Doc
+whose words hold `-->` comes home as the words alone with the loss named,
+because the file has to build again. `%%` inside the words is fine, since the
+HTML spelling is the one written.
+
+**gdoc's own two comments are markers, not pencil.** `<!-- tab ` and
+`<!-- image: ` join `markers.Pairs`, so `build` and `publish` refuse a note
+holding one by line, the way they refuse `{+ +}` and `[[c: ]]`, and
+`propose`, `reply` and `annotate` refuse one in their text. `export` keeps
+writing the image comment for somebody to place the picture by hand. Today
+that comment is a block of HTML left out with a warning; refusing it is what
+"a marker travels out of a document and never back in" already said.
+
+**The old span is refused by name.** `]{.pencil}` on a line is refused, naming
+the comment, because the alternative is brackets and braces printed into a
+document with the build saying ok. It is one regular expression. Nothing in
+the hub holds one today, and the rule can go in a later entry.
+
+**Other raw HTML is unchanged.** `<b>` inside a sentence is warned about by
+line and left out, and a block of HTML that is not a comment is left out
+whole, as since M13.
+
+**The docx is unchanged.** The run carries the `Pencil` character style and
+the exact hex #9A9A9A, no italic, under the 4.5:1 floor on purpose as the
+2026-10-14 entry says. A grey paragraph of its own is a body paragraph whose
+one run carries it. Drive's import of that hex was measured in M18 and nothing
+new goes over the wire, so there is no gate. The in-place restyle still turns
+a pencil black, `docs/backlog/restyle-keeps-pencil.md` holds the fix, and
+only its wording changes.
+
+**What goes.** The span parser, both halves, the `Span` node, `checkSpans`
+and its six refusals, `spanWritten` and `spanClosed`, and the `.pencil`
+constant. `internal/body` reads one inline extension of its own after this,
+the highlight, and one of goldmark's, the comment.
+
+**What is not built.** Markdown inside a pencil. A pencil on a heading. The
+Obsidian spelling on the way home. A comment in `propose --block` content,
+which stays raw HTML and stays refused. A comment in a thread, which
+`plaintext` refuses as it refuses any markup. A meaning for pencil in the
+binary.
+
+**Tests.** `internal/body`'s `TestAnHTMLCommentIsAPencilRun`,
+`TestAnObsidianCommentIsAPencilRun`,
+`TestACommentOnLinesOfItsOwnIsGreyParagraphs`,
+`TestTheWordsInsideAPencilAreLiteral`, `TestAnEmptyCommentIsLeftOut`,
+`TestAPencilGoesWhereAMarkGoes`, `TestAHighlightInsideAPencilIsWords`,
+`TestGdocsOwnCommentsAreMarkersAndNotPencil`,
+`TestTheOldSpanIsRefusedByLineNamingTheComment`,
+`TestOtherRawHTMLIsStillWarnedAndLeftOut` and the kept
+`TestThePencilSyntaxIsTheHouseStyles`; `internal/markers`'s
+`TestMarkersNamesEachOpener`, grown by two; `internal/export`'s
+`TestAPencilRunComesHomeAsAnHTMLComment`,
+`TestAGreyParagraphComesHomeAsACommentOfItsOwn`,
+`TestAPencilWhoseWordsHoldTheCloserIsNamedAsALoss`,
+`TestFormattingOnAPencilIsDroppedAndNamed` and
+`TestTheObsidianSpellingIsNeverWritten`; `cmd/gdoc`'s
+`TestHelpMarksPrintsBothPencilSpellings`; `internal/live`'s
+`TestLiveRoundTrip`, whose pencil pair changes; and `go/boundary`'s
+`TestThePublishingPageSaysAPencilIsAComment`.
