@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -151,5 +152,33 @@ func TestSettingsPathIsInTheConfigFolder(t *testing.T) {
 	}
 	if p != filepath.Join(dir, "settings.yaml") {
 		t.Errorf("SettingsPath() = %q, want settings.yaml in the config folder", p)
+	}
+}
+
+func TestPresenceDirIsInTheConfigFolder(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	p, err := PresenceDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != filepath.Join(dir, "presence") {
+		t.Errorf("PresenceDir() = %q, want presence in the config folder", p)
+	}
+	// Naming the directory creates nothing: the first event is what makes it,
+	// and a command with the flag off names it never.
+	if _, err := os.Stat(p); !os.IsNotExist(err) {
+		t.Errorf("PresenceDir() made the directory: %v", err)
+	}
+}
+
+func TestPresenceDirFailsWhenTheDirectoryCannotBeNamed(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("%AppData% is the Windows branch and TestDirForEachCase holds it")
+	}
+	t.Setenv("GDOC_CONFIG_DIR", "")
+	t.Setenv("HOME", "")
+	if _, err := PresenceDir(); err == nil {
+		t.Error("PresenceDir() guessed a path with no home to put it under")
 	}
 }

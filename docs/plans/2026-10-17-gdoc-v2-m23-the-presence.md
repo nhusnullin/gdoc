@@ -177,7 +177,7 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/internal/presence/doc.go`, `event.go`, `append.go`, `presence_test.go`, `testdata/events-v1.jsonl`
 - Modify: `go/internal/config/config.go`, `go/internal/config/config_test.go`
 
-- [ ] `TestOffTouchesNothing` (`GDOC_CONFIG_DIR` under a 0500 directory, no
+- [x] `TestOffTouchesNothing` (`GDOC_CONFIG_DIR` under a 0500 directory, no
       `presence/` appears, no error), `TestTheEventCarriesOnlyItsListedFields`
       (json tags against the spec's literal list, `gdoc` and `run` among them),
       `TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle` (canaries in data
@@ -199,8 +199,8 @@ every box in it is ticked and its commit is on the branch.
       scripted run against `events-v1.jsonl`, byte for byte, with a fixed
       clock, pid, run id and version; the script covers every event kind and
       every optional field at least once, chat and terminal both)
-- [ ] `config.PresenceDir()` beside the other paths, with its test
-- [ ] `Event` as the spec lists it; `Begin(ctx, on bool, version, command,
+- [x] `config.PresenceDir()` beside the other paths, with its test
+- [x] `Event` as the spec lists it; `Begin(ctx, on bool, version, command,
       doc string, wait, readsBack bool, errOut) *Run`, `(*Run).End(emit.Result)`,
       `Held`, `Released`, `Expired`, `Landed`, `WithChat(ctx) context.Context`
       and its reader, every one safe on nil and on off; the writer is one
@@ -209,7 +209,7 @@ every box in it is ticked and its commit is on the branch.
       eight random bytes as hex taken once per process; the clock, the pid,
       the run id and the monotonic source behind variables for the fixture
       test
-- [ ] `doc.go` holds the rules with the test for each, and why the binary
+- [x] `doc.go` holds the rules with the test for each, and why the binary
       never reads the file
 
 ### Task 3: the hook in `dispatch` and in the holds
