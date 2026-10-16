@@ -739,6 +739,13 @@ func (e *emitter) breakLine(index int) string {
 	if e.opts.PageBreak != "" {
 		return e.opts.PageBreak
 	}
+	return e.breakPlaceholder(index)
+}
+
+// breakPlaceholder is the half of breakLine that names the break the caller
+// got no line for, so a place that can take no line of markdown at all still
+// says the page turns there instead of dropping the fact.
+func (e *emitter) breakPlaceholder(index int) string {
 	p := placeholders[docs.KindPageBreak]
 	m := "[" + p.label + "]"
 	e.warnings = append(e.warnings,
@@ -1148,6 +1155,12 @@ func (e *emitter) cell(c docs.Cell) string {
 	var parts []string
 	for _, b := range c.Blocks {
 		if b.Paragraph != nil {
+			// A cell holds inline text, so the caller's line cannot be written
+			// here whatever it is: the flag keeps the placeholder and the
+			// warning, the way a native break in a cell already does.
+			if b.Paragraph.PageBreakBefore {
+				parts = append(parts, e.breakPlaceholder(b.Paragraph.StartIndex))
+			}
 			if s := e.capture(func() { e.runs(b.Paragraph.Runs) }); s != "" {
 				parts = append(parts, s)
 			}
@@ -1173,15 +1186,22 @@ func (e *emitter) cell(c docs.Cell) string {
 // break on a line of its own rather than inside a sentence, which is the only
 // shape PageBreak is written for.
 //
-// A break carrying a suggestion id is not one. The markers that say a
-// suggestion is pending are written around the span, and the caller's line
-// would go inside them: "{----}" is neither the suggestion nor the break.
+// A paragraph carrying a suggestion id on any of its runs is not one. The
+// markers that say a suggestion is pending are written around the span, and
+// the caller's line would go inside them or sit against them: "{----}" is
+// neither the suggestion nor the break, and "---{++}[s:ID]" is a line the next
+// build reads as prose. The id on the newline beside the break is the same
+// pending span as the id on the break itself.
+// TestABreakBesideASuggestionKeepsThePlaceholder is the pin.
 func standaloneBreak(rs []docs.Run) bool {
 	found := false
 	for _, r := range rs {
+		if len(r.InsertionIDs) > 0 || len(r.DeletionIDs) > 0 {
+			return false
+		}
 		switch {
 		case r.Kind == docs.KindPageBreak:
-			if found || len(r.InsertionIDs) > 0 || len(r.DeletionIDs) > 0 {
+			if found {
 				return false
 			}
 			found = true

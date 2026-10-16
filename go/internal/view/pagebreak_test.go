@@ -167,3 +167,70 @@ func TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine(t *testing.T) {
 		})
 	}
 }
+
+// TestABreakBesideASuggestionKeepsThePlaceholder: standaloneBreak refuses a
+// break that carries a suggestion id, because the caller's line would be
+// written inside the markers that say the span is pending. A paragraph holding
+// the break and a newline somebody suggested is the same shape with the id on
+// the other run, and "---{++}[s:ID]" is a line the next build reads as prose
+// rather than as a break. So no run of the paragraph may carry one.
+func TestABreakBesideASuggestionKeepsThePlaceholder(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", StartIndex: 1, Runs: []docs.Run{
+			{Kind: docs.KindPageBreak, StartIndex: 1, EndIndex: 2},
+			{Kind: docs.KindText, Text: "\n", StartIndex: 2, EndIndex: 3, InsertionIDs: []string{"sug1"}},
+		}}},
+	}}}}
+	text, warnings := Project(d, Options{PageBreak: "---"})
+	if strings.Contains(text, "---") {
+		t.Errorf("the caller's line was written beside a pending suggestion:\n%q", text)
+	}
+	if !strings.Contains(text, "[page break]") {
+		t.Errorf("the projection does not hold the placeholder:\n%q", text)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "a page break at index 1") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("nothing warned that the break was printed as a placeholder: %v", warnings)
+	}
+}
+
+// TestABreakFlaggedOnACellParagraphKeepsThePlaceholder: a cell holds inline
+// text, so no line of markdown says the page turns there, whichever shape the
+// break has. A native break in a cell already keeps the placeholder and the
+// warning; the flag on a cell's paragraph is the same fact and is named the
+// same way rather than dropped.
+func TestABreakFlaggedOnACellParagraphKeepsThePlaceholder(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		{Table: &docs.Table{StartIndex: 1, Rows: [][]docs.Cell{{
+			{Blocks: []docs.Block{{Paragraph: &docs.Paragraph{
+				Style:           "NORMAL_TEXT",
+				StartIndex:      2,
+				PageBreakBefore: true,
+				Runs:            []docs.Run{run("a cell", 2)},
+			}}}},
+			{Blocks: []docs.Block{{Paragraph: &docs.Paragraph{
+				Style:      "NORMAL_TEXT",
+				StartIndex: 9,
+				Runs:       []docs.Run{run("b cell", 9)},
+			}}}},
+		}}}},
+	}}}}
+	text, warnings := Project(d, Options{PageBreak: "---"})
+	if want := "[page break] a cell | b cell"; !strings.Contains(text, want) {
+		t.Errorf("the projection does not hold %q:\n%q", want, text)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "a page break at index 2") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("nothing warned that the cell's break was printed as a placeholder: %v", warnings)
+	}
+}

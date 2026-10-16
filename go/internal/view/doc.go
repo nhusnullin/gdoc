@@ -208,6 +208,18 @@
 // did not survive, which is what every break printed before the line existed.
 // TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine is the pin.
 //
+// The flag's line is written in front of the paragraph and carries no prefix,
+// so a heading and a list item take it. A cell does not: nothing inside a cell
+// is a line of its own, so a cell paragraph carrying the flag keeps the
+// placeholder and the warning the way a native break in a cell does.
+// TestABreakFlaggedOnACellParagraphKeepsThePlaceholder is the pin.
+//
+// A pending suggestion is the other place the line is not written. The markers
+// that say a span is pending are written around it, so the line would go
+// inside them or sit against them, and neither reads back as a break: a
+// paragraph is a standalone break only where no run of it carries a suggestion
+// id. TestABreakBesideASuggestionKeepsThePlaceholder is the pin.
+//
 // # A horizontal rule prints [rule] and not ---
 //
 // The footnote separator is already ---, and one line meaning two things is a

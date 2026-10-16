@@ -4517,9 +4517,21 @@ placeholder and the warning instead, because the line would come back as
 something else on the next build: `# ---` as a heading saying `---`, `1. ---`
 as an item holding a break, and `---` in a cell as three hyphens of text, since
 a pipe table's cell holds inline text and goldmark reads no thematic break in
-one. The flag's line is unaffected: it is written in front of the paragraph and
-carries no prefix. `internal/view`'s
-`TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine` is the pin.
+one. The flag's line is written in front of the paragraph and carries no
+prefix, so a heading and a list item take it; a cell does not, because nothing
+inside a cell is a line of its own, and a cell paragraph carrying the flag
+keeps the placeholder and the warning too. `internal/view`'s
+`TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine` and
+`TestABreakFlaggedOnACellParagraphKeepsThePlaceholder` are the pins.
+
+**No line is written beside a pending suggestion**, which the same review left
+half done. The markers that say a span is pending are written around it, so the
+line would go inside them or sit against them, and `---{++}[s:ID]` is read back
+as prose rather than as a break. The refusal was on the break run alone, so a
+paragraph holding a break and a newline somebody suggested still got the line
+and lost the break with no warning. It is the whole paragraph now: a standalone
+break is one where no run carries a suggestion id.
+`TestABreakBesideASuggestionKeepsThePlaceholder` is the pin.
 
 **What is not built here.** No syntax for a horizontal rule in a note. No
 `insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body pass, so
