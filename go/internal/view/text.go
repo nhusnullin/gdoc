@@ -7,6 +7,7 @@ package view
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -162,7 +163,24 @@ type Mark struct {
 	// bare.
 	Ambiguous []string
 	Explicit  string
+	// Literal says nothing inside these words is markdown: the mark is
+	// written as a comment, and the next build reads what is inside one as
+	// the characters it is. So the words are written as the document holds
+	// them, the markup gdoc would otherwise have written around them is
+	// dropped and the loss is named, and the only thing they cannot hold is
+	// the mark's own closer. internal/export's
+	// TestFormattingOnAPencilIsDroppedAndNamed and
+	// TestAPencilWhoseWordsHoldTheCloserIsNamedAsALoss are the pins.
+	Literal bool
 }
+
+// closer is what shuts the mark, without the space that separates it from the
+// words: " -->" is written around the words and "-->" is what the next build
+// reads as the end of the comment, whatever sits in front of it.
+func (m Mark) closer() string { return strings.TrimSpace(m.Shut) }
+
+// delimiter is what opens the mark, without that same space.
+func (m Mark) delimiter() string { return strings.TrimSpace(m.Open) }
 
 // opener is what this group of marked words opens with: Open, or Explicit
 // where the words would read as carrying the opener themselves.
@@ -1292,14 +1310,18 @@ type shape struct {
 //
 // Two shapes, both of them markup gdoc writes into the file itself. The first
 // is a real note's reference, "[^n]", and footnoteMark holds what the next
-// build makes of one. The second is the attribute a mark's span closes with,
-// "{.pencil}", which comes off the palette rather than being a constant here,
-// because the house style is the one place the syntax is stated. The attribute
-// is searched for on its own, without the bracket in front of it, because all
-// three shapes it appears in are losses: internal/body refuses an attribute
-// that closes no span it reads and refuses a closer no line opened, and a
-// whole span written in the document's own words publishes a grey phrase the
-// document never carried with the brackets dropped out of the text.
+// build makes of one. The second is the opener of a mark written as a comment,
+// "<!--", which comes off the palette rather than being a constant here,
+// because the house style is the one place the syntax is stated.
+//
+// The opener alone, and not the comment it would make. A complete one in the
+// document's own words publishes a grey aside the document never carried, with
+// the delimiters dropped out of the text; an opener with no closer of its own
+// reaches the closer of the next pencil in the file and takes everything
+// between them, and on a line of its own it swallows every line after it. The
+// closer alone is no loss at all: with no opener in front of it the next build
+// reads it as the characters the document shows, so naming it would call an
+// arrow in a caption a loss.
 //
 // Neither shape can be escaped out of the way: internal/body hands goldmark's
 // text through as it stands and never unescapes a punctuation mark, so a
@@ -1311,13 +1333,13 @@ func (e *emitter) gdocShapes(text string) []shape {
 	for _, m := range footnoteMark.FindAllStringIndex(text, -1) {
 		out = append(out, shape{at: m[0], what: text[m[0]:m[1]], noun: "a footnote mark of gdoc's"})
 	}
-	for _, a := range e.spanAttributes() {
+	for _, a := range e.commentOpeners() {
 		for from := 0; ; {
 			i := strings.Index(text[from:], a)
 			if i < 0 {
 				break
 			}
-			out = append(out, shape{at: from + i, what: a, noun: "the attribute gdoc closes a mark's span with"})
+			out = append(out, shape{at: from + i, what: a, noun: "the opener gdoc writes a mark's comment with"})
 			from += i + len(a)
 		}
 	}
@@ -1325,27 +1347,21 @@ func (e *emitter) gdocShapes(text string) []shape {
 	return out
 }
 
-// spanAttributes is the attribute each span in the palette closes with, once
+// commentOpeners is the opener each mark written as a comment opens with, once
 // each. A mark written as a delimiter pair has none, and two marks sharing one
-// attribute would otherwise name the same words twice.
-func (e *emitter) spanAttributes() []string {
+// opener would otherwise name the same words twice.
+func (e *emitter) commentOpeners() []string {
 	var out []string
 	for i := range e.opts.Marks {
-		shut := e.opts.Marks[i].Shut
-		brace := strings.Index(shut, "{")
-		if brace < 0 || !strings.Contains(shut, "]") {
+		m := &e.opts.Marks[i]
+		if !m.Literal {
 			continue
 		}
-		a := shut[brace:]
-		seen := false
-		for _, had := range out {
-			if had == a {
-				seen = true
-			}
+		a := m.delimiter()
+		if a == "" || slices.Contains(out, a) {
+			continue
 		}
-		if !seen {
-			out = append(out, a)
-		}
+		out = append(out, a)
 	}
 	return out
 }
@@ -1443,10 +1459,35 @@ func (e *emitter) body(rs []docs.Run) {
 			continue
 		}
 		e.write(m.opener(words))
-		e.links(words)
+		if m.Literal {
+			e.literal(words)
+		} else {
+			e.links(words)
+		}
 		e.write(m.Shut)
 		e.links(tail)
 		i = j
+	}
+}
+
+// literal writes a mark's words as the characters they are, which is what the
+// next build makes of anything inside a comment.
+//
+// A link is the one piece of markup the read carries on a run that can also
+// carry the mark: written as "[words](url)" inside the comment it would reach
+// the next document as those characters, in the mark's own colour, with an
+// address nobody typed beside them. The words are the document's either way,
+// so they go home and the link is named, which is what a placeholder does for
+// a picture. internal/export's TestFormattingOnAPencilIsDroppedAndNamed is
+// the pin.
+func (e *emitter) literal(rs []docs.Run) {
+	for _, r := range rs {
+		if l := textLink(r); l != nil && e.target(l) != "" {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the link on the words at index %d is printed as the words alone: nothing inside a comment is markdown, and the mark these words carry is written as one",
+				r.StartIndex))
+		}
+		e.one(r)
 	}
 }
 
@@ -1504,28 +1545,23 @@ func (e *emitter) cannotOpenHere(m *Mark, words []docs.Run) string {
 // A mark comes home as the syntax an author types, and the next build reads
 // that syntax back. Two shapes of words it cannot be read around:
 //
-//   - A span's words end at the first bracket a reader meets, so a bracket the
-//     document holds closes the span early, and so do the brackets gdoc writes
-//     for a run that is not text: a footnote mark is "[^3]". internal/body
-//     refuses the line rather than guessing, so the file would not build at
-//     all. A link is the same bracket from the other side: "[[words](url)]"
-//     opens nothing either side can read. Words opening with a caret are the
-//     same bracket once more: the span's own "[" in front of them is how a
-//     footnote mark is written, and goldmark's footnote parser runs ahead of
-//     the span parser, so "[^1]{.pencil}" is a mark of gdoc's to the next
-//     build. A label the file does not define refuses it by line; a label it
-//     does define grows a second reference to a note the document never had,
-//     and the words and the colour go with it.
+//   - A comment's words end at the first closer a reader meets, so a closer
+//     the document holds shuts the comment early and the words after it reach
+//     the file as prose, grey in the document and black in the next one. It is
+//     the one word a comment cannot hold: everything else inside one is the
+//     characters it is, brackets and delimiters and all.
 //   - A delimiter pair is read by its run of characters, so the pair itself
 //     inside the words closes the mark early, and one of its characters against
 //     either delimiter lengthens that run and comes home as a stray character
 //     in the document.
 //
-// Every mark in the palette is asked, not this one alone. A mark the words hold
-// is another mark's syntax inside this one, which the next build refuses as a
-// mark inside a mark, and a span's closer inside a highlight's words is one it
-// refuses as a span the line does not open. internal/export's
-// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords is the pin.
+// Every mark in the palette is asked of a mark written as a pair, not this one
+// alone: a mark the words hold is another mark's syntax inside this one, which
+// the next build refuses as a mark inside a mark. A mark whose words are
+// literal is asked about its own closer and nothing else, because the next
+// build reads no mark of any kind inside a comment. internal/export's
+// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords and
+// TestAPencilWhoseWordsHoldAHighlightComesHomeInTheComment are the two pins.
 //
 // A backslash is not the answer. internal/body hands goldmark's text through as
 // it stands and never unescapes a punctuation mark, so a backslash written into
@@ -1535,22 +1571,18 @@ func (e *emitter) cannotOpenHere(m *Mark, words []docs.Run) string {
 // TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
 func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
 	words, allText := writtenWords(rs)
-	if strings.Contains(m.Open, "[") || strings.Contains(m.Shut, "]") {
-		if !allText {
-			return "a span marks words, and gdoc writes this content as markup of its own, which carries the bracket that would close the span"
+	if !allText {
+		// A mark matches a run of the document's own text alone, so nothing
+		// reaches this today. It stays because a caller naming a colour that
+		// a placeholder's run carries would otherwise mark gdoc's own markup
+		// as the author's words.
+		return "gdoc writes this content as markup of its own, and a mark around it would say gdoc's words were the author's"
+	}
+	if m.Literal {
+		if strings.Contains(words, m.closer()) {
+			return "the words hold " + m.closer() + ", which shuts the comment the mark is written as, and the words after it would reach the file as prose"
 		}
-		if strings.ContainsAny(words, "[]") {
-			return "the words hold a bracket, and a span's words end at the first bracket a reader meets"
-		}
-		if strings.HasPrefix(words, "^") {
-			return "the words open with a caret, and a bracket in front of one is how a footnote mark is written"
-		}
-		for _, r := range rs {
-			if l := textLink(r); l != nil && e.target(l) != "" {
-				return "the words point somewhere, and a link is written with the bracket that would close the span"
-			}
-		}
-		return e.holdsAnotherMark(m, words)
+		return ""
 	}
 	if strings.Contains(words, m.Shut) || strings.Contains(words, m.Open) {
 		return "the words hold the delimiter the mark is written with, which would close it early"
@@ -1567,12 +1599,13 @@ func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
 // holdsAnotherMark is why these words hold the syntax of a mark that is not
 // this one, or nothing where they hold none.
 //
-// A span's closer is enough on its own: the next build refuses a closer the
-// line does not open, whatever sits in front of it. A delimiter pair takes
-// both halves, because one "==" in a sentence is a sentence and the build
-// reads a mark only where a pair closes. Either way the mark around these
-// words would nest inside this one, and two colours on one stretch of words is
-// what the house style has no answer for.
+// A comment's opener is enough on its own, for the reason gdocShapes gives: it
+// opens a mark the author did not write, and it reaches a closer somewhere,
+// the next pencil's or the end of the file. A delimiter pair takes both
+// halves, because one "==" in a sentence is a sentence and the build reads a
+// mark only where a pair closes. Either way the mark around these words would
+// nest inside this one, and two colours on one stretch of words is what the
+// house style has no answer for.
 func (e *emitter) holdsAnotherMark(m *Mark, words string) string {
 	for i := range e.opts.Marks {
 		other := &e.opts.Marks[i]
@@ -1582,9 +1615,9 @@ func (e *emitter) holdsAnotherMark(m *Mark, words string) string {
 		if other.Shut == "" || (other.Open == m.Open && other.Shut == m.Shut) {
 			continue
 		}
-		if strings.Contains(other.Shut, "]") {
-			if strings.Contains(words, other.Shut) {
-				return "the words hold the closer of another mark, which the next build reads as a span this line does not open"
+		if other.Literal {
+			if strings.Contains(words, other.delimiter()) {
+				return "the words hold the opener of the comment another mark is written as, which the next build reads as a mark inside this one"
 			}
 			continue
 		}

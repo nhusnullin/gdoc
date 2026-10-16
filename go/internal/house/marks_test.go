@@ -33,7 +33,7 @@ func TestTheSevenMarksAreStatedAsLiterals(t *testing.T) {
 		{"blue", []string{"🔵"}, "highlight", "#5DB3FF", false},
 		{"red", []string{"🔴"}, "highlight", "#FF6B6B", false},
 		{"orange", []string{"🟠"}, "highlight", "#FFB85C", false},
-		{"pencil", []string{".pencil", "<!--", "%%"}, "text", "#9A9A9A", false},
+		{"pencil", []string{"<!--", "%%", ".pencil"}, "text", "#9A9A9A", false},
 	}
 	for _, c := range cases {
 		mark, ok := cfg.Marks[c.name]
@@ -215,8 +215,8 @@ func TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused(t *testing.T) {
 // ==highlight== would come out as grey text.
 func TestTheBareHighlightBelongsToAHighlight(t *testing.T) {
 	src := bytes.Replace(embedded,
-		[]byte("    syntax:\n    - .pencil\n"),
-		[]byte("    syntax:\n    - .pencil\n    - '=='\n"), 1)
+		[]byte("    syntax:\n    - '<!--'\n"),
+		[]byte("    syntax:\n    - '<!--'\n    - '=='\n"), 1)
 	if bytes.Equal(src, embedded) {
 		t.Fatal("the pencil mark's syntax was not found to extend")
 	}

@@ -911,39 +911,50 @@ func TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss(t *testing
 	}
 }
 
-// TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss. The pencil comes home as
-// Pandoc's span, so the attribute it closes with is syntax of gdoc's in the
-// file: the document's own words holding it are read by the next build as that
-// syntax and not as the words the document shows. Two of the three shapes
-// refuse the file by line and the third publishes a grey phrase the document
-// never carried, with the brackets and the attribute dropped from the words.
-func TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss(t *testing.T) {
+// TestWordsThatWouldReadAsAPencilsCommentAreNamedAsALoss. A pencil comes home
+// as a comment, so the opener it is written with is syntax of gdoc's in the
+// file: the document's own words holding it are read by the next build as a
+// comment and not as the words the document shows. A complete one in the prose
+// publishes a grey aside the document never carried, with the delimiters
+// dropped out of the text, and an opener with no closer of its own reaches the
+// closer of the next pencil in the file, or, on a line of its own, swallows
+// every line after it.
+//
+// The closer is not named on its own. "-->" in the prose with no opener in
+// front of it is the characters the document shows, which is what the next
+// build makes of them, so naming it would call an arrow in a caption a loss.
+func TestWordsThatWouldReadAsAPencilsCommentAreNamedAsALoss(t *testing.T) {
 	for _, prose := range []string{
-		"the {.pencil} attribute",
-		"ends with ]{.pencil} here",
-		"write [x]{.pencil} to mark",
+		"a <!-- comment --> in the prose",
+		"ends with <!-- here",
 	} {
 		_, _, _, warnings := Project(oneMarked(docs.Run{Text: prose}), nil, palette(t))
 
 		named := false
 		for _, w := range warnings {
-			if strings.Contains(w, "{.pencil}") {
+			if strings.Contains(w, "<!--") {
 				named = true
 			}
 		}
 		if !named {
-			t.Errorf("%q: no warning names the span syntax the next build would read: %v", prose, warnings)
+			t.Errorf("%q: no warning names the comment syntax the next build would read: %v", prose, warnings)
 		}
 	}
 }
 
-// The other half: prose holding no such shape is not warned about one.
-func TestProseWithNoSpanSyntaxIsNotWarnedAboutOne(t *testing.T) {
-	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "a pencil note about .pencil here"}), nil, palette(t))
+// The other half: prose holding no such shape is not warned about one, and the
+// closer alone is no such shape.
+func TestProseWithNoCommentSyntaxIsNotWarnedAboutOne(t *testing.T) {
+	for _, prose := range []string{
+		"a pencil note about pencils here",
+		"the load --> the queue, both ways",
+	} {
+		_, _, _, warnings := Project(oneMarked(docs.Run{Text: prose}), nil, palette(t))
 
-	for _, w := range warnings {
-		if strings.Contains(w, "{.pencil}") {
-			t.Errorf("a warning names span syntax in words that hold none: %q", w)
+		for _, w := range warnings {
+			if strings.Contains(w, "the next build reads") {
+				t.Errorf("%q: a warning names comment syntax in words that hold none: %q", prose, w)
+			}
 		}
 	}
 }

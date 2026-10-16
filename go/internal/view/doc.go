@@ -246,15 +246,18 @@
 // TestProseWithNoFootnoteMarkIsNotWarnedAboutOne are the pins, and
 // docs/backlog/build-never-unescapes-a-backslash.md is the escaping.
 //
-// The attribute a mark's span closes with, {.pencil}, is the second shape and
+// The opener a mark's comment is written with, <!--, is the second shape and
 // is asked for the same reason. It comes off the palette rather than being a
-// constant here, and it is searched for on its own, without the bracket in
-// front of it, because every shape it appears in is a loss: internal/body
-// refuses an attribute that closes no span it reads and refuses a closer no
-// line opened, and a whole span written in the document's own words publishes
-// a grey phrase the document never carried with the brackets dropped out of
-// the text. internal/export's TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss
-// and TestProseWithNoSpanSyntaxIsNotWarnedAboutOne are the pins. A pair of ==
+// constant here, and the opener is asked for rather than the comment it would
+// make, because every shape it appears in is a loss: a complete one in the
+// document's own words publishes a grey aside the document never carried with
+// the delimiters dropped out of the text, an opener with no closer of its own
+// reaches the closer of the next pencil in the file, and on a line of its own
+// it swallows every line after it. The closer alone is no loss: with no opener
+// in front of it the next build reads it as the characters the document shows,
+// so naming it would call an arrow in a caption a loss. internal/export's
+// TestWordsThatWouldReadAsAPencilsCommentAreNamedAsALoss and
+// TestProseWithNoCommentSyntaxIsNotWarnedAboutOne are the pins. A pair of ==
 // in the document's own words is not asked, because whether a pair opens a
 // highlight is goldmark's flanking rule rather than a shape:
 // docs/backlog/export-never-names-a-highlight-in-the-documents-own-words.md.
@@ -272,9 +275,9 @@
 // make of it is noise in a reviewing session.
 // TestReadNamesNothingTheNextBuildWouldRead is the pin.
 //
-// The same bracket from the span's side is in cannotCarry: words opening with a
-// caret cannot carry a pencil, because the span's own [ in front of them is how
-// a footnote mark is written and goldmark's footnote parser runs first.
+// A footnote reference inside a mark's words is not one of these shapes: a
+// reference is not text, so no mark is written around it, and a caret in the
+// words of a comment is the character it is.
 //
 // # A comment range that names no position is a warning, not a marker
 //
@@ -522,17 +525,25 @@
 //
 // A mark whose words cannot carry its syntax is written as the words alone,
 // with the loss named, which is what a placeholder does for a picture. The
-// next build reads the syntax back, and three shapes of words it cannot read
-// it around: a bracket the document holds, because a span's words end at the
-// first bracket a reader meets; a link, because that is written with the same
-// bracket; and a highlight's own delimiter inside the words, which closes the
-// mark early, or one half of it against either end, which lengthens it.
-// Written anyway, the first two put a file into the hub that `build` refuses by
-// line, blaming the file rather than the export. A backslash is no answer:
+// next build reads the syntax back, and two shapes of words it cannot read it
+// around: a highlight's own delimiter inside the words, which closes the mark
+// early, or one half of it against either end, which lengthens it; and, for a
+// mark written as a comment, that comment's closer, which shuts it early and
+// leaves the words after it in the file as prose. A backslash is no answer:
 // internal/body hands goldmark's text through as it stands and never unescapes
 // a punctuation mark, so one written here reaches the document as a backslash.
 // internal/export's
 // TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
+//
+// A mark may say its words are literal, which is what Mark.Literal is for and
+// what a mark written as a comment says: the next build reads nothing inside a
+// comment as markdown. So the words are written as the document holds them and
+// the markup this projection would otherwise have written around them is
+// dropped and named, which is the link a run can carry beside the colour.
+// Written anyway it would reach the next document as the characters
+// "[words](url)", in the mark's own colour, with an address nobody typed
+// beside them. internal/export's TestFormattingOnAPencilIsDroppedAndNamed and
+// TestAPencilRunComesHomeAsAnHTMLComment are the pins.
 //
 // Where the line is is asked before what the words hold, in cannotMarkHere.
 // internal/body refuses a mark inside a heading by line, because Word copies a
@@ -561,14 +572,16 @@
 // document's own, a held one included, separates the two runs.
 // TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords is the pin.
 //
-// Every mark in the palette is asked, not the one being written alone. A pencil
-// whose words hold a pair of "==" came home as "[a ==b== c]{.pencil}", which
-// the next build refuses as a mark inside a mark, and a highlight whose words
-// hold "]{.pencil}" came home as a span that line does not open. A span's
-// closer is enough on its own, because the build refuses one whatever sits in
-// front of it, and a delimiter pair takes both halves, because one "==" in a
-// sentence is a sentence. internal/export's
-// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords is the pin.
+// Every mark in the palette is asked of a mark written as a pair, not the one
+// being written alone. A highlight whose words hold "<!--" came home as
+// "==a <!-- b --> c==", which the next build reads as a mark inside a mark and
+// refuses by line. A comment's opener is enough on its own, because it opens a
+// mark the author did not write and reaches a closer somewhere, and a
+// delimiter pair takes both halves, because one "==" in a sentence is a
+// sentence. A mark whose words are literal is asked about its own closer and
+// nothing else: a highlight inside a comment is the characters it is.
+// internal/export's TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords
+// and TestAPencilWhoseWordsHoldAHighlightComesHomeInTheComment are the pins.
 //
 // A mark may carry a second opener for the case where its own would be read
 // off the words. The one highlight an author writes bare says no colour, so

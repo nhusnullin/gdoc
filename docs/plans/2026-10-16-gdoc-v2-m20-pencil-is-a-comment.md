@@ -98,7 +98,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 3: the Obsidian spelling reaches the same node
 - [x] Task 4: a pencil goes where a mark goes
 - [x] Task 5: gdoc's own two comments are markers
-- [ ] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
+- [x] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 - [ ] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
 - [ ] Task 8: the live round trip
 - [ ] Task 9: the words in the guide, the skills, the backlog and the README
@@ -211,6 +211,41 @@ the text-colour mark as `Open: m.Syntax[0] + " "`, `Shut: " -->"`, and the
 and forgets `]{`. The span tests in `internal/export` that read the old
 `Shut` are rewritten here, because this is the commit that changes what
 export writes; the span still parses on the way in until Task 7.
+
+Ran 2026-10-16. Two words of the task read differently once the code was in
+hand, and both are in the tests.
+
+The bold on a grey run is not a fact gdoc has. `docs.Run` carries the
+background, the text colour and the link, because `walk.go` decodes
+`textStyle.backgroundColor` and `textStyle.foregroundColor` and nothing else,
+so a bold pencil cannot be written as a test. The spec's own row is wider than
+the plan's sentence, "any formatting other than the grey on a pencilled run is
+dropped, loss named", and the one piece of formatting the read does carry on a
+run that also carries the grey is the link.
+`TestFormattingOnAPencilIsDroppedAndNamed` states that one: `<!-- the grey
+link -->` comes home with the address dropped and named, because inside a
+comment `[words](url)` is characters rather than a link. `view.Mark.Literal`
+is the field that says so, and `emitter.literal` is the one route that writes
+a mark's words with nothing of gdoc's around them.
+
+The loss rule learns the opener rather than the closer. `-->` on its own in
+the document's prose is the characters the next build reads, so naming it
+would call an arrow in a caption a loss; `<!--` on its own is a loss every
+way it falls, because it reaches the closer of the next pencil in the file or,
+on a line of its own, swallows every line after it. So `spanAttributes`
+became `commentOpeners`, `TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss`
+became `TestWordsThatWouldReadAsAPencilsCommentAreNamedAsALoss`, and
+`TestProseWithNoCommentSyntaxIsNotWarnedAboutOne` holds the arrow. The closer
+is still refused inside a pencil's own words, which is `cannotCarry`'s one
+rule for a literal mark and the spec's row.
+
+Three of the span's refusals went with the span's syntax: a bracket, a caret
+and a link no longer stop the mark being written, because a comment holds all
+three as the characters they are. `holdsAnotherMark` now refuses a highlight
+whose words hold `<!--`, which is a mark inside a mark, and asks nothing of a
+pencil's own words, which is the spec's "a highlight inside a pencil is
+words". `make vet`, gofmt and the raced suite are green over every package but
+`internal/live`, which is Task 8's.
 
 ### Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
 

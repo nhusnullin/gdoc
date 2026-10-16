@@ -20,6 +20,13 @@ import (
 // without an emoji.
 const plainHighlight = "=="
 
+// commentCloser shuts the comment a pencil is written as. It is a constant
+// here and not a value off the house style because the house states what an
+// author opens a mark with, and one pair has a closer that is not its opener.
+// internal/body states the same string, and
+// TestAPencilRunComesHomeAsAnHTMLComment reads this one back through a file.
+const commentCloser = "-->"
+
 // Palette is the house marks as the projection writes them back, in the order
 // house.yaml states them.
 //
@@ -28,9 +35,17 @@ const plainHighlight = "=="
 // from a note comes home spelled the way it left. The plain highlight carries
 // no emoji: an author who wrote ==words== gets ==words== back.
 //
-// A mark that is not a highlight is the run's own text colour, and gdoc reads
-// exactly one span for it, Pandoc's "[words]{.pencil}", whose attribute is the
-// mark's syntax.
+// A mark that is not a highlight is the run's own text colour, and it comes
+// home as the comment an author writes it as, "<!-- words -->", with the one
+// space inside each delimiter that internal/body takes off again. The opener
+// is the mark's first syntax rather than a constant here, because the house
+// style is the one place the palette is stated, and the first of the two
+// comment spellings is the one that is written: Obsidian's "%%" is a spelling
+// an author may type and never one a file comes home in.
+//
+// The words inside it are literal, which is what Literal says: nothing in a
+// comment is markdown, so the projection writes the document's own characters
+// and names whatever markup it would otherwise have written around them.
 func Palette(cfg *house.Config) []view.Mark {
 	if cfg == nil {
 		return nil
@@ -61,9 +76,10 @@ func Palette(cfg *house.Config) []view.Mark {
 			continue
 		}
 		out = append(out, view.Mark{
-			Colour: m.Color,
-			Open:   "[",
-			Shut:   "]{" + m.Syntax[0] + "}",
+			Colour:  m.Color,
+			Open:    m.Syntax[0] + " ",
+			Shut:    " " + commentCloser,
+			Literal: true,
 		})
 	}
 	return out
@@ -168,7 +184,7 @@ func claimedColour(hexes []string, palette []view.Mark) bool {
 // no syntax for is a mark it brought home as prose and the session should know
 // how many. A text colour is how a document is designed: counting every
 // coloured word in a brochure would say nothing, and the one text colour that
-// is a mark comes home as its span when it matches.
+// is a mark comes home as its comment when it matches.
 //
 // skip is the caller's, so the cover's own yellow placeholders are not
 // counted: they are the prelude, they leave the file, and the probe measured

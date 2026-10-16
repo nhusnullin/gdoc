@@ -134,7 +134,7 @@ func TestThePencilSyntaxIsTheHouseStyles(t *testing.T) {
 	if !ok {
 		t.Fatal("the house style states no pencil mark")
 	}
-	want := []string{".pencil", "<!--", "%%"}
+	want := []string{"<!--", "%%", ".pencil"}
 	if !slices.Equal(mark.Syntax, want) {
 		t.Errorf("the house style's pencil syntax is %q, want %q", mark.Syntax, want)
 	}

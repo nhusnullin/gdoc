@@ -144,9 +144,10 @@ var markKinds = map[string]bool{markKindHighlight: true, "text": true}
 
 // Mark is one authoring mark. Syntax is every opener an author may write for
 // it: one colour emoji for five of the highlights, both '==' and 🟡 for the
-// yellow a plain highlight is, and three for the pencil, which is the span
-// gdoc still reads and the two comments it is written as from milestone 20 on,
-// HTML's '<!--' and Obsidian's '%%'.
+// yellow a plain highlight is, and three for the pencil, which is the two
+// comments it is written as from milestone 20 on, HTML's '<!--' and
+// Obsidian's '%%', and the span gdoc still reads. The first is the one export
+// writes, which is why the comment comes first.
 // Debt says the mark is counted on the build and publish envelopes, which is
 // a fact the skills judge rather than a refusal.
 type Mark struct {

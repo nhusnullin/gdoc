@@ -64,9 +64,9 @@ marks:
     debt: false
   pencil:
     syntax:
-    - .pencil
     - '<!--'
     - '%%'
+    - .pencil
     kind: text
     color: '#9A9A9A'
     debt: false
