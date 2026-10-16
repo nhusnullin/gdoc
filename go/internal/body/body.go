@@ -115,13 +115,12 @@ type renderer struct {
 	// not one of them: it reuses its parent's id.
 	numberedLists int
 
-	// anchors is every heading id a bookmark could be written for, collected
-	// before the walk so a link to a heading further down the note resolves.
-	// linked is every heading id some "#" link in the note names, and only a
-	// heading in both carries a bookmark. bookmarkID is the w:id the next pair
-	// takes, counting from 0 across the document.
+	// anchors is every heading id a bookmark is written for, collected before
+	// the walk so a link to a heading further down the note resolves and a
+	// link naming no heading is named on the envelope. Every heading in it
+	// carries its bookmark, whether anything links to it or not. bookmarkID is
+	// the w:id the next pair takes, counting from 0 across the document.
 	anchors    map[string]bool
-	linked     map[string]bool
 	bookmarkID int
 
 	// deadAnchors is every line and destination already named on the
@@ -209,7 +208,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 
 	r := &renderer{
 		cfg: cfg, base: base, source: source, marks: newMarkTable(cfg),
-		anchors: headingAnchors(root, source), linked: linkedAnchors(root),
+		anchors:     headingAnchors(root, source),
 		deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
 		firstHeading:   true,
@@ -490,7 +489,7 @@ func firstTextNode(node ast.Node) *ast.Text {
 // opening with a letter, and at most 40 characters. A name outside it is not
 // refused, it is repaired, and a repaired name is one no w:anchor matches.
 const (
-	bookmarkPrefix  = "h_"
+	bookmarkPrefix  = "_h_"
 	bookmarkMaxName = 40
 	// The stem is what is left of the name once the separator and the seven
 	// hex digits of the hash have their room: 32 + 1 + 7 is the ceiling.
@@ -510,8 +509,12 @@ const (
 // deliberately wider than what goldmark emits, because the ids are the
 // document's and a generator that widens is not this package's to notice.
 //
-// The leading "h_" is what makes the name open with a letter, which Word
-// requires and a heading called "1.1 Purpose" would otherwise break.
+// The leading "_h_" is what Drive's import reads: it mints a heading id for a
+// heading paragraph only when the paragraph carries a bookmark whose name
+// opens with an underscore, which is the convention Google's own docx export
+// uses, and Word hides such a bookmark from its bookmark list. The "h_" after
+// it keeps a heading called "1.1 Purpose" from naming itself with a digit
+// first, which Word refuses once the underscore is stripped.
 //
 // A name over the ceiling keeps its first characters, which is what makes it
 // readable in Word's bookmark list, and takes the hash of the whole id, which
@@ -560,30 +563,6 @@ func headingAnchors(root ast.Node, source []byte) map[string]bool {
 		if id, ok := heading.AttributeString("id"); ok {
 			if raw, ok := id.([]byte); ok {
 				ids[string(raw)] = true
-			}
-		}
-		return ast.WalkContinue, nil
-	})
-	return ids
-}
-
-// linkedAnchors is every heading id a "#" link in the note names, read before
-// the blocks are walked so a heading above the link that names it still gets
-// its bookmark. A link inside a footnote definition is left out, because the
-// footnotes part names no relationship: the footnote walk prints such a link
-// as its words and says so on the envelope.
-func linkedAnchors(root ast.Node) map[string]bool {
-	ids := map[string]bool{}
-	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
-			return ast.WalkContinue, nil
-		}
-		if _, dropped := node.(*east.FootnoteList); dropped {
-			return ast.WalkSkipChildren, nil
-		}
-		if link, ok := node.(*ast.Link); ok {
-			if anchor, ok := strings.CutPrefix(string(link.Destination), "#"); ok {
-				ids[anchor] = true
 			}
 		}
 		return ast.WalkContinue, nil
@@ -971,17 +950,21 @@ func firstBlockOf(node ast.Node) ast.Node {
 }
 
 // headingBookmark is the name the bookmark on this heading takes, or empty
-// when goldmark handed the heading no id or no "#" link in the note names it.
-// Google Docs shows a bookmark as a flag on its heading, so one nothing jumps
-// to is a flag for nothing, and a later edit to the note goes out through a
-// fresh publish that writes the bookmarks again.
+// when goldmark handed the heading no id at all.
+//
+// Every heading gets one, whether a "#" link names it or not, because the
+// bookmark is what Drive's import mints the Google heading id from and a
+// contents entry is a link to a heading by that id. Without it every entry
+// resolves to the start of the tab. The name opens with an underscore, so
+// Word hides it and no flag reaches a reader:
+// TestEveryHeadingCarriesAHiddenBookmark.
 func (r *renderer) headingBookmark(heading *ast.Heading) string {
 	id, ok := heading.AttributeString("id")
 	if !ok {
 		return ""
 	}
 	raw, ok := id.([]byte)
-	if !ok || !r.linked[string(raw)] {
+	if !ok {
 		return ""
 	}
 	return bookmarkName(string(raw))

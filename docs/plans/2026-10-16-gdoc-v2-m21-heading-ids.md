@@ -136,21 +136,21 @@ in the test folder.
 - Modify: `go/internal/body/build.go` (`heading`: the empty pair before the runs)
 - Modify: `go/internal/body/anchors_test.go`
 
-- [ ] write `TestEveryHeadingCarriesAHiddenBookmark`: three headings, no `#`
+- [x] write `TestEveryHeadingCarriesAHiddenBookmark`: three headings, no `#`
       link, each heading paragraph holds one `w:bookmarkStart` named
       `_h_<slug>` and its `w:bookmarkEnd` directly after it, before the first
       `w:r`; it fails today
-- [ ] rewrite `TestAnAnchorLinkIsAJumpAndNotARelationship` to expect
+- [x] rewrite `TestAnAnchorLinkIsAJumpAndNotARelationship` to expect
       `w:anchor="_h_scope"`; rewrite `TestBookmarkNameIsWordSafe` for the
       `_h_` opening and the 40-character ceiling with it
-- [ ] delete `TestOnlyALinkedHeadingCarriesABookmark` and
+- [x] delete `TestOnlyALinkedHeadingCarriesABookmark` and
       `TestANoteWithNoAnchorLinkCarriesNoBookmark`, whose claim the decision
       retired; keep `TestAFigureOnlyHeadingCarriesNoBookmark` and
       `TestAHeadingInsideAFootnoteIsNoAnchor` and make sure they still pass
-- [ ] change `bookmarkPrefix` to `_h_`, make `headingBookmark` return the name
+- [x] change `bookmarkPrefix` to `_h_`, make `headingBookmark` return the name
       for every heading goldmark gave an id, drop `linked` and `linkedAnchors`,
       and write the pair in `heading` as an empty pair before the runs
-- [ ] run the body and render tests, then `make test`
+- [x] run the body and render tests, then `make test`
 
 ### Task 3: The rules in the doc comments
 
