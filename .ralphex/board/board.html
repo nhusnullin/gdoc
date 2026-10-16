@@ -320,6 +320,7 @@ const snapshot = {
 };
 // ---- render ----
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 $("refreshed").textContent = snapshot.refreshed;
 $("started").textContent = snapshot.started;
 $("run-pill").textContent = snapshot.state;
@@ -336,7 +337,6 @@ const tiles = [
 ];
 $("tiles").innerHTML = tiles.map(x => `
   <div class="tile"><div class="v mono">${x.v}</div><div class="l">${x.l}</div><div class="meter"><i style="width:${Math.round(x.pct*100)}%"></i></div></div>`).join("");
-const esc = (s) => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const label = {done:"Done", active:"In progress", pending:"Waiting"};
 $("tasks").innerHTML = t.map(x => `
   <tr class="${x.s}">
