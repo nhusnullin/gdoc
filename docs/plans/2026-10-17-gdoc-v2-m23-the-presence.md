@@ -255,13 +255,13 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/boundary/presence_test.go`
 - Modify: `go/internal/comments/doc.go`, `go/internal/chat/doc.go`, `go/cmd/gdoc/doc.go`
 
-- [ ] `TestOnlyPresenceAppends` (`O_APPEND` outside `_test.go` only in
+- [x] `TestOnlyPresenceAppends` (`O_APPEND` outside `_test.go` only in
       `internal/presence`), `TestPresenceOpensNoWireAndRunsNothing` (no `net`,
       `net/http`, `os/exec`, `internal/chat`, `internal/gapi`),
       `TestPresenceExportsNoReader` (no exported `Read*` or `Open*`, no
       `os.Open` or `os.ReadFile` outside `_test.go`), `TestBeginHasOneCaller`
       (after `TestAccountOfHasTwoCallers`), `TestNoSkillPassesThePresenceFlag`
-- [ ] `comments/doc.go`'s "Nothing is kept. The wait writes no file of its
+- [x] `comments/doc.go`'s "Nothing is kept. The wait writes no file of its
       own" gains the sentence that `dispatch` writes a start and an end for it
       under the setting, and why that is a record for another program and not
       session state; `chat/doc.go` says the hold event carries no ledger word;
