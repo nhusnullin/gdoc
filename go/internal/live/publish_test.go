@@ -88,7 +88,16 @@ func TestLivePublish(t *testing.T) {
 	if err := os.WriteFile(note, []byte(publishNoteSource), 0o600); err != nil {
 		t.Fatalf("the note could not be written: %v", err)
 	}
-	doc := renderNoteFile(t, note)
+	// The firm's own mark, fetched the way a real publish fetches it, so the
+	// document that goes into Drive is the document production puts there.
+	// TestPublishCarriesTheHouseLogo is the measurement; this is the publish
+	// that rests on it.
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("the embedded house style did not load: %v", err)
+	}
+	doc := renderNoteFileWithLogo(t, note, liveHouseLogo(t, cfg))
+	carriesTheHouseLogo(t, doc.docx)
 	t.Logf("rendered %d bytes titled %q from the %s house style", len(doc.docx), doc.title, doc.house)
 
 	rep, err := publish.Run(ctx, s, publish.Options{
@@ -316,11 +325,29 @@ type noteDocument struct {
 	house string
 }
 
-// renderNoteFile runs the generator over one note. It is cmd/gdoc's render
-// step, spelled here because that package is main and cannot be imported, and
-// it is the same five calls internal/drift's own gate makes for the same
-// reason.
+// renderNoteFile runs the generator over one note with the placeholder mark,
+// which is what every test here but one wants: a document whose logo is the
+// right shape, since what they measure about it is geometry.
+//
+// TestPublishCarriesTheHouseLogo is the one, and it hands over the bytes it
+// read out of the firm's Drive.
 func renderNoteFile(t *testing.T, path string) noteDocument {
+	t.Helper()
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("the embedded house style did not load: %v", err)
+	}
+	return renderNoteFileWithLogo(t, path, houseLogo(t, cfg))
+}
+
+// renderNoteFileWithLogo is cmd/gdoc's render step, spelled here because that
+// package is main and cannot be imported, and it is the same five calls
+// internal/drift's own gate makes for the same reason.
+//
+// The mark is a parameter for render.Build's own reason: a house style may
+// name its logo as one file in Drive, and only internal/asset can turn that
+// into bytes.
+func renderNoteFileWithLogo(t *testing.T, path string, logo []byte) noteDocument {
 	t.Helper()
 	source, err := os.ReadFile(path)
 	if err != nil {
@@ -341,7 +368,7 @@ func renderNoteFile(t *testing.T, path string) noteDocument {
 	for _, w := range walked.Warnings {
 		t.Logf("render warning: %s", w)
 	}
-	pkg, err := render.Build(cfg, houseLogo(t, cfg), fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
+	pkg, err := render.Build(cfg, logo, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}

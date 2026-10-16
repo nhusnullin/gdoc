@@ -74,6 +74,30 @@
 // the guard, and the readers run on what really came back. It reads and it
 // writes nothing, to Drive or to disk, unless GDOC_LIVE_RECORD says otherwise.
 //
+// # One test reads the firm's own file, and makes a config directory for it
+//
+// TestPublishCarriesTheHouseLogo is M22's, in houselogo_test.go. The house
+// style names its logo as one file in the firm's Drive rather than carrying
+// its bytes, so the question no fixture can answer is whether a build still
+// comes out with the firm's mark on it. It reads that file through
+// internal/asset with the real token, hashes what Drive answered against the
+// literal go/boundary's TestTheLogoIsNotInTheTree holds, builds the publish
+// note's document with those bytes and hashes word/media/logo.png out of it.
+// Then it asks again and holds that Drive was not: one request a day is what
+// makes a logo in Drive affordable, and a stamp minutes old is the answer.
+//
+// It creates nothing in Drive and copies no document. What it writes is a
+// cache and a stamp in a config directory of its own, with a copy of this
+// machine's token in it, because a build measured against the cache every
+// other run has been leaving would be answering about those runs. The real
+// token file is left as it was, so a refresh inside the run costs the next
+// real command one refresh of its own.
+//
+// It asks for GDOC_LIVE_WRITE beside GDOC_LIVE_TEST even so. The file it
+// reads is the firm's rather than a document somebody handed in, and it is the
+// only test here that writes anything to this machine, so the second decision
+// is made on purpose like the others.
+//
 // # Which test creates, and which copies
 //
 // The difference decides what a run can damage, so it is stated per test
@@ -90,7 +114,10 @@
 //     handed and checks that window is empty, up to 90 seconds and then 15.
 //   - TestLivePublish, M6's. It publishes a temp note into the folder and
 //     asserts the read-back, the title, the one tab and the block written into
-//     the note.
+//     the note. Since M22 the note is built with the firm's own mark, fetched
+//     the way a publish fetches it, and the document is held to that file's
+//     hash before it is uploaded: the document a person opens is branded, or
+//     this test says so. The measurement the hash comes from is below.
 //   - TestLiveDrift, M6's. It uploads the built document and the master with
 //     conversion and runs drift.Items over both. That is the measurement that
 //     means something, because Google's import is part of the result.
