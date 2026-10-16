@@ -217,10 +217,25 @@
 // A mark comes home as the syntax it left as. The six house highlights are a
 // run's background in the document and Obsidian's "==", with the mark's colour
 // emoji and the one space internal/body takes off again; the pencil is a run's
-// text colour and Pandoc's "[words]{.pencil}". Palette states the pairing out
-// of house.yaml, which is the one place the colours live, and
+// text colour and HTML's comment, "<!-- words -->", with that same space
+// inside each delimiter. Palette states the pairing out of house.yaml, which
+// is the one place the colours live, and
 // TestExportWritesObsidiansSyntaxForEachPaletteColour and
 // TestAMarkSplitOverSeveralRunsComesHomeWhole are the pins.
+//
+// The pencil's second spelling never comes home. The house style states both
+// "<!--" and Obsidian's "%%" as syntax an author may type, and the comment
+// spelling is written first there so that the one a file carries is the one
+// every editor dims the same way. TestTheObsidianSpellingIsNeverWritten is the
+// pin. The words inside it are literal, so nothing the projection would
+// otherwise write around them is: a grey paragraph of its own comes home as a
+// comment on a line of its own, a highlight inside a pencil is the characters
+// it is, a link on those words is dropped and named, and the one thing the
+// words cannot hold is the closer.
+// TestAGreyParagraphComesHomeAsACommentOfItsOwn,
+// TestAPencilWhoseWordsHoldAHighlightComesHomeInTheComment,
+// TestFormattingOnAPencilIsDroppedAndNamed and
+// TestAPencilWhoseWordsHoldTheCloserIsNamedAsALoss are the pins.
 //
 // The mark an author may write bare is written bare, because an emoji in the
 // file would be an instruction nobody typed. The one exception is marked words

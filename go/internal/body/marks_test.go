@@ -1,14 +1,15 @@
 package body
 
 // The seven marks as the parser reads them: Obsidian's colour emoji on a
-// highlight, the one Pandoc span gdoc reads, and the five shapes that refuse
-// the build.
+// highlight, and the shapes that refuse the build. The grey mark is a comment,
+// and comment_test.go and obsidian_test.go hold its own two spellings.
 //
 // Every emoji and every mark name here is written out. The parser reads the
 // palette off house.yaml, so a test that read it too would follow the palette
 // wherever somebody moved it and claim nothing.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -107,39 +108,35 @@ func TestAnEmojiOutsideAHighlightIsText(t *testing.T) {
 	}
 }
 
-// TestAPencilSpanIsARunCarryingItsMark is the one Pandoc span this package
-// reads: content in brackets, then the attribute. It is text colour rather
-// than shading, which is why the syntax is not a highlight's.
-func TestAPencilSpanIsARunCarryingItsMark(t *testing.T) {
-	runs := firstBlockRuns(t, "A sentence with [a note to myself]{.pencil} in it.\n")
-
-	got := runCarrying(t, runs, "a note to myself")
-	if got.Mark != "pencil" {
-		t.Errorf("the span is mark %q, want pencil", got.Mark)
-	}
-	if text := joined(runs); strings.Contains(text, "[") || strings.Contains(text, "{") {
-		t.Errorf("the prose reads %q, want the syntax out of the words", text)
-	}
-}
-
-// TestThePencilSyntaxIsTheHouseStyles. The attribute the parser matches is a
-// constant here, because the parser is built before the house style is read;
-// the house file states the same string as the pencil mark's syntax, and the
-// two agreeing is the whole of what makes the constant safe.
+// TestThePencilSyntaxIsTheHouseStyles. The spellings the parser matches are
+// constants in this package, because the parsers are built before the house
+// style is read; the house file states the same strings as the pencil mark's
+// syntax, and the two agreeing is the whole of what makes those constants
+// safe. The list is written out here rather than read off the file, so a
+// spelling somebody adds is a spelling somebody states.
 func TestThePencilSyntaxIsTheHouseStyles(t *testing.T) {
 	mark, ok := config(t).Marks["pencil"]
 	if !ok {
 		t.Fatal("the house style states no pencil mark")
 	}
-	if len(mark.Syntax) != 1 || mark.Syntax[0] != pencilAttribute {
-		t.Errorf("the house style's pencil syntax is %q, and the parser matches %q",
-			mark.Syntax, pencilAttribute)
+	want := []string{"<!--", "%%"}
+	if !slices.Equal(mark.Syntax, want) {
+		t.Errorf("the house style's pencil syntax is %q, want %q", mark.Syntax, want)
+	}
+	if !slices.Equal(want, []string{commentOpener, obsidianDelimiter}) {
+		t.Errorf("the parser matches %q and %q, and the two spellings are %q",
+			commentOpener, obsidianDelimiter, want)
+	}
+	if slices.Contains(mark.Syntax, oldPencilSpelling) {
+		t.Errorf("the house style still states %q, which nothing parses and checkOldPencilSpan refuses",
+			oldPencilSpelling)
 	}
 }
 
-// TestALinkIsStillALink. The span parser triggers on the same bracket a link
-// opens with and runs before the link parser, so a link is where it would
-// break first.
+// TestALinkIsStillALink. A bracket was the grey mark's own opener until
+// milestone 20, claimed before goldmark's link parser was asked, and a link is
+// where that broke first. Nothing claims a bracket now, and the link is still
+// the pin.
 func TestALinkIsStillALink(t *testing.T) {
 	runs := firstBlockRuns(t, "see [the handbook](https://example.com/h) for more\n")
 
@@ -152,10 +149,10 @@ func TestALinkIsStillALink(t *testing.T) {
 	}
 }
 
-// TestABracketNotFollowedByAttributesIsText. Pandoc's grammar is a bracketed
-// content immediately followed by an attribute list; everything else a bracket
-// opens is the author's own words.
-func TestABracketNotFollowedByAttributesIsText(t *testing.T) {
+// TestABracketIsTheAuthorsOwnWords. A mark opens with its own syntax, and a
+// bracket is no mark's: an aside somebody wrote in brackets reaches the
+// document as the characters they typed.
+func TestABracketIsTheAuthorsOwnWords(t *testing.T) {
 	runs := firstBlockRuns(t, "An [aside] in brackets, and [another] one.\n")
 
 	text := joined(runs)
@@ -169,11 +166,12 @@ func TestABracketNotFollowedByAttributesIsText(t *testing.T) {
 	}
 }
 
-// TestAMarkMayCarryEmphasisAndCode. The mark goes down the inline tree the way
-// bold does, so the words inside one keep their own formatting.
-func TestAMarkMayCarryEmphasisAndCode(t *testing.T) {
-	runs := firstBlockRuns(t,
-		"A ==🔵 gap with **weight** and `code`== and [a **bold** note]{.pencil}.\n")
+// TestAHighlightMayCarryEmphasisAndCode. The mark goes down the inline tree
+// the way bold does, so the words inside one keep their own formatting. The
+// grey mark is the exception and has its own pin: nothing inside a comment is
+// markdown, which TestTheWordsInsideAPencilAreLiteral holds.
+func TestAHighlightMayCarryEmphasisAndCode(t *testing.T) {
+	runs := firstBlockRuns(t, "A ==🔵 gap with **weight** and `code`== here.\n")
 
 	bold := runCarrying(t, runs, "weight")
 	if bold.Mark != "blue" || !bold.Bold {
@@ -183,23 +181,24 @@ func TestAMarkMayCarryEmphasisAndCode(t *testing.T) {
 	if code.Mark != "blue" || !code.Mono {
 		t.Errorf("the code inside the highlight is %#v, want a blue mark and the mono face", code)
 	}
-	note := runCarrying(t, runs, "bold")
-	if note.Mark != "pencil" || !note.Bold {
-		t.Errorf("the bold words inside the span are %#v, want a pencil mark and bold", note)
-	}
 }
 
 // TestTwoMarksSideBySideStayTwoRuns. merge joins neighbours that carry the
-// same formatting, and the mark is now part of that: joined, a pencil note and
-// a yellow gap would reach the document as one colour.
+// same formatting, and the mark is now part of that: joined, a pencilled aside
+// and a yellow gap would reach the document as one colour.
+//
+// The two sit inside a sentence rather than opening the line, because a
+// comment at the start of a line is a block of HTML: goldmark takes the whole
+// line into one, and a line whose comment shuts before the end of it is no
+// comment at all.
 func TestTwoMarksSideBySideStayTwoRuns(t *testing.T) {
-	runs := firstBlockRuns(t, "[pencilled]{.pencil}==marked==\n")
+	runs := firstBlockRuns(t, "a <!-- pencilled -->==marked== b\n")
 
-	if len(runs) != 2 {
-		t.Fatalf("two marks side by side are %d runs: %#v", len(runs), runs)
+	if len(runs) != 4 {
+		t.Fatalf("two marks side by side inside a sentence are %d runs: %#v", len(runs), runs)
 	}
-	if runs[0].Mark != "pencil" || runs[1].Mark != "yellow" {
-		t.Errorf("the runs are %q and %q, want pencil then yellow", runs[0].Mark, runs[1].Mark)
+	if runs[1].Mark != "pencil" || runs[2].Mark != "yellow" {
+		t.Errorf("the marked runs are %q and %q, want pencil then yellow", runs[1].Mark, runs[2].Mark)
 	}
 }
 
@@ -209,7 +208,7 @@ func TestTwoMarksSideBySideStayTwoRuns(t *testing.T) {
 // filled in is not the same fact as a note nobody looked at.
 func TestTheDebtsAreCountedAndTheOthersAreNot(t *testing.T) {
 	out := walk(t, "A ==gap== and ==another gap==, a ==🟣 question==, a ==🔵 note==,\n"+
-		"a ==🔴 warning==, a ==🟠 aside== and [a pencilled line]{.pencil}.\n")
+		"a ==🔴 warning==, a ==🟠 aside== and <!-- a pencilled line -->.\n")
 
 	want := map[string]int{"yellow": 2, "green": 0, "purple": 1}
 	if len(out.Counts.Marks) != len(want) {
@@ -227,8 +226,7 @@ func TestTheDebtsAreCountedAndTheOthersAreNot(t *testing.T) {
 // rather than being given whichever the walk wrote last.
 func TestANestedMarkIsRefusedByLine(t *testing.T) {
 	for _, note := range []string{
-		"Words.\n\nA ==gap with [a note]{.pencil} inside it== here.\n",
-		"Words.\n\nA [note with ==a gap== inside it]{.pencil} here.\n",
+		"Words.\n\nA ==gap with ==a gap of its own== inside it== here.\n",
 	} {
 		got := refused(t, note)
 		if !strings.Contains(got, "line 3:") {
@@ -240,92 +238,12 @@ func TestANestedMarkIsRefusedByLine(t *testing.T) {
 	}
 }
 
-// TestAnEmptySpanIsRefusedByLine. A span marking no words is a colour on
-// nothing, which the author cannot see in the document they open.
-func TestAnEmptySpanIsRefusedByLine(t *testing.T) {
-	got := refused(t, "Words.\n\nAn []{.pencil} empty span.\n")
-
-	if !strings.Contains(got, "line 3:") {
-		t.Errorf("the refusal is %q, want it to name line 3", got)
-	}
-	if !strings.Contains(got, "no words") {
-		t.Errorf("the refusal is %q, and it does not say the span marks no words", got)
-	}
-}
-
-// TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil. One attribute is
-// read, and a span carrying another would otherwise print as the words the
-// author wrote, brackets and braces included.
-func TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil(t *testing.T) {
-	got := refused(t, "Words.\n\nA [note]{.todo} here.\n")
-
-	if !strings.Contains(got, "line 3:") {
-		t.Errorf("the refusal is %q, want it to name line 3", got)
-	}
-	if !strings.Contains(got, ".pencil") {
-		t.Errorf("the refusal is %q, and it does not name the one attribute gdoc reads", got)
-	}
-}
-
-// TestASpanCrossingAParagraphIsRefusedByLine. A span opens and closes on one
-// line. One that does not is words in the document, and the words are the
-// syntax.
-func TestASpanCrossingAParagraphIsRefusedByLine(t *testing.T) {
-	got := refused(t, "[a note that opens\n\nand closes two lines down]{.pencil}\n")
-
-	if !strings.Contains(got, "line 3:") {
-		t.Errorf("the refusal is %q, want it to name line 3", got)
-	}
-	if !strings.Contains(got, pencilAttribute) {
-		t.Errorf("the refusal is %q, and it does not name the span it is about", got)
-	}
-}
-
-// TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan. Nothing inside
-// backticks is markdown, and both halves of the span read a line that way:
-// the parser used to stop at the bracket inside the code, leave the span
-// unopened and print "]{.pencil}" into the document, while checkSpans looked
-// at the line with the code taken out and saw nothing wrong.
-func TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan(t *testing.T) {
-	runs := firstBlockRuns(t, "Words [see `a[0]`]{.pencil} here.\n")
-
-	code := runCarrying(t, runs, "a[0]")
-	if code.Mark != "pencil" {
-		t.Errorf("the code inside the span is %#v, want a pencil mark", code)
-	}
-	if text := joined(runs); strings.Contains(text, "]{.pencil}") {
-		t.Errorf("the prose reads %q, want the span's own syntax out of it", text)
-	}
-}
-
-// TestASpanInsideACodeBlockIsNotASpan. The span scan reads the same lines the
-// footnote scan reads, so an author writing the syntax out in an example is
-// not refused for it. The indented block is the half that was read as prose.
-func TestASpanInsideACodeBlockIsNotASpan(t *testing.T) {
-	for _, markdown := range []string{
-		"Words.\n\n    example [x]{.y} here\n",
-		"Words.\n\n```\nexample [x]{.y} here\n```\n",
-		"## Example\n    example [x]{.y} here\n",
-		"Words.\n\n```\nx\n```\n    example [x]{.y} here\n",
-	} {
-		out, err := Render(config(t), []byte(markdown), "testdata/docs", true)
-		if err != nil {
-			t.Errorf("%q was refused: %v", markdown, err)
-			continue
-		}
-		if len(out.Blocks) == 0 {
-			t.Errorf("%q wrote nothing", markdown)
-		}
-	}
-}
-
 // TestAMarkInAHeadingIsRefusedByLine, for the reason a footnote mark in a
 // heading is refused: Word copies a heading into the contents field, and the
 // mark would be in the contents list as well as on the page.
 func TestAMarkInAHeadingIsRefusedByLine(t *testing.T) {
 	for _, note := range []string{
 		"Words.\n\n## A ==marked== heading\n\nMore words.\n",
-		"Words.\n\n## A [pencilled]{.pencil} heading\n\nMore words.\n",
 	} {
 		got := refused(t, note)
 		if !strings.Contains(got, "line 3:") {
@@ -345,7 +263,6 @@ func TestAMarkInAHeadingIsRefusedByLine(t *testing.T) {
 func TestAMarkInAPicturesAltTextIsRefusedByLine(t *testing.T) {
 	for _, note := range []string{
 		"Words.\n\n![a ==\U0001F7E2 marked== alt](badge.png)\n",
-		"Words.\n\n![a [pencilled]{.pencil} alt](badge.png)\n",
 	} {
 		got := refused(t, note)
 		if !strings.Contains(got, "line 3:") {
@@ -369,7 +286,7 @@ func TestAMarkInAPicturesAltTextIsRefusedByLine(t *testing.T) {
 // somebody moved it and claim nothing.
 func TestAMarkedRunCarriesItsStyleAndItsShading(t *testing.T) {
 	out := walk(t, "A ==a gap==, a ==🔴 warning==, a ==🟠 aside==, a ==🟢 claim==,\n"+
-		"a ==🔵 change==, a ==🟣 question== and [a pencilled line]{.pencil}.\n")
+		"a ==🔵 change==, a ==🟣 question== and <!-- a pencilled line -->.\n")
 
 	cases := []struct {
 		words, style, fill, color string
@@ -489,98 +406,5 @@ func TestAHighlightWithWordsAfterItsColourIsNotRefused(t *testing.T) {
 		if len(runs) == 0 {
 			t.Errorf("%q rendered no runs", note)
 		}
-	}
-}
-
-// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine: Pandoc's span is a
-// bracket gdoc's own parser claims, and three of goldmark's parsers claim one
-// first. A bracket after "!" is a picture's, a bracket holding a caret is a
-// footnote mark's, and a bracket followed by a target or a reference is a
-// link's. In each of those the attribute closes nothing, so "{.pencil}" is
-// published as words. The line check read the shape and called it a span.
-func TestAPencilAttributeThatOpensNoSpanIsRefusedByLine(t *testing.T) {
-	for _, markdown := range []string{
-		"Words.\n\nA picture ![a]{.pencil} here.\n",
-		"Words.[^a]{.pencil}\n\n[^a]: the note.\n",
-		"Words.\n\nA link [words](https://example.com){.pencil} here.\n",
-		"Words.\n\nA reference [words][ref]{.pencil} here.\n\n[ref]: https://example.com\n",
-		"Words.\n\nA bare {.pencil} in the prose.\n",
-	} {
-		got := refused(t, markdown)
-
-		if !strings.Contains(got, pencilAttribute) {
-			t.Errorf("%q: the refusal is %q, and it does not name the attribute", markdown, got)
-		}
-		if !strings.Contains(got, "words") {
-			t.Errorf("%q: the refusal is %q, and it does not say the attribute would reach the document as words", markdown, got)
-		}
-	}
-}
-
-// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing: a block of HTML is
-// named on the envelope and left out, so the syntax written inside it reaches
-// no page and refuses nothing, which is the rule a code block already has.
-func TestAPencilAttributeInsideABlockOfHTMLRefusesNothing(t *testing.T) {
-	out, err := Render(config(t), []byte("Words.\n\n<div>\n[a]{.pencil}\n</div>\n"), "testdata/docs", true)
-	if err != nil {
-		t.Fatalf("the file was refused: %v", err)
-	}
-	if len(out.Blocks) == 0 {
-		t.Error("the file wrote nothing")
-	}
-}
-
-// TestASpanTheParseFormsIsNotRefused guards the check above from refusing the
-// spans that do work: one of its own, two on a line, one inside emphasis and
-// one inside a table cell.
-func TestASpanTheParseFormsIsNotRefused(t *testing.T) {
-	for _, markdown := range []string{
-		"A [note]{.pencil} here.\n",
-		"A [note]{.pencil} and [another]{.pencil} here.\n",
-		"A *[note]{.pencil}* here.\n",
-		"| a | b |\n| --- | --- |\n| [note]{.pencil} | x |\n",
-	} {
-		if _, err := Render(config(t), []byte(markdown), "testdata/docs", true); err != nil {
-			t.Errorf("%q was refused: %v", markdown, err)
-		}
-	}
-}
-
-// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan. The line scan reads the
-// line with its code taken out, so a span whose whole content is a code span
-// read as "[]{.pencil}" and was refused for marking no words, naming a span
-// nowhere in the file. The parser forms that span: spanAhead steps over the
-// code, and the words reach the document grey.
-//
-// A document exported from Drive is where it showed: a pencil run whose text
-// is one piece of code comes home as the span, and the note would not build.
-func TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan(t *testing.T) {
-	source := "Words [`code`]{.pencil} here.\n"
-	if _, err := Render(config(t), []byte(source), "testdata/docs", true); err != nil {
-		t.Fatalf("the span was refused: %v", err)
-	}
-
-	runs := firstBlockRuns(t, source)
-
-	code := runCarrying(t, runs, "code")
-	if code.Mark != "pencil" {
-		t.Errorf("the code inside the span is %#v, want a pencil mark", code)
-	}
-	if text := joined(runs); strings.Contains(text, "]{.pencil}") {
-		t.Errorf("the prose reads %q, want the span's own syntax out of it", text)
-	}
-}
-
-// The other half: an empty span on a line that also holds a code span is still
-// refused. The words are empty because the author wrote no words, not because
-// the scan took them out, and nothing may reach the document as a colour on
-// nothing.
-func TestAnEmptySpanBesideACodeSpanIsStillRefused(t *testing.T) {
-	_, err := Render(config(t), []byte("Words `x` and []{.pencil} here.\n"), "testdata/docs", true)
-	if err == nil {
-		t.Fatal("the empty span was not refused")
-	}
-	if !strings.Contains(err.Error(), "line 1") {
-		t.Errorf("the refusal is %q, want it to name line 1", err)
 	}
 }

@@ -25,6 +25,12 @@ func TestProposeRefusesAMarkerInTheFile(t *testing.T) {
 		{"the reason carries a comment anchor",
 			`[{"quoted":"a","replacement":"b","why":"see [[c:AAA]]the team[[/c]]"}]`,
 			"marker"},
+		{"the replacement carries a floating picture's comment",
+			`[{"quoted":"a","replacement":"the figure <!-- image: floating, kix.p1 -->","why":"c"}]`,
+			"replacement"},
+		{"the quote carries a tab line",
+			`[{"quoted":"<!-- tab t.0: Operations -->","replacement":"b","why":"c"}]`,
+			"quoted"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := stubWire(t, &fakeWire{answers: proposeAnswers(t, true)})

@@ -172,7 +172,17 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	// builds: the export writes it into the middle of a sentence, and the
 	// sentence is a paragraph like any other. internal/markers holds why every
 	// route out of the hub asks, and TestBuildRefusesAMarkerByLine is the pin.
+	//
+	// The sentence has two halves because the markers do. gdoc's markup is
+	// syntax nobody writes by hand, so a note that carries it was exported;
+	// four of the eight are a comment opening with an ordinary English word,
+	// which an author may have typed for themselves, and telling that author
+	// about an export sends them looking for one that never happened.
+	// TestAnAsideOpeningLikeGdocsOwnCommentSaysSo is that half's pin.
 	if m, line := markers.Lines(string(source)); line > 0 {
+		if markers.IsComment(m) {
+			return Result{}, fmt.Errorf("line %d opens a comment with %s, which is one of gdoc's own and says a thing about a document that the document itself holds otherwise; a comment opening with those words is read as gdoc's wherever a note goes back into a document, so reword the aside to open with something else, or resolve the export this note came out of", line, m)
+		}
 		return Result{}, fmt.Errorf("line %d carries %s, one of gdoc's own markers; the note was exported out of a document and its suggestions and comments have not been resolved, so publishing it would put the marker into the document as words", line, m)
 	}
 	// The parse carries a context of Render's own, because readDefinitions
@@ -180,16 +190,19 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	// holds why the parse is the only place one of them can be seen.
 	pc := parser.NewContext()
 	root := parse().Parser().Parse(text.NewReader(source), parser.WithContext(pc))
-	// The footnotes and the spans are refused before a block is built, both
-	// mostly off the source lines: a mark naming no note and an attribute
-	// closing no span are facts about a line, and goldmark is silent in each
-	// of them. Each asks the parse the one question a line cannot answer,
-	// which is whether goldmark read the same thing there; footnote.go and
-	// mark.go hold which question that is.
+	// The footnotes, the grey mark's old spelling and a comment opener nothing
+	// closes are refused before a block is built, all three off the source
+	// lines: a mark naming no note, a span nothing parses any more and an
+	// opener the parse never read are facts about a line, and goldmark is
+	// silent in each of them. footnote.go and comment.go hold why each is
+	// asked here.
 	if err := checkFootnotes(source, root, definitionsRead(pc)); err != nil {
 		return Result{}, err
 	}
-	if err := checkSpans(source, root); err != nil {
+	if err := checkOldPencilSpan(source, root); err != nil {
+		return Result{}, err
+	}
+	if err := checkUnclosedComment(source, root); err != nil {
 		return Result{}, err
 	}
 	order, numbers := footnoteNumbers(root)
@@ -827,6 +840,39 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *ast.HTMLBlock:
+		// A comment standing on lines of its own is the author's aside
+		// standing alone, so it reaches the document as grey paragraphs
+		// rather than being left out. Every other block of HTML keeps the
+		// rule it has always had: named by line, left out whole.
+		if paragraphs, opener, comment := blockComment(typed, r.source); comment {
+			r.curLine = r.line(node)
+			r.greyParagraphs(paragraphs, opener, level, list)
+			return nil
+		}
+		if delimiter, unclosed := unclosedComment(typed, r.source); unclosed {
+			// Named as the comment it is: an author told they wrote a block of
+			// HTML would go looking for a tag that is not in the note. A
+			// comment with no closer runs to the end of the note, so the
+			// warning says that the lines under it went with it rather than
+			// leaving the author to notice.
+			r.warn("line %d: a %s comment that is never closed is not rendered in the house style, and it was left out with every line after it",
+				r.line(node), delimiter)
+			r.afterTable = false
+			return nil
+		}
+		if commentThenWords(blockText(typed, r.source)) {
+			// A comment that shuts part-way through the block, with the
+			// author's own words after it. commentline.go claims the
+			// one-line shape of this and reads it as a pencil and its prose,
+			// so what is left here wrapped over lines, where the closer is
+			// the block's own end and the words after it are inside it.
+			// Named as the comment it is, for the reason above.
+			// TestTwoCommentsOnOneLineAreTwoPencils holds this half.
+			r.warn("line %d: a comment with words after its closer is not rendered in the house style and was left out: put the comment on a line of its own, or write the whole of it inside the sentence",
+				r.line(node))
+			r.afterTable = false
+			return nil
+		}
 		r.warn("line %d: a block of HTML is not rendered in the house style and was left out",
 			r.line(node))
 		r.afterTable = false
@@ -1024,6 +1070,16 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		r.warnImages(images, line, "a list item")
 	}
 
+	// A paragraph that renders not one run and names not one picture is no
+	// paragraph: the only way to write one is a comment holding no words, and
+	// an empty paragraph there is a blank line the author never typed and the
+	// hub's reader never sees. A paragraph that names a picture it cannot
+	// place is not this case: it keeps its place, and warnImages said so.
+	if len(runs) == 0 && len(images) == 0 {
+		r.afterTable = false
+		return nil
+	}
+
 	if len(images) > 0 && level == 0 {
 		// The words first, then each picture on its own line.
 		if len(runs) > 0 {
@@ -1037,6 +1093,13 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		return nil
 	}
 
+	r.emitRuns(runs, level, list)
+	return nil
+}
+
+// emitRuns writes one paragraph of runs where the walk stands: a body
+// paragraph at the top level, and a paragraph of the item inside a list.
+func (r *renderer) emitRuns(runs []Run, level int, list listCtx) {
 	if level == 0 {
 		r.emit(r.paragraph(runs))
 		r.counts.Paragraphs++
@@ -1056,7 +1119,23 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
-	return nil
+}
+
+// greyParagraphs writes a comment that stands on lines of its own, one grey
+// paragraph per stretch of lines. It goes where the walk stands, so an aside
+// inside a bullet is that bullet's and an aside inside a quote is indented
+// with it. A list wins over a quote, the way a paragraph inside both does.
+func (r *renderer) greyParagraphs(paragraphs []string, opener string, level int, list listCtx) {
+	for _, words := range paragraphs {
+		runs := []Run{{Text: words, Mark: r.marks.comment(opener)}}
+		if level == 0 && r.quoteDepth > 0 {
+			r.emit(r.quote(runs, r.quoteDepth))
+			r.counts.Paragraphs++
+			continue
+		}
+		r.emitRuns(runs, level, list)
+	}
+	r.afterTable = false
 }
 
 // quoteBlock indents what the quote holds, one step per level of quoting.
@@ -1081,8 +1160,18 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 		// that block's line and the author looks for it there.
 		r.curLine = line
 		r.warnRawHTML(paragraph, line)
-		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
-		r.emit(r.quote(inlineRuns(paragraph, r.source, r.footnoteNumber, r.marks), r.quoteDepth))
+		images := collectImages(paragraph, r.source)
+		r.warnImages(images, line, "a block quote")
+		runs := inlineRuns(paragraph, r.source, r.footnoteNumber, r.marks)
+		// Empty is nothing here too, which is the check paragraphBlock makes
+		// and this path does not go through: a comment holding no words is
+		// the one way to write a paragraph with nothing in it, and an
+		// indented blank line is one the author never typed.
+		// TestAnEmptyCommentInsideAQuoteIsLeftOut is the pin.
+		if len(runs) == 0 && len(images) == 0 {
+			continue
+		}
+		r.emit(r.quote(runs, r.quoteDepth))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
@@ -1113,7 +1202,7 @@ func (r *renderer) emitImages(images []ImageRef, line int) error {
 // loses those words on the way in. Saying so is the same rule the block form
 // follows: what was left out is named, never dropped in silence.
 func (r *renderer) warnRawHTML(node ast.Node, line int) {
-	if !hasRawHTML(node) {
+	if !hasRawHTML(node, r.source) {
 		return
 	}
 	r.warn("line %d: inline HTML is not rendered in the house style and was left out", line)
@@ -1144,14 +1233,18 @@ func (r *renderer) warnImages(images []ImageRef, line int, where string) {
 		line, where)
 }
 
-// hasRawHTML says whether an inline subtree holds raw HTML, however deeply it
-// is nested.
-func hasRawHTML(node ast.Node) bool {
+// hasRawHTML says whether an inline subtree holds raw HTML the house style
+// does not carry, however deeply it is nested.
+//
+// A comment is not counted, because a comment is a pencil: it reaches the
+// document grey rather than being left out, so a line warned about it would
+// name a loss there is none of.
+func hasRawHTML(node ast.Node, source []byte) bool {
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if _, ok := child.(*ast.RawHTML); ok {
+		if raw, ok := child.(*ast.RawHTML); ok && !isComment(raw, source) {
 			return true
 		}
-		if hasRawHTML(child) {
+		if hasRawHTML(child, source) {
 			return true
 		}
 	}

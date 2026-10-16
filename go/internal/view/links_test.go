@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"gdoc/internal/docs"
+	"gdoc/internal/markers"
 )
 
 // project is one paragraph of runs through the whole projection, with the
@@ -513,5 +514,25 @@ func TestAFloatingObjectInACellIsPrintedInThatCell(t *testing.T) {
 	named, _ := Project(d, Options{Picture: func(string) string { return "![](assets/note-1.png)" }})
 	if !strings.Contains(named, "![](assets/note-1.png)") {
 		t.Errorf("Project() =\n%s\nwant the picture written in the cell", named)
+	}
+}
+
+// TestEveryFloatingPlaceholderIsAMarker keeps this package's labels and
+// internal/markers in step.
+//
+// A floating object is written as a comment naming its kind, and that comment
+// is gdoc's markup rather than the author's aside. A label markers does not
+// know comes home in the exported file as a line the next build reads as a
+// pencil, so a published document grows the grey paragraph "drawing:
+// floating, kix.p1" and nothing says so.
+//
+// The three kinds are every kind a positioned object comes back as: docs's
+// objectKind answers image, drawing, or the object it cannot name.
+func TestEveryFloatingPlaceholderIsAMarker(t *testing.T) {
+	for _, kind := range []string{docs.KindImage, docs.KindDrawing, docs.KindObject} {
+		line := "<!-- " + placeholders[kind].label + ": floating, kix.p1 -->"
+		if _, ok := markers.Find(line); !ok {
+			t.Errorf("the placeholder %q is no marker, so the next build reads it as the author's own aside", line)
+		}
 	}
 }

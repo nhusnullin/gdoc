@@ -218,9 +218,10 @@ $GDOC help marks --json
 ```
 
 A mark is a highlight an author wrote in the note, `==words==` and the six
-colour emoji, or the one grey span `[words]{.pencil}`. The object names each
-mark, what an author writes for it, the colour it reaches the document as, and
-its fate: `counted` or `carried`. Read the fate out of that object. This skill
+colour emoji, or the grey pencil, which is a comment: `<!-- words -->` or
+Obsidian's `%% words %%`. The object names each mark, what an author writes
+for it, the colour it reaches the document as, and its fate: `counted` or
+`carried`. Read the fate out of that object. This skill
 names no colour of its own, for the reason it names no flag: house.yaml is the
 only thing that knows the palette today.
 

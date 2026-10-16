@@ -286,7 +286,7 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Eight tests here ask for no network at all
+// # Nine tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -319,14 +319,29 @@
 //
 // TestTheRoundTripNoteCarriesAFootnoteAndEveryMark is the seventh, in
 // roundtrip_test.go. The round trip measures a footnote and a mark only if one
-// of the six notes it publishes still holds them, so the kitchen sink's seven
-// mark openers and its footnote are pinned as the literals an author types: a
-// note edited back to the shapes of M17 would otherwise leave the live run
-// green and the question unasked.
+// of the six notes it publishes still holds them, so the kitchen sink's six
+// highlight openers, both shapes of the pencil, a comment inside a sentence
+// and a comment on lines of its own, and its footnote are pinned as the
+// literals an author types: a note edited back to the shapes of M17 would
+// otherwise leave the live run green and the question unasked. Both pencil
+// shapes rather than the opener alone, because a note holding only the run
+// would leave the grey paragraph measured by no live run at all.
 //
 // TestThePageBreakNoteRendersWithNoNetwork is the eighth, in pagebreak_test.go,
 // and it is there for the same reason. The measurement's note is written in
 // that file rather than kept as a fixture, so it renders the note offline and
 // holds it to what it is for: one body break, one body heading, and the two
 // paragraphs the projection window is read around.
+//
+// TestTheComparisonLeavesAPencilsWordsAsTyped is the ninth, in
+// roundtrip_test.go, and it is the one rule of the comparison's own that a
+// pencil changed. The note side rewrites the middle of a line three ways
+// before it compares, the smart punctuation, the emphasis delimiters and the
+// link to a file in the hub, and the first of those read the "--" of "<!--"
+// as an en dash, so a pencil standing on a line that also carried a quote was
+// spelled the same way on both sides and still reported as a difference no
+// name covers. A pencil's words are not the typographer's business:
+// internal/body hands the comment through as the author typed it. So all
+// three rules go through outsideComments, which hands each of them the words
+// around every comment and leaves the comment alone, delimiters and all.
 package live

@@ -749,7 +749,7 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve"> is yellow and keeps the circle in its words, and the light turned 🔴 and we stopped. An [aside] in brackets is not a span, because Pandoc’s grammar wants the attribute straight after the bracket. A mark carries the formatting inside it: </w:t>
+      <w:t xml:space="preserve"> is yellow and keeps the circle in its words, and the light turned 🔴 and we stopped. An [aside] in brackets is the author’s own words, because a bracket is no mark’s opener. A highlight carries the formatting inside it: </w:t>
     </w:r>
     <w:r>
       <w:rPr>
@@ -795,7 +795,7 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">, and </w:t>
+      <w:t xml:space="preserve">, and a pencilled aside </w:t>
     </w:r>
     <w:r>
       <w:rPr>
@@ -804,18 +804,7 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">a pencilled </w:t>
-    </w:r>
-    <w:r>
-      <w:rPr>
-        <w:rStyle w:val="Pencil"/>
-        <w:b w:val="1"/>
-        <w:bCs w:val="1"/>
-        <w:color w:val="9a9a9a"/>
-        <w:sz w:val="24"/>
-        <w:szCs w:val="24"/>
-      </w:rPr>
-      <w:t xml:space="preserve">note</w:t>
+      <w:t xml:space="preserve">quietly</w:t>
     </w:r>
     <w:r>
       <w:rPr>

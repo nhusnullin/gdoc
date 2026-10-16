@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -108,7 +109,7 @@ var theSevenMarks = []markTopicRow{
 	{"blue", []string{"🔵"}, "highlight", "#5DB3FF", "carried"},
 	{"red", []string{"🔴"}, "highlight", "#FF6B6B", "carried"},
 	{"orange", []string{"🟠"}, "highlight", "#FFB85C", "carried"},
-	{"pencil", []string{".pencil"}, "text", "#9A9A9A", "carried"},
+	{"pencil", []string{"<!--", "%%"}, "text", "#9A9A9A", "carried"},
 }
 
 // `marks` is a word help answers and no command gdoc takes, so the help
@@ -177,6 +178,46 @@ func TestHelpMarksPrintsTheSevenFromTheBinary(t *testing.T) {
 	}
 }
 
+// TestHelpMarksPrintsBothPencilSpellings. The grey mark has two spellings
+// from milestone 20 on and no third: HTML's comment and Obsidian's, both
+// read, with the Pandoc span that was the one spelling until then refused by
+// line. A colleague asks the binary which to type, so the two come out of
+// `gdoc help marks` and the old one does not.
+func TestHelpMarksPrintsBothPencilSpellings(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	got, prose, code := runHelp(t, "help", "marks", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("gdoc help marks must be answered: %v (exit %d)", got, code)
+	}
+	data, _ := got["data"].(map[string]any)
+	list, ok := data["marks"].([]any)
+	if !ok {
+		t.Fatalf("data.marks is not a list: %v", data)
+	}
+	var syntax []any
+	for _, entry := range list {
+		mark, _ := entry.(map[string]any)
+		if mark["name"] == "pencil" {
+			syntax, _ = mark["syntax"].([]any)
+		}
+	}
+	want := []any{"<!--", "%%"}
+	if len(syntax) != len(want) {
+		t.Fatalf("the pencil's syntax is %v, want the two comment spellings %v", syntax, want)
+	}
+	for i, s := range want {
+		if syntax[i] != s {
+			t.Errorf("the pencil's syntax %d is %v, want %v", i, syntax[i], s)
+		}
+	}
+	for _, screen := range []string{fmt.Sprint(syntax), prose} {
+		if strings.Contains(screen, ".pencil") {
+			t.Errorf("the help offers the span gdoc refuses: %q", screen)
+		}
+	}
+}
+
 // Tab offers the topic where a command would be offered, in both shells.
 // Without it `gdoc help ma<Tab>` completes to nothing, and the one word that
 // is not a command is the one word nobody can guess is there.
@@ -210,7 +251,7 @@ func TestARefusedNoteWritesNothing(t *testing.T) {
 		},
 		{
 			what: "a mark inside a mark",
-			body: "A ==figure [words]{.pencil} to replace== here.\n",
+			body: "A ==figure <!-- words --> to replace== here.\n",
 			says: "a mark inside a mark",
 		},
 	} {

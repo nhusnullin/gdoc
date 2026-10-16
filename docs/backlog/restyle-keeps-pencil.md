@@ -21,7 +21,7 @@ backgrounds, and nothing on the allowlist writes a background.
 
 So a person who restyles a document that holds pencil gets ordinary black
 prose where the grey was, and `export` then brings those words home without
-the `[words]{.pencil}` span, because export recognises a mark by its exact
+the `<!-- words -->` comment, because export recognises a mark by its exact
 colour. Nothing says so: the restyle answer comes back `verified: true` and
 `ManualSteps` names five things, none of them this one.
 
