@@ -373,14 +373,14 @@ every box in it is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/{Glyph,PanelView,Rows}.swift`, `presence/Sources/Presence/{main,StatusItem,Panel,AppState}.swift`
 - Create: `presence/Tests/PresenceUITests/RenderTests.swift`, `presence/Info.plist`, `presence/bundle.sh`
 
-- [ ] `testTheGlyphIsOneOfFourStatesByPriority` (hold over running over watch
+- [x] `testTheGlyphIsOneOfFourStatesByPriority` (hold over running over watch
       over idle, monochrome template images),
       `testThePanelRendersNowAndTodayInLightAndDark` (PNGs written under
       `PRESENCE_SHOTS`, a directory outside the repository, from `day.jsonl`,
       both appearances, 2x), `testAStoppedRunWithUnknownOutcomeIsItsOwnRow`,
       `testTheVersionRowsNameTheAppAndTheLastGdoc`,
       `testTheReopenRowAppearsWhenThePlistVersionDiffers`
-- [ ] `Package.swift` gains `PresenceUI`, `Presence` and `PresenceUITests`;
+- [x] `Package.swift` gains `PresenceUI`, `Presence` and `PresenceUITests`;
       the shell: `NSStatusItem` with `sendAction(on: [.leftMouseUp,
       .rightMouseUp])`, a borderless key-capable `NSPanel` under the button
       with an `NSHostingView`, closed on resign key and on Esc; NOW and TODAY
@@ -390,14 +390,14 @@ every box in it is ticked and its commit is on the branch.
       the "Updated to X. Quit and reopen" row on a difference and "gdoc
       presence was removed" when the bundle is gone; no process is launched;
       nothing is persisted
-- [ ] `presence/Info.plist` as XML with `@VERSION@`, `LSUIElement`,
+- [x] `presence/Info.plist` as XML with `@VERSION@`, `LSUIElement`,
       `CFBundleIdentifier com.altery.gdoc.presence`,
       `LSMinimumSystemVersion 14.0`; `bundle.sh <version> <out>` builds
       universal with `swift build -c release --arch arm64 --arch x86_64`,
       fills the plist (`0.0.0` for `dev`), signs ad-hoc, verifies with
       `codesign --verify --deep --strict` and `lipo -archs`; Makefile `app`
       writes `bin/GdocPresence.app` from `$(VERSION)`
-- [ ] `make app`, `make app-test`, `make app-lint`; the PNGs looked at
+- [x] `make app`, `make app-test`, `make app-lint`; the PNGs looked at
 
 ### Task 9: the release builds the app and the zips carry it
 

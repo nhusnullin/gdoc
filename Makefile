@@ -66,6 +66,10 @@ dist:
 #
 # app-lint is the same line the release job runs, so the formatter's version is
 # the one lint was written against and a reformat is never a release's surprise.
+app:
+	mkdir -p bin
+	presence/bundle.sh "$(VERSION)" "$(PWD)/bin/GdocPresence.app"
+
 app-test:
 	cd presence && swift test
 
@@ -94,4 +98,4 @@ tag:
 	git push origin HEAD
 	git push origin "refs/tags/$(VERSION)"
 
-.PHONY: test vet build dist app-test app-lint tag
+.PHONY: test vet build dist app app-test app-lint tag
