@@ -22,7 +22,10 @@
 // package before it sends anything:
 //
 //   - internal/body, so `build` and `publish` refuse a note whose body still
-//     carries one, by line: TestBuildRefusesAMarkerByLine.
+//     carries one, by line: TestBuildRefusesAMarkerByLine. The question is
+//     asked before the note is parsed, so gdoc's own two comments are refused
+//     rather than read as the grey mark they look like:
+//     TestGdocsOwnCommentsAreMarkersAndNotPencil.
 //   - internal/plaintext, so `reply` and `annotate` refuse one in a thread,
 //     beside the markdown refusal: TestPlaintextRefusesAMarker.
 //   - cmd/gdoc's read of `propose --from`, because document text never passes
@@ -43,13 +46,27 @@
 // and a forgotten marker is not: TestFindLeavesAnEscapedMarkerAlone and
 // TestAnAuthorsBackslashDoesNotHideAMarker.
 //
-// # The closing bracket of [s:ID] is not looked for
+// # Three of the twelve literals are not looked for
 //
-// Seven of the eight literals are gdoc's markup and nothing else. The eighth is
-// a single "]", which a note carries in every markdown link and every numbered
-// reference. Looking for it would refuse a note nothing is wrong with, and
-// looking for it is not needed: "[s:" always comes first, and it is looked for.
-// Pairs holds all eight because the pairs are what a person reading the
+// Nine of them are gdoc's markup and nothing else. The other three are text a
+// note is entitled to carry.
+//
+// One is a single "]", which a note holds in every markdown link and every
+// numbered reference. The other two are the one "-->", written twice: it shuts
+// the tab comment, it shuts the floating picture's comment, and it shuts every
+// grey aside an author writes, because a pencil is a comment. Looking for any
+// of the three would refuse a note nothing is wrong with.
+//
+// Looking for none of them leaves no hole, because each marker's opener always
+// comes first and every opener is looked for. The two comment openers are the
+// whole of what makes gdoc's own comments markers: "<!-- tab " and
+// "<!-- image: " say a thing about a document that the document itself holds
+// otherwise, and "<!-- anything else -->" is the author's own aside, carried
+// into the document grey. TestAPencilIsNotAMarker is that line, and
+// internal/body's TestGdocsOwnCommentsAreMarkersAndNotPencil is the same line
+// on the route that builds.
+//
+// Pairs holds all twelve because the pairs are what a person reading the
 // exported file is told, and TestMarkersNamesEachOpener pins them.
 package markers
 
@@ -67,11 +84,13 @@ var Pairs = []Pair{
 	{"{-", "-}"},
 	{"[[c:", "[[/c]]"},
 	{"[s:", "]"},
+	{"<!-- tab ", "-->"},
+	{"<!-- image: ", "-->"},
 }
 
-// looked is what Find looks for: every literal in Pairs except the bare "]",
-// for the reason the package comment gives.
-var looked = []string{"{+", "+}", "{-", "-}", "[[c:", "[[/c]]", "[s:"}
+// looked is what Find looks for: every literal in Pairs except the bare "]" and
+// the two "-->", for the reason the package comment gives.
+var looked = []string{"{+", "+}", "{-", "-}", "[[c:", "[[/c]]", "[s:", "<!-- tab ", "<!-- image: "}
 
 // Find is the first marker of gdoc's on this line, and whether there is one. An
 // escaped marker is the author's own text and is not one.

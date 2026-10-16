@@ -438,11 +438,11 @@
 //
 // # A marker of gdoc's own is refused by line, before the note is parsed
 //
-// internal/view writes {+, {-, [[c: and [s: into the text `read` prints and
-// `export` writes to a file, and they say a thing about a document: these words
-// are a pending insertion, this range carries a comment. In a document they say
-// nothing, so a note still carrying one publishes the brackets and the id as
-// prose. The check is asked of the source line rather than of any block,
+// internal/view writes {+, {-, [[c:, [s:, `<!-- tab ` and `<!-- image: ` into
+// the text `read` prints and `export` writes to a file, and they say a thing
+// about a document: these words are a pending insertion, this range carries a
+// comment, a picture floats here. In a document they say nothing, so a note
+// still carrying one publishes the brackets and the id as prose. The check is asked of the source line rather than of any block,
 // because the export writes a marker into the middle of a sentence and the
 // sentence is a paragraph like any other, and it is asked of internal/markers,
 // which holds the literals and the escaping parity for all three routes out of
@@ -450,6 +450,15 @@
 // note written about the markers themselves still publishes.
 // TestBuildRefusesAMarkerByLine and TestBuildLeavesAnEscapedMarkerAlone are the
 // pins.
+//
+// Two of the six markers are comments, which is the shape the grey mark is
+// written in since this milestone. The refusal reaches them first, because it
+// is asked before the note is parsed, so a note carrying the comment `read`
+// writes for a floating picture is named rather than published as a grey aside
+// about a document it is no longer in. Only those two openers are markers:
+// every other comment is the author's own and comes out grey.
+// TestGdocsOwnCommentsAreMarkersAndNotPencil and
+// TestAnAuthorsOwnCommentIsStillAPencil are the two halves.
 //
 // It is a refusal rather than the warning a code block gets. A code block
 // leaves one block out of the document; a marker puts words into it that the

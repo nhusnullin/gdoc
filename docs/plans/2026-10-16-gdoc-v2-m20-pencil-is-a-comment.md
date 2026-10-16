@@ -97,7 +97,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 2: a comment on lines of its own is grey paragraphs
 - [x] Task 3: the Obsidian spelling reaches the same node
 - [x] Task 4: a pencil goes where a mark goes
-- [ ] Task 5: gdoc's own two comments are markers
+- [x] Task 5: gdoc's own two comments are markers
 - [ ] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 - [ ] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
 - [ ] Task 8: the live round trip
@@ -183,6 +183,17 @@ is refused by line as a marker and builds no grey run.
 `TestProposeRefusesAMarkerInTheFile` gain the two cases. `view`'s own
 writing of the two is untouched; `skills/gdoc-export/markers.md` lists them
 as markers in Task 9.
+
+Ran 2026-10-16. The two openers join `Pairs` and `looked`; the `-->` closer
+does not join `looked`, for the reason the bare `]` of `[s:ID]` does not: it
+shuts every pencil an author writes, so looking for it would refuse a note
+nothing is wrong with. Each opener always comes first, so no door is left
+open. `TestAPencilIsNotAMarker` in `internal/markers` and
+`TestAnAuthorsOwnCommentIsStillAPencil` in `internal/body` are that line from
+both sides, beside the two the plan names. `make vet` and the raced suite are
+green; `internal/live` timed out at 600s on the network with no assertion
+failing, and this session has no `GDOC_LIVE_DOC_ID`, so the live round trip
+is Task 8's.
 
 ### Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 

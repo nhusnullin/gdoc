@@ -50,6 +50,8 @@ func TestPlaintextRefusesAMarker(t *testing.T) {
 		{"🤖 the words {-annually-}[s:AAA] are gone", "{-"},
 		{"🤖 see [[c:AAA]]the operations team[[/c]]", "[[c:"},
 		{"🤖 that suggestion is [s:AAA]", "[s:"},
+		{"🤖 the picture is <!-- image: floating, kix.p1 -->", "<!-- image: "},
+		{"🤖 the tab reads <!-- tab t.0: Operations -->", "<!-- tab "},
 	} {
 		if got := Marker(c.body); got != c.want {
 			t.Errorf("Marker(%q) = %q, want %q", c.body, got, c.want)
@@ -65,6 +67,7 @@ func TestMarkerLeavesPlainWordsAlone(t *testing.T) {
 		"🤖 The 2026 register.",
 		`🤖 the export writes \{+words\+} for an insertion`,
 		"🤖 See item [1] of the schedule.",
+		"🤖 the note holds an aside <!-- about this figure --> here",
 	} {
 		if got := Marker(body); got != "" {
 			t.Errorf("Marker(%q) = %q, and there is no marker of gdoc's in it", body, got)

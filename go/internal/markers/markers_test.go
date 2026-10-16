@@ -4,18 +4,20 @@ import "testing"
 
 // TestMarkersNamesEachOpener is the list itself, written out as literals rather
 // than read off Pairs. A test that reads the constant follows it wherever
-// somebody moves it, and these eight strings are what `read` has already
-// written into every exported file: changing one of them without changing this
-// test is changing what a marker is.
+// somebody moves it, and these strings are what `read` has already written
+// into every exported file: changing one of them without changing this test is
+// changing what a marker is.
 func TestMarkersNamesEachOpener(t *testing.T) {
 	want := [][2]string{
 		{"{+", "+}"},
 		{"{-", "-}"},
 		{"[[c:", "[[/c]]"},
 		{"[s:", "]"},
+		{"<!-- tab ", "-->"},
+		{"<!-- image: ", "-->"},
 	}
 	if len(Pairs) != len(want) {
-		t.Fatalf("there are %d markers, and the four gdoc writes are %v", len(Pairs), want)
+		t.Fatalf("there are %d markers, and the six gdoc writes are %v", len(Pairs), want)
 	}
 	for i, p := range Pairs {
 		if p.Open != want[i][0] || p.Shut != want[i][1] {
@@ -37,6 +39,9 @@ func TestFindNamesTheFirstMarkerOnTheLine(t *testing.T) {
 		{"the tail of an anchor [[/c]] and the rest", "[[/c]]"},
 		{"the words then [s:AAA] alone", "[s:"},
 		{"a sentence, then {+added+} and then [[c:AAA]]", "{+"},
+		{"<!-- tab t.0: Title -->", "<!-- tab "},
+		{"<!-- image: floating, kix.p1 -->", "<!-- image: "},
+		{"the paragraph, and then <!-- image: inline, kix.p2 -->", "<!-- image: "},
 	} {
 		got, ok := Find(c.line)
 		if !ok || got != c.want {
@@ -93,5 +98,25 @@ func TestLinesCountsFromOne(t *testing.T) {
 	}
 	if m, line := Lines("# Heading\n\nA plain note.\n"); m != "" || line != 0 {
 		t.Errorf(`Lines over a note with no marker = %q, %d, want "", 0`, m, line)
+	}
+}
+
+// TestAPencilIsNotAMarker is the line this package has to draw since the grey
+// mark became a comment. Two of gdoc's own comments are markers, because they
+// say a thing about a document that the document itself holds otherwise. Every
+// other comment is the author's own aside, and the only difference on the line
+// is the opener: the closer "-->" is the same one, so it is not looked for.
+func TestAPencilIsNotAMarker(t *testing.T) {
+	for _, line := range []string{
+		"<!-- check this figure before Friday -->",
+		"The team meets weekly <!-- was monthly --> in Q3.",
+		"<!-- tabs are not the tab marker -->",
+		"<!-- images in general -->",
+		"%% an Obsidian aside %%",
+		"the words then --> on their own",
+	} {
+		if got, ok := Find(line); ok {
+			t.Errorf("Find(%q) = %q, true, and a pencil is the author's own aside", line, got)
+		}
 	}
 }
