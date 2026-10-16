@@ -164,7 +164,7 @@ shows what the binary printed.
     "Not you? Sign out", then settles.
 41. Optional expected domain in settings (guess that Nail wants it): when the
     signed-in email differs, a persistent exclamation line "Signed in as
-    nail@gmail.com, expected @altery.com". A hint in a panel is not a gate;
+    nail@example.org, expected @example.com". A hint in a panel is not a gate;
     the identity invariant holds.
 42. The signed-in row shows the email and a small check. No picture: it
     needs a userinfo read, a scope and the account grant per run, and a face
