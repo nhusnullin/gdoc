@@ -93,14 +93,23 @@ func housePNG(t *testing.T) []byte {
 // what it was asked for. Every other method fails the test: the logo fetch is
 // one GET and nothing else.
 type logoWire struct {
-	t     *testing.T
-	png   []byte
-	err   error
+	t   *testing.T
+	png []byte
+	err error
+	// hang is Drive answering nothing at all: the read waits for the
+	// context and ends with whatever ended it. It is the office network
+	// rather than a refusal, and it is the one failure a status code cannot
+	// stand in for, because its cost is time.
+	hang  bool
 	asked []string
 }
 
-func (w *logoWire) FileBytes(_ context.Context, fileID string, _ int64) ([]byte, error) {
+func (w *logoWire) FileBytes(ctx context.Context, fileID string, _ int64) ([]byte, error) {
 	w.asked = append(w.asked, fileID)
+	if w.hang {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
 	if w.err != nil {
 		return nil, w.err
 	}
@@ -311,6 +320,59 @@ func TestBuildWithAFreshCacheAsksDriveNothing(t *testing.T) {
 	}
 	if logoBlockOf(t, got)["source"] != "cache" {
 		t.Errorf("the bytes came from the cache: %v", logoBlockOf(t, got))
+	}
+}
+
+// The ceiling is twenty seconds, stated here as a literal so that moving it
+// is a decision somebody makes rather than a constant a test follows.
+//
+// Twenty rather than the two the update check gets, because that one is a
+// fetch nobody asked for and this one is a document that cannot be built
+// without it: the first build on a machine has no cache to fall back on, and
+// the deadline has to cover a token refresh and the read behind it. Twenty
+// rather than the guard's five minutes, because a build is a local thing and
+// a hung network must not turn it into a wait.
+func TestTheLogoCeilingIsTwentySeconds(t *testing.T) {
+	if logoCeiling != 20*time.Second {
+		t.Errorf("the logo fetch's ceiling is twenty seconds, and it is %v", logoCeiling)
+	}
+}
+
+// Drive answering nothing at all costs the ceiling and no more. The cache is
+// then the answer, exactly as a refusal makes it, and the envelope says the
+// deadline was what stopped the read.
+//
+// Without a deadline of its own the fetch inherits the guard's five minutes,
+// doubled by the retry after a 401, so a build that had yesterday's mark in
+// hand would sit on a hung network for ten minutes before using it. That is
+// the whole reason the ceiling exists.
+func TestAHungDriveCostsTheCeilingAndThenTheCacheAnswers(t *testing.T) {
+	wire := &logoWire{t: t, hang: true}
+	logoFetching(t, wire)
+	cachedLogo(t, logoFileID, housePNG(t), 30*time.Hour)
+	old := logoCeiling
+	logoCeiling = 20 * time.Millisecond
+	t.Cleanup(func() { logoCeiling = old })
+	dir, md := buildNote(t)
+
+	start := time.Now()
+	got, code := runJSON(t, "build", "--md", md, "--out", filepath.Join(dir, "out.docx"), "--house", driveLogoHouse(t))
+	took := time.Since(start)
+
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a hung Drive with a cache still builds: %v (exit %d)", got, code)
+	}
+	// Generous against a loaded machine, and still three orders of magnitude
+	// under the five minutes the guard alone would have allowed.
+	if took > 5*time.Second {
+		t.Errorf("the fetch is bounded by the ceiling, and the build took %v", took)
+	}
+	block := logoBlockOf(t, got)
+	if block["source"] != "cache" {
+		t.Errorf("Drive never answered, so the cache is the answer: %v", block)
+	}
+	if reason, _ := block["reason"].(string); !strings.Contains(reason, "deadline") {
+		t.Errorf("reason says the read ran out of time: %v", block)
 	}
 }
 

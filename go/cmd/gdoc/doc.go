@@ -70,9 +70,13 @@
 //   - annotate <url> --quote | --from [--body-file]: a comment on the words a
 //     caller quotes, and nothing else. internal/annotate.
 //   - build --md --out [--house] [--force]: the house-style docx, no network
-//     beyond the house logo, once a day. internal/house, internal/cover,
-//     internal/body, internal/render, and internal/asset when the style names
-//     the logo as one file in Drive rather than carrying its bytes.
+//     beyond the house logo, once a day and bounded by logoCeiling, twenty
+//     seconds, because a person is waiting for a file and a cached mark is
+//     already in hand. internal/house, internal/cover, internal/body,
+//     internal/render, and internal/asset when the style names the logo as one
+//     file in Drive rather than carrying its bytes.
+//     TestTheLogoCeilingIsTwentySeconds and
+//     TestAHungDriveCostsTheCeilingAndThenTheCacheAnswers.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary

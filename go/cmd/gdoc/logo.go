@@ -27,6 +27,24 @@ import (
 // fields are left out.
 const logoFromFile = "file"
 
+// logoCeiling is the whole of what the logo may cost a render. The guard
+// bounds one request at five minutes, which is there so a hung endpoint does
+// not hang the CLI forever; it is far too long for this one. A build is a
+// local thing a person waits on, the cache answers every run but the first of
+// the day, and a network that hangs rather than refusing would otherwise sit
+// on that build for five minutes, doubled by the retry after a 401, before
+// using the mark it already had.
+//
+// Twenty seconds rather than the two the update check gets, because that one
+// is a fetch nobody asked for and this one is a document that cannot be built
+// without it. The first build on a machine has no cache behind it, and the
+// deadline covers a token refresh as well as the read.
+//
+// It is a variable so a test can shorten it, as accountCeiling is.
+// TestTheLogoCeilingIsTwentySeconds states the literal and
+// TestAHungDriveCostsTheCeilingAndThenTheCacheAnswers holds the fallback.
+var logoCeiling = 20 * time.Second
+
 // logoData is where this run's mark came from. Every field is a fact: nothing
 // here says the document is branded correctly, only which bytes went into it,
 // how old they are, and what stopped Drive from being asked or from
@@ -107,6 +125,11 @@ func logoFor(ctx context.Context, cfg *house.Config) ([]byte, logoData, []string
 	p := guard.NewPolicy()
 	p.AllowAsset(id)
 	reach := &logoReach{policy: p}
+	// The deadline is the caller's, not internal/asset's: that room is handed
+	// its reach and sets no wire policy, and every other ceiling in this
+	// binary is set where the command is.
+	ctx, cancel := context.WithTimeout(ctx, logoCeiling)
+	defer cancel()
 	got, err := asset.Fetch(ctx, reach, id, asset.Want{
 		Mime:   cfg.Logo.Mime,
 		Width:  cfg.Logo.Px[0],
