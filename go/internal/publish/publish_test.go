@@ -775,3 +775,65 @@ func TestAMarkerBatchSentWithALostAnswerIsDecidedByTheReadBack(t *testing.T) {
 		t.Errorf("Marked is false although the read-back carries the marker: %v", rep.Warnings)
 	}
 }
+
+// A contents entry opens its heading only when the heading came back with an
+// id, and Drive's import mints one only from the hidden bookmark the body
+// writes. The read-back counts the headings that came back without one, so a
+// document whose contents list would land on the title page says so in the
+// report rather than a month later.
+func TestAPublishReportsHeadingsThatCameBackWithNoId(t *testing.T) {
+	// Arrange: three headings, two of them with no headingId.
+	f := script(t, "published-no-heading-ids.json")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.HeadingsWithoutID != 2 {
+		t.Errorf("HeadingsWithoutID = %d, want the two headings the read-back carried no id on", rep.HeadingsWithoutID)
+	}
+	if !strings.Contains(strings.Join(rep.Warnings, " "), "2 of the 3 headings") {
+		t.Errorf("warnings = %v, want one naming how many headings came back with no id", rep.Warnings)
+	}
+}
+
+func TestAPublishWhoseHeadingsAllCarryAnIdSaysSoAndWarnsAboutNone(t *testing.T) {
+	// Arrange
+	f := script(t, "published-contents.json")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.HeadingsWithoutID != 0 {
+		t.Errorf("HeadingsWithoutID = %d on a read-back where every heading carries one", rep.HeadingsWithoutID)
+	}
+	if strings.Contains(strings.Join(rep.Warnings, " "), "heading") {
+		t.Errorf("warnings = %v, want none about the heading ids", rep.Warnings)
+	}
+}
+
+// The count is a fact and the document is there, so it never makes the publish
+// a failure: a caller told the publish failed goes looking for a document that
+// is in the folder.
+func TestHeadingsWithoutAnIdLeaveThePublishVerified(t *testing.T) {
+	// Arrange
+	f := script(t, "published-no-heading-ids.json")
+
+	// Act
+	rep, err := Run(context.Background(), f, options())
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rep.Verified {
+		t.Errorf("Verified is false although all three routes held: %+v %v", rep.Checks, rep.Warnings)
+	}
+}

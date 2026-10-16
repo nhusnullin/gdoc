@@ -176,15 +176,15 @@ in the test folder.
 - Create: `go/internal/publish/testdata/published-no-heading-ids.json`
 - Modify: `go/internal/publish/publish_test.go`
 
-- [ ] write `TestAPublishReportsHeadingsThatCameBackWithNoId`: a read-back
+- [x] write `TestAPublishReportsHeadingsThatCameBackWithNoId`: a read-back
       where two of three headings carry no `headingId` reports
       `headings_without_id: 2` and one warning naming the count; a read-back
       where all carry one reports 0 and no warning
-- [ ] add the count to the report from the inline read-back, and the warning
+- [x] add the count to the report from the inline read-back, and the warning
       when it is not zero; it is a fact and a warning, not a failure, because
       the document is there
-- [ ] write the rule into `go/internal/publish/doc.go` with the test's name
-- [ ] run the publish tests, then `make test`
+- [x] write the rule into `go/internal/publish/doc.go` with the test's name
+- [x] run the publish tests, then `make test`
 
 ### Task 5: The live test pins what Drive does
 
