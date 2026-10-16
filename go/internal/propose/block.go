@@ -216,7 +216,11 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 		return w.refuse(node, "HTML is not something a block proposes; it would arrive in the document as words")
 
 	case *ast.ThematicBreak:
-		return w.refuse(node, "a horizontal rule is not something a block proposes")
+		// A note's `---` is a page break since M19 (DECISIONS.md,
+		// 2026-10-16), so the refusal names what the author typed rather
+		// than the rule it used to draw: insertPageBreak is not in the
+		// subset either way.
+		return w.refuse(node, "a page break (---) is not something a block proposes")
 
 	default:
 		// A container this walk does not name is read through rather than

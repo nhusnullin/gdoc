@@ -5,6 +5,7 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -81,5 +82,50 @@ func assertPageBreaks(t *testing.T, got map[string]any) {
 	if counts["page_breaks"] != theBreaksTheDocumentGot {
 		t.Errorf("body.page_breaks is %v, want %v: the pages the document got, not the lines the note held",
 			counts["page_breaks"], theBreaksTheDocumentGot)
+	}
+}
+
+// gdoc help build is where somebody reads what a note may hold without leaving
+// the terminal, so the line saying `---` starts a new page belongs there and
+// not only in the guide. The note carries the count's key beside the syntax,
+// because the pages the document got are the only check on the lines the note
+// held.
+func TestHelpBuildSaysAThematicBreakIsAPageBreak(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	got, prose, code := runHelp(t, "help", "build", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("gdoc help build must be answered: %v (exit %d)", got, code)
+	}
+	list := helpCommands(t, got)
+	if len(list) != 1 {
+		t.Fatalf("gdoc help build is one entry and %d came back: %v", len(list), list)
+	}
+	entry, ok := list[0].(map[string]any)
+	if !ok {
+		t.Fatalf("the entry is not an object: %v", list[0])
+	}
+	notes, ok := entry["notes"].([]any)
+	if !ok {
+		t.Fatalf("build's entry carries no notes: %v", entry)
+	}
+	var breakLine string
+	for _, n := range notes {
+		line, _ := n.(string)
+		if strings.Contains(line, "page break") {
+			breakLine = line
+			break
+		}
+	}
+	if breakLine == "" {
+		t.Fatalf("no line of gdoc help build says what a page break is: %v", notes)
+	}
+	for _, want := range []string{"---", "page_breaks"} {
+		if !strings.Contains(breakLine, want) {
+			t.Errorf("the page break line leaves out %q: %q", want, breakLine)
+		}
+	}
+	if !strings.Contains(prose, breakLine) {
+		t.Errorf("the words a person reads leave out %q: %q", breakLine, prose)
 	}
 }

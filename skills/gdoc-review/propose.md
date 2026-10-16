@@ -154,8 +154,8 @@ deep, and bold, italic and links inside a line. A wrapped line is one paragraph,
 because what makes two paragraphs is the empty line between them.
 
 Everything else is refused by name, before anything is sent: a table, a nested
-list, a picture, a code block, a block quote, raw HTML, a horizontal rule, and
-content that is empty. A numbered list always starts at `1.`: a suggested list
+list, a picture, a code block, a block quote, raw HTML, a page break (`---`),
+and content that is empty. A numbered list always starts at `1.`: a suggested list
 is numbered from 1, so a list written from `3.` is refused rather than
 renumbered where nobody would see it. There is also a size limit, so a whole document is not a
 block, and the refusal names it. When the answer needs one of those, say so in a

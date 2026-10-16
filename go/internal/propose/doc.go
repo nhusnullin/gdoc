@@ -155,7 +155,7 @@
 // dropped. A block that lost its table is a suggestion nobody can read and
 // nobody can explain, and the words around the hole read as if they were the
 // whole answer. The refusals are a table, a nested list, a picture, a code block,
-// a block quote, HTML in either shape, a horizontal rule, code in a sentence,
+// a block quote, HTML in either shape, a page break, code in a sentence,
 // struck-out words, a task list, a line break inside a paragraph, a heading
 // inside a list item, a list item with more than one paragraph, a numbered list
 // that does not begin at 1, a paragraph or a heading with no words in it, and
@@ -175,10 +175,11 @@
 // TestProposeRefusesBlockContentBeforeAnythingIsSent in cmd/gdoc are the pins.
 //
 // A refusal names the line because content is a file a person wrote and a block
-// is tens of lines long. A horizontal rule is the one construct goldmark builds
-// with no source position at all, so its line is the first line holding anything
-// after the block above it: naming line 1 would send the author to the top of a
-// file whose rule is thirty lines down, which is the wrong end of it.
+// is tens of lines long. A thematic break, which a note writes for a page break
+// (DECISIONS.md, 2026-10-16), is the one construct goldmark builds with no
+// source position at all, so its line is the first line holding anything after
+// the block above it: naming line 1 would send the author to the top of a file
+// whose break is thirty lines down, which is the wrong end of it.
 // TestARefusedConstructNamesItsLine and
 // TestARuleWithNoSourcePositionStillNamesItsLine are the pins.
 //

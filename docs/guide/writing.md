@@ -126,7 +126,7 @@ suggestion id, so `withdraw` takes it back whole.
 batch past that is a body the guard cannot read, and a caller told about the
 guard's peek has nothing to act on. Everything else is refused by name: a table,
 a nested list, a numbered list that does not begin at `1.`, a picture, a code
-block, a block quote, raw HTML, a thematic break and empty content. A suggested
+block, a block quote, raw HTML, a page break (`---`) and empty content. A suggested
 list is always numbered from 1, so a list written from `3.` is refused rather
 than renumbered where nobody would see it. Three characters are refused in whichever spelling they
 arrive in, written or as an entity reference such as `&#12;`: one the Docs API

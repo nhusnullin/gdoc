@@ -57,7 +57,7 @@ untouched, the `gdoc:` block included.
 
 The body is your markdown: headings to six levels, bulleted and numbered lists
 three deep, bold, italic, strikeout, marked text, footnotes, links,
-pictures, tables, horizontal rules and block quotes. Footnotes and the marks
+pictures, tables, page breaks and block quotes. Footnotes and the marks
 have [their own section](#footnotes-and-the-seven-marks) below. A picture is read from the
 note's own directory, or decoded when the markdown carries it as a `data:` URI;
 PNG and JPEG. A picture at an `http` address is refused naming the line, because
@@ -67,6 +67,23 @@ renders one, and Google Docs does not import an SVG out of a docx either.
 `/gdoc-publish` knows the way round it. It renders the SVG to a PNG beside the
 note on your own machine, with no installing on a Mac, and repoints that one
 link. The SVG stays where it is and stays the master.
+
+`---` on a line of its own is a page break. The document starts a new page
+there. `***`, `___` and `- - -` are that same break, so the spelling is yours.
+A note has no spelling for a horizontal rule at all: `---` turns the page
+rather than drawing a line.
+
+A break before nothing is left out. That is a break at the end of a note, a
+break before its footnote definitions, and a break standing directly before
+another break: the page each would open holds nothing. A break directly before
+the first heading is left out too, because the house style already turns the
+page there, so the reader gets one new page and not two. Nothing is refused and
+nothing warns, because the page you asked for is the page you get.
+
+`body.page_breaks` on the build and the publish envelopes is the pages the
+document got, not the lines the note held. A note with three `---` lines whose
+last one is at the foot of the file says two. That number is the one to check
+your note against, because the difference is invisible in the file.
 
 A link whose destination opens with `#` is a jump inside the document rather
 than a link out of it. It lands on the heading it names, so `[see below](#scope)`

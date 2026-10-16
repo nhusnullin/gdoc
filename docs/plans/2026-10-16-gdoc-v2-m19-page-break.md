@@ -321,18 +321,49 @@ set, `make test` is red on the three round trips above and on
   `go/internal/propose/place.go` and `span.go` wording, `README.md` if it
   lists what a note may hold, `go/boundary/guide_test.go`
 
-- [ ] `gdoc help build` says in one line that `---` on its own line is a
+- [x] `gdoc help build` says in one line that `---` on its own line is a
       page break, and `help --json` carries it. The guide's publishing page
       replaces "horizontal rules" with the page break and its two drops; the
       writing page's block refusal says a page break; the exporting page says
       a break comes home as `---` and a rule as `[rule]`; the reading page
       says `[page break]` prints where a published document breaks the page.
-- [ ] The publish skill reads `body.page_breaks` beside `body.footnotes` and
+- [x] The publish skill reads `body.page_breaks` beside `body.footnotes` and
       says the number when it is above zero, judging nothing. The review
       skill's `propose.md:35` and `:148` say "page break (`---`)".
-- [ ] A `go/boundary/guide_test.go` test holds the publishing page to the
+- [x] A `go/boundary/guide_test.go` test holds the publishing page to the
       sentence: `TestThePublishingPageSaysAThematicBreakIsAPageBreak`.
-- [ ] `git commit -m "docs: --- is a page break in the help, the guide and the skills"`
+- [x] `git commit -m "docs: --- is a page break in the help, the guide and the skills"`
+
+**Task 6 outcome, 2026-10-16.** `gdoc help build` carries a third note beside
+the footnote's and the marks', and `TestHelpBuildSaysAThematicBreakIsAPageBreak`
+in `cmd/gdoc/pagebreak_test.go` reads it off `help build --json` and out of the
+words a person reads. `TestHelpBuildNamesFootnotesAndMarks` counted two notes
+and now counts three. The frozen pipe golden `help.stdout.golden` moved by that
+one note, which is the same one-line move `565d708` made when the marks note
+was added: a note deliberately added to the table is not the bug that file's
+comment warns about, and the diff is the note and nothing else.
+
+Two of this task's file references were stale, the way Task 3's and Task 5's
+were, and neither is a disagreement between the code and the spec. First,
+`propose/place.go` and `span.go` already say "a page break": they name a
+document's own `KindPageBreak` run, which a quote may not cross, and that
+wording was right before this milestone. The construct that still called a
+note's `---` a horizontal rule is `propose/block.go:219`, the block content
+refusal, so that is the message this task renamed, with `doc.go` and
+`block_test.go` beside it. `place.go`'s `KindHorizontalRule` arm stays "a
+horizontal rule", because a document's rule is still a rule and has no spelling
+in a note. Second, `propose.md:35` and `:148` are the quote-crossing sentences,
+which name the break `read` prints as `[page break]`; spelling `---` there
+would be wrong, so the "page break (`---`)" went into the content refusal list
+at `:157`, which is what the bullet meant. `README.md` lists nothing about what
+a note may hold, so it is unchanged.
+
+The exporting page gained three table rows, `---` of its own, `[page break]`
+inside a sentence and `[rule]`, and a paragraph in "What comes home as the
+syntax it left as"; its footnote row and prose now say the last `---` in a file
+is the separator and not a page break. The reading page gained the row and the
+paragraph saying why the read printed nothing for a break until this milestone.
+`make test` and `make vet` are green with the live variables unset.
 
 ### Task 7: verify acceptance, and M19 completed
 

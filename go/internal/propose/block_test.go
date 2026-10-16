@@ -196,7 +196,7 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 		{"a block quote", "> quoted\n", "block quote"},
 		{"a block of HTML", "<div>x</div>\n", "HTML"},
 		{"HTML in a sentence", "Text <b>x</b> more\n", "HTML"},
-		{"a horizontal rule", "one\n\n---\n\ntwo\n", "horizontal rule"},
+		{"a page break", "one\n\n---\n\ntwo\n", "page break"},
 		{"no content at all", "", "no content"},
 		{"nothing but space", "   \n\n\t\n", "no content"},
 		{"code in a sentence", "Use `gdoc read` first\n", "code in a sentence"},
@@ -243,14 +243,14 @@ func TestARefusedConstructNamesItsLine(t *testing.T) {
 	}
 }
 
-// A horizontal rule is the construct goldmark builds with no source position at
+// A thematic break is the construct goldmark builds with no source position at
 // all, so its line is the first line holding anything after the paragraph above
-// it. Line 1 would send the author to the top of a file whose rule is further
+// it. Line 1 would send the author to the top of a file whose break is further
 // down, which is the wrong end of it.
 func TestARuleWithNoSourcePositionStillNamesItsLine(t *testing.T) {
 	_, err := ParseContent("one\n\n---\n\ntwo\n")
 	if err == nil {
-		t.Fatal("a horizontal rule is refused")
+		t.Fatal("a page break is refused")
 	}
 	if !strings.Contains(err.Error(), "line 3") {
 		t.Errorf("the refusal says %q, want it to name line 3", err)
