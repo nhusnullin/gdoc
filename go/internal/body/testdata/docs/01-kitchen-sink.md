@@ -46,6 +46,9 @@ confirm==, ==🟣 a question for one reviewer==, ==🔵 a line changed since
 the last version==, ==🔴 a warning==, ==🟠 an aside==, and
 a note <!-- that stays in the document but is not the argument --> of my own.
 
+<!-- A whole aside on lines of its own, which the build carries as a grey
+paragraph of the document and the export brings home as this comment again. -->
+
 Two of the claims above are cited under the page rather than argued in the
 sentence,[^master] which is where a citation costs a reader least.[^cost]
 

@@ -303,6 +303,25 @@
     </w:pPr>
     <w:r>
       <w:rPr>
+        <w:rStyle w:val="Pencil"/>
+        <w:color w:val="9a9a9a"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A whole aside on lines of its own, which the build carries as a grey paragraph of the document and the export brings home as this comment again.</w:t>
+    </w:r>
+  </w:p>
+  <w:p>
+    <w:pPr>
+      <w:spacing w:before="0" w:after="240"/>
+      <w:jc w:val="both"/>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:pPr>
+    <w:r>
+      <w:rPr>
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>

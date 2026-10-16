@@ -100,7 +100,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 5: gdoc's own two comments are markers
 - [x] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
 - [x] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
-- [ ] Task 8: the live round trip
+- [x] Task 8: the live round trip
 - [ ] Task 9: the words in the guide, the skills, the backlog and the README
 - [ ] Task 10: the acceptance table
 
@@ -308,6 +308,49 @@ comment on a line of its own, and the test publishes a note holding both and
 reads both home. `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1`. If the paragraph form
 comes home as anything but a comment on a line of its own, stop and write
 what came back into the task log for Nail.
+
+Ran 2026-10-16 against Drive, `GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1` and the
+test folder. Both shapes came home. `01-kitchen-sink.md` grew a comment on
+lines of its own beside the one it already carried inside a sentence, and the
+export of the document Drive made of it wrote them back as:
+
+```
+line 9: ... and a note <!-- that stays in the document but is not the argument --> of my own.
+line 11: <!-- A whole aside on lines of its own, which the build carries as a grey paragraph of the document and the export brings home as this comment again. -->
+```
+
+The paragraph form is a comment on a line of its own, so nothing here stops.
+The golden moved by one grey paragraph, and
+`TestTheRoundTripNoteCarriesAFootnoteAndEveryMark` now pins both shapes rather
+than the opener alone: a note holding only the run would leave the paragraph
+measured by no live run at all.
+
+One fault the live run found, and it was the reading's rather than the build's.
+The comparison's own smart punctuation rule read the `--` of `<!--` as an en
+dash, so a pencil standing on a line that also carried a quote or a bold word
+was spelled the same way on both sides and still reported as a difference no
+name covers. A pencil's words are not the typographer's business: goldmark
+hands the comment over as one piece of raw HTML, `internal/body` carries the
+straight apostrophe and the double hyphen through, and the document holds what
+the author typed. So the three note-side rules that rewrite the middle of a
+line, the punctuation, the emphasis delimiters and the link to a file in the
+hub, now go through `outsideComments`, which hands each rule the words around
+every comment and leaves the comment alone, delimiters and all.
+`TestTheComparisonLeavesAPencilsWordsAsTyped` holds that offline, in
+`make test`, with neither variable set.
+
+What is still red is not this milestone's and not a pencil. Eight differences
+in `01-kitchen-sink.md`, five in `02-pictures.md` and fourteen in
+`05-edge-cases.md` are unnamed, and no comment is in any of them: an ordered
+list that starts at 7 in the note and at 1 in the document, which the build
+warns about; a block quote wrapped over three lines, which `noteLines` flushes
+one line at a time while the document holds one paragraph; a task box, which
+the note writes `[ ]` and the house style writes ☐; an ampersand and angle
+brackets in a heading; the data-URI definition and the bare URL of the pictures
+note. The same eight came back from a run with the kitchen sink note reverted
+to HEAD, so they predate M20. Adding a name to that list is a decision Nail
+writes down with its reason, which is this file's own rule, so they are left
+for him. `make vet`, gofmt and the raced suite are green over the whole tree.
 
 ### Task 9: the words in the guide, the skills, the backlog and the README
 
